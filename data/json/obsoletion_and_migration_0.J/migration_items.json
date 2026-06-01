@@ -301,11 +301,6 @@
   },
   {
     "type": "MIGRATION",
-    "id": "blade_trap",
-    "replace": "motor_small"
-  },
-  {
-    "type": "MIGRATION",
     "id": [ "integrated_hooves", "integrated_rabbit_feet" ],
     "replace": "wristwatch"
   },
@@ -827,16 +822,6 @@
     "type": "MIGRATION",
     "id": "xs_gloves_lsurvivor",
     "replace": "xs_gloves_survivor"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "tallow_tainted",
-    "replace": "tallow"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "dry_meat_tainted",
-    "replace": "meat_tainted"
   },
   {
     "type": "MIGRATION",

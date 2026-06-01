@@ -249,10 +249,6 @@ class recipe
 
         bool npc_can_craft( std::string &reason ) const;
 
-        void apply_all_morale_mods( Character &guy ) const;
-        void apply_negative_morale_mods( Character &guy ) const;
-        void apply_positive_morale_mods( Character &guy ) const;
-
         /** Prevent this recipe from ever being added to the player's learned recipes ( used for special NPC crafting ) */
         bool never_learn = false;
 
@@ -269,7 +265,6 @@ class recipe
         /// @param decorated whether the result includes decoration (favorite mark, etc).
         std::string result_name( bool decorated = false ) const;
         std::vector<effect_on_condition_id> result_eocs;
-        std::pair<int, time_duration> morale_modifier;
         skill_id skill_used;
         std::map<skill_id, int> required_skills;
         // For step recipes, use get_proficiencies() instead -- this field is empty.

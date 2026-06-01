@@ -1459,7 +1459,7 @@
     "color": "green",
     "move_cost_mod": 3,
     "coverage": 70,
-    "required_str": 16,
+    "required_str": -1,
     "max_volume": "1500 L",
     "flags": [ "CONTAINER", "PLACE_ITEM", "BLOCKSDOOR", "HIDE_PLACE", "NO_SIGHT", "FIRE_CONTAINER", "LIQUIDCONT", "CLIMBABLE" ],
     "deconstruct": {

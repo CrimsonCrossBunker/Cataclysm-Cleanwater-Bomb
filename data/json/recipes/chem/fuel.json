@@ -57,6 +57,7 @@
       [
         [ "cooking_oil", 64 ],
         [ "edible_tallow", 20, "LIST" ],
+        [ "tallow_tainted", 8 ],
         [ "any_fat", 160, "LIST" ],
         [ "lamp_oil", 1000 ],
         [ "motor_oil", 1000 ]
@@ -88,7 +89,13 @@
     "tools": [ [ [ "catalytic_cracking_reactor_tool", 50000 ] ], [ [ "water", 40 ], [ "water_clean", 40 ] ] ],
     "components": [
       [ [ "chem_washing_soda", 40 ] ],
-      [ [ "edible_tallow", 450, "LIST" ], [ "cooking_oil", 660 ], [ "any_fat", 500, "LIST" ], [ "ghee", 720 ] ]
+      [
+        [ "edible_tallow", 450, "LIST" ],
+        [ "tallow_tainted", 180 ],
+        [ "cooking_oil", 660 ],
+        [ "any_fat", 500, "LIST" ],
+        [ "ghee", 720 ]
+      ]
     ],
     "flags": [ "ALLOW_ROTTEN" ]
   },
