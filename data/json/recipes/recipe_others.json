@@ -2840,6 +2840,52 @@
   },
   {
     "type": "recipe",
+    "activity_level": "ACTIVE_EXERCISE",
+    "result": "anvil_crude",
+    "id_suffix": "cast",
+    "category": "CC_OTHER",
+    "subcategory": "CSC_OTHER_TOOLS",
+    "skill_used": "fabrication",
+    "difficulty": 4,
+    "time": "8 h",
+    "book_learn": [ [ "textbook_fabrication", 4 ], [ "manual_fabrication", 4 ], [ "metal_casting_book", 3 ] ],
+    "//": "Traditional casting method for making a small anvil. Requires significant metal and careful mold preparation.",
+    "qualities": [ { "id": "HAMMER", "level": 2 }, { "id": "CHISEL", "level": 2 } ],
+    "tools": [
+      [ [ "crucible", -1 ], [ "crucible_clay", -1 ] ],
+      [ [ "forge", 100 ], [ "oxy_torch", 100 ] ],
+      [ [ "casting_mold", -1 ], [ "casting_mold_small", -1 ] ]
+    ],
+    "proficiencies": [
+      { "proficiency": "prof_metalworking", "required": true },
+      { "proficiency": "prof_redsmithing", "required": true },
+      { "proficiency": "prof_redsmithing_adv" }
+    ],
+    "components": [ [ [ "steel_lump_any", 3, "LIST" ], [ "steel_chunk_any", 12, "LIST" ], [ "scrap", 36 ] ] ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "ACTIVE_EXERCISE",
+    "result": "anvil_crude",
+    "id_suffix": "forged",
+    "category": "CC_OTHER",
+    "subcategory": "CSC_OTHER_TOOLS",
+    "skill_used": "fabrication",
+    "difficulty": 5,
+    "time": "12 h",
+    "book_learn": [ [ "textbook_fabrication", 5 ], [ "manual_fabrication", 5 ] ],
+    "//": "Traditional forging method - hammer welding multiple steel pieces together to form a solid anvil. Very labor intensive but doesn't require casting.",
+    "using": [ [ "blacksmithing_standard", 12 ] ],
+    "qualities": [ { "id": "CHISEL", "level": 3 }, { "id": "GRIND", "level": 2 } ],
+    "proficiencies": [
+      { "proficiency": "prof_metalworking", "required": true },
+      { "proficiency": "prof_blacksmithing", "required": true },
+      { "proficiency": "prof_toolsmithing" }
+    ],
+    "components": [ [ [ "steel_lump_any", 3, "LIST" ], [ "steel_chunk_any", 12, "LIST" ] ] ]
+  },
+  {
+    "type": "recipe",
     "activity_level": "MODERATE_EXERCISE",
     "result": "anvil_scavenged",
     "category": "CC_OTHER",
