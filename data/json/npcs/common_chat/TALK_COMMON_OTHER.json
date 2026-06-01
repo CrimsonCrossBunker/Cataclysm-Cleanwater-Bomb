@@ -546,7 +546,7 @@
       {
         "text": "What, this?  It's not the same one, you are mistaken.",
         "condition": "u_has_stolen_item",
-        "trial": { "type": "LIE", "difficulty": 25, "mod": [ [ "TRUST", 3 ]] },
+        "trial": { "type": "LIE", "difficulty": 25, "mod": [ [ "TRUST", 3 ] ] },
         "success": { "topic": "TALK_DONE", "effect": "remove_stolen_status" },
         "failure": { "topic": "TALK_DISALLOW_KEEP_ITEM", "opinion": { "trust": -3, "value": -1, "anger": 2 } }
       },
