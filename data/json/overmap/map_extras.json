@@ -714,6 +714,19 @@
     "flags": [ "MAN_MADE", "CLASSIC" ]
   },
   {
+    "id": "mx_city_trap",
+    "type": "map_extra",
+    "//CCB": "撤销 PR #86231 — 恢复刀片陷阱地图元素",
+    "name": { "str": "Zombie Trap" },
+    "description": "Someone put up a trap against zombies here.",
+    "generator": { "generator_method": "update_mapgen", "generator_id": "mx_city_trap" },
+    "sym": "I",
+    "color": "green",
+    "autonote_visibility": "details",
+    "min_max_zlevel": [ 0, 0 ],
+    "flags": [ "MAN_MADE", "CLASSIC" ]
+  },
+  {
     "id": "mx_laststand",
     "type": "map_extra",
     "name": { "str": "Last Stand" },

@@ -1,6 +1,7 @@
 [
   {
     "type": "climbing_aid",
+    "//CCB": "撤销 PR #86581 — 恢复僵尸尸体的实用性",
     "id": "null",
     "//": "SPECIAL, DO NOT REMOVE. This is a sentinel value only used for the absence of data.",
     "down": {
@@ -95,7 +96,7 @@
   {
     "type": "climbing_aid",
     "id": "furn_CLIMBABLE",
-    "//": "eg: fences",
+    "//": "eg: fences, downspouts",
     "copy-from": "generic_improvised",
     "down": { "menu_text": "Climb down %s here.", "confirm_text": "Climb down %s?", "msg_after": "You climb down." },
     "condition": { "type": "ter_furn", "flag": "CLIMBABLE" }

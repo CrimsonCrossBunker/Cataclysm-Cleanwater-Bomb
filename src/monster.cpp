@@ -137,7 +137,7 @@ static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_photophobia( "photophobia" );
 static const efftype_id effect_poison( "poison" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
-static const efftype_id effect_revived_marker( "revived_marker" );
+// Cleanwater: 撤销 PR #86067 — 删除 revived_marker 声明
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_run( "run" );
 static const efftype_id effect_spooked( "spooked" );
@@ -3065,8 +3065,8 @@ void monster::die( map *here, Creature *nkiller )
             ch = get_killer()->get_summoner()->as_character();
         }
         if( !is_hallucination() && ch != nullptr ) {
-            // Revived creatures never grant any kill xp.
-            const int kill_xp = has_effect( effect_revived_marker ) ? 0 : compute_kill_xp( type->id );
+            // Cleanwater: 撤销 PR #86067 — 恢复无条件击杀经验
+            const int kill_xp = compute_kill_xp( type->id );
             cata::event e = cata::event::make<event_type::character_kills_monster>( ch->getID(), type->id,
                             kill_xp );
             get_event_bus().send_with_talker( ch, this, e );
@@ -3147,11 +3147,7 @@ void monster::die( map *here, Creature *nkiller )
             death_spell.cast_all_effects( *this, pos_bub() );              // ditto.
         }
     }
-
-    // This is special-cased "death guilt" for human "monsters". They apply full murder penalties, it's quite a bit different to kill a living human than to re-kill the corpse of a child.
-    if( type->has_flag( mon_flag_GUILT_HUMAN ) && get_killer() == &get_player_character() ) {
-        get_player_character().apply_murder_penalties( this );
-    }
+    // Cleanwater: 撤销 PR #84242 — 移除人类怪物强制谋杀惩罚
 
     if( type->mdeath_effect.eoc.has_value() ) {
         //Not a hallucination, go process the death effects.
@@ -4045,26 +4041,8 @@ void monster::hear_sound( const tripoint_bub_ms &source, const int vol, const in
         return;
     }
 
-    // Kind of nasty, but this prevents zombies from being attracted to collapsing on-fire buildings.
-    // The rationale for this is simple: Without it, one burning building would wipe out every zed in several blocks. So how did any of them survive the riots?
-    bool probably_a_fire = false;
-    map &here = get_map();
-    for( const tripoint_bub_ms &pt : here.points_in_radius( source, 1, 1 ) ) {
-        const field_entry *fire_fld = here.get_field( pt, fd_fire );
-        // Only large, uncontained fires cause sounds to be ignored.
-        if( fire_fld && fire_fld->get_field_intensity() > 1 &&
-            !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_FIRE_CONTAINER, pt ) ) {
-            probably_a_fire = true;
-            break;
-        }
-    }
-
-    int tmp_provocative = !probably_a_fire && ( provocative || volume >= normal_roll( 30, 5 ) );
-
-    // Not interesting sound, nothing to do here
-    if( !tmp_provocative ) {
-        return;
-    }
+    // Cleanwater: 撤销 PR #83963 — 僵尸重新受火焰声音吸引
+    int tmp_provocative = provocative || volume >= normal_roll( 30, 5 );
     // already following a more interesting sound,
     // so 50% will try to stick to it, and 50% will move in direction of a new sound
     if( provocative_sound && wandf > 0 && rng( 0, 1 ) ) {

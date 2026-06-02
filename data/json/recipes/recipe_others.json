@@ -1,6 +1,7 @@
 [
   {
     "type": "recipe",
+    "//CCB": "撤销 PR #86581 — 恢复僵尸尸体的实用性",
     "activity_level": "NO_EXERCISE",
     "result": "concrete",
     "category": "CC_OTHER",
@@ -2174,7 +2175,7 @@
       [ [ "water_clean", 2 ], [ "water", 2 ] ],
       [ [ "tanning_agent", 1, "LIST" ] ],
       [ [ "salt_water", 2 ], [ "saline", 10 ], [ "salt", 10 ] ],
-      [ [ "edible_tallow", 2, "LIST" ] ],
+      [ [ "edible_tallow", 2, "LIST" ], [ "tallow_tainted", 1 ] ],
       [ [ "cured_hide", 6 ] ]
     ]
   },
@@ -2215,7 +2216,7 @@
       [ [ "water_clean", 2 ], [ "water", 2 ] ],
       [ [ "tanning_agent", 1, "LIST" ] ],
       [ [ "salt_water", 2 ], [ "saline", 10 ], [ "salt", 10 ] ],
-      [ [ "edible_tallow", 2, "LIST" ] ],
+      [ [ "edible_tallow", 2, "LIST" ], [ "tallow_tainted", 1 ] ],
       [ [ "cured_pelt", 6 ] ]
     ]
   },

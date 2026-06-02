@@ -1,6 +1,7 @@
 [
   {
     "type": "MIGRATION",
+    "//CCB": "撤销 PR #86581 #86067 #86231 — 移除迁移条目，恢复原始物品",
     "id": "shot_he",
     "replace": "shot_dragon"
   },
@@ -298,11 +299,6 @@
     "type": "MIGRATION",
     "id": "bren2_762mag30",
     "replace": "akmag30"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "blade_trap",
-    "replace": "motor_small"
   },
   {
     "type": "MIGRATION",
@@ -827,16 +823,6 @@
     "type": "MIGRATION",
     "id": "xs_gloves_lsurvivor",
     "replace": "xs_gloves_survivor"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "tallow_tainted",
-    "replace": "tallow"
-  },
-  {
-    "type": "MIGRATION",
-    "id": "dry_meat_tainted",
-    "replace": "meat_tainted"
   },
   {
     "type": "MIGRATION",

@@ -2,6 +2,7 @@
   {
     "id": "batter",
     "type": "requirement",
+    "//CCB": "撤销 PR #86581 — 恢复僵尸尸体的实用性",
     "//": "Bread type food usable as batter for frying.",
     "components": [
       [
@@ -976,7 +977,7 @@
     "id": "any_fat",
     "type": "requirement",
     "//": "Any type of raw fat.",
-    "components": [ [ [ "edible_fat", 1, "LIST" ] ] ]
+    "components": [ [ [ "edible_fat", 1, "LIST" ], [ "fat_tainted", 1 ] ] ]
   },
   {
     "id": "edible_fat",
@@ -1002,7 +1003,7 @@
     "id": "any_tallow",
     "type": "requirement",
     "//": "Any type of tallow.",
-    "components": [ [ [ "edible_tallow", 1, "LIST" ] ] ]
+    "components": [ [ [ "edible_tallow", 1, "LIST" ], [ "tallow_tainted", 1 ] ] ]
   },
   {
     "id": "edible_blood",

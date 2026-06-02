@@ -1,6 +1,7 @@
 [
   {
     "type": "ITEM",
+    "//CCB": "撤销 PR #86581 — 恢复僵尸尸体的实用性",
     "subtypes": [ "COMESTIBLE" ],
     "id": "sausage_raw",
     "name": { "str": "raw sausage" },
@@ -1719,6 +1720,26 @@
     "material": [ "veggy", "flesh" ],
     "fun": 7,
     "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ] ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "dry_meat_tainted",
+    "name": { "str_sp": "dehydrated tainted meat" },
+    "copy-from": "meat_tainted",
+    "weight": "85 g",
+    "color": "red",
+    "spoils_in": "360 days",
+    "use_action": [ "POISON" ],
+    "quench": -3,
+    "description": "Pieces of poisonous meat that have been dried to prevent them from rotting away.  They're still unsafe to eat.",
+    "price": "0 cent",
+    "price_postapoc": "10 cent",
+    "material": [ "flesh" ],
+    "volume": "125 ml",
+    "flags": [ "EDIBLE_FROZEN" ],
+    "fun": -7,
+    "vitamins": [ [ "meat_allergen", 1 ] ]
   },
   {
     "type": "ITEM",

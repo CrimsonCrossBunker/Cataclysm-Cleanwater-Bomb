@@ -744,7 +744,7 @@ bool trapfunc::shotgun( const tripoint_bub_ms &p, Creature *c, item * )
     return true;
 }
 
-// Remove after 0.J
+// Cleanwater: 撤销 PR #86231 — 恢复刀片陷阱功能
 bool trapfunc::blade( const tripoint_bub_ms &, Creature *c, item * )
 {
     map &here = get_map();
