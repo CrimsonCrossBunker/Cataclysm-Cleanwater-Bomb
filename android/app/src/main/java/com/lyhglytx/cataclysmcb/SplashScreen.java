@@ -28,7 +28,7 @@ import android.os.*;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
-import com.cleverraven.cataclysmdda.CataclysmDDA_Helpers;
+import com.lyhglytx.cataclysmcb.CataclysmDDA_Helpers;
 
 public class SplashScreen extends Activity {
     private static final String TAG = "Splash";
