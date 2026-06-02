@@ -110,8 +110,8 @@ std::optional<zone_type_id> item_category::zone() const
 
 std::optional<zone_type_id> item_category::priority_zone( const item &it ) const
 {
-    for( const zone_priority_data &zone_dat : zone_priority_ ) {
-        if( zone_dat.filthy ) {
+for( const zone_priority_data &zone_dat : zone_priority_ ) {
+    if( zone_dat.filthy ) {
             if( it.is_filthy() ) {
                 return zone_dat.id;
 

@@ -13,11 +13,11 @@
 #include "point.h"
 
 #if defined(USE_SDL3)
-#   include <SDL3_image/SDL_image.h>
+    #include <SDL3_image/SDL_image.h>
 #elif defined(_MSC_VER) && defined(USE_VCPKG)
-#   include <SDL2/SDL_image.h>
+    #include <SDL2/SDL_image.h>
 #else
-#   include <SDL_image.h>
+    #include <SDL_image.h>
 #endif
 
 #define dbg(x) DebugLog((x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "

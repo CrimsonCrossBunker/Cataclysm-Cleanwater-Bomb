@@ -445,7 +445,7 @@ bool teleport::teleport_vehicle( vehicle &veh, const tripoint_abs_ms &dp, bool f
     }
     std::set<int> smzs;
     bool found = false;
-    for( submap *&smap : here.grid ) {
+    for( submap * &smap : here.grid ) {
         for( size_t i = 0; i < smap->vehicles.size(); i++ ) {
             if( smap->vehicles[i].get() == &veh ) {
                 src_submap = smap;

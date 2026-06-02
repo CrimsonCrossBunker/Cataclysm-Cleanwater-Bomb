@@ -271,13 +271,13 @@ void enchant_cache::save_add_and_multiply( JsonOut &jsout, const std::string_vie
         const std::map<TKey, double> &mult_map ) const
 {
     if( add_map.empty() && mult_map.empty() ) {
-        return;
-    }
-    jsout.member( member_key );
-    jsout.start_array();
-    std::set<TKey> values_add_multiply;
-    for( auto& [ type, add ] : add_map ) {
-        if( float_equals( add, 0.0 ) ) {
+    return;
+}
+jsout.member( member_key );
+jsout.start_array();
+std::set<TKey> values_add_multiply;
+for( auto& [ type, add ] : add_map ) {
+    if( float_equals( add, 0.0 ) ) {
             continue;
         }
         jsout.start_object();
@@ -290,8 +290,8 @@ void enchant_cache::save_add_and_multiply( JsonOut &jsout, const std::string_vie
         }
         jsout.end_object();
     }
-    for( auto& [ type, multiply ] : mult_map ) {
-        if( float_equals( multiply, 0.0 ) ||
+for( auto& [ type, multiply ] : mult_map ) {
+    if( float_equals( multiply, 0.0 ) ||
             values_add_multiply.find( type ) != values_add_multiply.end() ) {
             continue;
         }
@@ -342,18 +342,18 @@ enchantment_id enchantment::load_inline_enchantment( const JsonValue &jv,
 bool enchantment::is_active( const Character &guy, const item &parent ) const
 {
     if( !guy.has_item( parent ) ) {
-        return false;
-    }
+    return false;
+}
 
-    if( active_conditions.first == has::HELD &&
+if( active_conditions.first == has::HELD &&
         active_conditions.second == condition::ALWAYS ) {
-        return true;
-    }
+    return true;
+}
 
-    if( !( active_conditions.first == has::HELD ||
+if( !( active_conditions.first == has::HELD ||
            ( active_conditions.first == has::WIELD && guy.is_wielding( parent ) ) ||
-           ( active_conditions.first == has::WORN &&
-             ( guy.is_worn( parent ) || guy.is_worn_module( parent ) ) ) ) ) {
+               ( active_conditions.first == has::WORN &&
+                 ( guy.is_worn( parent ) || guy.is_worn_module( parent ) ) ) ) ) {
         return false;
     }
 
@@ -421,9 +421,9 @@ bool enchantment::is_active( const vehicle &veh, const bool active ) const
 bool enchantment::is_monster_relevant() const
 {
     // Check add values.
-    for( const std::pair<const enchant_vals::mod, dbl_or_var> &pair_values :
-         values_add ) {
-        if( pair_values.first == enchant_vals::mod::ARMOR_ALL ||
+for( const std::pair<const enchant_vals::mod, dbl_or_var> &pair_values :
+    values_add ) {
+    if( pair_values.first == enchant_vals::mod::ARMOR_ALL ||
             pair_values.first == enchant_vals::mod::REGEN_HP ||
             pair_values.first == enchant_vals::mod::VISION_RANGE ||
             pair_values.first == enchant_vals::mod::RANGE_DODGE ||
@@ -435,9 +435,9 @@ bool enchantment::is_monster_relevant() const
     }
 
     // Check mult values.
-    for( const std::pair<const enchant_vals::mod, dbl_or_var> &pair_values :
+for( const std::pair<const enchant_vals::mod, dbl_or_var> &pair_values :
          values_multiply ) {
-        if( pair_values.first == enchant_vals::mod::ARMOR_ALL ||
+    if( pair_values.first == enchant_vals::mod::ARMOR_ALL ||
             pair_values.first == enchant_vals::mod::REGEN_HP ||
             pair_values.first == enchant_vals::mod::VISION_RANGE ||
             pair_values.first == enchant_vals::mod::RANGE_DODGE ||
@@ -454,7 +454,7 @@ bool enchantment::is_monster_relevant() const
     }
 
     if( !damage_values_add.empty() || !damage_values_multiply.empty() ||
-        !armor_values_add.empty() || !armor_values_multiply.empty() ) {
+            !armor_values_add.empty() || !armor_values_multiply.empty() ) {
         return true;
     }
 
@@ -465,9 +465,9 @@ bool enchantment::is_monster_relevant() const
 bool enchantment::is_vehicle_relevant() const
 {
     // Check add values.
-    for( const std::pair<const enchant_vals::mod, dbl_or_var> &pair_values :
-         values_add ) {
-        if( pair_values.first == enchant_vals::mod::TOTAL_WEIGHT ||
+for( const std::pair<const enchant_vals::mod, dbl_or_var> &pair_values :
+    values_add ) {
+    if( pair_values.first == enchant_vals::mod::TOTAL_WEIGHT ||
             pair_values.first == enchant_vals::mod::FUEL_USAGE ||
             pair_values.first == enchant_vals::mod::TURNING_DIFFICULTY ) {
             return true;
@@ -475,9 +475,9 @@ bool enchantment::is_vehicle_relevant() const
     }
 
     // Check mult values.
-    for( const std::pair<const enchant_vals::mod, dbl_or_var> &pair_values :
+for( const std::pair<const enchant_vals::mod, dbl_or_var> &pair_values :
          values_multiply ) {
-        if( pair_values.first == enchant_vals::mod::TOTAL_WEIGHT ||
+    if( pair_values.first == enchant_vals::mod::TOTAL_WEIGHT ||
             pair_values.first == enchant_vals::mod::FUEL_USAGE ||
             pair_values.first == enchant_vals::mod::TURNING_DIFFICULTY ) {
             return true;
@@ -701,19 +701,19 @@ void enchant_cache::serialize( JsonOut &jsout ) const
     jsout.member( "has", io::enum_to_string<enchantment::has>( active_conditions.first ) );
     jsout.member( "condition", io::enum_to_string<enchantment::condition>( active_conditions.second ) );
     if( emitter ) {
-        jsout.member( "emitter", emitter );
+    jsout.member( "emitter", emitter );
     }
 
     if( !hit_you_effect.empty() ) {
-        jsout.member( "hit_you_effect", hit_you_effect );
+    jsout.member( "hit_you_effect", hit_you_effect );
     }
 
     if( !hit_me_effect.empty() ) {
-        jsout.member( "hit_me_effect", hit_me_effect );
+    jsout.member( "hit_me_effect", hit_me_effect );
     }
 
     if( !intermittent_activation.empty() ) {
-        jsout.member( "intermittent_activation" );
+    jsout.member( "intermittent_activation" );
         jsout.start_object();
         jsout.member( "effects" );
         jsout.start_array();
@@ -729,7 +729,7 @@ void enchant_cache::serialize( JsonOut &jsout ) const
     }
 
     if( !ench_effects.empty() ) {
-        jsout.member( "ench_effects" );
+    jsout.member( "ench_effects" );
         jsout.start_array();
         for( const std::pair<const efftype_id, int> &eff : ench_effects ) {
             jsout.start_object();
@@ -744,7 +744,7 @@ void enchant_cache::serialize( JsonOut &jsout ) const
     jsout.member( "mutations", mutations );
 
     if( !values_add.empty() || !values_multiply.empty() ) {
-        jsout.member( "values" );
+    jsout.member( "values" );
         jsout.start_array();
         std::set<enchant_vals::mod> values_add_multiply;
         for( const auto& [ enchant, add ] : values_add ) {
@@ -791,8 +791,8 @@ void enchant_cache::serialize( JsonOut &jsout ) const
 
     jsout.member( "special_vision" );
     jsout.start_array();
-    for( const special_vision &struc : special_vision_vector ) {
-        jsout.start_object();
+for( const special_vision &struc : special_vision_vector ) {
+    jsout.start_object();
         jsout.member( "distance", struc.range );
         jsout.member( "descriptions" );
         jsout.start_array();
@@ -1105,23 +1105,23 @@ enchantment::special_vision enchantment::get_vision( const const_dialogue &d ) c
     // `"special_vision" { "id": "nether_vision", "bonus": 20 }`
 
     if( special_vision_vector.empty() ) {
-        return {};
-    }
+    return {};
+}
 
-    const double distance = rl_dist_exact( d.const_actor( true )->pos_abs(),
-                                           d.const_actor( false )->pos_abs() );
+const double distance = rl_dist_exact( d.const_actor( true )->pos_abs(),
+                                       d.const_actor( false )->pos_abs() );
 
-    // first iterate over structs that has ignores_aiming_cone true
-    // to prevent cata_tiles::draw_critter_at() from picking texture
-    // that cannot be rendered because it's behind you while you are aiming
-    for( const special_vision &struc : special_vision_vector ) {
-        if( struc.ignores_aiming_cone && struc.range.evaluate( d ) >= distance &&  struc.condition( d ) ) {
+// first iterate over structs that has ignores_aiming_cone true
+// to prevent cata_tiles::draw_critter_at() from picking texture
+// that cannot be rendered because it's behind you while you are aiming
+for( const special_vision &struc : special_vision_vector ) {
+    if( struc.ignores_aiming_cone && struc.range.evaluate( d ) >= distance &&  struc.condition( d ) ) {
             return struc;
         }
     }
 
-    for( const special_vision &struc : special_vision_vector ) {
-        if( !struc.ignores_aiming_cone && struc.range.evaluate( d ) >= distance &&  struc.condition( d ) ) {
+for( const special_vision &struc : special_vision_vector ) {
+    if( !struc.ignores_aiming_cone && struc.range.evaluate( d ) >= distance &&  struc.condition( d ) ) {
             return struc;
         }
     }
@@ -1139,12 +1139,12 @@ enchantment::special_vision_descriptions enchantment::get_vision_description_str
     const enchantment::special_vision &vision_struct, const_dialogue &d ) const
 {
     if( vision_struct.is_empty( d ) ) {
-        return {};
-    }
+    return {};
+}
 
-    for( const enchantment::special_vision_descriptions &desc :
+for( const enchantment::special_vision_descriptions &desc :
          vision_struct.special_vision_descriptions_vector ) {
-        if( desc.condition( d ) ) {
+    if( desc.condition( d ) ) {
             return desc;
         }
     }
@@ -1164,7 +1164,7 @@ double enchant_cache::get_skill_value_add( const skill_id &value ) const
 int enchant_cache::get_encumbrance_add( const bodypart_str_id &value ) const
 {
     return get_value<bodypart_str_id>( value,
-                                       encumbrance_values_add ) + get_value<bodypart_str_id>( body_part_all, encumbrance_values_add );
+           encumbrance_values_add ) + get_value<bodypart_str_id>( body_part_all, encumbrance_values_add );
 }
 
 int enchant_cache::get_damage_add( const damage_type_id &value ) const
@@ -1195,8 +1195,8 @@ double enchant_cache::get_skill_value_multiply( const skill_id &value ) const
 double enchant_cache::get_encumbrance_multiply( const bodypart_str_id &value ) const
 {
     return get_value<bodypart_str_id>( value,
-                                       encumbrance_values_multiply ) + get_value<bodypart_str_id>( body_part_all,
-                                               encumbrance_values_multiply );
+           encumbrance_values_multiply ) + get_value<bodypart_str_id>( body_part_all,
+    encumbrance_values_multiply );
 }
 
 double enchant_cache::get_damage_multiply( const damage_type_id &value ) const
@@ -1217,20 +1217,20 @@ double enchant_cache::get_extra_damage_multiply( const damage_type_id &value ) c
 enchant_cache::special_vision enchant_cache::get_vision( const const_dialogue &d ) const
 {
     if( special_vision_vector.empty() ) {
-        return {};
-    }
+    return {};
+}
 
-    const double distance = rl_dist_exact( d.const_actor( true )->pos_abs(),
-                                           d.const_actor( false )->pos_abs() );
+const double distance = rl_dist_exact( d.const_actor( true )->pos_abs(),
+                                       d.const_actor( false )->pos_abs() );
 
-    for( const special_vision &struc : special_vision_vector ) {
-        if( struc.ignores_aiming_cone && struc.range >= distance && struc.condition( d ) ) {
+for( const special_vision &struc : special_vision_vector ) {
+    if( struc.ignores_aiming_cone && struc.range >= distance && struc.condition( d ) ) {
             return struc;
         }
     }
 
-    for( const special_vision &struc : special_vision_vector ) {
-        if( !struc.ignores_aiming_cone && struc.range >= distance && struc.condition( d ) ) {
+for( const special_vision &struc : special_vision_vector ) {
+    if( !struc.ignores_aiming_cone && struc.range >= distance && struc.condition( d ) ) {
             return struc;
         }
     }
@@ -1247,12 +1247,12 @@ enchant_cache::special_vision_descriptions enchant_cache::get_vision_description
     const enchant_cache::special_vision &vision_struct, const_dialogue &d ) const
 {
     if( vision_struct.is_empty() ) {
-        return {};
-    }
+    return {};
+}
 
-    for( const enchant_cache::special_vision_descriptions &desc :
+for( const enchant_cache::special_vision_descriptions &desc :
          vision_struct.special_vision_descriptions_vector ) {
-        if( desc.condition( d ) ) {
+    if( desc.condition( d ) ) {
             return desc;
         }
     }
@@ -1369,8 +1369,8 @@ bool enchantment::modifies_bodyparts() const
 body_part_set enchantment::modify_bodyparts( const body_part_set &unmodified ) const
 {
     body_part_set modified( unmodified );
-    for( const bodypart_changes &changes : modified_bodyparts ) {
-        if( !changes.gain.is_empty() ) {
+for( const bodypart_changes &changes : modified_bodyparts ) {
+    if( !changes.gain.is_empty() ) {
             modified.set( changes.gain );
         }
         if( !changes.lose.is_empty() ) {
@@ -1384,36 +1384,36 @@ void enchant_cache::activate_passive( Character &guy ) const
 {
     // since it's a modifier, need to remove original value from the math
     guy.mod_str_bonus( modify_value( enchant_vals::mod::STRENGTH,
-                                     guy.get_str_base() ) - guy.get_str_base() );
+    guy.get_str_base() ) - guy.get_str_base() );
 
     guy.mod_dex_bonus( modify_value( enchant_vals::mod::DEXTERITY,
-                                     guy.get_dex_base() ) - guy.get_dex_base() );
+    guy.get_dex_base() ) - guy.get_dex_base() );
 
     guy.mod_per_bonus( modify_value( enchant_vals::mod::PERCEPTION,
-                                     guy.get_per_base() ) - guy.get_per_base() );
+    guy.get_per_base() ) - guy.get_per_base() );
 
     guy.mod_int_bonus( modify_value( enchant_vals::mod::INTELLIGENCE,
-                                     guy.get_int_base() ) - guy.get_int_base() );
+    guy.get_int_base() ) - guy.get_int_base() );
 
     guy.mod_num_dodges_bonus( modify_value( enchant_vals::mod::BONUS_DODGE,
-                                            guy.get_num_dodges_base() ) - guy.get_num_dodges_base() );
+    guy.get_num_dodges_base() ) - guy.get_num_dodges_base() );
 
     guy.mod_num_blocks_bonus( modify_value( enchant_vals::mod::BONUS_BLOCK,
-                                            guy.get_num_blocks_base() ) - guy.get_num_blocks_base() );
+    guy.get_num_blocks_base() ) - guy.get_num_blocks_base() );
 
     guy.mod_free_dodges( modify_value( enchant_vals::mod::FREE_DODGES,
-                                       guy.get_num_free_dodges() ) - guy.get_num_free_dodges() );
+    guy.get_num_free_dodges() ) - guy.get_num_free_dodges() );
 
     if( emitter ) {
-        get_map().emit_field( guy.pos_bub(), *emitter );
+    get_map().emit_field( guy.pos_bub(), *emitter );
     }
-    for( const std::pair<const efftype_id, int> &eff : ench_effects ) {
-        guy.add_effect( eff.first, 1_seconds, false, eff.second );
+for( const std::pair<const efftype_id, int> &eff : ench_effects ) {
+    guy.add_effect( eff.first, 1_seconds, false, eff.second );
     }
-    for( const std::pair<const time_duration, std::vector<fake_spell>> &activation :
+for( const std::pair<const time_duration, std::vector<fake_spell>> &activation :
          intermittent_activation ) {
-        // a random approximation!
-        if( one_in( to_seconds<int>( activation.first ) ) ) {
+    // a random approximation!
+    if( one_in( to_seconds<int>( activation.first ) ) ) {
             for( const fake_spell &fake : activation.second ) {
                 fake.get_spell( guy, 0 ).cast_all_effects( guy, guy.pos_bub() );
             }
@@ -1423,29 +1423,29 @@ void enchant_cache::activate_passive( Character &guy ) const
 
 void enchant_cache::cast_hit_you( Creature &caster, const Creature &target ) const
 {
-    for( const fake_spell &sp : hit_you_effect ) {
-        cast_enchantment_spell( caster, &target, sp );
+for( const fake_spell &sp : hit_you_effect ) {
+    cast_enchantment_spell( caster, &target, sp );
     }
 }
 
 void enchant_cache::cast_hit_me( Creature &caster, const Creature *target ) const
 {
-    for( const fake_spell &sp : hit_me_effect ) {
-        cast_enchantment_spell( caster, target, sp );
+for( const fake_spell &sp : hit_me_effect ) {
+    cast_enchantment_spell( caster, target, sp );
     }
 }
 
 void enchant_cache::cast_hit_you( Character &caster, const Creature &target ) const
 {
-    for( const fake_spell &sp : hit_you_effect ) {
-        cast_enchantment_spell( caster, &target, sp );
+for( const fake_spell &sp : hit_you_effect ) {
+    cast_enchantment_spell( caster, &target, sp );
     }
 }
 
 void enchant_cache::cast_hit_me( Character &caster, const Creature *target ) const
 {
-    for( const fake_spell &sp : hit_me_effect ) {
-        cast_enchantment_spell( caster, target, sp );
+for( const fake_spell &sp : hit_me_effect ) {
+    cast_enchantment_spell( caster, target, sp );
     }
 }
 
@@ -1454,18 +1454,18 @@ void enchant_cache::cast_enchantment_spell( Creature &caster, const Creature *ta
 {
     // check the chances
     if( !one_in( sp.trigger_once_in ) ) {
-        return;
-    }
+    return;
+}
 
-    if( sp.self ) {
-        caster.add_msg_player_or_npc( m_good,
-                                      sp.trigger_message,
-                                      sp.npc_trigger_message,
-                                      caster.get_name() );
+if( sp.self ) {
+    caster.add_msg_player_or_npc( m_good,
+                                  sp.trigger_message,
+                                  sp.npc_trigger_message,
+                                  caster.get_name() );
         sp.get_spell( caster, sp.level ).cast_all_effects( caster, caster.pos_bub() );
     } else if( target != nullptr ) {
-        const Creature &trg_crtr = *target;
-        const spell &spell_lvl = sp.get_spell( caster, sp.level );
+    const Creature &trg_crtr = *target;
+    const spell &spell_lvl = sp.get_spell( caster, sp.level );
         if( !spell_lvl.is_valid_target( caster, trg_crtr.pos_bub() ) ||
             !spell_lvl.is_target_in_range( caster, trg_crtr.pos_bub() ) ) {
             return;

@@ -2080,7 +2080,7 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
     // Allows climbing monsters to move on terrain with movecost <= 0
     Creature *critter = get_creature_tracker().creature_at( destination, is_hallucination() );
     const std::vector<field_type_id> impassable_field_ids = here.get_impassable_field_type_ids_at(
-                destination );
+            destination );
 
     // Check for permanent blockers. Includes terrain, impassable fieldeffects, traps and other.
     if( !force && !can_move_to( destination ) ) {
@@ -2505,8 +2505,8 @@ void monster::stumble_base( const bool is_voluntary )
         // (Unless they can swim/are aquatic)
         // But let them wander OUT of water if they are there.
         const bool avoiding_stepping_into_water = avoid_water &&
-                here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest ) &&
-                !here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos_bub() );
+            here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest ) &&
+            !here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos_bub() );
 
 
         // If the stumble is voluntary (just moving around), don't step into water or known danger tiles

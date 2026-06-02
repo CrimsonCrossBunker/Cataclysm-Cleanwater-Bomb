@@ -18,7 +18,7 @@
 #include <string>
 
 #if defined(EMSCRIPTEN)
-#include <emscripten.h>
+    #include <emscripten.h>
 #endif
 
 #include "auto_pickup.h"

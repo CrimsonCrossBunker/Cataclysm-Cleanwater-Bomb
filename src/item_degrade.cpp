@@ -219,11 +219,11 @@ bool item::activation_success() const
 float item::damage_adjusted_melee_weapon_damage( float value, const damage_type_id &dt ) const
 {
     if( type->count_by_charges() ) {
-        return value; // count by charges items don't have partial damage
-    }
+    return value; // count by charges items don't have partial damage
+}
 
-    for( fault_id fault : faults ) {
-        for( const std::tuple<int, float, damage_type_id> &damage_mod : fault.obj().melee_damage_mod() ) {
+for( fault_id fault : faults ) {
+    for( const std::tuple<int, float, damage_type_id> &damage_mod : fault.obj().melee_damage_mod() ) {
             const damage_type_id dmg_type_of_fault = std::get<2>( damage_mod );
             if( dt == dmg_type_of_fault ) {
                 const int damage_added = std::get<0>( damage_mod );
@@ -239,19 +239,19 @@ float item::damage_adjusted_melee_weapon_damage( float value, const damage_type_
 float item::damage_adjusted_gun_damage( float value ) const
 {
     if( type->count_by_charges() ) {
-        return value; // count by charges items don't have partial damage
-    }
-    return value - 2 * std::max( 0, damage_level() - 1 );
+    return value; // count by charges items don't have partial damage
+}
+return value - 2 * std::max( 0, damage_level() - 1 );
 }
 
 float item::damage_adjusted_armor_resist( float value, const damage_type_id &dmg_type ) const
 {
     if( type->count_by_charges() ) {
-        return value; // count by charges items don't have partial damage
-    }
+    return value; // count by charges items don't have partial damage
+}
 
-    for( fault_id fault : faults ) {
-        for( const std::tuple<int, float, damage_type_id> &damage_mod : fault.obj().armor_mod() ) {
+for( fault_id fault : faults ) {
+    for( const std::tuple<int, float, damage_type_id> &damage_mod : fault.obj().armor_mod() ) {
             const damage_type_id dmg_type_of_fault = std::get<2>( damage_mod );
             if( dmg_type == dmg_type_of_fault ) {
                 const int damage_added = std::get<0>( damage_mod );
@@ -320,8 +320,8 @@ bool item::has_fault( const fault_id &fault ) const
 
 bool item::has_fault_of_type( const std::string &fault_type ) const
 {
-    for( const fault_id &f : faults ) {
-        if( f.obj().type() == fault_type ) {
+for( const fault_id &f : faults ) {
+    if( f.obj().type() == fault_type ) {
             return true;
         }
     }
@@ -330,8 +330,8 @@ bool item::has_fault_of_type( const std::string &fault_type ) const
 
 bool item::has_fault_flag( const std::string &searched_flag ) const
 {
-    for( const fault_id &fault : faults ) {
-        if( fault->has_flag( searched_flag ) ) {
+for( const fault_id &fault : faults ) {
+    if( fault->has_flag( searched_flag ) ) {
             return true;
         }
     }
@@ -428,15 +428,15 @@ void item::remove_single_fault_of_type( const std::string &fault_type )
 bool item::goes_bad() const
 {
     if( item_internal::goes_bad_cache_is_for( this ) ) {
-        return item_internal::goes_bad_cache_fetch();
+    return item_internal::goes_bad_cache_fetch();
     }
     if( has_flag( flag_PROCESSING ) ) {
-        return false;
-    }
-    if( is_corpse() ) {
-        // Corpses rot only if they are made of rotting materials
-        // They also only rot if they are not dormant
-        if( corpse->has_flag( mon_flag_DORMANT ) ) {
+    return false;
+}
+if( is_corpse() ) {
+    // Corpses rot only if they are made of rotting materials
+    // They also only rot if they are not dormant
+    if( corpse->has_flag( mon_flag_DORMANT ) ) {
             return false;
         }
         return made_of_any( materials::get_rotting() );
@@ -447,7 +447,7 @@ bool item::goes_bad() const
 time_duration item::get_shelf_life() const
 {
     if( goes_bad() ) {
-        if( is_comestible() ) {
+    if( is_comestible() ) {
             return get_comestible()->spoils;
         } else if( is_corpse() ) {
             return 24_hours;
@@ -459,7 +459,7 @@ time_duration item::get_shelf_life() const
 double item::get_relative_rot() const
 {
     if( goes_bad() ) {
-        return rot / get_shelf_life();
+    return rot / get_shelf_life();
     }
     return 0;
 }
@@ -652,8 +652,8 @@ bool item::process_decay_in_air( map &here, Character *carrier, const tripoint_b
 }
 
 #if defined(_MSC_VER)
-// Deal with MSVC compiler bug (#17791, #17958)
-#pragma optimize( "", off )
+    // Deal with MSVC compiler bug (#17791, #17958)
+    #pragma optimize( "", off )
 #endif
 
 bool item::damage_type_can_damage_items( const damage_type_id &dmg_type ) const
@@ -667,15 +667,15 @@ float item::resist( const damage_type_id &dmg_type, const bool to_self,
                     const int resist_value ) const
 {
     if( is_null() ) {
-        return 0.0f;
-    }
+    return 0.0f;
+}
 
-    if( dmg_type.is_null() ) {
-        return 0.0f;
-    }
+if( dmg_type.is_null() ) {
+    return 0.0f;
+}
 
-    if( !dmg_type.is_valid() ) {
-        debugmsg( "Invalid damage type: %d", dmg_type.c_str() );
+if( !dmg_type.is_valid() ) {
+    debugmsg( "Invalid damage type: %d", dmg_type.c_str() );
         return 0.0f;
     }
 
@@ -683,7 +683,7 @@ float item::resist( const damage_type_id &dmg_type, const bool to_self,
     // Acid/fire immunity would be handled in _environmental_resist, but there are more
     // dmg types that do not affect items such as PURE/COLD etc..
     if( to_self && !damage_type_can_damage_items( dmg_type ) ) {
-        return std::numeric_limits<float>::max();
+    return std::numeric_limits<float>::max();
     }
 
     const bool bp_null = bp == bodypart_target();
@@ -702,7 +702,7 @@ float item::_resist( const damage_type_id &dmg_type, bool to_self, int resist_va
                      const float avg_thickness ) const
 {
     if( dmg_type->env ) {
-        return _environmental_resist( dmg_type, to_self, resist_value, bp_null, armor_mats );
+    return _environmental_resist( dmg_type, to_self, resist_value, bp_null, armor_mats );
     }
 
     std::optional<std::pair<damage_type_id, float>> derived;
@@ -716,8 +716,8 @@ float item::_resist( const damage_type_id &dmg_type, bool to_self, int resist_va
     const float damage_scale = damage_adjusted_armor_resist( 1.0f, dmg_type );
 
     if( !bp_null ) {
-        // If we have armour portion materials for this body part, use that instead
-        if( !armor_mats.empty() ) {
+    // If we have armour portion materials for this body part, use that instead
+    if( !armor_mats.empty() ) {
             for( const part_material *m : armor_mats ) {
                 // only count the material if it's hit
 
@@ -764,8 +764,8 @@ float item::_environmental_resist( const damage_type_id &dmg_type, const bool to
                                    const std::vector<const part_material *> &armor_mats ) const
 {
     if( to_self ) {
-        // Currently no items are damaged by acid, and fire is handled elsewhere
-        return std::numeric_limits<float>::max();
+    // Currently no items are damaged by acid, and fire is handled elsewhere
+    return std::numeric_limits<float>::max();
     }
 
     std::optional<std::pair<damage_type_id, float>> derived;
@@ -777,8 +777,8 @@ float item::_environmental_resist( const damage_type_id &dmg_type, const bool to
     float mod = get_clothing_mod_val_for_damage_type( dmg_type );
 
     if( !bp_null ) {
-        // If we have armour portion materials for this body part, use that instead
-        if( !armor_mats.empty() ) {
+    // If we have armour portion materials for this body part, use that instead
+    if( !armor_mats.empty() ) {
             for( const part_material *m : armor_mats ) {
                 float tmp_add = 0.f;
                 if( derived.has_value() && !m->id->has_dedicated_resist( dmg_type ) ) {
@@ -816,15 +816,15 @@ float item::_environmental_resist( const damage_type_id &dmg_type, const bool to
 
     const int env = get_env_resist( base_env_resist );
     if( env < 10 ) {
-        // Low env protection means it doesn't prevent acid seeping in.
-        resist *= env / 10.0f;
-    }
+    // Low env protection means it doesn't prevent acid seeping in.
+    resist *= env / 10.0f;
+}
 
-    return resist + mod;
+return resist + mod;
 }
 
 #if defined(_MSC_VER)
-#pragma optimize( "", on )
+    #pragma optimize( "", on )
 #endif
 
 int item::max_damage() const
@@ -1257,10 +1257,10 @@ bool item::flammable( int threshold ) const
 bool item::will_explode_in_fire() const
 {
     if( type->explode_in_fire ) {
-        return true;
-    }
+    return true;
+}
 
-    if( type->ammo && ( type->ammo->special_cookoff || type->ammo->cookoff ) ) {
+if( type->ammo && ( type->ammo->special_cookoff || type->ammo->cookoff ) ) {
         return true;
     }
 
@@ -1270,7 +1270,7 @@ bool item::will_explode_in_fire() const
 bool item::has_rotten_away() const
 {
     if( is_corpse() && !can_revive() ) {
-        return get_rot() > 10_days;
+    return get_rot() > 10_days;
     } else {
         return get_relative_rot() > 2.0;
     }

@@ -824,8 +824,8 @@ void player_settings::refresh_map_items( cache &map_items ) const
 
 void rule_list::refresh_map_items( cache &map_items ) const
 {
-    for( const rule &elem : *this ) {
-        if( elem.sRule.empty() || !elem.bActive ) {
+for( const rule &elem : *this ) {
+    if( elem.sRule.empty() || !elem.bActive ) {
             continue;
         }
 
@@ -859,7 +859,7 @@ void rule_list::refresh_map_items( cache &map_items ) const
 rule_state base_settings::check_item( const std::string &sItemName ) const
 {
     if( !map_items.ready ) {
-        recreate();
+    recreate();
     }
 
     const auto iter = map_items.find( sItemName );
@@ -943,8 +943,8 @@ void rule::serialize( JsonOut &jsout ) const
 void rule_list::serialize( JsonOut &jsout ) const
 {
     jsout.start_array();
-    for( const rule &elem : *this ) {
-        elem.serialize( jsout );
+for( const rule &elem : *this ) {
+    elem.serialize( jsout );
     }
     jsout.end_array();
 }

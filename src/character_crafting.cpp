@@ -61,16 +61,16 @@ bool Character::has_recipe_requirements( const recipe &rec ) const
 bool Character::can_decomp_learn( const recipe &rec ) const
 {
     return !rec.learn_by_disassembly.empty() &&
-           meets_skill_requirements( rec.learn_by_disassembly );
+    meets_skill_requirements( rec.learn_by_disassembly );
 }
 
 bool Character::studied_all_recipes( const itype &book ) const
 {
     if( !book.book ) {
-        return true;
-    }
-    for( const islot_book::recipe_with_description_t &elem : book.book->recipes ) {
-        if( !knows_recipe( elem.recipe ) ) {
+    return true;
+}
+for( const islot_book::recipe_with_description_t &elem : book.book->recipes ) {
+    if( !knows_recipe( elem.recipe ) ) {
             return false;
         }
     }
@@ -80,7 +80,7 @@ const recipe_subset &Character::get_learned_recipes() const
 {
     // Cache validity check
     if( !_skills->has_same_levels_as( *valid_autolearn_skills ) ) {
-        for( const recipe * const &r : recipe_dict.all_autolearn() ) {
+    for( const recipe * const &r : recipe_dict.all_autolearn() ) {
             // skip nested recipes they will be covered in get_available_nested
             if( meets_skill_requirements( r->autolearn_requirements ) && !r->is_nested() ) {
                 learned_recipes->include( r );
@@ -167,7 +167,7 @@ recipe_subset Character::get_available_recipes( const inventory &crafting_inv,
     res.include( get_recipes_from_ebooks( crafting_inv ) );
 
     if( helpers != nullptr ) {
-        for( Character *guy : *helpers ) {
+    for( Character *guy : *helpers ) {
             // Directly form the helper's inventory
             res.include( get_recipes_from_books( *guy->inv ) );
             // Being told what to do

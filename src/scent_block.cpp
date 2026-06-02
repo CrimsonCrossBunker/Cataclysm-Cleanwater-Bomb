@@ -52,7 +52,7 @@ void scent_block::apply_gas( const tripoint_bub_ms &p, const int nintensity )
     const point_rel_ms ndx = index( p );
     assignment[ndx.x()][ndx.y()].mode = data_mode::SET;
     assignment[ndx.x()][ndx.y()].intensity = std::max( 0,
-            assignment[ndx.x()][ndx.y()].intensity - nintensity );
+        assignment[ndx.x()][ndx.y()].intensity - nintensity );
     ++modification_count;
 }
 

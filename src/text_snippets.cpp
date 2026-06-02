@@ -354,14 +354,14 @@ snippet_id snippet_library::migrate_hash_to_id( const int old_hash )
 }
 
 std::vector<std::pair<snippet_id, std::string>> snippet_library::get_snippets_by_category(
-            const std::string &cat, bool add_null_id )
+    const std::string &cat, bool add_null_id )
 {
     std::vector<std::pair<snippet_id, std::string>> ret;
     if( !has_category( cat ) ) {
         return ret;
     }
     std::unordered_map<std::string, category_snippets>::iterator snipp_cat = snippets_by_category.find(
-                cat );
+            cat );
     if( snipp_cat != snippets_by_category.end() ) {
         category_snippets snipps = snipp_cat->second;
         if( add_null_id && !snipps.ids.empty() ) {

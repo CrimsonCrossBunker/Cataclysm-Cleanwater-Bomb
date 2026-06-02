@@ -325,8 +325,8 @@ void add_category_and_values( std::vector<std::string> &current_text, const int 
 }
 
 std::vector<std::pair<std::string, std::string>> collect_protection_subvalues(
-            const resistances &worst_res, const resistances &best_res, const resistances &median_res,
-            const bool display_median, const damage_type_id &type )
+    const resistances &worst_res, const resistances &best_res, const resistances &median_res,
+    const bool display_median, const damage_type_id &type )
 {
     std::vector<std::pair<std::string, std::string>> subvalues;
     subvalues.reserve( 2 + ( display_median ? 1 : 0 ) );
@@ -387,7 +387,7 @@ std::vector<std::string> clothing_protection( const item &worn_item, const int w
         if( dio->info_display == damage_info_order::info_disp::DETAILED ) {
             if( percent_worst > 0 ) {
                 std::vector<std::pair<std::string, std::string>> subvalues = collect_protection_subvalues(
-                            worst_res, best_res, median_res, display_median, dt.id );
+                        worst_res, best_res, median_res, display_median, dt.id );
                 add_category_and_values( prot, width, dtname, subvalues );
             } else {
                 skipped_details = true;
@@ -1170,36 +1170,36 @@ void outfit::sort_armor( Character &guy )
         } else if( action == "USAGE_HELP" ) {
             const std::vector<std::string> help_strings = {
                 string_format( _( "[<color_yellow>%s</color>]/[<color_yellow>%s</color>] to scroll the left pane (list of items).\n" ),
-                               ctxt.get_desc( "UP" ), ctxt.get_desc( "DOWN" ) ),
+                ctxt.get_desc( "UP" ), ctxt.get_desc( "DOWN" ) ),
                 string_format( _( "[<color_yellow>%s</color>]/[<color_yellow>%s</color>] to scroll the middle pane (item information).\n" ),
-                               ctxt.get_desc( "SCROLL_ITEM_INFO_UP" ), ctxt.get_desc( "SCROLL_ITEM_INFO_DOWN" ) ),
+                ctxt.get_desc( "SCROLL_ITEM_INFO_UP" ), ctxt.get_desc( "SCROLL_ITEM_INFO_DOWN" ) ),
                 string_format( _( "[<color_yellow>%s</color>]/[<color_yellow>%s</color>] to scroll the right pane (items grouped by body part).\n" ),
-                               ctxt.get_desc( "PREV_TAB" ), ctxt.get_desc( "NEXT_TAB" ) ),
+                ctxt.get_desc( "PREV_TAB" ), ctxt.get_desc( "NEXT_TAB" ) ),
                 string_format( _( "[<color_yellow>%s</color>]/[<color_yellow>%s</color>] to limit the left pane to a particular body part.\n" ),
-                               ctxt.get_desc( "LEFT" ), ctxt.get_desc( "RIGHT" ) ),
+                ctxt.get_desc( "LEFT" ), ctxt.get_desc( "RIGHT" ) ),
                 string_format( _( "[<color_yellow>%s</color>] to select an item for reordering.\n" ),
-                               ctxt.get_desc( "MOVE_ARMOR" ) ),
+                ctxt.get_desc( "MOVE_ARMOR" ) ),
                 string_format( _( "[<color_yellow>%s</color>] to assign special inventory letters to clothing.\n" ),
-                               ctxt.get_desc( "ASSIGN_INVLETS" ) ),
+                ctxt.get_desc( "ASSIGN_INVLETS" ) ),
                 string_format( _( "[<color_yellow>%s</color>] to change the side on which item is worn.\n" ),
-                               ctxt.get_desc( "CHANGE_SIDE" ) ),
+                ctxt.get_desc( "CHANGE_SIDE" ) ),
                 string_format( _( "[<color_yellow>%s</color>] to toggle item visibility on character sprite.\n" ),
-                               ctxt.get_desc( "TOGGLE_CLOTH" ) ),
+                ctxt.get_desc( "TOGGLE_CLOTH" ) ),
                 string_format( _( "[<color_yellow>%s</color>] to sort worn items into natural layer order.\n" ),
-                               ctxt.get_desc( "SORT_ARMOR" ) ),
+                ctxt.get_desc( "SORT_ARMOR" ) ),
                 string_format( _( "[<color_yellow>%s</color>] to equip a new item.\n" ),
-                               ctxt.get_desc( "EQUIP_ARMOR" ) ),
+                ctxt.get_desc( "EQUIP_ARMOR" ) ),
                 string_format( _( "[<color_yellow>%s</color>] to equip a new item at the currently selected position.\n" ),
-                               ctxt.get_desc( "EQUIP_ARMOR_HERE" ) ),
+                ctxt.get_desc( "EQUIP_ARMOR_HERE" ) ),
                 string_format( _( "[<color_yellow>%s</color>] to remove selected item.\n" ),
-                               ctxt.get_desc( "REMOVE_ARMOR" ) ),
+                ctxt.get_desc( "REMOVE_ARMOR" ) ),
                 "\n",
                 _( "Encumbrance explanation:\n" ),
                 _( "<color_light_gray>The first number is the summed encumbrance from all clothing on that bodypart."
-                   "The second number is an additional encumbrance penalty caused by wearing either multiple items "
-                   "on one of the bodypart's layers or wearing items the wrong way (e.g. a shirt over a backpack)."
-                   "The sum of these values is the effective encumbrance value your character has for that bodypart."
-                   "</color>" )
+                "The second number is an additional encumbrance penalty caused by wearing either multiple items "
+                "on one of the bodypart's layers or wearing items the wrong way (e.g. a shirt over a backpack)."
+                "The sum of these values is the effective encumbrance value your character has for that bodypart."
+                "</color>" )
             };
             std::string assembled_string;
             for( const std::string &current_line : help_strings ) {

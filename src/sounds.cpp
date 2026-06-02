@@ -48,33 +48,33 @@
 #include "weather_type.h"
 
 #if defined(SDL_SOUND)
-#   include "sound_backend.h"
-#   include <thread>
-#   if defined(_WIN32) && !defined(_MSC_VER)
-#       include "mingw.thread.h"
-#   endif
+    #include "sound_backend.h"
+    #include <thread>
+    #if defined(_WIN32) && !defined(_MSC_VER)
+        #include "mingw.thread.h"
+    #endif
 
-#   define dbg(x) DebugLog((x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
+    #define dbg(x) DebugLog((x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
 
-static int prev_hostiles = 0;
-static int previous_speed = 0;
-static int previous_gear = 0;
-static bool audio_muted = false;
+    static int prev_hostiles = 0;
+    static int previous_speed = 0;
+    static int previous_gear = 0;
+    static bool audio_muted = false;
 #endif
 
 static float g_sfx_volume_multiplier = 1.0f;
 
 #if defined(SDL_SOUND)
-static weather_type_id previous_weather;
-static std::optional<bool> previous_is_night;
+    static weather_type_id previous_weather;
+    static std::optional<bool> previous_is_night;
 
-static std::chrono::high_resolution_clock::time_point start_sfx_timestamp =
+    static std::chrono::high_resolution_clock::time_point start_sfx_timestamp =
     std::chrono::high_resolution_clock::now();
-static std::chrono::high_resolution_clock::time_point end_sfx_timestamp =
+    static std::chrono::high_resolution_clock::time_point end_sfx_timestamp =
     std::chrono::high_resolution_clock::now();
-static auto sfx_time = end_sfx_timestamp - start_sfx_timestamp;
-static activity_id act;
-static std::pair<std::string, std::string> engine_external_id_and_variant;
+    static auto sfx_time = end_sfx_timestamp - start_sfx_timestamp;
+    static activity_id act;
+    static std::pair<std::string, std::string> engine_external_id_and_variant;
 #endif
 
 static const bionic_id bio_sleep_shutdown( "bio_sleep_shutdown" );
@@ -86,9 +86,9 @@ static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_slept_through_alarm( "slept_through_alarm" );
 
 #if defined(SDL_SOUND)
-static const itype_id fuel_type_battery( "battery" );
-static const itype_id fuel_type_muscle( "muscle" );
-static const itype_id fuel_type_wind( "wind" );
+    static const itype_id fuel_type_battery( "battery" );
+    static const itype_id fuel_type_muscle( "muscle" );
+    static const itype_id fuel_type_wind( "wind" );
 #endif
 
 static const json_character_flag json_flag_ALARMCLOCK( "ALARMCLOCK" );
@@ -96,90 +96,90 @@ static const json_character_flag json_flag_HEARING_PROTECTION( "HEARING_PROTECTI
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 
 #if defined(SDL_SOUND)
-static const material_id material_bone( "bone" );
-static const material_id material_flesh( "flesh" );
-static const material_id material_hflesh( "hflesh" );
-static const material_id material_iflesh( "iflesh" );
-static const material_id material_steel( "steel" );
-static const material_id material_stone( "stone" );
-static const material_id material_veggy( "veggy" );
+    static const material_id material_bone( "bone" );
+    static const material_id material_flesh( "flesh" );
+    static const material_id material_hflesh( "hflesh" );
+    static const material_id material_iflesh( "iflesh" );
+    static const material_id material_steel( "steel" );
+    static const material_id material_stone( "stone" );
+    static const material_id material_veggy( "veggy" );
 
-static const skill_id skill_bashing( "bashing" );
-static const skill_id skill_cutting( "cutting" );
-static const skill_id skill_stabbing( "stabbing" );
-static const skill_id skill_unarmed( "unarmed" );
+    static const skill_id skill_bashing( "bashing" );
+    static const skill_id skill_cutting( "cutting" );
+    static const skill_id skill_stabbing( "stabbing" );
+    static const skill_id skill_unarmed( "unarmed" );
 
-static const ter_str_id ter_t_bridge( "t_bridge" );
-static const ter_str_id ter_t_chainfence( "t_chainfence" );
-static const ter_str_id ter_t_clay( "t_clay" );
-static const ter_str_id ter_t_claymound( "t_claymound" );
-static const ter_str_id ter_t_conveyor( "t_conveyor" );
-static const ter_str_id ter_t_dirt( "t_dirt" );
-static const ter_str_id ter_t_dirtfloor( "t_dirtfloor" );
-static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
-static const ter_str_id ter_t_dirtmoundfloor( "t_dirtmoundfloor" );
-static const ter_str_id ter_t_elevator( "t_elevator" );
-static const ter_str_id ter_t_forestfloor( "t_forestfloor" );
-static const ter_str_id ter_t_golf_hole( "t_golf_hole" );
-static const ter_str_id ter_t_grass( "t_grass" );
-static const ter_str_id ter_t_grass_dead( "t_grass_dead" );
-static const ter_str_id ter_t_grass_golf( "t_grass_golf" );
-static const ter_str_id ter_t_grass_long( "t_grass_long" );
-static const ter_str_id ter_t_grass_tall( "t_grass_tall" );
-static const ter_str_id ter_t_grass_white( "t_grass_white" );
-static const ter_str_id ter_t_grate( "t_grate" );
-static const ter_str_id ter_t_guardrail_bg_dp( "t_guardrail_bg_dp" );
-static const ter_str_id ter_t_metal_floor( "t_metal_floor" );
-static const ter_str_id ter_t_moss( "t_moss" );
-static const ter_str_id ter_t_ov_smreb_cage( "t_ov_smreb_cage" );
-static const ter_str_id ter_t_palisade_gate_o( "t_palisade_gate_o" );
-static const ter_str_id ter_t_railroad_rubble( "t_railroad_rubble" );
-static const ter_str_id ter_t_railroad_tie( "t_railroad_tie" );
-static const ter_str_id ter_t_railroad_tie_d( "t_railroad_tie_d" );
-static const ter_str_id ter_t_railroad_tie_d1( "t_railroad_tie_d1" );
-static const ter_str_id ter_t_railroad_tie_d2( "t_railroad_tie_d2" );
-static const ter_str_id ter_t_railroad_tie_h( "t_railroad_tie_h" );
-static const ter_str_id ter_t_railroad_tie_v( "t_railroad_tie_v" );
-static const ter_str_id ter_t_railroad_track( "t_railroad_track" );
-static const ter_str_id ter_t_railroad_track_d( "t_railroad_track_d" );
-static const ter_str_id ter_t_railroad_track_d1( "t_railroad_track_d1" );
-static const ter_str_id ter_t_railroad_track_d2( "t_railroad_track_d2" );
-static const ter_str_id ter_t_railroad_track_d_on_tie( "t_railroad_track_d_on_tie" );
-static const ter_str_id ter_t_railroad_track_h( "t_railroad_track_h" );
-static const ter_str_id ter_t_railroad_track_h_on_tie( "t_railroad_track_h_on_tie" );
-static const ter_str_id ter_t_railroad_track_on_tie( "t_railroad_track_on_tie" );
-static const ter_str_id ter_t_railroad_track_v( "t_railroad_track_v" );
-static const ter_str_id ter_t_railroad_track_v_on_tie( "t_railroad_track_v_on_tie" );
-static const ter_str_id ter_t_rootcellar( "t_rootcellar" );
-static const ter_str_id ter_t_sand( "t_sand" );
-static const ter_str_id ter_t_sandbox( "t_sandbox" );
-static const ter_str_id ter_t_sandmound( "t_sandmound" );
-static const ter_str_id ter_t_shrub( "t_shrub" );
-static const ter_str_id ter_t_shrub_blackberry( "t_shrub_blackberry" );
-static const ter_str_id ter_t_shrub_blackberry_harvested( "t_shrub_blackberry_harvested" );
-static const ter_str_id ter_t_shrub_blueberry( "t_shrub_blueberry" );
-static const ter_str_id ter_t_shrub_blueberry_harvested( "t_shrub_blueberry_harvested" );
-static const ter_str_id ter_t_shrub_grape( "t_shrub_grape" );
-static const ter_str_id ter_t_shrub_grape_harvested( "t_shrub_grape_harvested" );
-static const ter_str_id ter_t_shrub_huckleberry( "t_shrub_huckleberry" );
-static const ter_str_id ter_t_shrub_huckleberry_harvested( "t_shrub_huckleberry_harvested" );
-static const ter_str_id ter_t_shrub_hydrangea( "t_shrub_hydrangea" );
-static const ter_str_id ter_t_shrub_hydrangea_harvested( "t_shrub_hydrangea_harvested" );
-static const ter_str_id ter_t_shrub_lilac( "t_shrub_lilac" );
-static const ter_str_id ter_t_shrub_lilac_harvested( "t_shrub_lilac_harvested" );
-static const ter_str_id ter_t_shrub_peanut( "t_shrub_peanut" );
-static const ter_str_id ter_t_shrub_peanut_harvested( "t_shrub_peanut_harvested" );
-static const ter_str_id ter_t_shrub_raspberry( "t_shrub_raspberry" );
-static const ter_str_id ter_t_shrub_raspberry_harvested( "t_shrub_raspberry_harvested" );
-static const ter_str_id ter_t_shrub_rose( "t_shrub_rose" );
-static const ter_str_id ter_t_shrub_rose_harvested( "t_shrub_rose_harvested" );
-static const ter_str_id ter_t_shrub_strawberry( "t_shrub_strawberry" );
-static const ter_str_id ter_t_shrub_strawberry_harvested( "t_shrub_strawberry_harvested" );
-static const ter_str_id ter_t_slide( "t_slide" );
-static const ter_str_id ter_t_stump( "t_stump" );
-static const ter_str_id ter_t_trunk( "t_trunk" );
-static const ter_str_id ter_t_underbrush( "t_underbrush" );
-static const ter_str_id ter_t_underbrush_harvested( "t_underbrush_harvested" );
+    static const ter_str_id ter_t_bridge( "t_bridge" );
+    static const ter_str_id ter_t_chainfence( "t_chainfence" );
+    static const ter_str_id ter_t_clay( "t_clay" );
+    static const ter_str_id ter_t_claymound( "t_claymound" );
+    static const ter_str_id ter_t_conveyor( "t_conveyor" );
+    static const ter_str_id ter_t_dirt( "t_dirt" );
+    static const ter_str_id ter_t_dirtfloor( "t_dirtfloor" );
+    static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
+    static const ter_str_id ter_t_dirtmoundfloor( "t_dirtmoundfloor" );
+    static const ter_str_id ter_t_elevator( "t_elevator" );
+    static const ter_str_id ter_t_forestfloor( "t_forestfloor" );
+    static const ter_str_id ter_t_golf_hole( "t_golf_hole" );
+    static const ter_str_id ter_t_grass( "t_grass" );
+    static const ter_str_id ter_t_grass_dead( "t_grass_dead" );
+    static const ter_str_id ter_t_grass_golf( "t_grass_golf" );
+    static const ter_str_id ter_t_grass_long( "t_grass_long" );
+    static const ter_str_id ter_t_grass_tall( "t_grass_tall" );
+    static const ter_str_id ter_t_grass_white( "t_grass_white" );
+    static const ter_str_id ter_t_grate( "t_grate" );
+    static const ter_str_id ter_t_guardrail_bg_dp( "t_guardrail_bg_dp" );
+    static const ter_str_id ter_t_metal_floor( "t_metal_floor" );
+    static const ter_str_id ter_t_moss( "t_moss" );
+    static const ter_str_id ter_t_ov_smreb_cage( "t_ov_smreb_cage" );
+    static const ter_str_id ter_t_palisade_gate_o( "t_palisade_gate_o" );
+    static const ter_str_id ter_t_railroad_rubble( "t_railroad_rubble" );
+    static const ter_str_id ter_t_railroad_tie( "t_railroad_tie" );
+    static const ter_str_id ter_t_railroad_tie_d( "t_railroad_tie_d" );
+    static const ter_str_id ter_t_railroad_tie_d1( "t_railroad_tie_d1" );
+    static const ter_str_id ter_t_railroad_tie_d2( "t_railroad_tie_d2" );
+    static const ter_str_id ter_t_railroad_tie_h( "t_railroad_tie_h" );
+    static const ter_str_id ter_t_railroad_tie_v( "t_railroad_tie_v" );
+    static const ter_str_id ter_t_railroad_track( "t_railroad_track" );
+    static const ter_str_id ter_t_railroad_track_d( "t_railroad_track_d" );
+    static const ter_str_id ter_t_railroad_track_d1( "t_railroad_track_d1" );
+    static const ter_str_id ter_t_railroad_track_d2( "t_railroad_track_d2" );
+    static const ter_str_id ter_t_railroad_track_d_on_tie( "t_railroad_track_d_on_tie" );
+    static const ter_str_id ter_t_railroad_track_h( "t_railroad_track_h" );
+    static const ter_str_id ter_t_railroad_track_h_on_tie( "t_railroad_track_h_on_tie" );
+    static const ter_str_id ter_t_railroad_track_on_tie( "t_railroad_track_on_tie" );
+    static const ter_str_id ter_t_railroad_track_v( "t_railroad_track_v" );
+    static const ter_str_id ter_t_railroad_track_v_on_tie( "t_railroad_track_v_on_tie" );
+    static const ter_str_id ter_t_rootcellar( "t_rootcellar" );
+    static const ter_str_id ter_t_sand( "t_sand" );
+    static const ter_str_id ter_t_sandbox( "t_sandbox" );
+    static const ter_str_id ter_t_sandmound( "t_sandmound" );
+    static const ter_str_id ter_t_shrub( "t_shrub" );
+    static const ter_str_id ter_t_shrub_blackberry( "t_shrub_blackberry" );
+    static const ter_str_id ter_t_shrub_blackberry_harvested( "t_shrub_blackberry_harvested" );
+    static const ter_str_id ter_t_shrub_blueberry( "t_shrub_blueberry" );
+    static const ter_str_id ter_t_shrub_blueberry_harvested( "t_shrub_blueberry_harvested" );
+    static const ter_str_id ter_t_shrub_grape( "t_shrub_grape" );
+    static const ter_str_id ter_t_shrub_grape_harvested( "t_shrub_grape_harvested" );
+    static const ter_str_id ter_t_shrub_huckleberry( "t_shrub_huckleberry" );
+    static const ter_str_id ter_t_shrub_huckleberry_harvested( "t_shrub_huckleberry_harvested" );
+    static const ter_str_id ter_t_shrub_hydrangea( "t_shrub_hydrangea" );
+    static const ter_str_id ter_t_shrub_hydrangea_harvested( "t_shrub_hydrangea_harvested" );
+    static const ter_str_id ter_t_shrub_lilac( "t_shrub_lilac" );
+    static const ter_str_id ter_t_shrub_lilac_harvested( "t_shrub_lilac_harvested" );
+    static const ter_str_id ter_t_shrub_peanut( "t_shrub_peanut" );
+    static const ter_str_id ter_t_shrub_peanut_harvested( "t_shrub_peanut_harvested" );
+    static const ter_str_id ter_t_shrub_raspberry( "t_shrub_raspberry" );
+    static const ter_str_id ter_t_shrub_raspberry_harvested( "t_shrub_raspberry_harvested" );
+    static const ter_str_id ter_t_shrub_rose( "t_shrub_rose" );
+    static const ter_str_id ter_t_shrub_rose_harvested( "t_shrub_rose_harvested" );
+    static const ter_str_id ter_t_shrub_strawberry( "t_shrub_strawberry" );
+    static const ter_str_id ter_t_shrub_strawberry_harvested( "t_shrub_strawberry_harvested" );
+    static const ter_str_id ter_t_slide( "t_slide" );
+    static const ter_str_id ter_t_stump( "t_stump" );
+    static const ter_str_id ter_t_trunk( "t_trunk" );
+    static const ter_str_id ter_t_underbrush( "t_underbrush" );
+    static const ter_str_id ter_t_underbrush_harvested( "t_underbrush_harvested" );
 #endif
 
 static const trait_id trait_HEAVYSLEEPER( "HEAVYSLEEPER" );
@@ -1490,27 +1490,27 @@ void sfx::sound_thread::operator()() const
     std::string weapon_variant = weapon_id.str();
 
     if( weapon_skill == skill_bashing ) {
-        skill_variant = ( weapon_volume > 8 ) ? "big_bash" : "small_bash";
+    skill_variant = ( weapon_volume > 8 ) ? "big_bash" : "small_bash";
     } else if( weapon_skill == skill_cutting ) {
-        skill_variant = ( weapon_volume > 6 ) ? "big_cutting" : "small_cutting";
+    skill_variant = ( weapon_volume > 6 ) ? "big_cutting" : "small_cutting";
     } else if( weapon_skill == skill_stabbing ) {
-        skill_variant = ( weapon_volume > 4 ) ? "big_stabbing" : "small_stabbing";
+    skill_variant = ( weapon_volume > 4 ) ? "big_stabbing" : "small_stabbing";
     } else if( weapon_skill == skill_unarmed ) {
-        skill_variant = "unarmed";
-    } else {
-        skill_variant = "default";
-    }
+    skill_variant = "unarmed";
+} else {
+    skill_variant = "default";
+}
 
-    if( has_exact_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night ) ) {
-        play_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night,
-                            vol_src, ang_src, 0.8, 1.2 );
+if( has_exact_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night ) ) {
+    play_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night,
+                        vol_src, ang_src, 0.8, 1.2 );
     } else {
         play_variant_sound( "melee_swing", skill_variant, seas_str, indoors, night,
                             vol_src, ang_src, 0.8, 1.2 );
     }
 
     if( hit ) {
-        const int sleep_time = weapon_volume * ( targ_mon ? rng( 12, 16 ) : rng( 9, 12 ) );
+    const int sleep_time = weapon_volume * ( targ_mon ? rng( 12, 16 ) : rng( 9, 12 ) );
         std::string melee_hit_material = ( targ_mon &&
                                            material == "steel" ) ? "melee_hit_metal" : "melee_hit_flesh";
 
@@ -1615,7 +1615,7 @@ void sfx::do_danger_music()
     }
     audio_muted = false;
     int hostiles = 0;
-    for( Creature *&critter : player_character.get_visible_creatures( 40 ) ) {
+    for( Creature * &critter : player_character.get_visible_creatures( 40 ) ) {
         if( player_character.attitude_to( *critter ) == Creature::Attitude::HOSTILE ) {
             hostiles++;
         }

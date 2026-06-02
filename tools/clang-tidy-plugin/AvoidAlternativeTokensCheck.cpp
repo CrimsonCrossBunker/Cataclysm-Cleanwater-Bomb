@@ -74,8 +74,8 @@ static void CheckOperator( AvoidAlternativeTokensCheck &Check,
     }
 
     Check.diag( loc, "Avoid alternative token '%0'; prefer '%1'." )
-            << operatorString << Replacement << loc
-            << FixItHint::CreateReplacement( loc, Replacement );
+         << operatorString << Replacement << loc
+         << FixItHint::CreateReplacement( loc, Replacement );
 }
 
 void AvoidAlternativeTokensCheck::check( const MatchFinder::MatchResult &Result )

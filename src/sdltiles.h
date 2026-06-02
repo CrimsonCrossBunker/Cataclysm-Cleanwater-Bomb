@@ -20,8 +20,8 @@ class window;
 #include "string_id.h"
 
 #if defined(__APPLE__)
-// For TARGET_OS_IPHONE macro to test if is on iOS
-#include <TargetConditionals.h>
+    // For TARGET_OS_IPHONE macro to test if is on iOS
+    #include <TargetConditionals.h>
 #endif
 
 class cata_tiles;

@@ -76,7 +76,7 @@
 #include "popup.h"
 #include "safemode_ui.h"
 #if defined(TILES)
-#include "sdltiles.h"
+    #include "sdltiles.h"
 #endif
 #include "stats_tracker.h"
 #include "string_formatter.h"
@@ -90,10 +90,10 @@
 #include "zzip.h"
 
 #if defined(_WIN32)
-#if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
-#   include "platform_win.h"
-#endif
-#   include <tchar.h>
+    #if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
+        #include "platform_win.h"
+    #endif
+    #include <tchar.h>
 #endif
 
 static const mod_id MOD_INFORMATION_dda( "dda" );
@@ -355,7 +355,7 @@ bool game::load( const save_t &name )
                     if( world_generator->active_world->has_compression_enabled() ) {
                         std::optional<zzip> z = zzip::load( ( save_file_path + zzip_suffix ).get_unrelative_path() );
                         abort = !z.has_value() ||
-                        !read_from_zzip_optional( z.value(), save_file_path.get_unrelative_path().filename(),
+                                  !read_from_zzip_optional( z.value(), save_file_path.get_unrelative_path().filename(),
                         [this]( std::string_view sv ) {
                             unserialize( std::string{ sv } );
                         } );
@@ -430,7 +430,7 @@ bool game::load( const save_t &name )
                     validate_camps();
                     validate_linked_vehicles();
                     update_map( u );
-                    for( item *&e : u.inv_dump() ) {
+                    for( item * &e : u.inv_dump() ) {
                         e->set_owner( get_player_character() );
                     }
                     // legacy, needs to be here as we access the map.
@@ -440,7 +440,7 @@ bool game::load( const save_t &name )
                         // The vehicle stores the IDs of the boarded players, so update it, too.
                         if( u.in_vehicle ) {
                             if( const std::optional<vpart_reference> vp = here.veh_at(
-                                        u.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
+                                    u.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
                                 vp->part().passenger_id = u.getID();
                             }
                         }
@@ -802,7 +802,7 @@ void game::write_memorial_file( std::string sLastWords )
 {
     const std::string &memorial_dir = PATH_INFO::memorialdir();
     const std::string &memorial_active_world_dir = memorial_dir +
-            world_generator->active_world->world_name + "/";
+        world_generator->active_world->world_name + "/";
 
     //Check if both dirs exist. Nested assure_dir_exist fails if the first dir of the nested dir does not exist.
     if( !assure_dir_exist( memorial_dir ) ) {
@@ -813,7 +813,7 @@ void game::write_memorial_file( std::string sLastWords )
 
     if( !assure_dir_exist( memorial_active_world_dir ) ) {
         dbg( D_ERROR ) <<
-                       "game:write_memorial_file: Unable to make active world directory in memorial directory.";
+        "game:write_memorial_file: Unable to make active world directory in memorial directory.";
         debugmsg( "Could not make '%s' directory", memorial_active_world_dir );
         return;
     }

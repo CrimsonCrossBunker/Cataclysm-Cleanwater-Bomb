@@ -38,7 +38,7 @@ void gun_modifier_data::deserialize( const JsonObject &jo )
 std::string islot_book::recipe_with_description_t::name() const
 {
     if( optional_name ) {
-        return optional_name->translated();
+    return optional_name->translated();
     } else {
         return recipe->result_name( /*decorated=*/true );
     }
@@ -110,21 +110,21 @@ struct fuel_explosion_data itype::get_explosion_data() const {
 std::string itype::get_item_type_string() const
 {
     if( tool ) {
-        return "TOOL";
-    } else if( comestible ) {
-        return "FOOD";
-    } else if( armor ) {
-        return "ARMOR";
-    } else if( book ) {
-        return "BOOK";
-    } else if( gun ) {
-        return "GUN";
-    } else if( bionic ) {
-        return "BIONIC";
-    } else if( ammo ) {
-        return "AMMO";
-    }
-    return "misc";
+    return "TOOL";
+} else if( comestible ) {
+    return "FOOD";
+} else if( armor ) {
+    return "ARMOR";
+} else if( book ) {
+    return "BOOK";
+} else if( gun ) {
+    return "GUN";
+} else if( bionic ) {
+    return "BIONIC";
+} else if( ammo ) {
+    return "AMMO";
+}
+return "misc";
 }
 
 std::string itype::count_or_volume_or_weight_prefix( unsigned int quantity ) const
@@ -179,23 +179,23 @@ bool itype::has_any_quality( std::string_view quality ) const
 int itype::charges_default() const
 {
     if( tool && tool->def_charges > 0 ) {
-        return tool->def_charges;
-    } else if( comestible && comestible->def_charges > 0 ) {
-        return comestible->def_charges;
-    } else if( ammo && ammo->def_charges > 0 ) {
-        return ammo->def_charges;
-    }
-    return count_by_charges() ? 1 : 0;
+    return tool->def_charges;
+} else if( comestible && comestible->def_charges > 0 ) {
+    return comestible->def_charges;
+} else if( ammo && ammo->def_charges > 0 ) {
+    return ammo->def_charges;
+}
+return count_by_charges() ? 1 : 0;
 }
 
 int itype::charges_to_use() const
 {
     if( tool ) {
-        return tool->charges_per_use;
-    } else if( comestible ) {
-        return 1;
-    }
-    return 0;
+    return tool->charges_per_use;
+} else if( comestible ) {
+    return 1;
+}
+return 0;
 }
 
 int itype::charges_per_volume( const units::volume &vol ) const
@@ -264,10 +264,10 @@ std::optional<int> itype::invoke( Character *p, item &it, map *here,
                                   const tripoint_bub_ms &pos ) const
 {
     if( !has_use() ) {
-        return 0;
-    }
-    if( use_methods.find( "transform" ) != use_methods.end() ) {
-        return invoke( p, it, here, pos, "transform" );
+    return 0;
+}
+if( use_methods.find( "transform" ) != use_methods.end() ) {
+    return invoke( p, it, here, pos, "transform" );
     } else {
         return invoke( p, it, here, pos, use_methods.begin()->first );
     }
@@ -304,31 +304,31 @@ std::string gun_type_type::name() const
 {
     const itype_id gun_type_as_id( name_ );
     return gun_type_as_id.is_valid()
-           ? gun_type_as_id->nname( 1 )
-           : pgettext( "gun_type_type", name_.c_str() );
+    ? gun_type_as_id->nname( 1 )
+    : pgettext( "gun_type_type", name_.c_str() );
 }
 
 bool itype::can_have_charges() const
 {
     if( count_by_charges() ) {
-        return true;
-    }
-    if( tool && tool->max_charges > 0 ) {
-        return true;
-    }
-    if( gun && gun->clip > 0 ) {
-        return true;
-    }
-    if( has_flag( json_flag_CAN_HAVE_CHARGES ) ) {
-        return true;
-    }
-    return false;
+    return true;
+}
+if( tool && tool->max_charges > 0 ) {
+    return true;
+}
+if( gun && gun->clip > 0 ) {
+    return true;
+}
+if( has_flag( json_flag_CAN_HAVE_CHARGES ) ) {
+    return true;
+}
+return false;
 }
 
 bool itype::is_basic_component() const
 {
-    for( const auto &mat : materials ) {
-        if( mat.first->salvaged_into() && *mat.first->salvaged_into() == get_id() ) {
+for( const auto &mat : materials ) {
+    if( mat.first->salvaged_into() && *mat.first->salvaged_into() == get_id() ) {
             return true;
         }
     }
@@ -384,14 +384,14 @@ float islot_armor::avg_thickness() const
 int armor_portion_data::max_coverage( bodypart_str_id bp ) const
 {
     if( bp->sub_parts.empty() ) {
-        // if the location doesn't have subparts then its always 100 coverage
-        return 100;
-    }
+    // if the location doesn't have subparts then its always 100 coverage
+    return 100;
+}
 
-    int primary_max_coverage = 0;
-    int secondary_max_coverage = 0;
-    for( const sub_bodypart_str_id &sbp : sub_coverage ) {
-        if( bp.id() == sbp->parent.id() && !sbp->secondary ) {
+int primary_max_coverage = 0;
+int secondary_max_coverage = 0;
+for( const sub_bodypart_str_id &sbp : sub_coverage ) {
+    if( bp.id() == sbp->parent.id() && !sbp->secondary ) {
             // add all sublocations that share the same parent limb
             primary_max_coverage += sbp->max_coverage;
         }
@@ -461,7 +461,7 @@ int armor_portion_data::calc_encumbrance( units::mass weight, bodypart_id bp ) c
     int additional_encumbrance = 0;
     for( const encumbrance_modifier &em : encumber_modifiers ) {
         std::tuple<encumbrance_modifier_type, int> modifier = armor_portion_data::convert_descriptor_to_val(
-                    em );
+                em );
         if( std::get<0>( modifier ) == encumbrance_modifier_type::FLAT ) {
             additional_encumbrance += std::get<1>( modifier );
         } else if( std::get<0>( modifier ) == encumbrance_modifier_type::MULT ) {
@@ -501,7 +501,7 @@ std::map<itype_id, std::set<itype_id>> islot_magazine::compatible_guns;
 const itype_id &itype::tool_slot_first_ammo() const
 {
     if( tool ) {
-        for( const ammotype &at : tool->ammo_id ) {
+    for( const ammotype &at : tool->ammo_id ) {
             return at->default_ammotype();
         }
     }
@@ -525,13 +525,13 @@ int islot_ammo::dispersion_considering_length( units::length barrel_length ) con
 {
 
     if( disp_mod_by_barrels.empty() ) {
-        return  dispersion;
-    }
-    std::vector<std::pair<float, float>> lerp_points;
-    lerp_points.reserve( disp_mod_by_barrels.size() );
-    for( const disp_mod_by_barrel &b : disp_mod_by_barrels ) {
-        lerp_points.emplace_back( static_cast<float>( b.barrel_length.value() ),
-                                  static_cast<float>( b.dispersion_modifier ) );
+    return  dispersion;
+}
+std::vector<std::pair<float, float>> lerp_points;
+lerp_points.reserve( disp_mod_by_barrels.size() );
+for( const disp_mod_by_barrel &b : disp_mod_by_barrels ) {
+    lerp_points.emplace_back( static_cast<float>( b.barrel_length.value() ),
+                              static_cast<float>( b.dispersion_modifier ) );
     }
     return multi_lerp( lerp_points, barrel_length.value() ) + dispersion;
 }

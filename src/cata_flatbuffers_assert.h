@@ -6,7 +6,7 @@
 // raise a catchable error like currently happens with JsonObject/JsonIn
 
 #ifdef FLATBUFFERS_ASSERT
-#undef FLATBUFFERS_ASSERT
+    #undef FLATBUFFERS_ASSERT
 #endif
 
 #include "cata_assert.h"

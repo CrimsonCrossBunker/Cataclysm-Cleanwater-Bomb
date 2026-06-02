@@ -593,7 +593,7 @@ void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
     const shrapnel_data &shr = ex.shrapnel;
     if( shr.casing_mass > 0 ) {
         std::vector<tripoint_bub_ms> shrapnel_locations = shrapnel( m, source, p, ex.power, shr.casing_mass,
-                shr.fragment_mass );
+            shr.fragment_mass );
 
         // If explosion drops shrapnel...
         if( shr.recovery > 0 && !shr.drop.is_null() ) {

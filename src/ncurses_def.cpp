@@ -9,19 +9,19 @@
 #include "translations.h"
 #include "cata_imgui.h"
 #if defined(SDL_SOUND)
-#include "sound_backend.h"
+    #include "sound_backend.h"
 #endif
 
 // ncurses can define some functions as macros, but we need those identifiers
 // to be unchanged by the preprocessor, as we use them as function names.
 #define NCURSES_NOMACROS
 #if !defined(__APPLE__)
-#define NCURSES_WIDECHAR 1
+    #define NCURSES_WIDECHAR 1
 #endif
 #if defined(__CYGWIN__)
-#include <ncurses/curses.h>
+    #include <ncurses/curses.h>
 #else
-#include <curses.h>
+    #include <curses.h>
 #endif
 
 #include <cstdint>
@@ -41,13 +41,13 @@
 #include "ui_manager.h"
 
 #if defined(_WIN32)
-#include <windows.h>
+    #include <windows.h>
 #else
-#include <langinfo.h>
+    #include <langinfo.h>
 #endif
 
 #if defined(SDL_SOUND)
-#include "sdlsound.h"
+    #include "sdlsound.h"
 #endif
 
 std::unique_ptr<cataimgui::client> imclient;
@@ -326,7 +326,7 @@ void catacurses::init_pair( const short pair, const base_color f, const base_col
 
 catacurses::window catacurses::stdscr;
 #if !defined(USE_PDCURSES)
-catacurses::window catacurses::newscr;
+    catacurses::window catacurses::newscr;
 #endif
 
 void catacurses::resizeterm()
@@ -621,7 +621,7 @@ void check_encoding()
         do {
             const char *unicode_error_msg =
                 _( "You don't seem to have a valid Unicode locale.  You may see some weird "
-                   "characters (e.g. empty boxes or question marks).  You have been warned." );
+               "characters (e.g. empty boxes or question marks).  You have been warned." );
             catacurses::erase();
             const int maxx = getmaxx( catacurses::stdscr );
             fold_and_print( catacurses::stdscr, point::zero, maxx, c_white, unicode_error_msg );

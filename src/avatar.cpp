@@ -232,9 +232,9 @@ bool avatar::is_map_memory_valid() const
 bool avatar::should_show_map_memory() const
 {
     if( !you_know_where_you_are() ) {
-        return false;
-    }
-    return true;
+    return false;
+}
+return true;
 }
 
 bool avatar::save_map_memory()
@@ -260,7 +260,7 @@ void avatar::prepare_map_memory_region( const tripoint_abs_ms &p1, const tripoin
 const memorized_tile &avatar::get_memorized_tile( const tripoint_abs_ms &p ) const
 {
     if( should_show_map_memory() ) {
-        return player_map_memory->get_tile( p );
+    return player_map_memory->get_tile( p );
     }
     return mm_submap::default_tile;
 }
@@ -985,14 +985,14 @@ nc_color avatar::basic_symbol_color() const
 int avatar::print_info( const catacurses::window &w, int vStart, int, int column ) const
 {
     return vStart + fold_and_print( w, point( column, vStart ), getmaxx( w ) - column - 1, c_dark_gray,
-                                    _( "You (%s)" ),
-                                    get_name() ) - 1;
+    _( "You (%s)" ),
+    get_name() ) - 1;
 }
 
 std::string avatar::display_name( bool possessive, bool capitalize_first ) const
 {
     if( !possessive ) {
-        return capitalize_first ? _( "You" ) : _( "you" );
+    return capitalize_first ? _( "You" ) : _( "you" );
     } else {
         return capitalize_first ? _( "Your" ) : _( "your" );
     }
@@ -1192,11 +1192,11 @@ bool avatar::cant_see( const tripoint_bub_ms &p ) const
 
     // calc based on recoil
     if( !last_target_pos.has_value() ) {
-        return false;
-    }
+    return false;
+}
 
-    if( aim_cache_dirty ) {
-        rebuild_aim_cache();
+if( aim_cache_dirty ) {
+    rebuild_aim_cache();
     }
 
     return aim_cache[p.x()][p.y()];
@@ -1212,7 +1212,7 @@ void avatar::rebuild_aim_cache() const
     double pi = 2 * acos( 0.0 );
 
     const tripoint_bub_ms local_last_target = here.get_bub(
-                last_target_pos.value() );
+            last_target_pos.value() );
     const tripoint_bub_ms pos = pos_bub( here );
     float base_angle = atan2f( local_last_target.y() - pos.y(),
                                local_last_target.x() - pos.x() );
@@ -1541,7 +1541,7 @@ void avatar::advance_daily_calories()
 int avatar::get_daily_spent_kcal( bool yesterday ) const
 {
     if( yesterday ) {
-        if( calorie_diary.size() < 2 ) {
+    if( calorie_diary.size() < 2 ) {
             return 0;
         }
         std::list<avatar::daily_calories> copy = calorie_diary;
@@ -1554,7 +1554,7 @@ int avatar::get_daily_spent_kcal( bool yesterday ) const
 int avatar::get_daily_ingested_kcal( bool yesterday ) const
 {
     if( yesterday ) {
-        if( calorie_diary.size() < 2 ) {
+    if( calorie_diary.size() < 2 ) {
             return 0;
         }
         std::list<avatar::daily_calories> copy = calorie_diary;
@@ -1646,8 +1646,8 @@ void avatar::daily_calories::save_activity( JsonOut &json ) const
 {
     json.member( "activity" );
     json.start_array();
-    for( const std::pair<const float, int> &level : activity_levels ) {
-        if( level.second > 0 ) {
+for( const std::pair<const float, int> &level : activity_levels ) {
+    if( level.second > 0 ) {
             json.start_array();
             json.write( level.first );
             json.write( level.second );
@@ -1682,9 +1682,9 @@ std::string avatar::total_daily_calories_string() const
 {
     const std::string header_string =
         colorize( "       Minutes at each exercise level                  Calories per day",
-                  c_white ) + "\n" +
-        colorize( "  Day  Sleep None Light Moderate Brisk Active Extra    Gained  Spent  Total",
-                  c_yellow ) + "\n";
+        c_white ) + "\n" +
+    colorize( "  Day  Sleep None Light Moderate Brisk Active Extra    Gained  Spent  Total",
+    c_yellow ) + "\n";
     const std::string format_string =
         " %4d  %4d   %4d  %4d     %4d  %4d   %4d  %4d    %6d %6d";
 
@@ -1700,17 +1700,17 @@ std::string avatar::total_daily_calories_string() const
     // Start with today in the first row, day number from start of the Cataclysm
     int today = day_of_season<int>( calendar::turn ) + 1;
     int day_offset = 0;
-    for( const daily_calories &day : calorie_diary ) {
-        // Yes, this is clunky.
-        // Perhaps it should be done in log_activity_level? But that's called a lot more often.
-        int sleep_exercise = 0;
-        int no_exercise = 0;
-        int light_exercise = 0;
-        int moderate_exercise = 0;
-        int brisk_exercise = 0;
-        int active_exercise = 0;
-        int extra_exercise = 0;
-        for( const std::pair<const float, int> &level : day.activity_levels ) {
+for( const daily_calories &day : calorie_diary ) {
+    // Yes, this is clunky.
+    // Perhaps it should be done in log_activity_level? But that's called a lot more often.
+    int sleep_exercise = 0;
+    int no_exercise = 0;
+    int light_exercise = 0;
+    int moderate_exercise = 0;
+    int brisk_exercise = 0;
+    int active_exercise = 0;
+    int extra_exercise = 0;
+    for( const std::pair<const float, int> &level : day.activity_levels ) {
             if( level.second > 0 ) {
                 if( level.first < no_ex_thresh ) {
                     sleep_exercise += level.second;
@@ -1813,10 +1813,10 @@ void avatar::reassign_item( item &it, int invlet )
 void avatar::add_pain_msg( int val, const bodypart_id &bp ) const
 {
     if( has_flag( json_flag_PAIN_IMMUNE ) ) {
-        return;
-    }
-    if( bp == bodypart_str_id::NULL_ID() ) {
-        if( val > 20 ) {
+    return;
+}
+if( bp == bodypart_str_id::NULL_ID() ) {
+    if( val > 20 ) {
             add_msg_if_player( _( "Your body is wracked with excruciating pain!" ) );
         } else if( val > 10 ) {
             add_msg_if_player( _( "Your body is wracked with terrible pain!" ) );

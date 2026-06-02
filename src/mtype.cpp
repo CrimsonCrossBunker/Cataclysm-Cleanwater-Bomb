@@ -382,11 +382,11 @@ bool mtype::made_of( const material_id &material ) const
 bool mtype::made_of_any( const std::set<material_id> &materials ) const
 {
     if( mat.empty() ) {
-        return false;
-    }
+    return false;
+}
 
-    return std::any_of( mat.begin(), mat.end(), [&materials]( const std::pair<material_id, int> &e ) {
-        return materials.count( e.first );
+return std::any_of( mat.begin(), mat.end(), [&materials]( const std::pair<material_id, int> &e ) {
+    return materials.count( e.first );
     } );
 }
 
@@ -429,7 +429,7 @@ std::vector<std::string> mtype::species_descriptions() const
 field_type_id mtype::get_bleed_type() const
 {
     if( bleed_rate > 0 ) {
-        for( const species_id &s : species ) {
+    for( const species_id &s : species ) {
             if( !s->bleeds.is_empty() ) {
                 return s->bleeds;
             }
@@ -448,44 +448,44 @@ bool mtype::same_species( const mtype &other ) const
 field_type_id mtype::bloodType() const
 {
     if( has_flag( mon_flag_ACID_BLOOD ) )
-        //A monster that has the death effect "ACID" does not need to have acid blood.
-    {
-        return fd_acid;
-    }
-    if( has_flag( mon_flag_BILE_BLOOD ) ) {
-        return fd_bile;
-    }
-    if( has_flag( mon_flag_ARTHROPOD_BLOOD ) ) {
-        return fd_blood_invertebrate;
-    }
-    if( made_of( material_veggy ) || has_flag( mon_flag_PLANT_BLOOD ) ) {
-        return fd_blood_veggy;
-    }
-    if( made_of( material_iflesh ) ) {
-        return fd_blood_insect;
-    }
-    if( has_flag( mon_flag_WARM ) && made_of( material_flesh ) ) {
-        return fd_blood;
-    }
-    return get_bleed_type();
+    //A monster that has the death effect "ACID" does not need to have acid blood.
+{
+    return fd_acid;
+}
+if( has_flag( mon_flag_BILE_BLOOD ) ) {
+    return fd_bile;
+}
+if( has_flag( mon_flag_ARTHROPOD_BLOOD ) ) {
+    return fd_blood_invertebrate;
+}
+if( made_of( material_veggy ) || has_flag( mon_flag_PLANT_BLOOD ) ) {
+    return fd_blood_veggy;
+}
+if( made_of( material_iflesh ) ) {
+    return fd_blood_insect;
+}
+if( has_flag( mon_flag_WARM ) && made_of( material_flesh ) ) {
+    return fd_blood;
+}
+return get_bleed_type();
 }
 
 field_type_id mtype::gibType() const
 {
     if( in_species( species_MOLLUSK ) ) {
-        return fd_gibs_invertebrate;
-    }
-    if( made_of( material_veggy ) ) {
-        return fd_gibs_veggy;
-    }
-    if( made_of( material_iflesh ) ) {
-        return fd_gibs_insect;
-    }
-    if( made_of( material_flesh ) ) {
-        return fd_gibs_flesh;
-    }
-    // There are other materials not listed here like steel, protoplasmic, powder, null, stone, bone
-    return fd_null;
+    return fd_gibs_invertebrate;
+}
+if( made_of( material_veggy ) ) {
+    return fd_gibs_veggy;
+}
+if( made_of( material_iflesh ) ) {
+    return fd_gibs_insect;
+}
+if( made_of( material_flesh ) ) {
+    return fd_gibs_flesh;
+}
+// There are other materials not listed here like steel, protoplasmic, powder, null, stone, bone
+return fd_null;
 }
 
 int mtype::get_total_difficulty() const
@@ -501,7 +501,7 @@ int mtype::get_difficulty_adjustment() const
 itype_id mtype::get_meat_itype() const
 {
     if( has_flag( mon_flag_POISON ) ) {
-        if( made_of( material_flesh ) || made_of( material_hflesh ) ||
+    if( made_of( material_flesh ) || made_of( material_hflesh ) ||
             //In the future, insects could drop insect flesh rather than plain ol' meat.
             made_of( material_iflesh ) ) {
             return itype_meat_tainted;
@@ -551,7 +551,7 @@ ascii_art_id mtype::get_picture_id() const
 std::string mtype::get_footsteps() const
 {
     if( !species.empty() ) {
-        return species.begin()->obj().get_footsteps();
+    return species.begin()->obj().get_footsteps();
     }
     return _( "footsteps." );
 }
@@ -592,8 +592,8 @@ std::string mtype::get_difficulty_description() const
 std::string mtype::get_size_name() const
 {
     switch( size ) {
-        case creature_size::tiny:
-            return _( "Tiny" );
+    case creature_size::tiny:
+        return _( "Tiny" );
             break;
         case creature_size::small:
             return _( "Small" );

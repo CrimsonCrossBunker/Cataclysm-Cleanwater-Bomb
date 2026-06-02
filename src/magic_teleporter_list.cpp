@@ -150,8 +150,8 @@ void teleporter_list::serialize( JsonOut &json ) const
 
     json.member( "known_teleporters" );
     json.start_array();
-    for( const std::pair<const tripoint_abs_omt, std::string> &pair : known_teleporters ) {
-        json.start_object();
+for( const std::pair<const tripoint_abs_omt, std::string> &pair : known_teleporters ) {
+    json.start_object();
         json.member( "position", pair.first );
         json.member( "name", pair.second );
         json.end_object();
@@ -205,10 +205,10 @@ std::optional<tripoint_abs_omt> teleporter_list::choose_teleport_location()
     uilist teleport_selector;
     teleport_selector.desired_bounds = {
         -1.0,
-            -1.0,
-            std::max( 80, TERMX * 3 / 8 ) *ImGui::CalcTextSize( "X" ).x,
-            clamp( static_cast<int>( known_teleporters.size() ), 24, TERMY * 9 / 10 ) *ImGui::GetTextLineHeightWithSpacing(),
-        };
+        -1.0,
+        std::max( 80, TERMX * 3 / 8 ) *ImGui::CalcTextSize( "X" ).x,
+        clamp( static_cast<int>( known_teleporters.size() ), 24, TERMY * 9 / 10 ) *ImGui::GetTextLineHeightWithSpacing(),
+    };
 
     int index = 0;
     std::map<int, tripoint_abs_omt> index_pairs;

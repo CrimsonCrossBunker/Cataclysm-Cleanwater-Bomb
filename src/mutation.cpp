@@ -475,23 +475,23 @@ bool reflex_activation_data::is_trigger_true( Character &guy ) const
 bool mutation_branch::conflicts_with_item( const item &it ) const
 {
     if( allow_soft_gear && it.is_soft() ) {
-        return false;
-    }
+    return false;
+}
 
-    for( const flag_id &allowed : allowed_items ) {
-        if( it.has_flag( allowed ) ) {
+for( const flag_id &allowed : allowed_items ) {
+    if( it.has_flag( allowed ) ) {
             return false;
         }
     }
 
-    for( const bodypart_str_id &bp : restricts_gear ) {
-        if( it.covers( bp.id() ) && ( it.is_bp_rigid( bp.id() ) || !allow_soft_gear ) ) {
+for( const bodypart_str_id &bp : restricts_gear ) {
+    if( it.covers( bp.id() ) && ( it.is_bp_rigid( bp.id() ) || !allow_soft_gear ) ) {
             return true;
         }
     }
 
-    for( const sub_bodypart_str_id &bp : restricts_gear_subparts ) {
-        if( it.covers( bp.id() ) && ( it.is_bp_rigid( bp.id() ) || !allow_soft_gear ) ) {
+for( const sub_bodypart_str_id &bp : restricts_gear_subparts ) {
+    if( it.covers( bp.id() ) && ( it.is_bp_rigid( bp.id() ) || !allow_soft_gear ) ) {
             return true;
         }
     }
@@ -501,22 +501,22 @@ bool mutation_branch::conflicts_with_item( const item &it ) const
 
 bool mutation_branch::conflicts_with_item_rigid( const item &it ) const
 {
-    for( const bodypart_str_id &bp : remove_rigid ) {
-        if( it.covers( bp.id() ) && it.is_bp_rigid( bp.id() ) ) {
+for( const bodypart_str_id &bp : remove_rigid ) {
+    if( it.covers( bp.id() ) && it.is_bp_rigid( bp.id() ) ) {
             return true;
         }
     }
 
-    for( const sub_bodypart_str_id &bp : remove_rigid_subparts ) {
-        if( it.covers( bp.id() ) && it.is_bp_rigid( bp.id() ) ) {
+for( const sub_bodypart_str_id &bp : remove_rigid_subparts ) {
+    if( it.covers( bp.id() ) && it.is_bp_rigid( bp.id() ) ) {
             return true;
         }
     }
 
     // check integrated armor against the character's worn armor directly in case it wasn't specified in JSON
     // this also seems to check the armor against itself, logic should be skipped by the integrated check
-    for( const itype_id &integrated : integrated_armor ) {
-        if( it.has_flag( json_flag_INTEGRATED ) ) {
+for( const itype_id &integrated : integrated_armor ) {
+    if( it.has_flag( json_flag_INTEGRATED ) ) {
             // skip other integrated armor, that should be handled with other rules
             continue;
         }
@@ -999,7 +999,7 @@ void Character::activate_cached_mutation( const trait_id &mut )
                    has_flag( json_flag_CHLOROMORPH ) ) {
             startup_time = ( has_flag( json_flag_ROOTS3 ) ||
                              has_flag( json_flag_CHLOROMORPH ) ) ? rng( 15_minutes,
-                                     30_minutes ) : rng( 60_minutes, 90_minutes );
+                                 30_minutes ) : rng( 60_minutes, 90_minutes );
         } else {
             startup_time = rng( 120_minutes, 180_minutes );
         }
@@ -1051,8 +1051,8 @@ void Character::deactivate_mutation( const trait_id &mut )
 
 trait_id Character::trait_by_invlet( const int ch ) const
 {
-    for( const std::pair<const trait_id, trait_data> &mut : cached_mutations ) {
-        if( mut.second.key == ch ) {
+for( const std::pair<const trait_id, trait_data> &mut : cached_mutations ) {
+    if( mut.second.key == ch ) {
             return mut.first;
         }
     }
@@ -1076,20 +1076,20 @@ bool Character::mutation_ok( const trait_id &mutation, bool allow_good, bool all
                              bool allow_neutral ) const
 {
     if( !is_category_allowed( mutation->category ) ) {
-        return false;
-    }
-    if( mutation_branch::trait_is_blacklisted( mutation ) ) {
-        return false;
-    }
-    if( has_permanent_trait( mutation ) || has_child_flag( mutation ) ) {
-        // We already have this mutation or something that replaces it.
-        add_msg_debug( debugmode::DF_MUTATION, "mutation_ok( %s ): failed, trait or child already present",
-                       mutation.c_str() );
+    return false;
+}
+if( mutation_branch::trait_is_blacklisted( mutation ) ) {
+    return false;
+}
+if( has_permanent_trait( mutation ) || has_child_flag( mutation ) ) {
+    // We already have this mutation or something that replaces it.
+    add_msg_debug( debugmode::DF_MUTATION, "mutation_ok( %s ): failed, trait or child already present",
+                   mutation.c_str() );
         return false;
     }
 
-    for( const bionic_id &bid : get_bionics() ) {
-        for( const trait_id &mid : bid->canceled_mutations ) {
+for( const bionic_id &bid : get_bionics() ) {
+    for( const trait_id &mid : bid->canceled_mutations ) {
             if( mid == mutation ) {
                 add_msg_debug( debugmode::DF_MUTATION,
                                "mutation_ok( %s ): failed, bionic conflict (canceled mutation on %s)", mutation.c_str(),
@@ -1101,20 +1101,20 @@ bool Character::mutation_ok( const trait_id &mutation, bool allow_good, bool all
 
     const mutation_branch &mdata = mutation.obj();
     if( !allow_good && mdata.points > 0 ) {
-        add_msg_debug( debugmode::DF_MUTATION, "mutation_ok( %s ): good mutations not allowed",
-                       mutation.c_str() );
+    add_msg_debug( debugmode::DF_MUTATION, "mutation_ok( %s ): good mutations not allowed",
+                   mutation.c_str() );
         return false;
     }
 
     if( !allow_bad && mdata.points < 0 ) {
-        add_msg_debug( debugmode::DF_MUTATION, "mutation_ok( %s ): failed, bad mutations not allowed",
-                       mutation.c_str() );
+    add_msg_debug( debugmode::DF_MUTATION, "mutation_ok( %s ): failed, bad mutations not allowed",
+                   mutation.c_str() );
         return false;
     }
 
     if( !allow_neutral && mdata.points == 0 ) {
-        add_msg_debug( debugmode::DF_MUTATION, "mutation_ok( %s ): failed, neutral mutations not allowed",
-                       mutation.c_str() );
+    add_msg_debug( debugmode::DF_MUTATION, "mutation_ok( %s ): failed, neutral mutations not allowed",
+                   mutation.c_str() );
         return false;
     }
 
@@ -1527,7 +1527,7 @@ bool Character::mutation_selector( const std::vector<trait_id> &prospective_trai
 
     if( can_cross_threshold( cat ) ) {
         const mutation_category_trait &m_category = mutation_category_trait::get_category(
-                    cat );
+                cat );
         const trait_id &mutation_thresh = m_category.threshold_mut;
         traits.push_back( mutation_thresh );
 
@@ -2083,7 +2083,7 @@ bool Character::mutate_towards( const trait_id &mut, const mutation_variant *cho
 bool Character::has_conflicting_trait( const trait_id &flag ) const
 {
     return has_opposite_trait( flag ) || has_lower_trait( flag ) || has_replacement_trait( flag ) ||
-           has_same_type_trait( flag );
+    has_same_type_trait( flag );
 }
 
 std::unordered_set<trait_id> Character::get_conflicting_traits( const trait_id &flag ) const
@@ -2174,10 +2174,10 @@ std::unordered_set<trait_id> Character::get_same_type_traits( const trait_id &fl
 bool Character::purifiable( const trait_id &flag ) const
 {
     if( my_intrinsic_mutations.count( flag ) > 0 ) {
-        return false;
-    }
-    // If we haven't set the trait unpurifiable in gametime check its definition
-    return flag->purifiable;
+    return false;
+}
+// If we haven't set the trait unpurifiable in gametime check its definition
+return flag->purifiable;
 }
 
 /// Returns a randomly selected dream
@@ -2405,9 +2405,9 @@ void Character::remove_mutation( const trait_id &mut, bool silent )
 
 bool Character::has_child_flag( const trait_id &flag ) const
 {
-    for( const trait_id &elem : flag->replacements ) {
-        const trait_id &tmp = elem;
-        if( has_permanent_trait( tmp ) || has_child_flag( tmp ) ) {
+for( const trait_id &elem : flag->replacements ) {
+    const trait_id &tmp = elem;
+    if( has_permanent_trait( tmp ) || has_child_flag( tmp ) ) {
             return true;
         }
     }
@@ -2453,7 +2453,7 @@ bool Character::can_cross_threshold( const mutation_category_id &mutation_catego
     }
 
     const mutation_category_trait &m_category = mutation_category_trait::get_category(
-                mutation_category );
+            mutation_category );
 
     // If there is no threshold for this category, don't check it
     const trait_id &mutation_thresh = m_category.threshold_mut;
@@ -2480,7 +2480,7 @@ void Character::cross_threshold( const mutation_category_id &mutation_category )
         return;
     }
     const mutation_category_trait &m_category = mutation_category_trait::get_category(
-                mutation_category );
+            mutation_category );
     const trait_id &mutation_thresh = m_category.threshold_mut;
 
     const mutation_branch &thrdata = mutation_thresh.obj();

@@ -130,7 +130,7 @@ struct consume_menu_uistate {
 
     bool empty() const {
         return consume_menu_selections.empty() && consume_menu_selected_items.empty() &&
-               consume_menu_filter.empty();
+        consume_menu_filter.empty();
     }
     void clear() {
         collated = false;
@@ -312,8 +312,8 @@ class uistatedata
         void serialize_array( JsonOut &json, const std::string_view name, T &data ) const {
             json.member( name );
             json.start_array();
-            for( const auto &d : data ) {
-                json.write( d );
+for( const auto &d : data ) {
+            json.write( d );
             }
             json.end_array();
         }

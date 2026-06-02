@@ -539,34 +539,34 @@ struct grid_overlay {
     }
     int height() const {
         if( data.empty() ) {
-            return 0;
-        }
-        return data[0].size();
+        return 0;
     }
-    int width() const {
+    return data[0].size();
+}
+int width() const {
         if( data.empty() || data[0].empty() ) {
-            return 0;
-        }
-        return data[0][0].size();
+        return 0;
     }
-    tripoint get_max() const {
+    return data[0][0].size();
+}
+tripoint get_max() const {
         return offset + tripoint( width(), height(), depth() );
     }
 
     float get_transparency_global( const tripoint &p ) const {
         const half_open_cuboid<tripoint> bounds( offset, get_max() );
         if( bounds.contains( p ) ) {
-            return data[ p.z - offset.z ][ p.y - offset.y ][ p.x - offset.x ];
+        return data[ p.z - offset.z ][ p.y - offset.y ][ p.x - offset.x ];
         }
         return default_value;
     }
     bool get_floor_global( const tripoint &p ) const {
         if( floor.empty() ) {
-            return default_floor;
-        }
-        const half_open_cuboid<tripoint> bounds( offset, get_max() );
-        if( bounds.contains( p ) ) {
-            return data[ p.z - offset.z ][ p.y - offset.y ][ p.x - offset.x ];
+        return default_floor;
+    }
+    const half_open_cuboid<tripoint> bounds( offset, get_max() );
+    if( bounds.contains( p ) ) {
+        return data[ p.z - offset.z ][ p.y - offset.y ][ p.x - offset.x ];
         }
         return default_floor;
     }

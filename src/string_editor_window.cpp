@@ -7,15 +7,15 @@
 #include <vector>
 
 #if defined(TILES)
-#include "sdl_wrappers.h"
-#include "sdltiles.h"
+    #include "sdl_wrappers.h"
+    #include "sdltiles.h"
 #endif
 
 #if defined(__ANDROID__)
-#include <SDL_keyboard.h>
+    #include <SDL_keyboard.h>
 
-#include "cata_utility.h"
-#include "options.h"
+    #include "cata_utility.h"
+    #include "options.h"
 #endif
 
 #include "cata_utility.h"
@@ -177,30 +177,30 @@ const std::vector<folded_line> &folded_text::get_lines() const
 point folded_text::codepoint_coordinates( const int cpt_idx, const bool zero_x ) const
 {
     if( lines.empty() ) {
-        return point::zero;
-    }
-    // find the line before the cursor position
-    auto it = std::lower_bound( lines.begin(), lines.end(), cpt_idx,
-    []( const folded_line & l, const int p ) {
-        return l.cpts_end < p;
-    } );
-    if( it == lines.end() ) {
-        // past the last codepoint, shouldn't happen
-        return point::zero;
-    }
-    int y = std::distance( lines.begin(), it );
-    // if zero_x is true and the line is not the last line, cursor at the end of
-    // the line is moved to the start of the next line
-    if( zero_x && static_cast<size_t>( y ) + 1 < lines.size()
+    return point::zero;
+}
+// find the line before the cursor position
+auto it = std::lower_bound( lines.begin(), lines.end(), cpt_idx,
+[]( const folded_line & l, const int p ) {
+    return l.cpts_end < p;
+} );
+if( it == lines.end() ) {
+    // past the last codepoint, shouldn't happen
+    return point::zero;
+}
+int y = std::distance( lines.begin(), it );
+// if zero_x is true and the line is not the last line, cursor at the end of
+// the line is moved to the start of the next line
+if( zero_x && static_cast<size_t>( y ) + 1 < lines.size()
         && cpt_idx == it->cpts_end ) {
-        return point( 0, y + 1 );
+    return point( 0, y + 1 );
     }
     // otherwise, calculate the width until cpt_idx
     int x = 0;
     const char *src = it->str.c_str();
     int bytes = it->str.length();
     for( int i = 0; bytes > 0 && i < cpt_idx - it->cpts_start; ++i ) {
-        const uint32_t uc = UTF8_getch( &src, &bytes );
+    const uint32_t uc = UTF8_getch( &src, &bytes );
         if( is_linebreak( uc ) ) {
             x = 0;
             ++y;

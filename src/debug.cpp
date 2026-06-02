@@ -47,57 +47,57 @@
 #include "worldfactory.h"
 
 #if !defined(_MSC_VER)
-#include <sys/time.h>
+    #include <sys/time.h>
 #endif
 
 #if defined(_WIN32)
-#   if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
-#       include "platform_win.h"
-#   endif
+    #if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
+        #include "platform_win.h"
+    #endif
 #endif
 
 #if defined(BACKTRACE)
-#   if defined(_WIN32)
-#       include <dbghelp.h>
-#       if defined(LIBBACKTRACE)
-#           include <winnt.h>
-#       endif
-#   elif defined(__ANDROID__)
-#       include <unwind.h>
-#       include <dlfcn.h>
-#   else
-#       include <execinfo.h>
-#       include <unistd.h>
-#   endif
+    #if defined(_WIN32)
+        #include <dbghelp.h>
+        #if defined(LIBBACKTRACE)
+            #include <winnt.h>
+        #endif
+    #elif defined(__ANDROID__)
+        #include <unwind.h>
+        #include <dlfcn.h>
+    #else
+        #include <execinfo.h>
+        #include <unistd.h>
+    #endif
 #endif
 
 #if defined(LIBBACKTRACE)
-#   include <backtrace.h>
+    #include <backtrace.h>
 #endif
 
 #if defined(TILES)
-#include "sdl_wrappers.h"
+    #include "sdl_wrappers.h"
 #endif // TILES
 
 #if defined(__ANDROID__)
-// used by android_version() function for __system_property_get().
-#include <sys/system_properties.h>
-#include "input_context.h"
+    // used by android_version() function for __system_property_get().
+    #include <sys/system_properties.h>
+    #include "input_context.h"
 #endif
 
 #if (defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)) && !defined(CATA_IS_ON_BSD)
-#define CATA_IS_ON_BSD
+    #define CATA_IS_ON_BSD
 #endif
 
 // Static defines                                                   {{{1
 // ---------------------------------------------------------------------
 
 #if (defined(DEBUG) || defined(_DEBUG)) && !defined(NDEBUG)
-static int debugLevel = DL_ALL;
-static int debugClass = DC_ALL;
+    static int debugLevel = DL_ALL;
+    static int debugClass = DC_ALL;
 #else
-static int debugLevel = D_ERROR;
-static int debugClass = D_MAIN;
+    static int debugLevel = D_ERROR;
+    static int debugClass = D_MAIN;
 #endif
 
 /** Set to true when any error is logged. */
@@ -777,7 +777,7 @@ std::ostream &DebugFile::get_file()
 void DebugFile::init( DebugOutput output_mode, const cata_path &filename )
 {
     std::shared_ptr<std::ostringstream> str_buffer = std::dynamic_pointer_cast<std::ostringstream>
-            ( file );
+        ( file );
 
     bool rename_failed = false;
     const cata_path oldfile = filename + ".prev";
@@ -815,8 +815,8 @@ void DebugFile::init( DebugOutput output_mode, const cata_path &filename )
         DebugLog( D_ERROR, DC_ALL ) << "Moving the previous log file to "
                                     << oldfile << " failed.\n"
                                     << "Check the file permissions.  This "
-                                    "program will continue to use the "
-                                    "previous log file.";
+                                       "program will continue to use the "
+                                       "previous log file.";
     }
     if( str_buffer && file ) {
         *file << str_buffer->str();
@@ -1987,12 +1987,12 @@ std::string game_info::game_report()
     }
 
     report <<
-           "- OS: " << operating_system() << "\n" <<
-           "    - OS Version: " << os_version << "\n" <<
-           "- Game Version: " << game_version() << " [" << bitness() << "]\n" <<
-           "- Graphics Version: " << graphics_version() << "\n" <<
-           "- Game Language: " << lang_translated << " [" << lang << "]\n" <<
-           "- Mods loaded: [\n    " << mods_loaded() << "\n]\n";
+    "- OS: " << operating_system() << "\n" <<
+    "    - OS Version: " << os_version << "\n" <<
+    "- Game Version: " << game_version() << " [" << bitness() << "]\n" <<
+    "- Graphics Version: " << graphics_version() << "\n" <<
+    "- Game Language: " << lang_translated << " [" << lang << "]\n" <<
+    "- Mods loaded: [\n    " << mods_loaded() << "\n]\n";
 
     return report.str();
 }

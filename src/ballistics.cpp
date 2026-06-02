@@ -378,7 +378,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         // Continue line is very "stiff" when the original range is short
         // TODO: Make it use a more distant point for more realistic extended lines
         std::vector<tripoint_bub_ms> trajectory_extension = continue_line( trajectory,
-                extend_to_range - range );
+            extend_to_range - range );
         trajectory.reserve( trajectory.size() + trajectory_extension.size() );
         trajectory.insert( trajectory.end(), trajectory_extension.begin(), trajectory_extension.end() );
     }
@@ -422,7 +422,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                 t_copy.insert( t_copy.begin(), source );
                 if( !no_overshoot && range < extend_to_range ) {
                     std::vector<tripoint_bub_ms> extension = continue_line( t_copy,
-                            extend_to_range - range );
+                        extend_to_range - range );
                     t_copy.reserve( t_copy.size() + extension.size() );
                     t_copy.insert( t_copy.end(), extension.begin(), extension.end() );
                 }

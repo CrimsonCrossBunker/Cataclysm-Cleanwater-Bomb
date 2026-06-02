@@ -20,19 +20,19 @@
 // And on mingw even that doesn't work, so we are forced to have our own
 // fallback definitions.
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+    #define M_PI 3.14159265358979323846
 #endif
 
 #ifndef M_PI_2
-#define M_PI_2 1.57079632679489661923
+    #define M_PI_2 1.57079632679489661923
 #endif
 
 #ifndef M_SQRT2
-#define M_SQRT2 1.41421356237309504880
+    #define M_SQRT2 1.41421356237309504880
 #endif
 
 #ifndef M_LOG2E
-#define M_LOG2E 1.44269504088896340736
+    #define M_LOG2E 1.44269504088896340736
 #endif
 
 #endif // CATA_SRC_MATH_DEFINES_H

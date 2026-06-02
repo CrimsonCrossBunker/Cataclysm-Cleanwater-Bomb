@@ -530,26 +530,26 @@ void monster_tab_data::set_filter_active( bool active ) const
 bool monster_tab_data::can_fire_at_selected( avatar &you, int max_gun_range ) const
 {
     if( !selected_entry ) {
-        return false;
-    }
-    const Creature *critter = selected_entry->get_selected_entity();
+    return false;
+}
+const Creature *critter = selected_entry->get_selected_entity();
 
-    return critter && rl_dist( you.pos_bub(), critter->pos_bub() ) <= max_gun_range;
+return critter && rl_dist( you.pos_bub(), critter->pos_bub() ) <= max_gun_range;
 }
 
 bool monster_tab_data::fire_at_selected( avatar &you, int max_gun_range,
         const tripoint_rel_ms &stored_view_offset ) const
 {
     if( !can_fire_at_selected( you, max_gun_range ) ) {
-        return false;
-    }
+    return false;
+}
 
-    you.last_target = g->shared_from( *selected_entry->get_selected_entity() );
-    you.recoil = MAX_RECOIL;
-    you.view_offset = stored_view_offset;
-    avatar_action::fire_wielded_weapon( you );
+you.last_target = g->shared_from( *selected_entry->get_selected_entity() );
+you.recoil = MAX_RECOIL;
+you.view_offset = stored_view_offset;
+avatar_action::fire_wielded_weapon( you );
 
-    return true;
+return true;
 }
 
 terfurn_tab_data::terfurn_tab_data( const std::string &title ) :
@@ -1443,7 +1443,7 @@ void surroundings_menu::change_selected_tab_sorting()
 
 // todo: better solution for this
 std::vector<std::unordered_set<std::string>> surroundings_menu::get_shown_hotkeys(
-            const tab_data *tab )
+    const tab_data *tab )
 {
     std::vector<std::unordered_set<std::string>> ret;
     for( const std::unordered_set<std::string> &group : tab->hotkey_groups ) {

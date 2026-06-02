@@ -70,7 +70,7 @@ static std::map<bodypart_id, int> test_suffer_bodypart_hp_lost( Character &dummy
         const time_duration &dur )
 {
     const std::vector<bodypart_id> body_parts_with_hp = dummy.get_all_body_parts(
-                get_body_part_flags::only_main );
+            get_body_part_flags::only_main );
     // Total hit points lost for each body part
     std::map<bodypart_id, int> bp_hp_lost;
     for( const bodypart_id &bp : body_parts_with_hp ) {
@@ -222,7 +222,7 @@ TEST_CASE( "suffering_from_sunburn", "[char][suffer][sunburn]" )
     scoped_weather_override clear_weather( WEATHER_CLEAR );
     Character &dummy = get_player_character();
     const std::vector<bodypart_id> body_parts_with_hp = dummy.get_all_body_parts(
-                get_body_part_flags::only_main );
+            get_body_part_flags::only_main );
 
     int focus_lost = 0;
     int pain_felt = 0;

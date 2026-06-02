@@ -105,7 +105,7 @@ float read_proportional_entry( const JsonObject &jo, std::string_view key )
 nc_color nc_color_reader::get_next( const JsonValue &jv ) const
 {
     if( !jv.test_string() ) {
-        jv.throw_error( "invalid format for nc_color" );
+    jv.throw_error( "invalid format for nc_color" );
     }
     return color_from_string( jv.get_string() );
 }
@@ -113,11 +113,11 @@ nc_color nc_color_reader::get_next( const JsonValue &jv ) const
 float activity_level_reader::get_next( const JsonValue &jv ) const
 {
     if( !jv.test_string() ) {
-        jv.throw_error( "Invalid activity level" );
+    jv.throw_error( "Invalid activity level" );
     }
     auto it = activity_levels_map.find( jv.get_string() );
     if( it == activity_levels_map.end() ) {
-        jv.throw_error( "Invalid activity level" );
+    jv.throw_error( "Invalid activity level" );
     }
     return it->second;
 }

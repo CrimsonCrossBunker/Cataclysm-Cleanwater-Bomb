@@ -300,7 +300,7 @@ std::string display::sundial_text_color( const Character &u, int width )
     int sun_left_idx;
     int sun_right_idx;
     std::tie( sun_left_idx, sun_right_idx ) = left_right_highlight_index( sun_pos_idx,
-            sun_weather_highlight, width );
+        sun_weather_highlight, width );
 
     // Same for moonlight; illumination after weather is highlighted yellow
     const float incident_moon_light = incident_moonlight( weather.weather_id, calendar::turn );
@@ -317,7 +317,7 @@ std::string display::sundial_text_color( const Character &u, int width )
     int moon_left_idx;
     int moon_right_idx;
     std::tie( moon_left_idx, moon_right_idx ) = left_right_highlight_index( moon_pos_idx,
-            moon_weather_highlight, width );
+        moon_weather_highlight, width );
 
     nc_color current_clr = c_white;
     std::string chars;
@@ -881,7 +881,7 @@ std::pair<std::string, nc_color> display::pain_text_color( const Character &u )
 {
     // Get base Creature pain text to start with
     const std::pair<std::string, nc_color> pain = display::pain_text_color(
-                static_cast<const Creature &>( u ) );
+            static_cast<const Creature &>( u ) );
     nc_color pain_color = pain.second;
     std::string pain_string;
     // get pain color

@@ -19,20 +19,20 @@ std::uint32_t TranslationManager::Impl::Hash( const char *str )
 }
 
 std::optional<std::pair<std::size_t, std::size_t>> TranslationManager::Impl::LookupString(
-            const char *query ) const
+    const char *query ) const
 {
     if( strings.empty() ) {
-        return std::nullopt;
-    }
-    std::uint32_t hash = Hash( query );
-    auto it = strings.find( hash );
-    if( it == strings.end() ) {
-        return std::nullopt;
-    }
-    for( const std::pair<size_t, size_t> &entry : it->second ) {
-        const std::size_t document = entry.first;
-        const std::size_t index = entry.second;
-        if( strcmp( documents[document].GetOriginalString( index ), query ) == 0 ) {
+    return std::nullopt;
+}
+std::uint32_t hash = Hash( query );
+auto it = strings.find( hash );
+if( it == strings.end() ) {
+    return std::nullopt;
+}
+for( const std::pair<size_t, size_t> &entry : it->second ) {
+    const std::size_t document = entry.first;
+    const std::size_t index = entry.second;
+    if( strcmp( documents[document].GetOriginalString( index ), query ) == 0 ) {
             return std::optional<std::pair<std::size_t, std::size_t>> { entry };
         }
     }

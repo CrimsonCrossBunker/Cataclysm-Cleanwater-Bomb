@@ -27,10 +27,10 @@ bool iteminfo_query::test( const iteminfo_parts &value ) const
 }
 
 const iteminfo_query iteminfo_query::all = iteminfo_query(
-            std::string( static_cast<size_t>( iteminfo_parts::NUM_VALUES ), '1' ) );
+        std::string( static_cast<size_t>( iteminfo_parts::NUM_VALUES ), '1' ) );
 
 const iteminfo_query iteminfo_query::notext = iteminfo_query(
-            iteminfo_query::all & ~iteminfo_query(
+        iteminfo_query::all & ~iteminfo_query(
 std::vector<iteminfo_parts> {
     iteminfo_parts::DESCRIPTION,
     iteminfo_parts::DESCRIPTION_TECHNIQUES,

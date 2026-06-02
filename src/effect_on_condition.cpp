@@ -419,9 +419,9 @@ bool effect_on_condition::activate_activation_only( dialogue &d, const std::stri
 bool effect_on_condition::check_deactivate( const_dialogue const &d ) const
 {
     if( !has_deactivate_condition || has_false_effect ) {
-        return false;
-    }
-    return deactivate_condition( d );
+    return false;
+}
+return deactivate_condition( d );
 }
 
 bool effect_on_condition::test_condition( const_dialogue const &d ) const

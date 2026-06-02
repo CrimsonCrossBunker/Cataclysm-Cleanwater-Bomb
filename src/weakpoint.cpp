@@ -96,13 +96,13 @@ float Character::generic_weakpoint_skill( skill_id skill_1, skill_id skill_2,
 float Character::melee_weakpoint_skill( const item &weapon ) const
 {
     return generic_weakpoint_skill( weapon.is_null() ? skill_unarmed : weapon.melee_skill(),
-                                    skill_melee, limb_score_vision, limb_score_reaction );
+    skill_melee, limb_score_vision, limb_score_reaction );
 }
 
 float Character::ranged_weakpoint_skill( const item &weapon ) const
 {
     return generic_weakpoint_skill( weapon.gun_skill(), skill_gun, limb_score_vision,
-                                    limb_score_vision );
+    limb_score_vision );
 }
 
 float Character::throw_weakpoint_skill() const
@@ -113,8 +113,8 @@ float Character::throw_weakpoint_skill() const
 float weakpoint_family::modifier( const Character &attacker ) const
 {
     return attacker.has_proficiency( proficiency )
-           ? bonus.value_or( proficiency.obj().default_weakpoint_bonus() )
-           : penalty.value_or( proficiency.obj().default_weakpoint_penalty() );
+    ? bonus.value_or( proficiency.obj().default_weakpoint_bonus() )
+    : penalty.value_or( proficiency.obj().default_weakpoint_penalty() );
 }
 
 void weakpoint_family::load( const JsonValue &jsin )
@@ -445,23 +445,23 @@ void weakpoint::load( const JsonObject &jo )
 
 void weakpoint::check() const
 {
-    for( const std::pair<const damage_type_id, float> &dt : armor_mult ) {
-        if( !dt.first.is_valid() ) {
+for( const std::pair<const damage_type_id, float> &dt : armor_mult ) {
+    if( !dt.first.is_valid() ) {
             debugmsg( "Invalid armor_mult type \"%s\" for weakpoint %s", dt.first.c_str(), id );
         }
     }
-    for( const std::pair<const damage_type_id, float> &dt : armor_penalty ) {
-        if( !dt.first.is_valid() ) {
+for( const std::pair<const damage_type_id, float> &dt : armor_penalty ) {
+    if( !dt.first.is_valid() ) {
             debugmsg( "Invalid armor_penalty type \"%s\" for weakpoint %s", dt.first.c_str(), id );
         }
     }
-    for( const std::pair<const damage_type_id, float> &dt : damage_mult ) {
-        if( !dt.first.is_valid() ) {
+for( const std::pair<const damage_type_id, float> &dt : damage_mult ) {
+    if( !dt.first.is_valid() ) {
             debugmsg( "Invalid damage_mult type \"%s\" for weakpoint %s", dt.first.c_str(), id );
         }
     }
-    for( const std::pair<const damage_type_id, float> &dt : crit_mult ) {
-        if( !dt.first.is_valid() ) {
+for( const std::pair<const damage_type_id, float> &dt : crit_mult ) {
+    if( !dt.first.is_valid() ) {
             debugmsg( "Invalid crit_mult type \"%s\" for weakpoint %s", dt.first.c_str(), id );
         }
     }
@@ -474,8 +474,8 @@ std::string weakpoint::get_name() const
 
 void weakpoint::apply_to( resistances &resistances ) const
 {
-    for( const damage_type &dt : damage_type::get_all() ) {
-        if( resistances.resist_vals.count( dt.id ) <= 0 ) {
+for( const damage_type &dt : damage_type::get_all() ) {
+    if( resistances.resist_vals.count( dt.id ) <= 0 ) {
             resistances.resist_vals[dt.id] = 0.0f;
         }
         if( armor_mult.count( dt.id ) > 0 ) {
@@ -489,8 +489,8 @@ void weakpoint::apply_to( resistances &resistances ) const
 
 void weakpoint::apply_to( damage_instance &damage, bool is_crit ) const
 {
-    for( damage_unit &elem : damage.damage_units ) {
-        if( is_crit ) {
+for( damage_unit &elem : damage.damage_units ) {
+    if( is_crit ) {
             if( crit_mult.count( elem.type ) > 0 ) {
                 elem.damage_multiplier *= crit_mult.at( elem.type );
                 add_msg_debug( debugmode::DF_MONSTER, "%s crit_mult %f",
@@ -507,8 +507,8 @@ void weakpoint::apply_to( damage_instance &damage, bool is_crit ) const
 void weakpoint::apply_effects( Creature &target, int total_damage,
                                const weakpoint_attack &attack ) const
 {
-    for( const weakpoint_effect &effect : effects ) {
-        effect.apply_to( target, total_damage, attack );
+for( const weakpoint_effect &effect : effects ) {
+    effect.apply_to( target, total_damage, attack );
     }
 }
 
@@ -516,8 +516,8 @@ float weakpoint::hit_chance( const weakpoint_attack &attack ) const
 {
     // Evaluate condition
     if( has_condition ) {
-        dialogue d( attack.source == nullptr ? nullptr : get_talker_for( *attack.source ),
-                    get_talker_for( *attack.target ) );
+    dialogue d( attack.source == nullptr ? nullptr : get_talker_for( *attack.source ),
+                get_talker_for( *attack.target ) );
         if( !condition( d ) ) {
             add_msg_debug( debugmode::DF_MONSTER, "Attack conditionals failed" );
             return 0.0f;
@@ -530,9 +530,9 @@ float weakpoint::hit_chance( const weakpoint_attack &attack ) const
     float difficulty_mult;
     float final_coverage;
     if( is_good ) {
-        // Probability of a sample from a normal distribution centered on `skill` with `SD = 2`
-        // exceeding the difficulty.
-        diff = attack.wp_skill - difficulty.of( attack );
+    // Probability of a sample from a normal distribution centered on `skill` with `SD = 2`
+    // exceeding the difficulty.
+    diff = attack.wp_skill - difficulty.of( attack );
         difficulty_mult = 0.5f * ( 1.0f + erf( diff / ( 2.0f * sqrt( 2.0f ) ) ) );
         if( attack.source && attack.source->as_character() ) {
             final_coverage = attack.source->as_character()->enchantment_cache->modify_value(
@@ -567,10 +567,10 @@ static float reweigh( float base, float rolls )
 const weakpoint *weakpoints::select_weakpoint( const weakpoint_attack &attack ) const
 {
     add_msg_debug( debugmode::DF_MONSTER,
-                   "Weakpoint Selection: Source: %s, Weapon %s, Skill %.3f, Accuracy %.3f",
-                   attack.source == nullptr ? "nullptr" : attack.source->get_name(),
-                   attack.weapon == nullptr ? "nullptr" : attack.weapon->type_name(),
-                   attack.wp_skill, attack.accuracy );
+    "Weakpoint Selection: Source: %s, Weapon %s, Skill %.3f, Accuracy %.3f",
+    attack.source == nullptr ? "nullptr" : attack.source->get_name(),
+    attack.weapon == nullptr ? "nullptr" : attack.weapon->type_name(),
+    attack.wp_skill, attack.accuracy );
     float rolls = std::max( 1.0f, 1.0f + attack.wp_skill / 2.5f );
     // The base probability of hitting a more preferable weak point.
     float base = 0.0f;
@@ -578,7 +578,7 @@ const weakpoint *weakpoints::select_weakpoint( const weakpoint_attack &attack ) 
     float reweighed = 0.0f;
     float idx = rng_float( 0.0f, 100.0f );
     for( const weakpoint &weakpoint : weakpoint_list ) {
-        float raw_chance = weakpoint.hit_chance( attack );
+    float raw_chance = weakpoint.hit_chance( attack );
         if( raw_chance == 0.0f ) {
             add_msg_debug( debugmode::DF_MONSTER,
                            "Weakpoint Selection: weakpoint %s, conditions not match",
@@ -640,22 +640,22 @@ bool weakpoints_reader::do_extend( const JsonObject &jo, const std::string_view 
                                    weakpoints &member ) const
 {
     if( !jo.has_member( name ) ) {
-        return false;
-    }
-    return member.handle_extend( jo.get_member( name ) );
+    return false;
+}
+return member.handle_extend( jo.get_member( name ) );
 }
 
 bool weakpoints_reader::do_delete( const JsonObject &jo, const std::string_view name,
                                    weakpoints &member ) const
 {
     if( !jo.has_member( name ) ) {
-        return false;
-    }
-    weakpoints tmp;
-    tmp.deserialize( jo.get_member( name ) );
-    // deferred delete for weakpoints from sets
-    for( const weakpoint &del : tmp.weakpoint_list ) {
-        deleted.emplace( del.id );
+    return false;
+}
+weakpoints tmp;
+tmp.deserialize( jo.get_member( name ) );
+// deferred delete for weakpoints from sets
+for( const weakpoint &del : tmp.weakpoint_list ) {
+    deleted.emplace( del.id );
     }
     member.del_from_set( tmp );
     return true;
@@ -692,8 +692,8 @@ void weakpoints::load( const JsonArray &ja )
 
 void weakpoints::check() const
 {
-    for( const weakpoint &w : weakpoint_list ) {
-        w.check();
+for( const weakpoint &w : weakpoint_list ) {
+    w.check();
     }
 }
 

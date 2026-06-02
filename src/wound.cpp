@@ -143,26 +143,26 @@ void wound_fix::check_consistency()
 
 void wound_fix::check() const
 {
-    for( const auto &[skill_id, lvl] : skills ) {
+for( const auto &[skill_id, lvl] : skills ) {
         if( !skill_id.is_valid() ) {
             debugmsg( "wound_fix %s requires unknown skill '%s'", id.str(), skill_id.str() );
         }
     }
-    for( const wound_type_id &wd_id : wounds_removed ) {
-        if( !wd_id.is_valid() ) {
+for( const wound_type_id &wd_id : wounds_removed ) {
+    if( !wd_id.is_valid() ) {
             debugmsg( "wound_fix '%s' has invalid wound id '%s' in 'wounds_removed' field",
                       id.str(), wd_id.str() );
         }
     }
-    for( const wound_type_id &wd_id : wounds_added ) {
-        if( !wd_id.is_valid() ) {
+for( const wound_type_id &wd_id : wounds_added ) {
+    if( !wd_id.is_valid() ) {
             debugmsg( "wound_fix '%s' has invalid wound id '%s' in 'wounds_added' field",
                       id.str(), wd_id.str() );
         }
     }
 
-    for( const wound_proficiency &wound_prof : proficiencies ) {
-        if( !wound_prof.prof.is_valid() ) {
+for( const wound_proficiency &wound_prof : proficiencies ) {
+    if( !wound_prof.prof.is_valid() ) {
             debugmsg( "wound_fix '%s' has invalid proficiency '%s' in 'proficiencies' field",
                       id.str(), wound_prof.prof.str() );
         }
@@ -256,21 +256,21 @@ bool wound_type::allowed_on_bodypart( bodypart_str_id bp_id ) const
 {
 
     // doesn't have bp type we want
-    for( const bp_type &bp_type : whitelist_body_part_types ) {
-        if( !bp_id->has_type( bp_type ) ) {
+for( const bp_type &bp_type : whitelist_body_part_types ) {
+    if( !bp_id->has_type( bp_type ) ) {
             return false;
         }
     }
 
     // has no flag we want
     if( !bp_id->has_flag( whitelist_bp_with_flag ) &&
-        !whitelist_bp_with_flag.is_empty() ) {
+            !whitelist_bp_with_flag.is_empty() ) {
         return false;
     }
 
     // has type we do not want
-    for( const bp_type &bp_type : blacklist_body_part_types ) {
-        if( bp_id->has_type( bp_type ) ) {
+for( const bp_type &bp_type : blacklist_body_part_types ) {
+    if( bp_id->has_type( bp_type ) ) {
             return false;
         }
     }

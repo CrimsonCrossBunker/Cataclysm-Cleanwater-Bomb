@@ -166,7 +166,7 @@ TEST_CASE( "colony_basics", "[colony]" )
     count = 0;
     sum = 0;
     for( cata::colony<int *>::const_reverse_iterator it = --cata::colony<int *>::const_reverse_iterator(
-                test_colony.crend() ); it != cata::colony<int *>::const_reverse_iterator( test_colony.crbegin() );
+             test_colony.crend() ); it != cata::colony<int *>::const_reverse_iterator( test_colony.crbegin() );
          --it ) {
         ++count;
         sum += **it;
@@ -283,7 +283,7 @@ TEST_CASE( "colony_insert_and_erase", "[colony]" )
 
     cata::colony<int>::iterator found = std::find( test_colony.begin(), test_colony.end(), 5000 );
     cata::colony<int>::reverse_iterator found2 = std::find( test_colony.rbegin(), test_colony.rend(),
-            5000 );
+        5000 );
 
     // std::find reverse_iterator
     CHECK( *found == 5000 );

@@ -373,14 +373,14 @@ bool talker_character_const::has_flag( const json_character_flag &trait_flag_to_
 bool talker_character_const::has_species( const species_id &species ) const
 {
     add_msg_debug( debugmode::DF_TALKER, "Character %s checked for species %s", me_chr_const->name,
-                   species.c_str() );
+    species.c_str() );
     return me_chr_const->in_species( species );
 }
 
 bool talker_character_const::bodytype( const bodytype_id &bt ) const
 {
     add_msg_debug( debugmode::DF_TALKER, "Character %s checked for bodytype %s", me_chr_const->name,
-                   bt );
+    bt );
     // All characters are human-bodytyped for now
     // TODO: Change that for very limby characters
     return bt == "human";
@@ -448,9 +448,9 @@ int talker_character_const::get_spell_level( const trait_id &spell_school ) cons
 int talker_character_const::get_spell_level( const spell_id &spell_name ) const
 {
     if( !me_chr_const->magic->knows_spell( spell_name ) ) {
-        return -1;
-    }
-    return me_chr_const->magic->get_spell( spell_name ).get_effective_level();
+    return -1;
+}
+return me_chr_const->magic->get_spell( spell_name ).get_effective_level();
 }
 
 int talker_character_const::get_highest_spell_level() const
@@ -465,16 +465,16 @@ int talker_character_const::get_highest_spell_level() const
 int talker_character_const::get_spell_exp( const spell_id &spell_name ) const
 {
     if( !me_chr_const->magic->knows_spell( spell_name ) ) {
-        return -1;
-    }
-    return me_chr_const->magic->get_spell( spell_name ).xp();
+    return -1;
+}
+return me_chr_const->magic->get_spell( spell_name ).xp();
 }
 
 int talker_character_const::get_spell_difficulty( const spell_id &spell_name,
         bool ignore_modifiers = false ) const
 {
     if( ignore_modifiers || !me_chr_const->magic->knows_spell( spell_name ) ) {
-        return spell_name->get_difficulty( *me_chr_const );
+    return spell_name->get_difficulty( *me_chr_const );
     }
     return me_chr_const->magic->get_spell( spell_name ).get_difficulty( *me_chr_const );
 }
@@ -607,7 +607,7 @@ bool talker_character_const::has_charges( const itype_id &item_id, int count ) c
 bool talker_character_const::has_charges( const itype_id &item_id, int count, bool in_tools ) const
 {
     if( !in_tools ) {
-        return me_chr_const->has_charges( item_id, count );
+    return me_chr_const->has_charges( item_id, count );
     } else {
         return me_chr_const->charges_of( item_id, count, return_true<item>, nullptr, in_tools ) >= count;
     }
@@ -707,7 +707,7 @@ bool talker_character_const::has_stolen_item( const_talker const &guy ) const
 {
     const Character *owner = guy.get_const_character();
     if( owner ) {
-        for( const item *&elem : me_chr_const->inv_dump() ) {
+        for( const item * &elem : me_chr_const->inv_dump() ) {
             if( elem->is_old_owner( *owner, true ) ) {
                 return true;
             }
@@ -867,13 +867,13 @@ bool talker_character_const::wielded_with_flag( const flag_id &flag ) const
 bool talker_character_const::wielded_with_weapon_category( const weapon_category_id &w_cat ) const
 {
     return me_chr_const->get_wielded_item() &&
-           me_chr_const->get_wielded_item()->typeId()->weapon_category.count( w_cat ) > 0;
+    me_chr_const->get_wielded_item()->typeId()->weapon_category.count( w_cat ) > 0;
 }
 
 bool talker_character_const::wielded_with_weapon_skill( const skill_id &w_skill ) const
 {
     if( me_chr_const->get_wielded_item() ) {
-        item *it = me_chr_const->get_wielded_item().get_item();
+    item *it = me_chr_const->get_wielded_item().get_item();
         skill_id it_skill = it->is_gun() ? it->gun_skill() : it->melee_skill();
         return it_skill == w_skill;
     } else {
@@ -884,17 +884,17 @@ bool talker_character_const::wielded_with_weapon_skill( const skill_id &w_skill 
 bool talker_character_const::wielded_with_item_ammotype( const ammotype &w_ammotype ) const
 {
     if( !me_chr_const->get_wielded_item() ) {
-        return false;
-    }
-    item *it = me_chr_const->get_wielded_item().get_item();
-    if( it->ammo_types().empty() ) {
-        return false;
-    }
-    std::set<ammotype> it_ammotype = it->ammo_types();
-    bool match = false;
+    return false;
+}
+item *it = me_chr_const->get_wielded_item().get_item();
+if( it->ammo_types().empty() ) {
+    return false;
+}
+std::set<ammotype> it_ammotype = it->ammo_types();
+bool match = false;
 
-    for( ammotype ammo : it_ammotype ) {
-        if( ammo == w_ammotype ) {
+for( ammotype ammo : it_ammotype ) {
+    if( ammo == w_ammotype ) {
             match = true;
         }
     }
@@ -945,7 +945,7 @@ void talker_character::set_mana_cur( int value )
 bool talker_character_const::can_see() const
 {
     return !me_chr_const->is_blind() && ( !me_chr_const->in_sleep_state() ||
-                                          me_chr_const->has_flag( json_flag_SEESLEEP ) );
+    me_chr_const->has_flag( json_flag_SEESLEEP ) );
 }
 
 bool talker_character_const::can_see_location( const tripoint_bub_ms &pos ) const
@@ -1043,8 +1043,8 @@ int talker_character_const::get_addiction_intensity( const addiction_id &add_id 
 
 int talker_character_const::get_addiction_turns( const addiction_id &add_id ) const
 {
-    for( const addiction &add : me_chr_const->addictions ) {
-        if( add.type == add_id ) {
+for( const addiction &add : me_chr_const->addictions ) {
+    if( add.type == add_id ) {
             return to_turns<int>( add.sated );
         }
     }
@@ -1192,7 +1192,7 @@ units::temperature talker_character_const::get_body_temp() const
 units::temperature_delta talker_character_const::get_body_temp_delta() const
 {
     return me_chr_const->get_part_temp_conv( temp_delta( me_chr_const ).second ) -
-           me_chr_const->get_part_temp_cur( temp_delta( me_chr_const ).first );
+    me_chr_const->get_part_temp_cur( temp_delta( me_chr_const ).first );
 }
 
 bool talker_character_const::knows_martial_art( const matype_id &id ) const
@@ -1240,7 +1240,7 @@ std::vector<spell_id> talker_character_const::spells_teacheable() const
 std::vector<skill_id> talker_character_const::skills_offered_to( const_talker const &student ) const
 {
     if( student.get_const_character() ) {
-        return me_chr_const->skills_offered_to( student.get_const_character() );
+    return me_chr_const->skills_offered_to( student.get_const_character() );
     } else {
         return {};
     }
@@ -1273,7 +1273,7 @@ std::vector<proficiency_id> talker_character_const::proficiencies_offered_to(
     const_talker const &student ) const
 {
     if( student.get_const_character() ) {
-        return me_chr_const->proficiencies_offered_to( student.get_const_character() );
+    return me_chr_const->proficiencies_offered_to( student.get_const_character() );
     } else {
         return {};
     }
@@ -1309,7 +1309,7 @@ std::vector<matype_id> talker_character_const::styles_offered_to( const_talker c
 const
 {
     if( student.get_const_character() ) {
-        return me_chr_const->styles_offered_to( student.get_const_character() );
+    return me_chr_const->styles_offered_to( student.get_const_character() );
     } else {
         return {};
     }
@@ -1319,8 +1319,8 @@ std::string talker_character_const::style_training_text( const_talker const &stu
         const matype_id &style ) const
 {
     if( !student.get_const_character() ) {
-        return "";
-    } else if( !me_chr_const->is_npc() ||
+    return "";
+} else if( !me_chr_const->is_npc() ||
                me_chr_const->as_npc()->is_ally( *student.get_const_character() ) ) {
         return string_format( "%s", style.obj().name );
     } else {
@@ -1331,7 +1331,7 @@ std::string talker_character_const::style_training_text( const_talker const &stu
 std::vector<spell_id> talker_character_const::spells_offered_to( const_talker const &student ) const
 {
     if( student.get_const_character() ) {
-        return me_chr_const->spells_offered_to( student.get_const_character() );
+    return me_chr_const->spells_offered_to( student.get_const_character() );
     } else {
         return {};
     }
@@ -1427,9 +1427,9 @@ matec_id talker_character_const::get_random_technique( Creature const &t, bool c
         bool dodge_counter, bool block_counter, const std::vector<matec_id> &blacklist ) const
 {
     return std::get<0>( me_chr_const->pick_technique( t, me_chr_const->used_weapon(), crit,
-                        dodge_counter,
-                        block_counter,
-                        blacklist ) );
+    dodge_counter,
+    block_counter,
+    blacklist ) );
 }
 
 bool talker_character_const::is_in_vehicle() const

@@ -332,9 +332,9 @@ tileset::find_tile_type_by_season( const std::string &id, season_type season ) c
     }
     const tileset::season_tile_value &res = iter->second;
     if( res.season_tile ) {
-        return res.season_tile;
-    } else if( res.default_tile ) { // can skip this check, but just in case
-        return tile_lookup_res( iter->first, *res.default_tile );
+    return res.season_tile;
+} else if( res.default_tile ) { // can skip this check, but just in case
+    return tile_lookup_res( iter->first, *res.default_tile );
     }
     debugmsg( "empty record found in `tile_ids_by_season` for key: %s", id );
     return std::nullopt;
@@ -898,7 +898,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     int cur_zlevel = std::max( center.z() - fov_3d_z_range, -OVERMAP_DEPTH );
     while( cur_zlevel <= center.z() ) {
         const half_open_rectangle<point> &cur_any_tile_range = is_isometric()
-                ? z_any_tile_range[center.z() - cur_zlevel] : top_any_tile_range;
+            ? z_any_tile_range[center.z() - cur_zlevel] : top_any_tile_range;
         // For each row
         const bool iso = is_isometric();
         const level_cache &zlev_cache = here.access_cache( cur_zlevel );
@@ -1472,7 +1472,7 @@ point cata_tiles::get_window_base_tile_counts(
 point cata_tiles::get_window_base_tile_counts( const point &size ) const
 {
     return get_window_base_tile_counts(
-               size, point( tile_width, tile_height ), is_isometric() );
+           size, point( tile_width, tile_height ), is_isometric() );
 }
 
 half_open_rectangle<point> cata_tiles::get_window_any_tile_range(
@@ -1483,10 +1483,10 @@ half_open_rectangle<point> cata_tiles::get_window_any_tile_range(
     // Based on the maximum tile extent, these ensure that any tile that can be
     // possibly on screen is included in the range.
     if( is_isometric() ) {
-        // z-level below => negative z_height => smaller row_beg and row_end
-        const int z_height = zlevel_height * z;
-        const int col_beg = divide_round_down( ( tile_width - max_tile_extent.p_max.x ) * 2,
-                                               tile_width );
+    // z-level below => negative z_height => smaller row_beg and row_end
+    const int z_height = zlevel_height * z;
+    const int col_beg = divide_round_down( ( tile_width - max_tile_extent.p_max.x ) * 2,
+                                           tile_width );
         const int col_end = divide_round_up( ( size.x - max_tile_extent.p_min.x ) * 2,
                                              tile_width ) + 1;
         const int row_beg = divide_round_down( ( z_height + tile_height
@@ -1514,19 +1514,19 @@ half_open_rectangle<point> cata_tiles::get_window_any_tile_range(
 half_open_rectangle<point> cata_tiles::get_window_full_base_tile_range( const point &size ) const
 {
     if( is_isometric() ) {
-        // (following comments in get_window_base_tile_counts)
-        //
-        // Only the area from (0, 0) to (tile_width, tile_width / 2) is
-        // considered when checking which tiles are fully on-screen, and the
-        // exact position of pixels is disregarded. In the figure above, as
-        // opposed to 1-6, only 2-5 are fully shown on-screen. Therefore, we can
-        // see that,
-        //
-        // cols = divide_round_down(sx, w) - 1
-        // rows = divide_round_down(sy, h) - 1
-        // ||
-        // \/
-        const int columns = divide_round_down( size.x * 2, tile_width ) - 1;
+    // (following comments in get_window_base_tile_counts)
+    //
+    // Only the area from (0, 0) to (tile_width, tile_width / 2) is
+    // considered when checking which tiles are fully on-screen, and the
+    // exact position of pixels is disregarded. In the figure above, as
+    // opposed to 1-6, only 2-5 are fully shown on-screen. Therefore, we can
+    // see that,
+    //
+    // cols = divide_round_down(sx, w) - 1
+    // rows = divide_round_down(sy, h) - 1
+    // ||
+    // \/
+    const int columns = divide_round_down( size.x * 2, tile_width ) - 1;
         const int rows = divide_round_down( size.y * 4, tile_width ) - 1;
         //NOLINTNEXTLINE(cata-use-named-point-constants): the name would be confusing here (screen 'NSWE' are not map NSWE)
         return { { 1, 1 }, { columns + 1, rows + 1 } };
@@ -1554,9 +1554,9 @@ std::optional<point_bub_ms> cata_tiles::tile_to_player(
         }
         return o + point_rel_ms {
             divide_round_down( colrow.x - colrow.y - base_tile_cnt.x / 2
-                               + base_tile_cnt.y / 2, 2 ),
+            + base_tile_cnt.y / 2, 2 ),
             divide_round_down( colrow.y + colrow.x - base_tile_cnt.y / 2
-                               - base_tile_cnt.x / 2, 2 ),
+            - base_tile_cnt.x / 2, 2 ),
         };
     } else {
         return point_rel_ms( colrow ) + o;
@@ -1579,14 +1579,14 @@ point cata_tiles::player_to_tile( const point_bub_ms &pos ) const
 {
     // (calculate the screen position according to cata_tiles::tile_to_player)
     if( is_isometric() ) {
-        // (division rounded down):
-        //
-        // pos.x = ( col - row - sx / 2 + sy / 2 ) / 2 + o.x;
-        // pos.y = ( row + col - sy / 2 - sx / 2 ) / 2 + o.y;
-        // ( col - sx / 2 ) % 2 = ( row - sy / 2 ) % 2
-        // ||
-        // \/
-        const int col = pos.y() + pos.x() + screentile_width / 2 - o.y - o.x;
+    // (division rounded down):
+    //
+    // pos.x = ( col - row - sx / 2 + sy / 2 ) / 2 + o.x;
+    // pos.y = ( row + col - sy / 2 - sx / 2 ) / 2 + o.y;
+    // ( col - sx / 2 ) % 2 = ( row - sy / 2 ) % 2
+    // ||
+    // \/
+    const int col = pos.y() + pos.x() + screentile_width / 2 - o.y - o.x;
         const int row = pos.y() - pos.x() + screentile_height / 2 - o.y + o.x;
         return { col, row };
     } else {
@@ -1647,10 +1647,10 @@ point_bub_ms cata_tiles::screen_to_player(
         const point colrow( divide_round_down( scr_pos.x * 2, tile_size.x ) + 1,
                             divide_round_down( scr_pos.y * 4, tile_size.x ) + 1 );
         const std::optional<point_bub_ms> player_1 = tile_to_player(
-                    colrow, center, base_tile, iso );
+                colrow, center, base_tile, iso );
         const std::optional<point_bub_ms> player_2 = tile_to_player(
-                    //NOLINTNEXTLINE(cata-use-named-point-constants): the name would be confusing here (screen 'NSWE' are not map NSWE)
-                    colrow + point( 1, 0 ), center, base_tile, iso );
+                //NOLINTNEXTLINE(cata-use-named-point-constants): the name would be confusing here (screen 'NSWE' are not map NSWE)
+                colrow + point( 1, 0 ), center, base_tile, iso );
         // We do not know the precise shape of the base tile, assuming rhombuses.
         // TODO: maybe let tilesets provide the exact shape of the base tile.
         if( player_1.has_value() ) {
@@ -1778,10 +1778,10 @@ cata_tiles::find_tile_looks_like_by_string_id( std::string_view id, TILE_CATEGOR
 {
     const string_id<T> s_id( id );
     if( !s_id.is_valid() ) {
-        return std::nullopt;
-    }
-    const T &obj = s_id.obj();
-    return find_tile_looks_like( obj.looks_like, category, "", looks_like_jumps_limit - 1 );
+    return std::nullopt;
+}
+const T &obj = s_id.obj();
+return find_tile_looks_like( obj.looks_like, category, "", looks_like_jumps_limit - 1 );
 }
 
 std::optional<tile_lookup_res>
@@ -2972,7 +2972,7 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
             const auto furn = [&]( const tripoint_bub_ms & q, const bool invis ) -> furn_id {
                 const auto it = furniture_override.find( q );
                 return it != furniture_override.end() ? it->second :
-                ( !overridden || !invis ) ? here.furn( q ) : furn_str_id::NULL_ID().id();
+                                               ( !overridden || !invis ) ? here.furn( q ) : furn_str_id::NULL_ID().id();
             };
             const std::array<int, 4> neighborhood = {
                 static_cast<int>( furn( p + point::south, invisible[1] ) ),
@@ -3066,7 +3066,7 @@ bool cata_tiles::draw_trap( const tripoint_bub_ms &p, const lit_level ll, int &h
             const auto tr_at = [&]( const tripoint_bub_ms & q, const bool invis ) -> trap_id {
                 const auto it = trap_override.find( q );
                 return it != trap_override.end() ? it->second :
-                ( !overridden || !invis ) ? here.tr_at( q ).loadid : tr_null;
+                                          ( !overridden || !invis ) ? here.tr_at( q ).loadid : tr_null;
             };
             const std::array<int, 4> neighborhood = {
                 static_cast<int>( tr_at( p + point::south, invisible[1] ) ),
@@ -3305,7 +3305,7 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
             auto field_at = [&]( const tripoint_bub_ms & q, const bool invis ) -> field_type_id {
                 const auto it = field_override.find( q );
                 return it != field_override.end() ? it->second :
-                ( !fld_overridden || !invis ) ? here.field_at( q ).displayed_field_type() : fd_null;
+                                           ( !fld_overridden || !invis ) ? here.field_at( q ).displayed_field_type() : fd_null;
             };
             // for rotation information
             const std::array<int, 4> neighborhood = {
@@ -3889,7 +3889,7 @@ void cata_tiles::draw_entity_with_overlays( const Character &ch, const tripoint_
         }
     } else {
         mutation_branch::OverrideLook override_look = override_look_muts.at(
-                    0 ).obj().override_look.value();
+                0 ).obj().override_look.value();
         TILE_CATEGORY category;
         if( to_TILE_CATEGORY.find( override_look.tile_category ) != to_TILE_CATEGORY.end() ) {
             category = to_TILE_CATEGORY.at( override_look.tile_category );
@@ -3908,7 +3908,7 @@ void cata_tiles::draw_entity_with_overlays( const Character &ch, const tripoint_
 
     // next up, draw all the overlays
     std::vector<std::pair<std::string, std::string>> overlays = override_look_muts.empty() ?
-            ch.get_overlay_ids() : ch.get_overlay_ids_when_override_look();
+        ch.get_overlay_ids() : ch.get_overlay_ids_when_override_look();
     for( const std::pair<std::string, std::string> &overlay : overlays ) {
         std::string draw_id = overlay.first;
         if( find_overlay_looks_like( ch.male, overlay.first, overlay.second, draw_id ) ) {
@@ -4533,7 +4533,7 @@ void cata_tiles::get_terrain_orientation( const tripoint_bub_ms &p, int &rota, i
     const auto ter = [&]( const tripoint_bub_ms & q, const bool invis ) -> ter_str_id {
         const auto override_it = ter_override.find( q );
         return override_it != ter_override.end() ? override_it->second.id() :
-        ( !overridden || !invis ) ? here.ter( q ).id() : ter_str_id::NULL_ID();
+                                          ( !overridden || !invis ) ? here.ter( q ).id() : ter_str_id::NULL_ID();
     };
 
     // get terrain at x,y
@@ -5013,7 +5013,7 @@ void cata_tiles::lr_generic( Iter begin, Iter end, Func id_func, TILE_CATEGORY c
     const std::string &category_name = TILE_CATEGORY_IDS[static_cast<size_t>( category )];
     DebugLog( D_INFO, DC_ALL ) << "Missing " << category_name << ": " << missing_list;
     DebugLog( D_INFO, DC_ALL ) << "Missing " << category_name <<
-                               " (but looks_like tile exists): " << missing_with_looks_like_list;
+                                  " (but looks_like tile exists): " << missing_with_looks_like_list;
 }
 
 template <typename maptype>

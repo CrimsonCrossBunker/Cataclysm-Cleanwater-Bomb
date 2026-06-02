@@ -212,7 +212,7 @@ void mission::on_creature_death( Creature &poor_dead_dude )
     npc *p = dynamic_cast<npc *>( &poor_dead_dude );
     if( p == nullptr ) {
         // Must be the player
-        for( mission *&miss : get_avatar().get_active_missions() ) {
+        for( mission * &miss : get_avatar().get_active_missions() ) {
             // mission is free and can be reused
             miss->player_id = character_id();
         }
@@ -637,13 +637,13 @@ bool mission::is_complete( const character_id &_npc_id ) const
                     return false;
                 }
                 beta = get_talker_for( *n );
-                for( mission *&mission : n->chatbin.missions_assigned ) {
+                for( mission * &mission : n->chatbin.missions_assigned ) {
                     if( mission->get_assigned_player_id() == player_character.getID() ) {
                         miss.emplace_back( mission );
                     }
                 }
             } else {
-                for( mission *&mission : player_character.get_active_missions() ) {
+                for( mission * &mission : player_character.get_active_missions() ) {
                     if( mission->type->id == type->id ) {
                         miss.emplace_back( mission );
                     }

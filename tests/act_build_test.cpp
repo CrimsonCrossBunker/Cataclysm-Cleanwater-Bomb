@@ -127,7 +127,7 @@ construction setup_testcase( Character &u, std::string const &constr,
     zone_manager &zmgr = zone_manager::get_manager();
     shared_ptr_fast<blueprint_options> options =
         make_shared_fast<blueprint_options>( build.pre_terrain.empty() ? "" : *
-                build.pre_terrain.begin(), build.group, build.id );
+            build.pre_terrain.begin(), build.group, build.id );
 
     map &here = get_map();
     tripoint_abs_ms const loot_abs = here.get_abs( loot_loc );

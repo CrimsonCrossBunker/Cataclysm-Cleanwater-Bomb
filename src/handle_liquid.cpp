@@ -520,7 +520,7 @@ static bool handle_vehicle_target( Character &player_character, item &liquid,
                               liquid.tname() );
 
     const std::optional<vpart_reference> vpr = veh_interact::select_part( here, *target.veh, sel,
-            title );
+        title );
     if( !vpr ) {
         return false;
     }

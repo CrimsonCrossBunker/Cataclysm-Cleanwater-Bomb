@@ -589,9 +589,9 @@ std::unique_ptr<pixel_minimap_projector> pixel_minimap::create_projector(
 const
 {
     switch( type ) {
-        case pixel_minimap_type::ortho:
-            return std::make_unique<pixel_minimap_ortho_projector> ( total_tiles_count, max_screen_rect,
-                    settings.square_pixels );
+    case pixel_minimap_type::ortho:
+        return std::make_unique<pixel_minimap_ortho_projector> ( total_tiles_count, max_screen_rect,
+                settings.square_pixels );
 
         case pixel_minimap_type::iso:
             return std::make_unique<pixel_minimap_iso_projector>( total_tiles_count, max_screen_rect,

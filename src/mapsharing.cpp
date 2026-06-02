@@ -9,15 +9,15 @@
 #include "ofstream_wrapper.h"
 
 #if defined(__linux__)
-#include <unistd.h>
+    #include <unistd.h>
 #endif // __linux__
 
 #if defined(_WIN32)
-#include "platform_win.h"
+    #include "platform_win.h"
 #endif
 
 #if defined(EMSCRIPTEN)
-#include <emscripten.h>
+    #include <emscripten.h>
 #endif
 
 bool MAP_SHARING::sharing;

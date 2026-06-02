@@ -639,8 +639,8 @@ void diary::serialize( JsonOut &jsout ) const
     jsout.member( "owner", owner );
     jsout.member( "pages" );
     jsout.start_array();
-    for( const std::unique_ptr<diary_page> &n : pages ) {
-        if( n->is_summary() ) {
+for( const std::unique_ptr<diary_page> &n : pages ) {
+    if( n->is_summary() ) {
             continue;
         }
         jsout.start_object();

@@ -227,7 +227,7 @@ struct CompareDecls {
 
     auto as_tuple( const PromotableCall &p ) const {
         return std::make_pair( p.construction->getType().getAsString(),
-                               StringRef( p.canonical_name ) );
+        StringRef( p.canonical_name ) );
     }
 
     template<typename T, typename U>

@@ -56,8 +56,8 @@ static const SkillDisplayType invalid_skill_type;
 template<>
 const Skill &string_id<Skill>::obj() const
 {
-    for( const Skill &skill : Skill::skills ) {
-        if( skill.ident() == *this ) {
+for( const Skill &skill : Skill::skills ) {
+    if( skill.ident() == *this ) {
             return skill;
         }
     }
@@ -238,8 +238,8 @@ SkillDisplayType::SkillDisplayType( const skill_displayType_id &ident,
 template<>
 const SkillDisplayType &skill_displayType_id::obj() const
 {
-    for( const SkillDisplayType &skill : SkillDisplayType::skillTypes ) {
-        if( skill.ident() == *this ) {
+for( const SkillDisplayType &skill : SkillDisplayType::skillTypes ) {
+    if( skill.ident() == *this ) {
             return skill;
         }
     }
@@ -297,8 +297,8 @@ skill_id Skill::random_skill()
 
 bool Skill::can_chr_use( Character &chr ) const
 {
-    for( std::string tid : _requires_all_traits ) {
-        if( !chr.has_trait( trait_id( tid ) ) ) {
+for( std::string tid : _requires_all_traits ) {
+    if( !chr.has_trait( trait_id( tid ) ) ) {
             return false;
         }
     }
@@ -681,10 +681,10 @@ bool SkillLevelMap::theoretical_recipe_requirements( const recipe &rec ) const
 {
     // Regardless of your current practical skill, do you know the theory of how to make this thing?
     if( rec.skill_used && get_knowledge_level( rec.skill_used ) < rec.difficulty ) {
-        return false;
-    }
-    for( const std::pair<const skill_id, int> &elem : rec.required_skills ) {
-        if( get_knowledge_level( elem.first ) < elem.second ) {
+    return false;
+}
+for( const std::pair<const skill_id, int> &elem : rec.required_skills ) {
+    if( get_knowledge_level( elem.first ) < elem.second ) {
             return false;
         }
     }

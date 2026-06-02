@@ -1,7 +1,7 @@
 #include "do_turn.h"
 
 #if defined(EMSCRIPTEN)
-#include <emscripten.h>
+    #include <emscripten.h>
 #endif
 
 #include <algorithm>
@@ -23,7 +23,7 @@
 #include "cached_options.h"
 #include "calendar.h"
 #ifdef TILES
-#include "cata_imgui.h"
+    #include "cata_imgui.h"
 #endif
 #include "cata_variant.h"
 #include "clzones.h"
@@ -146,7 +146,7 @@ bool cleanup_at_end()
         std::vector<std::string> characters = g->list_active_saves();
         // remove current player from the active characters list, as they are dead
         std::vector<std::string>::iterator curchar = std::find( characters.begin(),
-                characters.end(), u.get_save_id() );
+            characters.end(), u.get_save_id() );
         if( curchar != characters.end() ) {
             characters.erase( curchar );
         }
@@ -428,7 +428,7 @@ void overmap_npc_move()
         }
     }
     bool npcs_need_reload = false;
-    for( npc *&elem : travelling_npcs ) {
+    for( npc * &elem : travelling_npcs ) {
         if( elem->has_omt_destination() ) {
             if( !elem->omt_path.empty() ) {
                 if( rl_dist( elem->omt_path.back(), elem->pos_abs_omt() ) > 2 ) {

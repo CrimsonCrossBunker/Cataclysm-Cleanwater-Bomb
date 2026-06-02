@@ -29,7 +29,7 @@ class help
         void load_object( const JsonObject &jo, const std::string &src );
         void reset_instance();
         std::map<int, inclusive_rectangle<point>> draw_menu( const catacurses::window &win,
-                                               int selected, std::map<int, input_event> &hotkeys ) const;
+                int selected, std::map<int, input_event> &hotkeys ) const;
         static std::string get_note_colors();
         static std::string get_dir_grid();
         // Modifier for each mods order

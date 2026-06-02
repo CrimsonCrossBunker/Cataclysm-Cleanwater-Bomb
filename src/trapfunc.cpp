@@ -744,7 +744,7 @@ bool trapfunc::shotgun( const tripoint_bub_ms &p, Creature *c, item * )
     return true;
 }
 
-// Remove after 0.J
+// Cleanwater: 撤销 PR #86231 — 恢复刀片陷阱功能
 bool trapfunc::blade( const tripoint_bub_ms &, Creature *c, item * )
 {
     map &here = get_map();
@@ -1610,8 +1610,8 @@ bool trapfunc::map_regen( const tripoint_bub_ms &p, Creature *c, item * )
             const update_mapgen_id &regen_mapgen = here.tr_at( p ).map_regen_target();
             here.remove_trap( p );
             const ret_val<void> has_colliding_vehicle = run_mapgen_update_func( regen_mapgen, omt_pos, {},
-                    nullptr,
-                    false );
+                nullptr,
+                false );
             if( !has_colliding_vehicle.success() ) {
                 popup( _( "Failed to generate the new map, probably due to collision with %s vehicle/appliance." ),
                        has_colliding_vehicle.str() );

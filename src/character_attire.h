@@ -45,7 +45,7 @@ struct item_penalties {
 
     int badness() const {
         return !body_parts_with_stacking_penalty.empty() +
-               !body_parts_with_out_of_order_penalty.empty();
+        !body_parts_with_out_of_order_penalty.empty();
     }
 
     nc_color color_for_stacking_badness() const;

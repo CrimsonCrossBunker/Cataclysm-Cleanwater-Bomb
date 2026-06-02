@@ -19,23 +19,23 @@ void PointInitializationCheck::registerMatchers( MatchFinder *Finder )
 {
     using CxxConstructorMatcher = clang::ast_matchers::internal::Matcher<Expr>;
     const CxxConstructorMatcher ZeroConstructor = cxxConstructExpr( anyOf(
-                allOf(
-                    argumentCountIs( 1 ),
-                    hasArgument( 0, declRefExpr( to( varDecl(
-                                     anyOf( hasName( "point::zero" ), hasName( "tripoint::zero" ) )
-                                 ) ) ) ) ),
-                allOf(
-                    hasArgument( 0, integerLiteral( equals( 0 ) ) ),
-                    hasArgument( 1, integerLiteral( equals( 0 ) ) ),
-                    anyOf(
-                        argumentCountIs( 2 ),
-                        allOf(
-                            hasArgument( 2, integerLiteral( equals( 0 ) ) ),
-                            argumentCountIs( 3 )
-                        )
+            allOf(
+                argumentCountIs( 1 ),
+                hasArgument( 0, declRefExpr( to( varDecl(
+                                 anyOf( hasName( "point::zero" ), hasName( "tripoint::zero" ) )
+                             ) ) ) ) ),
+            allOf(
+                hasArgument( 0, integerLiteral( equals( 0 ) ) ),
+                hasArgument( 1, integerLiteral( equals( 0 ) ) ),
+                anyOf(
+                    argumentCountIs( 2 ),
+                    allOf(
+                        hasArgument( 2, integerLiteral( equals( 0 ) ) ),
+                        argumentCountIs( 3 )
                     )
                 )
-            ) ).bind( "expr" );
+            )
+        ) ).bind( "expr" );
     Finder->addMatcher( varDecl(
                             unless( parmVarDecl() ),
                             hasType( isPointType() ),

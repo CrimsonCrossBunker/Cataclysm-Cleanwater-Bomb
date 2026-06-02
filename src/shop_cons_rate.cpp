@@ -33,10 +33,10 @@ bool icg_entry::matches( item const &it, npc const &beta ) const
 {
     const_dialogue temp( get_const_talker_for( get_avatar() ), get_const_talker_for( beta ) );
     return ( !condition || condition( temp ) ) &&
-           ( itype.is_empty() || it.typeId() == itype ) &&
-           ( category.is_empty() || it.get_category_shallow().id == category ) &&
-           ( item_group.is_empty() ||
-             item_group::group_contains_item( item_group, it.typeId() ) );
+    ( itype.is_empty() || it.typeId() == itype ) &&
+    ( category.is_empty() || it.get_category_shallow().id == category ) &&
+    ( item_group.is_empty() ||
+      item_group::group_contains_item( item_group, it.typeId() ) );
 }
 
 /** @relates string_id */
@@ -205,8 +205,8 @@ void shopkeeper_cons_rates::load( JsonObject const &jo, std::string_view/*src*/ 
 
 void shopkeeper_cons_rates::check() const
 {
-    for( const shopkeeper_cons_rate_entry &rate : rates ) {
-        if( !rate.itype.is_empty() &&
+for( const shopkeeper_cons_rate_entry &rate : rates ) {
+    if( !rate.itype.is_empty() &&
             ( !rate.category.is_empty() || !rate.item_group.is_empty() ) ) {
             debugmsg( "category/item_group filters are redundant when itype is specified in %s.",
                       id.c_str() );
@@ -220,9 +220,9 @@ void shopkeeper_cons_rates::check() const
 int shopkeeper_cons_rates::get_rate( item const &it, npc const &beta ) const
 {
     if( it.type->price_post < junk_threshold ) {
-        return -1;
-    }
-    for( auto rit = rates.crbegin(); rit != rates.crend(); ++rit ) {
+    return -1;
+}
+for( auto rit = rates.crbegin(); rit != rates.crend(); ++rit ) {
         if( rit->matches( it, beta ) ) {
             return rit->rate;
         }

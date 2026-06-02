@@ -858,7 +858,7 @@ struct segment_order {
     constexpr explicit segment_order( tname_array const &arr_ ) : arr( &arr_ ) {};
     constexpr bool operator()( tname::segments lhs, tname::segments rhs ) const {
         return arr->at( static_cast<std::size_t>( lhs ) ) <
-               arr->at( static_cast<std::size_t>( rhs ) );
+        arr->at( static_cast<std::size_t>( rhs ) );
     }
 
     tname_array const *arr;

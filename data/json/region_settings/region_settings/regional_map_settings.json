@@ -1041,9 +1041,10 @@
     "type": "map_extra_collection",
     "id": "road_nesw_manhole",
     "chance": 20,
-    "extras": [ [ "mx_laststand", 1 ] ]
+    "extras": [ [ "mx_city_trap", 1 ], [ "mx_laststand", 1 ] ]
   },
   {
+    "//CCB": "mx_city_trap 引用已恢复 — 撤销 PR #86231",
     "type": "map_extra_collection",
     "id": "build",
     "chance": 90,

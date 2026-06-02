@@ -25,13 +25,13 @@
 #include <type_traits>
 #include <vector>
 #ifndef USE_SDL3
-#if defined(_MSC_VER) && defined(USE_VCPKG)
-#   include <SDL2/SDL_syswm.h>
-#else
-#ifdef _WIN32
-#   include <SDL_syswm.h>
-#endif
-#endif
+    #if defined(_MSC_VER) && defined(USE_VCPKG)
+        #include <SDL2/SDL_syswm.h>
+    #else
+        #ifdef _WIN32
+            #include <SDL_syswm.h>
+        #endif
+    #endif
 #endif
 
 #include "avatar.h"
@@ -73,7 +73,7 @@
 #include "sdl_font.h"
 #include "sdl_gamepad.h"
 #if defined(SDL_SOUND)
-#include "sound_backend.h"
+    #include "sound_backend.h"
 #endif
 #include "sdlsound.h"
 #include "string_formatter.h"
@@ -87,25 +87,25 @@ std::unique_ptr<cataimgui::client> imclient;
 #include <cstdlib> // getenv()/setenv()
 
 #if defined(_WIN32)
-#   if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
-#       include "platform_win.h"
-#   endif
-#   include <shlwapi.h>
+    #if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
+        #include "platform_win.h"
+    #endif
+    #include <shlwapi.h>
 #endif
 
 #if defined(__ANDROID__)
-#include <jni.h>
+    #include <jni.h>
 
-#include "action.h"
-#include "inventory.h"
-#include "map.h"
-#include "vehicle.h"
-#include "vpart_position.h"
-#include "worldfactory.h"
+    #include "action.h"
+    #include "inventory.h"
+    #include "map.h"
+    #include "vehicle.h"
+    #include "vpart_position.h"
+    #include "worldfactory.h"
 #endif
 
 #if defined(EMSCRIPTEN)
-#include <emscripten.h>
+    #include <emscripten.h>
 #endif
 
 #define dbg(x) DebugLog((x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
@@ -141,7 +141,7 @@ static Uint32 pixel_format = SDL_PIXELFORMAT_UNKNOWN;
 static SDL_Texture_Ptr display_buffer;
 static GeometryRenderer_Ptr geometry;
 #if defined(__ANDROID__)
-static SDL_Texture_Ptr touch_joystick;
+    static SDL_Texture_Ptr touch_joystick;
 #endif
 static int WindowWidth;        //Width of the actual window, not the curses window
 static int WindowHeight;       //Height of the actual window, not the curses window
@@ -464,7 +464,7 @@ static void WinCreate()
         && only_spirv_shader_artifacts_present() ) {
         SDL_SetHint( SDL_HINT_GPU_DRIVER, "vulkan" );
         dbg( D_INFO ) << "Only SPIR-V shader artifacts present; biasing SDL3 "
-                      "GPU device toward Vulkan.";
+                         "GPU device toward Vulkan.";
     }
 #  else
     SDL_SetHint( SDL_HINT_RENDER_DRIVER, "gpu,opengl" );
@@ -479,7 +479,7 @@ static void WinCreate()
             software_renderer = true;
         } else if( !SetupRenderTarget() ) {
             dbg( D_ERROR ) <<
-                           "Failed to initialize display buffer under accelerated rendering, falling back to software rendering.";
+            "Failed to initialize display buffer under accelerated rendering, falling back to software rendering.";
             software_renderer = true;
             display_buffer.reset();
             renderer.reset();
@@ -709,7 +709,7 @@ void clear_window_area( const catacurses::window &win_ )
 }
 
 static std::optional<std::pair<tripoint_abs_omt, std::string>> get_mission_arrow(
-            const inclusive_cuboid<tripoint_abs_omt> &overmap_area, const tripoint_abs_omt &center )
+    const inclusive_cuboid<tripoint_abs_omt> &overmap_area, const tripoint_abs_omt &center )
 {
     const tripoint_abs_omt mission_target = get_avatar().get_active_mission_target();
 
@@ -735,7 +735,7 @@ static std::optional<std::pair<tripoint_abs_omt, std::string>> get_mission_arrow
     }
 
     const std::vector<tripoint_abs_omt> traj = line_to( center,
-            tripoint_abs_omt( mission_target.xy(), center.z() ) );
+        tripoint_abs_omt( mission_target.xy(), center.z() ) );
 
     if( traj.empty() ) {
         debugmsg( "Failed to gen overmap mission trajectory %s %s",
@@ -998,7 +998,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             if( vision != om_vision_level::unseen ) {
                 if( draw_overlays && uistate.overmap_debug_mongroup ) {
                     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                                omp );
+                            omp );
                     if( !hordes.empty() ) {
                         draw_from_id_string( "mon_zombie", omp, 0, 0, lit_level::LIT, false );
                     }
@@ -1181,7 +1181,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
 
         // only draw in full tiles so it doesn't get cut off
         const std::optional<std::pair<tripoint_abs_omt, std::string>> mission_arrow =
-                    get_mission_arrow( full_om_tile_area, center_pos );
+            get_mission_arrow( full_om_tile_area, center_pos );
         if( mission_arrow ) {
             draw_from_id_string( mission_arrow->second, global_omt_to_draw_position( mission_arrow->first ), 0,
                                  0, lit_level::LIT, false );
@@ -1250,7 +1250,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         const std::string &note_text = overmap_buffer.note( center_pos );
         if( !note_text.empty() ) {
             const std::tuple<char, nc_color, size_t> note_info = overmap_ui::get_note_display_info(
-                        note_text );
+                    note_text );
             const size_t pos = std::get<2>( note_info );
             if( pos != std::string::npos ) {
                 notes_window_text.emplace_back( std::get<1>( note_info ), note_text.substr( pos ) );
@@ -1338,7 +1338,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
 
                 if( seg[0] == '<' ) {
                     const color_tag_parse_result::tag_type type = update_color_stack(
-                                color_stack, seg, report_color_error::no );
+                            color_stack, seg, report_color_error::no );
                     if( type != color_tag_parse_result::non_color_tag ) {
                         seg = rm_prefix( seg );
                     }
@@ -2203,7 +2203,7 @@ bool ignore_action_for_quick_shortcuts( const std::string &action )
              || action == "MOVE_ARMOR" // maps to ENTER
              || action == "ANY_INPUT"
              || action ==
-             "DELETE_TEMPLATE" // strictly we shouldn't have this one, but I don't like seeing the "d" on the main menu by default. :)
+                       "DELETE_TEMPLATE" // strictly we shouldn't have this one, but I don't like seeing the "d" on the main menu by default. :)
            );
 }
 
@@ -2645,7 +2645,7 @@ void draw_virtual_joystick()
 #endif
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+    #define M_PI 3.14159265358979323846
 #endif
 
 static void draw_gamepad_radial_menu()
@@ -2783,7 +2783,7 @@ void handle_finger_input( uint32_t ticks )
     float dist = std::sqrt( delta_x * delta_x + delta_y * delta_y ); // in pixel space
     bool handle_diagonals = touch_input_context.is_action_registered( "LEFTUP" );
     bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE";
-    if( dist > ( get_option<float>( "ANDROID_DEADZONE_RANGE" )*std::max( WindowWidth,
+    if( dist > ( get_option<float>( "ANDROID_DEADZONE_RANGE" ) * std::max( WindowWidth,
                  WindowHeight ) ) ) {
         if( !handle_diagonals ) {
             if( delta_x >= 0 && delta_y >= 0 ) {
@@ -2895,8 +2895,8 @@ void android_vibrate()
 #endif
 
 #if !defined(__ANDROID__)
-static bool window_focus = false;
-static bool text_input_active_when_regaining_focus = false;
+    static bool window_focus = false;
+    static bool text_input_active_when_regaining_focus = false;
 #endif
 
 // Focus-aware text input helpers. These manage state around focus
@@ -3209,9 +3209,9 @@ static void CheckMessages()
                 while( SDL_PollEvent( &ev ) ) {
                     if( ev.type == CATA_FINGERUP ) {
                         third_finger_down_x = third_finger_curr_x = second_finger_down_x = second_finger_curr_x =
-                                                  finger_down_x = finger_curr_x = -1.0f;
+                        finger_down_x = finger_curr_x = -1.0f;
                         third_finger_down_y = third_finger_curr_y = second_finger_down_y = second_finger_curr_y =
-                                                  finger_down_y = finger_curr_y = -1.0f;
+                        finger_down_y = finger_curr_y = -1.0f;
                         is_two_finger_touch = false;
                         is_three_finger_touch = false;
                         finger_down_time = 0;
@@ -3810,9 +3810,9 @@ static void CheckMessages()
                             }
                         }
                         third_finger_down_x = third_finger_curr_x = second_finger_down_x = second_finger_curr_x =
-                                                  finger_down_x = finger_curr_x = -1.0f;
+                        finger_down_x = finger_curr_x = -1.0f;
                         third_finger_down_y = third_finger_curr_y = second_finger_down_y = second_finger_curr_y =
-                                                  finger_down_y = finger_curr_y = -1.0f;
+                        finger_down_y = finger_curr_y = -1.0f;
                         is_two_finger_touch = false;
                         is_three_finger_touch = false;
                         finger_down_time = 0;
@@ -4114,7 +4114,7 @@ void catacurses::init_interface()
 #endif // SOUND
 
     font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.fontwidth, fl.fontheight,
-            windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
+           windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
     gui_font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.fontwidth, fl.fontheight,
                windowsPalette, fl.gui_typeface, fl.fontsize, fl.fontblending );
     map_font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.map_fontwidth,
@@ -4389,23 +4389,23 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
     ( void ) center_cursor;
 
     if( !coordinate_input_received ) {
-        return std::nullopt;
-    }
+    return std::nullopt;
+}
 
-    const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
-    const window_dimensions dim = get_window_dimensions( capture_win );
+const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
+const window_dimensions dim = get_window_dimensions( capture_win );
 
-    const point &win_min = dim.window_pos_pixel;
-    point win_size = dim.window_size_pixel;
-    point logical_coordinate = coordinate;
-    const int scaling_factor = get_scaling_factor();
+const point &win_min = dim.window_pos_pixel;
+point win_size = dim.window_size_pixel;
+point logical_coordinate = coordinate;
+const int scaling_factor = get_scaling_factor();
 
-    // convert window size and coordinate to logical if UI is scaled
-    if( scaling_factor > 1 ) {
-        logical_coordinate.x /= scaling_factor;
-        logical_coordinate.y /= scaling_factor;
+// convert window size and coordinate to logical if UI is scaled
+if( scaling_factor > 1 ) {
+    logical_coordinate.x /= scaling_factor;
+    logical_coordinate.y /= scaling_factor;
 
-        const bool is_terrain_or_overmap = ( use_tiles && g && capture_win == g->w_terrain ) ||
+    const bool is_terrain_or_overmap = ( use_tiles && g && capture_win == g->w_terrain ) ||
                                            ( use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap );
         if( !is_terrain_or_overmap ) {
             win_size.x /= scaling_factor;
@@ -4419,21 +4419,21 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
     // Check if click is within bounds of the window we care about
     const half_open_rectangle<point> win_bounds( win_min, win_max );
     if( !win_bounds.contains( logical_coordinate ) ) {
-        return std::nullopt;
-    }
+    return std::nullopt;
+}
 
-    const point screen_pos = logical_coordinate - win_min;
+const point screen_pos = logical_coordinate - win_min;
 
-    const bool use_isometric = g->w_overmap &&
-                               capture_win == g->w_overmap ? false : g->is_tileset_isometric();
+const bool use_isometric = g->w_overmap &&
+                           capture_win == g->w_overmap ? false : g->is_tileset_isometric();
 
-    // convert tile size to logical if UI is scaled
-    point logical_tile_size;
-    if( scaling_factor > 1 ) {
-        const bool is_terrain = use_tiles && g && capture_win == g->w_terrain;
-        const bool is_overmap = use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap;
+// convert tile size to logical if UI is scaled
+point logical_tile_size;
+if( scaling_factor > 1 ) {
+    const bool is_terrain = use_tiles && g && capture_win == g->w_terrain;
+    const bool is_overmap = use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap;
 
-        if( is_terrain ) {
+    if( is_terrain ) {
             logical_tile_size.x = tilecontext->get_tile_width();
             logical_tile_size.y = tilecontext->get_tile_height();
         } else if( is_overmap ) {

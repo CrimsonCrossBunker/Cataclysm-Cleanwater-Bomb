@@ -117,8 +117,8 @@ class tripoint_range
 
         size_t size() const {
             if( !predicate ) {
-                Tripoint range( traits::x( maxp ) - traits::x( minp ), traits::y( maxp ) - traits::y( minp ),
-                                traits::z( maxp ) - traits::z( minp ) );
+            Tripoint range( traits::x( maxp ) - traits::x( minp ), traits::y( maxp ) - traits::y( minp ),
+                            traits::z( maxp ) - traits::z( minp ) );
                 return std::max( ++traits::x( range ) * ++traits::y( range ) * ++traits::z( range ), 0 );
             } else {
                 size_t count = 0;
@@ -134,8 +134,8 @@ class tripoint_range
         }
 
         bool is_point_inside( const Tripoint &point ) const {
-            for( const Tripoint &current : *this ) {
-                if( current == point ) {
+for( const Tripoint &current : *this ) {
+            if( current == point ) {
                     return true;
                 }
             }

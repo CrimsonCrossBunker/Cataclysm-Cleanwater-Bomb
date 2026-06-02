@@ -114,7 +114,7 @@ static weather_gen_common get_common_data( const tripoint_abs_ms &location,
     // Gregorian years start when winter starts.)
     // LATER: Do gregorian years start on winter? They start ~10 days into winter...
     const double days_year_start_to_midwinter = to_days<double>( ( calendar::season_length() / 2 ) -
-            ( calendar::season_length() - calendar::turn_zero_offset() ) );
+        ( calendar::season_length() - calendar::turn_zero_offset() ) );
     const double offset = days_year_start_to_midwinter / to_days<double>( calendar::year_length() );
     result.cyf = std::cos( tau * ( year_fraction - offset ) ); // [-1, 1]
     result.season = season_of_year( t.t );
@@ -158,7 +158,7 @@ units::temperature weather_generator::get_weather_temperature(
     const tripoint_abs_ms &location, const time_point &real_t, unsigned seed ) const
 {
     return weather_temperature_from_common_data( *this, get_common_data( location, real_t, seed ),
-            season_effective_time( real_t ) );
+    season_effective_time( real_t ) );
 }
 w_point weather_generator::get_weather( const tripoint_abs_ms &location, const time_point &real_t,
                                         unsigned seed ) const
@@ -183,20 +183,20 @@ w_point weather_generator::get_weather( const tripoint_abs_ms &location, const t
     // Humidity variation
     double mod_h( 0 );
     if( season == WINTER ) {
-        mod_h += winter_humidity_manual_mod;
-    } else if( season == SPRING ) {
-        mod_h += spring_humidity_manual_mod;
-    } else if( season == SUMMER ) {
-        mod_h += summer_humidity_manual_mod;
-    } else if( season == AUTUMN ) {
-        mod_h += autumn_humidity_manual_mod;
-    }
-    // Relative humidity, a percentage.
-    double H = std::min( 100., std::max( 0.,
-                                         base_humidity + mod_h + 100 * (
-                                                 .15 * seasonality +
-                                                 raw_noise_4d( x, y, z, modSEED + 101 ) *
-                                                 .2 * ( -seasonality + 2 ) ) ) );
+    mod_h += winter_humidity_manual_mod;
+} else if( season == SPRING ) {
+    mod_h += spring_humidity_manual_mod;
+} else if( season == SUMMER ) {
+    mod_h += summer_humidity_manual_mod;
+} else if( season == AUTUMN ) {
+    mod_h += autumn_humidity_manual_mod;
+}
+// Relative humidity, a percentage.
+double H = std::min( 100., std::max( 0.,
+                                     base_humidity + mod_h + 100 * (
+                                             .15 * seasonality +
+                                             raw_noise_4d( x, y, z, modSEED + 101 ) *
+                                             .2 * ( -seasonality + 2 ) ) ) );
 
     // Pressure
     double P =
@@ -212,7 +212,7 @@ w_point weather_generator::get_weather( const tripoint_abs_ms &location, const t
 
     // Initial static variable
     if( current_winddir == 1000 ) {
-        current_winddir = get_wind_direction( season );
+    current_winddir = get_wind_direction( season );
         current_winddir = convert_winddir( current_winddir );
     } else {
         // When wind strength is low, wind direction is more variable
@@ -314,11 +314,11 @@ units::temperature weather_generator::get_water_temperature() const
     float water_temperature = 0;
 
     if( season_length == 0 ) {
-        season_length = 1;
-    }
+    season_length = 1;
+}
 
-    // Temperature varies between 33.8F and 75.2F depending on the time of year. Day = 0 corresponds to the start of spring.
-    float annual_mean_water_temperature = 54.5 + 20.7 * std::sin( tau * ( day - season_length * 0.5 ) /
+// Temperature varies between 33.8F and 75.2F depending on the time of year. Day = 0 corresponds to the start of spring.
+float annual_mean_water_temperature = 54.5 + 20.7 * std::sin( tau * ( day - season_length * 0.5 ) /
                                           ( season_length * 4.0 ) );
     // Temperature varies between +2F and -2F depending on the time of day. Hour = 0 corresponds to midnight.
     float daily_water_temperature_variation = 2.0 + 2.0 * std::sin( tau * ( hour - 6.0 ) / 24.0 );
@@ -336,7 +336,7 @@ void weather_generator::test_weather( unsigned seed ) const
     // WEATHERGEN.test_weather(); // Runs this test.
     write_to_file( "weather.output", [&]( std::ostream & testfile ) {
         testfile <<
-                 "|;year;season;day;hour;minute;temperature(F);humidity(%);pressure(mB);weatherdesc;windspeed(mph);winddirection"
+        "|;year;season;day;hour;minute;temperature(F);humidity(%);pressure(mB);weatherdesc;windspeed(mph);winddirection"
                  << std::endl;
 
         const time_point begin = calendar::turn;

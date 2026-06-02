@@ -42,9 +42,9 @@
 #include "weather.h"
 
 #if defined(TILES)
-#include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
-#include "sdltiles.h"
-#include "weather_type.h"
+    #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
+    #include "sdltiles.h"
+    #include "weather_type.h"
 #endif
 
 static const activity_id ACT_TARGET_PRACTICE( "ACT_TARGET_PRACTICE" );
@@ -87,14 +87,14 @@ class basic_animation
             } while( true );
         }
 
-    private:
-        int_least64_t delay;
+private:
+    int_least64_t delay;
 };
 
 class explosion_animation : public basic_animation
 {
-    public:
-        explosion_animation() :
+public:
+    explosion_animation() :
             basic_animation( EXPLOSION_MULTIPLIER ) {
         }
 };
@@ -116,7 +116,7 @@ class bullet_animation : public basic_animation
             // Skip artificial animation delay to greatly reduce the realtime
             // delay between shots during player target practice activity
             if( !skip_bullet_animation_delay() ) {
-                basic_animation::progress();
+            basic_animation::progress();
             }
         }
 };
@@ -627,12 +627,12 @@ void draw_hit_player_curses( const game &/* g */, const Character &p, const int 
 void game::draw_hit_player( const Character &p, const int dam ) const
 {
     if( test_mode ) {
-        // avoid segfault from null tilecontext in tests
-        return;
-    }
+    // avoid segfault from null tilecontext in tests
+    return;
+}
 
-    if( !use_tiles ) {
-        draw_hit_player_curses( *this, p, dam );
+if( !use_tiles ) {
+    draw_hit_player_curses( *this, p, dam );
         return;
     }
     // Use creature reference to resolve sprite position at draw time
@@ -798,7 +798,7 @@ void draw_weather_curses( const catacurses::window &win, const weather_printable
 void game::draw_weather( const weather_printable &w ) const
 {
     if( !use_tiles ) {
-        draw_weather_curses( w_terrain, w );
+    draw_weather_curses( w_terrain, w );
         return;
     }
 
@@ -842,7 +842,7 @@ void draw_sct_curses( const game &g )
 void game::draw_sct() const
 {
     if( use_tiles ) {
-        tilecontext->init_draw_sct();
+    tilecontext->init_draw_sct();
     } else {
         draw_sct_curses( *this );
     }
@@ -877,7 +877,7 @@ void game::draw_zones( const tripoint_bub_ms &start, const tripoint_bub_ms &end,
                        const tripoint_rel_ms &offset ) const
 {
     if( use_tiles ) {
-        tilecontext->init_draw_zones( start, end, offset );
+    tilecontext->init_draw_zones( start, end, offset );
     } else {
         draw_zones_curses( w_terrain, start, end, offset );
     }

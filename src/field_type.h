@@ -93,7 +93,7 @@ struct field_effect {
     }
     effect get_effect( const time_point &start_time = calendar::turn ) const {
         return effect( effect_source::empty(), &id.obj(), get_duration(), bp, false, intensity,
-                       start_time );
+        start_time );
     }
 
     void deserialize( const JsonObject &jo );

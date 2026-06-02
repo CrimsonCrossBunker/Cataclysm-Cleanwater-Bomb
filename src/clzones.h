@@ -543,17 +543,17 @@ class zone_data
         }
         tripoint_abs_ms get_start_point() const {
             if( is_personal ) {
-                return cached_shift + personal_start;
-            }
-            return start;
+            return cached_shift + personal_start;
         }
-        tripoint_abs_ms get_end_point() const {
+        return start;
+    }
+    tripoint_abs_ms get_end_point() const {
             if( is_personal ) {
-                return cached_shift + personal_end;
-            }
-            return end;
+            return cached_shift + personal_end;
         }
-        void update_cached_shift( const tripoint_abs_ms &player_loc ) {
+        return end;
+    }
+    void update_cached_shift( const tripoint_abs_ms &player_loc ) {
             cached_shift = player_loc;
         }
         tripoint_abs_ms get_center_point() const;
@@ -573,8 +573,8 @@ class zone_data
         bool has_inside( const tripoint_abs_ms &p ) const {
             // if it is personal then the zone is local
             if( is_personal ) {
-                return inclusive_cuboid<tripoint_abs_ms>(
-                           cached_shift + personal_start, cached_shift + personal_end ).contains( p );
+            return inclusive_cuboid<tripoint_abs_ms>(
+                       cached_shift + personal_start, cached_shift + personal_end ).contains( p );
             }
             return inclusive_cuboid<tripoint_abs_ms>( start, end ).contains( p );
         }

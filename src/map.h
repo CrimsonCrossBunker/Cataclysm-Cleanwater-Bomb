@@ -49,7 +49,7 @@
 #include "vpart_position.h"
 
 #if defined(TILES)
-#include "cata_tiles.h"
+    #include "cata_tiles.h"
 #endif
 
 struct scent_block;

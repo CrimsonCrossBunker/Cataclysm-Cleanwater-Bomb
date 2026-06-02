@@ -749,7 +749,7 @@ class bookbinder_copy_activity_actor: public activity_actor
 
         bool can_resume_with_internal( const activity_actor &other, const Character & ) const override {
             const bookbinder_copy_activity_actor &act = static_cast<const bookbinder_copy_activity_actor &>
-                    ( other );
+                ( other );
             return rec_id == act.rec_id && book_binder == act.book_binder;
         }
 
@@ -1251,7 +1251,7 @@ class boltcutting_activity_actor : public activity_actor
         bool can_resume_with_internal( const activity_actor &other,
                                        const Character &/*who*/ ) const override {
             const boltcutting_activity_actor &actor = static_cast<const boltcutting_activity_actor &>
-                    ( other );
+                ( other );
             return actor.target == target && actor.tool == tool;
         }
 };
@@ -1917,7 +1917,7 @@ class safecracking_activity_actor : public activity_actor
         bool can_resume_with_internal( const activity_actor &other,
                                        const Character &/*who*/ ) const override {
             const safecracking_activity_actor &actor = static_cast<const safecracking_activity_actor &>
-                    ( other );
+                ( other );
             return actor.safe == safe;
         }
 };
@@ -2768,7 +2768,7 @@ class reel_cable_activity_actor : public activity_actor
         bool can_resume_with_internal( const activity_actor &other,
                                        const Character &/*who*/ ) const override {
             const reel_cable_activity_actor &actor = static_cast<const reel_cable_activity_actor &>
-                    ( other );
+                ( other );
             return actor.cable == cable;
         }
 

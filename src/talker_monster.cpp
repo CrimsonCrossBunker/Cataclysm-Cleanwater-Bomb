@@ -106,21 +106,21 @@ diag_value const *talker_monster_const::maybe_get_value( const std::string &var_
 bool talker_monster_const::has_flag( const flag_id &f ) const
 {
     add_msg_debug( debugmode::DF_TALKER, "Monster %s checked for flag %s", me_mon_const->name(),
-                   f.c_str() );
+    f.c_str() );
     return me_mon_const->has_flag( f );
 }
 
 bool talker_monster_const::has_species( const species_id &species ) const
 {
     add_msg_debug( debugmode::DF_TALKER, "Monster %s checked for species %s", me_mon_const->name(),
-                   species.c_str() );
+    species.c_str() );
     return me_mon_const->in_species( species );
 }
 
 bool talker_monster_const::bodytype( const bodytype_id &bt ) const
 {
     add_msg_debug( debugmode::DF_TALKER, "Monster %s checked for bodytype %s", me_mon_const->name(),
-                   bt );
+    bt );
     return me_mon_const->type->bodytype == bt;
 }
 

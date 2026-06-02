@@ -448,10 +448,10 @@ TEST_CASE( "display_short_description", "[effect][desc]" )
     // TODO: Determine a case where `reduced` (true/false) makes a difference
 
     CHECK( eff_debugged.disp_short_desc( false ) == "You have been debugged!\n"
-           "Everything is working perfectly now." );
+                                                    "Everything is working perfectly now." );
 
     CHECK( eff_debugged.disp_short_desc( true ) == "You have been debugged!\n"
-           "Everything is working perfectly now." );
+                                                   "Everything is working perfectly now." );
 }
 
 // effect::disp_name

@@ -9,15 +9,15 @@
 #include "flat_set.h"
 
 #if 0
-// Uncomment this to check container concepts if Boost is installed
-#include <boost/concept/assert.hpp>
-#include <boost/concept_check.hpp>
+    // Uncomment this to check container concepts if Boost is installed
+    #include <boost/concept/assert.hpp>
+    #include <boost/concept_check.hpp>
 
-BOOST_CONCEPT_ASSERT( ( boost::RandomAccessContainer<cata::flat_set<int>> ) );
-BOOST_CONCEPT_ASSERT( ( boost::SimpleAssociativeContainer<cata::flat_set<int>> ) );
-BOOST_CONCEPT_ASSERT( ( boost::SortedAssociativeContainer<cata::flat_set<int>> ) );
-BOOST_CONCEPT_ASSERT( ( boost::UniqueAssociativeContainer<cata::flat_set<int>> ) );
-BOOST_CONCEPT_ASSERT( ( boost::ReversibleContainer<cata::flat_set<int>> ) );
+    BOOST_CONCEPT_ASSERT( ( boost::RandomAccessContainer<cata::flat_set<int>> ) );
+    BOOST_CONCEPT_ASSERT( ( boost::SimpleAssociativeContainer<cata::flat_set<int>> ) );
+    BOOST_CONCEPT_ASSERT( ( boost::SortedAssociativeContainer<cata::flat_set<int>> ) );
+    BOOST_CONCEPT_ASSERT( ( boost::UniqueAssociativeContainer<cata::flat_set<int>> ) );
+    BOOST_CONCEPT_ASSERT( ( boost::ReversibleContainer<cata::flat_set<int>> ) );
 #endif
 
 TEST_CASE( "flat_set", "[flat_set]" )

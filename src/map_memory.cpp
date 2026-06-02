@@ -80,9 +80,9 @@ bool mm_submap::is_valid() const
 const memorized_tile &mm_submap::get_tile( const point_sm_ms &p ) const
 {
     if( tiles.empty() ) {
-        return default_tile;
-    }
-    return tiles[p.y() * SEEX + p.x()];
+    return default_tile;
+}
+return tiles[p.y() * SEEX + p.x()];
 }
 
 void mm_submap::set_tile( const point_sm_ms &p, const memorized_tile &value )

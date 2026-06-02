@@ -87,13 +87,13 @@ struct conditional_t {
         static void set_legacy_dbl( dialogue &d, double input, std::string_view checked_value, char scope );
         bool operator()( const_dialogue const &d ) const {
             if( !condition ) {
-                return false;
-            }
-            return condition( d );
+            return false;
         }
+        return condition( d );
+    }
 
-    private:
-        func condition;
+private:
+    func condition;
 };
 
 #endif // CATA_SRC_CONDITION_H

@@ -1389,13 +1389,13 @@ void vehicle::damage_wheel_on_item( vehicle_part *vp_wheel, const item &it,
                                     std::vector<std::string> *messages ) const
 {
     if( !it.has_flag( json_flag_PUNCTURE_VEHICLE_WHEELS ) ) {
-        return;
-    }
+    return;
+}
 
-    const double chance_to_damage = wheel_damage_chance_vs_item( it, *vp_wheel );
+const double chance_to_damage = wheel_damage_chance_vs_item( it, *vp_wheel );
 
-    if( chance_to_damage > 0.0 && chance_to_damage >= rng_float( 0.0, 1.0 ) ) {
-        apply_wheel_faults( vp_wheel, messages );
+if( chance_to_damage > 0.0 && chance_to_damage >= rng_float( 0.0, 1.0 ) ) {
+    apply_wheel_faults( vp_wheel, messages );
         refresh_pivot( get_map() );
         return;
     }
@@ -1534,14 +1534,14 @@ bool vehicle::check_is_heli_landed( map &here )
 bool vehicle::check_heli_descend( map &here, Character &p ) const
 {
     if( !is_rotorcraft( here ) ) {
-        debugmsg( "A vehicle is somehow flying without being an aircraft" );
+    debugmsg( "A vehicle is somehow flying without being an aircraft" );
         return true;
     }
     int count = 0;
     int air_count = 0;
     creature_tracker &creatures = get_creature_tracker();
-    for( const tripoint_abs_ms &pt : get_points( true ) ) {
-        const tripoint_bub_ms pos = here.get_bub( pt );
+for( const tripoint_abs_ms &pt : get_points( true ) ) {
+    const tripoint_bub_ms pos = here.get_bub( pt );
         tripoint_bub_ms below( pos + tripoint::below );
         if( pt.z() < -OVERMAP_DEPTH || !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, pos ) ) {
             p.add_msg_if_player( _( "You are already landed!" ) );
@@ -1559,7 +1559,7 @@ bool vehicle::check_heli_descend( map &here, Character &p ) const
         count++;
     }
     if( velocity > 0 && air_count != count ) {
-        p.add_msg_if_player( m_bad, _( "It would be unsafe to try and land while you are moving." ) );
+    p.add_msg_if_player( m_bad, _( "It would be unsafe to try and land while you are moving." ) );
         return false;
     }
     return true;
@@ -1569,19 +1569,19 @@ bool vehicle::check_heli_descend( map &here, Character &p ) const
 bool vehicle::check_heli_ascend( map &here, Character &p ) const
 {
     if( !is_rotorcraft( here ) ) {
-        debugmsg( "A vehicle is somehow flying without being an aircraft" );
+    debugmsg( "A vehicle is somehow flying without being an aircraft" );
         return true;
     }
     if( velocity > 0 && !is_flying_in_air() ) {
-        p.add_msg_if_player( m_bad, _( "It would be unsafe to try and take off while you are moving." ) );
+    p.add_msg_if_player( m_bad, _( "It would be unsafe to try and take off while you are moving." ) );
         return false;
     }
     if( sm_pos.z() + 1 >= OVERMAP_HEIGHT ) {
-        return false; // don't allow trying to ascend to max zlevel
-    }
-    creature_tracker &creatures = get_creature_tracker();
-    for( const tripoint_abs_ms &pt : get_points( true ) ) {
-        const tripoint_bub_ms pos = here.get_bub( pt );
+    return false; // don't allow trying to ascend to max zlevel
+}
+creature_tracker &creatures = get_creature_tracker();
+for( const tripoint_abs_ms &pt : get_points( true ) ) {
+    const tripoint_bub_ms pos = here.get_bub( pt );
         tripoint_bub_ms above( pos + tripoint::above );
         const optional_vpart_position ovp = here.veh_at( above );
         if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_INDOORS, pos ) ||
@@ -2004,7 +2004,7 @@ vehicle *vehicle::act_on_map( map &here )
     if( !here.inbounds( pt ) ) {
         dbg( D_INFO ) << "stopping out-of-map vehicle.  (x,y,z)=(" << pt.x() << "," << pt.y() << "," <<
                       pt.z() <<
-                      ")";
+        ")";
         stop( here );
         of_turn = 0;
         is_falling = false;

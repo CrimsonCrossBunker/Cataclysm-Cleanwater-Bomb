@@ -66,7 +66,7 @@ status_t node_t::process_predicates( const oracle_t *subject ) const
 behavior_return node_t::tick( const oracle_t *subject ) const
 {
     if( children.empty() ) {
-        status_t result = process_predicates( subject );
+    status_t result = process_predicates( subject );
         float score = 0.0f;
         if( result == status_t::running && score_function_ ) {
             score = score_function_->first( subject, score_function_->second );
@@ -207,7 +207,7 @@ void node_t::check() const
 {
     // Invariants
     if( children.empty() ) {
-        if( _goal.empty() ) {
+    if( _goal.empty() ) {
             debugmsg( "Behavior %s must have either children or a goal.",
                       id.str() );
         }

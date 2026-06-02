@@ -152,7 +152,7 @@ const std::vector<proficiency_category> &proficiency_category::get_all()
 bool proficiency::can_learn() const
 {
     if( _can_learn ) {
-        const double scaling = get_option<float>( "PROFICIENCY_TRAINING_SPEED" );
+    const double scaling = get_option<float>( "PROFICIENCY_TRAINING_SPEED" );
         return scaling != 0.0;
     } else {
         return false;
@@ -464,8 +464,8 @@ bool proficiency_set::has_learned( const proficiency_id &query ) const
 
 bool proficiency_set::has_practiced( const proficiency_id &query ) const
 {
-    for( const learning_proficiency &cursor : learning ) {
-        if( cursor.id == query ) {
+for( const learning_proficiency &cursor : learning ) {
+    if( cursor.id == query ) {
             return true;
         }
     }
@@ -474,8 +474,8 @@ bool proficiency_set::has_practiced( const proficiency_id &query ) const
 
 bool proficiency_set::has_prereqs( const proficiency_id &query ) const
 {
-    for( const proficiency_id &req : query->required_proficiencies() ) {
-        if( !has_learned( req ) ) {
+for( const proficiency_id &req : query->required_proficiencies() ) {
+    if( !has_learned( req ) ) {
             return false;
         }
     }
@@ -484,8 +484,8 @@ bool proficiency_set::has_prereqs( const proficiency_id &query ) const
 
 float proficiency_set::pct_practiced( const proficiency_id &query ) const
 {
-    for( const learning_proficiency &prof : learning ) {
-        if( prof.id == query ) {
+for( const learning_proficiency &prof : learning ) {
+    if( prof.id == query ) {
             return prof.practiced / query->time_to_learn();
         }
     }
@@ -497,8 +497,8 @@ float proficiency_set::pct_practiced( const proficiency_id &query ) const
 
 time_duration proficiency_set::pct_practiced_time( const proficiency_id &query ) const
 {
-    for( const learning_proficiency &prof : learning ) {
-        if( prof.id == query ) {
+for( const learning_proficiency &prof : learning ) {
+    if( prof.id == query ) {
             return prof.practiced;
         }
     }
@@ -510,8 +510,8 @@ time_duration proficiency_set::pct_practiced_time( const proficiency_id &query )
 
 time_duration proficiency_set::training_time_needed( const proficiency_id &query ) const
 {
-    for( const learning_proficiency &prof : learning ) {
-        if( prof.id == query ) {
+for( const learning_proficiency &prof : learning ) {
+    if( prof.id == query ) {
             return query->time_to_learn() - prof.practiced;
         }
     }
@@ -625,7 +625,7 @@ void book_proficiency_bonuses::add( const book_proficiency_bonus &bonus,
 }
 
 book_proficiency_bonuses &book_proficiency_bonuses::operator+=( const book_proficiency_bonuses
-        &rhs )
+    &rhs )
 {
     for( const book_proficiency_bonus &bonus : rhs.bonuses ) {
         add( bonus );

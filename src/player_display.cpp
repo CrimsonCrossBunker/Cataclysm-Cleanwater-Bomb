@@ -130,7 +130,7 @@ void Character::print_encumbrance( ui_adaptor &ui, const catacurses::window &win
 {
     // bool represents whether the part has been combined with its other half
     const std::vector<std::pair<bodypart_id, bool>> bps = list_and_combine_bps( *this,
-            selected_clothing );
+        selected_clothing );
 
     // width/height excluding title & scrollbar
     const int height = getmaxy( win ) - 1;
@@ -262,7 +262,7 @@ static std::vector<std::string> get_encumbrance_description( const Character &yo
             std::string desc = mod.description().translated();
             std::string valstr = colorize( string_format( "%.2f", mod.modifier( you ) ),
                                            limb_score_current_color( part->get_limb_score( you, sc.first ) * sc.second,
-                                                   bp->get_limb_score( sc.first ) * sc.second ) );
+                                               bp->get_limb_score( sc.first ) * sc.second ) );
             s.emplace_back( string_format( "%s: %s%s", desc, mod.mod_type_str(), valstr ) );
         }
     }
@@ -1415,10 +1415,10 @@ static bool handle_player_display_action( Character &you, unsigned int &line,
     } else if( action == "CHANGE_PROFESSION_NAME" ) {
         string_input_popup popup;
         popup.title( _( "Profession Name: " ) )
-        .width( 25 )
-        .text( "" )
-        .max_length( 25 )
-        .query();
+             .width( 25 )
+             .text( "" )
+             .max_length( 25 )
+             .query();
 
         you.custom_profession = popup.text();
         ui_tip.invalidate_ui();
@@ -1778,7 +1778,7 @@ void Character::disp_info( bool customize_character )
     ui_adaptor ui_traits;
     ui_traits.on_screen_resize( [&]( ui_adaptor & ui_traits ) {
         std::tie( trait_win_size_y, bionics_win_size_y ) = calculate_shared_column_win_height(
-                    TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max );
+                TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max );
         w_traits = catacurses::newwin( trait_win_size_y, grid_width,
                                        point( grid_width + 1, infooffsetybottom ) );
         w_traits_border = catacurses::newwin( trait_win_size_y + 1, grid_width + 2,
@@ -1802,7 +1802,7 @@ void Character::disp_info( bool customize_character )
     ui_adaptor ui_bionics;
     ui_bionics.on_screen_resize( [&]( ui_adaptor & ui_bionics ) {
         std::tie( trait_win_size_y, bionics_win_size_y ) = calculate_shared_column_win_height(
-                    TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max );
+                TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max );
         w_bionics = catacurses::newwin( bionics_win_size_y, grid_width,
                                         point( grid_width + 1,
                                                infooffsetybottom + trait_win_size_y + 1 ) );
@@ -1849,7 +1849,7 @@ void Character::disp_info( bool customize_character )
     ui_adaptor ui_effects;
     ui_effects.on_screen_resize( [&]( ui_adaptor & ui_effects ) {
         std::tie( effect_win_size_y, proficiency_win_size_y ) = calculate_shared_column_win_height(
-                    TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max );
+                TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max );
         w_effects = catacurses::newwin( effect_win_size_y, grid_width,
                                         point( grid_width * 2 + 2, infooffsetybottom ) );
         w_effects_border = catacurses::newwin( effect_win_size_y + 1, grid_width + 2,
@@ -1873,7 +1873,7 @@ void Character::disp_info( bool customize_character )
     ui_adaptor ui_proficiencies;
     ui_proficiencies.on_screen_resize( [&]( ui_adaptor & ui_proficiencies ) {
         std::tie( effect_win_size_y, proficiency_win_size_y ) = calculate_shared_column_win_height(
-                    TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max );
+                TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max );
         const point profstart = point( grid_width * 2 + 2, infooffsetybottom + effect_win_size_y + 1 );
         w_proficiencies = catacurses::newwin( proficiency_win_size_y, grid_width,
                                               profstart );

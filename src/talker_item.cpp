@@ -67,8 +67,8 @@ diag_value const *talker_item_const::maybe_get_value( const std::string &var_nam
 bool talker_item_const::has_flag( const flag_id &f ) const
 {
     add_msg_debug( debugmode::DF_TALKER, "Item %s checked for flag %s",
-                   me_it_const->get_item()->tname(),
-                   f.c_str() );
+    me_it_const->get_item()->tname(),
+    f.c_str() );
     return me_it_const->get_item()->has_flag( f );
 }
 

@@ -28,7 +28,7 @@ void activity_schedule::setup( avatar &guy ) const
     guy.assign_activity( player_activity() ); // disallow resuming
     const player_activity p_act = actor
                                   ? player_activity( *actor )
-                                  : player_activity( act, calendar::INDEFINITELY_LONG, -1, INT_MIN, "" );
+    : player_activity( act, calendar::INDEFINITELY_LONG, -1, INT_MIN, "" );
     guy.assign_activity( p_act );
 }
 
@@ -38,8 +38,8 @@ void activity_schedule::do_turn( avatar &guy ) const
     guy.activity.do_turn( guy );
     // Ensure we never actually finish an activity
     if( guy.activity.moves_left < 1000 ) {
-        guy.activity.moves_left = 4000;
-    }
+    guy.activity.moves_left = 4000;
+}
 }
 
 void meal_schedule::setup( avatar &guy ) const
@@ -80,7 +80,7 @@ void sleep_schedule::setup( avatar &guy ) const
 void sleep_schedule::do_turn( avatar &guy ) const
 {
     if( !guy.has_effect( effect_sleep ) ) {
-        debugmsg( "Woke up!" );
+    debugmsg( "Woke up!" );
     }
 }
 
@@ -221,8 +221,8 @@ int weariness_events::transition_minutes( const int from, const int to,
 
 bool weariness_events::have_weary_decrease() const
 {
-    for( const weary_transition &change : transitions ) {
-        if( change.from > change.to ) {
+for( const weary_transition &change : transitions ) {
+    if( change.from > change.to ) {
             return true;
         }
     }

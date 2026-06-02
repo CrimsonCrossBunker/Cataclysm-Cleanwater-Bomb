@@ -12,12 +12,12 @@
 // Use the expression to (hopefully) avoid unused variable warnings, hint compiler with
 // unreachable intrinsics, and place the code in decltype to avoid actual evaluation.
 #if defined(_MSC_VER)
-#define cata_assert(exp) decltype((exp) ? void() : __assume(0))()
+    #define cata_assert(exp) decltype((exp) ? void() : __assume(0))()
 #elif defined(__GNUC__) || defined(__clang__)
-#define cata_assert(exp) decltype((exp) ? void() : __builtin_unreachable())()
+    #define cata_assert(exp) decltype((exp) ? void() : __builtin_unreachable())()
 #else
-#include <cstdlib>
-#define cata_assert(exp) decltype((exp) ? void() : std::abort())()
+    #include <cstdlib>
+    #define cata_assert(exp) decltype((exp) ? void() : std::abort())()
 #endif
 #else
 #ifdef _WIN32

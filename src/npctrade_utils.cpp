@@ -181,7 +181,7 @@ std::list<item> distribute_items_to_npc_zones( std::list<item> &items, npc &guy 
 void consume_items_in_zones( npc &guy, time_duration const &elapsed )
 {
     std::unordered_set<tripoint_bub_ms> const src = zone_manager::get_manager().get_point_set_loot(
-                guy.pos_abs(), PICKUP_RANGE, guy.get_fac_id() );
+            guy.pos_abs(), PICKUP_RANGE, guy.get_fac_id() );
 
     consume_cache cache;
     map &here = get_map();

@@ -485,12 +485,12 @@ struct item_source_ref {
 
     std::string to_string() const {
         switch( k ) {
-            case kind::avatar:
-                return "avatar";
-            case kind::tile_current:
-                return "tile:current";
-            case kind::npc:
-                return "npc:" + std::to_string( npc_id );
+        case kind::avatar:
+            return "avatar";
+        case kind::tile_current:
+            return "tile:current";
+        case kind::npc:
+            return "npc:" + std::to_string( npc_id );
             case kind::monster:
                 if( mon_pos_str.has_value() ) {
                     return "mon:" + mon_type + "@" + *mon_pos_str;
@@ -850,7 +850,7 @@ void debug_console::execute()
         // TAB still reaches the input_context tab switch.
         const bool imgui_owns_keys = io.WantTextInput || ImGui::IsAnyItemActive() ||
                                      ImGui::IsPopupOpen( nullptr,
-                                             ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel );
+                                         ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel );
         if( imgui_owns_keys ) {
             continue;
         }
@@ -1006,20 +1006,20 @@ void debug_console::draw_controls()
         static const char *const flavors[] = {
             translate_marker( "Turn back.  This door was sealed for cause." ),
             translate_marker( "Beyond this threshold lies neither help nor "
-                              "heroism, only the marks thou leavest on a world "
-                              "that was working." ),
+            "heroism, only the marks thou leavest on a world "
+            "that was working." ),
             translate_marker( "Here thy save is mortal.  Here thy hours may "
-                              "rot.  Here be no kindness." ),
+            "rot.  Here be no kindness." ),
             translate_marker( "Pass only if thou hast no further use for this "
-                              "character." ),
+            "character." ),
             translate_marker( "Open this door and the game shall know thee for "
-                              "what thou art." ),
+            "what thou art." ),
             translate_marker( "Press on if thou must, but no bard shall sing "
-                              "of what follows." ),
+            "of what follows." ),
             translate_marker( "Down this hall lie corrupted saves, halted "
-                              "turns, and silences where there should be sound." ),
+            "turns, and silences where there should be sound." ),
             translate_marker( "Few who tread here remember why they came.  "
-                              "Fewer still remember to back up first." ),
+            "Fewer still remember to back up first." ),
         };
         constexpr int n_flavors = static_cast<int>( sizeof( flavors ) /
                                   sizeof( flavors[0] ) );
@@ -1502,8 +1502,8 @@ void debug_console::save_persisted_state() const
     size_t ini_size = 0;
     const char *ini_data = ImGui::SaveIniSettingsToMemory( &ini_size );
     if( ini_data != nullptr && ini_size > 0 ) {
-        write_to_file( persist_imgui_path(), [&]( std::ostream & fout ) {
-            fout.write( ini_data, ini_size );
+    write_to_file( persist_imgui_path(), [&]( std::ostream & fout ) {
+        fout.write( ini_data, ini_size );
         }, _( "debug console imgui state" ) );
     }
 }
@@ -2096,10 +2096,10 @@ void tab_tiles_view::draw_body( debug_console &host )
                              move_cost, light_at );
         js += string_format( R"(,"trap":"%s")",
                              capture_json_escape( tr.id != trap_str_id::NULL_ID() ?
-                                     tr.id.str() : std::string() ) );
+                                 tr.id.str() : std::string() ) );
         js += string_format( R"(,"creature":"%s")",
                              capture_json_escape( creature_here ? creature_here->get_name() :
-                                     std::string() ) );
+                                 std::string() ) );
         auto str_array = [&]( const std::vector<std::string> &v ) {
             std::string s = "[";
             for( size_t i = 0; i < v.size(); i++ ) {
@@ -3011,7 +3011,7 @@ void tab_items_view::save_state( JsonOut &jo ) const
     jo.member( "filter", item_filter );
     jo.member( "source", items_source );
     if( selected.has_value() ) {
-        jo.member( "selected_source", selected->source_key );
+    jo.member( "selected_source", selected->source_key );
         jo.member( "selected_type", selected->type_id );
         jo.member( "selected_location", selected->location );
         jo.member( "selected_rank", selected->instance_rank );
@@ -3070,7 +3070,7 @@ void tab_items_view::draw_body( debug_console &host )
             sources.push_back( {
                 mon_ref.to_string(),
                 string_format( "Mon: %s @ %s", m.get_name(),
-                               m.pos_bub( here ).to_string() )
+                m.pos_bub( here ).to_string() )
             } );
         }
     }
@@ -3733,18 +3733,18 @@ void tab_eoc_view::draw_eoc_browser( debug_console &host )
 
     auto status_rank = [&]( const std::string & id ) -> int {
         if( queued_ids.count( id ) )
-        {
-            return 0;
-        }
-        if( inactive_ids.count( id ) )
-        {
-            return 2;
-        }
-        return 1;
-    };
+    {
+        return 0;
+    }
+    if( inactive_ids.count( id ) )
+    {
+        return 2;
+    }
+    return 1;
+};
 
-    std::vector<int> filtered;
-    filtered.reserve( all_eocs.size() );
+std::vector<int> filtered;
+filtered.reserve( all_eocs.size() );
     for( int i = 0; i < static_cast<int>( all_eocs.size() ); i++ ) {
         const effect_on_condition &eoc = all_eocs[i];
         if( eoc_type_filter >= 0 &&
@@ -3805,7 +3805,7 @@ void tab_eoc_view::draw_eoc_browser( debug_console &host )
                 {
                     const std::string &id = all_eocs[i].id.str();
                     return queued_ids.count( id ) ? std::string( "queued" ) : inactive_ids.count(
-                        id ) ? std::string( "inactive" ) : std::string( "loaded" );
+                                         id ) ? std::string( "inactive" ) : std::string( "loaded" );
                 }
             },
             {
@@ -4264,7 +4264,7 @@ static void draw_var_table( const char *table_id,
                 _( "As Duration" ), colw::fit, []( const var_row & r )
                 {
                     return r->second.is_dbl() ? to_string( time_duration::from_turns( r->second.dbl() ) ) :
-                    std::string();
+                                    std::string();
                 }, 0.0f, 1.0f, 0.0f, ImGuiTableColumnFlags_NoSort
             },
             {
@@ -4546,7 +4546,7 @@ void tab_data_view::draw_game_state_panel()
             creature_counts[critter.get_name()]++;
         }
         std::vector<std::pair<std::string, int>> sorted_creatures( creature_counts.begin(),
-                                              creature_counts.end() );
+                creature_counts.end() );
         std::sort( sorted_creatures.begin(), sorted_creatures.end(),
         []( const std::pair<std::string, int> &a, const std::pair<std::string, int> &b ) {
             return a.second > b.second;
@@ -4674,7 +4674,7 @@ void tab_data_view::draw_var_browser( debug_console &/*host*/ )
                     const global_variables::impl_t &m = p->get_values();
                     auto it = m.find( k );
                     return it == m.end() ? std::string( "<gone>" )
-                    : it->second.to_string( true );
+                                  : it->second.to_string( true );
                 };
                 var_table_writer npc_writer{
                     [npc_cid]( const std::string & k, const diag_value & v )
@@ -4894,9 +4894,9 @@ void tab_data_view::draw_item_wakeups_table()
 
     auto hint_text = []( const item_locator_hint & h ) -> std::string {
         switch( h.where )
-        {
-            case item_locator_hint::place::map:
-                if( const auto *p = std::get_if<tripoint_abs_ms>( &h.location ) ) {
+    {
+        case item_locator_hint::place::map:
+            if( const auto *p = std::get_if<tripoint_abs_ms>( &h.location ) ) {
                     return string_format( "map@%s", p->to_string() );
                 }
                 return "map@?";
@@ -5296,7 +5296,7 @@ void tab_trace_view::save_state( JsonOut &jo ) const
     jo.member( "monitor_mode_idx", monitor_mode_idx );
     uint64_t mask_bits = 0;
     for( size_t i = 0; i < log_category_mask.size() && i < 64; ++i ) {
-        if( log_category_mask.test( i ) ) {
+    if( log_category_mask.test( i ) ) {
             mask_bits |= ( 1ULL << i );
         }
     }

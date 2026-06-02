@@ -1038,7 +1038,7 @@ void spell_effect::remove_field( const spell &sp, Creature &caster, const tripoi
 {
     const field_type_id &target_field_type_id = field_type_id( sp.effect_data() );
     std::pair<field, tripoint_bub_ms> field_removed = spell_remove_field( sp, target_field_type_id,
-            center, caster );
+        center, caster );
 
     for( const std::pair<const field_type_id, field_entry> &fd : std::get<0>( field_removed ) ) {
         if( fd.first.is_valid() && !fd.first.id().is_null() ) {
@@ -1914,7 +1914,7 @@ void spell_effect::dash( const spell &sp, Creature &caster, const tripoint_bub_m
     spell_effect::override_parameters params( sp, caster );
     params.range = sp.aoe( caster );
     const std::set<tripoint_bub_ms> hit_area = spell_effect_cone_range_override( params, source,
-            far_target );
+        far_target );
     damage_targets( sp, caster, hit_area );
 }
 

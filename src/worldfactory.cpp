@@ -324,19 +324,19 @@ void worldfactory::set_active_world( WORLD *world )
 bool WORLD::save() const
 {
     if( !assure_dir_exist( folder_path() ) ) {
-        debugmsg( "Unable to create or open world[%s] directory for saving", world_name );
+    debugmsg( "Unable to create or open world[%s] directory for saving", world_name );
         DebugLog( D_ERROR, DC_ALL ) << "Unable to create or open world[" << world_name <<
-                                    "] directory for saving";
+                                       "] directory for saving";
         return false;
     }
 
     if( !save_timestamp() ) {
-        return false;
-    }
+    return false;
+}
 
-    const cata_path savefile = folder_path() / PATH_INFO::worldoptions();
-    const bool saved = write_to_file( savefile, [&]( std::ostream & fout ) {
-        JsonOut jout( fout );
+const cata_path savefile = folder_path() / PATH_INFO::worldoptions();
+const bool saved = write_to_file( savefile, [&]( std::ostream & fout ) {
+    JsonOut jout( fout );
 
         jout.start_array();
 
@@ -357,11 +357,11 @@ bool WORLD::save() const
         jout.end_array();
     }, _( "world data" ) );
     if( !saved ) {
-        return false;
-    }
+    return false;
+}
 
-    world_generator->get_mod_manager().save_mods_list( this );
-    return true;
+world_generator->get_mod_manager().save_mods_list( this );
+return true;
 }
 
 void worldfactory::init()
@@ -763,10 +763,10 @@ int worldfactory::show_worldgen_tab_options( const catacurses::window &, WORLD *
 }
 
 std::map<int, inclusive_rectangle<point>> worldfactory::draw_mod_list( const catacurses::window &w,
-                                       int &start, size_t cursor, const std::vector<mod_id> &mods,
-                                       bool is_active_list, const std::string &text_if_empty,
-                                       const catacurses::window &w_shift, bool recalc_start,
-                                       const std::vector<mod_id> &potential_conflicts )
+        int &start, size_t cursor, const std::vector<mod_id> &mods,
+        bool is_active_list, const std::string &text_if_empty,
+        const catacurses::window &w_shift, bool recalc_start,
+        const std::vector<mod_id> &potential_conflicts )
 {
     werase( w );
     werase( w_shift );
@@ -1673,9 +1673,9 @@ int worldfactory::show_worldgen_basic( WORLD *world )
         // Hint text
         std::string hint_txt =
             string_format( _( "Press [<color_yellow>%s</color>] to pick a random name for your world.\n"
-                              "Navigate options with [<color_yellow>directional keys</color>] "
-                              "and confirm with [<color_yellow>%s</color>].\n"
-                              "Press [<color_yellow>%s</color>] to see additional control information." ),
+                          "Navigate options with [<color_yellow>directional keys</color>] "
+                          "and confirm with [<color_yellow>%s</color>].\n"
+                          "Press [<color_yellow>%s</color>] to see additional control information." ),
                            ctxt.get_desc( "PICK_RANDOM_WORLDNAME", 1U ), ctxt.get_desc( "CONFIRM", 1U ),
                            ctxt.get_desc( "HELP_KEYBINDINGS", 1U ) );
         if( !custom_opts && sel_opt > 0 && sel_opt <= static_cast<int>( wg_sliders.size() ) ) {
@@ -1901,7 +1901,7 @@ void worldfactory::draw_modselection_borders( const catacurses::window &win,
 }
 
 std::map<size_t, inclusive_rectangle<point>> worldfactory::draw_worldgen_tabs(
-            const catacurses::window &w, size_t current )
+    const catacurses::window &w, size_t current )
 {
     werase( w );
 
@@ -1915,7 +1915,7 @@ std::map<size_t, inclusive_rectangle<point>> worldfactory::draw_worldgen_tabs(
                    tab_strings_translated.end(), []( std::string & str )->void { str = _( str ); } );
 
     std::map<size_t, inclusive_rectangle<point>> tab_map =
-                draw_tabs( w, tab_strings_translated, current );
+        draw_tabs( w, tab_strings_translated, current );
     draw_border_below_tabs( w );
     return tab_map;
 }
@@ -1993,12 +1993,12 @@ bool WORLD::create_timestamp()
 bool WORLD::save_timestamp() const
 {
     if( timestamp.empty() ) {
-        return true;
-    }
+    return true;
+}
 
-    const cata_path path = folder_path() / PATH_INFO::world_timestamp();
-    return write_to_file( path, [this]( std::ostream & file ) {
-        JsonOut jsout( file );
+const cata_path path = folder_path() / PATH_INFO::world_timestamp();
+return write_to_file( path, [this]( std::ostream & file ) {
+    JsonOut jsout( file );
         jsout.write( timestamp );
     }, _( "world timestamp" ) );
 }
@@ -2094,7 +2094,7 @@ void load_external_option( const JsonObject &jo )
 bool WORLD::has_compression_enabled() const
 {
     if( !is_compressed.has_value() ) {
-        cata_path world_folder_path = folder_path();
+    cata_path world_folder_path = folder_path();
         is_compressed.emplace(
             std::filesystem::exists( ( world_folder_path / "maps.dict" ).get_unrelative_path() ) ||
             std::filesystem::exists( ( world_folder_path / "mmr.dict" ).get_unrelative_path() ) ||
@@ -2189,14 +2189,14 @@ bool WORLD::set_compression_enabled( bool enabled )
                     inp_mngr.pump_events();
 
                     std::vector<cata_path> character_map_memory_files = get_files_from_path( ".mmr",
-                            character_map_memory_folder, false, true );
+                        character_map_memory_folder, false, true );
                     std::filesystem::path mmr_path = character_map_memory_folder.get_unrelative_path();
                     for( const cata_path &map_memory : character_map_memory_files ) {
                         std::filesystem::path map_memory_filename = map_memory.get_unrelative_path().filename();
                         std::shared_ptr<zzip_stack> map_memory_zzip = zzip_stack::create_from_folder_with_files(
-                                    character_map_memory_folder.get_unrelative_path(),
-                                    mmr_path, { mmr_path / map_memory_filename }, 0,
-                                    mmr_dict.get_unrelative_path() );
+                                character_map_memory_folder.get_unrelative_path(),
+                                mmr_path, { mmr_path / map_memory_filename }, 0,
+                                mmr_dict.get_unrelative_path() );
                         if( !map_memory_zzip ) {
                             return false;
                         }
@@ -2297,7 +2297,7 @@ bool WORLD::set_compression_enabled( bool enabled )
                                                    dimension_folder / zzip_overmap_directory,
                                                    false, true );
             std::vector<cata_path> character_map_memory_folders = get_files_from_path( ".mm1",
-                    dimension_folder, false, true );
+                dimension_folder, false, true );
             std::vector<cata_path> save_zzips = get_files_from_path( ".sav" + std::string( zzip_suffix ),
                                                 dimension_folder,
                                                 false, true );

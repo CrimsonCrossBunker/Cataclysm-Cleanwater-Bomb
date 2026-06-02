@@ -23,10 +23,10 @@ class query_popup_impl : public cataimgui::window
         short last_keyboard_selected_option;
 
         std::vector<std::vector<std::string>> fold_query(
-                                               const std::string &category,
-                                               keyboard_mode pref_kbd_mode,
-                                               const std::vector<query_popup::query_option> &options,
-                                               int max_width, int horz_padding );
+            const std::string &category,
+            keyboard_mode pref_kbd_mode,
+            const std::vector<query_popup::query_option> &options,
+            int max_width, int horz_padding );
     public:
         short keyboard_selected_option;
 
@@ -226,10 +226,10 @@ query_popup &query_popup::preferred_keyboard_mode( const keyboard_mode mode )
 }
 
 std::vector<std::vector<std::string>> query_popup_impl::fold_query(
-                                       const std::string &category,
-                                       const keyboard_mode pref_kbd_mode,
-                                       const std::vector<query_popup::query_option> &options,
-                                       const int max_width, const int horz_padding )
+    const std::string &category,
+    const keyboard_mode pref_kbd_mode,
+    const std::vector<query_popup::query_option> &options,
+    const int max_width, const int horz_padding )
 {
     input_context ctxt( category, pref_kbd_mode );
 

@@ -406,7 +406,7 @@ class TextJsonIn
         /// Overload that calls a member function `T::deserialize(const TextJsonValue&)`, if available.
         template<typename T>
         auto read( T &v, bool throw_on_error = false ) -> decltype( v.deserialize(
-                    std::declval<const TextJsonValue &>() ), true ) {
+                std::declval<const TextJsonValue &>() ), true ) {
             try {
                 v.deserialize( this->get_value() );
                 return true;
@@ -1126,14 +1126,14 @@ class TextJsonObject
         template<typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
         E get_enum_value( const std::string &name, const E fallback ) const {
             if( !has_member( name ) ) {
-                return fallback;
-            }
-            mark_visited( name );
-            jsin->seek( verify_position( name ) );
-            return jsin->get_enum_value<E>();
+            return fallback;
         }
-        template<typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
-        E get_enum_value( const std::string_view name ) const {
+        mark_visited( name );
+        jsin->seek( verify_position( name ) );
+        return jsin->get_enum_value<E>();
+    }
+    template<typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
+    E get_enum_value( const std::string_view name ) const {
             mark_visited( name );
             jsin->seek( verify_position( name ) );
             return jsin->get_enum_value<E>();

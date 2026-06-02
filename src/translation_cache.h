@@ -5,7 +5,7 @@
 #include <string>
 
 #if defined(LOCALIZE)
-#include "translation_manager.h"
+    #include "translation_manager.h"
 #endif
 
 constexpr int INVALID_LANGUAGE_VERSION = 0;

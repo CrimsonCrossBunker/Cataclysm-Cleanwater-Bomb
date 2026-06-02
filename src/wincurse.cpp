@@ -1,7 +1,7 @@
 #pragma GCC diagnostic ignored "-Wunused-macros"
 #if !defined(TILES) && defined(_WIN32)
 #ifndef CMAKE
-#define _UNICODE 1
+    #define _UNICODE 1
 #endif
 #define UNICODE 1
 #include "cursesport.h" // IWYU pragma: associated
@@ -11,7 +11,7 @@
 
 #include "cached_options.h"
 #if defined(SDL_SOUND)
-#include "sound_backend.h"
+    #include "sound_backend.h"
 #endif
 #include "cursesdef.h"
 #include "options.h"
@@ -35,7 +35,7 @@
 
 
 #if defined(SDL_SOUND)
-#include "sdlsound.h"
+    #include "sdlsound.h"
 #endif
 
 //***********************************

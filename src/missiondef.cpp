@@ -207,7 +207,7 @@ bool mission_type::load( const JsonObject &jo, const std::string_view src )
 bool mission_type::test_goal_condition( struct dialogue &d ) const
 {
     if( goal_condition ) {
-        return goal_condition( d );
+    return goal_condition( d );
     }
     return true;
 }

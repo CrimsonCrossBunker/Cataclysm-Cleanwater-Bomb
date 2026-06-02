@@ -7,12 +7,12 @@
 
 // wrapping in another macro to prevent collection of the test string for translation
 #ifndef TRANSLATE_MACRO
-#define TRANSLATE_MACRO(msg) _( msg )
+    #define TRANSLATE_MACRO(msg) _( msg )
 #endif
 
 // wrapping in another macro to prevent collection of the test string for translation
 #ifndef TRANSLATE_TRANSLATION
-#define TRANSLATE_TRANSLATION(msg) to_translation( msg ).translated()
+    #define TRANSLATE_TRANSLATION(msg) to_translation( msg ).translated()
 #endif
 
 TEST_CASE( "translations_sanity_test", "[translations]" )

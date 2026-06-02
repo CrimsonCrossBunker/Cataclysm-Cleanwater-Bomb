@@ -224,9 +224,9 @@ item Single_item_creator::create_single_without_container( const time_point &bir
 
     item tmp = ( [&]() -> item {
         if( isd )
-        {
-            on_out_of_scope scope{
-                [&]{
+    {
+        on_out_of_scope scope{
+            [&]{
                     rec.erase( rec.end() - 1 );
                 }} ;
             return isd->create_single( birthday, rec );
@@ -408,8 +408,8 @@ void Single_item_creator::replace_items( const std::unordered_map<itype_id, ityp
 bool Single_item_creator::has_item( const itype_id &itemid ) const
 {
     switch( type ) {
-        case S_ITEM:
-            return itemid.str() == id;
+    case S_ITEM:
+        return itemid.str() == id;
         case S_ITEM_GROUP: {
             Item_spawn_data *isd = item_controller->get_group( item_group_id( id ) );
             if( isd != nullptr ) {
@@ -426,10 +426,10 @@ bool Single_item_creator::has_item( const itype_id &itemid ) const
 std::set<const itype *> Single_item_creator::every_item() const
 {
     switch( type ) {
-        case S_ITEM:
-            return { item::find_type( itype_id( id ) ) };
-        case S_ITEM_GROUP: {
-            Item_spawn_data *isd = item_controller->get_group( item_group_id( id ) );
+    case S_ITEM:
+        return { item::find_type( itype_id( id ) ) };
+    case S_ITEM_GROUP: {
+        Item_spawn_data *isd = item_controller->get_group( item_group_id( id ) );
             if( isd != nullptr ) {
                 return isd->every_item();
             }
@@ -446,8 +446,8 @@ std::set<const itype *> Single_item_creator::every_item() const
 std::map<const itype *, std::pair<int, int>> Single_item_creator::every_item_min_max() const
 {
     switch( type ) {
-        case S_ITEM: {
-            const itype *i = item::find_type( itype_id( id ) );
+    case S_ITEM: {
+        const itype *i = item::find_type( itype_id( id ) );
             if( i->count_by_charges() ) {
                 // TODO: Not technically perfect for only charge_min/charge max and for ammo/liquids but Item_modifier::modify()'s logic is gross and I'd rather not try to replicate it perfectly as is
                 const int min_charges = modifier->charges.first == -1 ?
@@ -507,20 +507,20 @@ Item_modifier::Item_modifier()
 void Item_modifier::modify( item &new_item, const std::string &context ) const
 {
     if( new_item.is_null() ) {
-        return;
-    }
+    return;
+}
 
-    new_item.set_damage( rng( damage.first, damage.second ) );
-    new_item.rand_degradation();
-    // Apply damage to any already-attached MOLLE pockets
-    for( item *pocket : new_item.get_contents().get_added_pockets_mutable() ) {
-        pocket->set_damage( rng( damage.first, damage.second ) );
+new_item.set_damage( rng( damage.first, damage.second ) );
+new_item.rand_degradation();
+// Apply damage to any already-attached MOLLE pockets
+for( item *pocket : new_item.get_contents().get_added_pockets_mutable() ) {
+    pocket->set_damage( rng( damage.first, damage.second ) );
         pocket->rand_degradation();
     }
     // no need for dirt if it's a bow
     if( new_item.is_gun() && !new_item.has_flag( flag_PRIMITIVE_RANGED_WEAPON ) &&
         !new_item.has_flag( flag_NON_FOULING ) ) {
-        int random_dirt = rng( dirt.first, dirt.second );
+    int random_dirt = rng( dirt.first, dirt.second );
         // if gun RNG is dirty, must add dirt fault to allow cleaning
         if( random_dirt > 0 ) {
             new_item.set_var( "dirt", random_dirt );
@@ -534,7 +534,7 @@ void Item_modifier::modify( item &new_item, const std::string &context ) const
     new_item.set_itype_variant( variant );
 
     if( !faults.empty() ) {
-        for( const std::pair<fault_id, int> &f : faults ) {
+    for( const std::pair<fault_id, int> &f : faults ) {
             if( x_in_y( f.second, 100 ) ) {
                 new_item.set_fault( f.first, false, nullptr );
             }
@@ -542,7 +542,7 @@ void Item_modifier::modify( item &new_item, const std::string &context ) const
     }
 
     if( !item_vars.empty() ) {
-        for( const auto &[str, diag_val] : item_vars ) {
+    for( const auto &[str, diag_val] : item_vars ) {
             new_item.set_var( str, diag_val );
         }
     }
@@ -617,7 +617,7 @@ void Item_modifier::modify( item &new_item, const std::string &context ) const
             }
 
             ch = charges_min == charges_max ? charges_min : rng( charges_min,
-                    charges_max );
+                 charges_max );
         } else if( cont.has_value() && !cont->is_null() && new_item.made_of( phase_id::LIQUID ) ) {
             new_item.charges = std::max( 1, max_capacity );
         }
@@ -724,8 +724,8 @@ void Item_modifier::modify( item &new_item, const std::string &context ) const
     }
 
     if( contents != nullptr ) {
-        Item_spawn_data::ItemList contentitems;
-        contents->create( contentitems, new_item.birthday() );
+    Item_spawn_data::ItemList contentitems;
+    contents->create( contentitems, new_item.birthday() );
         for( item &it : contentitems ) {
             // custom code for directly attaching pockets to MOLLE vests
             const use_function *action = new_item.get_use( "attach_molle" );
@@ -767,12 +767,12 @@ void Item_modifier::modify( item &new_item, const std::string &context ) const
         }
     }
 
-    for( const flag_id &flag : custom_flags ) {
-        new_item.set_flag( flag );
+for( const flag_id &flag : custom_flags ) {
+    new_item.set_flag( flag );
     }
 
     if( !snippets.empty() ) {
-        new_item.snip_id = random_entry( snippets );
+    new_item.snip_id = random_entry( snippets );
     }
 }
 
@@ -821,13 +821,13 @@ void Item_modifier::replace_items( const std::unordered_map<itype_id, itype_id> 
 const
 {
     if( ammo ) {
-        ammo->replace_items( replacements );
+    ammo->replace_items( replacements );
     }
     if( container ) {
-        container->replace_items( replacements );
+    container->replace_items( replacements );
     }
     if( contents ) {
-        contents->replace_items( replacements );
+    contents->replace_items( replacements );
     }
 }
 
@@ -855,7 +855,7 @@ void Item_group::add_item_entry( const itype_id &itemid, int probability,
 {
     std::string entry_context = "item " + itemid.str() + " within " + context();
     std::unique_ptr<Single_item_creator> added = std::make_unique<Single_item_creator>(
-                itemid.str(), Single_item_creator::S_ITEM, probability, entry_context );
+            itemid.str(), Single_item_creator::S_ITEM, probability, entry_context );
     if( !variant.empty() ) {
         added->modifier.emplace();
         added->modifier->variant = variant;
@@ -964,9 +964,9 @@ void Item_group::check_consistency( bool actually_spawn ) const
 {
     // if type is collection, then spawning itself automatically spawnes all entries,
     // thus no need to spawn them individually.
-    for( const auto &elem : items ) {
-        // Assuming every entry needs to be spawned.
-        elem->check_consistency( true );
+for( const auto &elem : items ) {
+    // Assuming every entry needs to be spawned.
+    elem->check_consistency( true );
     }
     // If this group has no container, no need to spawn it as a whole as every entry has been spawned.
     Item_spawn_data::check_consistency( container_item ? actually_spawn : false );
@@ -1021,8 +1021,8 @@ void Item_group::replace_items( const std::unordered_map<itype_id, itype_id> &re
 
 bool Item_group::has_item( const itype_id &itemid ) const
 {
-    for( const std::unique_ptr<Item_spawn_data> &elem : items ) {
-        if( elem->has_item( itemid ) ) {
+for( const std::unique_ptr<Item_spawn_data> &elem : items ) {
+    if( elem->has_item( itemid ) ) {
             return true;
         }
     }
@@ -1063,7 +1063,7 @@ std::string item_group::potential_items( const item_group_id &group_id )
     const Item_spawn_data *spawn_data = spawn_data_from_group( group_id );
     if( spawn_data ) {
         const std::map<const itype *, std::pair<int, int>> items_min_max =
-                    spawn_data->every_item_min_max();
+            spawn_data->every_item_min_max();
         for( const auto &item_min_max : items_min_max ) {
             const int &min = item_min_max.second.first;
             const int &max = item_min_max.second.second;

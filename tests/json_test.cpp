@@ -633,13 +633,13 @@ TEST_CASE( "correct_cursor_position_for_unicode_json_error", "[json]" )
         const std::string e_what = e.what();
         const std::string e_expected =
             R"(Json error: file <unknown source file>, at line 1, character 79:)"
-            "\n"
+         "\n"
             R"(illegal character: code: -28)"
-            "\n\n"
+         "\n\n"
             R"({ "两两两两两两两两两两两两两两两两两两两两两两两两": 两 })"
-            "\n"
+         "\n"
             R"(                                                     ▲▲▲)"
-            "\n";
+         "\n";
         CHECK_THAT( e_what, Catch::Matchers::Equals( e_expected ) );
         SUCCEED();
         return;

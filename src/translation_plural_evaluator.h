@@ -88,7 +88,7 @@ class TranslationPluralRulesEvaluator
             std::string ToString() const;
         };
 
-        static ExprToken GetNextToken( const char *&p );
+        static ExprToken GetNextToken( const char * &p );
         static std::vector<ExprToken> Lexer( std::string_view expr );
 
         struct ExprNode {

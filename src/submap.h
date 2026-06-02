@@ -97,12 +97,12 @@ class submap
 
         trap_id get_trap( const point_sm_ms &p ) const {
             if( is_uniform() ) {
-                return tr_null;
-            }
-            return m->trp[p.x()][p.y()];
+            return tr_null;
         }
+        return m->trp[p.x()][p.y()];
+    }
 
-        void set_trap( const point_sm_ms &p, trap_id trap ) {
+    void set_trap( const point_sm_ms &p, trap_id trap ) {
             ensure_nonuniform();
             m->trp[p.x()][p.y()] = trap;
         }
@@ -114,7 +114,7 @@ class submap
 
         furn_id get_furn( const point_sm_ms &p ) const {
             if( is_uniform() ) {
-                return furn_str_id::NULL_ID();
+            return furn_str_id::NULL_ID();
             }
             return m->frn[p.x()][p.y()];
         }
@@ -142,12 +142,12 @@ class submap
 
         ter_id get_ter( const point_sm_ms &p ) const {
             if( is_uniform() ) {
-                return uniform_ter;
-            }
-            return m->ter[p.x()][p.y()];
+            return uniform_ter;
         }
+        return m->ter[p.x()][p.y()];
+    }
 
-        void set_ter( const point_sm_ms &p, ter_id terr ) {
+    void set_ter( const point_sm_ms &p, ter_id terr ) {
             ensure_nonuniform();
             m->ter[p.x()][p.y()] = terr;
         }
@@ -165,24 +165,24 @@ class submap
 
         int get_radiation( const point_sm_ms &p ) const {
             if( is_uniform() ) {
-                return 0;
-            }
-            return m->rad[p.x()][p.y()];
+            return 0;
         }
+        return m->rad[p.x()][p.y()];
+    }
 
-        void set_radiation( const point_sm_ms &p, const int radiation ) {
+    void set_radiation( const point_sm_ms &p, const int radiation ) {
             ensure_nonuniform();
             m->rad[p.x()][p.y()] = radiation;
         }
 
         uint8_t get_lum( const point_sm_ms &p ) const {
             if( is_uniform() ) {
-                return 0;
-            }
-            return m->lum[p.x()][p.y()];
+            return 0;
         }
+        return m->lum[p.x()][p.y()];
+    }
 
-        void set_lum( const point_sm_ms &p, uint8_t luminance ) {
+    void set_lum( const point_sm_ms &p, uint8_t luminance ) {
             ensure_nonuniform();
             m->lum[p.x()][p.y()] = luminance;
         }
@@ -207,14 +207,14 @@ class submap
 
         const cata::colony<item> &get_items( const point_sm_ms &p ) const {
             if( is_uniform() ) {
-                cata::colony<item> static noitems;
-                return noitems;
-            }
-            return m->itm[p.x()][p.y()];
+            cata::colony<item> static noitems;
+            return noitems;
         }
+        return m->itm[p.x()][p.y()];
+    }
 
-        // TODO: Replace this as it essentially makes fld public
-        field &get_field( const point_sm_ms &p ) {
+    // TODO: Replace this as it essentially makes fld public
+    field &get_field( const point_sm_ms &p ) {
             if( is_uniform() ) {
                 field static nofield;
                 return nofield;
@@ -224,13 +224,13 @@ class submap
 
         const field &get_field( const point_sm_ms &p ) const {
             if( is_uniform() ) {
-                field static nofield;
-                return nofield;
-            }
-            return m->fld[p.x()][p.y()];
+            field static nofield;
+            return nofield;
         }
+        return m->fld[p.x()][p.y()];
+    }
 
-        void clear_fields( const point_sm_ms &p );
+    void clear_fields( const point_sm_ms &p );
 
         struct cosmetic_t {
             point_sm_ms pos;

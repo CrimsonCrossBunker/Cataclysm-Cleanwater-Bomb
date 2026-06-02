@@ -13,7 +13,7 @@
 #include "game.h"
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+    #define M_PI 3.14159265358979323846
 #endif
 
 namespace gamepad
@@ -21,57 +21,57 @@ namespace gamepad
 
 // SDL3 compat: normalized event and API constants
 #if SDL_MAJOR_VERSION >= 3
-static constexpr Uint32 CATA_CONTROLLERBUTTONDOWN    = SDL_EVENT_GAMEPAD_BUTTON_DOWN;
-static constexpr Uint32 CATA_CONTROLLERBUTTONUP      = SDL_EVENT_GAMEPAD_BUTTON_UP;
-static constexpr Uint32 CATA_CONTROLLERAXISMOTION    = SDL_EVENT_GAMEPAD_AXIS_MOTION;
-static constexpr Uint32 CATA_CONTROLLERDEVICEADDED   = SDL_EVENT_GAMEPAD_ADDED;
-static constexpr Uint32 CATA_CONTROLLERDEVICEREMOVED = SDL_EVENT_GAMEPAD_REMOVED;
-static constexpr int CATA_AXIS_TRIGGERLEFT  = SDL_GAMEPAD_AXIS_LEFT_TRIGGER;
-static constexpr int CATA_AXIS_TRIGGERRIGHT = SDL_GAMEPAD_AXIS_RIGHT_TRIGGER;
-static constexpr int CATA_AXIS_LEFTX       = SDL_GAMEPAD_AXIS_LEFTX;
-static constexpr int CATA_AXIS_LEFTY       = SDL_GAMEPAD_AXIS_LEFTY;
-static constexpr int CATA_AXIS_RIGHTX      = SDL_GAMEPAD_AXIS_RIGHTX;
-static constexpr int CATA_AXIS_RIGHTY      = SDL_GAMEPAD_AXIS_RIGHTY;
-static constexpr int CATA_BUTTON_A              = SDL_GAMEPAD_BUTTON_SOUTH;
-static constexpr int CATA_BUTTON_B              = SDL_GAMEPAD_BUTTON_EAST;
-static constexpr int CATA_BUTTON_X              = SDL_GAMEPAD_BUTTON_WEST;
-static constexpr int CATA_BUTTON_Y              = SDL_GAMEPAD_BUTTON_NORTH;
-static constexpr int CATA_BUTTON_LEFTSHOULDER   = SDL_GAMEPAD_BUTTON_LEFT_SHOULDER;
-static constexpr int CATA_BUTTON_RIGHTSHOULDER  = SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER;
-static constexpr int CATA_BUTTON_LEFTSTICK      = SDL_GAMEPAD_BUTTON_LEFT_STICK;
-static constexpr int CATA_BUTTON_RIGHTSTICK     = SDL_GAMEPAD_BUTTON_RIGHT_STICK;
-static constexpr int CATA_BUTTON_START          = SDL_GAMEPAD_BUTTON_START;
-static constexpr int CATA_BUTTON_BACK           = SDL_GAMEPAD_BUTTON_BACK;
-static constexpr int CATA_BUTTON_DPAD_UP        = SDL_GAMEPAD_BUTTON_DPAD_UP;
-static constexpr int CATA_BUTTON_DPAD_DOWN      = SDL_GAMEPAD_BUTTON_DPAD_DOWN;
-static constexpr int CATA_BUTTON_DPAD_LEFT      = SDL_GAMEPAD_BUTTON_DPAD_LEFT;
-static constexpr int CATA_BUTTON_DPAD_RIGHT     = SDL_GAMEPAD_BUTTON_DPAD_RIGHT;
+    static constexpr Uint32 CATA_CONTROLLERBUTTONDOWN    = SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+    static constexpr Uint32 CATA_CONTROLLERBUTTONUP      = SDL_EVENT_GAMEPAD_BUTTON_UP;
+    static constexpr Uint32 CATA_CONTROLLERAXISMOTION    = SDL_EVENT_GAMEPAD_AXIS_MOTION;
+    static constexpr Uint32 CATA_CONTROLLERDEVICEADDED   = SDL_EVENT_GAMEPAD_ADDED;
+    static constexpr Uint32 CATA_CONTROLLERDEVICEREMOVED = SDL_EVENT_GAMEPAD_REMOVED;
+    static constexpr int CATA_AXIS_TRIGGERLEFT  = SDL_GAMEPAD_AXIS_LEFT_TRIGGER;
+    static constexpr int CATA_AXIS_TRIGGERRIGHT = SDL_GAMEPAD_AXIS_RIGHT_TRIGGER;
+    static constexpr int CATA_AXIS_LEFTX       = SDL_GAMEPAD_AXIS_LEFTX;
+    static constexpr int CATA_AXIS_LEFTY       = SDL_GAMEPAD_AXIS_LEFTY;
+    static constexpr int CATA_AXIS_RIGHTX      = SDL_GAMEPAD_AXIS_RIGHTX;
+    static constexpr int CATA_AXIS_RIGHTY      = SDL_GAMEPAD_AXIS_RIGHTY;
+    static constexpr int CATA_BUTTON_A              = SDL_GAMEPAD_BUTTON_SOUTH;
+    static constexpr int CATA_BUTTON_B              = SDL_GAMEPAD_BUTTON_EAST;
+    static constexpr int CATA_BUTTON_X              = SDL_GAMEPAD_BUTTON_WEST;
+    static constexpr int CATA_BUTTON_Y              = SDL_GAMEPAD_BUTTON_NORTH;
+    static constexpr int CATA_BUTTON_LEFTSHOULDER   = SDL_GAMEPAD_BUTTON_LEFT_SHOULDER;
+    static constexpr int CATA_BUTTON_RIGHTSHOULDER  = SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER;
+    static constexpr int CATA_BUTTON_LEFTSTICK      = SDL_GAMEPAD_BUTTON_LEFT_STICK;
+    static constexpr int CATA_BUTTON_RIGHTSTICK     = SDL_GAMEPAD_BUTTON_RIGHT_STICK;
+    static constexpr int CATA_BUTTON_START          = SDL_GAMEPAD_BUTTON_START;
+    static constexpr int CATA_BUTTON_BACK           = SDL_GAMEPAD_BUTTON_BACK;
+    static constexpr int CATA_BUTTON_DPAD_UP        = SDL_GAMEPAD_BUTTON_DPAD_UP;
+    static constexpr int CATA_BUTTON_DPAD_DOWN      = SDL_GAMEPAD_BUTTON_DPAD_DOWN;
+    static constexpr int CATA_BUTTON_DPAD_LEFT      = SDL_GAMEPAD_BUTTON_DPAD_LEFT;
+    static constexpr int CATA_BUTTON_DPAD_RIGHT     = SDL_GAMEPAD_BUTTON_DPAD_RIGHT;
 #else
-static constexpr Uint32 CATA_CONTROLLERBUTTONDOWN    = SDL_CONTROLLERBUTTONDOWN;
-static constexpr Uint32 CATA_CONTROLLERBUTTONUP      = SDL_CONTROLLERBUTTONUP;
-static constexpr Uint32 CATA_CONTROLLERAXISMOTION    = SDL_CONTROLLERAXISMOTION;
-static constexpr Uint32 CATA_CONTROLLERDEVICEADDED   = SDL_CONTROLLERDEVICEADDED;
-static constexpr Uint32 CATA_CONTROLLERDEVICEREMOVED = SDL_CONTROLLERDEVICEREMOVED;
-static constexpr int CATA_AXIS_TRIGGERLEFT  = SDL_CONTROLLER_AXIS_TRIGGERLEFT;
-static constexpr int CATA_AXIS_TRIGGERRIGHT = SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
-static constexpr int CATA_AXIS_LEFTX       = SDL_CONTROLLER_AXIS_LEFTX;
-static constexpr int CATA_AXIS_LEFTY       = SDL_CONTROLLER_AXIS_LEFTY;
-static constexpr int CATA_AXIS_RIGHTX      = SDL_CONTROLLER_AXIS_RIGHTX;
-static constexpr int CATA_AXIS_RIGHTY      = SDL_CONTROLLER_AXIS_RIGHTY;
-static constexpr int CATA_BUTTON_A              = SDL_CONTROLLER_BUTTON_A;
-static constexpr int CATA_BUTTON_B              = SDL_CONTROLLER_BUTTON_B;
-static constexpr int CATA_BUTTON_X              = SDL_CONTROLLER_BUTTON_X;
-static constexpr int CATA_BUTTON_Y              = SDL_CONTROLLER_BUTTON_Y;
-static constexpr int CATA_BUTTON_LEFTSHOULDER   = SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
-static constexpr int CATA_BUTTON_RIGHTSHOULDER  = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
-static constexpr int CATA_BUTTON_LEFTSTICK      = SDL_CONTROLLER_BUTTON_LEFTSTICK;
-static constexpr int CATA_BUTTON_RIGHTSTICK     = SDL_CONTROLLER_BUTTON_RIGHTSTICK;
-static constexpr int CATA_BUTTON_START          = SDL_CONTROLLER_BUTTON_START;
-static constexpr int CATA_BUTTON_BACK           = SDL_CONTROLLER_BUTTON_BACK;
-static constexpr int CATA_BUTTON_DPAD_UP        = SDL_CONTROLLER_BUTTON_DPAD_UP;
-static constexpr int CATA_BUTTON_DPAD_DOWN      = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
-static constexpr int CATA_BUTTON_DPAD_LEFT      = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
-static constexpr int CATA_BUTTON_DPAD_RIGHT     = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
+    static constexpr Uint32 CATA_CONTROLLERBUTTONDOWN    = SDL_CONTROLLERBUTTONDOWN;
+    static constexpr Uint32 CATA_CONTROLLERBUTTONUP      = SDL_CONTROLLERBUTTONUP;
+    static constexpr Uint32 CATA_CONTROLLERAXISMOTION    = SDL_CONTROLLERAXISMOTION;
+    static constexpr Uint32 CATA_CONTROLLERDEVICEADDED   = SDL_CONTROLLERDEVICEADDED;
+    static constexpr Uint32 CATA_CONTROLLERDEVICEREMOVED = SDL_CONTROLLERDEVICEREMOVED;
+    static constexpr int CATA_AXIS_TRIGGERLEFT  = SDL_CONTROLLER_AXIS_TRIGGERLEFT;
+    static constexpr int CATA_AXIS_TRIGGERRIGHT = SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+    static constexpr int CATA_AXIS_LEFTX       = SDL_CONTROLLER_AXIS_LEFTX;
+    static constexpr int CATA_AXIS_LEFTY       = SDL_CONTROLLER_AXIS_LEFTY;
+    static constexpr int CATA_AXIS_RIGHTX      = SDL_CONTROLLER_AXIS_RIGHTX;
+    static constexpr int CATA_AXIS_RIGHTY      = SDL_CONTROLLER_AXIS_RIGHTY;
+    static constexpr int CATA_BUTTON_A              = SDL_CONTROLLER_BUTTON_A;
+    static constexpr int CATA_BUTTON_B              = SDL_CONTROLLER_BUTTON_B;
+    static constexpr int CATA_BUTTON_X              = SDL_CONTROLLER_BUTTON_X;
+    static constexpr int CATA_BUTTON_Y              = SDL_CONTROLLER_BUTTON_Y;
+    static constexpr int CATA_BUTTON_LEFTSHOULDER   = SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
+    static constexpr int CATA_BUTTON_RIGHTSHOULDER  = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
+    static constexpr int CATA_BUTTON_LEFTSTICK      = SDL_CONTROLLER_BUTTON_LEFTSTICK;
+    static constexpr int CATA_BUTTON_RIGHTSTICK     = SDL_CONTROLLER_BUTTON_RIGHTSTICK;
+    static constexpr int CATA_BUTTON_START          = SDL_CONTROLLER_BUTTON_START;
+    static constexpr int CATA_BUTTON_BACK           = SDL_CONTROLLER_BUTTON_BACK;
+    static constexpr int CATA_BUTTON_DPAD_UP        = SDL_CONTROLLER_BUTTON_DPAD_UP;
+    static constexpr int CATA_BUTTON_DPAD_DOWN      = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+    static constexpr int CATA_BUTTON_DPAD_LEFT      = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
+    static constexpr int CATA_BUTTON_DPAD_RIGHT     = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
 #endif
 
 static constexpr int max_triggers = 2;
@@ -120,11 +120,11 @@ static int repeat_interval = 50;
 // SDL related stuff
 static SDL_TimerID timer_id;
 #if SDL_MAJOR_VERSION >= 3
-static SDL_Gamepad *controller = nullptr;
-static SDL_JoystickID controller_id = 0; // SDL3 uses 0 as invalid
+    static SDL_Gamepad *controller = nullptr;
+    static SDL_JoystickID controller_id = 0; // SDL3 uses 0 as invalid
 #else
-static SDL_GameController *controller = nullptr;
-static SDL_JoystickID controller_id = -1;
+    static SDL_GameController *controller = nullptr;
+    static SDL_JoystickID controller_id = -1;
 #endif
 
 static direction left_stick_dir = direction::NONE;
@@ -137,9 +137,9 @@ static bool alt_modifier_held = false;
 
 // SDL3: callback signature changes to (void *userdata, SDL_TimerID timerID, Uint32 interval)
 #if SDL_MAJOR_VERSION >= 3
-static Uint32 timer_func( void *, SDL_TimerID, Uint32 interval )
+    static Uint32 timer_func( void *, SDL_TimerID, Uint32 interval )
 #else
-static Uint32 timer_func( Uint32 interval, void * )
+    static Uint32 timer_func( Uint32 interval, void * )
 #endif
 {
     SDL_Event event;

@@ -35,7 +35,7 @@ bool game::grabbed_veh_move_stairs( const tripoint_rel_ms &dp )
     avatar &you = get_avatar();
     tripoint_rel_ms new_dp = dp; // FIXME. We should be passed a copy not a reference.
     const optional_vpart_position grabbed_vehicle_vp = here.veh_at( you.pos_bub(
-                here ) + you.grab_point );
+            here ) + you.grab_point );
     if( !grabbed_vehicle_vp ) {
         return false;
     }

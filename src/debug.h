@@ -59,9 +59,9 @@
 #define STRING(x) STRING2(x)
 
 #if defined(__GNUC__)
-#define CATA_FUNCTION_NAME __PRETTY_FUNCTION__
+    #define CATA_FUNCTION_NAME __PRETTY_FUNCTION__
 #else
-#define CATA_FUNCTION_NAME __func__
+    #define CATA_FUNCTION_NAME __func__
 #endif
 
 /**
@@ -310,10 +310,10 @@ std::string filter_name( debug_filter value );
 bool isDebuggerActive();
 
 #if defined(BACKTRACE)
-/**
- * Write a stack backtrace to the given ostream
- */
-void debug_write_backtrace( std::ostream &out );
+    /**
+    * Write a stack backtrace to the given ostream
+    */
+    void debug_write_backtrace( std::ostream &out );
 #endif
 
 // vim:tw=72:sw=4:fdm=marker:fdl=0:

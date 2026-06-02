@@ -432,8 +432,8 @@ class generic_factory
          * Checks loaded/inserted objects for consistency
          */
         void check() const {
-            for( const T &obj : list ) {
-                obj.check();
+for( const T &obj : list ) {
+            obj.check();
             }
         }
         /**
@@ -492,7 +492,7 @@ class generic_factory
          */
         const T &obj( const int_id<T> &id ) const {
             if( !is_valid( id ) ) {
-                debugmsg( "invalid %s id \"%d\"", type_name, id.to_i() );
+            debugmsg( "invalid %s id \"%d\"", type_name, id.to_i() );
                 return dummy_obj;
             }
             return list[id.to_i()];
@@ -975,8 +975,8 @@ otherwise it is assumed to be the reader.
 */
 template<typename MemberType, typename DefaultType = MemberType,
          typename = std::enable_if_t<std::is_constructible_v<MemberType, const DefaultType &>>>
-                                     inline void optional( const JsonObject &jo, const bool was_loaded, const std::string_view name,
-                                             MemberType &member, const DefaultType &default_value )
+inline void optional( const JsonObject &jo, const bool was_loaded, const std::string_view name,
+                      MemberType &member, const DefaultType &default_value )
 {
     if( !was_loaded ) {
         warn_disabled_feature( jo, "relative", name, "no copy-from" );
@@ -1077,9 +1077,9 @@ struct has_str<T, std::void_t<decltype( std::declval<T &>().str() )> > : std::tr
 
 template<typename T>
 struct stringify < T, std::enable_if_t < has_to_string<T>::value ||
-                   has_to_string_writable<T>::value ||
-                   has_to_string_call<T>::value ||
-                   has_str<T>::value >> : std::true_type {
+    has_to_string_writable<T>::value ||
+    has_to_string_call<T>::value ||
+    has_str<T>::value >> : std::true_type {
     static std::string string( const T &data ) {
         if constexpr( has_to_string<T>::value ) {
             return data.to_string();
@@ -1128,7 +1128,7 @@ struct handler<cata::flat_set<T>> {
     }
     bool erase( cata::flat_set<T> &container, const T &data ) const {
         if( container.erase( data ) < 1 ) {
-            debugmsg( "Did not remove %s in delete", data_string( data ) );
+        debugmsg( "Did not remove %s in delete", data_string( data ) );
             return false;
         }
         return true;
@@ -1150,7 +1150,7 @@ struct handler<std::set<T>> {
     }
     bool erase( std::set<T> &container, const T &data ) const {
         if( container.erase( data ) < 1 ) {
-            debugmsg( "Did not remove %s in delete", data_string( data ) );
+        debugmsg( "Did not remove %s in delete", data_string( data ) );
             return false;
         }
         return true;
@@ -1172,7 +1172,7 @@ struct handler<std::unordered_set<T>> {
     }
     bool erase( std::unordered_set<T> &container, const T &data ) const {
         if( container.erase( data ) < 1 ) {
-            debugmsg( "Did not remove %s in delete", data_string( data ) );
+        debugmsg( "Did not remove %s in delete", data_string( data ) );
             return false;
         }
         return true;
@@ -1338,15 +1338,15 @@ struct handler<std::map<Key, Val>> {
     bool insert( std::map<Key, Val> &container, const std::pair<Key, Val> &data ) const {
         // emplace can fail if the key already exists
         if( !container.emplace( data ).second ) {
-            debugmsg( "Insert of <%s, %s> failed, key already exists",
-                      data_string( data.first ), data_string( data.second ) );
+        debugmsg( "Insert of <%s, %s> failed, key already exists",
+                  data_string( data.first ), data_string( data.second ) );
             return false;
         }
         return true;
     }
     bool relative( std::map<Key, Val> &container, const std::pair<Key, Val> &data ) const {
         if constexpr( !supports_relative<Val>::value ) {
-            debugmsg( "relative not supported by type %s", demangle( typeid( Val ).name() ) );
+        debugmsg( "relative not supported by type %s", demangle( typeid( Val ).name() ) );
             return false;
         } else {
             const auto iter = container.find( data.first );
@@ -1381,15 +1381,15 @@ struct handler<std::unordered_map<Key, Val>> {
     bool insert( std::unordered_map<Key, Val> &container, const std::pair<Key, Val> &data ) const {
         // emplace can fail if the key already exists
         if( !container.emplace( data ).second ) {
-            debugmsg( "Insert of <%s, %s> failed, key already exists",
-                      data_string( data.first ), data_string( data.second ) );
+        debugmsg( "Insert of <%s, %s> failed, key already exists",
+                  data_string( data.first ), data_string( data.second ) );
             return false;
         }
         return true;
     }
     bool relative( std::unordered_map<Key, Val> &container, const std::pair<Key, Val> &data ) const {
         if constexpr( !supports_relative<Val>::value ) {
-            debugmsg( "relative not supported by type %s", demangle( typeid( Val ).name() ) );
+        debugmsg( "relative not supported by type %s", demangle( typeid( Val ).name() ) );
             return false;
         } else {
             const auto iter = container.find( data.first );
@@ -1466,263 +1466,263 @@ struct T_has_do_delete<T, std::void_t<decltype( &T::do_delete )>> : std::true_ty
 template<typename Derived>
 class generic_typed_reader
 {
-public:
-    static constexpr bool read_objects = false;
-    static constexpr bool check_extend_delete_copy_from = true;
+    public:
+        static constexpr bool read_objects = false;
+        static constexpr bool check_extend_delete_copy_from = true;
 
-    template<typename C, typename Fn>
-    // I tried using a member function pointer and couldn't work it out
-    void apply_all_values( JsonValue &jv, C &container, Fn apply ) const {
-        if constexpr( Derived::read_objects ) {
+        template<typename C, typename Fn>
+        // I tried using a member function pointer and couldn't work it out
+        void apply_all_values( JsonValue &jv, C &container, Fn apply ) const {
+            if constexpr( Derived::read_objects ) {
             if( jv.test_array() ) {
-                for( JsonValue jav : jv.get_array() ) {
-                    apply( jav, container );
-                }
-            } else if( jv.test_object() ) {
-                for( JsonMember jam : jv.get_object() ) {
-                    apply( jam, container );
+                    for( JsonValue jav : jv.get_array() ) {
+                        apply( jav, container );
+                    }
+                } else if( jv.test_object() ) {
+                    for( JsonMember jam : jv.get_object() ) {
+                        apply( jam, container );
+                    }
+                } else {
+                    apply( jv, container );
                 }
             } else {
-                apply( jv, container );
-            }
-        } else {
-            if( jv.test_array() ) {
-                for( JsonValue jav : jv.get_array() ) {
-                    apply( jav, container );
+                if( jv.test_array() ) {
+                    for( JsonValue jav : jv.get_array() ) {
+                        apply( jav, container );
+                    }
+                } else {
+                    apply( jv, container );
                 }
-            } else {
-                apply( jv, container );
             }
         }
-    }
 
-    // We allow either a single value or an array of values. Note that this will not work
-    // correctly if the thing we load from JSON is itself an array.
-    template<typename C>
-    void insert_values_from( const JsonObject &jo, const std::string_view member_name,
-                             C &container ) const {
-        const Derived &derived = static_cast<const Derived &>( *this );
-        if( !jo.has_member( member_name ) ) {
-            return;
-        }
-        JsonValue jv = jo.get_member( member_name );
-        apply_all_values( jv, container, [&derived]( JsonValue & val, C & container ) {
-            derived.insert_next( val, container );
-        } );
-    }
-
-    template<typename C>
-    void insert_next( JsonValue &jv, C &container ) const {
-        const Derived &derived = static_cast<const Derived &>( *this );
-        if( !reader_detail::handler<C>().insert( container, derived.get_next( jv ) ) ) {
-            jv.throw_error( "insert failed" );
-        }
-    }
-
-    template<typename C>
-    void erase_values_from( const JsonObject &jo, const std::string_view member_name,
-                            C &container ) const {
-        const Derived &derived = static_cast<const Derived &>( *this );
-        if( !jo.has_member( member_name ) ) {
-            return;
-        }
-        JsonValue jv = jo.get_member( member_name );
-        apply_all_values( jv, container, [&derived]( JsonValue & val, C & container ) {
-            derived.erase_next( val, container );
-        } );
-    }
-    template<typename C>
-    void erase_next( JsonValue &jv, C &container ) const {
-        const Derived &derived = static_cast<const Derived &>( *this );
-        if( !reader_detail::handler<C>().erase( container, derived.get_next( jv ) ) ) {
-            jv.throw_error( "no value to delete" );
-        }
-    }
-    template<typename C>
-    void relative_values_from( const JsonObject &jo, const std::string_view member_name,
-                               C &container ) const {
-        const Derived &derived = static_cast<const Derived &>( *this );
-        if( !jo.has_member( member_name ) ) {
-            return;
-        }
-        JsonValue jv = jo.get_member( member_name );
-        apply_all_values( jv, container, [&derived]( JsonValue & val, C & container ) {
-            derived.relative_next( val, container );
-        } );
-    }
-    template<typename C>
-    void relative_next( JsonValue &jv, C &container ) const {
-        const Derived &derived = static_cast<const Derived &>( *this );
-        if( !reader_detail::handler<C>().relative( container, derived.get_next( jv ) ) ) {
-            jv.throw_error( "relative not supported or no value to modify" );
-        }
-    }
-
-    /**
-     * Implements the reader interface, handles members that are containers of flags.
-     * The functions forwards the actual changes to assign(), insert()
-     * and erase(), which are specialized for various container types.
-     * The `enable_if` is here to prevent the compiler from considering it
-     * when called on a simple data member, the other `operator()` will be used.
-     */
-    template<typename C, std::enable_if_t<reader_detail::handler<C>::is_container, int> = 0>
-    bool operator()( const JsonObject &jo, const std::string_view member_name,
-                     C &container, bool was_loaded ) const {
-        const Derived &derived = static_cast<const Derived &>( *this );
-        // If you get an error about "incomplete type 'struct reader_detail::handler...",
-        // you have to implement a specialization of your container type, so above for
-        // existing specializations in namespace reader_detail.
-        if( jo.has_member( member_name ) ) {
-            reader_detail::handler<C>().clear( container );
-            derived.insert_values_from( jo, member_name, container );
-            return true;
-        } else if( !was_loaded ) {
-            warn_disabled_feature( jo, "relative", member_name, "no copy-from" );
-            warn_disabled_feature( jo, "proportional", member_name, "no copy-from" );
-            warn_disabled_feature( jo, "extend", member_name, "no copy-from" );
-            warn_disabled_feature( jo, "delete", member_name, "no copy-from" );
-            return false;
-        } else {
-            warn_disabled_feature( jo, "proportional", member_name, "not implemented" );
-            if( jo.has_object( "relative" ) ) {
-                JsonObject tmp = jo.get_object( "relative" );
-                tmp.allow_omitted_members();
-                derived.relative_values_from( tmp, member_name, container );
-            }
-            if( jo.has_object( "extend" ) ) {
-                JsonObject tmp = jo.get_object( "extend" );
-                tmp.allow_omitted_members();
-                derived.insert_values_from( tmp, member_name, container );
-            }
-            if( jo.has_object( "delete" ) ) {
-                JsonObject tmp = jo.get_object( "delete" );
-                tmp.allow_omitted_members();
-                derived.erase_values_from( tmp, member_name, container );
-            }
-            return true;
-        }
-    }
-
-    /*
-     * These two functions are effectively handle_relative but they need to
-     * use the reader, so they must be here.
-     * proportional does not need these, because it's only reading a float
-     * whereas these are reading values of the same type.
-     */
-    // Type does not support relative
-    template < typename C, std::enable_if_t < !reader_detail::handler<C>::is_container,
-               int > = 0,
-               std::enable_if_t < !supports_relative<C>::value > * = nullptr
-               >
-    bool do_relative( const JsonObject &jo, const std::string_view name, C & ) const {
-        if( jo.has_object( "relative" ) ) {
-            JsonObject relative = jo.get_object( "relative" );
-            relative.allow_omitted_members();
-            if( !relative.has_member( name ) ) {
-                return false;
-            }
-            debugmsg( "Member %s of type %s does not support relative",
-                      name, demangle( typeid( C ).name() ) );
-        }
-        return false;
-    }
-
-    // Type supports relative
-    template < typename C, std::enable_if_t < !reader_detail::handler<C>::is_container,
-               int > = 0, std::enable_if_t<supports_relative<C>::value> * = nullptr >
-    bool do_relative( const JsonObject &jo, const std::string_view name, C &member ) const {
-        if( jo.has_object( "relative" ) ) {
-            JsonObject relative = jo.get_object( "relative" );
-            relative.allow_omitted_members();
+        // We allow either a single value or an array of values. Note that this will not work
+        // correctly if the thing we load from JSON is itself an array.
+        template<typename C>
+        void insert_values_from( const JsonObject &jo, const std::string_view member_name,
+                                 C &container ) const {
             const Derived &derived = static_cast<const Derived &>( *this );
-            // This needs to happen here, otherwise we get unvisited members
-            if( !relative.has_member( name ) ) {
-                return false;
+            if( !jo.has_member( member_name ) ) {
+                return;
             }
-            C adder = derived.get_next( relative.get_member( name ) );
-            member += adder;
-            return true;
+            JsonValue jv = jo.get_member( member_name );
+            apply_all_values( jv, container, [&derived]( JsonValue & val, C & container ) {
+                derived.insert_next( val, container );
+            } );
         }
-        return false;
-    }
 
-    // These functions enable readers for non-container types to implement extend/delete functions
-    template<typename T>
-    bool do_extend( const JsonObject &jo, const std::string_view name, T &member ) const {
-        if( !jo.has_member( name ) ) {
+        template<typename C>
+        void insert_next( JsonValue &jv, C &container ) const {
+            const Derived &derived = static_cast<const Derived &>( *this );
+            if( !reader_detail::handler<C>().insert( container, derived.get_next( jv ) ) ) {
+                jv.throw_error( "insert failed" );
+            }
+        }
+
+        template<typename C>
+        void erase_values_from( const JsonObject &jo, const std::string_view member_name,
+                                C &container ) const {
+            const Derived &derived = static_cast<const Derived &>( *this );
+            if( !jo.has_member( member_name ) ) {
+                return;
+            }
+            JsonValue jv = jo.get_member( member_name );
+            apply_all_values( jv, container, [&derived]( JsonValue & val, C & container ) {
+                derived.erase_next( val, container );
+            } );
+        }
+        template<typename C>
+        void erase_next( JsonValue &jv, C &container ) const {
+            const Derived &derived = static_cast<const Derived &>( *this );
+            if( !reader_detail::handler<C>().erase( container, derived.get_next( jv ) ) ) {
+                jv.throw_error( "no value to delete" );
+            }
+        }
+        template<typename C>
+        void relative_values_from( const JsonObject &jo, const std::string_view member_name,
+                                   C &container ) const {
+            const Derived &derived = static_cast<const Derived &>( *this );
+            if( !jo.has_member( member_name ) ) {
+                return;
+            }
+            JsonValue jv = jo.get_member( member_name );
+            apply_all_values( jv, container, [&derived]( JsonValue & val, C & container ) {
+                derived.relative_next( val, container );
+            } );
+        }
+        template<typename C>
+        void relative_next( JsonValue &jv, C &container ) const {
+            const Derived &derived = static_cast<const Derived &>( *this );
+            if( !reader_detail::handler<C>().relative( container, derived.get_next( jv ) ) ) {
+                jv.throw_error( "relative not supported or no value to modify" );
+            }
+        }
+
+        /**
+         * Implements the reader interface, handles members that are containers of flags.
+         * The functions forwards the actual changes to assign(), insert()
+         * and erase(), which are specialized for various container types.
+         * The `enable_if` is here to prevent the compiler from considering it
+         * when called on a simple data member, the other `operator()` will be used.
+         */
+        template<typename C, std::enable_if_t<reader_detail::handler<C>::is_container, int> = 0>
+        bool operator()( const JsonObject &jo, const std::string_view member_name,
+                         C &container, bool was_loaded ) const {
+            const Derived &derived = static_cast<const Derived &>( *this );
+            // If you get an error about "incomplete type 'struct reader_detail::handler...",
+            // you have to implement a specialization of your container type, so above for
+            // existing specializations in namespace reader_detail.
+            if( jo.has_member( member_name ) ) {
+                reader_detail::handler<C>().clear( container );
+                derived.insert_values_from( jo, member_name, container );
+                return true;
+            } else if( !was_loaded ) {
+                warn_disabled_feature( jo, "relative", member_name, "no copy-from" );
+                warn_disabled_feature( jo, "proportional", member_name, "no copy-from" );
+                warn_disabled_feature( jo, "extend", member_name, "no copy-from" );
+                warn_disabled_feature( jo, "delete", member_name, "no copy-from" );
+                return false;
+            } else {
+                warn_disabled_feature( jo, "proportional", member_name, "not implemented" );
+                if( jo.has_object( "relative" ) ) {
+                    JsonObject tmp = jo.get_object( "relative" );
+                    tmp.allow_omitted_members();
+                    derived.relative_values_from( tmp, member_name, container );
+                }
+                if( jo.has_object( "extend" ) ) {
+                    JsonObject tmp = jo.get_object( "extend" );
+                    tmp.allow_omitted_members();
+                    derived.insert_values_from( tmp, member_name, container );
+                }
+                if( jo.has_object( "delete" ) ) {
+                    JsonObject tmp = jo.get_object( "delete" );
+                    tmp.allow_omitted_members();
+                    derived.erase_values_from( tmp, member_name, container );
+                }
+                return true;
+            }
+        }
+
+        /*
+         * These two functions are effectively handle_relative but they need to
+         * use the reader, so they must be here.
+         * proportional does not need these, because it's only reading a float
+         * whereas these are reading values of the same type.
+         */
+        // Type does not support relative
+        template < typename C, std::enable_if_t < !reader_detail::handler<C>::is_container,
+                   int > = 0,
+                   std::enable_if_t < !supports_relative<C>::value > * = nullptr
+                   >
+        bool do_relative( const JsonObject &jo, const std::string_view name, C & ) const {
+            if( jo.has_object( "relative" ) ) {
+            JsonObject relative = jo.get_object( "relative" );
+                relative.allow_omitted_members();
+                if( !relative.has_member( name ) ) {
+                    return false;
+                }
+                debugmsg( "Member %s of type %s does not support relative",
+                          name, demangle( typeid( C ).name() ) );
+            }
+            return false;
+        }
+
+        // Type supports relative
+        template < typename C, std::enable_if_t < !reader_detail::handler<C>::is_container,
+                   int > = 0, std::enable_if_t<supports_relative<C>::value> * = nullptr >
+        bool do_relative( const JsonObject &jo, const std::string_view name, C &member ) const {
+            if( jo.has_object( "relative" ) ) {
+            JsonObject relative = jo.get_object( "relative" );
+                relative.allow_omitted_members();
+                const Derived &derived = static_cast<const Derived &>( *this );
+                // This needs to happen here, otherwise we get unvisited members
+                if( !relative.has_member( name ) ) {
+                    return false;
+                }
+                C adder = derived.get_next( relative.get_member( name ) );
+                member += adder;
+                return true;
+            }
+            return false;
+        }
+
+        // These functions enable readers for non-container types to implement extend/delete functions
+        template<typename T>
+        bool do_extend( const JsonObject &jo, const std::string_view name, T &member ) const {
+            if( !jo.has_member( name ) ) {
             return false;
         }
         if constexpr( T_has_do_extend<Derived>::value ) {
             const Derived &derived = static_cast<const Derived &>( *this );
-            return derived.do_extend( jo, name, member );
-        } else {
-            jo.throw_error( string_format( "%s (reader %s) does not support extend outside of a container",
-                                           name, demangle( typeid( Derived ).name() ) ) );
+                return derived.do_extend( jo, name, member );
+            } else {
+                jo.throw_error( string_format( "%s (reader %s) does not support extend outside of a container",
+                                               name, demangle( typeid( Derived ).name() ) ) );
+            }
+            return false;
         }
-        return false;
-    }
 
-    template<typename T>
-    bool do_delete( const JsonObject &jo, const std::string_view name, T &member ) const {
-        if( !jo.has_member( name ) ) {
+        template<typename T>
+        bool do_delete( const JsonObject &jo, const std::string_view name, T &member ) const {
+            if( !jo.has_member( name ) ) {
             return false;
         }
         if constexpr( T_has_do_delete<Derived>::value ) {
             const Derived &derived = static_cast<const Derived &>( *this );
-            return derived.do_delete( jo, name, member );
-        } else {
-            jo.throw_error( string_format( "%s (reader %s) does not support delete outside of a container",
-                                           name, demangle( typeid( Derived ).name() ) ) );
-        }
-        return false;
-    }
-
-    template<typename C>
-    bool read_normal( const JsonObject &jo, const std::string_view name, C &member ) const {
-        if( jo.has_member( name ) ) {
-            const Derived &derived = static_cast<const Derived &>( *this );
-            member = derived.get_next( jo.get_member( name ) );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Implements the reader interface, handles a simple data member.
-     */
-    // was_loaded is ignored here, if the value is not found in JSON, report to
-    // the caller, which will take action on their own.
-    template < typename C, std::enable_if_t < !reader_detail::handler<C>::is_container,
-               int > = 0 >
-    bool operator()( const JsonObject &jo, const std::string_view member_name,
-                     C &member, bool was_loaded ) const {
-        const Derived &derived = static_cast<const Derived &>( *this );
-        // or no handler for the container
-        if( !was_loaded ) {
-            // this is gross, but some JSON wants to delete from things loaded by a different member on the same entity
-            if( Derived::check_extend_delete_copy_from ) {
-                warn_disabled_feature( jo, "extend", member_name, "no copy-from" );
-                warn_disabled_feature( jo, "delete", member_name, "no copy-from" );
+                return derived.do_delete( jo, name, member );
+            } else {
+                jo.throw_error( string_format( "%s (reader %s) does not support delete outside of a container",
+                                               name, demangle( typeid( Derived ).name() ) ) );
             }
-            warn_disabled_feature( jo, "relative", member_name, "no copy-from" );
-            warn_disabled_feature( jo, "proportional", member_name, "no copy-from" );
+            return false;
         }
-        if( jo.has_object( "extend" ) ) {
-            JsonObject tmp = jo.get_object( "extend" );
-            tmp.allow_omitted_members();
-            do_extend( tmp, member_name, member );
+
+        template<typename C>
+        bool read_normal( const JsonObject &jo, const std::string_view name, C &member ) const {
+            if( jo.has_member( name ) ) {
+            const Derived &derived = static_cast<const Derived &>( *this );
+                member = derived.get_next( jo.get_member( name ) );
+                return true;
+            }
+            return false;
         }
-        if( jo.has_object( "delete" ) ) {
-            JsonObject tmp = jo.get_object( "delete" );
-            tmp.allow_omitted_members();
-            do_delete( tmp, member_name, member );
+
+        /**
+         * Implements the reader interface, handles a simple data member.
+         */
+        // was_loaded is ignored here, if the value is not found in JSON, report to
+        // the caller, which will take action on their own.
+        template < typename C, std::enable_if_t < !reader_detail::handler<C>::is_container,
+                   int > = 0 >
+        bool operator()( const JsonObject &jo, const std::string_view member_name,
+                         C &member, bool was_loaded ) const {
+            const Derived &derived = static_cast<const Derived &>( *this );
+            // or no handler for the container
+            if( !was_loaded ) {
+                // this is gross, but some JSON wants to delete from things loaded by a different member on the same entity
+                if( Derived::check_extend_delete_copy_from ) {
+                    warn_disabled_feature( jo, "extend", member_name, "no copy-from" );
+                    warn_disabled_feature( jo, "delete", member_name, "no copy-from" );
+                }
+                warn_disabled_feature( jo, "relative", member_name, "no copy-from" );
+                warn_disabled_feature( jo, "proportional", member_name, "no copy-from" );
+            }
+            if( jo.has_object( "extend" ) ) {
+                JsonObject tmp = jo.get_object( "extend" );
+                tmp.allow_omitted_members();
+                do_extend( tmp, member_name, member );
+            }
+            if( jo.has_object( "delete" ) ) {
+                JsonObject tmp = jo.get_object( "delete" );
+                tmp.allow_omitted_members();
+                do_delete( tmp, member_name, member );
+            }
+            return derived.read_normal( jo, member_name, member ) ||
+                   // not every reader handles proportional
+                   handle_proportional( jo, member_name, member ) ||
+                   // readers can override relative handling
+                   derived.do_relative( jo, member_name, member );
         }
-        return derived.read_normal( jo, member_name, member ) ||
-               // not every reader handles proportional
-               handle_proportional( jo, member_name, member ) ||
-               // readers can override relative handling
-               derived.do_relative( jo, member_name, member );
-    }
 };
 
 /**
@@ -1736,42 +1736,42 @@ public:
 template<typename T>
 class json_read_reader : public generic_typed_reader<json_read_reader<T>>
 {
-public:
-    static constexpr bool read_objects = true;
+    public:
+        static constexpr bool read_objects = true;
 
-    T get_next( const JsonValue &jv ) const {
-        T ret;
-        if( !jv.read( ret ) ) {
-            jv.throw_error( string_format( "Couldn't read %s", demangle( typeid( T ).name() ) ) );
+        T get_next( const JsonValue &jv ) const {
+            T ret;
+            if( !jv.read( ret ) ) {
+                jv.throw_error( string_format( "Couldn't read %s", demangle( typeid( T ).name() ) ) );
+            }
+            return ret;
         }
-        return ret;
-    }
 
-    bool do_extend( const JsonObject &jo, const std::string_view name, T &member ) const {
-        if( !jo.has_member( name ) ) {
+        bool do_extend( const JsonObject &jo, const std::string_view name, T &member ) const {
+            if( !jo.has_member( name ) ) {
             return false;
         }
         if constexpr( supports_extend_handler<T>::value ) {
             return member.handle_extend( jo.get_member( name ) );
-        } else {
-            jo.throw_error( string_format( "%s (type %s) does not implement handle_extend", name,
-                                           demangle( typeid( T ).name() ) ) );
+            } else {
+                jo.throw_error( string_format( "%s (type %s) does not implement handle_extend", name,
+                                               demangle( typeid( T ).name() ) ) );
+            }
+            return false;
         }
-        return false;
-    }
 
-    bool do_delete( const JsonObject &jo, const std::string_view name, T &member ) const {
-        if( !jo.has_member( name ) ) {
+        bool do_delete( const JsonObject &jo, const std::string_view name, T &member ) const {
+            if( !jo.has_member( name ) ) {
             return false;
         }
         if constexpr( supports_delete_handler<T>::value ) {
             return member.handle_delete( jo.get_member( name ) );
-        } else {
-            jo.throw_error( string_format( "%s (type %s) does not implement handle_delete", name,
-                                           demangle( typeid( T ).name() ) ) );
+            } else {
+                jo.throw_error( string_format( "%s (type %s) does not implement handle_delete", name,
+                                               demangle( typeid( T ).name() ) ) );
+            }
+            return false;
         }
-        return false;
-    }
 };
 
 /**
@@ -1789,10 +1789,10 @@ public:
 template<typename FlagType = std::string>
 class auto_flags_reader : public generic_typed_reader<auto_flags_reader<FlagType>>
 {
-public:
-    FlagType get_next( std::string &&str ) const {
-        return FlagType( std::move( str ) );
-    }
+    public:
+        FlagType get_next( std::string &&str ) const {
+            return FlagType( std::move( str ) );
+        }
 };
 
 using string_reader = auto_flags_reader<>;
@@ -1837,33 +1837,33 @@ class money_reader : public generic_typed_reader<money_reader>
 template<typename T>
 class typed_flag_reader : public generic_typed_reader<typed_flag_reader<T>>
 {
-private:
-    using map_t = std::unordered_map<std::string, T>;
+    private:
+        using map_t = std::unordered_map<std::string, T>;
 
-    const map_t &flag_map;
-    const std::string flag_type;
+        const map_t &flag_map;
+        const std::string flag_type;
 
-public:
-    typed_flag_reader( const map_t &flag_map, const std::string_view flag_type )
-        : flag_map( flag_map )
-        , flag_type( flag_type ) {
-    }
-
-    explicit typed_flag_reader( const std::string_view flag_type )
-        : flag_map( io::get_enum_lookup_map<T>() )
-        , flag_type( flag_type ) {
-    }
-
-    T get_next( const JsonValue &jv ) const {
-        const std::string flag = jv;
-        const auto iter = flag_map.find( flag );
-
-        if( iter == flag_map.cend() ) {
-            jv.throw_error( string_format( "invalid %s: \"%s\"", flag_type, flag ) );
+    public:
+        typed_flag_reader( const map_t &flag_map, const std::string_view flag_type )
+            : flag_map( flag_map )
+            , flag_type( flag_type ) {
         }
 
-        return iter->second;
-    }
+        explicit typed_flag_reader( const std::string_view flag_type )
+            : flag_map( io::get_enum_lookup_map<T>() )
+            , flag_type( flag_type ) {
+        }
+
+        T get_next( const JsonValue &jv ) const {
+            const std::string flag = jv;
+            const auto iter = flag_map.find( flag );
+
+            if( iter == flag_map.cend() ) {
+                jv.throw_error( string_format( "invalid %s: \"%s\"", flag_type, flag ) );
+            }
+
+            return iter->second;
+        }
 };
 
 template<typename T>
@@ -1879,22 +1879,22 @@ typed_flag_reader<T> make_flag_reader( const std::unordered_map<std::string, T> 
 template<typename E>
 class enum_flags_reader : public generic_typed_reader<enum_flags_reader<E>>
 {
-private:
-    const std::string flag_type;
+    private:
+        const std::string flag_type;
 
-public:
-    explicit enum_flags_reader( const std::string &flag_type ) : flag_type( flag_type ) {
-    }
-
-    E get_next( const JsonValue &jv ) const {
-        const std::string flag = jv.get_string();
-        try {
-            return io::string_to_enum<E>( flag );
-        } catch( const io::InvalidEnumString & ) {
-            jv.throw_error( string_format( "invalid %s: \"%s\"", flag_type, flag ) );
-            throw; // ^^ throws already
+    public:
+        explicit enum_flags_reader( const std::string &flag_type ) : flag_type( flag_type ) {
         }
-    }
+
+        E get_next( const JsonValue &jv ) const {
+            const std::string flag = jv.get_string();
+            try {
+                return io::string_to_enum<E>( flag );
+            } catch( const io::InvalidEnumString & ) {
+                jv.throw_error( string_format( "invalid %s: \"%s\"", flag_type, flag ) );
+                throw; // ^^ throws already
+            }
+        }
 };
 
 /**
@@ -1903,10 +1903,10 @@ public:
 template<typename T>
 class string_id_reader : public generic_typed_reader<string_id_reader<T>>
 {
-public:
-    string_id<T> get_next( std::string &&str ) const {
-        return string_id<T>( std::move( str ) );
-    }
+    public:
+        string_id<T> get_next( std::string &&str ) const {
+            return string_id<T>( std::move( str ) );
+        }
 };
 
 /**
@@ -1927,52 +1927,52 @@ public:
 template<typename K, typename V>
 class weighted_string_id_reader : public generic_typed_reader<weighted_string_id_reader<K, V>>
 {
-public:
-    static constexpr bool read_objects = true;
+    public:
+        static constexpr bool read_objects = true;
 
-    std::optional<V> default_weight;
-    explicit weighted_string_id_reader( std::optional<V> default_weight ) : default_weight(
-            default_weight ) {};
+        std::optional<V> default_weight;
+        explicit weighted_string_id_reader( std::optional<V> default_weight ) : default_weight(
+                default_weight ) {};
 
-    std::pair<K, V> get_next( const JsonValue &val ) const {
-        if( val.is_member() ) {
+        std::pair<K, V> get_next( const JsonValue &val ) const {
+            if( val.is_member() ) {
             const JsonMember &jm = dynamic_cast<const JsonMember &>( val );
-            return std::pair<K, V>( jm.name(), static_cast<V>( val.get_float() ) );
-        } else if( val.test_object() ) {
+                return std::pair<K, V>( jm.name(), static_cast<V>( val.get_float() ) );
+            } else if( val.test_object() ) {
             JsonObject inline_pair = val.get_object();
-            if( !( ( inline_pair.size() == 1 && default_weight.has_value() ) || inline_pair.size() == 2 ) ) {
-                inline_pair.throw_error( "weighted_string_id_reader failed to read object" );
-            }
-            K pair_key;
-            V pair_val = default_weight.value_or( V() );
-            for( JsonMember mem : inline_pair ) {
-                if( mem.test_string() ) {
-                    pair_key = K( std::move( mem.get_string() ) );
-                } else if( mem.test_float() ) {
-                    pair_val = static_cast<V>( mem.get_float() );
-                } else {
-                    inline_pair.throw_error( "weighted_string_id_reader found unexpected value in object" );
+                if( !( ( inline_pair.size() == 1 && default_weight.has_value() ) || inline_pair.size() == 2 ) ) {
+                    inline_pair.throw_error( "weighted_string_id_reader failed to read object" );
                 }
-            }
-            return std::pair<K, V>( pair_key, pair_val );
-        } else if( val.test_array() ) {
+                K pair_key;
+                V pair_val = default_weight.value_or( V() );
+                for( JsonMember mem : inline_pair ) {
+                    if( mem.test_string() ) {
+                        pair_key = K( std::move( mem.get_string() ) );
+                    } else if( mem.test_float() ) {
+                        pair_val = static_cast<V>( mem.get_float() );
+                    } else {
+                        inline_pair.throw_error( "weighted_string_id_reader found unexpected value in object" );
+                    }
+                }
+                return std::pair<K, V>( pair_key, pair_val );
+            } else if( val.test_array() ) {
             JsonArray arr = val.get_array();
-            if( arr.size() != 2 ) {
-                arr.throw_error( "weighted_string_id_reader read array without exactly two entries" );
-            }
-            return std::pair<K, V>(
-                       K( std::move( arr[0].get_string() ) ),
-                       static_cast<V>( arr[1].get_float() ) );
-        } else if( default_weight.has_value() ) {
-            if( val.test_string() ) {
+                if( arr.size() != 2 ) {
+                    arr.throw_error( "weighted_string_id_reader read array without exactly two entries" );
+                }
                 return std::pair<K, V>(
-                           K( std::move( val.get_string() ) ), *default_weight );
+                           K( std::move( arr[0].get_string() ) ),
+                           static_cast<V>( arr[1].get_float() ) );
+            } else if( default_weight.has_value() ) {
+            if( val.test_string() ) {
+                    return std::pair<K, V>(
+                               K( std::move( val.get_string() ) ), *default_weight );
+                }
+                val.throw_error( "weighted_string_id_reader provided with invalid string_id" );
+            } else {
+                val.throw_error( "weighted_string_id_reader requires two entries" );
             }
-            val.throw_error( "weighted_string_id_reader provided with invalid string_id" );
-        } else {
-            val.throw_error( "weighted_string_id_reader requires two entries" );
         }
-    }
 };
 
 // For loading pairs from a JSON object. { "a1": b1, "a2": b2 }, etc
@@ -1981,21 +1981,21 @@ public:
 template<typename K, typename V>
 class generic_map_reader : public generic_typed_reader<generic_map_reader<K, V>>
 {
-public:
-    static constexpr bool read_objects = true;
+    public:
+        static constexpr bool read_objects = true;
 
-    static_assert( key_from_json_string<K>::valid, "Type K must have a known conversion from string" );
+        static_assert( key_from_json_string<K>::valid, "Type K must have a known conversion from string" );
 
-    std::pair<K, V> get_next( const JsonValue &jv ) const {
-        const JsonMember *jm = dynamic_cast<const JsonMember *>( &jv );
-        if( jm == nullptr ) {
-            jv.throw_error( "not part of a JsonObject" );
+        std::pair<K, V> get_next( const JsonValue &jv ) const {
+            const JsonMember *jm = dynamic_cast<const JsonMember *>( &jv );
+            if( jm == nullptr ) {
+                jv.throw_error( "not part of a JsonObject" );
+            }
+            K key = key_from_json_string<K>()( jm->name() );
+            V value;
+            jv.read( value, true );
+            return std::pair<K, V>( key, value );
         }
-        K key = key_from_json_string<K>()( jm->name() );
-        V value;
-        jv.read( value, true );
-        return std::pair<K, V>( key, value );
-    }
 };
 
 // Supports three formats:
@@ -2011,45 +2011,45 @@ public:
 template<typename T, typename U = T>
 class pair_reader : public generic_typed_reader<pair_reader<T, U>>
 {
-public:
-    std::pair<T, U> get_next( const JsonValue &jv ) const {
-        // elements of the pair to return
-        T a;
-        U b;
-        // [ a, b ]
-        if( jv.test_array() ) {
-            JsonArray ja = jv.get_array();
-            if( ja.size() != 2 ) {
-                ja.throw_error( "Must have 2 elements" );
+    public:
+        std::pair<T, U> get_next( const JsonValue &jv ) const {
+            // elements of the pair to return
+            T a;
+            U b;
+            // [ a, b ]
+            if( jv.test_array() ) {
+                JsonArray ja = jv.get_array();
+                if( ja.size() != 2 ) {
+                    ja.throw_error( "Must have 2 elements" );
+                }
+                ja[0].read( a, true );
+                ja[1].read( b, true );
+                return std::make_pair( a, b );
             }
-            ja[0].read( a, true );
-            ja[1].read( b, true );
+            // { "a": b }
+            if constexpr( key_from_json_string<T>::valid ) {
+                if( jv.test_object() ) {
+                    JsonObject jo = jv.get_object();
+                    if( jo.size() != 1 ) {
+                        jo.throw_error( "bad object pair, has too many elements" );
+                    }
+                    // gross - we need to get the name of the member, this just unwraps it
+                    for( JsonMember jm : jo ) {
+                        a = key_from_json_string<T>()( jm.name() );
+                        jm.read( b, true );
+                        return std::make_pair( a, b );
+                    }
+                }
+            }
+            // shorthand for a = b
+            if constexpr( std::is_same_v<T, U> ) {
+                jv.read( a, true );
+                b = a;
+                return std::make_pair( a, b );
+            }
+            jv.throw_error( "bad pair" );
             return std::make_pair( a, b );
         }
-        // { "a": b }
-        if constexpr( key_from_json_string<T>::valid ) {
-            if( jv.test_object() ) {
-                JsonObject jo = jv.get_object();
-                if( jo.size() != 1 ) {
-                    jo.throw_error( "bad object pair, has too many elements" );
-                }
-                // gross - we need to get the name of the member, this just unwraps it
-                for( JsonMember jm : jo ) {
-                    a = key_from_json_string<T>()( jm.name() );
-                    jm.read( b, true );
-                    return std::make_pair( a, b );
-                }
-            }
-        }
-        // shorthand for a = b
-        if constexpr( std::is_same_v<T, U> ) {
-            jv.read( a, true );
-            b = a;
-            return std::make_pair( a, b );
-        }
-        jv.throw_error( "bad pair" );
-        return std::make_pair( a, b );
-    }
 };
 
 // Loads pairs as objects { key1: t1, key2: t2 }, or just t1, which uses the default for the value of t2
@@ -2058,34 +2058,34 @@ public:
 template<typename T1, typename T2>
 class named_pair_reader : public generic_typed_reader<named_pair_reader<T1, T2>>
 {
-public:
-    std::string_view key1;
-    std::string_view key2;
-    T2 default_value2;
+    public:
+        std::string_view key1;
+        std::string_view key2;
+        T2 default_value2;
 
-    named_pair_reader( std::string_view _key1, std::string_view _key2,
-                       T2 _default = T2() ) : key1( _key1 ), key2( _key2 ), default_value2( _default ) {
-        cata_assert( !key1.empty() );
-        cata_assert( !key2.empty() );
-        cata_assert( key1 != key2 );
-    }
+        named_pair_reader( std::string_view _key1, std::string_view _key2,
+                           T2 _default = T2() ) : key1( _key1 ), key2( _key2 ), default_value2( _default ) {
+            cata_assert( !key1.empty() );
+            cata_assert( !key2.empty() );
+            cata_assert( key1 != key2 );
+        }
 
-    std::pair<T1, T2> get_next( const JsonValue &jv ) const {
-        std::pair<T1, T2> ret;
-        if( jv.test_object() ) {
-            JsonObject jo = jv.get_object();
-            jo.read( key1, ret.first, true );
-            jo.read( key2, ret.second, true );
+        std::pair<T1, T2> get_next( const JsonValue &jv ) const {
+            std::pair<T1, T2> ret;
+            if( jv.test_object() ) {
+                JsonObject jo = jv.get_object();
+                jo.read( key1, ret.first, true );
+                jo.read( key2, ret.second, true );
+                return ret;
+            }
+            // TODO: support pair format? Forward to pair_reader<T1, T2>?
+            if( jv.test_array() ) {
+                jv.throw_error( "invalid format" );
+            }
+            jv.read( ret.first, true );
+            ret.second = default_value2;
             return ret;
         }
-        // TODO: support pair format? Forward to pair_reader<T1, T2>?
-        if( jv.test_array() ) {
-            jv.throw_error( "invalid format" );
-        }
-        jv.read( ret.first, true );
-        ret.second = default_value2;
-        return ret;
-    }
 };
 
 class nc_color;
@@ -2113,21 +2113,21 @@ struct supports_units : std::false_type {};
 
 template<typename T>
 struct supports_units < T, std::void_t < decltype( std::is_base_of<quantity, T>() )
-                        >> : std::true_type {};
+>> : std::true_type {};
 
 template<typename T, typename = std::void_t<>>
 struct supports_time : std::false_type {};
 
 template<typename T>
 struct supports_time < T, std::void_t < decltype( std::is_base_of<time_duration, T>() )
-                                        >> : std::true_type {};
+>> : std::true_type {};
 
 template<typename T, typename = std::void_t<>>
 struct supports_primitives : std::false_type {};
 
 template<typename T>
 struct supports_primitives < T, std::void_t < decltype( std::is_arithmetic_v<T> )
-                             >> : std::true_type {};
+>> : std::true_type {};
 
 /**
  * Throws an error if a single read value is outside those bounds,
@@ -2140,77 +2140,77 @@ struct supports_primitives < T, std::void_t < decltype( std::is_arithmetic_v<T> 
 template <typename T>
 class bound_reader : public generic_typed_reader<bound_reader<T>>
 {
-public:
-    T low;
-    T high;
+    public:
+        T low;
+        T high;
 
-    bound_reader() = default;
-    //override relative handling from generic_typed_reader: check bounds for (original + relative) value
-    bool do_relative( const JsonObject &jo, const std::string_view name, T &member ) const {
-        if( jo.has_object( "relative" ) ) {
+        bound_reader() = default;
+        //override relative handling from generic_typed_reader: check bounds for (original + relative) value
+        bool do_relative( const JsonObject &jo, const std::string_view name, T &member ) const {
+            if( jo.has_object( "relative" ) ) {
             JsonObject relative = jo.get_object( "relative" );
-            relative.allow_omitted_members();
-            // This needs to happen here, otherwise we get unvisited members
-            if( !relative.has_member( name ) ) {
-                return false;
+                relative.allow_omitted_members();
+                // This needs to happen here, otherwise we get unvisited members
+                if( !relative.has_member( name ) ) {
+                    return false;
+                }
+                JsonValue jv = relative.get_member( name );
+                T adder = read( jv );
+                member += adder;
+                //note: passes copy of parameter and then assigns the result to the parameter
+                member = bound_check( low, high, jv, member );
+                return true;
             }
-            JsonValue jv = relative.get_member( name );
-            T adder = read( jv );
-            member += adder;
-            //note: passes copy of parameter and then assigns the result to the parameter
-            member = bound_check( low, high, jv, member );
-            return true;
+            return false;
         }
-        return false;
-    }
 
-    //reads value as usual for type (i.e. without bound check)
-    T read( const JsonValue &jv ) const {
-        T read_member;
-        if( !jv.read( read_member ) ) {
-            jv.throw_error( "bound_reader failed to read value" );
+        //reads value as usual for type (i.e. without bound check)
+        T read( const JsonValue &jv ) const {
+            T read_member;
+            if( !jv.read( read_member ) ) {
+                jv.throw_error( "bound_reader failed to read value" );
+            }
+            return read_member;
         }
-        return read_member;
-    }
 
-    T get_next( const JsonValue &jv ) const {
-        return bound_check<T>( low, high, jv, read( jv ) );
-    }
+        T get_next( const JsonValue &jv ) const {
+            return bound_check<T>( low, high, jv, read( jv ) );
+        }
 };
 
 //bound_reader for primitive numbers
 template<typename T, std::enable_if_t<supports_primitives<T>::value >* = nullptr >
 class numeric_bound_reader : public bound_reader<T>
 {
-public:
-    explicit numeric_bound_reader( T low = std::numeric_limits<T>::lowest(),
-                                   T high = std::numeric_limits<T>::max() ) {
-        bound_reader<T>::low = low;
-        bound_reader<T>::high = high;
-    };
+    public:
+        explicit numeric_bound_reader( T low = std::numeric_limits<T>::lowest(),
+                                       T high = std::numeric_limits<T>::max() ) {
+            bound_reader<T>::low = low;
+            bound_reader<T>::high = high;
+        };
 };
 
 //bound_reader for units:: namespace
 template<typename T, std::enable_if_t<supports_units<T>::value >* = nullptr >
 class units_bound_reader : public bound_reader<T>
 {
-public:
-    explicit units_bound_reader( T low = T::min(), T high = T::max() ) {
-        bound_reader<T>::low = low;
-        bound_reader<T>::high = high;
-    };
+    public:
+        explicit units_bound_reader( T low = T::min(), T high = T::max() ) {
+            bound_reader<T>::low = low;
+            bound_reader<T>::high = high;
+        };
 };
 
 //bound_reader for time_duration, which is not a units::
 template <typename T = time_duration, std::enable_if_t<supports_time<T>::value >* = nullptr >
 class time_bound_reader : public bound_reader<T>
 {
-public:
-    explicit time_bound_reader( T low = 0_seconds,
-                                T high = calendar::INDEFINITELY_LONG_DURATION ) {
-        bound_reader<T>::low = low;
-        bound_reader<T>::high = high;
-    };
+    public:
+        explicit time_bound_reader( T low = 0_seconds,
+                                    T high = calendar::INDEFINITELY_LONG_DURATION ) {
+            bound_reader<T>::low = low;
+            bound_reader<T>::high = high;
+        };
 };
 
 struct percentile_reader : public generic_typed_reader<percentile_reader> {

@@ -679,11 +679,11 @@ void talk_function::scavenger_raid( mission_data &mission_key, npc &p )
 {
     std::string entry =
         _( "Profit: 50-100 merch, some items\nDanger: Medium\nTime: 10 hour missions\n\n"
-           "Scavenging raids target formerly populated areas to loot as many "
-           "valuable items as possible before being surrounded by the undead.  "
-           "Combat is to be expected and assistance from the rest of the party "
-           "can't be guaranteed.  The rewards are greater and there is a chance "
-           "of the companion bringing back items." );
+       "Scavenging raids target formerly populated areas to loot as many "
+       "valuable items as possible before being surrounded by the undead.  "
+       "Combat is to be expected and assistance from the rest of the party "
+       "can't be guaranteed.  The rewards are greater and there is a chance "
+       "of the companion bringing back items." );
     const mission_id miss_id = {Scavenging_Raid_Job, "", {}, std::nullopt};
     mission_key.add_start( miss_id, _( "Assign Scavenging Raid" ), entry );
     std::vector<npc_ptr> npc_list = companion_list( p, miss_id );
@@ -715,11 +715,11 @@ void talk_function::hospital_raid( mission_data &mission_key, npc &p )
     if( get_player_character().get_value( var_SCAVENGER_HOSPITAL_RAID_STARTED ).str() != "yes" ) {
         const std::string entry_assign =
             _( "Profit: hospital equipment, some items\nDanger: High\nTime: 20 hour mission\n\n"
-               "Scavenging raid targeting a hospital to search for hospital equipment and as many "
-               "valuable items as possible before being surrounded by the undead.  "
-               "Combat is to be expected and assistance from the rest of the party "
-               "can't be guaranteed.  This will be an extremely dangerous mission, "
-               "so make sure everyone is prepared before they go." );
+           "Scavenging raid targeting a hospital to search for hospital equipment and as many "
+           "valuable items as possible before being surrounded by the undead.  "
+           "Combat is to be expected and assistance from the rest of the party "
+           "can't be guaranteed.  This will be an extremely dangerous mission, "
+           "so make sure everyone is prepared before they go." );
         mission_key.add_start( miss_id, _( "Assign Hospital Raid" ), entry_assign );
     }
     std::vector<npc_ptr> npc_list = companion_list( p, miss_id );
@@ -2579,7 +2579,7 @@ comp_list talk_function::companion_sort( comp_list available,
 
         bool operator()( const npc_ptr &first, const npc_ptr &second ) const {
             return static_cast<int>( first->get_skill_level( req_skill ) ) > static_cast<int>
-                   ( second->get_skill_level( req_skill ) );
+            ( second->get_skill_level( req_skill ) );
         }
 
         skill_id req_skill;

@@ -220,8 +220,8 @@
     "broken_color": "light_gray",
     "size": "359614 ml",
     "item": "trashcan_large",
-    "extend": { "flags": [ "NO_INSTALL_HIDDEN" ] },
     "delete": { "flags": [ "CARGO_PASSABLE" ] },
+    "//CCB": "撤销 PR #86793 — 恢复垃圾桶在载具上的安装能力",
     "variants_bases": [ { "id": "trash can", "label": "Trash Can" } ],
     "variants": [ { "symbols": ")", "symbols_broken": "#" } ]
   },

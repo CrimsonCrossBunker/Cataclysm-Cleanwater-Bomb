@@ -70,9 +70,9 @@ static const oter_str_id oter_omt_obsolete( "omt_obsolete" );
 static const string_id<overmap_connection> overmap_connection_local_road( "local_road" );
 
 #if defined(__ANDROID__)
-#include "input.h"
+    #include "input.h"
 
-extern std::map<std::string, std::list<input_event>> quick_shortcuts_map;
+    extern std::map<std::string, std::list<input_event>> quick_shortcuts_map;
 #endif
 
 /*
@@ -1280,14 +1280,14 @@ namespace
 struct mongroup_bin_eq {
     bool operator()( const mongroup &a, const mongroup &b ) const {
         return a.monsters.empty() &&
-               b.monsters.empty() &&
-               a.type == b.type &&
-               a.population == b.population &&
-               a.target == b.target &&
-               a.interest == b.interest &&
-               a.dying == b.dying &&
-               a.horde == b.horde &&
-               a.behaviour == b.behaviour;
+        b.monsters.empty() &&
+        a.type == b.type &&
+        a.population == b.population &&
+        a.target == b.target &&
+        a.interest == b.interest &&
+        a.dying == b.dying &&
+        a.horde == b.horde &&
+        a.behaviour == b.behaviour;
     }
 };
 
@@ -1314,15 +1314,15 @@ void overmap::save_monster_groups( JsonOut &jout ) const
     std::unordered_map<mongroup, std::list<tripoint_om_sm>, mongroup_hash, mongroup_bin_eq>
     binned_groups;
     binned_groups.reserve( zg.size() );
-    for( const auto &pos_group : zg ) {
-        // Each group in bin adds only position
-        // so that 100 identical groups are 1 group data and 100 tripoints
-        std::list<tripoint_om_sm> &positions = binned_groups[pos_group.second];
+for( const auto &pos_group : zg ) {
+    // Each group in bin adds only position
+    // so that 100 identical groups are 1 group data and 100 tripoints
+    std::list<tripoint_om_sm> &positions = binned_groups[pos_group.second];
         positions.emplace_back( pos_group.first );
     }
 
-    for( auto &group_bin : binned_groups ) {
-        jout.start_array();
+for( auto &group_bin : binned_groups ) {
+    jout.start_array();
         // Zero the bin position so that it isn't serialized
         // The position is stored separately, in the list
         // TODO: Do it without the copy
@@ -1594,7 +1594,7 @@ void overmap::serialize( std::ostream &fout ) const
     fout << std::endl;
 
     std::vector<std::pair<om_pos_dir, std::string>> flattened_joins_used(
-                joins_used.begin(), joins_used.end() );
+        joins_used.begin(), joins_used.end() );
     json.member( "joins_used", flattened_joins_used );
     fout << std::endl;
 
@@ -1766,7 +1766,7 @@ void game::unserialize_dimension_data( const JsonValue &jv )
 void mission::serialize_all( JsonOut &json )
 {
     json.start_array();
-    for( mission *&e : get_all_active() ) {
+    for( mission * &e : get_all_active() ) {
         e->serialize( json );
     }
     json.end_array();
@@ -2073,8 +2073,8 @@ void creature_tracker::deserialize( const JsonArray &ja )
 void creature_tracker::serialize( JsonOut &jsout ) const
 {
     jsout.start_array();
-    for( const auto &monster_ptr : monsters_list ) {
-        jsout.write( *monster_ptr );
+for( const auto &monster_ptr : monsters_list ) {
+    jsout.write( *monster_ptr );
     }
     jsout.end_array();
 }

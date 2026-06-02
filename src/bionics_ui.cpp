@@ -287,7 +287,7 @@ static void draw_bionics_titlebar( const catacurses::window &window, avatar *p,
 
     const int pwr_str_pos = right_print( window, 1, 1, c_white,
                                          string_format( _( "Bionic Power: <color_light_blue>%s</color>/<color_light_blue>%ikJ</color>" ),
-                                                 power_string, units::to_kilojoule( p->get_max_power_level() ) ) );
+                                             power_string, units::to_kilojoule( p->get_max_power_level() ) ) );
 
     wattron( window, BORDER_COLOR );
     mvwaddch( window, point( pwr_str_pos - 1, 1 ), LINE_XOXO ); // |

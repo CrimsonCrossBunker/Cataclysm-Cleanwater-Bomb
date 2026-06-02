@@ -391,7 +391,7 @@ std::string medical_ui::get_modified_limb_name( const bodypart_id &part ) const
     const std::string bp_name = uppercase_first_letter( body_part_name( part, 1 ) );
     header += colorize( bp_name,
                         display::limb_color( *you,
-                                part, true, true, true ) ) + " " + hp_str;
+                            part, true, true, true ) ) + " " + hp_str;
 
     // BLEEDING block
     if( bleeding ) {
@@ -554,8 +554,8 @@ void medical_ui::summary_tab() const
     const diag_value *last_weighting_time = you->maybe_get_value( "last_weighting_time" );
     if( last_weighting_time != nullptr ) {
         const std::string last_weighting_weight = string_format( "%.0f %s",
-                convert_weight( units::from_kilogram( you->get_value( "last_weighting_weight_kg" ).dbl() ) ),
-                weight_units() );
+            convert_weight( units::from_kilogram( you->get_value( "last_weighting_weight_kg" ).dbl() ) ),
+            weight_units() );
         const std::string last_weighted_time = string_format( _( "last weighed %s ago." ),
                                                to_string_approx( calendar::turn - time_point( last_weighting_time->dbl() ) ) );
         const std::string weight_desc = string_format(

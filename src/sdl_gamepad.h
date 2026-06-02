@@ -6,9 +6,9 @@
 #include "sdl_wrappers.h"
 
 #if SDL_MAJOR_VERSION >= 3
-#define SDL_GAMEPAD_SCHEDULER (SDL_EVENT_USER+1)
+    #define SDL_GAMEPAD_SCHEDULER (SDL_EVENT_USER+1)
 #else
-#define SDL_GAMEPAD_SCHEDULER (SDL_USEREVENT+1)
+    #define SDL_GAMEPAD_SCHEDULER (SDL_USEREVENT+1)
 #endif
 
 struct tripoint;

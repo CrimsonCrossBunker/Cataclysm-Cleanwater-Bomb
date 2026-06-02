@@ -85,8 +85,8 @@ TEST_CASE( "nest_conditional_placement", "[map][nest]" )
         flags_any_success && predecessors_success && z_check_success ) {
         //Check the neighbors condition works with om_terrain_match_type
         const bool om_terrain_match_type_success = tm.ter( tripoint_omt_ms{ 22, 0, 0 } ) ==
-                ter_t_linoleum_white &&
-                tm.ter( tripoint_omt_ms{ 22, 1, 0 } ) == ter_t_linoleum_gray;
+            ter_t_linoleum_white &&
+            tm.ter( tripoint_omt_ms{ 22, 1, 0 } ) == ter_t_linoleum_gray;
         //Check that all conditions are required when multiple are specified
         const bool multiconditional_success = tm.ter( tripoint_omt_ms{ 23, 0, 0 } ) == ter_t_linoleum_white
                                               &&

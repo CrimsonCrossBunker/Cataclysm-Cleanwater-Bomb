@@ -76,14 +76,14 @@ float Character::mutation_armor( bodypart_id bp, const damage_unit &du ) const
 int Character::get_armor_type( const damage_type_id &dt, bodypart_id bp ) const
 {
     if( dt->no_resist ) {
-        return 0;
-    }
-    int ret = worn.damage_resist( dt, bp );
-    auto bonus = armor_bonus.find( dt );
-    if( bonus != armor_bonus.end() ) {
+    return 0;
+}
+int ret = worn.damage_resist( dt, bp );
+auto bonus = armor_bonus.find( dt );
+if( bonus != armor_bonus.end() ) {
         ret += bonus->second;
     }
-    for( const bionic_id &bid : get_bionics() ) {
+for( const bionic_id &bid : get_bionics() ) {
         const auto prot = bid->protec.find( bp.id() );
         if( prot != bid->protec.end() ) {
             ret += prot->second.type_resist( dt );
@@ -252,7 +252,7 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
     // check if the armor was damaged
     item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp,
                                  calculate_by_enchantment( 1,
-                                         enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
+                                     enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
                                  this );
 
     // describe what happened if the armor took damage
@@ -290,7 +290,7 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
     // check if the armor was damaged
     item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp,
                                  calculate_by_enchantment( 1,
-                                         enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
+                                     enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
                                  this );
 
     // describe what happened if the armor took damage

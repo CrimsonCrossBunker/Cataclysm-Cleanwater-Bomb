@@ -3,19 +3,19 @@
 #include <vector>
 
 #if defined(_WIN32)
-#if 1 // Prevent IWYU reordering platform_win.h below mmsystem.h
-#   include "platform_win.h"
-#endif
-#   include "mmsystem.h"
+    #if 1 // Prevent IWYU reordering platform_win.h below mmsystem.h
+        #include "platform_win.h"
+    #endif
+    #include "mmsystem.h"
 #elif defined(__APPLE__)
-#include <CoreFoundation/CFLocale.h>
-#include <CoreFoundation/CoreFoundation.h>
+    #include <CoreFoundation/CFLocale.h>
+    #include <CoreFoundation/CoreFoundation.h>
 #elif defined(__ANDROID__)
-#include <jni.h>
-#include "sdl_wrappers.h" // for GetAndroidJNIEnv()
-#include "debug.h" // for DebugLog/D_INFO/D_MAIN
+    #include <jni.h>
+    #include "sdl_wrappers.h" // for GetAndroidJNIEnv()
+    #include "debug.h" // for DebugLog/D_INFO/D_MAIN
 #elif defined(__linux__)
-#include <langinfo.h>
+    #include <langinfo.h>
 #endif
 
 #include "cata_utility.h"

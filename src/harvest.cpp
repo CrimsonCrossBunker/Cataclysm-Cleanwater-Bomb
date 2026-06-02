@@ -45,21 +45,21 @@ translation harvest_drop_type::field_dress_msg( bool succeeded ) const
 {
     // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     return SNIPPET.random_from_category(
-               succeeded ? msg_fielddress_success : msg_fielddress_fail ).value_or( translation() );
+           succeeded ? msg_fielddress_success : msg_fielddress_fail ).value_or( translation() );
 }
 
 translation harvest_drop_type::butcher_msg( bool succeeded ) const
 {
     // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     return SNIPPET.random_from_category(
-               succeeded ? msg_butcher_success : msg_butcher_fail ).value_or( translation() );
+           succeeded ? msg_butcher_success : msg_butcher_fail ).value_or( translation() );
 }
 
 translation harvest_drop_type::dissect_msg( bool succeeded ) const
 {
     // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     return SNIPPET.random_from_category(
-               succeeded ? msg_dissect_success : msg_dissect_fail ).value_or( translation() );
+           succeeded ? msg_dissect_success : msg_dissect_fail ).value_or( translation() );
 }
 
 /** @relates string_id */
@@ -90,8 +90,8 @@ bool harvest_list::is_null() const
 
 bool harvest_list::has_entry_type( const harvest_drop_type_id &type ) const
 {
-    for( const harvest_entry &entry : entries() ) {
-        if( entry.type == type ) {
+for( const harvest_entry &entry : entries() ) {
+    if( entry.type == type ) {
             return true;
         }
     }
@@ -283,14 +283,14 @@ std::vector<harvest_entry>::const_reverse_iterator harvest_list::rend() const
 std::string harvest_list::describe( int at_skill ) const
 {
     if( empty() ) {
-        return "";
-    }
+    return "";
+}
 
-    return enumerate_as_string( entries().begin(), entries().end(),
-    [at_skill]( const harvest_entry & en ) {
-        float min_f = en.base_num.first;
-        float max_f = en.base_num.second;
-        if( at_skill >= 0 ) {
+return enumerate_as_string( entries().begin(), entries().end(),
+[at_skill]( const harvest_entry & en ) {
+    float min_f = en.base_num.first;
+    float max_f = en.base_num.second;
+    if( at_skill >= 0 ) {
             min_f += en.scale_num.first * at_skill;
             max_f += en.scale_num.second * at_skill;
         } else {

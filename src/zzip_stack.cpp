@@ -251,21 +251,21 @@ bool zzip_stack::compact( double bloat_factor )
 zzip &zzip_stack::cold() const
 {
     if( !cold_ ) {
-        cold_ = load_temp( file_temp::cold );
+    cold_ = load_temp( file_temp::cold );
     }
     return *cold_;
 }
 zzip &zzip_stack::warm() const
 {
     if( !warm_ ) {
-        warm_ = load_temp( file_temp::warm );
+    warm_ = load_temp( file_temp::warm );
     }
     return *warm_;
 }
 zzip &zzip_stack::hot() const
 {
     if( !hot_ ) {
-        hot_ = load_temp( file_temp::hot );
+    hot_ = load_temp( file_temp::hot );
     }
     return *hot_;
 }
@@ -298,8 +298,8 @@ const
 zzip &zzip_stack::zzip_of_temp( zzip_stack::file_temp temp ) const
 {
     switch( temp ) {
-        case file_temp::cold: {
-            return cold();
+    case file_temp::cold: {
+        return cold();
         }
         case file_temp::warm: {
             return warm();

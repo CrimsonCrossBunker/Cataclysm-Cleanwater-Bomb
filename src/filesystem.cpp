@@ -15,7 +15,7 @@
 #include <vector>
 
 #if defined(EMSCRIPTEN)
-#include <emscripten.h>
+    #include <emscripten.h>
 #endif
 
 #include "cata_utility.h"

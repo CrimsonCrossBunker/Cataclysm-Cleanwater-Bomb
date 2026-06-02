@@ -845,7 +845,7 @@ void computer_session::action_list_mutations()
 
     if( ssmenu.ret >= 0 && ssmenu.ret < static_cast< int >( mutation_categories_list.size() ) ) {
         const mutation_category_trait &category = mutation_category_trait::get_category(
-                    mutation_categories_list[ssmenu.ret].second );
+                mutation_categories_list[ssmenu.ret].second );
         const std::vector<trait_id> category_mutations = mutations_category[category.id];
 
         uilist wmenu;

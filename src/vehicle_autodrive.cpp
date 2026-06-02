@@ -633,10 +633,10 @@ static int signum( int val )
 tripoint_bub_ms auto_navigation_data::adjust_z( map &here, const tripoint_bub_ms &p ) const
 {
     if( !land_ok ) {
-        return p;
-    }
-    const point pt_view = to_view( here, p );
-    if( !view_bounds.contains( pt_view ) ) {
+    return p;
+}
+const point pt_view = to_view( here, p );
+if( !view_bounds.contains( pt_view ) ) {
         debugmsg( "Autodrive tried to adjust zlevel on out-of-bounds point p=%s", p.to_string() );
         return p; // shouldn't happen, but who knows.
     }
@@ -646,10 +646,10 @@ tripoint_bub_ms auto_navigation_data::adjust_z( map &here, const tripoint_bub_ms
 tripoint_abs_ms auto_navigation_data::adjust_z( const tripoint_abs_ms &p ) const
 {
     if( !land_ok ) {
-        return p;
-    }
-    const point pt_view = to_view( p );
-    if( !view_bounds.contains( pt_view ) ) {
+    return p;
+}
+const point pt_view = to_view( p );
+if( !view_bounds.contains( pt_view ) ) {
         debugmsg( "Autodrive tried to adjust zlevel on out-of-bounds point p=%s", p.to_string() );
         return p; // shouldn't happen, but who knows.
     }
@@ -857,10 +857,10 @@ void vehicle::autodrive_controller::enqueue_if_ramp( point_queue &ramp_points,
         const map &here, const tripoint_bub_ms &p ) const
 {
     if( !data.land_ok ) {
-        return;
-    }
-    ramp_points.visited.emplace( p );
-    if( p.z() < OVERMAP_HEIGHT && here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, p ) ) {
+    return;
+}
+ramp_points.visited.emplace( p );
+if( p.z() < OVERMAP_HEIGHT && here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, p ) ) {
         ramp_points.enqueue( p + tripoint::above );
     }
     if( p.z() > -OVERMAP_DEPTH && here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, p ) ) {
@@ -1116,7 +1116,7 @@ const
 }
 
 std::optional<std::vector<navigation_step>> vehicle::autodrive_controller::compute_path(
-            int speed_tps ) const
+    int speed_tps ) const
 {
     if( speed_tps == 0 || speed_tps < -1 ) {
         return std::nullopt;
@@ -1127,7 +1127,7 @@ std::optional<std::vector<navigation_step>> vehicle::autodrive_controller::compu
     // TODO: check simple reachability first and bail out or set upper bound on node score
     std::unordered_map<node_address, navigation_node, node_address_hasher> known_nodes;
     std::priority_queue<scored_address, std::vector<scored_address>, std::greater<>>
-            open_set;
+    open_set;
     const tripoint_abs_ms veh_pos = driven_veh.pos_abs();
     const node_address start = data.nav_to_map.inverse().transform(
                                    veh_pos.raw().xy(), to_orientation( driven_veh.face.dir() ) );

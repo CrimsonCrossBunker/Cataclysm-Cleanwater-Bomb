@@ -476,18 +476,18 @@ void Character::update_bodytemp()
     const float scaled_sleepiness = clamp( get_sleepiness(), 0,
                                            900 ) / static_cast<float>( sleepiness_levels::EXHAUSTED );
     const units::temperature_delta sleepiness_warmth = has_sleep ? 0_C_delta : -1.725_C_delta *
-            scaled_sleepiness;
+        scaled_sleepiness;
 
     // Sunlight
     const float scaled_sun_irradiance = incident_sun_irradiance( get_weather().weather_id,
                                         calendar::turn ) / max_sun_irradiance();
     const units::temperature_delta sunlight_warmth = !g->is_sheltered( pos_bub() ) ? 3_C_delta *
-            scaled_sun_irradiance :
-            0_C_delta;
+        scaled_sun_irradiance :
+        0_C_delta;
     const int best_fire = get_best_fire( pos_bub() );
 
     const units::temperature_delta lying_warmth = use_floor_warmth ? floor_warmth(
-                pos_bub() ) : 0_C_delta;
+            pos_bub() ) : 0_C_delta;
     const units::temperature water_temperature =
         get_weather().get_cur_weather_gen().get_water_temperature();
 
@@ -513,7 +513,7 @@ void Character::update_bodytemp()
     // at 5 over healthy bmi (obese), it is ~5 warmth, at 20 over healthy bmi (morbid obesity) it is ~12 warmth
     // effects start to kick in halfway through overweightness
     const units::temperature_delta bmi_heat_bonus = 0.1_C_delta * std::sqrt( std::max( 0.0f,
-            ( get_bmi_fat() - 8.0f ) ) );
+        ( get_bmi_fat() - 8.0f ) ) );
     std::map<bodypart_id, int> warmth_per_bp = worn.warmth( *this );
     std::map<bodypart_id, int> bonus_warmth_per_bp = bonus_item_warmth();
     std::map<bodypart_id, int> wind_res_per_bp = get_wind_resistance( clothing_map );
@@ -535,9 +535,9 @@ void Character::update_bodytemp()
         // Produces a smooth curve between 0.06C and 0.12C.
         const units::temperature_delta homeostasis_adjustment = 0.06_C_delta * ( 1.0 + scaled_temperature );
         const units::temperature_delta clothing_warmth_adjustment = homeostasis_adjustment *
-                warmth_per_bp[bp];
+            warmth_per_bp[bp];
         const units::temperature_delta clothing_warmth_adjusted_bonus = homeostasis_adjustment *
-                bonus_warmth_per_bp[bp];
+            bonus_warmth_per_bp[bp];
         // WINDCHILL
 
         bp_windpower = static_cast<int>( static_cast<float>( bp_windpower ) *
@@ -573,7 +573,7 @@ void Character::update_bodytemp()
         // This results in needing to preserve those bugs for game balance, which is why we are doing this
         // odd scaling of windchill.
         const units::temperature_delta bugged_windchill = units::from_celsius_delta(
-                    units::to_fahrenheit_delta( windchill ) * 100.0 / 500.0 );
+                units::to_fahrenheit_delta( windchill ) * 100.0 / 500.0 );
 
         // Convergent temperature is affected by ambient temperature,
         // clothing warmth, and body wetness.
@@ -664,7 +664,7 @@ void Character::update_bodytemp()
 
         const units::temperature_delta comfortable_warmth = bonus_fire_warmth + lying_warmth;
         const units::temperature_delta bonus_warmth = comfortable_warmth + metabolism_warmth +
-                mutation_heat_bonus + bp_temp_bonus;
+            mutation_heat_bonus + bp_temp_bonus;
         if( bonus_warmth > 0_C_delta ) {
             // Approximate temp_conv needed to reach comfortable temperature in this very turn
             // Basically inverted formula for temp_cur below

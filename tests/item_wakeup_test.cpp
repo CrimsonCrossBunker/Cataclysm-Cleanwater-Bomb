@@ -1050,8 +1050,8 @@ TEST_CASE( "item_wakeup_enumerator_observes_resolved_location",
     auto loc_enumerator = []( const item & /*it*/, const item_location & loc )
     -> std::vector<desired_wakeup> {
         if( loc )
-        {
-            seen_locs.push_back( loc.pos_abs() );
+    {
+        seen_locs.push_back( loc.pos_abs() );
         }
         return {
             desired_wakeup{ item_wakeup_kind::ready_check, calendar::turn_zero + 5_minutes },

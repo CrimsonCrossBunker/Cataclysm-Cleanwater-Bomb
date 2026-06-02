@@ -40,7 +40,7 @@ enum class var_type : int {
 
 #pragma GCC diagnostic push
 #ifndef __clang__
-# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 struct var_info {
     var_info( var_type in_type, std::string in_name ): type( in_type ),
@@ -166,10 +166,10 @@ struct talk_effect_fun_t {
         likely_rewards_t &get_likely_rewards();
         void operator()( dialogue &d ) const {
             if( !function ) {
-                return;
-            }
-            function( d );
+            return;
         }
+        function( d );
+    }
 };
 
 #endif // CATA_SRC_DIALOGUE_HELPERS_H

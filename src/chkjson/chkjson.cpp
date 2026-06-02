@@ -19,9 +19,9 @@
 #include <vector>
 
 #if defined(_MSC_VER)
-#include <io.h>
+    #include <io.h>
 #else
-#include <unistd.h>
+    #include <unistd.h>
 #endif
 
 #include "json.h"

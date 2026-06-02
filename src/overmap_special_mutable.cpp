@@ -151,7 +151,7 @@ mutable_overmap_phase_remainder::satisfy_result mutable_overmap_phase_remainder:
                 tripoint_om_omt origin = pos - piece_pos;
 
                 if( std::optional<can_place_result> result = can_place(
-                            om, rule, origin, dir, unresolved ) ) {
+                        om, rule, origin, dir, unresolved ) ) {
                     if( best_result < *result ) {
                         pos_dir_options.clear();
                         best_result = *result;
@@ -240,26 +240,26 @@ void mutable_overmap_terrain::finalize( const std::string &context,
 void mutable_overmap_terrain::check( const std::string &context ) const
 {
     if( !terrain.is_valid() ) {
-        debugmsg( "invalid overmap terrain id %s in %s", terrain.str(), context );
+    debugmsg( "invalid overmap terrain id %s in %s", terrain.str(), context );
     }
 
     if( locations.empty() ) {
-        debugmsg( "In %s, no locations are defined", context );
+    debugmsg( "In %s, no locations are defined", context );
     }
 
-    for( const string_id<overmap_location> &loc : locations ) {
-        if( !loc.is_valid() ) {
+for( const string_id<overmap_location> &loc : locations ) {
+    if( !loc.is_valid() ) {
             debugmsg( "invalid overmap location id %s in %s", loc.str(), context );
         }
     }
 
-    for( const std::pair<const cube_direction, mutable_special_connection> &p :
+for( const std::pair<const cube_direction, mutable_special_connection> &p :
          connections ) {
-        p.second.check( string_format( "connection %s in %s", io::enum_to_string( p.first ),
-                                       context ) );
+    p.second.check( string_format( "connection %s in %s", io::enum_to_string( p.first ),
+                                   context ) );
     }
     if( camp_owner.has_value() ) {
-        if( !camp_owner.value().is_valid() ) {
+    if( !camp_owner.value().is_valid() ) {
             debugmsg( "In %s, camp at %s has invalid owner %s", context, terrain.str(),
                       camp_owner.value().c_str() );
         }
@@ -267,7 +267,7 @@ void mutable_overmap_terrain::check( const std::string &context ) const
             debugmsg( "In %s, camp was defined but missing a camp_name.", context );
         }
     } else if( !camp_name.empty() ) {
-        debugmsg( "In %s, camp_name defined but no owner.  Invalid name is discarded.", context );
+    debugmsg( "In %s, camp_name defined but no owner.  Invalid name is discarded.", context );
     }
 }
 
@@ -290,14 +290,14 @@ void mutable_overmap_terrain::deserialize( const JsonObject &jo )
 std::string mutable_overmap_placement_rule::description() const
 {
     if( !name.empty() ) {
-        return name;
-    }
-    std::string first_om_id = pieces[0].overmap_id;
-    if( pieces.size() == 1 ) {
-        return first_om_id;
-    } else {
-        return "chunk using overmap " + first_om_id;
-    }
+    return name;
+}
+std::string first_om_id = pieces[0].overmap_id;
+if( pieces.size() == 1 ) {
+    return first_om_id;
+} else {
+    return "chunk using overmap " + first_om_id;
+}
 }
 
 void mutable_overmap_placement_rule::finalize( const std::string &context,
@@ -362,12 +362,12 @@ void mutable_overmap_placement_rule::finalize( const std::string &context,
 void mutable_overmap_placement_rule::check( const std::string &context ) const
 {
     if( pieces.empty() ) {
-        cata_fatal( "phase of %s has chunk with zero pieces" );
+    cata_fatal( "phase of %s has chunk with zero pieces" );
     }
     int min_max = max.minimum();
     if( min_max < 0 ) {
-        debugmsg( "phase of %s specifies max which might be as low as %d; this should "
-                  "be a positive number", context, min_max );
+    debugmsg( "phase of %s specifies max which might be as low as %d; this should "
+              "be a positive number", context, min_max );
     }
 }
 
@@ -431,9 +431,9 @@ void joins_tracker::consistency_check() const
 #if 0 // Enable this to check the class invariants, at the cost of more runtime
     // verify that there are no positions in common between the
     // resolved and postponed lists
-    for( const join &j : postponed ) {
-        auto j_pos = j.where.p;
-        if( unresolved.any_at( j_pos ) ) {
+for( const join &j : postponed ) {
+    auto j_pos = j.where.p;
+    if( unresolved.any_at( j_pos ) ) {
             std::vector<iterator> unr = unresolved.all_at( j_pos );
             if( unr.empty() ) {
                 cata_fatal( "inconsistency between all_at and any_at" );
@@ -590,8 +590,8 @@ std::vector<joins_tracker::jl_iterator> joins_tracker::indexed_joins::all_at(
 
 bool joins_tracker::indexed_joins::any_at( const tripoint_om_omt &pos ) const
 {
-    for( cube_direction dir : all_enum_values<cube_direction>() ) {
-        if( count( om_pos_dir{ pos, dir } ) ) {
+for( cube_direction dir : all_enum_values<cube_direction>() ) {
+    if( count( om_pos_dir{ pos, dir } ) ) {
             return true;
         }
     }
@@ -677,9 +677,9 @@ void mutable_overmap_special_data::finalize( const std::string &context,
 void mutable_overmap_special_data::finalize_mapgen_parameters(
     mapgen_parameters &params, const std::string &context ) const
 {
-    for( const std::pair<const std::string, mutable_overmap_terrain> &p : overmaps ) {
-        const mutable_overmap_terrain &t = p.second;
-        std::string mapgen_id = t.terrain->get_mapgen_id();
+for( const std::pair<const std::string, mutable_overmap_terrain> &p : overmaps ) {
+    const mutable_overmap_terrain &t = p.second;
+    std::string mapgen_id = t.terrain->get_mapgen_id();
         params.check_and_merge( get_map_special_params( mapgen_id ), context );
     }
 }
@@ -687,7 +687,7 @@ void mutable_overmap_special_data::finalize_mapgen_parameters(
 void mutable_special_connection::check( const std::string &context ) const
 {
     if( !connection.is_valid() ) {
-        debugmsg( "invalid connection id %s in %s", connection.str(), context );
+    debugmsg( "invalid connection id %s in %s", connection.str(), context );
     }
 }
 

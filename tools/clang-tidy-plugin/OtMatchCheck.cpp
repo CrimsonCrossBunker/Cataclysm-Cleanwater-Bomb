@@ -61,7 +61,7 @@ static void CheckCall( OtMatchCheck &Check, const MatchFinder::MatchResult &Resu
         Check.diag( Call->getBeginLoc(),
                     "Call to is_ot_match with fixed ot_match_type 'type'.  For better efficientcy, "
                     "instead compare the type directly." ) <<
-                            FixItHint::CreateReplacement( CallRange, Replacement );
+             FixItHint::CreateReplacement( CallRange, Replacement );
     } else if( EnumDecl->getName() == "exact" ) {
         std::string Replacement =
             ( "( " + getText( Result, TerArg ) + " == oter_str_id( " +
@@ -69,7 +69,7 @@ static void CheckCall( OtMatchCheck &Check, const MatchFinder::MatchResult &Resu
         Check.diag( Call->getBeginLoc(),
                     "Call to is_ot_match with fixed ot_match_type 'exact'.  For better "
                     "efficientcy, instead compare the id directly." ) <<
-                            FixItHint::CreateReplacement( CallRange, Replacement );
+             FixItHint::CreateReplacement( CallRange, Replacement );
     }
 }
 

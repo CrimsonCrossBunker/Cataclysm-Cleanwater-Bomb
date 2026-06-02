@@ -136,7 +136,7 @@ item_location mdeath::splatter( map *here, monster &z )
 
     if( gibbable ) {
         const tripoint_range<tripoint_bub_ms> area = here->points_in_radius( z.pos_bub( *here ),
-                1 );
+            1 );
         int number_of_gibs = std::min( std::floor( corpse_damage ) - 1, 1 + max_hp / 5.0f );
 
         if( z.type->size >= creature_size::medium ) {

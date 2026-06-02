@@ -92,29 +92,29 @@ using chtype = int;
 #define LINE_XXXX_UNICODE 0x253C
 
 #if defined(USE_PDCURSES)
-#undef LINE_XOXO
-#undef LINE_OXOX
-#undef LINE_XXOO
-#undef LINE_OXXO
-#undef LINE_OOXX
-#undef LINE_XOOX
-#undef LINE_XXXO
-#undef LINE_XXOX
-#undef LINE_XOXX
-#undef LINE_OXXX
-#undef LINE_XXXX
+    #undef LINE_XOXO
+    #undef LINE_OXOX
+    #undef LINE_XXOO
+    #undef LINE_OXXO
+    #undef LINE_OOXX
+    #undef LINE_XOOX
+    #undef LINE_XXXO
+    #undef LINE_XXOX
+    #undef LINE_XOXX
+    #undef LINE_OXXX
+    #undef LINE_XXXX
 
-#define LINE_XOXO LINE_XOXO_UNICODE
-#define LINE_OXOX LINE_OXOX_UNICODE
-#define LINE_XXOO LINE_XXOO_UNICODE
-#define LINE_OXXO LINE_OXXO_UNICODE
-#define LINE_OOXX LINE_OOXX_UNICODE
-#define LINE_XOOX LINE_XOOX_UNICODE
-#define LINE_XXXO LINE_XXXO_UNICODE
-#define LINE_XXOX LINE_XXOX_UNICODE
-#define LINE_XOXX LINE_XOXX_UNICODE
-#define LINE_OXXX LINE_OXXX_UNICODE
-#define LINE_XXXX LINE_XXXX_UNICODE
+    #define LINE_XOXO LINE_XOXO_UNICODE
+    #define LINE_OXOX LINE_OXOX_UNICODE
+    #define LINE_XXOO LINE_XXOO_UNICODE
+    #define LINE_OXXO LINE_OXXO_UNICODE
+    #define LINE_OOXX LINE_OOXX_UNICODE
+    #define LINE_XOOX LINE_XOOX_UNICODE
+    #define LINE_XXXO LINE_XXXO_UNICODE
+    #define LINE_XXOX LINE_XXOX_UNICODE
+    #define LINE_XOXX LINE_XOXX_UNICODE
+    #define LINE_OXXX LINE_OXXX_UNICODE
+    #define LINE_XXXX LINE_XXXX_UNICODE
 #endif
 // Supports line drawing
 std::string string_from_int( catacurses::chtype ch );
@@ -844,8 +844,8 @@ std::map<std::string, inclusive_rectangle<point>> draw_tabs( const catacurses::w
 template<typename TabList, typename CurrentTab, typename = std::enable_if_t<
              std::is_same_v<CurrentTab,
                             std::remove_const_t<typename TabList::value_type::first_type>>>>
-             std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
-                     const TabList &tab_list, const CurrentTab &current_tab )
+std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
+        const TabList &tab_list, const CurrentTab &current_tab )
 {
     std::vector<std::string> tab_text;
     std::transform( tab_list.begin(), tab_list.end(), std::back_inserter( tab_text ),
@@ -858,7 +858,7 @@ template<typename TabList, typename CurrentTab, typename = std::enable_if_t<
     } );
     cata_assert( current_tab_it != tab_list.end() );
     std::map<size_t, inclusive_rectangle<point>> tab_map =
-                draw_tabs( w, tab_text, std::distance( tab_list.begin(), current_tab_it ) );
+        draw_tabs( w, tab_text, std::distance( tab_list.begin(), current_tab_it ) );
 
     std::map<CurrentTab, inclusive_rectangle<point>> ret_map;
     size_t i = 0;
@@ -876,8 +876,8 @@ template<typename TabList, typename CurrentTab, typename = std::enable_if_t<
 template<typename TabList, typename TabKeys, typename CurrentTab, typename = std::enable_if_t<
              std::is_same_v<CurrentTab,
                             std::remove_const_t<typename TabList::value_type::first_type>>>>
-             std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
-                     const TabList &tab_list, const TabKeys &keys, const CurrentTab &current_tab )
+std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
+        const TabList &tab_list, const TabKeys &keys, const CurrentTab &current_tab )
 {
     std::vector<typename TabList::value_type> ordered_tab_list;
     for( const auto &key : keys ) {
@@ -1300,7 +1300,7 @@ class tab_list
 
         std::string cur() const {
             if( _list->empty() ) {
-                return std::string();
+            return std::string();
             }
             return ( *_list )[_index];
         }

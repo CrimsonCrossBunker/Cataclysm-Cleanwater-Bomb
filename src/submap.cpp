@@ -109,7 +109,7 @@ void submap::delete_graffiti( const point_sm_ms &p )
 bool submap::has_signage( const point_sm_ms &p ) const
 {
     if( !is_uniform() && m->frn[p.x()][p.y()].obj().has_flag( ter_furn_flag::TFLAG_SIGN ) ) {
-        return find_cosmetic( cosmetics, p, COSMETICS_SIGNAGE ).result;
+    return find_cosmetic( cosmetics, p, COSMETICS_SIGNAGE ).result;
     }
 
     return false;
@@ -117,7 +117,7 @@ bool submap::has_signage( const point_sm_ms &p ) const
 std::string submap::get_signage( const point_sm_ms &p ) const
 {
     if( !is_uniform() && m->frn[p.x()][p.y()].obj().has_flag( ter_furn_flag::TFLAG_SIGN ) ) {
-        const cosmetic_find_result fresult = find_cosmetic( cosmetics, p, COSMETICS_SIGNAGE );
+    const cosmetic_find_result fresult = find_cosmetic( cosmetics, p, COSMETICS_SIGNAGE );
         if( fresult.result ) {
             return cosmetics[ fresult.ndx ].str;
         }
@@ -395,7 +395,7 @@ void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
     for( int x = 0; x < SEEX; x++ ) {
         for( int y = 0; y < SEEY; y++ ) {
             if( copy_from->m->ter[x][y] != t_null && ( copy_from_is_overlay ||
-                    this->m->ter[x][y] == t_null ) ) {
+                this->m->ter[x][y] == t_null ) ) {
                 this->m->ter[x][y] = copy_from->m->ter[x][y];
                 this->set_map_damage( { x, y }, copy_from->get_map_damage( { x, y } ) );
             }

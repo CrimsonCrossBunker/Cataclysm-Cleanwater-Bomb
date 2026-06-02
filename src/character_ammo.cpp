@@ -70,12 +70,12 @@ int Character::ammo_count_for( const item_location &gun ) const
 bool Character::can_reload( const item &it, const item *ammo ) const
 {
     if( ammo && !it.can_reload_with( *ammo, false ) ) {
-        return false;
-    }
+    return false;
+}
 
-    if( it.is_ammo_belt() ) {
-        const std::optional<itype_id> &linkage = it.type->magazine->linkage;
-        if( linkage && !has_charges( *linkage, 1 ) ) {
+if( it.is_ammo_belt() ) {
+    const std::optional<itype_id> &linkage = it.type->magazine->linkage;
+    if( linkage && !has_charges( *linkage, 1 ) ) {
             return false;
         }
     }
@@ -169,12 +169,12 @@ bool Character::list_ammo( const item_location &base, std::vector<item::reload_o
 int Character::item_reload_cost( const item &it, const item &ammo, int qty ) const
 {
     if( ammo.is_ammo() || ammo.is_frozen_liquid() || ammo.made_of_from_type( phase_id::LIQUID ) ) {
-        qty = std::max( std::min( ammo.charges, qty ), 1 );
+    qty = std::max( std::min( ammo.charges, qty ), 1 );
     } else if( ammo.is_ammo_container() ) {
-        int min_clamp = 0;
-        // find the first ammo in the container to get its charges
-        ammo.visit_items( [&min_clamp]( const item * it, item * ) {
-            if( it->is_ammo() ) {
+    int min_clamp = 0;
+    // find the first ammo in the container to get its charges
+    ammo.visit_items( [&min_clamp]( const item * it, item * ) {
+        if( it->is_ammo() ) {
                 min_clamp = it->charges;
                 return VisitResponse::ABORT;
             }
@@ -192,35 +192,35 @@ int Character::item_reload_cost( const item &it, const item &ammo, int qty ) con
     int mv = item_handling_cost( ammo, true, 0, qty );
 
     if( ammo.has_flag( flag_MAG_BULKY ) ) {
-        mv *= 1.5; // bulky magazines take longer to insert
-    }
+    mv *= 1.5; // bulky magazines take longer to insert
+}
 
-    if( !it.is_gun() && !it.is_magazine() ) {
-        return mv + 100; // reload a tool or sealable container
-    }
+if( !it.is_gun() && !it.is_magazine() ) {
+    return mv + 100; // reload a tool or sealable container
+}
 
-    /** @EFFECT_GUN decreases the time taken to reload a magazine */
-    /** @EFFECT_PISTOL decreases time taken to reload a pistol */
-    /** @EFFECT_SMG decreases time taken to reload an SMG */
-    /** @EFFECT_RIFLE decreases time taken to reload a rifle */
-    /** @EFFECT_SHOTGUN decreases time taken to reload a shotgun */
-    /** @EFFECT_LAUNCHER decreases time taken to reload a launcher */
+/** @EFFECT_GUN decreases the time taken to reload a magazine */
+/** @EFFECT_PISTOL decreases time taken to reload a pistol */
+/** @EFFECT_SMG decreases time taken to reload an SMG */
+/** @EFFECT_RIFLE decreases time taken to reload a rifle */
+/** @EFFECT_SHOTGUN decreases time taken to reload a shotgun */
+/** @EFFECT_LAUNCHER decreases time taken to reload a launcher */
 
-    int cost = 0;
-    if( it.is_gun() ) {
-        cost = it.get_reload_time() * qty;
+int cost = 0;
+if( it.is_gun() ) {
+    cost = it.get_reload_time() * qty;
     } else if( it.type->magazine ) {
-        cost = it.type->magazine->reload_time * qty;
-    } else {
-        cost = it.obtain_cost( ammo );
+    cost = it.type->magazine->reload_time * qty;
+} else {
+    cost = it.obtain_cost( ammo );
     }
 
     skill_id sk = it.is_gun() ? it.type->gun->skill_used : skill_gun;
     mv += cost / ( 1.0f + std::min( get_skill_level( sk ) * 0.1f, 1.0f ) );
 
     if( it.has_flag( flag_STR_RELOAD ) ) {
-        /** @EFFECT_STR reduces reload time of some weapons */
-        mv -= get_str() * 20;
+    /** @EFFECT_STR reduces reload time of some weapons */
+    mv -= get_str() * 20;
     }
 
     return std::max( static_cast<int>( std::round( mv * get_modifier(
@@ -243,29 +243,29 @@ std::vector<item_location> Character::find_reloadables()
 hint_rating Character::rate_action_reload( const item &it ) const
 {
     if( !it.is_reloadable() ) {
-        return hint_rating::cant;
-    }
+    return hint_rating::cant;
+}
 
-    return can_reload( it ) ? hint_rating::good : hint_rating::iffy;
+return can_reload( it ) ? hint_rating::good : hint_rating::iffy;
 }
 
 hint_rating Character::rate_action_unload( const item &it ) const
 {
     if( it.is_container() && !it.empty() &&
-        it.can_unload() ) {
-        return hint_rating::good;
-    }
+    it.can_unload() ) {
+    return hint_rating::good;
+}
 
-    if( it.has_flag( flag_NO_UNLOAD ) ) {
-        return hint_rating::cant;
-    }
+if( it.has_flag( flag_NO_UNLOAD ) ) {
+    return hint_rating::cant;
+}
 
-    if( !it.magazines_current().empty() ) {
-        return hint_rating::good;
-    }
+if( !it.magazines_current().empty() ) {
+    return hint_rating::good;
+}
 
-    for( const item *e : it.gunmods() ) {
-        if( ( e->is_gun() && !e->has_flag( flag_NO_UNLOAD ) &&
+for( const item *e : it.gunmods() ) {
+    if( ( e->is_gun() && !e->has_flag( flag_NO_UNLOAD ) &&
               ( !e->magazines_current().empty() || e->ammo_remaining( ) > 0 ||
                 e->casings_count() > 0 ) ) ||
             ( e->has_flag( flag_BRASS_CATCHER ) && !e->is_container_empty() ) ) {
@@ -274,14 +274,14 @@ hint_rating Character::rate_action_unload( const item &it ) const
     }
 
     if( it.ammo_types().empty() ) {
-        return hint_rating::cant;
-    }
+    return hint_rating::cant;
+}
 
-    if( it.ammo_remaining( ) > 0 || it.casings_count() > 0 ) {
-        return hint_rating::good;
-    }
+if( it.ammo_remaining( ) > 0 || it.casings_count() > 0 ) {
+    return hint_rating::good;
+}
 
-    return hint_rating::iffy;
+return hint_rating::iffy;
 }
 
 hint_rating Character::rate_action_insert( const item_location &loc ) const

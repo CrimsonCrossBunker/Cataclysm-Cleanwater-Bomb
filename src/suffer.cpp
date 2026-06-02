@@ -679,9 +679,9 @@ void suffer::from_asthma( Character &you, const int current_stim )
                 you.add_msg_if_player( m_bad, _( "You use your last inhaler charge." ) );
             } else {
                 you.add_msg_if_player( m_info, n_gettext( "You use your inhaler; "
-                                       "only %d charge left.",
-                                       "You use your inhaler; "
-                                       "only %d charges left.", charges ),
+                                                          "only %d charge left.",
+                                                          "You use your inhaler; "
+                                                          "only %d charges left.", charges ),
                                        charges );
             }
             you.add_effect( effect_took_antiasthmatic, rng( 6_hours, 12_hours ) );
@@ -694,9 +694,9 @@ void suffer::from_asthma( Character &you, const int current_stim )
                                                  "from the tank." ) );
             } else {
                 you.add_msg_if_player( m_info, n_gettext( "You take a deep breath from your oxygen "
-                                       "tank; only %d charge left.",
-                                       "You take a deep breath from your oxygen "
-                                       "tank; only %d charges left.", charges ),
+                                                          "tank; only %d charge left.",
+                                                          "You take a deep breath from your oxygen "
+                                                          "tank; only %d charges left.", charges ),
                                        charges );
             }
         }
@@ -869,8 +869,8 @@ void suffer::from_sunburn( Character &you, bool severe )
     };
     auto medium_sunburn = [severe, &you] {
         if( severe )
-        {
-            you.mod_pain( 1 );
+    {
+        you.mod_pain( 1 );
             return Pain;
         } else
         {
@@ -880,8 +880,8 @@ void suffer::from_sunburn( Character &you, bool severe )
     };
     auto light_sunburn = [severe, &you] {
         if( severe )
-        {
-            you.mod_focus( -1 );
+    {
+        you.mod_focus( -1 );
             return Focus_Loss;
         } else
         {

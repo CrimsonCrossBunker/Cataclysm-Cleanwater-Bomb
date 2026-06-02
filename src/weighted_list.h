@@ -109,8 +109,8 @@ template <typename T, typename W> struct weighted_list {
          * @param func The callback function.
          */
         void apply( std::function<void( const T & )> func ) const {
-            for( auto &itr : objects ) {
-                func( itr.first );
+for( auto &itr : objects ) {
+            func( itr.first );
             }
         }
 
@@ -132,7 +132,7 @@ template <typename T, typename W> struct weighted_list {
          */
         const T *pick( unsigned int randi ) const {
             if( total_weight > 0 ) {
-                return &( objects[pick_ent( randi )].first );
+            return &( objects[pick_ent( randi )].first );
             } else {
                 return nullptr;
             }
@@ -172,8 +172,8 @@ template <typename T, typename W> struct weighted_list {
          * in the weighted list it will return 0.
          */
         W get_specific_weight( const T &obj ) const {
-            for( const std::pair<T, W> &itr : objects ) {
-                if( itr.first == obj ) {
+for( const std::pair<T, W> &itr : objects ) {
+            if( itr.first == obj ) {
                     return itr.second;
                 }
             }

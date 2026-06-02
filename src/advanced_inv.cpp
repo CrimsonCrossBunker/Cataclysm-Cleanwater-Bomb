@@ -70,7 +70,7 @@
 #include "vehicle.h"
 
 #if defined(__ANDROID__)
-#   include <SDL_keyboard.h>
+    #include <SDL_keyboard.h>
 #endif
 
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
@@ -567,8 +567,8 @@ struct advanced_inv_sorter {
     bool operator()( const advanced_inv_listitem &d1, const advanced_inv_listitem &d2 ) const {
         // Note: the item pointer can only be null on sort by category, otherwise it is always valid.
         switch( sortby ) {
-            case SORTBY_NONE:
-                if( d1.idx != d2.idx ) {
+        case SORTBY_NONE:
+            if( d1.idx != d2.idx ) {
                     return d1.idx < d2.idx;
                 }
                 break;
@@ -1526,8 +1526,8 @@ void advanced_inventory::start_activity(
                 wield_activity_actor( target_items.front(), quantities.front() ) );
         } else if( destarea == AIM_INVENTORY ) {
             const std::optional<tripoint_bub_ms> starting_pos = from_vehicle
-                    ? std::nullopt
-                    : std::optional<tripoint_bub_ms>( player_character.pos_bub() );
+                ? std::nullopt
+                : std::optional<tripoint_bub_ms>( player_character.pos_bub() );
             const pickup_activity_actor act( target_items, quantities, starting_pos, false );
             player_character.assign_activity( act );
         } else {

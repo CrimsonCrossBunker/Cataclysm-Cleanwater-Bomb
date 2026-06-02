@@ -1160,7 +1160,7 @@ time_duration vpart_info::get_unfolding_time() const
 bool vpart_info::has_control_req() const
 {
     return !control_air.proficiencies.empty() || !control_air.skills.empty() ||
-           !control_land.proficiencies.empty() || !control_land.skills.empty();
+    !control_land.proficiencies.empty() || !control_land.skills.empty();
 }
 
 std::string vpart_variant::get_label() const
@@ -1302,7 +1302,7 @@ struct veh_proto_part_def_reader : generic_typed_reader<veh_proto_part_def_reade
 struct veh_spawn_item_reader : generic_typed_reader<veh_spawn_item_reader> {
     std::pair<itype_id, std::string> get_next( const JsonValue &jv ) const {
         if( jv.test_string() ) {
-            return std::make_pair( itype_id( jv.get_string() ), "" );
+        return std::make_pair( itype_id( jv.get_string() ), "" );
         }
         JsonObject jo = jv.get_object();
         std::pair<itype_id, std::string> ret;

@@ -79,7 +79,7 @@ void map_test_case::for_each_tile( const std::function<void( tile )> &callback )
 }
 
 std::vector<std::vector<std::string>> map_test_case::map_tiles_str(
-                                       const std::function<void( tile, std::ostringstream & )> &callback )
+    const std::function<void( tile, std::ostringstream & )> &callback )
 {
     return map_tiles<std::string>( [&]( tile t ) {
         std::ostringstream out;

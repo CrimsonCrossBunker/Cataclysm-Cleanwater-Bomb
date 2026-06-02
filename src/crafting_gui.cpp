@@ -1841,8 +1841,8 @@ void crafting_ui_impl::draw_components( const requirement_data &req,
     // Compute how many of a given component the player has on hand
     const auto avail_count = [&crafting_inv, &filter]( const item_comp & ic ) -> int {
         if( item::count_by_charges( ic.type ) )
-        {
-            return crafting_inv.charges_of( ic.type, INT_MAX, filter );
+    {
+        return crafting_inv.charges_of( ic.type, INT_MAX, filter );
         }
         return crafting_inv.amount_of( ic.type, false, INT_MAX, filter );
     };
@@ -1869,14 +1869,14 @@ void crafting_ui_impl::draw_components( const requirement_data &req,
         }
         const auto comp_rank = [&]( const item_comp * ic ) -> int {
             if( ic->has( crafting_inv, filter, batch_size ) )
-            {
-                return 0;
-            }
-            return avail_count( *ic ) > 0 ? 1 : 2;
-        };
-        std::stable_sort( sorted_alts.begin(), sorted_alts.end(),
-        [&]( const item_comp * a, const item_comp * b ) {
-            return comp_rank( a ) < comp_rank( b );
+        {
+            return 0;
+        }
+        return avail_count( *ic ) > 0 ? 1 : 2;
+    };
+    std::stable_sort( sorted_alts.begin(), sorted_alts.end(),
+    [&]( const item_comp * a, const item_comp * b ) {
+        return comp_rank( a ) < comp_rank( b );
         } );
 
         const bool is_expanded = expanded_comp_groups.count( gi ) > 0;
@@ -2284,8 +2284,8 @@ void crafting_ui_impl::recalculate_recipes()
             picking.insert( picking.end(), filtered_recipes.begin(), filtered_recipes.end() );
         } else {
             const std::pair<std::vector<const recipe *>, bool> result = recipes_from_cat(
-                        *available_recipes,
-                        crafting_category_id( tab.cur() ), subtab.cur() );
+                    *available_recipes,
+                    crafting_category_id( tab.cur() ), subtab.cur() );
             picking = result.first;
             skip_hidden = result.second;
             show_hidden = result.second;
@@ -2589,16 +2589,12 @@ void crafting_ui_impl::process_action( const std::string &action_in,
             nested_toggle( current[line]->ident(), recalc, keepline );
         } else {
             const int bs = get_batch_size();
-            const recipe crafting_rec = *current[line];
+            // Cleanwater: 撤销 PR #87043 — 移除 batch_size 参数和 too_many_results 检查
             craft_confirm_result confirm = can_start_craft(
-                                               crafting_rec, available[line], *crafter, bs );
+                                               *current[line], available[line], *crafter );
             switch( confirm ) {
                 case craft_confirm_result::cannot_craft:
                     popup( _( "Crafter can't craft that!" ) );
-                    break;
-                case craft_confirm_result::too_many_results:
-                    popup( string_format( _( "Batch would create too many items (%1$d).  The limit is %2$d." ),
-                                          crafting_rec.makes_amount() * bs, MAX_ITEM_IN_SQUARE ) );
                     break;
                 case craft_confirm_result::too_dark:
                     popup( _( "Crafter can't see!" ) );

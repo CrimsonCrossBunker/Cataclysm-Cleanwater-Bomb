@@ -5,9 +5,9 @@
 #include "sdl_wrappers.h"
 
 #if defined(_MSC_VER) && defined(USE_VCPKG)
-#include <SDL2/SDL_mixer.h>
+    #include <SDL2/SDL_mixer.h>
 #else
-#include <SDL_mixer.h>
+    #include <SDL_mixer.h>
 #endif
 
 #include <array>

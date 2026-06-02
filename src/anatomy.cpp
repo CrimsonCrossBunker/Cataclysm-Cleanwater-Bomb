@@ -93,14 +93,14 @@ void anatomy::check_consistency()
 void anatomy::check() const
 {
     if( !get_part_with_cumulative_hit_size( size_sum ).is_valid() ) {
-        debugmsg( "Invalid size_sum calculation for anatomy %s", id.c_str() );
+    debugmsg( "Invalid size_sum calculation for anatomy %s", id.c_str() );
     }
 
     std::unordered_set<bodypart_str_id> all_parts( unloaded_bps.begin(), unloaded_bps.end() );
     std::unordered_set<bodypart_str_id> root_parts;
 
-    for( const bodypart_str_id &bp : unloaded_bps ) {
-        if( !id.is_valid() ) {
+for( const bodypart_str_id &bp : unloaded_bps ) {
+    if( !id.is_valid() ) {
             // Error already reported in finalize
             continue;
         }
@@ -118,9 +118,9 @@ void anatomy::check() const
     }
 
     if( root_parts.size() > 1 ) {
-        debugmsg( "Anatomy %s has multiple root parts: %s", id.str(),
-        enumerate_as_string( root_parts.begin(), root_parts.end(), []( const bodypart_str_id & p ) {
-            return p.str();
+    debugmsg( "Anatomy %s has multiple root parts: %s", id.str(),
+    enumerate_as_string( root_parts.begin(), root_parts.end(), []( const bodypart_str_id & p ) {
+        return p.str();
         } ) );
     }
 }
@@ -165,7 +165,7 @@ float anatomy::get_organic_size_sum() const
 float anatomy::get_base_hit_size_sum( const anatomy_id &base ) const
 {
     add_msg_debug( debugmode::DF_ANATOMY_BP, "Base anatomy hitsize sum %.1f",
-                   base->size_sum );
+    base->size_sum );
     return base->size_sum;
 }
 
@@ -187,9 +187,9 @@ void anatomy::add_body_part( const bodypart_str_id &new_bp )
 // TODO: get_function_with_better_name
 bodypart_str_id anatomy::get_part_with_cumulative_hit_size( float size ) const
 {
-    for( const bodypart_id &part : cached_bps ) {
-        size -= part->hit_size;
-        if( size <= 0.0f ) {
+for( const bodypart_id &part : cached_bps ) {
+    size -= part->hit_size;
+    if( size <= 0.0f ) {
             return part.id();
         }
     }

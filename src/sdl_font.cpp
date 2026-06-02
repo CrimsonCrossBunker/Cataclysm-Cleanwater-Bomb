@@ -7,15 +7,15 @@
 #include "ui_manager.h"
 
 #if defined(_WIN32)
-#   if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
-#       include "platform_win.h"
-#   endif
-#   include <shlwapi.h>
-#   if !defined(strcasecmp)
-#       define strcasecmp StrCmpI
-#   endif
+    #if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
+        #include "platform_win.h"
+    #endif
+    #include <shlwapi.h>
+    #if !defined(strcasecmp)
+        #define strcasecmp StrCmpI
+    #endif
 #else
-#   include <strings.h> // for strcasecmp
+    #include <strings.h> // for strcasecmp
 #endif
 
 #define dbg(x) DebugLog((x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
@@ -351,13 +351,13 @@ bool CachedTTFFont::isGlyphProvided( const std::string &ch ) const
 {
     // Just return false if the glyph is not provided by the font
     if( !CanRenderGlyph( font, UTF8_getch( ch ) ) ) {
-        return false;
-    }
+    return false;
+}
 
-    // Test whether the glyph can actually be rendered
-    constexpr SDL_Color white{255, 255, 255, 0};
-    SDL_Surface_Ptr surface = RenderUTF8_Solid( font, ch.c_str(), white );
-    return static_cast<bool>( surface );
+// Test whether the glyph can actually be rendered
+constexpr SDL_Color white{255, 255, 255, 0};
+SDL_Surface_Ptr surface = RenderUTF8_Solid( font, ch.c_str(), white );
+return static_cast<bool>( surface );
 }
 
 void CachedTTFFont::OutputChar( const SDL_Renderer_Ptr &renderer, const GeometryRenderer_Ptr &,

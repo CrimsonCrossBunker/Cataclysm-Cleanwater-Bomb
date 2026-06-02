@@ -210,8 +210,8 @@ constexpr double thingie::eval( const_dialogue const &d ) const
         [&d]( auto const & v ) -> double
         {
             if constexpr( v_has_eval<decltype( v )> )
-            {
-                return v.eval( d );
+        {
+            return v.eval( d );
             } else
             {
                 throw math::internal_error( "math called eval() on unexpected node without eval()" );
@@ -225,7 +225,7 @@ constexpr double thingie::eval( const_dialogue const &d ) const
 constexpr double thingie::eval( dialogue &d ) const
 {
     if( std::holds_alternative<ass_oper>( data ) ) {
-        return std::get<ass_oper>( data ).eval( d );
+    return std::get<ass_oper>( data ).eval( d );
     }
     return eval( static_cast<const_dialogue const &>( d ) );
 }

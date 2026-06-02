@@ -448,24 +448,24 @@ class JsonArray : JsonWithPath
         JsonValue next_value();
 
         template<typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
-                 E next_enum_value() ;
+        E next_enum_value() ;
 
-                 // array ~> vector, deque, list
-                 template < typename T, std::enable_if_t <
-                                !std::is_same_v<void, typename T::value_type> > * = nullptr
-                            >
-                 auto read( T &v, bool throw_on_error = false ) const -> decltype( v.front(), true );
+        // array ~> vector, deque, list
+        template < typename T, std::enable_if_t <
+                       !std::is_same_v<void, typename T::value_type> > * = nullptr
+                   >
+        auto read( T &v, bool throw_on_error = false ) const -> decltype( v.front(), true );
 
-                 // random-access read values by reference
-                 template <typename T> bool read_next( T &t, bool throw_on_error = false );
+        // random-access read values by reference
+        template <typename T> bool read_next( T &t, bool throw_on_error = false );
 
-                 // random-access read values by reference
-                 template <typename T> bool read( size_t idx, T &t, bool throw_on_error = false ) const;
+        // random-access read values by reference
+        template <typename T> bool read( size_t idx, T &t, bool throw_on_error = false ) const;
 
-                 template <typename T = std::string, typename Res = std::set<T>>
-                 Res get_tags( size_t idx ) const;
+        template <typename T = std::string, typename Res = std::set<T>>
+        Res get_tags( size_t idx ) const;
 
-                 [[noreturn]] void string_error( size_t idx, int offset, const std::string &message ) const;
+        [[noreturn]] void string_error( size_t idx, int offset, const std::string &message ) const;
 
         bool has_more() const {
             return next_ < size_;
@@ -484,15 +484,15 @@ class JsonArray : JsonWithPath
         // NOLINTNEXTLINE(cata-large-inline-function)
         void init( const flexbuffer &json, tiny_bitset *moved_visited_fields = nullptr ) noexcept {
             if( json.IsFixedTypedVector() ) {
-                size_ = json.AsFixedTypedVector().size();
+            size_ = json.AsFixedTypedVector().size();
             } else if( json.IsTypedVector() ) {
-                size_ = json.AsTypedVector().size();
+            size_ = json.AsTypedVector().size();
             } else {
                 size_ = json.AsVector().size();
             }
             if( moved_visited_fields ) {
-                using namespace std;
-                swap( visited_fields_bitset_, *moved_visited_fields );
+            using namespace std;
+            swap( visited_fields_bitset_, *moved_visited_fields );
             } else {
                 visited_fields_bitset_.resize( size_ );
             }

@@ -113,7 +113,7 @@ T _read_from_string( std::string_view s,
     // TODO: LAMBDA_NORETURN_CLANG21x1 can be replaced with [[noreturn]] once we switch to C++23 on all compilers
     auto const error = [s]( char const * suffix, size_t /* offset */ ) LAMBDA_NORETURN_CLANG21x1 {
         throw math::runtime_error( R"(Failed to convert "%s" to a %s value: %s)", s,
-                                   _str_type_of<T>(), suffix );
+        _str_type_of<T>(), suffix );
     };
     return detail::read_from_json_string_common<T>( s, units, error );
 }
@@ -610,9 +610,9 @@ void spellcasting_adjustment_ass( double val, dialogue &d, char scope,
     switch( spellsearch_scope ) {
         case scope_spell:
             d.actor( is_beta( scope ) )
-            ->get_character()
-            ->magic->get_spell( spell_id( filter_str ) )
-            .set_temp_adjustment( spellcasting_property.str( d ), val );
+             ->get_character()
+             ->magic->get_spell( spell_id( filter_str ) )
+             .set_temp_adjustment( spellcasting_property.str( d ), val );
             break;
         case scope_school: {
             const trait_id school_id( filter_str );
@@ -1249,7 +1249,7 @@ double _time_in_unit( double time, std::string_view unit )
 {
     if( !unit.empty() ) {
         decltype( time_duration::units )::const_iterator iter = std::find_if( time_duration::units.cbegin(),
-                time_duration::units.cend(),
+            time_duration::units.cend(),
         [&unit]( std::pair<std::string_view, time_duration> const & u ) {
             return u.first == unit;
         } );
@@ -1728,8 +1728,8 @@ void vitamin_ass( double val, dialogue &d, char scope, std::vector<diag_value> c
 {
     if( d.actor( is_beta( scope ) )->get_character() ) {
         d.actor( is_beta( scope ) )
-        ->get_character()
-        ->vitamin_set( vitamin_id( params[0].str( d ) ), val );
+         ->get_character()
+         ->vitamin_set( vitamin_id( params[0].str( d ) ), val );
     }
 }
 

@@ -1,7 +1,7 @@
 #include <clang/Basic/Version.h>
 #include <clang-tidy/ClangTidyModule.h>
 #if CLANG_VERSION_MAJOR < 22
-#include <clang-tidy/ClangTidyModuleRegistry.h>
+    #include <clang-tidy/ClangTidyModuleRegistry.h>
 #endif
 #include <llvm/ADT/StringRef.h>
 
@@ -45,7 +45,7 @@
 #include "XYCheck.h"
 
 #if defined( CATA_CLANG_TIDY_EXECUTABLE )
-#include <clang-tidy/tool/ClangTidyMain.h>
+    #include <clang-tidy/tool/ClangTidyMain.h>
 #endif
 
 namespace clang::tidy

@@ -110,7 +110,7 @@ std::vector<skill_id> Character::skills_offered_to( const Character *you ) const
 std::vector<matype_id> Character::styles_offered_to( const Character *you ) const
 {
     if( you ) {
-        return you->martial_arts_data->get_unknown_styles( *martial_arts_data, true );
+    return you->martial_arts_data->get_unknown_styles( *martial_arts_data, true );
     }
     return martial_arts_data->get_known_styles( true );
 }
@@ -168,14 +168,14 @@ SkillLevel &Character::get_skill_level_object( const skill_id &ident )
 float Character::get_skill_level( const skill_id &ident ) const
 {
     return enchantment_cache->modify_value( ident,
-                                            _skills->get_skill_level( ident ) + _skills->get_progress_level( ident ) );
+           _skills->get_skill_level( ident ) + _skills->get_progress_level( ident ) );
 }
 
 float Character::get_skill_level( const skill_id &ident, const item &context ) const
 {
     return enchantment_cache->modify_value( ident, _skills->get_skill_level( ident,
-                                            context ) + _skills->get_progress_level( ident,
-                                                    context ) );
+           context ) + _skills->get_progress_level( ident,
+    context ) );
 }
 
 int Character::get_knowledge_level( const skill_id &ident ) const
@@ -201,7 +201,7 @@ float Character::get_average_skill_level( const skill_id &ident ) const
 float Character::get_greater_skill_or_knowledge_level( const skill_id &ident ) const
 {
     return get_skill_level( ident ) > get_knowledge_plus_progress( ident ) ? get_skill_level(
-               ident ) : get_knowledge_plus_progress( ident );
+    ident ) : get_knowledge_plus_progress( ident );
 }
 
 void Character::set_skill_level( const skill_id &ident, const int level )
@@ -353,29 +353,29 @@ int Character::lie_skill() const
 book_mastery Character::get_book_mastery( const item &book ) const
 {
     if( !book.is_book() || !has_identified( book.typeId() ) ) {
-        return book_mastery::CANT_DETERMINE;
-    }
-    // TODO: add illiterate check?
+    return book_mastery::CANT_DETERMINE;
+}
+// TODO: add illiterate check?
 
-    const cata::value_ptr<islot_book> &type = book.type->book;
-    const skill_id &skill = type->skill;
+const cata::value_ptr<islot_book> &type = book.type->book;
+const skill_id &skill = type->skill;
 
-    if( !skill ) {
-        // book gives no skill
-        return book_mastery::MASTERED;
-    }
+if( !skill ) {
+    // book gives no skill
+    return book_mastery::MASTERED;
+}
 
-    const int skill_level = get_knowledge_level( skill );
-    const int skill_requirement = type->req;
-    const int max_skill_learnable = type->level;
+const int skill_level = get_knowledge_level( skill );
+const int skill_requirement = type->req;
+const int max_skill_learnable = type->level;
 
-    if( skill_requirement > skill_level ) {
-        return book_mastery::CANT_UNDERSTAND;
-    }
-    if( skill_level >= max_skill_learnable ) {
-        return book_mastery::MASTERED;
-    }
-    return book_mastery::LEARNING;
+if( skill_requirement > skill_level ) {
+    return book_mastery::CANT_UNDERSTAND;
+}
+if( skill_level >= max_skill_learnable ) {
+    return book_mastery::MASTERED;
+}
+return book_mastery::LEARNING;
 }
 
 bool Character::fun_to_read( const item &book ) const

@@ -46,7 +46,7 @@
 #include "vpart_range.h"
 
 #if defined(TILES)
-#include "sdltiles.h" // To get tile screen positions for draw_appliance_connections()
+    #include "sdltiles.h" // To get tile screen positions for draw_appliance_connections()
 #endif
 
 class uilist_impl;
@@ -163,7 +163,7 @@ void veh_app_interact::run( map &here, vehicle &veh, const point_rel_ms &p )
 }
 
 #if defined(TILES)
-static bool showing_connections = true;
+    static bool showing_connections = true;
 #endif
 
 // Registers general appliance actions from keybindings

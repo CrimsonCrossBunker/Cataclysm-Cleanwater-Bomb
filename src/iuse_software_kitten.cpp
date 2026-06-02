@@ -127,7 +127,7 @@ void robot_finds_kitten::show() const
 
     werase( w );
     if( current_ui_state != ui_state::instructions ) {
-        mvwhline( w, point( 0, 2 ), BORDER_COLOR, '_', rfkCOLS );
+    mvwhline( w, point( 0, 2 ), BORDER_COLOR, '_', rfkCOLS );
         wmove( w, kitten.pos );
         draw_kitten();
 
@@ -139,11 +139,11 @@ void robot_finds_kitten::show() const
         draw_robot();
     }
     switch( current_ui_state ) {
-        case ui_state::instructions: {
-            int pos = 1;
-            // NOLINTNEXTLINE(cata-use-named-point-constants)
-            pos += fold_and_print( w, point( 1, 0 ), getmaxx( w ) - 4, c_light_gray,
-                                   _( "robotfindskitten v22July2008" ) );
+    case ui_state::instructions: {
+        int pos = 1;
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        pos += fold_and_print( w, point( 1, 0 ), getmaxx( w ) - 4, c_light_gray,
+                               _( "robotfindskitten v22July2008" ) );
             pos += 1 + fold_and_print( w, point( 1, pos ), getmaxx( w ) - 4, c_light_gray,
                                        _( "Originally by the illustrious Leonard Richardson, "
                                           "rewritten in PDCurses by Joseph Larson, "

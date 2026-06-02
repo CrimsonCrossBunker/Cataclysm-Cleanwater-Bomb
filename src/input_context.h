@@ -176,7 +176,7 @@ class input_context
         }
         bool is_action_registered( const std::string &action_descriptor ) const {
             return std::find( registered_actions.begin(), registered_actions.end(),
-                              action_descriptor ) != registered_actions.end();
+            action_descriptor ) != registered_actions.end();
         }
 
         bool operator==( const input_context &other ) const {

@@ -179,7 +179,7 @@ static void CheckCall( UsePointApisCheck &Check, const MatchFinder::MatchResult 
     }
 
     const FunctionDecl *ContainingFunction = getContainingFunction(
-                Result, Call ? static_cast<const Expr *>( Call ) : ConstructorCall );
+            Result, Call ? static_cast<const Expr *>( Call ) : ConstructorCall );
 
     // Look for another overload of the called function with a point parameter
     // in the right spot.
@@ -247,7 +247,7 @@ static void CheckCall( UsePointApisCheck &Check, const MatchFinder::MatchResult 
         : "Call to %0 could instead call overload using a point parameter.";
 
     Check.diag( CallBeginLoc, message )
-            << Callee << FixItHint::CreateReplacement( CharRangeToReplace, Replacement );
+         << Callee << FixItHint::CreateReplacement( CharRangeToReplace, Replacement );
     Check.diag( Callee->getLocation(), "current overload", DiagnosticIDs::Note );
     Check.diag( NewCallee->getLocation(), "alternate overload", DiagnosticIDs::Note );
 }

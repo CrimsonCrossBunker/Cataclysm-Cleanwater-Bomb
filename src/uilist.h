@@ -167,8 +167,8 @@ struct uilist_entry {
                       const nc_color &keycolor, const nc_color &txtcolor );
         template<typename Enum, typename... Args,
                  typename = std::enable_if_t<std::is_enum_v<Enum>>>
-                                             explicit uilist_entry( Enum e, Args && ... args ) :
-                                                 uilist_entry( static_cast<int>( e ), std::forward<Args>( args )... )
+        explicit uilist_entry( Enum e, Args && ... args ) :
+            uilist_entry( static_cast<int>( e ), std::forward<Args>( args )... )
         {}
 
     public:
@@ -571,7 +571,7 @@ class uilist_impl : public cataimgui::window
 
         cataimgui::bounds get_bounds() override {
             if( !parent.started ) {
-                parent.setup();
+            parent.setup();
             }
 
             return parent.desired_bounds.value_or( parent.calculated_bounds );

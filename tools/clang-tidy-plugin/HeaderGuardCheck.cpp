@@ -8,8 +8,8 @@
 #include <clang/Tooling/Tooling.h>
 
 #if !defined(_MSC_VER)
-#include <sys/stat.h>
-#include <unistd.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
 #endif
 
 #include "Utils.h"
@@ -129,11 +129,11 @@ class HeaderGuardPPCallbacks : public PPCallbacks
         void Ifndef( SourceLocation Loc, const Token &MacroNameTok,
                      const MacroDefinition &MD ) override {
             if( MD ) {
-                return;
-            }
+            return;
+        }
 
-            // Record #ifndefs that succeeded. We also need the Location of the Name.
-            FileInfos[GetFileName( Loc )].Ifndefs.push_back(
+        // Record #ifndefs that succeeded. We also need the Location of the Name.
+        FileInfos[GetFileName( Loc )].Ifndefs.push_back(
                 IfndefInfo{ MacroNameTok.getIdentifierInfo(), Loc, MacroNameTok.getLocation() } );
         }
 
@@ -334,7 +334,7 @@ class HeaderGuardPPCallbacks : public PPCallbacks
                     if( Name == CPPVar &&
                         SM.isWrittenInSameFile( StartLoc, DefineLoc ) ) {
                         Check->diag( DefineLoc, "Code/includes outside of area guarded by "
-                                     "header guard; consider moving it." );
+                                                "header guard; consider moving it." );
                         SeenMacro = true;
                         break;
                     }

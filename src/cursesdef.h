@@ -110,9 +110,9 @@ using attr_t = unsigned short;
 
 extern window stdscr;
 #if defined(USE_PDCURSES)
-inline constexpr window &newscr = stdscr;
+    inline constexpr window &newscr = stdscr;
 #else
-extern window newscr;
+    extern window newscr;
 #endif
 
 window newwin( int nlines, int ncols, const point &begin );

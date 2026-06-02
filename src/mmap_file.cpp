@@ -2,17 +2,17 @@
 
 #ifdef _WIN32
 
-#include <vector>
+    #include <vector>
 
-#include "platform_win.h"
+    #include "platform_win.h"
 
 #else
 
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
+    #include <sys/mman.h>
+    #include <sys/types.h>
+    #include <sys/stat.h>
+    #include <fcntl.h>
+    #include <unistd.h>
 
 #endif
 
@@ -22,9 +22,9 @@
 #include "cata_utility.h"
 
 #ifdef __clang__
-#define CLANG_REINITIALIZES [[clang::reinitializes]]
+    #define CLANG_REINITIALIZES [[clang::reinitializes]]
 #else
-#define CLANG_REINITIALIZES
+    #define CLANG_REINITIALIZES
 #endif
 
 mmap_file::mmap_file() = default;
@@ -207,7 +207,7 @@ struct file_impl : mmap_file::impl {
     ~file_impl() override {
         unmap_view();
         if( file != INVALID_HANDLE_VALUE ) {
-            CloseHandle( file );
+        CloseHandle( file );
         }
     }
 #else
@@ -243,7 +243,7 @@ struct file_impl : mmap_file::impl {
     ~file_impl() override {
         unmap_view();
         if( file != -1 ) {
-            close( file );
+        close( file );
         }
     }
 #endif

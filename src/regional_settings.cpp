@@ -746,7 +746,7 @@ void groundcover_extra::finalize()   // FIXME: return bool for failure
 ter_furn_id groundcover_extra::pick( bool boosted ) const
 {
     if( boosted ) {
-        return boosted_weightlist.lower_bound( rng( 0, 1000000 ) )->second;
+    return boosted_weightlist.lower_bound( rng( 0, 1000000 ) )->second;
     }
     return weightlist.lower_bound( rng( 0, 1000000 ) )->second;
 }
@@ -851,32 +851,32 @@ void region_settings_highway::finalize()
 map_extra_collection map_extra_collection::filtered_by( const mapgendata &dat ) const
 {
     map_extra_collection result( chance );
-    for( const std::pair<map_extra_id, int> &obj : values ) {
-        const map_extra_id &extra_id = obj.first;
-        if( extra_id->is_valid_for( dat ) ) {
+for( const std::pair<map_extra_id, int> &obj : values ) {
+    const map_extra_id &extra_id = obj.first;
+    if( extra_id->is_valid_for( dat ) ) {
             result.values.add( extra_id, obj.second );
         }
     }
     if( !values.empty() && result.values.empty() ) {
-        // OMT is too tall / too deep for all map extras. Skip map extra generation.
-        result.chance = 0;
-    }
-    return result;
+    // OMT is too tall / too deep for all map extras. Skip map extra generation.
+    result.chance = 0;
+}
+return result;
 }
 
 ter_id region_settings_terrain_furniture::resolve( const ter_id &tid ) const
 {
     if( tid.id().is_null() ) {
-        return tid;
-    }
-    ter_id result = tid;
-    auto predicate = [&result]( const region_terrain_furniture_id & tid_r ) {
-        return tid_r->replaced_ter_id == result;
-    };
-    auto found_tfid = std::find_if( ter_furn.begin(), ter_furn.end(), predicate );
-    while( found_tfid != ter_furn.end() ) {
-        const region_terrain_furniture_id &rtf_id = *found_tfid;
-        result = *rtf_id->terrain.pick();
+    return tid;
+}
+ter_id result = tid;
+auto predicate = [&result]( const region_terrain_furniture_id & tid_r ) {
+    return tid_r->replaced_ter_id == result;
+};
+auto found_tfid = std::find_if( ter_furn.begin(), ter_furn.end(), predicate );
+while( found_tfid != ter_furn.end() ) {
+    const region_terrain_furniture_id &rtf_id = *found_tfid;
+    result = *rtf_id->terrain.pick();
         found_tfid = std::find_if( ter_furn.begin(), ter_furn.end(), predicate );
     }
     return result;
@@ -885,16 +885,16 @@ ter_id region_settings_terrain_furniture::resolve( const ter_id &tid ) const
 furn_id region_settings_terrain_furniture::resolve( const furn_id &fid ) const
 {
     if( fid.id().is_null() ) {
-        return fid;
-    }
-    furn_id result = fid;
-    auto predicate = [&result]( const region_terrain_furniture_id & fid_r ) {
-        return fid_r->replaced_furn_id == result;
-    };
-    auto found_tfid = std::find_if( ter_furn.begin(), ter_furn.end(), predicate );
-    while( found_tfid != ter_furn.end() ) {
-        const region_terrain_furniture_id &rtf_id = *found_tfid;
-        result = *rtf_id->furniture.pick();
+    return fid;
+}
+furn_id result = fid;
+auto predicate = [&result]( const region_terrain_furniture_id & fid_r ) {
+    return fid_r->replaced_furn_id == result;
+};
+auto found_tfid = std::find_if( ter_furn.begin(), ter_furn.end(), predicate );
+while( found_tfid != ter_furn.end() ) {
+    const region_terrain_furniture_id &rtf_id = *found_tfid;
+    result = *rtf_id->furniture.pick();
         found_tfid = std::find_if( ter_furn.begin(), ter_furn.end(), predicate );
     }
     return result;
@@ -913,7 +913,7 @@ void building_bin::add( const overmap_special_id &building, int weight )
 overmap_special_id building_bin::pick() const
 {
     if( !finalized ) {
-        debugmsg( "Tried to pick a special out of a non-finalized bin" );
+    debugmsg( "Tried to pick a special out of a non-finalized bin" );
         overmap_special_id null_special( "null" );
         return null_special;
     }

@@ -53,8 +53,8 @@ void power_network_manager::serialize( JsonOut &json ) const
     json.member( "next_id", next_id_ );
     json.member( "networks" );
     json.start_array();
-    for( const auto &[net_id, net] : networks_ ) {
-        net.serialize( json );
+for( const auto &[net_id, net] : networks_ ) {
+    net.serialize( json );
     }
     json.end_array();
     json.end_object();
@@ -157,7 +157,7 @@ void power_network_manager::finish_rebuild()
 const power_network *power_network_manager::find_network_at(
     const tripoint_abs_ms &pos ) const
 {
-    for( const auto &[net_id, net] : networks_ ) {
+for( const auto &[net_id, net] : networks_ ) {
         for( const power_network_node &node : net.nodes ) {
             if( node.position == pos ) {
                 return &net;

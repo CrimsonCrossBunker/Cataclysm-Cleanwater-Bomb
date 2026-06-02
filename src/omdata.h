@@ -82,22 +82,22 @@ template<typename Tripoint>
 pos_dir<Tripoint> pos_dir<Tripoint>::opposite() const
 {
     switch( dir ) {
-        case cube_direction::north:
-            return { p + tripoint::north, cube_direction::south };
-        case cube_direction::east:
-            return { p + tripoint::east, cube_direction::west };
-        case cube_direction::south:
-            return { p + tripoint::south, cube_direction::north };
-        case cube_direction::west:
-            return { p + tripoint::west, cube_direction::east };
-        case cube_direction::above:
-            return { p + tripoint::above, cube_direction::below };
-        case cube_direction::below:
-            return { p + tripoint::below, cube_direction::above };
-        case cube_direction::last:
-            break;
-    }
-    cata_fatal( "Invalid cube_direction" );
+    case cube_direction::north:
+        return { p + tripoint::north, cube_direction::south };
+    case cube_direction::east:
+        return { p + tripoint::east, cube_direction::west };
+    case cube_direction::south:
+        return { p + tripoint::south, cube_direction::north };
+    case cube_direction::west:
+        return { p + tripoint::west, cube_direction::east };
+    case cube_direction::above:
+        return { p + tripoint::above, cube_direction::below };
+    case cube_direction::below:
+        return { p + tripoint::below, cube_direction::above };
+    case cube_direction::last:
+        break;
+}
+cata_fatal( "Invalid cube_direction" );
 }
 
 template<typename Tripoint>
@@ -1092,7 +1092,7 @@ struct mutable_overmap_placement_rule_remainder {
     pieces( const tripoint_om_omt &origin, om_direction::type rot ) const;
     using dest_outward_t = std::pair<om_pos_dir, const mutable_overmap_terrain_join *>;
     cata::views::transform<std::vector<std::pair<rel_pos_dir, const mutable_overmap_terrain_join *>>, dest_outward_t>
-            outward_joins( const tripoint_om_omt &origin, om_direction::type rot ) const;
+    outward_joins( const tripoint_om_omt &origin, om_direction::type rot ) const;
 };
 
 struct special_placement_result {

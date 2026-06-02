@@ -859,7 +859,7 @@ TEST_CASE( "npc_needs_bt_diagnostic_during_move", "[npc][behavior]" )
     // RAII: save and restore debug globals so later tests are unaffected
     restore_on_out_of_scope<bool> restore_debug( debug_mode );
     restore_on_out_of_scope<std::unordered_set<debugmode::debug_filter>>
-            restore_filters( debugmode::enabled_filters );
+    restore_filters( debugmode::enabled_filters );
 
     clear_map_without_vision();
     npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
@@ -6082,14 +6082,14 @@ TEST_CASE( "same_category_preemption", "[npc][needs]" )
         // Inventory water (in bottle) so has_water returns true and
         // BT selects drink_water.
         const item_group::ItemList water_items = item_group::items_from(
-                    Item_spawn_data_test_bottle_water );
+                Item_spawn_data_test_bottle_water );
         guy.i_add( water_items.front() );
         here.build_map_cache( 0 );
 
         // Pre-commit seek_warmth in holding state.
         guy.set_committed_goal( "seek_warmth" );
         guy.plan_for( npc::need_goal_id::seek_warmth ).last_result =
-            npc::need_result::holding;
+               npc::need_result::holding;
 
         guy.set_moves( 100 );
         guy.move();
@@ -6134,7 +6134,7 @@ TEST_CASE( "same_category_preemption", "[npc][needs]" )
         const tripoint_bub_ms clothing = guy.pos_bub() + tripoint( 5, 0, 0 );
         here.add_item_or_charges( clothing, item( itype_sweater ) );
         const item_group::ItemList water_items = item_group::items_from(
-                    Item_spawn_data_test_bottle_water );
+                Item_spawn_data_test_bottle_water );
         guy.i_add( water_items.front() );
         here.build_map_cache( 0 );
 
@@ -6157,13 +6157,13 @@ TEST_CASE( "same_category_preemption", "[npc][needs]" )
         guy.set_all_parts_temp_conv( BODYTEMP_VERY_COLD );
         guy.set_thirst( 1050 );
         const item_group::ItemList water_items = item_group::items_from(
-                    Item_spawn_data_test_bottle_water );
+                Item_spawn_data_test_bottle_water );
         guy.i_add( water_items.front() );
         here.build_map_cache( 0 );
 
         guy.set_committed_goal( "seek_warmth" );
         guy.plan_for( npc::need_goal_id::seek_warmth ).last_result =
-            npc::need_result::deferred;
+               npc::need_result::deferred;
 
         guy.set_moves( 100 );
         guy.move();
@@ -6405,7 +6405,7 @@ TEST_CASE( "start_fire_does_not_block_needs_forever", "[npc][needs]" )
     guy.worn.wear_item( guy, item( itype_backpack ), false, false );
     // Give water so the BT can select drink_water.
     const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+            Item_spawn_data_test_bottle_water );
     guy.i_add( water_items.front() );
 
     map &here = get_map();
@@ -6439,7 +6439,7 @@ TEST_CASE( "clear_committed_goal_clears_executor_state", "[npc][needs]" )
     fp.last_result = npc::need_result::progressed;
     fp.no_progress_turns = 3;
     guy.failed_targets_for( npc::need_goal_id::eat_food ).insert(
-        tripoint_abs_ms{ 60, 50, 0 } );
+           tripoint_abs_ms{ 60, 50, 0 } );
 
     // clear_committed_goal must reset everything.
     guy.clear_committed_goal();
@@ -6559,7 +6559,7 @@ TEST_CASE( "need_goal_id_plan_accessors", "[npc][needs]" )
     fp.goal = "eat_food";
     fp.no_progress_turns = 3;
     guy.failed_targets_for( npc::need_goal_id::eat_food ).insert(
-        tripoint_abs_ms{ 1, 2, 0 } );
+           tripoint_abs_ms{ 1, 2, 0 } );
     guy.clear_need_state( npc::need_goal_id::eat_food );
     CHECK_FALSE( fp.active() );
     CHECK( fp.no_progress_turns == 0 );
@@ -6851,7 +6851,7 @@ TEST_CASE( "npc_sleep_preemption", "[npc][needs][sleep]" )
     // Extreme thirst so drink urgency is very high.
     guy.set_thirst( 1100 );
     const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+            Item_spawn_data_test_bottle_water );
     guy.i_add( water_items.front() );
 
     map &here = get_map();

@@ -221,10 +221,10 @@ TEST_CASE( "collapse_checks", "[.]" )
     CHECK( open_air_count > partial_tiles );
     if( open_air_count < partial_tiles ) {
         FAIL( open_air_count << " open air tiles were found on the upper floors after the walls "
-              "collapsed." );
+                                "collapsed." );
     } else {
         INFO( open_air_count << " open air tiles were found on the upper floors after the walls "
-              "collapsed." );
+                                "collapsed." );
     }
     CHECK( no_wall_count == 8 );
     if( no_wall_count != 8 ) {

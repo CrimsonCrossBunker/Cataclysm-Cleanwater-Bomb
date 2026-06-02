@@ -118,26 +118,26 @@ void gate_data::check() const
     const ter_str_id winch_tid( id.str() );
 
     if( !winch_tid.is_valid() ) {
-        debugmsg( "Gates \"%s\" have no terrain of the same name, working as a winch.", id.c_str() );
+    debugmsg( "Gates \"%s\" have no terrain of the same name, working as a winch.", id.c_str() );
     } else if( !winch_tid->has_examine( iexamine::controls_gate ) ) {
-        debugmsg( "Terrain \"%s\" can't control gates, but gates \"%s\" depend on it.",
-                  winch_tid.c_str(), id.c_str() );
+    debugmsg( "Terrain \"%s\" can't control gates, but gates \"%s\" depend on it.",
+              winch_tid.c_str(), id.c_str() );
     }
 
     if( !door.is_valid() ) {
-        debugmsg( "Invalid door \"%s\" in \"%s\".", door.c_str(), id.c_str() );
+    debugmsg( "Invalid door \"%s\" in \"%s\".", door.c_str(), id.c_str() );
     }
     if( !floor.is_valid() ) {
-        debugmsg( "Invalid floor \"%s\" in \"%s\".", floor.c_str(), id.c_str() );
+    debugmsg( "Invalid floor \"%s\" in \"%s\".", floor.c_str(), id.c_str() );
     }
-    for( const auto &elem : walls ) {
-        if( !elem.is_valid() ) {
+for( const auto &elem : walls ) {
+    if( !elem.is_valid() ) {
             debugmsg( "Invalid wall \"%s\" in \"%s\".", elem.c_str(), id.c_str() );
         }
     }
 
     if( moves < 0 ) {
-        debugmsg( "Gates \"%s\" grant moves.", id.c_str() );
+    debugmsg( "Gates \"%s\" grant moves.", id.c_str() );
     }
 }
 
@@ -401,7 +401,7 @@ bool doors::forced_door_closing( const tripoint_bub_ms &p,
                  std::find( affected_tiles.cbegin(), affected_tiles.cend(), pvl ) == std::end( affected_tiles ) );
     };
     const std::optional<tripoint_bub_ms> pos = random_point( m.points_in_radius( p, 2 ),
-            valid_location );
+        valid_location );
     if( !pos.has_value() ) {
         // can't pushback any creatures anywhere, that means the door can't close.
         return false;
@@ -596,7 +596,7 @@ bool doors::unlock_door( map &m, Creature &who, const tripoint_bub_ms &lockp )
             // It's a lambda right now so we don't have to check it unless we need it.
             auto has_broken_window = [&]() {
                 std::vector<vehicle_part *> parts_at_target = veh->get_parts_at( &m, lockp, "LOCKABLE_DOOR",
-                        part_status_flag::available );
+                    part_status_flag::available );
                 return !parts_at_target.empty() && parts_at_target.front()->has_fault( fault_broken_window );
             };
             const bool reaches_in = !inside_vehicle && has_broken_window();

@@ -158,16 +158,16 @@ std::pair<int, int> Character::gunmod_installation_odds( const item_location &gu
 {
     // Mods with INSTALL_DIFFICULT have a chance to fail, potentially damaging the gun
     if( !mod.has_flag( flag_INSTALL_DIFFICULT ) || has_trait( trait_DEBUG_HS ) ) {
-        return std::make_pair( 100, 0 );
+    return std::make_pair( 100, 0 );
     }
 
     int roll = 100; // chance of success (%)
     int risk = 0;   // chance of failure (%)
     float chances = 1.0f; // start with 1 in 6 (~17% chance)
 
-    for( const auto &e : mod.type->min_skills ) {
-        // gain an additional chance for every level above the minimum requirement
-        skill_id sk = e.first.str() == "weapon" ? gun->gun_skill() : e.first;
+for( const auto &e : mod.type->min_skills ) {
+    // gain an additional chance for every level above the minimum requirement
+    skill_id sk = e.first.str() == "weapon" ? gun->gun_skill() : e.first;
         chances += std::max( get_greater_skill_or_knowledge_level( sk )  - e.second, 0.0f );
     }
     // cap success from skill alone to 1 in 5 (~83% chance)
@@ -330,7 +330,7 @@ bool Character::has_gun_for_ammo( const ammotype &at ) const
 bool Character::has_magazine_for_ammo( const ammotype &at ) const
 {
     if( cache_has_item_with( "is_magazine", &item::is_magazine, [&at]( const item & it ) {
-    return !it.has_flag( flag_NO_RELOAD ) && it.ammo_types().count( at );
+        return !it.has_flag( flag_NO_RELOAD ) && it.ammo_types().count( at );
     } ) ) {
         return true;
     }

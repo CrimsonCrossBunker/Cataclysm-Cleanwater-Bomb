@@ -1225,11 +1225,11 @@ std::optional<tripoint_bub_ms> choose_adjacent( const tripoint_bub_ms &pos,
             const input_context &ctxt, const std::string &action )> &action_cb )
 {
     const std::optional<tripoint_rel_ms> dir = choose_direction(
-                message, allow_vertical, /*allow_mouse=*/true, timeout,
+            message, allow_vertical, /*allow_mouse=*/true, timeout,
     [&]( const input_context & ctxt, const std::string & action ) {
         if( action == "SELECT" ) {
             const std::optional<tripoint_bub_ms> mouse_pos = ctxt.get_coordinates(
-                        g->w_terrain, g->ter_view_p.raw().xy(), true );
+                    g->w_terrain, g->ter_view_p.raw().xy(), true );
             if( mouse_pos ) {
                 const tripoint_rel_ms vec = *mouse_pos - pos;
                 if( vec.x() >= -1 && vec.x() <= 1
@@ -1261,7 +1261,7 @@ std::optional<tripoint_bub_ms> choose_adjacent_highlight( map &here, const std::
         const bool allow_vertical, const bool allow_autoselect )
 {
     const std::function<bool( const tripoint_bub_ms & )> f = [&action,
-    &here]( const tripoint_bub_ms & p ) {
+        &here]( const tripoint_bub_ms & p ) {
         return can_interact_at( action, here, p );
     };
     return choose_adjacent_highlight( here, message, failure_message, f, allow_vertical,

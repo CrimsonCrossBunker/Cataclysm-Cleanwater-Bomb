@@ -3,7 +3,7 @@
 #if defined(_WIN32) && defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
 #include <cstdint>
 #if defined(__SSE__)
-#include <xmmintrin.h>
+    #include <xmmintrin.h>
 #endif
 
 void reset_floating_point_mode()

@@ -51,7 +51,7 @@
 #include "type_id.h"
 
 #if defined(LOCALIZE)
-#include "translation_manager.h"
+    #include "translation_manager.h"
 #endif
 
 class recipe;

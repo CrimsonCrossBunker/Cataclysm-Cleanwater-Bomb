@@ -494,7 +494,7 @@ struct region_settings {
 
     const region_settings_city &get_settings_city() const {
         if( !city_spec.has_value() ) {
-            debugmsg( "No city settings defined for %s, but requesting them", id.str() );
+        debugmsg( "No city settings defined for %s, but requesting them", id.str() );
             static region_settings_city ret;
             return ret;
         }
@@ -505,7 +505,7 @@ struct region_settings {
     }
     const region_settings_forest_trail &get_settings_forest_trail() const {
         if( !forest_trail.has_value() ) {
-            debugmsg( "No forest trail settings defined for %s, but requesting them", id.str() );
+        debugmsg( "No forest trail settings defined for %s, but requesting them", id.str() );
             static region_settings_forest_trail ret;
             return ret;
         }
@@ -516,7 +516,7 @@ struct region_settings {
     }
     const region_settings_forest &get_settings_forest() const {
         if( !overmap_forest.has_value() ) {
-            debugmsg( "No forest settings defined for %s, but requesting them", id.str() );
+        debugmsg( "No forest settings defined for %s, but requesting them", id.str() );
             static region_settings_forest ret;
             return ret;
         }
@@ -524,7 +524,7 @@ struct region_settings {
     }
     const region_settings_river &get_settings_river() const {
         if( !overmap_river.has_value() ) {
-            debugmsg( "No river settings defined for %s, but requesting them", id.str() );
+        debugmsg( "No river settings defined for %s, but requesting them", id.str() );
             static region_settings_river ret;
             return ret;
         }
@@ -532,7 +532,7 @@ struct region_settings {
     }
     const region_settings_lake &get_settings_lake() const {
         if( !overmap_lake.has_value() ) {
-            debugmsg( "No lake settings defined for %s, but requesting them", id.str() );
+        debugmsg( "No lake settings defined for %s, but requesting them", id.str() );
             static region_settings_lake ret;
             return ret;
         }
@@ -540,7 +540,7 @@ struct region_settings {
     }
     const region_settings_ocean &get_settings_ocean() const {
         if( !overmap_ocean.has_value() ) {
-            debugmsg( "No ocean settings defined for %s, but requesting them", id.str() );
+        debugmsg( "No ocean settings defined for %s, but requesting them", id.str() );
             static region_settings_ocean ret;
             return ret;
         }
@@ -548,7 +548,7 @@ struct region_settings {
     }
     const region_settings_highway &get_settings_highway() const {
         if( !overmap_highway.has_value() ) {
-            debugmsg( "No highway settings defined for %s, but requesting them", id.str() );
+        debugmsg( "No highway settings defined for %s, but requesting them", id.str() );
             static region_settings_highway ret;
             return ret;
         }
@@ -556,7 +556,7 @@ struct region_settings {
     }
     const region_settings_ravine &get_settings_ravine() const {
         if( !overmap_ravine.has_value() ) {
-            debugmsg( "No ravine settings defined for %s, but requesting them", id.str() );
+        debugmsg( "No ravine settings defined for %s, but requesting them", id.str() );
             static region_settings_ravine ret;
             return ret;
         }

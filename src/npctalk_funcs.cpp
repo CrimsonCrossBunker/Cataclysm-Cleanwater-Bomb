@@ -112,7 +112,7 @@ void talk_function::assign_mission( npc &p )
         return;
     } else if( miss->is_assigned() ) {
         DebugLog( D_WARNING, D_MAIN ) << "assign_mission: mission_id: " << miss->mission_id().str() <<
-                                      " is already assigned!";
+                                         " is already assigned!";
         return;
     }
     miss->assign( get_avatar() );
@@ -1043,7 +1043,7 @@ void talk_function::drop_stolen_item( npc &p )
 {
     bool dropped = false;
     Character &player_character = get_player_character();
-    for( item *&elem : player_character.inv_dump() ) {
+    for( item * &elem : player_character.inv_dump() ) {
         dropped |= drop_stolen_item( *elem, p );
     }
     if( dropped ) {

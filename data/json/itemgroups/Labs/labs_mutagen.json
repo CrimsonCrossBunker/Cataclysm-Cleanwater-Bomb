@@ -2,6 +2,7 @@
   {
     "id": "lab_mutagen_ingredients",
     "type": "item_group",
+    "//CCB": "撤销 PR #86581 — 恢复僵尸尸体的实用性",
     "subtype": "collection",
     "entries": [
       { "item": "bleach", "charges": [ 1, -1 ], "prob": 40, "container-item": "jug_plastic", "sealed": false },
@@ -48,7 +49,7 @@
       { "item": "meat_tainted", "prob": 30, "count": [ 1, 3 ] },
       { "item": "tallow", "prob": 30, "count": [ 5, 15 ] },
       { "item": "fish", "prob": 40, "count": [ 1, 3 ] },
-      { "item": "fat_tainted", "prob": 20, "count": [ 5, 10 ] },
+      { "item": "tallow_tainted", "prob": 20, "count": [ 5, 10 ] },
       { "item": "egg_bird_unfert", "prob": 30, "count": [ 1, 12 ] },
       { "item": "gastropod_sample", "prob": 40, "count": [ 1, 3 ] },
       { "item": "batrachian_sample", "prob": 40, "count": [ 1, 3 ] },

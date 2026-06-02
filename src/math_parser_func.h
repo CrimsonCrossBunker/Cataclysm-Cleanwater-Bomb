@@ -163,12 +163,12 @@ constexpr std::array<math_func, 20> functions{
 
 namespace math_constants
 {
-# if (defined M_PI && defined M_E)
-constexpr double pi_v = M_PI;
-constexpr double e_v = M_E;
+#if (defined M_PI && defined M_E)
+    constexpr double pi_v = M_PI;
+    constexpr double e_v = M_E;
 #else
-constexpr double pi_v = 3.14159265358979323846;
-constexpr double e_v = 2.7182818284590452354;
+    constexpr double pi_v = 3.14159265358979323846;
+    constexpr double e_v = 2.7182818284590452354;
 #endif
 } // namespace math_constants
 

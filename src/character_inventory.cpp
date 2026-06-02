@@ -664,11 +664,11 @@ item *Character::invlet_to_item( const int linvlet ) const
     // Example: KEY_NPAGE (returned when the player presses the page-down key) is 0x152,
     // casted to char would yield 0x52, which happens to be 'R', a valid invlet.
     if( linvlet > std::numeric_limits<char>::max() || linvlet < std::numeric_limits<char>::min() ) {
-        return nullptr;
-    }
-    const char invlet = static_cast<char>( linvlet );
-    if( is_npc() ) {
-        DebugLog( D_WARNING, D_GAME ) << "Why do you need to call Character::invlet_to_position on npc " <<
+    return nullptr;
+}
+const char invlet = static_cast<char>( linvlet );
+if( is_npc() ) {
+    DebugLog( D_WARNING, D_GAME ) << "Why do you need to call Character::invlet_to_position on npc " <<
                                       get_name();
     }
     item *invlet_item = nullptr;
@@ -685,12 +685,12 @@ item *Character::invlet_to_item( const int linvlet ) const
 int Character::get_item_position( const item *it ) const
 {
     if( weapon.has_item( *it ) ) {
-        return -1;
-    }
+    return -1;
+}
 
-    std::optional<int> pos = worn.get_item_position( *it );
-    if( pos ) {
-        return worn_position_to_index( *pos );
+std::optional<int> pos = worn.get_item_position( *it );
+if( pos ) {
+    return worn_position_to_index( *pos );
     }
 
     return inv->position_by_item( it );
@@ -788,7 +788,7 @@ bool Character::has_active_item( const itype_id &id ) const
 ret_val<void> Character::can_drop( const item &it ) const
 {
     if( it.has_flag( flag_NO_UNWIELD ) || it.has_flag( flag_INTEGRATED ) ) {
-        return ret_val<void>::make_failure( _( "You cannot drop your %s." ), it.tname() );
+    return ret_val<void>::make_failure( _( "You cannot drop your %s." ), it.tname() );
     }
     return ret_val<void>::make_success();
 }
@@ -887,16 +887,16 @@ bool Character::dispose_item( item_location &&obj, const std::string &prompt )
         item_handling_cost( *obj ),
         [this, bucket, &obj] {
             if( bucket && !obj->spill_open_pockets( *this, obj.get_item() ) )
-            {
-                return false;
-            }
-
-            mod_moves( -item_handling_cost( *obj ) );
-            this->i_add( *obj, true, &*obj, &*obj );
-            obj.remove_item();
-            return true;
+        {
+            return false;
         }
-    } );
+
+        mod_moves( -item_handling_cost( *obj ) );
+        this->i_add( *obj, true, &*obj, &*obj );
+        obj.remove_item();
+        return true;
+    }
+} );
 
     opts.emplace_back( dispose_option{
         _( "Drop item" ), true, '2', 0, [this, &obj] {
@@ -911,15 +911,15 @@ bool Character::dispose_item( item_location &&obj, const std::string &prompt )
         can_wear( *obj ).success(), '3', item_wear_cost( *obj ),
         [this, bucket, &obj] {
             if( bucket && !obj->spill_contents( *this ) )
-            {
-                return false;
-            }
-
-            item it = *obj;
-            obj.remove_item();
-            return !!wear_item( it );
+        {
+            return false;
         }
-    } );
+
+        item it = *obj;
+        obj.remove_item();
+        return !!wear_item( it );
+    }
+} );
 
     worn.holster_opts( opts, obj, *this );
 
@@ -1062,7 +1062,7 @@ bool Character::natural_attack_restricted_on( const sub_bodypart_id &bp ) const
 std::vector<const item *> Character::get_pseudo_items() const
 {
     if( !pseudo_items_valid ) {
-        pseudo_items.clear();
+    pseudo_items.clear();
 
         for( const bionic &bio : *my_bionics ) {
             std::vector<const item *> pseudos = bio.get_available_pseudo_items();
@@ -1121,9 +1121,9 @@ void Character::remove_mission_items( int mission_id )
 units::mass Character::weight_carried() const
 {
     if( cached_weight_carried ) {
-        return *cached_weight_carried;
-    }
-    cached_weight_carried = weight_carried_with_tweaks( item_tweaks() );
+    return *cached_weight_carried;
+}
+cached_weight_carried = weight_carried_with_tweaks( item_tweaks() );
     return *cached_weight_carried;
 }
 
@@ -1146,7 +1146,7 @@ units::mass Character::weight_carried_with_tweaks( const item_tweaks &tweaks ) c
 {
     const std::map<const item *, int> empty;
     const std::map<const item *, int> &without = tweaks.without_items ? tweaks.without_items->get() :
-            empty;
+        empty;
 
     // Worn items
     units::mass ret = worn.weight_carried_with_tweaks( without );
@@ -1211,7 +1211,7 @@ bool Character::can_pickVolume_partial( const item &it, bool, const item *avoid,
 bool Character::can_pickWeight( const item &it, bool safe ) const
 {
     if( !safe ) {
-        return ( weight_carried() + it.weight() <= max_pickup_capacity() );
+    return ( weight_carried() + it.weight() <= max_pickup_capacity() );
     } else {
         return ( weight_carried() + it.weight() <= weight_capacity() );
     }
@@ -1230,8 +1230,8 @@ bool Character::can_pickWeight_partial( const item &it, bool safe ) const
 ret_val<void> Character::can_unwield( const item &it ) const
 {
     if( it.has_flag( flag_NO_UNWIELD ) ) {
-        // check if "it" is currently wielded fake bionic weapon that can be deactivated
-        std::optional<bionic *> bio_opt = find_bionic_by_uid( get_weapon_bionic_uid() );
+    // check if "it" is currently wielded fake bionic weapon that can be deactivated
+    std::optional<bionic *> bio_opt = find_bionic_by_uid( get_weapon_bionic_uid() );
         if( !is_wielding( it ) || it.ethereal || !bio_opt ||
             !can_deactivate_bionic( **bio_opt ).success() ) {
             return ret_val<void>::make_failure( _( "You can't unwield your %s." ), it.tname() );
@@ -1442,39 +1442,39 @@ int Character::item_retrieve_cost( const item &it, const item &container, bool p
 ret_val<void> Character::can_wield( const item &it ) const
 {
     if( it.has_flag( flag_INTEGRATED ) ) {
-        return ret_val<void>::make_failure( _( "You can't wield a part of your body." ) );
+    return ret_val<void>::make_failure( _( "You can't wield a part of your body." ) );
     }
     if( has_effect( effect_incorporeal ) ) {
-        return ret_val<void>::make_failure( _( "You can't wield anything while incorporeal." ) );
+    return ret_val<void>::make_failure( _( "You can't wield anything while incorporeal." ) );
     }
     if( !has_min_manipulators() ) {
-        return ret_val<void>::make_failure(
-                   _( "You need at least one arm available to even consider wielding something." ) );
+    return ret_val<void>::make_failure(
+               _( "You need at least one arm available to even consider wielding something." ) );
     }
     if( it.made_of( phase_id::LIQUID ) ) {
-        return ret_val<void>::make_failure( _( "You can't wield spilt liquids." ) );
+    return ret_val<void>::make_failure( _( "You can't wield spilt liquids." ) );
     }
     if( it.made_of( phase_id::GAS ) ) {
-        return ret_val<void>::make_failure( _( "You can't wield loose gases." ) );
+    return ret_val<void>::make_failure( _( "You can't wield loose gases." ) );
     }
     if( it.is_frozen_liquid() && !it.has_flag( flag_SHREDDED ) ) {
-        return ret_val<void>::make_failure( _( "You can't wield unbroken frozen liquids." ) );
+    return ret_val<void>::make_failure( _( "You can't wield unbroken frozen liquids." ) );
     }
     if( it.has_flag( flag_NO_UNWIELD ) ) {
-        if( get_wielded_item() && get_wielded_item().get_item() == &it ) {
+    if( get_wielded_item() && get_wielded_item().get_item() == &it ) {
             return ret_val<void>::make_failure( _( "You can't unwield this." ) );
         }
         return ret_val<void>::make_failure(
                    _( "You can't wield this.  Wielding it would make it impossible to unwield it." ) );
     }
     if( it.has_flag( flag_BIONIC_WEAPON ) ) {
-        return ret_val<void>::make_failure(
-                   _( "You can't wield this.  It looks like it has to be attached to a bionic." ) );
+    return ret_val<void>::make_failure(
+               _( "You can't wield this.  It looks like it has to be attached to a bionic." ) );
     }
 
     if( is_armed() && !can_unwield( weapon ).success() ) {
-        return ret_val<void>::make_failure( _( "The %1$s prevents you from wielding the %2$s." ),
-                                            weapname(), it.tname() );
+    return ret_val<void>::make_failure( _( "The %1$s prevents you from wielding the %2$s." ),
+                                        weapname(), it.tname() );
     }
     monster *mount = mounted_creature.get();
     const itype_id mech_weapon = is_mounted() ? mount->type->mech_weapon : itype_id::NULL_ID();
@@ -1488,7 +1488,7 @@ ret_val<void> Character::can_wield( const item &it ) const
     if( two_handed &&
         ( missing_arms || armor_restricts_hands ) &&
         !( mounted_mech && it.typeId() == mech_weapon ) //ignore this check for mech weapons
-      ) {
+          ) {
         if( armor_restricts_hands ) {
             return ret_val<void>::make_failure(
                        _( "Something you are wearing hinders the use of both hands." ) );
@@ -1501,10 +1501,10 @@ ret_val<void> Character::can_wield( const item &it ) const
         }
     }
     if( mounted_mech && it.typeId() != mech_weapon ) {
-        return ret_val<void>::make_failure( _( "You cannot wield anything while piloting a mech." ) );
+    return ret_val<void>::make_failure( _( "You cannot wield anything while piloting a mech." ) );
     }
     if( controlling_vehicle ) {
-        if( two_handed ) {
+    if( two_handed ) {
             return ret_val<void>::make_failure( _( "You need both hands to wield the %s but are driving." ),
                                                 it.tname() );
         }
@@ -1573,7 +1573,7 @@ std::string Character::weapname_simple() const
 {
     //To make wield state consistent, gun_nam; when calling tname, is disabling 'with_collapsed' flag
     if( weapon.is_gun() ) {
-        gun_mode current_mode = weapon.gun_current_mode();
+    gun_mode current_mode = weapon.gun_current_mode();
         const bool no_mode = !current_mode.target;
         tname::segment_bitset segs( tname::default_tname );
         segs.reset( tname::segments::TAGS );
@@ -1581,7 +1581,7 @@ std::string Character::weapname_simple() const
         return gun_name;
 
     } else if( !is_armed() ) {
-        return _( "fists" );
+    return _( "fists" );
     } else {
         return weapon.tname();
     }
@@ -1590,7 +1590,7 @@ std::string Character::weapname_simple() const
 std::string Character::weapname_mode() const
 {
     if( weapon.is_gun() ) {
-        gun_mode current_mode = weapon.gun_current_mode();
+    gun_mode current_mode = weapon.gun_current_mode();
         const bool no_mode = !current_mode.target;
         std::string gunmode;
         if( !no_mode && current_mode->gun_all_modes().size() > 1 ) {
@@ -1608,8 +1608,8 @@ std::string Character::weapname_ammo() const
     // resolves ammo_capacity(NULL_ID) == 0 on an empty projectile
     // pocket and prints "/0".
     if( weapon.uses_firing_requirements() && weapon.is_gun() ) {
-        std::vector<std::string> parts;
-        for( const item_pocket *p : weapon.get_pockets( []( const item_pocket & ) {
+    std::vector<std::string> parts;
+    for( const item_pocket *p : weapon.get_pockets( []( const item_pocket & ) {
         return true;
     } ) ) {
             int cur = 0;
@@ -1671,7 +1671,7 @@ std::string Character::weapname_ammo() const
         return "(" + joined + ")";
     }
     if( weapon.is_gun() ) {
-        gun_mode current_mode = weapon.gun_current_mode();
+    gun_mode current_mode = weapon.gun_current_mode();
         const bool no_mode = !current_mode.target;
         // only required for empty mags and empty guns
         std::string mag_ammo;
@@ -1738,10 +1738,10 @@ std::vector<const item *> Character::inv_dump() const
 bool Character::covered_with_flag( const flag_id &f, const body_part_set &parts ) const
 {
     if( parts.none() ) {
-        return true;
-    }
+    return true;
+}
 
-    return worn.covered_with_flag( f, parts );
+return worn.covered_with_flag( f, parts );
 }
 
 bool Character::is_waterproof( const body_part_set &parts ) const
@@ -2238,8 +2238,8 @@ std::vector<item_location> Character::cache_get_items_with( const std::string &k
 
 void Character::add_to_inv_search_caches( item &it ) const
 {
-    for( auto &cache : inv_search_caches ) {
-        if( ( cache.second.type.is_valid() && it.typeId() != cache.second.type ) ||
+for( auto &cache : inv_search_caches ) {
+    if( ( cache.second.type.is_valid() && it.typeId() != cache.second.type ) ||
             ( cache.second.type_flag.is_valid() && !it.type->has_flag( cache.second.type_flag ) ) ||
             ( cache.second.filter_func && !( it.*cache.second.filter_func )() ) ) {
             continue;
@@ -2300,20 +2300,20 @@ bool Character::has_fire( const int quantity ) const
     // TODO: Replace this with a "tool produces fire" flag.
 
     if( get_map().has_nearby_fire( pos_bub() ) ) {
-        return true;
-    }
-    if( cache_has_item_with( flag_FIRE ) ) {
-        return true;
-    }
-    if( !find_firestarter_with_charges( quantity ).is_null() ) {
-        return true;
-    }
-    if( is_npc() ) {
-        // HACK: A hack to make NPCs use their Molotovs
-        return true;
-    }
+    return true;
+}
+if( cache_has_item_with( flag_FIRE ) ) {
+    return true;
+}
+if( !find_firestarter_with_charges( quantity ).is_null() ) {
+    return true;
+}
+if( is_npc() ) {
+    // HACK: A hack to make NPCs use their Molotovs
+    return true;
+}
 
-    return false;
+return false;
 }
 
 void Character::on_worn_item_washed( const item &it )

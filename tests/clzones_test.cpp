@@ -496,7 +496,7 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
     bool spillable_skipped = false;
     zone_sorting::zone_items items = zone_sorting::populate_items( src_pos );
     zone_sorting::unload_sort_options opts = zone_sorting::set_unload_options( dummy, src_abs,
-            false );
+        false );
     std::vector<item_location> other_activity;
     CHECK_FALSE( zone_sorting::has_items_to_sort( dummy, src_abs, opts, other_activity, items,
                  &pickup_failure, &spillable_skipped ) );

@@ -314,7 +314,7 @@ void zone_manager_ui::display_zone_manager()
     bool zone_blink = false;
     bool zone_cursor = false;
     shared_ptr_fast<game::draw_callback_t> zone_cb = create_zone_callback(
-                zone_start, zone_end, zone_blink, zone_cursor );
+            zone_start, zone_end, zone_blink, zone_cursor );
     g->add_draw_callback( zone_cb );
 
     // This lambda returns either absolute coordinates or relative-to-player
@@ -344,11 +344,11 @@ void zone_manager_ui::display_zone_manager()
         const look_around_result first =
         g->look_around( /*show_window=*/false, center, center, false, true, false );
         if( first.position )
-        {
-            popup.message( "%s", _( "Select second point." ) );
+    {
+        popup.message( "%s", _( "Select second point." ) );
 
             const look_around_result second = g->look_around( /*show_window=*/false, center, *first.position,
-                    true, true, false );
+                true, true, false );
             if( second.position ) {
                 tripoint_abs_ms first_abs =
                 here.get_abs(
@@ -393,11 +393,11 @@ void zone_manager_ui::display_zone_manager()
         const look_around_result first =
         g->look_around( /*show_window=*/false, center, center, false, true, false );
         if( first.position )
-        {
-            popup.message( "%s", _( "Select second point." ) );
+    {
+        popup.message( "%s", _( "Select second point." ) );
 
             const look_around_result second = g->look_around( /*show_window=*/false, center, *first.position,
-                    true, true, false );
+                true, true, false );
             if( second.position ) {
                 tripoint_rel_ms first_rel(
                     std::min( first.position->x() - pos.x(), second.position->x() - pos.x() ),
@@ -589,7 +589,7 @@ void zone_manager_ui::display_zone_manager()
                 const std::string &name = maybe_name.value();
 
                 const std::optional<std::pair<tripoint_rel_ms, tripoint_rel_ms>> position =
-                            query_personal_position();
+                    query_personal_position();
                 if( !position ) {
                     break;
                 }

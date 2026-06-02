@@ -194,19 +194,19 @@ void scores_ui_impl::init_data()
 void scores_ui_impl::draw_achievements_text( bool use_conducts ) const
 {
     if( !g->achievements().is_enabled() ) {
-        ImGui::TextWrapped( "%s", _( "Achievements and conducts are disabled for debug characters." ) );
+    ImGui::TextWrapped( "%s", _( "Achievements and conducts are disabled for debug characters." ) );
         return;
     }
     if( use_conducts && conducts_text.empty() ) {
-        ImGui::TextWrapped( "%s", _( "This game has no valid conducts." ) );
+    ImGui::TextWrapped( "%s", _( "This game has no valid conducts." ) );
         return;
     }
     if( !use_conducts && achievements_text.empty() ) {
-        ImGui::TextWrapped( "%s", _( "This game has no valid achievements." ) );
+    ImGui::TextWrapped( "%s", _( "This game has no valid achievements." ) );
         return;
     }
-    for( const std::string &entry : use_conducts ? conducts_text : achievements_text ) {
-        cataimgui::draw_colored_text( entry );
+for( const std::string &entry : use_conducts ? conducts_text : achievements_text ) {
+    cataimgui::draw_colored_text( entry );
         ImGui::Separator();
     }
     ImGui::NewLine();
@@ -220,11 +220,11 @@ void scores_ui_impl::draw_achievements_text( bool use_conducts ) const
 void scores_ui_impl::draw_scores_text() const
 {
     if( scores_text.empty() ) {
-        ImGui::TextWrapped( "%s", _( "This game has no valid scores." ) );
+    ImGui::TextWrapped( "%s", _( "This game has no valid scores." ) );
         return;
     }
-    for( const std::string &entry : scores_text ) {
-        ImGui::TextWrapped( "%s", entry.c_str() );
+for( const std::string &entry : scores_text ) {
+    ImGui::TextWrapped( "%s", entry.c_str() );
     }
     ImGui::NewLine();
     ImGui::TextWrapped( "%s",
@@ -235,8 +235,8 @@ void scores_ui_impl::draw_scores_text() const
 void scores_ui_impl::draw_kills_text() const
 {
     if( ImGui::CollapsingHeader( string_format( _( "Monster kills (%d):" ), monster_kills ).c_str(),
-                                 monster_group_collapsed ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_DefaultOpen ) ) {
-        if( monster_kills == 0 ) {
+    monster_group_collapsed ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_DefaultOpen ) ) {
+    if( monster_kills == 0 ) {
             ImGui::TextWrapped( "%s", _( "You haven't killed any monsters yet!" ) );
         } else {
             for( const auto &entry : monster_kills_data ) {
@@ -257,7 +257,7 @@ void scores_ui_impl::draw_kills_text() const
     }
     if( ImGui::CollapsingHeader( string_format( _( "NPC kills (%d):" ), npc_kills ).c_str(),
                                  npc_group_collapsed ? ImGuiTreeNodeFlags_None : ImGuiTreeNodeFlags_DefaultOpen ) ) {
-        if( npc_kills == 0 ) {
+    if( npc_kills == 0 ) {
             ImGui::TextWrapped( "%s", _( "You haven't killed any NPCs yet!" ) );
         } else {
             for( const std::string &npc_name : npc_kills_data ) {

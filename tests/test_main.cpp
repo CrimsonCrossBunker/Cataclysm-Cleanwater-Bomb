@@ -1,6 +1,6 @@
 #ifdef CATA_CATCH_PCH
-#undef TWOBLUECUBES_SINGLE_INCLUDE_CATCH_HPP_INCLUDED
-#define CATCH_CONFIG_IMPL_ONLY
+    #undef TWOBLUECUBES_SINGLE_INCLUDE_CATCH_HPP_INCLUDED
+    #define CATCH_CONFIG_IMPL_ONLY
 #endif
 #define CATCH_CONFIG_RUNNER
 #include <algorithm>
@@ -19,9 +19,9 @@
 #include <vector>
 
 #if defined(_MSC_VER)
-#include <io.h>
+    #include <io.h>
 #else
-#include <unistd.h>
+    #include <unistd.h>
 #endif
 
 #include "cata_catch.h"
@@ -212,7 +212,7 @@ struct CataListener : Catch::TestEventListenerBase {
     void testRunStarting( Catch::TestRunInfo const & ) override {
         DebugLog( D_INFO, DC_ALL ) << "Running Catch2 session:" << std::endl;
         if( start_time == std::chrono::system_clock::time_point{} ) {
-            start_time = std::chrono::system_clock::now();
+        start_time = std::chrono::system_clock::now();
         }
         end_time = start_time;
     }
@@ -223,8 +223,8 @@ struct CataListener : Catch::TestEventListenerBase {
 
     void testCaseStarting( Catch::TestCaseInfo const &testInfo ) override {
         if( !game_initialized && !fail_to_init_game_state ) {
-            bool is_nogame = std::find( testInfo.tags.begin(), testInfo.tags.end(),
-                                        "nogame" ) != testInfo.tags.end();
+        bool is_nogame = std::find( testInfo.tags.begin(), testInfo.tags.end(),
+                                    "nogame" ) != testInfo.tags.end();
             if( !is_nogame ) {
                 try {
                     init_global_game_state( mods, option_overrides_for_test_suite, user_dir );
@@ -249,7 +249,7 @@ struct CataListener : Catch::TestEventListenerBase {
         // Initialize the cata RNG with the Catch seed for reproducible tests
         const unsigned int seed = m_config->rngSeed();
         if( seed ) {
-            rng_set_engine_seed( seed );
+        rng_set_engine_seed( seed );
         } else {
             rng_set_engine_seed( rng_get_first_seed() );
         }
@@ -261,9 +261,9 @@ struct CataListener : Catch::TestEventListenerBase {
     void sectionEnded( Catch::SectionStats const &sectionStats ) override {
         TestEventListenerBase::sectionEnded( sectionStats );
         if( !sectionStats.assertions.allPassed() ||
-            m_config->includeSuccessfulResults() ) {
-            std::vector<std::pair<std::string, std::string>> messages =
-                        Messages::recent_messages( 0 );
+        m_config->includeSuccessfulResults() ) {
+        std::vector<std::pair<std::string, std::string>> messages =
+            Messages::recent_messages( 0 );
             if( !messages.empty() ) {
                 if( !sectionStats.assertions.allPassed() ) {
                     std::cerr << "Log messages during failed test:\n";
@@ -281,20 +281,20 @@ struct CataListener : Catch::TestEventListenerBase {
     void testCaseEnded( Catch::TestCaseStats const &testCaseStats ) override {
         TestEventListenerBase::testCaseEnded( testCaseStats );
         if( !game_initialized ) {
-            return;
-        }
-        // Reset lightweight global state that tests commonly modify without
-        // restoring.  Expensive operations like clear_map() stay manual.
-        calendar::turn = calendar::turn_zero;
-        weather_manager &weather = get_weather();
-        weather.weather_override = WEATHER_NULL; // NOLINT(cata-tests-must-restore-global-state)
-        weather.windspeed_override.reset();
-        weather.forced_temperature.reset(); // NOLINT(cata-tests-must-restore-global-state)
-        weather.set_nextweather( calendar::turn );
-        weather.clear_temp_cache();
+        return;
     }
+    // Reset lightweight global state that tests commonly modify without
+    // restoring.  Expensive operations like clear_map() stay manual.
+    calendar::turn = calendar::turn_zero;
+    weather_manager &weather = get_weather();
+    weather.weather_override = WEATHER_NULL; // NOLINT(cata-tests-must-restore-global-state)
+    weather.windspeed_override.reset();
+    weather.forced_temperature.reset(); // NOLINT(cata-tests-must-restore-global-state)
+    weather.set_nextweather( calendar::turn );
+    weather.clear_temp_cache();
+}
 
-    bool assertionEnded( Catch::AssertionStats const &assertionStats ) override {
+bool assertionEnded( Catch::AssertionStats const &assertionStats ) override {
 #ifdef BACKTRACE
         Catch::AssertionResult const &result = assertionStats.assertionResult;
 
@@ -490,7 +490,7 @@ int main( int argc, const char *argv[] )
     } catch( const std::exception &err ) {
         DebugLog( D_ERROR, DC_ALL ) << "Terminated:\n" << err.what();
         DebugLog( D_INFO, DC_ALL ) <<
-                                   "Make sure that you're in the correct working directory and your data isn't corrupted.";
+        "Make sure that you're in the correct working directory and your data isn't corrupted.";
         return EXIT_FAILURE;
     }
 
@@ -522,7 +522,7 @@ int main( int argc, const char *argv[] )
 
     if( error_during_initialization ) {
         DebugLog( D_INFO, DC_ALL ) <<
-                                   "Treating result as failure due to error logged during initialization.";
+        "Treating result as failure due to error logged during initialization.";
         return 1;
     }
 

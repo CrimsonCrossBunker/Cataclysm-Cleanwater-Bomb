@@ -424,7 +424,7 @@ struct intrahighway_node {
     om_direction::type get_effective_dir() const {
         return is_segment ?
                om_direction::type( static_cast<int>( path_node.dir ) % 2 ) :
-               om_direction::type( static_cast<int>( path_node.dir ) );
+        om_direction::type( static_cast<int>( path_node.dir ) );
     }
 };
 
@@ -649,8 +649,8 @@ class overmap
             return npcs;
         }
         std::vector<shared_ptr_fast<npc>> get_npcs( const std::function<bool( const npc & )>
-                                       &predicate )
-                                       const;
+                &predicate )
+        const;
         point_om_omt get_fallback_road_connection_point() const;
     private:
         friend class overmapbuffer;

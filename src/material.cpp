@@ -145,37 +145,37 @@ void material_type::finalize_all()
 void material_type::check() const
 {
     if( name().empty() ) {
-        debugmsg( "material %s has no name.", id.c_str() );
+    debugmsg( "material %s has no name.", id.c_str() );
     }
     if( _dmg_adj.size() < 4 ) {
-        debugmsg( "material %s specifies insufficient damaged adjectives.", id.c_str() );
+    debugmsg( "material %s specifies insufficient damaged adjectives.", id.c_str() );
     }
     if( _salvaged_into && ( !item::type_is_defined( *_salvaged_into ) || _salvaged_into->is_null() ) ) {
-        debugmsg( "invalid \"salvaged_into\" %s for %s.", _salvaged_into->c_str(), id.c_str() );
+    debugmsg( "invalid \"salvaged_into\" %s for %s.", _salvaged_into->c_str(), id.c_str() );
     }
     if( !item::type_is_defined( _repaired_with ) ) {
-        debugmsg( "invalid \"repaired_with\" %s for %s.", _repaired_with.c_str(), id.c_str() );
+    debugmsg( "invalid \"repaired_with\" %s for %s.", _repaired_with.c_str(), id.c_str() );
     }
 
     if( _wind_resist && ( *_wind_resist > 100 || *_wind_resist < 0 ) ) {
-        debugmsg( "Wind resistance outside of range (100%% to 0%%, is %d%%) for %s.", *_wind_resist,
-                  id.str() );
+    debugmsg( "Wind resistance outside of range (100%% to 0%%, is %d%%) for %s.", *_wind_resist,
+              id.str() );
     }
 
     if( _repair_difficulty && ( _repair_difficulty > 10 || _repair_difficulty < 0 ) ) {
-        debugmsg( "Repair difficulty out of skill range (0 to 10, is %d) for %s.", _repair_difficulty,
-                  id.str() );
+    debugmsg( "Repair difficulty out of skill range (0 to 10, is %d) for %s.", _repair_difficulty,
+              id.str() );
     }
 
-    for( const auto &dt : _resistances.resist_vals ) {
-        if( !dt.first.is_valid() ) {
+for( const auto &dt : _resistances.resist_vals ) {
+    if( !dt.first.is_valid() ) {
             debugmsg( "Invalid resistance type \"%s\" for material %s", dt.first.c_str(), id.c_str() );
         }
     }
 
-    for( const damage_type &dt : damage_type::get_all() ) {
-        bool type_defined =
-            std::find( _res_was_loaded.begin(), _res_was_loaded.end(),  dt.id ) != _res_was_loaded.end();
+for( const damage_type &dt : damage_type::get_all() ) {
+    bool type_defined =
+        std::find( _res_was_loaded.begin(), _res_was_loaded.end(),  dt.id ) != _res_was_loaded.end();
         if( dt.material_required && !type_defined ) {
             debugmsg( "material %s is missing required resistance for \"%s\"", id.c_str(), dt.id.c_str() );
         }
@@ -210,7 +210,7 @@ float material_type::resist( const damage_type_id &dmg_type ) const
 bool material_type::has_dedicated_resist( const damage_type_id &dmg_type ) const
 {
     return std::find( _res_was_loaded.begin(), _res_was_loaded.end(),
-                      dmg_type ) != _res_was_loaded.end();
+    dmg_type ) != _res_was_loaded.end();
 }
 
 std::string material_type::bash_dmg_verb() const

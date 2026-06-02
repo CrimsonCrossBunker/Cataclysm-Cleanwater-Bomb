@@ -105,12 +105,12 @@ bool start_location::requires_city() const
 bool start_location::can_belong_to_city( const tripoint_om_omt &p, const city &cit ) const
 {
     if( !requires_city() ) {
-        return true;
-    }
-    if( !cit || !constraints_.city_size.contains( cit.size ) ) {
-        return false;
-    }
-    return constraints_.city_distance.contains( cit.get_distance_from( p ) - ( cit.size ) );
+    return true;
+}
+if( !cit || !constraints_.city_size.contains( cit.size ) ) {
+    return false;
+}
+return constraints_.city_distance.contains( cit.get_distance_from( p ) - ( cit.size ) );
 }
 
 const std::set<std::string> &start_location::flags() const
@@ -145,10 +145,10 @@ void start_location::load( const JsonObject &jo, const std::string_view )
 void start_location::check() const
 {
     if( _locations.empty() ) {
-        debugmsg( "start_location %s has no terrain defined", id.c_str() );
+    debugmsg( "start_location %s has no terrain defined", id.c_str() );
     }
-    for( const omt_types_parameters &loc : _locations ) {
-        if( loc.omt.empty() ) {
+for( const omt_types_parameters &loc : _locations ) {
+    if( loc.omt.empty() ) {
             debugmsg( "start_location %s has empty om_terrain string", id.c_str() );
             continue;
         }
@@ -288,7 +288,7 @@ void start_location::prepare_map( tinymap &m ) const
 }
 
 std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
-        start_location::find_player_initial_location( const point_abs_om &origin ) const
+start_location::find_player_initial_location( const point_abs_om &origin ) const
 {
     // Spiral out from the world origin scanning for a compatible starting location,
     // creating overmaps as necessary.
@@ -309,7 +309,7 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
 }
 
 std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
-        start_location::find_player_initial_location( const city &origin ) const
+start_location::find_player_initial_location( const city &origin ) const
 {
     overmap &omap = overmap_buffer.get( origin.pos_om );
     std::vector<std::pair<tripoint_om_omt, omt_types_parameters>> valid;
@@ -330,7 +330,7 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
         }
     }
     const std::pair<tripoint_om_omt, omt_types_parameters> random_valid = random_entry( valid,
-            std::make_pair( tripoint_om_omt::invalid, omt_types_parameters() ) );
+        std::make_pair( tripoint_om_omt::invalid, omt_types_parameters() ) );
     const tripoint_om_omt omtstart = random_valid.first;
     if( omtstart != tripoint_om_omt::min ) {
         return std::make_pair( project_combine( origin.pos_om, omtstart ), random_valid.second.parameters );
@@ -345,26 +345,26 @@ void start_location::set_parameters( const tripoint_abs_omt &omtstart,
                                      const std::unordered_map<std::string, std::string> &parameters_to_set ) const
 {
     if( parameters_to_set.empty() ) {
-        return;
-    }
-    overmap_buffer.externally_set_args = true;
-    std::optional<mapgen_arguments> *maybe_args = overmap_buffer.mapgen_args( omtstart );
-    if( !maybe_args ) {
-        debugmsg( "No overmap special args at start location." );
+    return;
+}
+overmap_buffer.externally_set_args = true;
+std::optional<mapgen_arguments> *maybe_args = overmap_buffer.mapgen_args( omtstart );
+if( !maybe_args ) {
+    debugmsg( "No overmap special args at start location." );
         return;
     }
     std::optional<overmap_special_id> s = overmap_buffer.overmap_special_at( omtstart );
     if( !s ) {
-        debugmsg( "No overmap special at start location from which to fetch parameters." );
+    debugmsg( "No overmap special at start location from which to fetch parameters." );
         return;
     }
     const overmap_special &special = **s;
     const mapgen_parameters &params = special.get_params();
     mapgen_arguments args;
-    for( const auto &param_to_set : parameters_to_set ) {
-        const std::string &param_name_to_set = param_to_set.first;
-        const std::string &value_to_set = param_to_set.second;
-        auto param_it = params.map.find( param_name_to_set );
+for( const auto &param_to_set : parameters_to_set ) {
+    const std::string &param_name_to_set = param_to_set.first;
+    const std::string &value_to_set = param_to_set.second;
+    auto param_it = params.map.find( param_name_to_set );
         if( param_it == params.map.end() ) {
             debugmsg( "Parameter %s not found", param_name_to_set );
             continue;
@@ -597,8 +597,8 @@ void start_location::add_map_extra( const tripoint_abs_omt &omtstart,
 
 void start_location::handle_heli_crash( avatar &you ) const
 {
-    for( const bodypart_id &bp : you.get_all_body_parts( get_body_part_flags::only_main ) ) {
-        if( bp == bodypart_id( "head" ) || bp == bodypart_id( "torso" ) ) {
+for( const bodypart_id &bp : you.get_all_body_parts( get_body_part_flags::only_main ) ) {
+    if( bp == bodypart_id( "head" ) || bp == bodypart_id( "torso" ) ) {
             continue;// Skip head + torso for balance reasons.
         }
         const int roll = static_cast<int>( rng( 1, 8 ) );
@@ -641,8 +641,8 @@ static void add_monsters( const tripoint_abs_omt &omtstart, const mongroup_id &t
 void start_location::surround_with_monsters(
     const tripoint_abs_omt &omtstart, const mongroup_id &type, float expected_points ) const
 {
-    for( const tripoint_abs_omt &p : points_in_radius( omtstart, 1 ) ) {
-        if( p != omtstart ) {
+for( const tripoint_abs_omt &p : points_in_radius( omtstart, 1 ) ) {
+    if( p != omtstart ) {
             add_monsters( p, type, roll_remainder( expected_points / 8.0f ) );
         }
     }

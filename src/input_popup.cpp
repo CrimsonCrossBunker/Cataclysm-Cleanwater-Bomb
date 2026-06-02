@@ -325,7 +325,7 @@ void string_input_popup_imgui::update_input_history( ImGuiInputTextCallbackData 
 void string_input_popup_imgui::add_to_history( const std::string &value ) const
 {
     if( !identifier.empty() && !value.empty() ) {
-        std::vector<std::string> &hist = uistate.gethistory( identifier );
+    std::vector<std::string> &hist = uistate.gethistory( identifier );
         if( hist.empty() || hist[hist.size() - 1] != value ) {
             hist.push_back( value );
         }

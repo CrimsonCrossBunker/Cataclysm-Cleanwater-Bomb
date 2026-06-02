@@ -44,8 +44,8 @@ TEST_CASE( "monster_speed_description", "[monster][speed_description]" )
         std::string speed_string = get_speed_string( mon_id );
         THEN( "returned string is the one expected" ) {
             const bool is_returned_string_is_inside_vector = std::find(
-                        descriptions.begin(), descriptions.end(),
-                        speed_string ) != descriptions.end();
+                    descriptions.begin(), descriptions.end(),
+                    speed_string ) != descriptions.end();
             // variable name will show up when error fails
             CHECK( is_returned_string_is_inside_vector );
         }

@@ -539,7 +539,7 @@ const oter_vision::level *oter_vision::viewed( om_vision_level vision ) const
 void oter_vision::check() const
 {
     if( levels.size() > 3 ) {
-        debugmsg( "Too many vision levels assigned!" );
+    debugmsg( "Too many vision levels assigned!" );
     }
 }
 
@@ -652,25 +652,25 @@ void oter_type_t::load( const JsonObject &jo, const std::string_view )
 void oter_type_t::check() const
 {
     if( !vision_levels.is_valid() ) {
-        debugmsg( "Invalid vision_levels '%s' for '%s'", vision_levels.str(), id.str() );
+    debugmsg( "Invalid vision_levels '%s' for '%s'", vision_levels.str(), id.str() );
     }
     if( uniform_terrain && !uniform_terrain->is_valid() ) {
-        debugmsg( "Invalid uniform_terrain id '%s' for '%s'", uniform_terrain->c_str(), id.str() );
+    debugmsg( "Invalid uniform_terrain id '%s' for '%s'", uniform_terrain->c_str(), id.str() );
     }
-    for( const pp_generator_id &gen : post_process_generators ) {
-        if( !gen.is_valid() ) {
+for( const pp_generator_id &gen : post_process_generators ) {
+    if( !gen.is_valid() ) {
             debugmsg( "Invalid post_process_generators id '%s' for '%s'", gen.str(), id.str() );
         }
     }
     if( !post_process_generators.empty() && has_flag( oter_flags::road ) ) {
-        debugmsg( "'%s' has post_process_generators but road flag; "
-                  "road OMTs use hardcoded dispatch and the field will be ignored",
-                  id.str() );
+    debugmsg( "'%s' has post_process_generators but road flag; "
+              "road OMTs use hardcoded dispatch and the field will be ignored",
+              id.str() );
     }
     if( has_flag( oter_flags::pp_generate_riot_damage ) && post_process_generators.empty() ) {
-        DebugLog( D_WARNING, D_MAP_GEN ) <<
-                                         "oter_type " << id.str() << " uses deprecated PP_GENERATE_RIOT_DAMAGE flag; "
-                                         "use \"post_process_generators\": [\"riot_damage\"] instead";
+    DebugLog( D_WARNING, D_MAP_GEN ) <<
+        "oter_type " << id.str() << " uses deprecated PP_GENERATE_RIOT_DAMAGE flag; "
+        "use \"post_process_generators\": [\"riot_damage\"] instead";
     }
     /* find omts without vision_levels assigned
     if( vision_levels == oter_vision_default && !has_flag( oter_flags::should_not_spawn ) ) {
@@ -732,11 +732,11 @@ oter_id oter_type_t::get_rotated( om_direction::type dir ) const
 oter_id oter_type_t::get_linear( size_t n ) const
 {
     if( !has_flag( oter_flags::line_drawing ) ) {
-        debugmsg( "Overmap terrain \"%s \" isn't drawn with lines.", id.c_str() );
+    debugmsg( "Overmap terrain \"%s \" isn't drawn with lines.", id.c_str() );
         return ot_null;
     }
     if( n >= om_lines::size ) {
-        debugmsg( "Invalid overmap line (%d) was asked from overmap terrain \"%s\".", n, id.c_str() );
+    debugmsg( "Invalid overmap line (%d) was asked from overmap terrain \"%s\".", n, id.c_str() );
         return ot_null;
     }
     cata_assert( directional_peers.size() == om_lines::size );
@@ -770,15 +770,15 @@ oter_t::oter_t( const oter_type_t &type, size_t line ) :
 std::string oter_t::get_mapgen_id() const
 {
     return type->has_flag( oter_flags::line_drawing )
-           ? type->id.str() + om_lines::mapgen_suffixes[om_lines::all[line].mapgen]
-           : type->id.str();
+    ? type->id.str() + om_lines::mapgen_suffixes[om_lines::all[line].mapgen]
+    : type->id.str();
 }
 
 oter_id oter_t::get_rotated( om_direction::type dir ) const
 {
     return type->has_flag( oter_flags::line_drawing )
-           ? type->get_linear( om_lines::rotate( this->line, dir ) )
-           : type->get_rotated( om_direction::add( this->dir, dir ) );
+    ? type->get_linear( om_lines::rotate( this->line, dir ) )
+    : type->get_rotated( om_direction::add( this->dir, dir ) );
 }
 
 bool oter_t::blends_adjacent( om_vision_level vision ) const
@@ -800,7 +800,7 @@ std::string oter_t::get_name( om_vision_level vision ) const
 std::string oter_t::get_symbol( om_vision_level vision, const bool from_land_use_code ) const
 {
     if( from_land_use_code ) {
-        return utf32_to_utf8( symbol_alt );
+    return utf32_to_utf8( symbol_alt );
     }
     if( const oter_vision::level *seen = type->vision_levels->viewed( vision ) ) {
         return utf32_to_utf8( seen->symbol );
@@ -816,9 +816,9 @@ uint32_t oter_t::get_uint32_symbol() const
 nc_color oter_t::get_color( om_vision_level vision, const bool from_land_use_code ) const
 {
     if( from_land_use_code ) {
-        return type->land_use_code->color;
-    }
-    if( const oter_vision::level *seen = type->vision_levels->viewed( vision ) ) {
+    return type->land_use_code->color;
+}
+if( const oter_vision::level *seen = type->vision_levels->viewed( vision ) ) {
         return seen->color;
     }
     return type->color;
@@ -836,11 +836,11 @@ std::string oter_t::get_tileset_id( om_vision_level vision ) const
 void oter_t::get_rotation_and_subtile( int &rotation, int &subtile ) const
 {
     if( is_linear() ) {
-        const om_lines::type &t = om_lines::all[line];
+    const om_lines::type &t = om_lines::all[line];
         rotation = ( 4 - t.rotation ) % 4;;
         subtile = t.subtile;
     } else if( is_rotatable() ) {
-        rotation = static_cast<int>( get_dir() );
+    rotation = static_cast<int>( get_dir() );
         subtile = -1;
     } else {
         rotation = 0;
@@ -851,13 +851,13 @@ void oter_t::get_rotation_and_subtile( int &rotation, int &subtile ) const
 int oter_t::get_rotation() const
 {
     if( is_linear() ) {
-        const om_lines::type &t = om_lines::all[line];
+    const om_lines::type &t = om_lines::all[line];
         // It turns out the rotation used for linear things is the opposite of
         // the rotation used for other things.  Sigh.
         return ( 4 - t.rotation ) % 4;
     }
     if( is_rotatable() ) {
-        return static_cast<int>( get_dir() );
+    return static_cast<int>( get_dir() );
     }
     return 0;
 }

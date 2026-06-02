@@ -135,8 +135,8 @@ class unique_item
         }
         // Returns a pointer to the item that matches this item in given container or null.
         const item *find_in_container( item &where ) const {
-            for( const item *it : where.all_items_top() ) {
-                if( is_same_item( it ) ) {
+for( const item *it : where.all_items_top() ) {
+            if( is_same_item( it ) ) {
                     return it;
                 }
             }

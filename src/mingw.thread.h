@@ -99,7 +99,7 @@ class thread
         thread &operator=( const thread & ) = delete;
         thread &operator=( thread &&other ) noexcept {
             if( joinable() ) {
-                std::terminate();
+            std::terminate();
             }
             swap( std::forward<thread>( other ) );
             return *this;

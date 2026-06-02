@@ -240,11 +240,11 @@ RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b
 #include "sdl_wrappers.h"
 #include "font_loader.h"
 #if SDL_MAJOR_VERSION >= 3
-#include <imgui/imgui_impl_sdl3.h>
-#include <imgui/imgui_impl_sdlrenderer3.h>
+    #include <imgui/imgui_impl_sdl3.h>
+    #include <imgui/imgui_impl_sdlrenderer3.h>
 #else
-#include <imgui/imgui_impl_sdl2.h>
-#include <imgui/imgui_impl_sdlrenderer2.h>
+    #include <imgui/imgui_impl_sdl2.h>
+    #include <imgui/imgui_impl_sdlrenderer2.h>
 #endif
 
 static bool clear_screen = false;
@@ -296,9 +296,9 @@ cataimgui::client::client( const SDL_Renderer_Ptr &sdl_renderer, const SDL_Windo
 }
 
 #if defined(__clang__) || defined(__GNUC__)
-#define UNUSED __attribute__((unused))
+    #define UNUSED __attribute__((unused))
 #else
-#define UNUSED
+    #define UNUSED
 #endif
 
 
@@ -882,7 +882,7 @@ cataimgui::window::~window()
 void cataimgui::window::hide_if_hidden() const
 {
     if( hide_ui ) {
-        ImGuiWindow *w = ImGui::GetCurrentWindowRead();
+    ImGuiWindow *w = ImGui::GetCurrentWindowRead();
         ImGui::SetWindowHiddenAndSkipItemsForCurrentFrame( w );
     }
 }

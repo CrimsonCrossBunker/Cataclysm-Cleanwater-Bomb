@@ -146,8 +146,8 @@ void pp_sub_generator::load( const JsonObject &jo )
 
 void pp_generator::check() const
 {
-    for( const pp_sub_generator &sg : sub_generators_ ) {
-        sg.check( id.str() );
+for( const pp_sub_generator &sg : sub_generators_ ) {
+    sg.check( id.str() );
     }
     // Uniqueness rule: when a sub_generator_type has any overmap_special-scoped
     // entry, it must be the ONLY entry of that type in this generator. This
@@ -155,15 +155,15 @@ void pp_generator::check() const
     // reorders and additions of omt-scoped entries.
     std::map<sub_generator_type, int> total_counts;
     std::map<sub_generator_type, int> special_counts;
-    for( const pp_sub_generator &sg : sub_generators_ ) {
-        total_counts[sg.type]++;
+for( const pp_sub_generator &sg : sub_generators_ ) {
+    total_counts[sg.type]++;
         if( sg.scope == pp_sub_generator_scope::overmap_special ) {
             special_counts[sg.type]++;
         }
     }
-    for( const std::pair<const sub_generator_type, int> &entry : special_counts ) {
-        const sub_generator_type t = entry.first;
-        const int total = total_counts[t];
+for( const std::pair<const sub_generator_type, int> &entry : special_counts ) {
+    const sub_generator_type t = entry.first;
+    const int total = total_counts[t];
         if( entry.second > 1 || total > 1 ) {
             debugmsg( "pp_generator '%s': sub_generator_type '%s' has an overmap_special-"
                       "scoped entry but also %d other entries of the same type.  "
@@ -177,14 +177,14 @@ void pp_generator::check() const
 void pp_sub_generator::check( const std::string &ctx ) const
 {
     if( attempts < 0 ) {
-        debugmsg( "pp_generator '%s': negative attempts", ctx );
+    debugmsg( "pp_generator '%s': negative attempts", ctx );
     }
 
     const std::string tname = io::enum_to_string( type );
 
     switch( type ) {
-        case sub_generator_type::bash_damage:
-            if( chance < 0 || chance > 100 ) {
+    case sub_generator_type::bash_damage:
+        if( chance < 0 || chance > 100 ) {
                 debugmsg( "pp_generator '%s' %s: chance %d not in [0,100]", ctx, tname, chance );
             }
             if( scaling_days_start != 0 || scaling_days_end != 0 ) {
@@ -257,13 +257,13 @@ void pp_sub_generator::check( const std::string &ctx ) const
     }
 
     if( min_intensity > max_intensity && max_intensity != 0 ) {
-        debugmsg( "pp_generator '%s' %s: min_intensity > max_intensity",
-                  ctx, tname );
+    debugmsg( "pp_generator '%s' %s: min_intensity > max_intensity",
+              ctx, tname );
     }
 
     if( scope == pp_sub_generator_scope::overmap_special ) {
-        // Only pre_burn and aftershock_ruin fit the single-bool shared-decision model.
-        if( type != sub_generator_type::pre_burn &&
+    // Only pre_burn and aftershock_ruin fit the single-bool shared-decision model.
+    if( type != sub_generator_type::pre_burn &&
             type != sub_generator_type::aftershock_ruin ) {
             debugmsg( "pp_generator '%s' %s: scope 'overmap_special' not supported "
                       "for this sub-generator type", ctx, tname );

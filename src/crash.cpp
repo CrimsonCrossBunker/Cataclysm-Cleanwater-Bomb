@@ -17,18 +17,18 @@
 #include <typeinfo>
 
 #if !(defined(WIN32) || defined(TILES) || defined(CYGWIN))
-#include <curses.h>
+    #include <curses.h>
 #endif
 
 #if defined(TILES)
-#include "sdl_wrappers.h"
+    #include "sdl_wrappers.h"
 #endif
 
 #if defined(_WIN32)
-#if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
-#include "platform_win.h"
-#endif
-#include <dbghelp.h>
+    #if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
+        #include "platform_win.h"
+    #endif
+    #include <dbghelp.h>
 #endif
 
 #include "debug.h"

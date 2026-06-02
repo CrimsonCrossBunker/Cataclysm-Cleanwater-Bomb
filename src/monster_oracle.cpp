@@ -25,9 +25,9 @@ status_t monster_oracle_t::split_possible( std::string_view ) const
 {
     // check if subject has split to support inverting this predicate for absorb monsters without split
     if( subject->has_special( "SPLIT" ) && ( subject->get_hp() / 2 ) > subject->get_hp_max() ) {
-        return status_t::running;
-    }
-    return status_t::failure;
+    return status_t::running;
+}
+return status_t::failure;
 }
 
 status_t monster_oracle_t::items_available( std::string_view ) const

@@ -140,7 +140,8 @@
     "material": [ "milk" ],
     "volume": "15 ml",
     "flags": [ "NO_AUTO_CONSUME" ],
-    "fun": -7,
+    "fun": -1,
+    "//CCB": "撤销 PR #85568 — 恢复黄油直接食用的快乐值",
     "vitamins": [ [ "milk_allergen", 1 ] ],
     "consumption_effect_on_conditions": [
       {

@@ -402,7 +402,7 @@ void player_activity::canceled( Character &who )
 float player_activity::exertion_level() const
 {
     if( actor ) {
-        return actor->exertion_level();
+    return actor->exertion_level();
     }
     return type->exertion_level();
 }
@@ -423,25 +423,25 @@ bool player_activity::can_resume_with( const player_activity &other, const Chara
     // And to forbid resuming now-invalid crafting
 
     if( !*this || !other || !type->can_resume() ) {
-        return false;
-    }
+    return false;
+}
 
-    if( id() != other.id() ) {
-        return false;
-    }
+if( id() != other.id() ) {
+    return false;
+}
 
-    // if actor XOR other.actor then id() != other.id() so
-    // we will correctly return false based on final return statement
-    if( actor && other.actor ) {
-        return actor->can_resume_with( *other.actor, who );
+// if actor XOR other.actor then id() != other.id() so
+// we will correctly return false based on final return statement
+if( actor && other.actor ) {
+    return actor->can_resume_with( *other.actor, who );
     }
 
     if( id() == ACT_CLEAR_RUBBLE ) {
-        if( other.coords.empty() || other.coords[0] != coords[0] ) {
+    if( other.coords.empty() || other.coords[0] != coords[0] ) {
             return false;
         }
     } else if( id() == ACT_VEHICLE ) {
-        if( values != other.values || str_values != other.str_values ) {
+    if( values != other.values || str_values != other.str_values ) {
             return false;
         }
     }

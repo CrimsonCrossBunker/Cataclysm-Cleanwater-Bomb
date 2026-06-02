@@ -14,13 +14,13 @@ struct input_event;
 using ImGuiInputTextFlags = int;
 
 #if defined(IMTUI) || !(defined(WIN32) || defined(TILES))
-#   define TUI
+    #define TUI
 #endif
 
 #ifndef TUI
-#include "sdl_geometry.h"
-#include "sdl_wrappers.h"
-#include "color_loader.h"
+    #include "sdl_geometry.h"
+    #include "sdl_wrappers.h"
+    #include "color_loader.h"
 #endif
 #include "text.h"
 
@@ -117,7 +117,7 @@ void draw_colored_text( const std::string &original_text, const nc_color &color,
                         float wrap_width = 0.0F, bool *is_selected = nullptr,
                         bool *is_focused = nullptr, bool *is_hovered = nullptr );
 #ifndef TUI
-bool clear_pending();
+    bool clear_pending();
 #endif
 void draw_colored_text( const std::string &original_text, nc_color &color,
                         float wrap_width = 0.0F, bool *is_selected = nullptr,
@@ -172,8 +172,8 @@ class window
 };
 
 #ifdef TUI
-void init_pair( int p, int f, int b );
-void load_colors();
+    void init_pair( int p, int f, int b );
+    void load_colors();
 #endif
 
 // drops the ImGuiInputTextFlags_CharsScientific flag from regular imgui InputFloat because it doesn't allow commas

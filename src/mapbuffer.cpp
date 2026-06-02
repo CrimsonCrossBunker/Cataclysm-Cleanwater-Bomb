@@ -373,10 +373,10 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
 
     bool read = [&] {
         if( world_generator->active_world->has_compression_enabled() )
-        {
-            cata_path zzip_name = dirname;
-            zzip_name += zzip_suffix;
-            if( !file_exist( zzip_name ) ) {
+    {
+        cata_path zzip_name = dirname;
+        zzip_name += zzip_suffix;
+        if( !file_exist( zzip_name ) ) {
                 return false;
             }
 

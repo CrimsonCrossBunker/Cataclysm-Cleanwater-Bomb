@@ -61,9 +61,9 @@ bool string_id<MOD_INFORMATION>::is_valid() const
 std::string MOD_INFORMATION::name() const
 {
     if( name_.empty() ) {
-        // "No name" gets confusing if many mods have no name
-        //~ name of a mod that has no name entry, (%s is the mods identifier)
-        return string_format( _( "No name (%s)" ), ident.c_str() );
+    // "No name" gets confusing if many mods have no name
+    //~ name of a mod that has no name entry, (%s is the mods identifier)
+    return string_format( _( "No name (%s)" ), ident.c_str() );
     } else {
         return name_.translated();
     }
@@ -343,7 +343,7 @@ bool mod_manager::copy_mod_contents( const t_mod_list &mods_to_copy,
 
     if( !assure_dir_exist( output_base_path ) ) {
         DebugLog( D_ERROR, DC_ALL ) << "Unable to create or open mod directory at [" << output_base_path <<
-                                    "] for saving";
+                                       "] for saving";
         return false;
     }
 

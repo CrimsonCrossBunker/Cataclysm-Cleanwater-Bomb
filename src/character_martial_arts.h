@@ -85,7 +85,7 @@ class character_martial_arts
 
         // Selects a valid attack vector
         std::optional<std::pair<attack_vector_id, sub_bodypart_str_id>> choose_attack_vector(
-                    const Character &user, const matec_id &tech ) const;
+            const Character &user, const matec_id &tech ) const;
         // Calculate and return the damage of the given contact area for a given vector
         damage_instance calculate_vector_damage( const Character &user, const attack_vector_id &vec,
                 const sub_bodypart_str_id &contact_area ) const;

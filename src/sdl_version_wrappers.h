@@ -7,11 +7,11 @@
 // handling in main.cpp (WinMain / SDL_main plumbing).
 
 #if defined(USE_SDL3)
-#   include <SDL3/SDL_version.h>
+    #include <SDL3/SDL_version.h>
 #elif defined(_MSC_VER) && defined(USE_VCPKG)
-#   include <SDL2/SDL_version.h>
+    #include <SDL2/SDL_version.h>
 #else
-#   include <SDL_version.h>
+    #include <SDL_version.h>
 #endif
 
 struct SDLVersionInfo {

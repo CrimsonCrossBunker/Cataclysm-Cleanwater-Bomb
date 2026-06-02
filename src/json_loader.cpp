@@ -61,7 +61,7 @@ flexbuffer_cache &cache_for_save( const cata_path &path )
     if( it == save_caches.end() ) {
         it = save_caches.emplace( worldname_str,
                                   std::make_unique<flexbuffer_cache>( std::filesystem::path(),
-                                          std::filesystem::u8path( PATH_INFO::savedir() ) / worldname_path ) ).first;
+                                      std::filesystem::u8path( PATH_INFO::savedir() ) / worldname_path ) ).first;
     }
 
     return *it->second;

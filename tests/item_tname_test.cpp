@@ -21,8 +21,8 @@
 #include "value_ptr.h"
 
 #if defined(LOCALIZE)
-#include "translation_manager.h"
-#include "translations.h"
+    #include "translation_manager.h"
+    #include "translations.h"
 #endif
 
 static const fault_id fault_gun_dirt( "fault_gun_dirt" );
@@ -760,7 +760,7 @@ TEST_CASE( "nested_items_tname", "[item][tname]" )
             std::string const wlmark = "⁺";
             REQUIRE( backpack_hiking.get_container_pockets().size() >= 2 );
             backpack_hiking.get_container_pockets().front()->settings.whitelist_item(
-                itype_rock );
+                               itype_rock );
             CHECK( backpack_hiking.tname( 1 ) == color_pref + "hiking backpack" +
                    colorize( wlmark, c_dark_gray ) + " " + nesting_sym + " " + rock_nested_tname );
             backpack_hiking.get_container_pockets()[1]->settings.set_was_edited();

@@ -1224,7 +1224,7 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
 units::temperature weather_manager::get_area_temperature( const tripoint_abs_omt &location ) const
 {
     return location.z() < 0 ? units::from_celsius(
-               get_weather().get_cur_weather_gen().base_temperature ) : temperature;
+    get_weather().get_cur_weather_gen().base_temperature ) : temperature;
 }
 
 void weather_manager::clear_temp_cache()

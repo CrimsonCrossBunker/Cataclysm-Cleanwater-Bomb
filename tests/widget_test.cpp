@@ -46,10 +46,10 @@
 
 // Needed for screen scraping
 #if defined(TILES)
-#include <cstddef>
+    #include <cstddef>
 
-#include "cursesdef.h"
-#include "cursesport.h"
+    #include "cursesdef.h"
+    #include "cursesport.h"
 #endif
 
 static const efftype_id effect_bandaged( "bandaged" );

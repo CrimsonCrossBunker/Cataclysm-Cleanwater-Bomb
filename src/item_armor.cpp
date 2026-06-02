@@ -214,7 +214,7 @@ void item::iterate_covered_sub_body_parts_internal( const side s,
 
     //check for ablative armor too
     if( check_ablative_armor && is_ablative() ) {
-        for( const item_pocket *pocket : get_ablative_pockets() ) {
+    for( const item_pocket *pocket : get_ablative_pockets() ) {
             if( !pocket->empty() ) {
                 // get the contained plate
                 const item &ablative_armor = pocket->front();
@@ -263,7 +263,7 @@ void item::iterate_covered_body_parts_internal( const side s,
 
     //check for ablative armor too
     if( check_ablative_armor && is_ablative() ) {
-        for( const item_pocket *pocket : get_ablative_pockets() ) {
+    for( const item_pocket *pocket : get_ablative_pockets() ) {
             if( !pocket->empty() ) {
                 // get the contained plate
                 const item &ablative_armor = pocket->front();
@@ -284,10 +284,10 @@ side item::get_side() const
 {
     // MSVC complains if directly cast double to enum
     return static_cast<side>(
-               static_cast<int>(
-                   get_var( var_lateral, static_cast<int>( side::BOTH ) )
-               )
-           );
+           static_cast<int>(
+           get_var( var_lateral, static_cast<int>( side::BOTH ) )
+    )
+    );
 }
 
 bool item::set_side( side s )
@@ -1261,12 +1261,12 @@ bool item::is_holster() const
 const islot_armor *item::find_armor_data() const
 {
     if( type->armor ) {
-        return &*type->armor;
-    }
-    // Currently the only way to make a non-armor item into armor is to install a gun mod.
-    // The gunmods are stored in the items contents, as are the contents of a container, and the
-    // tools in a tool belt (a container actually), or the ammo in a quiver (container again).
-    for( const item *mod : gunmods() ) {
+    return &*type->armor;
+}
+// Currently the only way to make a non-armor item into armor is to install a gun mod.
+// The gunmods are stored in the items contents, as are the contents of a container, and the
+// tools in a tool belt (a container actually), or the ammo in a quiver (container again).
+for( const item *mod : gunmods() ) {
         if( mod->type->armor ) {
             return &*mod->type->armor;
         }
@@ -1312,14 +1312,14 @@ int item::wind_resist() const
 bool item::is_soft() const
 {
     if( has_flag( flag_SOFT ) ) {
-        return true;
-    } else if( has_flag( flag_HARD ) ) {
-        return false;
-    }
+    return true;
+} else if( has_flag( flag_HARD ) ) {
+    return false;
+}
 
-    const std::map<material_id, int> &mats = made_of();
-    return std::all_of( mats.begin(), mats.end(), []( const std::pair<material_id, int> &mid ) {
-        return mid.first->soft();
+const std::map<material_id, int> &mats = made_of();
+return std::all_of( mats.begin(), mats.end(), []( const std::pair<material_id, int> &mid ) {
+    return mid.first->soft();
     } );
 }
 
@@ -1327,26 +1327,26 @@ bool item::is_rigid() const
 {
     // overrides for the item overall
     if( has_flag( flag_SOFT ) ) {
-        return false;
-    } else if( has_flag( flag_HARD ) ) {
-        return true;
-    }
+    return false;
+} else if( has_flag( flag_HARD ) ) {
+    return true;
+}
 
-    // if the item has no armor data it isn't rigid
-    const islot_armor *armor = find_armor_data();
-    if( armor == nullptr ) {
-        return false;
-    }
+// if the item has no armor data it isn't rigid
+const islot_armor *armor = find_armor_data();
+if( armor == nullptr ) {
+    return false;
+}
 
-    bool is_rigid = false;
+bool is_rigid = false;
 
-    for( const armor_portion_data &portion : armor->sub_data ) {
-        is_rigid |= portion.rigid;
-    }
+for( const armor_portion_data &portion : armor->sub_data ) {
+    is_rigid |= portion.rigid;
+}
 
-    // check if ablative pieces are rigid too
-    if( is_ablative() ) {
-        for( const item_pocket *pocket : contents.get_ablative_pockets() ) {
+// check if ablative pieces are rigid too
+if( is_ablative() ) {
+    for( const item_pocket *pocket : contents.get_ablative_pockets() ) {
             if( !pocket->empty() ) {
                 // get the contained plate
                 const item &ablative_armor = pocket->front();
@@ -1363,19 +1363,19 @@ bool item::is_comfortable() const
     // overrides for the item overall
     // NO_WEAR_EFFECT is there for jewelry and the like which is too small to be considered
     if( has_flag( flag_SOFT ) || has_flag( flag_PADDED ) || has_flag( flag_NO_WEAR_EFFECT ) ) {
-        return true;
-    } else if( has_flag( flag_HARD ) ) {
-        return false;
-    }
+    return true;
+} else if( has_flag( flag_HARD ) ) {
+    return false;
+}
 
-    // if the item has no armor data it isn't rigid
-    const islot_armor *armor = find_armor_data();
-    if( armor == nullptr ) {
-        return true;
-    }
+// if the item has no armor data it isn't rigid
+const islot_armor *armor = find_armor_data();
+if( armor == nullptr ) {
+    return true;
+}
 
-    for( const armor_portion_data &portion : armor->sub_data ) {
-        if( portion.comfortable ) {
+for( const armor_portion_data &portion : armor->sub_data ) {
+    if( portion.comfortable ) {
             return true;
         }
     }
@@ -1388,22 +1388,22 @@ bool item::is_bp_rigid( const T &bp ) const
 {
     // overrides for the item overall
     if( has_flag( flag_SOFT ) ) {
-        return false;
-    } else if( has_flag( flag_HARD ) ) {
-        return true;
-    }
+    return false;
+} else if( has_flag( flag_HARD ) ) {
+    return true;
+}
 
-    const armor_portion_data *portion = portion_for_bodypart( bp );
+const armor_portion_data *portion = portion_for_bodypart( bp );
 
-    bool is_rigid = false;
+bool is_rigid = false;
 
-    if( portion ) {
-        is_rigid |= portion->rigid;
-    }
+if( portion ) {
+    is_rigid |= portion->rigid;
+}
 
-    // check if ablative pieces are rigid too
-    if( is_ablative() ) {
-        for( const item_pocket *pocket : contents.get_ablative_pockets() ) {
+// check if ablative pieces are rigid too
+if( is_ablative() ) {
+    for( const item_pocket *pocket : contents.get_ablative_pockets() ) {
             if( !pocket->empty() ) {
                 // get the contained plate
                 const item &ablative_armor = pocket->front();
@@ -1454,18 +1454,18 @@ bool item::is_bp_comfortable( const T &bp ) const
     // overrides for the item overall
     // NO_WEAR_EFFECT is there for jewelry and the like which is too small to be considered
     if( has_flag( flag_SOFT ) || has_flag( flag_PADDED ) || has_flag( flag_NO_WEAR_EFFECT ) ) {
-        return true;
-    } else if( has_flag( flag_HARD ) ) {
-        return false;
-    }
+    return true;
+} else if( has_flag( flag_HARD ) ) {
+    return false;
+}
 
-    const armor_portion_data *portion = portion_for_bodypart( bp );
+const armor_portion_data *portion = portion_for_bodypart( bp );
 
-    if( !portion ) {
-        return false;
-    }
+if( !portion ) {
+    return false;
+}
 
-    return portion->comfortable;
+return portion->comfortable;
 }
 
 // initialize for sub_bodyparts and body parts
@@ -1475,8 +1475,8 @@ template bool item::is_bp_comfortable<bodypart_id>( const bodypart_id &bp ) cons
 
 bool item::has_clothing_mod() const
 {
-    for( const clothing_mod &cm : clothing_mods::get_all() ) {
-        if( has_own_flag( cm.flag ) ) {
+for( const clothing_mod &cm : clothing_mods::get_all() ) {
+    if( has_own_flag( cm.flag ) ) {
             return true;
         }
     }

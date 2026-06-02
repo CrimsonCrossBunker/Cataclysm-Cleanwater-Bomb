@@ -1,8 +1,8 @@
 #include <locale>
 
 #if defined(__APPLE__)
-// needed by localized_comparator
-#include <CoreFoundation/CoreFoundation.h>
+    // needed by localized_comparator
+    #include <CoreFoundation/CoreFoundation.h>
 #endif
 
 #include "catacharset.h"

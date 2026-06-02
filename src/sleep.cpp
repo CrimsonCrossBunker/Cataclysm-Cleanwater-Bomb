@@ -302,8 +302,8 @@ bool comfort_data::human_or_impossible() const
 // is true and ANDed together if it's false. Somehow.
 bool comfort_data::are_conditions_true( const Character &guy, const tripoint_bub_ms &p ) const
 {
-    for( const condition &cond : conditions ) {
-        const bool passed = cond.is_condition_true( guy, p );
+for( const condition &cond : conditions ) {
+    const bool passed = cond.is_condition_true( guy, p );
         if( conditions_or == passed ) {
             return conditions_or;
         }

@@ -111,9 +111,9 @@ struct track {
 std::ostream &operator<<( std::ostream &os, track const &value )
 {
     os << value.participant <<
-       " l:" << value.location <<
-       " d:" << value.distance <<
-       " m:" << value.moves;
+    " l:" << value.location <<
+    " d:" << value.distance <<
+    " m:" << value.moves;
     return os;
 }
 
@@ -1206,7 +1206,7 @@ TEST_CASE( "obstacles_placed_on_map_are_present_in_overmap", "[map][hordes]" )
     tripoint_bub_ms obstacle_origin{ 30, 30, 0 };
     int obstacle_radius = 10;
     tripoint_abs_ms obstacle_eastern_border = here.get_abs( obstacle_origin + point::east *
-            obstacle_radius );
+        obstacle_radius );
     std::set<tripoint_abs_omt> edited_omts;
     std::set<tripoint_abs_ms> obstacle_locations;
     std::set<tripoint_abs_ms> passable_locations;

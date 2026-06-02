@@ -181,8 +181,8 @@ static void ramp_transition_angled( const vproto_id &veh_id, const units::angle 
         cycles++;
     }
     const std::optional<vpart_reference> vp = here.veh_at(
-                player_character.pos_bub() ).part_with_feature(
-                VPFLAG_BOARDABLE, true );
+            player_character.pos_bub() ).part_with_feature(
+            VPFLAG_BOARDABLE, true );
     REQUIRE( vp );
     if( vp ) {
         const int z_change = map_starting_point.z() - player_character.posz();

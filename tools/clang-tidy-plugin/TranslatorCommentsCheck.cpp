@@ -66,9 +66,9 @@ class TranslatorCommentsCheck::TranslatorCommentsHandler : public CommentHandler
 
         bool HandleComment( Preprocessor &PP, SourceRange Range ) override {
             if( Check.MatchingStarted ) {
-                // according to the standard, all comments are processed before analyzing the syntax
-                Check.diag( Range.getBegin(), "AST Matching started before the end of comment preprocessing",
-                            DiagnosticIDs::Error );
+            // according to the standard, all comments are processed before analyzing the syntax
+            Check.diag( Range.getBegin(), "AST Matching started before the end of comment preprocessing",
+                        DiagnosticIDs::Error );
             }
 
             const SourceManager &SM = PP.getSourceManager();
@@ -141,9 +141,9 @@ class TranslatorCommentsCheck::TranslationMacroCallback : public PPCallbacks
                            SourceRange Range,
                            const MacroArgs *Args ) override {
             if( Check.MatchingStarted ) {
-                // according to the standard, all macros are expanded before analyzing the syntax
-                Check.diag( Range.getBegin(), "AST Matching started before the end of macro expansion",
-                            DiagnosticIDs::Error );
+            // according to the standard, all macros are expanded before analyzing the syntax
+            Check.diag( Range.getBegin(), "AST Matching started before the end of macro expansion",
+                        DiagnosticIDs::Error );
             }
 
             StringRef MacroName = MacroNameTok.getIdentifierInfo()->getName();
@@ -151,19 +151,19 @@ class TranslatorCommentsCheck::TranslationMacroCallback : public PPCallbacks
             bool is_marker;
             unsigned int RawStringInd;
             if( MacroName == "_" ) {
-                is_marker = false;
-                RawStringInd = 0;
-            } else if( MacroName == "translate_marker" ) {
-                is_marker = true;
-                RawStringInd = 0;
-            } else if( MacroName == "translate_marker_context" ) {
-                is_marker = true;
-                RawStringInd = 1;
-            } else {
-                return;
-            }
+            is_marker = false;
+            RawStringInd = 0;
+        } else if( MacroName == "translate_marker" ) {
+            is_marker = true;
+            RawStringInd = 0;
+        } else if( MacroName == "translate_marker_context" ) {
+            is_marker = true;
+            RawStringInd = 1;
+        } else {
+            return;
+        }
 
-            if( RawStringInd >= Args->getNumMacroArguments() ) {
+        if( RawStringInd >= Args->getNumMacroArguments() ) {
                 Check.diag( Range.getBegin(), "Translation marker doesn't have expected number of arguments",
                             DiagnosticIDs::Error );
             }

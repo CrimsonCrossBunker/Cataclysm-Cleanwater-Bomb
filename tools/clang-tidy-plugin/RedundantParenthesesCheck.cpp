@@ -130,7 +130,7 @@ static void CheckExpr( RedundantParenthesesCheck &Check, const MatchFinder::Matc
     StringRef Replacement = getText( Result, InnerRange );
 
     Check.diag( OuterExpr->getBeginLoc(), "Redundant parentheses." ) <<
-            FixItHint::CreateReplacement( OuterRange, Replacement );
+         FixItHint::CreateReplacement( OuterRange, Replacement );
 }
 
 void RedundantParenthesesCheck::check( const MatchFinder::MatchResult &Result )

@@ -58,13 +58,13 @@ void nutrients::clear_vitamins()
 std::map<vitamin_id, int> nutrients::vitamins() const
 {
     if( !finalized ) {
-        debugmsg( "Called nutrients::vitamins() before they were finalized!" );
+    debugmsg( "Called nutrients::vitamins() before they were finalized!" );
         return std::map<vitamin_id, int>();
     }
 
     std::map<vitamin_id, int> ret;
-    for( const std::pair<const vitamin_id, std::variant<int, vitamin_units::mass>> &vit : vitamins_ ) {
-        ret.emplace( vit.first, std::get<int>( vit.second ) );
+for( const std::pair<const vitamin_id, std::variant<int, vitamin_units::mass>> &vit : vitamins_ ) {
+    ret.emplace( vit.first, std::get<int>( vit.second ) );
     }
     return ret;
 }
@@ -362,7 +362,7 @@ void stomach_contents::deserialize( const JsonObject &jo )
 units::volume stomach_contents::capacity( const Character &owner ) const
 {
     return std::max( 250_ml, owner.enchantment_cache->modify_value(
-                         enchant_vals::mod::STOMACH_SIZE_MULTIPLIER, max_volume ) );
+           enchant_vals::mod::STOMACH_SIZE_MULTIPLIER, max_volume ) );
 }
 
 units::volume stomach_contents::stomach_remaining( const Character &owner ) const

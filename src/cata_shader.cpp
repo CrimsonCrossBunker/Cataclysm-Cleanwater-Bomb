@@ -84,7 +84,7 @@ shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename
     if( available == SDL_GPU_SHADERFORMAT_INVALID ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader: SDL_GetGPUShaderFormats returned INVALID; "
-                "no shader formats supported by GPU device";
+           "no shader formats supported by GPU device";
         return shader{};
     }
 
@@ -99,7 +99,7 @@ shader shader::load_fragment( SDL_GPUDevice *device, const std::string &basename
     if( !chosen ) {
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader: no shipped shader artifact matches GPU "
-                "device's supported formats (mask=" << static_cast<unsigned>( available ) << ")";
+           "device's supported formats (mask=" << static_cast<unsigned>( available ) << ")";
         return shader{};
     }
 
@@ -471,7 +471,7 @@ bool load_and_probe( SDL_GPUDevice *device, SDL_Renderer *renderer,
         DebugLog( D_ERROR, DC_ALL )
                 << "cata_shader::variant_pass: textured-draw probe failed for "
                 << basename << " (silent miswire? readback did not match "
-                "expected variant transform); shader variant path disabled";
+                       "expected variant transform); shader variant path disabled";
         return false;
     }
     out_shader = std::move( frag );
@@ -507,7 +507,7 @@ void variant_pass::probe()
     if( !device ) {
         DebugLog( D_INFO, DC_ALL )
                 << "cata_shader::variant_pass: SDL_GetGPURendererDevice "
-                "returned NULL (renderer is not gpu); shader variant path disabled";
+           "returned NULL (renderer is not gpu); shader variant path disabled";
         return;
     }
     for( int i = 0; i < static_cast<int>( variant_kind::count ); ++i ) {

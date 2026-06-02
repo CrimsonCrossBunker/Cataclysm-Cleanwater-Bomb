@@ -130,7 +130,7 @@ void prof_window::filter()
         if( !v.has_value() ) {
             // User mistyped query. Not severe enough for debugmsg.
             DebugLog( DebugLevel::D_WARNING, DebugClass::D_GAME ) <<
-                    "Malformed proficiency query \"" << filter_str << "\"";
+            "Malformed proficiency query \"" << filter_str << "\"";
             return;
         }
         prog_val = v.value();

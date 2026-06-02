@@ -81,7 +81,7 @@ std::optional<mod_id> mod_ui::find_mod_conflict( const mod_id &checked_mod,
     if( checked_mod.is_valid() ) {
         for( const mod_id &conflict_mod_id : checked_mod->conflicts ) {
             std::vector<mod_id>::const_iterator it = std::find( active_list.begin(),
-                    active_list.end(), conflict_mod_id );
+                active_list.end(), conflict_mod_id );
             if( it != active_list.end() ) {
                 return *it;
             }

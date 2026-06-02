@@ -65,8 +65,8 @@ static const half_open_rectangle<point_bub_ms> lightmap_boundaries(
 std::string four_quadrants::to_string() const
 {
     return string_format( "(%.2f,%.2f,%.2f,%.2f)",
-                          ( *this )[quadrant::NE], ( *this )[quadrant::SE],
-                          ( *this )[quadrant::SW], ( *this )[quadrant::NW] );
+           ( *this )[quadrant::NE], ( *this )[quadrant::SE],
+    ( *this )[quadrant::SW], ( *this )[quadrant::NW] );
 }
 
 // Dawn/dusk tint: cached per turn, returns the warm color for twilight
@@ -830,35 +830,35 @@ light_color_rgb light_color_rgb::from_hsv( float h, float s, float v )
 lit_level map::light_at( const tripoint_bub_ms &p ) const
 {
     if( !inbounds( p ) ) {
-        return lit_level::DARK;    // Out of bounds
-    }
+    return lit_level::DARK;    // Out of bounds
+}
 
-    const level_cache &map_cache = get_cache_ref( p.z() );
-    const auto &lm = map_cache.lm;
-    const auto &sm = map_cache.sm;
-    if( sm[p.x()][p.y()] >= LIGHT_SOURCE_BRIGHT ) {
+const level_cache &map_cache = get_cache_ref( p.z() );
+const auto &lm = map_cache.lm;
+const auto &sm = map_cache.sm;
+if( sm[p.x()][p.y()] >= LIGHT_SOURCE_BRIGHT ) {
         return lit_level::BRIGHT;
     }
 
     const float max_light = lm[p.x()][p.y()].max();
     if( max_light >= LIGHT_AMBIENT_LIT ) {
-        return lit_level::LIT;
-    }
+    return lit_level::LIT;
+}
 
-    if( max_light >= LIGHT_AMBIENT_LOW ) {
-        return lit_level::LOW;
-    }
+if( max_light >= LIGHT_AMBIENT_LOW ) {
+    return lit_level::LOW;
+}
 
-    return lit_level::DARK;
+return lit_level::DARK;
 }
 
 float map::ambient_light_at( const tripoint_bub_ms &p ) const
 {
     if( !this->inbounds( p ) ) {
-        return 0.0f;
-    }
+    return 0.0f;
+}
 
-    return get_cache_ref( p.z() ).lm[p.x()][p.y()].max();
+return get_cache_ref( p.z() ).lm[p.x()][p.y()].max();
 }
 
 bool map::is_transparent( const tripoint_bub_ms &p ) const
@@ -1006,13 +1006,13 @@ lit_level map::apparent_light_at( const tripoint_bub_ms &p,
 bool map::pl_sees( const tripoint_bub_ms &t, const int max_range ) const
 {
     if( !inbounds( t ) ) {
-        return false;
-    }
+    return false;
+}
 
-    const level_cache &map_cache = get_cache_ref( t.z() );
-    Character &player_character = get_player_character();
-    if( max_range >= 0 && square_dist( get_abs( t ), player_character.pos_abs() ) > max_range &&
-        map_cache.camera_cache[t.x()][t.y()] == 0 ) {
+const level_cache &map_cache = get_cache_ref( t.z() );
+Character &player_character = get_player_character();
+if( max_range >= 0 && square_dist( get_abs( t ), player_character.pos_abs() ) > max_range &&
+            map_cache.camera_cache[t.x()][t.y()] == 0 ) {
         return false;    // Out of range!
     }
 

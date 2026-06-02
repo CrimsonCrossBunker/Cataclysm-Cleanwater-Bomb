@@ -275,8 +275,8 @@ std::vector<MonsterGroupResult> MonsterGroupManager::GetResultFromGroup(
 
 bool MonsterGroup::IsMonsterInGroup( const mtype_id &mtypeid ) const
 {
-    for( const MonsterGroupEntry &m : monsters ) {
-        if( m.mtype == mtypeid ) {
+for( const MonsterGroupEntry &m : monsters ) {
+    if( m.mtype == mtypeid ) {
             return true;
         }
     }
@@ -516,11 +516,11 @@ void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo )
             const int upgrade_mult = mon_upgrade_factor > 0 ? mon_upgrade_factor : 1;
             const time_duration starts = mon.has_member( "starts" )
                                          ? read_from_json_string<time_duration>( mon.get_member( "starts" ),
-                                                 time_duration::units ) * upgrade_mult
+                                             time_duration::units ) * upgrade_mult
                                          : 0_turns;
             const time_duration ends = mon.has_member( "ends" )
                                        ? read_from_json_string<time_duration> ( mon.get_member( "ends" ),
-                                               time_duration::units ) * upgrade_mult
+                                           time_duration::units ) * upgrade_mult
                                        : 0_turns;
             spawn_data data;
             if( mon.has_object( "spawn_data" ) ) {
@@ -534,9 +534,9 @@ void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo )
             }
             MonsterGroupEntry new_mon_group = isgroup ?
                                               MonsterGroupEntry( mongroup_id( id_name ), freq, cost,
-                                                      pack_min, pack_max, data, starts, ends, event ) :
+                                                  pack_min, pack_max, data, starts, ends, event ) :
                                               MonsterGroupEntry( mtype_id( id_name ), freq, cost, pack_min,
-                                                      pack_max, data, starts, ends, event );
+                                                  pack_max, data, starts, ends, event );
             if( mon.has_member( "conditions" ) ) {
                 for( const std::string line : mon.get_array( "conditions" ) ) {
                     new_mon_group.conditions.push_back( line );

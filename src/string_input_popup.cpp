@@ -21,14 +21,14 @@
 #include "wcwidth.h"
 
 #if defined(TILES)
-#include "sdl_wrappers.h"
-#include "sdltiles.h"
+    #include "sdl_wrappers.h"
+    #include "sdltiles.h"
 #endif
 
 #if defined(__ANDROID__)
-#include <SDL_keyboard.h>
+    #include <SDL_keyboard.h>
 
-#include "options.h"
+    #include "options.h"
 #endif
 
 #include <algorithm>
@@ -179,7 +179,7 @@ void string_input_popup::show_history( utf8_wrapper &ret )
 void string_input_popup::add_to_history( const std::string &value ) const
 {
     if( !_identifier.empty() && !value.empty() ) {
-        std::vector<std::string> &hist = uistate.gethistory( _identifier );
+    std::vector<std::string> &hist = uistate.gethistory( _identifier );
         if( hist.empty() || hist[hist.size() - 1] != value ) {
             hist.push_back( value );
         }
@@ -234,7 +234,7 @@ void string_input_popup::draw( ui_adaptor *const ui, const utf8_wrapper &ret,
                                const utf8_wrapper &edit ) const
 {
     if( !custom_window ) {
-        werase( w_full );
+    werase( w_full );
         draw_border( w_full );
         wnoutrefresh( w_full );
 
@@ -311,7 +311,7 @@ void string_input_popup::draw( ui_adaptor *const ui, const utf8_wrapper &ret,
 
     std::unique_ptr<on_out_of_scope> move_cursor_and_refresh;
     if( ui ) {
-        ui->set_cursor( w_title_and_entry, cursor_pos );
+    ui->set_cursor( w_title_and_entry, cursor_pos );
     } else {
         // This ensures the cursor is set last for calling UIs to record and set
         // for screen readers and IME preview
@@ -323,7 +323,7 @@ void string_input_popup::draw( ui_adaptor *const ui, const utf8_wrapper &ret,
 
     //Draw scrolling description
     if( !custom_window && desc_view_ptr ) {
-        desc_view_ptr->draw( _desc_color );
+    desc_view_ptr->draw( _desc_color );
         wnoutrefresh( w_description );
     }
 }

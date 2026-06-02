@@ -791,20 +791,20 @@ void mutation_branch::check_consistency()
 nc_color mutation_branch::get_display_color() const
 {
     if( flags.count( json_flag_ATTUNEMENT ) ) {
-        return c_green;
-    } else if( flags.count( json_flag_HERITAGE ) || debug ) {
-        return c_light_cyan;
-    } else if( threshold || profession ) {
-        return c_white;
-    } else if( mixed_effect ) {
-        return c_pink;
-    } else if( points > 0 ) {
-        return c_light_green;
-    } else if( points < 0 ) {
-        return c_light_red;
-    } else {
-        return c_yellow;
-    }
+    return c_green;
+} else if( flags.count( json_flag_HERITAGE ) || debug ) {
+    return c_light_cyan;
+} else if( threshold || profession ) {
+    return c_white;
+} else if( mixed_effect ) {
+    return c_pink;
+} else if( points > 0 ) {
+    return c_light_green;
+} else if( points < 0 ) {
+    return c_light_red;
+} else {
+    return c_yellow;
+}
 }
 
 const mutation_variant *mutation_branch::pick_variant() const
@@ -835,19 +835,19 @@ const mutation_variant *mutation_branch::variant( const std::string &id ) const
 const mutation_variant *mutation_branch::pick_variant_menu() const
 {
     if( variants.empty() ) {
-        return nullptr;
-    }
-    uilist menu;
-    menu.allow_cancel = false;
-    menu.desc_enabled = true;
-    menu.text = string_format( _( "Pick variant for: %s" ), name() );
-    std::vector<const mutation_variant *> options;
-    options.reserve( variants.size() );
-    for( const std::pair<const std::string, mutation_variant> &var : variants ) {
-        options.emplace_back( &var.second );
+    return nullptr;
+}
+uilist menu;
+menu.allow_cancel = false;
+menu.desc_enabled = true;
+menu.text = string_format( _( "Pick variant for: %s" ), name() );
+std::vector<const mutation_variant *> options;
+options.reserve( variants.size() );
+for( const std::pair<const std::string, mutation_variant> &var : variants ) {
+    options.emplace_back( &var.second );
     }
     for( size_t i = 0; i < options.size(); ++i ) {
-        menu.addentry_desc( i, true, MENU_AUTOASSIGN, name( options[i]->id ), desc( options[i]->id ) );
+    menu.addentry_desc( i, true, MENU_AUTOASSIGN, name( options[i]->id ), desc( options[i]->id ) );
     }
     menu.query();
 
@@ -1130,8 +1130,8 @@ void mutation_branch::add_entry( Trait_group &tg, const JsonObject &obj )
         ptr = std::make_unique<Single_trait_creator>( id, var, probability );
     } else if( obj.has_member( "group" ) ) {
         ptr = std::make_unique<Trait_group_creator>( trait_group::Trait_group_tag(
-                    obj.get_string( "group" ) ),
-                probability );
+                  obj.get_string( "group" ) ),
+              probability );
     }
 
     if( !ptr ) {

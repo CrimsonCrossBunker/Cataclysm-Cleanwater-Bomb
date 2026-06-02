@@ -644,10 +644,10 @@ std::vector<zzip::entry_layout> zzip::get_layout() const
 JsonObject zzip::copy_footer() const
 {
     if( !file_ ) {
-        return footer_;
-    } else {
-        zzip_footer footer{ footer_ };
-        std::optional<zzip_meta> meta_opt = footer.get_meta();
+    return footer_;
+} else {
+    zzip_footer footer{ footer_ };
+    std::optional<zzip_meta> meta_opt = footer.get_meta();
         size_t old_content_end = 0;
         if( meta_opt.has_value() ) {
             old_content_end = meta_opt->content_end;
@@ -661,12 +661,12 @@ JsonObject zzip::copy_footer() const
         footer_buf.resize( footer_size );
         memcpy( footer_buf.data(), file_base_plus( old_content_end ), footer_size );
         std::shared_ptr<flexbuffer_storage> footer_storage = std::make_shared<zzip_vector_storage>(
-                    std::move( footer_buf )
-                );
+                std::move( footer_buf )
+            );
         flexbuffers::Reference root = flexbuffer_root_from_storage( footer_storage );
         std::shared_ptr<parsed_flexbuffer> footer_flexbuffer = std::make_shared<zzip_flexbuffer>(
-                    std::move( footer_storage )
-                );
+                std::move( footer_storage )
+            );
         return JsonValue( std::move( footer_flexbuffer ), root, nullptr, 0 );
     }
 }
@@ -833,11 +833,11 @@ bool zzip::update_footer( JsonObject const &original_footer,
     }
 
     std::shared_ptr<flexbuffer_storage> new_storage = std::make_shared<zzip_flexbuffer_storage>
-            ( file_ );
+        ( file_ );
     flexbuffers::Reference new_root = flexbuffer_root_from_storage( new_storage );
     std::shared_ptr<parsed_flexbuffer> new_flexbuffer = std::make_shared<zzip_flexbuffer>(
-                std::move( new_storage )
-            );
+            std::move( new_storage )
+        );
 
     footer_ = JsonValue( std::move( new_flexbuffer ), new_root, nullptr, 0 );
     return true;
@@ -1209,7 +1209,7 @@ void *zzip::file_base_plus( size_t offset ) const
 size_t zzip::file_capacity_at( size_t offset ) const
 {
     if( file_->len() < offset ) {
-        return 0;
-    }
-    return file_->len() - offset;
+    return 0;
+}
+return file_->len() - offset;
 }

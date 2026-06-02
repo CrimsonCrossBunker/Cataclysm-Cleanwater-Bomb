@@ -54,7 +54,7 @@ const char *TranslationDocument::GetString( const std::size_t byteIndex ) const
 std::size_t TranslationDocument::EvaluatePluralForm( std::size_t n ) const
 {
     if( plural_rules ) {
-        return plural_rules->Evaluate( n );
+    return plural_rules->Evaluate( n );
     } else {
         return 0;
     }

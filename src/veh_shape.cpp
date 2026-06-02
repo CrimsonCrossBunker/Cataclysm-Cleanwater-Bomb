@@ -152,13 +152,13 @@ void veh_shape::change_part_shape( vpart_reference vpr ) const
 
     for( const auto &[vvid, vv] : vpi.variants ) {
         menu.add( vv.get_label() )
-        .text_color( ( part.variant == vvid ) ? c_light_green : c_light_gray )
-        .skip_locked_check()
-        .skip_theft_check()
-        .location( veh.bub_part_pos( here, part ).raw() )
-        .desc( _( "Confirm to save or exit to revert" ) )
-        .symbol( vv.get_symbol_curses( 0_degrees, false ) )
-        .symbol_color( vpi.color )
+            .text_color( ( part.variant == vvid ) ? c_light_green : c_light_gray )
+            .skip_locked_check()
+            .skip_theft_check()
+            .location( veh.bub_part_pos( here, part ).raw() )
+            .desc( _( "Confirm to save or exit to revert" ) )
+            .symbol( vv.get_symbol_curses( 0_degrees, false ) )
+            .symbol_color( vpi.color )
         .on_select( [&part, variant_id = vvid]() {
             part.variant = variant_id;
         } )

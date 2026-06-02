@@ -235,9 +235,9 @@ bool vehicle_part::is_available( const bool carried ) const
 itype_id vehicle_part::fuel_current() const
 {
     if( !ammo_pref.is_null() ) {
-        return ammo_pref;
-    }
-    return info().fuel_type;
+    return ammo_pref;
+}
+return info().fuel_type;
 }
 
 bool vehicle_part::fuel_set( const itype_id &fuel )
@@ -256,15 +256,15 @@ bool vehicle_part::fuel_set( const itype_id &fuel )
 itype_id vehicle_part::ammo_current() const
 {
     if( is_battery() ) {
-        return itype_battery;
-    }
+    return itype_battery;
+}
 
-    if( is_tank() && !base.empty() ) {
-        return base.legacy_front().typeId();
+if( is_tank() && !base.empty() ) {
+    return base.legacy_front().typeId();
     }
 
     if( is_fuel_store( false ) || is_turret() ) {
-        return base.ammo_current() != itype_id::NULL_ID() ? base.ammo_current() : base.ammo_default();
+    return base.ammo_current() != itype_id::NULL_ID() ? base.ammo_current() : base.ammo_default();
     }
 
     return itype_id::NULL_ID();
@@ -273,7 +273,7 @@ itype_id vehicle_part::ammo_current() const
 int vehicle_part::ammo_capacity( const ammotype &ammo ) const
 {
     if( is_tank() ) {
-        const itype *ammo_type = item::find_type( ammo->default_ammotype() );
+    const itype *ammo_type = item::find_type( ammo->default_ammotype() );
         const int max_charges_volume = ammo_type->charges_per_volume( base.get_volume_capacity() );
         const int max_charges_weight = ammo_type->weight == 0_gram ? INT_MAX :
                                        static_cast<int>( base.get_total_weight_capacity() / ammo_type->weight );
@@ -281,7 +281,7 @@ int vehicle_part::ammo_capacity( const ammotype &ammo ) const
     }
 
     if( is_fuel_store( false ) || is_turret() ) {
-        return base.ammo_capacity( ammo );
+    return base.ammo_capacity( ammo );
     }
 
     return 0;
@@ -310,10 +310,10 @@ int vehicle_part::item_capacity( const itype_id &stuffing_id ) const
 int vehicle_part::ammo_remaining( ) const
 {
     if( is_tank() ) {
-        return base.empty() ? 0 : base.legacy_front().charges;
+    return base.empty() ? 0 : base.legacy_front().charges;
     }
     if( is_fuel_store( false ) || is_turret() ) {
-        return base.ammo_remaining( );
+    return base.ammo_remaining( );
     }
 
     return 0;
@@ -413,15 +413,15 @@ bool vehicle_part::can_reload( const item &obj ) const
 {
     // first check part is not destroyed and can contain ammo
     if( !is_fuel_store() ) {
-        return false;
-    }
+    return false;
+}
 
-    if( is_battery() ) {
-        return false;
-    }
+if( is_battery() ) {
+    return false;
+}
 
-    if( !obj.is_null() ) {
-        const itype_id obj_type = obj.typeId();
+if( !obj.is_null() ) {
+    const itype_id obj_type = obj.typeId();
         if( is_reactor() ) {
             return base.can_reload_with( obj, true );
         }
@@ -448,19 +448,19 @@ bool vehicle_part::can_reload( const item &obj ) const
         }
     }
     if( base.is_gun() ) {
-        return false;
-    }
+    return false;
+}
 
-    if( is_reactor() ) {
-        return true;
-    }
+if( is_reactor() ) {
+    return true;
+}
 
-    if( ammo_current().is_null() ) {
-        return true; // empty tank
-    }
+if( ammo_current().is_null() ) {
+    return true; // empty tank
+}
 
-    // Despite checking for an empty tank, item::find_type can still turn up with an empty ammo pointer
-    if( cata::value_ptr<islot_ammo> a_val = item::find_type( ammo_current() )->ammo ) {
+// Despite checking for an empty tank, item::find_type can still turn up with an empty ammo pointer
+if( cata::value_ptr<islot_ammo> a_val = item::find_type( ammo_current() )->ammo ) {
         return ammo_remaining( ) < ammo_capacity( a_val->type );
     }
 
@@ -594,14 +594,14 @@ void vehicle_part::unload_furniture( map &here, const tripoint_bub_ms &to )
 npc *vehicle_part::crew() const
 {
     if( is_broken() || !crew_id.is_valid() ) {
-        return nullptr;
-    }
+    return nullptr;
+}
 
-    npc *const res = g->critter_by_id<npc>( crew_id );
-    if( !res ) {
-        return nullptr;
-    }
-    return res->is_player_ally() ? res : nullptr;
+npc *const res = g->critter_by_id<npc>( crew_id );
+if( !res ) {
+    return nullptr;
+}
+return res->is_player_ally() ? res : nullptr;
 }
 
 bool vehicle_part::set_crew( const npc &who )
@@ -647,9 +647,9 @@ bool vehicle_part::is_light() const
 bool vehicle_part::is_fuel_store( bool skip_broke ) const
 {
     if( skip_broke && is_broken() ) {
-        return false;
-    }
-    return is_tank() || base.is_magazine() || is_reactor();
+    return false;
+}
+return is_tank() || base.is_magazine() || is_reactor();
 }
 
 bool vehicle_part::is_tank() const
@@ -660,13 +660,13 @@ bool vehicle_part::is_tank() const
 bool vehicle_part::contains_liquid() const
 {
     return is_tank() && !base.empty() &&
-           base.only_item().made_of( phase_id::LIQUID );
+    base.only_item().made_of( phase_id::LIQUID );
 }
 
 bool vehicle_part::is_battery() const
 {
     return info().has_flag( VPFLAG_BATTERY ) ||
-           ( base.is_magazine() && base.ammo_types().count( ammo_battery ) );
+    ( base.is_magazine() && base.ammo_types().count( ammo_battery ) );
 }
 
 bool vehicle_part::is_reactor() const
@@ -738,18 +738,18 @@ bool vehicle::can_enable( map &here, const vehicle_part &pt, bool alert ) const
     if( std::none_of( parts.begin(), parts.end(), [&pt]( const vehicle_part & e ) {
     return &e == &pt;
 } ) || pt.removed ) {
-        debugmsg( "Cannot enable removed or non-existent part" );
+    debugmsg( "Cannot enable removed or non-existent part" );
     }
 
     if( pt.is_broken() ) {
-        return false;
-    }
+    return false;
+}
 
-    // FIXME/HACK: Always checks buckwheat seeds!
-    ret_val<void>can_plant = warm_enough_to_plant( get_player_character().pos_bub(),
-                             itype_seed_buckwheat );
-    if( pt.info().has_flag( "PLANTER" ) && !can_plant.success() ) {
-        if( alert ) {
+// FIXME/HACK: Always checks buckwheat seeds!
+ret_val<void>can_plant = warm_enough_to_plant( get_player_character().pos_bub(),
+                         itype_seed_buckwheat );
+if( pt.info().has_flag( "PLANTER" ) && !can_plant.success() ) {
+    if( alert ) {
             add_msg( m_bad, can_plant.c_str() );
         }
         return false;
@@ -758,7 +758,7 @@ bool vehicle::can_enable( map &here, const vehicle_part &pt, bool alert ) const
     // TODO: check fuel for combustion engines
 
     if( pt.info().epower < 0_W && fuel_left( here, fuel_type_battery ) <= 0 ) {
-        if( alert ) {
+    if( alert ) {
             add_msg( m_bad, _( "Insufficient power to enable %s" ), pt.name() );
         }
         return false;
@@ -794,8 +794,8 @@ bool vehicle::assign_seat( vehicle_part &pt, const npc &who )
 std::string vehicle_part::carried_name() const
 {
     return carried_stack.empty()
-           ? std::string()
-           : carried_stack.top().veh_name;
+    ? std::string()
+    : carried_stack.top().veh_name;
 }
 
 int vehicle_part::contact_area() const

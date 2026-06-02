@@ -45,7 +45,7 @@ TEST_CASE( "list_basics", "[list]" )
         SECTION( "iterator count/access" ) {
             int count = 0;
             int sum = 0;
-            for( int *&it : test_list ) {
+            for( int * &it : test_list ) {
                 ++count;
                 sum += *it;
             }
@@ -274,7 +274,7 @@ TEST_CASE( "list_insert_and_erase", "[list]" )
 
     SECTION( "find reverse iterator" ) {
         cata::list<int>::reverse_iterator found_item2 = std::find( test_list.rbegin(), test_list.rend(),
-                5000 );
+            5000 );
 
         CHECK( *found_item2 == 5000 );
     }

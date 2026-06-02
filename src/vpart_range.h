@@ -120,7 +120,7 @@ class generic_vehicle_part_range
         template<typename T = ::vehicle>
         size_t part_count() const {
             if( with_fake_ ) {
-                return static_cast<const T &>( vehicle_.get() ).part_count();
+            return static_cast<const T &>( vehicle_.get() ).part_count();
             } else {
                 return static_cast<const T &>( vehicle_.get() ).part_count_real_cached();
             }
@@ -133,7 +133,7 @@ class generic_vehicle_part_range
         }
         iterator end() const {
             return iterator( const_cast<range_type &>( static_cast<const range_type &>( *this ) ),
-                             part_count() );
+            part_count() );
         }
 
         friend bool empty( const generic_vehicle_part_range<range_type> &range ) {
@@ -188,7 +188,7 @@ class vehicle_part_with_feature_range : public
     public:
         vehicle_part_with_feature_range( ::vehicle &v, feature_type f, part_status_flag r ) :
             generic_vehicle_part_range<vehicle_part_with_feature_range<feature_type>>( v ),
-                    feature_( std::move( f ) ), required_( r ) { }
+            feature_( std::move( f ) ), required_( r ) { }
 
         bool matches( size_t part ) const;
 };

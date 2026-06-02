@@ -13,9 +13,9 @@
 #include "type_id.h"
 
 #ifdef _MSC_VER
-#  include <intrin.h>
+    #include <intrin.h>
 
-#  define __builtin_popcount __popcnt
+    #define __builtin_popcount __popcnt
 #endif
 
 namespace
@@ -195,8 +195,8 @@ TEST_CASE( "string_ids_comparison", "[generic_factory][string_id]" )
     };
 
     DYNAMIC_SECTION( ( equal ? "equal" : "not_equal" ) << "___" <<
-                     "first_" << id_info( first_cached, first_valid ) << "___"
-                     "second_" << id_info( second_cached, second_valid )
+                               "first_" << id_info( first_cached, first_valid ) << "___"
+                               "second_" << id_info( second_cached, second_valid )
                    ) {
         if( equal ) {
             CHECK( id1 == id2 );

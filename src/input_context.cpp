@@ -146,9 +146,9 @@ static const std::string TIMEOUT = "TIMEOUT";
 
 const std::string &input_context::input_to_action( const input_event &inp ) const
 {
-    for( const std::string &elem : registered_actions ) {
-        const std::string &action = elem;
-        const std::vector<input_event> &check_inp = inp_mngr.get_input_for_action( action, category );
+for( const std::string &elem : registered_actions ) {
+    const std::string &action = elem;
+    const std::vector<input_event> &check_inp = inp_mngr.get_input_for_action( action, category );
 
         // Does this action have our queried input event in its keybindings?
         for( const input_event &check_inp_i : check_inp ) {
@@ -193,7 +193,7 @@ void input_context_stack_impl::push( std::shared_ptr<input_context_handle> const
 }
 
 #if defined(__ANDROID__) || defined(TILES)
-input_context_stack_impl input_context::input_context_stack;
+    input_context_stack_impl input_context::input_context_stack;
 #endif
 
 #if defined(__ANDROID__)
@@ -250,7 +250,7 @@ std::vector<input_event> input_context::keys_bound_to( const std::string &action
 {
     std::vector<input_event> result;
     const std::vector<input_event> &events = inp_mngr.get_input_for_action( action_descriptor,
-            category );
+        category );
     for( const input_event &events_event : events ) {
         // Ignore non-keyboard input
         if( ( !restrict_to_keyboard || ( events_event.type == input_event_t::keyboard_char
@@ -274,7 +274,7 @@ std::string input_context::get_available_single_char_hotkeys( std::string reques
     for( const auto &registered_action : registered_actions ) {
 
         const std::vector<input_event> &events = inp_mngr.get_input_for_action( registered_action,
-                category );
+            category );
         for( const input_event &events_event : events ) {
             // Only consider keyboard events without modifiers
             if( events_event.type == input_event_t::keyboard_char && events_event.modifiers.empty() ) {
@@ -319,7 +319,7 @@ std::string input_context::get_desc( const std::string &action_descriptor,
 
     bool is_local = false;
     const std::vector<input_event> &events = inp_mngr.get_input_for_action( action_descriptor,
-            category, &is_local );
+        category, &is_local );
 
     if( events.empty() ) {
         if( is_local ) {
@@ -379,7 +379,7 @@ std::string input_context::get_button_text( const std::string &action_descriptor
 
     bool is_local = false;
     const std::vector<input_event> &events = inp_mngr.get_input_for_action( action_descriptor,
-            category, &is_local );
+        category, &is_local );
     if( events.empty() ) {
         return action_text;
     }
@@ -596,7 +596,7 @@ static void rotate_direction_cw( int &dx, int &dy )
 // See src/coords_fwd.h and src/coordinates.h
 template<typename Point, coords::scale Scale>
 static std::optional<coords::coord_point<Point, coords::origin::relative, Scale>>
-        get_direction( const std::string &action, bool iso_mode )
+get_direction( const std::string &action, bool iso_mode )
 {
     using CoordPoint = coords::coord_point<Point, coords::origin::relative, Scale>;
     static const auto noop = static_cast<CoordPoint( * )( CoordPoint )>( []( CoordPoint p ) {
@@ -767,7 +767,7 @@ void keybindings_ui::draw_controls()
                                                       &overwrite_default );
                 bool basic_overwrite_default;
                 const action_attributes &basic_attributes = inp_mngr.get_action_attributes( action_id,
-                        ctxt->category, &basic_overwrite_default, true );
+                    ctxt->category, &basic_overwrite_default, true );
                 bool customized_keybinding = overwrite_default != basic_overwrite_default
                                              || attributes.input_events != basic_attributes.input_events;
 
@@ -955,7 +955,7 @@ bool input_context::action_remove( const std::string &name, const std::string &a
     bool uncovered_global = inp_mngr.remove_input_for_action( action_id, category_to_access );
     if( uncovered_global ) {
         const std::vector<input_event> &conflicting_events = inp_mngr.get_or_create_event_list( action_id,
-                default_context_id );
+            default_context_id );
         if( !resolve_conflicts( conflicting_events, action_id ) ) {
             inp_mngr.action_contexts.swap( old_action_contexts );
             return false;
@@ -1209,11 +1209,11 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
         &capture_win, const point &offset, const bool center_cursor ) const
 {
     if( !coordinate_input_received ) {
-        return std::nullopt;
-    }
-    const point view_size( getmaxx( capture_win ), getmaxy( capture_win ) );
+    return std::nullopt;
+}
+const point view_size( getmaxx( capture_win ), getmaxy( capture_win ) );
     const point win_min( getbegx( capture_win ),
-                         getbegy( capture_win ) );
+          getbegy( capture_win ) );
     const half_open_rectangle<point> win_bounds( win_min, win_min + view_size );
     if( !win_bounds.contains( coordinate ) ) {
         return std::nullopt;
@@ -1222,13 +1222,13 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
     point p = coordinate + offset;
     // If no offset is specified, account for the window location
     if( offset == point::zero ) {
-        p -= win_min;
-    }
-    // Some windows (notably the overmap) want 0,0 to be the center of the screen
-    if( center_cursor ) {
-        p -= view_size / 2;
-    }
-    return tripoint_bub_ms( p.x, p.y, get_map().get_abs_sub().z() );
+    p -= win_min;
+}
+// Some windows (notably the overmap) want 0,0 to be the center of the screen
+if( center_cursor ) {
+    p -= view_size / 2;
+}
+return tripoint_bub_ms( p.x, p.y, get_map().get_abs_sub().z() );
 }
 #endif
 
@@ -1255,25 +1255,25 @@ std::optional<point> input_context::get_coordinates_text( const catacurses::wind
     }
 #else
     if( !coordinate_input_received ) {
-        return std::nullopt;
-    }
-    const window_dimensions dim = get_window_dimensions( capture_win );
-    const int scaling_factor = get_scaling_factor();
-    point logical_coordinate = coordinate;
-    int fw = dim.scaled_font_size.x;
-    int fh = dim.scaled_font_size.y;
+    return std::nullopt;
+}
+const window_dimensions dim = get_window_dimensions( capture_win );
+const int scaling_factor = get_scaling_factor();
+point logical_coordinate = coordinate;
+int fw = dim.scaled_font_size.x;
+int fh = dim.scaled_font_size.y;
 
-    // convert coordinate and font sizeto logical if UI is scaled
-    if( scaling_factor > 1 ) {
-        logical_coordinate.x /= scaling_factor;
-        logical_coordinate.y /= scaling_factor;
-        fw /= scaling_factor;
-        fh /= scaling_factor;
-    }
+// convert coordinate and font sizeto logical if UI is scaled
+if( scaling_factor > 1 ) {
+    logical_coordinate.x /= scaling_factor;
+    logical_coordinate.y /= scaling_factor;
+    fw /= scaling_factor;
+    fh /= scaling_factor;
+}
 
-    const point &win_min = dim.window_pos_pixel;
-    const point screen_pos = logical_coordinate - win_min;
-    const point selected( divide_round_down( screen_pos.x, fw ),
+const point &win_min = dim.window_pos_pixel;
+const point screen_pos = logical_coordinate - win_min;
+const point selected( divide_round_down( screen_pos.x, fw ),
                           divide_round_down( screen_pos.y, fh ) );
     return selected;
 #endif
@@ -1299,7 +1299,7 @@ std::string input_context::get_action_name( const std::string &action_id ) const
     // this context that is masking the global hotkey. Fallback to the global
     // hotkey's name.
     const action_attributes &default_attributes = inp_mngr.get_action_attributes( action_id,
-            default_context_id, nullptr, true );
+        default_context_id, nullptr, true );
     if( !default_attributes.name.empty() ) {
         return default_attributes.name.translated();
     }
@@ -1393,12 +1393,12 @@ void input_context::reset_timeout()
 bool input_context::is_event_type_enabled( const input_event_t type ) const
 {
     switch( type ) {
-        case input_event_t::error:
-            return false;
-        case input_event_t::timeout:
-            return true;
-        case input_event_t::keyboard_char:
-            return input_manager::actual_keyboard_mode( preferred_keyboard_mode ) == keyboard_mode::keychar;
+    case input_event_t::error:
+        return false;
+    case input_event_t::timeout:
+        return true;
+    case input_event_t::keyboard_char:
+        return input_manager::actual_keyboard_mode( preferred_keyboard_mode ) == keyboard_mode::keychar;
         case input_event_t::keyboard_code:
             return input_manager::actual_keyboard_mode( preferred_keyboard_mode ) == keyboard_mode::keycode;
         case input_event_t::gamepad:
@@ -1416,7 +1416,7 @@ bool input_context::is_event_type_enabled( const input_event_t type ) const
 bool input_context::is_registered_action( const std::string &action_name ) const
 {
     return std::find( registered_actions.begin(), registered_actions.end(),
-                      action_name ) != registered_actions.end();
+    action_name ) != registered_actions.end();
 }
 
 input_event input_context::first_unassigned_hotkey( const hotkey_queue &queue ) const
@@ -1443,7 +1443,7 @@ input_event input_context::next_unassigned_hotkey( const hotkey_queue &queue,
 input_event hotkey_queue::first( const input_context &ctxt ) const
 {
     if( ctxt.is_event_type_enabled( input_event_t::keyboard_code ) ) {
-        if( !codes_keycode.empty() && !modifiers_keycode.empty() ) {
+    if( !codes_keycode.empty() && !modifiers_keycode.empty() ) {
             return input_event( modifiers_keycode[0], codes_keycode[0], input_event_t::keyboard_code );
         } else {
             return input_event();
@@ -1460,8 +1460,8 @@ input_event hotkey_queue::first( const input_context &ctxt ) const
 input_event hotkey_queue::next( const input_event &prev ) const
 {
     switch( prev.type ) {
-        default:
-            return input_event();
+    default:
+        return input_event();
         case input_event_t::keyboard_code: {
             if( prev.sequence.size() != 1 ) {
                 return input_event();

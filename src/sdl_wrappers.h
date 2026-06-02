@@ -4,28 +4,28 @@
 
 // IWYU pragma: begin_exports
 #if defined(USE_SDL3)
-#   include <SDL3/SDL.h>
-#   include <SDL3_image/SDL_image.h>
-#   include <SDL3_ttf/SDL_ttf.h>
+    #include <SDL3/SDL.h>
+    #include <SDL3_image/SDL_image.h>
+    #include <SDL3_ttf/SDL_ttf.h>
 #elif defined(_MSC_VER) && defined(USE_VCPKG)
-#   ifndef SDL_MAIN_HANDLED
-#   define SDL_MAIN_HANDLED
-#   endif
-#   include <SDL2/SDL.h>
-#   include <SDL2/SDL_image.h>
-#   include <SDL2/SDL_ttf.h>
-#   include <SDL2/SDL_mouse.h>
+    #ifndef SDL_MAIN_HANDLED
+        #define SDL_MAIN_HANDLED
+    #endif
+    #include <SDL2/SDL.h>
+    #include <SDL2/SDL_image.h>
+    #include <SDL2/SDL_ttf.h>
+    #include <SDL2/SDL_mouse.h>
 #else
-#   ifndef SDL_MAIN_HANDLED
-#   define SDL_MAIN_HANDLED
-#   endif
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#   include <SDL.h>
-#pragma GCC diagnostic pop
-#   include <SDL_image.h>
-#   include <SDL_ttf.h>
-#   include <SDL_mouse.h>
+    #ifndef SDL_MAIN_HANDLED
+        #define SDL_MAIN_HANDLED
+    #endif
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wold-style-cast"
+    #include <SDL.h>
+    #pragma GCC diagnostic pop
+    #include <SDL_image.h>
+    #include <SDL_ttf.h>
+    #include <SDL_mouse.h>
 #endif
 // IWYU pragma: end_exports
 
@@ -36,13 +36,13 @@ struct point;
 
 // SDL3 type renames. Use CataFlipMode at call sites.
 #if SDL_MAJOR_VERSION >= 3
-using CataFlipMode = SDL_FlipMode;
-// SDL3 renames KMOD_* -> SDL_KMOD_*
-inline constexpr SDL_Keymod KMOD_CTRL  = SDL_KMOD_CTRL;
-inline constexpr SDL_Keymod KMOD_SHIFT = SDL_KMOD_SHIFT;
-inline constexpr SDL_Keymod KMOD_ALT   = SDL_KMOD_ALT;
+    using CataFlipMode = SDL_FlipMode;
+    // SDL3 renames KMOD_* -> SDL_KMOD_*
+    inline constexpr SDL_Keymod KMOD_CTRL  = SDL_KMOD_CTRL;
+    inline constexpr SDL_Keymod KMOD_SHIFT = SDL_KMOD_SHIFT;
+    inline constexpr SDL_Keymod KMOD_ALT   = SDL_KMOD_ALT;
 #else
-using CataFlipMode = SDL_RendererFlip;
+    using CataFlipMode = SDL_RendererFlip;
 #endif
 
 struct SDL_Renderer_deleter {
@@ -235,15 +235,15 @@ bool IsTextInputActive( SDL_Window *window );
 // SDL3: SDL_WINDOW_ALLOW_HIGHDPI -> SDL_WINDOW_HIGH_PIXEL_DENSITY
 // SDL3: SDL_WINDOW_FULLSCREEN_DESKTOP removed; SDL_WINDOW_FULLSCREEN is borderless
 #if SDL_MAJOR_VERSION >= 3
-inline constexpr Uint32 CATA_WINDOW_HIDDEN    = SDL_WINDOW_HIDDEN;
-inline constexpr Uint32 CATA_WINDOW_RESIZABLE = SDL_WINDOW_RESIZABLE;
-inline constexpr Uint32 CATA_WINDOW_MAXIMIZED = SDL_WINDOW_MAXIMIZED;
-inline constexpr Uint32 CATA_WINDOW_HIGH_DPI  = SDL_WINDOW_HIGH_PIXEL_DENSITY;
+    inline constexpr Uint32 CATA_WINDOW_HIDDEN    = SDL_WINDOW_HIDDEN;
+    inline constexpr Uint32 CATA_WINDOW_RESIZABLE = SDL_WINDOW_RESIZABLE;
+    inline constexpr Uint32 CATA_WINDOW_MAXIMIZED = SDL_WINDOW_MAXIMIZED;
+    inline constexpr Uint32 CATA_WINDOW_HIGH_DPI  = SDL_WINDOW_HIGH_PIXEL_DENSITY;
 #else
-inline constexpr Uint32 CATA_WINDOW_HIDDEN    = SDL_WINDOW_HIDDEN;
-inline constexpr Uint32 CATA_WINDOW_RESIZABLE = SDL_WINDOW_RESIZABLE;
-inline constexpr Uint32 CATA_WINDOW_MAXIMIZED = SDL_WINDOW_MAXIMIZED;
-inline constexpr Uint32 CATA_WINDOW_HIGH_DPI  = SDL_WINDOW_ALLOW_HIGHDPI;
+    inline constexpr Uint32 CATA_WINDOW_HIDDEN    = SDL_WINDOW_HIDDEN;
+    inline constexpr Uint32 CATA_WINDOW_RESIZABLE = SDL_WINDOW_RESIZABLE;
+    inline constexpr Uint32 CATA_WINDOW_MAXIMIZED = SDL_WINDOW_MAXIMIZED;
+    inline constexpr Uint32 CATA_WINDOW_HIGH_DPI  = SDL_WINDOW_ALLOW_HIGHDPI;
 #endif
 
 // Creates a window centered on the given display. Uses CATA_WINDOW_* flags.
@@ -288,28 +288,28 @@ Uint32 GetWindowEventID( const SDL_Event &ev );
 
 // Normalized window event constants. Use with switch(GetWindowEventID(ev)).
 #if SDL_MAJOR_VERSION >= 3
-inline constexpr Uint32 CATA_WINDOWEVENT_SHOWN        = SDL_EVENT_WINDOW_SHOWN;
-inline constexpr Uint32 CATA_WINDOWEVENT_EXPOSED      = SDL_EVENT_WINDOW_EXPOSED;
-inline constexpr Uint32 CATA_WINDOWEVENT_MINIMIZED    = SDL_EVENT_WINDOW_MINIMIZED;
-inline constexpr Uint32 CATA_WINDOWEVENT_RESTORED     = SDL_EVENT_WINDOW_RESTORED;
-inline constexpr Uint32 CATA_WINDOWEVENT_RESIZED      = SDL_EVENT_WINDOW_RESIZED;
-// SIZE_CHANGED removed in SDL3; use RESIZED instead.
-inline constexpr Uint32 CATA_WINDOWEVENT_FOCUS_LOST   = SDL_EVENT_WINDOW_FOCUS_LOST;
-inline constexpr Uint32 CATA_WINDOWEVENT_FOCUS_GAINED = SDL_EVENT_WINDOW_FOCUS_GAINED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_SHOWN        = SDL_EVENT_WINDOW_SHOWN;
+    inline constexpr Uint32 CATA_WINDOWEVENT_EXPOSED      = SDL_EVENT_WINDOW_EXPOSED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_MINIMIZED    = SDL_EVENT_WINDOW_MINIMIZED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_RESTORED     = SDL_EVENT_WINDOW_RESTORED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_RESIZED      = SDL_EVENT_WINDOW_RESIZED;
+    // SIZE_CHANGED removed in SDL3; use RESIZED instead.
+    inline constexpr Uint32 CATA_WINDOWEVENT_FOCUS_LOST   = SDL_EVENT_WINDOW_FOCUS_LOST;
+    inline constexpr Uint32 CATA_WINDOWEVENT_FOCUS_GAINED = SDL_EVENT_WINDOW_FOCUS_GAINED;
 #else
-inline constexpr Uint32 CATA_WINDOWEVENT_SHOWN        = SDL_WINDOWEVENT_SHOWN;
-inline constexpr Uint32 CATA_WINDOWEVENT_EXPOSED      = SDL_WINDOWEVENT_EXPOSED;
-inline constexpr Uint32 CATA_WINDOWEVENT_MINIMIZED    = SDL_WINDOWEVENT_MINIMIZED;
-inline constexpr Uint32 CATA_WINDOWEVENT_RESTORED     = SDL_WINDOWEVENT_RESTORED;
-inline constexpr Uint32 CATA_WINDOWEVENT_RESIZED      = SDL_WINDOWEVENT_RESIZED;
-inline constexpr Uint32 CATA_WINDOWEVENT_FOCUS_LOST   = SDL_WINDOWEVENT_FOCUS_LOST;
-inline constexpr Uint32 CATA_WINDOWEVENT_FOCUS_GAINED = SDL_WINDOWEVENT_FOCUS_GAINED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_SHOWN        = SDL_WINDOWEVENT_SHOWN;
+    inline constexpr Uint32 CATA_WINDOWEVENT_EXPOSED      = SDL_WINDOWEVENT_EXPOSED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_MINIMIZED    = SDL_WINDOWEVENT_MINIMIZED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_RESTORED     = SDL_WINDOWEVENT_RESTORED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_RESIZED      = SDL_WINDOWEVENT_RESIZED;
+    inline constexpr Uint32 CATA_WINDOWEVENT_FOCUS_LOST   = SDL_WINDOWEVENT_FOCUS_LOST;
+    inline constexpr Uint32 CATA_WINDOWEVENT_FOCUS_GAINED = SDL_WINDOWEVENT_FOCUS_GAINED;
 #endif
 
 #if SDL_MAJOR_VERSION >= 3
-inline constexpr Uint32 CATA_RENDER_TARGETS_RESET = SDL_EVENT_RENDER_TARGETS_RESET;
+    inline constexpr Uint32 CATA_RENDER_TARGETS_RESET = SDL_EVENT_RENDER_TARGETS_RESET;
 #else
-inline constexpr Uint32 CATA_RENDER_TARGETS_RESET = SDL_RENDER_TARGETS_RESET;
+    inline constexpr Uint32 CATA_RENDER_TARGETS_RESET = SDL_RENDER_TARGETS_RESET;
 #endif
 
 // Touch finger ID accessor. SDL3 renames fingerId -> fingerID.
@@ -324,36 +324,36 @@ inline SDL_FingerID GetFingerID( const SDL_Event &ev )
 
 // Touch event renames. SDL3: SDL_FINGER* -> SDL_EVENT_FINGER_*.
 #if SDL_MAJOR_VERSION >= 3
-inline constexpr Uint32 CATA_FINGERMOTION = SDL_EVENT_FINGER_MOTION;
-inline constexpr Uint32 CATA_FINGERDOWN   = SDL_EVENT_FINGER_DOWN;
-inline constexpr Uint32 CATA_FINGERUP     = SDL_EVENT_FINGER_UP;
+    inline constexpr Uint32 CATA_FINGERMOTION = SDL_EVENT_FINGER_MOTION;
+    inline constexpr Uint32 CATA_FINGERDOWN   = SDL_EVENT_FINGER_DOWN;
+    inline constexpr Uint32 CATA_FINGERUP     = SDL_EVENT_FINGER_UP;
 #else
-inline constexpr Uint32 CATA_FINGERMOTION = SDL_FINGERMOTION;
-inline constexpr Uint32 CATA_FINGERDOWN   = SDL_FINGERDOWN;
-inline constexpr Uint32 CATA_FINGERUP     = SDL_FINGERUP;
+    inline constexpr Uint32 CATA_FINGERMOTION = SDL_FINGERMOTION;
+    inline constexpr Uint32 CATA_FINGERDOWN   = SDL_FINGERDOWN;
+    inline constexpr Uint32 CATA_FINGERUP     = SDL_FINGERUP;
 #endif
 
 // Input and quit event renames. SDL3: SDL_KEYDOWN -> SDL_EVENT_KEY_DOWN etc.
 #if SDL_MAJOR_VERSION >= 3
-inline constexpr Uint32 CATA_KEYDOWN         = SDL_EVENT_KEY_DOWN;
-inline constexpr Uint32 CATA_KEYUP           = SDL_EVENT_KEY_UP;
-inline constexpr Uint32 CATA_TEXTINPUT       = SDL_EVENT_TEXT_INPUT;
-inline constexpr Uint32 CATA_TEXTEDITING     = SDL_EVENT_TEXT_EDITING;
-inline constexpr Uint32 CATA_MOUSEMOTION     = SDL_EVENT_MOUSE_MOTION;
-inline constexpr Uint32 CATA_MOUSEBUTTONDOWN = SDL_EVENT_MOUSE_BUTTON_DOWN;
-inline constexpr Uint32 CATA_MOUSEBUTTONUP   = SDL_EVENT_MOUSE_BUTTON_UP;
-inline constexpr Uint32 CATA_MOUSEWHEEL      = SDL_EVENT_MOUSE_WHEEL;
-inline constexpr Uint32 CATA_QUIT            = SDL_EVENT_QUIT;
+    inline constexpr Uint32 CATA_KEYDOWN         = SDL_EVENT_KEY_DOWN;
+    inline constexpr Uint32 CATA_KEYUP           = SDL_EVENT_KEY_UP;
+    inline constexpr Uint32 CATA_TEXTINPUT       = SDL_EVENT_TEXT_INPUT;
+    inline constexpr Uint32 CATA_TEXTEDITING     = SDL_EVENT_TEXT_EDITING;
+    inline constexpr Uint32 CATA_MOUSEMOTION     = SDL_EVENT_MOUSE_MOTION;
+    inline constexpr Uint32 CATA_MOUSEBUTTONDOWN = SDL_EVENT_MOUSE_BUTTON_DOWN;
+    inline constexpr Uint32 CATA_MOUSEBUTTONUP   = SDL_EVENT_MOUSE_BUTTON_UP;
+    inline constexpr Uint32 CATA_MOUSEWHEEL      = SDL_EVENT_MOUSE_WHEEL;
+    inline constexpr Uint32 CATA_QUIT            = SDL_EVENT_QUIT;
 #else
-inline constexpr Uint32 CATA_KEYDOWN         = SDL_KEYDOWN;
-inline constexpr Uint32 CATA_KEYUP           = SDL_KEYUP;
-inline constexpr Uint32 CATA_TEXTINPUT       = SDL_TEXTINPUT;
-inline constexpr Uint32 CATA_TEXTEDITING     = SDL_TEXTEDITING;
-inline constexpr Uint32 CATA_MOUSEMOTION     = SDL_MOUSEMOTION;
-inline constexpr Uint32 CATA_MOUSEBUTTONDOWN = SDL_MOUSEBUTTONDOWN;
-inline constexpr Uint32 CATA_MOUSEBUTTONUP   = SDL_MOUSEBUTTONUP;
-inline constexpr Uint32 CATA_MOUSEWHEEL      = SDL_MOUSEWHEEL;
-inline constexpr Uint32 CATA_QUIT            = SDL_QUIT;
+    inline constexpr Uint32 CATA_KEYDOWN         = SDL_KEYDOWN;
+    inline constexpr Uint32 CATA_KEYUP           = SDL_KEYUP;
+    inline constexpr Uint32 CATA_TEXTINPUT       = SDL_TEXTINPUT;
+    inline constexpr Uint32 CATA_TEXTEDITING     = SDL_TEXTEDITING;
+    inline constexpr Uint32 CATA_MOUSEMOTION     = SDL_MOUSEMOTION;
+    inline constexpr Uint32 CATA_MOUSEBUTTONDOWN = SDL_MOUSEBUTTONDOWN;
+    inline constexpr Uint32 CATA_MOUSEBUTTONUP   = SDL_MOUSEBUTTONUP;
+    inline constexpr Uint32 CATA_MOUSEWHEEL      = SDL_MOUSEWHEEL;
+    inline constexpr Uint32 CATA_QUIT            = SDL_QUIT;
 #endif
 
 // SDL3 removes SDL_Keysym from key events: ev.key.keysym.sym -> ev.key.key,

@@ -303,8 +303,8 @@ std::string basecamp::next_upgrade( const point_rel_omt &dir, const int offset )
 
 bool basecamp::has_provides( const std::string &req, const expansion_data &e_data, int level ) const
 {
-    for( const auto &provide : e_data.provides ) {
-        if( provide.first == req && provide.second > level ) {
+for( const auto &provide : e_data.provides ) {
+    if( provide.first == req && provide.second > level ) {
             return true;
         }
     }
@@ -315,7 +315,7 @@ bool basecamp::has_provides( const std::string &req, const std::optional<point_r
                              int level ) const
 {
     if( !dir ) {
-        for( const auto &e : expansions ) {
+    for( const auto &e : expansions ) {
             if( has_provides( req, e.second, level ) ) {
                 return true;
             }
@@ -739,7 +739,7 @@ void basecamp::form_storage_zones( map &here, const tripoint_abs_ms &abspos )
     std::vector<tripoint_abs_ms> possible_liquid_dumps;
     if( mgr.has_near( zone_type_CAMP_STORAGE, abspos, MAX_VIEW_DISTANCE ) ) {
         const std::vector<const zone_data *> zones = mgr.get_near_zones( zone_type_CAMP_STORAGE, abspos,
-                MAX_VIEW_DISTANCE, get_owner() );
+            MAX_VIEW_DISTANCE, get_owner() );
         // Find the nearest unsorted zone to dump objects at
         if( !zones.empty() ) {
             std::unordered_set<tripoint_abs_ms> src_set;
@@ -1041,7 +1041,7 @@ bool basecamp_action_components::choose_components()
     for( const auto &it : req->get_components() ) {
         comp_selection<item_comp> is =
             player_character.select_item_component( it, batch_size_, base_._inv, true, filter,
-                    !base_.by_radio );
+                !base_.by_radio );
         if( is.use_from == usage_from::cancel ) {
             return false;
         }
@@ -1051,7 +1051,7 @@ bool basecamp_action_components::choose_components()
     for( const auto &it : req->get_tools() ) {
         comp_selection<tool_comp> ts =
             player_character.select_tool_component( it, batch_size_, base_._inv, true,
-                    !base_.by_radio );
+                !base_.by_radio );
         if( ts.use_from == usage_from::cancel ) {
             return false;
         }

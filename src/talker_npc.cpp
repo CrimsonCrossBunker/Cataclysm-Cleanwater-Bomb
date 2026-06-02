@@ -84,24 +84,24 @@ std::string talker_npc_const::distance_to_goal() const
 bool talker_npc::will_talk_to_u( const Character &you, bool force ) const
 {
     if( you.is_dead_state() ) {
-        me_npc->set_attitude( NPCATT_NULL );
+    me_npc->set_attitude( NPCATT_NULL );
         return false;
     }
     if( get_player_character().getID() == you.getID() ) {
-        if( me_npc->get_faction() ) {
+    if( me_npc->get_faction() ) {
             me_npc->get_faction()->known_by_u = true;
         }
         me_npc->set_known_to_u( true );
     }
     // This is necessary so that we don't bug the player over and over
     if( me_npc->get_attitude() == NPCATT_TALK ) {
-        me_npc->set_attitude( NPCATT_NULL );
+    me_npc->set_attitude( NPCATT_NULL );
     } else if( !force && ( me_npc->get_attitude() == NPCATT_FLEE ||
-                           me_npc-> get_attitude() == NPCATT_FLEE_TEMP ) ) {
+                               me_npc-> get_attitude() == NPCATT_FLEE_TEMP ) ) {
         add_msg( _( "%s is fleeing from you!" ), disp_name() );
         return false;
     } else if( !force && me_npc->get_attitude() == NPCATT_KILL ) {
-        add_msg( _( "%s is hostile!" ), disp_name() );
+    add_msg( _( "%s is hostile!" ), disp_name() );
         return false;
     }
     return true;
@@ -112,7 +112,7 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
     avatar &player_character = get_avatar();
     std::vector<std::string> add_topics;
     // For each active mission we have, let the mission know we talked to this NPC.
-    for( mission *&mission : player_character.get_active_missions() ) {
+    for( mission * &mission : player_character.get_active_missions() ) {
         mission->on_talk_with_npc( me_npc->getID() );
     }
 
@@ -127,7 +127,7 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
         add_topics.emplace_back( me_npc->chatbin.talk_stole_item );
     }
     int most_difficult_mission = 0;
-    for( mission *&mission : me_npc->chatbin.missions ) {
+    for( mission * &mission : me_npc->chatbin.missions ) {
         const mission_type &type = mission->get_type();
         if( type.urgent && type.difficulty > most_difficult_mission ) {
             add_topics.emplace_back( me_npc->chatbin.talk_mission_describe_urgent );
@@ -137,7 +137,7 @@ std::vector<std::string> talker_npc::get_topics( bool radio_contact ) const
     }
     most_difficult_mission = 0;
     bool chosen_urgent = false;
-    for( mission *&mission : me_npc->chatbin.missions_assigned ) {
+    for( mission * &mission : me_npc->chatbin.missions_assigned ) {
         if( mission->get_assigned_player_id() != player_character.getID() ) {
             // Not assigned to the player that is currently talking to the npc
             continue;
@@ -739,7 +739,7 @@ std::string talker_npc_const::view_personality_traits() const
 std::string talker_npc_const::evaluation_by( const_talker const &alpha ) const
 {
     if( !alpha.can_see() ) {
-        return _( "&You're blind and can't make anything out." );
+    return _( "&You're blind and can't make anything out." );
     }
 
     ///\EFFECT_PER affects whether player can size up NPCs
@@ -747,32 +747,32 @@ std::string talker_npc_const::evaluation_by( const_talker const &alpha ) const
     ///\EFFECT_INT slightly affects whether player can size up NPCs
     int ability = alpha.per_cur() * 3 + alpha.int_cur();
     if( ability <= 10 ) {
-        return _( "&You can't make anything out." );
+    return _( "&You can't make anything out." );
     }
 
     if( is_player_ally() || ability > 100 ) {
-        ability = 100;
-    }
+    ability = 100;
+}
 
-    std::string info = "&";
-    int str_range = static_cast<int>( 100 / ability );
-    int str_min = static_cast<int>( me_npc->get_str_base() / str_range ) * str_range;
-    info += string_format( _( "Str %d - %d" ), str_min, str_min + str_range );
+std::string info = "&";
+int str_range = static_cast<int>( 100 / ability );
+int str_min = static_cast<int>( me_npc->get_str_base() / str_range ) * str_range;
+info += string_format( _( "Str %d - %d" ), str_min, str_min + str_range );
 
-    if( ability >= 40 ) {
-        int dex_range = static_cast<int>( 160 / ability );
+if( ability >= 40 ) {
+    int dex_range = static_cast<int>( 160 / ability );
         int dex_min = static_cast<int>( me_npc->get_dex_base() / dex_range ) * dex_range;
         info += string_format( _( "  Dex %d - %d" ), dex_min, dex_min + dex_range );
     }
 
     if( ability >= 50 ) {
-        int int_range = static_cast<int>( 200 / ability );
+    int int_range = static_cast<int>( 200 / ability );
         int int_min = static_cast<int>( me_npc->get_int_base() / int_range ) * int_range;
         info += string_format( _( "  Int %d - %d" ), int_min, int_min + int_range );
     }
 
     if( ability >= 60 ) {
-        int per_range = static_cast<int>( 240 / ability );
+    int per_range = static_cast<int>( 240 / ability );
         int per_min = static_cast<int>( me_npc->get_per_base() / per_range ) * per_range;
         info += string_format( _( "  Per %d - %d" ), per_min, per_min + per_range );
     }
@@ -796,7 +796,7 @@ std::string talker_npc_const::evaluation_by( const_talker const &alpha ) const
         info += "\n" + how_tired;
     }
     if( ability >= 100 ) {
-        if( get_thirst() < 100 ) {
+    if( get_thirst() < 100 ) {
             time_duration thirst_at = 5_minutes * ( 100 - get_thirst() ) / rates.thirst;
             if( thirst_at > 1_hours ) {
                 info += _( "\nWill need water in " ) + to_string_approx( thirst_at );

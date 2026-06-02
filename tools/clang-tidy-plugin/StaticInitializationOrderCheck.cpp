@@ -62,13 +62,13 @@ static void CheckDecl( StaticInitializationOrderCheck &Check,
         if( in_same_file ) {
             // We know for certain that this is wrong
             Check.diag( referencing_loc, "Static initialization of %0 depends on extern %1, which "
-                        "is initialized afterwards." ) << referencing_decl << referenced_decl;
+                                         "is initialized afterwards." ) << referencing_decl << referenced_decl;
             return;
         }
     }
 
     Check.diag( referencing_loc, "Static initialization of %0 depends on extern %1, which may be "
-                "initialized afterwards." ) << referencing_decl << referenced_decl;
+                                 "initialized afterwards." ) << referencing_decl << referenced_decl;
 }
 
 void StaticInitializationOrderCheck::check( const MatchFinder::MatchResult &Result )

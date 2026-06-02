@@ -8,18 +8,18 @@
 #include "ui_manager.h"
 
 #if defined(TILES)
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include "imgui/imgui.h"
-#undef IMGUI_DEFINE_MATH_OPERATORS
-#include "mod_manager.h"
-#include "path_info.h"
-#include "sdltiles.h"
-#include "sdl_wrappers.h"
-#include "cata_imgui.h"
-#include "text_snippets.h"
-#include "worldfactory.h"
+    #define IMGUI_DEFINE_MATH_OPERATORS
+    #include "imgui/imgui.h"
+    #undef IMGUI_DEFINE_MATH_OPERATORS
+    #include "mod_manager.h"
+    #include "path_info.h"
+    #include "sdltiles.h"
+    #include "sdl_wrappers.h"
+    #include "cata_imgui.h"
+    #include "text_snippets.h"
+    #include "worldfactory.h"
 #else
-#include "cursesdef.h"
+    #include "cursesdef.h"
 #endif // TILES
 
 namespace

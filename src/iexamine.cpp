@@ -533,7 +533,7 @@ void iexamine::genemill( Character &you, const tripoint_bub_ms & )
         return p1.second < p2.second;
     } );
     const mutation_category_trait &highest_mct = mutation_category_trait::get_category(
-                highest_id->first );
+            highest_id->first );
 
     //Since chimera grants access to most post thresh traits with little inconvenience, we prevent the player from getting it through genemill.
     if( highest_id->first != mutation_category_CHIMERA &&
@@ -1881,7 +1881,7 @@ void iexamine::locked_object( Character &you, const tripoint_bub_ms &examp )
     // Check if the locked thing is a lockable door part.
     if( veh ) {
         std::vector<vehicle_part *> parts_at_target = veh->vehicle().get_parts_at(
-                    &here, examp, "LOCKABLE_DOOR", part_status_flag::available );
+                &here, examp, "LOCKABLE_DOOR", part_status_flag::available );
         if( !parts_at_target.empty() ) {
             locked_part = veh->vehicle().next_part_to_unlock(
                               veh->vehicle().index_of_part( parts_at_target.front() ) );
@@ -1950,7 +1950,7 @@ void iexamine::locked_object_pickable( Character &you, const tripoint_bub_ms &ex
 
     if( veh ) {
         const std::vector<vehicle_part *> parts_at_target = veh->vehicle().get_parts_at(
-                    &here, examp, "LOCKABLE_DOOR", part_status_flag::available );
+                &here, examp, "LOCKABLE_DOOR", part_status_flag::available );
         if( !parts_at_target.empty() ) {
             locked_part = veh->vehicle().next_part_to_unlock(
                               veh->vehicle().index_of_part( parts_at_target.front() ) );
@@ -4229,7 +4229,7 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         std::vector<std::string> drink_names;
         std::vector<double> drink_rot;
         std::vector<time_point> drink_bday;
-        for( item *&drink : drinks_inv ) {
+        for( item * &drink : drinks_inv ) {
             auto found_drink = std::find( drink_types.begin(), drink_types.end(), drink->typeId() );
             if( found_drink == drink_types.end() ) {
                 drink_types.push_back( drink->typeId() );
@@ -4822,9 +4822,9 @@ void iexamine::finite_water_source( Character &, const tripoint_bub_ms &examp )
 const itype *furn_t::crafting_pseudo_item_type() const
 {
     if( crafting_pseudo_item.is_empty() ) {
-        return nullptr;
-    }
-    return item::find_type( crafting_pseudo_item );
+    return nullptr;
+}
+return item::find_type( crafting_pseudo_item );
 }
 
 std::vector<const itype *> furn_t::crafting_ammo_item_types() const
@@ -4993,7 +4993,7 @@ static void reload_furniture( Character &you, const tripoint_bub_ms &examp, bool
     }
 
     const int amount_in_furn_after_placing = count_charges_in_list( opt_type,
-            here.i_at( examp ) );
+        here.i_at( examp ) );
     //~ %1$s - furniture, %2$d - number, %3$s items.
     add_msg( _( "The %1$s contains %2$d %3$s." ), f.name(), amount_in_furn_after_placing,
              opt_type->nname( amount_in_furn_after_placing ) );
@@ -5012,8 +5012,8 @@ void iexamine::curtains( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
     const bool closed_window_with_curtains = here.has_flag(
-                ter_furn_flag::TFLAG_BARRICADABLE_WINDOW_CURTAINS,
-                examp );
+            ter_furn_flag::TFLAG_BARRICADABLE_WINDOW_CURTAINS,
+            examp );
     if( here.is_outside( you.pos_bub() ) && ( here.has_flag( ter_furn_flag::TFLAG_WALL, examp ) ||
             closed_window_with_curtains ) ) {
         locked_object( you, examp );
@@ -5450,7 +5450,7 @@ void iexamine::pay_gas( Character &you, const tripoint_bub_ms &examp )
         clamp( liters, 0, maximum_liters );
 
         const std::optional<tripoint_bub_ms> pGasPump = getGasPumpByNumber( examp,
-                uistate.ags_pay_gas_selected_pump );
+            uistate.ags_pay_gas_selected_pump );
         if( !pGasPump || !toPumpFuel( pTank, *pGasPump, liters * 1000 ) ) {
             return;
         }
@@ -5480,7 +5480,7 @@ void iexamine::pay_gas( Character &you, const tripoint_bub_ms &examp )
         }
 
         const std::optional<tripoint_bub_ms> pGasPump = getGasPumpByNumber( examp,
-                uistate.ags_pay_gas_selected_pump );
+            uistate.ags_pay_gas_selected_pump );
         int amount_fuel = pGasPump ? fromPumpFuel( pTank, *pGasPump ) : -1;
         if( amount_fuel < 0 ) {
             popup( _( "Unable to refund, no fuel in pump." ) );
@@ -5947,7 +5947,7 @@ void iexamine::autodoc( Character &you, const tripoint_bub_ms &examp )
             bool has_install_program = false;
 
             std::vector<const item *> install_programs = you.crafting_inventory().items_with( [itemtype](
-                        const item & it ) -> bool { return it.typeId() == itemtype->bionic->installation_data; } );
+                    const item & it ) -> bool { return it.typeId() == itemtype->bionic->installation_data; } );
 
             if( !install_programs.empty() ) {
                 has_install_program = true;

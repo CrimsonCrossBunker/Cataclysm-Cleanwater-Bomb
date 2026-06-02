@@ -161,10 +161,10 @@ void faction_epilogue_data::deserialize( const JsonObject &jo )
 bool faction::check_relations( const std::vector<faction_power_spec> &faction_power_specs ) const
 {
     if( faction_power_specs.empty() ) {
-        return true;
-    }
-    for( const faction_power_spec &spec : faction_power_specs ) {
-        if( spec.power_min.has_value() ) {
+    return true;
+}
+for( const faction_power_spec &spec : faction_power_specs ) {
+    if( spec.power_min.has_value() ) {
             if( spec.faction->power < spec.power_min.value() ) {
                 return false;
             }
@@ -444,8 +444,8 @@ faction_price_rule const *faction::get_price_rules( item const &it, npc const &g
 
 bool faction::has_relationship( const faction_id &guy_id, npc_factions::relationship flag ) const
 {
-    for( const auto &rel_data : relations ) {
-        if( rel_data.first == guy_id.c_str() ) {
+for( const auto &rel_data : relations ) {
+    if( rel_data.first == guy_id.c_str() ) {
             return rel_data.second.test( static_cast<size_t>( flag ) );
         }
     }

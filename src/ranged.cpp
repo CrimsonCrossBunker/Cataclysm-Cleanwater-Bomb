@@ -897,7 +897,7 @@ bool Character::handle_gun_damage( item &it )
                                    _( "<npcname>'s %s fails to cycle!" ),
                                    it.tname() );
             it.ammo_data()->has_flag( flag_CASELESS_ROUNDS ) ? it.set_fault( fault_fail_to_feed ) :
-            it.set_fault( fault_gun_chamber_spent );
+              it.set_fault( fault_gun_chamber_spent );
 
             // Don't return false in this case; this shot happens, follow-up ones won't.
         }
@@ -1142,11 +1142,8 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         return 0;
     }
 
-    short times_shot_target = 0;
-    Creature *maybe_target = get_creature_tracker().creature_at( here.get_abs( target ) );
-    if( maybe_target && maybe_target->as_monster() ) {
-        times_shot_target = maybe_target->as_monster()->times_combatted_player;
-    }
+    // Cleanwater: 撤销 PR #86232 (Remove dumb gun cheese)
+    // 方法：删除 times_shot_target 计数器和射击次数限制，恢复无条件技能训练
 
     // usage of any attached bipod is dependent upon terrain or on being prone
     bool bipod = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_MOUNTABLE, pos_bub( here ) ) ||
@@ -1231,8 +1228,6 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
                 continue;
             }
             if( monster *const m = hit_entry.first->as_monster() ) {
-                times_shot_target = std::max( times_shot_target, m->times_combatted_player );
-                m->times_combatted_player++;
                 cata::event e = cata::event::make<event_type::character_ranged_attacks_monster>( getID(), gun_id,
                                 projectile_use_ammo_id,
                                 false,
@@ -1346,16 +1341,14 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         }
     }
 
-    // Preventing using a trapped creature as an infinite training dummy.
-    if( times_shot_target < 100 && curshot > 0 ) {
-        // Practice the base gun skill proportionally to number of hits, but always by one.
-        if( firing != nullptr && !gun.has_flag( flag_WONT_TRAIN_MARKSMANSHIP ) ) {
-            practice( skill_gun, ( hits + 1 ) * 5 );
-        }
-        // launchers train weapon skill for both hits and misses.
-        int practice_units = gun_skill == skill_launcher ? curshot : hits;
-        practice( gun_skill, ( practice_units + 1 ) * 5 );
+    // Cleanwater: 撤销 PR #86232 — 恢复无条件技能训练（删除 times_shot_target < 100 限制）
+    // Practice the base gun skill proportionally to number of hits, but always by one.
+    if( firing != nullptr && !gun.has_flag( flag_WONT_TRAIN_MARKSMANSHIP ) ) {
+        practice( skill_gun, ( hits + 1 ) * 5 );
     }
+    // launchers train weapon skill for both hits and misses.
+    int practice_units = gun_skill == skill_launcher ? curshot : hits;
+    practice( gun_skill, ( practice_units + 1 ) * 5 );
 
     if( !gun.is_gun() ) {
         // If we lose our gun as a side effect of firing it, skip the rest of the function.
@@ -2051,7 +2044,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
     // predict how long it'll take to reach from current recoil
     // to the ui's selected default aim mode threshold.
     const recoil_prediction aim_to_selected = predict_recoil( you, weapon, target,
-            ui.get_sight_dispersion(), ui.get_selected_aim_type(), you.recoil );
+        ui.get_sight_dispersion(), ui.get_selected_aim_type(), you.recoil );
 
     const double selected_steadiness = calc_steadiness( you, weapon, pos, aim_to_selected.recoil );
 
@@ -2216,11 +2209,11 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
                     int chance = std::min<int>( 100, 100.0 * ( cr.aim_level ) * out.confidence ) - last_chance;
                     last_chance += chance;
                     t_confidence[conf_iter + ( aim_iter * 5 )] = string_format( "<color_%s>%3d%%</color>", cr.color,
-                            chance );
+                        chance );
                     conf_iter++;
                     if( conf_iter == 3 ) {
                         t_confidence[conf_iter + ( aim_iter * 5 )] = string_format( "<color_%s>%3d%%</color>", "dark_gray",
-                                100 - last_chance );
+                            100 - last_chance );
                     }
                 }
                 aim_iter++;
@@ -2316,8 +2309,8 @@ static int print_aim( const target_ui &ui, Character &you, const catacurses::win
     };
 
     const std::vector<aim_type_prediction> aim_chances = calculate_ranged_chances( ui, you,
-            target_ui::TargetMode::Fire, ctxt, weapon, dispersion, confidence_config,
-            Target_attributes( you.pos_bub(), pos ), pos, load_loc );
+        target_ui::TargetMode::Fire, ctxt, weapon, dispersion, confidence_config,
+        Target_attributes( you.pos_bub(), pos ), pos, load_loc );
 
     int time = RAS_time( you, load_loc );
 
@@ -2354,15 +2347,15 @@ static void draw_throw_aim( const target_ui &ui, const Character &you, const cat
                                     confidence_config_critter : confidence_config_object;
 
     const target_ui::TargetMode throwing_target_mode = is_blind_throw ?
-            target_ui::TargetMode::ThrowBlind :
-            target_ui::TargetMode::Throw;
+        target_ui::TargetMode::ThrowBlind :
+        target_ui::TargetMode::Throw;
     Target_attributes attributes( range, target_size,
                                   here.ambient_light_at( target_pos ),
                                   you.sees( here, target_pos ) );
 
     const std::vector<aim_type_prediction> aim_chances = calculate_ranged_chances( ui, you,
-            throwing_target_mode, ctxt, weapon, dispersion, confidence_config, attributes, target_pos,
-            item_location() );
+        throwing_target_mode, ctxt, weapon, dispersion, confidence_config, attributes, target_pos,
+        item_location() );
 
     text_y = print_ranged_chance( w, text_y, aim_chances, 0 );
 }
@@ -2383,7 +2376,7 @@ std::vector<aim_type> Character::get_aim_types( const item &gun ) const
     };
     // Remove duplicate thresholds.
     std::vector<int>::iterator thresholds_it = std::adjacent_find( thresholds.begin(),
-            thresholds.end() );
+        thresholds.end() );
     while( thresholds_it != thresholds.end() ) {
         thresholds.erase( thresholds_it );
         thresholds_it = std::adjacent_find( thresholds.begin(), thresholds.end() );
@@ -2502,8 +2495,8 @@ static void cycle_action( item &weap, const itype_id &ammo, map *here, const tri
 
     // for turrets try and drop casings or linkages directly to any CARGO part on the same tile
     const std::optional<vpart_reference> ovp_cargo = weap.has_flag( flag_VEHICLE )
-            ? here->veh_at( pos ).cargo()
-            : std::nullopt;
+        ? here->veh_at( pos ).cargo()
+        : std::nullopt;
 
     item *brass_catcher = weap.gunmod_find_by_flag( flag_BRASS_CATCHER );
     if( !!ammo->ammo->casing ) {
@@ -2564,48 +2557,48 @@ void make_gun_sound_effect( const Character &p, bool burst, item *weapon )
 item::sound_data item::gun_noise( const bool burst ) const
 {
     if( !is_gun() ) {
-        return { 0, "" };
+    return { 0, "" };
+}
+
+int noise = type->gun->loudness;
+if( has_ammo() ) {
+    noise += ammo_data()->ammo->loudness;
     }
+for( const item *mod : gunmods() ) {
+    noise += mod->type->gunmod->loudness;
+    noise *= mod->type->gunmod->loudness_multiplier;
+}
 
-    int noise = type->gun->loudness;
-    if( has_ammo() ) {
-        noise += ammo_data()->ammo->loudness;
-    }
-    for( const item *mod : gunmods() ) {
-        noise += mod->type->gunmod->loudness;
-        noise *= mod->type->gunmod->loudness_multiplier;
-    }
+noise = std::max( noise, 0 );
 
-    noise = std::max( noise, 0 );
+const std::set<ammotype> &at = ammo_types();
+if( at.count( ammo_40x46mm ) || at.count( ammo_40x53mm ) ) {
+    // Grenade launchers
+    return { 8, _( "Thunk!" ) };
 
-    const std::set<ammotype> &at = ammo_types();
-    if( at.count( ammo_40x46mm ) || at.count( ammo_40x53mm ) ) {
-        // Grenade launchers
-        return { 8, _( "Thunk!" ) };
+} else if( at.count( ammo_12mm ) || at.count( ammo_metal_rail ) ) {
+    // Railguns
+    return { 24, _( "tz-CRACKck!" ) };
 
-    } else if( at.count( ammo_12mm ) || at.count( ammo_metal_rail ) ) {
-        // Railguns
-        return { 24, _( "tz-CRACKck!" ) };
-
-    } else if( at.count( ammo_flammable ) || at.count( ammo_66mm ) || at.count( ammo_120mm ) ||
+} else if( at.count( ammo_flammable ) || at.count( ammo_66mm ) || at.count( ammo_120mm ) ||
                at.count( ammo_84x246mm ) || at.count( ammo_m235 ) || at.count( ammo_atgm ) ||
                at.count( ammo_RPG_7 ) || at.count( ammo_homebrew_rocket ) ) {
-        // Rocket launchers and flamethrowers
-        return { 4, _( "Fwoosh!" ) };
-    } else if( at.count( ammo_arrow ) ) {
-        return { noise, _( "whizz!" ) };
-    } else if( at.count( ammo_strange_arrow ) ) {
-        return { noise, _( "Crack!" ) };
-    } else if( at.count( ammo_bolt ) || at.count( ammo_bolt_ballista ) ) {
-        return { noise, _( "thonk!" ) };
-    } else if( at.count( ammo_atlatl ) ) {
-        return { noise, _( "swoosh!" ) };
-    }
+    // Rocket launchers and flamethrowers
+    return { 4, _( "Fwoosh!" ) };
+} else if( at.count( ammo_arrow ) ) {
+    return { noise, _( "whizz!" ) };
+} else if( at.count( ammo_strange_arrow ) ) {
+    return { noise, _( "Crack!" ) };
+} else if( at.count( ammo_bolt ) || at.count( ammo_bolt_ballista ) ) {
+    return { noise, _( "thonk!" ) };
+} else if( at.count( ammo_atlatl ) ) {
+    return { noise, _( "swoosh!" ) };
+}
 
-    auto fx = ammo_effects();
+auto fx = ammo_effects();
 
-    if( fx.count( ammo_effect_LASER ) || fx.count( ammo_effect_PLASMA ) ) {
-        if( noise < 20 ) {
+if( fx.count( ammo_effect_LASER ) || fx.count( ammo_effect_PLASMA ) ) {
+    if( noise < 20 ) {
             return { noise, _( "Fzzt!" ) };
         } else if( noise < 40 ) {
             return { noise, _( "Pew!" ) };
@@ -2616,7 +2609,7 @@ item::sound_data item::gun_noise( const bool burst ) const
         }
 
     } else if( fx.count( ammo_effect_LIGHTNING ) ) {
-        if( noise < 20 ) {
+    if( noise < 20 ) {
             return { noise, _( "Bzzt!" ) };
         } else if( noise < 40 ) {
             return { noise, _( "Bzap!" ) };
@@ -2627,13 +2620,13 @@ item::sound_data item::gun_noise( const bool burst ) const
         }
 
     } else if( fx.count( ammo_effect_WHIP ) ) {
-        return { noise, _( "Crack!" ) };
+    return { noise, _( "Crack!" ) };
 
-    } else if( fx.count( ammo_effect_LIQUID ) ) {
-        return { noise, _( "Splash!" ) };
+} else if( fx.count( ammo_effect_LIQUID ) ) {
+    return { noise, _( "Splash!" ) };
 
-    } else if( noise > 0 ) {
-        if( noise < 10 ) {
+} else if( noise > 0 ) {
+    if( noise < 10 ) {
             return { noise, burst ? _( "Brrrip!" ) : _( "plink!" ) };
         } else if( noise < 150 ) {
             return { noise, burst ? _( "Brrrap!" ) : _( "bang!" ) };
@@ -2724,10 +2717,10 @@ double Character::gun_value( const item &weap, int ammo ) const
     // TODO: Mods
     // TODO: Allow using a specified type of ammo rather than default or current
     if( !weap.type->gun ) {
-        return 0.0;
-    }
+    return 0.0;
+}
 
-    if( ammo <= 0 || !meets_requirements( weap ) ) {
+if( ammo <= 0 || !meets_requirements( weap ) ) {
         return 0.0;
     }
 
@@ -2754,8 +2747,8 @@ double Character::gun_value( const item &weap, int ammo ) const
     int total_dispersion = get_weapon_dispersion( tmp ).max() + tmp.sight_dispersion( *this ).second;
 
     if( def_ammo_i != nullptr && def_ammo_i->ammo ) {
-        const islot_ammo &def_ammo = *def_ammo_i->ammo;
-        gun_damage.add( def_ammo.damage );
+    const islot_ammo &def_ammo = *def_ammo_i->ammo;
+    gun_damage.add( def_ammo.damage );
         total_dispersion += def_ammo.dispersion;
     }
 
@@ -2767,8 +2760,8 @@ double Character::gun_value( const item &weap, int ammo ) const
 
     int move_cost = time_to_attack( *this, *weap.type );
     if( gun.clip != 0 && gun.clip < 10 ) {
-        // TODO: RELOAD_ONE should get a penalty here
-        int reload_cost = gun.reload_time + encumb( bodypart_id( "hand_l" ) ) + encumb(
+    // TODO: RELOAD_ONE should get a penalty here
+    int reload_cost = gun.reload_time + encumb( bodypart_id( "hand_l" ) ) + encumb(
                               bodypart_id( "hand_r" ) );
         reload_cost /= gun.clip;
         move_cost += reload_cost;
@@ -2810,8 +2803,8 @@ double Character::gun_value( const item &weap, int ammo ) const
     // Until NPCs get proper kiting, at least
     int melee_penalty = weap.volume() / 250_ml - get_skill_level( skill_dodge );
     if( melee_penalty <= 0 ) {
-        // Dispersion matters less if you can just use the gun in melee
-        total_dispersion = std::min<int>( total_dispersion / move_cost_factor, total_dispersion );
+    // Dispersion matters less if you can just use the gun in melee
+    total_dispersion = std::min<int>( total_dispersion / move_cost_factor, total_dispersion );
     }
 
     float dispersion_factor = multi_lerp( dispersion_thresholds, total_dispersion );
@@ -3709,9 +3702,9 @@ void target_ui::set_view_offset( const tripoint_rel_ms &new_offset ) const
     bool changed_z = you->view_offset.z() != new_.z();
     you->view_offset = new_;
     if( changed_z ) {
-        // We need to do a bunch of cache updates since we're
-        // looking at a different z-level.
-        get_map().invalidate_map_cache( new_.z() );
+    // We need to do a bunch of cache updates since we're
+    // looking at a different z-level.
+    get_map().invalidate_map_cache( new_.z() );
     }
 }
 
@@ -4138,9 +4131,9 @@ int target_ui::get_sight_dispersion() const
 std::string target_ui::uitext_title() const
 {
     switch( mode ) {
-        case TargetMode::Fire:
-        case TargetMode::TurretManual:
-            return string_format( _( "Firing %s" ), relevant->tname() );
+    case TargetMode::Fire:
+    case TargetMode::TurretManual:
+        return string_format( _( "Firing %s" ), relevant->tname() );
         case TargetMode::Throw:
             return string_format( _( "Throwing %s" ), relevant->tname() );
         case TargetMode::ThrowBlind:
@@ -4476,7 +4469,7 @@ void target_ui::panel_spell_info( int &text_y )
             } else {
                 text_y += fold_and_print( w_target, point( 1, text_y ), getmaxx( w_target ) - 2, color,
                                           _( "Effective Spell Radius: %s%s" ), aoes, casting->in_aoe( src, dst,
-                                                  get_player_character() ) ? colorize( _( " WARNING!  IN RANGE" ), c_red ) : "" );
+                                              get_player_character() ) ? colorize( _( " WARNING!  IN RANGE" ), c_red ) : "" );
             }
         }
     }
@@ -4659,7 +4652,7 @@ bool gunmode_checks_weapon( avatar &you, const map &m, std::vector<std::string> 
     if( gmode->has_flag( flag_MOUNTED_GUN ) ) {
         const bool v_mountable = static_cast<bool>( m.veh_at(
                                      you.pos_bub() ).part_with_feature( "MOUNTABLE",
-                                             true ) );
+                                         true ) );
         bool t_mountable = m.has_flag_ter_or_furn( ter_furn_flag::TFLAG_MOUNTABLE, you.pos_bub() );
         if( !t_mountable && !v_mountable ) {
             messages.push_back( string_format(

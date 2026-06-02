@@ -136,8 +136,8 @@ int vitamin::units_absorption_per_day() const
 int vitamin::units_from_mass( vitamin_units::mass val ) const
 {
     if( !weight_per_unit.has_value() ) {
-        debugmsg( "Tried to convert vitamin in mass to units, but %s doesn't support mass for vitamins",
-                  id_.str() );
+    debugmsg( "Tried to convert vitamin in mass to units, but %s doesn't support mass for vitamins",
+              id_.str() );
         return 1;
     }
     return val / *weight_per_unit;
@@ -146,9 +146,9 @@ int vitamin::units_from_mass( vitamin_units::mass val ) const
 std::pair<std::string, std::string> vitamin::mass_str_from_units( int units ) const
 {
     if( !weight_per_unit.has_value() || !get_option<bool>( "SHOW_VITAMIN_MASS" ) ) {
-        return {"", ""};
-    }
-    return weight_to_string( units * *weight_per_unit );
+    return {"", ""};
+}
+return weight_to_string( units * *weight_per_unit );
 }
 
 namespace io

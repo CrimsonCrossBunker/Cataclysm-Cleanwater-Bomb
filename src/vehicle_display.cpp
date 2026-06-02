@@ -229,7 +229,7 @@ int vehicle::print_part_list( const catacurses::window &win, int y1,
 
     // print the label for this location
     const std::optional<std::string> label = vpart_position( const_cast<vehicle &>( *this ),
-            p ).get_label();
+        p ).get_label();
     if( label && y <= max_y ) {
         mvwprintz( win, point( 1, y++ ), c_light_red, _( "Label: %s" ), label->c_str() );
     }
@@ -589,14 +589,14 @@ void vehicle::print_speed_gauge( map &here, const catacurses::window &win, const
                                  int spacing ) const
 {
     if( spacing < 0 ) {
-        spacing = 0;
-    }
+    spacing = 0;
+}
 
-    // Color is based on how much vehicle is straining beyond its safe velocity
-    const float strain = this->strain( here );
-    nc_color col_vel = strain <= 0 ? c_light_blue :
-                       ( strain <= 0.2 ? c_yellow :
-                         ( strain <= 0.4 ? c_light_red : c_red ) );
+// Color is based on how much vehicle is straining beyond its safe velocity
+const float strain = this->strain( here );
+nc_color col_vel = strain <= 0 ? c_light_blue :
+                   ( strain <= 0.2 ? c_yellow :
+                     ( strain <= 0.4 ? c_light_red : c_red ) );
     // Get cruising (target) velocity, and current (actual) velocity
     const double t_speed = convert_velocity( cruise_velocity, VU_VEHICLE );
     const double c_speed = convert_velocity( velocity, VU_VEHICLE );

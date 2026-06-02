@@ -352,10 +352,10 @@ bool widget_clause::meets_condition( const std::string &opt_var ) const
 bool widget_clause::meets_condition( const std::set<bodypart_id> &bps ) const
 {
     if( bps.empty() ) {
-        return meets_condition();
+    return meets_condition();
     }
-    for( const bodypart_id &bid : bps ) {
-        if( meets_condition( bid.id().str() ) ) {
+for( const bodypart_id &bid : bps ) {
+    if( meets_condition( bid.id().str() ) ) {
             return true;
         }
     }
@@ -1146,51 +1146,51 @@ window_panel widget::get_window_panel( const int width, const int req_height )
 bool widget::uses_text_function() const
 {
     switch( _var ) {
-        case widget_var::activity_text:
-        case widget_var::body_graph:
-        case widget_var::body_graph_temp:
-        case widget_var::body_graph_encumb:
-        case widget_var::body_graph_status:
-        case widget_var::body_graph_wet:
-        case widget_var::bp_armor_outer_text:
-        case widget_var::carry_weight_text:
-        case widget_var::carry_weight_value:
-        case widget_var::compass_text:
-        case widget_var::compass_legend_text:
-        case widget_var::date_text:
-        case widget_var::env_temp_text:
-        case widget_var::faction_territory:
-        case widget_var::mood_text:
-        case widget_var::move_count_mode_text:
-        case widget_var::pain_text:
-        case widget_var::overmap_loc_text:
-        case widget_var::overmap_text:
-        case widget_var::place_text:
-        case widget_var::power_text:
-        case widget_var::power_balance_text:
-        case widget_var::safe_mode_text:
-        case widget_var::safe_mode_classic_text:
-        case widget_var::style_text:
-        case widget_var::sundial_text:
-        case widget_var::sundial_time_text:
-        case widget_var::time_text:
-        case widget_var::veh_azimuth_text:
-        case widget_var::veh_battery_text:
-        case widget_var::veh_cruise_text:
-        case widget_var::veh_fuel_text:
-        case widget_var::weariness_text:
-        case widget_var::weary_malus_text:
-        case widget_var::snow_depth_text:
-        case widget_var::weather_text:
-        case widget_var::wielding_text:
-        case widget_var::wielding_simple_text:
-        case widget_var::wielding_mode_text:
-        case widget_var::wielding_ammo_text:
-        case widget_var::wind_text:
-            return true;
-        default:
-            return false;
-    }
+    case widget_var::activity_text:
+    case widget_var::body_graph:
+    case widget_var::body_graph_temp:
+    case widget_var::body_graph_encumb:
+    case widget_var::body_graph_status:
+    case widget_var::body_graph_wet:
+    case widget_var::bp_armor_outer_text:
+    case widget_var::carry_weight_text:
+    case widget_var::carry_weight_value:
+    case widget_var::compass_text:
+    case widget_var::compass_legend_text:
+    case widget_var::date_text:
+    case widget_var::env_temp_text:
+    case widget_var::faction_territory:
+    case widget_var::mood_text:
+    case widget_var::move_count_mode_text:
+    case widget_var::pain_text:
+    case widget_var::overmap_loc_text:
+    case widget_var::overmap_text:
+    case widget_var::place_text:
+    case widget_var::power_text:
+    case widget_var::power_balance_text:
+    case widget_var::safe_mode_text:
+    case widget_var::safe_mode_classic_text:
+    case widget_var::style_text:
+    case widget_var::sundial_text:
+    case widget_var::sundial_time_text:
+    case widget_var::time_text:
+    case widget_var::veh_azimuth_text:
+    case widget_var::veh_battery_text:
+    case widget_var::veh_cruise_text:
+    case widget_var::veh_fuel_text:
+    case widget_var::weariness_text:
+    case widget_var::weary_malus_text:
+    case widget_var::snow_depth_text:
+    case widget_var::weather_text:
+    case widget_var::wielding_text:
+    case widget_var::wielding_simple_text:
+    case widget_var::wielding_mode_text:
+    case widget_var::wielding_ammo_text:
+    case widget_var::wind_text:
+        return true;
+    default:
+        return false;
+}
 }
 
 // Simple workaround from the copied widget from the panel to set the widget's height globally
@@ -1633,9 +1633,9 @@ std::vector<string_id<widget>> widget::widgets_cond()
 const widget_clause *widget::get_clause( const std::string &clause_id ) const
 {
     // Look for a clause with satisfied conditions
-    for( const widget_clause &wp : _clauses ) {
-        // If an id is given, only check conditions for that id
-        if( !clause_id.empty() && clause_id != wp.id ) {
+for( const widget_clause &wp : _clauses ) {
+    // If an id is given, only check conditions for that id
+    if( !clause_id.empty() && clause_id != wp.id ) {
             continue;
         }
         // Return this clause if it has no condition or the condition is true

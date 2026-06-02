@@ -462,7 +462,7 @@ void relic::serialize( JsonOut &jsout ) const
     // in such case names read back from a save would no longer be properly translated.
 
     if( !proc_passive_effects.empty() ) {
-        jsout.member( "passive_effects" );
+    jsout.member( "passive_effects" );
         jsout.start_array();
         for( const enchant_cache &ench : proc_passive_effects ) {
             ench.serialize( jsout );
@@ -471,7 +471,7 @@ void relic::serialize( JsonOut &jsout ) const
     }
 
     if( !active_effects.empty() ) {
-        jsout.member( "active_effects" );
+    jsout.member( "active_effects" );
         jsout.start_array();
         for( const fake_spell &sp : active_effects ) {
             sp.serialize( jsout );
@@ -713,9 +713,9 @@ int relic_procgen_data::power_level( const enchant_cache &ench ) const
 
 int relic_procgen_data::power_level( const fake_spell &sp ) const
 {
-    for( const std::pair<relic_procgen_data::enchantment_active, int> &vals :
-         active_procgen_values ) {
-        if( vals.first.activated_spell == sp.id ) {
+for( const std::pair<relic_procgen_data::enchantment_active, int> &vals :
+    active_procgen_values ) {
+    if( vals.first.activated_spell == sp.id ) {
             return vals.first.calc_power( sp.level );
         }
     }

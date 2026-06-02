@@ -23,10 +23,10 @@
 #include <utility>
 #include <vector>
 #if defined(_WIN32)
-#include "cata_allocator.h"
-#include "platform_win.h"
+    #include "cata_allocator.h"
+    #include "platform_win.h"
 #else
-#include <csignal>
+    #include <csignal>
 #endif
 
 #include <flatbuffers/util.h>
@@ -63,22 +63,22 @@
 #include "ui_manager.h"
 #include "cata_imgui.h"
 #if defined(MACOSX) || defined(__CYGWIN__)
-#   include <unistd.h> // getpid()
+    #include <unistd.h> // getpid()
 #endif
 
 #if defined(EMSCRIPTEN)
-#include <emscripten.h>
+    #include <emscripten.h>
 #endif
 
 #if defined(PREFIX)
-#   undef PREFIX
-#   include "prefix.h"
+    #undef PREFIX
+    #include "prefix.h"
 #endif
 
 class ui_adaptor;
 
 #if defined(TILES) || defined(SDL_SOUND)
-#   include "sdl_version_wrappers.h"
+    #include "sdl_version_wrappers.h"
 #endif
 
 #if defined(__ANDROID__)
@@ -136,8 +136,8 @@ namespace
 {
 
 #if defined(_WIN32) and defined(TILES)
-// Used only if AttachConsole() works
-FILE *CONOUT;
+    // Used only if AttachConsole() works
+    FILE *CONOUT;
 #endif
 void exit_handler( int s )
 {

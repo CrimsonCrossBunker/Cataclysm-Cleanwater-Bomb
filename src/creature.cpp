@@ -405,7 +405,7 @@ void Creature::process_turn()
 bool Creature::cant_do_underwater( bool msg ) const
 {
     if( is_underwater() ) {
-        if( msg ) {
+    if( msg ) {
             add_msg_player_or_npc( m_info, _( "You can't do that while underwater." ),
                                    _( "<npcname> can't do that while underwater." ) );
         }
@@ -422,9 +422,9 @@ bool Creature::is_underwater() const
 bool Creature::is_likely_underwater( const map &here ) const
 {
     return is_underwater() ||
-           ( has_flag( mon_flag_AQUATIC ) &&
-             ( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos_bub( here ) ) ||
-               here.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, pos_bub( here ) ) ) );
+    ( has_flag( mon_flag_AQUATIC ) &&
+    ( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos_bub( here ) ) ||
+    here.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, pos_bub( here ) ) ) );
 }
 
 bool Creature::hallucination_die( map *here, Creature *killer )
@@ -445,12 +445,12 @@ bool Creature::has_mind() const
 bool Creature::is_ranged_attacker() const
 {
     if( has_flag( mon_flag_RANGED_ATTACKER ) ) {
-        return true;
-    }
+    return true;
+}
 
-    const monster *mon = as_monster();
-    if( mon ) {
-        for( const std::pair<const std::string, mtype_special_attack> &attack :
+const monster *mon = as_monster();
+if( mon ) {
+    for( const std::pair<const std::string, mtype_special_attack> &attack :
              mon->type->special_attacks ) {
             if( attack.second->id == "gun" ) {
                 return true;
@@ -470,8 +470,8 @@ bool Creature::digging() const
 bool Creature::is_dangerous_fields( const field &fld ) const
 {
     // Else check each field to see if it's dangerous to us
-    for( const auto &dfield : fld ) {
-        if( is_dangerous_field( dfield.second ) && !is_immune_field( dfield.first ) ) {
+for( const auto &dfield : fld ) {
+    if( is_dangerous_field( dfield.second ) && !is_immune_field( dfield.first ) ) {
             return true;
         }
     }
@@ -487,8 +487,8 @@ bool Creature::is_dangerous_field( const field_entry &entry ) const
 
 bool Creature::is_immune_fields( const std::vector<field_type_id> &fields ) const
 {
-    for( const field_type_id fi : fields ) {
-        if( !is_immune_field( fi ) ) {
+for( const field_type_id fi : fields ) {
+    if( !is_immune_field( fi ) ) {
             return false;
         }
     }
@@ -684,21 +684,21 @@ bool Creature::sees( const map &here, const tripoint_bub_ms &t, bool is_avatar,
                      int range_mod ) const
 {
     if( std::abs( posz() - t.z() ) > fov_3d_z_range ) {
-        return false;
-    }
+    return false;
+}
 
-    const tripoint_bub_ms pos = pos_bub( here );
-    const int range_cur = sight_range( here.ambient_light_at( t ) );
-    const int range_day = sight_range( default_daylight_level() );
-    const int range_night = sight_range( 0 );
-    const int range_max = std::max( range_day, range_night );
-    const int range_min = std::min( range_cur, range_max );
-    const int wanted_range = rl_dist( pos, t );
-    if( wanted_range <= range_min ||
+const tripoint_bub_ms pos = pos_bub( here );
+const int range_cur = sight_range( here.ambient_light_at( t ) );
+const int range_day = sight_range( default_daylight_level() );
+const int range_night = sight_range( 0 );
+const int range_max = std::max( range_day, range_night );
+const int range_min = std::min( range_cur, range_max );
+const int wanted_range = rl_dist( pos, t );
+if( wanted_range <= range_min ||
         ( wanted_range <= range_max &&
           here.ambient_light_at( t ) > here.get_cache_ref( t.z() ).natural_light_level_cache ) ) {
-        int range = 0;
-        if( here.ambient_light_at( t ) > here.get_cache_ref( t.z() ).natural_light_level_cache ) {
+    int range = 0;
+    if( here.ambient_light_at( t ) > here.get_cache_ref( t.z() ).natural_light_level_cache ) {
             range = MAX_VIEW_DISTANCE;
         } else {
             range = range_min;
@@ -787,7 +787,7 @@ Creature *Creature::auto_find_hostile_target( int range, int &boo_hoo, int area 
         // TODO: what about g->u?
         return false;
     } );
-    for( Creature *&m : targets ) {
+    for( Creature * &m : targets ) {
         if( !sees( here, *m ) ) {
             // can't see nor sense it
             if( is_fake() && in_veh ) {
@@ -888,18 +888,18 @@ Creature *Creature::auto_find_hostile_target( int range, int &boo_hoo, int area 
 int Creature::size_melee_penalty() const
 {
     switch( get_size() ) {
-        case creature_size::tiny:
-            return 30;
-        case creature_size::small:
-            return 15;
-        case creature_size::medium:
-            return 0;
-        case creature_size::large:
-            return -10;
-        case creature_size::huge:
-            return -20;
-        case creature_size::num_sizes:
-            debugmsg( "ERROR: Creature has invalid size class." );
+    case creature_size::tiny:
+        return 30;
+    case creature_size::small:
+        return 15;
+    case creature_size::medium:
+        return 0;
+    case creature_size::large:
+        return -10;
+    case creature_size::huge:
+        return -20;
+    case creature_size::num_sizes:
+        debugmsg( "ERROR: Creature has invalid size class." );
             return 0;
     }
 
@@ -1203,7 +1203,7 @@ projectile_attack_results Creature::select_body_part_projectile_attack(
     bool crit_roll = hit_roll * 0.5 < accuracy_critical;
     const monster *mon = as_monster();
     if( mon ) {
-        fatal_hit = ret.max_damage * crit_multiplier > get_hp_max();
+    fatal_hit = ret.max_damage * crit_multiplier > get_hp_max();
         ret.wp = mon->type->weakpoints.select_weakpoint( attack );
         crit_roll &= ret.wp->is_good && !ret.wp->id.empty();
         ret.is_headshot = !has_flag( mon_flag_NOHEAD ) && ret.wp->is_head;
@@ -1223,8 +1223,8 @@ projectile_attack_results Creature::select_body_part_projectile_attack(
     }
 
     if( magic ) {
-        // do nothing special, no damage mults, nothing
-    } else if( goodhit < accuracy_headshot && ( ret.is_headshot || fatal_hit ) ) {
+    // do nothing special, no damage mults, nothing
+} else if( goodhit < accuracy_headshot && ( ret.is_headshot || fatal_hit ) ) {
         ret.message = _( "Critical!!" );
         ret.gmtSCTcolor = m_headshot;
         // ( 0.95, 1.05 ) when goodhit = 0, ( 0.95, 1.04 ) when nears 0.1
@@ -1239,16 +1239,16 @@ projectile_attack_results Creature::select_body_part_projectile_attack(
         ret.damage_mult *= std_hit_mult + ( crit_multiplier - std_hit_mult ) * crit_mod;
         ret.is_crit = true;
     } else if( goodhit < accuracy_goodhit ) {
-        ret.message = _( "Good hit!" );
+    ret.message = _( "Good hit!" );
         ret.gmtSCTcolor = m_good;
         // ( 0.5, 1.0 ) when goodhit = 0, ( 0.5, 0.75 ) when nears 0.5
         ret.damage_mult *= 1.0 - 0.5 * hit_roll;
         ret.damage_mult *= std_hit_mult;
     } else if( goodhit < accuracy_standard ) {
-        // ( 0.5, 1.0 ) when goodhit = 0.5, ( 0.5, 0.7 ) when nears 0.8
-        ret.damage_mult *= 1.5 - hit_roll;
-    } else if( goodhit < accuracy_grazing ) {
-        ret.message = _( "Grazing hit." );
+    // ( 0.5, 1.0 ) when goodhit = 0.5, ( 0.5, 0.7 ) when nears 0.8
+    ret.damage_mult *= 1.5 - hit_roll;
+} else if( goodhit < accuracy_grazing ) {
+    ret.message = _( "Grazing hit." );
         ret.gmtSCTcolor = m_grazing;
         // ( 0.05, 0.25 ) when goodhit = 0.8, 0.05 when nears 1.0
         ret.damage_mult *= 1.05 - hit_roll;
@@ -1425,7 +1425,7 @@ void Creature::deal_projectile_attack( map *here, Creature *source, dealt_projec
     wp_attack_copy.compute_wp_skill();
 
     projectile_attack_results hit_selection = select_body_part_projectile_attack( proj, goodhit,
-            magic, missed_by, wp_attack_copy );
+        magic, missed_by, wp_attack_copy );
     wp_attack_copy.is_crit = hit_selection.is_crit;
 
     // copy it, since we're mutating.
@@ -2049,7 +2049,7 @@ bool Creature::has_effect_with_flag( const flag_id &flag ) const
 }
 
 std::vector<std::reference_wrapper<const effect>> Creature::get_effects_with_flag(
-            const flag_id &flag ) const
+    const flag_id &flag ) const
 {
     std::vector<std::reference_wrapper<const effect>> effs;
     for( auto &elem : *effects ) {
@@ -2075,7 +2075,7 @@ std::vector<std::reference_wrapper<const effect>> Creature::get_effects() const
 }
 
 std::vector<std::reference_wrapper<const effect>> Creature::get_effects_from_bp(
-            const bodypart_id &bp ) const
+    const bodypart_id &bp ) const
 {
     std::vector<std::reference_wrapper<const effect>> effs;
     for( auto &elem : *effects ) {
@@ -2177,13 +2177,13 @@ void Creature::process_effects()
 
 bool Creature::resists_effect( const effect &e ) const
 {
-    for( const efftype_id &i : e.get_resist_effects() ) {
-        if( has_effect( i ) ) {
+for( const efftype_id &i : e.get_resist_effects() ) {
+    if( has_effect( i ) ) {
             return true;
         }
     }
-    for( const string_id<mutation_branch> &i : e.get_resist_traits() ) {
-        if( has_trait( i ) ) {
+for( const string_id<mutation_branch> &i : e.get_resist_traits() ) {
+    if( has_trait( i ) ) {
             return true;
         }
     }
@@ -2267,7 +2267,7 @@ void Creature::set_moves( int nmoves )
 bool Creature::in_sleep_state() const
 {
     return has_effect( effect_sleep ) || has_effect( effect_lying_down ) ||
-           has_effect( effect_npc_suspend );
+    has_effect( effect_npc_suspend );
 }
 
 /*
@@ -2319,8 +2319,8 @@ void Creature::decrement_summon_timer()
 Creature *Creature::get_summoner() const
 {
     if( !summoner ) {
-        return nullptr;
-    } else if( summoner.value() == get_player_character().getID() ) {
+    return nullptr;
+} else if( summoner.value() == get_player_character().getID() ) {
         return &get_player_character();
     } else {
         return g->find_npc( summoner.value() );
@@ -2781,8 +2781,8 @@ void Creature::set_all_parts_hp_to_max()
 
 bool Creature::has_atleast_one_wet_part() const
 {
-    for( const std::pair<const bodypart_str_id, bodypart> &elem : body ) {
-        if( elem.second.get_wetness() > 0 ) {
+for( const std::pair<const bodypart_str_id, bodypart> &elem : body ) {
+    if( elem.second.get_wetness() > 0 ) {
             return true;
         }
     }
@@ -2828,7 +2828,7 @@ static void sort_body_parts( std::vector<bodypart_id> &bps, const Creature *c )
 
     // Topo-sort the parts from the extremities towards the head
     std::unordered_map<bodypart_id, cata::flat_set<bodypart_id>> unaccounted_parts =
-                parts_connected_to;
+        parts_connected_to;
     cata::flat_set<bodypart_id> parts_with_no_connections;
 
     for( const bodypart_id &bp : bps ) {
@@ -2921,8 +2921,8 @@ std::vector<bodypart_id> Creature::get_all_body_parts( get_body_part_flags flags
     bool only_minor( flags & get_body_part_flags::only_minor );
     std::vector<bodypart_id> all_bps;
     all_bps.reserve( body.size() );
-    for( const std::pair<const bodypart_str_id, bodypart> &elem : body ) {
-        if( ( only_main && elem.first->main_part != elem.first ) || ( only_minor &&
+for( const std::pair<const bodypart_str_id, bodypart> &elem : body ) {
+    if( ( only_main && elem.first->main_part != elem.first ) || ( only_minor &&
                 elem.first->main_part == elem.first ) ) {
             continue;
         }
@@ -2930,7 +2930,7 @@ std::vector<bodypart_id> Creature::get_all_body_parts( get_body_part_flags flags
     }
 
     if( flags & get_body_part_flags::sorted ) {
-        sort_body_parts( all_bps, this );
+    sort_body_parts( all_bps, this );
     }
 
     return  all_bps;
@@ -2938,8 +2938,8 @@ std::vector<bodypart_id> Creature::get_all_body_parts( get_body_part_flags flags
 
 bodypart_id Creature::get_root_body_part() const
 {
-    for( const bodypart_id &part : get_all_body_parts() ) {
-        if( part->connected_to == part->id ) {
+for( const bodypart_id &part : get_all_body_parts() ) {
+    if( part->connected_to == part->id ) {
             return part;
         }
     }
@@ -2954,8 +2954,8 @@ std::vector<bodypart_id> Creature::get_all_body_parts_of_type(
     const bool primary( flags & get_body_part_flags::primary_type );
 
     std::vector<bodypart_id> bodyparts;
-    for( const std::pair<const bodypart_str_id, bodypart> &elem : body ) {
-        if( only_main && elem.first->main_part != elem.first ) {
+for( const std::pair<const bodypart_str_id, bodypart> &elem : body ) {
+    if( only_main && elem.first->main_part != elem.first ) {
             continue;
         }
         if( primary ) {
@@ -2968,7 +2968,7 @@ std::vector<bodypart_id> Creature::get_all_body_parts_of_type(
     }
 
     if( flags & get_body_part_flags::sorted ) {
-        sort_body_parts( bodyparts, this );
+    sort_body_parts( bodyparts, this );
     }
 
     return bodyparts;
@@ -3505,12 +3505,12 @@ void Creature::adjust_taken_damage_by_enchantments( damage_unit &du ) const
 {
     //If we're not dealing any damage of the given type, don't even bother.
     if( du.amount < 0.1f ) {
-        return;
-    }
+    return;
+}
 
-    double total = enchantment_cache->modify_damage_units_by_armor_protection( du.type, du.amount );
-    if( !du.type->no_resist ) {
-        total = calculate_by_enchantment( total, enchant_vals::mod::ARMOR_ALL );
+double total = enchantment_cache->modify_damage_units_by_armor_protection( du.type, du.amount );
+if( !du.type->no_resist ) {
+    total = calculate_by_enchantment( total, enchant_vals::mod::ARMOR_ALL );
     }
 
     du.amount = std::max( 0.0, total );

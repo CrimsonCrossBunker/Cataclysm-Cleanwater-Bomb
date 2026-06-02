@@ -13,12 +13,12 @@
 #include "point.h"
 
 #if defined(EMSCRIPTEN)
-#include <emscripten.h>
+    #include <emscripten.h>
 #endif
 
 #if defined(TILES)
-#include "sdl_wrappers.h"
-#include "sdltiles.h"
+    #include "sdl_wrappers.h"
+    #include "sdltiles.h"
 #endif
 
 using ui_stack_t = std::vector<std::reference_wrapper<ui_adaptor>>;
@@ -28,7 +28,7 @@ static bool redraw_in_progress = false;
 static bool showing_debug_message = false;
 static bool restart_redrawing = false;
 #if defined( TILES )
-static std::optional<SDL_Rect> prev_clip_rect;
+    static std::optional<SDL_Rect> prev_clip_rect;
 #endif
 static ui_stack_t ui_stack;
 
@@ -286,10 +286,10 @@ void ui_adaptor::invalidation_consistency_and_optimization()
 void ui_adaptor::invalidate_ui() const
 {
     if( invalidated ) {
-        return;
-    }
-    auto it = ui_stack.cbegin();
-    for( ; it < ui_stack.cend(); ++it ) {
+    return;
+}
+auto it = ui_stack.cbegin();
+for( ; it < ui_stack.cend(); ++it ) {
         if( &it->get() == this ) {
             break;
         }

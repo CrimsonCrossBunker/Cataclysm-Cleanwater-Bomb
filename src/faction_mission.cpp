@@ -188,6 +188,6 @@ void faction_mission::check_consistency()
 void faction_mission::check() const
 {
     if( !skill_used.is_valid() && !skill_used.is_null() ) {
-        debugmsg( "Invalid skill in faction mission: %s, %s", name, skill_used.str() );
+    debugmsg( "Invalid skill in faction mission: %s, %s", name, skill_used.str() );
     }
 }

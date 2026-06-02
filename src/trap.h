@@ -203,7 +203,7 @@ struct trap {
 
         std::string memorial_msg( bool male ) const {
             if( male ) {
-                return memorial_male->translated();
+            return memorial_male->translated();
             }
             return memorial_female->translated();
         }
