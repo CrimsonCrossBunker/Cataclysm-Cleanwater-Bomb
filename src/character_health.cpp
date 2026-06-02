@@ -2058,11 +2058,12 @@ float Character::get_bmi() const
 float Character::get_bmi_lean() const
 {
     //strength BMIs decrease to zero as you starve (muscle atrophy)
+    // CCB: 调整瘦体重BMI公式，降低力量对体重的贡献
     if( get_bmi_fat() < character_weight_category::normal ) {
         const stat_mod wpen = get_weight_penalty();
-        return 12.0f + get_str_base() - wpen.strength;
+        return 14.0f + ( get_str_base() / 4.0f ) - wpen.strength;
     }
-    return 12.0f + get_str_base();
+    return 14.0f + ( get_str_base() / 4.0f );
 }
 
 float Character::get_bmi_fat() const
