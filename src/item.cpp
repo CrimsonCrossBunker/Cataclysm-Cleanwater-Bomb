@@ -1766,7 +1766,7 @@ std::string item::display_name( unsigned int quantity ) const
             }
         }
         show_amt = !has_flag( flag_RELOAD_AND_SHOOT );
-    } else if( count_by_charges() && !has_infinite_charges() ) {
+    } else if( count_by_charges() && !has_infinite_charges() && !type->is_stackable() ) {
         // A chargeable item
         amount = charges;
         const itype *adata = ammo_data();
@@ -2870,6 +2870,11 @@ for( const std::pair<itype_id, std::vector<item>> pair : components ) {
 bool item::count_by_charges() const
 {
     return type->count_by_charges();
+}
+
+bool item::is_stackable() const
+{
+    return type->stackable_;
 }
 
 void item::compress_charges_or_liquid( int &compcount )
