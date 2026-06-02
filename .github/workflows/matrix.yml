@@ -89,8 +89,12 @@ jobs:
           echo "fail_fast=$([ "$GITHUB_REF_NAME" = "master" -o "$GITHUB_REPOSITORY_OWNER" != "CleverRaven" ] && echo false || echo true)" >> $GITHUB_OUTPUT
           echo "skip_tests=$([ "$GITHUB_REF_NAME" = "master" ] && echo true || echo false)" >> $GITHUB_OUTPUT
           echo "max_parallel=$([ "$GITHUB_REF_NAME" = "master" -o "$GITHUB_REPOSITORY_OWNER" != "CleverRaven" ] && echo 20 || echo 1)" >> $GITHUB_OUTPUT
+  build-translations:
+    uses: ./.github/workflows/build-translations.yml
+    secrets:
+      TX_TOKEN: ${{ secrets.TX_TOKEN }}
   varied_builds:
-    needs: [ skip-duplicates-code, skip-duplicates-data, matrix-variables ]
+    needs: [ skip-duplicates-code, skip-duplicates-data, matrix-variables, build-translations ]
     strategy:
       fail-fast: ${{ fromJSON(needs.matrix-variables.outputs.fail_fast) }}
       max-parallel: ${{ fromJSON(needs.matrix-variables.outputs.max_parallel) }}
@@ -277,6 +281,11 @@ jobs:
     - name: prepare
       if: ${{ env.SKIP == 'false' }}
       run: bash ./build-scripts/requirements.sh
+    - name: Fetch translations artifact into build
+      if: ${{ env.SKIP == 'false' }}
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      with:
+        name: translations
     - name: Get ccache vars
       id: get-vars
       if: ${{ env.SKIP == 'false' }}
