@@ -2,7 +2,6 @@
   {
     "abstract": "scrap_worthless",
     "type": "ITEM",
-    "//CCB": "撤销 PR #86581 — 恢复僵尸尸体的实用性",
     "name": { "str_sp": "worthless scraps", "//~": "NO_I18N" },
     "description": { "str": "A handful of oddly-shaped worthless bits of abstract code.  Seeing this is a bug.", "//~": "NO_I18N" },
     "category": "other",
@@ -13,7 +12,8 @@
     "material": [ "cotton" ],
     "symbol": "=",
     "color": "dark_gray",
-    "flags": [ "NO_SALVAGE", "TRADER_AVOID" ]
+    "flags": [ "NO_SALVAGE", "TRADER_AVOID" ],
+    "stackable": true
   },
   {
     "abstract": "scrap_valuable",
@@ -28,7 +28,8 @@
     "material": [ "cotton" ],
     "symbol": "=",
     "color": "dark_gray",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -41,7 +42,8 @@
     "price": "10 cent",
     "material": [ "dry_plant" ],
     "weight": "100 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "id": "scrap_cotton",
@@ -174,7 +176,8 @@
     "material": [ "wool" ],
     "symbol": ",",
     "color": "white",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -189,7 +192,8 @@
     "flags": [ "NO_SALVAGE" ],
     "weight": "46 g",
     "volume": "58 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -215,7 +219,8 @@
     "flags": [ "NO_SALVAGE" ],
     "weight": "25 g",
     "volume": "23 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -230,7 +235,8 @@
     "flags": [ "NO_SALVAGE" ],
     "weight": "3 g",
     "volume": "18 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -245,7 +251,8 @@
     "material": [ "nomex" ],
     "flags": [ "NO_SALVAGE" ],
     "weight": "4 g",
-    "volume": "9 ml"
+    "volume": "9 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -260,7 +267,8 @@
     "flags": [ "NO_SALVAGE" ],
     "weight": "40 g",
     "volume": "125 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -274,7 +282,8 @@
     "material": [ "leather" ],
     "weight": "296 g",
     "volume": "186 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -288,7 +297,8 @@
     "price": "25 USD",
     "price_postapoc": "2 USD 50 cent",
     "symbol": ",",
-    "color": "brown"
+    "color": "brown",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -310,7 +320,8 @@
     "flags": [ "NO_SALVAGE" ],
     "weight": "372 g",
     "volume": "465 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -324,7 +335,8 @@
     "material": [ "fur" ],
     "weight": "372 g",
     "volume": "465 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -338,7 +350,8 @@
     "material": [ "fur" ],
     "weight": "372 g",
     "volume": "465 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "id": "sheet_cotton",
@@ -355,7 +368,8 @@
     "price_postapoc": "10 cent",
     "material": [ "cotton" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_cotton_patchwork",
@@ -380,7 +394,8 @@
     "price_postapoc": "20 cent",
     "material": [ "faux_fur" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_faux_fur_patchwork",
@@ -390,7 +405,8 @@
     "description": "A 12-inch by 24-inch sheet of faux fur sewn together from mismatched patches.  Suitable for making clothing if you lack proper material sheets, but the bright, clashing colors might end up making you look like a diseased Muppet.",
     "//": "12 inches by 24 inches with GSM of 2000",
     "price": "10 USD",
-    "price_postapoc": "50 cent"
+    "price_postapoc": "50 cent",
+    "stackable": true
   },
   {
     "id": "sheet_felt",
@@ -405,7 +421,8 @@
     "price_postapoc": "20 cent",
     "material": [ "wool" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_felt_patchwork",
@@ -430,7 +447,8 @@
     "price_postapoc": "50 cent",
     "material": [ "kevlar" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_kevlar_patchwork",
@@ -446,7 +464,8 @@
     "material": [ "kevlar" ],
     "looks_like": "sheet_kevlar",
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "kevlar_patch",
@@ -461,7 +480,8 @@
     "price_postapoc": "5 cent",
     "material": [ "kevlar" ],
     "symbol": ",",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_lycra",
@@ -476,7 +496,8 @@
     "price_postapoc": "25 cent",
     "material": [ "lycra" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_kevlar_layered",
@@ -493,7 +514,8 @@
     "material": [ "kevlar_layered" ],
     "flags": [ "NO_SALVAGE" ],
     "symbol": ",",
-    "color": "green"
+    "color": "green",
+    "stackable": true
   },
   {
     "id": "rigid_kevlar_plate",
@@ -510,7 +532,8 @@
     "material": [ "kevlar_rigid" ],
     "flags": [ "NO_SALVAGE" ],
     "symbol": ",",
-    "color": "green"
+    "color": "green",
+    "stackable": true
   },
   {
     "id": "sheet_lycra_patchwork",
@@ -535,7 +558,8 @@
     "price_postapoc": "35 cent",
     "material": [ "neoprene" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_neoprene_patchwork",
@@ -560,7 +584,8 @@
     "price_postapoc": "40 cent",
     "material": [ "nomex" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_nomex_patchwork",
@@ -586,7 +611,8 @@
     "price_postapoc": "20 cent",
     "material": [ "nylon" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_nylon_patchwork",
@@ -612,7 +638,8 @@
     "price_postapoc": "8 cent",
     "symbol": ",",
     "color": "white",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -669,7 +696,8 @@
     "price_postapoc": "50 cent",
     "material": [ "denim" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "scrap_denim",
@@ -698,7 +726,8 @@
     "flags": [ "NO_SALVAGE" ],
     "weight": "11 g",
     "volume": "13 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "id": "sheet_denim_patchwork",
@@ -711,7 +740,8 @@
     "price_postapoc": "50 cent",
     "material": [ "denim" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "sheet_canvas",
@@ -727,7 +757,8 @@
     "price_postapoc": "50 cent",
     "material": [ "canvas" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -778,7 +809,8 @@
     "flags": [ "NO_SALVAGE" ],
     "weight": "9500 mg",
     "volume": "6 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "id": "sheet_canvas_patchwork",
@@ -793,7 +825,8 @@
     "price_postapoc": "50 cent",
     "material": [ "canvas" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "strap_cotton",
@@ -808,6 +841,7 @@
     "price_postapoc": "5 cent",
     "material": [ { "type": "cotton", "portion": 6 }, { "type": "steel", "portion": 1 } ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   }
 ]
