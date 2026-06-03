@@ -1446,15 +1446,16 @@ void Character::modify_morale( item &food, const int nutr )
         // PR #81379 (Remove cannibal's last consumption bonus)
         // 方法：还原为原始士气数值和持续时间，恢复食人+精神病+灵性(+25)、食人+精神病(+15)、
         // 食人+灵性(+15)、精神病+灵性(+5)的组合加成，纯食人恢复+10奖励，惩罚持续时间恢复60分钟
-        if( cannibal && psycho && spiritual ) {
+        // 追加修复：将食人上位flag噬人症加入最高阶士气加成判断；修复精神病文本顺序错误覆盖食血变异类flag效果
+        if( (cannibal || sapiovore) && psycho && spiritual ) {
             add_msg_if_player( m_good,
                                _( "You feast upon the human flesh, and in doing so, devour their spirit." ) );
             // You're not really consuming anything special; you just think you are.
             add_morale( morale_cannibal, 25, 300 );
-        } else if( cannibal && psycho ) {
+        } else if( (cannibal || sapiovore) && psycho ) {
             add_msg_if_player( m_good, _( "You feast upon the human flesh." ) );
             add_morale( morale_cannibal, 15, 200 );
-        } else if( cannibal && spiritual ) {
+        } else if( (cannibal || sapiovore) && spiritual ) {
             add_msg_if_player( m_good, _( "You consume the sacred human flesh." ) );
             // Boosted because you understand the philosophical implications of your actions, and YOU LIKE THEM.
             add_morale( morale_cannibal, 15, 200 );
@@ -1474,12 +1475,16 @@ void Character::modify_morale( item &food, const int nutr )
             add_msg_if_player( m_good, _( "Blood.  Just what you need.  You want more." ) );
         } else if( has_flag( json_flag_BLOODFEEDER ) && food.has_flag( flag_HEMOVORE_FUN ) ) {
             add_msg_if_player( _( "The human blood tastes as good as any other." ) );
+        } else if( has_flag( json_flag_HEMOVORE ) && food.has_flag( flag_HEMOVORE_FUN ) ) {
+            if ( psycho ) {
+                add_msg_if_player( _( "You feel no wrong in drinking the blood of others to quench your thirst." ) );
+            } else {
+                add_msg_if_player(
+                    _( "Despite your cravings, you still can't help feeling weird about drinking somebody's blood." ) );
+                add_morale( morale_cannibal, -10, -30, 30_minutes, 15_minutes );
+            }
         } else if( psycho ) {
             add_msg_if_player( _( "Meh.  You've eaten worse." ) );
-        } else if( has_flag( json_flag_HEMOVORE ) && food.has_flag( flag_HEMOVORE_FUN ) ) {
-            add_msg_if_player(
-                _( "Despite your cravings, you still can't help feeling weird about drinking somebody's blood." ) );
-            add_morale( morale_cannibal, -10, -30, 30_minutes, 15_minutes );
         } else if( spiritual ) {
             add_msg_if_player( m_bad,
                                _( "This is probably going to count against you if there's still an afterlife." ) );
