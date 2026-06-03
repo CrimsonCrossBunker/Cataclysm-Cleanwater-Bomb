@@ -29,9 +29,17 @@ https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/data/changelog
 
 <!-- 用几句话描述你做这次改动的原因。
 如果它与某个已有 issue 相关，可以用「#」加 GitHub issue 编号来关联，例如 #1234。
-当你的 PR 能完全解决某个 issue 时，请使用 [GitHub 的关闭关键字](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests#linking-a-pull-request-to-an-issue)
-（如 Fixes #1234 / 修复 #1234），以便 PR 合并后自动关闭该 issue。
+
+【重要】当你的 PR 能完全解决某个 issue 时，必须使用 [GitHub 的英文关闭关键字](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests#linking-a-pull-request-to-an-issue)
+才能在 PR 合并后自动关闭该 issue，例如：Fixes #1234。
+只能用以下英文关键词（后面紧跟「#编号」）：
+  close / closes / closed
+  fix / fixes / fixed
+  resolve / resolves / resolved
+注意：中文「修复 #1234」不会触发自动关闭，GitHub 只识别上述英文关键词。
+
 如果没有相关 issue，请在这里说明你要解决的问题、特性或其他关注点。如果这是一个 bug 修复，请附上复现原始 bug 的步骤，以便你的修复可以被验证。 -->
+
 
 #### 解决方案描述 (Describe the solution)
 
