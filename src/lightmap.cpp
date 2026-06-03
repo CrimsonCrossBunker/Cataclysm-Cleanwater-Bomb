@@ -895,11 +895,12 @@ map::apparent_light_info map::apparent_light_helper( const level_cache &map_cach
     };
 
     // possibly reduce view if aiming (also blocks light)
-    if( get_avatar().recoil < MAX_RECOIL ) {
-        if( get_avatar().cant_see( p ) ) {
+    if( u.recoil < MAX_RECOIL ) {
+        if( u.cant_see( p ) ) {
             return { true, true, 0.0 };
         }
     }
+
 
     const bool p_opaque = is_opaque( p.xy() );
     float apparent_light;
@@ -925,19 +926,28 @@ map::apparent_light_info map::apparent_light_helper( const level_cache &map_cach
         };
 
         four_quadrants seen_from( 0 );
+        // Hoist loop-invariant player position and vision range out of the
+        // 8-neighbour loop (player does not move within a single helper call).
+        const point_bub_ms u_xy = u.pos_bub().xy();
+        const int u_range = u.unimpaired_range();
         for( const offset_and_quadrants &oq : adjacent_offsets ) {
             const point_bub_ms neighbour = p.xy() + oq.offset;
 
             if( !lightmap_boundaries.contains( neighbour ) ) {
                 continue;
             }
-            if( is_opaque( neighbour ) ) {
+            // Cheapest rejection first: a neighbour that is neither directly
+            // seen nor camera-covered contributes nothing, so skip it before
+            // the more expensive is_opaque (two cache reads) and rl_dist.
+            const float n_camera = map_cache.camera_cache[neighbour.x()][neighbour.y()];
+            const float n_seen = map_cache.seen_cache[neighbour.x()][neighbour.y()];
+            if( n_seen == 0 && n_camera == 0 ) {
                 continue;
             }
-            if( ( rl_dist( u.pos_bub().xy(), neighbour ) > u.unimpaired_range() &&
-                  map_cache.camera_cache[neighbour.x()][neighbour.y()] == 0 ) ||
-                ( map_cache.seen_cache[neighbour.x()][neighbour.y()] == 0 &&
-                  map_cache.camera_cache[neighbour.x()][neighbour.y()] == 0 ) ) {
+            if( n_camera == 0 && rl_dist( u_xy, neighbour ) > u_range ) {
+                continue;
+            }
+            if( is_opaque( neighbour ) ) {
                 continue;
             }
             // This is a non-opaque visible neighbour, so count visibility from the relevant
@@ -945,6 +955,7 @@ map::apparent_light_info map::apparent_light_helper( const level_cache &map_cach
             seen_from[oq.quadrants[0]] = vis;
             seen_from[oq.quadrants[1]] = vis;
         }
+
         apparent_light = ( seen_from * map_cache.lm[p.x()][p.y()] ).max();
     } else {
         // This is the simple case, for a non-opaque tile light from all

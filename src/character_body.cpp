@@ -479,11 +479,14 @@ void Character::update_bodytemp()
         scaled_sleepiness;
 
     // Sunlight
-    const float scaled_sun_irradiance = incident_sun_irradiance( get_weather().weather_id,
+    const float scaled_sun_irradiance = incident_sun_irradiance( weather_man.weather_id,
                                         calendar::turn ) / max_sun_irradiance();
-    const units::temperature_delta sunlight_warmth = !g->is_sheltered( pos_bub() ) ? 3_C_delta *
+    // Reuse the cached `sheltered` computed above instead of recomputing
+    // is_sheltered() (which queries veh_at + is_outside) for the same position.
+    const units::temperature_delta sunlight_warmth = !sheltered ? 3_C_delta *
         scaled_sun_irradiance :
         0_C_delta;
+
     const int best_fire = get_best_fire( pos_bub() );
 
     const units::temperature_delta lying_warmth = use_floor_warmth ? floor_warmth(
@@ -520,6 +523,11 @@ void Character::update_bodytemp()
     // We might not use this at all, so leave it empty
     // If we do need to use it, we'll initialize it (once) there
     std::map<bodypart_id, int> fire_armor_per_bp;
+    // Local humidity depends only on loop-invariant inputs (weather humidity,
+    // weather type and shelter), so compute it once instead of per body part.
+    const int local_humidity = get_local_humidity( weather.humidity, weather_man.weather_id,
+                               sheltered );
+
     // Current temperature and converging temperature calculations
     for( const bodypart_id &bp : get_all_body_parts() ) {
 
@@ -542,10 +550,10 @@ void Character::update_bodytemp()
 
         bp_windpower = static_cast<int>( static_cast<float>( bp_windpower ) *
                                          ( 1 - wind_res_per_bp[bp] / 100.0 ) );
-        // Calculate windchill
+        // Calculate windchill (local_humidity precomputed above; loop-invariant)
         units::temperature_delta windchill = get_local_windchill( player_local_temp,
-                                             get_local_humidity( weather.humidity, get_weather().weather_id, sheltered ),
-                                             bp_windpower );
+                                             local_humidity, bp_windpower );
+
 
         static const auto is_lower = []( const bodypart_id & bp ) {
             return bp->has_flag( json_flag_LIMB_LOWER );
