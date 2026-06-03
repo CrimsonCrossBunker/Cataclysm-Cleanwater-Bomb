@@ -93,6 +93,22 @@ void material_type::load( const JsonObject &jsobj, std::string_view )
             _res_was_loaded.emplace_back( jmemb.name() );
         }
     }
+    else if( was_loaded ) {
+        // A temporary solution, manually add `extend` support.
+        // Handwritten data instead of going through generic_factory, but this processing is really crude.
+        // The `delete` option may cause more bugs and is not currently being considered for handling.
+        if( jsobj.has_object( "extend" ) && jsobj.has_string("copy-from") ) {
+            JsonObject ext = jsobj.get_object( "extend" );
+            ext.allow_omitted_members();
+            if( ext.has_object("resist") ) {
+                JsonObject ejo = ext.get_object( "resist" );
+                _resistances = extend_resistances_instance( _resistances, ejo );
+                for( const JsonMember &jmemb : ejo ) {
+                    _res_was_loaded.emplace_back( jmemb.name() );
+                }
+            }
+        }
+    }
 
     optional( jsobj, was_loaded, "conductive", _conductive );
     mandatory( jsobj, was_loaded, "chip_resist", _chip_resist, numeric_bound_reader<int> {0} );
