@@ -1403,9 +1403,10 @@ double item_rot_eval(const_dialogue const &d, char scope, std::vector<diag_value
             double turns = to_turns<double>(rotting);
             return _time_in_unit(turns, unit_val.str(d));
         }
-        else if (format == "relative")
+        else
         {
-            return obj.get_relative_rot()
+            // format already validated to be "raw" or "relative" above
+            return obj.get_relative_rot();
         }
     }
     else
@@ -1414,7 +1415,7 @@ double item_rot_eval(const_dialogue const &d, char scope, std::vector<diag_value
     }
 }
 
-void item_rot_ass(double val, dialogue& d, char scope, std::vector << diag_value > const&/*params*/, diag_kwargs const& kwargs)
+void item_rot_ass(double val, dialogue& d, char scope, std::vector<diag_value> const &/*params*/, diag_kwargs const& kwargs)
 {
     item_location* it = d.actor(is_beta(scope))->get_item();
     if (it == nullptr) {
