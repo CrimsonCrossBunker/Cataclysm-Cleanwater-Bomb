@@ -560,20 +560,5 @@ float raw_noise_4d( const float x, const float y, const float z, const float w )
     return 27.0f * ( n0 + n1 + n2 + n3 + n4 );
 }
 
-int fastfloor( const float x )
-{
-    return x > 0 ? static_cast<int>( x ) : static_cast<int>( x ) - 1;
-}
-
-float dot( const std::array<int, 3> &g, const float x, const float y )
-{
-    return g[0] * x + g[1] * y;
-}
-float dot( const std::array<int, 3> &g, const float x, const float y, const float z )
-{
-    return g[0] * x + g[1] * y + g[2] * z;
-}
-float dot( const std::array<int, 4> &g, const float x, const float y, const float z, const float w )
-{
-    return g[0] * x + g[1] * y + g[2] * z + g[3] * w;
-}
+// fastfloor() and dot() are now defined inline in simplexnoise.h so the hot
+// raw_noise_* functions can inline them (see header comment).

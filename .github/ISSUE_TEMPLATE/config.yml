@@ -1,14 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Found typos?
+  - name: 发现错别字 / 拼写错误？
     url: https://docs.github.com/en/repositories/working-with-files/managing-files/editing-files#editing-files-in-another-users-repository
-    about: They are trivial to fix, even for absolute beginners. Fixing them yourself is faster than reporting them. And you get credit for fixing them, too!
-  - name: Translations
-    url: https://github.com/CleverRaven/Cataclysm-DDA/blob/master/doc/TRANSLATING.md
-    about: Typos or other non-technical errors in translations? Go here.
-  - name: Tileset Issues
-    url: https://github.com/I-am-Erk/CDDA-Tilesets/issues
-    about: For issues concerning the built-in tilesets.
-  - name: Project Forums
-    url: https://discourse.cataclysmdda.org/
-    about: For even more general discussion with the community, consider posting on the forums.
+    about: 这类问题即使是初学者也能轻松修复。自己动手改比报告还快，而且你还能因修复获得贡献署名！
+  - name: 翻译相关
+    url: https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/doc/TRANSLATING.md
+    about: 翻译中的错别字或其他非技术性错误？请到这里。

@@ -1,9 +1,16 @@
 # Lines longer than 78 characters will be wrapped automatically
 # The following line is for reference
 ##############################################################################
-(<color_cyan>0.I</color>):</color>
-<color_white>Original author:</color>    <color_white>Project Manager:</color>
-<color_yellow>Whales</color> (<color_dark_gray>retired</color>)    <color_yellow>KevinGranade</color>
+(<color_cyan>0.Aa</color>):</color>
+<color_white>Original author:</color>    <color_white>Original Project Manager:</color>    <color_white>Project Manager:</color>
+<color_yellow>Whales</color> (<color_dark_gray>retired</color>)    <color_yellow>KevinGranade</color>                 <color_yellow>g1ytx</color>
+
+<color_white>Founders:</color>
+<color_yellow>滑稽摸鱼Na--喵</color> (<color_cyan>lapp2333xhj</color>)
+<color_yellow>g1ytx</color> (<color_cyan>LYHGLYTX</color>)
+<color_yellow>滴哒</color> (<color_cyan>EliadOArias</color>)
+<color_yellow>幽月琉璃</color> (<color_cyan>LunaGlaze</color>)
+<color_yellow>byiyuebai</color> (<color_cyan>byjbaiyue</color>)
 
 <color_white>Special thanks to:</color>
 <color_yellow>Standing-Storm</color> - Creator and maintainer of the enormous 'Mind over Matter' mod and numerous contributions to other mods (fair folk and espers and wizards, oh my!)
@@ -30,11 +37,12 @@
 <color_yellow>gettingusedto</color> - MSX+ heavyweight and all around nice guy. We've gotten used to (heh) seeing them around!
 
 <color_white>For a full list of contributors please see:</color>
+<color_cyan>https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb</color>
 <color_cyan>https://github.com/CleverRaven/Cataclysm-DDA/contributors</color>
 <color_cyan>https://github.com/I-am-Erk/CDDA-Tilesets/graphs/contributors</color>
 <color_cyan>https://github.com/pixel-32/CDDA-tileset/graphs/contributors</color>
 
-<color_light_cyan>Cataclysm</color>: <color_light_blue>Dark Days Ahead</color> is released under <color_white>CC-BY-SA 3.0</color>:
+<color_light_cyan>Cataclysm</color>: <color_light_blue>Cleanwater Bomb</color> is released under <color_white>CC-BY-SA 3.0</color>:
 <color_cyan>https://creativecommons.org/licenses/by-sa/3.0/</color>
 
 

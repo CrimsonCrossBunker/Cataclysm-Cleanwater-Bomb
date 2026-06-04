@@ -4140,6 +4140,14 @@ class Character : public Creature, public visitable
         /** warnings from a faction about bad behavior */
         mutable std::map<faction_id, std::pair<int, time_point>> warning_record;
         /**
+         * Throttling for body temperature change messages ("You feel your X getting warm.", etc).
+         * Key is the body part; value is the temperature tier last announced for that part and the
+         * time of that announcement. Used by update_bodytemp() to suppress message spam when a
+         * body part's temperature hovers around a threshold. Runtime only, not serialized.
+         */
+        std::map<bodypart_id, std::pair<int, time_point>> temp_message_record;
+
+        /**
          * Traits / mutations of the character. Key is the mutation id (it's also a valid
          * key into @ref mutation_data), the value describes the status of the mutation.
          * If there is not entry for a mutation, the character does not have it. If the map

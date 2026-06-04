@@ -21,7 +21,9 @@
     "flags": [ "HURT_WHEN_WIELDED", "TRADER_AVOID", "SINGLE_USE", "FRAGILE_MELEE", "ALLOWS_BODY_BLOCK", "PUNCTURE_VEHICLE_WHEELS" ],
     "to_hit": { "grip": "bad", "length": "hand", "surface": "point", "balance": "neutral" },
     "melee_damage": { "cut": 6 },
-    "weapon_category": [ "SHIVS" ]
+    "weapon_category": [ "SHIVS" ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",

@@ -9,7 +9,8 @@
       "//~": "NO_I18N"
     },
     "symbol": ";",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "drivebelt",

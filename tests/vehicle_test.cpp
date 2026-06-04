@@ -964,20 +964,23 @@ TEST_CASE( "vehicle_wheels_damaged_by_running_over_items", "[vehicle]" )
                                              test_point, 0_degrees, 100, veh_spawn_status::UNDAMAGED, false );
         vehicle_part *vp_wheel = setup_squish_test_return_wheel( here, test_point, veh_ptr );
 
+        // CCB: 车轮碾压公式由 pow(ratio, 2.0) 改为 min( pow(ratio, 6.0), 0.2 )，
+        // 期望值随之更新（ratio = item_hardness / wheel_hardness）。
         const std::map<itype_id, double> test_items = {
-            // Dangerous scenario: A chunk of steel on the road. You wouldn't want to run this over.
-            {itype_qt_steel_chunk, 1.0},
-            // Unlikely scenario: An abandoned body pillow. (Do you know how expensive these things are?! Who would do this???)
-            {itype_test_bodypillow_cloth_item, 0.5625},
-            // Player scenario: Running over people in your car
-            {itype_corpse_fake_TEST, 0.0625},
-            // Final Destination: This thing is guaranteed to ruin your day if you run it over.
-            {itype_test_guarantee_wheel_dmg, 1.0},
-            // Finally, something big that should be very squishable and not much of a threat to a normal wheel.
-            {itype_test_squishy_fruit, 0.015625},
+            // Dangerous scenario: A chunk of steel on the road. ratio 1.0 -> 封顶 0.2
+            {itype_qt_steel_chunk, 0.2},
+            // Unlikely scenario: An abandoned body pillow. ratio 0.75 -> 0.75^6
+            {itype_test_bodypillow_cloth_item, 0.177978515625},
+            // Player scenario: Running over people in your car. ratio 0.25 -> 0.25^6
+            {itype_corpse_fake_TEST, 0.000244140625},
+            // Final Destination: guaranteed-damage item, ratio >= 1.0 -> 封顶 0.2
+            {itype_test_guarantee_wheel_dmg, 0.2},
+            // Finally, something big and squishy. ratio 0.125 -> 0.125^6
+            {itype_test_squishy_fruit, 0.000003814697265625},
             // And to be sure: An item without the flag allowing it to damage wheels.
             {itype_corpse_fake_TEST_NODMG, 0.0}
         };
+
 
         run_squish_test( test_items, test_point, here, veh_ptr, vp_wheel );
     }
@@ -987,12 +990,13 @@ TEST_CASE( "vehicle_wheels_damaged_by_running_over_items", "[vehicle]" )
                                              test_point, 0_degrees, 100, veh_spawn_status::UNDAMAGED, false );
         vehicle_part *vp_wheel = setup_squish_test_return_wheel( here, test_point, veh_ptr );
 
+        // CCB: 新公式 min( pow(ratio, 6.0), 0.2 )，普通车轮硬度与自行车轮相同。
         const std::map<itype_id, double> test_items = {
-            {itype_qt_steel_chunk, 1.0},
-            {itype_test_bodypillow_cloth_item, 0.5625},
-            {itype_corpse_fake_TEST, 0.0625},
-            {itype_test_guarantee_wheel_dmg, 1.0},
-            {itype_test_squishy_fruit, 0.015625},
+            {itype_qt_steel_chunk, 0.2},
+            {itype_test_bodypillow_cloth_item, 0.177978515625},
+            {itype_corpse_fake_TEST, 0.000244140625},
+            {itype_test_guarantee_wheel_dmg, 0.2},
+            {itype_test_squishy_fruit, 0.000003814697265625},
             {itype_corpse_fake_TEST_NODMG, 0.0}
         };
 
@@ -1004,14 +1008,16 @@ TEST_CASE( "vehicle_wheels_damaged_by_running_over_items", "[vehicle]" )
                                              test_point, 0_degrees, 100, veh_spawn_status::UNDAMAGED, false );
         vehicle_part *vp_wheel = setup_squish_test_return_wheel( here, test_point, veh_ptr );
 
+        // CCB: 新公式 min( pow(ratio, 6.0), 0.2 )，装甲车轮硬度更高（ratio 更小）。
         const std::map<itype_id, double> test_items = {
-            {itype_qt_steel_chunk, 0.25},
-            {itype_test_bodypillow_cloth_item, 0.0225},
-            {itype_corpse_fake_TEST, 0.0025},
-            {itype_test_guarantee_wheel_dmg, 1.0},
-            {itype_test_squishy_fruit, 0.000625},
+            {itype_qt_steel_chunk, 0.015625},
+            {itype_test_bodypillow_cloth_item, 0.000011390625},
+            {itype_corpse_fake_TEST, 0.000000015625},
+            {itype_test_guarantee_wheel_dmg, 0.2},
+            {itype_test_squishy_fruit, 0.000000000244140625},
             {itype_corpse_fake_TEST_NODMG, 0.0}
         };
+
 
         run_squish_test( test_items, test_point, here, veh_ptr, vp_wheel );
     }

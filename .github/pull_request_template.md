@@ -1,56 +1,64 @@
-<!-- HOW TO USE: Under each "#### Heading" below, enter information relevant to your pull request.
-You must have the below headings. Comments like this may be safely removed, if you want.
+<!-- 使用说明：在下面每个「#### 标题」下填写与你的 PR 相关的信息。
+请保留这些标题。像这样的注释可以安全删除。
 
-If you are opening this pull request from GitHub's web interface, you can use the 'preview' button to see what your pull request will look like to others.
+如果你是在 GitHub 网页界面发起这个 PR，可以用「preview（预览）」按钮查看 PR 对他人显示的样子。
 
-Guidelines for pull requests:
--Keep your changes limited to one specific issue or change, plus the bare minimum related work to make that happen.
--A good rule of thumb is that most pull requests are less than 500 lines of changes.
--You can open extra pull requests to separate out portions of an intended change, ask if you're unsure. We're happy to work with you or advise the best way to get your PR merged.
+PR 提交准则：
+- 让你的改动只聚焦于一个具体的问题或变更，外加为实现它所必需的最小相关改动。
+- 一个经验法则：大多数 PR 的改动应少于 500 行。
+- 你可以另开 PR 来拆分一次较大的预期改动；如果不确定怎么拆，尽管问。我们很乐意与你协作，并建议合并你 PR 的最佳方式。
 -->
 
-#### Summary
-Category "Brief description"
+#### 概述 (Summary)
+分类 "简要描述"
 
-<!-- This section should consist of exactly one line, edit the one above.
-1. Replace the word "Category" with one of these specific categories: Features, Content, Interface, Mods, Balance, Bugfixes, Performance, Infrastructure, Build, I18N.
-2. Replace the text inside the quotes with a brief description of your changes.
-Or if you don't want a changelog entry, replace the whole line with just the word "None" (with no quotes).
-Some examples:
+<!-- 这一节应当只有一行，请编辑上面那一行。
+1. 把「分类」替换为下列具体分类之一：Features、Content、Interface、Mods、Balance、Bugfixes、Performance、Infrastructure、Build、I18N。
+2. 把引号内的文字替换为对你改动的简要描述。
+如果你不希望生成更新日志条目，把整行替换为单独一个词「None」（不带引号）。
+示例：
 1. None
-2. Features "In-game Armor sprite change"
-3. Interface "Show crafting failure chances in the crafting interface"
-For more on the meaning of each category, see:
-https://github.com/CleverRaven/Cataclysm-DDA/blob/master/doc/CHANGELOG_GUIDELINES.md
-If merged, your summary will be added to the project changelog:
-https://github.com/CleverRaven/Cataclysm-DDA/blob/master/data/changelog.txt -->
+2. Bugfixes "修复长矛无法锁定不同楼层敌人的问题"
+3. Interface "在制作界面显示制作失败几率"
+分类含义详见：
+https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/doc/CHANGELOG_GUIDELINES.md
+合并后，你的概述会被加入项目更新日志：
+https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/data/changelog.txt -->
 
-#### Purpose of change
+#### 改动目的 (Purpose of change)
 
-<!-- With a few sentences, describe your reasons for making this change.
-If it relates to an existing issue, you can link it with a # followed by the GitHub issue number, like #1234.
-When you submit a pull request that completely resolves an issue, use [GitHub's closing keywords](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests#linking-a-pull-request-to-an-issue)
-to automatically close the issue once your pull request is merged.
-If there is no related issue, explain here what issue, feature, or other concern you are addressing.  If this is a bugfix, include steps to reproduce the original bug, so your fix can be verified. -->
+<!-- 用几句话描述你做这次改动的原因。
+如果它与某个已有 issue 相关，可以用「#」加 GitHub issue 编号来关联，例如 #1234。
 
-#### Describe the solution
+【重要】当你的 PR 能完全解决某个 issue 时，必须使用 [GitHub 的英文关闭关键字](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests#linking-a-pull-request-to-an-issue)
+才能在 PR 合并后自动关闭该 issue，例如：Fixes #1234。
+只能用以下英文关键词（后面紧跟「#编号」）：
+  close / closes / closed
+  fix / fixes / fixed
+  resolve / resolves / resolved
+注意：中文「修复 #1234」不会触发自动关闭，GitHub 只识别上述英文关键词。
 
-<!-- How does the feature work, or how does this fix a bug?  The easier you make your solution to understand, the faster it can get merged. -->
-
-#### Describe alternatives you've considered
-
-<!-- Explain any alternative solutions, different approaches, or possibilities you've considered using to solve the same problem. -->
-
-#### Testing
-
-<!-- Describe what steps you took to test that this PR resolved the bug or added the feature, and what tests you performed to make sure it didn't cause any regressions.  Also, include testing suggestions for reviewers and maintainers. See TESTING_YOUR_CHANGES.md -->
-
-#### Additional context
-
-<!-- Add any other context (such as mock-ups, proof of concepts or screenshots) about the feature or bugfix here. -->
+如果没有相关 issue，请在这里说明你要解决的问题、特性或其他关注点。如果这是一个 bug 修复，请附上复现原始 bug 的步骤，以便你的修复可以被验证。 -->
 
 
-<!--README: Cataclysm: Dark Days Ahead is released under the Creative Commons Attribution ShareAlike 3.0 license.
-The code and content of the game are free to use, modify, and redistribute for any purpose whatsoever.
-By contributing to the project you agree to the terms of the license and that any contribution you make will also be covered by the same license.
-See http://creativecommons.org/licenses/by-sa/3.0/ for details. -->
+#### 解决方案描述 (Describe the solution)
+
+<!-- 这个特性是如何工作的，或者这个 bug 是怎么被修复的？方案越易于理解，就越快能被合并。 -->
+
+#### 你考虑过的替代方案 (Describe alternatives you've considered)
+
+<!-- 说明你为解决同一问题考虑过的其他方案、不同思路或可能性。 -->
+
+#### 测试 (Testing)
+
+<!-- 描述你采取了哪些步骤来测试这个 PR 是否修复了 bug 或添加了特性，以及你做了哪些测试以确保没有引入回归问题。也请为审阅者和维护者提供测试建议。参见 TESTING_YOUR_CHANGES.md -->
+
+#### 补充说明 (Additional context)
+
+<!-- 在此添加关于这个特性或 bug 修复的其他背景信息（例如原型图、概念验证或截图）。 -->
+
+
+<!--README: Cataclysm: Cleanwater Bomb (CCB) 以 Creative Commons Attribution ShareAlike 3.0 许可证发布。
+游戏的代码与内容可自由用于任何目的的使用、修改和再分发。
+通过为本项目做贡献，你即同意该许可证的条款，并同意你所做的任何贡献也将受同一许可证覆盖。
+详见 http://creativecommons.org/licenses/by-sa/3.0/ 。 -->

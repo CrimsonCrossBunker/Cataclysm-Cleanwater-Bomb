@@ -1514,34 +1514,51 @@ std::set<tripoint_bub_ms> map::get_moving_vehicle_targets( const Creature &z, in
     const tripoint_bub_ms zpos( z.pos_bub() );
     std::set<tripoint_bub_ms> priority;
     std::set<tripoint_bub_ms> visible;
-    for( wrapped_vehicle &v : get_vehicles() ) {
-        if( !v.v->is_moving() ) {
+    // Iterate the per-z-level cached vehicle sets directly instead of calling
+    // get_vehicles(), which rebuilds a full VehicleList by scanning every
+    // submap and constructing a wrapped_vehicle (with pos_bub()) for every
+    // vehicle. This function is called by monster AI for (potentially) every
+    // monster every turn, and almost always finds no moving vehicles, so the
+    // list construction was a major hotspot (map::get_vehicles topped a CPU
+    // profile at ~15%). The cached vehicle_list gives the same set of vehicles
+    // without the rebuild cost.
+    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
+    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    for( int zlev = minz; zlev <= maxz; ++zlev ) {
+        const level_cache *cache = get_cache_lazy( zlev );
+        if( !cache ) {
             continue;
         }
-        if( v.v->get_driver( *this ) != nullptr &&
-            z.attitude_to( *v.v->get_driver( *this ) ) != Creature::Attitude::HOSTILE ) {
-            continue;
-        }
-        if( std::abs( v.pos.z() - zpos.z() ) > fov_3d_z_range ) {
-            continue;
-        }
-        if( rl_dist( zpos, tripoint_bub_ms( v.pos ) ) > max_range + 40 ) {
-            continue; // coarse distance filter, 40 = ~24 * sqrt(2) - rough max diameter of a vehicle
-        }
-        for( const vpart_reference &vpr : v.v->get_all_parts() ) {
-            const tripoint_bub_ms vppos = vpr.pos_bub( *this );
-            if( rl_dist( zpos, vppos ) > max_range ) {
+        for( vehicle *veh : cache->vehicle_list ) {
+            if( !veh->is_moving() ) {
                 continue;
             }
-            if( !z.sees( *this, vppos ) ) {
+            if( veh->get_driver( *this ) != nullptr &&
+                z.attitude_to( *veh->get_driver( *this ) ) != Creature::Attitude::HOSTILE ) {
                 continue;
             }
-            if( vpr.has_feature( VPFLAG_CONTROLS ) ||
-                vpr.has_feature( VPFLAG_ENGINE ) ||
-                vpr.has_feature( VPFLAG_WHEEL ) ) {
-                priority.emplace( vppos );
-            } else {
-                visible.emplace( vppos );
+            const tripoint_bub_ms veh_pos = veh->pos_bub( *this );
+            if( std::abs( veh_pos.z() - zpos.z() ) > fov_3d_z_range ) {
+                continue;
+            }
+            if( rl_dist( zpos, veh_pos ) > max_range + 40 ) {
+                continue; // coarse distance filter, 40 = ~24 * sqrt(2) - rough max diameter of a vehicle
+            }
+            for( const vpart_reference &vpr : veh->get_all_parts() ) {
+                const tripoint_bub_ms vppos = vpr.pos_bub( *this );
+                if( rl_dist( zpos, vppos ) > max_range ) {
+                    continue;
+                }
+                if( !z.sees( *this, vppos ) ) {
+                    continue;
+                }
+                if( vpr.has_feature( VPFLAG_CONTROLS ) ||
+                    vpr.has_feature( VPFLAG_ENGINE ) ||
+                    vpr.has_feature( VPFLAG_WHEEL ) ) {
+                    priority.emplace( vppos );
+                } else {
+                    visible.emplace( vppos );
+                }
             }
         }
     }

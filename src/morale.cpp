@@ -20,6 +20,7 @@
 #include "input_context.h"
 #include "item.h"
 #include "localized_comparator.h"
+#include "messages.h"
 #include "morale_types.h"
 #include "output.h"
 #include "point.h"
@@ -851,7 +852,11 @@ bool player_morale::consistent_with( const player_morale &morale ) const
             } );
 
             if( iter == rhs.points.end() || lhp.get_net_bonus() != iter->get_net_bonus() ) {
-                debugmsg( "Morale \"%s\" is inconsistent.", lhp.get_name() );
+                // This is an expected, self-correcting condition: check_and_recover_morale()
+                // calls sync_permanent() right after to fix the drift. Use a quiet debug log
+                // (matching that caller) instead of a disruptive debugmsg popup.
+                add_msg_debug( debugmode::DF_CHARACTER, "Morale \"%s\" is inconsistent.",
+                               lhp.get_name() );
                 return false;
             }
         }
@@ -860,16 +865,16 @@ bool player_morale::consistent_with( const player_morale &morale ) const
     };
 
     if( took_prozac != morale.took_prozac ) {
-        debugmsg( "player_morale::took_prozac is inconsistent." );
+        add_msg_debug( debugmode::DF_CHARACTER, "player_morale::took_prozac is inconsistent." );
         return false;
     } else if( took_prozac_bad != morale.took_prozac_bad ) {
-        debugmsg( "player_morale::took_prozac (bad) is inconsistent." );
+        add_msg_debug( debugmode::DF_CHARACTER, "player_morale::took_prozac (bad) is inconsistent." );
         return false;
     } else if( perceived_pain != morale.perceived_pain ) {
-        debugmsg( "player_morale::perceived_pain is inconsistent." );
+        add_msg_debug( debugmode::DF_CHARACTER, "player_morale::perceived_pain is inconsistent." );
         return false;
     } else if( radiation != morale.radiation ) {
-        debugmsg( "player_morale::radiation is inconsistent." );
+        add_msg_debug( debugmode::DF_CHARACTER, "player_morale::radiation is inconsistent." );
         return false;
     }
 

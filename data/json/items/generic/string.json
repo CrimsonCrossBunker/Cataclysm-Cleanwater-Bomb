@@ -30,7 +30,8 @@
     "material": [ "cotton" ],
     "symbol": ",",
     "color": "light_gray",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "string_36",

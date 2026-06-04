@@ -20,7 +20,8 @@
     "effects": [ "COOKOFF" ],
     "explode_in_fire": true,
     "explosion": { "power": 20, "shrapnel": 0 },
-    "flags": [ "NO_DROP", "IRREMOVABLE" ]
+    "flags": [ "NO_DROP", "IRREMOVABLE" ],
+    "stackable": true
   },
   {
     "id": "welding_rod_steel",
@@ -38,7 +39,8 @@
     "symbol": "i",
     "color": "light_red",
     "longest_side": "350 mm",
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "UNRECOVERABLE" ],
+    "stackable": true
   },
   {
     "id": "welding_rod_alloy",
@@ -56,7 +58,8 @@
     "symbol": "i",
     "color": "cyan",
     "longest_side": "350 mm",
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "UNRECOVERABLE" ],
+    "stackable": true
   },
   {
     "id": "welding_wire_steel",
@@ -74,7 +77,8 @@
     "symbol": "@",
     "color": "light_red",
     "longest_side": "102 mm",
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "UNRECOVERABLE" ],
+    "stackable": true
   },
   {
     "id": "welding_wire_alloy",
@@ -92,7 +96,8 @@
     "symbol": "@",
     "color": "cyan",
     "longest_side": "102 mm",
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "UNRECOVERABLE" ],
+    "stackable": true
   },
   {
     "id": "brazing_rod_bronze",
@@ -110,7 +115,8 @@
     "symbol": "|",
     "color": "red",
     "longest_side": "460 mm",
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "UNRECOVERABLE" ],
+    "stackable": true
   },
   {
     "id": "brazing_rod_alloy",
@@ -128,6 +134,7 @@
     "symbol": "|",
     "color": "cyan",
     "longest_side": "460 mm",
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "UNRECOVERABLE" ],
+    "stackable": true
   }
 ]

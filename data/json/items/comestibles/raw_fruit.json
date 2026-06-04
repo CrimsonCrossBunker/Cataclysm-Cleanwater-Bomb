@@ -19,7 +19,8 @@
     "fun": 3,
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "8400 μg" ], [ "iron", "200 μg" ], [ "calcium", "10900 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "8400 μg" ], [ "iron", "200 μg" ], [ "calcium", "10900 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -41,7 +42,8 @@
     "fun": -1,
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "4 mg" ], [ "iron", "200 μg" ], [ "calcium", "9 mg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "4 mg" ], [ "iron", "200 μg" ], [ "calcium", "9 mg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -61,7 +63,8 @@
     "volume": "125 ml",
     "fun": 5,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "10300 μg" ], [ "iron", "300 μg" ], [ "calcium", "5900 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "10300 μg" ], [ "iron", "300 μg" ], [ "calcium", "5900 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -83,7 +86,8 @@
     "fun": 3,
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "69700 μg" ], [ "iron", "100 μg" ], [ "calcium", "52400 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "69700 μg" ], [ "iron", "100 μg" ], [ "calcium", "52400 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -105,7 +109,8 @@
     "flags": [ "FREEZERBURN", "RAW" ],
     "smoking_result": "dry_fruit",
     "vitamins": [ [ "vitC", "83200 μg" ], [ "iron", "800 μg" ], [ "calcium", "65900 μg" ], [ "fruit_allergen", 1 ] ],
-    "fun": -4
+    "fun": -4,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -127,7 +132,9 @@
     "fun": 2,
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "14400 μg" ], [ "iron", "400 μg" ], [ "calcium", "8900 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "14400 μg" ], [ "iron", "400 μg" ], [ "calcium", "8900 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -137,7 +144,9 @@
     "copy-from": "blueberries",
     "color": "dark_gray",
     "description": "Some black hobbleberries.  They are quite sweet.  Before they ripened, they were deceptively red and utterly bitter.",
-    "fun": 3
+    "fun": 3,
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -148,7 +157,9 @@
     "calories": 134,
     "copy-from": "blueberries",
     "description": "Not tasting anything like olives, this sweet, red and very nutritious fruit can also be used as a tomato-substitute in some cases.",
-    "vitamins": [ [ "vitC", "22200 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "22200 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -170,7 +181,9 @@
     "fun": 5,
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "84700 μg" ], [ "iron", "600 μg" ], [ "calcium", "23 mg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "84700 μg" ], [ "iron", "600 μg" ], [ "calcium", "23 mg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -192,7 +205,9 @@
     "fun": -10,
     "flags": [ "EDIBLE_FROZEN", "BIRD", "RABBIT", "CATTLE", "RAT", "MOUSE" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "13300 μg" ], [ "iron", "300 μg" ], [ "calcium", "8 mg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "13300 μg" ], [ "iron", "300 μg" ], [ "calcium", "8 mg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -214,7 +229,9 @@
     "fun": 4,
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "32200 μg" ], [ "iron", "800 μg" ], [ "calcium", "30800 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "32200 μg" ], [ "iron", "800 μg" ], [ "calcium", "30800 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -236,7 +253,9 @@
     "fun": 2,
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "4100 μg" ], [ "iron", "400 μg" ], [ "calcium", "8900 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "4100 μg" ], [ "iron", "400 μg" ], [ "calcium", "8900 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -257,7 +276,9 @@
     "volume": "20 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", 8 ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 8 ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -279,7 +300,8 @@
     "flags": [ "FORAGE_POISON" ],
     "smoking_result": "dry_fruit",
     "//": "entire plant contains poison interacting with the central nervous system, but the fruit is edible in small quantities. the effect of the poison is very similar to our mutant_toxin excess, a dedicated toxin just for this would be a waste of time and resources.",
-    "vitamins": [ [ "vitC", 3 ], [ "mutant_toxin", 15 ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 3 ], [ "mutant_toxin", 15 ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -300,7 +322,9 @@
     "fun": 2,
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", 4 ], [ "iron", 1 ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 4 ], [ "iron", 1 ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -322,7 +346,9 @@
     "fun": 4,
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "51 mg" ], [ "iron", "2600 μg" ], [ "calcium", "54600 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "51 mg" ], [ "iron", "2600 μg" ], [ "calcium", "54600 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -345,7 +371,9 @@
     "fun": -2,
     "flags": [ "RAW", "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "52200 μg" ], [ "iron", "2300 μg" ], [ "calcium", "55100 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "52200 μg" ], [ "iron", "2300 μg" ], [ "calcium", "55100 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -358,7 +386,9 @@
     "use_action": [  ],
     "quench": 0,
     "fun": 2,
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -380,7 +410,9 @@
     "color": "dark_gray",
     "price": "0 cent",
     "price_postapoc": "10 cent",
-    "vitamins": [ [ "vitC", "21000 μg" ], [ "iron", "600 μg" ], [ "calcium", "30 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "21000 μg" ], [ "iron", "600 μg" ], [ "calcium", "30 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -402,7 +434,9 @@
     "volume": "250 ml",
     "fun": -5,
     "flags": [ "RAW", "EDIBLE_FROZEN", "INEDIBLE", "CATTLE", "RABBIT", "BIRD" ],
-    "vitamins": [ [ "vitC", "272640 μg" ], [ "iron", "678 μg" ], [ "calcium", "108160 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "272640 μg" ], [ "iron", "678 μg" ], [ "calcium", "108160 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -424,7 +458,9 @@
     "fun": 2,
     "flags": [ "RAW", "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "272640 μg" ], [ "iron", "678 μg" ], [ "calcium", "108160 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "272640 μg" ], [ "iron", "678 μg" ], [ "calcium", "108160 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -446,7 +482,9 @@
     "flags": [ "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_fruit",
     "//": "juice pulp is an arbitrary item, but needed some baseline nutrients for byproducts",
-    "vitamins": [ [ "vitC", 8 ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 8 ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -468,7 +506,8 @@
     "fun": 4,
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "7700 μg" ], [ "iron", "300 μg" ], [ "calcium", "16 mg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "7700 μg" ], [ "iron", "300 μg" ], [ "calcium", "16 mg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -490,7 +529,8 @@
     "fun": 4,
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "125600 μg" ], [ "iron", "100 μg" ], [ "calcium", "9900 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "125600 μg" ], [ "iron", "100 μg" ], [ "calcium", "9900 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -512,7 +552,9 @@
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_fruit",
     "vitamins": [ [ "vitC", "70800 μg" ], [ "iron", "3800 μg" ], [ "calcium", "28300 μg" ], [ "fruit_allergen", 1 ] ],
-    "fun": 3
+    "fun": 3,
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -534,7 +576,8 @@
     "fun": 3,
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "3800 μg" ], [ "iron", "400 μg" ], [ "calcium", "9600 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "3800 μg" ], [ "iron", "400 μg" ], [ "calcium", "9600 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -556,7 +599,8 @@
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_fruit",
     "vitamins": [ [ "vitC", "91 mg" ], [ "iron", "300 μg" ], [ "calcium", "36900 μg" ], [ "fruit_allergen", 1 ] ],
-    "fun": 2
+    "fun": 2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -578,7 +622,9 @@
     "fun": 3,
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "9700 μg" ], [ "iron", "500 μg" ], [ "calcium", "17900 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "9700 μg" ], [ "iron", "500 μg" ], [ "calcium", "17900 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -599,7 +645,8 @@
     "volume": "82 ml",
     "fun": 3,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "6300 μg" ], [ "iron", "100 μg" ], [ "calcium", "4 mg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "6300 μg" ], [ "iron", "100 μg" ], [ "calcium", "4 mg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -621,7 +668,9 @@
     "fun": 4,
     "flags": [ "FREEZERBURN", "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "4800 μg" ], [ "iron", "500 μg" ], [ "calcium", "15100 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "4800 μg" ], [ "iron", "500 μg" ], [ "calcium", "15100 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -642,7 +691,8 @@
     "volume": "2400 ml",
     "fun": -4,
     "vitamins": [ [ "vitC", "432600 μg" ], [ "iron", "2600 μg" ], [ "calcium", "117700 μg" ], [ "fruit_allergen", 1 ] ],
-    "melee_damage": { "bash": 1 }
+    "melee_damage": { "bash": 1 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -663,7 +713,9 @@
     "volume": "250 ml",
     "fun": 4,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "78900 μg" ], [ "iron", "500 μg" ], [ "calcium", "21500 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "78900 μg" ], [ "iron", "500 μg" ], [ "calcium", "21500 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "coconut",
@@ -681,7 +733,8 @@
     "material": [ "fruit" ],
     "spoils_in": "360 days",
     "melee_damage": { "bash": 2 },
-    "flags": [ "INEDIBLE" ]
+    "flags": [ "INEDIBLE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -702,7 +755,9 @@
     "volume": "250 ml",
     "fun": 4,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "2600 μg" ], [ "iron", "1900 μg" ], [ "calcium", "11200 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "2600 μg" ], [ "iron", "1900 μg" ], [ "calcium", "11200 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -723,7 +778,8 @@
     "volume": "180 ml",
     "fun": 4,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "9900 μg" ], [ "iron", "400 μg" ], [ "calcium", "9 mg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "9900 μg" ], [ "iron", "400 μg" ], [ "calcium", "9 mg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -745,7 +801,8 @@
     "volume": "7150 ml",
     "flags": [ "EATEN_COLD", "FREEZERBURN", "INEDIBLE" ],
     "vitamins": [ [ "vitC", "366 mg" ], [ "iron", "10800 μg" ], [ "calcium", "316300 μg" ], [ "fruit_allergen", 1 ] ],
-    "melee_damage": { "bash": 2 }
+    "melee_damage": { "bash": 2 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -767,7 +824,8 @@
     "flags": [ "EATEN_COLD", "FREEZERBURN" ],
     "fun": 4,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "23200 μg" ], [ "iron", "700 μg" ], [ "calcium", "20 mg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "23200 μg" ], [ "iron", "700 μg" ], [ "calcium", "20 mg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -789,7 +847,8 @@
     "flags": [ "EATEN_COLD", "INEDIBLE" ],
     "fun": 4,
     "vitamins": [ [ "vitC", "202600 μg" ], [ "iron", "1200 μg" ], [ "calcium", "49700 μg" ], [ "fruit_allergen", 1 ] ],
-    "melee_damage": { "bash": 1 }
+    "melee_damage": { "bash": 1 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -811,7 +870,9 @@
     "fun": 4,
     "flags": [ "EATEN_COLD" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "50650 μg" ], [ "iron", "300 μg" ], [ "calcium", "12425 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "50650 μg" ], [ "iron", "300 μg" ], [ "calcium", "12425 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -833,7 +894,9 @@
     "fun": 4,
     "flags": [ "EDIBLE_FROZEN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "30200 μg" ], [ "iron", "900 μg" ], [ "calcium", "41800 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "30200 μg" ], [ "iron", "900 μg" ], [ "calcium", "41800 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -854,7 +917,8 @@
     "volume": "500 ml",
     "fun": 5,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "75300 μg" ], [ "iron", "300 μg" ], [ "calcium", "22800 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "75300 μg" ], [ "iron", "300 μg" ], [ "calcium", "22800 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -875,7 +939,8 @@
     "volume": "550 ml",
     "fun": 7,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "28800 μg" ], [ "iron", "800 μg" ], [ "calcium", "28200 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "28800 μg" ], [ "iron", "800 μg" ], [ "calcium", "28200 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -896,7 +961,8 @@
     "volume": "594 ml",
     "fun": 5,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "185100 μg" ], [ "iron", "800 μg" ], [ "calcium", "60800 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "185100 μg" ], [ "iron", "800 μg" ], [ "calcium", "60800 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -917,7 +983,8 @@
     "volume": "70 ml",
     "fun": 3,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "64 mg" ], [ "iron", "200 μg" ], [ "calcium", "23500 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "64 mg" ], [ "iron", "200 μg" ], [ "calcium", "23500 μg" ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -939,7 +1006,9 @@
     "volume": "250 ml",
     "fun": 3,
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", "14 mg" ], [ "iron", "500 μg" ], [ "calcium", "18200 μg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "14 mg" ], [ "iron", "500 μg" ], [ "calcium", "18200 μg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -961,7 +1030,8 @@
     "fun": 6,
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_fruit",
-    "vitamins": [ [ "vitC", 18 ], [ "iron", 1 ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 18 ], [ "iron", 1 ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -982,6 +1052,8 @@
     "volume": "250 ml",
     "fun": -1,
     "flags": [ "RAW" ],
-    "vitamins": [ [ "vitC", "8 mg" ], [ "iron", "500 μg" ], [ "calcium", "141 mg" ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "8 mg" ], [ "iron", "500 μg" ], [ "calcium", "141 mg" ], [ "fruit_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   }
 ]

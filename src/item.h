@@ -1111,6 +1111,12 @@ class item : public visitable
         bool count_by_charges() const;
 
         /**
+         * Return true if this item's type is stackable
+         * (true for stackable)
+         */
+        bool is_stackable() const;
+
+        /**
          * Compress liquids and counted-by-charges items into one item.
          * They are added together on the map anyway and handle_liquid
          * should only be called once to put it all into a container at once.

@@ -1,50 +1,49 @@
-name: Feature Request ✨
-description: Suggest an idea for this project
+name: 功能建议 ✨ (Feature Request)
+description: 为本项目提出一个想法
 labels: ["<Suggestion / Discussion>"]
 
 body:
   - type: markdown
     attributes:
       value: |
-        Note that CDDA is an open source project, meaning anybody can contribute. Please consider reading the contribution guide (https://github.com/CleverRaven/Cataclysm-DDA/wiki/Guide-to-adding-new-content-to-CDDA-for-first-time-contributors) and see if you could implement your idea yourself. A lot of CDDA is written in JSON, which is essentially plain-text code anybody can edit.  
- 
+        请注意，CCB 是一个开源项目，任何人都可以参与贡献。建议你看看能否自己实现这个想法。CCB 有很大一部分是用 JSON 编写的，它本质上就是任何人都能编辑的纯文本代码。
+
   - type: markdown
     attributes:
       value: |
-        Please take the time to fill out all the fields below.
+        请花点时间填写下面所有字段。
 
   - type: textarea
     id: description-of-bug
     attributes:
-      label: Is your feature request related to a problem? Please describe.
-      description: A clear and concise description of what the problem is that made you submit this report.
-      placeholder: I am always frustrated, when...
+      label: 你的功能建议是否与某个问题相关？请描述。
+      description: 清晰、简洁地描述促使你提交这份建议的问题是什么。
+      placeholder: 每当……的时候，我总是感到很困扰。
     validations:
       required: true
 
   - type: textarea
     id: description-of-solution
     attributes:
-      label: Solution you would like.
-      description: A clear and concise description of what you want to happen.
-      placeholder: Instead of behaving like this, there should be...
+      label: 你希望的解决方案
+      description: 清晰、简洁地描述你希望发生的情况。
+      placeholder: 与其像现在这样，不如应该……
     validations:
       required: true
 
   - type: textarea
     id: alternatives
     attributes:
-      label: Describe alternatives you have considered.
-      description: A clear and concise description of any alternative solutions or features you have considered.
-      placeholder: Another workaround that would work, is...
+      label: 你考虑过的替代方案
+      description: 清晰、简洁地描述你考虑过的任何替代解决方案或功能。
+      placeholder: 另一个可行的变通办法是……
     validations:
       required: false
 
   - type: textarea
     id: additional-context
     attributes:
-      label: Additional context
-      description: Add any other context (such as mock-ups, proof of concepts or screenshots) about the feature request here.
+      label: 补充说明
+      description: 在此添加关于该功能建议的其他背景信息（例如原型图、概念验证或截图）。
     validations:
       required: false
-    

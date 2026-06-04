@@ -479,11 +479,14 @@ void Character::update_bodytemp()
         scaled_sleepiness;
 
     // Sunlight
-    const float scaled_sun_irradiance = incident_sun_irradiance( get_weather().weather_id,
+    const float scaled_sun_irradiance = incident_sun_irradiance( weather_man.weather_id,
                                         calendar::turn ) / max_sun_irradiance();
-    const units::temperature_delta sunlight_warmth = !g->is_sheltered( pos_bub() ) ? 3_C_delta *
+    // Reuse the cached `sheltered` computed above instead of recomputing
+    // is_sheltered() (which queries veh_at + is_outside) for the same position.
+    const units::temperature_delta sunlight_warmth = !sheltered ? 3_C_delta *
         scaled_sun_irradiance :
         0_C_delta;
+
     const int best_fire = get_best_fire( pos_bub() );
 
     const units::temperature_delta lying_warmth = use_floor_warmth ? floor_warmth(
@@ -520,6 +523,11 @@ void Character::update_bodytemp()
     // We might not use this at all, so leave it empty
     // If we do need to use it, we'll initialize it (once) there
     std::map<bodypart_id, int> fire_armor_per_bp;
+    // Local humidity depends only on loop-invariant inputs (weather humidity,
+    // weather type and shelter), so compute it once instead of per body part.
+    const int local_humidity = get_local_humidity( weather.humidity, weather_man.weather_id,
+                               sheltered );
+
     // Current temperature and converging temperature calculations
     for( const bodypart_id &bp : get_all_body_parts() ) {
 
@@ -542,10 +550,10 @@ void Character::update_bodytemp()
 
         bp_windpower = static_cast<int>( static_cast<float>( bp_windpower ) *
                                          ( 1 - wind_res_per_bp[bp] / 100.0 ) );
-        // Calculate windchill
+        // Calculate windchill (local_humidity precomputed above; loop-invariant)
         units::temperature_delta windchill = get_local_windchill( player_local_temp,
-                                             get_local_humidity( weather.humidity, get_weather().weather_id, sheltered ),
-                                             bp_windpower );
+                                             local_humidity, bp_windpower );
+
 
         static const auto is_lower = []( const bodypart_id & bp ) {
             return bp->has_flag( json_flag_LIMB_LOWER );
@@ -753,32 +761,86 @@ void Character::update_bodytemp()
 
         update_frostbite( bp, bp_windpower, warmth_per_bp );
 
-        // Warn the player if condition worsens
-        if( temp_before > BODYTEMP_FREEZING && temp_after < BODYTEMP_FREEZING ) {
-            //~ %s is bodypart
-            add_msg_if_player( m_warning, _( "You feel your %s beginning to go numb from the cold!" ),
-                               body_part_name( bp ) );
-        } else if( temp_before > BODYTEMP_VERY_COLD && temp_after < BODYTEMP_VERY_COLD ) {
-            //~ %s is bodypart
-            add_msg_if_player( m_warning, _( "You feel your %s getting very cold." ),
-                               body_part_name( bp ) );
-        } else if( temp_before > BODYTEMP_COLD && temp_after < BODYTEMP_COLD ) {
-            //~ %s is bodypart
-            add_msg_if_player( m_warning, _( "You feel your %s getting chilly." ),
-                               body_part_name( bp ) );
-        } else if( temp_before < BODYTEMP_SCORCHING && temp_after > BODYTEMP_SCORCHING ) {
-            //~ %s is bodypart
-            add_msg_if_player( m_bad, _( "You feel your %s getting red hot from the heat!" ),
-                               body_part_name( bp ) );
-        } else if( temp_before < BODYTEMP_VERY_HOT && temp_after > BODYTEMP_VERY_HOT ) {
-            //~ %s is bodypart
-            add_msg_if_player( m_warning, _( "You feel your %s getting very hot." ),
-                               body_part_name( bp ) );
-        } else if( temp_before < BODYTEMP_HOT && temp_after > BODYTEMP_HOT ) {
-            //~ %s is bodypart
-            add_msg_if_player( m_warning, _( "You feel your %s getting warm." ),
-                               body_part_name( bp ) );
+        // Warn the player if condition worsens.
+        // To avoid flooding the log when a body part's temperature hovers around a
+        // threshold, these messages are throttled: a message is shown if the body part
+        // reaches a dangerous tier (freezing / red hot), if it reaches a different tier
+        // than the one last announced for that part (a large or new change), or if enough
+        // time has passed since the last message for that part. See temp_message_record.
+        const auto temp_tier = []( const units::temperature & t ) -> int {
+            if( t < BODYTEMP_FREEZING )
+            {
+                return -3;
+            } else if( t < BODYTEMP_VERY_COLD )
+            {
+                return -2;
+            } else if( t < BODYTEMP_COLD )
+            {
+                return -1;
+            } else if( t > BODYTEMP_SCORCHING )
+            {
+                return 3;
+            } else if( t > BODYTEMP_VERY_HOT )
+            {
+                return 2;
+            } else if( t > BODYTEMP_HOT )
+            {
+                return 1;
+            }
+            return 0;
+        };
+
+        const int tier_before = temp_tier( temp_before );
+        const int tier_after = temp_tier( temp_after );
+        // Only warn when crossing a threshold in the worsening direction (further from comfort).
+        const bool worsening = ( tier_after > 0 && tier_after > tier_before ) ||
+                               ( tier_after < 0 && tier_after < tier_before );
+        if( worsening ) {
+            constexpr time_duration temp_message_cooldown = 5_minutes;
+            const auto rec = temp_message_record.find( bp );
+            const bool is_danger = tier_after <= -3 || tier_after >= 3;
+            const bool new_tier = rec == temp_message_record.end() || rec->second.first != tier_after;
+            const bool cooled_down = rec == temp_message_record.end() ||
+                                     calendar::turn - rec->second.second >= temp_message_cooldown;
+            if( is_danger || new_tier || cooled_down ) {
+                switch( tier_after ) {
+                    case -3:
+                        //~ %s is bodypart
+                        add_msg_if_player( m_warning, _( "You feel your %s beginning to go numb from the cold!" ),
+                                           body_part_name( bp ) );
+                        break;
+                    case -2:
+                        //~ %s is bodypart
+                        add_msg_if_player( m_warning, _( "You feel your %s getting very cold." ),
+                                           body_part_name( bp ) );
+                        break;
+                    case -1:
+                        //~ %s is bodypart
+                        add_msg_if_player( m_warning, _( "You feel your %s getting chilly." ),
+                                           body_part_name( bp ) );
+                        break;
+                    case 3:
+                        //~ %s is bodypart
+                        add_msg_if_player( m_bad, _( "You feel your %s getting red hot from the heat!" ),
+                                           body_part_name( bp ) );
+                        break;
+                    case 2:
+                        //~ %s is bodypart
+                        add_msg_if_player( m_warning, _( "You feel your %s getting very hot." ),
+                                           body_part_name( bp ) );
+                        break;
+                    case 1:
+                        //~ %s is bodypart
+                        add_msg_if_player( m_warning, _( "You feel your %s getting warm." ),
+                                           body_part_name( bp ) );
+                        break;
+                    default:
+                        break;
+                }
+                temp_message_record[bp] = std::make_pair( tier_after, calendar::turn );
+            }
         }
+
 
         // Note: Numbers are based off of BODYTEMP at the top of weather.h
         // If torso is BODYTEMP_COLD which is 34C, the early stages of hypothermia begin

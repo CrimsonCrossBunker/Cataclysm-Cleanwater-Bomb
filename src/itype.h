@@ -1692,6 +1692,10 @@ struct itype {
             return stackable_ || ammo || ( comestible && phase != phase_id::SOLID );
         }
 
+        bool is_stackable() const {
+            return stackable_;
+        }
+
         int charges_default() const;
 
         int charges_to_use() const;

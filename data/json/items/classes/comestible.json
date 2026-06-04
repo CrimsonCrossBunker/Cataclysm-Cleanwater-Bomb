@@ -13,6 +13,8 @@
     "container": "bag_plastic_small",
     "material": [ "powder" ],
     "symbol": "%",
-    "freezing_point": -274
+    "freezing_point": -274,
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   }
 ]

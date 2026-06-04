@@ -117,11 +117,28 @@ float raw_noise_2d( float x, float y );
 float raw_noise_3d( float x, float y, float z );
 float raw_noise_4d( float x, float y, float, float w );
 
-int fastfloor( float x );
+// Defined inline so the hot noise functions (raw_noise_*) can inline these
+// one-line helpers. They are called several times per noise evaluation and,
+// when left out-of-line in the .cpp, showed up as real call overhead in
+// profiles (raw_noise_3d is a mapgen hotspot) because the build does not
+// enable LTO by default.
+inline int fastfloor( float x )
+{
+    return x > 0 ? static_cast<int>( x ) : static_cast<int>( x ) - 1;
+}
 
-float dot( const std::array<int, 3> &g, float x, float y );
-float dot( const std::array<int, 3> &g, float x, float y, float z );
-float dot( const std::array<int, 4> &g, float x, float y, float z, float w );
+inline float dot( const std::array<int, 3> &g, float x, float y )
+{
+    return g[0] * x + g[1] * y;
+}
+inline float dot( const std::array<int, 3> &g, float x, float y, float z )
+{
+    return g[0] * x + g[1] * y + g[2] * z;
+}
+inline float dot( const std::array<int, 4> &g, float x, float y, float z, float w )
+{
+    return g[0] * x + g[1] * y + g[2] * z + g[3] * w;
+}
 
 // The gradients are the midpoints of the vertices of a cube.
 inline constexpr std::array<std::array<int, 3>, 12> grad3 = { {

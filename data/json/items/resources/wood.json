@@ -33,7 +33,9 @@
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "flags": [ "NO_SALVAGE", "TRADER_AVOID", "FIREWOOD" ],
-    "melee_damage": { "bash": 2 }
+    "melee_damage": { "bash": 2 },
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -190,7 +192,8 @@
     "price": "10 USD",
     "price_postapoc": "10 cent",
     "flags": [ "FRAGILE_MELEE", "FIREWOOD" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
