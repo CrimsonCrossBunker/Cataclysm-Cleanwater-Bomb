@@ -1382,6 +1382,76 @@ double time_until_eoc_eval( const_dialogue const &d, char /* scope */,
     return it != list.end() ? _time_in_unit( to_turn<double>( it->time ), unit_val.str( d ) ) : -1;
 }
 
+double item_rot_eval(const_dialogue const &d, char scope, std::vector<diag_value> const &/*params*/,
+    diag_kwargs const &kwargs )
+{
+    item_location const *it = d.const_actor(is_beta(scope))->get_const_item();
+    if ( it == nullptr ) {
+        throw math::runtime_error("subject of item_rot() must be an item");
+    }
+    diag_value format_value = kwargs.kwarg_or("format", "relative");
+    std::string const &format = format_value.str(d);
+    if ( format != "raw" && format != "relative" ) {
+        throw math::runtime_error(R"(Unknown format type "%s" for item_rot)", format);
+    }
+    const item &obj = **it;
+    if ( obj.goes_bad() ) {
+        if (format == "raw") {
+            diag_value unit_val = kwargs.kwarg_or("unit");
+            time_duration rotting = obj.get_rot();
+            if (rotting < 0_turns) rotting = 0_turns;
+            double turns = to_turns<double>(rotting);
+            return _time_in_unit(turns, unit_val.str(d));
+        }
+        else if (format == "relative")
+        {
+            return obj.get_relative_rot()
+        }
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+void item_rot_ass(double val, dialogue& d, char scope, std::vector << diag_value > const&/*params*/, diag_kwargs const& kwargs)
+{
+    item_location* it = d.actor(is_beta(scope))->get_item();
+    if (it == nullptr) {
+        throw math::runtime_error("subject of item_rot() assignment must be an item");
+    }
+    item& obj = **it;
+    if (!obj.goes_bad()) {
+        throw math::runtime_error("Try setting rot val for item that don't have a rot mechanism");
+    }
+    else {
+        diag_value format_value = kwargs.kwarg_or("format", "relative");
+        std::string const &format = format_value.str(d);
+        if ( format != "raw" && format != "relative" ) {
+            throw math::runtime_error(R"(Unknown format type "%s" for item_rot)", format);
+        }
+        if (format == "raw") {
+            diag_value unit_val = kwargs.kwarg_or("unit");
+            double turns = val;
+            if (!unit_val.is_empty()) {
+                std::string_view unit = unit_val.str(d);
+                auto iter = std::find_if(time_duration::units.cbegin(), time_duration::units.cend(),
+                    [&unit](std::pair<std::string_view, time_duration> const& u) {
+                        return u.first == unit;
+                    });
+                if (iter == time_duration::units.end()) {
+                    throw math::runtime_error(R"(Unknown time unit "%s")", unit);
+                }
+                turns = val * to_turns<double>(iter->second);
+            }
+            obj.set_rot(time_duration::from_turns<double>(turns));
+        }
+        else if (format == "relative") {
+            obj.set_relative_rot(val);
+        }
+    }
+}
+
 double effect_duration_eval( const_dialogue const &d, char scope,
                              std::vector<diag_value> const &params, diag_kwargs const &kwargs )
 {
@@ -1885,6 +1955,7 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "time_until", { "g", 1, time_until_eval, {}, { "unit" } } },
     { "time_until_eoc", { "g", 1, time_until_eoc_eval, {}, { "unit" } } },
     { "proficiency", { "un", 1, proficiency_eval, proficiency_ass, { "format", "direct" } } },
+    { "item_rot", { "un", 0, item_rot_eval, item_rot_ass, { "format", "unit" } } },
     { "val", { "un", 1, u_val, u_val_ass } },
     { "npc_anger", { "un", 0, npc_anger_eval, npc_anger_ass } },
     { "npc_fear", { "un", 0, npc_fear_eval, npc_fear_ass } },
