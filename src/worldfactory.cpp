@@ -1004,12 +1004,17 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
     ctxt.register_action( "RIGHT", to_translation( "Switch to other list" ) );
     ctxt.register_action( "HELP_KEYBINDINGS" );
     ctxt.register_action( "QUIT" );
-    ctxt.register_action( "NEXT_CATEGORY_TAB" );
-    ctxt.register_action( "PREV_CATEGORY_TAB" );
+    // Register NEXT_TAB/PREV_TAB before NEXT_CATEGORY_TAB/PREV_CATEGORY_TAB so that, when
+    // the tabbed worldgen view is shown (e.g. after copying a world's settings), the Tab key
+    // switches between the World Mods / World Options panels instead of being consumed by the
+    // mod category switching (which shares the Tab binding). Category switching remains on </>.
     if( with_tabs ) {
         ctxt.register_action( "NEXT_TAB" );
         ctxt.register_action( "PREV_TAB" );
     }
+    ctxt.register_action( "NEXT_CATEGORY_TAB" );
+    ctxt.register_action( "PREV_CATEGORY_TAB" );
+
     ctxt.register_action( "CONFIRM", to_translation( "Activate / deactivate mod" ) );
     ctxt.register_action( "MOVE_MOD_UP" );
     ctxt.register_action( "MOVE_MOD_DOWN" );
