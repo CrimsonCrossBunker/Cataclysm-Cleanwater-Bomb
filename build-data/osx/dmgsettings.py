@@ -2,6 +2,7 @@
 
 
 import biplist
+import glob
 import os.path
 
 # defines is provided by dmgbuild, but pretend to define it here for the
@@ -37,7 +38,13 @@ def icon_from_app(app_path):
 format = defines.get('format', 'UDBZ')
 
 # Files to include
-files = [application]
+#
+# SDL3 builds stage LICENSE-SDL*.txt / LICENSE-vendored-*.txt at the repo
+# root (dmgbuild CWD); ship them in the DMG. Empty glob on SDL2/local.
+license_files = sorted(
+    glob.glob('LICENSE-SDL*.txt') + glob.glob('LICENSE-vendored-*.txt')
+)
+files = [application] + license_files
 
 # Symlinks to create
 symlinks = {'Applications': '/Applications'}
