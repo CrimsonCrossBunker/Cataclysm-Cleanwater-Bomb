@@ -218,8 +218,8 @@ bool item::activation_success() const
 
 float item::damage_adjusted_melee_weapon_damage( float value, const damage_type_id &dt ) const
 {
-    if( type->count_by_charges() ) {
-    return value; // count by charges items don't have partial damage
+    if( max_damage() == 0 ) {
+    return value; // items without a damage range don't have partial damage
 }
 
 for( fault_id fault : faults ) {
@@ -238,16 +238,16 @@ for( fault_id fault : faults ) {
 
 float item::damage_adjusted_gun_damage( float value ) const
 {
-    if( type->count_by_charges() ) {
-    return value; // count by charges items don't have partial damage
+    if( max_damage() == 0 ) {
+    return value; // items without a damage range don't have partial damage
 }
 return value - 2 * std::max( 0, damage_level() - 1 );
 }
 
 float item::damage_adjusted_armor_resist( float value, const damage_type_id &dmg_type ) const
 {
-    if( type->count_by_charges() ) {
-    return value; // count by charges items don't have partial damage
+    if( max_damage() == 0 ) {
+    return value; // items without a damage range don't have partial damage
 }
 
 for( fault_id fault : faults ) {
@@ -859,7 +859,11 @@ bool item::mod_damage( int qty, const Character *holder )
     if( has_flag( flag_UNBREAKABLE ) ) {
         return false;
     }
-    if( count_by_charges() ) {
+    if( max_damage() == 0 ) {
+        // Items with no damage range (ammo, liquid/gas comestibles) lose units
+        // when damaged instead of accumulating damage. Stackable resources have
+        // a real damage range and fall through to the normal damage path below,
+        // so the whole stack shares a single damage value.
         charges -= std::min( type->stack_size * qty / itype::damage_scale, charges );
         return charges == 0; // return destroy = true if no charges
     } else {

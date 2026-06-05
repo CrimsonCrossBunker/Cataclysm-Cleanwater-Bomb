@@ -205,13 +205,16 @@ double vehicle_part::floating_leak_threshold() const
 
 double vehicle_part::damage_percent() const
 {
-    return static_cast<double>( damage() ) / max_damage();
+    const int dmg_max = max_damage();
+    return dmg_max > 0 ? static_cast<double>( damage() ) / dmg_max : 0.0;
 }
 
 /** parts are considered broken at zero health */
 bool vehicle_part::is_broken() const
 {
-    return base.damage() >= base.max_damage();
+    // A base item with no damage range (max_damage()==0) has no notion of being
+    // broken via damage; without this guard it would read as broken at 0 damage.
+    return base.max_damage() > 0 && base.damage() >= base.max_damage();
 }
 
 bool vehicle_part::is_cleaner_on() const

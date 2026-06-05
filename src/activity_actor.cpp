@@ -2869,8 +2869,15 @@ void spellcasting_activity_actor::finish( player_activity &act, Character &who )
             if( spell_item_casting ) {
                 item *it = spell_item_casting.get_item();
                 if( it != nullptr && it->has_flag( flag_SINGLE_USE ) ) {
-                    who.i_rem( it );
-                    spell_item_casting = item_location::nowhere;
+                    // A stackable (count_by_charges) single-use item spends a
+                    // single unit per cast; removing the whole item object would
+                    // destroy the entire stack. Mirrors the firstaid fix.
+                    if( it->count_by_charges() && it->charges > 1 ) {
+                        it->charges -= 1;
+                    } else {
+                        who.i_rem( it );
+                        spell_item_casting = item_location::nowhere;
+                    }
                 } else if( it && !it->has_flag( flag_USE_PLAYER_ENERGY ) ) {
                     it->consume_tool_uses( 1, get_map(), who.pos_bub(), &who );
                 }
@@ -10398,7 +10405,14 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
                            *used_tool, healed );
     std::list<item>used;
     if( used_tool->has_flag( flag_SINGLE_USE ) ) {
-        it.remove_item();
+        // A stackable (count_by_charges) single-use item, e.g. a cotton sheet,
+        // consumes a single unit from the stack per use. Removing the whole
+        // item_location here would destroy the entire stack instead of one.
+        if( used_tool->count_by_charges() && used_tool->charges > 1 ) {
+            used_tool->charges -= 1;
+        } else {
+            it.remove_item();
+        }
     } else if( used_tool->is_medication() ) {
         if( !it->count_by_charges() ||
             it->use_charges( it->typeId(), charges_consumed, used, it.pos_bub( here ) ) ) {

@@ -1648,7 +1648,11 @@ struct itype {
 
 
         int damage_max() const {
-            return count_by_charges() ? 0 : damage_max_;
+            // count_by_charges items (ammo, liquid/gas comestibles) have no
+            // individual damage state. Stackable resources are the exception:
+            // they are count_by_charges for stacking purposes but still carry a
+            // real damage range (so they work as vehicle part bases, etc.).
+            return ( count_by_charges() && !stackable_ ) ? 0 : damage_max_;
         }
         /** Number of degradation increments before the item is destroyed */
         int degrade_increments() const {

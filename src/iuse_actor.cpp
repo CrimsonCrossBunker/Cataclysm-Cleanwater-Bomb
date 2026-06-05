@@ -3943,9 +3943,23 @@ int heal_actor::finish_using( Character &healer, Character &patient, item &it,
         // If the item is a tool, `make` it the new form
         // Otherwise it probably was consumed, so create a new one
         if( it.is_tool() ) {
-            it.convert( used_up_item_id, &healer );
-            for( const auto &flag : used_up_item_flags ) {
-                it.set_flag( flag );
+            if( it.count_by_charges() && it.charges > 1 ) {
+                // For a stackable (count_by_charges) tool, only the single unit
+                // that was used up takes the new (e.g. FILTHY) form. Converting
+                // and flagging `it` in place would contaminate the entire stack.
+                item used_up( it );
+                used_up.charges = 1;
+                used_up.convert( used_up_item_id, &healer );
+                for( const auto &flag : used_up_item_flags ) {
+                    used_up.set_flag( flag );
+                }
+                it.charges -= 1;
+                healer.i_add_or_drop( used_up );
+            } else {
+                it.convert( used_up_item_id, &healer );
+                for( const auto &flag : used_up_item_flags ) {
+                    it.set_flag( flag );
+                }
             }
         } else {
             item used_up( used_up_item_id, it.birthday() );

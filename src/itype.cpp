@@ -159,7 +159,9 @@ int itype::damage_level( int damage ) const
     if( damage == 0 ) {
         return 0;
     }
-    if( count_by_charges() ) {
+    // Items with no damage range (ammo, liquid/gas comestibles) have no
+    // meaningful damage level; also guards the division below.
+    if( damage_max() == 0 ) {
         return 5;
     }
     return std::clamp( 1 + 4 * damage / damage_max(), 0, 5 );

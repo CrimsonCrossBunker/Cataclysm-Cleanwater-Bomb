@@ -4494,7 +4494,14 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
     actually_used->activation_consume( charges_used.value(), pt, this );
 
     if( actually_used->has_flag( flag_SINGLE_USE ) || actually_used->is_bionic() ) {
-        i_rem( actually_used );
+        // For a stackable (count_by_charges) single-use item, only one unit of
+        // the stack is spent per activation. Removing the whole item object
+        // would destroy the entire stack rather than the single item used.
+        if( actually_used->count_by_charges() && actually_used->charges > 1 ) {
+            actually_used->charges -= 1;
+        } else {
+            i_rem( actually_used );
+        }
         return true;
     }
 
@@ -4534,6 +4541,13 @@ bool Character::consume_charges( item &used, int qty )
     }
 
     if( used.is_tool() && !used.needs_charges_to_use() ) {
+        // A stackable (count_by_charges) tool consumes `qty` units from the
+        // stack per use; removing the whole item object here would destroy the
+        // entire stack instead. Mirror the comestible branch above.
+        if( used.count_by_charges() && used.charges > qty ) {
+            used.charges -= qty;
+            return false;
+        }
         if( has_item( used ) ) {
             i_rem( &used );
         } else {

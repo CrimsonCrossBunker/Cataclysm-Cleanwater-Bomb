@@ -5733,7 +5733,9 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
         return true;
     };
 
-    // Get how many copies of the item can fit in a tile
+    // Get how many copies of the item can fit in a tile. Only used for items
+    // that are not count_by_charges; charge-counted stacks are split by charges
+    // in a dedicated branch further down.
     auto how_many_copies_fit = [&]( const tripoint_bub_ms & e ) {
         return std::min( { copies_remaining,
                            obj.volume() == 0_ml ? INT_MAX : free_volume( e ) / obj.volume(),
@@ -5742,15 +5744,6 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
 
     // Performs the actual insertion of the object onto the map
     auto place_item = [&]( const tripoint_bub_ms & tile, int &copies ) -> item& {
-        if( obj.count_by_charges() )
-        {
-            for( item &e : i_at( tile ) ) {
-                if( e.merge_charges( obj ) ) {
-                    return e;
-                }
-            }
-        }
-
         support_dirty( tile );
         return add_item( tile, obj, copies );
     };
@@ -5767,6 +5760,136 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
     // If intended drop tile destroys the item then we don't attempt to overflow
     if( !valid_tile( pos ) ) {
         return { &null_item_reference(), tripoint_bub_ms::invalid };
+    }
+
+    // count_by_charges items are a single divisible stack. Treating the whole
+    // stack as one indivisible "copy" makes a stack larger than a tile's volume
+    // vanish, and dumping it all onto one tile overfills the tile past its limit.
+    // Instead split it across the target tile and, if needed, adjacent tiles by
+    // each tile's free volume, so a huge stack spreads into several normal
+    // stacks. Only when no reachable tile can hold the remainder do we overfill,
+    // as a last resort, so items are never silently destroyed.
+    if( obj.count_by_charges() ) {
+        // For charge-counted items, copies collapse into a single stack's charge
+        // count (N identical stacks on a tile would merge into one anyway).
+        const std::int64_t total_charges = static_cast<std::int64_t>( obj.charges ) *
+                                            std::max( copies_remaining, 1 );
+        obj.charges = static_cast<int>( std::min<std::int64_t>( total_charges, INT_MAX ) );
+
+        std::optional<std::pair<item *, tripoint_bub_ms>> charge_first_added;
+
+        auto drop_action_applies = []( const item & it ) {
+            return it.made_of( phase_id::LIQUID ) || !it.has_flag( flag_DROP_ACTION_ONLY_IF_LIQUID );
+        };
+
+        // Whether placing item it on tile e needs no new item slot (there is
+        // already a stack to merge into) or there is still room for a new stack.
+        auto room_for_stack = [&]( const tripoint_bub_ms & e, const item & stack_item ) {
+            for( item &it : i_at( e ) ) {
+                if( it.stacks_with( stack_item ) ) {
+                    return true;
+                }
+            }
+            return static_cast<int>( i_at( e ).size() ) < MAX_ITEM_IN_SQUARE;
+        };
+
+        // Place up to qty charges of obj on tile e, merging into an existing
+        // identical stack when possible. Runs drop actions on the per-tile slice
+        // so quantity-scaled effects and item mutations match what is inserted.
+        // Decrements obj.charges by the amount handled and records the first
+        // stack we touched.
+        auto place_charges = [&]( const tripoint_bub_ms & e, int qty ) {
+            if( qty < 1 ) {
+                return false;
+            }
+            item slice = obj;
+            slice.charges = qty;
+            if( drop_action_applies( slice ) && slice.on_drop( e, *this ) ) {
+                obj.charges -= qty;
+                return true;
+            }
+            if( !room_for_stack( e, slice ) ) {
+                return false;
+            }
+            item *placed = nullptr;
+            for( item &it : i_at( e ) ) {
+                if( it.merge_charges( slice ) ) {
+                    placed = &it;
+                    break;
+                }
+            }
+            if( placed == nullptr ) {
+                support_dirty( e );
+                int one = 1;
+                placed = &add_item( e, slice, one );
+            }
+            if( placed != nullptr && !placed->is_null() ) {
+                obj.charges -= qty;
+                if( !charge_first_added ) {
+                    charge_first_added = std::make_pair( placed, e );
+                }
+            }
+            return false;
+        };
+
+        // How many charges of obj fit in tile e's current free volume.
+        auto charges_that_fit = [&]( const tripoint_bub_ms & e ) {
+            const units::volume avail = std::max( free_volume( e ), 0_ml );
+            return std::min( obj.charges, obj.charges_per_volume( avail, true ) );
+        };
+
+        auto tile_accepts_items = [&]( const tripoint_bub_ms & e ) {
+            return !has_flag( ter_furn_flag::TFLAG_NOITEM, e ) ||
+                   ( has_flag( ter_furn_flag::TFLAG_LIQUIDCONT, e ) && obj.made_of( phase_id::LIQUID ) );
+        };
+
+        // Target tile first.
+        if( tile_accepts_items( pos ) ) {
+            if( room_for_stack( pos, obj ) ) {
+                if( place_charges( pos, charges_that_fit( pos ) ) ) {
+                    return { &null_item_reference(), tripoint_bub_ms::invalid };
+                }
+            }
+        }
+
+        // Spill the remainder across nearby tiles, each up to its free volume.
+        if( overflow && obj.charges > 0 ) {
+            const int max_dist = 2;
+            std::vector<tripoint_bub_ms> tiles = closest_points_first( pos, 1, max_dist );
+            const int max_path_length = 4 * max_dist;
+            const pathfinding_settings setting( {}, max_dist, max_path_length, 0, false, false, true, false,
+                                                false, false );
+            for( const tripoint_bub_ms &e : tiles ) {
+                if( obj.charges <= 0 ) {
+                    break;
+                }
+                if( !inbounds( e ) || !valid_tile( e ) ) {
+                    continue;
+                }
+                if( has_flag( ter_furn_flag::TFLAG_NOITEM, e ) ||
+                    has_flag( ter_furn_flag::TFLAG_SEALED, e ) ) {
+                    continue;
+                }
+                // must be a path to the target tile
+                if( route( pos, pathfinding_target::point( e ), setting ).empty() ) {
+                    continue;
+                }
+                if( room_for_stack( e, obj ) ) {
+                    if( place_charges( e, charges_that_fit( e ) ) ) {
+                        return charge_first_added ? charge_first_added.value() :
+                               std::make_pair( &null_item_reference(), tripoint_bub_ms::invalid );
+                    }
+                }
+            }
+        }
+
+        // If no reachable tile can hold the rest by volume, the leftover charges
+        // are intentionally dropped: every placed stack stays within its tile's
+        // volume limit (no overfilling), so the stack is effectively reduced to
+        // what the available tiles can legitimately hold.
+        copies_remaining = obj.charges > 0 ? std::max( copies_remaining, 1 ) : 0;
+        return charge_first_added ? charge_first_added.value() :
+               std::make_pair( &null_item_reference(), tripoint_bub_ms::invalid );
     }
 
     std::optional<std::pair<item *, tripoint_bub_ms>> first_added;

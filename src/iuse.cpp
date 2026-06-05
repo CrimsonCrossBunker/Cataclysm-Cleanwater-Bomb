@@ -3805,19 +3805,31 @@ std::optional<int> iuse::rpgdie( Character *you, item *die, const tripoint_bub_m
     if( you->cant_do_mounted() ) {
         return std::nullopt;
     }
-    int num_sides = die->get_var( "die_num_sides", 0 );
+    // A stack of dice (count_by_charges) is a single item object; setting the
+    // side count on `die` directly would lock every die in the stack to the
+    // same value. Split the one die being rolled off an as-yet-undetermined
+    // stack so only it gets determined, leaving the rest free to roll later.
+    item split_die;
+    item *rolled = die;
+    if( die->get_var( "die_num_sides", 0 ) == 0 && die->count_by_charges() && die->charges > 1 ) {
+        split_die = die->split( 1 );
+        rolled = &split_die;
+    }
+    int num_sides = rolled->get_var( "die_num_sides", 0 );
     if( num_sides == 0 ) {
         const std::vector<int> sides_options = { 4, 6, 8, 10, 12, 20, 50 };
-        const int sides = sides_options[ rng( 0, sides_options.size() - 1 ) ];
-        num_sides = sides;
-        die->set_var( "die_num_sides", sides );
+        num_sides = sides_options[ rng( 0, sides_options.size() - 1 ) ];
+        rolled->set_var( "die_num_sides", num_sides );
     }
     const int roll = rng( 1, num_sides );
     //~ %1$d: roll number, %2$d: side number of a die, %3$s: die item name
     you->add_msg_if_player( pgettext( "dice", "You roll a %1$d on your %2$d sided %3$s" ), roll,
-                            num_sides, die->tname() );
+                            num_sides, rolled->tname() );
     if( roll == num_sides ) {
         add_msg( m_good, _( "Critical!" ) );
+    }
+    if( rolled == &split_die ) {
+        you->i_add_or_drop( split_die );
     }
     return roll;
 }
