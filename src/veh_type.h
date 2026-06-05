@@ -124,6 +124,7 @@ enum vpart_bitflags : int {
     VPFLAG_NL_BOILER,
     VPFLAG_BALLOON,
     VPFLAG_PROPELLER,
+    VPFLAG_LADDER,
 
     NUM_VPFLAGS
 };
@@ -185,11 +186,12 @@ struct vpslot_propeller {
 
 struct vpslot_balloon {
     bool was_loaded = false;
-
-    // effective lifting "height"/volume of the balloon, used to compute lift in kg
     float height = 0.0f;
-
     void deserialize( const JsonObject &jo );
+};
+
+struct vpslot_ladder {
+    int length = 0;
 };
 
 
@@ -318,6 +320,10 @@ class vpart_info
         }
         void set_flag( const std::string &flag );
 
+        int ladder_length() const {
+            return has_flag( "LADDER" ) ? ladder_info->length : 0;
+        }
+
         /** Gets all categories of this part */
         const std::set<std::string> &get_categories() const;
 
@@ -358,6 +364,7 @@ class vpart_info
         std::optional<vpslot_rotor> rotor_info;
         std::optional<vpslot_propeller> propeller_info;
         std::optional<vpslot_balloon> balloon_info;
+        std::optional<vpslot_ladder> ladder_info;
         std::optional<vpslot_terrain_transform> transform_terrain_info;
 
         //Enchantments

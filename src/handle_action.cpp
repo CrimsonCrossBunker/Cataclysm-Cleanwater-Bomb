@@ -2566,6 +2566,26 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
             }
 
+            if( player_character.in_vehicle && here.has_rope_at( player_character.pos_bub() ) ) {
+                here.unboard_vehicle( player_character.pos_bub() );
+                const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
+                if( vp.has_value() ) {
+                    const int idx = vp->vehicle().part_with_feature( vp->part_index(), VPFLAG_LADDER, true );
+                    if( idx != -1 ) {
+                        const vpart_info &info = vp->vehicle().part( idx ).info();
+                        int dist = 1;
+                        tripoint_bub_ms below = player_character.pos_bub();
+                        below.z()--;
+                        while( here.ter( below ).id().str() == "t_open_air" && dist < info.ladder_length() ) {
+                            below.z()--;
+                            dist++;
+                        }
+                        vertical_move( -dist, true );
+                        break;
+                    }
+                }
+            }
+
             if( has_vehicle_control( player_character ) ) {
                 const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
                 if( vp->vehicle().is_rotorcraft( here ) ) {
@@ -2575,6 +2595,25 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             }
 
             if( !player_character.in_vehicle ) {
+                // Check for vehicle rope ladder above before climbing down other ways
+                if( here.has_rope_at( player_character.pos_bub() ) ) {
+                    const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
+                    if( vp.has_value() ) {
+                        const int idx = vp->vehicle().part_with_feature( vp->part_index(), VPFLAG_LADDER, true );
+                        if( idx != -1 ) {
+                            const vpart_info &info = vp->vehicle().part( idx ).info();
+                            int dist = 1;
+                            tripoint_bub_ms below = player_character.pos_bub();
+                            below.z()--;
+                            while( here.ter( below ).id().str() == "t_open_air" && dist < info.ladder_length() ) {
+                                below.z()--;
+                                dist++;
+                            }
+                            vertical_move( -dist, true );
+                            break;
+                        }
+                    }
+                }
                 // We're NOT standing on tiles with stairs, ropes, ladders etc
                 if( !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, player_character.pos_bub() ) &&
                     !u.has_flag( json_flag_PHASE_MOVEMENT ) ) {
@@ -2624,6 +2663,27 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
             }
             if( !player_character.in_vehicle ) {
+                if( here.has_rope_at( player_character.pos_bub() ) ) {
+                    const auto &veh_pair = here.get_rope_at( player_character.pos_bub().xy() );
+                    vehicle *veh = veh_pair.first;
+                    int veh_part = veh_pair.second;
+                    tripoint_bub_ms above = player_character.pos_bub();
+                    const int ladder_len = veh->part( veh_part ).info().ladder_length();
+                    above.z()++;
+                    if( here.ter( above ).id().str() != "t_open_air" ) {
+                        vertical_move( 1, false );
+                    } else {
+                        int dist = 1;
+                        while( here.ter( above ).id().str() == "t_open_air" &&
+                               !here.veh_at( tripoint_bub_ms( player_character.pos_bub().xy(), above.z() ) ) &&
+                               dist < ladder_len ) {
+                            above.z()++;
+                            dist++;
+                        }
+                        vertical_move( dist, true );
+                    }
+                    break;
+                }
                 vertical_move( 1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
             } else if( has_vehicle_control( player_character ) ) {
                 const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );

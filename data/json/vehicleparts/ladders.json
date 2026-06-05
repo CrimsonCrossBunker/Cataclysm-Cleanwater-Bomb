@@ -15,7 +15,7 @@
     "type": "vehicle_part",
     "name": "3-story rope ladder",
     "item": "rope_30",
-    "//": "treats a z-level as being about 3 meters tall.",
+    "length": 3,
     "requirements": { "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "60 m", "using": [  ] } },
     "durability": 60,
     "damage_modifier": 80,

@@ -902,6 +902,9 @@ class map
                               bool dead_passenger = false );
         // Remove passenger from vehicle at p.
         void unboard_vehicle( const tripoint_bub_ms &p, bool dead_passenger = false );
+
+        bool has_rope_at( tripoint_bub_ms pt ) const;
+        std::pair<vehicle *, int> get_rope_at( const point_bub_ms &pt ) const;
         // Change vehicle coordinates and move vehicle's driver along.
         // WARNING: not checking collisions!
         // optionally: include a list of parts to displace instead of the entire vehicle
@@ -1862,6 +1865,7 @@ class map
         bool pl_sees( const tripoint_bub_ms &t, int max_range ) const;
 
         std::set<vehicle *> dirty_vehicle_list;
+        std::map<point_bub_ms, std::pair<vehicle *, int> > cached_veh_rope;
 
         /** return @ref abs_sub */
         tripoint_abs_sm get_abs_sub() const;

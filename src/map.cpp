@@ -595,6 +595,10 @@ void map::add_vehicle_to_cache( vehicle *veh )
             ch.set_veh_exists_at( p, true );
             set_transparency_cache_dirty( p );
         }
+        int part = veh->part_with_feature( static_cast<int>( vpr.part_index() ), VPFLAG_LADDER, true );
+        if( part != -1 ) {
+            cached_veh_rope[p.xy()] = std::make_pair( veh, part );
+        }
     }
 }
 
@@ -612,6 +616,7 @@ void map::clear_vehicle_point_from_cache( vehicle *veh, const tripoint_bub_ms &p
         }
         ch->clear_veh_from_veh_cached_parts( pt, veh );
     }
+    cached_veh_rope.erase( pt.xy() );
 }
 
 void map::clear_vehicle_level_caches( )
@@ -622,6 +627,7 @@ void map::clear_vehicle_level_caches( )
             ch->clear_vehicle_cache();
         }
     }
+    cached_veh_rope.clear();
 }
 
 void map::remove_vehicle_from_cache( vehicle *veh, int zmin, int zmax )
@@ -2976,6 +2982,22 @@ for( const tripoint_bub_ms &pt : points_in_radius( p, 1 ) ) {
 
     // TODO: Make this more sensible - check opposite sides, not just movement blocker count
     return std::max( 0, best_difficulty - blocks_movement );
+}
+
+bool map::has_rope_at( tripoint_bub_ms pt ) const
+{
+    if( cached_veh_rope.count( pt.xy() ) > 0 ) {
+        const auto &veh_pair = get_rope_at( pt.xy() );
+        vehicle *veh = veh_pair.first;
+        int veh_part = veh_pair.second;
+        return veh->part( veh_part ).info().ladder_length() >= veh->pos_bub( *this ).z() - pt.z();
+    }
+    return false;
+}
+
+std::pair<vehicle *, int> map::get_rope_at( const point_bub_ms &pt ) const
+{
+    return cached_veh_rope.at( pt );
 }
 
 bool map::has_floor( const tripoint_bub_ms &p ) const

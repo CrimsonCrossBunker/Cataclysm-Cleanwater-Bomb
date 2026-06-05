@@ -117,6 +117,7 @@ static const std::unordered_map<std::string, vpart_bitflags> vpart_bitflag_map =
     { "ROTOR", VPFLAG_ROTOR },
     { "BALLOON", VPFLAG_BALLOON },
     { "PROPELLER", VPFLAG_PROPELLER },
+    { "LADDER", VPFLAG_LADDER },
     { "FLOATS", VPFLAG_FLOATS },
 
     { "NO_LEAK", VPFLAG_NO_LEAK },
@@ -389,6 +390,13 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
             balloon_info.emplace();
         }
         balloon_info->deserialize( jo );
+    }
+
+    if( has_flag( "LADDER" ) ) {
+        if( !ladder_info ) {
+            ladder_info.emplace();
+        }
+        optional( jo, was_loaded, "length", ladder_info->length, 0 );
     }
 
     if( has_flag( "WORKBENCH" ) ) {
