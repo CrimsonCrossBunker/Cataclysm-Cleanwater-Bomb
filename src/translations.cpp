@@ -104,5 +104,5 @@ void set_language( const std::string &lang )
     // names.
     SNIPPET.reload_names( PATH_INFO::names() );
 
-    set_title( string_format( _( "Cataclysm: Dark Days Ahead - %s" ), getVersionString() ) );
+    set_title( string_format( _( "Cataclysm: Cleanwater Bomb - %s" ), getVersionString() ) );
 }

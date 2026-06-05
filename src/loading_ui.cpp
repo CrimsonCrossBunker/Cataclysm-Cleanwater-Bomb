@@ -204,7 +204,7 @@ static void update_state( const std::string &context, const std::string &step )
 #else
         std::string splash = PATH_INFO::title( get_holiday_from_time() );
         if( get_option<bool>( "ENABLE_ASCII_TITLE" ) ) {
-            splash = read_whole_file( splash ).value_or( _( "Cataclysm: Dark Days Ahead" ) );
+            splash = read_whole_file( splash ).value_or( _( "Cataclysm: Cleanwater Bomb" ) );
         }
         gLUI->splash = string_split( splash, '\n' );
         gLUI->blanks = std::string( TERMX, ' ' );
