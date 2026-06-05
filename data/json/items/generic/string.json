@@ -66,6 +66,7 @@
     "subtypes": [ "ARMOR" ],
     "name": { "str": "short rope" },
     "description": "A 6-foot (or about 180 cm) long piece of rope.  Wear it over a shoulder and tie items to it as a temporary carrying solution.",
+    "stackable": false,
     "proportional": { "weight": 6, "volume": 6, "price": 6 },
     "pocket_data": [
       {
