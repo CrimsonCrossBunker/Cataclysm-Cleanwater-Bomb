@@ -42,8 +42,6 @@ class TextJsonIn;
 class TextJsonObject;
 class TextJsonValue;
 class item;
-bool stackable_container_contents_need_split( const item &it );
-bool split_stackable_container_contents_from_stack( item &it, item &empty_stack );
 
 // Traits class to distinguish sequences which are string like from others
 template< class, class = void >
