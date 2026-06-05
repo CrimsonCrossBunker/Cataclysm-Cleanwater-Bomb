@@ -2613,7 +2613,7 @@
     "npc_background": "BG_survival_story_WORKER_COMMERCIAL",
     "points": 4,
     "skills": [ { "level": 6, "name": "driving" }, { "level": 3, "name": "mechanics" }, { "level": 2, "name": "speech" } ],
-    "proficiencies": [ "prof_helicopter_pilot" ],
+    "proficiencies": [ "prof_helicopter_pilot", "prof_airship_pilot" ],
     "items": {
       "both": {
         "entries": [
