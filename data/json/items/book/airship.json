@@ -1,0 +1,27 @@
+[
+  {
+    "id": "book_airship_piloting",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "category": "manuals",
+    "name": { "str": "The Complete Guide to Piloting Aircraft", "str_pl": "copies of The Complete Guide to Piloting Aircraft" },
+    "description": "A comprehensive civilian flight manual covering every kind of aircraft, from helicopters to lighter-than-air craft.  It explains managing lift and ballast, steering with rotors and propellers, and handling changing winds.",
+    "weight": "1400 g",
+    "volume": "1500 ml",
+    "price": "85 USD",
+    "price_postapoc": "25 USD",
+    "material": [ "paper", "cardboard" ],
+    "symbol": "?",
+    "color": "light_blue",
+    "looks_like": "book_icef",
+    "intelligence": 8,
+    "time": "50 m",
+    "read_fun": 1,
+    "melee_damage": { "bash": 4 },
+    "read_skill": "driving",
+    "proficiencies": [
+      { "proficiency": "prof_airship_pilot", "time_factor": 0.7, "fail_factor": 0.5 },
+      { "proficiency": "prof_helicopter_pilot", "time_factor": 0.7, "fail_factor": 0.5 }
+    ]
+  }
+]
