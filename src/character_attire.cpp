@@ -7,6 +7,7 @@
 #include <iterator>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <ostream>
 
 #include "avatar_action.h"
@@ -2289,13 +2290,80 @@ for( const item &it : worn ) {
     }
 }
 
-void outfit::pickup_stash( const item &newit, int &remaining_charges, bool ignore_pkt_settings )
+static bool is_empty_stackable_container_stack( const item_location &loc )
+{
+    return loc && loc->count_by_charges() && loc->charges > 1 &&
+           loc->is_container() && loc->container_type_pockets_empty();
+}
+
+static bool is_empty_stackable_container( const item_location &loc )
+{
+    return loc && loc->count_by_charges() && loc->charges > 0 &&
+           loc->is_container() && loc->container_type_pockets_empty();
+}
+
+static item_location single_container_from_stack( item_location &loc )
+{
+    if( is_empty_stackable_container_stack( loc ) ) {
+        item_location split = loc.split_stack( 1 );
+        if( split ) {
+            return split;
+        }
+    }
+    return loc;
+}
+
+static int fill_empty_stackable_containers( item_location loc, const item &newit,
+        const int amount, Character &guy, const bool unseal_pockets, const bool allow_sealed,
+        const bool ignore_settings, const bool into_bottom, const bool allow_nested )
+{
+    int total_added = 0;
+    while( is_empty_stackable_container( loc ) && amount > total_added ) {
+        item contained_copy( newit );
+        if( contained_copy.count_by_charges() ) {
+            contained_copy.charges = 1;
+        }
+        ret_val<void> can_contain = loc->can_contain( contained_copy, false, false,
+                                    ignore_settings, false, item_location(), 10000000_ml, allow_nested );
+        if( !can_contain.success() ) {
+            break;
+        }
+        ret_val<int> max_parent_charges = loc.max_charges_by_parent_recursive( newit );
+        if( !max_parent_charges.success() ) {
+            break;
+        }
+        const int charges_to_insert = std::min( amount - total_added,
+                                                max_parent_charges.value() );
+        if( charges_to_insert <= 0 ) {
+            break;
+        }
+        item_location target = single_container_from_stack( loc );
+        if( !target ) {
+            break;
+        }
+        const int added = target->fill_with( newit, charges_to_insert, unseal_pockets,
+                                            allow_sealed, ignore_settings, into_bottom, allow_nested, &guy );
+        if( added <= 0 ) {
+            break;
+        }
+        total_added += added;
+    }
+    return total_added;
+}
+
+void outfit::pickup_stash( Character &guy, const item &newit, int &remaining_charges,
+                           bool ignore_pkt_settings )
 {
     for( item &i : worn ) {
         if( remaining_charges == 0 ) {
             break;
         }
-        if( i.can_contain_partial( newit ).success() ) {
+        item_location loc( guy, &i );
+        if( is_empty_stackable_container( loc ) ) {
+            const int used_charges = fill_empty_stackable_containers( loc, newit, remaining_charges,
+                                     guy, false, false, ignore_pkt_settings, false, true );
+            remaining_charges -= used_charges;
+        } else if( i.can_contain_partial( newit ).success() ) {
             const int used_charges =
                 i.fill_with( newit, remaining_charges, false, false, ignore_pkt_settings );
             remaining_charges -= used_charges;
@@ -2304,17 +2372,12 @@ void outfit::pickup_stash( const item &newit, int &remaining_charges, bool ignor
 }
 
 static std::vector<pocket_data_with_parent> get_child_pocket_with_parent(
-    const item_pocket *pocket, const item_location &parent, item_location it, const int nested_level,
+    const item_pocket *pocket, item_location it, const int nested_level,
     const std::function<bool( const item_pocket * )> &filter = return_true<const item_pocket *> )
 {
     std::vector<pocket_data_with_parent> ret;
     if( pocket != nullptr ) {
-        pocket_data_with_parent pocket_data = { pocket, item_location::nowhere, nested_level };
-        const item_location new_parent = item_location( it );
-
-        if( parent != item_location::nowhere ) {
-            pocket_data.parent = item_location( parent, it.get_item() );
-        }
+        pocket_data_with_parent pocket_data = { pocket, item_location( it ), nested_level };
         if( filter( pocket_data.pocket_ptr ) ) {
             ret.emplace_back( pocket_data );
         }
@@ -2323,8 +2386,7 @@ static std::vector<pocket_data_with_parent> get_child_pocket_with_parent(
             const item_location poc_loc = item_location( it, const_cast<item *>( contained ) );
             for( const item_pocket *pocket_nest : contained->get_container_pockets() ) {
                 std::vector<pocket_data_with_parent> child =
-                    get_child_pocket_with_parent( pocket_nest, new_parent,
-                                                  poc_loc, nested_level + 1, filter );
+                    get_child_pocket_with_parent( pocket_nest, poc_loc, nested_level + 1, filter );
                 ret.insert( ret.end(), child.begin(), child.end() );
             }
         }
@@ -2417,7 +2479,7 @@ std::vector<pocket_data_with_parent> Character::get_all_pocket_with_parent(
     for( item_location &loc : locs ) {
         for( const item_pocket *pocket : loc->get_container_pockets() ) {
             std::vector<pocket_data_with_parent> child =
-                get_child_pocket_with_parent( pocket, item_location::nowhere, loc, 0, filter );
+                get_child_pocket_with_parent( pocket, loc, 0, filter );
             ret.insert( ret.end(), child.begin(), child.end() );
         }
     }
@@ -2425,6 +2487,46 @@ std::vector<pocket_data_with_parent> Character::get_all_pocket_with_parent(
         std::sort( ret.begin(), ret.end(), sort_pockets_func );
     }
     return ret;
+}
+
+static std::optional<size_t> container_pocket_index( const item_location &loc,
+        const item_pocket *pocket )
+{
+    if( !loc || pocket == nullptr ) {
+        return std::nullopt;
+    }
+    const std::vector<const item_pocket *> pockets = loc->get_container_pockets();
+    for( size_t index = 0; index < pockets.size(); index++ ) {
+        if( pockets[index] == pocket ) {
+            return index;
+        }
+    }
+    return std::nullopt;
+}
+
+static item_pocket *pocket_for_fill_target( const pocket_data_with_parent &pocket_data,
+        item_location &parent )
+{
+    item_pocket *pocket = const_cast<item_pocket *>( pocket_data.pocket_ptr );
+    parent = pocket_data.parent;
+    if( !is_empty_stackable_container_stack( parent ) ) {
+        return pocket;
+    }
+
+    std::optional<size_t> pocket_index = container_pocket_index( parent, pocket );
+    if( !pocket_index ) {
+        return nullptr;
+    }
+    item_location split = parent.split_stack( 1 );
+    if( !split ) {
+        return nullptr;
+    }
+    std::vector<item_pocket *> split_pockets = split->get_container_pockets();
+    if( *pocket_index >= split_pockets.size() ) {
+        return nullptr;
+    }
+    parent = split;
+    return split_pockets[*pocket_index];
 }
 
 void outfit::add_stash( Character &guy, const item &newit, int &remaining_charges,
@@ -2436,14 +2538,20 @@ void outfit::add_stash( Character &guy, const item &newit, int &remaining_charge
         // Crawl First : wielded item
         item_location carried_item = guy.get_wielded_item();
         if( carried_item && !carried_item->has_pocket_type( pocket_type::MAGAZINE ) &&
-            carried_item->can_contain_partial( newit ).success() ) {
-            int used_charges = carried_item->fill_with( newit, remaining_charges, /*unseal_pockets=*/false,
-                               /*allow_sealed=*/false, /*ignore_settings=*/false, /*into_bottom*/false, /*allow_nested*/true,
-                               &guy );
+            is_empty_stackable_container( carried_item ) ) {
+            int used_charges = fill_empty_stackable_containers( carried_item, newit, remaining_charges,
+                               guy, /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
+                               /*into_bottom*/false, /*allow_nested*/true );
+            remaining_charges -= used_charges;
+        } else if( carried_item && !carried_item->has_pocket_type( pocket_type::MAGAZINE ) &&
+                   carried_item->can_contain_partial( newit ).success() ) {
+            int used_charges = carried_item->fill_with( newit, remaining_charges,
+                               /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
+                               /*into_bottom*/false, /*allow_nested*/true, &guy );
             remaining_charges -= used_charges;
         }
         // Crawl Next : worn items
-        pickup_stash( newit, remaining_charges, ignore_pkt_settings );
+        pickup_stash( guy, newit, remaining_charges, ignore_pkt_settings );
     } else {
         //item copy for test can contain
         item temp_it = item( newit );
@@ -2463,28 +2571,41 @@ void outfit::add_stash( Character &guy, const item &newit, int &remaining_charge
         const int amount = remaining_charges;
         int num_contained = 0;
         for( const pocket_data_with_parent &pocket_data_ptr : pockets_with_parent ) {
-            if( amount <= num_contained || remaining_charges <= 0 ) {
-                break;
-            }
-            int filled_count = 0;
-            item_pocket *pocke = const_cast<item_pocket *>( pocket_data_ptr.pocket_ptr );
-            if( pocke == nullptr ) {
-                continue;
-            }
-            int max_contain_value = pocke->remaining_capacity_for_item( newit );
-            const item_location parent_data = pocket_data_ptr.parent;
+            while( amount > num_contained && remaining_charges > 0 ) {
+                item_location parent_data;
+                int filled_count = 0;
+                item_pocket *pocke = const_cast<item_pocket *>( pocket_data_ptr.pocket_ptr );
+                parent_data = pocket_data_ptr.parent;
+                if( pocke == nullptr ) {
+                    break;
+                }
+                int max_contain_value = pocke->remaining_capacity_for_item( newit );
 
-            if( parent_data.has_parent() ) {
-                if( parent_data.parents_can_contain_recursive( &temp_it ).success() ) {
-                    max_contain_value = parent_data.max_charges_by_parent_recursive( temp_it ).value();
-                } else {
-                    max_contain_value = 0;
+                if( parent_data && parent_data.has_parent() ) {
+                    if( parent_data.parents_can_contain_recursive( &temp_it ).success() ) {
+                        max_contain_value = parent_data.max_charges_by_parent_recursive( temp_it ).value();
+                    } else {
+                        max_contain_value = 0;
+                    }
+                }
+                const int charges = std::min( max_contain_value, remaining_charges ) ;
+                if( charges <= 0 ) {
+                    break;
+                }
+                pocke = pocket_for_fill_target( pocket_data_ptr, parent_data );
+                if( pocke == nullptr ) {
+                    break;
+                }
+                filled_count = pocke->fill_with( newit, guy, charges, false, false );
+                if( filled_count <= 0 ) {
+                    break;
+                }
+                num_contained += filled_count;
+                remaining_charges -= filled_count;
+                if( !is_empty_stackable_container( pocket_data_ptr.parent ) ) {
+                    break;
                 }
             }
-            const int charges = std::min( max_contain_value, remaining_charges ) ;
-            filled_count = pocke->fill_with( newit, guy, charges, false, false );
-            num_contained += filled_count;
-            remaining_charges -= filled_count;
         }
     }
 }

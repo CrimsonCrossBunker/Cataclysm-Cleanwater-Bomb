@@ -3064,17 +3064,138 @@ bool Character::wield_contents( item &container, item *internal_item, bool penal
     return true;
 }
 
+static bool is_empty_stackable_container_stack( const item_location &loc )
+{
+    return loc && loc->count_by_charges() && loc->charges > 1 &&
+           loc->is_container() && loc->container_type_pockets_empty();
+}
+
+static bool is_empty_stackable_container( const item_location &loc )
+{
+    return loc && loc->count_by_charges() && loc->charges > 0 &&
+           loc->is_container() && loc->container_type_pockets_empty();
+}
+
+static item_location single_container_from_stack( item_location &loc )
+{
+    if( is_empty_stackable_container_stack( loc ) ) {
+        item_location split = loc.split_stack( 1 );
+        if( split ) {
+            return split;
+        }
+    }
+    return loc;
+}
+
 void Character::store( item &container, item &put, bool penalties, int base_cost,
                        pocket_type pk_type, bool check_best_pkt )
 {
-    mod_moves( -item_store_cost( put, container, penalties, base_cost ) );
+    const bool stackable_empty_container = container.count_by_charges() && container.charges > 1 &&
+                                           container.is_container() &&
+                                           container.container_type_pockets_empty();
+    item_location container_loc;
+    if( stackable_empty_container ) {
+        container_loc = item_location( *this, &container );
+    }
+    if( stackable_empty_container && pk_type == pocket_type::CONTAINER && put.count_by_charges() ) {
+        const bool use_best_pocket = check_best_pkt && container.get_container_pockets().size() > 1;
+        int total_stored = 0;
+        while( is_empty_stackable_container( container_loc ) && total_stored < put.charges ) {
+            item contained_copy( put );
+            contained_copy.charges = 1;
+            ret_val<void> can_store = container_loc->can_contain( contained_copy, false, false,
+                                      use_best_pocket, false, item_location(), 10000000_ml, use_best_pocket );
+            if( !can_store.success() ) {
+                break;
+            }
+            ret_val<int> max_parent_charges = container_loc.max_charges_by_parent_recursive( put );
+            if( !max_parent_charges.success() ) {
+                break;
+            }
+            const int charges_to_store = std::min( put.charges - total_stored,
+                                                   max_parent_charges.value() );
+            if( charges_to_store <= 0 ) {
+                break;
+            }
+            item_location target = single_container_from_stack( container_loc );
+            if( !target ) {
+                break;
+            }
+            const bool split_from_stack = target != container_loc;
+            const int stored = target->fill_with( put, charges_to_store, false, false, use_best_pocket,
+                                                  false, use_best_pocket, this );
+            if( stored <= 0 ) {
+                if( split_from_stack ) {
+                    container_loc->charges += target->charges;
+                    target.remove_item();
+                }
+                break;
+            }
+            total_stored += stored;
+        }
+        if( total_stored <= 0 ) {
+            return;
+        }
+        mod_moves( -item_store_cost( put, container, penalties, base_cost ) );
+        if( total_stored >= put.charges ) {
+            i_rem( &put );
+        } else {
+            put.charges -= total_stored;
+        }
+        calc_encumbrance();
+        return;
+    }
+
+    item *target_container = &container;
+    item_location split;
+    if( stackable_empty_container ) {
+        if( pk_type == pocket_type::CONTAINER ) {
+            const bool use_partial_check = check_best_pkt &&
+                                           container.get_container_pockets().size() > 1 &&
+                                           put.count_by_charges();
+            ret_val<void> can_store = use_partial_check ? container.can_contain_partial( put ) :
+                                      container.can_contain_directly( put );
+            if( !can_store.success() ) {
+                return;
+            }
+        }
+        split = container_loc.split_stack( 1 );
+        if( !split ) {
+            return;
+        }
+        target_container = split.get_item();
+    }
+    const auto rollback_split = [&container, &split]() {
+        if( split ) {
+            container.charges += split->charges;
+            split.remove_item();
+        }
+    };
+
     if( check_best_pkt && pk_type == pocket_type::CONTAINER &&
-        container.get_container_pockets().size() > 1 ) {
+        target_container->get_container_pockets().size() > 1 && put.count_by_charges() ) {
         // Bypass pocket settings (assuming the item is manually stored)
-        int charges = put.count_by_charges() ? put.charges : 1;
-        container.fill_with( i_rem( &put ), charges, false, false, true, false, true, this );
+        const int charges = put.charges;
+        const int charges_stored = target_container->fill_with( put, charges, false, false, true, false,
+                                  true, this );
+        if( charges_stored <= 0 ) {
+            rollback_split();
+            return;
+        }
+        mod_moves( -item_store_cost( put, container, penalties, base_cost ) );
+        if( charges_stored >= put.charges ) {
+            i_rem( &put );
+        } else {
+            put.charges -= charges_stored;
+        }
     } else {
-        container.put_in( i_rem( &put ), pk_type, false, this );
+        ret_val<void> stored = target_container->put_in( put, pk_type, false, this, true );
+        if( !stored.success() ) {
+            rollback_split();
+            return;
+        }
+        mod_moves( -item_store_cost( put, container, penalties, base_cost ) );
+        i_rem( &put );
     }
     calc_encumbrance();
 }
@@ -3091,9 +3212,13 @@ void Character::store( item_pocket *pocket, item &put, bool penalties, int base_
     if( !!pkt_best && pocket->better_pocket( *pkt_best, put, true ) ) {
         pocket = pkt_best;
     }
+    ret_val<item *> result = pocket->insert_item( put );
+    if( !result.success() ) {
+        return;
+    }
     mod_moves( -std::max( item_store_cost( put, null_item_reference(), penalties, base_cost ),
                           pocket->obtain_cost( put ) ) );
-    ret_val<item *> result = pocket->insert_item( i_rem( &put ) );
+    i_rem( &put );
     result.value()->on_pickup( *this );
     calc_encumbrance();
 }

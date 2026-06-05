@@ -2350,16 +2350,6 @@ void Item_factory::check_definitions() const
             }
         }
 
-        // A stackable (count_by_charges) item is a single object representing the
-        // whole stack, so a container pocket would share one set of contents
-        // across every unit and duplicate them when the stack is split. Disallow
-        // the combination rather than supporting per-unit pocket contents.
-        if( type->is_stackable() && is_container( type ) ) {
-            msg += "is stackable and has a CONTAINER pocket; this duplicates pocket "
-                   "contents when the stack is split.  Remove the pocket or the "
-                   "\"stackable\" property.\n";
-        }
-
         if( !type->picture_id.is_empty() && !type->picture_id.is_valid() ) {
             msg +=  "item has unknown ascii_picture.";
         }

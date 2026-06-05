@@ -7706,6 +7706,29 @@ static bool is_bulk_load( const item_location &lhs, const item_location &rhs )
     return false;
 }
 
+static bool is_empty_stackable_container_stack( const item_location &loc )
+{
+    return loc && loc->count_by_charges() && loc->charges > 1 &&
+           loc->is_container() && loc->container_type_pockets_empty();
+}
+
+static bool is_empty_stackable_container( const item_location &loc )
+{
+    return loc && loc->count_by_charges() && loc->charges > 0 &&
+           loc->is_container() && loc->container_type_pockets_empty();
+}
+
+static item_location single_container_from_stack( item_location &loc )
+{
+    if( is_empty_stackable_container_stack( loc ) ) {
+        item_location split = loc.split_stack( 1 );
+        if( split ) {
+            return split;
+        }
+    }
+    return loc;
+}
+
 void insert_item_activity_actor::start( player_activity &act, Character &who )
 {
     if( items.empty() ) {
@@ -7758,7 +7781,57 @@ static ret_val<void> try_insert( item_location &holster, drop_location &holstere
             return ret;
         }
 
+        holster = single_container_from_stack( holster );
+        if( !holster ) {
+            return ret_val<void>::make_failure( _( "item can't be stored there" ) );
+        }
         return holster->put_in( it, pocket_type::CONTAINER, /*unseal_pockets=*/true, carrier );
+    }
+
+    if( is_empty_stackable_container( holster ) ) {
+        item_location stack = holster;
+        item_location first_filled = item_location::nowhere;
+        int total_added = 0;
+        ret_val<void> last_ret = ret_val<void>::make_failure( _( "item can't be stored there" ) );
+        while( is_empty_stackable_container( stack ) &&
+               holstered_item.second > total_added ) {
+            last_ret = stack->can_contain_partial_directly( it );
+            if( !last_ret.success() ) {
+                break;
+            }
+            ret_val<int> max_parent_charges = stack.max_charges_by_parent_recursive( it );
+            if( !max_parent_charges.success() ) {
+                last_ret = ret_val<void>::make_failure( max_parent_charges.str() );
+                break;
+            }
+            const int charges_to_insert = std::min( holstered_item.second - total_added,
+                                                    max_parent_charges.value() );
+            if( charges_to_insert <= 0 ) {
+                break;
+            }
+            item_location target = single_container_from_stack( stack );
+            if( !target ) {
+                break;
+            }
+            const int added = target->fill_with( it, charges_to_insert, /*unseal_pockets=*/true,
+                                                /*allow_sealed=*/true, /*ignore_settings*/true, /*into_bottom*/true,
+                                                /*allow_nested*/allow_fill_charge_item_nested, carrier );
+            if( added <= 0 ) {
+                last_ret = ret_val<void>::make_failure( _( "item can't be stored there" ) );
+                break;
+            }
+            if( !first_filled ) {
+                first_filled = target;
+            }
+            total_added += added;
+            last_ret = ret_val<void>::make_success();
+        }
+        if( total_added > 0 ) {
+            *charges_added = total_added;
+            holster = first_filled;
+            return ret_val<void>::make_success();
+        }
+        return last_ret;
     }
 
     ret = holster->can_contain_partial_directly( it );

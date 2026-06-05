@@ -134,6 +134,7 @@ class item_location::impl
         };
         virtual std::string describe( const Character * ) const = 0;
         virtual item_location obtain( Character &, int ) = 0;
+        virtual item_location split_stack( int ) = 0;
         virtual units::volume volume_capacity() const = 0;
         virtual units::mass weight_capacity() const = 0;
         virtual bool check_parent_capacity_recursive() const = 0;
@@ -214,6 +215,11 @@ class item_location::impl::nowhere : public item_location::impl
         }
 
         item_location obtain( Character &, int ) override {
+            debugmsg( "invalid use of nowhere item_location" );
+            return item_location();
+        }
+
+        item_location split_stack( int ) override {
             debugmsg( "invalid use of nowhere item_location" );
             return item_location();
         }
@@ -335,6 +341,20 @@ class item_location::impl::item_on_map : public item_location::impl
                 remove_item();
                 return get_local_location( ch, inv );
             }
+        }
+
+        item_location split_stack( const int qty ) override {
+            on_contents_changed();
+            item obj = target()->split( qty );
+            if( obj.is_null() ) {
+                return item_location();
+            }
+            item &split = get_map().add_item( cur.pos_bub(), std::move( obj ) );
+            if( split.is_null() ) {
+                target()->charges += qty;
+                return item_location();
+            }
+            return item_location( cur, &split );
         }
 
         int obtain_cost( const Character &ch, int qty ) const override {
@@ -506,6 +526,19 @@ class item_location::impl::item_on_person : public item_location::impl
             }
         }
 
+        item_location split_stack( const int qty ) override {
+            if( !ensure_who_unpacked() ) {
+                return item_location();
+            }
+            on_contents_changed();
+            item obj = target()->split( qty );
+            if( obj.is_null() ) {
+                return item_location();
+            }
+            item &split = who->inv->add_item( std::move( obj ), false, false, false );
+            return item_location( *who, &split );
+        }
+
         int obtain_cost( const Character &ch, int qty ) const override {
             if( !target() || !ensure_who_unpacked() ) {
             return 0;
@@ -663,6 +696,19 @@ class item_location::impl::item_on_vehicle : public item_location::impl
                 remove_item();
                 return inv;
             }
+        }
+
+        item_location split_stack( const int qty ) override {
+            on_contents_changed();
+            item obj = target()->split( qty );
+            if( obj.is_null() ) {
+                return item_location();
+            }
+            vehicle_part &vp = cur.veh.part( cur.part );
+            obj.preserve_location( cur.veh.pos_abs() );
+            auto split = vp.items.insert( obj );
+            cur.veh.invalidate_mass();
+            return item_location( cur, &( *split ) );
         }
 
         int obtain_cost( const Character &ch, int qty ) const override {
@@ -862,6 +908,25 @@ for( const item *it : container->all_items_container_top() ) {
                 remove_item();
                 return inv;
             }
+        }
+
+        item_location split_stack( const int qty ) override {
+            on_contents_changed();
+            item obj = target()->split( qty );
+            if( obj.is_null() ) {
+                return item_location();
+            }
+            item_pocket *pocket = parent_pocket();
+            if( pocket == nullptr ) {
+                target()->charges += qty;
+                return item_location();
+            }
+            ret_val<item *> result = pocket->insert_item( obj, false, false );
+            if( !result.success() ) {
+                target()->charges += qty;
+                return item_location();
+            }
+            return item_location( container, result.value() );
         }
 
         int obtain_cost( const Character &ch, int qty ) const override {
@@ -1256,6 +1321,15 @@ item_location item_location::obtain( Character &ch, int qty )
         return item_location();
     }
     return ptr->obtain( ch, qty );
+}
+
+item_location item_location::split_stack( const int qty )
+{
+    if( !ptr->valid() ) {
+        debugmsg( "item location does not point to valid item" );
+        return item_location();
+    }
+    return ptr->split_stack( qty );
 }
 
 int item_location::obtain_cost( const Character &ch, int qty ) const

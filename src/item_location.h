@@ -89,6 +89,9 @@ class item_location
          *  @return item_location for the item */
         item_location obtain( Character &ch, int qty = -1 );
 
+        /** Split charges from this stack into a separate item in the same location. */
+        item_location split_stack( int qty = 1 );
+
         /** Calculate (but do not deduct) number of moves required to obtain an item
          *  @see item_location::obtain */
         int obtain_cost( const Character &ch, int qty = -1 ) const;
