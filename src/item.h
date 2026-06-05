@@ -3506,6 +3506,8 @@ class item : public visitable
 
 
     public:
+        friend bool split_stackable_container_contents_from_stack( item &it, item &empty_stack );
+
         static const int INFINITE_CHARGES;
 
         const itype *type;
