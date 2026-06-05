@@ -141,6 +141,11 @@
     "//": "Will not damage items on the map even when it otherwise would try to. Hardcoded"
   },
   {
+    "id": "NEVER_MISFIRES",
+    "type": "ammo_effect",
+    "//": "Disables misfires."
+  },
+  {
     "id": "NON_FOULING",
     "type": "ammo_effect",
     "//": "This ammo does not cause dirtying or blackpowder fouling on the gun when fired. Hardcoded"
