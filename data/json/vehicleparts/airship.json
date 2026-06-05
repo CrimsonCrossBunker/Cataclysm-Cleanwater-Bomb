@@ -23,6 +23,7 @@
     },
     "durability": 60,
     "damage_modifier": 80,
+    "control_requirements": { "air": { "proficiencies": [ "prof_airship_pilot" ] } },
     "//": "Todo: should explode if damaged or destroyed by bullets, fire, or electric damage.",
     "breaks_into": [ { "item": "plastic_chunk", "count": [ 10, 20 ] } ],
     "flags": [ "BALLOON", "SHOCK_IMMUNE" ],
@@ -46,6 +47,7 @@
     "broken_color": "light_gray",
     "variants": [ { "symbols": "X", "symbols_broken": "O" } ],
     "flags": [ "PROPELLER", "PROTRUSION", "SHOCK_RESISTANT" ],
+    "control_requirements": { "air": { "proficiencies": [ "prof_airship_pilot" ] } },
     "description": "A set of aerofoil propeller rotors, when spun at high speed, they generate thrust via horizontal momentum."
   },
   {

@@ -2353,6 +2353,10 @@ bool read_activity_actor::player_read( avatar &you )
             }
         }
 
+        for( const book_proficiency_bonus &bonus : islotbook->proficiencies ) {
+            learner->practice_proficiency( bonus.id, islotbook->time * bonus.time_factor * penalty );
+        }
+
         if( learner_left && learner->getID().get_value() == learner_id ) {
             learner_left = false;
         }

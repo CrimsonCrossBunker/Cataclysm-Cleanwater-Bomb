@@ -4915,9 +4915,9 @@ bool vehicle::is_in_water( bool deep_water ) const
 
 bool vehicle::can_control_in_air( const Character &pc ) const
 {
-for( const int index : control_req_parts ) {
+    for( const int index : control_req_parts ) {
     for( const proficiency_id prof : parts[index].info().control_air.proficiencies ) {
-            if( !pc.has_proficiency( prof ) ) {
+            if( pc.get_proficiency_practice( prof ) <= 0.0f ) {
                 return false;
             }
         }
@@ -5414,6 +5414,15 @@ void vehicle::consume_fuel( map &here, int load, bool idling )
     // if engine is under load, player is actively piloting a vehicle, so train appropriate vehicle proficiency
     if( load > 0 ) {
         practice_pilot_proficiencies( *driver, in_deep_water );
+        if( is_flying_in_air() ) {
+            for( const int index : control_req_parts ) {
+                for( const proficiency_id prof : parts[index].info().control_air.proficiencies ) {
+                    if( !driver->has_proficiency( prof ) ) {
+                        driver->practice_proficiency( prof, 1_seconds );
+                    }
+                }
+            }
+        }
     }
 
     if( load > 0 && fuel_left( here, fuel_type_muscle ) > 0 &&
