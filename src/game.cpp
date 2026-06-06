@@ -11404,10 +11404,10 @@ pulp_data game::calculate_pulpability( const Character &you, const mtype &corpse
     float corpse_volume = units::to_liter( corpse_mtype.volume );
     // in seconds
     int time_to_pulp = std::max( 1.0, ( std::pow( corpse_volume,
-                                        pow_factor ) * 1000 ) / pd.nominal_pulp_power );
+                                        pow_factor ) * 100 ) / pd.nominal_pulp_power );
     // in seconds also
     // 30 seconds for human body volume of 62.5L, scale from this
-    int min_time_to_pulp = std::max( 1.0, 30 * corpse_volume / 62.5 );
+    int min_time_to_pulp = std::max( 1.0, 10 * corpse_volume / 62.5 );
 
     // you have a hard time pulling armor to reach important parts of this monster
     if( corpse_mtype.has_flag( mon_flag_PULP_PRYING ) ) {
@@ -11419,7 +11419,7 @@ pulp_data game::calculate_pulpability( const Character &you, const mtype &corpse
     }
 
     // Adjust pulp_power to match the time taken.
-    pd.pulp_power = ( std::pow( corpse_volume, pow_factor ) * 1000 ) / time_to_pulp;
+    pd.pulp_power = ( std::pow( corpse_volume, pow_factor ) * 100 ) / time_to_pulp;
 
     // +25% to pulp time if char knows no weakpoints of monster
     // -25% if knows all of them
@@ -11441,7 +11441,7 @@ pulp_data game::calculate_pulpability( const Character &you, const mtype &corpse
     if( time_to_pulp < min_time_to_pulp ) {
         pd.time_to_pulp = min_time_to_pulp;
         // Reducing the power to match the time in order to get the same amount of splatter.
-        pd.pulp_power = pd.time_to_pulp / ( std::pow( corpse_volume, pow_factor ) * 1000 );
+        pd.pulp_power = pd.time_to_pulp / ( std::pow( corpse_volume, pow_factor ) * 100 );
     } else {
         pd.time_to_pulp = time_to_pulp;
     }
