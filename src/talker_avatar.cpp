@@ -4,9 +4,11 @@
 
 #include "avatar.h"
 #include "calendar.h"
+#include "character.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
+#include "flag.h"
 #include "game.h"
 #include "messages.h"
 #include "monster.h"
@@ -26,6 +28,8 @@ static const itype_id itype_foodperson_mask( "foodperson_mask" );
 static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
 
 static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
+
+static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
 
 std::vector<std::string> talker_avatar_const::get_topics( bool ) const
 {
@@ -50,7 +54,14 @@ int talker_avatar_const::parse_mod( const std::string &attribute, const int fact
         const std::string after = "u_has_trait: ";
         trait_id checked_trait = trait_id( attribute.substr( after.size() ) );
         modifier = me_chr->has_trait( checked_trait ) ? 1 : 0;
+    } else if ( attribute == "LOWFUNC_PSYCHOPATH" )
+    {
+        modifier = me_chr-> has_flag( json_flag_PSYCHOPATH ) && get_int() <= 8 ? 1 : 0;
+    } else if ( attribute == "HIGHFUNC_PSYCHOPATH" )
+    {
+        modifier = me_chr-> has_flag( json_flag_PSYCHOPATH ) && get_int() >= 16 ? 1 : 0;
     }
+    
     modifier *= factor;
     return modifier;
 }

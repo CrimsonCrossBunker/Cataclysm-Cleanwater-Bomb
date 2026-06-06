@@ -792,6 +792,11 @@ u_has_trait checks if the player character has the specified trait.
 npc_has_trait checks if the NPC has the specified trait.
 Modifier is 1 if they have the trait, 0 otherwise.
 
+### `LOWFUNC_PSYCHOPATH` / `HIGHFUNC_PSYCHOPATH`
+LOWFUNC_PSYCHOPATH and HIGHFUNC_PSYCHOPATH check if the player has the `PSYCHOPATH` JSON flag and their current Intelligence attribute.
+LOWFUNC_PSYCHOPATH is applied when the `PSYCHOPATH` flag exists and the Intelligence is below 8(inclusive).
+HIGHFUNC_PSYCHOPATH is applied when the `PSYCHOPATH` flag exists and the Intelligence is above 16(inclusive).
+
 ### `TOTAL`
 The special `"TOTAL"` modifier sums all previous modifiers and then multiplies the result by its value and is used when setting the owed value.
 
