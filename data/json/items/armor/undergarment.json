@@ -278,20 +278,6 @@
         "append": true
       },
       {
-        "id": "binder_top_trans",
-        "name": { "str": "trans flag binder" },
-        "description": "This one is painted after the trans pride flag.",
-        "weight": 20,
-        "append": true
-      },
-      {
-        "id": "binder_top_nonbinary",
-        "name": { "str": "non-binary flag binder" },
-        "description": "This one is painted after the non-binary pride flag.",
-        "weight": 6,
-        "append": true
-      },
-      {
         "id": "binder_top_meme",
         "name": { "str": "meme binder" },
         "description": "This one has an image of a stuffed rat chef, looking up with arms spread to the heavens, with text above reading \"I don't want to cook anymore\", and the bottom text reading \"I want to DIE\" all in a comic sans font.",

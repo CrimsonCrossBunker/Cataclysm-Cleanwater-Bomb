@@ -1,0 +1,11 @@
+[
+  {
+    "type": "MOD_INFO",
+    "id": "pride_items",
+    "name": "Pride Items",
+    "authors": [ "The Cataclysm: Dark Days Ahead team" ],
+    "description": "Adds pride-themed clothing variants and pins.",
+    "category": "content",
+    "dependencies": [ "dda" ]
+  }
+]

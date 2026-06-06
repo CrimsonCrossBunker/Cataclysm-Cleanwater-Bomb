@@ -13,7 +13,6 @@
       { "group": "box_of_batteries_unopened", "prob": 50 },
       { "item": "radio", "prob": 30, "charges": 100 },
       { "item": "mp3", "prob": 25, "charges": 100 },
-      { "item": "pride_flag", "prob": 1 },
       { "item": "national_flag", "prob": 1 }
     ]
   },

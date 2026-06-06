@@ -1,0 +1,74 @@
+[
+  {
+    "id": "nightstand",
+    "copy-from": "nightstand",
+    "type": "item_group",
+    "extend": { "items": [ { "item": "pride_flag", "prob": 5 } ] }
+  },
+  {
+    "id": "roof_sign",
+    "copy-from": "roof_sign",
+    "type": "item_group",
+    "extend": { "items": [ [ "pride_flag", 2 ] ] }
+  },
+  {
+    "id": "bugout_memento",
+    "copy-from": "bugout_memento",
+    "type": "item_group",
+    "extend": { "items": [ [ "pride_flag", 20 ] ] }
+  },
+  {
+    "id": "accesories_personal_unisex",
+    "copy-from": "accesories_personal_unisex",
+    "type": "item_group",
+    "extend": { "items": [ { "item": "pride_flag", "prob": 1 } ] }
+  },
+  {
+    "id": "costume_cloacks",
+    "copy-from": "costume_cloacks",
+    "type": "item_group",
+    "extend": { "entries": [ { "item": "pride_flag", "prob": 2 } ] }
+  },
+  {
+    "id": "music_shop",
+    "copy-from": "music_shop",
+    "type": "item_group",
+    "extend": { "items": [ { "item": "pride_flag", "prob": 1 } ] }
+  },
+  {
+    "id": "clutter_bedroom",
+    "copy-from": "clutter_bedroom",
+    "type": "item_group",
+    "extend": { "items": [ [ "pride_flag", 5 ] ] }
+  },
+  {
+    "id": "clutter_yard",
+    "copy-from": "clutter_yard",
+    "type": "item_group",
+    "extend": { "items": [ [ "pride_flag", 3 ] ] }
+  },
+  {
+    "id": "clutter_ballroom",
+    "copy-from": "clutter_ballroom",
+    "type": "item_group",
+    "extend": { "items": [ [ "pride_flag", 1 ] ] }
+  },
+  {
+    "id": "map_extra_college_camping_corpse",
+    "copy-from": "map_extra_college_camping_corpse",
+    "type": "item_group",
+    "extend": { "entries": [ { "item": "pride_flag", "prob": 5 } ] }
+  },
+  {
+    "id": "map_extra_college_sports_corpse",
+    "copy-from": "map_extra_college_sports_corpse",
+    "type": "item_group",
+    "extend": { "entries": [ { "item": "pride_flag", "prob": 2 } ] }
+  },
+  {
+    "id": "flags_pride_and_other",
+    "copy-from": "flags_pride_and_other",
+    "type": "item_group",
+    "extend": { "items": [ [ "pride_flag", 70 ] ] }
+  }
+]

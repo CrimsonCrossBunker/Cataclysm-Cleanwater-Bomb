@@ -268,7 +268,6 @@
       { "group": "cotton_ball_bag_full", "prob": 3 },
       { "group": "box_of_contact_lens_any", "prob": 20 },
       [ "transition_contacts", 2 ],
-      { "item": "pride_flag", "prob": 5 },
       { "item": "national_flag", "prob": 1 },
       { "prob": 20, "group": "vitamins_bottle_plastic_pill_supplement_1_20" },
       { "prob": 20, "group": "bottle_otc_painkiller_1_20" },

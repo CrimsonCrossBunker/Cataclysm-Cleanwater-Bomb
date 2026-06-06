@@ -1,0 +1,438 @@
+[
+  {
+    "id": "stockings",
+    "copy-from": "stockings",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "extend": {
+      "variants": [
+        {
+          "id": "stockings_pride_default",
+          "name": { "str_sp": "pride flag stockings (pair)" },
+          "description": "This one has patterns akin to the pride flag.",
+          "color": "yellow",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_lesbian",
+          "name": { "str_sp": "lesbian flag stockings (pair)" },
+          "description": "This one has patterns akin to the lesbian flag.",
+          "color": "red",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_bisexual",
+          "name": { "str_sp": "bisexual flag stockings (pair)" },
+          "description": "This one has patterns akin to the bisexual flag.",
+          "color": "magenta",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_transgender",
+          "name": { "str_sp": "transgender flag stockings (pair)" },
+          "description": "This one has patterns akin to the transgender flag.",
+          "color": "blue",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_asexual",
+          "name": { "str_sp": "asexual flag stockings (pair)" },
+          "description": "This one has patterns akin to the asexual flag.",
+          "color": "magenta",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_aromantic",
+          "name": { "str_sp": "aromantic flag stockings (pair)" },
+          "description": "This one has patterns akin to the aromantic flag.",
+          "color": "green",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_pansexual",
+          "name": { "str_sp": "pansexual flag stockings (pair)" },
+          "description": "This one has patterns akin to the pansexual flag.",
+          "color": "blue",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_genderqueer",
+          "name": { "str_sp": "genderqueer flag stockings (pair)" },
+          "description": "This one has patterns akin to the genderqueer flag.",
+          "color": "magenta",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_genderfluid",
+          "name": { "str_sp": "genderfluid flag stockings (pair)" },
+          "description": "This one has patterns akin to the genderfluid flag.",
+          "color": "magenta",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_agender",
+          "name": { "str_sp": "agender flag stockings (pair)" },
+          "description": "This one has patterns akin to the agender flag.",
+          "color": "dark_gray",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_nonbinary",
+          "name": { "str_sp": "non-binary flag stockings (pair)" },
+          "description": "This one has patterns akin to the non-binary flag.",
+          "color": "yellow",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_intersex",
+          "name": { "str_sp": "intersex flag stockings (pair)" },
+          "description": "This one has patterns akin to the intersex flag.",
+          "color": "yellow",
+          "append": true
+        },
+        {
+          "id": "stockings_pride_polysexual",
+          "name": { "str_sp": "polysexual flag stockings (pair)" },
+          "description": "This one has patterns akin to the polysexual flag.",
+          "color": "green",
+          "append": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "tshirt",
+    "copy-from": "tshirt",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "extend": {
+      "variants": [
+        {
+          "id": "pride_default",
+          "name": { "str": "pride flag t-shirt" },
+          "description": "This one has patterns akin to the pride flag.",
+          "color": "yellow",
+          "append": true
+        },
+        {
+          "id": "pride_lesbian",
+          "name": { "str": "lesbian flag t-shirt" },
+          "color": "red",
+          "description": "This one has patterns akin to the lesbian flag.",
+          "append": true
+        },
+        {
+          "id": "pride_bisexual",
+          "name": { "str": "bisexual flag t-shirt" },
+          "color": "red",
+          "description": "This one has patterns akin to the bisexual flag.",
+          "append": true
+        },
+        {
+          "id": "pride_transgender",
+          "name": { "str": "transgender flag t-shirt" },
+          "color": "blue",
+          "description": "This one has patterns akin to the transgender flag.",
+          "append": true
+        },
+        {
+          "id": "pride_asexual",
+          "name": { "str": "asexual flag t-shirt" },
+          "color": "magenta",
+          "description": "This one has patterns akin to the asexual flag.",
+          "append": true
+        },
+        {
+          "id": "pride_aromantic",
+          "name": { "str": "aromantic flag t-shirt" },
+          "color": "green",
+          "description": "This one has patterns akin to the aromantic flag.",
+          "append": true
+        },
+        {
+          "id": "pride_pansexual",
+          "name": { "str": "pansexual flag t-shirt" },
+          "color": "blue",
+          "description": "This one has patterns akin to the pansexual flag.",
+          "append": true
+        },
+        {
+          "id": "pride_genderqueer",
+          "name": { "str": "genderqueer flag t-shirt" },
+          "color": "magenta",
+          "description": "This one has patterns akin to the genderqueer flag.",
+          "append": true
+        },
+        {
+          "id": "pride_genderfluid",
+          "name": { "str": "genderfluid flag t-shirt" },
+          "color": "magenta",
+          "description": "This one has patterns akin to the genderfluid flag.",
+          "append": true
+        },
+        {
+          "id": "pride_agender",
+          "name": { "str": "agender flag t-shirt" },
+          "color": "dark_gray",
+          "description": "This one has patterns akin to the agender flag.",
+          "append": true
+        },
+        {
+          "id": "pride_nonbinary",
+          "name": { "str": "non-binary flag t-shirt" },
+          "color": "yellow",
+          "description": "This one has patterns akin to the non-binary flag.",
+          "append": true
+        },
+        {
+          "id": "pride_intersex",
+          "name": { "str": "intersex flag t-shirt" },
+          "color": "yellow",
+          "description": "This one has patterns akin to the intersex flag.",
+          "append": true
+        },
+        {
+          "id": "pride_polysexual",
+          "name": { "str": "polysexual flag t-shirt" },
+          "color": "green",
+          "description": "This one has patterns akin to the polysexual flag.",
+          "append": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "pin_badge",
+    "copy-from": "pin_badge",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "extend": {
+      "variants": [
+        {
+          "id": "pin_pride",
+          "name": { "str": "pride pin" },
+          "description": "This one has the pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_progress",
+          "name": { "str": "progress pride pin" },
+          "description": "This one has the progress pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_bi",
+          "name": { "str": "pride pin, bisexual", "str_pl": "pride pins, bisexual" },
+          "description": "This one has the bisexual pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_pan",
+          "name": { "str": "pride pin, pansexual", "str_pl": "pride pins, pansexual" },
+          "description": "This one has the pansexual pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_ace",
+          "name": { "str": "pride pin, asexual", "str_pl": "pride pins, asexual" },
+          "description": "This one has the asexual pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_aro",
+          "name": { "str": "pride pin, aromantic", "str_pl": "pride pins, aromantic" },
+          "description": "This one has the aromantic pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_wlw",
+          "name": { "str": "pride pin, lesbian", "str_pl": "pride pins, lesbian" },
+          "description": "This one has the lesbian pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_poly",
+          "name": { "str": "pride pin, polysexual", "str_pl": "pride pins, polysexual" },
+          "description": "This one has the polysexual pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_trans",
+          "name": { "str": "pride pin, transgender", "str_pl": "pride pins, transgender" },
+          "description": "This one has the transgender pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_nb",
+          "name": { "str": "pride pin, non-binary", "str_pl": "pride pins, non-binary" },
+          "description": "This one has the non-binary pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_agender",
+          "name": { "str": "pride pin, agender", "str_pl": "pride pins, agender" },
+          "description": "This one has the agender pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_gender",
+          "name": { "str": "pride pin, genderqueer", "str_pl": "pride pins, genderqueer" },
+          "description": "This one has the genderqueer pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_genderfluid",
+          "name": { "str": "pride pin, genderfluid", "str_pl": "pride pins, genderfluid" },
+          "description": "This one has the genderfluid pride flag on it.",
+          "append": true
+        },
+        {
+          "id": "pin_pride_intersex",
+          "name": { "str": "pride pin, intersex", "str_pl": "pride pins, intersex" },
+          "description": "This one has the intersex pride flag on it.",
+          "append": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "binder_top",
+    "copy-from": "binder_top",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "extend": {
+      "variants": [
+        {
+          "id": "binder_top_trans",
+          "name": { "str": "trans flag binder" },
+          "description": "This one is painted after the trans pride flag.",
+          "weight": 20,
+          "append": true
+        },
+        {
+          "id": "binder_top_nonbinary",
+          "name": { "str": "non-binary flag binder" },
+          "description": "This one is painted after the non-binary pride flag.",
+          "weight": 6,
+          "append": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "pride_flag",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "pride flag" },
+    "description": "A large rainbow flag, The colors reflect the diversity of the LGBT community and the spectrum of human sexuality and gender.",
+    "copy-from": "american_flag",
+    "symbol": "]",
+    "looks_like": "sheet",
+    "color": "pink",
+    "variant_type": "generic",
+    "variants": [
+      { "id": "rainbow_pride_flag", "//": "inherit name and description from item", "weight": 10 },
+      {
+        "id": "progress_pride_flag",
+        "name": { "str": "progress pride flag" },
+        "description": "On the left side you can see a chevron that features black, brown, light blue, pink, and white stripes to bring those communities to the forefront; \"the arrow points to the right to show forward movement, while being along the left edge shows that progress still needs to be made\".",
+        "append": true,
+        "weight": 10
+      },
+      {
+        "id": "agender_pride_flag",
+        "name": { "str": "agender flag" },
+        "description": "A large green gray and black agender flag.  The black and white stripes represent complete absence of gender, gray represents being semi-genderless, and green represents non-binary gender.",
+        "weight": 2
+      },
+      {
+        "id": "bisexual_pride_flag",
+        "name": { "str": "bisexual flag" },
+        "description": "A large pink and blue bisexual flag.  The pink stripe represents homosexuality, while the blue stripe represents heterosexuality.  The purple stripe, the \"overlap\" of the blue and pink stripes, purple represents attraction regardless of sex or gender a.k.a bisexuality.",
+        "weight": 5
+      },
+      {
+        "id": "pansexual_pride_flag",
+        "name": { "str": "pansexual flag" },
+        "description": "A large pink, blue and yellow pansexual flag.  The pan-pride flag uses pink for people on the female-spectrum, blue for people on the male-spectrum, and yellow for non-binary or genderqueer people.",
+        "weight": 5
+      },
+      {
+        "id": "labrys_lesbian_pride_flag",
+        "name": { "str": "labrys lesbian flag" },
+        "description": "A large black and purple labrys lesbian flag.  On the flag you can see a labrys, a type of double-headed axe, superimposed on a downward-pointing black triangle, set against a violet background.",
+        "weight": 2
+      },
+      {
+        "id": "lesbian_pride_flag",
+        "name": { "str": "lesbian flag" },
+        "description": "A large pink, white and orange lesbian flag.  The dark orange representing \"gender non-conformity\", orange for \"independence\", light orange for \"community\", white for \"unique relationships to womanhood\", pink for \"serenity and peace\", dusty pink for \"love and sex\", and dark rose for \"femininity\".",
+        "weight": 5
+      },
+      {
+        "id": "asexual_pride_flag",
+        "name": { "str": "asexual flag" },
+        "description": "A large purple, white, gray and black asexual flag.  Black for asexuality (feeling no sexual attraction), gray for gray-asexuality and demisexuality (feeling sexual attraction only sometimes), white for non-asexual partners and allies, and purple for community.",
+        "weight": 2
+      },
+      {
+        "id": "aromantic_pride_flag",
+        "name": { "str": "aromantic flag" },
+        "description": "A large black, gray, white and green aromantic flag.  The green and light green stripes cover everyone under the aromantic spectrum, while represents nonromantic forms of love and attraction, and the gray and black represent all sexualities under the aromantic spectrum.",
+        "weight": 2
+      },
+      {
+        "id": "transgender_pride_flag",
+        "name": { "str": "transgender flag" },
+        "description": "A large white, pink, and blue transgender flag.  The stripes at the top and bottom are light blue, the traditional color for baby boys.  The stripes next to them are pink, the traditional color for baby girls.  The white stripe is for people that are nonbinary, feel that they don't have a gender.  The pattern is such that no matter which way you fly it, it is always correct, signifying finding correctness in one's life.",
+        "weight": 5
+      },
+      {
+        "id": "genderqueer_pride_flag",
+        "name": { "str": "genderqueer flag" },
+        "description": "A large green, white, and purple genderqueer flag.  Lavender, a mixture of blue and pink to represent androgynes and androgyny, white to represent agender identity, and green, the inverse of lavender, to represent all those who fall outside of the gender binary.",
+        "weight": 2
+      },
+      {
+        "id": "intersex_pride_flag",
+        "name": { "str": "intersex flag" },
+        "description": "A large yellow, and purple intersex flag.  It displays a purple circle on a yellow field.  Yellow and purple were chosen as colors as they were viewed as free from gender associations and were historically used to represent intersex people.  The circle is described as \"unbroken and unornamented, symbolizing wholeness and completeness, and our potentialities\".",
+        "weight": 2
+      },
+      {
+        "id": "genderfluid_pride_flag",
+        "name": { "str": "genderfluid flag" },
+        "description": "A large blue, black, purple, white and pink genderfluid flag.  The genderfluid flag has a pink stripe for femininity, a blue stripe for masculinity, a purple stripe for both masculinity and femininity, a black stripe for lack of gender, and a white stripe for all genders.",
+        "weight": 2
+      },
+      {
+        "id": "agender_pride_flag",
+        "name": { "str": "agender flag" },
+        "description": "A large green, white, gray and black agender flag.  The black and white stripes represent complete absence of gender, gray represents being semi-genderless, and green represents non-binary gender.  The symmetry of the pattern makes it so that it's correct no matter how it flies.",
+        "weight": 2
+      },
+      {
+        "id": "nonbinary_pride_flag",
+        "name": { "str": "non-binary flag" },
+        "description": "A large black, purple, white, and yellow non-binary flag.  Yellow for those whose gender exists outside of and without reference to the binary, white for those who have many or all genders, purple for those who feel their gender is between or a mix of female and male, and black for those who feel they are without gender.",
+        "weight": 5
+      },
+      {
+        "id": "polysexual_pride_flag",
+        "name": { "str": "polysexual flag" },
+        "description": "A large blue, green, and pink polysexual flag.  Pink for people on the female-spectrum, blue for people on the male-spectrum, and green for non-binary or genderqueer people.",
+        "weight": 2
+      },
+      {
+        "id": "leather_pride_flag",
+        "name": { "str": "leather flag" },
+        "description": "A horizontally striped black and blue leather flag with a white band in the middle and red heart in a corner.  The black represents leather; the blue represents devotion, loyalty, and community; the white represents purity and innocence; and the red heart represents love for the community."
+      },
+      {
+        "id": "bear_pride_flag",
+        "name": { "str": "bear flag" },
+        "description": "A large black and orange international bear brotherhood flag.  The flag displays seven horizontal stripes of colors ranging from black to brown representing the colors of different bear species, you can see a black bear paw in the upper right corner."
+      }
+    ]
+  }
+]

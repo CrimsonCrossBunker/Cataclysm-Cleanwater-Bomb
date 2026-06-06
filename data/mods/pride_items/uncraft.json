@@ -1,0 +1,10 @@
+[
+  {
+    "result": "pride_flag",
+    "type": "uncraft",
+    "activity_level": "NO_EXERCISE",
+    "time": "30 s",
+    "qualities": [ { "id": "CUT", "level": 1 } ],
+    "components": [ [ [ "sheet", 7 ] ], [ [ "sheet_cotton", 6 ] ] ]
+  }
+]

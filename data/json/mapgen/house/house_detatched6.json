@@ -2,7 +2,7 @@
   {
     "id": "flags_pride_and_other",
     "type": "item_group",
-    "items": [ [ "pride_flag", 70 ], [ "american_flag", 20 ], [ "state_flag", 10 ] ]
+    "items": [ [ "american_flag", 20 ], [ "state_flag", 10 ] ]
   },
   {
     "type": "mapgen",
