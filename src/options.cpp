@@ -2479,6 +2479,11 @@ void options_manager::add_options_graphics()
              true, COPT_CURSES_HIDE
            );
 
+        add( "VEHICLE_EDIT_TILES", page_id, to_translation( "Graphical vehicle display" ),
+             to_translation( "If true, the vehicle interaction screen displays the vehicle layout using graphical tiles instead of ASCII symbols." ),
+             true, COPT_CURSES_HIDE
+           );
+
         add( "SWAP_ZOOM", page_id, to_translation( "Zoom Threshold" ),
              to_translation( "Choose when you should swap tileset (lower is more zoomed out)." ),
              1, 4, 2, COPT_CURSES_HIDE
@@ -2489,6 +2494,7 @@ void options_manager::add_options_graphics()
         get_option( "DISTANT_TILES" ).setPrerequisite( "USE_DISTANT_TILES" );
         get_option( "SWAP_ZOOM" ).setPrerequisite( "USE_DISTANT_TILES" );
         get_option( "CREATURE_OVERLAY_ICONS" ).setPrerequisite( "USE_TILES" );
+        get_option( "VEHICLE_EDIT_TILES" ).setPrerequisite( "USE_TILES" );
 
         add( "USE_OVERMAP_TILES", page_id, to_translation( "Use tiles to display overmap" ),
              to_translation( "If true, replaces some TTF-rendered text with tiles for overmap display." ),

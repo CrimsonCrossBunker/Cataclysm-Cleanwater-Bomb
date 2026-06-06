@@ -56,8 +56,14 @@ class memorized_tile;
 class monster;
 class nc_color;
 class pixel_minimap;
+class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
+
+namespace catacurses
+{
+class window;
+} // namespace catacurses
 enum class direction : unsigned int;
 enum class lit_level : uint8_t;
 enum class visibility_type : int;
@@ -661,6 +667,17 @@ class cata_tiles
         bool draw_item_highlight( const tripoint_bub_ms &pos, int &height_3d );
 
     public:
+        /**
+         * Draw a vehicle's layout into @p w_disp using graphical tiles, centered on the
+         * structural part under @p cursor_vp_mount. Used by veh_interact as a graphical
+         * alternative to the ASCII display_veh(). @p cpart is set to the structural part
+         * index under the cursor (matching the ASCII path's contract).
+         * Returns false without drawing for isometric tilesets, so the caller can fall
+         * back to the ASCII display.
+         */
+        bool draw_vehicle_preview( const catacurses::window &w_disp, const vehicle &veh,
+                                   const point_rel_ms &cursor_vp_mount, int &cpart );
+
         // Animation layers
         void init_explosion( const tripoint_bub_ms &p, int radius );
         void draw_explosion_frame();
