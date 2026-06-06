@@ -98,6 +98,10 @@ static const trait_id trait_INATTENTIVE( "INATTENTIVE" );
 
 static const trap_str_id tr_unfinished_construction( "tr_unfinished_construction" );
 
+// Iterating a vehicle's "structure" parts yields one part per occupied square, so the vehicle
+// preview draws exactly one sprite per tile (the same basis the ASCII display_veh() uses).
+static const vpart_location_id vpart_location_structure( "structure" );
+
 static const std::string ITEM_HIGHLIGHT( "highlight_item" );
 static const std::string ZOMBIE_REVIVAL_INDICATOR( "zombie_revival_indicator" );
 
@@ -3553,6 +3557,87 @@ bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height
         }
     }
     return false;
+}
+
+bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const vehicle &veh,
+                                       const point_rel_ms &cursor_vp_mount, int &cpart )
+{
+    // Reuses the normal map sprite path (draw_from_id_string, exactly as draw_vpart does) to
+    // render the vehicle into an arbitrary curses window, without modifying the core renderer.
+    // The trick: temporarily repoint the draw origin (o/op) and scale at the target window, draw
+    // each part at a synthetic tile coordinate relative to the cursor, then restore on exit.
+
+    // Isometric tilesets use a different projection that this simple rectangular grid does
+    // not handle; signal the caller to fall back to the ASCII display.
+    if( is_isometric() ) {
+        return false;
+    }
+
+    // This temporarily rescales the shared tile context. cata_tiles::draw() does not reset
+    // the scale every frame, so we must restore it before returning or the map would stay
+    // at the preview scale.
+    const int saved_zoom = g->get_zoom();
+    // Fixed preview scale (16 == native tile size). Lower it to fit more of large vehicles.
+    constexpr int preview_scale = 16;
+    set_draw_scale( preview_scale );
+
+    // Target window rectangle, in screen pixels.
+    const window_dimensions dim = get_window_dimensions( w_disp );
+    const point win_px_beg = dim.window_pos_pixel;
+    const point win_px_size = dim.window_size_pixel;
+    const point center_px = win_px_beg + win_px_size / 2;
+
+    // Repurpose the draw origin so a synthetic tile coordinate maps straight to a screen
+    // pixel: player_to_screen( pos ) == op + ( pos - o ) * { tile_width, tile_height } in the
+    // non-isometric case. With o == (0,0) and op == window centre, synthetic tile (0,0)
+    // lands at the centre, where the cursor part is drawn.
+    o = point::zero;
+    op = center_px;
+
+    // Clip to the panel so an oversized vehicle does not bleed into neighbouring windows.
+    const SDL_Rect clip{ win_px_beg.x, win_px_beg.y, win_px_size.x, win_px_size.y };
+    RenderSetClipRect( renderer, &clip );
+
+    int center_part = -1;
+    // One sprite per structural square, mirroring the ASCII display_veh().
+    for( const int part_idx : veh.all_parts_at_location( vpart_location_structure ) ) {
+        const vehicle_part &vp = veh.part( part_idx );
+        const vpart_display vd = veh.get_display_of_tile( vp.mount, false, false );
+        if( vd.id.is_null() ) {
+            continue;
+        }
+        // Same fixed, heading-independent layout transform the ASCII view uses.
+        const point_rel_ms q = ( vp.mount + cursor_vp_mount ).rotate( 3 );
+        const tripoint_bub_ms screen_tile( tripoint( q.x(), q.y(), 0 ) );
+        const int subtile = vd.is_open ? open_ : vd.is_broken ? broken : 0;
+        // Canonical (un-rotated) orientation, the tile analogue of the ASCII path's
+        // rotate=false symbols. If the whole vehicle looks rotated by a multiple of 90
+        // degrees, change this to 1, 2 or 3.
+        const int rotation = 0;
+        int height_3d = 0;
+        draw_from_id_string( "vp_" + vd.id.str(), TILE_CATEGORY::VEHICLE_PART, empty_string,
+                             screen_tile, subtile, rotation, lit_level::LIT, false, height_3d, 0,
+                             vd.variant.id );
+        if( vd.has_cargo ) {
+            // Cargo space holding items: overlay the item-highlight, as the map path does.
+            draw_item_highlight( screen_tile, height_3d );
+        }
+        if( q == point_rel_ms::zero ) {
+            center_part = part_idx;   // the part under the cursor, drawn at the window centre
+        }
+    }
+    cpart = center_part;
+
+    // Mark the selected cell with the "cursor" sprite (the yellow selection box, the same
+    // sprite the look-around cursor uses). The cursor part is at the synthetic origin, i.e.
+    // the window centre. Drawn after the parts so it sits on top, and still inside the clip.
+    draw_from_id_string( "cursor", tripoint_bub_ms( tripoint( 0, 0, 0 ) ), 0, 0, lit_level::LIT,
+                         false );
+
+    // Restore the clip rectangle and the map draw scale.
+    RenderSetClipRect( renderer, nullptr );
+    set_draw_scale( saved_zoom );
+    return true;
 }
 
 bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &height_3d,

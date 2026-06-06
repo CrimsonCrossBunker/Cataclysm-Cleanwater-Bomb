@@ -72,6 +72,15 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 
+#if defined(TILES)
+// Only for the graphical vehicle-layout branch in display_veh(): use_tiles (cached_options),
+// get_option (options), and tilecontext / cata_tiles::draw_vehicle_preview (sdltiles / cata_tiles).
+#include "cached_options.h"
+#include "cata_tiles.h"
+#include "options.h"
+#include "sdltiles.h"
+#endif
+
 static const ammotype ammo_battery( "battery" );
 
 static const faction_id faction_no_faction( "no_faction" );
@@ -2299,6 +2308,17 @@ void veh_interact::display_grid()
  */
 void veh_interact::display_veh( map &here )
 {
+#if defined(TILES)
+    // Graphical layout (option-gated, active tileset only). Falls through to ASCII below
+    // when disabled, when no tileset is loaded, or for isometric tilesets.
+    if( use_tiles && get_option<bool>( "VEHICLE_EDIT_TILES" ) ) {
+        werase( w_disp );
+        wnoutrefresh( w_disp );
+        if( tilecontext->draw_vehicle_preview( w_disp, *veh, cursor_vp_mount, cpart ) ) {
+            return;
+        }
+    }
+#endif
     werase( w_disp );
     const point h_size = point( getmaxx( w_disp ), getmaxy( w_disp ) ) / 2;
 
