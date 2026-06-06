@@ -117,10 +117,9 @@ jobs:
             tileset_src_checkout: ""
           - name: MSX++UndeadPeopleEdition
             tileset_repo: LYHGLYTX/CCB-UndeadPeople-Tileset
-            tileset_ref: v1.0
-            tileset_dir: gfx/MSX++UnDeadPeopleEdition
-            precomposed: true
-            tileset_src_checkout: ""
+            tileset_dir: .
+            compose_args: ""
+            tileset_src_checkout: "
 
     name: Compose tileset
     runs-on: ubuntu-latest
@@ -178,16 +177,6 @@ jobs:
           export DEST="${{github.workspace}}/gfx/${{ matrix.name }}"
           mkdir -p "$DEST"
           cp -r "$SOURCE"/* "$DEST/"
-
-      - name: Copy external_tileset (precomposed only)
-        if: matrix.precomposed == true
-        run: |
-          export EXT_SRC="${{github.workspace}}/precomposed-tileset/external_tileset"
-          export EXT_DEST="${{github.workspace}}/data/json/external_tileset"
-          if [ -d "$EXT_SRC" ]; then
-            mkdir -p "$EXT_DEST"
-            cp -r "$EXT_SRC"/* "$EXT_DEST/"
-          fi
 
       - name: Store artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
