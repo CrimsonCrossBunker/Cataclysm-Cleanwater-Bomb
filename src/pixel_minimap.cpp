@@ -261,29 +261,13 @@ void pixel_minimap::clear_unused_cache()
 //draws individual updates to the submap cache texture
 void pixel_minimap::flush_cache_updates()
 {
-    // Batch render-target switches: scoped_render_target restores the prior target
-    // on each destruction, so binding it per chunk inside the loop costs ~2N target
-    // switches (screen->chunk->screen per chunk). Each switch forces a driver sync
-    // (profiled: ZwDelayExecution / D3D11_RunCommandQueue stalls in flush). Bind each
-    // chunk directly and restore the prior target once after the loop -> N+1 switches.
-    bool target_changed = false;
-    SDL_Texture *prior_target = nullptr;
-
     for( auto &mcp : cache ) {
         if( mcp.second.update_list.empty() ) {
             continue;
         }
 
-        if( !target_changed ) {
-            prior_target = SDL_GetRenderTarget( renderer.get() );
-            target_changed = true;
-        }
-
-#if SDL_MAJOR_VERSION >= 3
-        if( !SDL_SetRenderTarget( renderer.get(), mcp.second.chunk_tex.get() ) ) {
-#else
-        if( SDL_SetRenderTarget( renderer.get(), mcp.second.chunk_tex.get() ) != 0 ) {
-#endif
+        scoped_render_target chunk_scope( renderer, mcp.second.chunk_tex.get() );
+        if( !chunk_scope.is_valid() ) {
             continue;
         }
 
@@ -318,10 +302,6 @@ void pixel_minimap::flush_cache_updates()
         }
 
         mcp.second.update_list.clear();
-    }
-
-    if( target_changed ) {
-        SDL_SetRenderTarget( renderer.get(), prior_target );
     }
 }
 

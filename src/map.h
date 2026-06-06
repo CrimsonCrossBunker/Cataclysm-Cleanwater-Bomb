@@ -394,6 +394,77 @@ struct tile_render_info {
         : com( com ), var( var ) {}
 };
 
+#if defined(TILES)
+/**
+ * Flat-storage replacement for the former
+ * std::map<int, std::map<int, std::vector<tile_render_info>>> draw-points cache.
+ *
+ * The z dimension is a fixed array indexed by (zlevel + OVERMAP_DEPTH); the row
+ * dimension is a contiguous vector offset by the first row touched. Both reuse
+ * their buffers across frames (see soft_clear) so the per-move rebuild no longer
+ * frees and reallocates std::map nodes / row vectors every step — that churn was
+ * the dominant movement-time render cost. operator[] auto-grows like the old
+ * std::map operator[], so an untouched [z][row] still reads back empty.
+ */
+class draw_points_cache_t
+{
+    public:
+        using row_vec = std::vector<tile_render_info>;
+
+        // Row storage for a single z-level, addressed by absolute screen row.
+        // row_base is the absolute row of rows[0].
+        class level_rows
+        {
+            public:
+                row_vec &operator[]( const int row ) {
+                    if( !initialized ) {
+                        row_base = row;
+                        initialized = true;
+                    }
+                    if( row < row_base ) {
+                        // Prepend empty rows. tile_render_info has a const member
+                        // (deleted copy/move assignment), so vector::insert — which
+                        // shifts via assignment — won't compile. Rebuild front-to-back
+                        // using move-construction only.
+                        std::vector<row_vec> grown;
+                        grown.reserve( rows.size() + static_cast<size_t>( row_base - row ) );
+                        grown.resize( static_cast<size_t>( row_base - row ) );
+                        for( row_vec &r : rows ) {
+                            grown.push_back( std::move( r ) );
+                        }
+                        rows.swap( grown );
+                        row_base = row;
+                    }
+                    const size_t idx = static_cast<size_t>( row - row_base );
+                    if( idx >= rows.size() ) {
+                        rows.resize( idx + 1 );
+                    }
+                    return rows[idx];
+                }
+                void soft_clear() {
+                    for( row_vec &r : rows ) {
+                        r.clear(); // keep capacity
+                    }
+                }
+            private:
+                int row_base = 0;
+                bool initialized = false;
+                std::vector<row_vec> rows;
+        };
+
+        level_rows &operator[]( const int zlevel ) {
+            return levels[zlevel + OVERMAP_DEPTH];
+        }
+        void soft_clear() {
+            for( level_rows &lr : levels ) {
+                lr.soft_clear();
+            }
+        }
+    private:
+        std::array<level_rows, OVERMAP_LAYERS> levels;
+};
+#endif // TILES
+
 /**
  * Manage and cache data about a part of the map.
  *
@@ -2400,7 +2471,7 @@ class map
 
 #if defined(TILES)
         bool draw_points_cache_dirty = true;
-        std::map<int, std::map<int, std::vector<tile_render_info>>> draw_points_cache;
+        draw_points_cache_t draw_points_cache;
         point_rel_ms prev_top_left;
         point_rel_ms prev_bottom_right;
         point prev_o;
