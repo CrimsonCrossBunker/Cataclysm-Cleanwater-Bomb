@@ -30,34 +30,25 @@ jobs:
     runs-on: ubuntu-latest
     permissions: write-all
     outputs:
-      timestamp: ${{ steps.get-timestamp.outputs.time }}
+      timestamp: ${{ steps.meta.outputs.time }}
     steps:
-      - name: Get build timestamp
-        id: get-timestamp
+      - name: Generate release metadata
+        id: meta
         run: |
-          echo "time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d-%H%M")" >> $GITHUB_OUTPUT
-      - name: Generate environmental variables
-        id: generate_env_vars
-        run: |
-          echo "tag_name=ccb-experimental-${STEPS_GET_TIMESTAMP_OUTPUTS_TIME}" >> $GITHUB_OUTPUT
-          echo "release_name=Cataclysm-Cleanwater-Bomb experimental build ${STEPS_GET_TIMESTAMP_OUTPUTS_TIME}" >> $GITHUB_OUTPUT
-        env:
-          STEPS_GET_TIMESTAMP_OUTPUTS_TIME: ${{ steps.get-timestamp.outputs.time }}
+          time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d-%H%M")
+          echo "time=$time" >> $GITHUB_OUTPUT
+          echo "tag_name=ccb-experimental-${time}" >> $GITHUB_OUTPUT
+          echo "release_name=Cataclysm-Cleanwater-Bomb experimental build ${time}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
       - name: Generate Release Notes
-        id: generate-release-notes
         run: |
           npm install @actions/github@8
-          node build-scripts/generate-release-notes.js '${{ secrets.GITHUB_TOKEN }}' "${STEPS_GENERATE_ENV_VARS_OUTPUTS_TAG_NAME}" "$(git log -1 --format='%H')" > notes.txt
-        env:
-          STEPS_GENERATE_ENV_VARS_OUTPUTS_TAG_NAME: ${{ steps.generate_env_vars.outputs.tag_name }}
-      - run: |
-          gh release create ${STEPS_GENERATE_ENV_VARS_OUTPUTS_TAG_NAME} --notes-file notes.txt --prerelease --title "${STEPS_GENERATE_ENV_VARS_OUTPUTS_RELEASE_NAME}" --target "$(git log -1 --format='%H')"
-        env:
-          STEPS_GENERATE_ENV_VARS_OUTPUTS_TAG_NAME: ${{ steps.generate_env_vars.outputs.tag_name }}
-          STEPS_GENERATE_ENV_VARS_OUTPUTS_RELEASE_NAME: ${{ steps.generate_env_vars.outputs.release_name }}
+          node build-scripts/generate-release-notes.js '${{ secrets.GITHUB_TOKEN }}' '${{ steps.meta.outputs.tag_name }}' "$(git log -1 --format='%H')" > notes.txt
+      - name: Create GitHub Release
+        run: |
+          gh release create '${{ steps.meta.outputs.tag_name }}' --notes-file notes.txt --prerelease --title '${{ steps.meta.outputs.release_name }}' --target "$(git log -1 --format='%H')"
 
   compose-tilesets:
     uses: ./.github/workflows/compose-tilesets.yml
