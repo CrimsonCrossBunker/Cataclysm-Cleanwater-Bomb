@@ -101,12 +101,12 @@ def process_mode(xlsx_path: str, source_dir: str):
 
     for sname in detail_names:
         ws = wb[sname]
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not row or not row[0]: continue
-            game_id = str(row[0]).strip()
-            term    = str(row[2]).strip() if len(row) > 2 and row[2] else ""
-            artist  = str(row[5]).strip() if len(row) > 5 and row[5] else ""
-            status  = str(row[4]).strip() if len(row) > 4 and row[4] else ""
+        for row in ws.iter_rows(min_row=2):
+            if not row or not row[0].value: continue
+            game_id = str(row[0].value or '').strip()
+            term    = str(row[2].value or '').strip() if len(row) > 2 else ""
+            artist  = str(row[5].value or '').strip() if len(row) > 5 else ""
+            status  = str(row[4].value or '').strip() if len(row) > 4 else ""
 
             if status != "已完成":
                 continue
