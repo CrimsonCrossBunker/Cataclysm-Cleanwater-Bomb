@@ -819,6 +819,8 @@ class TileEntry:
         # return converted entry if there are new IDs
         if entry_ids:
             entry['id'] = list_or_first(entry_ids)
+            for field in ('artist', 'source', '//'):
+                entry.pop(field, None)
             return entry
 
         return None
