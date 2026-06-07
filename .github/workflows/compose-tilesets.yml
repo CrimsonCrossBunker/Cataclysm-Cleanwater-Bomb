@@ -118,8 +118,8 @@ jobs:
           - name: MSX++UndeadPeopleEdition
             tileset_repo: LYHGLYTX/CCB-UndeadPeople-Tileset
             tileset_dir: .
-            compose_args: --use-all
-            tileset_ref: main
+            precomposed: true
+            release_download: true
 
     name: Compose tileset
     runs-on: ubuntu-latest
@@ -149,8 +149,20 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Download ${{ matrix.name }} from latest release
+        if: matrix.release_download == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(gh release list -R ${{ matrix.tileset_repo }} --limit 1 --json tagName -q '.[0].tagName')
+          echo "Downloading release $TAG from ${{ matrix.tileset_repo }}"
+          gh release download "$TAG" -R ${{ matrix.tileset_repo }} -p 'MSX++*.zip' -O tileset.zip
+          unzip -q tileset.zip
+          mkdir -p precomposed-tileset
+          cp -r MSX++UnDeadPeopleEdition/* precomposed-tileset/
+
       - name: Clone precomposed tileset repo
-        if: matrix.precomposed == true
+        if: matrix.precomposed == true && matrix.release_download != true
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{ matrix.tileset_repo }}
