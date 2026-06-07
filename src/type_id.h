@@ -385,6 +385,9 @@ using vpart_location_id = string_id<vpart_location>;
 struct vehicle_prototype;
 using vproto_id = string_id<vehicle_prototype>;
 
+class VehiclePalette;
+using vpalette_id = string_id<VehiclePalette>;
+
 class weather_generator;
 using weather_generator_id = string_id<weather_generator>;
 

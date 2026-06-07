@@ -1,6 +1,7 @@
 [
   {
     "id": "FM_early_pickup",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Caravaner's Pickup Truck",
     "//": "Basically a pickup truck, but spawns some different items in the bed.  Later versions could have a mounted gun, a ram, and some armour.",
@@ -72,6 +73,7 @@
   },
   {
     "id": "traveler_van_motorhome",
+    "color_palette": "car_standard",
     "//": "Just a normal mini RV with a few different items included.  Later versions could inlcude things like makeshift armor, a trailer, or a ram.",
     "type": "vehicle",
     "name": "Mini RV",

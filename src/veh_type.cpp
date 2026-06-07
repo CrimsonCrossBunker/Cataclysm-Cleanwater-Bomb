@@ -45,6 +45,7 @@
 #include "value_ptr.h"
 #include "vehicle.h"
 #include "vehicle_group.h"
+#include "vehicle_palette.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "wcwidth.h"
@@ -1402,6 +1403,10 @@ void vehicle_prototype::load( const JsonObject &jo, std::string_view )
 
     optional( jo, was_loaded, "items", item_spawns );
     optional( jo, was_loaded, "zones", zone_defs, json_read_reader<zone_def> {} );
+
+    if( jo.has_member( "color_palette" ) ) {
+        color_palette = vpalette_id( jo.get_string( "color_palette" ) );
+    }
 }
 
 void vehicle_prototype::save_vehicle_as_prototype( const vehicle &veh,
@@ -1582,6 +1587,14 @@ void vehicles::finalize_prototypes()
             if( !pt.part.is_valid() ) {
                 debugmsg( "unknown vehicle part %s in %s", pt.part.c_str(), proto.id.str() );
                 continue;
+            }
+
+            // Map each part id to its palette color group, so spawning can color it.
+            if( proto.color_palette.is_valid() && proto.color_match.count( pt.part.str() ) == 0 ) {
+                const int index = proto.color_palette->fuzzy_to_index( pt.part );
+                if( index != -1 ) {
+                    proto.color_match[pt.part.str()] = index;
+                }
             }
 
             const int part_idx = blueprint.install_part( here, pt.pos, pt.part );

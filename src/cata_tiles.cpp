@@ -310,6 +310,7 @@ void tileset::clear()
     overexposed_tile_values.clear();
     memory_tile_values.clear();
     silhouette_tile_values.clear();
+    tinted_tile_values.clear();
     atlas_descriptors.clear();
     default_item_highlight_index.reset();
     renderer_instance_generation_at_upload = 0;
@@ -2530,7 +2531,12 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
     }
 
     //draw it!
-    const tile_render_params rp{ ll, nv_color_active };
+    tile_render_params rp{ ll, nv_color_active };
+    // Vehicle parts carry a per-instance paint color via pending_part_tint_
+    // (set by draw_vpart). Only apply it to vehicle part sprites.
+    if( category == TILE_CATEGORY::VEHICLE_PART ) {
+        rp.tint = pending_part_tint_;
+    }
     draw_tile_at( display_tile, screen_pos, loc_rand, rota, rp,
                   retract, height_3d, offset );
 
@@ -2583,8 +2589,12 @@ bool cata_tiles::draw_sprite_at(
     // preset, late session-disable) try_begin returns false and the
     // fallthrough below picks the matching pre-baked variant atlas.
     if( m_variant_pass ) {
+        // A painted vehicle part is recolored on the CPU below, so force NORMAL
+        // (no GPU variant transform); otherwise the shader samples the base atlas
+        // and ignores the tinted texture. NORMAL also clears prior shader state.
         const cata_shader::variant_kind v =
-            compute_variant_kind( rp.ll, rp.use_night_vision_tiles );
+            rp.tint ? cata_shader::variant_kind::NORMAL
+            : compute_variant_kind( rp.ll, rp.use_night_vision_tiles );
         // Call try_begin for every variant including NORMAL. State-cached
         // bind stays put across same-variant runs; NORMAL clears any prior
         // shader state so it doesn't leak onto the next sprite.
@@ -2613,6 +2623,14 @@ bool cata_tiles::draw_sprite_at(
             if( const texture *ptr = tileset_ptr->get_shadow_tile( sprite_index ) ) {
                 sprite_tex = ptr;
             }
+        }
+    }
+
+    // Recolor the chosen (light-adjusted) sprite toward the vehicle part's paint.
+    if( rp.tint ) {
+        if( const texture *tinted = tileset_ptr->get_tinted_tile(
+                                        renderer, sprite_index, *rp.tint, sprite_tex ) ) {
+            sprite_tex = tinted;
         }
     }
 
@@ -3521,11 +3539,15 @@ bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height
             }
             if( !overridden ) {
                 int height_3d_temp = height_3d;
+                // Paint the displayed part with its color while it draws (the tint
+                // is consumed when tile_render_params is built); cleared right after.
+                pending_part_tint_ = get_vpart_tint( veh, ovp->mount_pos() );
                 const bool ret = memorize_only
                                  ? false
                                  : draw_from_id_string( "vp_" + vd.id.str(), TILE_CATEGORY::VEHICLE_PART,
                                                         empty_string, p, subtile, rotation, ll,
                                                         nv_goggles_activated, height_3d_temp, 0, vd.variant.id );
+                pending_part_tint_ = std::nullopt;
                 if( ret && vd.has_cargo ) {
                     draw_item_highlight( p, height_3d_temp );
                 }
@@ -3645,9 +3667,14 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
         // degrees, change this to 1, 2 or 3.
         const int rotation = 0;
         int height_3d = 0;
+        // Tint with the DISPLAYED part's paint (which may be a board/door on top
+        // of this structure frame), mirroring the main-map path. The frame itself
+        // is never colored by a palette, so checking vp here would always be empty.
+        pending_part_tint_ = get_vpart_tint( veh, vp.mount );
         draw_from_id_string( "vp_" + vd.id.str(), TILE_CATEGORY::VEHICLE_PART, empty_string,
                              screen_tile, subtile, rotation, lit_level::LIT, false, height_3d, 0,
                              vd.variant.id );
+        pending_part_tint_ = std::nullopt;
         if( vd.has_cargo ) {
             // Cargo space holding items: overlay the item-highlight, as the map path does.
             draw_item_highlight( screen_tile, height_3d );

@@ -1,6 +1,7 @@
 [
   {
     "id": "armored_car",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Armored Car",
     "blueprint": [
@@ -84,6 +85,7 @@
   },
   {
     "id": "cube_van",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Cube Van",
     "blueprint": [
@@ -174,6 +176,7 @@
   },
   {
     "id": "fridge_van",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Refrigerated Van",
     "blueprint": [
@@ -264,6 +267,7 @@
   },
   {
     "id": "cube_van_cheap",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Low-End Cube Van",
     "blueprint": [
@@ -347,6 +351,7 @@
   },
   {
     "id": "hippie_van",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Hippie Van",
     "blueprint": [
@@ -413,6 +418,7 @@
   },
   {
     "id": "van_full-size",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Full-size Van",
     "blueprint": [
@@ -482,6 +488,7 @@
   },
   {
     "id": "van_full-size_hybrid",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Hybrid Full-size Van",
     "blueprint": [
@@ -556,6 +563,7 @@
   },
   {
     "id": "van_mini",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Minivan",
     "blueprint": [
@@ -629,6 +637,7 @@
   },
   {
     "id": "van_mini_hybrid",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Hybrid Minivan",
     "blueprint": [
@@ -703,6 +712,7 @@
   },
   {
     "id": "van_cargo",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Cargo Van",
     "blueprint": [
@@ -768,6 +778,7 @@
   },
   {
     "id": "van_camper",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Camper Van",
     "blueprint": [
@@ -835,6 +846,7 @@
   },
   {
     "id": "van_motorhome",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Mini RV",
     "blueprint": [
@@ -903,6 +915,7 @@
   },
   {
     "id": "icecream_truck",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Ice Cream Truck",
     "blueprint": [
@@ -998,6 +1011,7 @@
   },
   {
     "id": "food_truck_taco",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Taco Truck",
     "blueprint": [
@@ -1093,6 +1107,7 @@
   },
   {
     "id": "food_truck",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Food Truck",
     "blueprint": [
@@ -1216,6 +1231,7 @@
   {
     "//": "This is a duplicate used for the last delivery starting scenario",
     "id": "food_truck_delivery_mission",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Food Truck",
     "blueprint": [
@@ -1336,6 +1352,7 @@
   },
   {
     "id": "lux_rv",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Luxury RV",
     "parts": [
@@ -1452,6 +1469,7 @@
   },
   {
     "id": "surv_rv",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Survivor RV",
     "parts": [
@@ -1590,6 +1608,7 @@
   },
   {
     "id": "meth_lab",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Mobile Meth Lab",
     "blueprint": [
@@ -1696,6 +1715,7 @@
   },
   {
     "id": "rv",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "RV",
     "blueprint": [
@@ -1799,6 +1819,7 @@
   },
   {
     "id": "limousine",
+    "color_palette": "limo_standard",
     "type": "vehicle",
     "name": "Limousine",
     "blueprint": [
@@ -1887,6 +1908,7 @@
   },
   {
     "id": "schoolbus",
+    "color_palette": "bus_standard",
     "type": "vehicle",
     "name": "Schoolbus",
     "blueprint": [
@@ -1994,6 +2016,7 @@
   },
   {
     "id": "bus_prison",
+    "color_palette": "police_standard",
     "type": "vehicle",
     "name": "Prison Bus",
     "blueprint": [
@@ -2132,6 +2155,7 @@
   },
   {
     "id": "bus",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Bus",
     "blueprint": [
@@ -2263,6 +2287,7 @@
   },
   {
     "id": "bus_rack",
+    "color_palette": "bus_standard",
     "type": "vehicle",
     "copy-from": "bus",
     "name": "Bus with Bike Rack",
@@ -2276,6 +2301,7 @@
   },
   {
     "id": "bus_tour",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Tour Bus",
     "blueprint": [
@@ -2409,6 +2435,7 @@
   },
   {
     "id": "security_van",
+    "color_palette": "swat_standard",
     "type": "vehicle",
     "name": "Security Van",
     "blueprint": [
@@ -2510,6 +2537,7 @@
   },
   {
     "id": "wienermobile",
+    "color_palette": "wienermobile_standard",
     "type": "vehicle",
     "name": "Wienermobile",
     "blueprint": [
@@ -2601,6 +2629,7 @@
   },
   {
     "id": "prisoner_van_1",
+    "color_palette": "police_standard",
     "type": "vehicle",
     "name": "Prisoner Van",
     "blueprint": [

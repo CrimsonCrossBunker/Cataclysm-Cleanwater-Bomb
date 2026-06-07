@@ -12,6 +12,7 @@
 #include "fault.h"
 #include "flag.h"
 #include "game.h"
+#include "hsv_color.h"
 #include "item.h"
 #include "itype.h"
 #include "mapdata.h"
@@ -100,6 +101,58 @@ void vehicle_part::set_base( item &&new_base )
     }
     base = std::move( new_base );
     base.set_flag( flag_VEHICLE );
+}
+
+namespace
+{
+// Item-variable keys for vehicle part paint color. Stored on the base item so a
+// painted part keeps its color when removed and reinstalled on another vehicle.
+const std::string TINT_COLOR_VAR_NAME( "tint_color" );
+const std::string TINT_COLOR_BG_VAR_NAME( "tint_color_bg" );
+const std::string TINT_COLOR_FG_VAR_NAME( "tint_color_fg" );
+} // namespace
+
+RGBColorPair vehicle_part::get_color( const bool ignore_default ) const
+{
+    // Color is read straight from the base item variables (the single source of
+    // truth), so it stays correct across save/load and part transfers with no
+    // cache to refresh.
+    if( base.has_var( TINT_COLOR_VAR_NAME ) ) {
+        const RGBColor primary = RGBColor::from_hex( base.get_var( TINT_COLOR_VAR_NAME ) );
+        const RGBColor bg = base.has_var( TINT_COLOR_BG_VAR_NAME )
+                            ? RGBColor::from_hex( base.get_var( TINT_COLOR_BG_VAR_NAME ) )
+                            : primary;
+        const RGBColor fg = base.has_var( TINT_COLOR_FG_VAR_NAME )
+                            ? RGBColor::from_hex( base.get_var( TINT_COLOR_FG_VAR_NAME ) )
+                            : primary;
+        return RGBColorPair{ bg, fg };
+    }
+    if( ignore_default ) {
+        return RGBColorPair{};
+    }
+    const RGBColor def = curses_color_to_RGB( info().color );
+    return RGBColorPair{ def, def };
+}
+
+bool vehicle_part::has_custom_color() const
+{
+    return base.has_var( TINT_COLOR_VAR_NAME );
+}
+
+void vehicle_part::set_color( const RGBColor &bg, const RGBColor &fg )
+{
+    // Parts flagged NO_PAINT (windows, lights, wheels, …) keep their own art.
+    if( info().has_flag( "NO_PAINT" ) ) {
+        return;
+    }
+    base.set_var( TINT_COLOR_VAR_NAME, fg.to_hex() );
+    if( bg != fg ) {
+        base.set_var( TINT_COLOR_BG_VAR_NAME, bg.to_hex() );
+        base.set_var( TINT_COLOR_FG_VAR_NAME, fg.to_hex() );
+    } else {
+        base.remove_var( TINT_COLOR_BG_VAR_NAME );
+        base.remove_var( TINT_COLOR_FG_VAR_NAME );
+    }
 }
 
 std::string vehicle_part::name( bool with_prefix ) const

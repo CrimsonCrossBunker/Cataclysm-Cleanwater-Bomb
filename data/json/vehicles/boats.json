@@ -2,6 +2,7 @@
   {
     "type": "vehicle",
     "id": "canoe",
+    "color_palette": "wooden_standard",
     "name": "canoe",
     "blueprint": [ [ "<OO>" ] ],
     "parts": [
@@ -14,6 +15,7 @@
   {
     "type": "vehicle",
     "id": "DUKW",
+    "color_palette": "car_standard",
     "name": "Amphibious Truck",
     "parts": [
       { "x": 0, "y": 0, "parts": [ "frame#cross", "seat", "seatbelt", "controls", "dashboard", "roof", "metal_boat_hull" ] },
@@ -88,6 +90,7 @@
   {
     "type": "vehicle",
     "id": "kayak",
+    "color_palette": "wooden_standard",
     "name": "kayak",
     "blueprint": [ [ "<O>" ] ],
     "parts": [
@@ -99,6 +102,7 @@
   {
     "type": "vehicle",
     "id": "kayak_racing",
+    "color_palette": "wooden_standard",
     "name": "racing kayak",
     "blueprint": [ [ "<O>" ] ],
     "parts": [
@@ -150,6 +154,7 @@
   {
     "type": "vehicle",
     "id": "raft",
+    "color_palette": "wooden_standard",
     "name": "raft",
     "blueprint": [
       [ "OO" ],
@@ -211,6 +216,7 @@
   {
     "type": "vehicle",
     "id": "wood_rowboat_double",
+    "color_palette": "wooden_standard",
     "name": "wooden rowboat",
     "blueprint": [
       [ " /\\" ],
@@ -246,6 +252,7 @@
   },
   {
     "id": "cabin_cruiser_wood",
+    "color_palette": "wooden_standard",
     "type": "vehicle",
     "name": "Wooden Cabin Cruiser",
     "parts": [

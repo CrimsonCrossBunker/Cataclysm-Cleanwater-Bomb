@@ -41,6 +41,7 @@
   },
   {
     "id": "excavator",
+    "color_palette": "construction_standard",
     "type": "vehicle",
     "name": "Excavator",
     "blueprint": [
@@ -78,6 +79,7 @@
   },
   {
     "id": "road_roller",
+    "color_palette": "construction_standard",
     "type": "vehicle",
     "name": "Road Roller",
     "blueprint": [
@@ -132,6 +134,7 @@
   {
     "type": "vehicle",
     "id": "forklift",
+    "color_palette": "construction_standard",
     "name": "Electric Forklift",
     "blueprint": [
       [ "|" ],
@@ -170,6 +173,7 @@
   {
     "type": "vehicle",
     "id": "forklift_diesel",
+    "color_palette": "construction_standard",
     "name": "Heavy-Duty Forklift",
     "blueprint": [
       [ "o#o-" ],
@@ -202,6 +206,7 @@
   },
   {
     "id": "trencher",
+    "color_palette": "construction_standard",
     "type": "vehicle",
     "name": "Trencher",
     "blueprint": [

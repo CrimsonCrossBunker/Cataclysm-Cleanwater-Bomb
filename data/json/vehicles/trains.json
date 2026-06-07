@@ -1,6 +1,7 @@
 [
   {
     "id": "train_car_passenger",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Passenger Car",
     "parts": [
@@ -410,6 +411,7 @@
   },
   {
     "id": "trolley",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Trolley",
     "blueprint": [ "O" ],
@@ -586,6 +588,7 @@
   },
   {
     "id": "train_car_passenger_small",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Small Passenger Car",
     "blueprint": [

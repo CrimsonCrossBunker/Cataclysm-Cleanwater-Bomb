@@ -56,6 +56,7 @@
 #include "global_vars.h"
 #include "harvest.h"
 #include "help.h"
+#include "hsv_color.h"
 #include "input.h"
 #include "item_action.h"
 #include "item_category.h"
@@ -121,6 +122,7 @@
 #include "type_id.h"
 #include "veh_type.h"
 #include "vehicle_group.h"
+#include "vehicle_palette.h"
 #include "vehicle_part_location.h"
 #include "vitamin.h"
 #include "weakpoint.h"
@@ -354,6 +356,9 @@ void DynamicDataLoader::initialize()
     add( "vehicle_group",  &VehicleGroup::load );
     add( "vehicle_placement",  &VehiclePlacement::load );
     add( "vehicle_spawn",  &VehicleSpawn::load );
+    // Vehicle part coloring (see hsv_color.h / vehicle_palette.h).
+    add( "vehicle_color_palette", &VehiclePalette::load );
+    add( "named_color", &RGBColor::load_named_color );
 
     add( "requirement", []( const JsonObject & jo ) {
         requirement_data::load_requirement( jo, string_id<requirement_data>::NULL_ID(), true );
@@ -772,6 +777,8 @@ void DynamicDataLoader::unload_data()
     trap::reset();
     trap_migrations::reset();
     unload_talk_topics();
+    RGBColor::unload_names();
+    VehiclePalette::reset();
     VehicleGroup::reset();
     VehiclePlacement::reset();
     VehicleSpawn::reset();
@@ -978,6 +985,7 @@ void DynamicDataLoader::check_consistency()
             { _( "Vehicle parts" ), &vehicles::parts::check },
             { _( "Vehicle part locations" ), &vpart_location::check_all },
             { _( "Vehicle part migrations" ), &vpart_migration::check },
+            { _( "Vehicle color palettes" ), &VehiclePalette::check },
             { _( "Mapgen definitions" ), &check_mapgen_definitions },
             { _( "Mapgen palettes" ), &mapgen_palette::check_definitions },
             {

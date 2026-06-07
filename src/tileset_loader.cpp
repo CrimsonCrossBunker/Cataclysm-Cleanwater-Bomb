@@ -1028,6 +1028,9 @@ void tileset_cache::loader::upload_atlases( tileset &ts, const SDL_Renderer_Ptr 
     ts.overexposed_tile_values = std::move( cand_overexposed );
     ts.memory_tile_values = std::move( cand_memory );
     ts.silhouette_tile_values = std::move( cand_silhouette );
+    // Base textures were just (re)uploaded; previously baked tints reference the
+    // stale textures, so drop them and let them rebake on demand.
+    ts.clear_tinted_tiles();
 
     ts.set_upload_generations( renderer_instance_generation, gpu_textures_generation );
 }

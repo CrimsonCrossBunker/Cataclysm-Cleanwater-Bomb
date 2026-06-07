@@ -1,6 +1,7 @@
 [
   {
     "id": "oldtractor",
+    "color_palette": "farm_standard",
     "type": "vehicle",
     "name": "Primitive Tractor",
     "blueprint": [
@@ -31,6 +32,7 @@
   },
   {
     "id": "autotractor",
+    "color_palette": "farm_standard",
     "type": "vehicle",
     "name": "Automatic Tractor",
     "blueprint": [
@@ -68,6 +70,7 @@
   },
   {
     "id": "tractor_plow",
+    "color_palette": "farm_standard",
     "type": "vehicle",
     "name": "Plow Tractor",
     "blueprint": [
@@ -103,6 +106,7 @@
   },
   {
     "id": "tractor_reaper",
+    "color_palette": "farm_standard",
     "type": "vehicle",
     "name": "Reaper Tractor",
     "blueprint": [
@@ -138,6 +142,7 @@
   },
   {
     "id": "tractor_seed",
+    "color_palette": "farm_standard",
     "type": "vehicle",
     "name": "Planter Tractor",
     "blueprint": [
@@ -176,6 +181,7 @@
   },
   {
     "id": "uncovered_wagon",
+    "color_palette": "wooden_standard",
     "type": "vehicle",
     "name": "Wagon",
     "blueprint": [
@@ -204,6 +210,7 @@
   },
   {
     "id": "covered_wagon",
+    "color_palette": "wooden_standard",
     "type": "vehicle",
     "name": "Covered Wagon",
     "blueprint": [
@@ -267,6 +274,7 @@
   },
   {
     "id": "stagecoach",
+    "color_palette": "wooden_standard",
     "type": "vehicle",
     "name": "Stagecoach",
     "blueprint": [
@@ -329,6 +337,7 @@
   },
   {
     "id": "gig_carriage",
+    "color_palette": "wooden_standard",
     "type": "vehicle",
     "name": "Gig Carriage",
     "blueprint": [
@@ -346,6 +355,7 @@
   },
   {
     "id": "horse_trailer",
+    "color_palette": "wooden_standard",
     "type": "vehicle",
     "name": "Horse Trailer",
     "blueprint": [

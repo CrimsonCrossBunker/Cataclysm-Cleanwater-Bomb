@@ -26,6 +26,7 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "cuboid_rectangle.h"
+#include "hsv_color.h"
 #include "mapdata.h"
 #include "options.h"
 #include "pimpl.h"
@@ -198,6 +199,8 @@ class texture
 struct tile_render_params {
     lit_level ll;
     bool use_night_vision_tiles = false;
+    // When set, the sprite is recolored toward this color (vehicle part paint).
+    std::optional<RGBColor> tint = std::nullopt;
 };
 
 /**
@@ -262,6 +265,12 @@ class tileset
         std::vector<texture> overexposed_tile_values;
         std::vector<texture> memory_tile_values;
         std::vector<texture> silhouette_tile_values;
+
+        // Lazily-baked HSV-tinted variants of base sprites, keyed by
+        // (sprite_index << 32 | packed RGBA). Filled on demand by
+        // get_tinted_tile (a const memoizing accessor, hence mutable) and cleared
+        // whenever base textures are (re)uploaded.
+        mutable std::unordered_map<uint64_t, texture> tinted_tile_values;
 
         // Descriptors recorded during JSON parsing; replayed by upload_atlases.
         std::vector<atlas_replay_descriptor> atlas_descriptors;
@@ -342,6 +351,18 @@ class tileset
         }
         const texture *get_silhouette_tile( const size_t index ) const {
             return get_if_available( index, silhouette_tile_values );
+        }
+        /**
+         * Returns an HSV-tinted variant of sprite \p index recolored toward
+         * \p color, baking and caching it on first use. \p source is the already
+         * looked-up base/lit texture to recolor (so the tint stacks on the right
+         * light variant); falls back to the plain base tile when null.
+         * Returns nullptr if the sprite can't be tinted.
+         */
+        const texture *get_tinted_tile( const SDL_Renderer_Ptr &renderer, size_t index,
+                                        const RGBColor &color, const texture *source ) const;
+        void clear_tinted_tiles() {
+            tinted_tile_values.clear();
         }
 
         const std::unordered_set<std::string> &get_duplicate_ids() const {
@@ -645,6 +666,10 @@ class cata_tiles
                                  const std::array<bool, 5> &invisible, bool memorize_only );
         bool draw_vpart_roof( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                               const std::array<bool, 5> &invisible, bool memorize_only );
+        // Paint color to tint the vehicle part displayed at \p mount of \p veh,
+        // or nullopt when it is unpainted or the VEHICLE_PART_COLOR option is off.
+        std::optional<RGBColor> get_vpart_tint( const vehicle &veh,
+                                                const point_rel_ms &mount ) const;
         bool draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                               const std::array<bool, 5> &invisible, bool memorize_only );
         bool draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
@@ -878,6 +903,11 @@ class cata_tiles
         // tinting; null for iso tiles, UI overlays, and non-tinted tiles.
         sprite_screen_bounds *m_cur_bounds = nullptr;
         small_literal_vector<tint_sprite_record, 4> *m_cur_tint_sprites = nullptr;
+
+        // Set by draw_vpart around its draw_from_id_string call so the vehicle
+        // part sprite gets recolored with the part's paint color; nullopt
+        // otherwise. Consumed when building tile_render_params.
+        std::optional<RGBColor> pending_part_tint_ = std::nullopt;
 
         // Per-draw caches rebuilt once per draw() from g->all_creatures(). Let the
         // critter layers skip the per-tile creature_at hash lookup for the ~all

@@ -83,6 +83,7 @@
 #include "units_utility.h"
 #include "value_ptr.h"
 #include "veh_type.h"
+#include "vehicle_palette.h"
 #include "vehicle_part_location.h"
 #include "vehicle_selector.h"
 #include "weather.h"
@@ -256,7 +257,32 @@ vehicle::vehicle( const vproto_id &proto_id )
         // The game language may have changed after the blueprint was created,
         // so translated the prototype name again.
         name = proto.name.translated();
+        // Roll a random color scheme for this instance from the prototype's
+        // palette (each spawned vehicle gets its own colors). Saved vehicles are
+        // restored via deserialize instead, so they are not re-rolled here.
+        apply_color_palette( proto );
         refresh( );
+    }
+}
+
+void vehicle::apply_color_palette( const vehicle_prototype &proto )
+{
+    if( !proto.color_palette.is_valid() || proto.color_match.empty() ) {
+        return;
+    }
+    const std::vector<RGBColor> colors = proto.color_palette->pick_colors();
+    if( colors.empty() ) {
+        return;
+    }
+    for( vehicle_part &vp : parts ) {
+        const auto it = proto.color_match.find( vp.info().id.str() );
+        if( it == proto.color_match.end() ) {
+            continue;
+        }
+        const int idx = it->second;
+        if( idx >= 0 && idx < static_cast<int>( colors.size() ) ) {
+            vp.set_color( colors[idx], colors[idx] );
+        }
     }
 }
 

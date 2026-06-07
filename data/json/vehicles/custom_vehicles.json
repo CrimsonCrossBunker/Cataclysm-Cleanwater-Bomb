@@ -1,6 +1,7 @@
 [
   {
     "id": "hearse",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Hearse",
     "blueprint": [
@@ -74,6 +75,7 @@
   {
     "type": "vehicle",
     "id": "pickup_technical",
+    "color_palette": "military_standard",
     "name": "Technical",
     "blueprint": [
       [ "o--+-ox" ],
@@ -152,6 +154,7 @@
   },
   {
     "id": "truck_trailer_explosives",
+    "color_palette": "military_standard",
     "//": "This is for use in part 2 of Luke Isherwoods' truck explosive mission.",
     "type": "vehicle",
     "name": "Truck Trailer",

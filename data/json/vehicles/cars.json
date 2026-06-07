@@ -1,6 +1,7 @@
 [
   {
     "abstract": "4x4_car_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "4x4 Car",
     "blueprint": [
@@ -63,6 +64,7 @@
   },
   {
     "id": "4x4_car",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "4x4_car_abstract",
     "parts": [
@@ -72,6 +74,7 @@
   },
   {
     "id": "4x4_car_diesel",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "4x4_car_abstract",
     "parts": [
@@ -81,6 +84,7 @@
   },
   {
     "id": "beetle",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Beetle",
     "blueprint": [
@@ -124,6 +128,7 @@
   },
   {
     "abstract": "car_abstract_no_items_1_missing_wheel",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Station Wagon",
     "blueprint": [
@@ -168,6 +173,7 @@
   },
   {
     "abstract": "car_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_abstract_no_items_1_missing_wheel",
     "parts": [ { "x": -2, "y": -1, "parts": [ "wheel" ] } ],
@@ -181,6 +187,7 @@
   },
   {
     "id": "car",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_abstract",
     "parts": [
@@ -190,6 +197,7 @@
   },
   {
     "id": "car_mayhem_tire_change",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_abstract_no_items_1_missing_wheel",
     "parts": [
@@ -205,6 +213,7 @@
   },
   {
     "id": "car_diesel",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_abstract",
     "parts": [
@@ -214,6 +223,7 @@
   },
   {
     "id": "car_rack",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car",
     "name": "Station Wagon with Bike Rack",
@@ -226,6 +236,7 @@
   },
   {
     "id": "car_luxury",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Luxury Station Wagon",
     "blueprint": [
@@ -286,6 +297,7 @@
   },
   {
     "id": "car_anmlcmpt",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "//": "animal compartment version",
     "name": "Station Wagon",
@@ -340,6 +352,7 @@
   },
   {
     "id": "car_chassis",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Car Chassis",
     "blueprint": [
@@ -380,6 +393,7 @@
   },
   {
     "id": "car_hybrid_rack",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_hybrid",
     "name": "Hybrid Car with Bike Rack",
@@ -392,6 +406,7 @@
   },
   {
     "id": "car_hybrid",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Hybrid Car",
     "blueprint": [
@@ -457,6 +472,7 @@
   },
   {
     "id": "car_mini",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "City Car",
     "blueprint": [
@@ -501,6 +517,7 @@
   },
   {
     "abstract": "car_micro_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Microcar",
     "blueprint": [
@@ -540,6 +557,7 @@
   },
   {
     "id": "car_micro",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_micro_abstract",
     "parts": [
@@ -550,6 +568,7 @@
   },
   {
     "id": "car_micro_hybrid",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_micro_abstract",
     "name": "Hybrid Microcar",
@@ -564,6 +583,7 @@
   },
   {
     "id": "car_micro_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_micro_abstract",
     "name": "Electric Microcar",
@@ -575,6 +595,7 @@
   },
   {
     "abstract": "scompact_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Supercompact Car",
     "blueprint": [
@@ -610,6 +631,7 @@
   },
   {
     "id": "scompact",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_abstract",
     "parts": [
@@ -620,6 +642,7 @@
   },
   {
     "id": "scompact_hybrid",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_abstract",
     "name": "Hybrid Supercompact Car",
@@ -634,6 +657,7 @@
   },
   {
     "id": "scompact_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_abstract",
     "name": "Electric Supercompact Car",
@@ -645,6 +669,7 @@
   },
   {
     "abstract": "scompact_tandem_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Supercompact Tandem Car",
     "blueprint": [
@@ -679,6 +704,7 @@
   },
   {
     "id": "scompact_tandem_stow",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "parts": [
@@ -694,6 +720,7 @@
   },
   {
     "id": "scompact_tandem_hboard",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "parts": [
@@ -709,6 +736,7 @@
   },
   {
     "id": "scompact_tandem_electric_stow",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Electric Supercompact Tandem Car",
@@ -725,6 +753,7 @@
   },
   {
     "id": "scompact_tandem_electric_hboard",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Electric Supercompact Tandem Car",
@@ -741,6 +770,7 @@
   },
   {
     "id": "scompact_tandem_2wheel_stow",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Tandem Cabin Motorcycle",
@@ -757,6 +787,7 @@
   },
   {
     "id": "scompact_tandem_2wheel_hboard",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Tandem Cabin Motorcycle",
@@ -773,6 +804,7 @@
   },
   {
     "id": "scompact_tandem_electric_2wheel_stow",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Electric Tandem Cabin Motorcycle",
@@ -789,6 +821,7 @@
   },
   {
     "id": "scompact_tandem_electric_2wheel_hboard",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Electric Tandem Cabin Motorcycle",
@@ -805,6 +838,7 @@
   },
   {
     "id": "scompact_tandem_3wheel_stow",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Tandem Three-Wheeled Supercompact Car",
@@ -819,6 +853,7 @@
   },
   {
     "id": "scompact_tandem_3wheel_hboard",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Tandem Three-Wheeled Supercompact Car",
@@ -833,6 +868,7 @@
   },
   {
     "id": "scompact_tandem_electric_3wheel_stow",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Electric Tandem Three-Wheeled Supercompact Car",
@@ -848,6 +884,7 @@
   },
   {
     "id": "scompact_tandem_electric_3wheel_hboard",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "scompact_tandem_abstract",
     "name": "Electric Tandem Three-Wheeled Supercompact Car",
@@ -863,6 +900,7 @@
   },
   {
     "abstract": "car_hatch_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Hatchback",
     "blueprint": [
@@ -914,6 +952,7 @@
   },
   {
     "id": "car_hatch",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_hatch_abstract",
     "name": "Hatchback",
@@ -925,6 +964,7 @@
   },
   {
     "id": "car_hatch_diesel",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_hatch_abstract",
     "name": "Hatchback",
@@ -936,6 +976,7 @@
   },
   {
     "id": "car_hatch_rack",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_hatch",
     "name": "Hatchback with Bike Rack",
@@ -948,6 +989,7 @@
   },
   {
     "id": "car_sports",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Sports Car",
     "blueprint": [
@@ -1005,6 +1047,7 @@
   },
   {
     "abstract": "car_shootingbrake_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Shooting Brake",
     "blueprint": [
@@ -1060,6 +1103,7 @@
   },
   {
     "id": "car_shootingbrake_v8",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_shootingbrake_abstract",
     "parts": [
@@ -1070,6 +1114,7 @@
   },
   {
     "id": "car_shootingbrake_v12",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_shootingbrake_abstract",
     "name": "Premium Shooting Brake",
@@ -1081,6 +1126,7 @@
   },
   {
     "id": "car_shootingbrake_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_shootingbrake_abstract",
     "name": "Electric Shooting Brake",
@@ -1095,6 +1141,7 @@
   },
   {
     "abstract": "car_shootingbrake_long_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Shooting Brake",
     "blueprint": [
@@ -1156,6 +1203,7 @@
   },
   {
     "id": "car_shootingbrake_long_v8",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_shootingbrake_long_abstract",
     "parts": [
@@ -1166,6 +1214,7 @@
   },
   {
     "id": "car_shootingbrake_long_v12",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_shootingbrake_long_abstract",
     "name": "Premium Shooting Brake",
@@ -1177,6 +1226,7 @@
   },
   {
     "id": "car_shootingbrake_long_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_shootingbrake_long_abstract",
     "name": "Electric Shooting Brake",
@@ -1191,6 +1241,7 @@
   },
   {
     "abstract": "car_sedan_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Sedan",
     "blueprint": [
@@ -1240,6 +1291,7 @@
   },
   {
     "id": "car_sedan",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "parts": [
@@ -1257,6 +1309,7 @@
   },
   {
     "id": "car_sedan_diesel_i4",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "parts": [
@@ -1271,6 +1324,7 @@
   },
   {
     "id": "car_sedan_diesel_v6",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "parts": [
@@ -1285,6 +1339,7 @@
   },
   {
     "id": "car_sedan_v8",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "name": "V8 Sports Sedan",
@@ -1306,6 +1361,7 @@
   },
   {
     "id": "car_sedan_sports_v12",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "name": "V12 Sports Sedan",
@@ -1327,6 +1383,7 @@
   },
   {
     "id": "car_sedan_sports_v6",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "name": "V6 Sports Sedan",
@@ -1348,6 +1405,7 @@
   },
   {
     "id": "car_sedan_luxury_v6",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "name": "Luxury Sedan",
@@ -1364,6 +1422,7 @@
   },
   {
     "id": "car_sedan_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "name": "Electric Sedan",
@@ -1383,6 +1442,7 @@
   },
   {
     "id": "car_sedan_luxury_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "name": "Luxury Electric Sedan",
@@ -1402,6 +1462,7 @@
   },
   {
     "id": "car_sedan_sports_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_sedan_abstract",
     "name": "Electric Sports Sedan",
@@ -1426,6 +1487,7 @@
   },
   {
     "abstract": "car_town_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Town Car",
     "blueprint": [
@@ -1486,6 +1548,7 @@
   },
   {
     "id": "car_town",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_town_abstract",
     "parts": [
@@ -1501,6 +1564,7 @@
   },
   {
     "id": "car_town_diesel",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_town_abstract",
     "parts": [
@@ -1516,6 +1580,7 @@
   },
   {
     "id": "car_town_budget",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_town_abstract",
     "name": "Budget Town Car",
@@ -1531,6 +1596,7 @@
   },
   {
     "id": "car_town_budget_superior",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_town_abstract",
     "name": "Budget Town Car",
@@ -1546,6 +1612,7 @@
   },
   {
     "id": "car_town_diesel_budget",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_town_abstract",
     "parts": [
@@ -1560,6 +1627,7 @@
   },
   {
     "abstract": "car_coupe_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Coupe",
     "blueprint": [
@@ -1608,6 +1676,7 @@
   },
   {
     "id": "car_coupe",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "parts": [
@@ -1623,6 +1692,7 @@
   },
   {
     "id": "car_coupe_diesel_i4",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "parts": [
@@ -1638,6 +1708,7 @@
   },
   {
     "id": "car_coupe_diesel_v6",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "parts": [
@@ -1653,6 +1724,7 @@
   },
   {
     "id": "car_coupe_muscle",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "name": "Muscle Car",
@@ -1669,6 +1741,7 @@
   },
   {
     "id": "car_coupe_sports_v12",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "name": "V12 Sports Coupe",
@@ -1685,6 +1758,7 @@
   },
   {
     "id": "car_coupe_sports_v6",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "name": "V6 Sports Coupe",
@@ -1701,6 +1775,7 @@
   },
   {
     "id": "car_coupe_luxury_v6",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "name": "Luxury Coupe",
@@ -1714,6 +1789,7 @@
   },
   {
     "id": "car_coupe_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "name": "Electric Coupe",
@@ -1730,6 +1806,7 @@
   },
   {
     "id": "car_coupe_luxury_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "name": "Luxury Electric Coupe",
@@ -1746,6 +1823,7 @@
   },
   {
     "id": "car_coupe_sports_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_coupe_abstract",
     "name": "Electric Sports Coupe",
@@ -1765,6 +1843,7 @@
   },
   {
     "abstract": "car_super_abstract",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Supercar",
     "blueprint": [
@@ -1816,6 +1895,7 @@
   },
   {
     "id": "car_super_v12",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_super_abstract",
     "name": "V12 Super Car",
@@ -1830,6 +1910,7 @@
   },
   {
     "id": "car_super_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_super_abstract",
     "name": "Electric Super Car",
@@ -1847,6 +1928,7 @@
   },
   {
     "id": "car_super_electric_alt",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "car_super_abstract",
     "name": "Electric Super Car",
@@ -1865,6 +1947,7 @@
   },
   {
     "id": "car_sports_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Electric Sports Car",
     "blueprint": [
@@ -1913,6 +1996,7 @@
   },
   {
     "id": "car_racing_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Electric Racing Car",
     "blueprint": [
@@ -1961,6 +2045,7 @@
   },
   {
     "id": "electric_car",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Electric Car",
     "blueprint": [
@@ -2012,6 +2097,7 @@
   },
   {
     "id": "rara_x",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Solar Car",
     "blueprint": [
@@ -2060,6 +2146,7 @@
   },
   {
     "id": "suv",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "SUV",
     "blueprint": [
@@ -2131,6 +2218,7 @@
   },
   {
     "id": "suv_electric",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Electric SUV",
     "blueprint": [
@@ -2201,6 +2289,7 @@
   },
   {
     "id": "suv_electric_rack",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "copy-from": "suv_electric",
     "name": "Electric SUV with Bike Rack",
@@ -2213,6 +2302,7 @@
   },
   {
     "id": "surv_car",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Survivor Car",
     "parts": [

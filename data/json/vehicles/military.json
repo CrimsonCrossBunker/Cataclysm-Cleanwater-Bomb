@@ -1,6 +1,7 @@
 [
   {
     "id": "aapc-gl",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Mechanized Infantry Carrier",
     "//": "grenade launcher version",
@@ -108,6 +109,7 @@
   },
   {
     "id": "aapc-mg",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Mechanized Infantry Carrier",
     "parts": [
@@ -210,6 +212,7 @@
   },
   {
     "id": "apc",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Armored Personnel Carrier",
     "parts": [
@@ -296,6 +299,7 @@
   },
   {
     "id": "apc-gl",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Armored Personnel Carrier",
     "//": "grenade launcher version",
@@ -387,6 +391,7 @@
   },
   {
     "id": "humvee",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Humvee",
     "blueprint": [
@@ -473,6 +478,7 @@
   },
   {
     "id": "humvee_gl",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Humvee",
     "blueprint": [
@@ -558,6 +564,7 @@
   },
   {
     "id": "humvee_tow",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Humvee",
     "blueprint": [
@@ -646,6 +653,7 @@
   },
   {
     "id": "military_cargo_truck",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Military Cargo Truck",
     "blueprint": [
@@ -748,6 +756,7 @@
   },
   {
     "id": "military_cargo_truck_b",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "Military Cargo Truck",
     "blueprint": [
@@ -850,6 +859,7 @@
   },
   {
     "id": "cannon_3in",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "cannon",
     "blueprint": [ "HUH" ],
@@ -861,6 +871,7 @@
   },
   {
     "id": "cannon_3in_plugged",
+    "color_palette": "military_standard",
     "type": "vehicle",
     "name": "cannon",
     "blueprint": [ "HUH" ],

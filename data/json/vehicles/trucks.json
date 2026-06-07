@@ -1,6 +1,7 @@
 [
   {
     "id": "flatbed_truck",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Flatbed Truck",
     "blueprint": [
@@ -85,6 +86,7 @@
   },
   {
     "id": "pickup",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Pickup Truck",
     "blueprint": [
@@ -144,6 +146,7 @@
   },
   {
     "id": "extended_pickup",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Extended Bed 4 Seat Pickup Truck",
     "blueprint": [
@@ -212,6 +215,7 @@
   },
   {
     "id": "4seat_pickup",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "4 Seat Pickup Truck",
     "blueprint": [
@@ -276,6 +280,7 @@
   },
   {
     "id": "semi_truck",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Semi Truck",
     "blueprint": [
@@ -363,6 +368,7 @@
   },
   {
     "id": "semi_truck_scenario",
+    "color_palette": "car_standard",
     "//": "semi trailer for the Trucker scenario start, includes spawn for a lab entrance card.",
     "type": "vehicle",
     "name": "Semi Truck",
@@ -450,6 +456,7 @@
   },
   {
     "id": "truck_trailer",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Truck Trailer",
     "blueprint": [
@@ -559,6 +566,7 @@
   },
   {
     "id": "tatra_truck",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Heavy-duty Cargo Truck",
     "blueprint": [
@@ -637,6 +645,7 @@
   },
   {
     "id": "animalctrl",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Animal Control Truck",
     "blueprint": [
@@ -709,6 +718,7 @@
   },
   {
     "id": "underlift_tow_truck",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Underlift Tow Truck",
     "blueprint": [
@@ -793,6 +803,7 @@
   },
   {
     "id": "underlift_tow_truck_lack_wheels",
+    "color_palette": "car_standard",
     "type": "vehicle",
     "name": "Underlift Tow Truck",
     "blueprint": [

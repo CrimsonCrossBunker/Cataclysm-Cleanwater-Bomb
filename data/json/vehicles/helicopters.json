@@ -1,6 +1,7 @@
 [
   {
     "id": "2seater2",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "2-seater helicopter A",
     "parts": [
@@ -48,6 +49,7 @@
   },
   {
     "id": "2seater2_scenario",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "2-seater helicopter A",
     "parts": [
@@ -97,6 +99,7 @@
   },
   {
     "id": "SmallFlier1",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "Small helicopter",
     "parts": [
@@ -131,6 +134,7 @@
   },
   {
     "id": "SmallFlier2",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "Small helicopter",
     "parts": [
@@ -167,6 +171,7 @@
   },
   {
     "id": "SmallFlier3",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "Small helicopter",
     "parts": [
@@ -205,6 +210,7 @@
   },
   {
     "id": "Medevac1",
+    "color_palette": "ems_standard",
     "type": "vehicle",
     "name": "Medevac helicopter 1",
     "parts": [
@@ -270,6 +276,7 @@
   },
   {
     "id": "Medevac2",
+    "color_palette": "ems_standard",
     "type": "vehicle",
     "name": "Medevac helicopter 2",
     "parts": [
@@ -335,6 +342,7 @@
   },
   {
     "id": "2seater2_Wreck",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "2-seater helicopter 2",
     "parts": [
@@ -373,6 +381,7 @@
   },
   {
     "id": "Smallflier1_Wreck",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "Small helicopter",
     "parts": [
@@ -399,6 +408,7 @@
   },
   {
     "id": "SmallFlier2_Wreck",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "SmallFlier2 Wreck",
     "parts": [
@@ -429,6 +439,7 @@
   },
   {
     "id": "SmallFlier3_Wreck",
+    "color_palette": "aircraft_standard",
     "type": "vehicle",
     "name": "Small helicopter",
     "parts": [
@@ -465,6 +476,7 @@
   },
   {
     "id": "Medevac1_Wreck",
+    "color_palette": "ems_standard",
     "type": "vehicle",
     "name": "Medevac helicopter w1",
     "parts": [
@@ -519,6 +531,7 @@
   },
   {
     "id": "Medevac2_Wreck",
+    "color_palette": "ems_standard",
     "type": "vehicle",
     "name": "Medevac helicopter w2",
     "parts": [
@@ -584,6 +597,7 @@
   },
   {
     "id": "helicopter_apache_1a",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "AH-64 Apache",
     "blueprint": [
@@ -708,6 +722,7 @@
   },
   {
     "id": "helicopter_apache_1b",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "AH-64 Apache",
     "blueprint": [
@@ -810,6 +825,7 @@
   },
   {
     "id": "helicopter_apache_1c",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "AH-64 Apache",
     "blueprint": [
@@ -906,6 +922,7 @@
   },
   {
     "id": "helicopter_osprey_2a",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "V-22 Osprey",
     "blueprint": [
@@ -1152,6 +1169,7 @@
   },
   {
     "id": "helicopter_osprey_2b",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "V-22 Osprey",
     "blueprint": [
@@ -1377,6 +1395,7 @@
   },
   {
     "id": "helicopter_osprey_2c",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "V-22 Osprey",
     "blueprint": [
@@ -1562,6 +1581,7 @@
   },
   {
     "id": "helicopter_blackhawk_3a",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "UH-60 Blackhawk",
     "blueprint": [
@@ -1692,6 +1712,7 @@
   },
   {
     "id": "helicopter_blackhawk_3b",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "UH-60 Blackhawk",
     "blueprint": [
@@ -1818,6 +1839,7 @@
   },
   {
     "id": "helicopter_blackhawk_3c",
+    "color_palette": "military_heli",
     "type": "vehicle",
     "name": "UH-60 Blackhawk",
     "blueprint": [

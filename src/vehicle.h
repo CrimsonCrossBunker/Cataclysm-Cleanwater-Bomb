@@ -66,6 +66,8 @@ class vpart_variant;
 enum class ter_furn_flag : int;
 enum vpart_bitflags : int;
 struct itype;
+struct RGBColor;
+struct RGBColorPair;
 struct vehicle_part;
 template <typename E> struct enum_traits;
 
@@ -279,6 +281,21 @@ struct vehicle_part {
         std::vector<item> get_salvageable() const;
         // set part base to \p new_base, std::move()-ing it
         void set_base( item &&new_base );
+
+        /**
+         * Vehicle part display color (tinting), ported from CBN.
+         *
+         * The color is stored directly in the base item's variables (as a hex
+         * string), so it is persisted with saves and travels with the part when
+         * it is removed and reinstalled on another vehicle. There is no separate
+         * cached copy to keep in sync.
+         */
+        /** Painted color, or the part type's default color when unpainted (unless \p ignore_default). */
+        RGBColorPair get_color( bool ignore_default = false ) const;
+        /** Assign a paint color, stored on the base item. No-op for NO_PAINT parts. */
+        void set_color( const RGBColor &bg, const RGBColor &fg );
+        /** True if this part has an explicitly assigned (painted or spawned) color. */
+        bool has_custom_color() const;
 
         bool has_flag( const vp_flag flag ) const noexcept {
             const uint32_t flag_as_uint32 = static_cast<uint32_t>( flag );
@@ -992,6 +1009,10 @@ class vehicle
 
     private:
         vehicle &operator=( const vehicle & ) = default;
+
+        // Roll and apply a random color scheme from the prototype's palette to
+        // this freshly-spawned instance's parts (see vehicle_palette).
+        void apply_color_palette( const vehicle_prototype &proto );
 
     public:
         /** Disable or enable refresh() ; used to speed up performance when creating a vehicle */

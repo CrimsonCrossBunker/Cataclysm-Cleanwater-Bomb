@@ -589,6 +589,11 @@ struct vehicle_prototype {
         std::vector<zone_def> zone_defs;
         std::vector<std::pair<vproto_id, mod_id>> src;
 
+        /** Optional random color palette applied to parts when the vehicle spawns. */
+        vpalette_id color_palette;
+        /** Built during finalization: part-id string -> palette color-group index. */
+        std::map<std::string, int> color_match;
+
         shared_ptr_fast<vehicle> blueprint;
 
         void load( const JsonObject &jo, std::string_view src );
