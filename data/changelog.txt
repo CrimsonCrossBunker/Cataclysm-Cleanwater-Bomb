@@ -496,6 +496,7 @@ The Exodii can turn you into a full-blown cyborg
 If the Exodii trust you enough they'll give you a Cyberframe
 Dimension: the Scarlet Sea
 Challenge - Labyrinth Bound
+Expanding zombie weakpoints with vitals
 
 
 ## Interface:
@@ -1835,6 +1836,7 @@ Aftershock: Plasma degrades armors
 Stop spamming player log when NPCs are hot
 Stop ref center guard EOCs from firing in alternate dimensions
 Uncomfortable limbs must exist
+Fix Android black screen after turning the screen off
 
 
 ## Performance:
@@ -2167,7 +2169,7 @@ Fix maybe-uninitialized warning in unseal_and_spill_test
 Cache vcpkg installed packages in MSVC CI
 Build instruction and files for Visual Studio Code
 Demote GCC 16 -Wsfinae-incomplete to warning
-Fix SDL3 release artifacts for Linux, macOS, Windows
+Proper SDL support
 Migrate Android to SDL3 via CMake + prefab AAR; drop SDL2 customs; bump buildkit
 
 
