@@ -1,5 +1,17 @@
 [
   {
+    "id": "any_flag_landing_upgradekey",
+    "type": "requirement",
+    "//": "For when a recipe calls for a flag.",
+    "components": [
+      [
+        [ "national_flag", 1 ],
+        [ "american_flag", 1 ],
+        [ "state_flag", 1 ]
+      ]
+    ]
+  },
+  {
     "id": "any_badge",
     "type": "requirement",
     "//": "For when a recipe calls for a badge.",

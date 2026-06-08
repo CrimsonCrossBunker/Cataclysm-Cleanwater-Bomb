@@ -389,7 +389,7 @@
     "reversible": false,
     "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
     "components": [
-      [ [ "pride_flag", 6 ], [ "national_flag", 6 ], [ "american_flag", 6 ], [ "state_flag", 6 ] ],
+      [ [ "any_flag_landing_upgradekey", 6, "LIST"] ],
       [ [ "warptoken", 16 ] ],
       [
         [ "roadmap", 6 ],

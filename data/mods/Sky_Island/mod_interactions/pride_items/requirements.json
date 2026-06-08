@@ -1,0 +1,8 @@
+[
+  {
+    "id": "any_flag_landing_upgradekey",
+    "type": "requirement",
+    "//": "For when a recipe calls for a flag.",
+    "extend": { "components": [ [ [ "pride_flag", 1 ] ] ] }
+  }
+]

@@ -638,22 +638,6 @@
     "description": "A fifty-cent coin, featuring a portrait of famed rapper 50 Cent.  On the back is the date of minting, and the G-Unit symbol."
   },
   {
-    "id": "pride_flag",
-    "copy-from": "pride_flag",
-    "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
-    "extend": {
-      "variants": [
-        {
-          "id": "newbrunswick_pride_flag",
-          "name": { "str": "NB flag" },
-          "description": "A yellow flag with a ship and lion, representing New Brunswick.  You have a feeling this might be the wrong NB flag.",
-          "weight": 5
-        }
-      ]
-    }
-  },
-  {
     "id": "kitchen_gun",
     "type": "ITEM",
     "subtypes": [ "GUN" ],
