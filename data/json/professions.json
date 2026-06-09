@@ -463,6 +463,30 @@
     ]
   },
   {
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "mags_skyfarer",
+    "entries": [
+      { "item": "glock42_mag", "ammo-item": "380_p", "charges": 6 },
+      { "item": "glock42_mag", "ammo-item": "380_p", "charges": 6 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "mags_rifle_skyfarer",
+    "entries": [
+      { "item": "762R_clip", "ammo-item": "762_54R", "charges": 5 },
+      { "item": "762R_clip", "ammo-item": "762_54R", "charges": 5 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "flintlock_pouch_skyfarer",
+    "entries": [ { "item": "36navy", "charges": 16 } ]
+  },
+  {
     "type": "profession_item_substitutions",
     "item": "blazer",
     "sub": [ { "present": [ "WOOLALLERGY" ], "new": [ "jacket_leather" ] }, { "present": [ "VEGAN" ], "new": [ "jacket_light" ] } ]
@@ -2631,6 +2655,113 @@
       "male": { "entries": [ { "item": "boxer_shorts" } ] },
       "female": { "entries": [ { "item": "bra" }, { "item": "boy_shorts" } ] }
     }
+  },
+  {
+    "type": "profession",
+    "id": "airship_pilot",
+    "name": "Airship Captain",
+    "description": "You once led a crew of skyfarers, traveling the skies for fame, bricks and sand.  Now you are on your own, and the ground is swarming with zombies.  At least this world has ground…",
+    "skills": [
+      { "level": 4, "name": "driving" },
+      { "level": 2, "name": "mechanics" },
+      { "level": 3, "name": "speech" },
+      { "level": 1, "name": "gun" },
+      { "level": 1, "name": "pistol" },
+      { "level": 1, "name": "melee" },
+      { "level": 1, "name": "cutting" }
+    ],
+    "proficiencies": [ "prof_airship_pilot" ],
+    "items": {
+      "both": {
+        "items": [
+          "fedora",
+          "knit_scarf",
+          "dress_shirt",
+          "jacket_leather",
+          "pants",
+          "socks",
+          "knee_high_boots",
+          "gloves_leather",
+          "mbag",
+          "pocketwatch"
+        ],
+        "entries": [
+          { "item": "legpouch_large", "contents-group": "mags_skyfarer" },
+          { "item": "380_p", "charges": 7 },
+          { "item": "glock_42", "ammo-item": "380_p", "charges": 6, "container-item": "sholster" },
+          { "item": "cavalry_sabre", "container-item": "scabbard" }
+        ]
+      },
+      "male": [ "boxer_shorts" ],
+      "female": [ "sports_bra", "boy_shorts" ]
+    },
+    "vehicle": "airship",
+    "points": 7,
+    "flags": [ "SCEN_ONLY" ]
+  },
+  {
+    "type": "profession",
+    "id": "airboat_pilot",
+    "name": "Airboat Commander",
+    "description": "You were part of a squadron of skyfarers, plying the vastness to protect trade routes from nefarious air pirates.  Now you're adrift and alone, one vessel against an alien world swarming with the undead…",
+    "vehicle": "airboat",
+    "points": 6,
+    "proficiencies": [ "prof_airship_pilot" ],
+    "skills": [
+      { "level": 4, "name": "driving" },
+      { "level": 2, "name": "mechanics" },
+      { "level": 1, "name": "swimming" },
+      { "level": 1, "name": "firstaid" },
+      { "level": 1, "name": "gun" },
+      { "level": 1, "name": "rifle" },
+      { "level": 1, "name": "melee" },
+      { "level": 1, "name": "stabbing" }
+    ],
+    "items": {
+      "both": {
+        "items": [ "beret", "trenchcoat_leather", "longshirt", "pants_leather", "boots_larmor", "gauntlets_larmor", "socks" ],
+        "entries": [
+          { "item": "legpouch_large", "contents-group": "mags_rifle_skyfarer" },
+          { "item": "762_54R", "charges": 5 },
+          { "item": "mosin91_30", "ammo-item": "762_54R", "charges": 5, "contents-item": "shoulder_strap" },
+          { "item": "knife_trench", "container-item": "sheath" }
+        ]
+      },
+      "male": [ "boxer_shorts" ],
+      "female": [ "sports_bra", "boy_shorts" ]
+    },
+    "flags": [ "SCEN_ONLY" ]
+  },
+  {
+    "type": "profession",
+    "id": "aircanoe_pilot",
+    "name": "Aircanoe Pilot",
+    "description": "You're a lone skyfarer, scouting the endless blue for new routes across the sky.  Now you've caught sight of more land than you've seen in a lifetime, an unfamiliar land of monsters…",
+    "vehicle": "aircanoe",
+    "points": 5,
+    "proficiencies": [ "prof_airship_pilot" ],
+    "skills": [
+      { "level": 4, "name": "driving" },
+      { "level": 2, "name": "mechanics" },
+      { "level": 2, "name": "survival" },
+      { "level": 1, "name": "gun" },
+      { "level": 1, "name": "pistol" },
+      { "level": 1, "name": "melee" },
+      { "level": 1, "name": "cutting" }
+    ],
+    "items": {
+      "both": {
+        "items": [ "cowboy_hat", "bandana", "duster_leather", "longshirt", "pants", "socks", "boots_western", "gloves_fingerless" ],
+        "entries": [
+          { "item": "flintlock_pouch", "contents-group": "flintlock_pouch_skyfarer" },
+          { "item": "colt_navy", "ammo-item": "36navy", "charges": 6, "container-item": "holster" },
+          { "item": "hatchet", "container-item": "axe_ring" }
+        ]
+      },
+      "male": [ "boxer_shorts" ],
+      "female": [ "sports_bra", "boy_shorts" ]
+    },
+    "flags": [ "SCEN_ONLY" ]
   },
   {
     "type": "profession",

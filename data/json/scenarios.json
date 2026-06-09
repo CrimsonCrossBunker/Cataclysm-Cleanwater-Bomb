@@ -812,6 +812,18 @@
   },
   {
     "type": "scenario",
+    "id": "skyfarer_landing",
+    "name": "Skyfarer's Landing",
+    "points": 2,
+    "description": "You once roamed the skies aboard your airship, trading and exploring above the clouds.  When the Cataclysm struck, you had no choice but to set down in unfamiliar territory.  The ground is dangerous, but the skies still belong to you.",
+    "start_name": "Emergency Landing Site",
+    "allowed_locs": [ "sloc_field", "sloc_forest" ],
+    "missions": [ "MISSION_HELICOPTER_REFUEL" ],
+    "professions": [ "airship_pilot", "airboat_pilot", "aircanoe_pilot" ],
+    "flags": [ "LONE_START" ]
+  },
+  {
+    "type": "scenario",
     "id": "wilderness",
     "name": "Wilderness",
     "points": 0,
