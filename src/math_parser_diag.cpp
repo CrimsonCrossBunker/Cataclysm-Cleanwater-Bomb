@@ -683,6 +683,61 @@ double item_rad_eval( const_dialogue const &d, char scope, std::vector<diag_valu
            ->item_rads( flag_id( params[0].str( d ) ), agg.value_or( aggregate_type::MIN ) );
 }
 
+double item_burnt_eval(const_dialogue const &d, char scope, std::vector<diag_value> const &/*params*/,
+    diag_kwargs const &kwargs )
+{
+    item_location const *it = d.const_actor(is_beta(scope))->get_const_item();
+    if ( it == nullptr ) {
+        throw math::runtime_error("subject of item_burnt() must be an item");
+    }
+    diag_value format_value = kwargs.kwarg_or("format", "raw");
+    std::string const &format = format_value.str(d);
+    if ( format != "raw" && format != "percent" ) {
+        throw math::runtime_error(R"(Unknown format type "%s" for item_burnt)", format);
+    }
+    const item &obj = **it;
+    if ( obj.base_volume() <= 0) {
+        return -1;
+    }
+    else{
+        if( format == "raw" ) {
+            return static_cast<double>( obj.burnt );
+        }
+        else if( format == "percent" ) {
+            const int vol_units = obj.base_volume() / 250_ml;
+            const int threshold = std::max( vol_units * 3, 1 );
+            return static_cast<double>( obj.burnt ) * 100.0 / static_cast<double>( threshold );
+        }
+    }
+}
+
+void item_burnt_ass(double val, dialogue& d, char scope, std::vector<diag_value> const &/*params*/, diag_kwargs const& kwargs)
+{
+    item_location* it = d.actor(is_beta(scope))->get_item();
+    if (it == nullptr) {
+        throw math::runtime_error("subject of item_burnt() assignment must be an item");
+    }
+    diag_value format_value = kwargs.kwarg_or("format", "raw");
+    std::string const &format = format_value.str(d);
+    if ( format != "raw" && format != "percent" ) {
+        throw math::runtime_error(R"(Unknown format type "%s" for item_burnt)", format);
+    }
+    item &obj = **it;
+    if ( obj.base_volume() <= 0) {
+        throw math::runtime_error( "Zero volume items cannot use item_burnt() assignment" );
+    }
+    else{
+        if( format == "raw" ) {
+            obj.burnt = static_cast<int>( val );
+        }
+        else if ( format == "percent" ) {
+            const int vol_units = obj.base_volume() / 250_ml;
+            const int threshold = std::max( vol_units * 3, 1 );
+            obj.burnt = static_cast<int>( std::round( val * threshold / 100.0 ) );
+        }
+    }
+}
+
 double num_input_eval( const_dialogue const &d, char /*scope*/,
                        std::vector<diag_value> const &params, diag_kwargs const & /* kwargs */ )
 {
@@ -1924,6 +1979,7 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "hp_max", { "un", 1, hp_max_eval } },
     { "item_count", { "un", 1, item_count_eval } },
     { "item_rad", { "un", 1, item_rad_eval, {}, { "aggregate" } } },
+    { "item_burnt", { "un", 0, item_burnt_eval, item_burnt_ass, { "format" } } },
     { "melee_damage", { "un", 1, melee_damage_eval } },
     { "mod_load_order", { "g", 1, mod_order_eval } },
     { "monsters_nearby", { "ung", -1, monsters_nearby_eval, {}, { "radius", "attitude", "location" } } },
