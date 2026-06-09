@@ -27,8 +27,8 @@ constexpr int EXPLOSION_MULTIPLIER = 7;
 
 constexpr int fov_3d_z_range = 10;
 
-// Change to INT_MAX - 1(because of MULTISALVAGE).
-constexpr int MAX_ITEM_IN_SQUARE = 2147483646;
+// Really just a sanity check for functions not tested beyond this. in theory 4096 works (`InvletInvlet).
+constexpr int MAX_ITEM_IN_SQUARE = 4096;
 // no reason to differ.
 constexpr int MAX_ITEM_IN_VEHICLE_STORAGE = MAX_ITEM_IN_SQUARE;
 // Sanity checks for volume
