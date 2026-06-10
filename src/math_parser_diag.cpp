@@ -696,7 +696,7 @@ double item_burnt_eval(const_dialogue const &d, char scope, std::vector<diag_val
         throw math::runtime_error(R"(Unknown format type "%s" for item_burnt)", format);
     }
     const item &obj = **it;
-    if ( obj.base_volume() <= 0) {
+    if ( obj.base_volume() <= 0_ml) {
         return -1;
     }
     else{
@@ -723,7 +723,7 @@ void item_burnt_ass(double val, dialogue& d, char scope, std::vector<diag_value>
         throw math::runtime_error(R"(Unknown format type "%s" for item_burnt)", format);
     }
     item &obj = **it;
-    if ( obj.base_volume() <= 0) {
+    if ( obj.base_volume() <= 0_ml) {
         throw math::runtime_error( "Zero volume items cannot use item_burnt() assignment" );
     }
     else{
