@@ -852,12 +852,14 @@ ifeq ($(TILES), 1)
       else # libsdl build
         DEFINES += -DOSX_SDL2_LIBS
         # handle #include "SDL2/SDL.h" and "SDL.h"
-        CXXFLAGS += $(subst -I,-isystem ,$(shell sdl2-config --cflags)) \
+        ifneq (,$(shell which sdl2-config 2>/dev/null))
+          CXXFLAGS += $(subst -I,-isystem ,$(shell sdl2-config --cflags)) \
 		  -isystem $(shell dirname $(shell sdl2-config --cflags | sed 's/-I\(.[^ ]*\) .*/\1/'))
-        LDFLAGS += -framework Cocoa $(shell sdl2-config --libs) -lSDL2_ttf
-        LDFLAGS += -lSDL2_image
-        ifeq ($(SOUND), 1)
-          LDFLAGS += -lSDL2_mixer
+          LDFLAGS += -framework Cocoa $(shell sdl2-config --libs) -lSDL2_ttf
+          LDFLAGS += -lSDL2_image
+          ifeq ($(SOUND), 1)
+            LDFLAGS += -lSDL2_mixer
+          endif
         endif
       endif
     endif

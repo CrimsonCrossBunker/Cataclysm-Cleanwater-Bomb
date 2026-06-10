@@ -581,7 +581,7 @@ jobs:
       - name: Build CDDA (osx, SDL2)
         if: runner.os == 'macOS' && matrix.sdl3 != 1
         run: |
-          make -j3 TILES=${{ matrix.tiles }} SOUND=${{ matrix.tiles }} SDL3=0 RELEASE=1 LOCALIZE=1 LANGUAGES=all BACKTRACE=0 PCH=0 USE_HOME_DIR=1 UNIVERSAL_BINARY=1 WARN_STALE_DATA=1 dmgdist
+          make -j3 TILES=${{ matrix.tiles }} SOUND=${{ matrix.tiles }} FRAMEWORK=1 SDL3=0 RELEASE=1 LOCALIZE=1 LANGUAGES=all BACKTRACE=0 PCH=0 USE_HOME_DIR=1 UNIVERSAL_BINARY=1 WARN_STALE_DATA=1 dmgdist
           mv Cataclysm.dmg ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.dmg
       - name: Build CDDA (osx, SDL3)
         if: runner.os == 'macOS' && matrix.sdl3 == 1
