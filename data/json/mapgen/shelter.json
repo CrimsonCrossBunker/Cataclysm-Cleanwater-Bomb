@@ -158,7 +158,10 @@
       ],
       "palettes": [ "parametrized_roof_palette" ],
       "terrain": { "2": { "param": "roof_type", "fallback": "t_flat_roof" } },
-      "place_items": [ { "item": "SUS_trash_roof", "x": [ 5, 17 ], "y": [ 9, 22 ], "chance": 50, "repeat": [ 1, 3 ] } ]
+      "place_items": [ { "item": "SUS_trash_roof", "x": [ 5, 17 ], "y": [ 9, 22 ], "chance": 50, "repeat": [ 1, 3 ] } ],
+      "place_vehicles": [
+        { "vehicle": "aircanoe", "x": 12, "y": 15, "chance": 15, "rotation": 0, "fuel": 0, "status": -1 }
+      ]
     }
   },
   {
@@ -314,7 +317,10 @@
       ],
       "palettes": [ "parametrized_roof_palette" ],
       "terrain": { "2": { "param": "roof_type", "fallback": "t_flat_roof" } },
-      "place_items": [ { "item": "SUS_trash_roof", "x": [ 5, 17 ], "y": [ 11, 22 ], "chance": 50, "repeat": [ 1, 3 ] } ]
+      "place_items": [ { "item": "SUS_trash_roof", "x": [ 5, 17 ], "y": [ 11, 22 ], "chance": 50, "repeat": [ 1, 3 ] } ],
+      "place_vehicles": [
+        { "vehicle": "aircanoe", "x": 12, "y": 16, "chance": 15, "rotation": 0, "fuel": 0, "status": -1 }
+      ]
     }
   },
   {
@@ -419,7 +425,10 @@
       ],
       "palettes": [ "parametrized_roof_palette" ],
       "terrain": { "2": { "param": "roof_type", "fallback": "t_flat_roof" } },
-      "place_items": [ { "item": "SUS_trash_roof", "x": [ 8, 15 ], "y": [ 7, 22 ], "chance": 50, "repeat": [ 1, 3 ] } ]
+      "place_items": [ { "item": "SUS_trash_roof", "x": [ 8, 15 ], "y": [ 7, 22 ], "chance": 50, "repeat": [ 1, 3 ] } ],
+      "place_vehicles": [
+        { "vehicle": "aircanoe", "x": 12, "y": 15, "chance": 15, "rotation": 0, "fuel": 0, "status": -1 }
+      ]
     }
   },
   {

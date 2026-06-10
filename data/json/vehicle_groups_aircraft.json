@@ -1,0 +1,17 @@
+[
+  {
+    "type": "vehicle_group",
+    "id": "personal_aircraft_small",
+    "vehicles": [
+      [ "aircanoe", 60 ],
+      [ "airboat", 40 ]
+    ]
+  },
+  {
+    "type": "vehicle_group",
+    "id": "personal_aircraft_large",
+    "vehicles": [
+      [ "airship", 100 ]
+    ]
+  }
+]

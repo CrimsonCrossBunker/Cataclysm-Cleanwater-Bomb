@@ -130,7 +130,10 @@
         "                        "
       ],
       "palettes": [ "roof_palette" ],
-      "terrain": { ".": "t_shingle_flat_roof" }
+      "terrain": { ".": "t_shingle_flat_roof" },
+      "place_vehicles": [
+        { "vehicle": "airboat", "x": 13, "y": 14, "chance": 15, "rotation": 0, "fuel": 0, "status": -1 }
+      ]
     }
   },
   {
