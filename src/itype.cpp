@@ -127,7 +127,7 @@ std::string itype::get_item_type_string() const
 return "misc";
 }
 
-std::string itype::count_or_volume_or_weight_prefix( unsigned int quantity ) const
+std::string itype::item_measure_prefix( unsigned int quantity ) const
 {
     if( display_type == item_display_type::BY_WEIGHT ) {
         return string_format( _( "%1$s,%2$d" ), weight_to_string( weight * quantity, true, true ), quantity );
