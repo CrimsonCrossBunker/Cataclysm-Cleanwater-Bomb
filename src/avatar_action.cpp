@@ -402,11 +402,13 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
                          msg_safe_mode );
                 return false;
             }
+            const int hp_before = critter.get_hp();
             you.melee_attack( critter, true );
+            const int dam_dealt = std::max( 0, hp_before - critter.get_hp() );
             if( critter.is_hallucination() ) {
                 critter.die( &m, &you );
             }
-            g->draw_hit_mon( dest_loc, critter, critter.is_dead() );
+            g->draw_hit_mon( dest_loc, critter, critter.is_dead(), dam_dealt, &you );
             return false;
         } else if( critter.has_flag( mon_flag_IMMOBILE ) || critter.has_effect( effect_harnessed ) ||
                    critter.has_effect( effect_ridden ) || critter.has_flag( json_flag_CANNOT_MOVE ) ) {

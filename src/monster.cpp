@@ -2194,6 +2194,8 @@ bool monster::melee_attack( Creature &target, float accuracy )
 
     const int monster_hit_roll = melee::melee_hit_range( accuracy );
     int hitspread = target.deal_melee_attack( this, monster_hit_roll );
+    // Optional visual lunge of the attacker toward the target (tiles build only).
+    g->draw_creature_attack( *this, target );
     if( type->melee_dice == 0 ) {
         // We don't hit, so just return
         return true;

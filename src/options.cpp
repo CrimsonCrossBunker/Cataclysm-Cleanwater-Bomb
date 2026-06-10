@@ -2373,6 +2373,93 @@ void options_manager::add_options_graphics()
 
         get_option( "ANIMATION_DELAY" ).setPrerequisite( "ANIMATIONS" );
 
+        add( "CREATURE_MOVE_ANIM", page_id, to_translation( "Creature movement animation" ),
+             to_translation( "If true, creatures (including you) visually glide from tile to tile when they move, instead of snapping instantly." ),
+             false, COPT_CURSES_HIDE
+           );
+
+        get_option( "CREATURE_MOVE_ANIM" ).setPrerequisite( "ANIMATIONS" );
+
+        add( "PLAYER_MOVE_ANIM", page_id, to_translation( "Player movement animation" ),
+             to_translation( "If true, your own movement glide plays.  Turn this off to keep other creatures' movement animation while leaving yourself unanimated." ),
+             true, COPT_CURSES_HIDE
+           );
+
+        get_option( "PLAYER_MOVE_ANIM" ).setPrerequisite( "ANIMATIONS" );
+
+        add( "PLAYER_ATTACK_ANIM", page_id, to_translation( "Player attack animation" ),
+             to_translation( "If true, your own attack lunge plays.  Turn this off to keep other creatures' attack animation while leaving yourself unanimated." ),
+             true, COPT_CURSES_HIDE
+           );
+
+        get_option( "PLAYER_ATTACK_ANIM" ).setPrerequisite( "ANIMATIONS" );
+
+        add( "PLAYER_HIT_ANIM", page_id, to_translation( "Player hit animation" ),
+             to_translation( "If true, your own got-hit reaction plays.  Turn this off to keep other creatures' hit animation while leaving yourself unanimated." ),
+             true, COPT_CURSES_HIDE
+           );
+
+        get_option( "PLAYER_HIT_ANIM" ).setPrerequisite( "ANIMATIONS" );
+
+        add( "CREATURE_MOVE_ANIM_TIME", page_id, to_translation( "Creature movement animation time" ),
+             to_translation( "Time in milliseconds a creature takes to glide across one tile.  Lower is faster." ),
+             50, 2000, 500, COPT_CURSES_HIDE
+           );
+
+        get_option( "CREATURE_MOVE_ANIM_TIME" ).setPrerequisite( "CREATURE_MOVE_ANIM" );
+
+        add( "CREATURE_MOVE_ANIM_CURVE", page_id, to_translation( "Creature movement animation curve" ),
+        to_translation( "Interpolation used for the glide.  Smooth eases in and out; parabola adds a symmetric vertical hop; leap hovers over the origin then drops quickly onto the destination." ), {
+            { "smooth", to_translation( "Smooth" ) },
+            { "parabola", to_translation( "Parabola" ) },
+            { "leap", to_translation( "Leap" ) }
+        }, "parabola", COPT_CURSES_HIDE
+           );
+
+        get_option( "CREATURE_MOVE_ANIM_CURVE" ).setPrerequisite( "CREATURE_MOVE_ANIM" );
+
+        add( "CREATURE_MOVE_ANIM_FPS", page_id, to_translation( "Creature animation framerate" ),
+             to_translation( "Target redraw rate (frames per second) while a creature is gliding, bouncing from a hit, or lunging in an attack.  Higher is smoother but uses more CPU/GPU.  Shared by all creature animations." ),
+             15, 144, 60, COPT_CURSES_HIDE
+           );
+
+        add( "CREATURE_HIT_ANIM", page_id, to_translation( "Creature hit animation" ),
+             to_translation( "If true, a creature (including you) pops up and falls back down when it takes a hit." ),
+             false, COPT_CURSES_HIDE
+           );
+
+        get_option( "CREATURE_HIT_ANIM" ).setPrerequisite( "ANIMATIONS" );
+
+        add( "CREATURE_HIT_ANIM_TIME", page_id, to_translation( "Creature hit animation time" ),
+             to_translation( "Time in milliseconds of the pop-and-fall bounce when a creature is hit.  Lower is faster." ),
+             50, 2000, 300, COPT_CURSES_HIDE
+           );
+
+        get_option( "CREATURE_HIT_ANIM_TIME" ).setPrerequisite( "CREATURE_HIT_ANIM" );
+
+        add( "CREATURE_HIT_ANIM_CURVE", page_id, to_translation( "Creature hit animation style" ),
+        to_translation( "Bounce pops the creature straight up and drops it back down.  Knockback shoves it away from the attacker and back.  Knockback falls back to bounce when the attacker's direction is unknown (traps, fire, etc.)." ), {
+            { "bounce", to_translation( "Bounce" ) },
+            { "knockback", to_translation( "Knockback" ) }
+        }, "bounce", COPT_CURSES_HIDE
+           );
+
+        get_option( "CREATURE_HIT_ANIM_CURVE" ).setPrerequisite( "CREATURE_HIT_ANIM" );
+
+        add( "CREATURE_ATTACK_ANIM", page_id, to_translation( "Creature attack animation" ),
+             to_translation( "If true, a creature (including you) lunges toward its target and back when it makes a melee attack." ),
+             false, COPT_CURSES_HIDE
+           );
+
+        get_option( "CREATURE_ATTACK_ANIM" ).setPrerequisite( "ANIMATIONS" );
+
+        add( "CREATURE_ATTACK_ANIM_TIME", page_id, to_translation( "Creature attack animation time" ),
+             to_translation( "Time in milliseconds of the lunge-and-return when a creature makes a melee attack.  Lower is faster." ),
+             50, 2000, 250, COPT_CURSES_HIDE
+           );
+
+        get_option( "CREATURE_ATTACK_ANIM_TIME" ).setPrerequisite( "CREATURE_ATTACK_ANIM" );
+
         add( "BLINK_SPEED", page_id, to_translation( "Blinking effects speed" ),
              to_translation( "The speed of every blinking effects in ms." ),
              100, 5000, 300

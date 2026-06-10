@@ -869,8 +869,13 @@ class game
         // sprites (CBN-style), instead of animating a single bullet hopping tile-by-tile.
         void draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, char bullet,
                                const std::string &custom_sprite = {} );
-        void draw_hit_mon( const tripoint_bub_ms &p, const monster &m, bool dead = false );
-        void draw_hit_player( const Character &p, int dam ) const;
+        void draw_hit_mon( const tripoint_bub_ms &p, const monster &m, bool dead = false, int dam = -1,
+                           const Creature *source = nullptr );
+        void draw_hit_player( const Character &p, int dam, float damage_fraction = 1.0f,
+                              const Creature *source = nullptr ) const;
+        // Trigger the attacker's optional lunge animation toward \p target. No-op
+        // on curses builds and when the option is off.
+        void draw_creature_attack( const Creature &attacker, const Creature &target );
         void draw_line( const tripoint_bub_ms &p, const tripoint_bub_ms &center_point,
                         const std::vector<tripoint_bub_ms> &points, bool noreveal = false );
         void draw_line( const tripoint_bub_ms &p, const std::vector<tripoint_bub_ms> &points );

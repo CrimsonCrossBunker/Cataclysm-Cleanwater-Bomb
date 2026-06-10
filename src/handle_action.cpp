@@ -341,8 +341,38 @@ input_context game::get_player_input( std::string &action )
         add_draw_callback( animation_cb );
 
         creature_tracker &creatures = get_creature_tracker();
+        // Discrete step-based animations (weather drops, SCT) advance once per
+        // ~125ms regardless of how fast we redraw, so raising the redraw rate for
+        // a smooth creature glide does not speed them up. Tracks the last step time.
+        std::chrono::steady_clock::time_point last_discrete_step =
+            std::chrono::steady_clock::now();
         do {
-            if( bWeatherEffect && get_option<bool>( "ANIMATION_RAIN" ) ) {
+#if defined(TILES)
+            const bool gliding = tilecontext && tilecontext->has_creature_anim();
+#else
+            const bool gliding = false;
+#endif
+            // While a creature is gliding, redraw at the configured framerate so
+            // the motion looks smooth instead of stepping at 8 FPS.
+            if( gliding ) {
+                const int fps = std::clamp( get_option<int>( "CREATURE_MOVE_ANIM_FPS" ), 15, 144 );
+                ctxt.set_timeout( std::max( 1, 1000 / fps ) );
+            } else {
+                ctxt.set_timeout( 125 );
+            }
+            // Gate the discrete step-based animations to their original cadence.
+            bool do_discrete_step = true;
+            if( gliding ) {
+                const std::chrono::steady_clock::time_point now =
+                    std::chrono::steady_clock::now();
+                if( std::chrono::duration_cast<std::chrono::milliseconds>(
+                        now - last_discrete_step ).count() >= 125 ) {
+                    last_discrete_step = now;
+                } else {
+                    do_discrete_step = false;
+                }
+            }
+            if( do_discrete_step && bWeatherEffect && get_option<bool>( "ANIMATION_RAIN" ) ) {
                 /*
                 Location to add rain drop animation bits! Since it refreshes w_terrain it can be added to the animation section easily
                 Get tile information from above's weather information:
@@ -372,7 +402,8 @@ input_context game::get_player_input( std::string &action )
                 }
             }
             // don't bother calculating SCT if we won't show it
-            if( uquit != QUIT_WATCH && get_option<bool>( "ANIMATION_SCT" ) && !SCT.vSCT.empty() ) {
+            if( do_discrete_step && uquit != QUIT_WATCH && get_option<bool>( "ANIMATION_SCT" ) &&
+                !SCT.vSCT.empty() ) {
                 invalidate_main_ui_adaptor();
 
                 SCT.advanceAllSteps();
@@ -447,6 +478,11 @@ input_context game::get_player_input( std::string &action )
 
             // Animated tiles need periodic redraws to cycle frames
             if( tilecontext->has_animated_tiles() ) {
+                invalidate_main_ui_adaptor();
+            }
+            // A gliding creature must keep redrawing even when its sprite is
+            // currently off-screen (it may scroll back into view mid-glide).
+            if( gliding ) {
                 invalidate_main_ui_adaptor();
             }
 #endif

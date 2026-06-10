@@ -771,6 +771,12 @@ class cata_tiles
                               const std::array<bool, 5> &invisible, bool memorize_only );
         bool draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                                  const std::array<bool, 5> &invisible );
+
+        // Pixel offset to add to the sprite currently being drawn so a creature
+        // appears to glide from its old tile to its new one. Set by
+        // draw_critter_at (guarded so it is restored to zero afterwards) and read
+        // by player_to_screen; zero for terrain/everything else.
+        point m_entity_draw_offset;
         bool draw_zone_mark( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                              const std::array<bool, 5> &invisible, bool memorize_only );
         bool draw_zombie_revival_indicators( const tripoint_bub_ms &pos, lit_level ll, int &height_3d,
@@ -815,11 +821,70 @@ class cata_tiles
         void draw_bullet_frame();
         void void_bullet();
 
-        void init_draw_hit( const Creature &critter );
+        // \p damage_fraction scales the reaction; \p dir_tiles is the knockback
+        // direction (victim - attacker, in tiles; zero if unknown). \p dead skips
+        // the reaction so a freshly-killed creature's bounce can't linger and get
+        // mistakenly triggered when something else later steps onto the tile.
+        void init_draw_hit( const Creature &critter, float damage_fraction = 1.0f,
+                            const point &dir_tiles = point::zero, bool dead = false );
         void draw_hit_frame();
         void void_hit();
         // Prune expired hit animations.  Returns true if any were removed.
         bool expire_hit_animations();
+
+        // --- Creature move animation (opt-in CREATURE_MOVE_ANIM) ---
+        // Interpolation curve for the per-tile glide.
+        enum class move_anim_curve : int {
+            smooth = 0,   // ease-in-out horizontal glide
+            parabola,     // smooth horizontal + symmetric half-tile vertical hop
+            leap,         // backward bob + long hang over origin, then short quick fall
+        };
+        // Register (or restart) a glide for a creature that just moved from
+        // \p from_abs to \p to_abs. New animations overwrite any existing one for
+        // the same creature and play from the start, so they never block the game.
+        // No-op when the option is off, on z-changes, or on jumps further than one
+        // tile (teleports snap instantly). \p is_player gates the avatar's glide on
+        // the separate PLAYER_MOVE_ANIM option.
+        void start_creature_move_anim( const tripoint_abs_ms &from_abs,
+                                       const tripoint_abs_ms &to_abs, bool is_player );
+        // Advance all active glides by real elapsed time and drop finished ones.
+        void advance_creature_move_anims();
+        // True while any creature move glide is in flight. Used by the input loop
+        // to raise its redraw rate so the glide looks smooth instead of stepping.
+        bool has_creature_move_anim() const {
+            return !m_creature_anims.empty();
+        }
+        // Register (or restart) a "got hit" reaction for the creature now standing
+        // at \p pos_abs. No-op when the CREATURE_HIT_ANIM option is off. Shares the
+        // redraw framerate and deferred-overlay path with the move glide.
+        // \p damage_fraction is the hit's damage as a fraction of the creature's max
+        // HP (0..1); it scales the reaction magnitude between a small floor and a
+        // half-tile maximum. \p dir_tiles is the knockback direction (attacker ->
+        // victim, in tiles); when zero, or when the curve option is "bounce", a
+        // vertical pop-and-fall is used instead of a horizontal knockback.
+        // \p is_player gates the avatar's reaction on the separate PLAYER_HIT_ANIM option.
+        void start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
+                                      const point &dir_tiles, bool is_player );
+        // True while any hit reaction is in flight.
+        bool has_creature_hit_anim() const {
+            return !m_creature_hit_anims.empty();
+        }
+        // Register (or restart) an attack lunge for the attacker at \p pos_abs that
+        // just struck a target in direction \p dir_tiles (attacker -> target, in
+        // tiles): a quick lunge toward the target and back. No-op when the
+        // CREATURE_ATTACK_ANIM option is off. \p is_player gates the avatar's lunge
+        // on the separate PLAYER_ATTACK_ANIM option.
+        void start_creature_attack_anim( const tripoint_abs_ms &pos_abs,
+                                         const point &dir_tiles, bool is_player );
+        // True while any attack lunge is in flight.
+        bool has_creature_attack_anim() const {
+            return !m_creature_attack_anims.empty();
+        }
+        // True while any creature animation (glide, hit, or attack) is in flight.
+        bool has_creature_anim() const {
+            return has_creature_move_anim() || has_creature_hit_anim() ||
+                   has_creature_attack_anim();
+        }
 
         void draw_footsteps_frame( const tripoint_bub_ms &center );
 
@@ -1014,6 +1079,59 @@ class cata_tiles
         //     its own column, so columns with no creature skip the upward z-scan.
         std::unordered_set<tripoint_bub_ms> m_creature_positions;
         std::unordered_set<point_bub_ms> m_creature_columns;
+
+        // Active per-creature move glides, keyed by the creature's *destination*
+        // absolute position (where it now sits, i.e. where draw_critter_at finds
+        // it). progress runs 0->1: at 0 the sprite is offset back to its old tile,
+        // at 1 it sits on the real (new) tile.
+        struct creature_move_anim {
+            point delta_tiles;         // (old - new) tile delta, converted to pixels at draw time
+            float progress = 0.0f;     // 0..1
+            float per_ms = 0.0f;       // progress increment per millisecond
+            move_anim_curve curve = move_anim_curve::smooth;
+        };
+        std::map<tripoint_abs_ms, creature_move_anim> m_creature_anims;
+        // steady_clock timestamp (ms) of the last advance, for real-time stepping.
+        std::optional<int64_t> m_creature_anim_last_ms;
+
+        // Active per-creature "got hit" reactions, keyed by the creature's absolute
+        // position. Either a vertical pop-and-fall (bounce) or a horizontal
+        // knockback-and-return, sharing the offset injection and deferred-overlay
+        // path with the move glide.
+        struct creature_hit_anim {
+            float progress = 0.0f;     // 0..1
+            float per_ms = 0.0f;       // progress increment per millisecond
+            float magnitude_tiles = 0.5f; // peak displacement in tiles (damage-scaled)
+            // Knockback direction (victim - attacker) in tiles. Zero -> vertical bounce.
+            point dir_tiles;
+        };
+        std::map<tripoint_abs_ms, creature_hit_anim> m_creature_hit_anims;
+
+        // Active per-creature attack lunges, keyed by the attacker's absolute
+        // position: a quick lunge toward the struck target and back.
+        struct creature_attack_anim {
+            float progress = 0.0f;     // 0..1
+            float per_ms = 0.0f;       // progress increment per millisecond
+            float dist_tiles = 0.5f;   // peak lunge distance in tiles
+            point dir_tiles;           // lunge direction (target - attacker) in tiles
+        };
+        std::map<tripoint_abs_ms, creature_attack_anim> m_creature_attack_anims;
+
+        // Gliding critters are drawn in a deferred overlay pass after the whole
+        // z-level row loop, so their offset/parabola sprite sits on top of terrain
+        // instead of being overdrawn by rows painted later (the "moving up gets
+        // blocked by the ground" artifact).
+        struct deferred_glide_critter {
+            tripoint_bub_ms pos;
+            lit_level ll = lit_level::BLANK;
+            int height_3d = 0;
+            std::array<bool, 5> invisible = {};
+        };
+        std::vector<deferred_glide_critter> m_deferred_glide_critters;
+        // True during the main row loop: draw_critter_at records gliding critters
+        // for the deferred pass instead of drawing them in place. False during the
+        // deferred pass itself so they draw normally.
+        bool m_collecting_glide_critters = false;
 
         // Scratch render target for the ortho silhouette mask tint path. Sized
         // to fit the largest batched sprite region; reused across tiles/frames.

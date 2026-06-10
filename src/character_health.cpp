@@ -2683,7 +2683,9 @@ dealt_damage_instance Character::deal_damage( Creature *source, bodypart_id bp,
 
     // TODO: Pre or post blit hit tile onto "this"'s location here
     if( dam > 0 && get_player_view().sees( here, pos ) ) {
-        g->draw_hit_player( *this, dam );
+        const int bp_max_hp = get_hp_max( bp );
+        const float frac = bp_max_hp > 0 ? static_cast<float>( dam ) / bp_max_hp : 1.0f;
+        g->draw_hit_player( *this, dam, frac, source );
 
         if( is_avatar() && source ) {
             const tripoint_bub_ms source_pos = source->pos_bub( here );

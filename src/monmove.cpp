@@ -2006,9 +2006,11 @@ bool monster::attack_at( const tripoint_bub_ms &p )
         Creature::Attitude attitude = attitude_to( mon );
         // mon_flag_ATTACKMON == hulk behavior, whack everything in your way
         if( attitude == Attitude::HOSTILE || has_flag( mon_flag_ATTACKMON ) ) {
+            const int hp_before = mon.get_hp();
             const bool attacked = melee_attack( mon );
             if( attacked && get_player_view().sees( here, p ) ) {
-                g->draw_hit_mon( p, mon, mon.is_dead() );
+                const int dam_dealt = std::max( 0, hp_before - mon.get_hp() );
+                g->draw_hit_mon( p, mon, mon.is_dead(), dam_dealt, this );
             }
             return attacked;
         }

@@ -23,6 +23,7 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_assert.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -516,6 +517,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     has_animated_tiles_ = false;
 
+    // Advance creature move glides by real elapsed time before drawing so each
+    // sprite's offset reflects the current frame.
+    advance_creature_move_anims();
+
     {
         //set clipping to prevent drawing over stuff we shouldn't
         SDL_Rect clipRect = {dest.x, dest.y, width, height};
@@ -970,6 +975,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     // Multi z-level draw mode
     // Start drawing from the lowest visible z-level (some off-screen tiles
     // are considered visible here to simplify the logic.)
+    // Collect gliding critters during the row loop; they are redrawn on top in a
+    // deferred overlay pass below so terrain painted in later rows can't cover them.
+    m_deferred_glide_critters.clear();
+    m_collecting_glide_critters = !m_creature_anims.empty() || !m_creature_hit_anims.empty() ||
+                                  !m_creature_attack_anims.empty();
     int cur_zlevel = std::max( center.z() - fov_3d_z_range, -OVERMAP_DEPTH );
     bool draw_aborted = false;
     while( cur_zlevel <= center.z() && !draw_aborted ) {
@@ -1346,8 +1356,29 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 }
             }
         }
+        // --- Per-z-level deferred critter flush ---
+        // A small subset of animating critters defer to here: only those whose
+        // sprite is pushed DOWN/south this frame (see draw_critter_at), because the
+        // southern row that would overdraw them is painted later. Redraw them on top
+        // of this z-level's terrain, but BEFORE the next z-level paints its
+        // fog/shadow overlay (flushing once after the whole z-loop would let a
+        // lower-level animation punch through the inter-z shadow layer). Pure
+        // east/west glides and upward motion are NOT deferred — they draw in place
+        // during the row loop and keep natural painter occlusion (tall terrain and
+        // creatures to the south correctly cover them). All entries collected during
+        // this level's row loop belong to this level, so this drains them.
+        if( m_collecting_glide_critters && !m_deferred_glide_critters.empty() ) {
+            m_collecting_glide_critters = false;
+            for( deferred_glide_critter &c : m_deferred_glide_critters ) {
+                draw_critter_at( c.pos, c.ll, c.height_3d, c.invisible, false );
+            }
+            m_deferred_glide_critters.clear();
+            m_collecting_glide_critters = true;
+        }
         cur_zlevel += 1;
     }
+    m_collecting_glide_critters = false;
+    m_deferred_glide_critters.clear();
 
     // display number of monsters to spawn in mapgen preview
     for( int row = top_any_tile_range.p_min.y; row < top_any_tile_range.p_max.y; row ++ ) {
@@ -1717,13 +1748,251 @@ point cata_tiles::player_to_tile( const point_bub_ms &pos ) const
     }
 }
 
+// Map a 0..1 linear glide progress to the horizontal fraction travelled toward
+// the destination (0 = old tile, 1 = new tile). May leave [0,1] to overshoot.
+static float move_anim_eased( cata_tiles::move_anim_curve curve, float t )
+{
+    t = std::clamp( t, 0.0f, 1.0f );
+    switch( curve ) {
+        case cata_tiles::move_anim_curve::smooth:
+        case cata_tiles::move_anim_curve::parabola:
+            // smoothstep: ease in and out.
+            return t * t * ( 3.0f - 2.0f * t );
+        case cata_tiles::move_anim_curve::leap: {
+            // easeInBack: a subtle backward anticipation, a long hang near the
+            // origin, then a quick rush to the destination. A small overshoot
+            // coefficient keeps the back-step slight (~1% of a tile) and elegant.
+            constexpr float s = 0.6f;
+            return t * t * ( ( s + 1.0f ) * t - s );
+        }
+    }
+    return t;
+}
+
+// Vertical hop fraction (0 = on the ground, 1 = peak height) for the configured
+// curve. Smooth has no hop.
+static float move_anim_hop( cata_tiles::move_anim_curve curve, float t )
+{
+    t = std::clamp( t, 0.0f, 1.0f );
+    switch( curve ) {
+        case cata_tiles::move_anim_curve::smooth:
+            return 0.0f;
+        case cata_tiles::move_anim_curve::parabola:
+            // Symmetric arc, peaking mid-glide.
+            return 4.0f * t * ( 1.0f - t );
+        case cata_tiles::move_anim_curve::leap: {
+            // Physical jump: a fast launch that eases into the apex, a long hang
+            // at the top, then a short gravity-accelerated fall that lands hard.
+            constexpr float rise_end = 0.22f;
+            constexpr float fall_start = 0.78f;
+            if( t < rise_end ) {
+                const float s = t / rise_end;
+                // ease-out: quick launch, velocity settling to zero at the apex.
+                return s * ( 2.0f - s );
+            } else if( t < fall_start ) {
+                return 1.0f;
+            } else {
+                const float s = ( t - fall_start ) / ( 1.0f - fall_start );
+                // gravity: hangs a moment, then accelerates down for a snappy landing.
+                return 1.0f - s * s;
+            }
+        }
+    }
+    return 0.0f;
+}
+
+// "Got hit" bounce height fraction (0 = on the ground, 1 = peak) over 0..1
+// progress: a quick pop up that eases into the apex, then a gravity-accelerated
+// fall that lands hard. Same design language as the leap move curve.
+static float hit_anim_bounce( float t )
+{
+    t = std::clamp( t, 0.0f, 1.0f );
+    constexpr float rise_end = 0.35f;
+    if( t < rise_end ) {
+        const float s = t / rise_end;
+        // ease-out: fast launch settling to zero velocity at the apex.
+        return s * ( 2.0f - s );
+    } else {
+        const float s = ( t - rise_end ) / ( 1.0f - rise_end );
+        // gravity: accelerates downward for a snappy landing.
+        return 1.0f - s * s;
+    }
+}
+
+// Displacement fraction (0 = at rest, 1 = peak offset) for a "lunge out and back"
+// motion over 0..1 progress, shared by the hit knockback and the attack lunge: a
+// fast push out to the peak near the start, then an ease back to rest. Peaks at
+// ~30% progress so the recoil reads as a sharp jab.
+static float lunge_out_and_back( float t )
+{
+    t = std::clamp( t, 0.0f, 1.0f );
+    constexpr float out_end = 0.3f;
+    if( t < out_end ) {
+        const float s = t / out_end;
+        // ease-out push to the peak.
+        return s * ( 2.0f - s );
+    } else {
+        const float s = ( t - out_end ) / ( 1.0f - out_end );
+        // smoothstep ease back to rest.
+        return 1.0f - s * s * ( 3.0f - 2.0f * s );
+    }
+}
+
+void cata_tiles::start_creature_move_anim( const tripoint_abs_ms &from_abs,
+        const tripoint_abs_ms &to_abs, bool is_player )
+{
+    if( !get_option<bool>( "CREATURE_MOVE_ANIM" ) ) {
+        return;
+    }
+    // The avatar's glide is additionally gated on the separate player option.
+    if( is_player && !get_option<bool>( "PLAYER_MOVE_ANIM" ) ) {
+        return;
+    }
+    const tripoint_rel_ms d = from_abs - to_abs;
+    // A no-op "move" to the same tile happens when game::update_map re-sets the
+    // player's position after a real step (to re-express it post map-shift). Must
+    // NOT erase the glide the real move just registered, or the player never
+    // animates. Leave any in-flight animation untouched.
+    if( d.x() == 0 && d.y() == 0 && d.z() == 0 ) {
+        return;
+    }
+    // Snap z-changes and teleports (jumps further than one tile): drop any stale
+    // animation at the destination so the sprite appears instantly.
+    if( d.z() != 0 || std::abs( d.x() ) > 1 || std::abs( d.y() ) > 1 ) {
+        m_creature_anims.erase( to_abs );
+        return;
+    }
+
+    const float total_ms = std::max( 1, get_option<int>( "CREATURE_MOVE_ANIM_TIME" ) );
+
+    creature_move_anim anim;
+    anim.delta_tiles = point( d.x(), d.y() );
+    anim.progress = 0.0f;
+    anim.per_ms = 1.0f / total_ms;
+    const std::string curve_opt = get_option<std::string>( "CREATURE_MOVE_ANIM_CURVE" );
+    if( curve_opt == "parabola" ) {
+        anim.curve = move_anim_curve::parabola;
+    } else if( curve_opt == "leap" ) {
+        anim.curve = move_anim_curve::leap;
+    } else {
+        anim.curve = move_anim_curve::smooth;
+    }
+    // New animation overwrites any prior one for this creature and plays from 0.
+    m_creature_anims[to_abs] = anim;
+}
+
+void cata_tiles::advance_creature_move_anims()
+{
+    if( m_creature_anims.empty() && m_creature_hit_anims.empty() &&
+        m_creature_attack_anims.empty() ) {
+        m_creature_anim_last_ms.reset();
+        return;
+    }
+    const int64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now().time_since_epoch() ).count();
+    if( !m_creature_anim_last_ms ) {
+        m_creature_anim_last_ms = now_ms;
+        return;
+    }
+    const int64_t dt_raw = now_ms - *m_creature_anim_last_ms;
+    m_creature_anim_last_ms = now_ms;
+    if( dt_raw <= 0 ) {
+        return;
+    }
+    // Clamp the step. Between registering an animation (progress 0) and the next
+    // draw that actually shows it, an unbounded amount of wall-clock can elapse:
+    // the rest of the turn is processed (monsters act, the map may shift and hit
+    // disk) before control returns to the idle redraw loop. Advancing by that raw
+    // gap would jump a freshly-started glide straight to its end, so the player
+    // sees only the tail of the motion or nothing at all — the "doesn't trigger
+    // reliably" symptom. Capping each step to ~one frame at the floor framerate
+    // (15 FPS -> ~66ms) makes the glide start from near its beginning regardless
+    // of how long the turn took, at the cost of the animation running slightly
+    // longer in real time after a heavy turn (imperceptible, and self-corrects).
+    constexpr int64_t max_step_ms = 1000 / 15;
+    const int64_t dt = std::min( dt_raw, max_step_ms );
+    for( auto it = m_creature_anims.begin(); it != m_creature_anims.end(); ) {
+        it->second.progress += it->second.per_ms * static_cast<float>( dt );
+        if( it->second.progress >= 1.0f ) {
+            it = m_creature_anims.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    for( auto it = m_creature_hit_anims.begin(); it != m_creature_hit_anims.end(); ) {
+        it->second.progress += it->second.per_ms * static_cast<float>( dt );
+        if( it->second.progress >= 1.0f ) {
+            it = m_creature_hit_anims.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    for( auto it = m_creature_attack_anims.begin(); it != m_creature_attack_anims.end(); ) {
+        it->second.progress += it->second.per_ms * static_cast<float>( dt );
+        if( it->second.progress >= 1.0f ) {
+            it = m_creature_attack_anims.erase( it );
+        } else {
+            ++it;
+        }
+    }
+}
+
+void cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
+        const point &dir_tiles, bool is_player )
+{
+    if( !get_option<bool>( "CREATURE_HIT_ANIM" ) ) {
+        return;
+    }
+    if( is_player && !get_option<bool>( "PLAYER_HIT_ANIM" ) ) {
+        return;
+    }
+    const float total_ms = std::max( 1, get_option<int>( "CREATURE_HIT_ANIM_TIME" ) );
+    creature_hit_anim anim;
+    anim.progress = 0.0f;
+    anim.per_ms = 1.0f / total_ms;
+    // Scale reaction magnitude by damage: 0% -> 0.1 tile, 100% -> 0.5 tile.
+    const float frac = std::clamp( damage_fraction, 0.0f, 1.0f );
+    anim.magnitude_tiles = 0.1f + 0.4f * frac;
+    // Use horizontal knockback only when the option asks for it AND we have a
+    // direction; otherwise fall back to the vertical bounce.
+    const bool want_knockback = get_option<std::string>( "CREATURE_HIT_ANIM_CURVE" ) == "knockback";
+    if( want_knockback && ( dir_tiles.x != 0 || dir_tiles.y != 0 ) ) {
+        anim.dir_tiles = dir_tiles;
+    } else {
+        anim.dir_tiles = point::zero;
+    }
+    // Restart from the top if the creature is hit again mid-reaction.
+    m_creature_hit_anims[pos_abs] = anim;
+}
+
+void cata_tiles::start_creature_attack_anim( const tripoint_abs_ms &pos_abs,
+        const point &dir_tiles, bool is_player )
+{
+    if( !get_option<bool>( "CREATURE_ATTACK_ANIM" ) ) {
+        return;
+    }
+    if( is_player && !get_option<bool>( "PLAYER_ATTACK_ANIM" ) ) {
+        return;
+    }
+    if( dir_tiles.x == 0 && dir_tiles.y == 0 ) {
+        return;
+    }
+    const float total_ms = std::max( 1, get_option<int>( "CREATURE_ATTACK_ANIM_TIME" ) );
+    creature_attack_anim anim;
+    anim.progress = 0.0f;
+    anim.per_ms = 1.0f / total_ms;
+    anim.dist_tiles = 0.5f;
+    anim.dir_tiles = dir_tiles;
+    m_creature_attack_anims[pos_abs] = anim;
+}
+
 point cata_tiles::player_to_screen( const point_bub_ms &pos ) const
 {
     const point colrow = player_to_tile( pos );
     if( is_isometric() ) {
         // To ensure the first fully drawn basic tile (col or row = 1, according
         // to the definition in get_window_full_base_tile_range) starts at 0,
-        return op + point{
+        return m_entity_draw_offset + op + point{
             // left = ( col - 1 ) * ( tw / 2.0 ) =>
             divide_round_down( ( colrow.x - 1 ) * tile_width, 2 ),
             // top = ( row - 1 ) * ( tw / 4.0 ) - th + tw / 2.0 =>
@@ -1732,7 +2001,7 @@ point cata_tiles::player_to_screen( const point_bub_ms &pos ) const
             divide_round_down( ( colrow.y + 1 ) * tile_width, 4 ) - tile_height,
         };
     } else {
-        return op + point{ colrow.x * tile_width, colrow.y * tile_height };
+        return m_entity_draw_offset + op + point{ colrow.x * tile_width, colrow.y * tile_height };
     }
 }
 
@@ -3855,6 +4124,84 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
         return false;
     }
 
+    // Apply creature animation offsets (move glide, got-hit reaction, attack lunge)
+    // to this sprite. Guarded so terrain and everything drawn afterward keep a zero
+    // offset. All kinds defer to the post-z-level overlay pass so the offset sprite
+    // sits on top of terrain instead of being overdrawn by rows painted later.
+    restore_on_out_of_scope restore_entity_offset( m_entity_draw_offset );
+    if( !m_creature_anims.empty() || !m_creature_hit_anims.empty() ||
+        !m_creature_attack_anims.empty() ) {
+        const tripoint_abs_ms abs = here.get_abs( p );
+        const auto move_it = m_creature_anims.find( abs );
+        const auto hit_it = m_creature_hit_anims.find( abs );
+        const auto atk_it = m_creature_attack_anims.find( abs );
+        const bool has_move = move_it != m_creature_anims.end();
+        const bool has_hit = hit_it != m_creature_hit_anims.end();
+        const bool has_atk = atk_it != m_creature_attack_anims.end();
+        if( has_move || has_hit || has_atk ) {
+            // Keep the idle redraw heartbeat alive while any animation is active.
+            has_animated_tiles_ = true;
+            // Pixel vector for moving one tile in direction d, in this view's basis
+            // (handles isometric and zoom exactly).
+            const point screen_here = player_to_screen( p.xy() );
+            const auto tile_dir_to_px = [&]( const point & d ) -> point {
+                const point screen_there = player_to_screen( p.xy() + point_rel_ms( d.x, d.y ) );
+                return screen_there - screen_here;
+            };
+            point off( 0, 0 );
+            if( has_move ) {
+                const creature_move_anim &anim = move_it->second;
+                // Remaining fraction of the trip back to the old tile.
+                const float t = move_anim_eased( anim.curve, anim.progress );
+                const float back = 1.0f - t;
+                const point raw_delta = tile_dir_to_px( anim.delta_tiles );
+                off.x += static_cast<int>( raw_delta.x * back );
+                off.y += static_cast<int>( raw_delta.y * back );
+                // Half-tile vertical hop (curve-dependent shape; zero for smooth).
+                const float h = move_anim_hop( anim.curve, anim.progress );
+                if( h != 0.0f ) {
+                    off.y -= static_cast<int>( h * ( tile_height * 0.5f ) );
+                }
+            }
+            if( has_hit ) {
+                const creature_hit_anim &anim = hit_it->second;
+                if( anim.dir_tiles.x != 0 || anim.dir_tiles.y != 0 ) {
+                    // Horizontal knockback: pushed away from the attacker and back.
+                    const float k = lunge_out_and_back( anim.progress ) * anim.magnitude_tiles;
+                    const point dir_px = tile_dir_to_px( anim.dir_tiles );
+                    off.x += static_cast<int>( dir_px.x * k );
+                    off.y += static_cast<int>( dir_px.y * k );
+                } else {
+                    // Vertical pop-and-fall, on top of any glide motion.
+                    const float b = hit_anim_bounce( anim.progress );
+                    off.y -= static_cast<int>( b * ( tile_height * anim.magnitude_tiles ) );
+                }
+            }
+            if( has_atk ) {
+                // Lunge toward the struck target and back.
+                const creature_attack_anim &anim = atk_it->second;
+                const float l = lunge_out_and_back( anim.progress ) * anim.dist_tiles;
+                const point dir_px = tile_dir_to_px( anim.dir_tiles );
+                off.x += static_cast<int>( dir_px.x * l );
+                off.y += static_cast<int>( dir_px.y * l );
+            }
+            // Defer to the post-row overlay pass ONLY when the sprite is pushed DOWN
+            // (off.y > 0), i.e. it visually intrudes into the tile row to the south.
+            // That southern row is painted later, so it would overdraw the intruding
+            // part of this sprite — the "moving up gets covered by the ground"
+            // artifact the deferred pass exists to fix. When the sprite stays put
+            // vertically or moves up/north (off.y <= 0, including pure east/west
+            // glides and upward hops), it only intrudes into already-painted northern
+            // rows, so the normal in-place draw is correct and keeps natural painter
+            // occlusion: tall terrain and creatures south of the mover still cover it.
+            if( m_collecting_glide_critters && off.y > 0 ) {
+                m_deferred_glide_critters.push_back( { p, ll, height_3d, invisible } );
+                return false;
+            }
+            m_entity_draw_offset = off;
+        }
+    }
+
     bool result;
     bool is_player;
     bool sees_player;
@@ -4427,13 +4774,22 @@ void cata_tiles::init_draw_bullets( const std::vector<tripoint_bub_ms> &ps,
     bul_id.insert( bul_id.end(), names.begin(), names.end() );
     bul_rotation.insert( bul_rotation.end(), rotations.begin(), rotations.end() );
 }
-void cata_tiles::init_draw_hit( const Creature &critter )
+void cata_tiles::init_draw_hit( const Creature &critter, float damage_fraction,
+                                const point &dir_tiles, bool dead )
 {
     hit_animation hit;
     hit.timestamp = std::chrono::steady_clock::now();
     hit.creature_ptr = g->shared_from( critter );
     do_draw_hit = true;
     hit_animations.push_front( hit );
+    // Optional "got hit" reaction, sharing the move-animation machinery. Skip it
+    // for a creature that just died: it gets a death animation instead, and a
+    // lingering bounce keyed to this now-empty tile would be wrongly replayed if
+    // another creature (e.g. the player) steps onto the tile within its lifetime.
+    if( !dead ) {
+        start_creature_hit_anim( critter.pos_abs(), damage_fraction, dir_tiles,
+                                 critter.is_avatar() );
+    }
 }
 
 void cata_tiles::init_draw_line( const tripoint_bub_ms &p, std::vector<tripoint_bub_ms> trajectory,

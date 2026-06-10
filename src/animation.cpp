@@ -755,7 +755,8 @@ void draw_hit_mon_curses( const tripoint_bub_ms &center, const monster &m, const
 } // namespace
 
 #if defined(TILES)
-void game::draw_hit_mon( const tripoint_bub_ms &p, const monster &m, const bool dead )
+void game::draw_hit_mon( const tripoint_bub_ms &p, const monster &m, const bool dead, const int dam,
+                         const Creature *source )
 {
     if( test_mode ) {
         // avoid segfault from null tilecontext in tests
@@ -767,12 +768,23 @@ void game::draw_hit_mon( const tripoint_bub_ms &p, const monster &m, const bool 
         return;
     }
 
-    // Use creature reference to resolve sprite position at draw time
-    tilecontext->init_draw_hit( m );
+    // Use creature reference to resolve sprite position at draw time. A dam of
+    // -1 means the caller didn't supply a damage amount, so use a full reaction.
+    const int max_hp = m.get_hp_max();
+    const float frac = ( dam >= 0 && max_hp > 0 )
+                       ? static_cast<float>( dam ) / max_hp : 1.0f;
+    // Knockback direction: from the attacker toward the victim (victim - source).
+    point dir;
+    if( source ) {
+        const tripoint_rel_ms d = m.pos_abs() - source->pos_abs();
+        dir = point( std::clamp( d.x(), -1, 1 ), std::clamp( d.y(), -1, 1 ) );
+    }
+    tilecontext->init_draw_hit( m, frac, dir, dead );
 }
 
 #else
-void game::draw_hit_mon( const tripoint_bub_ms &p, const monster &m, const bool dead )
+void game::draw_hit_mon( const tripoint_bub_ms &p, const monster &m, const bool dead, const int,
+                         const Creature * )
 {
     draw_hit_mon_curses( p, m, u, dead );
 }
@@ -789,7 +801,8 @@ void draw_hit_player_curses( const game &/* g */, const Character &p, const int 
 } //namespace
 
 #if defined(TILES)
-void game::draw_hit_player( const Character &p, const int dam ) const
+void game::draw_hit_player( const Character &p, const int dam, const float damage_fraction,
+                            const Creature *source ) const
 {
     if( test_mode ) {
     // avoid segfault from null tilecontext in tests
@@ -800,15 +813,37 @@ if( !use_tiles ) {
     draw_hit_player_curses( *this, p, dam );
         return;
     }
+    // Knockback direction: from the attacker toward the victim (victim - source).
+    point dir;
+    if( source ) {
+        const tripoint_rel_ms d = p.pos_abs() - source->pos_abs();
+        dir = point( std::clamp( d.x(), -1, 1 ), std::clamp( d.y(), -1, 1 ) );
+    }
     // Use creature reference to resolve sprite position at draw time
-    tilecontext->init_draw_hit( p );
+    tilecontext->init_draw_hit( p, damage_fraction, dir, false );
     // this creates a blocking delay in user inputs, to give the player time to mentally register the hit
     bullet_animation().progress();
 }
 #else
-void game::draw_hit_player( const Character &p, const int dam ) const
+void game::draw_hit_player( const Character &p, const int dam, const float, const Creature * ) const
 {
     draw_hit_player_curses( *this, p, dam );
+}
+#endif
+
+#if defined(TILES)
+void game::draw_creature_attack( const Creature &attacker, const Creature &target )
+{
+    if( test_mode || !use_tiles || !tilecontext ) {
+        return;
+    }
+    const tripoint_rel_ms d = target.pos_abs() - attacker.pos_abs();
+    const point dir( std::clamp( d.x(), -1, 1 ), std::clamp( d.y(), -1, 1 ) );
+    tilecontext->start_creature_attack_anim( attacker.pos_abs(), dir, attacker.is_avatar() );
+}
+#else
+void game::draw_creature_attack( const Creature &, const Creature & )
+{
 }
 #endif
 

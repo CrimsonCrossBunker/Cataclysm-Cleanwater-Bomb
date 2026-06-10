@@ -74,6 +74,11 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 
+#if defined(TILES)
+#include "sdltiles.h"
+#include "cata_tiles.h"
+#endif
+
 struct mutation_branch;
 
 static const ammo_effect_str_id ammo_effect_APPLY_SAP( "APPLY_SAP" );
@@ -319,7 +324,18 @@ void Creature::set_pos_abs_only( const tripoint_abs_ms &loc )
     location = loc;
 }
 
-void Creature::on_move( const tripoint_abs_ms & ) {}
+void Creature::on_move( const tripoint_abs_ms &old_pos )
+{
+#if defined(TILES)
+    // Register a sprite glide from the old tile to the new one. Cheap and a no-op
+    // when the option is off; non-planar/teleport moves are filtered inside.
+    if( tilecontext ) {
+        tilecontext->start_creature_move_anim( old_pos, pos_abs(), is_avatar() );
+    }
+#else
+    static_cast<void>( old_pos );
+#endif
+}
 
 std::vector<std::string> Creature::get_grammatical_genders() const
 {

@@ -615,6 +615,8 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
     melee::melee_stats.attack_count += 1;
     int hit_spread = t.deal_melee_attack( this, hit_roll() );
+    // Optional visual lunge of the attacker toward the target (tiles build only).
+    g->draw_creature_attack( *this, t );
     if( !t.is_avatar() ) {
         // TODO: Per-NPC tracking? Right now monster hit by either npc or player will draw aggro...
         t.add_effect( effect_hit_by_player, 10_minutes ); // Flag as attacked by us for AI
