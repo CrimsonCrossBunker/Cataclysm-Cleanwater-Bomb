@@ -253,6 +253,12 @@ class enchantment
         std::map<skill_id, dbl_or_var> skill_values_add; // NOLINT(cata-serialize)
         std::map<skill_id, dbl_or_var> skill_values_multiply; // NOLINT(cata-serialize)
 
+        // mod-defined string-keyed values. Not interpreted by the engine; read from JSON
+        // math via enchant_val('key'). Lets third-party content add to the same key and
+        // have the engine sum every source automatically (e.g. a custom "qi_max").
+        std::map<std::string, dbl_or_var> custom_values_add; // NOLINT(cata-serialize)
+        std::map<std::string, dbl_or_var> custom_values_multiply; // NOLINT(cata-serialize)
+
         std::map<bodypart_str_id, dbl_or_var> encumbrance_values_add; // NOLINT(cata-serialize)
         std::map<bodypart_str_id, dbl_or_var> encumbrance_values_multiply; // NOLINT(cata-serialize)
 
@@ -310,6 +316,8 @@ class enchant_cache : public enchantment
 
         double modify_value( enchant_vals::mod mod_val, double value ) const;
         double modify_value( const skill_id &mod_val, double value ) const;
+        // applies a mod-defined string-keyed value (add then multiply) to a base value
+        double modify_value( const std::string &mod_val, double value ) const;
         units::energy modify_value( enchant_vals::mod mod_val, units::energy value ) const;
         units::mass modify_value( enchant_vals::mod mod_val, units::mass value ) const;
         units::volume modify_value( enchant_vals::mod mod_val, units::volume value ) const;
@@ -341,11 +349,13 @@ class enchant_cache : public enchantment
         int mult_bonus( enchant_vals::mod value_type, int base_value ) const;
 
         double get_skill_value_add( const skill_id &value ) const;
+        double get_custom_value_add( const std::string &value ) const;
         int get_damage_add( const damage_type_id &value ) const;
         int get_armor_add( const damage_type_id &value ) const;
         int get_encumbrance_add( const bodypart_str_id &value ) const;
         int get_extra_damage_add( const damage_type_id &value ) const;
         double get_skill_value_multiply( const skill_id &value ) const;
+        double get_custom_value_multiply( const std::string &value ) const;
         double get_damage_multiply( const damage_type_id &value ) const;
         double get_armor_multiply( const damage_type_id &value ) const;
         double get_encumbrance_multiply( const bodypart_str_id &value ) const;
@@ -418,6 +428,10 @@ class enchant_cache : public enchantment
         // the exact same as above, though specifically for skills
         std::map<skill_id, double> skill_values_add; // NOLINT(cata-serialize)
         std::map<skill_id, double> skill_values_multiply; // NOLINT(cata-serialize)
+
+        // mod-defined string-keyed values, summed across all sources. See enchantment::custom_values_add.
+        std::map<std::string, double> custom_values_add; // NOLINT(cata-serialize)
+        std::map<std::string, double> custom_values_multiply; // NOLINT(cata-serialize)
 
         std::map<bodypart_str_id, double> encumbrance_values_add; // NOLINT(cata-serialize)
         std::map<bodypart_str_id, double> encumbrance_values_multiply; // NOLINT(cata-serialize)

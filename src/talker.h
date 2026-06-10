@@ -160,6 +160,10 @@ class const_talker
         virtual int get_artifact_resonance() const {
             return 0;
         }
+        // mod-defined string-keyed enchantment value, summed across all sources
+        virtual double get_enchant_custom_value( const std::string & ) const {
+            return 0;
+        }
         virtual int str_cur() const {
             return 0;
         }

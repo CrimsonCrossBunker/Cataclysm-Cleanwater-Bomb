@@ -584,6 +584,9 @@ void enchantment::load( const JsonObject &jo, std::string_view,
     load_add_and_multiply_dbl_or_var<skill_id>( jo, "skills", "value", skill_values_add,
             skill_values_multiply );
 
+    load_add_and_multiply_dbl_or_var<std::string>( jo, "custom", "value", custom_values_add,
+            custom_values_multiply );
+
     load_add_and_multiply_dbl_or_var<bodypart_str_id>( jo, "encumbrance_modifier", "part",
             encumbrance_values_add, encumbrance_values_multiply );
 
@@ -655,6 +658,9 @@ void enchant_cache::load( const JsonObject &jo, std::string_view,
 
     load_add_and_multiply<skill_id>( jo, "skills", "value",
                                      skill_values_add, skill_values_multiply );
+
+    load_add_and_multiply<std::string>( jo, "custom", "value",
+                                        custom_values_add, custom_values_multiply );
 
     load_add_and_multiply<bodypart_str_id>( jo, "encumbrance_modifier", "part",
                                             encumbrance_values_add, encumbrance_values_multiply );
@@ -777,6 +783,9 @@ void enchant_cache::serialize( JsonOut &jsout ) const
     save_add_and_multiply<skill_id>( jsout, "skills", "value", skill_values_add,
                                      skill_values_multiply );
 
+    save_add_and_multiply<std::string>( jsout, "custom", "value", custom_values_add,
+                                        custom_values_multiply );
+
     save_add_and_multiply<bodypart_str_id>( jsout, "encumbrance_modifier", "part",
                                             encumbrance_values_add, encumbrance_values_multiply );
 
@@ -861,6 +870,17 @@ void enchant_cache::force_add( const enchant_cache &rhs )
         // values do not multiply against each other, they add.
         // so +10% and -10% will add to 0%
         skill_values_multiply[pair_values.first] += pair_values.second;
+    }
+
+    for( const std::pair<const std::string, double> &pair_values :
+         rhs.custom_values_add ) {
+        custom_values_add[pair_values.first] += pair_values.second;
+    }
+    for( const std::pair<const std::string, double> &pair_values :
+         rhs.custom_values_multiply ) {
+        // values do not multiply against each other, they add.
+        // so +10% and -10% will add to 0%
+        custom_values_multiply[pair_values.first] += pair_values.second;
     }
 
     for( const std::pair<const damage_type_id, double> &pair_values : rhs.damage_values_add ) {
@@ -981,6 +1001,17 @@ void enchant_cache::force_add_with_dialogue( const enchantment &rhs, const const
         // values do not multiply against each other, they add.
         // so +10% and -10% will add to 0%
         skill_values_multiply[pair_values.first] += pair_values.second.evaluate( d );
+    }
+
+    for( const std::pair<const std::string, dbl_or_var> &pair_values :
+         rhs.custom_values_add ) {
+        custom_values_add[pair_values.first] += pair_values.second.evaluate( d );
+    }
+    for( const std::pair<const std::string, dbl_or_var> &pair_values :
+         rhs.custom_values_multiply ) {
+        // values do not multiply against each other, they add.
+        // so +10% and -10% will add to 0%
+        custom_values_multiply[pair_values.first] += pair_values.second.evaluate( d );
     }
 
     for( const std::pair<const bodypart_str_id, dbl_or_var> &pair_values :
@@ -1161,6 +1192,11 @@ double enchant_cache::get_skill_value_add( const skill_id &value ) const
     return get_value<skill_id>( value, skill_values_add );
 }
 
+double enchant_cache::get_custom_value_add( const std::string &value ) const
+{
+    return get_value<std::string>( value, custom_values_add );
+}
+
 int enchant_cache::get_encumbrance_add( const bodypart_str_id &value ) const
 {
     return get_value<bodypart_str_id>( value,
@@ -1190,6 +1226,11 @@ double enchant_cache::get_value_multiply( const enchant_vals::mod value ) const
 double enchant_cache::get_skill_value_multiply( const skill_id &value ) const
 {
     return get_value<skill_id>( value, skill_values_multiply );
+}
+
+double enchant_cache::get_custom_value_multiply( const std::string &value ) const
+{
+    return get_value<std::string>( value, custom_values_multiply );
 }
 
 double enchant_cache::get_encumbrance_multiply( const bodypart_str_id &value ) const
@@ -1270,6 +1311,13 @@ double enchant_cache::modify_value( const skill_id &mod_val, double value ) cons
 {
     value += get_skill_value_add( mod_val );
     value *= 1.0 + get_skill_value_multiply( mod_val );
+    return value;
+}
+
+double enchant_cache::modify_value( const std::string &mod_val, double value ) const
+{
+    value += get_custom_value_add( mod_val );
+    value *= 1.0 + get_custom_value_multiply( mod_val );
     return value;
 }
 
@@ -1488,6 +1536,8 @@ void enchant_cache::clear()
     values_multiply.clear();
     skill_values_add.clear();
     skill_values_multiply.clear();
+    custom_values_add.clear();
+    custom_values_multiply.clear();
     damage_values_add.clear();
     damage_values_multiply.clear();
     armor_values_add.clear();

@@ -291,6 +291,13 @@ double artifact_resonance_eval( const_dialogue const &d, char scope,
     return d.const_actor( is_beta( scope ) )->get_artifact_resonance();
 }
 
+double enchant_val_eval( const_dialogue const &d, char scope,
+                         std::vector<diag_value> const &params,
+                         diag_kwargs const & /* kwargs */ )
+{
+    return d.const_actor( is_beta( scope ) )->get_enchant_custom_value( params[0].str( d ) );
+}
+
 double damage_level_eval( const_dialogue const &d, char scope,
                           std::vector<diag_value> const & /* params */,
                           diag_kwargs const & /* kwargs */ )
@@ -1952,6 +1959,7 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "effect_duration", { "un", 1, effect_duration_eval, {}, { "bodypart", "unit" } } },
     { "limb_score", { "un", 1, limb_score_eval, {}, { "type" } } },
     { "health", { "un", 0, health_eval, health_ass } },
+    { "enchant_val", { "un", 1, enchant_val_eval } },
     { "encumbrance", { "un", 1, encumbrance_eval } },
     { "energy", { "g", 1, energy_eval } },
     { "event_statistic", { "g", 1, event_statistic_eval } },

@@ -52,6 +52,7 @@ class talker_character_const: virtual public const_talker
 
         // stats, skills, traits, bionics, and magic
         int get_artifact_resonance() const override;
+        double get_enchant_custom_value( const std::string &value ) const override;
         int str_cur() const override;
         int dex_cur() const override;
         int int_cur() const override;
