@@ -478,6 +478,18 @@ void monster::anger_cub_threatened( monster_plan &mon_plan )
         return;
     }
 
+    // This monster protects no cubs of its own, so the per-tmp `is_baby` check
+    // below (which depends only on THIS monster's baby_type, not on tmp) can
+    // never be true: the loop body would touch nothing. Skip the whole O(M)
+    // scan over all_monsters() — a no-op for the vast majority of monsters
+    // (e.g. zombies), which turns a per-monster O(M) into O(M^2) in hordes.
+    // Behaviour is bit-for-bit identical: no anger/morale/aggro writes, no
+    // rate_target calls, no RNG consumed.
+    if( type->baby_type.baby_monster.is_null() &&
+        type->baby_type.baby_monster_group.is_null() ) {
+        return;
+    }
+
     for( monster &tmp : g->all_monsters() ) {
         bool is_baby = false;
         if( !type->baby_type.baby_monster.is_null() ) {
