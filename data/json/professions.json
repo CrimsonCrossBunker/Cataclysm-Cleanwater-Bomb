@@ -484,7 +484,7 @@
     "type": "item_group",
     "subtype": "collection",
     "id": "flintlock_pouch_skyfarer",
-    "entries": [ { "item": "36paper", "charges": 14 } ]
+    "entries": [ { "item": "36navy", "charges": 14 } ]
   },
   {
     "type": "profession_item_substitutions",
@@ -2754,7 +2754,7 @@
         "items": [ "cowboy_hat", "bandana", "duster_leather", "longshirt", "pants", "socks", "boots_western", "gloves_fingerless" ],
         "entries": [
           { "item": "flintlock_pouch", "contents-group": "flintlock_pouch_skyfarer" },
-          { "item": "colt_navy", "ammo-item": "36paper", "charges": 6, "container-item": "western_holster" },
+          { "item": "colt_navy", "ammo-item": "36navy", "charges": 6, "container-item": "western_holster" },
           { "item": "hatchet", "container-item": "axe_ring" }
         ]
       },
