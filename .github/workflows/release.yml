@@ -81,7 +81,7 @@ jobs:
       id: sdl
       uses: libsdl-org/setup-sdl@4ebea449684c989388fe6bcea0460e300d13a5ae # main
       with:
-        version: 3.4.4
+        version: 3.4.10
         cmake-generator: Ninja
         install-linux-dependencies: true
 
@@ -306,6 +306,36 @@ jobs:
         with:
           name: cdda-shaders
           path: data/shaders
+      - name: Verify shader artifacts are complete (SDL3)
+        if: matrix.sdl3 == 1
+        shell: bash
+        run: |
+          # compile-shaders is continue-on-error so a broken shader toolchain
+          # never blocks non-SDL3 releases. But that means a partial/empty
+          # artifact can slip through silently and ship a build that crashes
+          # at runtime with "failed to read shader artifact". Fail the SDL3
+          # build here instead: every .frag/.vert source must have a matching
+          # .spv/.dxil/.msl produced by build_shaders.py.
+          missing=0
+          shopt -s nullglob
+          sources=( data/shaders/*.frag data/shaders/*.vert )
+          if [ ${#sources[@]} -eq 0 ]; then
+            echo "::error::no shader sources found under data/shaders"
+            exit 1
+          fi
+          for src in "${sources[@]}"; do
+            for fmt in spv dxil msl; do
+              if [ ! -s "${src}.${fmt}" ]; then
+                echo "::error::missing or empty shader artifact: ${src}.${fmt}"
+                missing=1
+              fi
+            done
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::shader artifacts incomplete; the compile-shaders job likely failed silently. Refusing to ship a broken SDL3 build."
+            exit 1
+          fi
+          echo "All shader artifacts present for ${#sources[@]} source(s)."
       - name: Mark shader artifacts fresh (SDL3)
         if: matrix.sdl3 == 1
         shell: bash
