@@ -1,0 +1,35 @@
+[
+  {
+    "type": "mutation",
+    "id": "immortal_path_qi_cultivator",
+    "name": "炼气之体",
+    "//en_us_name": "Qi Cultivator's Body",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "player_display": false,
+    "description": "经脉已通，可纳灵气于体内。灵气上限随炼气境层数增长。",
+    "//en_us_description": "Meridians opened; able to hold qi within the body. The qi cap grows with each Qi Refining layer.",
+    "//": "修士的隐藏载体特性。携带 qi_max enchantment：把炼气境层数换算成灵气上限增量。开局由 EOC_immortal_path_grant_meditation 授予。灵气上限 = 100（基础）+ 本特性贡献 + 任何其它 qi_max 来源。/ Hidden carrier trait for cultivators. Its qi_max enchantment converts realm layers into qi-cap bonus. Granted at new-character init. Any other qi_max source stacks on top automatically.",
+    "enchantments": [
+      {
+        "condition": "ALWAYS",
+        "custom": [ { "value": "qi_max", "add": { "math": [ "max( 0, u_spell_level('realm_qi_refining') ) * 20" ] } } ]
+      }
+    ]
+  },
+  {
+    "type": "mutation",
+    "id": "immortal_path_qi_max_demo",
+    "name": "灵脉异禀（示范）",
+    "//en_us_name": "Exceptional Meridians (demo)",
+    "points": 0,
+    "valid": false,
+    "purifiable": false,
+    "player_display": true,
+    "description": "示范用特性：固定增加 50 点灵气上限。它与「炼气之体」挂在同一个 qi_max 通道上——拥有两者时上限增量自动相加，证明 enchantment 通道可被任意来源（含第三方 mod）叠加，而无需改动灵气上限公式。",
+    "//en_us_description": "Demo trait: flat +50 qi cap. It contributes to the same qi_max channel as the cultivator trait; holding both sums the bonuses, proving the channel stacks across arbitrary sources (including third-party mods) without editing the cap formula.",
+    "//": "纯演示/验证用。证明 enchant_val('qi_max') 会把多个来源累加。正式内容里可删除或改造为真实的灵根特性。/ Demonstration only: proves enchant_val('qi_max') sums multiple sources. Remove or repurpose into a real spirit-root trait later.",
+    "enchantments": [ { "condition": "ALWAYS", "custom": [ { "value": "qi_max", "add": 50 } ] } ]
+  }
+]

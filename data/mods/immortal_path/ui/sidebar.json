@@ -1,0 +1,120 @@
+[
+  {
+    "id": "immortal_path_qi_desc",
+    "type": "widget",
+    "style": "text",
+    "label": "境界",
+    "//en_us_label": "Realm",
+    "//": "文字描述：显示当前炼气境层数（未入门 / 一层~十三层）。用 clauses + math 判定。/ Text descriptor: current Qi Refining layer.",
+    "flags": [ "W_DISABLED_WHEN_EMPTY" ],
+    "clauses": [
+      {
+        "id": "uninitiated",
+        "text": "未入门",
+        "//en_us": "Uninitiated",
+        "color": "c_dark_gray",
+        "condition": { "math": [ "u_spell_level('realm_qi_refining') < 0" ] }
+      },
+      {
+        "id": "qi_refining",
+        "text": "炼气 <u_val:qi_refining_layer> 层",
+        "//en_us": "Qi Refining, layer N",
+        "color": "c_light_cyan",
+        "parse_tags": true,
+        "condition": { "math": [ "u_spell_level('realm_qi_refining') >= 0" ] }
+      }
+    ]
+  },
+  {
+    "id": "immortal_path_qi_num",
+    "type": "widget",
+    "style": "number",
+    "label": "灵气",
+    "//en_us_label": "Qi",
+    "//": "灵气数值 widget：当前灵气 / 动态上限。值与上限均走 math 内置接口。/ Qi number widget: current qi over dynamic cap.",
+    "var": "custom",
+    "custom_var": { "value": { "math": [ "u_vitamin('qi')" ] }, "range": [ 0, { "math": [ "immortal_path_qi_max()" ] } ] },
+    "colors": [ "c_light_blue", "c_cyan", "c_light_cyan" ]
+  },
+  {
+    "id": "immortal_path_qi_graph",
+    "type": "widget",
+    "style": "graph",
+    "label": "灵气",
+    "//en_us_label": "Qi",
+    "//": "灵气进度条 widget：按动态上限自动缩放（range 上限调用 jmath immortal_path_qi_max，与 qi_clamp EOC 同源）。/ Qi graph widget: scales to the dynamic cap via the shared jmath function.",
+    "var": "custom",
+    "custom_var": { "value": { "math": [ "u_vitamin('qi')" ] }, "range": [ 0, { "math": [ "immortal_path_qi_max()" ] } ] },
+    "width": 20,
+    "symbols": ".oO0",
+    "fill": "bucket",
+    "colors": [ "c_blue", "c_light_blue", "c_cyan", "c_light_cyan" ]
+  },
+  {
+    "id": "immortal_path_qi_desc_layout",
+    "type": "widget",
+    "style": "layout",
+    "arrange": "columns",
+    "//": "境界文字分区。/ Realm descriptor section.",
+    "widgets": [ "immortal_path_qi_desc" ]
+  },
+  {
+    "id": "immortal_path_qi_num_layout",
+    "type": "widget",
+    "style": "layout",
+    "arrange": "columns",
+    "//": "灵气数值分区。/ Qi number section.",
+    "widgets": [ "immortal_path_qi_num" ]
+  },
+  {
+    "id": "immortal_path_qi_graph_layout",
+    "type": "widget",
+    "style": "layout",
+    "arrange": "columns",
+    "//": "灵气进度条分区。/ Qi graph section.",
+    "widgets": [ "immortal_path_qi_graph" ]
+  },
+  {
+    "copy-from": "custom_sidebar",
+    "type": "widget",
+    "id": "custom_sidebar",
+    "//": "把灵气分区 extend 进各原版侧边栏预设。/ Extend each vanilla sidebar preset with the qi sections.",
+    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_graph_layout" ] }
+  },
+  {
+    "copy-from": "legacy_classic_sidebar",
+    "type": "widget",
+    "id": "legacy_classic_sidebar",
+    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_graph_layout" ] }
+  },
+  {
+    "copy-from": "legacy_compact_sidebar",
+    "type": "widget",
+    "id": "legacy_compact_sidebar",
+    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_graph_layout" ] }
+  },
+  {
+    "copy-from": "legacy_labels_narrow_sidebar",
+    "type": "widget",
+    "id": "legacy_labels_narrow_sidebar",
+    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_graph_layout" ] }
+  },
+  {
+    "copy-from": "legacy_labels_sidebar",
+    "type": "widget",
+    "id": "legacy_labels_sidebar",
+    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_graph_layout" ] }
+  },
+  {
+    "copy-from": "my_labels_sidebar",
+    "type": "widget",
+    "id": "my_labels_sidebar",
+    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_graph_layout" ] }
+  },
+  {
+    "copy-from": "my_labels_sidebar_cleaner",
+    "type": "widget",
+    "id": "my_labels_sidebar_cleaner",
+    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_graph_layout" ] }
+  }
+]

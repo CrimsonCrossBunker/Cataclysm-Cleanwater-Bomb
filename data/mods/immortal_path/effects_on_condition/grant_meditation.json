@@ -1,0 +1,40 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_immortal_path_grant_meditation",
+    "//": "新角色初始化时授予「吐纳打坐」能力 + 炼气之体特性。set_spell_level 对未知 spell（level≥0）会自动习得（见 known_magic::set_spell_level），但不会自动授予 spell_class 特性，故这里显式 u_add_trait。M1 为方便测试，人人开局即会打坐；后续应改为由灵根特性/传承功法授予。/ Grant Meditate + Qi Cultivator trait at new-character init. set_spell_level auto-learns but does NOT grant the spell_class trait, so add it explicitly. For M1 everyone starts able to meditate.",
+    "eoc_type": "EVENT",
+    "required_event": "game_avatar_new",
+    "condition": { "math": [ "u_spell_level('immortal_path_meditate') < 0" ] },
+    "effect": [ { "math": [ "u_spell_level('immortal_path_meditate') = 0" ] }, { "u_add_trait": "immortal_path_qi_cultivator" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_immortal_path_bind_realm_trait",
+    "//": "「法术派系即变异」的即时绑定：监听 character_learns_spell 事件，一旦学会炼气境 spell（realm_qi_refining）就授予其 spell_class 特性 immortal_path_qi_cultivator。引擎在 learn_spell 路径会自动 set_mutation(spell_class)，但 set_spell_level 路径不会——本 EOC 补上这条，使无论以何种方式获得境界 spell，载体特性都到位。事件 EOC 的 spell id 通过上下文变量传入。/ Event-driven binding: when the realm spell is learned by any path, grant its spell_class trait (the engine only auto-grants via learn_spell, not set_spell_level).",
+    "eoc_type": "EVENT",
+    "required_event": "character_learns_spell",
+    "condition": {
+      "and": [
+        { "math": [ "u_spell_level('realm_qi_refining') > -1" ] },
+        { "not": { "u_has_trait": "immortal_path_qi_cultivator" } }
+      ]
+    },
+    "effect": [ { "u_add_trait": "immortal_path_qi_cultivator" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_immortal_path_ensure_realm_trait",
+    "//": "定期检测兜底：RECURRING 周期检查「已会炼气境 spell 但缺炼气之体特性」的角色并补发。覆盖两种漏发场景：(1) 旧存档——角色在本特性机制加入前就已修炼，game_avatar_new 与 learn 事件都已错过；(2) 任何其它途径授予境界 spell 时的遗漏。幂等：有特性即跳过。与即时绑定 EOC 并行，双保险。/ RECURRING safety net: periodically grant the carrier trait to anyone who knows the realm spell but lacks it. Covers old saves (predating this trait) and any missed grant path. Idempotent.",
+    "recurrence": [ "30 seconds", "90 seconds" ],
+    "global": true,
+    "run_for_npcs": false,
+    "condition": {
+      "and": [
+        { "math": [ "u_spell_level('realm_qi_refining') > -1" ] },
+        { "not": { "u_has_trait": "immortal_path_qi_cultivator" } }
+      ]
+    },
+    "effect": [ { "u_add_trait": "immortal_path_qi_cultivator" } ]
+  }
+]

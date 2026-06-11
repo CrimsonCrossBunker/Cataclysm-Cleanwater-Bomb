@@ -1,0 +1,51 @@
+[
+  {
+    "id": "immortal_path_meditate",
+    "type": "SPELL",
+    "name": "吐纳打坐",
+    "//en_us_name": "Meditate (Breathe and Circulate Qi)",
+    "description": "盘膝静坐，吐纳天地灵气，温养经脉。耗费时间，补充灵气，并累积炼气境修为。",
+    "//en_us_description": "Sit in meditation, breathing in the qi of heaven and earth to nourish the meridians. Takes time; restores qi and accumulates Qi Refining cultivation.",
+    "//": "玩家主动发起的修炼动作：可施放 spell，施法即打坐。完成后由 EOC 加灵气、给炼气境 spell 加经验。详见 doc/03_qi_system.md「吐纳打坐」。",
+    "valid_targets": [ "self" ],
+    "effect": "effect_on_condition",
+    "effect_str": "EOC_immortal_path_meditate",
+    "shape": "blast",
+    "energy_source": "NONE",
+    "spell_class": "NONE",
+    "flags": [ "NO_FAIL", "SILENT", "CONCENTRATE" ],
+    "base_casting_time": 3000,
+    "//base_casting_time": "约 30 秒一轮打坐（moves）。〔待平衡〕/ ~30s per meditation round.",
+    "base_energy_cost": 0,
+    "difficulty": 0,
+    "max_level": 0,
+    "min_damage": 0,
+    "max_damage": 0,
+    "min_range": 0,
+    "max_range": 0
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_immortal_path_meditate",
+    "//": "一轮吐纳完成的结算：先给炼气境加经验，再更新层数显示变量、补充灵气并钳制到动态上限。注意：未学会的 spell u_spell_exp 返回 -1，必须用 max(0,...) 兜底，否则首次打坐从 -1 起算导致整条经验链少 1 点、升级要多打一次（即「时好时坏」的 off-by-one 根因）。set_spell_exp 对未知 spell（值≥0）会自动习得。〔数值待平衡〕/ Per-round meditation payoff. NOTE: u_spell_exp returns -1 for an unknown spell, so guard the base with max(0,...) — otherwise the first meditation starts from -1, shifting the whole exp curve down by 1 and requiring an extra round to level (the intermittent off-by-one bug). set_spell_exp auto-learns an unknown spell when the value is >= 0.",
+    "effect": [
+      { "math": [ "u_qi_layer_before = max( 0, u_spell_level('realm_qi_refining') )" ] },
+      { "math": [ "u_spell_exp('realm_qi_refining') = max( 0, u_spell_exp('realm_qi_refining') ) + 25" ] },
+      { "math": [ "u_qi_refining_layer = max( 0, u_spell_level('realm_qi_refining') )" ] },
+      { "math": [ "u_vitamin('qi') = min( u_vitamin('qi') + 30, immortal_path_qi_max() )" ] },
+      {
+        "u_message": "你吐纳一周天，灵气温养经脉。",
+        "//en_us": "You complete a cycle of breathing; qi nourishes your meridians.",
+        "type": "good"
+      },
+      {
+        "if": { "math": [ "u_qi_refining_layer > u_qi_layer_before" ] },
+        "then": {
+          "u_message": "修为精进！炼气已至 <u_val:qi_refining_layer> 层。",
+          "//en_us": "Breakthrough! Qi Refining has reached layer N.",
+          "type": "good"
+        }
+      }
+    ]
+  }
+]

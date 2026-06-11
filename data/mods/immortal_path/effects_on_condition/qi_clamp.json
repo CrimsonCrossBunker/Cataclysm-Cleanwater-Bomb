@@ -1,0 +1,12 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_immortal_path_qi_clamp",
+    "//": "周期把灵气钳制到由境界 spell level 动态计算的上限，防止溢出。上限表达式与 widget 进度条 range 保持一致（M1 仅炼气境）。详见 doc/03_qi_system.md。/ Periodically clamp qi to the dynamic cap computed from realm spell levels. Keep this formula identical to the widget graph range.",
+    "recurrence": [ "30 seconds", "90 seconds" ],
+    "global": true,
+    "run_for_npcs": false,
+    "condition": { "math": [ "u_vitamin('qi') > immortal_path_qi_max()" ] },
+    "effect": [ { "math": [ "u_vitamin('qi') = immortal_path_qi_max()" ] } ]
+  }
+]

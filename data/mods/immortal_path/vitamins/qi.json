@@ -1,0 +1,15 @@
+[
+  {
+    "id": "qi",
+    "type": "vitamin",
+    "vit_type": "counter",
+    "name": "灵气",
+    "//en_us_name": "Qi",
+    "//": "灵气：本 mod 的独立修炼能量池，与 mana/智力解耦。/ Qi: the mod's standalone cultivation energy pool, decoupled from mana/INT.",
+    "min": 0,
+    "max": 1000000,
+    "//max": "静态 max 仅作防溢出兜底（远高于化神满级理论值）；当前生效上限由境界 spell level 经 math 表达式动态计算，并由 qi_clamp EOC 钳制。详见 doc/03_qi_system.md。/ Static max is only an overflow safety net; the effective cap is computed dynamically from realm spell levels and clamped by the qi_clamp EOC.",
+    "rate": "0 m",
+    "//rate": "被动回复设为 0；灵气恢复走主动吐纳打坐（activity + EOC），不做被动代谢。/ No passive regen; qi is restored via active meditation, not metabolism."
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "type": "jmath_function",
+    "id": "immortal_path_qi_max",
+    "num_args": 0,
+    "//": "灵气动态上限的唯一数据源。基础 100 作为基准传给 enchant_val('qi_max', 100)：上限 = (100 + Σadd) × (1 + Σmultiply)，即所有 add 来源先累加到基础 100 上，再被所有 multiply 来源整体放大。这样一条「灵气上限 +20%」的功法会连基础带境界加成一起放大，符合玩家直觉。qi_max 通道见 fork 提交 feat(magic): string-keyed enchantment values。任何特性/法宝/丹药/第三方 mod 挂 custom:[{value:'qi_max',add/multiply:...}] 即自动并入，无需改本函数。/ Single source of truth for the qi cap. The base 100 is passed as the base value so the result is (100 + Σadd) × (1 + Σmultiply): every add source stacks onto the base, then every multiply source scales the whole thing — a '+20% qi cap' buff scales base and realm bonuses alike. Any source contributing to the qi_max channel is summed automatically; no need to edit this function.",
+    "return": "u_enchant_val('qi_max', 100)"
+  },
+  {
+    "type": "jmath_function",
+    "id": "immortal_path_realm_exp_for_level",
+    "num_args": 1,
+    "//": "境界 spell 的「等级→所需总经验」公式。线性：每层 100 经验。必须与 immortal_path_realm_get_level 互为反函数。/ Realm spell exp-for-level: linear, 100 exp per layer. Must be the inverse of immortal_path_realm_get_level.",
+    "return": "_0 * 100"
+  },
+  {
+    "type": "jmath_function",
+    "id": "immortal_path_realm_get_level",
+    "num_args": 1,
+    "//": "境界 spell 的「总经验→当前等级」公式，上式的反函数。/ Realm spell get-level: inverse of immortal_path_realm_exp_for_level.",
+    "return": "floor( _0 / 100 )"
+  }
+]
