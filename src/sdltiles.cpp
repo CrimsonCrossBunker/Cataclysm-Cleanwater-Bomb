@@ -78,6 +78,8 @@
 #include "sdl_renderer_recovery.h"
 #include "sdl_wrappers.h"
 #include "sdl_font.h"
+#include "screen_shake.h"
+#include "shockwave.h"
 #include "tileset_loader.h"
 #include "sdl_gamepad.h"
 #if defined(SDL_SOUND)
@@ -980,6 +982,120 @@ SDL_Rect get_android_render_rect( float DisplayBufferWidth, float DisplayBufferH
 
 static void draw_gamepad_radial_menu();
 
+// Blit the finished frame (display_buffer) to the window through a distorted
+// triangle mesh, refracting the rendered scene along the active shockwave ring.
+// Returns false if it could not warp (caller then does a straight RenderCopy).
+// Vertex positions span the render coordinate space (what a full RenderCopy fills),
+// so the mesh covers the whole frame under HiDPI/scaling; the shockwave geometry
+// and UVs stay in display-buffer pixel space, where the ring centres were computed.
+// (shake_dx, shake_dy) translates every vertex by the current screen-shake offset
+// so the warp and the shake compose in a single blit.
+static bool blit_display_buffer_warped( int shake_dx, int shake_dy )
+{
+    const std::vector<shockwave_state> &shockwaves = get_shockwaves();
+    if( shockwaves.empty() || !display_buffer ) {
+        return false;
+    }
+    // Skip if every ring is a no-op (zero strength/thickness).
+    bool any = false;
+    for( const shockwave_state &sw : shockwaves ) {
+        if( sw.active && sw.strength != 0.0f && sw.thickness > 0.0f ) {
+            any = true;
+            break;
+        }
+    }
+    if( !any ) {
+        return false;
+    }
+    // Buffer pixel space: the space player_to_screen() and the shockwave centres
+    // live in, used for the refraction distance math and UV sampling.
+    int bw = 0;
+    int bh = 0;
+    get_display_buffer_dims( &bw, &bh );
+    if( bw <= 0 || bh <= 0 ) {
+        return false;
+    }
+    // Render coordinate space: the region a straight RenderCopy( null, null ) fills.
+    // Vertex positions span this so the mesh covers the whole window regardless of
+    // HiDPI (no logical size) or integer scaling (logical size == buffer dims).
+    int rw = 0;
+    int rh = 0;
+    GetRenderCoordinateSpaceSize( renderer, &rw, &rh );
+    if( rw <= 0 || rh <= 0 ) {
+        return false;
+    }
+
+    // A uniform grid of vertices over the buffer. Resolution is a balance between
+    // smoothness of the refraction and per-frame cost; ~32x24 cells is plenty for
+    // a single ring and trivial to build each frame.
+    constexpr int cols = 32;
+    constexpr int rows = 24;
+    constexpr int vx = cols + 1;
+    constexpr int vy = rows + 1;
+    const int num_vertices = vx * vy;
+
+    std::vector<float> xy( static_cast<size_t>( num_vertices ) * 2 );
+    std::vector<float> uv( static_cast<size_t>( num_vertices ) * 2 );
+    const float fbw = static_cast<float>( bw );
+    const float fbh = static_cast<float>( bh );
+    const float frw = static_cast<float>( rw );
+    const float frh = static_cast<float>( rh );
+    for( int j = 0; j < vy; j++ ) {
+        for( int i = 0; i < vx; i++ ) {
+            const int v = j * vx + i;
+            const float u = static_cast<float>( i ) / static_cast<float>( cols );
+            const float w = static_cast<float>( j ) / static_cast<float>( rows );
+            // Buffer-space sample point: where the refraction distance and UV are
+            // measured (shockwave centres are in this space).
+            const float bpx = fbw * u;
+            const float bpy = fbh * w;
+            // Vertex position is the fixed render-space grid plus the screen-shake
+            // translation; the refraction offsets the UV (where we sample the
+            // rendered scene from), not the vertex. Concurrent rings sum.
+            xy[v * 2 + 0] = frw * u + static_cast<float>( shake_dx );
+            xy[v * 2 + 1] = frh * w + static_cast<float>( shake_dy );
+            float du = 0.0f;
+            float dv = 0.0f;
+            for( const shockwave_state &sw : shockwaves ) {
+                float ddu = 0.0f;
+                float ddv = 0.0f;
+                shockwave_vertex_offset( bpx, bpy, sw, ddu, ddv );
+                du += ddu;
+                dv += ddv;
+            }
+            const float su = std::clamp( ( bpx + du ) / fbw, 0.0f, 1.0f );
+            const float sv = std::clamp( ( bpy + dv ) / fbh, 0.0f, 1.0f );
+            uv[v * 2 + 0] = su;
+            uv[v * 2 + 1] = sv;
+        }
+    }
+
+    // Two triangles per cell. The topology is fixed (cols/rows are constexpr), so
+    // build the index buffer once and reuse it across frames.
+    static const std::vector<int> idx = []() {
+        std::vector<int> out;
+        out.reserve( static_cast<size_t>( cols ) * rows * 6 );
+        for( int j = 0; j < rows; j++ ) {
+            for( int i = 0; i < cols; i++ ) {
+                const int tl = j * vx + i;
+                const int tr = tl + 1;
+                const int bl = tl + vx;
+                const int br = bl + 1;
+                out.push_back( tl );
+                out.push_back( tr );
+                out.push_back( bl );
+                out.push_back( tr );
+                out.push_back( br );
+                out.push_back( bl );
+            }
+        }
+        return out;
+    }();
+
+    return RenderTexturedMesh( renderer, display_buffer, xy.data(), uv.data(),
+                               num_vertices, idx.data(), static_cast<int>( idx.size() ) );
+}
+
 void refresh_display()
 {
     needupdate = false;
@@ -1022,13 +1138,45 @@ void refresh_display()
         }
     }
     ClearScreen();
+    // Sound-driven screen shake: translate the whole frame by a few pixels. Read
+    // once here and applied both to the warp mesh and the straight copy.
+    int shake_dx = 0;
+    int shake_dy = 0;
+    screen_shake_offset_now( shake_dx, shake_dy );
 #if defined(__ANDROID__)
     SDL_Rect dstrect = get_android_render_rect( TERMINAL_WIDTH * fontwidth,
                        TERMINAL_HEIGHT * fontheight );
+    dstrect.x += shake_dx;
+    dstrect.y += shake_dy;
     RenderCopy( renderer, display_buffer, NULL, &dstrect );
 #else
-    RenderCopy( renderer, display_buffer, nullptr, nullptr );
+    // When a shockwave is active, blit the frame through a distorted mesh so the
+    // rendered scene refracts along the ring (the shake offset rides along on the
+    // mesh). Falls back to a straight copy if the warp is unsupported or inactive —
+    // no behaviour change in the common case beyond the shake translation.
+    if( !blit_display_buffer_warped( shake_dx, shake_dy ) ) {
+        if( shake_dx != 0 || shake_dy != 0 ) {
+            // Size the dstrect to the render coordinate space (what a null-dst
+            // RenderCopy fills), not the raw output, so the offset copy fills the
+            // same region as every other frame under HiDPI / integer scaling and
+            // only translates by the shake rather than rescaling the scene.
+            int rw = 0;
+            int rh = 0;
+            GetRenderCoordinateSpaceSize( renderer, &rw, &rh );
+            SDL_Rect dstrect{ shake_dx, shake_dy, rw, rh };
+            RenderCopy( renderer, display_buffer, nullptr, &dstrect );
+        } else {
+            RenderCopy( renderer, display_buffer, nullptr, nullptr );
+        }
+    }
 #endif
+
+    // Consume the shockwave set: it is republished every frame by
+    // draw_explosion_light_frame() (which runs from draw(), ahead of the present
+    // during the blast). Clearing it here means a present that runs WITHOUT a fresh
+    // draw — a UI redraw, a menu present — won't refract the new contents through a
+    // ring whose pixel centre/radius were computed against a stale scroll.
+    clear_shockwaves();
 
 #if defined(__ANDROID__)
     draw_terminal_size_preview();

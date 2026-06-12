@@ -4,11 +4,13 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <list>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -22,7 +24,9 @@
 #include "creature.h"
 #include "creature_tracker.h"
 #include "cursesdef.h"
+#include "debug.h"
 #include "explosion.h"
+#include "explosion_light.h"
 #include "game.h"
 #include "game_constants.h"
 #include "input.h"
@@ -333,13 +337,135 @@ void explosion_handler::draw_explosion( const tripoint_bub_ms &p, const int r, c
 }
 #endif
 
+#if defined(TILES)
+// Modern explosion light overlay (phase one). Computes a per-tile intensity
+// (1 at the epicentre, falling to 0 at the rim) from the blast area, then runs
+// the animation as a smooth 0..1 progress sweep so the light can bloom outward
+// and fade. Rendering is a blended colour cover per tile — no sprites.
+static void draw_explosion_light( const std::map<tripoint_bub_ms, nc_color> &all_area,
+                                  const explosion_light_str_id &light_effect,
+                                  const std::optional<tripoint_bub_ms> &epicenter = std::nullopt )
+{
+    if( all_area.empty() ) {
+        return;
+    }
+
+    // Restrict to the avatar's current z-level and find the epicentre. Prefer the
+    // true blast origin when the caller passed it; fall back to the area centroid
+    // (which drifts off-centre when the blast is clipped by walls on one side).
+    avatar &player_character = get_avatar();
+    const tripoint_rel_ms view_center = relative_view_pos( player_character,
+                                        player_character.pos_bub() );
+
+    std::map<tripoint_bub_ms, float> radial;
+    double sx = 0.0;
+    double sy = 0.0;
+    int n = 0;
+    for( const auto &pr : all_area ) {
+        const tripoint_rel_ms rel = relative_view_pos( player_character, pr.first );
+        if( rel.z() != view_center.z() ) {
+            continue;
+        }
+        radial[pr.first] = 0.0f;
+        sx += pr.first.x();
+        sy += pr.first.y();
+        n++;
+    }
+    if( n == 0 ) {
+        return;
+    }
+    // Use the true origin if it is on the drawn z-level; otherwise the centroid.
+    double cx = sx / n;
+    double cy = sy / n;
+    if( epicenter && epicenter->z() == radial.begin()->first.z() ) {
+        cx = epicenter->x();
+        cy = epicenter->y();
+    }
+
+    // Per-tile radial coordinate (0 at centre, 1 at rim) drives the wave timing in
+    // explosion_light::sample(). We only ever light the flood-filled blast area
+    // (never a bare geometric disc), so the light cannot bleed through walls; the
+    // sample()-side rim taper keeps the outer edge from looking ragged in the open
+    // while walls naturally clip it where the blast was actually blocked.
+    float max_d = 0.0001f;
+    for( auto &pr : radial ) {
+        const double dx = pr.first.x() - cx;
+        const double dy = pr.first.y() - cy;
+        const float d = static_cast<float>( std::sqrt( dx * dx + dy * dy ) );
+        pr.second = d;
+        max_d = std::max( max_d, d );
+    }
+    for( auto &pr : radial ) {
+        pr.second = std::clamp( pr.second / max_d, 0.0f, 1.0f );
+    }
+
+    // A named effect that doesn't resolve is almost always a typo in JSON. We can't
+    // validate it at data-load time (explosion_data is embedded in many types and
+    // explosion lights may load after), so flag it here, once per bad id, then fall
+    // back to the default recipe rather than silently dropping the modder's intent.
+    if( !light_effect.is_empty() && !light_effect.is_valid() ) {
+        static std::set<explosion_light_str_id> warned;
+        if( warned.insert( light_effect ).second ) {
+            debugmsg( "explosion light_effect '%s' is not a defined explosion_light; "
+                      "using default_blast", light_effect.str() );
+        }
+    }
+    const explosion_light_str_id &effect =
+        light_effect.is_empty() ? explosion_lights::default_blast : light_effect;
+    const explosion_light &eff = effect.is_valid() ? *effect : *explosion_lights::default_blast;
+
+    // Total progress span: a rim tile is reached by the clear wave last, at
+    // wave_travel (front travel) + 2*wave_gap (A->B->clear) + fade (its fall),
+    // plus the worst-case spread jitter. Run a small margin past that so the
+    // final fade completes.
+    const float end_progress = eff.wave_travel + 2.0f * eff.wave_gap + eff.fade +
+                               eff.spread_jitter + 0.05f;
+
+    // Asynchronous: register the blast and return immediately. It advances itself
+    // by real elapsed time each frame (cata_tiles::advance_explosion_lights), so
+    // the game keeps running and the player can act right away; the light plays out
+    // in the background and several blasts in one turn overlap. Duration scales
+    // gently with radius so big blasts read as a travelling wave; small ones stay
+    // snappy. per_ms converts elapsed wall-clock into progress.
+    const float duration_ms = std::clamp( 120.0f + max_d * 45.0f, 150.0f, 900.0f );
+    const float per_ms = end_progress / duration_ms;
+
+    // Centre tile (rounded centroid) at the blast's z-level, used as both the light
+    // origin and the shockwave epicentre. The blast is on one z-level.
+    int center_z = 0;
+    if( !radial.empty() ) {
+        center_z = radial.begin()->first.z();
+    }
+    const tripoint_bub_ms center( static_cast<int>( std::lround( cx ) ),
+                                  static_cast<int>( std::lround( cy ) ), center_z );
+
+    tilecontext->init_explosion_light( radial, effect, center, max_d, per_ms, end_progress );
+}
+#endif
+
 void explosion_handler::draw_custom_explosion(
-    const std::map<tripoint_bub_ms, nc_color> &all_area, const std::optional<std::string> &tile_id )
+    const std::map<tripoint_bub_ms, nc_color> &all_area, const std::optional<std::string> &tile_id,
+    const explosion_light_str_id &light_effect, const std::optional<tripoint_bub_ms> &epicenter )
 {
     if( test_mode ) {
         // avoid segfault from null tilecontext in tests
         return;
     }
+
+#if defined(TILES)
+    // Modern light-overlay path: a blended colour cover that blooms outward then
+    // fades, instead of the legacy expanding sprite. Taken whenever tiles are on
+    // and the blast hasn't explicitly opted back into legacy sprites. tile_id
+    // (used by spells/creature hits to name a specific sprite) keeps the legacy
+    // path so those bespoke sprites still show.
+    const bool legacy_opt_out = light_effect.str() == explosion_lights::legacy_sprite_id;
+    if( use_tiles && !tile_id && !legacy_opt_out ) {
+        draw_explosion_light( all_area, light_effect, epicenter );
+        return;
+    }
+#else
+    ( void )epicenter;
+#endif
 
     constexpr explosion_neighbors all_neighbors = N_NORTH | N_SOUTH | N_WEST | N_EAST;
     // We will "shell" the explosion area

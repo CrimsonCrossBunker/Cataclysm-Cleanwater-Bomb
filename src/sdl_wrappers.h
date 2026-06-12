@@ -108,6 +108,13 @@ void throwErrorIf( bool condition, const char *message );
 /**@{*/
 void RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
                  const SDL_Rect *srcrect, const SDL_Rect *dstrect );
+// Draw a white-tinted textured triangle mesh (used for the shockwave warp blit).
+// xy and uv are interleaved float pairs (length num_vertices*2); uv is in
+// normalized texture coordinates (0..1). Returns false on failure or if the
+// backend lacks RenderGeometry.
+bool RenderTexturedMesh( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
+                         const float *xy, const float *uv, int num_vertices,
+                         const int *indices, int num_indices );
 SDL_Texture_Ptr CreateTexture( const SDL_Renderer_Ptr &renderer, Uint32 format, int access,
                                int w, int h );
 SDL_Texture_Ptr CreateTextureFromSurface( const SDL_Renderer_Ptr &renderer,
@@ -323,6 +330,11 @@ bool RenderReadPixels( const SDL_Renderer_Ptr &renderer, const SDL_Rect *rect,
                        Uint32 format, void *pixels, int pitch );
 // SDL3: renamed to SDL_GetCurrentRenderOutputSize.
 void GetRendererOutputSize( const SDL_Renderer_Ptr &renderer, int *w, int *h );
+// Size of the coordinate space a full-target RenderCopy fills: the active logical
+// presentation size if one is set, otherwise the raw output pixels. Use this to
+// size anything that must cover the whole presented frame (shockwave warp mesh,
+// shake-offset dstrect) so it stays correct under HiDPI and integer scaling.
+void GetRenderCoordinateSpaceSize( const SDL_Renderer_Ptr &renderer, int *w, int *h );
 // The texture currently bound as the renderer's target, or NULL for the
 // default window target.
 SDL_Texture *GetRenderTarget( const SDL_Renderer_Ptr &renderer );

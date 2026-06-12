@@ -110,6 +110,7 @@ enum class direction : unsigned int;
 
 #if defined(TILES)
     #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
+    #include "screen_shake.h"
     #include "sdltiles.h"
 #endif
 
@@ -348,12 +349,16 @@ input_context game::get_player_input( std::string &action )
             std::chrono::steady_clock::now();
         do {
 #if defined(TILES)
-            const bool gliding = tilecontext && tilecontext->has_creature_anim();
+            const bool gliding = tilecontext &&
+                                 ( tilecontext->has_creature_anim() ||
+                                   tilecontext->has_explosion_light_anim() ||
+                                   screen_shake_active() );
 #else
             const bool gliding = false;
 #endif
-            // While a creature is gliding, redraw at the configured framerate so
-            // the motion looks smooth instead of stepping at 8 FPS.
+            // While a creature is gliding, an explosion light is playing, or the
+            // screen is shaking, redraw at the configured framerate so the motion
+            // looks smooth instead of stepping at 8 FPS.
             if( gliding ) {
                 const int fps = std::clamp( get_option<int>( "CREATURE_MOVE_ANIM_FPS" ), 15, 144 );
                 ctxt.set_timeout( std::max( 1, 1000 / fps ) );

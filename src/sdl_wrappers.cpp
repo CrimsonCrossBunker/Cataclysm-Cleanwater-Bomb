@@ -7,6 +7,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "cata_assert.h"
 #if SDL_MAJOR_VERSION >= 3
@@ -99,6 +100,41 @@ void RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &textur
 #else
     printErrorIf( SDL_RenderCopy( renderer.get(), texture.get(), srcrect, dstrect ) != 0,
                   "SDL_RenderCopy failed" );
+#endif
+}
+
+bool RenderTexturedMesh( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
+                         const float *xy, const float *uv, int num_vertices,
+                         const int *indices, int num_indices )
+{
+    if( !renderer || !texture || !xy || !uv || num_vertices <= 0 ||
+        !indices || num_indices <= 0 ) {
+        return false;
+    }
+#if SDL_MAJOR_VERSION >= 3
+    // The mesh is always white-tinted; keep a reusable buffer so a per-frame warp
+    // blit doesn't allocate a fresh color array every call.
+    static std::vector<SDL_FColor> colors;
+    const SDL_FColor white{ 1.0f, 1.0f, 1.0f, 1.0f };
+    colors.assign( static_cast<size_t>( num_vertices ), white );
+    return SDL_RenderGeometryRaw(
+               renderer.get(), texture.get(),
+               xy, static_cast<int>( 2 * sizeof( float ) ),
+               colors.data(), static_cast<int>( sizeof( SDL_FColor ) ),
+               uv, static_cast<int>( 2 * sizeof( float ) ),
+               num_vertices,
+               indices, num_indices, static_cast<int>( sizeof( int ) ) );
+#else
+    static std::vector<SDL_Color> colors;
+    const SDL_Color white{ 255, 255, 255, 255 };
+    colors.assign( static_cast<size_t>( num_vertices ), white );
+    return SDL_RenderGeometryRaw(
+               renderer.get(), texture.get(),
+               xy, static_cast<int>( 2 * sizeof( float ) ),
+               colors.data(), static_cast<int>( sizeof( SDL_Color ) ),
+               uv, static_cast<int>( 2 * sizeof( float ) ),
+               num_vertices,
+               indices, num_indices, static_cast<int>( sizeof( int ) ) ) == 0;
 #endif
 }
 
@@ -1166,6 +1202,41 @@ void GetRendererOutputSize( const SDL_Renderer_Ptr &renderer, int *w, int *h )
     printErrorIf( SDL_GetRendererOutputSize( renderer.get(), w, h ) != 0,
                   "SDL_GetRendererOutputSize failed" );
 #endif
+}
+
+void GetRenderCoordinateSpaceSize( const SDL_Renderer_Ptr &renderer, int *w, int *h )
+{
+    if( !renderer || !w || !h ) {
+        return;
+    }
+    // The coordinate space a full-target RenderCopy( ..., nullptr, nullptr ) fills:
+    // the logical-presentation size when one is active, otherwise the raw output
+    // pixels. Anything that wants to cover the whole frame (the shockwave warp
+    // mesh, the shake-offset dstrect) must size itself against this, not against
+    // the display-buffer dims or the output size unconditionally — those diverge
+    // under HiDPI (no logical size set) and under integer scaling (logical size
+    // set to the buffer dims while output is larger).
+#if SDL_MAJOR_VERSION >= 3
+    int lw = 0;
+    int lh = 0;
+    SDL_RendererLogicalPresentation mode = SDL_LOGICAL_PRESENTATION_DISABLED;
+    if( SDL_GetRenderLogicalPresentation( renderer.get(), &lw, &lh, &mode ) &&
+        mode != SDL_LOGICAL_PRESENTATION_DISABLED && lw > 0 && lh > 0 ) {
+        *w = lw;
+        *h = lh;
+        return;
+    }
+#else
+    int lw = 0;
+    int lh = 0;
+    SDL_RenderGetLogicalSize( renderer.get(), &lw, &lh );
+    if( lw > 0 && lh > 0 ) {
+        *w = lw;
+        *h = lh;
+        return;
+    }
+#endif
+    GetRendererOutputSize( renderer, w, h );
 }
 
 SDL_Texture *GetRenderTarget( const SDL_Renderer_Ptr &renderer )

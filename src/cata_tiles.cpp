@@ -39,6 +39,7 @@
 #include "dialogue.h"
 #include "enum_conversions.h"
 #include "enums.h"
+#include "explosion_light.h"
 #include "field.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
@@ -72,10 +73,12 @@
 #include "overmap.h"
 #include "pixel_minimap.h"
 #include "scent_map.h"
+#include "screen_shake.h"
 #include "sdl_renderer_recovery.h"
 #include "sdl_utils.h"
 #include "sdl_wrappers.h"
 #include "sdltiles.h"
+#include "shockwave.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "submap.h"
@@ -517,6 +520,12 @@ void cata_tiles::load_tileset( const std::string &tileset_id, const bool prechec
 void cata_tiles::reinit()
 {
     set_draw_scale( 16 );
+    // A tileset reload / renderer recovery invalidates any in-flight present-time
+    // overlay: the pixel geometry it published was computed against the old tile
+    // metrics and scroll. Drop the async explosion lights and their shockwaves so a
+    // stale ring/light doesn't paint onto the rebuilt scene, and clear any shake.
+    void_explosion_light();
+    clear_screen_shake();
     // Wrap so the clear lands on display_buffer rather than the null idle target.
     display_buffer_draw_scope draw_scope;
     if( !draw_scope.should_draw() ) {
@@ -586,6 +595,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     // Advance creature move glides by real elapsed time before drawing so each
     // sprite's offset reflects the current frame.
     advance_creature_move_anims();
+    // Advance asynchronous explosion light overlays the same way.
+    advance_explosion_lights();
+    // Advance the sound-driven screen shake decay.
+    advance_screen_shake_frame();
 
     {
         //set clipping to prevent drawing over stuff we shouldn't
@@ -1534,6 +1547,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     }
 
     in_animation = do_draw_explosion || do_draw_custom_explosion ||
+                   has_explosion_light_anim() ||
                    do_draw_bullet || do_draw_hit || do_draw_line ||
                    do_draw_cursor || do_draw_highlight || do_draw_weather ||
                    do_draw_sct || do_draw_zones || do_draw_async_anim;
@@ -1545,6 +1559,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         }
         if( do_draw_custom_explosion ) {
             draw_custom_explosion_frame();
+        }
+        if( has_explosion_light_anim() ) {
+            draw_explosion_light_frame( center.z() );
         }
         if( do_draw_bullet ) {
             draw_bullet_frame();
@@ -4853,6 +4870,84 @@ void cata_tiles::init_custom_explosion_layer( const std::map<tripoint_bub_ms, ex
     do_draw_custom_explosion = true;
     custom_explosion_layer = layer;
 }
+void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
+                                       const explosion_light_str_id &effect,
+                                       const tripoint_bub_ms &center, float radius_tiles,
+                                       float per_ms, float end_progress )
+{
+    // Append a new asynchronous blast; existing ones keep playing (concurrent
+    // overlap). It advances itself each frame via advance_explosion_lights().
+    active_explosion_light a;
+    a.radial = intensity;
+    a.effect = effect;
+    a.center = center;
+    a.radius_tiles = radius_tiles;
+    a.progress = 0.0f;
+    a.per_ms = per_ms;
+    a.end_progress = end_progress;
+    m_explosion_lights.push_back( std::move( a ) );
+}
+// Elapsed steady-clock ms since the last tick stored in \p last_ms, capped so a
+// long stall (pause, heavy turn) advances at most one frame's worth instead of
+// jumping the whole effect. Updates \p last_ms and returns 0 on the priming call
+// (when last_ms was empty) or when no positive time has passed. Shared by the
+// wall-clock present effects (explosion lights, screen shake).
+int64_t cata_tiles::capped_frame_dt_ms( std::optional<int64_t> &last_ms )
+{
+    const int64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now().time_since_epoch() ).count();
+    if( !last_ms ) {
+        last_ms = now_ms;
+        return 0;
+    }
+    const int64_t dt_raw = now_ms - *last_ms;
+    last_ms = now_ms;
+    if( dt_raw <= 0 ) {
+        return 0;
+    }
+    constexpr int64_t max_step_ms = 1000 / 15;
+    return std::min( dt_raw, max_step_ms );
+}
+void cata_tiles::advance_explosion_lights()
+{
+    if( m_explosion_lights.empty() ) {
+        m_explosion_light_last_ms.reset();
+        // No blasts: make sure no stale distortion rings linger. The shockwave
+        // list is only rebuilt by draw_explosion_light_frame(), which stops being
+        // called once the list is empty, so clear it here instead.
+        clear_shockwaves();
+        return;
+    }
+    const int64_t dt = capped_frame_dt_ms( m_explosion_light_last_ms );
+    if( dt <= 0 ) {
+        return;
+    }
+    for( auto it = m_explosion_lights.begin(); it != m_explosion_lights.end(); ) {
+        it->progress += it->per_ms * static_cast<float>( dt );
+        if( it->progress >= it->end_progress ) {
+            it = m_explosion_lights.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    // If the last blast just finished, drop its distortion ring now rather than
+    // waiting for a frame draw that will no longer happen.
+    if( m_explosion_lights.empty() ) {
+        clear_shockwaves();
+    }
+}
+void cata_tiles::advance_screen_shake_frame()
+{
+    if( !screen_shake_active() ) {
+        m_screen_shake_last_ms.reset();
+        return;
+    }
+    const int64_t dt = capped_frame_dt_ms( m_screen_shake_last_ms );
+    if( dt <= 0 ) {
+        return;
+    }
+    advance_screen_shake( dt );
+}
 void cata_tiles::init_draw_bullet( const tripoint_bub_ms &p, std::string name, int rotation )
 {
     do_draw_bullet = true;
@@ -4980,6 +5075,14 @@ void cata_tiles::void_custom_explosion()
 {
     do_draw_custom_explosion = false;
     custom_explosion_layer.clear();
+}
+void cata_tiles::void_explosion_light()
+{
+    // Drop every active blast at once (scene reset / renderer recovery). Normal
+    // completion is handled per-blast by advance_explosion_lights().
+    m_explosion_lights.clear();
+    m_explosion_light_last_ms.reset();
+    clear_shockwaves();
 }
 void cata_tiles::void_bullet()
 {
@@ -5217,6 +5320,101 @@ void cata_tiles::draw_custom_explosion_frame()
         draw_from_id_string( explosion_tile_id, p, subtile, rotation, lit_level::LIT,
                              nv_goggles_activated );
     }
+}
+void cata_tiles::draw_explosion_light_frame( int view_z )
+{
+    if( m_explosion_lights.empty() ) {
+        clear_shockwaves();
+        return;
+    }
+
+    // Rebuilt fresh each frame from the live blast list (one ring per blast that
+    // has a shockwave). Published for the present-time warp blit; this runs every
+    // present frame with the current scroll, so player_to_screen + tile size give
+    // exact pixel coordinates.
+    std::vector<shockwave_state> shockwaves;
+    const float tile_px = ( tile_width + tile_height ) * 0.5f;
+
+    SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
+    for( const active_explosion_light &blast : m_explosion_lights ) {
+        // The blast is anchored to the z-level it fired on. If the view has since
+        // moved to another level (stairs, elevator, looking up/down), don't paint
+        // it onto an unrelated floor — it keeps advancing in time and ends normally,
+        // it just isn't drawn here. The 2D player_to_screen mapping carries no z.
+        if( blast.center.z() != view_z ) {
+            continue;
+        }
+        const explosion_light_str_id &eff_id =
+            blast.effect.is_empty() ? explosion_lights::default_blast : blast.effect;
+        if( !eff_id.is_valid() ) {
+            continue;
+        }
+        const explosion_light &eff = *eff_id;
+
+        if( eff.shockwave && eff.shockwave_strength > 0.0f && blast.radius_tiles > 0.0f ) {
+            const point c_scr = player_to_screen( blast.center.xy() );
+            shockwave_state sw;
+            sw.active = true;
+            // Centre on the middle of the epicentre tile.
+            sw.center_x = static_cast<float>( c_scr.x ) + tile_width * 0.5f;
+            sw.center_y = static_cast<float>( c_scr.y ) + tile_height * 0.5f;
+            const float radius_px = blast.radius_tiles * tile_px;
+            // Ring sweeps out at shockwave_speed relative to the light's own front.
+            sw.radius = blast.progress * eff.shockwave_speed * radius_px;
+            sw.thickness = eff.shockwave_thickness * tile_px;
+            // Envelope the strength over the blast's life so the ring eases in and,
+            // crucially, fades out instead of snapping off when the blast ends (a
+            // constant strength followed by a hard cut reads as abrupt). t is the
+            // blast's normalised progress; a quick attack then a smooth (squared)
+            // release to zero.
+            const float t = blast.end_progress > 0.0f
+                            ? std::clamp( blast.progress / blast.end_progress, 0.0f, 1.0f )
+                            : 1.0f;
+            constexpr float attack = 0.12f;
+            constexpr float release = 0.45f;
+            const float rise = std::clamp( t / attack, 0.0f, 1.0f );
+            float fall = std::clamp( ( 1.0f - t ) / release, 0.0f, 1.0f );
+            fall *= fall; // ease the tail so it settles softly to zero
+            const float env = rise * fall;
+            sw.strength = eff.shockwave_strength * tile_px * env;
+            if( sw.strength > 0.0f ) {
+                shockwaves.push_back( sw );
+            }
+        }
+
+        for( const auto &pr : blast.radial ) {
+            // Stable per-tile seed (constant across frames): drives the wave-arrival
+            // spread jitter and colour grain, so the wavefront edge is irregular but
+            // doesn't crawl between frames. Cast to unsigned before multiplying so the
+            // spatial hash wraps as intended rather than overflowing signed int (UB).
+            const uint32_t tile_seed =
+                static_cast<uint32_t>( pr.first.x() ) * 73856093U ^
+                static_cast<uint32_t>( pr.first.y() ) * 19349663U;
+            // Per-frame seed: drives the live flicker. Mix in the quantised progress
+            // so the flicker animates without shimmering between sub-pixels.
+            const uint32_t frame_q = static_cast<uint32_t>( blast.progress * 32.0f );
+            const uint32_t frame_seed = tile_seed ^ ( frame_q * 83492791U );
+
+            const explosion_light_sample s =
+                eff.sample( pr.second, blast.progress, tile_seed, frame_seed );
+            if( s.a == 0 ) {
+                continue;
+            }
+
+            const point scr = player_to_screen( pr.first.xy() );
+            SDL_Rect draw_rect;
+            draw_rect.x = scr.x;
+            draw_rect.y = scr.y;
+            draw_rect.w = tile_width;
+            draw_rect.h = tile_height;
+
+            const SDL_Color col{ s.r, s.g, s.b, s.a };
+            geometry->rect( renderer, draw_rect, col );
+        }
+    }
+    SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
+
+    set_shockwaves( std::move( shockwaves ) );
 }
 void cata_tiles::draw_bullet_frame()
 {
