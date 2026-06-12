@@ -44,7 +44,10 @@
     "//en_us_label": "Qi power",
     "//": "灵气强度数值 widget：显示 qi_power 通道当前值（基础 100、炼气圆满约 196）。它是攻击/破坏类法术威力的绝对评判标准之一——法术伤害取 qi_power/100 作系数,值越高威力越大。仅在已入门（有炼气士特性、qi_power 偏离基础 100）时有意义,故 W_DISABLED_WHEN_EMPTY 配合范围。值走 jmath immortal_path_qi_power,与火弹术伤害同源。/ Qi power number widget: the qi_power channel value (base 100, ~196 at full Qi Refining). One of the absolute power metrics for attack arts; damage uses qi_power/100 as a multiplier. Same jmath source as Fireball damage.",
     "var": "custom",
-    "custom_var": { "value": { "math": [ "immortal_path_qi_power()" ] }, "range": [ 100, { "math": [ "max( 100, immortal_path_qi_power() )" ] } ] },
+    "custom_var": {
+      "value": { "math": [ "immortal_path_qi_power()" ] },
+      "range": [ 100, { "math": [ "max( 100, immortal_path_qi_power() )" ] } ]
+    },
     "colors": [ "c_yellow", "c_light_red", "c_red" ]
   },
   {
@@ -106,42 +109,91 @@
     "type": "widget",
     "id": "custom_sidebar",
     "//": "把灵气分区 extend 进各原版侧边栏预设。/ Extend each vanilla sidebar preset with the qi sections.",
-    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_power_layout", "immortal_path_qi_graph_layout" ] }
+    "extend": {
+      "widgets": [
+        "immortal_path_qi_desc_layout",
+        "immortal_path_qi_num_layout",
+        "immortal_path_qi_power_layout",
+        "immortal_path_qi_graph_layout"
+      ]
+    }
   },
   {
     "copy-from": "legacy_classic_sidebar",
     "type": "widget",
     "id": "legacy_classic_sidebar",
-    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_power_layout", "immortal_path_qi_graph_layout" ] }
+    "extend": {
+      "widgets": [
+        "immortal_path_qi_desc_layout",
+        "immortal_path_qi_num_layout",
+        "immortal_path_qi_power_layout",
+        "immortal_path_qi_graph_layout"
+      ]
+    }
   },
   {
     "copy-from": "legacy_compact_sidebar",
     "type": "widget",
     "id": "legacy_compact_sidebar",
-    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_power_layout", "immortal_path_qi_graph_layout" ] }
+    "extend": {
+      "widgets": [
+        "immortal_path_qi_desc_layout",
+        "immortal_path_qi_num_layout",
+        "immortal_path_qi_power_layout",
+        "immortal_path_qi_graph_layout"
+      ]
+    }
   },
   {
     "copy-from": "legacy_labels_narrow_sidebar",
     "type": "widget",
     "id": "legacy_labels_narrow_sidebar",
-    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_power_layout", "immortal_path_qi_graph_layout" ] }
+    "extend": {
+      "widgets": [
+        "immortal_path_qi_desc_layout",
+        "immortal_path_qi_num_layout",
+        "immortal_path_qi_power_layout",
+        "immortal_path_qi_graph_layout"
+      ]
+    }
   },
   {
     "copy-from": "legacy_labels_sidebar",
     "type": "widget",
     "id": "legacy_labels_sidebar",
-    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_power_layout", "immortal_path_qi_graph_layout" ] }
+    "extend": {
+      "widgets": [
+        "immortal_path_qi_desc_layout",
+        "immortal_path_qi_num_layout",
+        "immortal_path_qi_power_layout",
+        "immortal_path_qi_graph_layout"
+      ]
+    }
   },
   {
     "copy-from": "my_labels_sidebar",
     "type": "widget",
     "id": "my_labels_sidebar",
-    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_power_layout", "immortal_path_qi_graph_layout" ] }
+    "extend": {
+      "widgets": [
+        "immortal_path_qi_desc_layout",
+        "immortal_path_qi_num_layout",
+        "immortal_path_qi_power_layout",
+        "immortal_path_qi_graph_layout"
+      ]
+    }
   },
   {
     "copy-from": "my_labels_sidebar_cleaner",
     "type": "widget",
     "id": "my_labels_sidebar_cleaner",
-    "extend": { "widgets": [ "immortal_path_qi_desc_layout", "immortal_path_qi_num_layout", "immortal_path_qi_power_layout", "immortal_path_qi_graph_layout" ] }
+    "extend": {
+      "widgets": [
+        "immortal_path_qi_desc_layout",
+        "immortal_path_qi_num_layout",
+        "immortal_path_qi_power_layout",
+        "immortal_path_qi_graph_layout"
+      ]
+    }
   }
 ]

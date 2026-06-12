@@ -37,10 +37,7 @@
     "type": "effect_on_condition",
     "id": "EOC_immortal_path_meditate_phase_neutral",
     "//": "中性吐纳的 phase 包装（基础吐纳打坐 / 魔功，无五行偏向）：置阻碍除数 u_qi_pol_hinder = 1（无相克惩罚），再运行共享结算 EOC_immortal_path_meditate。五行吐纳各有自己的 phase 包装覆盖 effect_str；本 neutral 由抽象基底默认指向，故基础吐纳与未单列的变体走此路。/ Neutral breathing wrapper (basic meditation / demonic, no phase bias): set divisor 1 (no conflict penalty) then run the shared settlement EOC. Elemental variants override effect_str to their own phase wrapper; this neutral is the abstract-base default.",
-    "effect": [
-      { "math": [ "u_qi_pol_hinder = 1" ] },
-      { "run_eocs": "EOC_immortal_path_meditate" }
-    ]
+    "effect": [ { "math": [ "u_qi_pol_hinder = 1" ] }, { "run_eocs": "EOC_immortal_path_meditate" } ]
   },
   {
     "type": "effect_on_condition",
@@ -95,7 +92,9 @@
       { "math": [ "u_qi_layer_before = max( 0, u_spell_level('realm_qi_refining') )" ] },
       { "math": [ "u_qi_fatigue_before = u_vitamin('qi_fatigue')" ] },
       { "math": [ "u_qi_pol_hinder = ( u_qi_pol_hinder > 0 ) ? min( u_qi_pol_hinder, 4 ) : 1" ] },
-      { "math": [ "u_qi_exp_gain = round( 33 * immortal_path_fatigue_mult( u_qi_fatigue_before ) / u_qi_pol_hinder )" ] },
+      {
+        "math": [ "u_qi_exp_gain = round( 33 * immortal_path_fatigue_mult( u_qi_fatigue_before ) / u_qi_pol_hinder )" ]
+      },
       { "math": [ "u_spell_exp('realm_qi_refining') = max( 0, u_spell_exp('realm_qi_refining') ) + u_qi_exp_gain" ] },
       { "math": [ "u_vitamin('qi_fatigue') = u_vitamin('qi_fatigue') + 22" ] },
       { "math": [ "u_qi_refining_layer = max( 0, u_spell_level('realm_qi_refining') )" ] },

@@ -27,7 +27,11 @@
     "type": "ITEM",
     "subtypes": [ "BOOK" ],
     "category": "manuals",
-    "name": { "str_sp": "葳蕤经", "//en_us_str": "Sutra of Verdant Flourishing", "//en_us_str_pl": "copies of the Sutra of Verdant Flourishing" },
+    "name": {
+      "str_sp": "葳蕤经",
+      "//en_us_str": "Sutra of Verdant Flourishing",
+      "//en_us_str_pl": "copies of the Sutra of Verdant Flourishing"
+    },
     "//": "木行练气期功法（完整传承，非残卷）。learn_spell 授予养荣导引；学会后由 EOC_immortal_path_bind_art_traits 授予载体特性「草木同春」。练气期上限功法,无更高法术/秘术。/ Wood-phase Qi-Refining technique (complete, not a scroll). Grants the breathing art; the carrier trait follows.",
     "description": "一部完整的木行修炼功法，封皮以青藤缠绕，纸页似有草木清气。所载养荣导引引木行生气入体，使经脉常青、生机不绝。乃练气期之法。",
     "//en_us_description": "A complete Wood-phase cultivation manual, its cover wound with green vine, its pages carrying a faint green freshness. Its breathing method draws the living qi of Wood into the body, keeping the meridians evergreen. A Qi-Refining technique.",
@@ -46,7 +50,11 @@
     "type": "ITEM",
     "subtypes": [ "BOOK" ],
     "category": "manuals",
-    "name": { "str_sp": "炎阳真传", "//en_us_str": "Blazing Sun Transmission", "//en_us_str_pl": "copies of the Blazing Sun Transmission" },
+    "name": {
+      "str_sp": "炎阳真传",
+      "//en_us_str": "Blazing Sun Transmission",
+      "//en_us_str_pl": "copies of the Blazing Sun Transmission"
+    },
     "//": "火行练气期功法。learn_spell 授予炼焰息；学会后授载体特性「阳炎附骨」。/ Fire-phase Qi-Refining technique.",
     "description": "一部火行修炼功法，纸页泛着焦黄，触手微温。所载炼焰息纳火行炎气入丹田，体魄染炎上之力，近战更具威势。乃练气期之法。",
     "//en_us_description": "A Fire-phase manual, its pages scorched amber and warm to the touch. Its breathing method takes the blazing qi of Fire into the dantian, lending the body yang force and harder melee. A Qi-Refining technique.",
@@ -84,7 +92,11 @@
     "type": "ITEM",
     "subtypes": [ "BOOK" ],
     "category": "manuals",
-    "name": { "str_sp": "素锋录", "//en_us_str": "Record of the Bared Edge", "//en_us_str_pl": "copies of the Record of the Bared Edge" },
+    "name": {
+      "str_sp": "素锋录",
+      "//en_us_str": "Record of the Bared Edge",
+      "//en_us_str_pl": "copies of the Record of the Bared Edge"
+    },
     "//": "金行练气期功法。learn_spell 授予淬锋诀；学会后授载体特性「百炼成锋」。/ Metal-phase Qi-Refining technique.",
     "description": "一部金行修炼功法，以薄金片为页，寒光内蕴。所载淬锋诀引金行锐气淬炼筋骨，出手锋锐精准。乃练气期之法。",
     "//en_us_description": "A Metal-phase manual, its pages thin metal leaves with a cold sheen. Its forging method tempers sinew and bone with the sharp qi of Metal. A Qi-Refining technique.",
@@ -103,7 +115,11 @@
     "type": "ITEM",
     "subtypes": [ "BOOK" ],
     "category": "manuals",
-    "name": { "str_sp": "玄渊心法", "//en_us_str": "Abyssal Heart Method", "//en_us_str_pl": "copies of the Abyssal Heart Method" },
+    "name": {
+      "str_sp": "玄渊心法",
+      "//en_us_str": "Abyssal Heart Method",
+      "//en_us_str_pl": "copies of the Abyssal Heart Method"
+    },
     "//": "水行练气期功法。learn_spell 授予纳川息；学会后授载体特性「渊渟」（额外灵气上限）。/ Water-phase Qi-Refining technique.",
     "description": "一部水行修炼功法，纸页清润如得水汽。所载纳川息心静如止水，丹田如渊纳百川，灵气蓄养更深。乃练气期之法。",
     "//en_us_description": "A Water-phase manual, its pages cool and moist. Its breathing method stills the mind like standing water; the dantian holds qi like an abyss. A Qi-Refining technique.",

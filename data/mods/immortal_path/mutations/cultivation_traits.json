@@ -123,10 +123,7 @@
     "//en_us_description": "The body shaped by long Water cultivation; the mind still as standing water, the dantian holding qi like an abyss holds rivers. A higher qi cap, a deeper reserve, and one's Water-phase power flows more supple.",
     "//": "水行功法载体特性。被动：额外 qi_max（与炼气士同通道，自动叠加）+ 水行极化（polarization_water +0.3）。「回灵气快」目前无 enchant 钩子（打坐回灵气是 EOC 固定值），故仅以上限加成表达;后续可在 EOC 内按特性加成。待平衡。/ Water carrier trait. Passive: extra qi_max (same channel, stacks) + water polarization (+0.3). Faster qi recovery has no enchant hook yet.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "custom": [ { "value": "qi_max", "add": 30 }, { "value": "polarization_water", "add": 0.3 } ]
-      }
+      { "condition": "ALWAYS", "custom": [ { "value": "qi_max", "add": 30 }, { "value": "polarization_water", "add": 0.3 } ] }
     ]
   },
   {
