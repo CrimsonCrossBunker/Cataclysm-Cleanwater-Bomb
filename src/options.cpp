@@ -2460,6 +2460,27 @@ void options_manager::add_options_graphics()
 
         get_option( "CREATURE_ATTACK_ANIM_TIME" ).setPrerequisite( "CREATURE_ATTACK_ANIM" );
 
+        add( "SCREEN_SHAKE", page_id, to_translation( "Screen shake on loud sounds" ),
+             to_translation( "If true, loud nearby sounds such as explosions shake the screen." ),
+             true, COPT_CURSES_HIDE
+           );
+
+        get_option( "SCREEN_SHAKE" ).setPrerequisite( "ANIMATIONS" );
+
+        add( "SCREEN_SHAKE_THRESHOLD", page_id, to_translation( "Screen shake threshold" ),
+             to_translation( "Minimum loudness heard at your position (sound volume minus distance) before the screen shakes.  Higher means only louder or closer blasts shake the view." ),
+             0, 200, 30, COPT_CURSES_HIDE
+           );
+
+        get_option( "SCREEN_SHAKE_THRESHOLD" ).setPrerequisite( "SCREEN_SHAKE" );
+
+        add( "SCREEN_SHAKE_INTENSITY", page_id, to_translation( "Screen shake intensity" ),
+             to_translation( "Scales how far the screen shakes, as a percentage.  0 disables the shake while leaving it enabled." ),
+             0, 200, 100, COPT_CURSES_HIDE, "%i%%"
+           );
+
+        get_option( "SCREEN_SHAKE_INTENSITY" ).setPrerequisite( "SCREEN_SHAKE" );
+
         add( "BLINK_SPEED", page_id, to_translation( "Blinking effects speed" ),
              to_translation( "The speed of every blinking effects in ms." ),
              100, 5000, 300

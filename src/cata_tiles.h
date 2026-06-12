@@ -827,6 +827,35 @@ class cata_tiles
         void draw_custom_explosion_frame();
         void void_custom_explosion();
 
+        // Modern explosion light overlay (phase one): a blended colour cover per
+        // tile, driven by a 0..1 progress sweep, replacing the legacy sprites.
+        // Registers (appends) a new asynchronous blast that advances itself each
+        // frame; several may overlap. \p radius_tiles is the blast's max extent in
+        // tiles (used to size the shockwave ring). \p per_ms / \p end_progress
+        // drive the real-time sweep.
+        void init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
+                                   const explosion_light_str_id &effect,
+                                   const tripoint_bub_ms &center, float radius_tiles,
+                                   float per_ms, float end_progress );
+        // Advance all active explosion lights by real elapsed time and drop the
+        // finished ones. Called once at the start of each draw().
+        void advance_explosion_lights();
+        // True while any explosion light overlay is playing. Used by the input loop
+        // to raise its redraw rate so the blast plays smoothly while idle.
+        bool has_explosion_light_anim() const {
+            return !m_explosion_lights.empty();
+        }
+        void draw_explosion_light_frame( int view_z );
+        void void_explosion_light();
+
+        // Advance the sound-driven screen shake by real elapsed time. Called once at
+        // the start of each draw(), alongside the other wall-clock animations.
+        void advance_screen_shake_frame();
+        // Capped elapsed-ms helper shared by the wall-clock present effects above:
+        // returns the steady-clock ms since the tick stored in \p last_ms (which it
+        // updates), clamped to one frame's worth, or 0 on the priming call.
+        static int64_t capped_frame_dt_ms( std::optional<int64_t> &last_ms );
+
         void init_draw_bullet( const tripoint_bub_ms &p, std::string name, int rotation = 0 );
         void init_draw_bullets( const std::vector<tripoint_bub_ms> &ps,
                                 const std::vector<std::string> &names, const std::vector<int> &rotations );
@@ -1173,6 +1202,27 @@ class cata_tiles
 
         std::map<tripoint_bub_ms, explosion_tile> custom_explosion_layer;
         std::map<tripoint_bub_ms, std::string> async_anim_layer;
+
+        // Modern explosion light overlay state.
+        // Active explosion light overlays. Each plays asynchronously: the blast
+        // is registered when it fires and then advances by real elapsed time every
+        // frame (like the creature glides), so the game keeps running and the
+        // player can act immediately. Several can overlap (concurrent blasts in one
+        // turn). progress runs 0..end_progress; finished entries are dropped.
+        struct active_explosion_light {
+            std::map<tripoint_bub_ms, float> radial; // per-tile radial coord (0..1)
+            explosion_light_str_id effect;
+            tripoint_bub_ms center;
+            float radius_tiles = 0.0f;
+            float progress = 0.0f;
+            float per_ms = 0.0f;       // progress increment per millisecond
+            float end_progress = 1.0f; // progress value at which the blast is done
+        };
+        std::vector<active_explosion_light> m_explosion_lights;
+        // steady_clock timestamp (ms) of the last advance, for real-time stepping.
+        std::optional<int64_t> m_explosion_light_last_ms;
+        // Same, for the sound-driven screen shake decay.
+        std::optional<int64_t> m_screen_shake_last_ms;
 
         std::vector<tripoint_bub_ms> bul_pos;
         std::vector<std::string> bul_id;

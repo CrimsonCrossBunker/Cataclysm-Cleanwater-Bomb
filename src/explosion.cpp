@@ -54,6 +54,7 @@
 #include "point.h"
 #include "projectile.h"
 #include "rng.h"
+#include "screen_shake.h"
 #include "shadowcasting.h"
 #include "sounds.h"
 #include "translations.h"
@@ -153,6 +154,7 @@ void explosion_data::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "max_noise", max_noise, 90000000 );
     optional( jo, was_loaded, "fire", fire );
     optional( jo, was_loaded, "shrapnel", shrapnel, shrapnel_reader{} );
+    optional( jo, was_loaded, "light_effect", light_effect, explosion_light_str_id() );
 }
 
 void shrapnel_data::deserialize( const JsonObject &jo )
@@ -192,7 +194,8 @@ float gurney_spherical( const double charge, const double mass )
 
 // (C1001) Compiler Internal Error on Visual Studio 2015 with Update 2
 static void do_blast( map *m, const Creature *source, const tripoint_bub_ms &p, const float power,
-                      const float distance_factor, const bool fire )
+                      const float distance_factor, const bool fire,
+                      const explosion_light_str_id &light_effect = explosion_light_str_id() )
 {
     const float tile_dist = 1.0f;
     const float diag_dist = trigdist ? M_SQRT2 * tile_dist : 1.0f * tile_dist;
@@ -329,7 +332,8 @@ static void do_blast( map *m, const Creature *source, const tripoint_bub_ms &p, 
             explosion_colors[bubble_pos] = col;
         }
 
-        draw_custom_explosion( explosion_colors );
+        draw_custom_explosion( explosion_colors, std::nullopt, light_effect,
+                               bubble_map.get_bub( m->get_abs( p ) ) );
     }
 
     creature_tracker &creatures = get_creature_tracker();
@@ -588,6 +592,15 @@ void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
             sounds::sound( bubble_pos, 3, sounds::sound_t::combat, _( "a loud pop!" ), false, "explosion",
                            "small" );
         }
+
+        // Sound-driven screen shake: feed the loudness as heard at the player (raw
+        // noise attenuated by distance, same shape as the sound system's falloff).
+        // Measure the distance in absolute map coordinates so it stays correct when
+        // the blast is on a map other than the player's reality bubble (bubble_pos
+        // and pos_bub() can be in different bubble frames). The shake itself is
+        // gated/scaled by options inside the helper.
+        const int heard = noise - rl_dist( get_player_character().pos_abs(), m->get_abs( p ) );
+        maybe_trigger_screen_shake_from_sound( heard );
     }
 
     if( ex.distance_factor >= 1.0f ) {
@@ -595,7 +608,7 @@ void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
     } else if( ex.distance_factor > 0.0f && ex.power > 0.0f ) {
         // Power rescaled to mean grams of TNT equivalent, this scales it roughly back to where
         // it was before until we re-do blasting power to be based on TNT-equivalent directly.
-        do_blast( m, source, p, ex.power / 15.0, ex.distance_factor, ex.fire );
+        do_blast( m, source, p, ex.power / 15.0, ex.distance_factor, ex.fire, ex.light_effect );
     }
 
     const shrapnel_data &shr = ex.shrapnel;

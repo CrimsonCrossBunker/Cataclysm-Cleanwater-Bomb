@@ -93,12 +93,14 @@ using emit_id = string_id<emit>;
 
 class enchantment;
 using enchantment_id = string_id<enchantment>;
-
 struct end_screen;
 using end_screen_id = string_id<end_screen>;
 
 class event_statistic;
 using event_statistic_id = string_id<event_statistic>;
+
+struct explosion_light;
+using explosion_light_str_id = string_id<explosion_light>;
 
 class faction_mission;
 using faction_mission_id = string_id<faction_mission>;

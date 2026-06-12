@@ -44,6 +44,7 @@
 #include "emit.h"
 #include "end_screen.h"
 #include "event_statistics.h"
+#include "explosion_light.h"
 #include "faction.h"
 #include "faction_camp.h"
 #include "fault.h"
@@ -287,6 +288,7 @@ void DynamicDataLoader::initialize()
     add( "weather_type", &weather_types::load );
     add( "weather_generator", &weather_generator::load_weather_generator );
     add( "ammo_effect", &ammo_effects::load );
+    add( "explosion_light", &explosion_lights::load );
     add( "emit", &emit::load_emit );
     add( "help", &help::load );
     add( "activity_type", &activity_type::load_all );
@@ -650,6 +652,7 @@ void DynamicDataLoader::unload_data()
     activity_type::reset();
     add_type::reset();
     ammo_effects::reset();
+    explosion_lights::reset();
     ammunition_type::reset();
     anatomy::reset();
     ascii_art::reset();
@@ -971,6 +974,7 @@ void DynamicDataLoader::check_consistency()
             { _( "Field types" ), &field_types::check_consistency },
             { _( "Field type migrations" ), &field_type_migrations::check },
             { _( "Ammo effects" ), &ammo_effects::check_consistency },
+            { _( "Explosion lights" ), &explosion_lights::check_consistency },
             { _( "Emissions" ), &emit::check_consistency },
             { _( "Effect types" ), &effect_type::check_consistency },
             { _( "Effect migration" ), &effect_migration::check },
