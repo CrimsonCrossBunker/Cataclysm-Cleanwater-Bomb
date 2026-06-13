@@ -11,14 +11,14 @@
       {
         "id": "uninitiated",
         "text": "未入门",
-        "//en_us": "Uninitiated",
+        "//en_us_text": "Uninitiated",
         "color": "c_dark_gray",
         "condition": { "math": [ "u_spell_level('realm_qi_refining') < 0" ] }
       },
       {
         "id": "qi_refining",
         "text": "炼气 <u_val:qi_refining_layer> 层",
-        "//en_us": "Qi Refining, layer N",
+        "//en_us_text": "Qi Refining, layer N",
         "color": "c_light_cyan",
         "parse_tags": true,
         "condition": { "math": [ "u_spell_level('realm_qi_refining') >= 0" ] }

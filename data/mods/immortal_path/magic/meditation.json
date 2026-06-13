@@ -114,19 +114,19 @@
         "if": { "math": [ "u_qi_fatigue_before >= 60" ] },
         "then": {
           "u_message": "心神已疲，强行吐纳事倍功半（修为 +<u_val:qi_exp_gain>，炼气 <u_val:qi_refining_layer> 层 <u_val:qi_exp_into_layer>/<u_val:qi_layer_need>）。",
-          "//en_us": "Your mind is weary; forcing more meditation yields little (cultivation +N; Qi Refining layer L, P/Q).",
+          "//en_us_u_message": "Your mind is weary; forcing more meditation yields little (cultivation +N; Qi Refining layer L, P/Q).",
           "type": "bad"
         },
         "else": {
           "if": { "math": [ "u_qi_layer_before >= 10" ] },
           "then": {
             "u_message": "炼气将满，每层所需修为剧增，纯吐纳精进缓慢（修为 +<u_val:qi_exp_gain>，炼气 <u_val:qi_refining_layer> 层 <u_val:qi_exp_into_layer>/<u_val:qi_layer_need>）。",
-            "//en_us": "Qi Refining nears its peak; each layer demands far more cultivation and meditation alone crawls (cultivation +N; layer L, P/Q).",
+            "//en_us_u_message": "Qi Refining nears its peak; each layer demands far more cultivation and meditation alone crawls (cultivation +N; layer L, P/Q).",
             "type": "mixed"
           },
           "else": {
             "u_message": "你吐纳一周天（修为 +<u_val:qi_exp_gain>，炼气 <u_val:qi_refining_layer> 层 <u_val:qi_exp_into_layer>/<u_val:qi_layer_need>），灵气温养经脉。",
-            "//en_us": "You complete a cycle of breathing; cultivation +N (layer L, P/Q), qi nourishes your meridians.",
+            "//en_us_u_message": "You complete a cycle of breathing; cultivation +N (layer L, P/Q), qi nourishes your meridians.",
             "type": "good"
           }
         }
@@ -135,7 +135,7 @@
         "if": { "math": [ "u_qi_full_before > 0" ] },
         "then": {
           "u_message": "丹田灵气已满，盈则溢，吐纳暂无益于蓄气。",
-          "//en_us": "Your dantian is full of qi; brimming over, further breathing adds no qi.",
+          "//en_us_u_message": "Your dantian is full of qi; brimming over, further breathing adds no qi.",
           "type": "neutral"
         }
       },
@@ -143,7 +143,7 @@
         "if": { "math": [ "u_qi_pol_hinder > 1.01" ] },
         "then": {
           "u_message": "相克之力扰乱真气运转，本系修为难以凝练，进境大减。",
-          "//en_us": "Conflicting phase-power disrupts the flow of true qi; same-phase cultivation will not coalesce, and progress is greatly reduced.",
+          "//en_us_u_message": "Conflicting phase-power disrupts the flow of true qi; same-phase cultivation will not coalesce, and progress is greatly reduced.",
           "type": "bad"
         }
       },
@@ -151,7 +151,7 @@
         "if": { "math": [ "u_qi_refining_layer > u_qi_layer_before" ] },
         "then": {
           "u_message": "修为精进！炼气已至 <u_val:qi_refining_layer> 层。",
-          "//en_us": "Breakthrough! Qi Refining has reached layer N.",
+          "//en_us_u_message": "Breakthrough! Qi Refining has reached layer N.",
           "type": "good"
         }
       }
