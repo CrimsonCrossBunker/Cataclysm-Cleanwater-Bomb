@@ -57,7 +57,7 @@ Based on the `cdda/master` branch of [CleverRaven/Cataclysm-DDA](https://github.
 
 ## How to Contribute
 Any developer interested in contributing to this branch is welcome to submit pull requests to this repository to support its development.
-For now, you can refer to [CONTRIBUTING.md](./CONTRIBUTING.md). Please note that we have not yet fully modified this document, so it may not fully align with our project's guidelines.
+For now, you can refer to [CONTRIBUTING.md](./CONTRIBUTING.md). Please note that we have not yet fully updated this document, so it may not fully align with this project's guidelines.
 
 We also welcome feedback and improvement suggestions from all players, particularly on the following areas:
 - Any illogical or counterintuitive mechanics, preferably with verifiable real-world references

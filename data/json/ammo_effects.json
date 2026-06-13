@@ -56,7 +56,7 @@
   {
     "id": "BOUNCE",
     "type": "ammo_effect",
-    "//": "Projectile with this effect will rebound to a nearby target after hitting the oringinal target. Will not choose targets already hit by this projectile. Hardcoded"
+    "//": "Projectile with this effect will rebound to a nearby target after hitting the original target. Will not choose targets already hit by this projectile. Hardcoded"
   },
   {
     "id": "BURST",
@@ -66,12 +66,12 @@
   {
     "id": "SPECIAL_COOKOFF",
     "type": "ammo_effect",
-    "//": "Ammo item explodes when lit on fire with it's ammo_effect. Strength of the explosion do not scale to the amount of ammo. If both COOKOFF and SPECIAL_COOKOFF is used, only SPECIAL_ effect would be used. Hardcoded"
+    "//": "Ammo item explodes when lit on fire with its ammo_effect. Strength of the explosion does not scale to the amount of ammo. If both COOKOFF and SPECIAL_COOKOFF are used, only SPECIAL_ effect would be used. Hardcoded"
   },
   {
     "id": "COOKOFF",
     "type": "ammo_effect",
-    "//": "Ammo item create an explosion when lit on fire. Strength of the explosion scale to the amount of ammo. Hardcoded"
+    "//": "Ammo item creates an explosion when lit on fire. Strength of the explosion scales to the amount of ammo. Hardcoded"
   },
   {
     "id": "BLACKPOWDER",

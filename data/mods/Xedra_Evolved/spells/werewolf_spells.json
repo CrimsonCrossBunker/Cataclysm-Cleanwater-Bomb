@@ -13,7 +13,7 @@
     "id": "xe_werewolf_illuminate_target_spell",
     "type": "SPELL",
     "name": "Moon's Cold Glow",
-    "description": "Surround a single target with a outline of line that follows them as they move, revealing their position at all times.",
+    "description": "Surround a single target with an outline of light that follows them as they move, revealing their position at all times.",
     "message": "Your target is outlined in light.",
     "teachable": false,
     "valid_targets": [ "ally", "hostile" ],
