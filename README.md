@@ -12,8 +12,8 @@
 
 ## 贡献方式
 
-任何有意愿参与分支建设的开发者皆可通过发起pr为本分支的建设贡献力量。
-暂时可以参考[CONTRIBUTING.md](./CONTRIBUTING.md)。请注意，我们还没有对其做出修改，并不完全符合我们的项目。
+任何有意愿参与分支建设的开发者皆可通过向本仓库发起 PR 为本分支的建设贡献力量。
+暂时可以参考 [CONTRIBUTING.md](./CONTRIBUTING.md)。请注意，我们还没有对其做出完整修改，并不完全符合我们的项目。
 
 对于任何玩家，同时也欢迎基于以下方向提交反馈或改动建议：
 
@@ -46,7 +46,7 @@
 ----
 
 # Cataclysm: Cleanwater Bomb
-Cataclysm: Cleanwater Bomb is a apocalyptic, science-fantasy roguelike single-player turn-based survival game.
+Cataclysm: Cleanwater Bomb is an apocalyptic, science-fantasy roguelike single-player turn-based survival game.
 
 In this game, you will face a complex, procedurally generated environment filled with reanimated zombies, relentless and ongoing survival pressures, and terrifying incursions from other worlds. You must struggle to survive in a broken world, scavenging the ruins of a fallen civilization for food and gear. Looking ahead, we plan to introduce exciting new features, such as achieving industrialization and rebuilding your home from the ground up. *(We're recruiting contributors to help turn these plans into reality!)*
 
@@ -56,8 +56,8 @@ Based on the `cdda/master` branch of [CleverRaven/Cataclysm-DDA](https://github.
 **Releases** You can download the current test version here: [Releases](https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/releases)
 
 ## How to Contribute
-Any developer interested in contributing to this branch is welcome to submit pull requests to support its development.
-For now, you can refer to [CONTRIBUTING.md](./CONTRIBUTING.md). Please note that we have not yet modified this document, so it may not fully align with our project's guidelines.
+Any developer interested in contributing to this branch is welcome to submit pull requests to this repository to support its development.
+For now, you can refer to [CONTRIBUTING.md](./CONTRIBUTING.md). Please note that we have not yet fully modified this document, so it may not fully align with our project's guidelines.
 
 We also welcome feedback and improvement suggestions from all players, particularly on the following areas:
 - Any illogical or counterintuitive mechanics, preferably with verifiable real-world references
