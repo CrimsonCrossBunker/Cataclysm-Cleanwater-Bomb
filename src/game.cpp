@@ -691,6 +691,18 @@ void game::setup()
 
     m = map();
 
+    reset_game_state();
+    // back to menu for save loading, new game etc
+}
+
+// Reset all per-game runtime state to a clean slate, so a fresh load can
+// populate it without stale leftovers from a previously played game.
+// Shared by setup() (full reload via main menu) and the in-place reloads
+// (quickload / snapshot restore) which deliberately skip JSON/mod reloading.
+void game::reset_game_state()
+{
+    new_game = true;
+
     next_npc_id = character_id( 1 );
     next_mission_id = 1;
     next_item_uid = 1;
@@ -734,7 +746,56 @@ void game::setup()
     globvars.clear_global_values();
     unique_npcs.clear();
     get_weather().weather_override = WEATHER_NULL;
-    // back to menu for save loading, new game etc
+}
+
+bool game::reload_active_save( const save_t &save_file )
+{
+    // In-place reload: tear down the current game's runtime state and reload
+    // the save WITHOUT bouncing through the main menu (which would re-run the
+    // expensive JSON/mod load). Used by quickload and snapshot restore.
+    // Suppress rendering while state is half-cleared.
+    should_draw = false;
+    on_out_of_scope restore_draw( [this]() {
+        should_draw = true;
+    } );
+
+    set_driving_view_offset( point_rel_ms::zero );
+
+    sfx::fade_audio_channel( sfx::channel::any, 300 );
+    sfx::fade_audio_group( sfx::group::weather, 300 );
+    sfx::fade_audio_group( sfx::group::time_of_day, 300 );
+    sfx::fade_audio_group( sfx::group::context_themes, 300 );
+    sfx::fade_audio_group( sfx::group::low_stamina, 300 );
+
+    zone_manager::get_manager().clear();
+
+    // These are world-level and not reset by reset_game_state(); the full
+    // main-menu reload clears them via teardown, so do it here too.
+    MAPBUFFER.clear();
+    overmap_buffer.clear();
+
+    m = map();
+
+    // Reset all per-game runtime state to a clean slate (sets new_game = true,
+    // resets ID counters, trackers, EOC queues, global variables, etc.).
+    reset_game_state();
+
+    try {
+        if( load( save_file ) ) {
+            // A freshly loaded save is internally consistent again, so a prior
+            // debug-induced "dirty" state no longer applies.
+            save_is_dirty = false;
+            return true;
+        }
+        debugmsg( "In-place reload failed: unable to load save file '%s'", save_file.base_path() );
+    } catch( const std::exception &e ) {
+        debugmsg( "In-place reload failed: %s", e.what() );
+    }
+    // The in-place teardown already cleared the map/overmap and reset runtime
+    // state, so there is nothing playable left in memory. Bail to the main menu
+    // rather than leaving the player stranded in an empty world.
+    uquit = QUIT_NOSAVED;
+    return false;
 }
 
 bool game::has_gametype() const
@@ -2645,6 +2706,8 @@ input_context get_default_mode_input_context()
 #if !defined(RELEASE)
         ctxt.register_action( "quickload" );
 #endif
+        ctxt.register_action( "snapshot_menu" );
+        ctxt.register_action( "quit_to_snapshot" );
         ctxt.register_action( "SUICIDE" );
         ctxt.register_action( "player_data" );
         ctxt.register_action( "map" );
@@ -3334,6 +3397,13 @@ bool game::has_blink_curses()
 
 void game::draw( ui_adaptor &ui )
 {
+    // Skip drawing while an in-place reload (quickload / snapshot restore) is
+    // tearing down and rebuilding game state; drawing then would touch
+    // half-cleared structures.
+    if( !should_draw ) {
+        return;
+    }
+
     map &here = get_map();
 
     if( test_mode ) {

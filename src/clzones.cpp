@@ -108,6 +108,9 @@ void zone_manager::clear()
     added_vzones.clear();
     changed_vzones.clear();
     removed_vzones.clear();
+    // Reset personal zone counter, else it accumulates across in-place reloads
+    // (quickload / snapshot restore) since deserialize() only ever increments it.
+    num_personal_zones = 0;
     // Do not clear types since it is needed for the next games.
     area_cache.clear();
     vzone_cache.clear();

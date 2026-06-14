@@ -48,6 +48,7 @@
 #include "path_info.h"
 #include "popup.h"
 #include "safemode_ui.h"
+#include "save_snapshot.h"
 #include "scenario.h"
 #include "sdlsound.h"
 #include "sounds.h"
@@ -508,6 +509,7 @@ void main_menu::init_strings()
     vWorldSubItems.emplace_back( pgettext( "Main Menu|World", "Copy World Sett<i|I>ngs" ) );
     vWorldSubItems.emplace_back( pgettext( "Main Menu|World", "Character to Tem<p|P>late" ) );
     vWorldSubItems.emplace_back( pgettext( "Main Menu|World", "Toggle World <C|c>ompression" ) );
+    vWorldSubItems.emplace_back( pgettext( "Main Menu|World", "S<n|N>apshots" ) );
     vWorldSubItems.emplace_back( pgettext( "Main Menu|World", "<D|d>elete World" ) );
     vWorldSubItems.emplace_back( pgettext( "Main Menu|World", "<R|r>eset World" ) );
 
@@ -980,10 +982,12 @@ bool main_menu::new_character_tab()
                     continue;
                 }
                 if( !world->world_saves.empty() ) {
-                    if( !query_yn(
-                            _( "Many game features will not work correctly with multiple characters in the same world.  Create a new character anyway?" ) ) ) {
-                        return false;
-                    }
+                    // One character per world is enforced (snapshot save system +
+                    // avoiding shared-world-state contamination). Block instead of
+                    // warning-and-allowing.
+                    popup( _( "This world already has a character.  Create a new world "
+                              "for a new character." ) );
+                    return false;
                 }
 
                 world_generator->set_active_world( world );
@@ -1025,10 +1029,12 @@ bool main_menu::new_character_tab()
             return false;
         }
         if( !world->world_saves.empty() ) {
-            if( !query_yn(
-                    _( "Many game features will not work correctly with multiple characters in the same world.  Create a new character anyway?" ) ) ) {
-                return false;
-            }
+            // One character per world is enforced (snapshot save system +
+            // avoiding shared-world-state contamination). Block instead of
+            // warning-and-allowing.
+            popup( _( "This world already has a character.  Create a new world "
+                      "for a new character." ) );
+            return false;
         }
         world_generator->set_active_world( world );
         try {
@@ -1179,7 +1185,7 @@ void main_menu::world_tab( const std::string &worldname )
     uilist mmenu( string_format( _( "Manage world \"%s\"" ), worldname ), {} );
     mmenu.border_color = c_white;
     int opt_val = 0;
-    std::array<char, 6> hotkeys = { 'm', 's', 't', 'c', 'd', 'r' };
+    std::array<char, 7> hotkeys = { 'm', 's', 't', 'c', 'n', 'd', 'r' };
     for( const std::string &it : vWorldSubItems ) {
         mmenu.entries.emplace_back( opt_val, true, hotkeys[opt_val],
                                     remove_color_tags( shortcut_text( c_white, it ) ) );
@@ -1237,18 +1243,77 @@ void main_menu::world_tab( const std::string &worldname )
                 }
             }
             break;
-        case 4: // Delete World
+        case 4: // Snapshots
+            snapshots_tab( worldname );
+            break;
+        case 5: // Delete World
             if( query_yn( _( "Delete the world and all saves within?" ) ) ) {
                 clear_world( true );
             }
             break;
-        case 5: // Reset World
+        case 6: // Reset World
             if( query_yn( _( "Remove all saves and regenerate world?" ) ) ) {
                 clear_world( false );
             }
             break;
         default:
             break;
+    }
+}
+
+void main_menu::snapshots_tab( const std::string &worldname )
+{
+    WORLD *world = world_generator->get_world( worldname );
+    if( world == nullptr ) {
+        return;
+    }
+    const cata_path world_dir = world->folder_path();
+
+    while( true ) {
+        const save_snapshot::menu_selection sel =
+            save_snapshot::query_snapshot_menu(
+                world_dir, string_format( _( "Snapshots of \"%s\"" ), worldname ),
+                _( "Restore this snapshot" ) );
+
+        if( sel.action == save_snapshot::menu_action::none ) {
+            return;
+        }
+
+        if( sel.action == save_snapshot::menu_action::create ) {
+            // No live game here: the on-disk world files already are the saved
+            // state, so snapshot the directory directly. Character name / turn
+            // are unknown from the menu, so leave them blank/0.
+            if( save_snapshot::make_snapshot( world_dir, sel.new_name, std::string(), 0 ) ) {
+                popup_getkey( _( "Snapshot \"%s\" saved." ), sel.new_name );
+            } else {
+                popup_getkey( _( "Failed to create the snapshot." ) );
+            }
+            continue;
+        }
+
+        if( sel.action == save_snapshot::menu_action::remove ) {
+            if( query_yn( _( "Permanently delete snapshot \"%s\"?" ), sel.chosen.name ) ) {
+                save_snapshot::delete_snapshot( world_dir, sel.chosen.dir_name );
+            }
+            continue;
+        }
+
+        // menu_action::load (restore)
+        if( !query_yn( _( "Restore snapshot \"%s\"?  This overwrites the world's "
+                          "current save." ), sel.chosen.name ) ) {
+            continue;
+        }
+        if( save_snapshot::restore_snapshot( world_dir, sel.chosen.dir_name ) ) {
+            // Drop any cached map/overmap so a later load reads the restored
+            // files rather than stale buffers, and re-probe compression state.
+            MAPBUFFER.clear();
+            overmap_buffer.clear();
+            world->invalidate_compression_cache();
+            savegames.clear();
+            popup_getkey( _( "Snapshot \"%s\" restored." ), sel.chosen.name );
+        } else {
+            popup_getkey( _( "Failed to restore the snapshot." ) );
+        }
     }
 }
 

@@ -250,6 +250,23 @@ class game
         void load_mod_interaction_data_from_dir( const cata_path &path, const std::string &src );
     public:
         void setup();
+        /**
+         * Reset all per-game runtime state (ID counters, weather, trackers,
+         * EOC queues, global variables, etc.) to a clean slate. Called by
+         * setup() and by the in-place reloads (quickload / snapshot restore)
+         * that skip JSON/mod reloading.
+         */
+        void reset_game_state();
+
+        /**
+         * Reload a save in place without bouncing through the main menu,
+         * skipping the expensive JSON/mod reload. Tears down runtime state via
+         * reset_game_state(), clears the map/overmap buffers, then load()s the
+         * given save. Suppresses rendering while state is half-cleared.
+         * Used by quickload() and snapshot restore.
+         * @return true on success.
+         */
+        bool reload_active_save( const save_t &save_file );
         /** Saving and loading functions. */
         void serialize_json( std::ostream &fout ); // for save
         void unserialize( std::istream &fin, const cata_path &path ); // for load
@@ -1116,6 +1133,10 @@ class game
     public:
         void quicksave();        // Saves the game without quitting
         void quickload();        // Loads the previously saved game if it exists
+        void snapshot_menu();    // Opens the snapshot (multi-save) save/load menu
+        // Restore the most recent snapshot and quit to the main menu, discarding
+        // progress since that snapshot. No-op (with a prompt) if none exist.
+        void quit_to_last_snapshot();
         void disp_NPCs();        // Currently for debug use.  Lists global NPCs.
 
         void list_missions();       // Listed current, completed and failed missions (mission_ui.cpp)
@@ -1214,6 +1235,10 @@ class game
         bool save_is_dirty; // NOLINT(cata-serialize)
         /** True if the game has just started or loaded, else false. */
         bool new_game = false; // NOLINT(cata-serialize)
+
+        /** When false, game::draw() is skipped. Used to suppress rendering
+         *  during an in-place reload (quickload / snapshot restore). */
+        bool should_draw = true; // NOLINT(cata-serialize)
 
         tripoint_bub_ms ter_view_p; // NOLINT(cata-serialize)
         catacurses::window w_terrain; // NOLINT(cata-serialize)

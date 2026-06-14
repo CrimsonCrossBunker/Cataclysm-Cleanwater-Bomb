@@ -3605,6 +3605,18 @@
   },
   {
     "type": "keybinding",
+    "name": "Snapshot save/load menu",
+    "category": "DEFAULTMODE",
+    "id": "snapshot_menu"
+  },
+  {
+    "type": "keybinding",
+    "name": "Quit to last snapshot",
+    "category": "DEFAULTMODE",
+    "id": "quit_to_snapshot"
+  },
+  {
+    "type": "keybinding",
     "name": "Move view northeast",
     "category": "DEFAULTMODE",
     "id": "shift_ne",

@@ -262,6 +262,7 @@ std::string enum_to_string<debug_menu::debug_menu_index>( debug_menu::debug_menu
         case debug_menu::debug_menu_index::PRINT_NPC_MAGIC: return "PRINT_NPC_MAGIC";
         case debug_menu::debug_menu_index::QUIT_NOSAVE: return "QUIT_NOSAVE";
         case debug_menu::debug_menu_index::QUICKLOAD: return "QUICKLOAD";
+        case debug_menu::debug_menu_index::SNAPSHOT_MENU: return "SNAPSHOT_MENU";
         case debug_menu::debug_menu_index::TEST_WEATHER: return "TEST_WEATHER";
         case debug_menu::debug_menu_index::WRITE_GLOBAL_EOCS: return "WRITE_GLOBAL_EOCS";
         case debug_menu::debug_menu_index::WRITE_GLOBAL_VARS: return "WRITE_GLOBAL_VARS";
@@ -1017,6 +1018,7 @@ static int game_uilist()
         { uilist_entry( debug_menu_index::ACTIVATE_EOC, true, 'E', _( "Activate EOC" ) ) },
         { uilist_entry( debug_menu_index::QUIT_NOSAVE, true, 'Q', _( "Quit to main menu" ) )  },
         { uilist_entry( debug_menu_index::QUICKLOAD, true, 'q', _( "Quickload" ) )  },
+        { uilist_entry( debug_menu_index::SNAPSHOT_MENU, true, 'n', _( "Snapshot save/load menu" ) )  },
     };
 
     return uilist( _( "Game…" ), uilist_initializer );
@@ -4833,6 +4835,13 @@ const std::vector<debug_action_entry> &all_actions()
                     g->quickload();
                     g->save_is_dirty = true;
                 }
+            }
+        },
+        {
+            debug_menu_index::SNAPSHOT_MENU, translate_marker( "Snapshot save/load menu" ),
+            "snapshot save load", "Game", []()
+            {
+                g->snapshot_menu();
             }
         },
         {

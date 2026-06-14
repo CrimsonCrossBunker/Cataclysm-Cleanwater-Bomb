@@ -90,6 +90,10 @@ struct WORLD {
 
         bool has_compression_enabled() const;
         bool set_compression_enabled( bool enabled );
+        // Drop the memoized compression state so the next has_compression_enabled()
+        // re-probes the on-disk dictionaries. Needed after the world files are
+        // replaced underneath a loaded WORLD (e.g. snapshot restore).
+        void invalidate_compression_cache();
     private:
         mutable std::optional<bool> is_compressed;
 
