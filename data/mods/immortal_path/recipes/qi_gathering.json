@@ -1,0 +1,44 @@
+[
+  {
+    "id": "immortal_path_qi_gathering_pill",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "category": "drugs",
+    "comestible_type": "MED",
+    "name": {
+      "str_sp": "聚气丹",
+      "//en_us_str": "Qi-Gathering Pill",
+      "//en_us_str_pl": "Qi-Gathering Pills"
+    },
+    "//": "基础回灵丹药：只补灵气，不给炼气修为，避免绕过打坐成长曲线。数值对齐一次吐纳补气量（+60）。/ Basic qi-restoring pill: restores qi only, not Qi Refining cultivation, so it does not bypass the meditation progression curve. Amount matches one meditation cast (+60 qi).",
+    "description": "一枚淡青色小丹，入口后化作温润灵息，汇入丹田。可补充少量灵气，但不能增长修为。",
+    "//en_us_description": "A pale cyan pill that melts into a warm spiritual breath and gathers in the dantian. Restores a small amount of qi, but does not increase cultivation.",
+    "weight": "8 g",
+    "volume": "5 ml",
+    "price": "0 USD",
+    "price_postapoc": "3 USD",
+    "material": [ "junk" ],
+    "symbol": "*",
+    "color": "cyan",
+    "use_action": {
+      "type": "consume_drug",
+      "activation_message": "你服下一枚聚气丹，温润灵息汇入丹田。",
+      "//en_us_activation_message": "You take a Qi-Gathering Pill, and a warm spiritual breath gathers in your dantian.",
+      "vitamins": [ [ "qi", 60 ] ]
+    }
+  },
+  {
+    "result": "immortal_path_qi_gathering_pill",
+    "type": "recipe",
+    "//": "基础聚气丹配方。autolearn:false；由 EOC_immortal_path_ensure_basic_elixir_recipe 在角色踏入炼气后授予。材料沿用早期草木/清水路线，后续可替换为专属灵材。/ Basic Qi-Gathering Pill recipe. Not autolearned; granted by EOC_immortal_path_ensure_basic_elixir_recipe once the character enters Qi Refining. Uses early herb/water components for now; later replaceable with dedicated spirit materials.",
+    "category": "CC_CHEM",
+    "subcategory": "CSC_CHEM_DRUGS",
+    "skill_used": "firstaid",
+    "difficulty": 1,
+    "time": "15 m",
+    "activity_level": "LIGHT_EXERCISE",
+    "autolearn": false,
+    "qualities": [ { "id": "CONTAIN", "level": 1 } ],
+    "components": [ [ [ "wild_herbs", 2 ], [ "tea_bark", 1 ] ], [ [ "water_clean", 1 ], [ "water", 1 ] ] ]
+  }
+]

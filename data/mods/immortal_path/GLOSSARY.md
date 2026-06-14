@@ -90,6 +90,7 @@
 | 炼器 | artifact forging | 炼制法器 |
 | 法器 / 法宝 | magic tool / treasure | 修士器物 |
 | 洞府 | cave abode | 修士居所/据点 |
+| 聚气丹 | Qi-Gathering Pill | 基础回灵丹药 |
 
 ## 势力 / Factions（预留）
 

@@ -30,6 +30,21 @@
   },
   {
     "type": "effect_on_condition",
+    "id": "EOC_immortal_path_ensure_basic_elixir_recipe",
+    "//": "炼气入门后授予基础聚气丹配方。用 RECURRING 兜底，覆盖旧存档与任何非 learn_spell 路径获得境界 spell 的角色；已有配方则跳过。/ Grant the basic Qi-Gathering Pill recipe after entering Qi Refining. RECURRING covers old saves and any non-learn_spell grant path; skip if already known.",
+    "recurrence": [ "30 seconds", "90 seconds" ],
+    "global": true,
+    "run_for_npcs": false,
+    "condition": {
+      "and": [
+        { "math": [ "u_spell_level('realm_qi_refining') > -1" ] },
+        { "not": { "u_know_recipe": "immortal_path_qi_gathering_pill" } }
+      ]
+    },
+    "effect": [ { "u_learn_recipe": "immortal_path_qi_gathering_pill" } ]
+  },
+  {
+    "type": "effect_on_condition",
     "id": "EOC_immortal_path_bind_art_traits",
     "//": "学功法即授五行/魔功载体特性：监听 character_learns_spell，按已会的吐纳变体 spell 分支授予对应载体特性（草木同春/阳炎附骨/…）。各分支幂等（已有特性即跳过 u_add_trait 不重复）。这些载体特性携带五行被动 enchantment（含属性极化）；境界进度共用 realm_qi_refining，与本绑定无关（境界特性炼气士由上面的 EOC 单独授予）。一个角色可同时修炼多门功法、叠加多个载体特性——是否限制「只能主修一门」留待后续设计。/ Grant the elemental/demonic carrier trait when its breathing variant is learned. Each branch is idempotent. Multiple arts can stack for now; 'one core method only' is a later design choice.",
     "eoc_type": "EVENT",
