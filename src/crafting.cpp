@@ -1777,7 +1777,12 @@ void craft_stamp_passive_entry( item &craft, const Character &crafter, time_poin
         if( cur_step.grace_period.has_value() ) {
             fail_dur += *cur_step.grace_period;
         }
-        craft.set_fail_at( entry_time + fail_dur );
+        // Anchor the destruction deadline to completion (ready_at), not entry.
+        // ready_at already scales with batch size via step_budget_moves, so a
+        // large batch (e.g. boiling 4+ water) no longer hits a fixed max_time
+        // deadline before it can finish.  max_time/grace_period are the buffer
+        // allowed past completion before the craft is destroyed.
+        craft.set_fail_at( craft.get_ready_at() + fail_dur );
     }
     if( plan.choice == step_choice::set_timer && plan.alarm_offset.has_value() ) {
         craft.set_alarm_at( entry_time + *plan.alarm_offset );

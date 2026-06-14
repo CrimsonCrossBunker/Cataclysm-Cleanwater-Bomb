@@ -6368,11 +6368,18 @@ void craft_activity_actor::do_turn( player_activity &act, Character &crafter )
             }
 
             if( plan.choice == step_choice::do_wait ) {
-                // Per-turn env check fast-path.  do_something / set_timer
-                // rely on the periodic env_check wakeup at 1-minute cadence
-                // since no actor runs for those modes.
-                craft_actualize_scheduled( craft, item_wakeup_kind::env_check,
-                                           calendar::turn, craft_item );
+                // Env check fast-path, throttled to the env_check_at cursor.
+                // craft_check_env_step re-arms the cursor to now+1min after each
+                // check, so honoring it here keeps the per-minute cadence instead
+                // of rebuilding the (expensive) nearby inventory every single turn
+                // -- the latter caused severe stutter while waiting on a craft.
+                // do_something / set_timer rely on the periodic env_check wakeup
+                // for the same cadence since no actor runs for those modes.
+                const time_point env_at = craft.get_env_check_at();
+                if( env_at != calendar::before_time_starts && calendar::turn >= env_at ) {
+                    craft_actualize_scheduled( craft, item_wakeup_kind::env_check,
+                                               calendar::turn, craft_item );
+                }
                 crafter.set_moves( 0 );
                 return;
             }

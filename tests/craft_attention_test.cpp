@@ -1609,6 +1609,37 @@ TEST_CASE( "craft_env_unpause_alarm_clears_when_already_due",
     CHECK( on_map.get_pause_started_at() == calendar::before_time_starts );
 }
 
+TEST_CASE( "craft_stamp_anchors_fail_at_to_ready_at_not_entry",
+           "[craft][attention][overdue][fail]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &u = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms origin( 60, 60, 0 );
+    u.setpos( here, origin );
+
+    // Cure step: time 10m, max_time 20m, grace_period 5m, unattended.
+    item ingredient( itype_2x4, calendar::turn );
+    item placed( &recipe_cudgel_test_timeout_recipe.obj(), 1, ingredient );
+    item &on_map = here.add_item( origin, placed );
+    REQUIRE( on_map.is_craft() );
+    on_map.set_current_step( 1 );
+    on_map.set_crafter_id( u.getID() );
+    on_map.set_step_plans( std::vector<attention_plan>( 2 ) );
+
+    item_location loc( map_cursor( here.get_abs( origin ) ), &on_map );
+    craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
+
+    // fail_at must be anchored to completion (ready_at + max_time + grace),
+    // NOT to entry_time.  Anchoring to entry made large batches hit a fixed
+    // deadline before ready_at could scale past it (boiling 4+ water vanished).
+    REQUIRE( on_map.get_passive_started_at() == calendar::turn );
+    CHECK( on_map.get_fail_at() == on_map.get_ready_at() + 20_minutes + 5_minutes );
+    CHECK( on_map.get_fail_at() > on_map.get_ready_at() );
+}
+
+
 TEST_CASE( "craft_stamp_arms_env_check_when_step_has_env_requirements",
            "[craft][attention][env_check]" )
 {
@@ -1932,7 +1963,7 @@ TEST_CASE( "craft_actualize_ready_via_helper_still_pauses_on_env_loss",
     CHECK( on_map.get_env_check_at() == calendar::before_time_starts );
 }
 
-TEST_CASE( "craft_activity_do_wait_env_check_fires_per_turn",
+TEST_CASE( "craft_activity_do_wait_env_check_fires_when_cursor_due",
            "[craft][attention][env_check][actor]" )
 {
     clear_avatar();
@@ -1941,7 +1972,9 @@ TEST_CASE( "craft_activity_do_wait_env_check_fires_per_turn",
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
     u.setpos( here, origin );
-    // No OVEN: per-turn env_check inside do_wait branch must trip pause.
+    // No OVEN: the do_wait env_check must trip a pause -- but only when the
+    // env_check_at cursor is due, not every single turn (the per-turn rebuild
+    // caused severe stutter; the fast-path now honors the 1-minute cursor).
 
     item ingredient( itype_2x4, calendar::turn );
     item placed( &recipe_cudgel_test_unattended_with_qual.obj(), 1, ingredient );
@@ -1964,10 +1997,20 @@ TEST_CASE( "craft_activity_do_wait_env_check_fires_per_turn",
     u.activity = player_activity( craft_actor );
     u.activity.targets.push_back( loc );
 
-    u.activity.do_turn( u );
+    SECTION( "cursor not yet due: env_check is throttled, no pause this turn" ) {
+        // Cursor armed one minute out (as craft_stamp_passive_entry would).
+        on_map.set_env_check_at( t0 + 1_minutes );
+        u.activity.do_turn( u );
+        CHECK( on_map.get_pause_started_at() == calendar::before_time_starts );
+    }
 
-    CHECK( on_map.get_pause_started_at() != calendar::before_time_starts );
-    CHECK( on_map.get_saved_ready_at() == t0 + 10_minutes );
+    SECTION( "cursor due: env_check fires and pauses on the missing quality" ) {
+        // Cursor due now -> the throttled fast-path runs the env check.
+        on_map.set_env_check_at( t0 );
+        u.activity.do_turn( u );
+        CHECK( on_map.get_pause_started_at() != calendar::before_time_starts );
+        CHECK( on_map.get_saved_ready_at() == t0 + 10_minutes );
+    }
 }
 
 TEST_CASE( "reconcile_walks_avatar_inventory_for_env_check",
