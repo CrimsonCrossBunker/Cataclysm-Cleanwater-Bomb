@@ -47,7 +47,7 @@
   {
     "id": "ammo_pouch_223",
     "type": "item_group",
-    "//": "TODO: addd 1 stipper clip guide (aka 'spoon') for 223 in this group, when the game will be able to check his using",
+    "//": "TODO: add 1 stripper clip guide (aka 'spoon') for 223 in this group, when the game will be able to check its use",
     "subtype": "collection",
     "container-item": "cheap_ammo_pouch",
     "items": [ { "group": "box_223_clips", "count": 4 } ]

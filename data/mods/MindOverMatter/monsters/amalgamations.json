@@ -5,7 +5,7 @@
     "copy-from": "mon_amalgamation_abstract_small",
     "symbol": "ä",
     "name": { "str": "radiant amalgamation" },
-    "description": "A four-legged creature with bulbous body and a small head with a fanged maw, with three multi-jointed limbs waving above it in the air.  The limbs emit a soft glow, occasionally brightening into a eye-searing flare.",
+    "description": "A four-legged creature with a bulbous body and a small head with a fanged maw, with three multi-jointed limbs waving above it in the air.  The limbs emit a soft glow, occasionally brightening into an eye-searing flare.",
     "luminance": 5,
     "special_attacks": [
       {

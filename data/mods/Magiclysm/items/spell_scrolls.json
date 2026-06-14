@@ -538,7 +538,7 @@
     "id": "spell_scroll_pertifying_touch",
     "//": "Earthshaper spell",
     "name": { "str": "Scroll of Petrifying Touch", "str_pl": "Scrolls of Petrifying Touch" },
-    "description": "Your hands tries to transform the body of your enemy into a pure stone.  The effect is temporary, but it can deal significant damage.",
+    "description": "Your hands try to transform the body of your enemy into pure stone.  The effect is temporary, but it can deal significant damage.",
     "use_action": { "type": "learn_spell", "spells": [ "pertifying_touch" ] }
   },
   {
@@ -548,7 +548,7 @@
     "id": "spell_scroll_reactive_armor",
     "//": "Earthshaper spell",
     "name": { "str": "Scroll of Reactive Armor", "str_pl": "Scrolls of Reactive Armor" },
-    "description": "Explode your stone skin, to deal massive damage to all enemies around.",
+    "description": "Explode your stone skin to deal massive damage to all enemies around.",
     "use_action": { "type": "learn_spell", "spells": [ "reactive_armor" ] }
   },
   {
