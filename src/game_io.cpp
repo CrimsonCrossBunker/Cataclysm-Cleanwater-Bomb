@@ -61,7 +61,6 @@
 #include "json.h"
 #include "loading_ui.h"
 #include "magic_enchantment.h"
-#include "main_menu.h"
 #include "map.h"
 #include "mapbuffer.h"
 #include "memorial_logger.h"
@@ -75,6 +74,7 @@
 #include "pimpl.h"
 #include "popup.h"
 #include "safemode_ui.h"
+#include "save_snapshot.h"
 #if defined(TILES)
     #include "sdltiles.h"
 #endif
@@ -917,25 +917,144 @@ void game::quickload()
     if( active_world == nullptr ) {
         return;
     }
-    std::string const world_name = active_world->world_name;
-    std::string const &save_id = u.get_save_id();
 
-    if( active_world->save_exists( save_t::from_save_id( save_id ) ) ) {
-        if( moves_since_last_save != 0 ) { // See if we need to reload anything
-            moves_since_last_save = 0;
-            last_save_timestamp = std::time( nullptr );
+    const std::string &save_id = u.get_save_id();
+    const save_t save_file = save_t::from_save_id( save_id );
 
-            u.set_moves( 0 );
-            uquit = QUIT_NOSAVED;
+    if( !active_world->save_exists( save_file ) ) {
+        popup_getkey( _( "No saves for current character yet." ) );
+        return;
+    }
 
-            main_menu::queued_world_to_load = world_name;
-            main_menu::queued_save_id_to_load = save_id;
+    if( moves_since_last_save == 0 ) {
+        // Nothing has happened since the last save; no need to reload.
+        return;
+    }
 
+    if( reload_active_save( save_file ) ) {
+        add_msg( _( "Quick load successful!" ) );
+        moves_since_last_save = 0;
+        last_save_timestamp = std::time( nullptr );
+    } else {
+        popup_getkey( _( "Quick load failed!" ) );
+    }
+}
+
+void game::snapshot_menu()
+{
+    WORLD *active_world = world_generator->active_world;
+    if( active_world == nullptr ) {
+        return;
+    }
+    const cata_path world_dir = active_world->folder_path();
+
+    while( true ) {
+        const save_snapshot::menu_selection sel =
+            save_snapshot::query_snapshot_menu( world_dir, _( "Snapshots" ),
+                    _( "Load this snapshot" ) );
+
+        if( sel.action == save_snapshot::menu_action::none ) {
+            return;
         }
 
-    } else {
-        popup_getkey( _( "No saves for current character yet." ) );
+        if( sel.action == save_snapshot::menu_action::create ) {
+            // Persist current progress, then snapshot the whole world directory.
+            if( !save() ) {
+                popup_getkey( _( "Could not save the game before taking a snapshot." ) );
+                continue;
+            }
+            if( save_snapshot::make_snapshot( world_dir, sel.new_name, u.get_name(),
+                                              to_turn<int>( calendar::turn ) ) ) {
+                add_msg( _( "Snapshot \"%s\" saved." ), sel.new_name );
+            } else {
+                popup_getkey( _( "Failed to create the snapshot." ) );
+            }
+            continue;
+        }
+
+        if( sel.action == save_snapshot::menu_action::remove ) {
+            if( query_yn( _( "Permanently delete snapshot \"%s\"?" ), sel.chosen.name ) ) {
+                save_snapshot::delete_snapshot( world_dir, sel.chosen.dir_name );
+            }
+            continue;
+        }
+
+        // menu_action::load
+        if( !query_yn( _( "Load snapshot \"%s\"?  Unsaved progress will be lost." ),
+                       sel.chosen.name ) ) {
+            continue;
+        }
+
+        // Drop in-memory map/overmap buffers BEFORE touching the files on disk.
+        // On Windows the prefetcher can hold mmap handles on maps/*.zzip, which
+        // would make the restore's deletes fail; clearing here releases them.
+        MAPBUFFER.clear();
+        overmap_buffer.clear();
+        m = map();
+
+        if( !save_snapshot::restore_snapshot( world_dir, sel.chosen.dir_name ) ) {
+            popup_getkey( _( "Failed to restore the snapshot." ) );
+            return;
+        }
+        // The on-disk compression state may differ from before; force a re-probe
+        // so load() picks the right codec.
+        active_world->invalidate_compression_cache();
+
+        const save_t save_file = save_t::from_save_id( u.get_save_id() );
+        if( reload_active_save( save_file ) ) {
+            add_msg( _( "Snapshot \"%s\" loaded." ), sel.chosen.name );
+        } else {
+            popup_getkey( _( "Snapshot restored on disk, but reloading failed." ) );
+        }
+        return; // game state reloaded (or bailed to menu); leave the menu
     }
+}
+
+void game::quit_to_last_snapshot()
+{
+    WORLD *active_world = world_generator->active_world;
+    if( active_world == nullptr ) {
+        return;
+    }
+    const cata_path world_dir = active_world->folder_path();
+
+    const std::vector<save_snapshot::snapshot_info> snaps =
+        save_snapshot::list_snapshots( world_dir );
+    if( snaps.empty() ) {
+        popup_getkey( _( "There are no snapshots to return to." ) );
+        return;
+    }
+
+    // list_snapshots() is sorted newest-first.
+    const save_snapshot::snapshot_info &latest = snaps.front();
+
+    if( !query_yn(
+            _( "Quit to the most recent snapshot \"%s\"?  Progress since then will be lost." ),
+            latest.name ) ) {
+        return;
+    }
+
+    // Drop in-memory buffers and the live map BEFORE touching files: it releases
+    // any mmap handles (so the restore's deletes succeed on Windows) and avoids
+    // leaving the map holding freed submap pointers.
+    MAPBUFFER.clear();
+    overmap_buffer.clear();
+    m = map();
+
+    // Restore the snapshot's files over the world, then quit WITHOUT saving so
+    // the discarded progress is never written back. The on-disk world is now a
+    // consistent snapshot state, which avoids the corruption risk of a plain
+    // "quit without saving". The restored save is loaded next time the world is
+    // opened from the main menu. restore_snapshot is atomic: on failure the
+    // world is rolled back intact, but our in-memory state is already torn down,
+    // so quit to the main menu regardless.
+    if( !save_snapshot::restore_snapshot( world_dir, latest.dir_name ) ) {
+        popup_getkey( _( "Failed to restore the snapshot." ) );
+    }
+    active_world->invalidate_compression_cache();
+
+    u.set_moves( 0 );
+    uquit = QUIT_NOSAVED;
 }
 
 void game::autosave()

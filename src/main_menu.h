@@ -63,6 +63,8 @@ class main_menu
         bool new_character_tab();
         bool load_character_tab( const std::string &worldname );
         void world_tab( const std::string &worldname );
+        // Snapshot (multi-save) management for a world, from the main menu.
+        void snapshots_tab( const std::string &worldname );
 
         /*
          * Load character templates from template folder

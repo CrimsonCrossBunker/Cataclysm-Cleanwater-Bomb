@@ -3145,6 +3145,14 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             g->save_is_dirty = true;
             return false;
 
+        case ACTION_SNAPSHOT_MENU:
+            snapshot_menu();
+            return false;
+
+        case ACTION_QUIT_TO_SNAPSHOT:
+            quit_to_last_snapshot();
+            return false;
+
         case ACTION_PL_INFO:
             player_character.disp_info( true );
             break;

@@ -114,6 +114,16 @@ bool WORLD::save_exists( const save_t &name ) const
 void WORLD::add_save( const save_t &name )
 {
     if( !save_exists( name ) ) {
+        // One character per world is enforced at the UI layer (main_menu blocks
+        // creating a second character, and the snapshot system treats one world
+        // as one save slot). This is just a low-level backstop: silently refuse
+        // a second, different save id rather than debugmsg — a modal error here
+        // would fire on every save after a debug "rename save" and is the wrong
+        // altitude for a policy decision. (Re-saving the same character hits
+        // save_exists() above and returns, so this only blocks genuinely new ids.)
+        if( !world_saves.empty() ) {
+            return;
+        }
         world_saves.push_back( name );
     }
 }
@@ -2106,6 +2116,11 @@ bool WORLD::has_compression_enabled() const
             std::filesystem::exists( ( world_folder_path / "overmaps.dict" ).get_unrelative_path() ) );
     }
     return is_compressed.value();
+}
+
+void WORLD::invalidate_compression_cache()
+{
+    is_compressed.reset();
 }
 
 bool WORLD::set_compression_enabled( bool enabled )

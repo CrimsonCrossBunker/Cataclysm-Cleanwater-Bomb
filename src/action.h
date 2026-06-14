@@ -248,6 +248,10 @@ enum action_id : int {
     ACTION_QUICKSAVE,
     /** Quickload the game */
     ACTION_QUICKLOAD,
+    /** Open the save snapshot (multi-save) menu */
+    ACTION_SNAPSHOT_MENU,
+    /** Restore the most recent snapshot and quit to main menu (discard current progress) */
+    ACTION_QUIT_TO_SNAPSHOT,
     /** Commit suicide */
     ACTION_SUICIDE,
     /**@}*/

@@ -312,6 +312,10 @@ std::string action_ident( action_id act )
             return "quicksave";
         case ACTION_QUICKLOAD:
             return "quickload";
+        case ACTION_SNAPSHOT_MENU:
+            return "snapshot_menu";
+        case ACTION_QUIT_TO_SNAPSHOT:
+            return "quit_to_snapshot";
         case ACTION_SUICIDE:
             return "SUICIDE";
         case ACTION_PL_INFO:
@@ -430,6 +434,8 @@ bool can_action_change_worldstate( const action_id act )
         case ACTION_SAVE:
         case ACTION_QUICKSAVE:
         case ACTION_QUICKLOAD:
+        case ACTION_SNAPSHOT_MENU:
+        case ACTION_QUIT_TO_SNAPSHOT:
         case ACTION_SUICIDE:
         // Info Screens
         case ACTION_PL_INFO:
@@ -1121,6 +1127,8 @@ action_id handle_main_menu()
     REGISTER_ACTION( ACTION_ACTIONMENU );
     REGISTER_ACTION( ACTION_QUICKSAVE );
     REGISTER_ACTION( ACTION_SAVE );
+    REGISTER_ACTION( ACTION_SNAPSHOT_MENU );
+    REGISTER_ACTION( ACTION_QUIT_TO_SNAPSHOT );
     if( hotkey_for_action( ACTION_DEBUG, /*maximum_modifier_count=*/1, false ).has_value() ) {
         REGISTER_ACTION( ACTION_DEBUG, 'D' );
     }
