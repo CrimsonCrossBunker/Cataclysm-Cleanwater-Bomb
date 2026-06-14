@@ -20,6 +20,7 @@
 #include "item_category.h"
 #include "map.h"
 #include "npc.h"
+#include "npc_class.h"
 #include "npc_opinion.h"
 #include "npctrade.h"
 #include "npctrade_utils.h"
@@ -27,6 +28,7 @@
 #include "output.h"
 #include "point.h"
 #include "ret_val.h"
+#include "shop_cons_rate.h"
 #include "string_formatter.h"
 #include "type_id.h"
 #include "vehicle.h"
@@ -52,6 +54,18 @@ point _pane_size()
     return { TERMX / 2, TERMY - _pane_orig( 0 ).y };
 }
 
+// Check whether an NPC's shopkeeper whitelist/blacklist allows this item.
+bool _npc_passes_trade_filter( npc const &np, item const &it )
+{
+    if( np.will_exchange_items_freely() ) {
+        return true;
+    }
+    if( np.myclass->has_whitelist() ) {
+        return np.myclass->get_shopkeeper_whitelist().matches( it, np ) != nullptr;
+    }
+    return np.myclass->get_shopkeeper_blacklist().matches( it, np ) == nullptr;
+}
+
 } // namespace
 
 trade_preset::trade_preset( Character const &you, Character const &trader )
@@ -67,9 +81,15 @@ trade_preset::trade_preset( Character const &you, Character const &trader )
 
 bool trade_preset::is_shown( item_location const &loc ) const
 {
-    return !loc->has_var( VAR_TRADE_IGNORE ) && inventory_selector_preset::is_shown( loc ) &&
-    loc->is_owned_by( _u ) && loc->made_of( phase_id::SOLID ) && !loc->is_frozen_liquid() &&
-    ( !_u.is_wielding( *loc ) || !loc->has_flag( json_flag_NO_UNWIELD ) );
+    if( !loc->has_var( VAR_TRADE_IGNORE ) && inventory_selector_preset::is_shown( loc ) &&
+        loc->is_owned_by( _u ) && loc->made_of( phase_id::SOLID ) && !loc->is_frozen_liquid() &&
+        ( !_u.is_wielding( *loc ) || !loc->has_flag( json_flag_NO_UNWIELD ) ) ) {
+        if( _trader.is_npc() && !_u.is_npc() ) {
+            return _npc_passes_trade_filter( *_trader.as_npc(), *loc );
+        }
+        return true;
+    }
+    return false;
 }
 
 std::string trade_preset::get_denial( const item_location &loc ) const
