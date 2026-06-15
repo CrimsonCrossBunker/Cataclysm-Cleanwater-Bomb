@@ -735,7 +735,7 @@
     "color": "dark_gray",
     "description": "A 120mm high-explosive anti-tank round.  It could ruin anyone's whole day.",
     "material": [ "steel", "powder" ],
-    "volume": "250 ml",
+    "volume": "15 L",
     "weight": "22725 g",
     "ammo_type": "120mm",
     "damage": { "damage_type": "stab", "amount": 40, "armor_penetration": 10 },

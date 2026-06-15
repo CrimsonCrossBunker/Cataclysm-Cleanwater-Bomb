@@ -2762,7 +2762,7 @@
     "name": { "str": "autoclave pouch", "str_pl": "autoclave pouches" },
     "description": "A medical device that bears the approval of the FDA (Food and Drug Administration).  If used properly, this pouch can keep things sterile indefinitely.",
     "weight": "2 g",
-    "volume": "1 ml",
+    "volume": "25 ml",
     "price": "5 cent",
     "price_postapoc": "1 USD",
     "use_action": [ "PACK_CBM" ],
