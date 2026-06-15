@@ -54,6 +54,8 @@
     "weight": "2 g",
     "container": "bottle_plastic_small",
     "display_type": "BY_WEIGHT",
+    "stackable": true,
+    "display_type": "BY_WEIGHT",
     "stackable": true
   },
   {
@@ -1551,7 +1553,9 @@
     "description": "A handful of almost-weightless residue left after the burning of some substance.",
     "material": [ "powder_nonflam" ],
     "volume": "2 ml",
-    "weight": "1 g"
+    "weight": "1 g",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1566,7 +1570,9 @@
     "description": "The burnt remains of a person or animal.",
     "material": [ "powder_nonflam" ],
     "volume": "1 ml",
-    "weight": "1 g"
+    "weight": "1 g",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1732,7 +1738,9 @@
     "material": [ "powder" ],
     "volume": "2 ml",
     "//": "Bulk density is around 0.5 g/mL",
-    "weight": "1 g"
+    "weight": "1 g",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1748,7 +1756,9 @@
     "material": [ "powder" ],
     "volume": "1 ml",
     "//": "Bulk density is around 0.55 g/mL",
-    "weight": "1 g"
+    "weight": "1 g",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1764,7 +1774,9 @@
     "material": [ "powder" ],
     "volume": "2 ml",
     "//": "Bulk density is around 0.5 g/mL (because it's a powder, the actual density of 1.12 g/mL is not useful)",
-    "weight": "1 g"
+    "weight": "1 g",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "steel_grille",
@@ -1905,7 +1917,9 @@
     "material": [ "powder" ],
     "volume": "2 ml",
     "//": "Bulk density is around 0.5 g/mL (because it's a powder, the actual density of 1.12 g/mL is not useful)",
-    "weight": "1 g"
+    "weight": "1 g",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2024,7 +2038,9 @@
     "symbol": "=",
     "color": "red",
     "price": "50 cent",
-    "price_postapoc": "2 cent"
+    "price_postapoc": "2 cent",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "red_phosphorous_small",
@@ -2038,7 +2054,9 @@
     "symbol": "=",
     "color": "red",
     "price": "50 cent",
-    "price_postapoc": "2 cent"
+    "price_postapoc": "2 cent",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "white_phosphorous",
@@ -2052,7 +2070,9 @@
     "symbol": "=",
     "color": "white",
     "price": "50 cent",
-    "price_postapoc": "2 cent"
+    "price_postapoc": "2 cent",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "acetic_anhydride",
