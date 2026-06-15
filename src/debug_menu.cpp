@@ -4754,12 +4754,6 @@ const std::vector<debug_action_entry> &all_actions()
             }
         },
         {
-            debug_menu_index::QUICK_SETUP_FLAG_DIRTY, translate_marker( "Quick setup (dirty)" ), "quick setup dirty", "Game", []()
-            {
-                do_debug_quick_setup();
-            }
-        },
-        {
             debug_menu_index::TOGGLE_SETUP_MUTATION, translate_marker( "Toggle debug mutations" ), "debug mutation", "Game", []()
             {
                 Character &u = get_avatar();
