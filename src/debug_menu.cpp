@@ -4756,7 +4756,7 @@ const std::vector<debug_action_entry> &all_actions()
         {
             debug_menu_index::QUICK_SETUP_FLAG_DIRTY, translate_marker( "Quick setup (dirty)" ), "quick setup dirty", "Game", []()
             {
-                do_debug_quick_setup( true );
+                do_debug_quick_setup();
             }
         },
         {
