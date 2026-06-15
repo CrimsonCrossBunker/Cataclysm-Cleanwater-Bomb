@@ -881,7 +881,7 @@
     "items": [
       [ "shot_hull", 40 ],
       [ "sinew", 40 ],
-      { "item": "rolling_paper", "prob": 20, "count": [ 1, 30 ] },
+      { "item": "rolling_paper", "prob": 20, "charges": [ 1, 30 ] },
       { "item": "flashlight", "prob": 20, "charges": [ 0, 300 ] },
       [ "9mm_casing", 20 ],
       [ "38_casing", 20 ],
