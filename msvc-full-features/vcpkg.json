@@ -11,9 +11,7 @@
         "libvorbis",
         { "name": "sdl2", "version>=": "2.26.4#0" },
         { "name": "sdl2-image", "features": [ "libjpeg-turbo" ] },
-        { "name": "sdl2-mixer", "features": [ "libflac", "mpg123", "wavpack" ],
-          "default-features": false
-        },
+        { "name": "sdl2-mixer", "features": [ "libflac", "mpg123", "wavpack" ], "default-features": false },
         "sdl2-ttf"
       ]
     },
@@ -23,7 +21,8 @@
         "sdl3",
         { "name": "sdl3-image", "features": [ "jpeg", "png" ] },
         "sdl3-ttf",
-        { "name": "sdl3-mixer",
+        {
+          "name": "sdl3-mixer",
           "features": [ "libflac", "mpg123", "wavpack", "libvorbis" ],
           "default-features": false
         },
