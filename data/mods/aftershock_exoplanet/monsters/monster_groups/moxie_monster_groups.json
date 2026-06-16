@@ -5,9 +5,11 @@
     "monsters": [
       { "monster": "mon_moxie_scavenger", "weight": 350, "cost_multiplier": 1 },
       { "monster": "mon_moxie_scavenger", "weight": 250, "cost_multiplier": 1, "pack_size": [ 1, 4 ] },
-      { "monster": "mon_moxie_regenerator", "weight": 200, "cost_multiplier": 1, "pack_size": [ 1, 2 ] },
+      { "monster": "mon_moxie_scavenger", "weight": 250, "cost_multiplier": 1, "pack_size": [ 1, 4 ] },
+      { "monster": "mon_moxie_infested", "weight": 200, "cost_multiplier": 1, "pack_size": [ 1, 2 ] },
+      { "monster": "mon_moxie_infested", "weight": 50, "cost_multiplier": 1, "pack_size": [ 1, 2 ] },
       { "monster": "mon_moxie_grabby", "weight": 100, "cost_multiplier": 1 },
-      { "monster": "mon_human_biomachine", "weight": 50, "cost_multiplier": 1, "pack_size": [ 1, 2 ] }
+      { "monster": "mon_moxie_bloodhound", "weight": 50, "cost_multiplier": 1, "pack_size": [ 1, 2 ] }
     ]
   },
   {
