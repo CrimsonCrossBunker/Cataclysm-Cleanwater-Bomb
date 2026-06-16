@@ -198,6 +198,8 @@
   {
     "type": "ITEM",
     "id": "aluminum_foil",
+    "stackable": true,
+    "stack_size": 200,
     "category": "spare_parts",
     "price": "6 USD 48 cent",
     "price_postapoc": "10 cent",
@@ -733,7 +735,7 @@
     "color": "dark_gray",
     "description": "A 120mm high-explosive anti-tank round.  It could ruin anyone's whole day.",
     "material": [ "steel", "powder" ],
-    "volume": "250 ml",
+    "volume": "15 L",
     "weight": "22725 g",
     "ammo_type": "120mm",
     "damage": { "damage_type": "stab", "amount": 40, "armor_penetration": 10 },
@@ -841,6 +843,7 @@
   {
     "type": "ITEM",
     "id": "oxy_powder",
+    "stackable": true,
     "category": "chems",
     "price": "30 USD",
     "price_postapoc": "10 USD",
@@ -858,6 +861,7 @@
   {
     "type": "ITEM",
     "id": "lye_powder",
+    "stackable": true,
     "category": "chems",
     "price": "30 USD",
     "price_postapoc": "5 USD",
@@ -872,6 +876,7 @@
   {
     "type": "ITEM",
     "id": "shotgun_primer",
+    "stackable": true,
     "category": "spare_parts",
     "price": "30 USD",
     "price_postapoc": "20 USD",
@@ -888,6 +893,7 @@
   {
     "type": "ITEM",
     "id": "smpistol_primer",
+    "stackable": true,
     "category": "spare_parts",
     "price": "40 USD",
     "price_postapoc": "10 USD",
@@ -904,6 +910,7 @@
   {
     "type": "ITEM",
     "id": "lgpistol_primer",
+    "stackable": true,
     "category": "spare_parts",
     "price": "60 USD",
     "price_postapoc": "20 USD",
@@ -920,6 +927,7 @@
   {
     "type": "ITEM",
     "id": "smrifle_primer",
+    "stackable": true,
     "category": "spare_parts",
     "price": "60 USD",
     "price_postapoc": "10 USD",
@@ -936,6 +944,7 @@
   {
     "type": "ITEM",
     "id": "lgrifle_primer",
+    "stackable": true,
     "category": "spare_parts",
     "price": "80 USD",
     "price_postapoc": "20 USD",
@@ -1051,6 +1060,8 @@
   {
     "type": "ITEM",
     "id": "copper",
+    "stackable": true,
+    "stack_size": 200,
     "category": "spare_parts",
     "price": "10 USD",
     "price_postapoc": "8 USD",

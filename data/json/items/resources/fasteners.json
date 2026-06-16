@@ -15,6 +15,8 @@
   },
   {
     "id": "button_plastic",
+    "stackable": true,
+    "stack_size": 20,
     "type": "ITEM",
     "category": "spare_parts",
     "name": { "str": "button" },

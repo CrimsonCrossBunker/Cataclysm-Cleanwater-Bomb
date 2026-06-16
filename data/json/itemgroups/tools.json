@@ -11,7 +11,7 @@
       [ "swage", 60 ],
       [ "drift", 70 ],
       { "item": "graphite", "prob": 70, "count": [ 1, 250 ] },
-      { "item": "chem_borax", "prob": 90, "count": [ 0, 500 ] },
+      { "item": "chem_borax", "prob": 90, "charges": [ 0, 500 ] },
       [ "metal_file", 90 ],
       [ "hotcut", 90 ],
       [ "metalworking_tongs", 90 ],
@@ -416,8 +416,13 @@
           },
           {
             "distribution": [
-              { "item": "brazing_rod_bronze", "prob": 75, "count": [ 500, 1500 ], "entry-wrapper": "tube_welding_rod" },
-              { "item": "brazing_rod_alloy", "prob": 50, "count": [ 500, 1500 ], "entry-wrapper": "tube_welding_rod" }
+              { "item": "brazing_rod_bronze", "prob": 75, "charges": [ 500, 1500 ], "entry-wrapper": "tube_welding_rod" },
+              {
+                "item": "brazing_rod_alloy",
+                "prob": 50,
+                "charges": [ 500, 1500 ],
+                "entry-wrapper": "tube_welding_rod"
+              }
             ]
           }
         ],
@@ -437,12 +442,12 @@
       { "item": "welding_blanket", "prob": 20, "count": [ 0, 1 ] },
       {
         "distribution": [
-          { "item": "welding_rod_steel", "prob": 20, "count": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "welding_rod_alloy", "prob": 10, "count": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "welding_wire_steel", "prob": 15, "count": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
-          { "item": "welding_wire_alloy", "prob": 5, "count": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
-          { "item": "brazing_rod_bronze", "prob": 7, "count": [ 500, 1500 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "brazing_rod_alloy", "prob": 5, "count": [ 400, 1200 ], "entry-wrapper": "tube_welding_rod" }
+          { "item": "welding_rod_steel", "prob": 20, "charges": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
+          { "item": "welding_rod_alloy", "prob": 10, "charges": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
+          { "item": "welding_wire_steel", "prob": 15, "charges": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
+          { "item": "welding_wire_alloy", "prob": 5, "charges": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
+          { "item": "brazing_rod_bronze", "prob": 7, "charges": [ 500, 1500 ], "entry-wrapper": "tube_welding_rod" },
+          { "item": "brazing_rod_alloy", "prob": 5, "charges": [ 400, 1200 ], "entry-wrapper": "tube_welding_rod" }
         ]
       },
       [ "clamp", 10 ],
@@ -880,12 +885,12 @@
       { "item": "welding_blanket", "prob": 10, "count": [ 0, 1 ] },
       {
         "distribution": [
-          { "item": "welding_rod_steel", "prob": 10, "count": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "welding_rod_alloy", "prob": 5, "count": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "welding_wire_steel", "prob": 20, "count": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
-          { "item": "welding_wire_alloy", "prob": 20, "count": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
-          { "item": "brazing_rod_bronze", "prob": 3, "count": [ 500, 1500 ], "entry-wrapper": "tube_welding_rod" },
-          { "item": "brazing_rod_alloy", "prob": 2, "count": [ 400, 1200 ], "entry-wrapper": "tube_welding_rod" }
+          { "item": "welding_rod_steel", "prob": 10, "charges": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
+          { "item": "welding_rod_alloy", "prob": 5, "charges": [ 1000, 1600 ], "entry-wrapper": "tube_welding_rod" },
+          { "item": "welding_wire_steel", "prob": 20, "charges": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
+          { "item": "welding_wire_alloy", "prob": 20, "charges": [ 1000, 1600 ], "entry-wrapper": "spool_welding" },
+          { "item": "brazing_rod_bronze", "prob": 3, "charges": [ 500, 1500 ], "entry-wrapper": "tube_welding_rod" },
+          { "item": "brazing_rod_alloy", "prob": 2, "charges": [ 400, 1200 ], "entry-wrapper": "tube_welding_rod" }
         ]
       },
       { "item": "soldering_iron", "prob": 8 },

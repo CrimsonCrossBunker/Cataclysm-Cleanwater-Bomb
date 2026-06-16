@@ -651,6 +651,7 @@
   {
     "type": "ITEM",
     "id": "chem_aluminium_powder",
+    "stackable": true,
     "category": "chems",
     "price": "5 cent",
     "price_postapoc": "5 cent",
@@ -681,6 +682,7 @@
   {
     "type": "ITEM",
     "id": "chem_zinc_powder",
+    "stackable": true,
     "category": "chems",
     "price": "6 cent",
     "price_postapoc": "2 cent",
@@ -696,6 +698,7 @@
   {
     "type": "ITEM",
     "id": "chem_zinc_oxide",
+    "stackable": true,
     "category": "chems",
     "price": "2 cent",
     "price_postapoc": "2 cent",
@@ -711,6 +714,7 @@
   {
     "type": "ITEM",
     "id": "chem_manganese_dioxide",
+    "stackable": true,
     "category": "chems",
     "price": "6 cent",
     "price_postapoc": "1 cent",
@@ -769,6 +773,7 @@
   {
     "type": "ITEM",
     "id": "chem_potassium_chloride",
+    "stackable": true,
     "category": "chems",
     "price": "6 cent",
     "price_postapoc": "1 cent",
@@ -785,6 +790,7 @@
   {
     "type": "ITEM",
     "id": "chem_potassium_hydroxide",
+    "stackable": true,
     "category": "chems",
     "price": "6 cent",
     "price_postapoc": "1 cent",
@@ -884,6 +890,7 @@
   {
     "type": "ITEM",
     "id": "chem_chromium_oxide",
+    "stackable": true,
     "category": "chems",
     "price": "5 USD",
     "price_postapoc": "1 USD",
@@ -921,6 +928,7 @@
   {
     "type": "ITEM",
     "id": "chem_carbide",
+    "stackable": true,
     "category": "chems",
     "price": "1 cent",
     "price_postapoc": "1 cent",
@@ -936,6 +944,7 @@
   {
     "type": "ITEM",
     "id": "chem_caco3",
+    "stackable": true,
     "category": "chems",
     "price": "1 cent",
     "price_postapoc": "1 cent",
@@ -1052,6 +1061,7 @@
   {
     "type": "ITEM",
     "id": "chem_saltpetre",
+    "stackable": true,
     "category": "chems",
     "price": "4 cent",
     "price_postapoc": "10 cent",
@@ -1163,6 +1173,8 @@
   {
     "type": "ITEM",
     "id": "chem_black_powder",
+    "stackable": true,
+    "stack_size": 1000,
     "category": "chems",
     "price": "20 USD",
     "price_postapoc": "10 USD",
@@ -1452,6 +1464,7 @@
   {
     "type": "ITEM",
     "id": "detergent",
+    "stackable": true,
     "category": "chems",
     "price": "50 cent",
     "price_postapoc": "10 cent",
@@ -2026,6 +2039,7 @@
   },
   {
     "id": "red_phosphorous",
+    "stackable": true,
     "type": "ITEM",
     "category": "chems",
     "name": { "str_sp": "red phosphorous powder" },
@@ -2058,6 +2072,7 @@
   },
   {
     "id": "white_phosphorous",
+    "stackable": true,
     "type": "ITEM",
     "category": "chems",
     "name": { "str_sp": "white phosphorous powder" },
@@ -2101,6 +2116,7 @@
   },
   {
     "id": "iodine_crystal",
+    "stackable": true,
     "type": "ITEM",
     "category": "chems",
     "name": { "str_sp": "iodine crystals" },

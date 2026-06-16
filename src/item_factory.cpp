@@ -473,7 +473,9 @@ void Item_factory::finalize_pre( itype &obj )
     // for ammo and comestibles stack size defaults to count of initial charges
     // Set max stack size to 200 to prevent integer overflow
     if( obj.count_by_charges() ) {
-        if( obj.stackable_ ) {
+        if( obj.stackable_ && obj.stack_size == 0 ) {
+            // Default stackable items to a 1:1 unit/volume ratio, but honor an
+            // explicit "stack_size" from JSON (set above) for bulk powders/fuels.
             obj.stack_size = 1;
         }
         if( obj.comestible ) {
@@ -482,10 +484,11 @@ void Item_factory::finalize_pre( itype &obj )
             obj.stack_size = obj.ammo->stack_size;
         }
         if( obj.stack_size == 0 ) {
+            // No explicit stack_size and not derived from ammo/comestible:
+            // fall back to the default charge count. Not clamped — ammo such
+            // as gunpowder relies on a large charges_default (e.g. 4540) here,
+            // and the volume math uses int64/units so large values are safe.
             obj.stack_size = obj.charges_default();
-        } else if( obj.stack_size > 200 ) {
-            debugmsg( obj.id.str() + " stack size is too large, reducing to 200" );
-            obj.stack_size = 200;
         }
     }
 
@@ -4450,6 +4453,12 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "price", price, not_negative_money, 0_cent );
     optional( jo, was_loaded, "price_postapoc", price_post, not_negative_money, -1_cent );
     optional( jo, was_loaded, "stackable", stackable_ );
+    // Allow stackable (non-ammo, non-comestible) items to define how many units
+    // occupy one "volume" worth of stack, mirroring ammo/comestible stack_size.
+    // Without this a stackable item is hard-pinned to stack_size=1 (see
+    // item_factory finalize), which inflates volume for bulk powders/fuels that
+    // used to be AMMO with a large count (e.g. chem_black_powder count:1000).
+    optional( jo, was_loaded, "stack_size", stack_size, numeric_bound_reader<int> { 1 } );
     optional( jo, was_loaded, "integral_volume", integral_volume, not_negative_volume, -1_ml );
     optional( jo, was_loaded, "light", light_emission, 0 );
     optional( jo, was_loaded, "integral_longest_side", integral_longest_side, not_negative_length,

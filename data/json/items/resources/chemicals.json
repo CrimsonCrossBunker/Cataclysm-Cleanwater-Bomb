@@ -57,11 +57,13 @@
     "container": "box_small",
     "material": [ "dense_powder_nonflam" ],
     "volume": "1 ml",
-    "weight": "2540 mg"
+    "weight": "2540 mg",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "chem_baking_soda",
+    "stackable": true,
     "category": "chems",
     "price": "12 cents",
     "price_postapoc": "2 cent",
