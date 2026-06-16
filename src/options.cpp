@@ -3037,9 +3037,15 @@ void options_manager::add_options_world_default()
 
     add_empty_line();
 
+    // string_input (free text) rather than string_select: total-conversion
+    // mods set this via EXTERNAL_OPTION (e.g. Aftershock -> "default_aftershock"),
+    // and a string_select silently rejects any value not in its candidate list.
+    // The candidate list cannot be pre-populated here because region data loads
+    // after options, so a free-text field is the only form that accepts arbitrary
+    // (mod-provided or player-typed) region ids while staying visible in worldgen.
     add( "DEFAULT_REGION", "world_default", to_translation( "Default region type" ),
-         to_translation( "(WIP feature) Determines terrain, shops, plants, and more." ),
-    { { "default", to_translation( "default" ) } }, "default"
+         to_translation( "(WIP feature) Determines terrain, shops, plants, and more.  Set by total-conversion mods; leave as \"default\" unless you know the id of an installed region." ),
+         "default", 60
        );
 
     add_empty_line();
