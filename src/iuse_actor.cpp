@@ -41,6 +41,7 @@
 #include "enum_conversions.h"
 #include "enums.h"
 #include "explosion.h"
+#include "explosion_light.h"
 #include "field_type.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -75,6 +76,7 @@
 #include "mutation.h"
 #include "npc.h"
 #include "output.h"
+#include "options.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
@@ -100,6 +102,7 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vfx_emit.h"
 #include "vehicle_selector.h"
 #include "visitable.h"
 #include "vitamin.h"
@@ -989,6 +992,20 @@ std::optional<int> explosion_iuse::use( Character *p, item &it, map *here,
         }
     }
     if( emp_blast_radius >= 0 ) {
+        // EMP light overlay. An EMP item with a real explosion block (e.g. the EMP
+        // bomb) already draws emp_blast via that explosion's light_effect above; a
+        // pure-EMP item like the EMP grenade has no explosion block (power < 0), so
+        // draw the overlay here instead — otherwise its detonation is invisible.
+        if( explosion.power < 0.0f && get_option<bool>( "ANIMATIONS" ) &&
+            bubble_map.inbounds( here->get_abs( pos ) ) ) {
+            vfx_emit e;
+            e.shape = vfx_shape::disc;
+            e.origin = bubble_map.get_bub( here->get_abs( pos ) );
+            e.target = e.origin;
+            e.radius = std::max( 1, emp_blast_radius );
+            e.light = explosion_lights::emp_blast;
+            explosion_handler::play_vfx( e );
+        }
         for( const tripoint_bub_ms &dest : here->points_in_radius( pos, emp_blast_radius ) ) {
             // TODO: Use map aware 'emp_blast' when available.
             explosion_handler::emp_blast( dest );

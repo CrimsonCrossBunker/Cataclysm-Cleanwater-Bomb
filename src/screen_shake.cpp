@@ -71,6 +71,30 @@ void maybe_trigger_screen_shake_from_sound( int heard_volume )
 #endif
 }
 
+void maybe_trigger_screen_shake_recipe( float magnitude_px, float duration_ms, uint32_t seed )
+{
+#if !defined(TILES)
+    // Tiles-only present-time effect (see maybe_trigger_screen_shake_from_sound).
+    ( void )magnitude_px;
+    ( void )duration_ms;
+    ( void )seed;
+#else
+    if( magnitude_px <= 0.0f || duration_ms <= 0.0f ) {
+        return;
+    }
+    // Same master gates as the sound path, but no loudness threshold: the recipe
+    // asked for this shake explicitly.
+    if( !get_option<bool>( "ANIMATIONS" ) || !get_option<bool>( "SCREEN_SHAKE" ) ) {
+        return;
+    }
+    const float intensity = std::max( 0, get_option<int>( "SCREEN_SHAKE_INTENSITY" ) ) / 100.0f;
+    if( intensity <= 0.0f ) {
+        return;
+    }
+    trigger_screen_shake( magnitude_px * intensity, duration_ms, seed );
+#endif
+}
+
 bool advance_screen_shake( int64_t dt_ms )
 {
     if( !screen_shake_active() ) {

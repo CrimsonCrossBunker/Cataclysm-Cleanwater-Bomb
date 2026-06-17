@@ -25,6 +25,33 @@ struct explosion_light_sample {
     uint8_t a = 0;
 };
 
+// One keyframe in the colour ramp a blast sweeps through: a colour + the opacity
+// the tile holds while this stop is the active one. The waves are the stops in
+// order — wave i paints stops[i]; after the last stop the clear front fades the
+// tile out. Two stops reproduce the original color_a/color_b behaviour.
+struct light_stop {
+    std::array<uint8_t, 3> color = { { 255, 255, 255 } };
+    uint8_t alpha = 150;
+};
+
+// Easing applied to the hue blend between consecutive stops and to the alpha
+// ramps. linear is the historical behaviour.
+enum class vfx_easing : int {
+    linear,
+    ease_in,    // slow start (t^2)
+    ease_out,   // slow finish (1-(1-t)^2)
+    smoothstep, // slow start and finish (3t^2-2t^3)
+    last
+};
+
+template <typename E> struct enum_traits;
+template<>
+struct enum_traits<vfx_easing> {
+    static constexpr vfx_easing last = vfx_easing::last;
+};
+
+
+
 // A data-driven recipe for the modern explosion light overlay (phase one:
 // colour/alpha light cover, no geometry distortion). Replaces the legacy
 // expanding-sprite look with a blended colour block per tile. The blast sends
@@ -78,6 +105,35 @@ struct explosion_light {
         // alpha/brightness to give the fire an uneven, live edge).
         float flicker = 0.18f;
 
+        // Optional N-stop colour ramp. When non-empty this drives the waves: the
+        // blast sends one front per stop (front i paints stops[i].color at
+        // stops[i].alpha), followed by a final clear front. When EMPTY, load()
+        // synthesises a two-stop ramp from color_a/alpha_a + color_b/alpha_b, so a
+        // recipe that predates this field is byte-for-byte unchanged. color_a/b and
+        // alpha_a/b above are the legacy two-stop inputs and are ignored once
+        // `stops` is populated.
+        std::vector<light_stop> stops;
+        // Easing for the hue blend and alpha ramps.
+        vfx_easing easing = vfx_easing::linear;
+
+        // Animation duration, in ms, as a function of blast radius:
+        //   clamp( duration_base_ms + radius_tiles * duration_per_tile_ms,
+        //          duration_min_ms, duration_max_ms )
+        // Defaults reproduce the historical hardcoded formula.
+        float duration_base_ms = 120.0f;
+        float duration_per_tile_ms = 45.0f;
+        float duration_min_ms = 150.0f;
+        float duration_max_ms = 900.0f;
+
+        // --- Recipe-driven screen shake -------------------------------------
+        // A blast using this recipe gives the view a quick jolt, independent of the
+        // sound-driven shake. Gated by the same ANIMATIONS / SCREEN_SHAKE /
+        // SCREEN_SHAKE_INTENSITY options, but not by the sound threshold (this is an
+        // explicit authored effect). 0 magnitude/duration = no shake.
+        float screen_shake_magnitude = 0.0f; // peak displacement in pixels
+        float screen_shake_duration_ms = 0.0f;
+
+
 
         // --- Phase two: screen-space shockwave distortion --------------------
         // A CPU-driven refraction ring that warps the already-rendered frame at
@@ -111,6 +167,10 @@ struct explosion_light {
         explosion_light_sample sample( float radial, float progress, uint32_t tile_seed,
                                        uint32_t frame_seed, float blast_radius_tiles = 1.0f ) const;
 
+        // Animation duration in ms for a blast of the given radius (applies the
+        // duration_* fields). Renderer-free; used to derive the per-ms progress rate.
+        float duration_ms( float blast_radius_tiles ) const;
+
         // Used by generic_factory
         explosion_light_str_id id;
         std::vector<std::pair<explosion_light_str_id, mod_id>> src;
@@ -129,6 +189,25 @@ const std::vector<explosion_light> &get_all();
 // The built-in recipe used when an explosion does not name one. Resolved lazily
 // so it works whether or not data has finished loading.
 extern const explosion_light_str_id default_blast;
+
+// Built-in muzzle-flash recipe used by Character::fire_gun for visible gunfire.
+extern const explosion_light_str_id muzzle_flash;
+
+// Built-in combat recipes used by the ballistics path: a point spark at the
+// projectile's impact tile, a faint tracer streak along a normal bullet's
+// flight path, and the three energy-beam recipes keyed off ammo effect.
+extern const explosion_light_str_id impact_spark;
+extern const explosion_light_str_id bullet_tracer;
+extern const explosion_light_str_id beam_laser;
+extern const explosion_light_str_id beam_plasma;
+extern const explosion_light_str_id beam_lightning;
+
+// Built-in flashbang light recipe, played from explosion_handler::flashbang.
+extern const explosion_light_str_id flashbang_blast;
+
+// Built-in EMP light recipe, played from explosion_iuse for pure-EMP items
+// (e.g. the EMP grenade) that have no explosion block to carry it.
+extern const explosion_light_str_id emp_blast;
 
 // Reserved light_effect id that opts a blast back into the legacy expanding-sprite
 // animation instead of the modern overlay. Not a real explosion_light definition;

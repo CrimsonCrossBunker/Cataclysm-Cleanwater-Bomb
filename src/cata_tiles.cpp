@@ -4873,7 +4873,11 @@ void cata_tiles::init_custom_explosion_layer( const std::map<tripoint_bub_ms, ex
 void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
                                        const explosion_light_str_id &effect,
                                        const tripoint_bub_ms &center, float radius_tiles,
-                                       float per_ms, float end_progress )
+                                       float per_ms, float end_progress,
+                                       bool circular_shockwave,
+                                       shockwave_state::sw_shape shock_shape,
+                                       const tripoint_bub_ms &shock_target,
+                                       float shock_half_angle )
 {
     // Append a new asynchronous blast; existing ones keep playing (concurrent
     // overlap). It advances itself each frame via advance_explosion_lights().
@@ -4885,6 +4889,10 @@ void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &i
     a.progress = 0.0f;
     a.per_ms = per_ms;
     a.end_progress = end_progress;
+    a.circular_shockwave = circular_shockwave;
+    a.shock_shape = shock_shape;
+    a.shock_target = shock_target;
+    a.shock_half_angle = shock_half_angle;
     m_explosion_lights.push_back( std::move( a ) );
 }
 // Elapsed steady-clock ms since the last tick stored in \p last_ms, capped so a
@@ -5355,14 +5363,39 @@ void cata_tiles::draw_explosion_light_frame( int view_z )
             const point c_scr = player_to_screen( blast.center.xy() );
             shockwave_state sw;
             sw.active = true;
-            // Centre on the middle of the epicentre tile.
+            // Origin = middle of the epicentre tile (apex for line/cone).
             sw.center_x = static_cast<float>( c_scr.x ) + tile_width * 0.5f;
             sw.center_y = static_cast<float>( c_scr.y ) + tile_height * 0.5f;
             const float radius_px = blast.radius_tiles * tile_px;
-            // Ring sweeps out at shockwave_speed relative to the light's own front.
+            // Front sweeps out at shockwave_speed relative to the light's own front.
             sw.radius = blast.progress * eff.shockwave_speed * radius_px;
             sw.thickness = eff.shockwave_thickness * tile_px;
-            // Envelope the strength over the blast's life so the ring eases in and,
+            // Shape: a radial ring for a disc blast; a flat front along the axis for
+            // a line; an angular slice for a cone. circular_shockwave gates the disc;
+            // otherwise the directional geometry stored on the blast is used.
+            if( blast.circular_shockwave ) {
+                sw.shape = shockwave_state::sw_shape::disc;
+            } else {
+                sw.shape = blast.shock_shape;
+                // Axis from the origin toward the target, in screen pixels.
+                const point t_scr = player_to_screen( blast.shock_target.xy() );
+                const float ax = static_cast<float>( t_scr.x ) - static_cast<float>( c_scr.x );
+                const float ay = static_cast<float>( t_scr.y ) - static_cast<float>( c_scr.y );
+                const float alen = std::sqrt( ax * ax + ay * ay );
+                if( alen > 1e-3f ) {
+                    sw.axis_x = ax / alen;
+                    sw.axis_y = ay / alen;
+                }
+                sw.half_angle = blast.shock_half_angle;
+                // A line front is infinite across its axis unless bounded; without
+                // this a beam warps the entire screen width. Confine it to a tube a
+                // few tiles wide around the beam (cosine taper to the edge). Cones
+                // are already bounded by their angular sector, so leave half_width 0.
+                if( sw.shape == shockwave_state::sw_shape::line ) {
+                    sw.half_width = std::max( sw.thickness, tile_px * 1.5f );
+                }
+            }
+            // Envelope the strength over the blast's life so the front eases in and,
             // crucially, fades out instead of snapping off when the blast ends (a
             // constant strength followed by a hard cut reads as abrupt). t is the
             // blast's normalised progress; a quick attack then a smooth (squared)

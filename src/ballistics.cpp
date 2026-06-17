@@ -19,6 +19,7 @@
 #include "dispersion.h"
 #include "enums.h"
 #include "explosion.h"
+#include "explosion_light.h"
 #include "game.h"
 #include "item.h"
 #include "itype.h"
@@ -39,6 +40,8 @@
 #include "trap.h"
 #include "type_id.h"
 #include "units.h"
+#include "vfx_emit.h"
+#include "viewer.h"
 #include "vpart_position.h"
 #if defined(TILES)
 #include "cata_tiles.h" // for per-ammo bullet sprite lookup
@@ -52,6 +55,9 @@ static const ammo_effect_str_id ammo_effect_DRAW_AS_LINE( "DRAW_AS_LINE" );
 static const ammo_effect_str_id ammo_effect_EXCESS_PEN( "EXCESS_PEN" );
 static const ammo_effect_str_id ammo_effect_HEAVY_HIT( "HEAVY_HIT" );
 static const ammo_effect_str_id ammo_effect_JET( "JET" );
+static const ammo_effect_str_id ammo_effect_LASER( "LASER" );
+static const ammo_effect_str_id ammo_effect_LIGHTNING( "LIGHTNING" );
+static const ammo_effect_str_id ammo_effect_PLASMA( "PLASMA" );
 static const ammo_effect_str_id ammo_effect_MUZZLE_SMOKE( "MUZZLE_SMOKE" );
 static const ammo_effect_str_id ammo_effect_NO_EMBED( "NO_EMBED" );
 static const ammo_effect_str_id ammo_effect_NO_ITEM_DAMAGE( "NO_ITEM_DAMAGE" );
@@ -236,6 +242,74 @@ projectile_attack_aim projectile_attack_roll( const dispersion_sources &dispersi
     }
 
     return aim;
+}
+
+// Combat VFX helpers (light overlay). All no-op in tests / curses via play_vfx,
+// and gated on player visibility so an off-screen shooter isn't given away.
+
+// A line streak swept from source to impact. Genuine energy weapons
+// (LASER / PLASMA / LIGHTNING) get a bright coloured beam; anything else drawn as
+// a line — non-energy DRAW_AS_LINE ammo, or ordinary bullets under the
+// BULLETS_AS_LASERS option — gets the faint warm-white tracer, not a red beam.
+static void play_beam_vfx( const tripoint_bub_ms &source, const tripoint_bub_ms &impact,
+                           const std::set<ammo_effect_str_id> &fx )
+{
+    explosion_light_str_id recipe = explosion_lights::bullet_tracer;
+    if( fx.count( ammo_effect_LASER ) ) {
+        recipe = explosion_lights::beam_laser;
+    } else if( fx.count( ammo_effect_PLASMA ) ) {
+        recipe = explosion_lights::beam_plasma;
+    } else if( fx.count( ammo_effect_LIGHTNING ) ) {
+        recipe = explosion_lights::beam_lightning;
+    }
+    viewer &player_view = get_player_view();
+    map &here = get_map();
+    // Draw if either endpoint is visible — a beam crossing the screen reads even
+    // when one end is in shadow.
+    if( !player_view.sees( here, source ) && !player_view.sees( here, impact ) ) {
+        return;
+    }
+    vfx_emit e;
+    e.shape = vfx_shape::line;
+    e.origin = source;
+    e.target = impact;
+    e.radius = 1; // 1-tile-wide beam spine
+    e.range = std::max( 1, rl_dist( source, impact ) );
+    e.light = recipe;
+    explosion_handler::play_vfx( e );
+}
+
+// A faint tracer streak along a normal bullet's flight path.
+static void play_tracer_vfx( const tripoint_bub_ms &source, const tripoint_bub_ms &impact )
+{
+    viewer &player_view = get_player_view();
+    map &here = get_map();
+    if( !player_view.sees( here, source ) && !player_view.sees( here, impact ) ) {
+        return;
+    }
+    vfx_emit e;
+    e.shape = vfx_shape::line;
+    e.origin = source;
+    e.target = impact;
+    e.radius = 1;
+    e.range = std::max( 1, rl_dist( source, impact ) );
+    e.light = explosion_lights::bullet_tracer;
+    explosion_handler::play_vfx( e );
+}
+
+// A small spark of light at the projectile's impact tile (any tile: hit, wall,
+// ground or clean miss).
+static void play_impact_spark_vfx( const tripoint_bub_ms &impact )
+{
+    if( !get_player_view().sees( get_map(), impact ) ) {
+        return;
+    }
+    vfx_emit e;
+    e.shape = vfx_shape::point;
+    e.origin = impact;
+    e.target = impact;
+    e.light = explosion_lights::impact_spark;
+    explosion_handler::play_vfx( e );
 }
 
 void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_arg,
@@ -702,6 +776,22 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
 
         if( here->impassable( tp ) ) {
             tp = prev_point;
+        }
+
+        // Light-overlay combat VFX, once per shot (first projectile of the count),
+        // matching the sprite animation's own gating. tp is now the resolved impact
+        // tile. These are firearm / energy-weapon visuals, so skip them entirely for
+        // thrown items (a flung rock or knife is not a bullet) — the thrown item's
+        // own flight sprite already animates, and grenades handle their explosion
+        // separately. Beams use the directional line shape; normal visible bullets
+        // get a faint tracer; every (non-thrown) impact gets a small spark.
+        if( first && do_animation && !wp_attack.is_thrown && here == &reality_bubble() ) {
+            if( do_draw_line ) {
+                play_beam_vfx( source, tp, proj_effects );
+            } else if( is_bullet ) {
+                play_tracer_vfx( source, tp );
+            }
+            play_impact_spark_vfx( tp );
         }
 
         drop_or_embed_projectile( here, attack, proj );

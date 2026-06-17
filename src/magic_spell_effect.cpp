@@ -509,7 +509,22 @@ static std::set<tripoint_bub_ms> spell_effect_area( const spell &sp, const tripo
             const std::string exp_name = "explosion_" + sp.id().str();
             explosion_handler::draw_custom_explosion( explosion_colors, exp_name );
         } else {
-            explosion_handler::draw_custom_explosion( explosion_colors, std::nullopt, light, target );
+            // Shape the light's propagation. A blast blooms radially from the
+            // target epicentre (circular shockwave ring). A line or cone is
+            // directional: the wave sweeps out from the caster, so pass the
+            // caster tile as the origin and the spell target as the sweep
+            // direction. The shockwave front follows the shape — a flat beam for
+            // a line, an arc (sp.aoe() degrees) for a cone — instead of a centred
+            // ring. The light cover and screen shake play in every case.
+            const bool directional = sp.shape() == spell_shape::line ||
+                                     sp.shape() == spell_shape::cone;
+            const tripoint_bub_ms origin = directional ? caster.pos_bub() : target;
+            const std::optional<tripoint_bub_ms> shock_target =
+                directional ? std::optional<tripoint_bub_ms>( target ) : std::nullopt;
+            const double arc = sp.shape() == spell_shape::cone
+                               ? static_cast<double>( sp.aoe( caster ) ) : 0.0;
+            explosion_handler::draw_custom_explosion( explosion_colors, std::nullopt, light,
+                    origin, !directional, shock_target, arc );
         }
     }
     return targets;

@@ -66,6 +66,8 @@
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
+#include "explosion.h"
+#include "explosion_light.h"
 #include "faction.h"
 #include "filesystem.h"
 #include "game.h"
@@ -136,6 +138,7 @@
 #include "units_utility.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vfx_emit.h"
 #include "vitamin.h"
 #include "vpart_position.h"
 #include "weather.h"
@@ -231,6 +234,7 @@ std::string enum_to_string<debug_menu::debug_menu_index>( debug_menu::debug_menu
         case debug_menu::debug_menu_index::WIND_DIRECTION: return "WIND_DIRECTION";
         case debug_menu::debug_menu_index::WIND_SPEED: return "WIND_SPEED";
         case debug_menu::debug_menu_index::GEN_SOUND: return "GEN_SOUND";
+        case debug_menu::debug_menu_index::VFX_PREVIEW: return "VFX_PREVIEW";
         case debug_menu::debug_menu_index::KILL_MONS: return "KILL_MONS";
         case debug_menu::debug_menu_index::DISPLAY_HORDES: return "DISPLAY_HORDES";
         case debug_menu::debug_menu_index::TEST_IT_GROUP: return "TEST_IT_GROUP";
@@ -1082,6 +1086,7 @@ static int map_uilist()
         { uilist_entry( debug_menu_index::WIND_DIRECTION, true, 'd', _( "Change wind direction" ) ) },
         { uilist_entry( debug_menu_index::WIND_SPEED, true, 's', _( "Change wind speed" ) ) },
         { uilist_entry( debug_menu_index::GEN_SOUND, true, 'S', _( "Generate sound" ) ) },
+        { uilist_entry( debug_menu_index::VFX_PREVIEW, true, 'V', _( "Preview explosion VFX" ) ) },
         { uilist_entry( debug_menu_index::KILL_MONS, true, 'K', _( "Kill all monsters" ) ) },
         { uilist_entry( debug_menu_index::CHANGE_TIME, true, 't', _( "Change time" ) ) },
         { uilist_entry( debug_menu_index::FORCE_TEMP, true, 'T', _( "Force temperature" ) ) },
@@ -3581,6 +3586,80 @@ static void gen_sound()
                    volume ) );
 }
 
+static void vfx_preview()
+{
+    // Pick an explosion_light recipe to preview.
+    const std::vector<explosion_light> &recipes = explosion_lights::get_all();
+    if( recipes.empty() ) {
+        popup( _( "No explosion_light recipes are loaded." ) );
+        return;
+    }
+    uilist rmenu;
+    rmenu.text = _( "Explosion VFX recipe to preview" );
+    for( size_t i = 0; i < recipes.size(); i++ ) {
+        rmenu.addentry( static_cast<int>( i ), true, MENU_AUTOASSIGN, "%s", recipes[i].id.str() );
+    }
+    rmenu.query();
+    if( rmenu.ret < 0 || rmenu.ret >= static_cast<int>( recipes.size() ) ) {
+        return;
+    }
+    const explosion_light_str_id light = recipes[rmenu.ret].id;
+
+    // Pick a shape.
+    uilist smenu;
+    smenu.text = _( "Shape" );
+    smenu.addentry( 0, true, 'd', _( "Disc (radial blast)" ) );
+    smenu.addentry( 1, true, 'l', _( "Line (beam)" ) );
+    smenu.addentry( 2, true, 'c', _( "Cone (fan)" ) );
+    smenu.addentry( 3, true, 'p', _( "Point" ) );
+    smenu.query();
+    if( smenu.ret < 0 ) {
+        return;
+    }
+
+    vfx_emit e;
+    e.light = light;
+    e.origin = get_avatar().pos_bub();
+    switch( smenu.ret ) {
+        case 0:
+            e.shape = vfx_shape::disc;
+            e.radius = 6;
+            break;
+        case 1:
+            e.shape = vfx_shape::line;
+            e.radius = 3;  // width
+            e.range = 10;
+            break;
+        case 2:
+            e.shape = vfx_shape::cone;
+            e.arc_degrees = 60;
+            e.range = 10;
+            break;
+        default:
+            e.shape = vfx_shape::point;
+            break;
+    }
+
+    // Disc/point are centred on a picked tile; line/cone sweep from the avatar
+    // toward a picked target.
+    if( e.shape == vfx_shape::disc || e.shape == vfx_shape::point ) {
+        const std::optional<tripoint_bub_ms> where = g->look_around();
+        if( !where ) {
+            return;
+        }
+        e.origin = *where;
+        e.target = *where;
+    } else {
+        const std::optional<tripoint_bub_ms> where = g->look_around();
+        if( !where ) {
+            return;
+        }
+        e.target = *where;
+    }
+
+    explosion_handler::play_vfx( e );
+}
+
 static void import_folower()
 {
     cata_path export_dir{ cata_path::root_path::user,  "export_dir" };
@@ -4449,6 +4528,12 @@ const std::vector<debug_action_entry> &all_actions()
             debug_menu_index::GEN_SOUND, translate_marker( "Generate sound" ), "sound", "Map", []()
             {
                 gen_sound();
+            }
+        },
+        {
+            debug_menu_index::VFX_PREVIEW, translate_marker( "Preview explosion VFX" ), "explosion vfx light shockwave preview", "Map", []()
+            {
+                vfx_preview();
             }
         },
         {

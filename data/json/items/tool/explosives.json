@@ -121,7 +121,7 @@
     "material": [ "steel", "plastic" ],
     "symbol": "*",
     "explode_in_fire": true,
-    "explosion": { "power": 600, "shrapnel": { "casing_mass": 3214, "fragment_mass": 0.5 } },
+    "explosion": { "power": 600, "light_effect": "emp_blast", "shrapnel": { "casing_mass": 3214, "fragment_mass": 0.5 } },
     "color": "light_gray",
     "use_action": { "target": "EMPbomb_act", "msg": "You activate the EMP bomb.", "menu_text": "Activate", "type": "transform" },
     "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE", "WATER_BREAK", "ALLOWS_REMOTE_USE" ],
@@ -140,7 +140,7 @@
       "draw_explosion_radius": 10,
       "draw_explosion_color": "light_blue",
       "emp_blast_radius": 10,
-      "explosion": { "power": 600, "shrapnel": { "casing_mass": 3214, "fragment_mass": 0.5 } }
+      "explosion": { "power": 600, "light_effect": "emp_blast", "shrapnel": { "casing_mass": 3214, "fragment_mass": 0.5 } }
     },
     "flags": [ "DANGEROUS", "WATER_BREAK", "SPAWN_ACTIVE" ]
   },

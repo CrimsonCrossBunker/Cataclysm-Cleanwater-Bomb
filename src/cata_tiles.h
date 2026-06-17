@@ -35,6 +35,7 @@
 #include "point.h"
 #include "sdl_geometry.h"
 #include "sdl_wrappers.h"
+#include "shockwave.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
@@ -836,7 +837,12 @@ class cata_tiles
         void init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
                                    const explosion_light_str_id &effect,
                                    const tripoint_bub_ms &center, float radius_tiles,
-                                   float per_ms, float end_progress );
+                                   float per_ms, float end_progress,
+                                   bool circular_shockwave = true,
+                                   shockwave_state::sw_shape shock_shape =
+                                       shockwave_state::sw_shape::disc,
+                                   const tripoint_bub_ms &shock_target = tripoint_bub_ms(),
+                                   float shock_half_angle = 0.0f );
         // Advance all active explosion lights by real elapsed time and drop the
         // finished ones. Called once at the start of each draw().
         void advance_explosion_lights();
@@ -1217,6 +1223,19 @@ class cata_tiles
             float progress = 0.0f;
             float per_ms = 0.0f;       // progress increment per millisecond
             float end_progress = 1.0f; // progress value at which the blast is done
+            // Whether the shockwave (if the recipe has one) is an expanding ring
+            // centred on `center`. True for radial blasts (disc). False for
+            // directional shapes (line/cone): the shockwave is built from
+            // shock_shape + shock_target + shock_half_angle instead of a centred
+            // circle. See draw_explosion_light_frame.
+            bool circular_shockwave = true;
+            // Directional shockwave geometry, used only when circular_shockwave is
+            // false. shock_shape selects line vs cone; shock_target gives the
+            // direction the front sweeps toward (from `center`); shock_half_angle
+            // is the cone's half-width in radians (0 for line).
+            shockwave_state::sw_shape shock_shape = shockwave_state::sw_shape::disc;
+            tripoint_bub_ms shock_target;
+            float shock_half_angle = 0.0f;
         };
         std::vector<active_explosion_light> m_explosion_lights;
         // steady_clock timestamp (ms) of the last advance, for real-time stepping.

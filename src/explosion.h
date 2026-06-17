@@ -117,10 +117,17 @@ void draw_explosion( const tripoint_bub_ms &p, int radius, const nc_color &col )
 // \p epicenter, when provided, is the true blast origin (reality-bubble coords);
 // the modern light overlay uses it as the light/shockwave centre instead of the
 // blast area's centroid, which drifts off-centre for blasts clipped by walls.
+// \p circular_shockwave is true for radial blasts (the light/distortion ring
+// expands from the epicentre); pass false for a directional shape (line/cone)
+// whose tiles aren't a centred disc, so it skips the ring and keeps only the
+// light cover + screen shake.
 void draw_custom_explosion( const std::map<tripoint_bub_ms, nc_color> &area,
                             const std::optional<std::string> &tile_id = std::nullopt,
                             const explosion_light_str_id &light_effect = explosion_light_str_id(),
-                            const std::optional<tripoint_bub_ms> &epicenter = std::nullopt );
+                            const std::optional<tripoint_bub_ms> &epicenter = std::nullopt,
+                            bool circular_shockwave = true,
+                            const std::optional<tripoint_bub_ms> &shock_target = std::nullopt,
+                            double arc_degrees = 0.0 );
 
 int ballistic_damage( float velocity, float mass );
 float gurney_spherical( double charge, double mass );

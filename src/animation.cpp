@@ -39,6 +39,8 @@
 #include "output.h"
 #include "point.h"
 #include "popup.h"
+#include "screen_shake.h"
+#include "shockwave.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -344,15 +346,22 @@ void explosion_handler::draw_explosion( const tripoint_bub_ms &p, const int r, c
 // and fade. Rendering is a blended colour cover per tile — no sprites.
 static void draw_explosion_light( const std::map<tripoint_bub_ms, nc_color> &all_area,
                                   const explosion_light_str_id &light_effect,
-                                  const std::optional<tripoint_bub_ms> &epicenter = std::nullopt )
+                                  const std::optional<tripoint_bub_ms> &epicenter = std::nullopt,
+                                  bool circular_shockwave = true,
+                                  const std::optional<tripoint_bub_ms> &shock_target = std::nullopt,
+                                  double arc_degrees = 0.0 )
 {
     if( all_area.empty() ) {
         return;
     }
 
-    // Restrict to the avatar's current z-level and find the epicentre. Prefer the
-    // true blast origin when the caller passed it; fall back to the area centroid
-    // (which drifts off-centre when the blast is clipped by walls on one side).
+    // Restrict to the avatar's current z-level and find the propagation origin.
+    // Prefer the origin the caller passed (the blast's true epicentre, or — for a
+    // directional shape like a line/cone — the caster tile the wave sweeps out
+    // from); fall back to the area centroid (which drifts off-centre when the
+    // blast is clipped by walls on one side). The per-tile coord below is distance
+    // from this origin, so for a line/cone the wave reads as travelling along the
+    // shape from its origin rather than blooming from the middle of the tiles.
     avatar &player_character = get_avatar();
     const tripoint_rel_ms view_center = relative_view_pos( player_character,
                                         player_character.pos_bub() );
@@ -415,20 +424,23 @@ static void draw_explosion_light( const std::map<tripoint_bub_ms, nc_color> &all
     const explosion_light &eff = effect.is_valid() ? *effect : *explosion_lights::default_blast;
 
     // Total progress span: a rim tile is reached by the clear wave last, at
-    // wave_travel (front travel) + 2*wave_gap (A->B->clear) + fade (its fall),
-    // plus the worst-case spread jitter. Run a small margin past that so the
-    // final fade completes.
-    const float end_progress = eff.wave_travel + 2.0f * eff.wave_gap + eff.fade +
-                               eff.spread_jitter + 0.05f;
+    // wave_travel (front travel) + N*wave_gap (one front per colour stop, then the
+    // clear front) + fade (its fall), plus the worst-case spread jitter. Run a
+    // small margin past that so the final fade completes.
+    const int num_stops = std::max<int>( 1, static_cast<int>( eff.stops.size() ) );
+    const float end_progress = eff.wave_travel + static_cast<float>( num_stops ) * eff.wave_gap +
+                               eff.fade + eff.spread_jitter + 0.05f;
 
     // Asynchronous: register the blast and return immediately. It advances itself
     // by real elapsed time each frame (cata_tiles::advance_explosion_lights), so
     // the game keeps running and the player can act right away; the light plays out
     // in the background and several blasts in one turn overlap. Duration scales
-    // gently with radius so big blasts read as a travelling wave; small ones stay
-    // snappy. per_ms converts elapsed wall-clock into progress.
-    const float duration_ms = std::clamp( 120.0f + max_d * 45.0f, 150.0f, 900.0f );
+    // gently with radius (per the recipe's duration_* fields) so big blasts read as
+    // a travelling wave; small ones stay snappy. per_ms converts elapsed wall-clock
+    // into progress.
+    const float duration_ms = eff.duration_ms( max_d );
     const float per_ms = end_progress / duration_ms;
+
 
     // Centre tile (rounded centroid) at the blast's z-level, used as both the light
     // origin and the shockwave epicentre. The blast is on one z-level.
@@ -439,13 +451,45 @@ static void draw_explosion_light( const std::map<tripoint_bub_ms, nc_color> &all
     const tripoint_bub_ms center( static_cast<int>( std::lround( cx ) ),
                                   static_cast<int>( std::lround( cy ) ), center_z );
 
-    tilecontext->init_explosion_light( radial, effect, center, max_d, per_ms, end_progress );
+    // Recipe-declared screen shake (independent of the sound-driven shake). Seed
+    // from the epicentre so successive blasts jitter on different axes without an
+    // RNG. Gating (options/intensity) lives in the trigger.
+    if( eff.screen_shake_magnitude > 0.0f && eff.screen_shake_duration_ms > 0.0f ) {
+        const uint32_t seed = ( static_cast<uint32_t>( center.x() ) * 73856093U ) ^
+                              ( static_cast<uint32_t>( center.y() ) * 19349663U );
+        maybe_trigger_screen_shake_recipe( eff.screen_shake_magnitude,
+                                           eff.screen_shake_duration_ms, seed );
+    }
+
+    // Derive the directional shockwave geometry. A circular blast is a disc ring.
+    // Otherwise the front sweeps from the origin toward the target: a cone when an
+    // arc was given, a line beam otherwise. shock_target defaults to the origin if
+    // the caller didn't pass one (degenerate axis -> the frame builder keeps the
+    // default axis, so it simply reads as a faint disc).
+    shockwave_state::sw_shape shock_shape = shockwave_state::sw_shape::disc;
+    float shock_half_angle = 0.0f;
+    if( !circular_shockwave ) {
+        if( arc_degrees > 0.0 ) {
+            shock_shape = shockwave_state::sw_shape::cone;
+            constexpr double deg_to_rad = 3.14159265358979323846 / 180.0;
+            shock_half_angle = static_cast<float>( arc_degrees * 0.5 * deg_to_rad );
+        } else {
+            shock_shape = shockwave_state::sw_shape::line;
+        }
+    }
+    const tripoint_bub_ms shock_tgt = shock_target.value_or( center );
+
+    tilecontext->init_explosion_light( radial, effect, center, max_d, per_ms, end_progress,
+                                       circular_shockwave, shock_shape, shock_tgt,
+                                       shock_half_angle );
 }
 #endif
 
 void explosion_handler::draw_custom_explosion(
     const std::map<tripoint_bub_ms, nc_color> &all_area, const std::optional<std::string> &tile_id,
-    const explosion_light_str_id &light_effect, const std::optional<tripoint_bub_ms> &epicenter )
+    const explosion_light_str_id &light_effect, const std::optional<tripoint_bub_ms> &epicenter,
+    bool circular_shockwave, const std::optional<tripoint_bub_ms> &shock_target,
+    double arc_degrees )
 {
     if( test_mode ) {
         // avoid segfault from null tilecontext in tests
@@ -460,11 +504,16 @@ void explosion_handler::draw_custom_explosion(
     // path so those bespoke sprites still show.
     const bool legacy_opt_out = light_effect.str() == explosion_lights::legacy_sprite_id;
     if( use_tiles && !tile_id && !legacy_opt_out ) {
-        draw_explosion_light( all_area, light_effect, epicenter );
+        draw_explosion_light( all_area, light_effect, epicenter, circular_shockwave,
+                              shock_target, arc_degrees );
         return;
     }
 #else
+    ( void )light_effect;
     ( void )epicenter;
+    ( void )circular_shockwave;
+    ( void )shock_target;
+    ( void )arc_degrees;
 #endif
 
     constexpr explosion_neighbors all_neighbors = N_NORTH | N_SOUTH | N_WEST | N_EAST;

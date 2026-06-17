@@ -171,3 +171,87 @@ TEST_CASE( "explosion_light clamps inputs", "[explosion_light]" )
     CHECK( static_cast<int>( hi.a ) <= 255 );
     CHECK( static_cast<int>( hi.r ) <= 255 );
 }
+
+TEST_CASE( "explosion_light N-stop ramp sweeps through every colour", "[explosion_light]" )
+{
+    // Three explicit stops: white -> blue -> purple, then clear. With wave_gap 0.25
+    // the fronts arrive at the centre at 0, 0.25, 0.50 and clear at 0.75.
+    explosion_light e = make_default_recipe();
+    e.stops = {
+        { { { 255, 255, 255 } }, 180 },
+        { { { 100, 150, 255 } }, 130 },
+        { { { 150,  60, 255 } },  70 },
+    };
+    e.blend = 0.05f;
+
+    // After stop-1 front + blend (0.06): white.
+    const explosion_light_sample s0 = e.sample( 0.0f, 0.06f, 0, 0 );
+    CHECK( static_cast<int>( s0.r ) == 255 );
+    CHECK( static_cast<int>( s0.g ) == 255 );
+    CHECK( static_cast<int>( s0.b ) == 255 );
+
+    // After stop-2 front (0.25) + blend: blue.
+    const explosion_light_sample s1 = e.sample( 0.0f, 0.32f, 0, 0 );
+    CHECK( static_cast<int>( s1.r ) == 100 );
+    CHECK( static_cast<int>( s1.g ) == 150 );
+    CHECK( static_cast<int>( s1.b ) == 255 );
+
+    // After stop-3 front (0.50) + blend: purple.
+    const explosion_light_sample s2 = e.sample( 0.0f, 0.57f, 0, 0 );
+    CHECK( static_cast<int>( s2.r ) == 150 );
+    CHECK( static_cast<int>( s2.g ) == 60 );
+    CHECK( static_cast<int>( s2.b ) == 255 );
+
+    // After the clear front (0.75) + fade (0.10): gone.
+    CHECK( static_cast<int>( e.sample( 0.0f, 0.90f, 0, 0 ).a ) == 0 );
+}
+
+TEST_CASE( "explosion_light single stop holds one colour then clears", "[explosion_light]" )
+{
+    explosion_light e = make_default_recipe();
+    e.stops = { { { { 0, 255, 0 } }, 120 } };
+
+    // Lit: solid green at its stop alpha (single stop -> flat alpha while lit).
+    const explosion_light_sample lit = e.sample( 0.0f, 0.10f, 0, 0 );
+    CHECK( static_cast<int>( lit.r ) == 0 );
+    CHECK( static_cast<int>( lit.g ) == 255 );
+    CHECK( static_cast<int>( lit.a ) == 120 );
+
+    // One stop -> clear front at t0 + 1*wave_gap (0.25); after + fade it's gone.
+    CHECK( static_cast<int>( e.sample( 0.0f, 0.40f, 0, 0 ).a ) == 0 );
+}
+
+TEST_CASE( "explosion_light easing changes the blend trajectory", "[explosion_light]" )
+{
+    // Two stops, black -> white, sampled mid-blend. ease_in lags (darker) and
+    // ease_out leads (lighter) relative to linear at the same instant.
+    auto channel_at = [&]( vfx_easing ez ) {
+        explosion_light e = make_default_recipe();
+        e.stops = { { { { 0, 0, 0 } }, 150 }, { { { 255, 255, 255 } }, 150 } };
+        e.blend = 0.20f;
+        e.easing = ez;
+        // Stop-2 front is at wave_gap (0.25); sample a quarter into the blend.
+        return static_cast<int>( e.sample( 0.0f, 0.25f + 0.05f, 0, 0 ).r );
+    };
+    const int lin = channel_at( vfx_easing::linear );
+    const int in = channel_at( vfx_easing::ease_in );
+    const int out = channel_at( vfx_easing::ease_out );
+    CHECK( in < lin );
+    CHECK( out > lin );
+}
+
+TEST_CASE( "explosion_light duration scales with radius per recipe fields", "[explosion_light]" )
+{
+    explosion_light e = make_default_recipe();
+    e.duration_base_ms = 120.0f;
+    e.duration_per_tile_ms = 45.0f;
+    e.duration_min_ms = 150.0f;
+    e.duration_max_ms = 900.0f;
+
+    // Small radius is clamped up to the floor; a mid radius scales linearly; a huge
+    // radius is clamped to the ceiling.
+    CHECK( e.duration_ms( 0.0f ) == Approx( 150.0f ) );   // 120 -> clamped to 150
+    CHECK( e.duration_ms( 6.0f ) == Approx( 390.0f ) );   // 120 + 6*45
+    CHECK( e.duration_ms( 100.0f ) == Approx( 900.0f ) ); // clamped to ceiling
+}
+

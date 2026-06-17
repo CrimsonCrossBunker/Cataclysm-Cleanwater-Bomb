@@ -38,6 +38,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "explosion.h"
+#include "explosion_light.h"
 #include "flag.h"
 #include "game.h"
 #include "game_constants.h"
@@ -86,6 +87,8 @@
 #include "units_utility.h"
 #include "value_ptr.h"
 #include "vehicle.h"
+#include "vfx_emit.h"
+#include "viewer.h"
 #include "vpart_position.h"
 #include "weakpoint.h"
 
@@ -211,6 +214,7 @@ static int RAS_time( const Character &p, const item_location &loc );
 */
 static void cycle_action( item &weap, const itype_id &ammo, map *here, const tripoint_bub_ms &pos );
 static void make_gun_sound_effect( const Character &p, bool burst, item *weapon );
+static void make_gun_flash_effect( const Character &p, const tripoint_bub_ms &target, item &gun );
 
 namespace
 {
@@ -1204,6 +1208,8 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         // Add gunshot noise
         make_gun_sound_effect( *this, shots > 1, &gun );
         sfx::generate_gun_sound( *this, gun );
+        // Muzzle flash light overlay (visible, loud firearms only).
+        make_gun_flash_effect( *this, aim, gun );
 
         weakpoint_attack wp_attack;
         wp_attack.weapon = &gun;
@@ -2555,6 +2561,53 @@ void make_gun_sound_effect( const Character &p, bool burst, item *weapon )
     segs.set( tname::segments::CONTENTS, false );
     p.add_msg_if_player( _( "You shoot your %1$s.  %2$s" ), weapon->tname( 1, segs ),
                          uppercase_first_letter( data.sound ) );
+}
+
+// Muzzle flash: a brief point of light at the muzzle, nudged one tile toward the
+// aim so the shot direction reads. Played for player, NPC and turret fire alike,
+// but only when the muzzle tile is actually visible (so an off-screen shooter
+// isn't given away), and suppressed for quiet weapons (silenced guns, air guns)
+// and for non-firearms (bows/crossbows/thrown) which have no muzzle flash. The
+// recipe (muzzle_flash) carries its own tiny screen shake.
+static void make_gun_flash_effect( const Character &p, const tripoint_bub_ms &target, item &gun )
+{
+    if( !get_option<bool>( "ANIMATIONS" ) ) {
+        return;
+    }
+    // No flash from bows, crossbows, atlatls, slings, etc. — only chemical-propellant
+    // firearms have a muzzle flash. gun_noise volume already folds in suppressors and
+    // air guns, so a low value also covers silenced fire.
+    const skill_id &skill = gun.gun_skill();
+    if( skill == skill_archery || skill == skill_throw ) {
+        return;
+    }
+    // gun_noise() returns the *burst* noise when passed true; a single representative
+    // shot is enough to decide whether there's a visible flash.
+    constexpr int flash_loudness_threshold = 5;
+    if( gun.gun_noise( false ).volume < flash_loudness_threshold ) {
+        return;
+    }
+    // Only draw it where the player can see the muzzle; otherwise it would reveal a
+    // hidden shooter's position.
+    const tripoint_bub_ms muzzle = p.pos_bub();
+    if( !get_player_view().sees( get_map(), muzzle ) ) {
+        return;
+    }
+
+    vfx_emit e;
+    e.shape = vfx_shape::point;
+    e.light = explosion_lights::muzzle_flash;
+    // Nudge the point one tile toward the target so the flash sits at the barrel end
+    // rather than dead-centre on the shooter, giving a sense of direction.
+    e.origin = muzzle;
+    if( target != muzzle ) {
+        const std::vector<tripoint_bub_ms> path = line_to( muzzle, target );
+        if( !path.empty() ) {
+            e.origin = path.front();
+        }
+    }
+    e.target = e.origin;
+    explosion_handler::play_vfx( e );
 }
 
 item::sound_data item::gun_noise( const bool burst ) const
