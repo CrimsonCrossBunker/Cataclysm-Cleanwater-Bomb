@@ -464,6 +464,7 @@ void explosion_handler::draw_custom_explosion(
         return;
     }
 #else
+    ( void )light_effect;
     ( void )epicenter;
 #endif
 

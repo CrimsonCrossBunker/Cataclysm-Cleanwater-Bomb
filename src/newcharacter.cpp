@@ -2956,7 +2956,7 @@ static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int 
     std::string sig = std::string( u.male ? "m|" : "f|" ) + ( outfit ? "o1|" : "o0|" ) +
                       std::to_string( preview_scale ) + "|" +
                       ( u.prof ? u.prof->ident().str() : "none" ) + "|";
-    for( const std::pair<const std::string, std::string> &ov : u.get_overlay_ids() ) {
+    for( const std::pair<std::string, std::string> &ov : u.get_overlay_ids() ) {
         sig += ov.first;
         sig += ',';
     }
