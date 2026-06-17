@@ -2194,7 +2194,6 @@ void Item_factory::init()
     add_iuse( "THORAZINE", &iuse::thorazine );
     add_iuse( "TOWEL", &iuse::towel );
     add_iuse( "UNFOLD_GENERIC", &iuse::unfold_generic );
-    add_iuse( "UNPACK_ITEM", &iuse::unpack_item );
     add_iuse( "CALL_OF_TINDALOS", &iuse::call_of_tindalos );
     add_iuse( "BLOOD_DRAW", &iuse::blood_draw );
     add_iuse( "VIBE", &iuse::vibe );
@@ -2231,7 +2230,6 @@ void Item_factory::init()
     add_actor( std::make_unique<holster_actor>() );
     add_actor( std::make_unique<inscribe_actor>() );
     add_actor( std::make_unique<iuse_transform>() );
-    add_actor( std::make_unique<unpack_actor>() );
     add_actor( std::make_unique<message_iuse>() );
     add_actor( std::make_unique<paint_vehicle>() );
     add_actor( std::make_unique<mp3_iuse>() );
