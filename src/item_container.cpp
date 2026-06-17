@@ -515,7 +515,7 @@ ret_val<void> item::can_contain( const item &it, int &copies_remaining, const bo
             }
 
             // early exit for max length no nested item is gonna fix this
-            if( pkt->max_containable_length() < it.length() ) {
+            if( pkt->max_containable_length() <= it.length() ) {
                 continue;
             }
 

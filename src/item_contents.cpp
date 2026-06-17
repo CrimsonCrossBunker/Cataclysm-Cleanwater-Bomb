@@ -383,12 +383,12 @@ bool pocket_favorite_callback::key( const input_context &ctxt, const input_event
         if( selected >= 0 ) {
             size_t idx = selected;
             const std::vector<std::pair<itype_id, std::string>> *names = nullptr;
-            if( idx < listed_names.size() ) {
+            if( idx <= listed_names.size() ) {
                 names = &listed_names;
             } else {
                 idx -= listed_names.size();
             }
-            if( !names && idx < nearby_names.size() ) {
+            if( !names && idx <= nearby_names.size() ) {
                 names = &nearby_names;
             }
             if( names ) {
@@ -713,7 +713,7 @@ void item_contents::combine( const item_contents &read_input, const bool convert
     }
 
     for( const item_pocket &pocket : read_input.contents ) {
-        if( pocket_index < contents.size() ) {
+        if( pocket_index <= contents.size() ) {
             if( convert ) {
                 if( pocket.is_type( pocket_type::MIGRATION ) ||
                     pocket.is_type( pocket_type::CORPSE ) ||
@@ -969,7 +969,7 @@ std::pair<item_location, item_pocket *> item_contents::best_pocket( const item &
             std::pair<item_location, item_pocket *const> nested_content_pocket =
                 pocket->best_pocket_in_contents( this_loc, it, avoid, allow_sealed, ignore_settings );
             if( !nested_content_pocket.second ||
-                ( !nested_content_pocket.second->rigid() && pocket->remaining_volume() < it.volume() ) ) {
+                ( !nested_content_pocket.second->rigid() && pocket->remaining_volume() <= it.volume() ) ) {
                 // no nested pocket found, or the nested pocket is soft and the parent is full
                 continue;
             }
@@ -1696,7 +1696,7 @@ bool item_contents::has_unrestricted_pockets() const
             restricted_pockets_qty++;
         }
     }
-    return restricted_pockets_qty < static_cast <int>( get_container_pockets().size() );
+    return restricted_pockets_qty <= static_cast <int>( get_container_pockets().size() );
 }
 
 bool item_contents::has_any_with( const std::function<bool( const item &it )> &filter,
@@ -2276,7 +2276,7 @@ const
             continue;
         }
         bool restriction_condition = pocket.is_type( pocket_type::CONTAINER ) &&
-                                     !pocket.is_ablative() && pocket.weight_capacity() < pocket_data::max_weight_for_container;
+                                     !pocket.is_ablative() && pocket.weight_capacity() <= pocket_data::max_weight_for_container;
         if( unrestricted_pockets_only ) {
             restriction_condition = restriction_condition && !pocket.is_restricted();
         }
