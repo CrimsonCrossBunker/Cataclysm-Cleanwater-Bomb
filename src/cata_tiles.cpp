@@ -4205,6 +4205,152 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
     return true;
 }
 
+SDL_Texture *cata_tiles::render_character_preview( const Character &ch, const int scale,
+        int &out_w, int &out_h )
+{
+    // The paper-doll preview reuses the normal map sprite path (draw_entity_with_overlays,
+    // the same routine that paints the player on the map) but redirects the draw origin and
+    // render target at an offscreen texture, the same trick draw_vehicle_preview uses for the
+    // vehicle construction UI. Isometric tilesets use a projection this flat layout does not
+    // handle, so bail and let the caller show nothing.
+    out_w = 0;
+    out_h = 0;
+    if( is_isometric() || scale <= 0 ) {
+        return nullptr;
+    }
+
+    // draw() resets o/op every map frame, so they need no manual restore, but set_draw_scale
+    // persists across frames; capture and restore it like draw_vehicle_preview does.
+    const int saved_zoom = g->get_zoom();
+    set_draw_scale( scale );
+
+    // Character sprites are not tile-sized: they carry per-sprite offsets and overlays (hair,
+    // hats, mutations) that extend above and around the base tile by an amount that varies per
+    // tileset. Rather than guess a headroom that fits every case, draw into a generous work
+    // canvas, then read the rendered pixels back to find the tight non-transparent bounding box
+    // and crop to exactly that. This removes the dead space above the sprite for any tileset.
+    const int work_w = tile_width * 3;
+    const int work_h = tile_height * 3;
+    if( work_w <= 0 || work_h <= 0 ) {
+        set_draw_scale( saved_zoom );
+        return nullptr;
+    }
+
+    if( !char_preview_work_tex || char_preview_work_w != work_w || char_preview_work_h != work_h ) {
+        char_preview_work_tex = CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
+                                               SDL_TEXTUREACCESS_TARGET, work_w, work_h );
+        if( !char_preview_work_tex ) {
+            set_draw_scale( saved_zoom );
+            return nullptr;
+        }
+        SetTextureBlendMode( char_preview_work_tex, SDL_BLENDMODE_BLEND );
+        char_preview_work_w = work_w;
+        char_preview_work_h = work_h;
+    }
+
+    // Place the base tile centred horizontally and one tile up from the bottom, leaving a full
+    // tile of margin on every side so even large overlays land inside the work canvas.
+    op = point( tile_width, work_h - tile_height * 2 );
+    o = point::zero;
+    m_entity_draw_offset = point::zero;
+
+    // Pixel buffer for readback: ARGB8888, 4 bytes per pixel.
+    std::vector<uint32_t> pixels( static_cast<size_t>( work_w ) * work_h, 0 );
+    bool drawn = false;
+    {
+        scoped_render_target preview_scope( renderer, char_preview_work_tex.get()
+#if SDL_MAJOR_VERSION >= 3
+                                            , get_shared_variant_pass()
+#endif
+                                          );
+        if( preview_scope.is_valid() ) {
+            const SDL_Rect clip{ 0, 0, work_w, work_h };
+            RenderSetClipRect( renderer, &clip );
+            SetRenderDrawColor( renderer, 0, 0, 0, 0 );
+            RenderClear( renderer );
+
+            int height_3d = 0;
+            // Force a stable right-facing pose regardless of the avatar's current facing.
+            draw_entity_with_overlays( ch, tripoint_bub_ms( tripoint::zero ), lit_level::BRIGHT,
+                                       height_3d, FacingDirection::RIGHT );
+
+            const SDL_Rect full{ 0, 0, work_w, work_h };
+            drawn = RenderReadPixels( renderer, &full, SDL_PIXELFORMAT_ARGB8888, pixels.data(),
+                                      work_w * 4 );
+            RenderSetClipRect( renderer, nullptr );
+        }
+    }
+
+    if( !drawn ) {
+        set_draw_scale( saved_zoom );
+        return nullptr;
+    }
+
+    // Scan for the bounding box of any non-zero (non-transparent) pixel. The canvas was cleared
+    // to all-zero bytes, so a pixel is "drawn" iff it is non-zero -- no need to assume which byte
+    // is alpha, sidestepping format/endianness concerns.
+    int min_x = work_w;
+    int min_y = work_h;
+    int max_x = -1;
+    int max_y = -1;
+    for( int y = 0; y < work_h; y++ ) {
+        const uint32_t *row = pixels.data() + static_cast<size_t>( y ) * work_w;
+        for( int x = 0; x < work_w; x++ ) {
+            if( row[x] != 0 ) {
+                min_x = std::min( min_x, x );
+                max_x = std::max( max_x, x );
+                min_y = std::min( min_y, y );
+                max_y = std::max( max_y, y );
+            }
+        }
+    }
+
+    if( max_x < min_x || max_y < min_y ) {
+        // Nothing was drawn (e.g. a tileset with no player sprite); show nothing.
+        set_draw_scale( saved_zoom );
+        return nullptr;
+    }
+
+    const int crop_w = max_x - min_x + 1;
+    const int crop_h = max_y - min_y + 1;
+
+    // (Re)allocate the cropped result target at the exact bounding-box size, so ImGui::Image
+    // samples it with default 0..1 UVs and no padding shows around the sprite.
+    if( !char_preview_tex || char_preview_w != crop_w || char_preview_h != crop_h ) {
+        char_preview_tex = CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
+                                          SDL_TEXTUREACCESS_TARGET, crop_w, crop_h );
+        if( !char_preview_tex ) {
+            set_draw_scale( saved_zoom );
+            return nullptr;
+        }
+        SetTextureBlendMode( char_preview_tex, SDL_BLENDMODE_BLEND );
+        char_preview_w = crop_w;
+        char_preview_h = crop_h;
+    }
+
+    SDL_Texture *result = nullptr;
+    {
+        scoped_render_target crop_scope( renderer, char_preview_tex.get()
+#if SDL_MAJOR_VERSION >= 3
+                                         , get_shared_variant_pass()
+#endif
+                                       );
+        if( crop_scope.is_valid() ) {
+            SetRenderDrawColor( renderer, 0, 0, 0, 0 );
+            RenderClear( renderer );
+            const SDL_Rect src{ min_x, min_y, crop_w, crop_h };
+            const SDL_Rect dst{ 0, 0, crop_w, crop_h };
+            RenderCopy( renderer, char_preview_work_tex, &src, &dst );
+            result = char_preview_tex.get();
+            out_w = crop_w;
+            out_h = crop_h;
+        }
+    }
+
+    set_draw_scale( saved_zoom );
+    return result;
+}
+
 bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                                   const std::array<bool, 5> &invisible, const bool memorize_only )
 {
