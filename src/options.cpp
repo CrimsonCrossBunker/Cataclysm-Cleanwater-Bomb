@@ -2649,6 +2649,11 @@ void options_manager::add_options_graphics()
              true, COPT_CURSES_HIDE
            );
 
+        add( "USE_CHARACTER_PREVIEW", page_id, to_translation( "Character creation preview" ),
+             to_translation( "If true, the character creation screen shows a graphical preview of your character's appearance, including mutations." ),
+             true, COPT_CURSES_HIDE
+           );
+
         add( "SWAP_ZOOM", page_id, to_translation( "Zoom Threshold" ),
              to_translation( "Choose when you should swap tileset (lower is more zoomed out)." ),
              1, 4, 2, COPT_CURSES_HIDE
@@ -2661,6 +2666,7 @@ void options_manager::add_options_graphics()
         get_option( "CREATURE_OVERLAY_ICONS" ).setPrerequisite( "USE_TILES" );
         get_option( "VEHICLE_EDIT_TILES" ).setPrerequisite( "USE_TILES" );
         get_option( "VEHICLE_PART_COLOR" ).setPrerequisite( "USE_TILES" );
+        get_option( "USE_CHARACTER_PREVIEW" ).setPrerequisite( "USE_TILES" );
 
         add( "USE_OVERMAP_TILES", page_id, to_translation( "Use tiles to display overmap" ),
              to_translation( "If true, replaces some TTF-rendered text with tiles for overmap display." ),

@@ -83,6 +83,14 @@
 #include "veh_type.h"
 #include "worldfactory.h"
 
+#if defined(TILES)
+// For the character paper-doll preview: tilecontext / cata_tiles::render_character_preview,
+// the USE_CHARACTER_PREVIEW option, and the use_tiles cache.
+#include "cached_options.h"
+#include "cata_tiles.h"
+#include "sdltiles.h"
+#endif
+
 static const std::string flag_CHALLENGE( "CHALLENGE" );
 static const std::string flag_CITY_START( "CITY_START" );
 static const std::string flag_SECRET( "SECRET" );
@@ -152,10 +160,75 @@ static void set_detail_scroll()
     }
 }
 
+#if defined(TILES)
+static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int &out_h );
+static void draw_character_preview_cell( const avatar &u );
+
+// The preview occupies its own table column only when tiles + the option are on and the active
+// tileset can actually produce a preview. Isometric tilesets are unsupported by
+// render_character_preview (it always returns null for them), so excluding them here keeps an
+// empty 1px "Preview" column from appearing on every tab. Kept as a predicate so the column count
+// and the per-tab tables stay in agreement.
+static bool character_preview_active()
+{
+    return use_tiles && get_option<bool>( "USE_CHARACTER_PREVIEW" ) && tilecontext &&
+           !tilecontext->is_isometric();
+}
+#endif
+
+// Number of extra table columns the character preview adds (one when active, else none). Owns the
+// #if TILES guard so callers can express their column count as base + this, keeping every table in
+// agreement about when the preview column exists.
+static int preview_extra_columns()
+{
+#if defined(TILES)
+    return character_preview_active() ? 1 : 0;
+#else
+    return 0;
+#endif
+}
+
+// Column count for the per-tab list/detail tables: base of two (placeholder + detail) plus the
+// preview column when it is enabled.
+static int list_detail_columns()
+{
+    return 2 + preview_extra_columns();
+}
+
 static void setup_list_detail_ui( const std::string &header = std::string(),
                                   float uilist_width = 0.33f )
 {
     ImGui::TableSetupScrollFreeze( 0, 1 ); // Make top row always visible
+#if defined(TILES)
+    if( character_preview_active() ) {
+        // Three columns: [placeholder | detail | preview]. The placeholder column must keep its
+        // absolute width (a fraction of the viewport, matching the separate left-hand list window
+        // it sits under) rather than a fraction of the table -- if it stayed a stretch column, the
+        // fixed preview column would shrink it below that fraction and the detail text would slide
+        // left out from under the list (the earlier dropped-character bug). So the placeholder is
+        // pinned to viewport width, the detail column stretches to fill what remains, and the
+        // preview column is fixed to the rendered sprite's width. The preview is ordinary cell
+        // content, so it scrolls with the detail column instead of floating above it.
+        const ImGuiStyle &style = ImGui::GetStyle();
+        const float placeholder_w = uilist_width * ImGui::GetMainViewport()->WorkSize.x;
+        int pw = 0;
+        int ph = 0;
+        character_preview_texture( get_avatar(), pw, ph );
+        const float preview_w = pw > 0 ? pw + style.CellPadding.x * 2.0f + style.ScrollbarSize
+                                : 1.0f;
+        ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, placeholder_w );
+        ImGui::TableSetupColumn( header.empty() ? _( "No entries found!" ) : header.c_str(),
+                                 ImGuiTableColumnFlags_WidthStretch, 1.0f );
+        ImGui::TableSetupColumn( _( "Preview" ), ImGuiTableColumnFlags_WidthFixed, preview_w );
+        ImGui::TableHeadersRow();
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex( 2 );
+        draw_character_preview_cell( get_avatar() );
+        ImGui::TableSetColumnIndex( 1 ); // leave the cursor in the detail column for the caller
+        set_detail_scroll();
+        return;
+    }
+#endif
     // reserve space for uilist
     ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthStretch, uilist_width );
     ImGui::TableSetupColumn( header.empty() ? _( "No entries found!" ) : header.c_str(),
@@ -631,7 +704,7 @@ void Character::randomize( const bool random_scenario, bool play_now )
     }
 }
 
-void Character::add_profession_items()
+void Character::add_profession_items( bool identify_books )
 {
     // Our profession should not be a hobby
     if( prof->is_hobby() ) {
@@ -641,7 +714,8 @@ void Character::add_profession_items()
     std::list<item> prof_items = prof->items( outfit, get_mutations() );
     std::list<item> try_adding_again;
 
-    auto attempt_add_items = [this]( std::list<item> &prof_items, std::list<item> &failed_to_add ) {
+    auto attempt_add_items = [this, identify_books]( std::list<item> &prof_items,
+    std::list<item> &failed_to_add ) {
         for( item &it : prof_items ) {
             if( it.has_flag( json_flag_WET ) ) {
                 it.active = true;
@@ -675,7 +749,7 @@ void Character::add_profession_items()
                 success = try_add( it, nullptr, nullptr, false );
             }
 
-            if( it.is_book() && this->is_avatar() ) {
+            if( it.is_book() && identify_books && this->is_avatar() ) {
                 as_avatar()->identify( it );
             }
 
@@ -2792,6 +2866,138 @@ void character_creator_ui_impl::draw_controls()
     cc_uistate.previous_tab = cc_uistate.selected_tab;
 }
 
+#if defined(TILES)
+// Build a throwaway avatar that mirrors the live character's appearance (gender, body,
+// mutations with their variants) and additionally wears the profession's starting outfit, so
+// the preview shows the clothed result. The live creation avatar does not actually wear the
+// profession gear (it is only listed as a preview inventory), so the clothing overlays have to
+// come from a temporary that does. avatar is non-copyable, hence the field-by-field mirror.
+//
+// This must be side-effect-free with respect to the rest of the game: it is a preview, not a
+// commitment. The profession item path (prof->items() and trait enchantment activation) draws
+// from the global RNG, which would otherwise shift the random stream the real creation/worldgen
+// uses, making the result depend on how many times the user previewed. So the whole build runs
+// inside a save/restore of the global RNG engine. Book identification (which writes to the
+// message log) is suppressed via add_profession_items( false ).
+static void build_preview_avatar( const avatar &src, avatar &dst )
+{
+    // Snapshot the global RNG engine and restore it afterwards so previewing consumes no RNG.
+    const cata_default_random_engine saved_rng = rng_get_engine();
+
+    dst.male = src.male;
+    dst.set_body();
+    dst.prof = src.prof;
+
+    // Mirror the visible mutations (with variants) so trait-driven overlays match the live one.
+    dst.clear_mutations();
+    for( const trait_and_var &tv : src.get_mutations_variants() ) {
+        dst.set_mutation( tv.trait, tv.trait->variant( tv.variant ) );
+    }
+    dst.recalc_hp();
+
+    // Wear/wield the profession's starting items onto the temporary so its worn/wielded
+    // overlays populate. Hobbies carry no starting outfit, so this is a no-op for them.
+    // identify_books=false keeps the throwaway from spamming the global message log.
+    if( dst.prof && !dst.prof->is_hobby() ) {
+        dst.add_profession_items( false );
+    }
+
+    rng_get_engine() = saved_rng;
+}
+
+// Produce the character paper-doll preview texture (base sprite plus mutation/worn/wielded
+// overlays) via cata_tiles::render_character_preview -- the same overlay path the map uses --
+// into an offscreen texture. Re-rendering is gated on a cheap appearance signature so the
+// continuously-redrawing creator does not rebuild the texture every frame. Returns the cached
+// texture and writes its pixel size to out_w/out_h, or nullptr (size 0) when the preview is
+// disabled or nothing could be rendered.
+static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int &out_h )
+{
+    out_w = 0;
+    out_h = 0;
+    if( !use_tiles || !get_option<bool>( "USE_CHARACTER_PREVIEW" ) || !tilecontext ) {
+        return nullptr;
+    }
+
+    // Scale the preview to the screen resolution, like CBN does, so it stays a sensible size on
+    // both small and 4K displays. 6x native (scale 96) at 1080p, scaled by viewport height and
+    // clamped/rounded to a multiple of 16 (set_draw_scale's granularity).
+    const float viewport_h = ImGui::GetMainViewport()->Size.y;
+    int preview_scale = static_cast<int>( std::lround( 96.0f * viewport_h / 1080.0f / 16.0f ) ) * 16;
+    preview_scale = std::clamp( preview_scale, 48, 160 );
+
+    // Appearance signature: gender, profession, mutations, and the scale (so a resolution change
+    // re-renders). When unchanged the cached texture from the previous render is reused as-is.
+    // last_sig starts empty, which no real signature ever equals (they always begin "m|"/"f|"),
+    // so the first call always renders.
+    static std::string last_sig;
+    static SDL_Texture *cached_tex = nullptr;
+    static int cached_w = 0;
+    static int cached_h = 0;
+
+    // This function is called more than once per frame (to size the preview column, then to draw
+    // it) and the creator redraws continuously. Building the signature string -- an allocation plus
+    // a loop over every overlay id -- on each of those calls is pure waste when nothing changed. So
+    // short-circuit when the same avatar is queried again within the same ImGui frame: the scale
+    // and signature cannot have changed since the previous call this frame, so reuse the result.
+    static int last_frame = -1;
+    static const avatar *last_u = nullptr;
+    static int last_scale = 0;
+    const int frame = ImGui::GetFrameCount();
+    if( frame == last_frame && last_u == &u && last_scale == preview_scale ) {
+        out_w = cached_w;
+        out_h = cached_h;
+        return cached_tex;
+    }
+    last_frame = frame;
+    last_u = &u;
+    last_scale = preview_scale;
+
+    std::string sig = std::string( u.male ? "m|" : "f|" ) + ( outfit ? "o1|" : "o0|" ) +
+                      std::to_string( preview_scale ) + "|" +
+                      ( u.prof ? u.prof->ident().str() : "none" ) + "|";
+    for( const std::pair<const std::string, std::string> &ov : u.get_overlay_ids() ) {
+        sig += ov.first;
+        sig += ',';
+    }
+
+    // Gate purely on the signature, NOT on cached_tex being non-null. A render that legitimately
+    // produces nothing (returns null) records its signature too, so it is not retried every frame
+    // -- otherwise build_preview_avatar (RNG snapshot, mutation rebuild, item equip) would run on
+    // every redraw for any character whose sprite fails to render.
+    if( sig != last_sig ) {
+        // Render a temporary clothed copy rather than the live avatar (which is not wearing the
+        // profession outfit during creation). Rebuilt only when the signature changes, so the
+        // per-change avatar construction does not run every frame.
+        avatar preview_av;
+        build_preview_avatar( u, preview_av );
+        cached_tex = tilecontext->render_character_preview( preview_av, preview_scale, cached_w,
+                     cached_h );
+        last_sig = sig;
+    }
+
+    out_w = cached_w;
+    out_h = cached_h;
+    return cached_tex;
+}
+
+// Draw the preview sprite into the current table cell (the list/detail tables' third column,
+// whose column header already reads "Preview"). Unlike the earlier foreground-draw approach this
+// is ordinary cell content, so it participates in layout and scrolls with the detail column
+// instead of floating above everything.
+static void draw_character_preview_cell( const avatar &u )
+{
+    int tex_w = 0;
+    int tex_h = 0;
+    SDL_Texture *tex = character_preview_texture( u, tex_w, tex_h );
+    if( !tex || tex_w <= 0 || tex_h <= 0 ) {
+        return;
+    }
+    ImGui::Image( reinterpret_cast<ImTextureID>( tex ),
+                  ImVec2( static_cast<float>( tex_w ), static_cast<float>( tex_h ) ) );
+}
+#endif // TILES
+
 void character_creator_ui_impl::draw_top_bar( const avatar &u ) const
 {
     auto draw_separator = []() {
@@ -2904,7 +3110,7 @@ void character_creator_ui_impl::draw_scenarios() const
     cc_uistate.recalc_scenario_list( u );
     const scenario *current_scenario = cc_uistate.get_selected_scenario();
 
-    if( ImGui::BeginTable( "SCENARIO_MAIN", 2, CHARACTER_CREATOR_TABLE_FLAGS ) ) {
+    if( ImGui::BeginTable( "SCENARIO_MAIN", list_detail_columns(), CHARACTER_CREATOR_TABLE_FLAGS ) ) {
         if( current_scenario ) {
             std::string scenario_name = current_scenario->gender_appropriate_name( !u.male );
             if( current_scenario == get_scenario() ) {
@@ -2924,7 +3130,7 @@ void character_creator_ui_impl::draw_professions() const
     const avatar &u = get_avatar();
     cc_uistate.recalc_profession_list( u );
 
-    if( ImGui::BeginTable( "PROFESSION_MAIN", 2, CHARACTER_CREATOR_TABLE_FLAGS ) ) {
+    if( ImGui::BeginTable( "PROFESSION_MAIN", list_detail_columns(), CHARACTER_CREATOR_TABLE_FLAGS ) ) {
         const profession_id &selected_profession = cc_uistate.get_selected_profession();
 
         if( !selected_profession.is_null() ) {
@@ -2956,7 +3162,7 @@ void character_creator_ui_impl::draw_backgrounds()
     cc_uistate.recalc_hobby_list( u );
     cc_uistate.recalc_hobbies_taken_list( u );
 
-    if( ImGui::BeginTable( "BACKGROUNDS_MAIN", 2, CHARACTER_CREATOR_TABLE_FLAGS ) ) {
+    if( ImGui::BeginTable( "BACKGROUNDS_MAIN", list_detail_columns(), CHARACTER_CREATOR_TABLE_FLAGS ) ) {
 
         const profession_id selected_hobby = cc_uistate.get_selected_hobby();
         if( !selected_hobby.is_null() ) {
@@ -2986,7 +3192,7 @@ void character_creator_ui_impl::draw_backgrounds()
 
 void character_creator_ui_impl::draw_stats()
 {
-    if( ImGui::BeginTable( "STATS_MAIN", 2, CHARACTER_CREATOR_TABLE_FLAGS ) ) {
+    if( ImGui::BeginTable( "STATS_MAIN", list_detail_columns(), CHARACTER_CREATOR_TABLE_FLAGS ) ) {
         setup_list_detail_ui( char_creation::get_character_stat_header( cc_uistate.selected_stat_index ) );
         ImGui::NewLine();
         char_creation::draw_stat_details( get_avatar() );
@@ -2999,7 +3205,7 @@ void character_creator_ui_impl::draw_traits()
     const avatar &u = get_avatar();
     cc_uistate.recalc_trait_list( u );
     const trait_id selected_trait = cc_uistate.get_selected_trait();
-    if( ImGui::BeginTable( "TRAITS_MAIN", 2, CHARACTER_CREATOR_TABLE_FLAGS ) ) {
+    if( ImGui::BeginTable( "TRAITS_MAIN", list_detail_columns(), CHARACTER_CREATOR_TABLE_FLAGS ) ) {
         if( !selected_trait.is_null() ) {
             std::string trait_name = selected_trait->name();
             if( u.has_trait( selected_trait ) ) {
@@ -3018,7 +3224,7 @@ void character_creator_ui_impl::draw_traits()
 void character_creator_ui_impl::draw_skills()
 {
     cc_uistate.recalc_skill_list();
-    if( ImGui::BeginTable( "SKILLS_MAIN", 2, CHARACTER_CREATOR_TABLE_FLAGS ) ) {
+    if( ImGui::BeginTable( "SKILLS_MAIN", list_detail_columns(), CHARACTER_CREATOR_TABLE_FLAGS ) ) {
         const skill_id selected_skill = cc_uistate.get_selected_skill();
         if( !selected_skill.is_null() ) {
             const avatar &u = get_avatar();
@@ -3045,7 +3251,11 @@ void character_creator_ui_impl::draw_summary()
     const avatar &u = get_avatar();
     const Character &who = get_player_character();
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 20.0f, 0.0f } );
-    if( ImGui::BeginTable( "DESCRIPTION_MAIN", 3, CHARACTER_CREATOR_TABLE_FLAGS |
+    // One extra content-sized column holds the character preview when it is enabled, matching the
+    // other tabs. This table sizes columns to their content (SizingFixedFit), so the preview simply
+    // occupies its own right-hand column without disturbing the existing three.
+    const int summary_cols = 3 + preview_extra_columns();
+    if( ImGui::BeginTable( "DESCRIPTION_MAIN", summary_cols, CHARACTER_CREATOR_TABLE_FLAGS |
                            ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_BordersInnerV ) ) {
         ImGui::TableNextColumn();
 
@@ -3075,6 +3285,13 @@ void character_creator_ui_impl::draw_summary()
         char_creation::draw_profession_bionics( dummy, _( "Bionics" ), *who.prof );
 
         set_detail_scroll();
+
+#if defined(TILES)
+        if( character_preview_active() ) {
+            ImGui::TableNextColumn();
+            draw_character_preview_cell( u );
+        }
+#endif
 
         ImGui::EndTable();
     }

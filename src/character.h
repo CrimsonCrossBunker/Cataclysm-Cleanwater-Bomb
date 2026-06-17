@@ -763,7 +763,10 @@ class Character : public Creature, public visitable
 
         //returns character's profession
         const profession *get_profession() const;
-        void add_profession_items();
+        // Equip the profession's starting items. identify_books controls whether starting books
+        // are run through avatar::identify() (which writes to the message log) -- the character
+        // preview passes false so building its throwaway avatar does not spam messages.
+        void add_profession_items( bool identify_books = true );
         //returns the hobbies
         std::set<const profession *> get_hobbies() const;
 

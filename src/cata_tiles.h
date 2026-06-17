@@ -818,6 +818,19 @@ class cata_tiles
         bool draw_vehicle_preview( const catacurses::window &w_disp, const vehicle &veh,
                                    const point_rel_ms &cursor_vp_mount, int &cpart );
 
+        /**
+         * Render @p ch (base sprite plus mutation/worn/wielded overlays) into an
+         * internally-owned, offscreen render target, scaled to @p scale (16 == native
+         * tile size). The canvas is sized to fit the scaled sprite exactly, with one
+         * extra tile of headroom above for overlays that draw upward (hair, hats); the
+         * used pixel size is returned in @p out_w / @p out_h so the caller can size its
+         * ImGui::Image to match. The character is centred horizontally and bottom-aligned.
+         * Returns nullptr for isometric tilesets or on render-target failure; the returned
+         * texture is owned by cata_tiles and stays valid until the next call.
+         */
+        SDL_Texture *render_character_preview( const Character &ch, int scale, int &out_w,
+                                               int &out_h );
+
         // Animation layers
         void init_explosion( const tripoint_bub_ms &p, int radius );
         void draw_explosion_frame();
@@ -1180,6 +1193,17 @@ class cata_tiles
         int tint_mask_w = 0;
         int tint_mask_h = 0;
         void ensure_tint_mask_texture( int w, int h );
+
+        // Render targets for the character-creation paper-doll preview. The work target is the
+        // generous canvas the character is drawn into; its non-transparent pixels are read back to
+        // find a tight bounding box, then copied into the cropped target that the caller displays.
+        // Both reused across redraws, reallocated only when their required size changes.
+        SDL_Texture_Ptr char_preview_work_tex;
+        int char_preview_work_w = 0;
+        int char_preview_work_h = 0;
+        SDL_Texture_Ptr char_preview_tex;
+        int char_preview_w = 0;
+        int char_preview_h = 0;
 
         bool in_animation = false;
 
