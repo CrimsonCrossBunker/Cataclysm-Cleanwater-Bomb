@@ -1841,25 +1841,25 @@ void options_manager::add_options_interface()
     [&]( const std::string & page_id ) {
         add( "USE_CELSIUS", page_id, to_translation( "Temperature units" ),
              to_translation( "Switch between Fahrenheit, Celsius, and Kelvin." ),
-        { { "fahrenheit", to_translation( "Fahrenheit" ) }, { "celsius", to_translation( "Celsius" ) }, { "kelvin", to_translation( "Kelvin" ) } },
+        { { "celsius", to_translation( "Celsius" ) }, { "fahrenheit", to_translation( "Fahrenheit" ) }, { "kelvin", to_translation( "Kelvin" ) } },
         "fahrenheit"
            );
 
         add( "USE_METRIC_SPEEDS", page_id, to_translation( "Speed units" ),
              to_translation( "Switch between mph, km/h, and tiles/turn." ),
-        { { "mph", to_translation( "mph" ) }, { "km/h", to_translation( "km/h" ) }, { "t/t", to_translation( "tiles/turn" ) } },
+        { { "km/h", to_translation( "km/h" ) }, { "mph", to_translation( "mph" ) }, { "t/t", to_translation( "tiles/turn" ) } },
         ( SystemLocale::UseMetricSystem().value_or( false ) ? "km/h" : "mph" )
            );
 
         add( "USE_METRIC_WEIGHTS", page_id, to_translation( "Mass units" ),
              to_translation( "Switch between lbs and kg." ),
-        { { "lbs", to_translation( "lbs" ) }, { "kg", to_translation( "kg" ) } },
+        { { "kg", to_translation( "kg" ) }, { "lbs", to_translation( "lbs" ) } },
         ( SystemLocale::UseMetricSystem().value_or( false ) ? "kg" : "lbs" )
            );
 
         add( "VOLUME_UNITS", page_id, to_translation( "Volume units" ),
              to_translation( "Switch between the cups (c), liters (L), and quarts (qt)." ),
-        { { "c", to_translation( "Cup" ) }, { "l", to_translation( "Liter" ) }, { "qt", to_translation( "Quart" ) } },
+        { { "l", to_translation( "Liter" ) }, { "c", to_translation( "Cup" ) }, { "qt", to_translation( "Quart" ) } },
         "l"
            );
         add( "DISTANCE_UNITS", page_id, to_translation( "Distance units" ),
@@ -2122,7 +2122,7 @@ void options_manager::add_options_interface()
 
         add( "REVERSE_STEERING", page_id, to_translation( "Reverse steering direction in reverse" ),
              to_translation( "If true, when driving a vehicle in reverse, steering should also reverse like real life." ),
-             false
+             true
            );
     } );
 
@@ -2596,7 +2596,7 @@ void options_manager::add_options_graphics()
 
         add( "IMGUI_LOAD_CHINESE", page_id, to_translation( "Chinese glyph ranges in ImGui" ),
              to_translation( "If true, ImGui will add glyphs of full Chinese, include zh_CN, zh_TW, ja. Use this option when your need all Chinese glyphs.  Requires restart." ),
-             false, COPT_CURSES_HIDE
+             true, COPT_CURSES_HIDE
            );
     } );
 #endif // TILES
@@ -2816,7 +2816,7 @@ void options_manager::add_options_graphics()
 
         add( "PIXEL_MINIMAP_BLINK", page_id, to_translation( "Hostile creature beacon blink speed" ),
              to_translation( "Controls how fast the hostile creature beacons blink on the pixel minimap.  Value is multiplied by 200ms.  0 = disabled." ),
-             0, 50, 10, COPT_CURSES_HIDE
+             0, 50, 5, COPT_CURSES_HIDE
            );
 
         get_option( "PIXEL_MINIMAP_BLINK" ).setPrerequisite( "PIXEL_MINIMAP" );
