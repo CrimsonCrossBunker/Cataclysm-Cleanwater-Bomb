@@ -1039,8 +1039,21 @@ void avatar_action::plthrow( avatar &you, item_location loc,
         return;
     }
 
+    // make a copy and get the original.
+    // the copy is thrown and has its and the originals charges set appropriately
+    // or deleted from inventory if its charges(1) or not stackable.
+    item *orig = loc.get_item();
+    item thrown = *orig;
+
+    // Throwing aids such as slings can stay wielded while hurling another item.
+    const item_location wielded_item = you.get_wielded_item();
+    const bool keep_wielded = !in_mech && wielded_item &&
+                              !you.is_wielding( *orig ) && !you.is_worn( *orig ) &&
+                              wielded_item->has_flag( flag_THROW_KEEP_WIELDED );
+
     // Bypass check for whether we can wield an item if we're inside a mech
-    if( !in_mech ) {
+    // or if a throwing aid is already wielded.
+    if( !in_mech && !keep_wielded ) {
         const ret_val<void> ret = you.can_wield( *loc );
         if( !ret.success() ) {
             add_msg( m_info, "%s", ret.c_str() );
@@ -1048,11 +1061,6 @@ void avatar_action::plthrow( avatar &you, item_location loc,
         }
     }
 
-    // make a copy and get the original.
-    // the copy is thrown and has its and the originals charges set appropriately
-    // or deleted from inventory if its charges(1) or not stackable.
-    item *orig = loc.get_item();
-    item thrown = *orig;
     int range = you.throw_range( thrown );
     if( range < 0 ) {
         add_msg( m_info, _( "You don't have that item." ) );
@@ -1080,9 +1088,9 @@ void avatar_action::plthrow( avatar &you, item_location loc,
             return;
         }
     }
-    // you must wield the item to throw it
-    // if we're in the mech, let's assume the mech wields the item
-    if( !in_mech ) {
+    // You must wield the item to throw it, unless a throwing aid is already wielded.
+    // If we're in the mech, let's assume the mech wields the item.
+    if( !in_mech && !keep_wielded ) {
         if( !you.is_wielding( *orig ) ) {
             if( !you.wield( *orig ) ) {
                 return;
@@ -1100,8 +1108,9 @@ void avatar_action::plthrow( avatar &you, item_location loc,
 
     g->temp_exit_fullscreen();
 
-    item_location weapon = in_mech ? loc : you.get_wielded_item();
-    target_handler::trajectory trajectory = target_handler::mode_throw( you, *weapon,
+    item_location weapon = in_mech ? loc : ( keep_wielded ? wielded_item : you.get_wielded_item() );
+    item &relevant = keep_wielded ? thrown : *weapon;
+    target_handler::trajectory trajectory = target_handler::mode_throw( you, relevant,
                                             blind_throw_from_pos.has_value() );
 
     // If we previously shifted our position, put ourselves back now that we've picked our target.
@@ -1113,7 +1122,14 @@ void avatar_action::plthrow( avatar &you, item_location loc,
         return;
     }
 
-    if( weapon->count_by_charges() && weapon->charges > 1 ) {
+    if( keep_wielded ) {
+        if( orig->count_by_charges() && orig->charges > 1 ) {
+            orig->mod_charges( -1 );
+            thrown.charges = 1;
+        } else {
+            loc.remove_item();
+        }
+    } else if( weapon->count_by_charges() && weapon->charges > 1 ) {
         weapon->mod_charges( -1 );
         thrown.charges = 1;
     } else {

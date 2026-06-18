@@ -622,7 +622,10 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                                                  print_messages, wp_attack );
 
                 if( critter->is_npc() ) {
-                    critter->as_npc()->on_attacked( *origin );
+                    // A hit on the originally targeted tile is treated as deliberate;
+                    // hitting a different tile along the trajectory is a stray shot.
+                    const bool intentional = ( tp == target_arg );
+                    critter->as_npc()->on_attacked( *origin, intentional );
                 }
 
                 // Critter can still dodge the projectile

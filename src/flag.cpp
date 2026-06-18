@@ -344,6 +344,7 @@ const flag_id flag_TACK( "TACK" );
 const flag_id flag_TANGLE( "TANGLE" );
 const flag_id flag_TARDIS( "TARDIS" );
 const flag_id flag_THERMOMETER( "THERMOMETER" );
+const flag_id flag_THROW_KEEP_WIELDED( "THROW_KEEP_WIELDED" );
 const flag_id flag_TIE_UP( "TIE_UP" );
 const flag_id flag_TINDER( "TINDER" );
 const flag_id flag_TOBACCO( "TOBACCO" );

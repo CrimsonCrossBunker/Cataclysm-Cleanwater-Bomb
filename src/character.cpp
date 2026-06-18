@@ -3715,23 +3715,73 @@ if( ( tmp.weight() / 113_gram ) > str * 15 )  {
     auto *mons = mounted_creature.get();
         str = mons->mech_str_addition() != 0 ? mons->mech_str_addition() : str;
     }
-    int ret = ( str * 10 ) / ( tmp.weight() >= 150_gram ? tmp.weight() / 113_gram : 10 -
-                               static_cast<int>(
-                                   tmp.weight() / 15_gram ) );
+    // Skill and high dexterity reduce the range penalty for very light items.
+    float light_item_coeff = 1.0f + 0.1f * get_skill_level( skill_throw );
+    const int dex = get_dex();
+    if( dex > 8 ) {
+        light_item_coeff += 0.08f * dex;
+    }
+
+    int ret;
+    if( tmp.weight() >= 150_gram ) {
+        ret = ( str * 10 ) / ( tmp.weight() / 113_gram );
+    } else {
+        int light_penalty = 10 - static_cast<int>( tmp.weight() / 15_gram );
+        light_penalty = std::max( 1, static_cast<int>( light_penalty / light_item_coeff ) );
+        ret = ( str * 10 ) / light_penalty;
+    }
     ret -= tmp.volume() / 1_liter;
     if( has_active_bionic( bio_railgun ) && tmp.made_of_any( ferric ) ) {
-    ret *= 2;
-}
-if( ret < 1 ) {
-    return 1;
-}
+        ret *= 2;
+    }
 
-// Cap at triple of our strength + skill
-if( ret > round( str * 3 + get_skill_level( skill_throw ) + ench_bonus ) ) {
-        return round( str * 3 + get_skill_level( skill_throw ) + ench_bonus );
+    if( ret < 1 ) {
+        ret = 1;
+    }
+
+    // Cap at triple of our strength + skill.
+    const int range_cap = round( str * 3 + get_skill_level( skill_throw ) + ench_bonus );
+    if( ret > range_cap ) {
+        ret = range_cap;
+    }
+
+    ret = static_cast<int>( std::round( ret * throw_range_multiplier() ) );
+
+    if( ret < 1 ) {
+        return 1;
     }
 
     return ret;
+}
+
+float Character::throw_damage_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_damage_multiplier : 1.0f;
+}
+
+float Character::throw_range_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_range_multiplier : 1.0f;
+}
+
+float Character::throw_stamina_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_stamina_multiplier : 1.0f;
+}
+
+float Character::throw_dispersion_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_dispersion_multiplier : 1.0f;
+}
+
+float Character::throw_speed_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_speed_multiplier : 1.0f;
 }
 
 const std::vector<material_id> Character::fleshy = { material_flesh, material_hflesh };

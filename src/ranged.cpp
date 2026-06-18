@@ -1416,6 +1416,7 @@ int throw_cost( const Character &c, const item &to_throw )
     move_cost += skill_cost;
     move_cost -= dexbonus;
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
+    move_cost = static_cast<int>( std::round( move_cost * c.throw_speed_multiplier() ) );
 
     return std::max( 25, move_cost );
 }
@@ -1529,6 +1530,8 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
         dispersion *= 4;
     }
 
+    dispersion = static_cast<int>( std::round( dispersion * throw_dispersion_multiplier() ) );
+
     return std::max( 0, dispersion );
 }
 
@@ -1553,6 +1556,25 @@ static float throwing_skill_adjusted( const Character &guy )
         skill_level = std::max( 0.0f, skill_level - 5 );
     }
     return skill_level;
+}
+
+// Weight-based thrown bash damage, scaled by throwing skill and dexterity so that
+// light items can approach the strength-based cap when the thrower is skilled.
+static double thrown_item_weight_damage( const Character &thrower, const item &thrown )
+{
+    const float weight_dmg = thrown.weight() / 100.0_gram;
+    const float skill = throwing_skill_adjusted( thrower );
+    const int dex = thrower.get_dex();
+
+    // Base 1.0; high skill and dexterity let the thrower get more damage out of
+    // light items without changing the low-stat balance.
+    const float velocity_factor = 1.0f
+                                  + 0.5f * ( skill / static_cast<float>( MAX_SKILL ) )
+                                  + 0.03f * std::max( 0, dex - 8 );
+
+    const double scaled_weight_dmg = weight_dmg * velocity_factor;
+    const double cap = thrower.thrown_item_adjusted_damage( thrown );
+    return std::min( scaled_weight_dmg, cap );
 }
 
 int Character::thrown_item_adjusted_damage( const item &thrown ) const
@@ -1587,8 +1609,7 @@ projectile Character::thrown_item_projectile( const item &thrown ) const
 int Character::thrown_item_total_damage_raw( const item &thrown ) const
 {
     projectile proj = thrown_item_projectile( thrown );
-    proj.impact.add_damage( damage_bash, std::min( thrown.weight() / 100.0_gram,
-                            static_cast<double>( thrown_item_adjusted_damage( thrown ) ) ) );
+    proj.impact.add_damage( damage_bash, thrown_item_weight_damage( *this, thrown ) );
     const int glass_portion = thrown.made_of( material_glass );
     const float glass_fraction = glass_portion / static_cast<float>( thrown.type->mat_portion_total );
     const units::volume volume = thrown.volume() * glass_fraction;
@@ -1608,7 +1629,7 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
     for( damage_unit &du : proj.impact.damage_units ) {
         total_damage += du.amount * du.damage_multiplier;
     }
-    return total_damage;
+    return std::round( total_damage * throw_damage_multiplier() );
 }
 
 dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, const item &to_throw,
@@ -1628,7 +1649,8 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
 
     if( !throw_assist ) {
         const int stamina_cost = get_standard_stamina_cost( &thrown );
-        mod_stamina( stamina_cost + throwing_skill );
+        mod_stamina( static_cast<int>( std::round(
+                         ( stamina_cost + throwing_skill ) * throw_stamina_multiplier() ) ) );
     }
 
     const float skill_level = throwing_skill_adjusted( *this );
@@ -1637,11 +1659,18 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     damage_instance &impact = proj.impact;
     std::set<ammo_effect_str_id> &proj_effects = proj.proj_effects;
 
+    // Throwing skill and high dexterity/perception improve the critical hit multiplier.
+    proj.critical_multiplier += 0.15f * get_skill_level( skill_throw );
+    const int dex = get_dex();
+    const int per = get_per();
+    if( dex > 8 && per > 8 ) {
+        proj.critical_multiplier += 0.06f * std::min( dex, per );
+    }
+
     const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
                             !throw_assist;
 
-    impact.add_damage( damage_bash, std::min( weight / 100.0_gram,
-                       static_cast<double>( thrown_item_adjusted_damage( thrown ) ) ) );
+    impact.add_damage( damage_bash, thrown_item_weight_damage( *this, thrown ) );
 
     impact.add_damage( damage_bash,
                        enchantment_cache->get_value_add( enchant_vals::mod::THROW_DAMAGE ) );
@@ -1710,6 +1739,9 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     if( thrown.has_flag( flag_TANGLE ) ) {
         proj_effects.insert( ammo_effect_TANGLE );
     }
+
+    // Apply wielded-item throwing damage multiplier.
+    impact.mult_damage( throw_damage_multiplier() );
 
     Creature *critter = get_creature_tracker().creature_at( target, true );
     const dispersion_sources dispersion( throwing_dispersion( thrown, critter,

@@ -277,14 +277,18 @@ static const ammotype ammo_plutonium( "plutonium" );
 static const bionic_id bio_painkiller( "bio_painkiller" );
 
 static const efftype_id effect_asocial_dissatisfied( "asocial_dissatisfied" );
+static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_blind( "blind" );
 static const efftype_id effect_controlled( "controlled" );
 static const efftype_id effect_docile( "docile" );
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_gliding( "gliding" );
+static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_magic_channeling( "magic_channeling" );
 static const efftype_id effect_narcosis( "narcosis" );
+static const efftype_id effect_npc_flee_player( "npc_flee_player" );
+static const efftype_id effect_npc_run_away( "npc_run_away" );
 static const efftype_id effect_paid( "paid" );
 static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_sensor_stun( "sensor_stun" );
@@ -384,6 +388,8 @@ static const mtype_id mon_yrax_trifacet( "mon_yrax_trifacet" );
 static const proficiency_id proficiency_prof_lockpicking( "prof_lockpicking" );
 static const proficiency_id proficiency_prof_lockpicking_expert( "prof_lockpicking_expert" );
 static const proficiency_id proficiency_prof_safecracking( "prof_safecracking" );
+static const proficiency_id proficiency_prof_wound_care( "prof_wound_care" );
+static const proficiency_id proficiency_prof_wound_care_expert( "prof_wound_care_expert" );
 
 static const quality_id qual_CUT( "CUT" );
 static const quality_id qual_FISHING_ROD( "FISHING_ROD" );
@@ -397,6 +403,7 @@ static const quality_id qual_SHEAR( "SHEAR" );
 static const skill_id skill_computer( "computer" );
 static const skill_id skill_electronics( "electronics" );
 static const skill_id skill_fabrication( "fabrication" );
+static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_gun( "gun" );
 static const skill_id skill_mechanics( "mechanics" );
 static const skill_id skill_survival( "survival" );
@@ -10502,6 +10509,16 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
         return;
     }
     const bodypart_id healed = bodypart_id( act.str_values[0] );
+
+    // Capture pre-heal state so we can reward the player for helping NPCs.
+    npc *patient_npc = ( who.is_avatar() && patient->is_npc() ) ?
+                       dynamic_cast<npc *>( patient ) : nullptr;
+    const int pre_hp = patient_npc ? patient->get_part_hp_cur( healed ) : 0;
+    const int pre_pain = patient_npc ? patient->get_pain() : 0;
+    const bool pre_bleed = patient_npc ? patient->has_effect( effect_bleed, healed ) : false;
+    const bool pre_bite = patient_npc ? patient->has_effect( effect_bite, healed ) : false;
+    const bool pre_infected = patient_npc ? patient->has_effect( effect_infected, healed ) : false;
+
     int charges_consumed = actor->finish_using( who, *patient,
                            *used_tool, healed );
     std::list<item>used;
@@ -10522,6 +10539,71 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
     } else if( used_tool->is_tool() ) {
         if( used_tool->needs_charges_to_use() ) {
             it->activation_consume( charges_consumed, it.pos_bub( here ), &who );
+        }
+    }
+
+    // Update NPC opinion when the player heals an NPC.
+    if( patient_npc ) {
+        const int hp_healed = patient->get_part_hp_cur( healed ) - pre_hp;
+        const int pain_reduced = pre_pain - patient->get_pain();
+        const bool post_bleed = patient->has_effect( effect_bleed, healed );
+        const bool post_bite = patient->has_effect( effect_bite, healed );
+        const bool post_infected = patient->has_effect( effect_infected, healed );
+
+        int trust_gain = 1;
+        int value_gain = 1;
+
+        // Direct HP recovery.
+        trust_gain += hp_healed / 10;
+        value_gain += hp_healed / 10;
+
+        // Pain relief.
+        trust_gain += pain_reduced / 20;
+        value_gain += pain_reduced / 20;
+
+        // Treating serious conditions.
+        if( pre_bleed && !post_bleed ) {
+            trust_gain += 2;
+            value_gain += 1;
+        }
+        if( pre_bite && !post_bite ) {
+            trust_gain += 1;
+            value_gain += 1;
+        }
+        if( pre_infected && !post_infected ) {
+            trust_gain += 3;
+            value_gain += 2;
+        }
+
+        // Bonus when the patient was in critical condition.
+        const int max_hp = patient->get_part_hp_max( healed );
+        if( max_hp > 0 ) {
+            const float hp_ratio = static_cast<float>( pre_hp ) / max_hp;
+            if( hp_ratio < 0.25f ) {
+                trust_gain += 2;
+                value_gain += 2;
+            } else if( hp_ratio < 0.5f ) {
+                trust_gain += 1;
+                value_gain += 1;
+            }
+        }
+
+        // Competence makes the help feel more reliable.
+        trust_gain += who.get_skill_level( skill_firstaid ) / 3;
+        if( who.has_proficiency( proficiency_prof_wound_care ) ) {
+            value_gain += 1;
+        }
+        if( who.has_proficiency( proficiency_prof_wound_care_expert ) ) {
+            value_gain += 1;
+        }
+
+        trust_gain = std::clamp( trust_gain, 0, 5 );
+        value_gain = std::clamp( value_gain, 0, 5 );
+
+        if( trust_gain > 0 || value_gain > 0 ) {
+            patient_npc->op_of_u.trust += trust_gain;
+            patient_npc->op_of_u.value += value_gain;
+            add_msg( m_good, _( "%s appreciates your medical help." ), patient->disp_name() );
         }
     }
 
@@ -12512,19 +12594,67 @@ void socialize_activity_actor::finish( player_activity &act, Character &who )
             // 50% chance of increasing 1 npc opinion value each social chat after 6hr
             if( !valid_socialize_partner->has_effect( effect_socialized_recently ) &&
                 valid_socialize_partner->opinion_values_raised <= 10 ) {
+                // Contextual mood modifier: location comfort and NPC state affect bonding.
+                float mood_modifier = 1.0f;
+                const tripoint_bub_ms partner_pos = valid_socialize_partner->pos_bub();
+                const map &here = get_map();
+
+                // Comfortable, safe locations improve the conversation.
+                if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_INDOORS, partner_pos ) ) {
+                    mood_modifier += 0.3f;
+                    if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_CAN_SIT, partner_pos ) ) {
+                        mood_modifier += 0.2f;
+                    }
+                } else {
+                    mood_modifier -= 0.2f;
+                }
+
+                // Danger nearby makes it hard to relax.
+                if( valid_socialize_partner->has_effect( effect_npc_run_away ) ||
+                    valid_socialize_partner->has_effect( effect_npc_flee_player ) ) {
+                    mood_modifier -= 0.4f;
+                }
+                for( const tripoint_bub_ms &p : here.points_in_radius( partner_pos, 2 ) ) {
+                    if( here.get_field( p, fd_fire ) || here.get_field( p, fd_smoke ) ||
+                        here.get_field( p, fd_tear_gas ) || here.get_field( p, fd_toxic_gas ) ) {
+                        mood_modifier -= 0.3f;
+                        break;
+                    }
+                }
+
+                // NPC physical discomfort reduces the benefit.
+                if( valid_socialize_partner->get_hunger() > 100 ) {
+                    mood_modifier -= 0.15f;
+                }
+                if( valid_socialize_partner->get_thirst() > 100 ) {
+                    mood_modifier -= 0.15f;
+                }
+                if( valid_socialize_partner->get_sleepiness() >=
+                    static_cast<int>( sleepiness_levels::TIRED ) ) {
+                    mood_modifier -= 0.2f;
+                }
+                if( valid_socialize_partner->get_pain() > 20 ) {
+                    mood_modifier -= 0.2f;
+                }
+
                 int value_change = 0;
                 switch( rng( 1, 3 ) ) {
-                    case 1:
-                        value_change = rng( 0, 1 );
+                    case 1: {
+                        const int base = rng( 0, 1 );
+                        value_change = static_cast<int>( std::round( base * mood_modifier ) );
                         valid_socialize_partner->op_of_u.trust += value_change;
                         break;
-                    case 2:
-                        value_change = rng( 0, 1 );
+                    }
+                    case 2: {
+                        const int base = rng( 0, 1 );
+                        value_change = static_cast<int>( std::round( base * mood_modifier ) );
                         valid_socialize_partner->op_of_u.value += value_change;
                         break;
+                    }
                     case 3:
                         if( valid_socialize_partner->op_of_u.anger > 0 ) {
-                            value_change = rng( -1, 0 );
+                            const int base = rng( -1, 0 );
+                            value_change = static_cast<int>( std::round( base * mood_modifier ) );
                             valid_socialize_partner->op_of_u.anger += value_change;
                         }
                         break;
@@ -12532,6 +12662,14 @@ void socialize_activity_actor::finish( player_activity &act, Character &who )
                 // we need to check for any non-zero value, e.g. anger change might be negative
                 if( value_change != 0 ) {
                     valid_socialize_partner->opinion_values_raised++;
+                }
+                // Surface notable context to the player.
+                if( mood_modifier >= 1.5f && value_change > 0 ) {
+                    add_msg( m_good,
+                             _( "The comfortable surroundings make the conversation especially pleasant." ) );
+                } else if( mood_modifier <= 0.5f && value_change > 0 ) {
+                    add_msg( m_warning,
+                             _( "The difficult circumstances make it hard to bond." ) );
                 }
                 valid_socialize_partner->add_effect( effect_socialized_recently, 6_hours );
             }

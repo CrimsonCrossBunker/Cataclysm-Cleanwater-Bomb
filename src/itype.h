@@ -1392,6 +1392,13 @@ struct itype {
         /** Base damage output when thrown */
         damage_instance thrown_damage;
 
+        /** Multipliers applied to throwing when this item is wielded */
+        float throw_damage_multiplier = 1.0f;
+        float throw_range_multiplier = 1.0f;
+        float throw_stamina_multiplier = 1.0f;
+        float throw_dispersion_multiplier = 1.0f;
+        float throw_speed_multiplier = 1.0f;
+
         /** What recipes can make this item */
         std::vector<recipe_id> recipes;
 

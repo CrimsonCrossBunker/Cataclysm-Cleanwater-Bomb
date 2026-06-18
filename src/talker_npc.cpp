@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <set>
@@ -84,24 +85,24 @@ std::string talker_npc_const::distance_to_goal() const
 bool talker_npc::will_talk_to_u( const Character &you, bool force ) const
 {
     if( you.is_dead_state() ) {
-    me_npc->set_attitude( NPCATT_NULL );
+        me_npc->set_attitude( NPCATT_NULL );
         return false;
     }
     if( get_player_character().getID() == you.getID() ) {
-    if( me_npc->get_faction() ) {
+        if( me_npc->get_faction() ) {
             me_npc->get_faction()->known_by_u = true;
         }
         me_npc->set_known_to_u( true );
     }
     // This is necessary so that we don't bug the player over and over
     if( me_npc->get_attitude() == NPCATT_TALK ) {
-    me_npc->set_attitude( NPCATT_NULL );
+        me_npc->set_attitude( NPCATT_NULL );
     } else if( !force && ( me_npc->get_attitude() == NPCATT_FLEE ||
-                               me_npc-> get_attitude() == NPCATT_FLEE_TEMP ) ) {
+                           me_npc-> get_attitude() == NPCATT_FLEE_TEMP ) ) {
         add_msg( _( "%s is fleeing from you!" ), disp_name() );
         return false;
     } else if( !force && me_npc->get_attitude() == NPCATT_KILL ) {
-    add_msg( _( "%s is hostile!" ), disp_name() );
+        add_msg( _( "%s is hostile!" ), disp_name() );
         return false;
     }
     return true;
@@ -374,6 +375,40 @@ static consumption_result try_consume( npc &p, item &it, std::string &reason )
             p.mod_moves( -to_moves<int>( consume_time ) );
             p.consume( to_eat );
             reason = p.chat_snippets().snip_consume_eat.translated();
+
+            // Feeding an NPC improves their opinion of the player based on the
+            // food's quality and the NPC's current needs.
+            const int kcal = p.compute_effective_nutrients( to_eat ).kcal();
+            const int quench = comest->quench;
+            const std::pair<int, int> fun = p.fun_for( to_eat );
+            const int stored_need = p.get_healthy_kcal() - p.get_stored_kcal() +
+                                    p.stomach.get_calories();
+            const int kcal_need = std::max( 0, stored_need );
+            const int thirst_need = std::max( 0, p.get_thirst() );
+
+            // The hungrier or thirstier the NPC, the more they appreciate the food.
+            const float hunger_factor = 1.0f + std::min( 1.0f,
+                                        static_cast<float>( kcal_need ) / 2000.0f );
+            const float thirst_factor = 1.0f + std::min( 1.0f,
+                                        static_cast<float>( thirst_need ) / 200.0f );
+            // Altruistic NPCs value gifts from others more highly.
+            const float altruism_mod = 1.0f + static_cast<float>( p.personality.altruism ) / 20.0f;
+
+            const float trust_base = ( kcal / 100.0f ) * hunger_factor;
+            const float value_base = ( fun.first * 0.5f +
+                                       quench / 10.0f * thirst_factor ) * altruism_mod;
+
+            int trust_gain = static_cast<int>( std::round( trust_base ) );
+            int value_gain = static_cast<int>( std::round( value_base ) );
+
+            trust_gain = std::clamp( trust_gain, 0, 4 );
+            value_gain = std::clamp( value_gain, 0, 4 );
+
+            if( trust_gain > 0 || value_gain > 0 ) {
+                p.op_of_u.trust += trust_gain;
+                p.op_of_u.value += value_gain;
+                add_msg_if_player_sees( p, _( "%s appreciates the food." ), p.disp_name() );
+            }
         }
 
     } else if( to_eat.is_medication() ) {
@@ -739,7 +774,7 @@ std::string talker_npc_const::view_personality_traits() const
 std::string talker_npc_const::evaluation_by( const_talker const &alpha ) const
 {
     if( !alpha.can_see() ) {
-    return _( "&You're blind and can't make anything out." );
+        return _( "&You're blind and can't make anything out." );
     }
 
     ///\EFFECT_PER affects whether player can size up NPCs
@@ -747,32 +782,32 @@ std::string talker_npc_const::evaluation_by( const_talker const &alpha ) const
     ///\EFFECT_INT slightly affects whether player can size up NPCs
     int ability = alpha.per_cur() * 3 + alpha.int_cur();
     if( ability <= 10 ) {
-    return _( "&You can't make anything out." );
+        return _( "&You can't make anything out." );
     }
 
     if( is_player_ally() || ability > 100 ) {
-    ability = 100;
-}
+        ability = 100;
+    }
 
-std::string info = "&";
-int str_range = static_cast<int>( 100 / ability );
-int str_min = static_cast<int>( me_npc->get_str_base() / str_range ) * str_range;
-info += string_format( _( "Str %d - %d" ), str_min, str_min + str_range );
+    std::string info = "&";
+    int str_range = static_cast<int>( 100 / ability );
+    int str_min = static_cast<int>( me_npc->get_str_base() / str_range ) * str_range;
+    info += string_format( _( "Str %d - %d" ), str_min, str_min + str_range );
 
-if( ability >= 40 ) {
-    int dex_range = static_cast<int>( 160 / ability );
+    if( ability >= 40 ) {
+        int dex_range = static_cast<int>( 160 / ability );
         int dex_min = static_cast<int>( me_npc->get_dex_base() / dex_range ) * dex_range;
         info += string_format( _( "  Dex %d - %d" ), dex_min, dex_min + dex_range );
     }
 
     if( ability >= 50 ) {
-    int int_range = static_cast<int>( 200 / ability );
+        int int_range = static_cast<int>( 200 / ability );
         int int_min = static_cast<int>( me_npc->get_int_base() / int_range ) * int_range;
         info += string_format( _( "  Int %d - %d" ), int_min, int_min + int_range );
     }
 
     if( ability >= 60 ) {
-    int per_range = static_cast<int>( 240 / ability );
+        int per_range = static_cast<int>( 240 / ability );
         int per_min = static_cast<int>( me_npc->get_per_base() / per_range ) * per_range;
         info += string_format( _( "  Per %d - %d" ), per_min, per_min + per_range );
     }
@@ -796,7 +831,7 @@ if( ability >= 40 ) {
         info += "\n" + how_tired;
     }
     if( ability >= 100 ) {
-    if( get_thirst() < 100 ) {
+        if( get_thirst() < 100 ) {
             time_duration thirst_at = 5_minutes * ( 100 - get_thirst() ) / rates.thirst;
             if( thirst_at > 1_hours ) {
                 info += _( "\nWill need water in " ) + to_string_approx( thirst_at );

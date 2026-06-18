@@ -72,6 +72,12 @@ static const json_character_flag json_flag_HYPEROPIC( "HYPEROPIC" );
 static const skill_id skill_electronics( "electronics" );
 static const skill_id skill_tailor( "tailor" );
 
+// Batch size limits for the crafting UI.
+// Quick batch mode shows a scrollable list of 1..50 entries.
+// Direct numeric input allows entering a larger amount without expanding the list.
+constexpr int crafting_batch_quick_max = 50;
+constexpr int crafting_batch_input_max = 9999;
+
 namespace
 {
 
@@ -233,6 +239,7 @@ static input_context make_crafting_context( bool highlight_unread_recipes )
     ctxt.register_action( "CYCLE_BATCH" );
     ctxt.register_action( "BATCH_SIZE_UP" );
     ctxt.register_action( "BATCH_SIZE_DOWN" );
+    ctxt.register_action( "SET_BATCH_SIZE" );
     ctxt.register_action( "CHOOSE_CRAFTER" );
     ctxt.register_action( "RELATED_RECIPES" );
     ctxt.register_action( "HIDE_SHOW_RECIPE" );
@@ -955,7 +962,7 @@ void crafting_ui_impl::draw_recipe_info_panel()
 
             bool show_batch_ui = !recp.is_nested();
             bool show_minus = show_batch_ui && manual_batch > 1;
-            bool show_plus = show_batch_ui && manual_batch < 50;
+            bool show_plus = show_batch_ui && manual_batch < crafting_batch_input_max;
 
             std::string mult_str;
             if( show_batch_ui && manual_batch > 1 ) {
@@ -2229,6 +2236,7 @@ void crafting_ui_impl::rebuild_keybinding_tips()
         add_action_desc( "CYCLE_BATCH", pgettext( "crafting gui", "Batch" ) );
         add_action_desc( "BATCH_SIZE_UP", pgettext( "crafting gui", "Batch +" ) );
         add_action_desc( "BATCH_SIZE_DOWN", pgettext( "crafting gui", "Batch -" ) );
+        add_action_desc( "SET_BATCH_SIZE", pgettext( "crafting gui", "Set batch" ) );
         add_action_desc( "CHOOSE_CRAFTER", pgettext( "crafting gui", "Choose crafter" ) );
         add_action_desc( "PRIORITIZE_MISSING_COMPONENTS", pgettext( "crafting gui", "Prioritize" ) );
         add_action_desc( "DEPRIORITIZE_COMPONENTS", pgettext( "crafting gui", "Deprioritize" ) );
@@ -2457,7 +2465,10 @@ void crafting_ui_impl::process_action( const std::string &action_in,
                               line >= 0 && line < static_cast<int>( current.size() ) &&
                               !current[line]->is_nested();
         if( can_batch_here ) {
-            int new_batch = std::clamp( manual_batch + pending_batch_delta, 1, 50 );
+            // In batch-mode list, keep +/- within the 1..50 quick range.
+            // Outside batch mode, allow up to the direct-input maximum.
+            const int upper = batch ? crafting_batch_quick_max : crafting_batch_input_max;
+            int new_batch = std::clamp( manual_batch + pending_batch_delta, 1, upper );
             if( new_batch != manual_batch ) {
                 // Auto-enter batch mode on first increment from x1
                 if( manual_batch == 1 && new_batch > 1 && !batch ) {
@@ -2811,6 +2822,38 @@ void crafting_ui_impl::process_action( const std::string &action_in,
         pending_batch_delta = 1;
     } else if( action == "BATCH_SIZE_DOWN" ) {
         pending_batch_delta = -1;
+    } else if( action == "SET_BATCH_SIZE" && selection_ok( current, line, false ) ) {
+        if( !current[line]->is_nested() ) {
+            number_input_popup<int> popup( 38, manual_batch, _( "Set batch size" ) );
+            popup.set_description( string_format(
+                                       _( "Enter amount to craft (1-%d):" ), crafting_batch_input_max ) );
+            int new_batch = popup.query();
+            if( !popup.cancelled() && new_batch >= 1 ) {
+                new_batch = std::clamp( new_batch, 1, crafting_batch_input_max );
+                if( new_batch <= crafting_batch_quick_max ) {
+                    // Small amount: behave like the quick batch list.
+                    if( !batch ) {
+                        chosen = current[line];
+                        batch_line = line;
+                        batch = true;
+                        recalc = true;
+                    }
+                    manual_batch = new_batch;
+                    if( batch ) {
+                        line = manual_batch - 1;
+                        need_scroll_to_selected = true;
+                    }
+                } else {
+                    // Large amount: keep the numeric value but leave the 1..50 batch list.
+                    if( batch ) {
+                        batch = false;
+                        keepline = true;
+                        recalc = true;
+                    }
+                    manual_batch = new_batch;
+                }
+            }
+        }
     } else if( action == "QUIT" ) {
         if( batch ) {
             batch = false;

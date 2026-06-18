@@ -1959,14 +1959,30 @@ void npc::make_angry()
     }
 }
 
-void npc::on_attacked( const Creature &attacker )
+void npc::on_attacked( const Creature &attacker, const bool intentional )
 {
     map &here = get_map();
 
     hallucination_die( &here, nullptr );
 
     if( attacker.is_avatar() && !is_enemy() && !is_dead() && !guaranteed_hostile() ) {
-        make_angry();
+        if( is_player_ally() ) {
+            // Allies give the player some leeway for stray fire, but deliberate
+            // attacks or repeated mistakes wear down their loyalty.
+            const int trust_loss = intentional ? 5 : 3;
+            op_of_u.trust -= trust_loss;
+            op_of_u.anger += trust_loss;
+
+            if( op_of_u.trust < 5 || turned_hostile() ) {
+                make_angry();
+            } else {
+                add_msg_if_player_sees( *this, m_warning,
+                                        _( "%s is upset but stays loyal." ),
+                                        disp_name() );
+            }
+        } else {
+            make_angry();
+        }
         hit_by_player = true;
     }
 }

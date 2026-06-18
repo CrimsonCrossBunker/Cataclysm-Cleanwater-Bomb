@@ -950,7 +950,7 @@ class npc : public Character
         * if the creature is a player and the NPC is not already hostile
         * towards the player.
         */
-        void on_attacked( const Creature &attacker );
+        void on_attacked( const Creature &attacker, bool intentional = true );
         int assigned_missions_value() const;
         // State checks
         // We want to kill/mug/etc the player
