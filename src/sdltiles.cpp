@@ -306,6 +306,22 @@ static point compute_drawable_dims()
     return point{ pw, ph };
 }
 
+#if !defined(__ANDROID__)
+// Present rect in drawable px: largest integer buffer multiple that fits
+// (absorbs SCALING_FACTOR + HiDPI), top-left, remainder border. A fractional
+// fit would grid the minimap. Inverted by window_to_display_buffer_coords.
+static SDL_Rect get_display_buffer_render_rect()
+{
+    const point b = compute_display_buffer_dims();
+    const point d = compute_drawable_dims();
+    if( b.x <= 0 || b.y <= 0 ) {
+        return SDL_Rect{ 0, 0, 0, 0 };
+    }
+    const int scale = std::max( 1, std::min( d.x / b.x, d.y / b.y ) );
+    return SDL_Rect{ 0, 0, b.x * scale, b.y * scale };
+}
+#endif
+
 // Test-only injected drawable pixels. The headless dummy backend reports backing
 // pixels equal to the logical window, so a DPI-only change cannot be produced
 // through SDL; a non-negative override stands in. Inert at the -1 default.
@@ -1155,15 +1171,13 @@ void refresh_display()
     // mesh). Falls back to a straight copy if the warp is unsupported or inactive —
     // no behaviour change in the common case beyond the shake translation.
     if( !blit_display_buffer_warped( shake_dx, shake_dy ) ) {
-        if( shake_dx != 0 || shake_dy != 0 ) {
-            // Size the dstrect to the render coordinate space (what a null-dst
-            // RenderCopy fills), not the raw output, so the offset copy fills the
-            // same region as every other frame under HiDPI / integer scaling and
-            // only translates by the shake rather than rescaling the scene.
-            int rw = 0;
-            int rh = 0;
-            GetRenderCoordinateSpaceSize( renderer, &rw, &rh );
-            SDL_Rect dstrect{ shake_dx, shake_dy, rw, rh };
+        // Integer-scaled top-left blit; remainder is border. A null full-window
+        // blit would fractionally scale and grid the minimap. The shake offset
+        // translates the present rect rather than rescaling the scene.
+        SDL_Rect dstrect = get_display_buffer_render_rect();
+        if( dstrect.w > 0 && dstrect.h > 0 ) {
+            dstrect.x += shake_dx;
+            dstrect.y += shake_dy;
             RenderCopy( renderer, display_buffer, nullptr, &dstrect );
         } else {
             RenderCopy( renderer, display_buffer, nullptr, nullptr );
@@ -1275,12 +1289,20 @@ SDL_Point window_to_display_buffer_coords( SDL_Point window_pt )
     int win_w = 0;
     int win_h = 0;
     GetWindowSize( window.get(), &win_w, &win_h );
-    if( win_w <= 0 || win_h <= 0 ) {
+    const point draw = compute_drawable_dims();
+    const SDL_Rect dst = get_display_buffer_render_rect();
+    if( win_w <= 0 || win_h <= 0 || draw.x <= 0 || draw.y <= 0 || dst.w <= 0 || dst.h <= 0 ) {
         return window_pt;
     }
+    // Invert the present rect: logical coords to drawable px, then through the
+    // rect to buffer px. Points past it land in the border.
+    const point p{
+        static_cast<int>( static_cast<int64_t>( window_pt.x ) * draw.x / win_w ),
+        static_cast<int>( static_cast<int64_t>( window_pt.y ) * draw.y / win_h )
+    };
     return SDL_Point{
-        static_cast<int>( static_cast<int64_t>( window_pt.x ) * buf_w / win_w ),
-        static_cast<int>( static_cast<int64_t>( window_pt.y ) * buf_h / win_h )
+        static_cast<int>( static_cast<int64_t>( p.x - dst.x ) * buf_w / dst.w ),
+        static_cast<int>( static_cast<int64_t>( p.y - dst.y ) * buf_h / dst.h )
     };
 #endif
 }
