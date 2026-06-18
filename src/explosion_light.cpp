@@ -344,8 +344,11 @@ explosion_light_sample explosion_light::sample( float radial, float progress,
 
 float explosion_light::duration_ms( float blast_radius_tiles ) const
 {
+    // check() warns on a malformed recipe (min<=0 or max<min) but does not repair
+    // it, so guard the bounds here: std::clamp with lo>hi is undefined behaviour.
+    const float hi = std::max( duration_min_ms, duration_max_ms );
     return std::clamp( duration_base_ms + blast_radius_tiles * duration_per_tile_ms,
-                       duration_min_ms, duration_max_ms );
+                       duration_min_ms, hi );
 }
 
 void explosion_lights::load( const JsonObject &jo, const std::string &src )

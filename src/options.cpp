@@ -2345,6 +2345,13 @@ void options_manager::add_options_graphics()
 
         get_option( "ANIMATION_PROJECTILES" ).setPrerequisite( "ANIMATIONS" );
 
+        add( "ANIMATION_PROJECTILES_ASYNC", page_id, to_translation( "Asynchronous projectiles" ),
+             to_translation( "If true, projectile animations play in the background and the game continues immediately after a shot, so many units firing in one turn no longer stutter frame-by-frame.  The animation lags slightly behind the game state (damage is resolved before the bullet visually lands).  If false, each shot blocks until its animation finishes." ),
+             true
+           );
+
+        get_option( "ANIMATION_PROJECTILES_ASYNC" ).setPrerequisite( "ANIMATION_PROJECTILES" );
+
         add( "BULLETS_AS_LASERS", page_id, to_translation( "Draw bullets as lines" ),
              to_translation( "If true, projectiles are drawn as a line of images along their whole flight path, and the animation lasts only one frame." ),
              true

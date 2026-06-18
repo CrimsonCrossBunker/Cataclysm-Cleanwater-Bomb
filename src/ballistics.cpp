@@ -382,6 +382,11 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
     const bool no_item_damage = proj_effects.count( ammo_effect_NO_ITEM_DAMAGE ) > 0;
     const bool do_draw_line = proj_effects.count( ammo_effect_DRAW_AS_LINE ) > 0 ||
                               get_option<bool>( "BULLETS_AS_LASERS" );
+    // Play projectile animations asynchronously (register + return) instead of
+    // blocking the main thread per shot, so many units firing in one turn don't
+    // stutter. Gated on its own option; off = legacy synchronous behaviour.
+    const bool async_anim = do_animation &&
+                            get_option<bool>( "ANIMATION_PROJECTILES_ASYNC" );
     const bool null_source = proj_effects.count( ammo_effect_NULL_SOURCE ) > 0;
     // Determines whether it can penetrate obstacles
     const bool is_bullet = proj_arg.speed >= 200 &&
@@ -559,6 +564,11 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         int projectile_skip_calculation = range * projectile_skip_multiplier;
         int projectile_skip_current_frame = rng( 0, projectile_skip_calculation );
         bool has_momentum = true;
+        // Where the projectile actually stopped along the path (creature hit, lost
+        // momentum, or obstacle). Used to clip the drawn flight line so a stopped
+        // shot doesn't render a tracer all the way to max range (the "infinite
+        // penetration" look). Defaults to the full length; narrowed on stop.
+        size_t stop_idx = traj_len;
 
         for( size_t i = 1; i < traj_len && ( has_momentum || stream ); ++i ) {
             tp = t_copy[i];
@@ -596,7 +606,9 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
 
             // Drawing the bullet uses player g->u, and not player p, because it's drawn
             // relative to YOUR position, which may not be the gunman's position.
-            if( first && do_animation && !do_draw_line ) {
+            // Synchronous dot path only: the async path registers the whole flight
+            // path once after the loop instead of drawing (and sleeping) per tile.
+            if( first && do_animation && !do_draw_line && !async_anim ) {
                 // TODO: Make this draw thrown item/launched grenade/arrow
                 if( projectile_skip_current_frame >= projectile_skip_calculation ) {
                     // TODO: Refine so overlapping maps are handled.
@@ -727,6 +739,8 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                         proj.shot_impact.mult_damage( size_mult, true );
                     } else {
                         has_momentum = false;
+                        // Bullet stops on this creature; clip the drawn line here.
+                        stop_idx = i;
                     }
                     // on-hit effects for inflicted damage types
                     for( const std::pair<const damage_type_id, int> &dt : attack.dealt_dam.dealt_dams ) {
@@ -750,6 +764,8 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                     }
                 } else {
                     has_momentum = false;
+                    // Round hit terrain/furniture hard enough to stop; clip here.
+                    stop_idx = i;
                 }
             }
             if( ( !has_momentum || traj_len == size_t( 2 ) ) && proj.count > 1 && distance <= 1 ) {
@@ -768,10 +784,30 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         }
         // Done with the trajectory!
         if( first && do_animation && do_draw_line && traj_len > 2 ) {
+            // Clip the drawn line to where the projectile actually stopped, so a
+            // shot halted by a creature/obstacle doesn't streak to max range.
+            const size_t draw_len = std::min( traj_len, stop_idx );
             t_copy.erase( t_copy.begin() );
-            t_copy.resize( traj_len-- );
+            t_copy.resize( draw_len > 0 ? draw_len : traj_len );
             // Draw the whole flight path at once as a gun line of rotated tracer sprites.
-            g->draw_bullet_line( t_copy, bullet, custom_bullet_sprite );
+            if( async_anim ) {
+                g->draw_bullet_async( t_copy, bullet, /*as_line=*/true, custom_bullet_sprite );
+            } else {
+                g->draw_bullet_line( t_copy, bullet, custom_bullet_sprite );
+            }
+        } else if( first && async_anim && !do_draw_line && here == &reality_bubble() ) {
+            // Async moving-dot path: register the clipped flight path once and let
+            // it sweep in the background instead of drawing+sleeping per tile. Match
+            // the line path's clipping — skip the shooter's own tile (index 0) and
+            // run through the impact tile (stop_idx) — so both visual modes agree on
+            // which tiles the projectile occupies.
+            const size_t draw_len = std::min( traj_len, stop_idx );
+            const size_t end_idx = std::min( t_copy.size(), draw_len + 1 );
+            if( end_idx > 1 ) {
+                std::vector<tripoint_bub_ms> dot_path( t_copy.begin() + 1,
+                                                       t_copy.begin() + end_idx );
+                g->draw_bullet_async( dot_path, bullet, /*as_line=*/false, custom_bullet_sprite );
+            }
         }
 
         if( here->impassable( tp ) ) {
@@ -783,10 +819,14 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         // tile. These are firearm / energy-weapon visuals, so skip them entirely for
         // thrown items (a flung rock or knife is not a bullet) — the thrown item's
         // own flight sprite already animates, and grenades handle their explosion
-        // separately. Beams use the directional line shape; normal visible bullets
-        // get a faint tracer; every (non-thrown) impact gets a small spark.
+        // separately. An energy shot (laser / plasma / lightning) or any line-drawn
+        // shot gets a coloured beam; a normal visible bullet gets a faint tracer;
+        // every (non-thrown) impact gets a small spark.
         if( first && do_animation && !wp_attack.is_thrown && here == &reality_bubble() ) {
-            if( do_draw_line ) {
+            const bool energy_beam = proj_effects.count( ammo_effect_LASER ) > 0 ||
+                                     proj_effects.count( ammo_effect_PLASMA ) > 0 ||
+                                     proj_effects.count( ammo_effect_LIGHTNING ) > 0;
+            if( do_draw_line || energy_beam ) {
                 play_beam_vfx( source, tp, proj_effects );
             } else if( is_bullet ) {
                 play_tracer_vfx( source, tp );

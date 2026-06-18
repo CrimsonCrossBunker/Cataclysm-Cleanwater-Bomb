@@ -10,6 +10,7 @@
 #include "enums.h"
 #include "explosion.h"
 #include "line.h"
+#include "map.h"
 #include "units.h"
 
 // Pure geometry. Reuses the same map-free primitives the spell shapes use
@@ -85,11 +86,25 @@ void explosion_handler::play_vfx( const vfx_emit &e )
     if( tiles.empty() ) {
         return;
     }
+    // The shape geometry is wall-free (disc/line/cone don't flood-fill or clip),
+    // so without this a disc would paint light over walls and a beam would shine
+    // through them. Clip to tiles the origin actually has line of sight to, which
+    // also keeps the modern overlay's stated invariant ("only ever light tiles the
+    // effect can reach, so light can't bleed through walls"). The origin tile is
+    // always kept. Range is the shape's own reach (disc radius / beam range), with
+    // a floor so a point/degenerate emit still lights its own tile.
+    map &here = get_map();
+    const int los_range = std::max( { 1, e.radius, e.range } );
     // The modern overlay ignores the per-tile nc_color (the recipe drives the
     // colour); it only needs the tile keys. Pass a placeholder colour.
     std::map<tripoint_bub_ms, nc_color> area;
     for( const tripoint_bub_ms &p : tiles ) {
-        area[p] = c_white;
+        if( p == e.origin || here.sees( e.origin, p, los_range ) ) {
+            area[p] = c_white;
+        }
+    }
+    if( area.empty() ) {
+        return;
     }
     // disc/point bloom radially from a centre (ring on); line/cone are
     // directional and sweep from the origin (ring off). The origin tile is the

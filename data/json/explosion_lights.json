@@ -309,5 +309,29 @@
     "shockwave_strength": 0.65,
     "shockwave_speed": 0.95,
     "shockwave_thickness": 2.2
+  },
+  {
+    "//": "Neutral smoke release (grey, not toxic green). Unlike the blast recipes this is NOT an outward-sweeping ring: wave_travel is near zero so the whole puff appears together, jitter (not radius) drives per-tile arrival for an irregular cloud edge, and it holds at low opacity then fades softly over a long life. Reads as billowing smoke settling in place rather than an explosion bloom. For smoke bombs / smoke mortars; distinct from gas_cloud (green-yellow toxic vapour).",
+    "type": "explosion_light",
+    "id": "smoke_cloud",
+    "stops": [
+      { "color": [ 185, 185, 190 ], "alpha": 90 },
+      { "color": [ 140, 140, 145 ], "alpha": 78 },
+      { "color": [ 95, 95, 100 ], "alpha": 45 }
+    ],
+    "easing": "smoothstep",
+    "wave_travel": 0.05,
+    "wave_gap": 0.34,
+    "rise": 0.16,
+    "fade": 0.55,
+    "blend": 0.4,
+    "spread_jitter": 0.22,
+    "color_jitter": 0.04,
+    "flicker": 0.04,
+    "duration_base_ms": 900,
+    "duration_per_tile_ms": 130,
+    "duration_min_ms": 1300,
+    "duration_max_ms": 3500,
+    "shockwave": false
   }
 ]

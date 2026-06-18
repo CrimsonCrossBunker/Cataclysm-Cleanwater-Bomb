@@ -854,6 +854,33 @@ class cata_tiles
         void draw_explosion_light_frame( int view_z );
         void void_explosion_light();
 
+        // --- Asynchronous bullet animation (ANIMATION_PROJECTILES_ASYNC) -----
+        // Mirrors the explosion-light async model: a shot registers its visible
+        // flight path here and returns immediately, so the game keeps running and
+        // many units firing in one turn don't each block the main thread. The
+        // animation advances by real elapsed time every frame.
+        //   as_line  true  -> the whole path shows at once for a short life (the
+        //                     BULLETS_AS_LASERS gun-line look).
+        //            false -> a single bullet sprite sweeps tile-to-tile along the
+        //                     path (the classic moving-dot look).
+        // per_ms drives the sweep (dot) or the life countdown (line).
+        void init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
+                               const std::vector<std::string> &sprites,
+                               const std::vector<int> &rotations,
+                               bool as_line, float per_ms );
+        // Advance all active bullet animations by real elapsed time, dropping the
+        // finished ones. Called once at the start of each draw().
+        void advance_bullet_anims();
+        // True while any async bullet animation is playing (raises idle redraw rate).
+        bool has_bullet_anim() const {
+            return !m_bullet_anims.empty();
+        }
+        void draw_bullet_anim_frame( int view_z );
+        // Drop all in-flight bullet animations (used on tileset reload / renderer
+        // recovery, like void_explosion_light), so stale tiles computed against old
+        // metrics don't paint onto the rebuilt scene.
+        void void_bullet_anim();
+
         // Advance the sound-driven screen shake by real elapsed time. Called once at
         // the start of each draw(), alongside the other wall-clock animations.
         void advance_screen_shake_frame();
@@ -1242,6 +1269,30 @@ class cata_tiles
         std::optional<int64_t> m_explosion_light_last_ms;
         // Same, for the sound-driven screen shake decay.
         std::optional<int64_t> m_screen_shake_last_ms;
+
+        // Active asynchronous bullet animations. Each is registered when a shot
+        // fires and advances by real elapsed time every frame (like the explosion
+        // lights), so several concurrent shots overlap without blocking the turn.
+        // Finished entries are dropped in advance_bullet_anims().
+        struct active_bullet_anim {
+            std::vector<tripoint_bub_ms> points; // visible flight path tiles
+            std::vector<std::string> sprites;    // per-point sprite id
+            std::vector<int> rotations;          // per-point rotation
+            bool as_line = false;                // whole-line vs moving-dot
+            float head = 0.0f;                   // dot: float index along points
+            float life = 0.0f;                   // line: progress 0..1 over its life
+            float per_ms = 0.0f;                 // advance rate per ms
+            // Countdown (ms) before this shot's animation starts. Staggers the
+            // rounds of a full-auto burst (which all register in the same tick,
+            // before any frame advances) so they fly in sequence — the "哒哒哒"
+            // rhythm — instead of as one simultaneous wall of bullets. Counts down
+            // in advance_bullet_anims(); the anim is invisible and frozen until it
+            // hits zero.
+            float start_delay_ms = 0.0f;
+        };
+        std::vector<active_bullet_anim> m_bullet_anims;
+        // steady_clock timestamp (ms) of the last bullet-anim advance.
+        std::optional<int64_t> m_bullet_anim_last_ms;
 
         std::vector<tripoint_bub_ms> bul_pos;
         std::vector<std::string> bul_id;

@@ -889,6 +889,13 @@ class game
         // sprites (CBN-style), instead of animating a single bullet hopping tile-by-tile.
         void draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, char bullet,
                                const std::string &custom_sprite = {} );
+        // Asynchronous projectile animation (ANIMATION_PROJECTILES_ASYNC). Registers
+        // the whole trajectory with the tile renderer and returns immediately instead
+        // of blocking the main thread per shot, so many units firing in one turn don't
+        // stutter. \p as_line picks the look: true = the whole BULLETS_AS_LASERS gun
+        // line shown at once; false = a single bullet sprite sweeping tile-to-tile.
+        void draw_bullet_async( const std::vector<tripoint_bub_ms> &trajectory, char bullet,
+                                bool as_line, const std::string &custom_sprite = {} );
         void draw_hit_mon( const tripoint_bub_ms &p, const monster &m, bool dead = false, int dam = -1,
                            const Creature *source = nullptr );
         void draw_hit_player( const Character &p, int dam, float damage_fraction = 1.0f,

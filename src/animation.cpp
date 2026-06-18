@@ -887,6 +887,56 @@ void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, con
     bullet_animation().progress();
     tilecontext->void_bullet();
 }
+
+void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &trajectory, const char bullet,
+                              const bool as_line, const std::string &custom_sprite )
+{
+    if( test_mode ) {
+        // avoid segfault from null tilecontext in tests
+        return;
+    }
+    if( !use_tiles || trajectory.size() < 2 ) {
+        return;
+    }
+
+    // Collect the visible flight path the same way draw_bullet_line does: a
+    // directional streak sprite rotated per-tile so the path reads as a gun line.
+    const std::string sprite = !custom_sprite.empty() ? custom_sprite : tracer_sprite_id( bullet );
+    std::vector<tripoint_bub_ms> points;
+    std::vector<std::string> sprites;
+    std::vector<int> rotations;
+    points.reserve( trajectory.size() );
+    sprites.reserve( trajectory.size() );
+    rotations.reserve( trajectory.size() );
+    for( size_t i = 0; i < trajectory.size(); ++i ) {
+        if( !is_point_visible( trajectory[i] ) ) {
+            continue;
+        }
+        points.push_back( trajectory[i] );
+        sprites.push_back( sprite );
+        rotations.push_back( get_bullet_rotation( get_bullet_dir( trajectory, i ) ) );
+    }
+    if( points.empty() ) {
+        return;
+    }
+
+    // Derive the sweep rate from ANIMATION_DELAY so the async dot keeps the same
+    // perceived speed as the legacy blocking version (one point per delay-ms).
+    // A zero delay (instant) collapses to a one-frame show. The line variant just
+    // needs a short visible life; tie it to the same scale.
+    const int delay_ms = std::max( 1, get_option<int>( "ANIMATION_DELAY" ) );
+    const float dot_per_ms = 1.0f / static_cast<float>( delay_ms );
+    // The whole-line look lives for roughly the time the dot would take to cross
+    // the path, so a long shot's line lingers a touch longer than a short one,
+    // capped so it never overstays.
+    const float line_life_ms = std::min( 400.0f,
+                                          static_cast<float>( delay_ms ) * static_cast<float>( points.size() ) );
+    const float line_per_ms = 1.0f / std::max( 1.0f, line_life_ms );
+
+    tilecontext->init_bullet_anim( points, sprites, rotations, as_line,
+                                   as_line ? line_per_ms : dot_per_ms );
+    g->invalidate_main_ui_adaptor();
+}
 #else
 void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, const char /*bullet*/,
                              const std::string &/*custom_sprite*/ )
@@ -906,6 +956,12 @@ void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, con
     } );
     add_draw_callback( line_cb );
     bullet_animation().progress();
+}
+void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &/*trajectory*/, const char /*bullet*/,
+                              const bool /*as_line*/, const std::string &/*custom_sprite*/ )
+{
+    // Curses has no asynchronous projectile path; callers fall back to the
+    // synchronous draw_bullet / draw_bullet_line in this build.
 }
 #endif
 
