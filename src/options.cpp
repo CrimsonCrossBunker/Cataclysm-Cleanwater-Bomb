@@ -2593,10 +2593,11 @@ void options_manager::add_options_graphics()
              to_translation( "If true, use SDL ASCII line drawing routine instead of Unicode Line Drawing characters.  Use this option when your selected font doesn't contain necessary glyphs." ),
              true, COPT_CURSES_HIDE
            );
-
+        
+        const std::string lang = SystemLocale::Language().value_or( "" );
         add( "IMGUI_LOAD_CHINESE", page_id, to_translation( "Chinese glyph ranges in ImGui" ),
              to_translation( "If true, ImGui will add glyphs of full Chinese, include zh_CN, zh_TW, ja. Use this option when your need all Chinese glyphs.  Requires restart." ),
-             true, COPT_CURSES_HIDE
+             ( lang == "zh_CN" || lang == "zh_TW" || lang == "ja" ), COPT_CURSES_HIDE
            );
     } );
 #endif // TILES
