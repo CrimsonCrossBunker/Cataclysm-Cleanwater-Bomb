@@ -4491,6 +4491,11 @@ void itype::load( const JsonObject &jo, std::string_view src )
 
     optional( jo, was_loaded, "melee_damage", melee );
     optional( jo, was_loaded, "thrown_damage", thrown_damage );
+    optional( jo, was_loaded, "throw_damage_multiplier", throw_damage_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_range_multiplier", throw_range_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_stamina_multiplier", throw_stamina_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_dispersion_multiplier", throw_dispersion_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_speed_multiplier", throw_speed_multiplier, 1.0f );
     optional( jo, was_loaded, "explosion", explosion );
     using_legacy_to_hit = false; //required for inherited but undefined "to_hit" field
     optional( jo, was_loaded, "to_hit", m_to_hit, melee_accuracy_reader{ *this }, -2 );

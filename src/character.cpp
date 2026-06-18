@@ -3732,18 +3732,56 @@ if( ( tmp.weight() / 113_gram ) > str * 15 )  {
     }
     ret -= tmp.volume() / 1_liter;
     if( has_active_bionic( bio_railgun ) && tmp.made_of_any( ferric ) ) {
-    ret *= 2;
-}
-if( ret < 1 ) {
-    return 1;
-}
+        ret *= 2;
+    }
 
-// Cap at triple of our strength + skill
-if( ret > round( str * 3 + get_skill_level( skill_throw ) + ench_bonus ) ) {
-        return round( str * 3 + get_skill_level( skill_throw ) + ench_bonus );
+    if( ret < 1 ) {
+        ret = 1;
+    }
+
+    // Cap at triple of our strength + skill.
+    const int range_cap = round( str * 3 + get_skill_level( skill_throw ) + ench_bonus );
+    if( ret > range_cap ) {
+        ret = range_cap;
+    }
+
+    ret = static_cast<int>( std::round( ret * throw_range_multiplier() ) );
+
+    if( ret < 1 ) {
+        return 1;
     }
 
     return ret;
+}
+
+float Character::throw_damage_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_damage_multiplier : 1.0f;
+}
+
+float Character::throw_range_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_range_multiplier : 1.0f;
+}
+
+float Character::throw_stamina_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_stamina_multiplier : 1.0f;
+}
+
+float Character::throw_dispersion_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_dispersion_multiplier : 1.0f;
+}
+
+float Character::throw_speed_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_speed_multiplier : 1.0f;
 }
 
 const std::vector<material_id> Character::fleshy = { material_flesh, material_hflesh };
