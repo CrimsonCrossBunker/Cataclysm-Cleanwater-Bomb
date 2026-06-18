@@ -596,7 +596,15 @@ void Character::update_mental_focus()
 {
     // calc_focus_change() returns percentile focus, applying it directly
     // to focus pool is an implicit / 100.
-    focus_pool += 10 * calc_focus_change();
+    int focus_change = calc_focus_change();
+    if( focus_change > 0 ) {
+        // Base focus regen multiplier is 1.0.  Both add and multiply stack on top of that.
+        const double multiplier =
+            ( 1.0 + enchantment_cache->get_value_add( enchant_vals::mod::FOCUS_REGEN ) ) *
+            ( 1.0 + enchantment_cache->get_value_multiply( enchant_vals::mod::FOCUS_REGEN ) );
+        focus_change = static_cast<int>( focus_change * multiplier );
+    }
+    focus_pool += 10 * focus_change;
 }
 
 void Character::calc_discomfort()

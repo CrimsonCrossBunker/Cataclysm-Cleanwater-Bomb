@@ -88,6 +88,7 @@ namespace io
             case enchant_vals::mod::THIRST: return "THIRST";
             case enchant_vals::mod::SLEEPINESS: return "SLEEPINESS";
             case enchant_vals::mod::SLEEPINESS_REGEN: return "SLEEPINESS_REGEN";
+            case enchant_vals::mod::FOCUS_REGEN: return "FOCUS_REGEN";
             case enchant_vals::mod::PAIN: return "PAIN";
             case enchant_vals::mod::PAIN_REMOVE: return "PAIN_REMOVE";
             case enchant_vals::mod::PAIN_PENALTY_MOD_STR: return "PAIN_PENALTY_MOD_STR";

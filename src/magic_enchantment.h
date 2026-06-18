@@ -63,6 +63,7 @@ enum class mod : int {
     THIRST,        // thirst rate
     SLEEPINESS,       // sleepiness rate
     SLEEPINESS_REGEN,
+    FOCUS_REGEN,
     PAIN,
     PAIN_REMOVE,
     PAIN_PENALTY_MOD_STR,
