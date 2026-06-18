@@ -1840,25 +1840,25 @@ void options_manager::add_options_interface()
                                           to_translation( "Options regarding measurement units." ) ),
     [&]( const std::string & page_id ) {
         add( "USE_CELSIUS", page_id, to_translation( "Temperature units" ),
-             to_translation( "Switch between Fahrenheit, Celsius, and Kelvin." ),
+             to_translation( "Switch between Celsius, Fahrenheit, and Kelvin." ),
         { { "celsius", to_translation( "Celsius" ) }, { "fahrenheit", to_translation( "Fahrenheit" ) }, { "kelvin", to_translation( "Kelvin" ) } },
         "fahrenheit"
            );
 
         add( "USE_METRIC_SPEEDS", page_id, to_translation( "Speed units" ),
-             to_translation( "Switch between mph, km/h, and tiles/turn." ),
+             to_translation( "Switch between km/h, mph, and tiles/turn." ),
         { { "km/h", to_translation( "km/h" ) }, { "mph", to_translation( "mph" ) }, { "t/t", to_translation( "tiles/turn" ) } },
         ( SystemLocale::UseMetricSystem().value_or( false ) ? "km/h" : "mph" )
            );
 
         add( "USE_METRIC_WEIGHTS", page_id, to_translation( "Mass units" ),
-             to_translation( "Switch between lbs and kg." ),
+             to_translation( "Switch between kg and lbs." ),
         { { "kg", to_translation( "kg" ) }, { "lbs", to_translation( "lbs" ) } },
         ( SystemLocale::UseMetricSystem().value_or( false ) ? "kg" : "lbs" )
            );
 
         add( "VOLUME_UNITS", page_id, to_translation( "Volume units" ),
-             to_translation( "Switch between the cups (c), liters (L), and quarts (qt)." ),
+             to_translation( "Switch between the liters (L), cups (c), and quarts (qt)." ),
         { { "l", to_translation( "Liter" ) }, { "c", to_translation( "Cup" ) }, { "qt", to_translation( "Quart" ) } },
         "l"
            );
