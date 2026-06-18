@@ -366,7 +366,7 @@ TEST_CASE( "reasons_for_not_being_able_to_read", "[reading][reasons]" )
             REQUIRE( dummy.has_trait( trait_ILLITERATE ) );
 
             CHECK( dummy.get_book_reader( *western, reasons ) == nullptr );
-            expect_reasons = { "You're illiterate!" };
+            expect_reasons = { "You can't make sense of the text." };
             CHECK( reasons == expect_reasons );
         }
 

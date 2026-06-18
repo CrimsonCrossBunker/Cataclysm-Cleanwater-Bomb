@@ -4151,7 +4151,7 @@ std::optional<int> iuse::portable_game( Character *p, item *it, const tripoint_b
         return std::nullopt;
     }
     if( p->has_trait( trait_ILLITERATE ) ) {
-        p->add_msg_if_player( m_info, _( "You're illiterate!" ) );
+        p->add_msg_if_player( m_info, _( "You can't make sense of the text." ) );
         return std::nullopt;
     } else if( it->typeId() != itype_arcade_machine && !it->ammo_sufficient( p ) ) {
         p->add_msg_if_player( m_info, _( "The %s's batteries are dead." ), it->tname() );

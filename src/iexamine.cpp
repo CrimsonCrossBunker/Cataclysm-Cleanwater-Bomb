@@ -5062,7 +5062,7 @@ void iexamine::sign( Character &you, const tripoint_bub_ms &examp )
     // Display existing message, or lack thereof.
     if( here.furn( examp )->has_flag( ter_furn_flag::TFLAG_SIGN_ALWAYS ) || previous_signage_exists ) {
         if( you.has_trait( trait_ILLITERATE ) ) {
-            popup( _( "You're illiterate, and can't read the message on the sign." ) );
+            popup( _( "You can't make sense of the message on the sign." ) );
         } else if( previous_signage_exists ) {
             popup( existing_signage );
         } else {
@@ -5337,7 +5337,7 @@ void iexamine::pay_gas( Character &you, const tripoint_bub_ms &examp )
     const int refund = 4;
 
     if( you.has_trait( trait_ILLITERATE ) ) {
-        popup( _( "You're illiterate, and can't read the screen." ) );
+        popup( _( "You can't make sense of the text on the screen." ) );
     }
 
     fuel_station_fuel_type fuelType = FUEL_TYPE_NONE;

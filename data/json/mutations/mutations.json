@@ -1938,7 +1938,7 @@
     "type": "mutation",
     "id": "ILLITERATE",
     "name": { "str": "Illiterate" },
-    "description": "You never learned to read!  Books and computers are off-limits to you.",
+    "description": "You struggle to read and understand written language.  Books, complex instructions, and most computer interfaces are effectively off-limits without help.",
     "cancels": [ "FASTREADER", "SLOWREADER", "PROF_DICEMASTER", "LOVES_BOOKS", "HATES_BOOKS" ],
     "points": -6,
     "starting_trait": true,
