@@ -3813,7 +3813,7 @@ for( const std::pair<const item *, int> &content_w_count : counted_contents ) {
     }
 }
 
-void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *parts, int batch,
+void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *parts, int /*batch*/,
                           bool /*debug*/ ) const
 {
     if( is_null() ) {
@@ -3838,25 +3838,25 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
     info.emplace_back( "DESCRIPTION", _( "<bold>Throwing aid bonuses</bold>" ) );
 
     if( t->throw_damage_multiplier != 1.0f ) {
-        info.emplace_back( "DESCRIPTION", _( "Throwing damage: " ), "x<num>",
+        info.emplace_back( "BASE", _( "Throwing damage: " ), "x<num>",
                            iteminfo::is_decimal, t->throw_damage_multiplier );
     }
     if( t->throw_range_multiplier != 1.0f ) {
-        info.emplace_back( "DESCRIPTION", _( "Throwing range: " ), "x<num>",
+        info.emplace_back( "BASE", _( "Throwing range: " ), "x<num>",
                            iteminfo::is_decimal, t->throw_range_multiplier );
     }
     if( t->throw_stamina_multiplier != 1.0f ) {
-        info.emplace_back( "DESCRIPTION", _( "Throwing stamina cost: " ), "x<num>",
+        info.emplace_back( "BASE", _( "Throwing stamina cost: " ), "x<num>",
                            iteminfo::is_decimal | iteminfo::lower_is_better,
                            t->throw_stamina_multiplier );
     }
     if( t->throw_dispersion_multiplier != 1.0f ) {
-        info.emplace_back( "DESCRIPTION", _( "Throwing dispersion: " ), "x<num>",
+        info.emplace_back( "BASE", _( "Throwing dispersion: " ), "x<num>",
                            iteminfo::is_decimal | iteminfo::lower_is_better,
                            t->throw_dispersion_multiplier );
     }
     if( t->throw_speed_multiplier != 1.0f ) {
-        info.emplace_back( "DESCRIPTION", _( "Throwing speed: " ), "x<num>",
+        info.emplace_back( "BASE", _( "Throwing speed: " ), "x<num>",
                            iteminfo::is_decimal | iteminfo::lower_is_better,
                            t->throw_speed_multiplier );
     }
