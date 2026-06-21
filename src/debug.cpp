@@ -570,6 +570,9 @@ void realDebugmsg( const char *filename, const char *line, const char *funcname,
 #endif
     }
 #endif //
+    if( get_option<bool>( "NO_ERROR_POPUP" ) ) {
+        return;
+    }
 
     // Show excessive repetition prompt once per excessive set
     bool excess_repetition = rep_folder.repeat_count == repetition_folder::repetition_threshold;
