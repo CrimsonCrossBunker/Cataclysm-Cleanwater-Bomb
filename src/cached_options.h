@@ -50,6 +50,13 @@ extern test_mode_spilling_action_t test_mode_spilling_action;
 
 extern bool direct3d_mode;
 
+// True when the live renderer is SDL3's "gpu" renderer backed by the D3D12
+// driver. That backend SIGSEGVs in D3D12_PushFragmentUniformData when a
+// mid-frame render-target switch (scoped_render_target) flushes the command
+// queue. Used to route the colored-light tint overlay away from its
+// render-target-switching silhouette-mask path on that backend.
+extern bool gpu_d3d12_mode;
+
 enum class error_log_format_t {
     human_readable,
     // Output error messages in github action command format (currently json only)

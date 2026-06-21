@@ -17,6 +17,7 @@ bool use_pinyin_search;
 bool use_tiles_overmap;
 test_mode_spilling_action_t test_mode_spilling_action = test_mode_spilling_action_t::spill_all;
 bool direct3d_mode;
+bool gpu_d3d12_mode;
 bool pixel_minimap_option;
 int pixel_minimap_r;
 int pixel_minimap_g;

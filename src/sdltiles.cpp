@@ -497,6 +497,12 @@ static void detect_renderer_backend()
     if( actual_name && std::string( actual_name ).find( "direct3d" ) != std::string::npos ) {
         direct3d_mode = true;
     }
+    // The "gpu" renderer on the D3D12 driver crashes on mid-frame render-target
+    // switches (see gpu_d3d12_mode doc). Detect that exact combination so the
+    // tint overlay can avoid its render-target-switching path on this backend.
+    gpu_d3d12_mode = actual_name &&
+                     std::string( actual_name ) == "gpu" &&
+                     std::string( gpu_driver ).find( "direct3d12" ) != std::string::npos;
 #endif
 }
 
