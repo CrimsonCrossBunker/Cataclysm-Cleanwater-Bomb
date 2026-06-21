@@ -1914,7 +1914,7 @@ void options_manager::add_options_interface()
              true
            );
     } );
-    
+
     add_empty_line();
 
     add_option_group( "interface", Group( "naming_opts", to_translation( "Naming options" ),
