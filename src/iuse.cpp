@@ -1563,7 +1563,9 @@ std::optional<int> iuse::petfood( Character *p, item *it, const tripoint_bub_ms 
     }
 
     creature_tracker &creatures = get_creature_tracker();
-    if( monster *const mon = creatures.creature_at<monster>( *pnt, true ) ) {
+    monster *const mon = creatures.creature_at<monster>( *pnt, true );
+
+    if( mon != nullptr && !mon->type->petfood.food.empty() ) {
         p->mod_moves( -to_moves<int>( 1_seconds ) );
 
         bool can_feed = false;
@@ -2375,20 +2377,6 @@ std::optional<int> iuse::manage_exosuit( Character *p, item *it, const tripoint_
     return 0;
 }
 
-std::optional<int> iuse::unpack_item( Character *p, item *it, const tripoint_bub_ms & )
-{
-    if( p->cant_do_underwater() ) {
-        return std::nullopt;
-    }
-    std::string oname = it->typeId().str() + "_on";
-    p->mod_moves( -to_moves<int>( 10_seconds ) );
-    p->add_msg_if_player( _( "You unpack your %s for use." ), it->tname() );
-    it->convert( itype_id( oname ), p ).active = false;
-    // Check if unpacking led to invalid container state
-    p->invalidate_inventory_validity_cache();
-    return 0;
-}
-
 std::optional<int> iuse::pack_cbm( Character *p, item *it, const tripoint_bub_ms & )
 {
     item_location bionic = g->inv_map_splice( []( const item & e ) {
@@ -2538,29 +2526,6 @@ std::optional<int> iuse::purify_water( Character *p, item *purifier, item_locati
     }
     // We've already consumed the tablets, so don't try to consume them again
     return std::nullopt;
-}
-
-std::optional<int> iuse::water_tablets( Character *p, item *it, const tripoint_bub_ms & )
-{
-    map &here = get_map();
-
-    if( p->cant_do_mounted() ) {
-        return std::nullopt;
-    }
-
-    item_location obj = g->inv_map_splice( [&here]( const item_location & e ) {
-        return ( !e->empty() && e->has_item_with( []( const item & it ) {
-            return it.typeId() == itype_water || it.typeId() == itype_water_murky;
-        } ) ) || ( ( e->typeId() == itype_water || e->typeId() == itype_water_murky ) &&
-                   here.has_flag_furn( ter_furn_flag::TFLAG_LIQUIDCONT, e.pos_bub( here ) ) );
-    }, _( "Purify what?" ), 1, _( "You don't have water to purify." ) );
-
-    if( !obj ) {
-        p->add_msg_if_player( m_info, _( "You don't have that item!" ) );
-        return std::nullopt;
-    }
-
-    return purify_water( p, it, obj );
 }
 
 std::optional<int> iuse::directional_antenna( Character *p, item *it, const tripoint_bub_ms & )
@@ -4151,7 +4116,7 @@ std::optional<int> iuse::portable_game( Character *p, item *it, const tripoint_b
         return std::nullopt;
     }
     if( p->has_trait( trait_ILLITERATE ) ) {
-        p->add_msg_if_player( m_info, _( "You're illiterate!" ) );
+        p->add_msg_if_player( m_info, _( "You can't make sense of the text." ) );
         return std::nullopt;
     } else if( it->typeId() != itype_arcade_machine && !it->ammo_sufficient( p ) ) {
         p->add_msg_if_player( m_info, _( "The %s's batteries are dead." ), it->tname() );

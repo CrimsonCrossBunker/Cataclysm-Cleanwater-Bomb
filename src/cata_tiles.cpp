@@ -526,6 +526,7 @@ void cata_tiles::reinit()
     // stale ring/light doesn't paint onto the rebuilt scene, and clear any shake.
     void_explosion_light();
     clear_screen_shake();
+    void_bullet_anim();
     // Wrap so the clear lands on display_buffer rather than the null idle target.
     display_buffer_draw_scope draw_scope;
     if( !draw_scope.should_draw() ) {
@@ -597,6 +598,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     advance_creature_move_anims();
     // Advance asynchronous explosion light overlays the same way.
     advance_explosion_lights();
+    // Advance asynchronous bullet animations the same way.
+    advance_bullet_anims();
     // Advance the sound-driven screen shake decay.
     advance_screen_shake_frame();
 
@@ -1358,7 +1361,15 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
                         // Simple: all recorded sprites fit inside the tile rect,
                         // so a flat colored rect matches the sprite extent exactly.
-                        const bool simple = !tp->com.bounds.valid ||
+                        // On the SDL3 gpu/D3D12 backend, ALSO force the simple path:
+                        // the complex silhouette-mask path switches render target
+                        // mid-frame (scoped_render_target), whose command-queue flush
+                        // SIGSEGVs in D3D12_PushFragmentUniformData. The flat rect
+                        // tint is a minor visual downgrade for oversized sprites
+                        // (boxy glow instead of outline-hugging) but avoids the crash;
+                        // other backends keep the precise silhouette mask.
+                        const bool simple = gpu_d3d12_mode ||
+                                            !tp->com.bounds.valid ||
                                             tp->com.tint_sprites.empty() ||
                                             ( tp->com.bounds.x >= tile_rect.x &&
                                               tp->com.bounds.y >= tile_rect.y &&
@@ -1548,6 +1559,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     in_animation = do_draw_explosion || do_draw_custom_explosion ||
                    has_explosion_light_anim() ||
+                   has_bullet_anim() ||
                    do_draw_bullet || do_draw_hit || do_draw_line ||
                    do_draw_cursor || do_draw_highlight || do_draw_weather ||
                    do_draw_sct || do_draw_zones || do_draw_async_anim;
@@ -1565,6 +1577,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         }
         if( do_draw_bullet ) {
             draw_bullet_frame();
+        }
+        if( has_bullet_anim() ) {
+            draw_bullet_anim_frame( center.z() );
         }
         if( do_draw_hit ) {
             void_hit();
@@ -5019,7 +5034,11 @@ void cata_tiles::init_custom_explosion_layer( const std::map<tripoint_bub_ms, ex
 void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
                                        const explosion_light_str_id &effect,
                                        const tripoint_bub_ms &center, float radius_tiles,
-                                       float per_ms, float end_progress )
+                                       float per_ms, float end_progress,
+                                       bool circular_shockwave,
+                                       shockwave_state::sw_shape shock_shape,
+                                       const tripoint_bub_ms &shock_target,
+                                       float shock_half_angle )
 {
     // Append a new asynchronous blast; existing ones keep playing (concurrent
     // overlap). It advances itself each frame via advance_explosion_lights().
@@ -5031,6 +5050,10 @@ void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &i
     a.progress = 0.0f;
     a.per_ms = per_ms;
     a.end_progress = end_progress;
+    a.circular_shockwave = circular_shockwave;
+    a.shock_shape = shock_shape;
+    a.shock_target = shock_target;
+    a.shock_half_angle = shock_half_angle;
     m_explosion_lights.push_back( std::move( a ) );
 }
 // Elapsed steady-clock ms since the last tick stored in \p last_ms, capped so a
@@ -5093,6 +5116,80 @@ void cata_tiles::advance_screen_shake_frame()
         return;
     }
     advance_screen_shake( dt );
+}
+void cata_tiles::init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
+                                   const std::vector<std::string> &sprites,
+                                   const std::vector<int> &rotations,
+                                   bool as_line, float per_ms )
+{
+    if( points.empty() ) {
+        return;
+    }
+    active_bullet_anim anim;
+    anim.points = points;
+    anim.sprites = sprites;
+    anim.rotations = rotations;
+    anim.as_line = as_line;
+    anim.per_ms = per_ms;
+    // Stagger full-auto bursts: every round of a burst registers in the same game
+    // tick (the fire_gun loop never yields a frame mid-burst), so without an offset
+    // they'd all start sweeping at once. Delay each new shot by a fixed gap times
+    // the number of rounds already queued in this same batch, capped so a big volley
+    // (many units in one turn) still wraps up promptly instead of dribbling out over
+    // seconds. Only count anims not yet advanced (head/life still zero) so a shot
+    // still flying from a previous turn doesn't inflate this burst's spacing.
+    constexpr float burst_gap_ms = 55.0f;
+    constexpr float max_stagger_ms = 275.0f;
+    const auto pending = std::count_if( m_bullet_anims.begin(), m_bullet_anims.end(),
+    []( const active_bullet_anim & a ) {
+        return a.head == 0.0f && a.life == 0.0f;
+    } );
+    anim.start_delay_ms = std::min( max_stagger_ms,
+                                    burst_gap_ms * static_cast<float>( pending ) );
+    m_bullet_anims.push_back( std::move( anim ) );
+}
+void cata_tiles::advance_bullet_anims()
+{
+    if( m_bullet_anims.empty() ) {
+        m_bullet_anim_last_ms.reset();
+        return;
+    }
+    const int64_t dt = capped_frame_dt_ms( m_bullet_anim_last_ms );
+    if( dt <= 0 ) {
+        return;
+    }
+    for( auto it = m_bullet_anims.begin(); it != m_bullet_anims.end(); ) {
+        // Hold this shot frozen and invisible until its stagger delay elapses, then
+        // spend only the leftover dt (the overshoot past zero) on its first step so
+        // the rhythm stays even regardless of where the delay lands within a frame.
+        float step_ms = static_cast<float>( dt );
+        if( it->start_delay_ms > 0.0f ) {
+            it->start_delay_ms -= step_ms;
+            if( it->start_delay_ms > 0.0f ) {
+                ++it;
+                continue;
+            }
+            // Crossed zero this frame: the negative remainder is the leftover time.
+            step_ms = -it->start_delay_ms;
+            it->start_delay_ms = 0.0f;
+        }
+        if( it->as_line ) {
+            // The whole gun-line shows at once; per_ms counts its short life to 1.
+            it->life += it->per_ms * step_ms;
+            if( it->life >= 1.0f ) {
+                it = m_bullet_anims.erase( it );
+                continue;
+            }
+        } else {
+            // The dot sweeps one point per per_ms step; done past the last point.
+            it->head += it->per_ms * step_ms;
+            if( it->head >= static_cast<float>( it->points.size() ) ) {
+                it = m_bullet_anims.erase( it );
+                continue;
+            }
+        }
+        ++it;
+    }
 }
 void cata_tiles::init_draw_bullet( const tripoint_bub_ms &p, std::string name, int rotation )
 {
@@ -5501,14 +5598,39 @@ void cata_tiles::draw_explosion_light_frame( int view_z )
             const point c_scr = player_to_screen( blast.center.xy() );
             shockwave_state sw;
             sw.active = true;
-            // Centre on the middle of the epicentre tile.
+            // Origin = middle of the epicentre tile (apex for line/cone).
             sw.center_x = static_cast<float>( c_scr.x ) + tile_width * 0.5f;
             sw.center_y = static_cast<float>( c_scr.y ) + tile_height * 0.5f;
             const float radius_px = blast.radius_tiles * tile_px;
-            // Ring sweeps out at shockwave_speed relative to the light's own front.
+            // Front sweeps out at shockwave_speed relative to the light's own front.
             sw.radius = blast.progress * eff.shockwave_speed * radius_px;
             sw.thickness = eff.shockwave_thickness * tile_px;
-            // Envelope the strength over the blast's life so the ring eases in and,
+            // Shape: a radial ring for a disc blast; a flat front along the axis for
+            // a line; an angular slice for a cone. circular_shockwave gates the disc;
+            // otherwise the directional geometry stored on the blast is used.
+            if( blast.circular_shockwave ) {
+                sw.shape = shockwave_state::sw_shape::disc;
+            } else {
+                sw.shape = blast.shock_shape;
+                // Axis from the origin toward the target, in screen pixels.
+                const point t_scr = player_to_screen( blast.shock_target.xy() );
+                const float ax = static_cast<float>( t_scr.x ) - static_cast<float>( c_scr.x );
+                const float ay = static_cast<float>( t_scr.y ) - static_cast<float>( c_scr.y );
+                const float alen = std::sqrt( ax * ax + ay * ay );
+                if( alen > 1e-3f ) {
+                    sw.axis_x = ax / alen;
+                    sw.axis_y = ay / alen;
+                }
+                sw.half_angle = blast.shock_half_angle;
+                // A line front is infinite across its axis unless bounded; without
+                // this a beam warps the entire screen width. Confine it to a tube a
+                // few tiles wide around the beam (cosine taper to the edge). Cones
+                // are already bounded by their angular sector, so leave half_width 0.
+                if( sw.shape == shockwave_state::sw_shape::line ) {
+                    sw.half_width = std::max( sw.thickness, tile_px * 1.5f );
+                }
+            }
+            // Envelope the strength over the blast's life so the front eases in and,
             // crucially, fades out instead of snapping off when the blast ends (a
             // constant strength followed by a hard cut reads as abrupt). t is the
             // blast's normalised progress; a quick attack then a smooth (squared)
@@ -5560,6 +5682,20 @@ void cata_tiles::draw_explosion_light_frame( int view_z )
     }
     SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
 
+    // Cap the number of concurrent shockwave fronts. The present-time warp blit
+    // costs O(grid_vertices * shockwaves) trig calls every frame, so a full-auto
+    // energy burst (one front per shot, all live at once) can spike frame time for
+    // a few hundred ms. Past the cap, keep only the strongest fronts — strength
+    // dominates the visible distortion, and the dropped weak ones are imperceptible
+    // anyway. Threshold is generous so normal play (a blast or two) never clips.
+    constexpr size_t max_shockwaves = 6;
+    if( shockwaves.size() > max_shockwaves ) {
+        std::partial_sort( shockwaves.begin(), shockwaves.begin() + max_shockwaves,
+        shockwaves.end(), []( const shockwave_state & a, const shockwave_state & b ) {
+            return a.strength > b.strength;
+        } );
+        shockwaves.resize( max_shockwaves );
+    }
     set_shockwaves( std::move( shockwaves ) );
 }
 void cata_tiles::draw_bullet_frame()
@@ -5568,6 +5704,39 @@ void cata_tiles::draw_bullet_frame()
         draw_from_id_string( bul_id[i], TILE_CATEGORY::BULLET, empty_string, bul_pos[i], 0,
                              bul_rotation[i], lit_level::LIT, false );
     }
+}
+void cata_tiles::draw_bullet_anim_frame( int view_z )
+{
+    for( const active_bullet_anim &anim : m_bullet_anims ) {
+        // Not yet started (still in its burst-stagger delay): draw nothing.
+        if( anim.start_delay_ms > 0.0f ) {
+            continue;
+        }
+        if( anim.as_line ) {
+            // Whole gun-line: every visible point of the flight path, at once.
+            for( size_t i = 0; i < anim.points.size(); ++i ) {
+                if( anim.points[i].z() != view_z ) {
+                    continue;
+                }
+                draw_from_id_string( anim.sprites[i], TILE_CATEGORY::BULLET, empty_string,
+                                     anim.points[i], 0, anim.rotations[i], lit_level::LIT, false );
+            }
+        } else {
+            // Moving dot: just the current head point, clamped to the path.
+            const size_t idx = std::min( static_cast<size_t>( anim.head ),
+                                         anim.points.size() - 1 );
+            if( anim.points[idx].z() != view_z ) {
+                continue;
+            }
+            draw_from_id_string( anim.sprites[idx], TILE_CATEGORY::BULLET, empty_string,
+                                 anim.points[idx], 0, anim.rotations[idx], lit_level::LIT, false );
+        }
+    }
+}
+void cata_tiles::void_bullet_anim()
+{
+    m_bullet_anims.clear();
+    m_bullet_anim_last_ms.reset();
 }
 void cata_tiles::draw_hit_frame()
 {

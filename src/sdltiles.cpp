@@ -306,6 +306,22 @@ static point compute_drawable_dims()
     return point{ pw, ph };
 }
 
+#if !defined(__ANDROID__)
+// Present rect in drawable px: largest integer buffer multiple that fits
+// (absorbs SCALING_FACTOR + HiDPI), top-left, remainder border. A fractional
+// fit would grid the minimap. Inverted by window_to_display_buffer_coords.
+static SDL_Rect get_display_buffer_render_rect()
+{
+    const point b = compute_display_buffer_dims();
+    const point d = compute_drawable_dims();
+    if( b.x <= 0 || b.y <= 0 ) {
+        return SDL_Rect{ 0, 0, 0, 0 };
+    }
+    const int scale = std::max( 1, std::min( d.x / b.x, d.y / b.y ) );
+    return SDL_Rect{ 0, 0, b.x * scale, b.y * scale };
+}
+#endif
+
 // Test-only injected drawable pixels. The headless dummy backend reports backing
 // pixels equal to the logical window, so a DPI-only change cannot be produced
 // through SDL; a non-negative override stands in. Inert at the -1 default.
@@ -458,10 +474,35 @@ static void detect_renderer_backend()
     const char *actual_name = props != 0
                               ? SDL_GetStringProperty( props, SDL_PROP_RENDERER_NAME_STRING, "" )
                               : "";
-    dbg( D_INFO ) << "SDL renderer in use: " << ( actual_name ? actual_name : "unknown" );
+    // Diagnostic: the selected renderer name alone is not enough to predict the
+    // mid-frame render-target-switch crash. When the renderer is "gpu", the real
+    // culprit is the backing SDL_gpu device driver (direct3d12 vs vulkan): the
+    // crash was only seen on direct3d12. Use DebugLog(..., DC_ALL) rather than the
+    // file-local dbg() macro: dbg() logs under category D_SDL, which is filtered
+    // out of debug.log by default, so it would never land. DC_ALL always shows.
+    const char *gpu_driver = "n/a";
+    SDL_GPUDevice *gpu_dev = props != 0
+                             ? static_cast<SDL_GPUDevice *>( SDL_GetPointerProperty(
+                                     props, SDL_PROP_RENDERER_GPU_DEVICE_POINTER, nullptr ) )
+                             : nullptr;
+    if( gpu_dev ) {
+        const char *drv = SDL_GetGPUDeviceDriver( gpu_dev );
+        if( drv ) {
+            gpu_driver = drv;
+        }
+    }
+    DebugLog( D_INFO, DC_ALL ) << "SDL renderer in use: "
+                               << ( actual_name ? actual_name : "unknown" )
+                               << "; backing GPU driver: " << gpu_driver;
     if( actual_name && std::string( actual_name ).find( "direct3d" ) != std::string::npos ) {
         direct3d_mode = true;
     }
+    // The "gpu" renderer on the D3D12 driver crashes on mid-frame render-target
+    // switches (see gpu_d3d12_mode doc). Detect that exact combination so the
+    // tint overlay can avoid its render-target-switching path on this backend.
+    gpu_d3d12_mode = actual_name &&
+                     std::string( actual_name ) == "gpu" &&
+                     std::string( gpu_driver ).find( "direct3d12" ) != std::string::npos;
 #endif
 }
 
@@ -1155,15 +1196,13 @@ void refresh_display()
     // mesh). Falls back to a straight copy if the warp is unsupported or inactive —
     // no behaviour change in the common case beyond the shake translation.
     if( !blit_display_buffer_warped( shake_dx, shake_dy ) ) {
-        if( shake_dx != 0 || shake_dy != 0 ) {
-            // Size the dstrect to the render coordinate space (what a null-dst
-            // RenderCopy fills), not the raw output, so the offset copy fills the
-            // same region as every other frame under HiDPI / integer scaling and
-            // only translates by the shake rather than rescaling the scene.
-            int rw = 0;
-            int rh = 0;
-            GetRenderCoordinateSpaceSize( renderer, &rw, &rh );
-            SDL_Rect dstrect{ shake_dx, shake_dy, rw, rh };
+        // Integer-scaled top-left blit; remainder is border. A null full-window
+        // blit would fractionally scale and grid the minimap. The shake offset
+        // translates the present rect rather than rescaling the scene.
+        SDL_Rect dstrect = get_display_buffer_render_rect();
+        if( dstrect.w > 0 && dstrect.h > 0 ) {
+            dstrect.x += shake_dx;
+            dstrect.y += shake_dy;
             RenderCopy( renderer, display_buffer, nullptr, &dstrect );
         } else {
             RenderCopy( renderer, display_buffer, nullptr, nullptr );
@@ -1275,12 +1314,20 @@ SDL_Point window_to_display_buffer_coords( SDL_Point window_pt )
     int win_w = 0;
     int win_h = 0;
     GetWindowSize( window.get(), &win_w, &win_h );
-    if( win_w <= 0 || win_h <= 0 ) {
+    const point draw = compute_drawable_dims();
+    const SDL_Rect dst = get_display_buffer_render_rect();
+    if( win_w <= 0 || win_h <= 0 || draw.x <= 0 || draw.y <= 0 || dst.w <= 0 || dst.h <= 0 ) {
         return window_pt;
     }
+    // Invert the present rect: logical coords to drawable px, then through the
+    // rect to buffer px. Points past it land in the border.
+    const point p{
+        static_cast<int>( static_cast<int64_t>( window_pt.x ) * draw.x / win_w ),
+        static_cast<int>( static_cast<int64_t>( window_pt.y ) * draw.y / win_h )
+    };
     return SDL_Point{
-        static_cast<int>( static_cast<int64_t>( window_pt.x ) * buf_w / win_w ),
-        static_cast<int>( static_cast<int64_t>( window_pt.y ) * buf_h / win_h )
+        static_cast<int>( static_cast<int64_t>( p.x - dst.x ) * buf_w / dst.w ),
+        static_cast<int>( static_cast<int64_t>( p.y - dst.y ) * buf_h / dst.h )
     };
 #endif
 }
@@ -4732,12 +4779,36 @@ void draw_terminal_size_preview()
     }
 }
 
+// Mark the frame dirty after an Android keyboard / shortcut-bar state change so
+// the strip is rebuilt to reflect the new state on the next draw pass.
+static void android_request_repaint()
+{
+    needupdate = true;
+    ui_manager::redraw_invalidated();
+}
+
+// The SDL "text input active" flag can be set while the keyboard never actually
+// appeared on screen, which would wrongly hide the shortcut strip. Trust the
+// platform IME-insets report once we have one; fall back to the SDL flag only
+// until the first report arrives.
+static bool android_keyboard_occludes_shortcuts()
+{
+    if( !IsTextInputActive( ::window.get() ) ) {
+        return false;
+    }
+    SDL_Rect frame;
+    bool has_frame = false;
+    bool visible = false;
+    visible_frame_inbox.read_frame( frame, has_frame, visible );
+    return has_frame ? ( visible && frame.h > 0 ) : true;
+}
+
 // Draw quick shortcuts on top of the game view
 void draw_quick_shortcuts()
 {
 
     if( !quick_shortcuts_enabled ||
-        IsTextInputActive( ::window.get() ) ||
+        android_keyboard_occludes_shortcuts() ||
         ( get_option<bool>( "ANDROID_HIDE_HOLDS" ) && !is_quick_shortcut_touch && finger_down_time > 0 &&
           GetTicks() - finger_down_time >= static_cast<uint32_t>(
               get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) ) { // player is swipe + holding in a direction
@@ -5093,6 +5164,16 @@ bool is_string_input( input_context &ctx )
            || category == "HELP_KEYBINDINGS";
 }
 
+// True when the soft keyboard is legitimately wanted for this context and CDDA
+// must not auto-hide it or convert keystrokes to quick shortcuts: a legacy
+// string-input/curses context, an inventory quantity field, or a focused ImGui
+// text widget (ImGui drives SDL text-input itself; CDDA defers to it).
+static bool android_wants_text_input( input_context &ctx )
+{
+    return is_string_input( ctx ) || ctx.allow_text_entry
+           || cataimgui::client::want_text_input();
+}
+
 int get_key_event_from_string( const std::string &str )
 {
     if( !str.empty() ) {
@@ -5305,8 +5386,7 @@ static void CheckMessages()
 
         // If we were in an allow_text_entry input context, and text input is still active, and we're auto-managing keyboard, hide it.
         if( touch_input_context.allow_text_entry &&
-            !new_input_context->allow_text_entry &&
-            !is_string_input( *new_input_context ) &&
+            !android_wants_text_input( *new_input_context ) &&
             IsTextInputActive( ::window.get() ) &&
             get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
             focus_aware_stop_text_input();
@@ -5510,6 +5590,7 @@ static void CheckMessages()
             if( !quick_shortcuts_toggle_handled ) {
                 quick_shortcuts_enabled = !quick_shortcuts_enabled;
                 quick_shortcuts_toggle_handled = true;
+                android_request_repaint();
                 refresh_display();
 
                 // Display an Android toast message
@@ -5696,7 +5777,7 @@ static void CheckMessages()
                             last_input = input_event( lc, input_event_t::keyboard_char );
 #if defined(__ANDROID__)
                             if( !android_is_hardware_keyboard_available() ) {
-                                if( !is_string_input( touch_input_context ) && !touch_input_context.allow_text_entry ) {
+                                if( !android_wants_text_input( touch_input_context ) ) {
                                     if( get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
                                         focus_aware_stop_text_input();
                                     }
@@ -5706,7 +5787,7 @@ static void CheckMessages()
                                         !inp_mngr.get_keyname( lc, input_event_t::keyboard_char ).empty() ) {
                                         qsl.remove( last_input );
                                         add_quick_shortcut( qsl, last_input, false, true );
-                                        ui_manager::redraw_invalidated();
+                                        android_request_repaint();
                                         refresh_display();
                                     }
                                 } else if( lc == '\n' || lc == KEY_ESCAPE ) {
@@ -5728,11 +5809,17 @@ static void CheckMessages()
                     if( GetKeysym( ev ).sym == SDLK_AC_BACK ) {
                         if( ticks - ac_back_down_time <= static_cast<uint32_t>
                             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-                            if( IsTextInputActive( ::window.get() ) ) {
+                            if( cataimgui::client::want_text_input() ) {
+                                // ImGui owns the keyboard while a text widget is
+                                // focused. Defocus it so ImGui releases text input
+                                // and the keyboard dismisses.
+                                cataimgui::client::clear_text_focus();
+                            } else if( IsTextInputActive( ::window.get() ) ) {
                                 focus_aware_stop_text_input();
                             } else {
                                 focus_aware_start_text_input();
                             }
+                            android_request_repaint();
                         }
                         ac_back_down_time = 0;
                     }
@@ -5764,7 +5851,7 @@ static void CheckMessages()
                             last_input = input_event( lc, input_event_t::keyboard_char );
 #if defined(__ANDROID__)
                             if( !android_is_hardware_keyboard_available() ) {
-                                if( !is_string_input( touch_input_context ) && !touch_input_context.allow_text_entry ) {
+                                if( !android_wants_text_input( touch_input_context ) ) {
                                     if( get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
                                         focus_aware_stop_text_input();
                                     }
@@ -5773,7 +5860,7 @@ static void CheckMessages()
                                                                  touch_input_context.get_category() )];
                                     qsl.remove( last_input );
                                     add_quick_shortcut( qsl, last_input, false, true );
-                                    ui_manager::redraw_invalidated();
+                                    android_request_repaint();
                                     refresh_display();
                                 } else if( lc == '\n' || lc == KEY_ESCAPE ) {
                                     if( get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
@@ -6140,8 +6227,8 @@ static void CheckMessages()
                         is_three_finger_touch = false;
                         finger_down_time = 0;
                         finger_repeat_time = 0;
-                        needupdate = true; // ensure virtual joystick and quick shortcuts are updated properly
-                        ui_manager::redraw_invalidated();
+                        // ensure virtual joystick and quick shortcuts are updated properly
+                        android_request_repaint();
                         refresh_display(); // as above, but actually redraw it now as well
                     } else if( slot == 1 ) {
                         if( is_two_finger_touch ) {

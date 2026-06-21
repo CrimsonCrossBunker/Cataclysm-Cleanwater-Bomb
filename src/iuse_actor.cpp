@@ -41,6 +41,7 @@
 #include "enum_conversions.h"
 #include "enums.h"
 #include "explosion.h"
+#include "explosion_light.h"
 #include "field_type.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -54,7 +55,6 @@
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
-#include "item_group.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_transformation.h"
@@ -75,6 +75,7 @@
 #include "mutation.h"
 #include "npc.h"
 #include "output.h"
+#include "options.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
@@ -100,6 +101,7 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vfx_emit.h"
 #include "vehicle_selector.h"
 #include "visitable.h"
 #include "vitamin.h"
@@ -593,59 +595,6 @@ void iuse_transform::info( const item &it, std::vector<iteminfo> &dump ) const
     }
 }
 
-std::unique_ptr<iuse_actor> unpack_actor::clone() const
-{
-    return std::make_unique<unpack_actor>( *this );
-}
-
-void unpack_actor::load( const JsonObject &obj, const std::string & )
-{
-    optional( obj, false, "group", unpack_group );
-    optional( obj, false, "items_fit", items_fit, false );
-    optional( obj, false, "filthy_volume_threshold", filthy_vol_threshold, 0_ml );
-}
-
-std::optional<int> unpack_actor::use( Character *p, item &it, map *here,
-                                      const tripoint_bub_ms & ) const
-{
-    std::vector<item> items = item_group::items_from( unpack_group, calendar::turn );
-    item last_armor;
-
-    p->add_msg_if_player( _( "You unpack the %s." ), it.tname() );
-
-    for( item &content : items ) {
-        if( content.is_armor() ) {
-            if( items_fit ) {
-                content.set_flag( flag_FIT );
-            } else if( content.typeId() == last_armor.typeId() ) {
-                if( last_armor.has_flag( flag_FIT ) ) {
-                    content.set_flag( flag_FIT );
-                } else if( !last_armor.has_flag( flag_FIT ) ) {
-                    content.unset_flag( flag_FIT );
-                }
-            }
-            last_armor = content;
-        }
-
-        if( content.get_volume_capacity() >= filthy_vol_threshold &&
-            it.has_flag( flag_FILTHY ) ) {
-            content.set_flag( flag_FILTHY );
-        }
-
-        here->add_item_or_charges( p->pos_bub( *here ), content );
-    }
-
-    p->i_rem( &it );
-
-    return 0;
-}
-
-void unpack_actor::info( const item &, std::vector<iteminfo> &dump ) const
-{
-    dump.emplace_back( "DESCRIPTION",
-    _( "This item could be unpacked to receive something." ) );
-}
-
 std::unique_ptr<iuse_actor> message_iuse::clone() const
 {
     return std::make_unique<message_iuse>( *this );
@@ -989,6 +938,20 @@ std::optional<int> explosion_iuse::use( Character *p, item &it, map *here,
         }
     }
     if( emp_blast_radius >= 0 ) {
+        // EMP light overlay. An EMP item with a real explosion block (e.g. the EMP
+        // bomb) already draws emp_blast via that explosion's light_effect above; a
+        // pure-EMP item like the EMP grenade has no explosion block (power < 0), so
+        // draw the overlay here instead — otherwise its detonation is invisible.
+        if( explosion.power < 0.0f && get_option<bool>( "ANIMATIONS" ) &&
+            bubble_map.inbounds( here->get_abs( pos ) ) ) {
+            vfx_emit e;
+            e.shape = vfx_shape::disc;
+            e.origin = bubble_map.get_bub( here->get_abs( pos ) );
+            e.target = e.origin;
+            e.radius = std::max( 1, emp_blast_radius );
+            e.light = explosion_lights::emp_blast;
+            explosion_handler::play_vfx( e );
+        }
         for( const tripoint_bub_ms &dest : here->points_in_radius( pos, emp_blast_radius ) ) {
             // TODO: Use map aware 'emp_blast' when available.
             explosion_handler::emp_blast( dest );

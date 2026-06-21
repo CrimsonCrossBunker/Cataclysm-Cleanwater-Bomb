@@ -44,6 +44,7 @@ enum class debug_menu_index : int {
     WIND_DIRECTION,
     WIND_SPEED,
     GEN_SOUND,
+    VFX_PREVIEW,
     KILL_MONS,
     DISPLAY_HORDES,
     TEST_IT_GROUP,

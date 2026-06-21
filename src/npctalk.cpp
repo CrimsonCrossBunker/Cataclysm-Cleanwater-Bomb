@@ -83,6 +83,7 @@
 #include "item_location.h"
 #include "itype.h"
 #include "kill_tracker.h"
+#include "line.h"
 #include "localized_comparator.h"
 #include "magic.h"
 #include "magic_teleporter_list.h"
@@ -94,8 +95,8 @@
 #include "mapgen_functions.h"
 #include "mapgendata.h"
 #include "martialarts.h"
-#include "math_parser_type.h"
 #include "math_parser_diag_value.h"
+#include "math_parser_type.h"
 #include "memory_fast.h"
 #include "messages.h"
 #include "mission.h"
@@ -142,8 +143,8 @@
 #include "translation_gendered.h"
 #include "translations.h"
 #include "trap.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "uistate.h"
 #include "units.h"
 #include "veh_type.h"
@@ -5999,7 +6000,6 @@ talk_effect_fun_t::func f_die_advanced( const JsonObject &jo, std::string_view m
     JsonObject job = jo.get_object( member );
     std::optional<bool> remove_corpse;
     std::optional<bool> supress_message;
-    std::optional<bool> remove_from_creature_tracker;
 
     if( job.has_bool( "remove_corpse" ) ) {
         remove_corpse = job.get_bool( "remove_corpse" );
@@ -6007,27 +6007,15 @@ talk_effect_fun_t::func f_die_advanced( const JsonObject &jo, std::string_view m
     if( job.has_bool( "supress_message" ) ) {
         supress_message = job.get_bool( "supress_message" );
     }
-    if( job.has_bool( "remove_from_creature_tracker" ) ) {
-        remove_from_creature_tracker = job.get_bool( "remove_from_creature_tracker" );
-    }
 
-    return [remove_corpse, supress_message, remove_from_creature_tracker,
-    is_npc]( dialogue const & d ) {
+    return [remove_corpse, supress_message, is_npc]( dialogue const & d ) {
         map &here = get_map();
 
-        if( d.actor( is_npc )->get_monster() ) {
-            monster &mon = *d.actor( is_npc )->get_monster();
-            if( remove_from_creature_tracker ) {
-                get_creature_tracker().remove( mon );
-                return;
-            }
-            mon.death_drops = remove_corpse.has_value() ? !remove_corpse.value() : mon.death_drops;
-            mon.quiet_death = supress_message.has_value() ? supress_message.value() : mon.quiet_death;
-        } else if( d.actor( is_npc )->get_npc() ) {
-            npc &guy_npc = *d.actor( is_npc )->get_npc();
-            guy_npc.spawn_corpse = remove_corpse.has_value() ? !remove_corpse.value() : guy_npc.spawn_corpse;
-            guy_npc.quiet_death = supress_message.has_value() ? supress_message.value() : guy_npc.quiet_death;
-        }
+        Creature *cr = d.actor( is_npc )->get_creature();
+
+        cr->death_message = supress_message.has_value() ? !supress_message.value() : cr->death_message;
+        cr->spawn_corpse = remove_corpse.has_value() ? !remove_corpse.value() : cr->spawn_corpse;
+        cr->death_drops = remove_corpse.has_value() ? !remove_corpse.value() : cr->death_drops;
 
         d.actor( is_npc )->die( &here );
     };
@@ -7824,8 +7812,8 @@ talk_effect_fun_t::func f_spawn_monster( const JsonObject &jo, std::string_view 
                     if( lifespan.value() > 0_seconds ) {
                         spawned->set_summon_time( lifespan.value() );
                         // Temporary monsters shouldn't drop items unless told to
-                        spawned->no_extra_death_drops = !temporary_drop_items;
-                        spawned->no_corpse_quiet = !temporary_drop_items;
+                        spawned->death_drops = temporary_drop_items;
+                        spawned->spawn_corpse = temporary_drop_items;
                     }
                 }
             }
@@ -7955,39 +7943,135 @@ talk_effect_fun_t::func f_spawn_npc( const JsonObject &jo, std::string_view memb
     };
 }
 
+talk_effect_fun_t::func f_set_trap( const JsonObject &jo, std::string_view member,
+                                    std::string_view )
+{
+    str_or_var trap = get_str_or_var( jo.get_member( member ), member, true );
+    var_info location;
+    mandatory( jo, false, "location", location );
+
+    dbl_or_var dov_radius = get_dbl_or_var( jo, "radius", false, 1 );
+    const bool square = jo.get_bool( "square", false );
+
+    return [trap, dov_radius, location, square]( dialogue const & d ) {
+
+        map &here = get_map();
+        const tripoint_abs_ms loc = read_var_value( location, d ).tripoint();
+        const int radius =  dov_radius.evaluate( d );
+        const trap_id tr = trap_id( trap.evaluate( d ) );
+        tripoint_range<tripoint_bub_ms> points( tripoint_bub_ms::zero, tripoint_bub_ms::zero );
+
+        if( square ) {
+            points = points_in_radius( here.get_bub( loc ), radius );
+        } else {
+            points = points_in_radius_circ( here.get_bub( loc ), radius );
+        }
+
+        for( const tripoint_bub_ms &dest : points ) {
+            here.trap_set( dest, tr );
+        }
+    };
+}
+
+talk_effect_fun_t::func f_set_terrain( const JsonObject &jo, std::string_view member,
+                                       std::string_view )
+{
+    str_or_var ter = get_str_or_var( jo.get_member( member ), member, true );
+    var_info location;
+    mandatory( jo, false, "location", location );
+    dbl_or_var dov_radius = get_dbl_or_var( jo, "radius", false, 1 );
+    bool avoid_creatures = jo.get_bool( "avoid_creatures", false );
+    const bool square = jo.get_bool( "square", false );
+
+    return [ter, dov_radius, avoid_creatures, location, square]( dialogue const & d ) {
+
+        map &here = get_map();
+        const tripoint_abs_ms loc = read_var_value( location, d ).tripoint();
+        const int radius =  dov_radius.evaluate( d );
+        const ter_id t = ter_id( ter.evaluate( d ) );
+
+        tripoint_range<tripoint_bub_ms> points( tripoint_bub_ms::zero, tripoint_bub_ms::zero );
+
+        if( square ) {
+            points = points_in_radius( here.get_bub( loc ), radius );
+        } else {
+            points = points_in_radius_circ( here.get_bub( loc ), radius );
+        }
+
+        for( const tripoint_bub_ms &dest : points ) {
+            here.ter_set( dest, t, avoid_creatures );
+        }
+    };
+}
+
+talk_effect_fun_t::func f_set_furniture( const JsonObject &jo, std::string_view member,
+        std::string_view )
+{
+    str_or_var furn = get_str_or_var( jo.get_member( member ), member, true );
+    var_info location;
+    mandatory( jo, false, "location", location );
+    dbl_or_var dov_radius = get_dbl_or_var( jo, "radius", false, 1 );
+    bool avoid_creatures = jo.get_bool( "avoid_creatures", false );
+    const bool square = jo.get_bool( "square", false );
+
+    return [furn, dov_radius, avoid_creatures, location, square]( dialogue const & d ) {
+
+        map &here = get_map();
+        const tripoint_abs_ms loc = read_var_value( location, d ).tripoint();
+        const int radius =  dov_radius.evaluate( d );
+        const furn_id f = furn_id( furn.evaluate( d ) );
+
+        tripoint_range<tripoint_bub_ms> points( tripoint_bub_ms::zero, tripoint_bub_ms::zero );
+
+        if( square ) {
+            points = points_in_radius( here.get_bub( loc ), radius );
+        } else {
+            points = points_in_radius_circ( here.get_bub( loc ), radius );
+        }
+
+        for( const tripoint_bub_ms &dest : points ) {
+            here.furn_set( dest, f, false, avoid_creatures );
+        }
+    };
+}
+
 talk_effect_fun_t::func f_field( const JsonObject &jo, std::string_view member,
                                  std::string_view, bool is_npc )
 {
     str_or_var new_field = get_str_or_var( jo.get_member( member ), member, true );
     dbl_or_var dov_intensity = get_dbl_or_var( jo, "intensity", false, 1 );
     duration_or_var dov_age = get_duration_or_var( jo, "age", false, 1_turns );
-    dbl_or_var dov_radius = get_dbl_or_var( jo, "radius", false, 10000000 );
+    dbl_or_var dov_radius = get_dbl_or_var( jo, "radius", false, 1 );
 
     const bool outdoor_only = jo.get_bool( "outdoor_only", false );
     const bool indoor_only = jo.get_bool( "indoor_only", false );
     const bool hit_player = jo.get_bool( "hit_player", true );
+    const bool square = jo.get_bool( "square", false );
 
     std::optional<var_info> target_var;
     optional( jo, false, "target_var", target_var );
 
     return [new_field, dov_intensity, dov_age, dov_radius, outdoor_only,
-    hit_player, target_var, is_npc, indoor_only]( dialogue & d ) {
+               hit_player, square, target_var, is_npc, indoor_only]( dialogue & d ) {
         map &here = get_map();
-
-        int radius = dov_radius.evaluate( d );
-        int intensity = dov_intensity.evaluate( d );
-
+        const int radius = dov_radius.evaluate( d );
+        const field_type_str_id field = field_type_str_id( new_field.evaluate( d ) );
         tripoint_abs_ms target_pos = d.actor( is_npc )->pos_abs();
         if( target_var.has_value() ) {
             target_pos = read_var_value( *target_var, d ).tripoint();
         }
-        for( const tripoint_bub_ms &dest : here.points_in_radius( here.get_bub( target_pos ),
-                radius ) ) {
-            if( ( !outdoor_only || here.is_outside( dest ) ) && ( !indoor_only ||
-                    !here.is_outside( dest ) ) ) {
-                here.add_field( dest, field_type_str_id( new_field.evaluate( d ) ), intensity,
-                                dov_age.evaluate( d ),
-                                hit_player );
+
+        tripoint_range<tripoint_bub_ms> points( tripoint_bub_ms::zero, tripoint_bub_ms::zero );
+        if( square ) {
+            points = points_in_radius( here.get_bub( target_pos ), radius );
+        } else {
+            points = points_in_radius_circ( here.get_bub( target_pos ), radius );
+        }
+
+        for( const tripoint_bub_ms &dest : points ) {
+            if( ( !outdoor_only || here.is_outside( dest ) ) &&
+                ( !indoor_only || !here.is_outside( dest ) ) ) {
+                here.add_field( dest, field, dov_intensity.evaluate( d ), dov_age.evaluate( d ), hit_player );
             }
         }
     };
@@ -8439,6 +8523,9 @@ parsers = {
     { "u_die", "npc_die", jarg::object, &talk_effect_fun::f_die_advanced},
     { "u_spawn_monster", "npc_spawn_monster", jarg::member, &talk_effect_fun::f_spawn_monster },
     { "u_spawn_npc", "npc_spawn_npc", jarg::member, &talk_effect_fun::f_spawn_npc },
+    { "set_trap", jarg::member, &talk_effect_fun::f_set_trap },
+    { "set_terrain", jarg::member, &talk_effect_fun::f_set_terrain },
+    { "set_furniture", jarg::member, &talk_effect_fun::f_set_furniture },
     { "u_set_field", "npc_set_field", jarg::member, &talk_effect_fun::f_field },
     { "u_emit", "npc_emit", jarg::member, &talk_effect_fun::f_emit },
     { "u_teleport", "npc_teleport", jarg::object, &talk_effect_fun::f_teleport },

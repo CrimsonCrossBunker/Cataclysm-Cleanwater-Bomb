@@ -31,6 +31,13 @@ void trigger_screen_shake( float magnitude_px, float duration_ms, uint32_t seed 
 // pass the heard loudness.
 void maybe_trigger_screen_shake_from_sound( int heard_volume );
 
+// Trigger a shake declared by an explosion_light recipe. Gated by the same
+// ANIMATIONS / SCREEN_SHAKE master toggles and scaled by SCREEN_SHAKE_INTENSITY,
+// but NOT by the sound threshold — this is an explicit authored effect, not a
+// sound the player happened to hear. magnitude_px is the recipe's peak in pixels
+// (already in pixel space); no-op when shake is disabled or magnitude/duration<=0.
+void maybe_trigger_screen_shake_recipe( float magnitude_px, float duration_ms, uint32_t seed );
+
 // Advance the shake by real elapsed time (ms); clears it when it runs out. Returns
 // true while a shake is still in flight.
 bool advance_screen_shake( int64_t dt_ms );

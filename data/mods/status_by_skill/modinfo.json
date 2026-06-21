@@ -1,0 +1,35 @@
+[
+  {
+    "type": "MOD_INFO",
+    "id": "status_by_skill",
+    "name": "Status by Skill",
+    "authors": [ "续命狂蛤-江借时" ],
+    "maintainers": [ "续命狂蛤-江借时" ],
+    "description": "状态随着技能等级的提高提高",
+    "category": "rebalance"
+  },
+  {
+    "id": "skill_status_buff",
+    "type": "effect_type",
+    "enchantments": [
+      {
+        "condition": "ALWAYS",
+        "values": [
+          { "value": "SPEED", "add": { "math": [ "speed_by_dex()" ] } },
+          { "value": "STRENGTH", "add": { "math": [ "sqrt(str_growth_by_skill() / 20)" ] } },
+          { "value": "DEXTERITY", "add": { "math": [ "sqrt(dex_growth_by_skill() / 20)" ] } },
+          { "value": "INTELLIGENCE", "add": { "math": [ "sqrt(int_growth_by_skill() / 20)" ] } },
+          { "value": "PERCEPTION", "add": { "math": [ "sqrt(per_growth_by_skill() / 20)" ] } },
+          { "value": "FOCUS_REGEN", "multiply": { "math": [ "(u_val('intelligence') - 8) * 0.1" ] } }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "status_enhancement",
+    "eoc_type": "EVENT",
+    "required_event": "game_start",
+    "effect": { "u_add_effect": "skill_status_buff", "duration": "PERMANENT" }
+  }
+]

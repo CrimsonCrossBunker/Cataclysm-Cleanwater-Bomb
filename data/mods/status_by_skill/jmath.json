@@ -1,0 +1,37 @@
+[
+  {
+    "type": "jmath_function",
+    "id": "speed_by_dex",
+    "//": "根据敏捷获得加速",
+    "num_args": 0,
+    "return": "(u_val('dexterity') - 8) * 2"
+  },
+  {
+    "type": "jmath_function",
+    "id": "dex_growth_by_skill",
+    "//": "敏捷成长值: 投掷^2*5 + 闪避^2*10 + 近战^2*5 + 刺击^2*10 + 斩击^2*5",
+    "num_args": 0,
+    "return": "u_skill('throw') ^ 2 * 5 + u_skill('dodge') ^ 2 * 10 + u_skill('melee') ^ 2 * 5 + u_skill('stabbing') ^ 2 * 10 + u_skill('cutting') ^ 2 * 5"
+  },
+  {
+    "type": "jmath_function",
+    "id": "str_growth_by_skill",
+    "//": "力量成长值: 投掷^2*5 + 近战^2*5 + 钝器^2*10 + 斩击^2*5",
+    "num_args": 0,
+    "return": "u_skill('throw') ^ 2 * 5 + u_skill('melee') ^ 2 * 5 + u_skill('bashing') ^ 2 * 10 + u_skill('cutting') ^ 2 * 5"
+  },
+  {
+    "type": "jmath_function",
+    "id": "int_growth_by_skill",
+    "//": "智力成长值: 计算机^2*10 + 电子学^2*10 + 化学^2*10 + 急救^2*5 + 陷阱^2*5 + 制造^2*5",
+    "num_args": 0,
+    "return": "u_skill('computer') ^ 2 * 10 + u_skill('electronics') ^ 2 * 10 + u_skill('chemistry') ^ 2 * 10 + u_skill('firstaid') ^ 2 * 5 + u_skill('traps') ^ 2 * 5 + u_skill('fabrication') ^ 2 * 5"
+  },
+  {
+    "type": "jmath_function",
+    "id": "per_growth_by_skill",
+    "//": "感知成长值: 生存^2*10 + 弓术^2*10 + 陷阱^2*5 + 投掷^2*5 + 枪械^2*5",
+    "num_args": 0,
+    "return": "u_skill('survival') ^ 2 * 10 + u_skill('archery') ^ 2 * 10 + u_skill('traps') ^ 2 * 5 + u_skill('throw') ^ 2 * 5 + u_skill('gun') ^ 2 * 5"
+  }
+]

@@ -216,14 +216,14 @@
     "type": "ammo_effect",
     "//": "Explosion that spreads fire",
     "aoe": [ { "field_type": "fd_fire", "intensity_min": 1, "intensity_max": 1, "size": 3 } ],
-    "explosion": { "power": 60, "distance_factor": 0.7, "fire": true }
+    "explosion": { "power": 60, "light_effect": "incendiary_blast", "distance_factor": 0.7, "fire": true }
   },
   {
     "id": "PYROPHORIC",
     "type": "ammo_effect",
     "//": "Large explosion that spreads fire of high intensity",
     "aoe": [ { "field_type": "fd_fire", "intensity_min": 2, "intensity_max": 2, "radius": 3 } ],
-    "explosion": { "power": 360, "distance_factor": 0.8, "fire": true }
+    "explosion": { "power": 360, "light_effect": "incendiary_blast", "distance_factor": 0.8, "fire": true }
   },
   {
     "id": "MOLOTOV",

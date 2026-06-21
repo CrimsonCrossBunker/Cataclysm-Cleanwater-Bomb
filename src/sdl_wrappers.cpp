@@ -431,6 +431,22 @@ scoped_render_target::scoped_render_target( const SDL_Renderer_Ptr &renderer,
     renderer_ = renderer.get();
 #if SDL_MAJOR_VERSION >= 3
     vp_ = vp;
+    // Drain queued draw commands NOW, while the prior render target is still
+    // bound and the variant_pass shader state is still consistent. SDL forces a
+    // queue flush inside SDL_SetRenderTarget; on the SDL3 gpu/D3D12 backend that
+    // late flush has crashed (SIGSEGV in D3D12_PushFragmentUniformData) when the
+    // queue still held sprite draws referencing custom GPU render state that the
+    // vp_->flush() unbind below would invalidate first. Flushing here -- before
+    // the unbind and the target switch -- executes those draws against valid
+    // state, leaving an empty queue for the switch. Other SDL3 backends are
+    // unaffected (a clean flush before a target switch is always correct).
+    if( !SDL_FlushRenderer( renderer_ ) ) {
+        dbg( D_ERROR ) << "scoped_render_target: SDL_FlushRenderer failed: " << SDL_GetError();
+        mark_boundary_lost();
+        renderer_ = nullptr;
+        vp_ = nullptr;
+        return;
+    }
     // Flush the pass FIRST so an embargoed pass refuses before any SDL call;
     // only then capture prior_target_ and switch.
     if( vp_ && !vp_->flush() ) {
@@ -478,6 +494,15 @@ bool scoped_render_target::restore()
         return false;
     }
 #if SDL_MAJOR_VERSION >= 3
+    // Drain queued draws against the current (scratch) target before switching
+    // back, for the same reason as the ctor: SDL_SetRenderTarget's implicit
+    // flush has crashed on the gpu/D3D12 backend. See the ctor comment.
+    if( !SDL_FlushRenderer( renderer_ ) ) {
+        dbg( D_ERROR ) << "scoped_render_target::restore: SDL_FlushRenderer failed: "
+                       << SDL_GetError();
+        mark_boundary_lost();
+        return false;
+    }
     if( vp_ && !vp_->flush() ) {
         // Undefined shader-state bind: do not switch the target.
         dbg( D_ERROR ) << "scoped_render_target::restore: variant_pass flush failed";

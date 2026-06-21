@@ -3813,6 +3813,55 @@ for( const std::pair<const item *, int> &content_w_count : counted_contents ) {
     }
 }
 
+void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *parts, int /*batch*/,
+                          bool /*debug*/ ) const
+{
+    if( is_null() ) {
+        return;
+    }
+
+    if( !parts->test( iteminfo_parts::DESCRIPTION_THROW_BONUSES ) ) {
+        return;
+    }
+
+    const itype *t = type;
+    const bool has_bonus = t->throw_damage_multiplier != 1.0f ||
+                           t->throw_range_multiplier != 1.0f ||
+                           t->throw_stamina_multiplier != 1.0f ||
+                           t->throw_dispersion_multiplier != 1.0f ||
+                           t->throw_speed_multiplier != 1.0f;
+    if( !has_bonus ) {
+        return;
+    }
+
+    insert_separation_line( info );
+    info.emplace_back( "DESCRIPTION", _( "<bold>Throwing aid bonuses</bold>" ) );
+
+    if( t->throw_damage_multiplier != 1.0f ) {
+        info.emplace_back( "BASE", _( "Throwing damage: " ), "x<num>",
+                           iteminfo::is_decimal, t->throw_damage_multiplier );
+    }
+    if( t->throw_range_multiplier != 1.0f ) {
+        info.emplace_back( "BASE", _( "Throwing range: " ), "x<num>",
+                           iteminfo::is_decimal, t->throw_range_multiplier );
+    }
+    if( t->throw_stamina_multiplier != 1.0f ) {
+        info.emplace_back( "BASE", _( "Throwing stamina cost: " ), "x<num>",
+                           iteminfo::is_decimal | iteminfo::lower_is_better,
+                           t->throw_stamina_multiplier );
+    }
+    if( t->throw_dispersion_multiplier != 1.0f ) {
+        info.emplace_back( "BASE", _( "Throwing dispersion: " ), "x<num>",
+                           iteminfo::is_decimal | iteminfo::lower_is_better,
+                           t->throw_dispersion_multiplier );
+    }
+    if( t->throw_speed_multiplier != 1.0f ) {
+        info.emplace_back( "BASE", _( "Throwing speed: " ), "x<num>",
+                           iteminfo::is_decimal | iteminfo::lower_is_better,
+                           t->throw_speed_multiplier );
+    }
+}
+
 void item::properties_info( std::vector<iteminfo> &info, const iteminfo_query *parts, int batch,
                             bool debug ) const
 {
@@ -4394,6 +4443,7 @@ std::vector<iteminfo> item::get_info( const iteminfo_query *parts, int batch ) c
             battery_info( info, parts, batch, debug );
             tool_info( info, parts, batch, debug );
             actions_info( info, parts, batch, debug );
+            throwing_info( info, parts, batch, debug );
             component_info( info, parts, batch, debug );
             qualities_info( info, parts, batch, debug );
 

@@ -938,6 +938,7 @@ These flags can be applied via JSON item definition to most items.  Not to be co
 - ```TANGLE``` When this item is thrown, and hits a target, it has a chance to tangle them up and immobilize them.
 - ```TARDIS``` Container item with this flag bypasses internal checks for pocket data, so inside it could be bigger than on the outside, and could hold items that otherwise won't fit its dimensions.
 - ```TIE_UP``` Item can be used to tie up a creature.
+- ```THROW_KEEP_WIELDED``` This item can stay wielded when the player throws another item.  Any throwing multipliers on this item are applied to the thrown item.
 - ```TINDER``` This item can be used as tinder for lighting a fire with a `REQUIRES_TINDER` flagged firestarter.
 - ```TOBACCO``` This item is a lit cigar or cigarette, and gives smoking effect when you wear it.
 - ```TOURNIQUET``` This item is tourniquet, it temporarily reduces bleed intensity and increases your effective compression limit.

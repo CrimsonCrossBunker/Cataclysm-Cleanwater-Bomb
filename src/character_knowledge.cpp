@@ -505,8 +505,8 @@ const Character *Character::get_book_reader( const item &book,
 
     // Check for conditions that disqualify us only if no other Characters can read to us
     if( condition & read_condition_result::ILLITERATE ) {
-        reasons.emplace_back( is_avatar() ? _( "You're illiterate!" ) : string_format(
-                                  _( "%s is illiterate!" ), disp_name() ) );
+        reasons.emplace_back( is_avatar() ? _( "You can't make sense of the text." ) : string_format(
+                                  _( "%s can't make sense of the text." ), disp_name() ) );
     } else if( condition & read_condition_result::NEED_GLASSES ) {
         reasons.emplace_back( is_avatar() ? _( "Your eyes won't focus without reading glasses." ) :
                               string_format( _( "%s's eyes won't focus without reading glasses." ), disp_name() ) );
@@ -538,7 +538,7 @@ const Character *Character::get_book_reader( const item &book,
         // Check for disqualifying factors:
         condition = elem->check_read_condition( book );
         if( condition & read_condition_result::ILLITERATE ) {
-            reasons.push_back( string_format( _( "%s is illiterate!" ),
+            reasons.push_back( string_format( _( "%s can't make sense of the text." ),
                                               elem->disp_name() ) );
         } else if( condition & read_condition_result::CANT_UNDERSTAND ) {
             reasons.push_back( string_format( _( "%s %d needed to understand.  %s has %d" ),

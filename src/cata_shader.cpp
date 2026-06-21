@@ -630,6 +630,24 @@ variant_pass::begin_result variant_pass::try_begin( variant_kind v )
         // Embargo raised: refuse without calling SDL until rebind.
         return begin_result::abort_frame;
     }
+    // The SHADOW/NIGHT/OVEREXPOSED/MEMORY variants are GPU re-implementations of
+    // the pre-baked light-variant atlases (shadow/night/overexposed/memory
+    // tile_values, built unconditionally at load). Binding their fragment shader
+    // defeats the renderer's draw batching, so at low zoom a screen full of dim
+    // (SHADOW) or remembered (MEMORY) tiles degrades to tens of thousands of
+    // individual draws -> multi-second GPU flush stall. Route them to the
+    // pre-baked atlas path (use_atlas -> shader_bound=false -> draw_sprite_at
+    // picks the tinted texture), which batches and is visually equivalent.
+    // MEMORY in particular dominates low-zoom frames (off-screen explored area),
+    // so it MUST take the atlas path too. Cost: memory-map-mode switching now
+    // re-bakes the atlas instead of swapping a shader uniform -- acceptable.
+    if( v == variant_kind::SHADOW || v == variant_kind::NIGHT ||
+        v == variant_kind::OVEREXPOSED || v == variant_kind::MEMORY ) {
+        if( !flush() ) {
+            return begin_result::abort_frame;
+        }
+        return begin_result::use_atlas;
+    }
     if( reprobe_requested() ) {
         reset();
         clear_reprobe();

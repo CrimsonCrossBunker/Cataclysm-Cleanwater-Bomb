@@ -28,6 +28,7 @@
 #include "damage.h"
 #include "debug.h"
 #include "enums.h"
+#include "explosion_light.h"
 #include "field_type.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -61,6 +62,7 @@
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
+#include "vfx_emit.h"
 #include "vpart_position.h"
 #include "weakpoint.h"
 
@@ -680,7 +682,20 @@ void flashbang( const tripoint_bub_ms &p, bool player_immune, const int radius )
     };
 
     map &here = get_map();
-    draw_explosion( p, radius, c_white );
+    // Blinding white light overlay (flashbang_blast: single near-opaque white stop,
+    // long hold, strong screen shake, no shockwave). Replaces the legacy expanding
+    // white circle — play_vfx routes through the modern overlay on tiles and the
+    // legacy shell animation on curses, so a single call covers both and we no
+    // longer draw the old animation and the overlay back to back.
+    if( get_option<bool>( "ANIMATIONS" ) ) {
+        vfx_emit e;
+        e.shape = vfx_shape::disc;
+        e.origin = p;
+        e.target = p;
+        e.radius = std::max( 1, radius );
+        e.light = explosion_lights::flashbang_blast;
+        play_vfx( e );
+    }
 
     Character &you = get_player_character();
     if( !player_immune && rl_dist( you.pos_bub(), p ) <= radius ) {

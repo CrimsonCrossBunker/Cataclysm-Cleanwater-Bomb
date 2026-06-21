@@ -2045,6 +2045,11 @@
     "type": "json_flag"
   },
   {
+    "id": "THROW_KEEP_WIELDED",
+    "type": "json_flag",
+    "info": "Can be kept wielded while throwing another item, boosting the throw."
+  },
+  {
     "id": "TIE_UP",
     "type": "json_flag"
   },

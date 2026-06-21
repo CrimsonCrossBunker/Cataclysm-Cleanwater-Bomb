@@ -655,8 +655,12 @@ std::vector<npc_attack_rating> npc_attack_activate_item::all_evaluations( const 
 
 void npc_attack_throw::use( npc &source, const tripoint_bub_ms &location ) const
 {
-    if( !source.is_wielding( thrown_item ) ) {
-    if( !source.wield( thrown_item ) ) {
+    const item_location wielded_item = source.get_wielded_item();
+    const bool keep_wielded = wielded_item && !source.is_wielding( thrown_item ) &&
+                              wielded_item->has_flag( flag_THROW_KEEP_WIELDED );
+
+    if( !source.is_wielding( thrown_item ) && !keep_wielded ) {
+        if( !source.wield( thrown_item ) ) {
             debugmsg( "ERROR: npc tried to equip a weapon it couldn't wield" );
         }
         return;
@@ -673,17 +677,31 @@ void npc_attack_throw::use( npc &source, const tripoint_bub_ms &location ) const
         return;
     }
 
-    item_location weapon = source.get_wielded_item();
-    add_msg_debug( debugmode::debug_filter::DF_NPC, "%s throws the %s", source.disp_name(),
-                   weapon->display_name() );
-    item thrown( *weapon );
-    if( weapon->count_by_charges() && weapon->charges > 1 ) {
-    weapon->mod_charges( -1 );
-        thrown.charges = 1;
+    if( keep_wielded ) {
+        add_msg_debug( debugmode::debug_filter::DF_NPC, "%s throws the %s with the %s",
+                       source.disp_name(), thrown_item.display_name(),
+                       wielded_item->display_name() );
+        item thrown( thrown_item );
+        if( thrown_item.count_by_charges() && thrown_item.charges > 1 ) {
+            thrown_item.mod_charges( -1 );
+            thrown.charges = 1;
+        } else {
+            source.i_rem( &thrown_item );
+        }
+        source.throw_item( location, thrown );
     } else {
-        source.remove_weapon();
+        item_location weapon = source.get_wielded_item();
+        add_msg_debug( debugmode::debug_filter::DF_NPC, "%s throws the %s", source.disp_name(),
+                       weapon->display_name() );
+        item thrown( *weapon );
+        if( weapon->count_by_charges() && weapon->charges > 1 ) {
+            weapon->mod_charges( -1 );
+            thrown.charges = 1;
+        } else {
+            source.remove_weapon();
+        }
+        source.throw_item( location, thrown );
     }
-    source.throw_item( location, thrown );
 }
 
 bool npc_attack_throw::can_use( const npc &source ) const
@@ -694,7 +712,11 @@ bool npc_attack_throw::can_use( const npc &source ) const
     return false;
 }
 
-if( !source.is_wielding( thrown_item ) && !source.can_wield( thrown_item ).success() ) {
+const item_location wielded_item = source.get_wielded_item();
+const bool keep_wielded = wielded_item && !source.is_wielding( thrown_item ) &&
+                          wielded_item->has_flag( flag_THROW_KEEP_WIELDED );
+if( !source.is_wielding( thrown_item ) && !keep_wielded &&
+    !source.can_wield( thrown_item ).success() ) {
     return false;
 }
 
@@ -730,12 +752,15 @@ int npc_attack_throw::base_penalty( const npc &source ) const
 {
     item single_item( thrown_item );
     if( single_item.count_by_charges() ) {
-    single_item.charges = 1;
-}
-const int time_penalty = source.is_wielding( single_item ) ? 0 :
-                         npc_attack_constants::base_time_penalty;
+        single_item.charges = 1;
+    }
+    const item_location wielded_item = source.get_wielded_item();
+    const bool keep_wielded = wielded_item && !source.is_wielding( thrown_item ) &&
+                              wielded_item->has_flag( flag_THROW_KEEP_WIELDED );
+    const int time_penalty = ( source.is_wielding( single_item ) || keep_wielded ) ? 0 :
+                             npc_attack_constants::base_time_penalty;
 
-return time_penalty;
+    return time_penalty;
 }
 
 tripoint_range<tripoint_bub_ms> npc_attack_throw::targetable_points( const npc &source ) const
