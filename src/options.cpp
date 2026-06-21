@@ -3202,6 +3202,11 @@ void options_manager::add_options_debug()
          false
 #endif
        );
+
+    add( "NO_ERROR_POPUP", "debug", to_translation("No error popup"),
+        to_translation("If enabled, debug message won't popup on the screen."),
+        false
+       );
 }
 
 void options_manager::add_options_android()
