@@ -1868,12 +1868,9 @@ void options_manager::add_options_interface()
         ( SystemLocale::UseMetricSystem().value_or( true ) ? "metric" : "imperial" ) );
 
         add( "24_HOUR", page_id, to_translation( "Time format" ),
-             to_translation( "12h: AM/PM, e.g. 7:31 AM - Military: 24h Military, e.g. 0731 - 24h: Normal 24h, e.g. 7:31" ),
-             //~ 12h time, e.g.  11:59pm
+             to_translation( "12h: AM/PM, e.g. 7:31:47 PM - 24h: Normal 24h, e.g. 21:31:47 - Military: 24h Military, e.g. 2131.47" ),
         {   { "12h", to_translation( "12h" ) },
-            //~ 24h time, e.g.  23:59
             { "24h", to_translation( "24h" ) },
-            //~ Military time, e.g.  2359
             { "military", to_translation( "Military" ) }
         },
         "12h" );
