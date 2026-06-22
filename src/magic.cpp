@@ -1037,6 +1037,10 @@ int spell::energy_cost( const Character &guy ) const
     } else {
         cost = type->base_energy_cost.evaluate( d );
     }
+    // Spells with no cost are not increased by encumbrance
+    if( cost == 0 ) {
+        return 0;
+    }
     if( !no_hands() && !guy.has_flag( json_flag_SUBTLE_SPELL ) ) {
         // the first 10 points of combined encumbrance is ignored, but quickly adds up
         const int hands_encumb = std::max( 0,
@@ -2866,6 +2870,7 @@ bool spell::casting_time_encumbered( const Character &guy ) const
 
 bool spell::energy_cost_encumbered( const Character &guy ) const
 {
+
     if( !no_hands() && !guy.has_flag( json_flag_SUBTLE_SPELL ) ) {
     return std::max( 0, guy.avg_encumb_of_limb_type( bp_type:: hand ) - 5 ) >
                0;
