@@ -41,6 +41,7 @@
 #include "magic_enchantment.h"
 #include "mutation.h"
 #include "output.h"
+#include "options.h"
 #include "pimpl.h"
 #include "point.h"
 #include "proficiency.h"
@@ -80,6 +81,9 @@ static const std::string title_SKILLS = translate_marker( "SKILLS" );
 static const std::string title_BIONICS = translate_marker( "BIONICS" );
 static const std::string title_TRAITS = translate_marker( "TRAITS" );
 static const std::string title_PROFICIENCIES = translate_marker( "PROFICIENCIES" );
+
+static const json_character_flag json_flag_GENDER_FLUIDITY( "GENDER_FLUIDITY" );
+static const json_character_flag json_flag_GENDER_INVARIANCE( "GENDER_INVARIANCE" );
 
 static const unsigned int grid_width = 26;
 
@@ -1144,8 +1148,13 @@ static void on_customize_character( Character &you )
 
     cmenu.query();
     if( cmenu.ret == 1 ) {
-        you.male = !you.male;
-        popup( _( "Gender set to %s." ), you.male ? _( "Male" ) : _( "Female" ) );
+        if ( ( get_option<bool>( "PLAYER_ARBITRARY_CHANGE_GENDER" ) || you.has_flag( json_flag_GENDER_FLUIDITY ) ) && !you.has_flag( json_flag_GENDER_INVARIANCE ) ) {
+            you.male = !you.male;
+            popup( _( "Gender set to %s." ), you.male ? _( "Male" ) : _( "Female" ) );
+        }
+        else{
+            popup( _( "You can't reset your gender, because %s." ), get_option<bool>( "PLAYER_ARBITRARY_CHANGE_GENDER" ) ? _( "you don't have that ability" ) : _( "option is disabled" ) );
+        }
     } else if( cmenu.ret == 2 ) {
         std::string filterstring = you.play_name.value_or( std::string() );
         string_input_popup popup;

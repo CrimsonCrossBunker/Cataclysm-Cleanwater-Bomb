@@ -3085,5 +3085,15 @@
     "id": "ROBOFAC_LENS_HELMET",
     "type": "json_flag",
     "info": "This item allows you to wear Hub 01 LENS accessories."
+  },
+  {
+    "id": "GENDER_FLUIDITY",
+    "type": "json_flag",
+    "//": "Allows characters to change their gender by bypassing the PLAYER_ARBITRARY_CHANGE_GENDER option."
+  },
+  {
+    "id": "GENDER_INVARIANCE",
+    "type": "json_flag",
+    "//": "Preventing a character from changing their gender will override GENDER_FLUIDITY."
   }
 ]
