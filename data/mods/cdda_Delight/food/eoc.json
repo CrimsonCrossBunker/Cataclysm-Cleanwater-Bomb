@@ -1,0 +1,66 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_strength_enhancement_apply",
+    "//": "统一施加接口：根据 u_cd_delight_strength_stacks 和 u_cd_delight_strength_duration 施加/刷新力量增强，并记录逻辑结束时间",
+    "effect": [
+      {
+        "if": { "math": [ "u_cd_delight_strength_stacks <= 0" ] },
+        "then": [ { "u_lose_effect": "cd_delight_strength_enhancement" } ],
+        "else": [
+          { "u_lose_effect": "cd_delight_strength_enhancement" },
+          {
+            "u_add_effect": "cd_delight_strength_enhancement",
+            "intensity": { "math": [ "clamp(u_cd_delight_strength_stacks, 1, 10)" ] },
+            "duration": "PERMANENT"
+          },
+          {
+            "math": [
+              "u_cd_delight_strength_end = time('now') + u_cd_delight_strength_duration * time('1 s')"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_strength_enhancement_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "5 s",
+    "//": "统一衰减/到期检查：所有 buff 都可以复制此模式，用一个统一的 manager EOC 调用各个 tick EOC",
+    "condition": { "u_has_effect": "cd_delight_strength_enhancement" },
+    "effect": [
+      {
+        "if": { "math": [ "time('now') >= u_cd_delight_strength_end" ] },
+        "then": [
+          { "u_lose_effect": "cd_delight_strength_enhancement" },
+          { "math": [ "u_cd_delight_strength_stacks = 0" ] }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_strength_enhancement_example_trigger",
+    "eoc_type": "EVENT",
+    "required_event": "character_eats_item",
+    "//": "示例触发：当吃掉指定食物时叠加一层力量增强。把 _itype 换成你 mod 里实际的食物 id",
+    "condition": { "math": [ "_itype == 'cd_delight_strength_food'" ] },
+    "effect": [
+      {
+        "if": { "u_has_effect": "cd_delight_strength_enhancement" },
+        "then": [
+          {
+            "math": [
+              "u_cd_delight_strength_stacks = min(u_effect_intensity('cd_delight_strength_enhancement') + 1, 10)"
+            ]
+          }
+        ],
+        "else": [ { "math": [ "u_cd_delight_strength_stacks = 1" ] } ]
+      },
+      { "math": [ "u_cd_delight_strength_duration = 300" ] },
+      { "run_eocs": [ "eoc_cd_delight_strength_enhancement_apply" ] }
+    ]
+  }
+]

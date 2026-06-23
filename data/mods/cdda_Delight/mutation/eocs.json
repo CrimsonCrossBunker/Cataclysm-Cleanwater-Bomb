@@ -1,0 +1,22 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_DELIGHT_FIRST_TASTE_ON_EAT",
+    "eoc_type": "EVENT",
+    "required_event": "character_eats_item",
+    "condition": { "u_has_trait": "DELIGHT_FIRST_TASTE" },
+    "effect": [
+      {
+        "if": { "math": [ "time('now', 'unit': 'days') != u_delight_first_taste_day" ] },
+        "then": [
+          { "math": [ "u_delight_first_taste_fun = food_fun(_itype)" ] },
+          { "math": [ "u_delight_first_taste_day = time('now', 'unit': 'days')" ] },
+          {
+            "u_message": "你品尝到了今天第一份食物，它的美味度为 <u_val:delight_first_taste_fun>。",
+            "type": "good"
+          }
+        ]
+      }
+    ]
+  }
+]

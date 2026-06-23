@@ -1,0 +1,227 @@
+[
+  {
+    "type": "ITEM",
+    "abstract": "tsow_shrub_base",
+    "subtypes": [ "GENERIC" ],
+    "name": { "str": "可移植灌木" },
+    "description": "从地下挖掘出来的灌木丛，可以重新种植。",
+    "weight": "500 g",
+    "volume": "1000 ml",
+    "material": [ "wood" ],
+    "symbol": "#",
+    "category": "other"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_underbrush",
+    "name": { "str": "灌木丛" },
+    "color": "green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_huckleberry",
+    "name": { "str": "越橘灌木" },
+    "color": "light_blue_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_hobblebush",
+    "name": { "str": "垂荚蓬灌木" },
+    "color": "light_blue_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_grape",
+    "name": { "str": "葡萄灌木" },
+    "color": "light_green_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_blueberry",
+    "name": { "str": "蓝莓灌木" },
+    "color": "light_blue_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_raspberry",
+    "name": { "str": "覆盆子灌木" },
+    "color": "light_red_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_strawberry",
+    "name": { "str": "草莓灌木" },
+    "color": "light_red_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_peanut",
+    "name": { "str": "花生灌木" },
+    "color": "brown_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_autumn_olive",
+    "name": { "str": "秋橄榄灌木" },
+    "color": "light_blue_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_blackberry",
+    "name": { "str": "黑莓灌木" },
+    "color": "black_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_spicebush",
+    "name": { "str": "香料灌木" },
+    "color": "light_green_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_chokeberry",
+    "name": { "str": "北美沙果灌木" },
+    "color": "light_green_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_rose",
+    "name": { "str": "玫瑰灌木" },
+    "color": "light_red_green"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_hydrangea",
+    "name": { "str": "绣球花灌木" },
+    "color": "light_blue"
+  },
+  {
+    "copy-from": "tsow_shrub_base",
+    "type": "ITEM",
+    "subtypes": [ "GENERIC" ],
+    "id": "tsow_shrub_lilac",
+    "name": { "str": "丁香灌木" },
+    "color": "magenta"
+  },
+  {
+    "type": "ITEM",
+    "id": "tsow_grass_stalk_with_seed",
+    "subtypes": [ "GENERIC" ],
+    "name": { "str": "带穗的草杆" },
+    "description": "一根带着谷穗的草杆，比普通的干草更重，可以晒干后脱粒，或者作为牲畜饲料和引火物。",
+    "weight": "100 g",
+    "volume": "500 ml",
+    "material": [ "veggy", "dry_plant" ],
+    "symbol": "/",
+    "color": "yellow",
+    "flags": [ "TRADER_AVOID", "INEDIBLE", "CATTLE", "TINDER", "RABBIT" ]
+  },
+  {
+    "type": "ITEM",
+    "id": "tsow_compost_bin_empty",
+    "subtypes": [ "GENERIC" ],
+    "category": "container",
+    "name": { "str": "空的堆肥桶" },
+    "description": "一个用木板和钉子钉成的简易木箱，容积约十升，用来盛放腐殖质进行堆肥发酵。",
+    "weight": "2000 g",
+    "volume": "12000 ml",
+    "longest_side": "30 cm",
+    "price": "1 USD",
+    "price_postapoc": "50 cent",
+    "material": [ "wood" ],
+    "symbol": ")",
+    "color": "brown",
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "rigid": true,
+        "open_container": true,
+        "max_contains_volume": "10 L",
+        "max_contains_weight": "50 kg"
+      }
+    ],
+    "qualities": [ [ "CONTAIN", 1 ] ],
+    "flags": [ "TRADER_AVOID" ]
+  },
+  {
+    "type": "ITEM",
+    "id": "tsow_humus",
+    "subtypes": [ "GENERIC" ],
+    "category": "spare_parts",
+    "name": { "str": "腐殖质" },
+    "description": "由蚯蚓、泥土和稻草堆混合而成的富含有机质的腐殖质，是制作沃土的好材料。",
+    "weight": "250 g",
+    "volume": "250 ml",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "soil", "veggy" ],
+    "symbol": "*",
+    "color": "brown",
+    "stackable": true,
+    "flags": [ "TRADER_AVOID", "INEDIBLE" ]
+  },
+  {
+    "type": "ITEM",
+    "id": "tsow_compost_bin_fermenting",
+    "subtypes": [ "GENERIC" ],
+    "category": "other",
+    "name": { "str": "发酵中的堆肥桶" },
+    "description": "装满腐殖质的堆肥桶，内部的有机物正在发酵。大约七天后腐殖质会变成沃土，而堆肥桶可以重复使用。",
+    "weight": "7000 g",
+    "volume": "12000 ml",
+    "longest_side": "30 cm",
+    "price": "0 cent",
+    "price_postapoc": "0 cent",
+    "material": [ "wood", "soil" ],
+    "symbol": ")",
+    "color": "yellow_green",
+    "countdown_interval": "7 days",
+    "transform_into": { "target": "tsow_fertile_soil", "container": "tsow_compost_bin_empty", "target_charges": 20 },
+    "flags": [ "SPAWN_ACTIVE", "TRADER_AVOID" ]
+  },
+  {
+    "type": "ITEM",
+    "id": "tsow_fertile_soil",
+    "subtypes": [ "GENERIC" ],
+    "category": "spare_parts",
+    "name": { "str": "沃土" },
+    "description": "经过充分发酵的肥沃土壤，富含腐殖质，非常适合种植作物。",
+    "weight": "250 g",
+    "volume": "250 ml",
+    "price": "0 cent",
+    "price_postapoc": "5 cent",
+    "material": [ "soil", "veggy" ],
+    "symbol": "*",
+    "color": "brown",
+    "stackable": true,
+    "flags": [ "TRADER_AVOID", "INEDIBLE" ]
+  }
+]
