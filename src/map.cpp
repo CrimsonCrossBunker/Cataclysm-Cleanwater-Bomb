@@ -2739,6 +2739,98 @@ void map::get_terrain_orientation( const tripoint_bub_ms &p, int &rota, int &sub
     get_rotation_and_subtile( val, rotation_targets, rota, subtile );
 }
 
+void map::get_tile_values( const int t, const std::array<int, 4> &tn, int &subtile,
+                           int &rotation, const char rotation_targets )
+{
+    std::array<bool, 4> connects;
+    char val = 0;
+    for( int i = 0; i < 4; ++i ) {
+        connects[i] = ( tn[i] == t );
+        if( connects[i] ) {
+            val += 1 << i;
+        }
+    }
+    get_rotation_and_subtile( val, rotation_targets, rotation, subtile );
+}
+
+void map::get_tile_values_with_ter(
+    const tripoint_bub_ms &p, const int t, const std::array<int, 4> &tn, int &subtile, int &rotation,
+    const std::bitset<NUM_TERCONN> &rotate_to_group )
+{
+    map &here = get_map();
+    uint8_t rotation_targets = here.get_known_rotates_to_f( p, rotate_to_group, {} );
+    //check if furniture should connect to itself
+    if( here.has_flag( ter_furn_flag::TFLAG_NO_SELF_CONNECT, p ) ||
+        here.has_flag( ter_furn_flag::TFLAG_ALIGN_WORKBENCH, p ) ) {
+        //if we don't ever connect to ourself just return unconnected to be used further
+        get_rotation_and_subtile( 0, rotation_targets, rotation, subtile );
+    } else {
+        //if we do connect to ourself (tables, counters etc.) calculate based on neighbours
+        get_tile_values( t, tn, subtile, rotation, rotation_targets );
+    }
+    // calculate rotation for unconnected tiles based on surrounding walls
+    // if not any rotates_to neighbours
+    if( subtile == unconnected && ( rotation_targets == 0 || rotation_targets == CHAR_MAX ) ) {
+        int val = 0;
+        bool use_furniture = false;
+
+        if( here.has_flag( ter_furn_flag::TFLAG_ALIGN_WORKBENCH, p ) ) {
+            for( int i = 0; i < 4; ++i ) {
+                // align to furniture that has the workbench quality
+                const tripoint_bub_ms &pt = p + four_adjacent_offsets[i];
+                if( here.has_furn( pt ) && here.furn( pt ).obj().workbench ) {
+                    val += 1 << i;
+                    use_furniture = true;
+                }
+            }
+        }
+        // if still unaligned, try aligning to walls
+        if( val == 0 ) {
+            for( int i = 0; i < 4; ++i ) {
+                const tripoint_bub_ms &pt = p + four_adjacent_offsets[i];
+                if( here.has_flag( ter_furn_flag::TFLAG_WALL, pt ) ||
+                    here.has_flag( ter_furn_flag::TFLAG_WINDOW, pt ) ||
+                    here.has_flag( ter_furn_flag::TFLAG_DOOR, pt ) ) {
+                    val += 1 << i;
+                }
+            }
+        }
+
+        switch( val ) {
+            case 4:    // south wall
+            case 14:   // north opening T
+                rotation = 2;
+                break;
+            case 2:    // east wall
+            case 6:    // southeast corner
+            case 5:    // E/W corridor
+            case 7:    // east opening T
+                rotation = 1;
+                break;
+            case 8:    // west wall
+            case 12:   // southwest corner
+            case 13:   // west opening T
+                rotation = 3;
+                break;
+            case 0:    // no walls
+            case 1:    // north wall
+            case 3:    // northeast corner
+            case 9:    // northwest corner
+            case 10:   // N/S corridor
+            case 11:   // south opening T
+            case 15:   // surrounded
+            default:   // just in case
+                rotation = rotate_to_group.none() ? 0 : 15;
+                break;
+        }
+
+        //
+        if( use_furniture ) {
+            rotation = ( rotation + 2 ) % 4;
+        }
+    }
+}
+
 /*
  * Get the results of harvesting this tile's furniture or terrain
  */

@@ -1125,6 +1125,14 @@ class map
                                              const std::map<tripoint_bub_ms, ter_id> &ter_override,
                                              const std::array<bool, 5> &invisible,
                                              const std::bitset<NUM_TERCONN> &rotate_group );
+        // Compute subtile/rotation from a 4-neighbour sameness mask.
+        static void get_tile_values( int t, const std::array<int, 4> &tn, int &subtile, int &rotation,
+                                     char rotation_targets );
+        // as get_tile_values, but for unconnected tiles, infer rotation from surrounding walls
+        static void get_tile_values_with_ter( const tripoint_bub_ms &p, int t,
+                                              const std::array<int, 4> &tn,
+                                              int &subtile, int &rotation,
+                                              const std::bitset<NUM_TERCONN> &rotate_to_group );
 
         /**
          * Returns the full harvest list, for spawning.

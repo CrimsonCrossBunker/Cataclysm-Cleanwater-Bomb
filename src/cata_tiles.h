@@ -716,12 +716,6 @@ class cata_tiles
                            const point &offset, bool allow_diagonal_rota = false );
 
         /* Tile Picking */
-        void get_tile_values( int t, const std::array<int, 4> &tn, int &subtile, int &rotation,
-                              char rotation_targets );
-        // as get_tile_values, but for unconnected tiles, infer rotation from surrounding walls
-        void get_tile_values_with_ter( const tripoint_bub_ms &p, int t, const std::array<int, 4> &tn,
-                                       int &subtile, int &rotation,
-                                       const std::bitset<NUM_TERCONN> &rotate_to_group );
 
         /** Map memory */
         const memorized_tile &get_terrain_memory_at( const tripoint_abs_ms &p ) const;
