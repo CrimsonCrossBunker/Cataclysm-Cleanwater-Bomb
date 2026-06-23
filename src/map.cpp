@@ -2478,6 +2478,267 @@ for( int i = 0; i < 4; ++i ) {
     return val;
 }
 
+// ---------------------------------------------------------------------------
+// Sim-side tile orientation helpers — Stage 1 of sim/render decoupling.
+// Verbatim logic extracted from cata_tiles.cpp.  The three map-querying
+// functions (get_connect_values, get_furn_connect_values,
+// get_terrain_orientation) call get_map() just as the cata_tiles originals
+// did; static members have no implicit this, so get_map() is the right call.
+// The four pure-math helpers (get_rotation_and_subtile + 3 rotation helpers)
+// have no map dependency and could live anywhere — they are map:: members
+// only to give them a natural home without a new header.
+// ---------------------------------------------------------------------------
+
+void map::get_rotation_and_subtile( const char val, const char rot_to, int &rotation,
+                                    int &subtile )
+{
+    const bool no_rotation = rot_to == CHAR_MAX;
+    switch( val ) {
+        case 0:
+            subtile = unconnected;
+            if( no_rotation ) {
+                rotation = 0;
+                break;
+            }
+            rotation = get_rotation_unconnected( rot_to );
+            break;
+        case 15:
+            subtile = center;
+            rotation = 0;
+            break;
+        case 8:
+            subtile = end_piece;
+            if( no_rotation ) {
+                rotation = 2;
+                break;
+            }
+            rotation = 2 + 4 * get_rotation_edge_ns( rot_to );
+            break;
+        case 4:
+            subtile = end_piece;
+            if( no_rotation ) {
+                rotation = 1;
+                break;
+            }
+            rotation = 1 + 4 * get_rotation_edge_ew( rot_to );
+            break;
+        case 2:
+            subtile = end_piece;
+            if( no_rotation ) {
+                rotation = 3;
+                break;
+            }
+            rotation = 3 + 4 * get_rotation_edge_ew( rot_to );
+            break;
+        case 1:
+            subtile = end_piece;
+            if( no_rotation ) {
+                rotation = 0;
+                break;
+            }
+            rotation = 4 * get_rotation_edge_ns( rot_to );
+            break;
+        case 9:
+            subtile = edge;
+            if( no_rotation ) {
+                rotation = 0;
+                break;
+            }
+            rotation = 2 * get_rotation_edge_ns( rot_to );
+            break;
+        case 6:
+            subtile = edge;
+            if( no_rotation ) {
+                rotation = 1;
+                break;
+            }
+            rotation = 1 + 2 * get_rotation_edge_ew( rot_to );
+            break;
+        case 12:
+            subtile = corner;
+            rotation = 2;
+            break;
+        case 10:
+            subtile = corner;
+            rotation = 3;
+            break;
+        case 3:
+            subtile = corner;
+            rotation = 0;
+            break;
+        case 5:
+            subtile = corner;
+            rotation = 1;
+            break;
+        case 14:
+            subtile = t_connection;
+            rotation = 2;
+            break;
+        case 11:
+            subtile = t_connection;
+            rotation = 3;
+            break;
+        case 7:
+            subtile = t_connection;
+            rotation = 0;
+            break;
+        case 13:
+            subtile = t_connection;
+            rotation = 1;
+            break;
+    }
+}
+
+int map::get_rotation_edge_ns( const char rot_to )
+{
+    if( ( rot_to & static_cast<int>( NEIGHBOUR::EAST ) ) == static_cast<int>( NEIGHBOUR::EAST ) ) {
+        if( ( rot_to & static_cast<int>( NEIGHBOUR::WEST ) ) == static_cast<int>( NEIGHBOUR::WEST ) ) {
+            return 2;
+        } else {
+            return 1;
+        }
+    } else {
+        if( ( rot_to & static_cast<int>( NEIGHBOUR::WEST ) ) == static_cast<int>( NEIGHBOUR::WEST ) ) {
+            return 0;
+        } else {
+            return 3;
+        }
+    }
+}
+
+int map::get_rotation_edge_ew( const char rot_to )
+{
+    if( ( rot_to & static_cast<int>( NEIGHBOUR::NORTH ) ) == static_cast<int>( NEIGHBOUR::NORTH ) ) {
+        if( ( rot_to & static_cast<int>( NEIGHBOUR::SOUTH ) ) == static_cast<int>( NEIGHBOUR::SOUTH ) ) {
+            return 2;
+        } else {
+            return 1;
+        }
+    } else {
+        if( ( rot_to & static_cast<int>( NEIGHBOUR::SOUTH ) ) == static_cast<int>( NEIGHBOUR::SOUTH ) ) {
+            return 0;
+        } else {
+            return 3;
+        }
+    }
+}
+
+int map::get_rotation_unconnected( const char rot_to )
+{
+    int rotation = 0;
+    switch( rot_to ) {
+        case 0:
+            rotation = 15;
+            break;
+        case 15:
+            rotation = 12;
+            break;
+        case static_cast<int>( NEIGHBOUR::NORTH ):
+            rotation = 2;
+            break;
+        case static_cast<int>( NEIGHBOUR::EAST ):
+            rotation = 1;
+            break;
+        case static_cast<int>( NEIGHBOUR::SOUTH ):
+            rotation = 0;
+            break;
+        case static_cast<int>( NEIGHBOUR::WEST ):
+            rotation = 3;
+            break;
+        case 10:
+            rotation = 6;
+            break;
+        case 3:
+            rotation = 5;
+            break;
+        case 5:
+            rotation = 4;
+            break;
+        case 12:
+            rotation = 7;
+            break;
+        case 14:
+            rotation = 10;
+            break;
+        case 11:
+            rotation = 9;
+            break;
+        case 7:
+            rotation = 8;
+            break;
+        case 13:
+            rotation = 11;
+            break;
+        case 9:
+            rotation = 14;
+            break;
+        case 6:
+            rotation = 13;
+            break;
+    }
+    return rotation;
+}
+
+void map::get_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
+                              const std::bitset<NUM_TERCONN> &connect_group,
+                              const std::bitset<NUM_TERCONN> &rotate_to_group,
+                              const std::map<tripoint_bub_ms, ter_id> &ter_override )
+{
+    map &here = get_map();
+    uint8_t connections = here.get_known_connections( p, connect_group, ter_override );
+    uint8_t rotation_targets = here.get_known_rotates_to( p, rotate_to_group, ter_override );
+    get_rotation_and_subtile( connections, rotation_targets, rotation, subtile );
+}
+
+void map::get_furn_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
+                                   const std::bitset<NUM_TERCONN> &connect_group,
+                                   const std::bitset<NUM_TERCONN> &rotate_to_group,
+                                   const std::map<tripoint_bub_ms, furn_id> &furn_override )
+{
+    map &here = get_map();
+    uint8_t connections = here.get_known_connections_f( p, connect_group, furn_override );
+    uint8_t rotation_targets = here.get_known_rotates_to_f( p, rotate_to_group, {}, {} );
+    get_rotation_and_subtile( connections, rotation_targets, rotation, subtile );
+}
+
+void map::get_terrain_orientation( const tripoint_bub_ms &p, int &rota, int &subtile,
+                                   const std::map<tripoint_bub_ms, ter_id> &ter_override,
+                                   const std::array<bool, 5> &invisible,
+                                   const std::bitset<NUM_TERCONN> &rotate_group )
+{
+    map &here = get_map();
+    const bool overridden = ter_override.find( p ) != ter_override.end();
+    const auto ter = [&]( const tripoint_bub_ms & q, const bool invis ) -> ter_str_id {
+        const auto override_it = ter_override.find( q );
+        return override_it != ter_override.end() ? override_it->second.id() :
+                                          ( !overridden || !invis ) ? here.ter( q ).id() : ter_str_id::NULL_ID();
+    };
+
+    const ter_id &tid = ter( p, invisible[0] );
+    if( tid == ter_str_id::NULL_ID() ) {
+        subtile = 0;
+        rota = 0;
+        return;
+    }
+
+    const std::array<ter_id, 4> neighborhood = {
+        ter( p + point::south, invisible[1] ),
+        ter( p + point::east,  invisible[2] ),
+        ter( p + point::west,  invisible[3] ),
+        ter( p + point::north, invisible[4] )
+    };
+
+    char val = 0;
+    for( int i = 0; i < 4; ++i ) {
+        if( neighborhood[i] == tid ) {
+            val += 1 << i;
+        }
+    }
+
+    uint8_t rotation_targets = here.get_known_rotates_to( p, rotate_group, {} );
+    get_rotation_and_subtile( val, rotation_targets, rota, subtile );
+}
+
 /*
  * Get the results of harvesting this tile's furniture or terrain
  */

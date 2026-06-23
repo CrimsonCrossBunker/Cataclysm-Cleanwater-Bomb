@@ -3113,7 +3113,7 @@ std::pair<std::string, bool> cata_tiles::get_omt_id_rotation_and_subtile(
             }
         }
 
-        get_rotation_and_subtile( val, -1, rota, subtile );
+        map::get_rotation_and_subtile( val, -1, rota, subtile );
     } else if( ot_type.has_flag( oter_flags::water ) ) {
         // water looks nicer if it connects together
         char val = 0;
@@ -3125,7 +3125,7 @@ std::pair<std::string, bool> cata_tiles::get_omt_id_rotation_and_subtile(
             }
         }
 
-        get_rotation_and_subtile( val, -1, rota, subtile );
+        map::get_rotation_and_subtile( val, -1, rota, subtile );
     } else {
         // 'Regular', nonlinear terrain only needs to worry about rotation, not
         // subtile

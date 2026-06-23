@@ -1098,6 +1098,34 @@ class map
                                         const std::map<tripoint_bub_ms, ter_id> &override = {},
                                         const std::map<tripoint_bub_ms, furn_id> &override_f = {} ) const;
 
+        // -----------------------------------------------------------------------
+        // Sim-side tile orientation helpers (Stage 1 of sim/render decoupling).
+        // Extracted from cata_tiles so the memory-update pass in do_turn can
+        // compute subtile/rotation when memorising seen tiles, without depending
+        // on the tiles subsystem.  See sim-render-decoupling-plan.md §1.
+        // -----------------------------------------------------------------------
+        // Pure-math rotation helpers (no map state needed).
+        static void get_rotation_and_subtile( char val, char rot_to, int &rotation, int &subtile );
+        static int  get_rotation_unconnected( char rot_to );
+        static int  get_rotation_edge_ns( char rot_to );
+        static int  get_rotation_edge_ew( char rot_to );
+
+        // Terrain/furniture connection values + orientation — call get_map() internally.
+        // ter_override / furn_override are populated only on the render preview path;
+        // pass empty maps from the sim-side memory-update pass.
+        static void get_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
+                                        const std::bitset<NUM_TERCONN> &connect_group,
+                                        const std::bitset<NUM_TERCONN> &rotate_to_group,
+                                        const std::map<tripoint_bub_ms, ter_id> &ter_override = {} );
+        static void get_furn_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
+                                             const std::bitset<NUM_TERCONN> &connect_group,
+                                             const std::bitset<NUM_TERCONN> &rotate_to_group,
+                                             const std::map<tripoint_bub_ms, furn_id> &furn_override = {} );
+        static void get_terrain_orientation( const tripoint_bub_ms &p, int &rota, int &subtile,
+                                             const std::map<tripoint_bub_ms, ter_id> &ter_override,
+                                             const std::array<bool, 5> &invisible,
+                                             const std::bitset<NUM_TERCONN> &rotate_group );
+
         /**
          * Returns the full harvest list, for spawning.
          */

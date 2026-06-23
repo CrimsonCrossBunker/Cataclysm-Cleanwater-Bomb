@@ -3481,11 +3481,11 @@ bool cata_tiles::draw_terrain( const tripoint_bub_ms &p, const lit_level ll, int
         const std::bitset<NUM_TERCONN> &rotate_group = t.obj().rotate_to_groups;
 
         if( connect_group.any() ) {
-            get_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
+            map::get_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
             // re-memorize previously seen terrain in case new connections have been seen
             here.memory_cache_ter_set_dirty( p, true );
         } else {
-            get_terrain_orientation( p, rotation, subtile, {}, invisible, rotate_group );
+            map::get_terrain_orientation( p, rotation, subtile, {}, invisible, rotate_group );
             // do something to get other terrain orientation values
         }
         if( here.memory_cache_ter_is_dirty( p ) ) {
@@ -3511,10 +3511,10 @@ bool cata_tiles::draw_terrain( const tripoint_bub_ms &p, const lit_level ll, int
             const std::bitset<NUM_TERCONN> &rotate_group = t2.obj().rotate_to_groups;
 
             if( connect_group.any() ) {
-                get_connect_values( p, subtile, rotation, connect_group, rotate_group,
+                map::get_connect_values( p, subtile, rotation, connect_group, rotate_group,
                                     terrain_override );
             } else {
-                get_terrain_orientation( p, rotation, subtile, terrain_override, invisible,
+                map::get_terrain_orientation( p, rotation, subtile, terrain_override, invisible,
                                          rotate_group );
             }
             const std::string &tname = t2.id().str();
@@ -3572,7 +3572,7 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
         const std::bitset<NUM_TERCONN> &rotate_group = f.obj().rotate_to_groups;
 
         if( connect_group.any() ) {
-            get_furn_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
+            map::get_furn_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
         } else {
             get_tile_values_with_ter( p, f.to_i(), neighborhood, subtile, rotation, rotate_group );
         }
@@ -3613,7 +3613,7 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
             const std::bitset<NUM_TERCONN> &rotate_group = f.obj().rotate_to_groups;
 
             if( connect_group.any() ) {
-                get_furn_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
+                map::get_furn_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
             } else {
                 get_tile_values_with_ter( p, f.to_i(), neighborhood, subtile, rotation, rotate_group );
             }
@@ -5916,306 +5916,6 @@ void cata_tiles::init_light()
     g->reset_light_level();
 }
 
-void cata_tiles::get_terrain_orientation( const tripoint_bub_ms &p, int &rota, int &subtile,
-        const std::map<tripoint_bub_ms, ter_id> &ter_override, const std::array<bool, 5> &invisible,
-        const std::bitset<NUM_TERCONN> &rotate_group )
-{
-    map &here = get_map();
-    const bool overridden = ter_override.find( p ) != ter_override.end();
-    const auto ter = [&]( const tripoint_bub_ms & q, const bool invis ) -> ter_str_id {
-        const auto override_it = ter_override.find( q );
-        return override_it != ter_override.end() ? override_it->second.id() :
-                                          ( !overridden || !invis ) ? here.ter( q ).id() : ter_str_id::NULL_ID();
-    };
-
-    // get terrain at x,y
-    const ter_id &tid = ter( p, invisible[0] );
-    if( tid == ter_str_id::NULL_ID() ) {
-        subtile = 0;
-        rota = 0;
-        return;
-    }
-
-    // get terrain neighborhood
-    const std::array<ter_id, 4> neighborhood = {
-        ter( p + point::south, invisible[1] ),
-        ter( p + point::east, invisible[2] ),
-        ter( p + point::west, invisible[3] ),
-        ter( p + point::north, invisible[4] )
-    };
-
-    char val = 0;
-
-    // populate connection information
-    for( int i = 0; i < 4; ++i ) {
-        if( neighborhood[i] == tid ) {
-            val += 1 << i;
-        }
-    }
-
-    uint8_t rotation_targets = here.get_known_rotates_to( p, rotate_group, {} );
-    get_rotation_and_subtile( val, rotation_targets, rota, subtile );
-}
-
-void cata_tiles::get_rotation_and_subtile( const char val, const char rot_to, int &rotation,
-        int &subtile )
-{
-    const bool no_rotation = rot_to == CHAR_MAX;
-    switch( val ) {
-        // no connections
-        case 0:
-            subtile = unconnected;
-            if( no_rotation ) {
-                rotation = 0;
-                break;
-            }
-            rotation = get_rotation_unconnected( rot_to );
-            break;
-        // all connections
-        case 15:
-            subtile = center;
-            rotation = 0;
-            break;
-        // end pieces
-        // rotations:
-        //
-        // --> edge index
-        // Nw, Ws, Sw, Es,
-        // Ne, Wn, Se, En,  |
-        // N+, W+, S+, E+,  V  get_rotation_... return index
-        // N-, W-, S-, E-
-        //
-        // (Nw = north end piece, rotated to west)
-        case 8:
-            // vertical end piece S
-            subtile = end_piece;
-            if( no_rotation ) {
-                rotation = 2;
-                break;
-            }
-            rotation = 2 + 4 * get_rotation_edge_ns( rot_to );
-            break;
-        case 4:
-            // horizontal end piece E
-            subtile = end_piece;
-            if( no_rotation ) {
-                rotation = 1;
-                break;
-            }
-            rotation = 1 + 4 * get_rotation_edge_ew( rot_to );
-            break;
-        case 2:
-            // horizontal end piece W
-            subtile = end_piece;
-            if( no_rotation ) {
-                rotation = 3;
-                break;
-            }
-            rotation = 3 + 4 * get_rotation_edge_ew( rot_to );
-            break;
-        case 1:
-            // vertical end piece N
-            subtile = end_piece;
-            if( no_rotation ) {
-                rotation = 0;
-                break;
-            }
-            rotation = 4 * get_rotation_edge_ns( rot_to );
-            break;
-        // edges
-        // rotations:
-        //
-        // --> edge index
-        // NSw, EWs,
-        // NSe, EWn,  |
-        // NS+, EW+,  V  get_rotation_... return index
-        // NS-, EW-,
-        //
-        // (NSw = north-south edge, rotated to west)
-        case 9:
-            // vertical edge
-            subtile = edge;
-            if( no_rotation ) {
-                rotation = 0;
-                break;
-            }
-            rotation = 2 * get_rotation_edge_ns( rot_to );
-            break;
-        case 6:
-            // horizontal edge
-            subtile = edge;
-            if( no_rotation ) {
-                rotation = 1;
-                break;
-            }
-            rotation = 1 + 2 * get_rotation_edge_ew( rot_to );
-            break;
-        // corners
-        case 12:
-            subtile = corner;
-            rotation = 2;
-            break;
-        case 10:
-            subtile = corner;
-            rotation = 3;
-            break;
-        case 3:
-            subtile = corner;
-            rotation = 0;
-            break;
-        case 5:
-            subtile = corner;
-            rotation = 1;
-            break;
-        // all t_connections
-        case 14:
-            subtile = t_connection;
-            rotation = 2;
-            break;
-        case 11:
-            subtile = t_connection;
-            rotation = 3;
-            break;
-        case 7:
-            subtile = t_connection;
-            rotation = 0;
-            break;
-        case 13:
-            subtile = t_connection;
-            rotation = 1;
-            break;
-    }
-}
-
-int cata_tiles::get_rotation_edge_ns( const char rot_to )
-{
-    if( ( rot_to & static_cast<int>( NEIGHBOUR::EAST ) ) == static_cast<int>( NEIGHBOUR::EAST ) ) {
-        if( ( rot_to & static_cast<int>( NEIGHBOUR::WEST ) ) == static_cast<int>( NEIGHBOUR::WEST ) ) {
-            // EW
-            return 2;
-        } else {
-            // Ew
-            return 1;
-        }
-    } else { // east -
-        if( ( rot_to & static_cast<int>( NEIGHBOUR::WEST ) ) == static_cast<int>( NEIGHBOUR::WEST ) ) {
-            // eW
-            return 0;
-        } else {
-            // ew
-            return 3;
-        }
-    }
-}
-
-int cata_tiles::get_rotation_edge_ew( const char rot_to )
-{
-    if( ( rot_to & static_cast<int>( NEIGHBOUR::NORTH ) ) == static_cast<int>( NEIGHBOUR::NORTH ) ) {
-        if( ( rot_to & static_cast<int>( NEIGHBOUR::SOUTH ) ) == static_cast<int>( NEIGHBOUR::SOUTH ) ) {
-            // NS
-            return 2;
-        } else {
-            // Ns
-            return 1;
-        }
-    } else { // north -
-        if( ( rot_to & static_cast<int>( NEIGHBOUR::SOUTH ) ) == static_cast<int>( NEIGHBOUR::SOUTH ) ) {
-            // nS
-            return 0;
-        } else {
-            // ns
-            return 3;
-        }
-    }
-}
-
-int cata_tiles::get_rotation_unconnected( const char rot_to )
-{
-    int rotation = 0;
-    switch( rot_to ) {
-        // Catch no and all first for performance; these are the last sprites!
-        case 0: // NONE
-            rotation = 15;
-            break;
-        case 15: // ALL
-            rotation = 12;
-            break;
-
-        // Cases for single tile to rotate to -> easy
-        case static_cast<int>( NEIGHBOUR::NORTH ):
-            rotation = 2;
-            break;
-        case static_cast<int>( NEIGHBOUR::EAST ):
-            rotation = 1;
-            break;
-        case static_cast<int>( NEIGHBOUR::SOUTH ):
-            rotation = 0;
-            break;
-        case static_cast<int>( NEIGHBOUR::WEST ):
-            rotation = 3;
-            break;
-        // Two tiles, resulting in diagonal
-        case 10: // NE
-            rotation = 6;
-            break;
-        case 3: // SE
-            rotation = 5;
-            break;
-        case 5: // SW
-            rotation = 4;
-            break;
-        case 12: // NW
-            rotation = 7;
-            break;
-        // Cases for three tiles to rotate to -> easy
-        // Arranged to fallback / modulo to fitting index 0-4
-        case 14: // 3 but south --> modulo = north
-            rotation = 10;
-            break;
-        case 11: // 3 but west --> modulo = east
-            rotation = 9;
-            break;
-        case 7: // 3 but north --> modulo = south
-            rotation = 8;
-            break;
-        case 13: // 3 but east --> modulo = west
-            rotation = 11;
-            break;
-        // Two opposing tiles, (No tiles, all tiles; see first cases)
-        case 9: // N-S
-            rotation = 14;
-            break;
-        case 6: // E-W
-            rotation = 13;
-            break;
-    }
-
-    return rotation;
-}
-
-void cata_tiles::get_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
-                                     const std::bitset<NUM_TERCONN> &connect_group,
-                                     const std::bitset<NUM_TERCONN> &rotate_to_group,
-                                     const std::map<tripoint_bub_ms, ter_id> &ter_override )
-{
-    map &here = get_map();
-
-    uint8_t connections = here.get_known_connections( p, connect_group, ter_override );
-    uint8_t rotation_targets = here.get_known_rotates_to( p, rotate_to_group, ter_override );
-    get_rotation_and_subtile( connections, rotation_targets, rotation, subtile );
-}
-
-void cata_tiles::get_furn_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
-        const std::bitset<NUM_TERCONN> &connect_group, const std::bitset<NUM_TERCONN> &rotate_to_group,
-        const std::map<tripoint_bub_ms, furn_id> &furn_override )
-{
-    map &here = get_map();
-
-    uint8_t connections = here.get_known_connections_f( p, connect_group, furn_override );
-    uint8_t rotation_targets = here.get_known_rotates_to_f( p, rotate_to_group, {}, {} );
-    get_rotation_and_subtile( connections, rotation_targets, rotation, subtile );
-}
-
 void cata_tiles::get_tile_values( const int t, const std::array<int, 4> &tn, int &subtile,
                                   int &rotation, const char rotation_targets )
 {
@@ -6227,7 +5927,7 @@ void cata_tiles::get_tile_values( const int t, const std::array<int, 4> &tn, int
             val += 1 << i;
         }
     }
-    get_rotation_and_subtile( val, rotation_targets, rotation, subtile );
+    map::get_rotation_and_subtile( val, rotation_targets, rotation, subtile );
 }
 
 void cata_tiles::get_tile_values_with_ter(
@@ -6240,7 +5940,7 @@ void cata_tiles::get_tile_values_with_ter(
     if( here.has_flag( ter_furn_flag::TFLAG_NO_SELF_CONNECT, p ) ||
         here.has_flag( ter_furn_flag::TFLAG_ALIGN_WORKBENCH, p ) ) {
         //if we don't ever connect to ourself just return unconnected to be used further
-        get_rotation_and_subtile( 0, rotation_targets, rotation, subtile );
+        map::get_rotation_and_subtile( 0, rotation_targets, rotation, subtile );
     } else {
         //if we do connect to ourself (tables, counters etc.) calculate based on neighbours
         get_tile_values( t, tn, subtile, rotation, rotation_targets );
