@@ -1613,6 +1613,49 @@ void vehicle::use_mws( map &here, int p )
     }
 }
 
+void vehicle::use_auto_cooker( map &here, int p )
+{
+    vehicle_part &vp = parts[p];
+    vehicle_stack items = get_items( vp );
+
+    if( vp.enabled ) {
+        vp.enabled = false;
+        add_msg( m_bad, _( "You turn off the electric cooker." ) );
+        return;
+    }
+
+    bool has_cookable = false;
+    for( const item &it : items ) {
+        if( it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
+            !it.get_comestible()->cook_result.is_empty() ) {
+            has_cookable = true;
+            break;
+        }
+    }
+
+    if( !has_cookable ) {
+        add_msg( m_bad, _( "The electric cooker has no raw food that can be automatically cooked." ) );
+        return;
+    }
+
+    const auto [battery_remaining, battery_capacity] = connected_battery_power_level( here );
+    if( battery_remaining <= 0 ) {
+        add_msg( m_bad, _( "The electric cooker has no power." ) );
+        return;
+    }
+
+    vp.enabled = true;
+    for( item &it : items ) {
+        if( it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
+            !it.get_comestible()->cook_result.is_empty() ) {
+            it.set_var( "cook_energy_done", "0" );
+            it.set_var( "cook_time_done", "0" );
+        }
+    }
+
+    add_msg( m_good, _( "You turn on the electric cooker." ) );
+}
+
 void vehicle::use_nl_boiler( map &here, int p )
 {
     std::string dimension_prefix = g->get_dimension_prefix();
@@ -2710,6 +2753,16 @@ for( const vpart_reference &vp : get_avail_parts( "SMART_ENGINE_CONTROLLER" ) )
             .hotkey( "TOGGLE_MWS" )
             .on_submit( [this, dw_idx, here] { use_mws( *here, dw_idx ); } );
     }
+    const std::optional<vpart_reference> vp_auto_cooker = vp.avail_part_with_feature( "AUTO_COOKER" );
+    if( vp_auto_cooker ) {
+        const size_t ac_idx = vp_auto_cooker->part_index();
+        menu.add( vp_auto_cooker->part().enabled
+                  ? _( "Deactivate the electric cooker" )
+                  : _( "Activate the electric cooker" ) )
+            .hotkey( "TOGGLE_AUTO_COOKER" )
+            .on_submit( [this, ac_idx, here] { use_auto_cooker( *here, ac_idx ); } );
+    }
+
     const std::optional<vpart_reference> vp_nl_boiler = vp.avail_part_with_feature( "NL_BOILER" );
     if( vp_nl_boiler ) {
         const size_t dw_idx = vp_nl_boiler->part_index();

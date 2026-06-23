@@ -2343,6 +2343,11 @@ class vehicle
         void use_washing_machine( map &here, int p );
         void use_dishwasher( map &here, int p );
         void use_mws( map &here, int p );
+        void use_auto_cooker( map &here, int p );
+        // Process one turn of an enabled AUTO_COOKER part.
+        void process_auto_cooker_part( map &here, int p );
+        // Catch up auto-cooker progress after the vehicle was outside the reality bubble.
+        void catch_up_auto_cooker( map &here, int p, const time_duration &elapsed );
         void use_nl_boiler( map &here, int p );
         void use_monster_capture( int part, map *here, const tripoint_bub_ms &pos );
         void use_tiedown_furniture( int part, map *here, const tripoint_bub_ms & );
@@ -2652,6 +2657,14 @@ class vehicle
         // Returns debug data to overlay on the screen, a vector of {map tile position
         // relative to vehicle pos, color and text}.
         std::vector<std::tuple<point_rel_ms, int, std::string>> get_debug_overlay_data() const;
+
+        // Auto-cooker helpers.  Defined in vehicle.cpp so they can be reused by
+        // the off-map time catch-up logic.
+        static bool is_auto_cookable( const item &it );
+        item *auto_cooker_current_item( vehicle_part &vp, size_t &cookable_index );
+        static void finish_auto_cooked_item( item &it, const islot_comestible &comest );
+        static bool advance_auto_cooker_item_once( item &it, size_t cookable_index,
+                vehicle &cur_veh, map &here, bool &out_of_power );
 };
 
 // For reference what each function is supposed to do, see their implementation in
