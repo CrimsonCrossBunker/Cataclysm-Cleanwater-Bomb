@@ -49,6 +49,7 @@
 #include "get_version.h"
 #include "help.h"
 #include "input.h"
+#include "input_replay.h"
 #include "main_menu.h"
 #include "mapsharing.h"
 #include "memory_fast.h"
@@ -154,6 +155,9 @@ void exit_handler( int s )
         // during static destruction.
         Json::globally_report_unvisited_members( false );
         deinitDebug();
+
+        // Flush & close any open input replay log before the process tears down.
+        input_replay::finish();
 
         int exit_status = 0;
         g.reset();
@@ -285,6 +289,8 @@ struct cli_opts {
     std::vector<std::string> opts;
     std::string world; /** if set try to load first save in this world on startup */
     bool disable_ascii_art = false;
+    std::string replay_record; /** if set, record input events to this path */
+    std::string replay_play;   /** if set, replay input events from this path */
 };
 
 cli_opts parse_commandline( int argc, const char **argv )
@@ -340,6 +346,26 @@ cli_opts parse_commandline( int argc, const char **argv )
                 [&result]( int, const char ** ) -> int {
                     result.noverify = true;
                     return 0;
+                }
+            },
+            {
+                "--replay-record", "<path>",
+                "Record the input event stream to <path> for deterministic replay",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.replay_record = params[0];
+                    return 1;
+                }
+            },
+            {
+                "--replay-play", "<path>",
+                "Replay a previously recorded input event stream from <path>",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.replay_play = params[0];
+                    return 1;
                 }
             },
             {
@@ -789,6 +815,22 @@ int main( int argc, const char *argv[] )
 
     rng_set_engine_seed( cli.seed );
 
+    // Deterministic input replay harness (phase 0.5). Record captures the active
+    // seed into the log; replay re-applies the recorded seed so the run is
+    // byte-for-byte reproducible regardless of --seed on the replay invocation.
+    if( !cli.replay_record.empty() && !cli.replay_play.empty() ) {
+        debugmsg( "--replay-record and --replay-play are mutually exclusive" );
+        exit_handler( -1 );
+    }
+    if( !cli.replay_record.empty() ) {
+        input_replay::set_record_seed( static_cast<unsigned int>( cli.seed ) );
+        input_replay::begin_record( cli.replay_record );
+    } else if( !cli.replay_play.empty() ) {
+        if( input_replay::begin_replay( cli.replay_play ) ) {
+            rng_set_engine_seed( input_replay::recorded_seed() );
+        }
+    }
+
     game_ui::init_ui();
 
     g = std::make_unique<game>();
@@ -880,6 +922,13 @@ int main( int argc, const char *argv[] )
         shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
         get_event_bus().send<event_type::game_begin>( getVersionString() );
         while( !g->do_turn() ) {}
+        // do_turn returned true: the game ended (e.g. the recording's own
+        // save/quit ran). Under replay there is no interactive user to drive the
+        // main menu, so exit instead of looping back into opening_screen() and
+        // hanging on input.
+        if( input_replay::is_replaying() ) {
+            exit_handler( 0 );
+        }
     }
 
     exit_handler( -999 );

@@ -741,8 +741,15 @@ bool game::save_external_options_record()
 
 bool game::save()
 {
+    // total_time_played accumulates real wall-clock seconds, which is inherently
+    // non-deterministic. Under input replay we freeze the delta at 0 so the
+    // persisted playtime (written to both .pt and the character .sav) is
+    // reproducible -- otherwise two A/B replay runs differ by the seconds they
+    // happened to take. This is the only non-sim source the replay harness found.
     std::chrono::seconds time_since_load =
-        std::chrono::duration_cast<std::chrono::seconds>(
+        replay_mode == replay_mode_t::replay
+        ? std::chrono::seconds( 0 )
+        : std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::steady_clock::now() - time_of_last_load );
     std::chrono::seconds total_time_played = time_played_at_last_load + time_since_load;
     events().send<event_type::game_save>( time_since_load, total_time_played );

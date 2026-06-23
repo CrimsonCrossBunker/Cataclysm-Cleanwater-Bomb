@@ -5,6 +5,7 @@ bool log_from_top;
 int message_ttl;
 int message_cooldown;
 bool test_mode;
+replay_mode_t replay_mode = replay_mode_t::off;
 int prevent_occlusion;
 bool prevent_occlusion_retract;
 bool prevent_occlusion_transp;

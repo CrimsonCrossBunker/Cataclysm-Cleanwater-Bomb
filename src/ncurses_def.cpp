@@ -5,6 +5,7 @@
 // input.h must be include *before* the ncurses header. The latter has some macro
 // defines that clash with the constants defined in input.h (e.g. KEY_UP).
 #include "input.h"
+#include "input_replay.h"
 #include "point.h"
 #include "translations.h"
 #include "cata_imgui.h"
@@ -425,6 +426,14 @@ void input_manager::pump_events()
 // ignoring preferred keyboard mode
 input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyboard_mode*/ )
 {
+    if( input_replay::is_replaying() ) {
+        input_event replayed;
+        if( input_replay::try_replay( replayed ) ) {
+            previously_pressed_key = replayed.get_first_input();
+            return replayed;
+        }
+        // Replay log exhausted: fall through to normal polling.
+    }
     if( test_mode ) {
         // input should be skipped in caller's code
         throw std::runtime_error( "input_manager::get_input_event called in test mode" );
@@ -533,6 +542,7 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
         imclient->process_input( &rval );
     } while( key == KEY_RESIZE );
 
+    input_replay::on_record( rval );
     return rval;
 }
 

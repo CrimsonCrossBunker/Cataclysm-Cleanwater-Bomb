@@ -41,6 +41,7 @@
 #include "help.h"
 #include "input.h"
 #include "input_context.h"
+#include "input_replay.h"
 #include "item_wakeup.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -133,8 +134,12 @@ bool cleanup_at_end()
         g->save_achievements();
 
         g->death_screen();
+        // See game::save(): freeze the wall-clock delta under replay so playtime
+        // (and anything derived from the game_over event) is reproducible.
         std::chrono::seconds time_since_load =
-            std::chrono::duration_cast<std::chrono::seconds>(
+            replay_mode == replay_mode_t::replay
+            ? std::chrono::seconds( 0 )
+            : std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now() - g->time_of_last_load );
         std::chrono::seconds total_time_played = g->time_played_at_last_load + time_since_load;
         get_event_bus().send<event_type::game_over>( total_time_played );
@@ -521,6 +526,16 @@ void game::handle_progress_ui()
 
 bool game::do_turn()
 {
+    // If a replay's input log has drained, save and request quit before doing
+    // any more simulation. Checked at the top of every turn so it fires no matter
+    // which input path drained the log (avatar action loop, a modal menu, a
+    // query); a single in-loop check missed cases where the avatar loop was not
+    // re-entered. One-shot, so it only triggers the save once.
+    if( input_replay::replay_just_finished() ) {
+        save();
+        uquit = QUIT_SAVED;
+    }
+
     if( is_game_over() ) {
         return turn_handler::cleanup_at_end();
     }

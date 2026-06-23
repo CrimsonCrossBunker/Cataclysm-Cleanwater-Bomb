@@ -60,6 +60,7 @@
 #include "horde_entity.h"
 #include "input.h"
 #include "input_context.h"
+#include "input_replay.h"
 #include "json.h"
 #include "line.h"
 #include "loading_ui.h"
@@ -6608,6 +6609,16 @@ void input_manager::pump_events()
 // is simply a wrapper around this.
 input_event input_manager::get_input_event( const keyboard_mode preferred_keyboard_mode )
 {
+    // Replay takes precedence over the test_mode guard: a replaying session
+    // sources input from the log instead of polling SDL.
+    if( input_replay::is_replaying() ) {
+        input_event replayed;
+        if( input_replay::try_replay( replayed ) ) {
+            previously_pressed_key = replayed.get_first_input();
+            return replayed;
+        }
+        // Replay log exhausted: fall through to normal polling.
+    }
     if( test_mode ) {
         // input should be skipped in caller's code
         throw std::runtime_error( "input_manager::get_input_event called in test mode" );
@@ -6696,6 +6707,7 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     }
 #endif
 
+    input_replay::on_record( last_input );
     return last_input;
 }
 
