@@ -74,8 +74,11 @@
     <ClCompile Condition="!$(Configuration.Contains(NoTiles))">
       <PreprocessorDefinitions>USE_SDL3;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Condition="$(Configuration.Contains(NoTiles))">
+    <ClCompile Condition="$(Configuration.Contains(NoTiles)) And !$(Configuration.Contains(Headless))">
       <PreprocessorDefinitions>USE_PDCURSES;PDC_NCMOUSE;PDC_WIDE;IMTUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Condition="$(Configuration.Contains(Headless))">
+      <PreprocessorDefinitions>HEADLESS;IMTUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Condition="$(_CDDA_BACKTRACE)">
       <PreprocessorDefinitions>BACKTRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -151,7 +154,7 @@
         Winmm.lib;
         %(AdditionalDependencies)
       </AdditionalDependencies>
-      <AdditionalDependencies Condition="$(Configuration.Contains(NoTiles))">
+      <AdditionalDependencies Condition="$(Configuration.Contains(NoTiles)) And !$(Configuration.Contains(Headless))">
         pdcurses.lib;
         %(AdditionalDependencies)
       </AdditionalDependencies>

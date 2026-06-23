@@ -37,12 +37,20 @@
       <Configuration>Debug-NoTiles</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-NoTilesHeadless|x64">
+      <Configuration>Debug-NoTilesHeadless</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release-NoTiles|x64">
       <Configuration>Release-NoTiles</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-NoTilesHeadless|x64">
+      <Configuration>Release-NoTilesHeadless</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -76,6 +84,11 @@
     <ClCompile Include="..\src\third-party\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\src\third-party\imtui\imtui-impl-ncurses.cpp">
       <ExcludedFromBuild Condition="!$(Configuration.Contains(NoTiles))">true</ExcludedFromBuild>
+      <!-- Headless (the *-NoTilesHeadless configs) replaces the ncurses platform
+           layer with the in-memory shim in src/platform_headless.cpp, so exclude
+           the real one. Configuration is an intrinsic property, so this works
+           even though this ItemGroup precedes the Cataclysm-common.props import. -->
+      <ExcludedFromBuild Condition="$(Configuration.Contains(Headless))">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\src\third-party\imtui\imtui-impl-text.cpp">
       <ExcludedFromBuild Condition="!$(Configuration.Contains(NoTiles))">true</ExcludedFromBuild>
@@ -133,6 +146,32 @@
     <VcpkgHostTriplet>$(VcpkgTriplet)</VcpkgHostTriplet>
     <VcpkgConfiguration>$(Configuration)</VcpkgConfiguration>
   </PropertyGroup>
+  <!-- NoTiles configs were missing a static-triplet pin, so vcpkg fell back to
+       the default dynamic triplet (x64-windows) and tried a from-scratch
+       network rebuild of deps. Mirror the static pin used by the other x64
+       configs. (Pre-existing gap, surfaced by the headless NoTiles build.) -->
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug-NoTiles|x64'">
+    <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
+    <VcpkgHostTriplet>$(VcpkgTriplet)</VcpkgHostTriplet>
+    <VcpkgConfiguration>$(Configuration)</VcpkgConfiguration>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release-NoTiles|x64'">
+    <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
+    <VcpkgHostTriplet>$(VcpkgTriplet)</VcpkgHostTriplet>
+    <VcpkgConfiguration>$(Configuration)</VcpkgConfiguration>
+  </PropertyGroup>
+  <!-- Headless variants share the same static triplet (and reuse the NoTiles
+       installed deps; vcpkg keys the install dir on triplet, not config name). -->
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug-NoTilesHeadless|x64'">
+    <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
+    <VcpkgHostTriplet>$(VcpkgTriplet)</VcpkgHostTriplet>
+    <VcpkgConfiguration>$(Configuration)</VcpkgConfiguration>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Release-NoTilesHeadless|x64'">
+    <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
+    <VcpkgHostTriplet>$(VcpkgTriplet)</VcpkgHostTriplet>
+    <VcpkgConfiguration>$(Configuration)</VcpkgConfiguration>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -150,7 +189,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug-NoTiles'">
+  <ItemDefinitionGroup Condition="$(Configuration.StartsWith('Debug-NoTiles'))">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -175,7 +214,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release-NoTiles'">
+  <ItemDefinitionGroup Condition="$(Configuration.StartsWith('Release-NoTiles'))">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>

@@ -348,6 +348,70 @@ if (CURSES)
     endif()
 endif ()
 
+# Build headless version if requested. Mirrors the curses build but links no
+# terminal/SDL backend: the in-memory ImTui text renderer (third-party imtui
+# headless variant) plus src/platform_headless.cpp supply the present layer.
+if (HEADLESS)
+    add_library(cataclysm-common OBJECT
+            ${CATACLYSM_DDA_SOURCES}
+            ${CATACLYSM_DDA_HEADERS})
+    target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(cataclysm-common PUBLIC third-party)
+    target_compile_definitions(cataclysm-common PUBLIC HEADLESS)
+
+    add_executable(cataclysm
+            ${MAIN_CPP}
+            ${MESSAGES_CPP})
+
+    add_dependencies(cataclysm-common get_version)
+    target_link_libraries(cataclysm PRIVATE cataclysm-common)
+
+    if (LOCALIZE)
+        target_include_directories(cataclysm-common PUBLIC
+                ${LIBINTL_INCLUDE_DIR}
+                ${ICONV_INCLUDE_DIR})
+        target_link_libraries(cataclysm-common PUBLIC
+                ${LIBINTL_LIBRARIES}
+                ${ICONV_LIBRARIES})
+    endif ()
+
+    if (CMAKE_USE_PTHREADS_INIT)
+        target_compile_options(cataclysm-common PUBLIC "-pthread")
+    endif ()
+
+    if (CMAKE_THREAD_LIBS_INIT)
+        target_link_libraries(cataclysm-common PUBLIC ${CMAKE_THREAD_LIBS_INIT})
+    endif ()
+
+    if (WIN32)
+        target_link_libraries(cataclysm-common PUBLIC gdi32.lib)
+        target_link_libraries(cataclysm-common PUBLIC winmm.lib)
+        target_link_libraries(cataclysm-common PUBLIC imm32.lib)
+        target_link_libraries(cataclysm-common PUBLIC ole32.lib)
+        target_link_libraries(cataclysm-common PUBLIC oleaut32.lib)
+        target_link_libraries(cataclysm-common PUBLIC version.lib)
+        if (BACKTRACE)
+            target_link_libraries(cataclysm-common PUBLIC dbghelp.lib)
+        endif ()
+    elseif (APPLE)
+        target_link_libraries(cataclysm-common PUBLIC "-framework CoreFoundation")
+    endif ()
+
+    if (LIBBACKTRACE)
+        target_link_libraries(cataclysm-common PUBLIC backtrace)
+    endif ()
+
+    if (RELEASE)
+        install(TARGETS cataclysm RUNTIME)
+    endif ()
+
+    if (TARGET ZLIB::ZLIB)
+        target_link_libraries(cataclysm-common PUBLIC ZLIB::ZLIB)
+    else()
+        target_link_libraries(cataclysm-common PUBLIC ${ZLIB_LIBRARIES})
+    endif()
+endif ()
+
 if (MINGW AND NOT RELEASE)
     # Try to Install shared libraries for dev builds
     # Note: It is specific to MSYS2 and uses hardcoded versions so

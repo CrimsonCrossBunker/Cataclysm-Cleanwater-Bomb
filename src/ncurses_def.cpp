@@ -1,4 +1,4 @@
-#if !(defined(TILES))
+#if !(defined(TILES)) && !defined(HEADLESS)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 

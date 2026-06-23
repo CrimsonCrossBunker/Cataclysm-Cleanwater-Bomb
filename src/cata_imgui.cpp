@@ -24,7 +24,20 @@ static ImGuiKey cata_key_to_imgui( int cata_key );
 #ifdef TUI
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#if defined(HEADLESS)
+// Headless has no terminal and thus no curses header. cata_imgui only needs a
+// few curses mouse constants below to build ImTui mouse events, which the
+// headless ImTui platform shim discards. Define them locally instead of
+// pulling in <curses.h>. BUTTON5_PRESSED is intentionally left undefined so the
+// mousewheel branch compiles out.
+#  define KEY_MOUSE        0x199
+#  define BUTTON1_PRESSED  0x0002
+#  define BUTTON1_RELEASED 0x0001
+#  define BUTTON3_PRESSED  0x0800
+#  define BUTTON3_RELEASED 0x0400
+#else
 #include <curses.h>
+#endif
 #pragma GCC diagnostic pop
 #include <imtui/imtui-impl-ncurses.h>
 #include <imtui/imtui-impl-text.h>

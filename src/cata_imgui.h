@@ -13,7 +13,7 @@ class nc_color;
 struct input_event;
 using ImGuiInputTextFlags = int;
 
-#if defined(IMTUI) || !(defined(WIN32) || defined(TILES))
+#if defined(IMTUI) || defined(HEADLESS) || !(defined(WIN32) || defined(TILES))
     #define TUI
 #endif
 

@@ -193,6 +193,59 @@ if (TILES)
                 )
 endif ()
 
+# ImTUI (headless): reuse Dear ImGui + the in-memory text renderer, but NOT
+# imtui-impl-ncurses.cpp (the terminal driver). The ImTui_ImplNcurses_* symbols
+# are provided instead by src/platform_headless.cpp. No curses dependency.
+if (HEADLESS)
+        add_library(
+                imtui
+                STATIC
+                imgui/imconfig.h
+                imgui/imgui.cpp
+                imgui/imgui.h
+                imgui/imgui_demo.cpp
+                imgui/imgui_draw.cpp
+                imgui/imgui_internal.h
+                imgui/imgui_stdlib.cpp
+                imgui/imgui_stdlib.h
+                imgui/imgui_tables.cpp
+                imgui/imgui_widgets.cpp
+                imtui/imtui-impl-text.cpp
+                imtui/imtui-impl-text.h
+                imtui/imtui.h
+                )
+
+        target_include_directories(
+                imtui
+                SYSTEM
+                PUBLIC
+                ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+        target_include_directories(
+                imtui
+                PRIVATE
+                ${CATA_REPO_ROOT}/src
+        )
+        target_compile_options(
+                imtui
+                PRIVATE
+                -w
+                )
+
+        target_compile_definitions(
+                imtui
+                PUBLIC
+                IMTUI
+                HEADLESS
+                )
+
+        target_link_libraries(
+                third-party
+                INTERFACE
+                imtui
+                )
+endif ()
+
 # ImTUI
 if (CURSES)
         add_library(

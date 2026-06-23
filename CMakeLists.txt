@@ -20,6 +20,7 @@ set(CMAKE_TLS_VERIFY ON)
 # Build options
 include(CMakeDependentOption)
 option(CURSES "Build curses version." "ON")
+option(HEADLESS "Build headless version (no terminal/SDL; in-memory ImTui text renderer). For tests, replay, and server." "OFF")
 option(SOUND "Support for in-game sounds & music." "OFF")
 option(BACKTRACE "Support for printing stack backtraces on crash" "ON")
 option(LIBBACKTRACE "Print backtrace with libbacktrace." "OFF")
@@ -165,6 +166,14 @@ if (TILES)
     set(CURSES OFF)
 endif ()
 
+# Headless reuses the ImTui text renderer but needs neither real ncurses nor
+# SDL. It is mutually exclusive with both other backends.
+if (HEADLESS)
+    set(CURSES OFF)
+    set(TILES OFF)
+    add_definitions(-DHEADLESS)
+endif ()
+
 # Can't use both home and xdg directories
 if (USE_XDG_DIR)
     set(USE_HOME_DIR OFF)
@@ -218,6 +227,7 @@ message(STATUS "DYNAMIC_LINKING               : ${DYNAMIC_LINKING}")
 message(STATUS "TILES                         : ${TILES}")
 message(STATUS "USE_SDL3                      : ${USE_SDL3}")
 message(STATUS "CURSES                        : ${CURSES}")
+message(STATUS "HEADLESS                      : ${HEADLESS}")
 message(STATUS "SOUND                         : ${SOUND}")
 message(STATUS "BACKTRACE                     : ${BACKTRACE}")
 message(STATUS "LOCALIZE                      : ${LOCALIZE}")

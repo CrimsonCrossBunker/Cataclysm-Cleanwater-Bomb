@@ -65,7 +65,7 @@ class input_context
         std::shared_ptr<input_context_handle> handle{ new input_context_handle{this} };
 
     public:
-#if defined(__ANDROID__) || defined(TILES)
+#if defined(__ANDROID__) || defined(TILES) || defined(IMTUI) || defined(HEADLESS)
         // Whatever's on top is our current input context.
         static input_context_stack_impl input_context_stack;
 #endif

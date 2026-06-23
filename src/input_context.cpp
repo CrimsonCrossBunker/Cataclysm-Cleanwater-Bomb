@@ -192,7 +192,7 @@ void input_context_stack_impl::push( std::shared_ptr<input_context_handle> const
     stack.push_back( context );
 }
 
-#if defined(__ANDROID__) || defined(TILES)
+#if defined(__ANDROID__) || defined(TILES) || defined(IMTUI) || defined(HEADLESS)
     input_context_stack_impl input_context::input_context_stack;
 #endif
 
