@@ -84,6 +84,8 @@
 class JsonObject;
 
 static const std::string GUN_MODE_VAR_NAME( "item::mode" );
+static const std::string EOC_CABLE_RELOCATION_TURN_VAR( "eoc_cable_relocation_turn" );
+static constexpr int EOC_CABLE_RELOCATION_TURNS = 100;
 
 static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_bolt( "bolt" );
@@ -3839,6 +3841,18 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
     }
 
     const bool last_t_abs_pos_is_oob = !here.inbounds( link().t_abs_pos );
+    const int current_turn = to_turns<int>( calendar::turn - calendar::turn_zero );
+    const bool has_eoc_relocation = has_var( EOC_CABLE_RELOCATION_TURN_VAR );
+    int eoc_relocation_turn = static_cast<int>( get_var( EOC_CABLE_RELOCATION_TURN_VAR, -1 ) );
+    if( has_eoc_relocation && eoc_relocation_turn < 0 ) {
+        eoc_relocation_turn = current_turn + EOC_CABLE_RELOCATION_TURNS;
+        set_var( EOC_CABLE_RELOCATION_TURN_VAR, eoc_relocation_turn );
+    }
+    const bool is_eoc_relocation = has_eoc_relocation &&
+                                   eoc_relocation_turn >= current_turn;
+    if( has_eoc_relocation && !is_eoc_relocation ) {
+        erase_var( EOC_CABLE_RELOCATION_TURN_VAR );
+    }
 
     // Lambda function for checking if a cable has been stretched too long, resetting it if so.
     // @return True if the cable is disconnected.
@@ -3880,6 +3894,10 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
                 // reconnect when the target submap loads back in.
                 return false;
             }
+            if( is_eoc_relocation ) {
+                return false;
+            }
+            erase_var( EOC_CABLE_RELOCATION_TURN_VAR );
             return reset_link( true, carrier, -2, true, pos );
         }
         if( debug_mode ) {
@@ -3891,6 +3909,22 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
 
     // Regular pointers are faster, so make one now that we know the reference is valid.
     vehicle *t_veh = link().t_veh.get();
+
+    // copy_location moves map items before matching vehicle EOCs run.  During
+    // that interval t_abs_pos already names the destination, while t_veh may
+    // still point to the vehicle at the source.  Prefer the translated target
+    // during the short relocation window.
+    if( is_eoc_relocation && link().t_abs_pos != t_veh->pos_abs() ) {
+        if( vehicle *translated_veh = vehicle::find_vehicle( here, link().t_abs_pos ) ) {
+            link().t_veh = translated_veh->get_safe_reference();
+            t_veh = translated_veh;
+        } else {
+            return false;
+        }
+    }
+    if( is_eoc_relocation ) {
+        erase_var( EOC_CABLE_RELOCATION_TURN_VAR );
+    }
 
     // We should skip processing if the last saved target point is out of bounds, since vehicles give innacurate absolute coordinates when out of bounds.
     // However, if the linked vehicle is moving fast enough, we should always do processing to avoid erroneously skipping linked items riding inside of it.

@@ -5193,6 +5193,48 @@ talk_effect_fun_t::func f_revert_location( const JsonObject &jo, std::string_vie
     };
 }
 
+static const std::string EOC_CABLE_RELOCATION_TURN_VAR( "eoc_cable_relocation_turn" );
+
+static void translate_linked_items( visitable &items, const tripoint_rel_ms &offset )
+{
+    items.visit_items( [&]( item *it, item * ) {
+        if( it->has_link_data() && !it->has_no_links() &&
+            it->link().t_abs_pos != tripoint_abs_ms::invalid ) {
+            it->link().t_abs_pos += offset;
+            it->link().s_bub_pos = tripoint_bub_ms::invalid;
+            it->set_var( EOC_CABLE_RELOCATION_TURN_VAR, -1 );
+        }
+        return VisitResponse::NEXT;
+    } );
+}
+
+static void translate_vehicle_linked_items( vehicle &veh, const tripoint_rel_ms &offset )
+{
+    for( const vpart_reference &vpr : veh.get_all_parts() ) {
+        for( item &it : veh.get_items( veh.part( vpr.part_index() ) ) ) {
+            translate_linked_items( it, offset );
+        }
+    }
+    for( const rider_data &rider : veh.get_riders() ) {
+        if( rider.psg != nullptr ) {
+            if( Character *character = rider.psg->as_character() ) {
+                translate_linked_items( *character, offset );
+            }
+        }
+    }
+}
+
+static void translate_submap_linked_items( submap &sm, const tripoint_rel_ms &offset )
+{
+    for( int x = 0; x < SEEX; x++ ) {
+        for( int y = 0; y < SEEY; y++ ) {
+            for( item &it : sm.get_items( point_sm_ms( x, y ) ) ) {
+                translate_linked_items( it, offset );
+            }
+        }
+    }
+}
+
 talk_effect_fun_t::func f_copy_location( const JsonObject &jo, std::string_view member,
         std::string_view )
 {
@@ -5213,6 +5255,8 @@ talk_effect_fun_t::func f_copy_location( const JsonObject &jo, std::string_view 
         // maptile is 4 submaps so queue up 4 submap reverts
         const tripoint_abs_sm revert_sm_base = project_to<coords::sm>( omt_pos );
         const tripoint_abs_sm new_sm_base = project_to<coords::sm>( omt_pos_new );
+        const tripoint_rel_ms copy_offset = project_to<coords::ms>( omt_pos_new ) -
+                                            project_to<coords::ms>( omt_pos );
         if( !MAPBUFFER.submap_exists( new_sm_base ) ) {
             tinymap tm;
             // This creates the submaps if they didn't already exist.
@@ -5226,9 +5270,11 @@ talk_effect_fun_t::func f_copy_location( const JsonObject &jo, std::string_view 
 
                 const tripoint_abs_sm revert_sm = revert_sm_base + point( x, y );
                 submap *sm = MAPBUFFER.lookup_submap( revert_sm );
+                submap copied_submap = sm->get_revert_submap();
+                translate_submap_linked_items( copied_submap, copy_offset );
                 get_timed_events().add( timed_event_type::REVERT_SUBMAP, tif, -1,
                                         project_to<coords::ms>( new_sm ), 0, "",
-                                        sm->get_revert_submap(), key.evaluate( d ) );
+                                        std::move( copied_submap ), key.evaluate( d ) );
             }
         }
         // We need to copy the translocator to target omt pos if it exists
@@ -8121,8 +8167,12 @@ talk_effect_fun_t::func f_teleport( const JsonObject &jo, std::string_view membe
         tripoint_abs_ms target_pos = read_var_value( target_var, d ).tripoint();
         Creature *teleporter = d.actor( is_npc )->get_creature();
         if( teleporter ) {
+            const tripoint_abs_ms old_pos = teleporter->pos_abs();
             if( teleport::teleport_to_point( *teleporter, get_map().get_bub( target_pos ), true, false,
                                              false, force, force_safe ) ) {
+                if( Character *character = teleporter->as_character() ) {
+                    translate_linked_items( *character, character->pos_abs() - old_pos );
+                }
                 teleporter->add_msg_if_player( success_message.evaluate( d ) );
             } else {
                 teleporter->add_msg_if_player( fail_message.evaluate( d ) );
@@ -8130,13 +8180,17 @@ talk_effect_fun_t::func f_teleport( const JsonObject &jo, std::string_view membe
         }
         item_location *it = d.actor( is_npc )->get_item();
         if( it && it->get_item() ) {
-            map_add_item( *it->get_item(), target_pos );
+            item moved_item = *it->get_item();
+            translate_linked_items( moved_item, target_pos - it->pos_abs() );
+            map_add_item( moved_item, target_pos );
             add_msg( success_message.evaluate( d ) );
             it->remove_item();
         }
         vehicle *veh = d.actor( is_npc )->get_vehicle();
         if( veh ) {
+            const tripoint_abs_ms old_pos = veh->pos_abs();
             if( teleport::teleport_vehicle( *veh, target_pos, force ) ) {
+                translate_vehicle_linked_items( *veh, veh->pos_abs() - old_pos );
                 add_msg( success_message.evaluate( d ) );
             } else {
                 add_msg( fail_message.evaluate( d ) );
