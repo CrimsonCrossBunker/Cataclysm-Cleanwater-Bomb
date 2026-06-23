@@ -8821,22 +8821,127 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
         }
     }
 
-    // Advance cooking turn by turn until we run out of elapsed time, items, or power.
-    while( turns_left > 0 ) {
-        size_t cookable_index = 0;
-        item *current = auto_cooker_current_item( vp, cookable_index );
+    // Gather all unfinished cookable items in one scan.
+    struct pending_item {
+        item *it;
+        int target_energy_kj;
+        int target_time_turns;
+        int new_energy_done;
+        int new_time_done;
+        bool finished;
+    };
+    std::vector<pending_item> pending;
+    pending.reserve( 64 );
 
-        if( current == nullptr ) {
-            vp.enabled = false;
-            return;
+    {
+        vehicle_stack items = get_items( vp );
+        size_t cookable_index = 0;
+        for( item &it : items ) {
+            if( !is_auto_cookable( it ) ) {
+                continue;
+            }
+            const islot_comestible &comest = *it.get_comestible();
+            const int target_energy_kj = units::to_kilojoule<int>(
+                                             auto_cooker_target_energy( comest, cookable_index ) );
+            const int target_time_turns = to_turns<int>(
+                                              auto_cooker_target_time( comest, cookable_index ) );
+            const int energy_done = std::stoi( it.get_var( "cook_energy_done", "0" ) );
+            const int time_done = std::stoi( it.get_var( "cook_time_done", "0" ) );
+
+            if( energy_done < target_energy_kj || time_done < target_time_turns ) {
+                pending.push_back( { &it, target_energy_kj, target_time_turns,
+                                     energy_done, time_done, false } );
+            }
+            ++cookable_index;
+        }
+    }
+
+    if( pending.empty() ) {
+        vp.enabled = false;
+        return;
+    }
+
+    // Determine how much energy we can spend without over-discharging.
+    const int battery_remaining = connected_battery_power_level( here ).first;
+    int64_t energy_budget = battery_remaining;
+    int64_t total_energy_to_consume = 0;
+
+    // Simulate cooking in item-sized chunks instead of turn-by-turn.
+    for( pending_item &pi : pending ) {
+        while( turns_left > 0 && energy_budget > 0 ) {
+            const int remaining_energy = pi.target_energy_kj - pi.new_energy_done;
+            const int remaining_turns = pi.target_time_turns - pi.new_time_done;
+
+            if( remaining_energy <= 0 && remaining_turns <= 0 ) {
+                pi.finished = true;
+                break;
+            }
+
+            if( remaining_turns <= 0 ) {
+                // Time requirement already met; just pay the remaining energy.
+                const int energy_to_use = std::min( remaining_energy,
+                                                    static_cast<int>( energy_budget ) );
+                pi.new_energy_done += energy_to_use;
+                energy_budget -= energy_to_use;
+                total_energy_to_consume += energy_to_use;
+                if( pi.new_energy_done >= pi.target_energy_kj ) {
+                    pi.new_time_done = std::max( pi.new_time_done, 1 );
+                    pi.finished = true;
+                }
+                break;
+            }
+
+            const int max_turns = std::min( turns_left, remaining_turns );
+            const int energy_per_turn = std::max( 1, remaining_energy / remaining_turns );
+            const int energy_for_max_turns = std::min( energy_per_turn * max_turns, remaining_energy );
+
+            if( energy_for_max_turns <= energy_budget ) {
+                // Enough energy to advance this item by the full turn budget.
+                pi.new_energy_done += energy_for_max_turns;
+                pi.new_time_done += max_turns;
+                energy_budget -= energy_for_max_turns;
+                total_energy_to_consume += energy_for_max_turns;
+                turns_left -= max_turns;
+                // Loop again to handle any remaining energy if time just ran out.
+            } else {
+                // Energy limited: advance only as many turns as we can afford.
+                const int affordable_turns = static_cast<int>( energy_budget / energy_per_turn );
+                if( affordable_turns > 0 ) {
+                    int energy_to_use = affordable_turns * energy_per_turn;
+                    energy_to_use = std::min( energy_to_use, remaining_energy );
+                    pi.new_energy_done += energy_to_use;
+                    pi.new_time_done += affordable_turns;
+                    energy_budget -= energy_to_use;
+                    total_energy_to_consume += energy_to_use;
+                    turns_left -= affordable_turns;
+                } else {
+                    // Not enough energy for a full turn; consume the leftover energy
+                    // without advancing time, matching original out-of-power behavior.
+                    const int leftover = std::min( static_cast<int>( energy_budget ), remaining_energy );
+                    pi.new_energy_done += leftover;
+                    energy_budget -= leftover;
+                    total_energy_to_consume += leftover;
+                }
+                break;
+            }
         }
 
-        bool out_of_power = false;
-        advance_auto_cooker_item_once( *current, cookable_index, *this, here, out_of_power );
-        --turns_left;
+        if( pi.new_energy_done >= pi.target_energy_kj && pi.new_time_done >= pi.target_time_turns ) {
+            pi.finished = true;
+        }
+    }
 
-        if( out_of_power ) {
-            return;
+    // Discharge the battery once for the whole catch-up period.
+    if( total_energy_to_consume > 0 ) {
+        discharge_battery( here, static_cast<int>( total_energy_to_consume ) );
+    }
+
+    // Apply computed progress to the actual items.
+    for( pending_item &pi : pending ) {
+        pi.it->set_var( "cook_energy_done", std::to_string( pi.new_energy_done ) );
+        pi.it->set_var( "cook_time_done", std::to_string( pi.new_time_done ) );
+        if( pi.finished ) {
+            finish_auto_cooked_item( *pi.it, *pi.it->get_comestible() );
         }
     }
 }
