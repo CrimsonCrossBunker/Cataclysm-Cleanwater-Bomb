@@ -593,7 +593,7 @@ class map
         // helpers.  This used to live in the tiles draw path (memorize_only); it
         // now runs in do_turn so rendering can become pure-read.  Must be called
         // after the map cache is built and before the visibility cache is
-        // invalidated.  See sim-render-decoupling-plan.md §1.
+        // invalidated.
         void update_map_memory( avatar &you );
 
         /**
@@ -1113,7 +1113,7 @@ class map
         // Sim-side tile orientation helpers (Stage 1 of sim/render decoupling).
         // Extracted from cata_tiles so the memory-update pass in do_turn can
         // compute subtile/rotation when memorising seen tiles, without depending
-        // on the tiles subsystem.  See sim-render-decoupling-plan.md §1.
+        // on the tiles subsystem.
         // -----------------------------------------------------------------------
         // Pure-math rotation helpers (no map state needed).
         static void get_rotation_and_subtile( char val, char rot_to, int &rotation, int &subtile );
