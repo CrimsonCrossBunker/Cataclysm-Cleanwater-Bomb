@@ -11,6 +11,7 @@
 #include <list>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <queue>
 #include <set>
 #include <sstream>
@@ -270,7 +271,7 @@ void vehicle::apply_color_palette( const vehicle_prototype &proto )
     if( !proto.color_palette.is_valid() || proto.color_match.empty() ) {
         return;
     }
-    const std::vector<RGBColor> colors = proto.color_palette->pick_colors();
+    const std::vector<std::optional<RGBColor>> colors = proto.color_palette->pick_colors();
     if( colors.empty() ) {
         return;
     }
@@ -280,8 +281,10 @@ void vehicle::apply_color_palette( const vehicle_prototype &proto )
             continue;
         }
         const int idx = it->second;
-        if( idx >= 0 && idx < static_cast<int>( colors.size() ) ) {
-            vp.set_color( colors[idx], colors[idx] );
+        // idx indexes color groups 1:1 (see VehiclePalette::pick_colors); a group
+        // that rolled no color leaves an empty slot, so skip painting that part.
+        if( idx >= 0 && idx < static_cast<int>( colors.size() ) && colors[idx] ) {
+            vp.set_color( *colors[idx], *colors[idx] );
         }
     }
 }
