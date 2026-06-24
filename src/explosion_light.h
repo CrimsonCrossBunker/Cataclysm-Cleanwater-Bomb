@@ -90,7 +90,7 @@ struct explosion_light {
         // bright almost immediately rather than easing in).
         float rise = 0.05f;
         // Quick alpha fall when wave 3 (the clear wave) reaches a tile — the fast
-        // "变透明" dissipation.
+        // fade-to-transparent dissipation.
         float fade = 0.1f;
         // Short window over which the hue blends color_a -> color_b at wave 2.
         float blend = 0.05f;
