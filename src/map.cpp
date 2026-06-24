@@ -101,6 +101,7 @@
 #include "trap.h"
 #include "ui_manager.h"
 #include "units.h"
+#include "units_utility.h"
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
@@ -474,6 +475,176 @@ void map::memory_clear_vehicle_points( const vehicle &veh ) const
         }
         memory_cache_dec_set_dirty( get_bub( p ), true );
         player_character.memorize_clear_decoration( p, "vp_" );
+    }
+}
+
+namespace
+{
+// Sim-side replicas of the per-tile memorise side effects that used to live in
+// cata_tiles::draw_* under memorize_only=true.  Each writes player map memory
+// for one category; orientation comes from the map:: helpers extracted in
+// Stage 1.  The render-only override paths are intentionally omitted: the
+// memorise pass always ran after all tile overrides were voided, so the
+// override branches were dead there.
+
+void memorize_terrain_at( map &here, avatar &you, const tripoint_bub_ms &p,
+                          const std::array<bool, 5> &invisible )
+{
+    const ter_id &t = here.ter( p );
+    if( !t || invisible[0] ) {
+        return;
+    }
+    const std::string &tname = t.id().str();
+    int subtile = 0;
+    int rotation = 0;
+    const std::bitset<NUM_TERCONN> &connect_group = t.obj().connect_to_groups;
+    const std::bitset<NUM_TERCONN> &rotate_group = t.obj().rotate_to_groups;
+    if( connect_group.any() ) {
+        map::get_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
+        // re-memorize previously seen terrain in case new connections have been seen
+        here.memory_cache_ter_set_dirty( p, true );
+    } else {
+        map::get_terrain_orientation( p, rotation, subtile, {}, invisible, rotate_group );
+    }
+    if( here.memory_cache_ter_is_dirty( p ) ) {
+        you.memorize_terrain( here.get_abs( p ), tname, subtile, rotation );
+    }
+}
+
+void memorize_furniture_at( map &here, avatar &you, const tripoint_bub_ms &p,
+                            const std::array<bool, 5> &invisible )
+{
+    const furn_id &f = here.furn( p );
+    if( !f || invisible[0] ) {
+        return;
+    }
+    const std::array<int, 4> neighborhood = {
+        static_cast<int>( here.furn( p + point::south ) ),
+        static_cast<int>( here.furn( p + point::east ) ),
+        static_cast<int>( here.furn( p + point::west ) ),
+        static_cast<int>( here.furn( p + point::north ) )
+    };
+    int subtile = 0;
+    int rotation = 0;
+    const std::bitset<NUM_TERCONN> &connect_group = f.obj().connect_to_groups;
+    const std::bitset<NUM_TERCONN> &rotate_group = f.obj().rotate_to_groups;
+    if( connect_group.any() ) {
+        map::get_furn_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
+    } else {
+        map::get_tile_values_with_ter( p, f.to_i(), neighborhood, subtile, rotation, rotate_group );
+    }
+    const std::string &fname = f.id().str();
+    if( !( you.get_grab_type() == object_type::FURNITURE && p == you.pos_bub() + you.grab_point )
+        && here.memory_cache_dec_is_dirty( p ) ) {
+        you.memorize_decoration( here.get_abs( p ), fname, subtile, rotation );
+    }
+}
+
+void memorize_trap_at( map &here, avatar &you, const tripoint_bub_ms &p,
+                       const std::array<bool, 5> &invisible )
+{
+    const trap &tr = here.tr_at( p );
+    if( tr.is_null() || invisible[0] || !tr.can_see( p, you ) ) {
+        return;
+    }
+    const std::array<int, 4> neighborhood = {
+        static_cast<int>( here.tr_at( p + point::south ).loadid ),
+        static_cast<int>( here.tr_at( p + point::east ).loadid ),
+        static_cast<int>( here.tr_at( p + point::west ).loadid ),
+        static_cast<int>( here.tr_at( p + point::north ).loadid )
+    };
+    int subtile = 0;
+    int rotation = 0;
+    map::get_tile_values( tr.loadid.to_i(), neighborhood, subtile, rotation, 0 );
+    if( here.memory_cache_dec_is_dirty( p ) ) {
+        you.memorize_decoration( here.get_abs( p ), tr.loadid.id().str(), subtile, rotation );
+    }
+}
+
+void memorize_part_con_at( map &here, avatar &you, const tripoint_bub_ms &p,
+                           const std::array<bool, 5> &invisible )
+{
+    if( here.partial_con_at( p ) != nullptr && !invisible[0] ) {
+        if( here.memory_cache_dec_is_dirty( p ) ) {
+            you.memorize_decoration( here.get_abs( p ), tr_unfinished_construction.str(), 0, 0 );
+        }
+    }
+}
+
+void memorize_vpart_at( map &here, avatar &you, const tripoint_bub_ms &p,
+                        const std::array<bool, 5> &invisible )
+{
+    const optional_vpart_position ovp = here.veh_at( p );
+    if( !ovp || invisible[0] ) {
+        return;
+    }
+    const vehicle &veh = ovp->vehicle();
+    const vpart_display vd = veh.get_display_of_tile( ovp->mount_pos() );
+    if( vd.id.is_null() ) {
+        return;
+    }
+    const int subtile = vd.is_open ? open_ : vd.is_broken ? broken : 0;
+    const int rotation = angle_to_dir4( veh.face.dir() - 270_degrees );
+    if( !veh.forward_velocity() && !veh.player_in_control( here, you )
+        && !( you.get_grab_type() == object_type::VEHICLE
+              && veh.get_points().count( ( you.pos_abs() + you.grab_point ) ) )
+        && here.memory_cache_dec_is_dirty( p ) ) {
+        you.memorize_decoration( here.get_abs( p ), vd.get_tileset_id(), subtile, rotation );
+    }
+}
+} // namespace
+
+void map::update_map_memory( avatar &you )
+{
+    map &here = *this;
+    const visibility_variables &cache = here.get_visibility_variables_cache();
+    const tripoint_bub_ms you_pos = you.pos_bub( here );
+    // Limit the update area to the maximum view range, matching the render-path
+    // memorise loop: a (MAPSIZE-1)*SEE square anchored on the player's submap.
+    const point min_visible( you_pos.x() % SEEX, you_pos.y() % SEEY );
+    const point max_visible( ( you_pos.x() % SEEX ) + ( MAPSIZE - 1 ) * SEEX,
+                             ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
+    const int z = you.posz();
+    const level_cache &ch = here.access_cache( z );
+
+    // Mirrors cata_tiles::apply_visible: a neighbour is "invisible" for
+    // orientation purposes if it falls outside the view window or fails the
+    // visibility test (anything other than a CLEAR view).
+    const auto neighbour_invisible = [&]( const tripoint_bub_ms & np ) -> bool {
+        return np.y() < min_visible.y || np.y() > max_visible.y ||
+               np.x() < min_visible.x || np.x() > max_visible.x ||
+               here.get_visibility( ch.visibility_cache[np.x()][np.y()], cache ) !=
+               visibility_type::CLEAR;
+    };
+
+    // Memorize everything the character can currently see, even if it was not
+    // displayed this frame.
+    for( int mem_y = min_visible.y; mem_y <= max_visible.y; mem_y++ ) {
+        for( int mem_x = min_visible.x; mem_x <= max_visible.x; mem_x++ ) {
+            const tripoint_bub_ms p( mem_x, mem_y, z );
+            const lit_level lighting = ch.visibility_cache[p.x()][p.y()];
+            // Skip tiles that would have vision effects applied (i.e. not a
+            // CLEAR view); those are never memorized.
+            if( here.get_visibility( lighting, cache ) != visibility_type::CLEAR ) {
+                continue;
+            }
+            std::array<bool, 5> invisible;
+            invisible[0] = false;
+            for( int i = 0; i < 4; i++ ) {
+                invisible[1 + i] = neighbour_invisible( p + neighborhood[i] );
+            }
+            // Bypass the decoration cache check for terrain in case we learn
+            // something new about the terrain's connections.
+            memorize_terrain_at( here, you, p, invisible );
+            if( here.memory_cache_dec_is_dirty( p ) ) {
+                you.memorize_clear_decoration( here.get_abs( p ), "" );
+                memorize_furniture_at( here, you, p, invisible );
+                memorize_trap_at( here, you, p, invisible );
+                memorize_part_con_at( here, you, p, invisible );
+                memorize_vpart_at( here, you, p, invisible );
+                here.memory_cache_dec_set_dirty( p, false );
+            }
+        }
     }
 }
 

@@ -60,6 +60,7 @@ class window;
 } // namespace catacurses
 class Character;
 class Creature;
+class avatar;
 class basecamp;
 class character_id;
 class computer;
@@ -584,6 +585,16 @@ class map
         void memory_cache_ter_set_dirty( const tripoint_bub_ms &p, bool value ) const;
         // clears map memory for points occupied by vehicle and marks "dirty" for re-memorizing
         void memory_clear_vehicle_points( const vehicle &veh ) const;
+
+        // Sim-side map-memory update pass (Stage 1 of sim/render decoupling).
+        // Walks the avatar's current field of view and writes everything just
+        // seen into player map memory (terrain/furniture/trap/partial-construction/
+        // vehicle-part), computing subtile/rotation via the map:: orientation
+        // helpers.  This used to live in the tiles draw path (memorize_only); it
+        // now runs in do_turn so rendering can become pure-read.  Must be called
+        // after the map cache is built and before the visibility cache is
+        // invalidated.  See sim-render-decoupling-plan.md §1.
+        void update_map_memory( avatar &you );
 
         /**
          * A pre-filter for bresenham LOS.
