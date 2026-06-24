@@ -8,6 +8,7 @@
     "color": "brown_green",
     "move_cost": 2,
     "flags": [ "TRANSPARENT", "DIGGABLE", "FLAT", "PLOWABLE", "PLANTABLE" ],
+    "plant_data": { "transform": "f_cd_delight_fertile_seed" },
     "bash": {
       "sound": "thump",
       "ter_set": "t_dirt",

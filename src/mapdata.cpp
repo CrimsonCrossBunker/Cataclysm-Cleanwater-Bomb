@@ -1355,6 +1355,11 @@ void ter_t::load( const JsonObject &jo, const std::string &src )
         prying->load( jo.get_object( "prying" ) );
     }
 
+    if( jo.has_object( "plant_data" ) ) {
+        plant = cata::make_value<plant_data>();
+        plant->load( jo, "plant_data" );
+    }
+
     if( jo.has_object( "bash" ) ) {
         bool bash_loaded = !!bash;
         if( !bash_loaded ) {

@@ -713,6 +713,8 @@ struct ter_t : map_data_common_t {
     cata::value_ptr<activity_data_ter> oxytorch; // Oxytorch action data
     cata::value_ptr<activity_data_ter> prying;  // Prying action data
 
+    cata::value_ptr<plant_data> plant;
+
     std::string trap_id_str;     // String storing the id string of the trap.
     ter_str_id transforms_into; // Transform into what terrain?
     ter_str_id roof;            // What will be the floor above this terrain

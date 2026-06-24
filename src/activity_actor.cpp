@@ -314,7 +314,6 @@ static const furn_str_id furn_f_kiln_empty( "f_kiln_empty" );
 static const furn_str_id furn_f_kiln_metal_empty( "f_kiln_metal_empty" );
 static const furn_str_id furn_f_kiln_portable_empty( "f_kiln_portable_empty" );
 static const furn_str_id furn_f_metal_smoking_rack( "f_metal_smoking_rack" );
-static const furn_str_id furn_f_cd_delight_fertile_seed( "f_cd_delight_fertile_seed" );
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
 static const furn_str_id furn_f_safe_c( "f_safe_c" );
 static const furn_str_id furn_f_safe_o( "f_safe_o" );
@@ -420,7 +419,6 @@ static const ter_str_id ter_t_door_c( "t_door_c" );
 static const ter_str_id ter_t_door_locked_alarm( "t_door_locked_alarm" );
 static const ter_str_id ter_t_door_metal_c( "t_door_metal_c" );
 static const ter_str_id ter_t_door_metal_locked( "t_door_metal_locked" );
-static const ter_str_id ter_t_cd_delight_fertile_bed( "t_cd_delight_fertile_bed" );
 static const ter_str_id ter_t_greenhouse( "t_greenhouse" );
 static const ter_str_id ter_t_greenhouse_tilled( "t_greenhouse_tilled" );
 static const ter_str_id ter_t_stump( "t_stump" );
@@ -7200,10 +7198,11 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
             here.furn( examp )->plant != nullptr ) {
             here.furn_set( examp, here.furn( examp )->plant->transform );
         } else if( seed_id->seed->required_terrain_flag == ter_furn_flag::TFLAG_PLANTABLE ) {
+            const ter_t &terrain = here.ter( examp ).obj();
             if( here.ter( examp ).id() == ter_t_greenhouse_tilled ) {
                 here.set( examp, ter_t_greenhouse, furn_f_plant_seed );
-            } else if( here.ter( examp ).id() == ter_t_cd_delight_fertile_bed ) {
-                here.set( examp, ter_t_cd_delight_fertile_bed, furn_f_cd_delight_fertile_seed );
+            } else if( terrain.plant != nullptr ) {
+                here.set( examp, terrain.id, terrain.plant->transform );
             } else {
                 here.set( examp, ter_t_dirt, furn_f_plant_seed );
             }
