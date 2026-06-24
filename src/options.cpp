@@ -1881,8 +1881,8 @@ void options_manager::add_options_interface()
              to_translation( "Display the masses of vitamins in addition to units/RDA values in item descriptions." ),
              true );
         add( "MEASURE_PREFIX", page_id, to_translation( "Item measure prefix" ),
-             to_translation( "The measure unit of item prefix." ),
-        { { "both", to_translation( "Both measure unit and count" ) }, { "unit", to_translation( "Measure unit fist" ) }, { "count", to_translation( "Count only" ) } },
+             to_translation( "The measure unit of item prefix.  Both - both measure unit and count, e.g. '1kg,4'.  Unit - measure unit first, e.g. '1kg'.  Count - count only, e.g. '4'." ),
+        { { "both", to_translation( "Both" ) }, { "unit", to_translation( "Unit" ) }, { "count", to_translation( "Count" ) } },
         "both"
            );
     } );
