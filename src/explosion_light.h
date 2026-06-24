@@ -137,9 +137,9 @@ struct explosion_light {
 
         // --- Phase two: screen-space shockwave distortion --------------------
         // A CPU-driven refraction ring that warps the already-rendered frame at
-        // present time (see shockwave.h / the shockwave-distortion plan). Purely
-        // a visual add-on: when unsupported (curses, no RenderGeometryRaw) it is
-        // silently skipped and the light overlay still plays.
+        // present time (see shockwave.h). Purely a visual add-on: when unsupported
+        // (curses, no RenderGeometryRaw) it is silently skipped and the light
+        // overlay still plays.
         bool shockwave = false;
         // Peak UV displacement, as a fraction of a tile's size (converted to
         // pixels at blast time). 0 = no distortion.
