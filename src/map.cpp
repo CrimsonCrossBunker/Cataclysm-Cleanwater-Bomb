@@ -9458,6 +9458,8 @@ void map::grow_plant( const tripoint_bub_ms &p )
                                     ( ter_furn_flag::TFLAG_GROWTH_SEED ) );
     time_duration time_to_grow_to_this_stage = 0_seconds;
 
+    const float growth_multiplier = furn.plant->growth_multiplier;
+
     for( const auto &pair : growth_stages ) {
         if( has_flag_furn( pair.first.str(), p ) ) {
             current_stage = pair.first;
@@ -9466,7 +9468,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
             target_stage = pair.first;
         } // Don't break the loop for the case where time has been rewound.
         // Advance to the time of the next stage for the next iteration.
-        time_to_grow_to_this_stage += pair.second;
+        time_to_grow_to_this_stage += pair.second / growth_multiplier;
     }
 
     const auto check_flag = []( const std::string & to_check ) {

@@ -1,6 +1,21 @@
 [
   {
     "type": "construction_group",
+    "id": "cd_delight_build_fertile_bed",
+    "name": "建造沃土种植地"
+  },
+  {
+    "type": "construction_group",
+    "id": "cd_delight_build_paddy",
+    "name": "建造水田"
+  },
+  {
+    "type": "construction_group",
+    "id": "cd_delight_build_trellis",
+    "name": "建造种植架"
+  },
+  {
+    "type": "construction_group",
     "id": "tsow_dig_underbrush",
     "name": "挖掘灌木"
   },
@@ -8,6 +23,50 @@
     "type": "construction_group",
     "id": "tsow_plant_underbrush",
     "name": "种植灌木"
+  },
+  {
+    "type": "construction",
+    "id": "constr_cd_delight_fertile_bed",
+    "group": "cd_delight_build_fertile_bed",
+    "category": "FARM_WOOD",
+    "required_skills": [ [ "survival", 2 ] ],
+    "time": "40 m",
+    "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
+    "pre_terrain": "t_dirt",
+    "post_terrain": "t_cd_delight_fertile_bed",
+    "components": [
+      [ [ "tsow_fertile_soil", 50 ] ]
+    ]
+  },
+  {
+    "type": "construction",
+    "id": "constr_cd_delight_paddy",
+    "group": "cd_delight_build_paddy",
+    "category": "FARM_WOOD",
+    "required_skills": [ [ "survival", 1 ] ],
+    "time": "20 m",
+    "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
+    "pre_terrain": "t_cd_delight_fertile_bed",
+    "post_terrain": "f_cd_delight_paddy",
+    "components": [
+      [ [ "material_soil", 10 ] ],
+      [ [ "stick", 2 ] ]
+    ]
+  },
+  {
+    "type": "construction",
+    "id": "constr_cd_delight_trellis",
+    "group": "cd_delight_build_trellis",
+    "category": "FARM_WOOD",
+    "required_skills": [ [ "survival", 1 ] ],
+    "time": "15 m",
+    "qualities": [ [ { "id": "CUT", "level": 1 } ] ],
+    "pre_terrain": "t_cd_delight_fertile_bed",
+    "post_terrain": "f_cd_delight_trellis",
+    "components": [
+      [ [ "stick", 4 ] ],
+      [ [ "string_36", 1 ] ]
+    ]
   },
   {
     "type": "construction",

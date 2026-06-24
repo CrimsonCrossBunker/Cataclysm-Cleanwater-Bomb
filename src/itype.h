@@ -285,6 +285,10 @@ struct islot_comestible {
             return default_nutrition.kcal() / kcal_per_nutr;
         }
 
+        int get_fun() const {
+            return fun;
+        }
+
         /** The monster that is drawn from when the item rots away */
         rot_spawn_data rot_spawn;
 

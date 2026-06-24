@@ -693,7 +693,7 @@ double food_fun_eval( const_dialogue const &d, char /* scope */,
     if( !id->comestible ) {
         return 0;
     }
-    return id->comestible->fun;
+    return id->comestible->get_fun();
 }
 
 double item_rad_eval( const_dialogue const &d, char scope, std::vector<diag_value> const &params,

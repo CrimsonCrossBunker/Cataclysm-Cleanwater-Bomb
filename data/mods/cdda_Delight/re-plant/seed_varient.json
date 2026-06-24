@@ -1,0 +1,242 @@
+[
+  {
+    "id": "seed_hops_seedling",
+    "copy-from": "seed_hops",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "啤酒花苗" },
+    "description": "一株已经长出少量根系的啤酒花幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "18 days" },
+      { "GROWTH_SEEDLING": "18 days" },
+      { "GROWTH_MATURE": "18 days" },
+      { "GROWTH_HARVEST": "18 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_grapes_seedling",
+    "copy-from": "seed_grapes",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "name": { "str_sp": "葡萄苗" },
+    "description": "一株已经长出少量根系的葡萄幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_beans_seedling",
+    "copy-from": "seed_beans",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "豆苗" },
+    "description": "一株已经长出少量根系的豆苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_pea_seedling",
+    "copy-from": "seed_pea",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "豌豆苗" },
+    "description": "一株已经长出少量根系的豌豆幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "12 days" },
+      { "GROWTH_SEEDLING": "12 days" },
+      { "GROWTH_MATURE": "12 days" },
+      { "GROWTH_HARVEST": "12 days" },
+      { "GROWTH_OVERGROWN": "6 hours" }
+    ]
+  },
+  {
+    "id": "seed_cucumber_seedling",
+    "copy-from": "seed_cucumber",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "黄瓜苗" },
+    "description": "一株已经长出少量根系的黄瓜幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "9 days" },
+      { "GROWTH_SEEDLING": "9 days" },
+      { "GROWTH_MATURE": "9 days" },
+      { "GROWTH_HARVEST": "9 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_gherkin_seedling",
+    "copy-from": "seed_gherkin",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "腌黄瓜苗" },
+    "description": "一株已经长出少量根系的小黄瓜幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "9 days" },
+      { "GROWTH_SEEDLING": "9 days" },
+      { "GROWTH_MATURE": "9 days" },
+      { "GROWTH_HARVEST": "9 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_bottle_gourd_seedling",
+    "copy-from": "seed_bottle_gourd",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "葫芦苗" },
+    "description": "一株已经长出少量根系的葫芦幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "9 days" },
+      { "GROWTH_SEEDLING": "9 days" },
+      { "GROWTH_MATURE": "9 days" },
+      { "GROWTH_HARVEST": "9 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_tomato_seedling",
+    "copy-from": "seed_tomato",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "番茄苗" },
+    "description": "一株已经长出少量根系的番茄幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "10 days" },
+      { "GROWTH_SEEDLING": "10 days" },
+      { "GROWTH_MATURE": "10 days" },
+      { "GROWTH_HARVEST": "9 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_watermelon_seedling",
+    "copy-from": "seed_watermelon",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "西瓜苗" },
+    "description": "一株已经长出少量根系的西瓜幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_melon_seedling",
+    "copy-from": "seed_melon",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "甜瓜苗" },
+    "description": "一株已经长出少量根系的甜瓜幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_pumpkin_seedling",
+    "copy-from": "seed_pumpkin",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "MILLING", "COMESTIBLE" ],
+    "name": { "str_sp": "南瓜苗" },
+    "description": "一株已经长出少量根系的南瓜幼苗，种植后比普通种子更快进入采收期。必须种在种植架上。",
+    "required_terrain_flag": "CD_DELIGHT_TRELLIS",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_cattail_seedling",
+    "copy-from": "seed_cattail",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "香蒲苗" },
+    "description": "一株已经长出少量根系的香蒲幼苗，种植后比普通种子更快进入采收期。必须种在水田里。",
+    "required_terrain_flag": "CD_DELIGHT_PADDY",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_lotus_seedling",
+    "copy-from": "seed_lotus",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "莲花苗" },
+    "description": "一株已经长出少量根系的莲花幼苗，种植后比普通种子更快进入采收期。必须种在水田里。",
+    "required_terrain_flag": "CD_DELIGHT_PADDY",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_wild_rice_seedling",
+    "copy-from": "seed_wild_rice",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "野米苗" },
+    "description": "一株已经长出少量根系的野米幼苗，种植后比普通种子更快进入采收期。必须种在水田里。",
+    "required_terrain_flag": "CD_DELIGHT_PADDY",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  },
+  {
+    "id": "seed_cranberries_seedling",
+    "copy-from": "seed_cranberries",
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "name": { "str_sp": "蔓越莓苗" },
+    "description": "一株已经长出少量根系的蔓越莓幼苗，种植后比普通种子更快进入采收期。必须种在水田里。",
+    "required_terrain_flag": "CD_DELIGHT_PADDY",
+    "growth_stages": [
+      { "GROWTH_SEED": "14 days" },
+      { "GROWTH_SEEDLING": "14 days" },
+      { "GROWTH_MATURE": "14 days" },
+      { "GROWTH_HARVEST": "13 days" },
+      { "GROWTH_OVERGROWN": "36 minutes" }
+    ]
+  }
+]

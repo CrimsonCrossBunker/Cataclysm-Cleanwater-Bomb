@@ -1,0 +1,22 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_cd_delight_fertile_bed",
+    "name": "沃土种植地",
+    "description": "用大量腐熟沃土铺成的肥沃种植床，土质疏松、养分充足，适合直接播种，也可以在其上建造水田或搭建种植架。",
+    "symbol": "#",
+    "color": "brown_green",
+    "move_cost": 2,
+    "flags": [ "TRANSPARENT", "DIGGABLE", "FLAT", "PLOWABLE", "PLANTABLE" ],
+    "bash": {
+      "sound": "thump",
+      "ter_set": "t_dirt",
+      "str_min": 20,
+      "str_max": 60,
+      "str_min_supported": 80,
+      "items": [
+        { "item": "material_soil", "count": [ 5, 15 ] }
+      ]
+    }
+  }
+]

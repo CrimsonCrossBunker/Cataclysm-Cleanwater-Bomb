@@ -333,6 +333,8 @@ std::string enum_to_string<ter_furn_flag>( ter_furn_flag data )
         case ter_furn_flag::TFLAG_ONE_DIMENSIONAL_X: return "ONE_DIMENSIONAL_X";
         case ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Y: return "ONE_DIMENSIONAL_Y";
         case ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Z: return "ONE_DIMENSIONAL_Z";
+        case ter_furn_flag::TFLAG_CD_DELIGHT_PADDY: return "CD_DELIGHT_PADDY";
+        case ter_furn_flag::TFLAG_CD_DELIGHT_TRELLIS: return "CD_DELIGHT_TRELLIS";
 
         // *INDENT-ON*
         case ter_furn_flag::NUM_TFLAG_FLAGS:

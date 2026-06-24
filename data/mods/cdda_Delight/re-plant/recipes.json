@@ -127,5 +127,245 @@
       [ [ "tsow_humus", 20 ] ],
       [ [ "tsow_compost_bin_empty", 1 ] ]
     ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_hops_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_hops", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_grapes_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_grapes", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_beans_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_beans", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_pea_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_pea", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_cucumber_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_cucumber", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_gherkin_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_gherkin", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_bottle_gourd_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_bottle_gourd", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_tomato_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_tomato", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_watermelon_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_watermelon", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_melon_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_melon", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_pumpkin_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_pumpkin", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 1 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_cattail_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_cattail", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 2 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_lotus_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_lotus", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 2 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_wild_rice_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_wild_rice", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 2 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "seed_cranberries_seedling",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_OTHER",
+    "skill_used": "survival",
+    "difficulty": 1,
+    "time": "20 m",
+    "autolearn": true,
+    "components": [
+      [ [ "seed_cranberries", 1 ] ],
+      [ [ "material_soil", 2 ] ],
+      [ [ "water", 2 ] ]
+    ]
   }
 ]
