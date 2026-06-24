@@ -49,4 +49,6 @@ de-charge 系列此前的回退工作多数已作废（分支回到 master），
 | PR | 合并日 | 标题 | 理由 |
 |---|---|---|---|
 | #87351 | 2026-06-02 | CMake+vcpkg to select SDL3 or SDL2 | fork 锁定 SDL3，不需要 SDL2 切换路径 |
+| #87717 | 2026-06-20 | fix: Crash in any ImGui window on alt + F4 | 上游随即被 #87720 revert，两者净零；同步无意义 |
+| #87720 | 2026-06-20 | Revert "fix: Crash in any ImGui window on alt + F4" | 撤销 #87717；与 #87717 成对跳过 |
 
