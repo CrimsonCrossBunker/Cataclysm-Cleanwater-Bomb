@@ -6,7 +6,6 @@
 
 #include "avatar.h"
 #include "cata_catch.h"
-#include "cata_tiles.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "map.h"
@@ -26,7 +25,7 @@ class cata_tiles_test_helper
         static void get_connect_values( const tripoint &p, int &subtile, int &rotation,
                                         const std::bitset<NUM_TERCONN> &connect_group,
                                         const std::bitset<NUM_TERCONN> &rotate_to_group ) {
-            cata_tiles::get_connect_values( tripoint_bub_ms( p ), subtile, rotation, connect_group,
+            map::get_connect_values( tripoint_bub_ms( p ), subtile, rotation, connect_group,
                                             rotate_to_group, {} );
         }
 };

@@ -1160,6 +1160,8 @@ class map
             return ter_set( tripoint_bub_ms( p, abs_sub.z() ), new_terrain, avoid_creatures );
         }
 
+        void kill_creature( const tripoint_bub_ms &p, bool remove_corpse );
+
         std::string tername( const tripoint_bub_ms &p ) const;
 
         // Check for terrain/furniture/field that provide a
