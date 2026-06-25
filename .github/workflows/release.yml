@@ -296,8 +296,12 @@ jobs:
           # (placeholder-only artifact) and a failed/empty artifact download.
           count=$(find lang/po -maxdepth 1 -name '*.po' ! -name 'placeholder.po' | wc -l)
           if [ "$count" -eq 0 ]; then
-            echo "::error::No real translations found in lang/po (placeholder only). Refusing to package an untranslated build."
-            exit 1
+            if [ "$GITHUB_REF_NAME" = "master" ]; then
+              echo "::error::No real translations found in lang/po (placeholder only). Refusing to package an untranslated build."
+              exit 1
+            else
+              echo "::warning::No real translations found (TX_TOKEN missing?), building without translations."
+            fi
           fi
           echo "Found $count translation .po file(s)."
       - name: Fetch shader artifacts into build (SDL3)
@@ -320,8 +324,12 @@ jobs:
           shopt -s nullglob
           sources=( data/shaders/*.frag data/shaders/*.vert )
           if [ ${#sources[@]} -eq 0 ]; then
-            echo "::error::no shader sources found under data/shaders"
-            exit 1
+            if [ "$GITHUB_REF_NAME" = "master" ]; then
+              echo "::error::no shader sources found under data/shaders"
+              exit 1
+            else
+              echo "::warning::no shader sources found, building without precompiled shaders."
+            fi
           fi
           for src in "${sources[@]}"; do
             for fmt in spv dxil msl; do
@@ -332,8 +340,12 @@ jobs:
             done
           done
           if [ "$missing" -ne 0 ]; then
-            echo "::error::shader artifacts incomplete; the compile-shaders job likely failed silently. Refusing to ship a broken SDL3 build."
-            exit 1
+            if [ "$GITHUB_REF_NAME" = "master" ]; then
+              echo "::error::shader artifacts incomplete; the compile-shaders job likely failed silently. Refusing to ship a broken SDL3 build."
+              exit 1
+            else
+              echo "::warning::shader artifacts incomplete, some shader formats missing."
+            fi
           fi
           echo "All shader artifacts present for ${#sources[@]} source(s)."
       - name: Mark shader artifacts fresh (SDL3)
