@@ -50,7 +50,8 @@
     "range": 3,
     "damage": { "damage_type": "bullet", "amount": 3, "armor_penetration": 1 },
     "dispersion": 180,
-    "effects": [ "NON_FOULING", "HURT_WHEN_WIELDED" ]
+    "effects": [ "NON_FOULING", "HURT_WHEN_WIELDED" ],
+    "stackable": true
   },
   {
     "id": "nuts_bolts",
@@ -67,7 +68,8 @@
     "price_postapoc": "2 cent",
     "material": [ "mc_steel" ],
     "symbol": "=",
-    "color": "cyan"
+    "color": "cyan",
+    "stackable": true
   },
   {
     "id": "rivets",
@@ -84,6 +86,7 @@
     "symbol": "=",
     "color": "cyan",
     "count": 100,
-    "stack_size": 100
+    "stack_size": 100,
+    "stackable": true
   }
 ]
