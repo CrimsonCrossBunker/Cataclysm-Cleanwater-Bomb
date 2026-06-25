@@ -377,8 +377,8 @@ double ass_oper::eval( dialogue &d ) const
         [&d, this]( auto const & v ) -> void
         {
             if constexpr( v_has_assign<decltype( v )> )
-        {
-            double const val = op( mhs->eval( d ), rhs->eval( d ) ) ;
+            {
+                double const val = op( mhs->eval( d ), rhs->eval( d ) ) ;
                 v.assign( d, val );
             } else
             {
@@ -421,9 +421,9 @@ void func_diag::_update_diag_args( const_dialogue const *d ) const
 template<bool at_runtime>
 void func_diag::_update_diag_kwargs( const_dialogue const *d ) const
 {
-for( std::map<std::string, thingie>::value_type const &blorg : kwargs_dyn ) {
-    std::visit( overloaded{
-        [this, blorg, d]( auto const & v )
+    for( std::map<std::string, thingie>::value_type const &blorg : kwargs_dyn ) {
+        std::visit( overloaded{
+            [this, blorg, d]( auto const & v )
             {
                 if constexpr( at_runtime ^ v_is_static<decltype( v )> ) {
                     kwargs.kwargs[ blorg.first ] = _get_diag_value( *d, blorg.second );

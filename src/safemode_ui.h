@@ -75,7 +75,7 @@ class safemode
          */
         // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map < std::string, std::array < std::array < rule_state_class, 3 >, 2 >>
-        safemode_rules_hostile; // NOLINT(cata-serialize)
+                safemode_rules_hostile; // NOLINT(cata-serialize)
         // NOLINTNEXTLINE(cata-serialize)
         std::array < std::vector < rules_class >, 2 > safemode_rules_sound;
 

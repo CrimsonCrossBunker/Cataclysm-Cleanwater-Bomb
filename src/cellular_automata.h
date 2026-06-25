@@ -38,8 +38,8 @@ int neighbor_count( const std::vector<std::vector<int>> &cells, int width,
 * @returns The width x height grid of cells. Each cell is a 0 if dead or a 1 if alive.
 */
 std::vector<std::vector<int>> generate_cellular_automaton(
-    int width, int height, int alive, int iterations,
-    int birth_limit, int stasis_limit );
+                               int width, int height, int alive, int iterations,
+                               int birth_limit, int stasis_limit );
 
 } // namespace CellularAutomata
 

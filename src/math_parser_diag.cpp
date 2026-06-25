@@ -113,7 +113,7 @@ T _read_from_string( std::string_view s,
     // TODO: LAMBDA_NORETURN_CLANG21x1 can be replaced with [[noreturn]] once we switch to C++23 on all compilers
     auto const error = [s]( char const * suffix, size_t /* offset */ ) LAMBDA_NORETURN_CLANG21x1 {
         throw math::runtime_error( R"(Failed to convert "%s" to a %s value: %s)", s,
-        _str_type_of<T>(), suffix );
+                                   _str_type_of<T>(), suffix );
     };
     return detail::read_from_json_string_common<T>( s, units, error );
 }
@@ -299,7 +299,8 @@ double enchant_val_eval( const_dialogue const &d, char scope,
     // add/multiply is applied to (defaults to 0). num_params is -1 (variadic) so the
     // parser does not enforce arity for us; validate it here.
     if( params.empty() || params.size() > 2 ) {
-        throw math::runtime_error( R"("enchant_val" takes a key and an optional base value: enchant_val('key'[, base]))" );
+        throw math::runtime_error(
+            R"("enchant_val" takes a key and an optional base value: enchant_val('key'[, base]))" );
     }
     double const base = params.size() > 1 ? params[1].dbl( d ) : 0.0;
     return d.const_actor( is_beta( scope ) )->get_enchant_custom_value( params[0].str( d ), base );
@@ -633,9 +634,9 @@ void spellcasting_adjustment_ass( double val, dialogue &d, char scope,
     switch( spellsearch_scope ) {
         case scope_spell:
             d.actor( is_beta( scope ) )
-             ->get_character()
-             ->magic->get_spell( spell_id( filter_str ) )
-             .set_temp_adjustment( spellcasting_property.str( d ), val );
+            ->get_character()
+            ->magic->get_spell( spell_id( filter_str ) )
+            .set_temp_adjustment( spellcasting_property.str( d ), val );
             break;
         case scope_school: {
             const trait_id school_id( filter_str );
@@ -697,23 +698,24 @@ double item_rad_eval( const_dialogue const &d, char scope, std::vector<diag_valu
            ->item_rads( flag_id( params[0].str( d ) ), agg.value_or( aggregate_type::MIN ) );
 }
 
-double item_burnt_eval(const_dialogue const &d, char scope, std::vector<diag_value> const &/*params*/,
-    diag_kwargs const &kwargs )
+double item_burnt_eval( const_dialogue const &d, char scope,
+                        std::vector<diag_value> const &/*params*/,
+                        diag_kwargs const &kwargs )
 {
-    item_location const *it = d.const_actor(is_beta(scope))->get_const_item();
-    if ( it == nullptr ) {
-        throw math::runtime_error("subject of item_burnt() must be an item");
+    item_location const *it = d.const_actor( is_beta( scope ) )->get_const_item();
+    if( it == nullptr ) {
+        throw math::runtime_error( "subject of item_burnt() must be an item" );
     }
-    diag_value format_value = kwargs.kwarg_or("format", "raw");
-    std::string const &format = format_value.str(d);
-    if ( format != "raw" && format != "percent" ) {
-        throw math::runtime_error(R"(Unknown format type "%s" for item_burnt)", format);
+    diag_value format_value = kwargs.kwarg_or( "format", "raw" );
+    std::string const &format = format_value.str( d );
+    if( format != "raw" && format != "percent" ) {
+        throw math::runtime_error( R"(Unknown format type "%s" for item_burnt)", format );
     }
     const item &obj = **it;
-    if ( obj.base_volume() <= 0_ml ) {
+    if( obj.base_volume() <= 0_ml ) {
         return -1;
     }
-    if ( format == "raw" ) {
+    if( format == "raw" ) {
         return static_cast<double>( obj.burnt );
     }
     // format is guaranteed to be "raw" or "percent" (validated above)
@@ -722,26 +724,25 @@ double item_burnt_eval(const_dialogue const &d, char scope, std::vector<diag_val
     return static_cast<double>( obj.burnt ) * 100.0 / static_cast<double>( threshold );
 }
 
-void item_burnt_ass(double val, dialogue& d, char scope, std::vector<diag_value> const &/*params*/, diag_kwargs const& kwargs)
+void item_burnt_ass( double val, dialogue &d, char scope, std::vector<diag_value> const &/*params*/,
+                     diag_kwargs const &kwargs )
 {
-    item_location* it = d.actor(is_beta(scope))->get_item();
-    if (it == nullptr) {
-        throw math::runtime_error("subject of item_burnt() assignment must be an item");
+    item_location *it = d.actor( is_beta( scope ) )->get_item();
+    if( it == nullptr ) {
+        throw math::runtime_error( "subject of item_burnt() assignment must be an item" );
     }
-    diag_value format_value = kwargs.kwarg_or("format", "raw");
-    std::string const &format = format_value.str(d);
-    if ( format != "raw" && format != "percent" ) {
-        throw math::runtime_error(R"(Unknown format type "%s" for item_burnt)", format);
+    diag_value format_value = kwargs.kwarg_or( "format", "raw" );
+    std::string const &format = format_value.str( d );
+    if( format != "raw" && format != "percent" ) {
+        throw math::runtime_error( R"(Unknown format type "%s" for item_burnt)", format );
     }
     item &obj = **it;
-    if ( obj.base_volume() <= 0_ml) {
+    if( obj.base_volume() <= 0_ml ) {
         throw math::runtime_error( "Zero volume items cannot use item_burnt() assignment" );
-    }
-    else{
+    } else {
         if( format == "raw" ) {
             obj.burnt = static_cast<int>( val );
-        }
-        else if ( format == "percent" ) {
+        } else if( format == "percent" ) {
             const int vol_units = obj.base_volume() / 250_ml;
             const int threshold = std::max( vol_units * 3, 1 );
             obj.burnt = static_cast<int>( std::round( val * threshold / 100.0 ) );
@@ -1324,7 +1325,7 @@ double _time_in_unit( double time, std::string_view unit )
 {
     if( !unit.empty() ) {
         decltype( time_duration::units )::const_iterator iter = std::find_if( time_duration::units.cbegin(),
-            time_duration::units.cend(),
+                time_duration::units.cend(),
         [&unit]( std::pair<std::string_view, time_duration> const & u ) {
             return u.first == unit;
         } );
@@ -1448,72 +1449,70 @@ double time_until_eoc_eval( const_dialogue const &d, char /* scope */,
     return it != list.end() ? _time_in_unit( to_turn<double>( it->time ), unit_val.str( d ) ) : -1;
 }
 
-double item_rot_eval(const_dialogue const &d, char scope, std::vector<diag_value> const &/*params*/,
-    diag_kwargs const &kwargs )
+double item_rot_eval( const_dialogue const &d, char scope,
+                      std::vector<diag_value> const &/*params*/,
+                      diag_kwargs const &kwargs )
 {
-    item_location const *it = d.const_actor(is_beta(scope))->get_const_item();
-    if ( it == nullptr ) {
-        throw math::runtime_error("subject of item_rot() must be an item");
+    item_location const *it = d.const_actor( is_beta( scope ) )->get_const_item();
+    if( it == nullptr ) {
+        throw math::runtime_error( "subject of item_rot() must be an item" );
     }
-    diag_value format_value = kwargs.kwarg_or("format", "relative");
-    std::string const &format = format_value.str(d);
-    if ( format != "raw" && format != "relative" ) {
-        throw math::runtime_error(R"(Unknown format type "%s" for item_rot)", format);
+    diag_value format_value = kwargs.kwarg_or( "format", "relative" );
+    std::string const &format = format_value.str( d );
+    if( format != "raw" && format != "relative" ) {
+        throw math::runtime_error( R"(Unknown format type "%s" for item_rot)", format );
     }
     const item &obj = **it;
-    if ( obj.goes_bad() ) {
-        if (format == "raw") {
-            diag_value unit_val = kwargs.kwarg_or("unit");
+    if( obj.goes_bad() ) {
+        if( format == "raw" ) {
+            diag_value unit_val = kwargs.kwarg_or( "unit" );
             time_duration rotting = obj.get_rot();
-            if (rotting < 0_turns) rotting = 0_turns;
-            double turns = to_turns<double>(rotting);
-            return _time_in_unit(turns, unit_val.str(d));
-        }
-        else
-        {
+            if( rotting < 0_turns ) {
+                rotting = 0_turns;
+            }
+            double turns = to_turns<double>( rotting );
+            return _time_in_unit( turns, unit_val.str( d ) );
+        } else {
             return obj.get_relative_rot();
         }
-    }
-    else
-    {
+    } else {
         return -1;
     }
 }
 
-void item_rot_ass(double val, dialogue& d, char scope, std::vector<diag_value> const &/*params*/, diag_kwargs const& kwargs)
+void item_rot_ass( double val, dialogue &d, char scope, std::vector<diag_value> const &/*params*/,
+                   diag_kwargs const &kwargs )
 {
-    item_location* it = d.actor(is_beta(scope))->get_item();
-    if (it == nullptr) {
-        throw math::runtime_error("subject of item_rot() assignment must be an item");
+    item_location *it = d.actor( is_beta( scope ) )->get_item();
+    if( it == nullptr ) {
+        throw math::runtime_error( "subject of item_rot() assignment must be an item" );
     }
-    item& obj = **it;
-    if (!obj.goes_bad()) {
-        throw math::runtime_error("Try setting rot val for item that don't have a rot mechanism");
-    }
-    else {
-        diag_value format_value = kwargs.kwarg_or("format", "relative");
-        std::string const &format = format_value.str(d);
-        if ( format != "raw" && format != "relative" ) {
-            throw math::runtime_error(R"(Unknown format type "%s" for item_rot)", format);
+    item &obj = **it;
+    if( !obj.goes_bad() ) {
+        throw math::runtime_error( "Try setting rot val for item that don't have a rot mechanism" );
+    } else {
+        diag_value format_value = kwargs.kwarg_or( "format", "relative" );
+        std::string const &format = format_value.str( d );
+        if( format != "raw" && format != "relative" ) {
+            throw math::runtime_error( R"(Unknown format type "%s" for item_rot)", format );
         }
-        if (format == "raw") {
-            diag_value unit_val = kwargs.kwarg_or("unit");
+        if( format == "raw" ) {
+            diag_value unit_val = kwargs.kwarg_or( "unit" );
             double turns = val;
-            if (!unit_val.is_empty()) {
-                std::string_view unit = unit_val.str(d);
-                auto iter = std::find_if(time_duration::units.cbegin(), time_duration::units.cend(),
-                    [&unit](std::pair<std::string_view, time_duration> const& u) {
-                        return u.first == unit;
-                    });
-                if (iter == time_duration::units.end()) {
-                    throw math::runtime_error(R"(Unknown time unit "%s")", unit);
+            if( !unit_val.is_empty() ) {
+                std::string_view unit = unit_val.str( d );
+                auto iter = std::find_if( time_duration::units.cbegin(), time_duration::units.cend(),
+                [&unit]( std::pair<std::string_view, time_duration> const & u ) {
+                    return u.first == unit;
+                } );
+                if( iter == time_duration::units.end() ) {
+                    throw math::runtime_error( R"(Unknown time unit "%s")", unit );
                 }
-                turns = val * to_turns<double>(iter->second);
+                turns = val * to_turns<double>( iter->second );
             }
-            obj.set_rot(time_duration::from_turns<double>(turns));
-        }
-        else if (format == "relative") {
-            obj.set_relative_rot(val);
+            obj.set_rot( time_duration::from_turns<double>( turns ) );
+        } else if( format == "relative" ) {
+            obj.set_relative_rot( val );
         }
     }
 }
@@ -1873,8 +1872,8 @@ void vitamin_ass( double val, dialogue &d, char scope, std::vector<diag_value> c
 {
     if( d.actor( is_beta( scope ) )->get_character() ) {
         d.actor( is_beta( scope ) )
-         ->get_character()
-         ->vitamin_set( vitamin_id( params[0].str( d ) ), val );
+        ->get_character()
+        ->vitamin_set( vitamin_id( params[0].str( d ) ), val );
     }
 }
 

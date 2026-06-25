@@ -24,7 +24,7 @@
 #include "json.h"
 
 #if defined(TILES)
-#include "sdl_wrappers.h"
+    #include "sdl_wrappers.h"
 #endif
 
 /**

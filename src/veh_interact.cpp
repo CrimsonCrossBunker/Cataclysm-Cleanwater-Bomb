@@ -73,12 +73,12 @@
 #include "vpart_range.h"
 
 #if defined(TILES)
-// Only for the graphical vehicle-layout branch in display_veh(): use_tiles (cached_options),
-// get_option (options), and tilecontext / cata_tiles::draw_vehicle_preview (sdltiles / cata_tiles).
-#include "cached_options.h"
-#include "cata_tiles.h"
-#include "options.h"
-#include "sdltiles.h"
+    // Only for the graphical vehicle-layout branch in display_veh(): use_tiles (cached_options),
+    // get_option (options), and tilecontext / cata_tiles::draw_vehicle_preview (sdltiles / cata_tiles).
+    #include "cached_options.h"
+    #include "cata_tiles.h"
+    #include "options.h"
+    #include "sdltiles.h"
 #endif
 
 static const ammotype ammo_battery( "battery" );
@@ -120,7 +120,7 @@ static constexpr units::mass JACK_LIMIT = 8500_kilogram; // 8500kg ( 8.5 metric 
 static double jack_quality( map &here, const vehicle &veh )
 {
     const units::quantity<double, units::mass::unit_type> mass = std::min( veh.total_mass( here ),
-        JACK_LIMIT );
+            JACK_LIMIT );
     return std::ceil( mass / lifting_quality_to_mass( 1 ) );
 }
 
@@ -272,7 +272,7 @@ std::optional<vpart_reference> veh_interact::select_part( map &here, const vehic
         res = vpart_reference( const_cast<vehicle &>( veh ), veh.index_of_part( &pt ) );
     };
     std::function<bool( const vpart_reference & )> sel_wrapper = [sel,
-        &here]( const vpart_reference & vpr ) {
+    &here]( const vpart_reference & vpr ) {
         return sel( here, vpr.part() );
     };
 
@@ -2448,14 +2448,14 @@ void veh_interact::display_stats( map &here ) const
 
     units::volume total_cargo = 0_ml;
     units::volume free_cargo = 0_ml;
-for( const vpart_reference &vpr : veh->get_any_parts( VPFLAG_CARGO ) ) {
-    const vehicle_stack vs = vpr.items();
+    for( const vpart_reference &vpr : veh->get_any_parts( VPFLAG_CARGO ) ) {
+        const vehicle_stack vs = vpr.items();
         total_cargo += vs.max_volume();
         free_cargo += vs.free_volume();
     }
 
     for( int i = 0; i < slots; i++ ) {
-    if( i < stats_h ) {
+        if( i < stats_h ) {
             // First column
             win[i] = &w_stats_1;
             row[i] = i;
@@ -2480,11 +2480,11 @@ for( const vpart_reference &vpr : veh->get_any_parts( VPFLAG_CARGO ) ) {
 
     int i = 0;
     if( is_aircraft ) {
-    fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
-                    _( "Air Safe/Top speed: <color_light_green>%3s</color>/<color_light_red>%3s</color> %s" ),
-                    vel_to_str( veh->safe_rotor_velocity( here, false ) ),
-                    vel_to_str( veh->max_rotor_velocity( here, false ) ),
-                    velocity_units( VU_VEHICLE ) );
+        fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
+                        _( "Air Safe/Top speed: <color_light_green>%3s</color>/<color_light_red>%3s</color> %s" ),
+                        vel_to_str( veh->safe_rotor_velocity( here, false ) ),
+                        vel_to_str( veh->max_rotor_velocity( here, false ) ),
+                        velocity_units( VU_VEHICLE ) );
         i += 1;
         fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
                         _( "Air acceleration: <color_light_blue>%3s</color> %s/s" ),
@@ -2548,17 +2548,17 @@ for( const vpart_reference &vpr : veh->get_any_parts( VPFLAG_CARGO ) ) {
     i += 1;
 
     if( install_info || remove_info ) {
-    // don't draw the second and third columns which would be overwritten by w_details
-    return;
-}
+        // don't draw the second and third columns which would be overwritten by w_details
+        return;
+    }
 
-// advance to next column if necessary
-i = std::max( i, stats_h );
+    // advance to next column if necessary
+    i = std::max( i, stats_h );
 
-//This lambda handles printing parts in the "Most damaged" and "Needs repair" cases
-//for the veh_interact ui
-const auto print_part = [&]( const std::string & str, int slot, vehicle_part * pt ) {
-    mvwprintz( *win[slot], point( 0, row[slot] ), c_light_gray, str );
+    //This lambda handles printing parts in the "Most damaged" and "Needs repair" cases
+    //for the veh_interact ui
+    const auto print_part = [&]( const std::string & str, int slot, vehicle_part * pt ) {
+        mvwprintz( *win[slot], point( 0, row[slot] ), c_light_gray, str );
         int iw = utf8_width( str ) + 1;
         return fold_and_print( *win[slot], point( iw, row[slot] ), getmaxx( *win[slot] ), c_light_gray,
                                pt->name() );
@@ -2569,8 +2569,8 @@ const auto print_part = [&]( const std::string & str, int slot, vehicle_part * p
 
     // Write the most damaged part
     if( mostDamagedPart && mostDamagedPart->damage_percent() ) {
-    const std::string damaged_header = mostDamagedPart == most_repairable ?
-                                       _( "Most damaged:" ) :
+        const std::string damaged_header = mostDamagedPart == most_repairable ?
+                                           _( "Most damaged:" ) :
                                            _( "Most damaged (can't repair):" );
         i += print_part( damaged_header, i, mostDamagedPart );
     } else {
@@ -2579,7 +2579,7 @@ const auto print_part = [&]( const std::string & str, int slot, vehicle_part * p
 
     // Write the part that needs repair the most.
     if( most_repairable && most_repairable != mostDamagedPart ) {
-    const std::string needsRepair = _( "Needs repair:" );
+        const std::string needsRepair = _( "Needs repair:" );
         i += print_part( needsRepair, i, most_repairable );
     } else {
         i += 1;
@@ -2591,14 +2591,14 @@ const auto print_part = [&]( const std::string & str, int slot, vehicle_part * p
     i += 1;
 
     if( is_boat ) {
-    fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
-                    _( "Water drag:     <color_light_blue>%5.2f</color>" ),
-                    veh->coeff_water_drag( here ) );
+        fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
+                        _( "Water drag:     <color_light_blue>%5.2f</color>" ),
+                        veh->coeff_water_drag( here ) );
     }
     i += 1;
 
     if( is_ground ) {
-    if( debug_mode ) {
+        if( debug_mode ) {
             fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
                             _( "Contact area:   <color_light_blue>%d</color>" ),
                             veh->wheel_area() );
@@ -2627,7 +2627,7 @@ const auto print_part = [&]( const std::string & str, int slot, vehicle_part * p
 
     if( is_boat ) {
 
-    const double water_clearance = veh->water_hull_height( here ) - veh->water_draft( here );
+        const double water_clearance = veh->water_hull_height( here ) - veh->water_draft( here );
         const char *draft_string = water_clearance > 0 ?
                                    _( "Draft/Clearance:<color_light_blue>%4.2f</color>m/<color_light_blue>%4.2f</color>m" ) :
                                    _( "Draft/Clearance:<color_light_blue>%4.2f</color>m/<color_light_red>%4.2f</color>m" ) ;
@@ -2664,13 +2664,13 @@ static std::string veh_act_desc( const input_context &ctxt, const std::string &i
                                  const std::string &desc, const task_reason reason )
 {
     static const translation inline_fmt_enabled = to_translation(
-            "keybinding", "<color_light_gray>%1$s<color_light_green>%2$s</color>%3$s</color>" );
+                "keybinding", "<color_light_gray>%1$s<color_light_green>%2$s</color>%3$s</color>" );
     static const translation inline_fmt_disabled = to_translation(
-            "keybinding", "<color_dark_gray>%1$s<color_green>%2$s</color>%3$s</color>" );
+                "keybinding", "<color_dark_gray>%1$s<color_green>%2$s</color>%3$s</color>" );
     static const translation separate_fmt_enabled = to_translation(
-            "keybinding", "<color_light_gray><color_light_green>%1$s</color>-%2$s</color>" );
+                "keybinding", "<color_light_gray><color_light_green>%1$s</color>-%2$s</color>" );
     static const translation separate_fmt_disabled = to_translation(
-            "keybinding", "<color_dark_gray><color_green>%1$s</color>-%2$s</color>" );
+                "keybinding", "<color_dark_gray><color_green>%1$s</color>-%2$s</color>" );
     if( reason == task_reason::CAN_DO ) {
         return ctxt.get_desc( id, desc, input_context::allow_all_keys,
                               inline_fmt_enabled, separate_fmt_enabled );
@@ -2994,7 +2994,7 @@ void act_vehicle_siphon( map &here, vehicle *veh )
         return pt.contains_liquid();
     };
     if( const std::optional<vpart_reference> tank = veh_interact::select_part( here, *veh, sel,
-        title ) ) {
+            title ) ) {
         item liquid( tank->part().get_base().only_item() );
         const int liq_charges = liquid.charges;
         liquid_dest_opt liquid_target;

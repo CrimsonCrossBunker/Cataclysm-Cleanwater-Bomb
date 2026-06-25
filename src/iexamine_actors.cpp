@@ -63,14 +63,14 @@ void appliance_convert_examine_actor::load( const JsonObject &jo, const std::str
 void appliance_convert_examine_actor::call( Character &you, const tripoint_bub_ms &examp ) const
 {
     if( !query_yn( _( "Connect %s to grid?" ), item::nname( appliance_item ) ) ) {
-    return;
-}
-map &here = get_map();
-if( furn_set ) {
-    here.furn_set( examp, *furn_set );
+        return;
+    }
+    map &here = get_map();
+    if( furn_set ) {
+        here.furn_set( examp, *furn_set );
     }
     if( ter_set ) {
-    here.ter_set( examp, *ter_set );
+        here.ter_set( examp, *ter_set );
     }
 
     place_appliance( here, examp, vpart_appliance_from_item( appliance_item ), you );
@@ -79,18 +79,18 @@ if( furn_set ) {
 void appliance_convert_examine_actor::finalize() const
 {
     if( furn_set && !furn_set->is_valid() ) {
-    debugmsg( "Invalid furniture id %s in appliance_convert action", furn_set->str() );
+        debugmsg( "Invalid furniture id %s in appliance_convert action", furn_set->str() );
     }
     if( ter_set && !ter_set->is_valid() ) {
-    debugmsg( "Invalid terrain id %s in appliance_convert action", ter_set->str() );
+        debugmsg( "Invalid terrain id %s in appliance_convert action", ter_set->str() );
     }
 
     if( !appliance_item.is_valid() ) {
-    debugmsg( "Invalid appliance item %s in appliance_convert action", appliance_item.str() );
+        debugmsg( "Invalid appliance item %s in appliance_convert action", appliance_item.str() );
     } else if( !vpart_appliance_from_item( appliance_item ).is_valid() ) {
-    // This will never actually trigger now, but is here if the semantics of vpart_appliance_from_item change
-    debugmsg( "In appliance_convert action, %s does not correspond to an appliance",
-              appliance_item.str() );
+        // This will never actually trigger now, but is here if the semantics of vpart_appliance_from_item change
+        debugmsg( "In appliance_convert action, %s does not correspond to an appliance",
+                  appliance_item.str() );
     }
 }
 
@@ -102,11 +102,11 @@ std::unique_ptr<iexamine_actor> appliance_convert_examine_actor::clone() const
 void cardreader_examine_actor::consume_card( const std::vector<item_location> &cards ) const
 {
     if( !consume ) {
-    return;
-}
-std::vector<item_location> opts;
-for( const item_location &it : cards ) {
-    const auto stacks = [&it]( const item_location & compare ) {
+        return;
+    }
+    std::vector<item_location> opts;
+    for( const item_location &it : cards ) {
+        const auto stacks = [&it]( const item_location & compare ) {
             return it->stacks_with( *compare );
         };
         if( std::any_of( opts.begin(), opts.end(), stacks ) ) {
@@ -171,7 +171,7 @@ bool cardreader_examine_actor::apply( const tripoint_bub_ms &examp ) const
     if( map_regen ) {
         tripoint_abs_omt omt_pos( coords::project_to<coords::omt>( here.get_abs( examp ) ) );
         const ret_val<void> has_colliding_vehicle = run_mapgen_update_func( mapgen_id, omt_pos, {}, nullptr,
-            false );
+                false );
         if( !has_colliding_vehicle.success() ) {
             debugmsg( "Failed to apply magen function %s, collision with %s", mapgen_id.str(),
                       has_colliding_vehicle.str() );
@@ -263,26 +263,26 @@ void cardreader_examine_actor::load( const JsonObject &jo, const std::string & )
 void cardreader_examine_actor::finalize() const
 {
     if( allowed_flags.empty() ) {
-    debugmsg( "Cardreader examine actor has no allowed card flags." );
+        debugmsg( "Cardreader examine actor has no allowed card flags." );
     }
 
-for( const flag_id &flag : allowed_flags ) {
-    if( !flag.is_valid() ) {
+    for( const flag_id &flag : allowed_flags ) {
+        if( !flag.is_valid() ) {
             debugmsg( "Cardreader uses flag %s that does not exist!", flag.str() );
         }
     }
 
     if( terrain_changes.empty() && furn_changes.empty() && mapgen_id.is_empty() ) {
-    debugmsg( "Cardreader examine actor does not change either terrain or furniture" );
+        debugmsg( "Cardreader examine actor does not change either terrain or furniture" );
     }
 
     if( query && query_msg.empty() ) {
-    debugmsg( "Cardreader is told to query, yet does not have a query message defined." );
+        debugmsg( "Cardreader is told to query, yet does not have a query message defined." );
     }
 
     if( allow_hacking && ( !furn_changes.empty() || terrain_changes.size() != 1 ||
-                               terrain_changes.count( ter_t_door_metal_locked ) != 1 ||
-                               terrain_changes.at( ter_t_door_metal_locked ) != ter_t_door_metal_c ) ) {
+                           terrain_changes.count( ter_t_door_metal_locked ) != 1 ||
+                           terrain_changes.at( ter_t_door_metal_locked ) != ter_t_door_metal_c ) ) {
         debugmsg( "Cardreader allows hacking, but activities different that if hacked." );
     }
 }
@@ -313,8 +313,8 @@ void eoc_examine_actor::load( const JsonObject &jo, const std::string &src )
 
 void eoc_examine_actor::finalize() const
 {
-for( const effect_on_condition_id &eoc : eocs ) {
-    if( !eoc.is_valid() ) {
+    for( const effect_on_condition_id &eoc : eocs ) {
+        if( !eoc.is_valid() ) {
             debugmsg( "Invalid effect_on_condition_id: %s", eoc.str() );
         }
     }
@@ -439,8 +439,8 @@ void mortar_examine_actor::load( const JsonObject &jo, const std::string &src )
 
 void mortar_examine_actor::finalize() const
 {
-for( ammotype ammo : ammo_type ) {
-    if( !ammo.is_valid() ) {
+    for( ammotype ammo : ammo_type ) {
+        if( !ammo.is_valid() ) {
             debugmsg( "Invalid ammo type: %s", ammo.str() );
         }
     }

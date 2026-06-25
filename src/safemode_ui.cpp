@@ -837,7 +837,7 @@ void safemode::serialize( JsonOut &json ) const
 
     const std::vector<rules_class> &temp_rules = is_character ? character_rules : global_rules;
     for( const rules_class &elem : temp_rules ) {
-    json.start_object();
+        json.start_object();
 
         json.member( "rule", elem.rule );
         json.member( "active", elem.active );

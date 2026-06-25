@@ -3652,7 +3652,7 @@ class item : public visitable
         time_point countdown_point = calendar::turn_max;
 
         units::specific_energy specific_energy = units::from_joule_per_gram(
-                -10 ); // Specific energy J/g. Negative value for unprocessed.
+                    -10 ); // Specific energy J/g. Negative value for unprocessed.
         units::temperature temperature = units::from_kelvin( 0 );       // Temperature of the item .
         int mission_id = -1;       // Refers to a mission in game's master list
         int player_id = -1;        // Only give a mission to the right player!
@@ -3808,6 +3808,6 @@ struct disp_mod_by_barrel {
  * For display purposes only.
  */
 std::vector<std::pair<const item *, int>> get_item_duplicate_counts(
-    const std::list<const item *> &items );
+        const std::list<const item *> &items );
 
 #endif // CATA_SRC_ITEM_H

@@ -659,7 +659,7 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
         const std::string &action = query_popup()
                                     .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
                                     .message( _( "<color_light_red>Attacking with your %1$s will take a long time.  "
-                     "Are you sure you want to continue?</color>" ),
+                                              "Are you sure you want to continue?</color>" ),
                                               cur_weap.display_name() )
                                     .option( "YES" )
                                     .option( "NO" )
@@ -997,7 +997,7 @@ int Character::get_total_melee_stamina_cost( const item *weap ) const
     // Quadrupeds don't mind crouching, squids and slimes hardly care about even being prone
     const int stance_malus = ( is_on_ground() &&
                                !has_flag( json_flag_PSEUDOPOD_GRASP ) ) ? 50 : ( !has_flag( json_flag_PSEUDOPOD_GRASP ) &&
-                                   ( !has_effect( effect_natural_stance ) && ( !unarmed_attack() ) ) && is_crouching() ? 20 : 0 );
+                                       ( !has_effect( effect_natural_stance ) && ( !unarmed_attack() ) ) && is_crouching() ? 20 : 0 );
 
     float proficiency_multiplier = 1.f;
     for( const weapon_category_id &cat : wielded_weapon_categories( *this ) ) {
@@ -1246,31 +1246,31 @@ int Character::get_spell_resist() const
 float Character::get_dodge() const
 {
     if( !can_try_dodge().success() ) {
-    return 0.0f;
-}
+        return 0.0f;
+    }
 
-float ret = Creature::get_dodge();
-add_msg_debug( debugmode::DF_MELEE, "Base dodge %.1f", ret );
+    float ret = Creature::get_dodge();
+    add_msg_debug( debugmode::DF_MELEE, "Base dodge %.1f", ret );
 
-// Chop in half if we are unable to move
-if( has_effect( effect_beartrap ) || has_effect( effect_lightsnare ) ||
+    // Chop in half if we are unable to move
+    if( has_effect( effect_beartrap ) || has_effect( effect_lightsnare ) ||
         has_effect( effect_heavysnare ) ) {
-    ret /= 2;
-    add_msg_debug( debugmode::DF_MELEE, "Dodge after trapped penalty %.1f", ret );
+        ret /= 2;
+        add_msg_debug( debugmode::DF_MELEE, "Dodge after trapped penalty %.1f", ret );
     }
 
     if( worn_with_flag( flag_ROLLER_INLINE ) ||
         worn_with_flag( flag_ROLLER_QUAD ) ||
         worn_with_flag( flag_ROLLER_ONE ) ) {
-    ret /= has_trait( trait_PROF_SKATER ) ? 2 : 5;
+        ret /= has_trait( trait_PROF_SKATER ) ? 2 : 5;
         add_msg_debug( debugmode::DF_MELEE, "Dodge after skate penalty %.1f", ret );
     }
 
     // Speed below 100 linearly decreases dodge effectiveness
     int speed_stat = get_speed();
     if( speed_stat < 100 ) {
-    ret *= speed_stat / 100.0f;
-    add_msg_debug( debugmode::DF_MELEE, "Dodge after speed penalty %.1f", ret );
+        ret *= speed_stat / 100.0f;
+        add_msg_debug( debugmode::DF_MELEE, "Dodge after speed penalty %.1f", ret );
     }
 
     //Dodge decreases logisticaly with stamina.
@@ -1314,7 +1314,7 @@ float Character::bonus_damage( bool random ) const
 {
     /** @ARM_STR increases bashing damage */
     if( random ) {
-    return rng_float( get_arm_str() / 2.0f, get_arm_str() );
+        return rng_float( get_arm_str() / 2.0f, get_arm_str() );
     }
 
     return get_arm_str() * 0.75f;
@@ -1431,7 +1431,7 @@ void Character::roll_damage( const damage_type_id &dt, bool crit, damage_instanc
 {
     // For handling typical melee damage types (bash, cut, stab)
     if( dt->melee_only ) {
-    roll_melee_damage_internal( *this, dt, crit, di, average, weap, attack_vector, contact, crit_mod );
+        roll_melee_damage_internal( *this, dt, crit, di, average, weap, attack_vector, contact, crit_mod );
         return;
     }
 
@@ -1450,7 +1450,7 @@ void Character::roll_damage( const damage_type_id &dt, bool crit, damage_instanc
 
     // No negative damage!
     if( other_dam > 0 ) {
-    float other_mul = 1.0f * mabuff_damage_mult( dt );
+        float other_mul = 1.0f * mabuff_damage_mult( dt );
         float armor_mult = 1.0f;
 
         di.add_damage( dt, other_dam, arpen, armor_mult, other_mul );
@@ -1489,8 +1489,8 @@ std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id> Character::pick_tech
                          sub_bodypart_str_id::NULL_ID() ) );
 }
 std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
-Character::evaluate_technique( const matec_id &tec_id, Creature const &t, const item_location &weap,
-                               bool crit, bool dodge_counter, bool block_counter ) const
+        Character::evaluate_technique( const matec_id &tec_id, Creature const &t, const item_location &weap,
+                                       bool crit, bool dodge_counter, bool block_counter ) const
 {
     // this could be more robust but for now it should work fine
     bool is_loaded = weap && weap->is_magazine_full();
@@ -1744,7 +1744,7 @@ bool character_martial_arts::has_technique( const Character &guy, const matec_id
         const item &weap ) const
 {
     return weap.has_technique( id ) ||
-    style_selected->has_technique( guy, id );
+           style_selected->has_technique( guy, id );
 }
 
 static damage_unit &get_damage_unit( std::vector<damage_unit> &di, const damage_type_id &dt )
@@ -1851,7 +1851,7 @@ void Character::perform_technique( const ma_technique &technique, Creature &t,
         const itype_id casing = *current_ammo->ammo->casing;
         if( cur_weapon.get_item()->has_flag( flag_RELOAD_EJECT ) ) {
             cur_weapon.get_item()->force_insert_item( item( casing ).set_flag( flag_CASING ),
-                      pocket_type::MAGAZINE );
+                    pocket_type::MAGAZINE );
             cur_weapon.get_item()->on_contents_changed();
         }
     }
@@ -2803,7 +2803,7 @@ double Character::evaluate_weapon_internal( const item &maybe_weapon, bool can_u
         bool use_silent, const int pretend_ammo ) const
 {
     if( is_wielding( maybe_weapon ) || ( !get_wielded_item() && maybe_weapon.is_null() ) ) {
-    auto cached_value = cached_info.find( "weapon_value" );
+        auto cached_value = cached_info.find( "weapon_value" );
         if( cached_value != cached_info.end() ) {
             return cached_value->second;
         }
@@ -2830,7 +2830,7 @@ double Character::evaluate_weapon_internal( const item &maybe_weapon, bool can_u
 
 
     if( is_wielding( maybe_weapon ) || ( !get_wielded_item() && maybe_weapon.is_null() ) ) {
-    cached_info.emplace( "weapon_value", val );
+        cached_info.emplace( "weapon_value", val );
     }
     return val;
 }

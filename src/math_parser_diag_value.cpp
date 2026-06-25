@@ -71,19 +71,19 @@ constexpr R _diag_value_helper( diag_value::impl_t const &data, const_dialogue c
         []( auto const & v ) -> R
         {
             if constexpr( std::is_same_v<std::decay_t<decltype( v )>, C> )
-        {
-            // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter)
-            return v;
-        } else if constexpr( std::is_same_v<std::decay_t<decltype( v )>, diag_value::legacy_value> )
-        {
-            if( !v.converted ) {
+            {
+                // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter)
+                return v;
+            } else if constexpr( std::is_same_v<std::decay_t<decltype( v )>, diag_value::legacy_value> )
+            {
+                if( !v.converted ) {
                     v.converted = std::make_shared<diag_value::impl_t>( _convert<C>( v ) );
                 }
                 return _diag_value_helper<C, at_runtime, R>( *v.converted );
             } else if constexpr( at_runtime )
-        {
-            throw math::runtime_error( "Type mismatch in diag_value: requested %s, got %s", _str_type_of( C{} ),
-                                       _str_type_of( v ) );
+            {
+                throw math::runtime_error( "Type mismatch in diag_value: requested %s, got %s", _str_type_of( C{} ),
+                                           _str_type_of( v ) );
             } else
             {
 

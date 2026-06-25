@@ -609,8 +609,8 @@ void monster::try_reproduce()
             }
             if( !type->baby_type.baby_monster_group.is_null() ) {
                 std::vector<MonsterGroupResult> babies = MonsterGroupManager::GetResultFromGroup(
-                        type->baby_type.baby_monster_group, &spawn_cnt,
-                        nullptr, false, nullptr, true );
+                            type->baby_type.baby_monster_group, &spawn_cnt,
+                            nullptr, false, nullptr, true );
                 for( const MonsterGroupResult &mgr : babies ) {
                     here.add_spawn( mgr.id, std::max( 1, spawn_cnt * mgr.pack_size ), pos_bub(), friendly );
                 }
@@ -713,7 +713,7 @@ std::string monster::get_name() const
 std::string monster::name( unsigned int quantity ) const
 {
     if( !type ) {
-    debugmsg( "monster::name empty type!" );
+        debugmsg( "monster::name empty type!" );
         return std::string();
     }
     std::string result = type->nname( quantity );
@@ -766,7 +766,7 @@ std::string monster::name_with_armor() const
 std::string monster::disp_name( bool possessive, bool capitalize_first ) const
 {
     if( !possessive ) {
-    return string_format( capitalize_first ? _( "The %s" ) : _( "the %s" ), name() );
+        return string_format( capitalize_first ? _( "The %s" ) : _( "the %s" ), name() );
     } else {
         return string_format( capitalize_first ? _( "The %s's" ) : _( "the %s's" ), name() );
     }
@@ -1354,14 +1354,14 @@ bool monster::avoid_trap( const tripoint_bub_ms & /* pos */, const trap &tr ) co
     // not even see them.
     // Traps are on the ground, digging monsters go below, fliers and climbers go above.
     if( digging() || flies() ) {
-    return true;
-}
+        return true;
+    }
 
-if( type->trap_avoids.count( tr.id ) > 0 ) {
-    return true;
-}
+    if( type->trap_avoids.count( tr.id ) > 0 ) {
+        return true;
+    }
 
-return dice( 3, type->sk_dodge + 1 ) >= dice( 3, tr.get_avoidance() );
+    return dice( 3, type->sk_dodge + 1 ) >= dice( 3, tr.get_avoidance() );
 }
 
 bool monster::has_flag( const mon_flag_id &f ) const
@@ -1373,10 +1373,10 @@ bool monster::has_flag( const flag_id &f ) const
 {
     mon_flag_str_id checked( f.c_str() );
     add_msg_debug( debugmode::DF_MONSTER,
-    "Monster %s checked for flag %s", name(),
-    f.c_str() );
+                   "Monster %s checked for flag %s", name(),
+                   f.c_str() );
     if( checked.is_valid() ) {
-    return has_flag( checked );
+        return has_flag( checked );
     } else {
         return has_effect_with_flag( f );
     }
@@ -1395,13 +1395,13 @@ bool monster::can_hear() const
 bool monster::can_submerge() const
 {
     return ( has_flag( mon_flag_NO_BREATHE ) || swims() || has_flag( mon_flag_AQUATIC ) ) &&
-    !has_flag( mon_flag_ELECTRONIC );
+           !has_flag( mon_flag_ELECTRONIC );
 }
 
 bool monster::can_drown() const
 {
     return !swims() && !has_flag( mon_flag_AQUATIC ) &&
-    !has_flag( mon_flag_NO_BREATHE ) && !flies();
+           !has_flag( mon_flag_NO_BREATHE ) && !flies();
 }
 
 bool monster::can_climb() const
@@ -1427,20 +1427,20 @@ bool monster::digs() const
 int monster::get_dig_mod() const
 {
     if( type->move_skills.dig.has_value() ) {
-    int percentile = type->move_skills.dig.value() * ( move_skills_data::max_movemod_penalty / 10 );
+        int percentile = type->move_skills.dig.value() * ( move_skills_data::max_movemod_penalty / 10 );
         return move_skills_data::max_movemod_penalty - percentile;
     } else if( has_flag( mon_flag_DIGS ) || has_flag( mon_flag_CAN_DIG ) ) {
-    return 1;
-}
+        return 1;
+    }
 
-// cannot dig
-return -1;
+    // cannot dig
+    return -1;
 }
 
 int monster::dig_skill() const
 {
     return type->move_skills.dig.value_or( has_flag( mon_flag_DIGS ) ||
-    has_flag( mon_flag_CAN_DIG ) ? 9 : -1 );
+                                           has_flag( mon_flag_CAN_DIG ) ? 9 : -1 );
 }
 
 bool monster::flies() const
@@ -1462,76 +1462,76 @@ int monster::climb_skill() const
 int monster::get_climb_mod() const
 {
     if( type->move_skills.climb.has_value() ) {
-    int percentile = type->move_skills.climb.value() * ( move_skills_data::max_movemod_penalty / 10 );
+        int percentile = type->move_skills.climb.value() * ( move_skills_data::max_movemod_penalty / 10 );
         return move_skills_data::max_movemod_penalty - percentile;
     } else if( has_flag( mon_flag_CLIMBS ) ) {
-    // only for backwards compatibility. In future move away from flags
-    return 1;
-}
+        // only for backwards compatibility. In future move away from flags
+        return 1;
+    }
 
-// cannot climb
-return -1;
+    // cannot climb
+    return -1;
 }
 
 bool monster::swims() const
 {
     return has_flag( mon_flag_SWIMS ) || has_flag( mon_flag_AQUATIC ) ||
-    type->move_skills.swim.has_value();
+           type->move_skills.swim.has_value();
 }
 
 int monster::swim_skill() const
 {
     if( type->move_skills.swim.has_value() ) {
-    return type->move_skills.swim.value();
+        return type->move_skills.swim.value();
     } else if( has_flag( mon_flag_SWIMS ) ) {
-    // Backwardscompatibility only
-    return 10;
-} else if( has_flag( mon_flag_AQUATIC ) ) {
-    // arbitrary value, if a specific speed is desired, use move_skills
-    return 6;
-}
-return -1;
+        // Backwardscompatibility only
+        return 10;
+    } else if( has_flag( mon_flag_AQUATIC ) ) {
+        // arbitrary value, if a specific speed is desired, use move_skills
+        return 6;
+    }
+    return -1;
 }
 
 int monster::get_swim_mod() const
 {
     if( type->move_skills.swim.has_value() ) {
-    int percentile = type->move_skills.swim.value() * ( move_skills_data::max_movemod_penalty / 10 );
+        int percentile = type->move_skills.swim.value() * ( move_skills_data::max_movemod_penalty / 10 );
         return move_skills_data::max_movemod_penalty - percentile;
 
     } else if( has_flag( mon_flag_SWIMS ) ) {
-    // only for backwards compatibility. In future move away from flags
-    // vanilla fish have fastest possible swimspeed
-    return 0;
-} else if( can_submerge() ) {
-    // monsters that can submerge can walk underwater. Simulated with min swimskill
-    return move_skills_data::max_movemod_penalty;
-}
+        // only for backwards compatibility. In future move away from flags
+        // vanilla fish have fastest possible swimspeed
+        return 0;
+    } else if( can_submerge() ) {
+        // monsters that can submerge can walk underwater. Simulated with min swimskill
+        return move_skills_data::max_movemod_penalty;
+    }
 
-// cannot swim
-return -1;
+    // cannot swim
+    return -1;
 }
 
 bool monster::can_act() const
 {
     return moves > 0 &&
            ( effects->empty() ||
-    ( !has_effect( effect_stunned ) && !has_effect( effect_psi_stunned ) &&
-    !has_effect( effect_downed ) && !has_effect( effect_webbed ) ) );
+             ( !has_effect( effect_stunned ) && !has_effect( effect_psi_stunned ) &&
+               !has_effect( effect_downed ) && !has_effect( effect_webbed ) ) );
 }
 
 int monster::sight_range( const float light_level ) const
 {
     // Non-aquatic monsters can't see much when submerged
     if( !can_see() || effect_cache[VISION_IMPAIRED] ||
-    ( underwater && !swims() && !has_flag( mon_flag_AQUATIC ) && !digging() ) ) {
-    return 1;
-}
-static const float default_daylight = default_daylight_level();
-if( light_level == 0 ) {
-    return calculate_by_enchantment( type->vision_night, enchant_vals::mod::VISION_RANGE, true );
+        ( underwater && !swims() && !has_flag( mon_flag_AQUATIC ) && !digging() ) ) {
+        return 1;
+    }
+    static const float default_daylight = default_daylight_level();
+    if( light_level == 0 ) {
+        return calculate_by_enchantment( type->vision_night, enchant_vals::mod::VISION_RANGE, true );
     } else if( light_level >= default_daylight ) {
-    return calculate_by_enchantment( type->vision_day, enchant_vals::mod::VISION_RANGE, true );
+        return calculate_by_enchantment( type->vision_day, enchant_vals::mod::VISION_RANGE, true );
     }
     int range = ( light_level * type->vision_day + ( default_daylight - light_level ) *
                   type->vision_night ) / default_daylight;
@@ -1574,11 +1574,11 @@ bool monster::is_pet_follow() const
 bool monster::has_intelligence() const
 {
     return has_flag( mon_flag_PATH_AVOID_FALL ) ||
-    has_flag( mon_flag_PATH_AVOID_FIRE ) ||
-    has_flag( mon_flag_PATH_AVOID_DANGER ) ||
-    has_flag( mon_flag_PRIORITIZE_TARGETS ) ||
-    get_pathfinding_settings().avoid_sharp ||
-    get_pathfinding_settings().avoid_traps;
+           has_flag( mon_flag_PATH_AVOID_FIRE ) ||
+           has_flag( mon_flag_PATH_AVOID_DANGER ) ||
+           has_flag( mon_flag_PRIORITIZE_TARGETS ) ||
+           get_pathfinding_settings().avoid_sharp ||
+           get_pathfinding_settings().avoid_traps;
 }
 
 std::vector<material_id> monster::get_absorb_material() const
@@ -1683,19 +1683,19 @@ bool monster::is_fleeing( Character &u ) const
         return true;
     }
     if( anger >= 100 || morale >= 100 ) {
-    return false;
-}
-monster_attitude att = attitude( &u );
-if( att == MATT_FLEE ) {
-    return true;
-}
-if( att != MATT_FOLLOW ) {
-    return false;
-}
-// Scale vertical separation for fliers (one z is roughly four meters).
-constexpr int FLIER_Z_PENALTY = 4;
-int effective;
-if( flies() ) {
+        return false;
+    }
+    monster_attitude att = attitude( &u );
+    if( att == MATT_FLEE ) {
+        return true;
+    }
+    if( att != MATT_FOLLOW ) {
+        return false;
+    }
+    // Scale vertical separation for fliers (one z is roughly four meters).
+    constexpr int FLIER_Z_PENALTY = 4;
+    int effective;
+    if( flies() ) {
         const int xy = rl_dist( pos_bub().xy(), u.pos_bub().xy() );
         const int z_diff = std::abs( pos_abs().z() - u.pos_abs().z() );
         effective = xy + z_diff * FLIER_Z_PENALTY;
@@ -2032,7 +2032,7 @@ bool monster::is_on_ground() const
 bool monster::has_weapon() const
 {
     return has_flag( mon_flag_WIELDED_WEAPON ) && !has_effect( effect_disarmed ) &&
-    !has_effect( effect_maimed_arm ); // monsters can actually have weapons, silly
+           !has_effect( effect_maimed_arm ); // monsters can actually have weapons, silly
 }
 
 bool monster::is_warm() const
@@ -2106,8 +2106,8 @@ bool monster::is_immune_effect( const efftype_id &effect ) const
 
 bool monster::check_immunity_data( const field_immunity_data &ft ) const
 {
-for( const flag_id &flag : ft.immunity_data_flags ) {
-    if( has_flag( flag ) ) {
+    for( const flag_id &flag : ft.immunity_data_flags ) {
+        if( has_flag( flag ) ) {
             return true;
         }
     }
@@ -2117,7 +2117,7 @@ for( const flag_id &flag : ft.immunity_data_flags ) {
 bool monster::is_immune_damage( const damage_type_id &dt ) const
 {
     if( !dt->mon_immune_flags.empty() ) {
-    for( const std::string &mf : dt->mon_immune_flags ) {
+        for( const std::string &mf : dt->mon_immune_flags ) {
             if( has_flag( mon_flag_id( mf ) ) ) {
                 return true;
             }
@@ -2128,10 +2128,10 @@ bool monster::is_immune_damage( const damage_type_id &dt ) const
         return true;
     }
     if( dt == damage_electric && type->sp_defense == &mdefense::zapback ) {
-    return true;
-}
+        return true;
+    }
 
-return false;
+    return false;
 }
 
 void monster::make_bleed( const effect_source &source, time_duration duration, int intensity,
@@ -2725,10 +2725,10 @@ std::string monster::get_effect_status() const
 int monster::get_worn_armor_val( const damage_type_id &dt ) const
 {
     if( !has_effect( effect_monster_armor ) ) {
-    return 0;
-}
-if( armor_item ) {
-    return armor_item->resist( dt );
+        return 0;
+    }
+    if( armor_item ) {
+        return armor_item->resist( dt );
     }
     return 0;
 }
@@ -2796,20 +2796,20 @@ float monster::stability_roll() const
 float monster::get_dodge() const
 {
     if( has_effect( effect_downed ) || has_flag( json_flag_CANNOT_MOVE ) ) {
-    return 0.0f;
-}
+        return 0.0f;
+    }
 
-float ret = Creature::get_dodge();
-if( has_effect( effect_lightsnare ) || has_effect( effect_heavysnare ) ||
+    float ret = Creature::get_dodge();
+    if( has_effect( effect_lightsnare ) || has_effect( effect_heavysnare ) ||
         has_effect( effect_beartrap ) || has_effect( effect_tied ) ) {
-    ret /= 2;
-}
+        ret /= 2;
+    }
 
-if( has_effect( effect_bouldering ) ) {
-    ret /= 4;
-}
+    if( has_effect( effect_bouldering ) ) {
+        ret /= 4;
+    }
 
-return ret;
+    return ret;
 }
 
 float monster::get_melee() const
@@ -2825,7 +2825,7 @@ float monster::dodge_roll() const
 bool monster::can_attack_high() const
 {
     return  !( ( type->size < creature_size::medium && !has_flag( mon_flag_FLIES ) &&
-    !has_flag( mon_flag_ATTACK_UPPER ) ) || has_flag( mon_flag_ATTACK_LOWER ) )  ;
+                 !has_flag( mon_flag_ATTACK_UPPER ) ) || has_flag( mon_flag_ATTACK_LOWER ) )  ;
 }
 
 int monster::get_grab_strength() const
@@ -2855,22 +2855,22 @@ bool monster::is_grabbing( bodypart_str_id bp )
 float monster::fall_damage_mod() const
 {
     if( flies() ) {
-    return 0.0f;
-}
+        return 0.0f;
+    }
 
-switch( type->size ) {
-    case creature_size::tiny:
-        return 0.2f;
-    case creature_size::small:
-        return 0.6f;
-    case creature_size::medium:
-        return 1.0f;
-    case creature_size::large:
-        return 1.4f;
-    case creature_size::huge:
-        return 2.0f;
-    case creature_size::num_sizes:
-        debugmsg( "ERROR: Invalid Creature size class." );
+    switch( type->size ) {
+        case creature_size::tiny:
+            return 0.2f;
+        case creature_size::small:
+            return 0.6f;
+        case creature_size::medium:
+            return 1.0f;
+        case creature_size::large:
+            return 1.4f;
+        case creature_size::huge:
+            return 2.0f;
+        case creature_size::num_sizes:
+            debugmsg( "ERROR: Invalid Creature size class." );
             return 0.0f;
     }
 
@@ -2940,14 +2940,14 @@ void monster::disable_special( const std::string &special_name )
 bool monster::special_available( std::string_view special_name ) const
 {
     std::map<std::string, mon_special_attack>::const_iterator iter = special_attacks.find(
-            special_name );
+                special_name );
     return iter != special_attacks.end() && iter->second.enabled && iter->second.cooldown == 0;
 }
 
 bool monster::has_special( const std::string &special_name ) const
 {
     std::map<std::string, mon_special_attack>::const_iterator iter = special_attacks.find(
-            special_name );
+                special_name );
     return iter != special_attacks.end() && iter->second.enabled;
 }
 
@@ -3147,7 +3147,7 @@ void monster::die( map *here, Creature *nkiller )
         const tripoint_abs_sm abssub = coords::project_to<coords::sm>( pos_abs() );
         // Do it for overmap above/below too
         for( const tripoint_abs_sm &p : points_in_radius( abssub, HALF_MAPSIZE, 1 ) ) {
-            for( mongroup * &mgp : overmap_buffer.groups_at( p ) ) {
+            for( mongroup *&mgp : overmap_buffer.groups_at( p ) ) {
                 if( MonsterGroupManager::IsMonsterInGroup( mgp->type, type->id ) ) {
                     mgp->dying = true;
                 }
@@ -3328,15 +3328,15 @@ int monster::mech_str_addition() const
 bool monster::check_mech_powered() const
 {
     if( is_hallucination() || !has_flag( mon_flag_RIDEABLE_MECH ) || !battery_item ) {
-    return false;
-}
-if( battery_item->ammo_remaining( ) <= 0 ) {
-    return false;
-}
-const itype &type = *battery_item->type;
-if( battery_item->ammo_remaining( ) <= type.magazine->capacity / 10 && one_in( 10 ) ) {
-    add_msg( m_bad, _( "Your %s emits a beeping noise as its batteries start to get low." ),
-             get_name() );
+        return false;
+    }
+    if( battery_item->ammo_remaining( ) <= 0 ) {
+        return false;
+    }
+    const itype &type = *battery_item->type;
+    if( battery_item->ammo_remaining( ) <= type.magazine->capacity / 10 && one_in( 10 ) ) {
+        add_msg( m_bad, _( "Your %s emits a beeping noise as its batteries start to get low." ),
+                 get_name() );
     }
     return true;
 }
@@ -3372,32 +3372,32 @@ void monster::generate_inventory( bool disableDrops )
 void monster::drop_items_on_death( map *here, item *corpse ) const
 {
     if( is_hallucination() ) {
-    return;
-}
-if( type->death_drops.is_empty() ) {
-    return;
-}
+        return;
+    }
+    if( type->death_drops.is_empty() ) {
+        return;
+    }
 
-std::vector<item> new_items = item_group::items_from( type->death_drops,
-                              calendar::start_of_cataclysm,
-                              spawn_flags::use_spawn_rate );
+    std::vector<item> new_items = item_group::items_from( type->death_drops,
+                                  calendar::start_of_cataclysm,
+                                  spawn_flags::use_spawn_rate );
 
-for( item &e : new_items ) {
-    e.randomize_rot();
+    for( item &e : new_items ) {
+        e.randomize_rot();
         e.preserve_location( pos_abs() );
     }
 
     // for non corpses this is much simpler
     if( !corpse ) {
-    for( item &it : new_items ) {
+        for( item &it : new_items ) {
             here->add_item_or_charges( pos_bub( *here ), it );
         }
         return;
     }
 
     // first put "on" things that are wearable
-for( item &it : new_items ) {
-    if( has_flag( mon_flag_FILTHY ) ) {
+    for( item &it : new_items ) {
+        if( has_flag( mon_flag_FILTHY ) ) {
             if( ( it.is_armor() || it.is_pet_armor() ) && !it.is_gun() ) {
                 // handle wearable guns as a special case
                 it.set_flag( json_flag_FILTHY );
@@ -3415,9 +3415,9 @@ for( item &it : new_items ) {
 
     // then nest the rest in those "worn" items if possible
     // TODO: disable the backup, only spawn items here that actually fit in something
-for( item &it : new_items ) {
-    // add stuff that could be worn or strapped to the creature
-    if( !it.is_armor() ) {
+    for( item &it : new_items ) {
+        // add stuff that could be worn or strapped to the creature
+        if( !it.is_armor() ) {
             std::pair<item_location, item_pocket *> current_best;
             for( item *worn_it : corpse->all_items_top() ) {
                 item_location loc;
@@ -3441,19 +3441,19 @@ for( item &it : new_items ) {
 void monster::spawn_dissectables_on_death( item *corpse ) const
 {
     if( is_hallucination() ) {
-    return;
-}
-if( type->dissect.is_empty() ) {
-    return;
-}
-if( !corpse ) {
-    return;
-}
+        return;
+    }
+    if( type->dissect.is_empty() ) {
+        return;
+    }
+    if( !corpse ) {
+        return;
+    }
 
-for( const harvest_entry &entry : *type->dissect ) {
-    std::vector<item> dissectables = item_group::items_from( item_group_id( entry.drop ),
-                                     calendar::turn,
-                                     spawn_flags::use_spawn_rate );
+    for( const harvest_entry &entry : *type->dissect ) {
+        std::vector<item> dissectables = item_group::items_from( item_group_id( entry.drop ),
+                                         calendar::turn,
+                                         spawn_flags::use_spawn_rate );
         for( item &dissectable : dissectables ) {
             dissectable.dropped_from = entry.type;
             for( const flag_id &flg : entry.flags ) {
@@ -3762,7 +3762,7 @@ bool monster::is_hallucination() const
 bool monster::is_electrical() const
 {
     return in_species( species_ROBOT ) || has_flag( mon_flag_ELECTRIC ) ||
-    in_species( species_CYBORG ) || has_effect( effect_absorbed_electric );
+           in_species( species_CYBORG ) || has_effect( effect_absorbed_electric );
 }
 
 bool monster::is_fae() const
@@ -3773,31 +3773,31 @@ bool monster::is_fae() const
 bool monster::is_nether() const
 {
     return in_species( species_HORROR ) || in_species( species_NETHER ) ||
-    in_species( species_nether_player_hate );
+           in_species( species_nether_player_hate );
 }
 
 // The logic is If PSI_NULL, no -> If HAS_MIND, yes -> if ZOMBIE, no -> if HUMAN, yes -> else, no, and monsters temporarily immune to telepathy cannot be seen
 bool monster::has_mind() const
 {
     return ( ( !in_species( species_PSI_NULL ) && has_flag( mon_flag_HAS_MIND ) ) ||
-    ( !in_species( species_PSI_NULL ) && !in_species( species_ZOMBIE ) &&
-    has_flag( mon_flag_HUMAN ) ) ) &&
-    !has_effect( effect_eff_monster_immune_to_telepathy );
+             ( !in_species( species_PSI_NULL ) && !in_species( species_ZOMBIE ) &&
+               has_flag( mon_flag_HUMAN ) ) ) &&
+           !has_effect( effect_eff_monster_immune_to_telepathy );
 }
 
 field_type_id monster::bloodType() const
 {
     if( is_hallucination() ) {
-    return fd_null;
-}
-return type->bloodType();
+        return fd_null;
+    }
+    return type->bloodType();
 }
 field_type_id monster::gibType() const
 {
     if( is_hallucination() ) {
-    return fd_null;
-}
-return type->gibType();
+        return fd_null;
+    }
+    return type->gibType();
 }
 
 creature_size monster::get_size() const
@@ -3808,7 +3808,7 @@ creature_size monster::get_size() const
 units::mass monster::get_weight() const
 {
     return enchantment_cache->modify_value( enchant_vals::mod::TOTAL_WEIGHT,
-           units::operator*( type->weight, get_size() / type->size ) );
+                                            units::operator*( type->weight, get_size() / type->size ) );
 }
 
 units::mass monster::weight_capacity() const
@@ -3940,7 +3940,7 @@ void monster::init_from_item( item &itm )
 item monster::to_item() const
 {
     if( type->revert_to_itype.is_empty() ) {
-    return item();
+        return item();
     }
     // Birthday is wrong, but the item created here does not use it anyway (I hope).
     item result( type->revert_to_itype, calendar::turn );

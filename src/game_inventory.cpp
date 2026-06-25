@@ -219,7 +219,7 @@ static item_location inv_internal( Character &u, const inventory_selector_preset
             collated ? std::vector<item_location> { location, inv_s.get_collation_next() }
 :
             inv_s.get_highlighted().locations,
-                 inv_s.get_filter(), collated, cm_uistate.consume_menu_comestype
+            inv_s.get_filter(), collated, cm_uistate.consume_menu_comestype
         };
         uistate.consume_uistate = new_state;
     }
@@ -432,9 +432,9 @@ class wear_inventory_preset: public armor_inventory_preset
 
         bool is_shown( const item_location &loc ) const override {
             return loc->is_armor() &&
-            ( !loc.has_parent() || !is_worn_ablative( loc.parent_item(), loc ) ) &&
-            !you.is_worn( *loc ) &&
-            ( bp != bodypart_str_id::NULL_ID() ? loc->covers( bp ) : true );
+                   ( !loc.has_parent() || !is_worn_ablative( loc.parent_item(), loc ) ) &&
+                   !you.is_worn( *loc ) &&
+                   ( bp != bodypart_str_id::NULL_ID() ? loc->covers( bp ) : true );
         }
 
         std::string get_denial( const item_location &loc ) const override {
@@ -570,7 +570,7 @@ class pickup_inventory_preset : public inventory_selector_preset
 
         std::string get_denial( const item_location &loc ) const override {
             if( !you.has_item( *loc ) ) {
-            if( loc->made_of_from_type( phase_id::GAS ) ) {
+                if( loc->made_of_from_type( phase_id::GAS ) ) {
                     return _( "Can't pick up gasses." );
                 }
                 if( loc->made_of_from_type( phase_id::LIQUID ) && !loc->is_frozen_liquid() ) {
@@ -593,7 +593,7 @@ class pickup_inventory_preset : public inventory_selector_preset
                         item_copy.charges = 1;
                         item_copy.set_flag( flag_SHREDDED );
                         std::pair<item_location, item_pocket *> pocke = const_cast<Character &>( you ).best_pocket(
-                                item_copy, nullptr, false );
+                                    item_copy, nullptr, false );
 
                         item_pocket *ip = pocke.second;
                         if( ip == nullptr ||
@@ -890,14 +890,14 @@ class comestible_inventory_preset : public inventory_selector_preset
 
         const islot_comestible &get_edible_comestible( const item &it ) const {
             if( it.is_comestible() && you.can_eat( it ).success() ) {
-            // Ok since can_eat() returns false if is_craft() is true
-            return *it.type->comestible;
+                // Ok since can_eat() returns false if is_craft() is true
+                return *it.type->comestible;
+            }
+            static const islot_comestible dummy {};
+            return dummy;
         }
-        static const islot_comestible dummy {};
-        return dummy;
-    }
 
-    time_duration get_time_left( const item_location &loc ) const {
+        time_duration get_time_left( const item_location &loc ) const {
             time_duration time_left = 0_turns;
             const time_duration shelf_life = loc->is_comestible() ? loc->get_comestible()->spoils :
                                              calendar::INDEFINITELY_LONG_DURATION;
@@ -1064,7 +1064,7 @@ class comestible_filtered_inventory_preset : public comestible_inventory_preset
 
         bool is_shown( const item_location &loc ) const override {
             return comestible_inventory_preset::is_shown( loc ) &&
-            predicate( *loc );
+                   predicate( *loc );
         }
         void set_predicate( const std::function<bool( const item &it )> &new_predicate ) {
             predicate = new_predicate;
@@ -1132,8 +1132,8 @@ class activatable_inventory_preset : public pickup_inventory_preset
 
         bool is_shown( const item_location &loc ) const override {
             return ( loc->is_craft() || ( ( loc->type->has_use() || loc->has_relic_activation() ) &&
-            ( !loc->is_comestible() || loc->type->can_use( "PETFOOD" ) ) ) ) &&
-            !loc.is_invisible_installed_gunmod();
+                                          ( !loc->is_comestible() || loc->type->can_use( "PETFOOD" ) ) ) ) &&
+                   !loc.is_invisible_installed_gunmod();
         }
 
         std::string get_denial( const item_location &loc ) const override {
@@ -1156,7 +1156,7 @@ class activatable_inventory_preset : public pickup_inventory_preset
             const use_function *consume_drug = it.type->get_use( "consume_drug" );
             if( consume_drug != nullptr ) { //its a drug)
                 const consume_drug_iuse *consume_drug_use = dynamic_cast<const consume_drug_iuse *>
-                    ( consume_drug->get_actor_ptr() );
+                        ( consume_drug->get_actor_ptr() );
                 for( const auto &tool : consume_drug_use->tools_needed ) {
                     const bool has = item::count_by_charges( tool.first )
                                      ? you.has_charges( tool.first, ( tool.second == -1 ) ? 1 : tool.second )
@@ -1461,14 +1461,14 @@ class read_inventory_preset: public pickup_inventory_preset
 
             append_cell( [ this, &you, unknown ]( const item_location & loc ) -> std::string {
                 if( loc->type->can_use( "MA_MANUAL" ) ) {
-                return _( "martial arts" );
+                    return _( "martial arts" );
                 }
                 if( !is_known( loc ) ) {
-                return unknown;
-            }
-            const islot_book &book = get_book( loc );
-            if( book.skill ) {
-                const SkillLevel &skill = you.get_skill_level_object( book.skill );
+                    return unknown;
+                }
+                const islot_book &book = get_book( loc );
+                if( book.skill ) {
+                    const SkillLevel &skill = you.get_skill_level_object( book.skill );
                     if( skill.can_train() ) {
                         //~ %1$s: book skill name, %2$d: book skill level, %3$d: player skill level
                         return string_format( pgettext( "skill", "%1$s to %2$d (%3$d)" ), book.skill->name(), book.level,
@@ -1480,29 +1480,29 @@ class read_inventory_preset: public pickup_inventory_preset
 
             append_cell( [ this, unknown ]( const item_location & loc ) -> std::string {
                 if( !is_known( loc ) ) {
-                return unknown;
-            }
-            const islot_book &book = get_book( loc );
-            const int unlearned = book.recipes.size() - get_known_recipes( book );
+                    return unknown;
+                }
+                const islot_book &book = get_book( loc );
+                const int unlearned = book.recipes.size() - get_known_recipes( book );
 
-            return unlearned > 0 ? std::to_string( unlearned ) : std::string();
-        }, _( "RECIPES" ), unknown );
+                return unlearned > 0 ? std::to_string( unlearned ) : std::string();
+            }, _( "RECIPES" ), unknown );
             append_cell( [ this, &you, unknown ]( const item_location & loc ) -> std::string {
                 if( !is_known( loc ) ) {
-                return unknown;
-            }
-            return good_bad_none( you.book_fun_for( *loc, you ) );
-        }, _( "FUN" ), unknown );
+                    return unknown;
+                }
+                return good_bad_none( you.book_fun_for( *loc, you ) );
+            }, _( "FUN" ), unknown );
 
             append_cell( [ this, &you, unknown ]( const item_location & loc ) -> std::string {
                 if( !is_known( loc ) ) {
-                return unknown;
-            }
-            std::vector<std::string> dummy;
+                    return unknown;
+                }
+                std::vector<std::string> dummy;
 
-            const Character *reader = you.get_book_reader( *loc, dummy );
-            if( reader == nullptr ) {
-                return std::string();  // Just to make sure
+                const Character *reader = you.get_book_reader( *loc, dummy );
+                if( reader == nullptr ) {
+                    return std::string();  // Just to make sure
                 }
                 // Actual reading time (in turns). Can be penalized.
                 const int actual_turns = to_turns<int>( you.time_to_read( *loc, *reader ) );
@@ -1511,7 +1511,7 @@ class read_inventory_preset: public pickup_inventory_preset
                 std::string duration = to_string_approx( time_duration::from_turns( actual_turns ), false );
 
                 if( actual_turns > normal_turns ) { // Longer - complicated stuff.
-                return string_format( "<color_light_red>%s</color>", duration );
+                    return string_format( "<color_light_red>%s</color>", duration );
                 }
 
                 return duration; // Normal speed.
@@ -2036,8 +2036,8 @@ class weapon_inventory_preset: public inventory_selector_preset
 
     private:
         bool deals_melee_damage( const item &it ) const {
-for( const damage_type &dt : damage_type::get_all() ) {
-            if( it.damage_melee( dt.id ) ) {
+            for( const damage_type &dt : damage_type::get_all() ) {
+                if( it.damage_melee( dt.id ) ) {
                     return true;
                 }
             }
@@ -2046,7 +2046,7 @@ for( const damage_type &dt : damage_type::get_all() ) {
 
         std::string get_damage_string( float damage, bool display_zeroes = false ) const {
             return ( damage || display_zeroes ) ?
-            string_format( "<color_yellow>%g</color>", damage ) : std::string();
+                   string_format( "<color_yellow>%g</color>", damage ) : std::string();
         }
 
         const Character &you;
@@ -2233,11 +2233,11 @@ class attach_molle_inventory_preset : public inventory_selector_preset
         std::string get_denial( const item_location &loc ) const override {
 
             if( actor->size - vest->get_contents().get_additional_space_used() < loc->get_pocket_size() ) {
-            return "not enough space left on the vest.";
-        }
+                return "not enough space left on the vest.";
+            }
 
-        {
-            return std::string();
+            {
+                return std::string();
             }
         }
 
@@ -2857,7 +2857,7 @@ static item_location autodoc_internal( Character &you, Character &patient,
     }
 
     std::vector<const item *> install_programs = patient.crafting_inventory().items_with( [](
-            const item & it ) -> bool { return it.has_flag( flag_BIONIC_INSTALLATION_DATA ); } );
+                const item & it ) -> bool { return it.has_flag( flag_BIONIC_INSTALLATION_DATA ); } );
 
     if( !install_programs.empty() ) {
         hint += string_format(
@@ -2952,7 +2952,7 @@ class bionic_install_preset: public inventory_selector_preset
             Character &installer = you;
 
             std::vector<const item *> install_programs = you.crafting_inventory().items_with( [loc](
-                    const item & it ) -> bool { return it.typeId() == loc.get_item()->type->bionic->installation_data; } );
+                        const item & it ) -> bool { return it.typeId() == loc.get_item()->type->bionic->installation_data; } );
 
             const bool has_install_program = !install_programs.empty();
 
@@ -3007,7 +3007,7 @@ class bionic_install_surgeon_preset : public inventory_selector_preset
 
         std::string get_denial( const item_location &loc ) const override {
             if( you.is_npc() ) {
-            int const price = npc_trading::bionic_install_price( you, pa, loc );
+                int const price = npc_trading::bionic_install_price( you, pa, loc );
                 ret_val<void> const refusal =
                     you.as_npc()->wants_to_sell( loc, price );
                 if( !refusal.success() ) {
@@ -3076,7 +3076,7 @@ class change_sprite_inventory_preset: public inventory_selector_preset
             you( pl ) {
             append_cell( []( const item_location & loc ) -> std::string {
                 if( loc->has_var( "sprite_override" ) ) {
-                const itype_id sprite_override( std::string( loc->get_var( "sprite_override" ) ) );
+                    const itype_id sprite_override( std::string( loc->get_var( "sprite_override" ) ) );
                     const std::string variant = loc->get_var( "sprite_override_variant" );
                     if( !item::type_is_defined( sprite_override ) ) {
                         return _( "Unknown" );
@@ -3115,7 +3115,7 @@ class unload_selector_preset : public inventory_selector_preset
         }
         bool is_shown( const item_location &location ) const override {
             return !location.is_invisible_installed_gunmod( ) &&
-            you.rate_action_unload( *location ) == hint_rating::good;
+                   you.rate_action_unload( *location ) == hint_rating::good;
         }
     private:
         const Character &you;

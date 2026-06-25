@@ -201,38 +201,38 @@ struct achievement_requirement {
 
     void check( const achievement_id &id ) const {
         if( !statistic.is_valid() ) {
-        debugmsg( "Achievement %s refers to invalid statistic %s", id.str(), statistic.str() );
+            debugmsg( "Achievement %s refers to invalid statistic %s", id.str(), statistic.str() );
         }
 
         if( target.type() != cata_variant_type::int_ && !description &&
             visibility != requirement_visibility::never &&
             comparison != achievement_comparison::anything ) {
-        debugmsg( "Achievement %s has a non-integer requirement which is sometimes visible.  "
-                  "Such requirements must have a description, but this one does not.",
-                  id.str() );
+            debugmsg( "Achievement %s has a non-integer requirement which is sometimes visible.  "
+                      "Such requirements must have a description, but this one does not.",
+                      id.str() );
         }
 
         if( !target.is_valid() ) {
-        debugmsg( "Achievement %s has a requirement target %s of type %s, but that is not "
-                  "a valid value of that type.",
-                  id.str(), target.get_string(), io::enum_to_string( target.type() ) );
+            debugmsg( "Achievement %s has a requirement target %s of type %s, but that is not "
+                      "a valid value of that type.",
+                      id.str(), target.get_string(), io::enum_to_string( target.type() ) );
         }
 
         if( comparison != achievement_comparison::anything &&
             target.type() != statistic->type() ) {
-        debugmsg( "Achievement %s has a requirement comparing a value of type %s to a value "
-                  "of type %s.  Comparisons should be between values of the same type.",
-                  id.str(), io::enum_to_string( target.type() ),
-                  io::enum_to_string( statistic->type() ) );
+            debugmsg( "Achievement %s has a requirement comparing a value of type %s to a value "
+                      "of type %s.  Comparisons should be between values of the same type.",
+                      id.str(), io::enum_to_string( target.type() ),
+                      io::enum_to_string( statistic->type() ) );
         }
     }
 
     bool satisfied_by( const cata_variant &v ) const {
         switch( comparison ) {
-        case achievement_comparison::equal:
-            return v == target;
-        case achievement_comparison::less_equal:
-            return v.get<int>() <= target.get<int>();
+            case achievement_comparison::equal:
+                return v == target;
+            case achievement_comparison::less_equal:
+                return v.get<int>() <= target.get<int>();
             case achievement_comparison::greater_equal:
                 return v.get<int>() >= target.get<int>();
             case achievement_comparison::anything:
@@ -245,19 +245,19 @@ struct achievement_requirement {
 
     bool is_visible( achievement_completion ach_completed, bool req_completed ) const {
         switch( visibility ) {
-        case requirement_visibility::always:
-            return true;
-        case requirement_visibility::when_requirement_completed:
-            return req_completed;
-        case requirement_visibility::when_achievement_completed:
-            return ach_completed == achievement_completion::completed;
-        case requirement_visibility::never:
-            return false;
-        case requirement_visibility::last:
-            break;
+            case requirement_visibility::always:
+                return true;
+            case requirement_visibility::when_requirement_completed:
+                return req_completed;
+            case requirement_visibility::when_achievement_completed:
+                return ach_completed == achievement_completion::completed;
+            case requirement_visibility::never:
+                return false;
+            case requirement_visibility::last:
+                break;
+        }
+        cata_fatal( "Invalid requirement_visibility value" );
     }
-    cata_fatal( "Invalid requirement_visibility value" );
-}
 };
 
 static time_point epoch_to_time_point( achievement::time_bound::epoch e )
@@ -330,18 +330,18 @@ achievement_completion achievement::time_bound::completed() const
 bool achievement::time_bound::becomes_false() const
 {
     switch( comparison_ ) {
-    case achievement_comparison::equal:
-        return false;
-    case achievement_comparison::less_equal:
-        return true;
-    case achievement_comparison::greater_equal:
-        return false;
-    case achievement_comparison::anything:
-        return true;
-    case achievement_comparison::last:
-        break;
-}
-cata_fatal( "Invalid achievement_comparison" );
+        case achievement_comparison::equal:
+            return false;
+        case achievement_comparison::less_equal:
+            return true;
+        case achievement_comparison::greater_equal:
+            return false;
+        case achievement_comparison::anything:
+            return true;
+        case achievement_comparison::last:
+            break;
+    }
+    cata_fatal( "Invalid achievement_comparison" );
 }
 
 std::string achievement::time_bound::ui_text( bool is_conduct ) const
@@ -445,8 +445,8 @@ void achievement::load( const JsonObject &jo, std::string_view )
 
 void achievement::check() const
 {
-for( const achievement_id &a : hidden_by_ ) {
-    if( !a.is_valid() ) {
+    for( const achievement_id &a : hidden_by_ ) {
+        if( !a.is_valid() ) {
             debugmsg( "Achievement %s specifies hidden_by achievement %s, but the latter does not "
                       "exist.", id.str(), a.str() );
             continue;
@@ -459,12 +459,12 @@ for( const achievement_id &a : hidden_by_ ) {
 
     bool all_requirements_become_false = true;
     if( time_constraint_ ) {
-    time_constraint_->check( id );
+        time_constraint_->check( id );
         all_requirements_become_false = time_constraint_->becomes_false();
     }
 
-for( const achievement_requirement &req : requirements_ ) {
-    req.check( id );
+    for( const achievement_requirement &req : requirements_ ) {
+        req.check( id );
         if( !req.becomes_false ) {
             all_requirements_become_false = false;
         }
@@ -558,7 +558,7 @@ class requirement_watcher : stat_watcher
 
         std::optional<std::string> ui_text() const {
             return text_for_requirement( *requirement_, current_value_,
-                   achievement_completion::pending );
+                                         achievement_completion::pending );
         }
     private:
         achievement_tracker *tracker_;
@@ -698,7 +698,7 @@ void achievement_tracker::set_requirement( requirement_watcher *watcher, bool is
 bool achievement_tracker::time_is_expired() const
 {
     return achievement_->time_constraint() &&
-    achievement_->time_constraint()->completed() == achievement_completion::failed;
+           achievement_->time_constraint()->completed() == achievement_completion::failed;
 }
 
 std::vector<cata_variant> achievement_tracker::current_values() const
@@ -715,11 +715,11 @@ std::string achievement_tracker::ui_text() const
 {
     // Determine overall achievement status
     if( time_is_expired() ) {
-    return achievement_state{
-        achievement_completion::failed,
-        achievement_->time_constraint()->target(),
-        current_values()
-    } .ui_text( achievement_ );
+        return achievement_state{
+            achievement_completion::failed,
+            achievement_->time_constraint()->target(),
+            current_values()
+        } .ui_text( achievement_ );
     }
 
     // First: the achievement name and description
@@ -731,15 +731,15 @@ std::string achievement_tracker::ui_text() const
                        true );
     std::string result = colorize( achievement_->name(), c_title ) + "\n";
     if( !achievement_->description().empty() ) {
-    result += "  " + colorize( achievement_->description(), c ) + "\n";
+        result += "  " + colorize( achievement_->description(), c ) + "\n";
     }
 
     // Note if it's been completed in other games
     const std::vector<std::string> avatars_completed =
         get_past_achievements().avatars_completed( achievement_->id );
     if( !avatars_completed.empty() ) {
-    std::string message =
-        string_format( _( "Previously completed by %s" ), avatars_completed.front() );
+        std::string message =
+            string_format( _( "Previously completed by %s" ), avatars_completed.front() );
         const size_t num_completions = avatars_completed.size();
         if( num_completions > 1 ) {
             message += string_format(
@@ -751,15 +751,15 @@ std::string achievement_tracker::ui_text() const
 
     // Next: the time constraint
     if( achievement_->time_constraint() ) {
-    result += "  " + achievement_->time_constraint()->ui_text( achievement_->is_conduct() ) +
+        result += "  " + achievement_->time_constraint()->ui_text( achievement_->is_conduct() ) +
                   "\n";
     }
 
     // Next: the requirements
     std::vector<std::optional<std::string>> req_texts;
     req_texts.reserve( watchers_.size() );
-for( const std::unique_ptr<requirement_watcher> &watcher : watchers_ ) {
-    req_texts.push_back( watcher->ui_text() );
+    for( const std::unique_ptr<requirement_watcher> &watcher : watchers_ ) {
+        req_texts.push_back( watcher->ui_text() );
     }
 
     result += format_requirements( req_texts, c );
@@ -857,8 +857,8 @@ void achievements_tracker::write_json_achievements(
 
     std::vector<achievement_id> ach_ids;
 
-for( const auto &kv : achievements_status_ ) {
-    if( kv.second.completion == achievement_completion::completed ) {
+    for( const auto &kv : achievements_status_ ) {
+        if( kv.second.completion == achievement_completion::completed ) {
             ach_ids.push_back( kv.first );
         }
     }

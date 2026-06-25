@@ -109,17 +109,17 @@ int turret_data::ammo_remaining() const
 int turret_data::ammo_capacity( const ammotype &ammo ) const
 {
     if( !veh || !part || uses_vehicle_tanks_or_batteries() ) {
-    return 0;
-}
-return part->base.ammo_capacity( ammo );
+        return 0;
+    }
+    return part->base.ammo_capacity( ammo );
 }
 
 const itype *turret_data::ammo_data() const
 {
     if( !veh || !part ) {
-    return nullptr;
-}
-if( part->base.uses_firing_requirements() ) {
+        return nullptr;
+    }
+    if( part->base.uses_firing_requirements() ) {
         // Same prep-on-temp-copy pattern as range() so callers always see the
         // post-prep ammo identity, not the empty pre-fire pocket state.
         item gun_copy( part->base );
@@ -233,7 +233,7 @@ bool turret_data::ammo_select( const itype_id &ammo )
 std::set<ammo_effect_str_id> turret_data::ammo_effects() const
 {
     if( !veh || !part ) {
-    return std::set<ammo_effect_str_id>();
+        return std::set<ammo_effect_str_id>();
     }
     if( part->base.uses_firing_requirements() ) {
         // Auto-fire reads ammo_effects() to size AoE before firing. Vehicle-
@@ -258,9 +258,9 @@ std::set<ammo_effect_str_id> turret_data::ammo_effects() const
 int turret_data::range() const
 {
     if( !veh || !part ) {
-    return 0;
-}
-if( part->base.uses_firing_requirements() ) {
+        return 0;
+    }
+    if( part->base.uses_firing_requirements() ) {
         // Vehicle-bound pockets are empty pre-fire, so reading range off
         // part->base.ammo_data() would miss the ammo bonus entirely. Prep a
         // temp copy so range reflects what the firing path will actually load.
@@ -283,19 +283,19 @@ if( part->base.uses_firing_requirements() ) {
 bool turret_data::in_range( const tripoint_abs_ms &target ) const
 {
     if( !veh || !part ) {
-    return false;
-}
-int range = veh->turret_query( *part ).range();
-int dist = rl_dist( veh->abs_part_pos( *part ), target );
+        return false;
+    }
+    int range = veh->turret_query( *part ).range();
+    int dist = rl_dist( veh->abs_part_pos( *part ), target );
     return range >= dist;
 }
 
 bool turret_data::can_reload() const
 {
     if( !veh || !part ) {
-    return false;
-}
-if( part->base.uses_firing_requirements() ) {
+        return false;
+    }
+    if( part->base.uses_firing_requirements() ) {
         return part->base.is_reloadable();
     }
     if( uses_vehicle_tanks_or_batteries() ) {
@@ -314,9 +314,9 @@ if( part->base.uses_firing_requirements() ) {
 bool turret_data::can_unload() const
 {
     if( !veh || !part ) {
-    return false;
-}
-if( part->base.uses_firing_requirements() ) {
+        return false;
+    }
+    if( part->base.uses_firing_requirements() ) {
         // Multimag aggregate: any loaded mag in any well, or any loose ammo
         // in any direct MAGAZINE pocket. magazine_current() returns only the
         // first well's mag and would miss the second well.
@@ -506,7 +506,7 @@ void vehicle::turrets_aim_and_fire_single()
     std::vector<vehicle_part *> options;
 
     // Find all turrets that are ready to fire
-    for( vehicle_part * &t : turrets() ) {
+    for( vehicle_part *&t : turrets() ) {
         turret_data data = turret_query( *t );
         if( data.query() == turret_data::status::ready ) {
             option_names.push_back( t->name() );
@@ -663,7 +663,7 @@ void vehicle::turrets_set_targeting()
         menu.selected = sel;
         menu.fselected = sel;
 
-        for( vehicle_part * &p : turrets ) {
+        for( vehicle_part *&p : turrets ) {
             menu.addentry( -1, has_part( abs_part_pos( *p ), "TURRET_CONTROLS" ), MENU_AUTOASSIGN,
                            "%s [%s]", p->name(), p->enabled ?
                            _( "auto -> manual" ) : has_part( abs_part_pos( *p ), "TURRET_CONTROLS" ) ?
@@ -719,7 +719,7 @@ void vehicle::turrets_set_mode()
         menu.selected = sel;
         menu.fselected = sel;
 
-        for( vehicle_part * &p : turrets ) {
+        for( vehicle_part *&p : turrets ) {
             menu.addentry( -1, true, MENU_AUTOASSIGN, "%s [%s]",
                            p->name(), p->base.gun_current_mode().tname() );
         }

@@ -1317,7 +1317,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         u.i_add( tool_with_ammo( itype_soldering_iron_portable, 50 ) );
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-            select_step_tool_allocs( u, r, 1, map_inv, cancelled, -1 );
+                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, -1 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK_FALSE( allocs[1].empty() );
@@ -1327,7 +1327,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         u.i_add( tool_with_ammo( itype_soldering_iron_portable, 50 ) );
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-            select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
+                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK( allocs[1].empty() );
@@ -1338,7 +1338,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         // missing tool.
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-            select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
+                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK( allocs[1].empty() );

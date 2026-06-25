@@ -792,7 +792,7 @@ void mapgen_forest( mapgendata &dat )
             edge_length; // first coordinate of next overmap location
         critical_point_depths[0] = border_depth[edge_corner_mappings[edge]];
         critical_point_depths[interediary_crit_point_count + 1] = border_depth[edge_corner_mappings[edge +
-            4]];
+                4]];
         // Generate critical points in-order displacement-wise.
         for( int ci = 1; ci < interediary_crit_point_count + 1; ci++ ) {
             critical_point_displacements[ci] = clamp<int>( std::abs( static_cast<int>( std::round( normal_roll(
@@ -824,8 +824,8 @@ void mapgen_forest( mapgendata &dat )
             float w_right = std::pow( std::abs( critical_point_displacements[ubidx] - step ) + 1,
                                       -border_curviness );
             perimeter_depth[perimeter_depth_offset + step] = std::round( ( w_left * critical_point_depths[ubidx
-                - 1]
-                + w_right * critical_point_depths[ubidx] ) / ( w_left + w_right ) );
+                    - 1]
+                    + w_right * critical_point_depths[ubidx] ) / ( w_left + w_right ) );
 
             if( perimeter_depth[perimeter_depth_offset + step] < 1 ) {
                 perimeter_depth[perimeter_depth_offset + step] =
@@ -864,9 +864,9 @@ void mapgen_forest( mapgendata &dat )
     * @param self_weight The relative impact of the original biome on generation.
     */
     const auto unify_continuous_border = [&self_biome]( const forest_biome_mapgen * ccw,
-                                         const forest_biome_mapgen * corner, const forest_biome_mapgen * cw, float *ccw_weight,
-                                         float *cw_weight,
-    float *self_weight ) {
+                                         const forest_biome_mapgen * corner, const forest_biome_mapgen * cw, float * ccw_weight,
+                                         float * cw_weight,
+    float * self_weight ) {
         if( ccw != cw ) {
             if( ccw == corner && cw == &self_biome ) {
                 *cw_weight = *cw_weight / ( *self_weight + *cw_weight );
@@ -949,8 +949,8 @@ void mapgen_forest( mapgendata &dat )
             } else {
                 weights[wi] = std::pow( static_cast<float>( perimeter_depths[wi] ) / ( point_depths[wi] + 1 ),
                                         biome_transition_abruptness ) * scaling_factor / std::pow( static_cast<float>
-                                            ( perimeter_depths[wi] ),
-                                            biome_transition_abruptness );
+                                                ( perimeter_depths[wi] ),
+                                                biome_transition_abruptness );
                 net_weight += weights[wi];
             }
         }
@@ -967,7 +967,7 @@ void mapgen_forest( mapgendata &dat )
     * @return The groundcover to be placed at the specified point in the forest.
     */
     const auto get_feathered_groundcover = [&max_factor, &factor, &self_biome,
-    &adjacent_biomes, &nesw_weights, &unify_all_borders, &dat]( const point & p ) {
+                 &adjacent_biomes, &nesw_weights, &unify_all_borders, &dat]( const point & p ) {
         std::array<float, 4> adj_weights;
         float net_weight = nesw_weights( p, factor, adj_weights, -groundcover_margin );
         float self_weight = self_scalar;
@@ -1015,8 +1015,8 @@ void mapgen_forest( mapgendata &dat )
     * @param p the point to check to place a feature at.
     */
     const auto get_feathered_feature = [&no_ter_furn, &max_factor, &factor, &self_biome,
-                                        &adjacent_biomes, &nesw_weights, &unify_all_borders,
-    &dat]( const point & p ) {
+                                                      &adjacent_biomes, &nesw_weights, &unify_all_borders,
+                  &dat]( const point & p ) {
         std::array<float, 4> adj_weights;
         float net_weight = nesw_weights( p, factor, adj_weights );
         float self_weight = self_scalar;
@@ -1069,7 +1069,7 @@ void mapgen_forest( mapgendata &dat )
     const auto set_terrain_dependent_furniture =
     [&self_biome, &m]( const ter_id & tid, const point_bub_ms & p ) {
         const auto terrain_dependent_furniture_it = self_biome.terrain_dependent_furniture.find(
-                tid );
+                    tid );
         if( terrain_dependent_furniture_it == self_biome.terrain_dependent_furniture.end() ) {
             // No terrain dependent furnitures for this terrain.
             return;
@@ -2062,7 +2062,7 @@ void mapgen_ravine_edge( mapgendata &dat )
         dat.fill_groundcover();
     } else {
         const std::optional<ter_str_id> uniform_ter = dat.region.default_oter[ OVERMAP_DEPTH +
-            dat.zlevel() ].id()->get_uniform_terrain();
+                              dat.zlevel() ].id()->get_uniform_terrain();
         if( uniform_ter ) {
             m->draw_fill_background( *uniform_ter );
         } else {

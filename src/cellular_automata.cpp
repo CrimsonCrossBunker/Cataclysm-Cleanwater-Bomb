@@ -39,8 +39,8 @@ int neighbor_count( const std::vector<std::vector<int>> &cells, const int width,
 }
 
 std::vector<std::vector<int>> generate_cellular_automaton(
-    const int width, const int height, const int alive, const int iterations,
-    const int birth_limit, const int stasis_limit )
+                               const int width, const int height, const int alive, const int iterations,
+                               const int birth_limit, const int stasis_limit )
 {
     std::vector<std::vector<int>> current( width, std::vector<int>( height, 0 ) );
     std::vector<std::vector<int>> next( width, std::vector<int>( height, 0 ) );

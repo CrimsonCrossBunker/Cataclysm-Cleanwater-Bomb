@@ -49,8 +49,8 @@ void bash_damage_profile::load( const JsonObject &jo, const std::string_view )
 
 void bash_damage_profile::check() const
 {
-for( const std::pair<const damage_type_id, double> &pr : profile ) {
-    if( !pr.first.is_valid() ) {
+    for( const std::pair<const damage_type_id, double> &pr : profile ) {
+        if( !pr.first.is_valid() ) {
             debugmsg( "Invalid damage type %s in %s.", pr.first.str(), id.str() );
             continue;
         }

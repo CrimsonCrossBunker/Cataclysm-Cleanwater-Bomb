@@ -287,10 +287,10 @@ void fault::load( const JsonObject &jo, std::string_view )
 void fault::check() const
 {
     if( name_.empty() ) {
-    debugmsg( "fault '%s' has empty name", id.str() );
+        debugmsg( "fault '%s' has empty name", id.str() );
     }
     if( description_.empty() ) {
-    debugmsg( "fault '%s' has empty description", id.str() );
+        debugmsg( "fault '%s' has empty description", id.str() );
     }
 }
 
@@ -357,9 +357,9 @@ void fault_fix::finalize()
 void fault_fix::check() const
 {
     if( time < 0_turns ) {
-    debugmsg( "fault_fix '%s' has negative time", id.str() );
+        debugmsg( "fault_fix '%s' has negative time", id.str() );
     }
-for( const auto &[skill_id, lvl] : skills ) {
+    for( const auto &[skill_id, lvl] : skills ) {
         if( !skill_id.is_valid() ) {
             debugmsg( "fault_fix %s requires unknown skill '%s'", id.str(), skill_id.str() );
         }
@@ -367,19 +367,19 @@ for( const auto &[skill_id, lvl] : skills ) {
             debugmsg( "fault_fix '%s' requires negative level of skill '%s'", id.str(), skill_id.str() );
         }
     }
-for( const fault_id &fault_id : faults_removed ) {
-    if( !fault_id.is_valid() ) {
+    for( const fault_id &fault_id : faults_removed ) {
+        if( !fault_id.is_valid() ) {
             debugmsg( "fault_fix '%s' has invalid fault_id '%s' in 'faults_removed' field",
                       id.str(), fault_id.str() );
         }
     }
-for( const fault_id &fault_id : faults_added ) {
-    if( !fault_id.is_valid() ) {
+    for( const fault_id &fault_id : faults_added ) {
+        if( !fault_id.is_valid() ) {
             debugmsg( "fault_fix '%s' has invalid fault_id '%s' in 'faults_added' field",
                       id.str(), fault_id.str() );
         }
     }
-for( const auto &[proficiency_id, mult] : time_save_profs ) {
+    for( const auto &[proficiency_id, mult] : time_save_profs ) {
         if( !proficiency_id.is_valid() ) {
             debugmsg( "fault_fix %s has unknown proficiency_id '%s'",
                       id.str(), proficiency_id.str() );
@@ -389,7 +389,7 @@ for( const auto &[proficiency_id, mult] : time_save_profs ) {
                       id.str(), proficiency_id.str() );
         }
     }
-for( const auto &[flag_id, mult] : time_save_flags ) {
+    for( const auto &[flag_id, mult] : time_save_flags ) {
         if( !flag_id.is_valid() ) {
             debugmsg( "fault_fix %s has unknown flag_id '%s'",
                       id.str(), flag_id.str() );

@@ -24,7 +24,7 @@ struct alignas( T * ) alignas( T ) small_literal_vector {
     static_assert( std::is_trivially_destructible_v<T>, "T must be trivially destructible." );
     static_assert( std::is_trivially_copyable_v<T>, "T must be trivially copyable." );
     static_assert( std::is_trivially_default_constructible_v<T>,
-    "T must be trivially default constuctible." );
+                   "T must be trivially default constuctible." );
 
     small_literal_vector() : heap_( nullptr ), capacity_( kInlineCount ), len_( 0 ) {}
     small_literal_vector( const small_literal_vector &other ) : capacity_( kInlineCount ), len_( 0 ) {
@@ -145,11 +145,11 @@ struct alignas( T * ) alignas( T ) small_literal_vector {
 private:
     void check_capacity( size_t count ) const {
         if( count > std::numeric_limits<SizeT>::max() ) {
-        throw std::runtime_error(
-            "Attempted to use small_literal_vector for " +
-            std::to_string( count ) +
-            " elements items when there is only tracking space for " +
-            std::to_string( std::numeric_limits<SizeT>::max() ) );
+            throw std::runtime_error(
+                "Attempted to use small_literal_vector for " +
+                std::to_string( count ) +
+                " elements items when there is only tracking space for " +
+                std::to_string( std::numeric_limits<SizeT>::max() ) );
         }
     }
 

@@ -85,28 +85,28 @@ static bool can_move_melee( const npc &source )
 bool npc_attack_rating::operator>( const npc_attack_rating &rhs ) const
 {
     if( !rhs._value ) {
-    return true;
-}
-if( !_value ) {
-    return false;
-}
-return *_value > *rhs._value;
+        return true;
+    }
+    if( !_value ) {
+        return false;
+    }
+    return *_value > *rhs._value;
 }
 
 bool npc_attack_rating::operator>( const int rhs ) const
 {
     if( !_value ) {
-    return false;
-}
-return *_value > rhs;
+        return false;
+    }
+    return *_value > rhs;
 }
 
 bool npc_attack_rating::operator<( const int rhs ) const
 {
     if( !_value ) {
-    return true;
-}
-return *_value < rhs;
+        return true;
+    }
+    return *_value < rhs;
 }
 
 npc_attack_rating npc_attack_rating::operator-=( const int rhs )
@@ -252,19 +252,19 @@ npc_attack_rating npc_attack_spell::evaluate_tripoint(
 void npc_attack_melee::use( npc &source, const tripoint_bub_ms &location ) const
 {
     if( !source.is_wielding( weapon ) ) {
-    if( !source.wield( weapon ) ) {
+        if( !source.wield( weapon ) ) {
             debugmsg( "ERROR: npc tried to equip a weapon it couldn't wield" );
         }
         return;
     }
     Creature *critter = get_creature_tracker().creature_at( location );
     if( !critter ) {
-    debugmsg( "ERROR: npc tried to attack null critter" );
+        debugmsg( "ERROR: npc tried to attack null critter" );
         return;
     }
     int target_distance = rl_dist( source.pos_bub(), location );
     if( !source.is_adjacent( critter, true ) ) {
-    if( target_distance <= weapon.reach_range( source ).first ) {
+        if( target_distance <= weapon.reach_range( source ).first ) {
             add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is attempting a reach attack",
                            source.disp_name() );
             // check for friendlies in the line of fire
@@ -335,8 +335,8 @@ void npc_attack_melee::use( npc &source, const tripoint_bub_ms &location ) const
     } else if( source.mem_combat.formation_distance != -1 &&
                source.mem_combat.formation_distance <= target_distance &&
                rng( NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX ) > source.personality.aggression ) {
-    add_msg_debug( debugmode::DF_NPC_MOVEAI,
-                   "<color_light_gray>%s decided to fall back to formation with allies.</color>", source.name );
+        add_msg_debug( debugmode::DF_NPC_MOVEAI,
+                       "<color_light_gray>%s decided to fall back to formation with allies.</color>", source.name );
         source.look_for_player( get_player_character() );
     } else {
         // may wish to add a break here to see if target is out of formation with allies, and consider running back.
@@ -356,12 +356,12 @@ npc_attack_rating npc_attack_melee::evaluate( const npc &source,
 {
     npc_attack_rating effectiveness( std::nullopt, source.pos_bub() );
     if( !can_use( source ) ) {
-    return effectiveness;
-}
-const int time_penalty = base_time_penalty( source );
-creature_tracker &creatures = get_creature_tracker();
-for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
-    if( Creature *critter = creatures.creature_at( targetable_point ) ) {
+        return effectiveness;
+    }
+    const int time_penalty = base_time_penalty( source );
+    creature_tracker &creatures = get_creature_tracker();
+    for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
+        if( Creature *critter = creatures.creature_at( targetable_point ) ) {
             if( source.attitude_to( *critter ) != Creature::Attitude::HOSTILE ) {
                 // no point in swinging a sword at a friendly!
                 continue;
@@ -414,11 +414,11 @@ npc_attack_rating npc_attack_melee::evaluate_critter( const npc &source,
         const Creature *target, Creature *critter ) const
 {
     if( !critter ) {
-    return npc_attack_rating{};
-}
+        return npc_attack_rating{};
+    }
 
-// Can't melee creatures that are underwater beneath a solid surface
-if( critter->is_underwater() ) {
+    // Can't melee creatures that are underwater beneath a solid surface
+    if( critter->is_underwater() ) {
         const map &here = get_map();
         if( here.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, critter->pos_bub() ) ) {
             return npc_attack_rating{};
@@ -449,24 +449,24 @@ if( critter->is_underwater() ) {
 void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
 {
     if( !source.is_wielding( gun ) ) {
-    if( !source.wield( gun ) ) {
+        if( !source.wield( gun ) ) {
             debugmsg( "ERROR: npc tried to equip a weapon it couldn't wield" );
         }
         return;
     }
 
     if( !gun.ammo_sufficient( &source ) ) {
-    // todo: make gun an item_location instead of getting wielded item here
-    // but since wielding is required before this, it should be fine
-    source.do_reload( source.get_wielded_item() );
+        // todo: make gun an item_location instead of getting wielded item here
+        // but since wielding is required before this, it should be fine
+        source.do_reload( source.get_wielded_item() );
         add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is reloading %s", source.disp_name(),
                        gun.display_name() );
         return;
     }
 
     if( has_obstruction( source.pos_bub(), location, false ) ||
-            ( source.rules.has_flag( ally_rule::avoid_friendly_fire ) &&
-              !source.wont_hit_friend( location, gun, false ) ) ) {
+        ( source.rules.has_flag( ally_rule::avoid_friendly_fire ) &&
+          !source.wont_hit_friend( location, gun, false ) ) ) {
         if( can_move( source ) ) {
             source.avoid_friendly_fire();
         } else {
@@ -482,7 +482,7 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
     // TODO: Get distance to closest enemy
     if( target.range > 1 && source.aim_per_move( gun, source.recoil, target, aim_cache ) > 0 &&
         source.confident_gun_mode_range( gunmode, source.recoil ) < target.range ) {
-    add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is aiming", source.disp_name() );
+        add_msg_debug( debugmode::debug_filter::DF_NPC, "%s is aiming", source.disp_name() );
         source.aim( Target_attributes( source.pos_bub(), location ) );
     } else {
         if( source.is_hallucination() ) {
@@ -500,7 +500,7 @@ bool npc_attack_gun::can_use( const npc &source ) const
 {
     // can't attack with something you can't wield or which lacks ammo.
     return ( source.is_wielding( *gunmode ) || source.can_wield( *gunmode ).success() )
-    && gun.has_ammo();
+           && gun.has_ammo();
 }
 
 int npc_attack_gun::base_time_penalty( const npc &source ) const
@@ -528,14 +528,14 @@ npc_attack_rating npc_attack_gun::evaluate(
 {
     npc_attack_rating effectiveness( std::nullopt, source.pos_bub() );
     if( !can_use( source ) ) {
-    return effectiveness;
-}
-const int time_penalty = base_time_penalty( source );
-creature_tracker &creatures = get_creature_tracker();
-for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
-    if( creatures.creature_at( targetable_point ) ) {
+        return effectiveness;
+    }
+    const int time_penalty = base_time_penalty( source );
+    creature_tracker &creatures = get_creature_tracker();
+    for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
+        if( creatures.creature_at( targetable_point ) ) {
             npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                targetable_point );
+                    targetable_point );
             effectiveness_at_point -= time_penalty;
             if( effectiveness_at_point > effectiveness ) {
                 effectiveness = effectiveness_at_point;
@@ -557,7 +557,7 @@ std::vector<npc_attack_rating> npc_attack_gun::all_evaluations( const npc &sourc
     for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
         if( creatures.creature_at( targetable_point ) ) {
             npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                targetable_point );
+                    targetable_point );
             effectiveness_at_point -= time_penalty;
             effectiveness.push_back( effectiveness_at_point );
         }
@@ -610,8 +610,8 @@ npc_attack_rating npc_attack_gun::evaluate_tripoint(
 void npc_attack_activate_item::use( npc &source, const tripoint_bub_ms &/*location*/ ) const
 {
     if( !source.wield( activatable_item ) ) {
-    debugmsg( "%s can't wield %s it tried to activate", source.disp_name(),
-              activatable_item.display_name() );
+        debugmsg( "%s can't wield %s it tried to activate", source.disp_name(),
+                  activatable_item.display_name() );
         return;
     }
     // npc::wield may invalidate activatable_item's reference
@@ -621,19 +621,19 @@ void npc_attack_activate_item::use( npc &source, const tripoint_bub_ms &/*locati
 bool npc_attack_activate_item::can_use( const npc &source ) const
 {
     if( !activatable_item.has_flag( flag_NPC_ACTIVATE ) ) {
-    //TODO: make this more complete. only does BOMB type items
-    return false;
-}
-const bool can_use_grenades = !source.is_hallucination() && ( !source.is_player_ally() ||
-                              source.rules.has_flag( ally_rule::use_grenades ) );
-return can_use_grenades;
+        //TODO: make this more complete. only does BOMB type items
+        return false;
+    }
+    const bool can_use_grenades = !source.is_hallucination() && ( !source.is_player_ally() ||
+                                  source.rules.has_flag( ally_rule::use_grenades ) );
+    return can_use_grenades;
 }
 
 npc_attack_rating npc_attack_activate_item::evaluate(
     const npc &source, const Creature * /*target*/ ) const
 {
     if( !can_use( source ) ) {
-    return npc_attack_rating( std::nullopt, source.pos_bub() );
+        return npc_attack_rating( std::nullopt, source.pos_bub() );
     }
     // until we have better logic for grenades it's better to keep this as a last resort...
     const int emergency = source.emergency() ? 1 : 0;
@@ -667,8 +667,8 @@ void npc_attack_throw::use( npc &source, const tripoint_bub_ms &location ) const
     }
 
     if( has_obstruction( source.pos_bub(), location, false ) ||
-            ( source.rules.has_flag( ally_rule::avoid_friendly_fire ) &&
-              !source.wont_hit_friend( location, thrown_item, true ) ) ) {
+        ( source.rules.has_flag( ally_rule::avoid_friendly_fire ) &&
+          !source.wont_hit_friend( location, thrown_item, true ) ) ) {
         if( can_move( source ) ) {
             source.avoid_friendly_fire();
         } else {
@@ -709,43 +709,43 @@ bool npc_attack_throw::can_use( const npc &source ) const
     // Don't throw anything if we're hallucination
     // TODO: make an analogue of pretend_fire function
     if( source.is_hallucination() ) {
-    return false;
-}
+        return false;
+    }
 
-const item_location wielded_item = source.get_wielded_item();
-const bool keep_wielded = wielded_item && !source.is_wielding( thrown_item ) &&
-                          wielded_item->has_flag( flag_THROW_KEEP_WIELDED );
-if( !source.is_wielding( thrown_item ) && !keep_wielded &&
-    !source.can_wield( thrown_item ).success() ) {
-    return false;
-}
+    const item_location wielded_item = source.get_wielded_item();
+    const bool keep_wielded = wielded_item && !source.is_wielding( thrown_item ) &&
+                              wielded_item->has_flag( flag_THROW_KEEP_WIELDED );
+    if( !source.is_wielding( thrown_item ) && !keep_wielded &&
+        !source.can_wield( thrown_item ).success() ) {
+        return false;
+    }
 
-item single_item( thrown_item );
-if( single_item.count_by_charges() ) {
-    single_item.charges = 1;
-}
+    item single_item( thrown_item );
+    if( single_item.count_by_charges() ) {
+        single_item.charges = 1;
+    }
 
-// Always allow throwing items that are flagged as throw now to
-// get rid of dangerous items ASAP, even if ranged attacks aren't allowed
-if( thrown_item.has_flag( flag_NPC_THROW_NOW ) ) {
-    return true;
-}
+    // Always allow throwing items that are flagged as throw now to
+    // get rid of dangerous items ASAP, even if ranged attacks aren't allowed
+    if( thrown_item.has_flag( flag_NPC_THROW_NOW ) ) {
+        return true;
+    }
 
-if( source.is_player_ally() && !source.rules.has_flag( ally_rule::use_guns ) ) {
-    return false;
-}
+    if( source.is_player_ally() && !source.rules.has_flag( ally_rule::use_guns ) ) {
+        return false;
+    }
 
-// Items flagged as NPC_THROWN are always allowed
-if( thrown_item.has_flag( flag_NPC_THROWN ) ) {
-    return true;
-}
+    // Items flagged as NPC_THROWN are always allowed
+    if( thrown_item.has_flag( flag_NPC_THROWN ) ) {
+        return true;
+    }
 
-bool throwable = source.throw_range( single_item ) > 0 && !source.is_worn( thrown_item ) &&
-                 !thrown_item.has_flag( flag_NPC_ACTIVATE );
-throwable = throwable && !thrown_item.is_gun() && !thrown_item.is_armor() &&
-            !thrown_item.is_comestible() && !thrown_item.is_magazine() && !thrown_item.is_tool();
-// TODO: Better choose what should be thrown
-return throwable;
+    bool throwable = source.throw_range( single_item ) > 0 && !source.is_worn( thrown_item ) &&
+                     !thrown_item.has_flag( flag_NPC_ACTIVATE );
+    throwable = throwable && !thrown_item.is_gun() && !thrown_item.is_armor() &&
+                !thrown_item.is_comestible() && !thrown_item.is_magazine() && !thrown_item.is_tool();
+    // TODO: Better choose what should be thrown
+    return throwable;
 }
 
 int npc_attack_throw::base_penalty( const npc &source ) const
@@ -767,10 +767,10 @@ tripoint_range<tripoint_bub_ms> npc_attack_throw::targetable_points( const npc &
 {
     item single_item( thrown_item );
     if( single_item.count_by_charges() ) {
-    single_item.charges = 1;
-}
-const int range = source.throw_range( single_item );
-return get_map().points_in_radius( source.pos_bub(), range );
+        single_item.charges = 1;
+    }
+    const int range = source.throw_range( single_item );
+    return get_map().points_in_radius( source.pos_bub(), range );
 }
 
 npc_attack_rating npc_attack_throw::evaluate(
@@ -778,26 +778,26 @@ npc_attack_rating npc_attack_throw::evaluate(
 {
     npc_attack_rating effectiveness( std::nullopt, source.pos_bub() );
     if( !can_use( source ) ) {
-    // please don't throw your pants...
-    return effectiveness;
-}
-const inventory &available_weapons = source.crafting_inventory( tripoint_bub_ms::zero, -1 );
-if( &thrown_item == source.evaluate_best_weapon() &&
+        // please don't throw your pants...
+        return effectiveness;
+    }
+    const inventory &available_weapons = source.crafting_inventory( tripoint_bub_ms::zero, -1 );
+    if( &thrown_item == source.evaluate_best_weapon() &&
         available_weapons.amount_of( thrown_item.typeId() ) <= 1 &&
         available_weapons.charges_of( thrown_item.typeId() ) <= 1 ) {
-    // Don't throw if it's the best individual killy-thing we've got
-    return effectiveness;
-}
-const int penalty = base_penalty( source );
-const bool throw_now = thrown_item.has_flag( flag_NPC_THROW_NOW );
-// TODO: Should this be a field to cache the result?
-const bool avoids_friendly_fire = source.rules.has_flag( ally_rule::avoid_friendly_fire );
-creature_tracker &creatures = get_creature_tracker();
-for( const tripoint_bub_ms &potential : targetable_points( source ) ) {
+        // Don't throw if it's the best individual killy-thing we've got
+        return effectiveness;
+    }
+    const int penalty = base_penalty( source );
+    const bool throw_now = thrown_item.has_flag( flag_NPC_THROW_NOW );
+    // TODO: Should this be a field to cache the result?
+    const bool avoids_friendly_fire = source.rules.has_flag( ally_rule::avoid_friendly_fire );
+    creature_tracker &creatures = get_creature_tracker();
+    for( const tripoint_bub_ms &potential : targetable_points( source ) ) {
 
-    // hot potato! HOT POTATO!
-    // Calculated for all targetable points, not just those with targets
-    if( throw_now ) {
+        // hot potato! HOT POTATO!
+        // Calculated for all targetable points, not just those with targets
+        if( throw_now ) {
             // TODO: Take into account distance to allies too
             const int distance_to_me = rl_dist( potential, source.pos_bub() );
             int result = npc_attack_constants::base_throw_now + distance_to_me;
@@ -814,7 +814,7 @@ for( const tripoint_bub_ms &potential : targetable_points( source ) ) {
                 continue;
             }
             npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                potential );
+                    potential );
             effectiveness_at_point -= penalty;
             if( effectiveness_at_point > effectiveness ) {
                 effectiveness = effectiveness_at_point;
@@ -841,7 +841,7 @@ std::vector<npc_attack_rating> npc_attack_throw::all_evaluations( const npc &sou
                 continue;
             }
             npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                potential );
+                    potential );
             effectiveness_at_point -= penalty;
             effectiveness.push_back( effectiveness_at_point );
         }
@@ -853,28 +853,28 @@ npc_attack_rating npc_attack_throw::evaluate_tripoint(
     const npc &source, const Creature *target, const tripoint_bub_ms &location ) const
 {
     if( has_obstruction( source.pos_bub(), location ) ) {
-    return npc_attack_rating( std::nullopt, location );
+        return npc_attack_rating( std::nullopt, location );
     }
     item single_item( thrown_item );
     if( single_item.count_by_charges() ) {
-    single_item.charges = 1;
-}
+        single_item.charges = 1;
+    }
 
-Creature::Attitude att = Creature::Attitude::NEUTRAL;
-const Creature *critter = get_creature_tracker().creature_at( location );
-if( critter ) {
-    att = source.attitude_to( *critter );
+    Creature::Attitude att = Creature::Attitude::NEUTRAL;
+    const Creature *critter = get_creature_tracker().creature_at( location );
+    if( critter ) {
+        att = source.attitude_to( *critter );
     }
 
     if( att != Creature::Attitude::HOSTILE ) {
-    // No point in throwing stuff at neutral/friendly targets
-    return npc_attack_rating( std::nullopt, location );
+        // No point in throwing stuff at neutral/friendly targets
+        return npc_attack_rating( std::nullopt, location );
     }
 
     if( source.rules.has_flag( ally_rule::avoid_friendly_fire ) &&
         !source.wont_hit_friend( location, thrown_item, true ) ) {
-    // Avoid friendy fire
-    return npc_attack_rating( std::nullopt, location );
+        // Avoid friendy fire
+        return npc_attack_rating( std::nullopt, location );
     }
 
     const float throw_mult = throw_cost( source, single_item ) * source.speed_rating() / 100.0f;
@@ -883,7 +883,7 @@ if( critter ) {
     const int distance_to_me = rl_dist( location, source.pos_bub() );
     float suitable_item_mult = -0.15f;
     if( distance_to_me > 1 ) {
-    if( thrown_item.has_flag( flag_NPC_THROWN ) ) {
+        if( thrown_item.has_flag( flag_NPC_THROWN ) ) {
             suitable_item_mult = 0.08f * std::min( distance_to_me - 1, 5 );
         }
     } else {
@@ -892,10 +892,10 @@ if( critter ) {
 
     double potential = dps * ( 1.0 + suitable_item_mult );
     if( potential > 0.0f && critter && damage >= critter->get_hp() ) {
-    potential *= npc_attack_constants::kill_modifier;
-}
-if( potential > 0.0f && target && critter && target->pos_bub() == critter->pos_bub() ) {
-    potential *= npc_attack_constants::target_modifier;
-}
-return npc_attack_rating( static_cast<int>( std::round( potential ) ), location );
+        potential *= npc_attack_constants::kill_modifier;
+    }
+    if( potential > 0.0f && target && critter && target->pos_bub() == critter->pos_bub() ) {
+        potential *= npc_attack_constants::target_modifier;
+    }
+    return npc_attack_rating( static_cast<int>( std::round( potential ) ), location );
 }

@@ -569,7 +569,7 @@ void game::toggle_pixel_minimap() const
 {
 #if defined(TILES)
     if( pixel_minimap_option ) {
-    clear_window_area( w_pixel_minimap );
+        clear_window_area( w_pixel_minimap );
     }
     pixel_minimap_option = !pixel_minimap_option;
     mark_main_ui_adaptor_resize();
@@ -1064,7 +1064,7 @@ bool game::start_game()
             }
         }
     }
-    for( item * &e : u.inv_dump() ) {
+    for( item *&e : u.inv_dump() ) {
         e->set_owner( get_player_character() );
     }
     // Now that we're done handling coordinates, ensure the player's submap is in the center of the map
@@ -1501,10 +1501,10 @@ void game::set_driving_view_offset( const point_rel_ms &p )
     // remove the previous driving offset,
     // store the new offset and apply the new offset.
     u.view_offset.raw() -=
-                     driving_view_offset.raw(); // TODO: Implement -= etc. for relative coordinates.
+        driving_view_offset.raw(); // TODO: Implement -= etc. for relative coordinates.
     driving_view_offset = p;
     u.view_offset.raw() +=
-                     driving_view_offset.raw(); // TODO: Implement -= etc. for relative coordinates.
+        driving_view_offset.raw(); // TODO: Implement -= etc. for relative coordinates.
 }
 
 void game::catch_a_monster( monster *fish, const tripoint_bub_ms &pos, Character *p,
@@ -1559,9 +1559,9 @@ bool game::cancel_activity_or_ignore_query( const distraction_type type, const s
                                 .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
                                 .message( force_uc && !is_keycode_mode_supported() ?
                                           pgettext( "cancel_activity_or_ignore_query",
-                                              "<color_light_red>%s %s (Case Sensitive)</color>" ) :
+                                                  "<color_light_red>%s %s (Case Sensitive)</color>" ) :
                                           pgettext( "cancel_activity_or_ignore_query",
-                                              "<color_light_red>%s %s</color>" ),
+                                                  "<color_light_red>%s %s</color>" ),
                                           text, u.activity.get_stop_phrase() )
                                 .option( "YES", allow_key )
                                 .option( "NO", allow_key )
@@ -2490,8 +2490,8 @@ bool game::handle_mouseview( input_context &ctxt, std::string &action )
         action = ctxt.handle_input();
         if( action == "MOUSE_MOVE" ) {
             const std::optional<tripoint_bub_ms> mouse_pos = ctxt.get_coordinates( w_terrain,
-                ter_view_p.raw().xy(),
-                true );
+                    ter_view_p.raw().xy(),
+                    true );
             if( mouse_pos && ( !liveview_pos || *mouse_pos != *liveview_pos ) ) {
                 liveview_pos = mouse_pos;
                 liveview.show( liveview_pos->raw() );
@@ -2573,7 +2573,7 @@ std::pair<tripoint_rel_omt, tripoint_rel_omt> game::mouse_edge_scrolling( input_
 {
     // It's the same operation technically, just using different coordinate systems.
     const std::pair<tripoint_rel_ms, tripoint_rel_ms> temp = game::mouse_edge_scrolling( ctxt, speed,
-        tripoint_rel_ms( last.raw() ), iso );
+            tripoint_rel_ms( last.raw() ), iso );
 
     return {tripoint_rel_omt( temp.first.raw() ), tripoint_rel_omt( temp.second.raw() )};
 }
@@ -2581,8 +2581,8 @@ std::pair<tripoint_rel_omt, tripoint_rel_omt> game::mouse_edge_scrolling( input_
 tripoint_rel_ms game::mouse_edge_scrolling_terrain( input_context &ctxt )
 {
     std::pair<tripoint_rel_ms, tripoint_rel_ms> ret = mouse_edge_scrolling( ctxt,
-        std::max( DEFAULT_TILESET_ZOOM / uistate.tileset_zoom, 1 ),
-        last_mouse_edge_scroll_vector_terrain, g->is_tileset_isometric() );
+            std::max( DEFAULT_TILESET_ZOOM / uistate.tileset_zoom, 1 ),
+            last_mouse_edge_scroll_vector_terrain, g->is_tileset_isometric() );
     last_mouse_edge_scroll_vector_terrain = ret.second;
     last_mouse_edge_scroll_vector_overmap = tripoint_rel_omt::zero;
     return ret.first;
@@ -3644,7 +3644,7 @@ std::optional<tripoint_rel_ms> game::get_veh_dir_indicator_location( bool next )
 void game::draw_veh_dir_indicator( bool next )
 {
     if( const std::optional<tripoint_rel_ms> indicator_offset = get_veh_dir_indicator_location(
-            next ) ) {
+                next ) ) {
         nc_color col = next ? c_white : c_dark_gray;
         mvwputch( w_terrain, indicator_offset->raw().xy() - u.view_offset.xy().raw() + point( POSX, POSY ),
                   col,
@@ -3656,10 +3656,10 @@ float game::natural_light_level( const int zlev ) const
 {
     // ignore while underground or above limits
     if( zlev > OVERMAP_HEIGHT || zlev < 0 ) {
-    return LIGHT_AMBIENT_MINIMAL;
-}
+        return LIGHT_AMBIENT_MINIMAL;
+    }
 
-if( latest_lightlevels[zlev] > std::numeric_limits<float>::lowest() ) {
+    if( latest_lightlevels[zlev] > std::numeric_limits<float>::lowest() ) {
         // Already found the light level for now?
         return latest_lightlevels[zlev];
     }
@@ -3698,15 +3698,15 @@ if( latest_lightlevels[zlev] > std::numeric_limits<float>::lowest() ) {
     // If we had a changed light level due to an artifact event then it overwrites
     // the natural light level.
     if( mod_ret > -1 ) {
-    ret = mod_ret;
-}
+        ret = mod_ret;
+    }
 
-// Cap everything to our minimum light level
-ret = std::max<float>( LIGHT_AMBIENT_MINIMAL, ret );
+    // Cap everything to our minimum light level
+    ret = std::max<float>( LIGHT_AMBIENT_MINIMAL, ret );
 
-latest_lightlevels[zlev] = ret;
+    latest_lightlevels[zlev] = ret;
 
-return ret;
+    return ret;
 }
 
 unsigned char game::light_level( const int zlev ) const
@@ -3749,7 +3749,7 @@ Creature *game::is_hostile_very_close( bool dangerous )
 
 Creature *game::is_hostile_within( int distance, bool dangerous )
 {
-    for( Creature * &critter : u.get_visible_creatures( distance ) ) {
+    for( Creature *&critter : u.get_visible_creatures( distance ) ) {
         if( u.attitude_to( *critter ) == Creature::Attitude::HOSTILE ) {
             if( dangerous ) {
                 if( critter->is_ranged_attacker() ) {
@@ -3795,7 +3795,7 @@ std::unordered_set<tripoint_abs_ms> game::get_fishable_locations_abs( int distan
         const tripoint_bub_ms &fish_pos )
 {
     const std::unordered_set<tripoint_bub_ms> temp = game::get_fishable_locations_bub( distance,
-        fish_pos );
+            fish_pos );
     std::unordered_set<tripoint_abs_ms> result;
     map &here = get_map();
     for( const tripoint_bub_ms pos : temp ) {
@@ -5776,9 +5776,9 @@ void game::pickup()
 
     // Prompt for which adjacent/current tile to pick up items from
     const std::optional<tripoint_bub_ms> where_ = choose_adjacent_highlight(
-            here, _( "Pick up items where?" ),
-            _( "There is nothing to pick up nearby." ),
-            ACTION_PICKUP, false );
+                here, _( "Pick up items where?" ),
+                _( "There is nothing to pick up nearby." ),
+                ACTION_PICKUP, false );
     if( !where_ ) {
         return;
     }
@@ -6186,8 +6186,8 @@ look_around_result game::look_around(
     bool zone_blink = false;
     bool zone_cursor = true;
     shared_ptr_fast<draw_callback_t> zone_cb = zone_manager_ui::create_zone_callback( zone_start,
-        zone_end, zone_blink,
-        zone_cursor, is_moving_zone );
+            zone_end, zone_blink,
+            zone_cursor, is_moving_zone );
     add_draw_callback( zone_cb );
 
     is_looking = true;
@@ -6316,8 +6316,8 @@ look_around_result game::look_around(
                 center += action == "MOUSE_MOVE" ? edge_scroll * 2 : edge_scroll;
             } else if( action == "MOUSE_MOVE" ) {
                 const std::optional<tripoint_bub_ms> mouse_pos = ctxt.get_coordinates( w_terrain,
-                    ter_view_p.raw().xy(),
-                    true );
+                        ter_view_p.raw().xy(),
+                        true );
                 if( mouse_pos ) {
                     lx = mouse_pos->x();
                     ly = mouse_pos->y();
@@ -6699,7 +6699,7 @@ static std::optional<input_event> get_initial_hotkey( const size_t menu_index )
 // There are options for optimization here, but the function is hit infrequently
 // enough that optimizing now is not a useful time expenditure.
 static std::vector<std::pair<map_stack::iterator, int>> generate_butcher_stack_display(
-    const std::vector<map_stack::iterator> &its )
+            const std::vector<map_stack::iterator> &its )
 {
     std::vector<std::pair<map_stack::iterator, int>> result;
     std::vector<std::string> result_strings;
@@ -7197,7 +7197,7 @@ class reload_selector_preset : public inventory_selector_preset
         }
         bool is_shown( const item_location &location ) const override {
             return !location.is_invisible_installed_gunmod( ) &&
-            you.rate_action_reload( *location ) == hint_rating::good;
+                   you.rate_action_reload( *location ) == hint_rating::good;
         }
     private:
         const Character &you;
@@ -7378,8 +7378,8 @@ bool game::check_safe_mode_allowed( bool repeat_safe_mode_warnings )
 
         const monster *const mon = most_frequent_mon.back();
         const std::string most_frequent_mon_text = colorize( most_frequent_mon.size() > 1 ?
-            string_format( "%d %s",
-                           most_frequent_mon.size(), mon->name( most_frequent_mon.size() ) ) : mon->name(), mon_color );
+                string_format( "%d %s",
+                               most_frequent_mon.size(), mon->name( most_frequent_mon.size() ) ) : mon->name(), mon_color );
 
         const std::string dist_text = min_dist == max_dist ?
                                       //~ %d: Distance to all monsters ("7")
@@ -7416,7 +7416,7 @@ bool game::check_safe_mode_allowed( bool repeat_safe_mode_warnings )
             //~ %s: Description of other monster count ("4 others"), %d: How many other monsters there are
             other_mon_text = string_format( _( " and %s" ),
                                             colorize( string_format( n_gettext( _( "%d other" ),  _( "%d others" ),
-                                                other_mon_count ), other_mon_count ), mon_color ) );
+                                                    other_mon_count ), other_mon_count ), mon_color ) );
         }
 
         //~ %1$s: Description of primary monster spotted ("3 fat zombies")
@@ -7750,7 +7750,7 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
     }
 
     const std::vector<field_type_id> impassable_field_ids = here.get_impassable_field_type_ids_at(
-            dest_loc );
+                dest_loc );
 
     if( ( !here.passable_skip_fields( dest_loc ) || ( !impassable_field_ids.empty() &&
             !u.is_immune_fields( impassable_field_ids ) ) ) && !pushing && !shifting_furniture ) {
@@ -7882,7 +7882,7 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
     const int mcost_to = here.move_cost( dest_loc ); //calculate this _after_ calling grabbed_move
     const bool fungus = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_FUNGUS, pos ) ||
                         here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_FUNGUS,
-                            dest_loc ); //fungal furniture has no slowing effect on Mycus characters
+                                dest_loc ); //fungal furniture has no slowing effect on Mycus characters
     const bool slowed = ( ( !u.has_proficiency( proficiency_prof_parkour ) && ( mcost_to > 2 ||
                             mcost_from > 2 ) ) ||
                           mcost_to > 4 || mcost_from > 4 ) ||
@@ -9638,7 +9638,7 @@ void game::vertical_move( int movez, bool force, bool peeking )
     // TODO: Remove the stairfinding, make the mapgen gen aligned maps
     if( !force && !climbing && !swimming ) {
         const std::optional<tripoint_bub_ms> pnt = find_or_make_stairs( here, z_after, rope_ladder, peeking,
-            pos );
+                pos );
         if( !pnt ) {
             return;
         }
@@ -9700,7 +9700,7 @@ void game::vertical_move( int movez, bool force, bool peeking )
     if( u.grab_point != tripoint_rel_ms::zero ) {
         u.grab_point.z() = u.grab_point.z() - movez;
         const std::optional<tripoint_rel_ms> dir = choose_direction(
-                _( "Select a direction to push grabbed object towards." ) );
+                    _( "Select a direction to push grabbed object towards." ) );
         if( !dir ) {
             u.grab( object_type::NONE );
         } else { // Try to vertically move whatever we're grabbing.

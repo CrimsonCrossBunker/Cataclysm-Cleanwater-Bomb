@@ -358,7 +358,7 @@ TEST_CASE( "weakpoint_hit_distribution_projectile", "[.]" )
 
     for( const wp_test_values &i_test_val : test ) {
         const std::unordered_map<std::string, int> distr = weakpoint_hit_distribution_proj(
-                i_test_val );
+                    i_test_val );
 
         hit_distribution_result result = { i_test_val, distr };
         results.emplace_back( result );

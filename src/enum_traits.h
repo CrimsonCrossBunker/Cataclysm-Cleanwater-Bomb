@@ -63,7 +63,7 @@ struct is_flag_enum : std::false_type {};
 
 template<typename E>
 struct is_flag_enum<E, std::integral_constant<bool, enum_traits<E>::is_flag_enum>> :
-    std::true_type {};
+            std::true_type {};
 
 // Annoyingly, you cannot overload conversions for enums, and we want
 // operator& to be convertible to bool, so we have it return a helper struct

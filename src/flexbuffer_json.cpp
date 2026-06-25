@@ -84,9 +84,9 @@ static void advance_jsin( TextJsonIn *jsin, flexbuffers::Reference root, const J
 std::string Json::get_root_source_path() const
 {
     if( root_->get_source_path().empty() ) {
-    return std::string{ "<unknown source file>" };
-}
-return root_->get_source_path().u8string();
+        return std::string{ "<unknown source file>" };
+    }
+    return root_->get_source_path().u8string();
 
 }
 
@@ -140,7 +140,7 @@ std::string Json::str() const
 bool JsonValue::read( bool &b, bool throw_on_error ) const
 {
     if( !test_bool() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected bool" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected bool" );
     }
     b = get_bool();
     return true;
@@ -148,7 +148,7 @@ bool JsonValue::read( bool &b, bool throw_on_error ) const
 bool JsonValue::read( char &c, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     c = get_int();
     return true;
@@ -156,7 +156,7 @@ bool JsonValue::read( char &c, bool throw_on_error ) const
 bool JsonValue::read( signed char &c, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     // TODO: test for overflow
     c = get_int();
@@ -165,7 +165,7 @@ bool JsonValue::read( signed char &c, bool throw_on_error ) const
 bool JsonValue::read( unsigned char &c, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     // TODO: test for overflow
     c = get_int();
@@ -174,7 +174,7 @@ bool JsonValue::read( unsigned char &c, bool throw_on_error ) const
 bool JsonValue::read( short unsigned int &s, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     // TODO: test for overflow
     s = get_int();
@@ -183,7 +183,7 @@ bool JsonValue::read( short unsigned int &s, bool throw_on_error ) const
 bool JsonValue::read( short int &s, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     // TODO: test for overflow
     s = get_int();
@@ -192,7 +192,7 @@ bool JsonValue::read( short int &s, bool throw_on_error ) const
 bool JsonValue::read( int &i, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     i = get_int();
     return true;
@@ -200,7 +200,7 @@ bool JsonValue::read( int &i, bool throw_on_error ) const
 bool JsonValue::read( int64_t &i, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     i = get_int64();
     return true;
@@ -208,7 +208,7 @@ bool JsonValue::read( int64_t &i, bool throw_on_error ) const
 bool JsonValue::read( uint64_t &i, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     i = get_uint64();
     return true;
@@ -216,7 +216,7 @@ bool JsonValue::read( uint64_t &i, bool throw_on_error ) const
 bool JsonValue::read( unsigned int &u, bool throw_on_error ) const
 {
     if( !test_int() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected integer" );
     }
     u = get_uint();
     return true;
@@ -224,7 +224,7 @@ bool JsonValue::read( unsigned int &u, bool throw_on_error ) const
 bool JsonValue::read( float &f, bool throw_on_error ) const
 {
     if( !test_number() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected number" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected number" );
     }
     f = get_float();
     return true;
@@ -232,7 +232,7 @@ bool JsonValue::read( float &f, bool throw_on_error ) const
 bool JsonValue::read( double &d, bool throw_on_error ) const
 {
     if( !test_number() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected number" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected number" );
     }
     d = get_float();
     return true;
@@ -240,7 +240,7 @@ bool JsonValue::read( double &d, bool throw_on_error ) const
 bool JsonValue::read( std::string &s, bool throw_on_error ) const
 {
     if( !test_string() ) {
-    return error_or_false( throw_on_error, "Syntax error.  Expected string" );
+        return error_or_false( throw_on_error, "Syntax error.  Expected string" );
     }
     s = get_string();
     return true;
@@ -250,8 +250,8 @@ void JsonObject::report_unvisited() const
 {
 #ifndef CATA_IN_TOOL
     if( !std::uncaught_exceptions() && report_unvisited_members && !visited_fields_bitset_.all() ) {
-    std::vector<size_t> skipped_members;
-    skipped_members.reserve( visited_fields_bitset_.size() );
+        std::vector<size_t> skipped_members;
+        skipped_members.reserve( visited_fields_bitset_.size() );
         tiny_bitset::block_t *bits = visited_fields_bitset_.bits();
         size_t block_idx = 0;
         for( size_t last_whole_block = visited_fields_bitset_.size() / tiny_bitset::kBitsPerBlock;

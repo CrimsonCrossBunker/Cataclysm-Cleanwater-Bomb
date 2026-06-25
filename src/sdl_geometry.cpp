@@ -83,7 +83,7 @@ void ColorModulatedGeometryRenderer::rect( const SDL_Renderer_Ptr &renderer, con
         const SDL_Color &color ) const
 {
     if( tex ) {
-    SetTextureColorMod( tex, color.r, color.g, color.b );
+        SetTextureColorMod( tex, color.r, color.g, color.b );
         SetTextureAlphaMod( tex, color.a );
         RenderCopy( renderer, tex, nullptr, &rect );
     } else {

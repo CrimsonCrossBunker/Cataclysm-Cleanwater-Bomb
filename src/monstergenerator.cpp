@@ -292,10 +292,10 @@ struct monster_adjustment {
 void monster_adjustment::apply( mtype &mon ) const
 {
     if( !mon.in_species( species ) ) {
-    return;
-}
-if( !stat.empty() ) {
-    if( stat == "speed" ) {
+        return;
+    }
+    if( !stat.empty() ) {
+        if( stat == "speed" ) {
             mon.speed *= stat_adjust;
         } else if( stat == "hp" ) {
             mon.hp *= stat_adjust;
@@ -304,10 +304,10 @@ if( !stat.empty() ) {
         }
     }
     if( !flag.empty() ) {
-    mon.set_flag( mon_flag_id( flag ), flag_val );
+        mon.set_flag( mon_flag_id( flag ), flag_val );
     }
     if( !special.empty() ) {
-    if( special == "nightvision" ) {
+        if( special == "nightvision" ) {
             mon.vision_night = mon.vision_day;
         }
     }
@@ -1376,8 +1376,8 @@ void MonsterGenerator::load_monster_attack( const JsonObject &jo, const std::str
 
 void MonsterGenerator::check_monster_definitions() const
 {
-for( const mtype &mon : mon_templates->get_all() ) {
-    if( !mon.src.empty() && mon.src.back().second.str() == "dda" ) {
+    for( const mtype &mon : mon_templates->get_all() ) {
+        if( !mon.src.empty() && mon.src.back().second.str() == "dda" ) {
             std::string mon_id = mon.id.str();
             std::string suffix_id = mon_id.substr( 0, mon_id.find( '_' ) );
             if( suffix_id != "mon" && suffix_id != "pseudo" ) {

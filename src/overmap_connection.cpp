@@ -38,12 +38,12 @@ const overmap_connection &string_id<overmap_connection>::obj() const
 bool overmap_connection::subtype::allows_terrain( const int_id<oter_t> &oter ) const
 {
     if( oter->type_is( terrain ) ) {
-    return true;    // Can be built on similar terrains.
-}
+        return true;    // Can be built on similar terrains.
+    }
 
-return std::any_of( locations.cbegin(),
-locations.cend(), [&oter]( const string_id<overmap_location> &elem ) {
-    return elem->test( oter );
+    return std::any_of( locations.cbegin(),
+    locations.cend(), [&oter]( const string_id<overmap_location> &elem ) {
+        return elem->test( oter );
     } );
 }
 
@@ -68,11 +68,11 @@ const overmap_connection::subtype *overmap_connection::pick_subtype_for(
     const int_id<oter_t> &ground ) const
 {
     if( !ground ) {
-    return nullptr;
-}
+        return nullptr;
+    }
 
-const size_t cache_index = ground.to_i();
-cata_assert( cache_index < cached_subtypes.size() );
+    const size_t cache_index = ground.to_i();
+    cata_assert( cache_index < cached_subtypes.size() );
 
     if( cached_subtypes[cache_index] ) {
         return cached_subtypes[cache_index].value;
@@ -106,10 +106,10 @@ void overmap_connection::load( const JsonObject &jo, std::string_view )
 void overmap_connection::check() const
 {
     if( subtypes.empty() ) {
-    debugmsg( "Overmap connection \"%s\" doesn't have subtypes.", id.c_str() );
+        debugmsg( "Overmap connection \"%s\" doesn't have subtypes.", id.c_str() );
     }
-for( const overmap_connection::subtype &subtype : subtypes ) {
-    if( !subtype.terrain.is_valid() ) {
+    for( const overmap_connection::subtype &subtype : subtypes ) {
+        if( !subtype.terrain.is_valid() ) {
             debugmsg( "In overmap connection \"%s\", terrain \"%s\" is invalid.", id.c_str(),
                       subtype.terrain.c_str() );
         }

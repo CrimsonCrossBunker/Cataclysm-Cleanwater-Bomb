@@ -50,8 +50,8 @@ template<typename CompType>
 std::string comp_selection<CompType>::nname() const
 {
     switch( use_from ) {
-    case usage_from::map:
-        return item::nname( comp.type, comp.count ) + _( " (nearby)" );
+        case usage_from::map:
+            return item::nname( comp.type, comp.count ) + _( " (nearby)" );
         case usage_from::both:
             return item::nname( comp.type, comp.count ) + _( " (person & nearby)" );
         case usage_from::player:
@@ -249,7 +249,7 @@ void craft_command::execute( bool only_cache_comps )
     std::vector<attention_plan> plans;
     if( rec->has_attention_steps() && crafter->is_avatar() ) {
         std::optional<std::vector<attention_plan>> chosen =
-            show_craft_planning_modal( *rec, *crafter, batch_size, /*from_step=*/0, {} );
+                show_craft_planning_modal( *rec, *crafter, batch_size, /*from_step=*/0, {} );
         if( !chosen ) {
             return;
         }
@@ -480,8 +480,8 @@ static bool should_add_crafting_faults( Character *who, const recipe *rec )
 
 
 std::vector<std::vector<step_tool_alloc>> select_step_tool_allocs(
-    Character &crafter, const recipe &rec, int batch, read_only_visitable &map_inv,
-    bool &cancelled, int reselect_step )
+        Character &crafter, const recipe &rec, int batch, read_only_visitable &map_inv,
+        bool &cancelled, int reselect_step )
 {
     cancelled = false;
     const std::vector<recipe_step> &steps = rec.steps();
@@ -702,7 +702,7 @@ skill_id craft_command::get_skill_id()
 }
 
 std::vector<comp_selection<item_comp>> craft_command::check_item_components_missing(
-    const read_only_visitable &map_inv ) const
+                                        const read_only_visitable &map_inv ) const
 {
     std::vector<comp_selection<item_comp>> missing;
 
@@ -767,7 +767,7 @@ std::vector<comp_selection<item_comp>> craft_command::check_item_components_miss
 }
 
 std::vector<comp_selection<tool_comp>> craft_command::check_tool_components_missing(
-    const read_only_visitable &map_inv ) const
+                                        const read_only_visitable &map_inv ) const
 {
     std::vector<comp_selection<tool_comp>> missing;
 

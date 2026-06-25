@@ -180,7 +180,7 @@ TEST_CASE( "step_recipe_root_requirements_separate_from_step_tools", "[recipe][s
     const auto finalize_msg = []( const std::string & steps_json ) -> std::string {
         recipe r;
         JsonObject jo = json_loader::from_string( string_format(
-                R"({ "type": "recipe", "result": "cudgel", "id_suffix": "test_charged_root",
+                    R"({ "type": "recipe", "result": "cudgel", "id_suffix": "test_charged_root",
                                 "category": "CC_WEAPON", "subcategory": "CSC_WEAPON_BASHING",
                                 "skill_used": "fabrication", "difficulty": 1,
                                 "using": [ [ "soldering_standard", 1 ] ], "components": [[ [ "2x4", 1 ] ]],
@@ -2339,12 +2339,12 @@ TEST_CASE( "step_recipe_root_tool_distributed_by_step_budget", "[recipe][steps][
     inventory map_inv;
     bool cancelled = false;
     const std::vector<std::vector<step_tool_alloc>> allocs =
-        select_step_tool_allocs( u, r, 1, map_inv, cancelled );
+                select_step_tool_allocs( u, r, 1, map_inv, cancelled );
     REQUIRE_FALSE( cancelled );
     REQUIRE( allocs.size() == 2 );
 
     const auto root_units = [&]( size_t step ) -> int {
-for( const step_tool_alloc &a : allocs[step] )
+        for( const step_tool_alloc &a : allocs[step] )
         {
             if( a.root_derived ) {
                 return a.step_count_units;

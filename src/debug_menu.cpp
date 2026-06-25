@@ -497,10 +497,10 @@ void write_min_archive()
                     }
                 }
                 std::filesystem::path min_mmr_save_rel = ( std::filesystem::path{ entry_filename } / // NOLINT(cata-u8-path)
-                    entry_filename ).concat( ".cold" + std::string( zzip_suffix ) ); // NOLINT(cata-u8-path)
+                        entry_filename ).concat( ".cold" + std::string( zzip_suffix ) ); // NOLINT(cata-u8-path)
                 std::filesystem::path min_mmr_temp_zzip_path = ( PATH_INFO::world_base_save_path() /
-                    min_mmr_save_rel +
-                    ".temp" ).get_unrelative_path();
+                        min_mmr_save_rel +
+                        ".temp" ).get_unrelative_path();
                 {
                     std::optional<zzip> min_mmr_temp_zzip = zzip::load( min_mmr_temp_zzip_path, mmr_dict );
                     if( !min_mmr_temp_zzip ||
@@ -549,8 +549,8 @@ class mission_debug
 
 // Used for quick setup
 static std::vector<trait_id> setup_traits{trait_DEBUG_BIONICS, trait_DEBUG_CLAIRVOYANCE, trait_DEBUG_CLOAK,
-    trait_DEBUG_HS, trait_DEBUG_LIGHT, trait_DEBUG_LS, trait_DEBUG_MANA, trait_DEBUG_MIND_CONTROL,
-    trait_DEBUG_NODMG, trait_DEBUG_NOTEMP, trait_DEBUG_STAMINA, trait_DEBUG_SPEED};
+           trait_DEBUG_HS, trait_DEBUG_LIGHT, trait_DEBUG_LS, trait_DEBUG_MANA, trait_DEBUG_MIND_CONTROL,
+           trait_DEBUG_NODMG, trait_DEBUG_NOTEMP, trait_DEBUG_STAMINA, trait_DEBUG_SPEED};
 
 static std::string first_word( const std::string &str )
 {
@@ -1645,17 +1645,17 @@ static void change_spells( Character &character )
     // keep the same spell selected
     auto spell_middle_or_id = [&]( const spell_id & spellid ) -> void {
         if( spellid.is_empty() )
-    {
-        spell_selected = 0;
-        return;
-    }
+        {
+            spell_selected = 0;
+            return;
+        }
 
-    // in case we don't find anything, keep selection in the middle of screen
-    const size_t spells_relative_size = spells_relative.size();
-    spell_selected = std::min( ( TERMY - 2 ) / 2, static_cast<int>( spells_relative_size ) / 2 );
-    for( size_t i = 0; i < spells_relative_size; ++i )
-    {
-        if( std::get<0>( *spells_relative[i] ).id == spellid ) {
+        // in case we don't find anything, keep selection in the middle of screen
+        const size_t spells_relative_size = spells_relative.size();
+        spell_selected = std::min( ( TERMY - 2 ) / 2, static_cast<int>( spells_relative_size ) / 2 );
+        for( size_t i = 0; i < spells_relative_size; ++i )
+        {
+            if( std::get<0>( *spells_relative[i] ).id == spellid ) {
                 spell_selected = i;
                 break;
             }
@@ -1664,9 +1664,9 @@ static void change_spells( Character &character )
 
     // reset spells_relative vector
     auto reset_spells_relative = [&]() -> void {
-for( spell_tuple &spt : spells_all )
-    {
-        spells_relative.emplace_back( &spt );
+        for( spell_tuple &spt : spells_all )
+        {
+            spells_relative.emplace_back( &spt );
         }
     };
 
@@ -1884,7 +1884,7 @@ static void teleport_overmap( bool specific_coordinates = false )
         where = coord_popup.query_coordinate();
     } else {
         const std::optional<tripoint_rel_ms> dir_ = choose_direction(
-                _( "Where is the desired overmap?" ) );
+                    _( "Where is the desired overmap?" ) );
         if( !dir_ ) {
             return;
         }
@@ -3177,8 +3177,8 @@ static void draw_benchmark( const int max_difference )
     }
 
     DebugLog( D_INFO, DC_ALL ) << "Draw benchmark:\n" <<
-                                  "\n| USE_TILES |  RENDERER | FRAMEBUFFER_ACCEL | USE_COLOR_MODULATED_TEXTURES | FPS |" <<
-                                  "\n|:---:|:---:|:---:|:---:|:---:|\n| " <<
+                               "\n| USE_TILES |  RENDERER | FRAMEBUFFER_ACCEL | USE_COLOR_MODULATED_TEXTURES | FPS |" <<
+                               "\n|:---:|:---:|:---:|:---:|:---:|\n| " <<
                                get_option<bool>( "USE_TILES" ) << " | " <<
 #if !defined(__ANDROID__)
                                get_option<std::string>( "RENDERER" ) << " | " <<
@@ -3727,7 +3727,7 @@ static void kill_area()
     }
 
     const tripoint_range<tripoint_bub_ms> points = here.points_in_rectangle(
-            tripoint_bub_ms( first.position.value() ), tripoint_bub_ms( second.position.value() ) );
+                tripoint_bub_ms( first.position.value() ), tripoint_bub_ms( second.position.value() ) );
 
     std::vector<Creature *> creatures = g->get_creatures_if(
     [&points]( const Creature & critter ) -> bool {
@@ -4627,7 +4627,7 @@ const std::vector<debug_action_entry> &all_actions()
                     testfile << "|;when;type;key;string_id;strength;map_point;faction_id;" << std::endl;
                     for( const timed_event &te : get_timed_events().get_all() ) {
                         testfile << "|;" << to_string( te.when ) << ";" << static_cast<int>( te.type ) << ";" << te.key <<
-                                    ";" << te.string_id << ";" << te.strength << ";" << te.map_point << ";" << te.faction_id << ";" <<
+                                 ";" << te.string_id << ";" << te.strength << ";" << te.map_point << ";" << te.faction_id << ";" <<
                                  std::endl;
                     }
                 }, "timed_event_list" );

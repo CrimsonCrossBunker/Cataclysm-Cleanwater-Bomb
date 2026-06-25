@@ -376,7 +376,7 @@ int map::cost_to_avoid( const tripoint_bub_ms & /*cur*/, const tripoint_bub_ms &
                         const pathfinding_settings &settings, PathfindingFlags p_special ) const
 {
     if( settings.avoid_traps && ( p_special & PathfindingFlag::DangerousTrap ) ) {
-    const const_maptile &tile = maptile_at_internal( p );
+        const const_maptile &tile = maptile_at_internal( p );
         const ter_t &terrain = tile.get_ter_t();
         const trap &ter_trp = terrain.trap.obj();
         const trap &trp = ter_trp.is_benign() ? tile.get_trap_t() : ter_trp;
@@ -388,11 +388,11 @@ int map::cost_to_avoid( const tripoint_bub_ms & /*cur*/, const tripoint_bub_ms &
     }
 
     if( settings.avoid_dangerous_fields && ( p_special & PathfindingFlag::DangerousField ) ) {
-    // We'll walk through even known-dangerous fields if we absolutely have to.
-    return 500;
-}
+        // We'll walk through even known-dangerous fields if we absolutely have to.
+        return 500;
+    }
 
-return 0;
+    return 0;
 }
 
 int map::extra_cost( const tripoint_bub_ms &cur, const tripoint_bub_ms &p,
@@ -602,7 +602,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
         if( settings.allow_climb_stairs && cur.z() > min.z() &&
             parent_terrain.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) ) {
             std::optional<tripoint_bub_ms> opt_dest = g->find_or_make_stairs( get_map(),
-                cur.z() - 1, rope_ladder, false, cur );
+                    cur.z() - 1, rope_ladder, false, cur );
             if( !opt_dest ) {
                 continue;
             }
@@ -621,7 +621,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
         if( settings.allow_climb_stairs && cur.z() < max.z() &&
             parent_terrain.has_flag( ter_furn_flag::TFLAG_GOES_UP ) ) {
             std::optional<tripoint_bub_ms> opt_dest = g->find_or_make_stairs( get_map(),
-                cur.z() + 1, rope_ladder, false, cur );
+                    cur.z() + 1, rope_ladder, false, cur );
             if( !opt_dest ) {
                 continue;
             }

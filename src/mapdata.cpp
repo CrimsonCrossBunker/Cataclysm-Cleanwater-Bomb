@@ -658,7 +658,7 @@ static void load_season_array( const JsonObject &jo, const std::string &key,
 bool map_data_common_t::has_disassembly() const
 {
     return !base_item.is_null() || ( deconstruct_info().has_value() &&
-    deconstruct_info().value().drop_group != Item_spawn_data_EMPTY_GROUP );
+                                     deconstruct_info().value().drop_group != Item_spawn_data_EMPTY_GROUP );
 }
 
 std::string map_data_common_t::name() const
@@ -689,7 +689,7 @@ void map_data_common_t::set_examine( iexamine_functions func )
 void map_data_common_t::examine( Character &you, const tripoint_bub_ms &examp ) const
 {
     if( !examine_actor ) {
-    examine_func.examine( you, examp );
+        examine_func.examine( you, examp );
         return;
     }
     examine_actor->call( you, examp );
@@ -1373,22 +1373,22 @@ void ter_t::load( const JsonObject &jo, const std::string &src )
 void map_common_bash_info::check( const std::string &id ) const
 {
     if( !drop_group.is_empty() ) {
-    if( !item_group::group_is_defined( drop_group ) ) {
+        if( !item_group::group_is_defined( drop_group ) ) {
             debugmsg( "%s: bash result item group %s does not exist", id, drop_group.c_str() );
         }
     }
     if( !hit_field.first.is_null() && !hit_field.first.is_valid() ) {
-    debugmsg( "%s: invalid hit_field '%s'", id, hit_field.first.str() );
+        debugmsg( "%s: invalid hit_field '%s'", id, hit_field.first.str() );
     }
     if( !destroyed_field.first.is_null() && !destroyed_field.first.is_valid() ) {
-    debugmsg( "%s: invalid destroyed_field '%s'", id, destroyed_field.first.str() );
+        debugmsg( "%s: invalid destroyed_field '%s'", id, destroyed_field.first.str() );
     }
 }
 void map_ter_bash_info::check( const std::string &id ) const
 {
     map_common_bash_info::check( id );
     if( str_max != -1 ) {
-    if( ter_set.is_empty() ) { // Some tiles specify t_null explicitly
+        if( ter_set.is_empty() ) { // Some tiles specify t_null explicitly
             debugmsg( "bash result terrain of %s is undefined/empty", id );
         }
         if( !ter_set.is_valid() ) {
@@ -1400,7 +1400,7 @@ void map_furn_bash_info::check( const std::string &id ) const
 {
     map_common_bash_info::check( id );
     if( str_max != -1 ) {
-    if( !furn_set.is_valid() ) {
+        if( !furn_set.is_valid() ) {
             debugmsg( "bash result furniture %s of %s does not exist", furn_set.c_str(), id );
         }
     }
@@ -1413,14 +1413,14 @@ void map_fd_bash_info::check( const std::string &id ) const
 void map_common_deconstruct_info::check( const std::string &id ) const
 {
     if( !item_group::group_is_defined( drop_group ) ) {
-    debugmsg( "%s: deconstruct result item group %s does not exist", id, drop_group.c_str() );
+        debugmsg( "%s: deconstruct result item group %s does not exist", id, drop_group.c_str() );
     }
 }
 
 void map_ter_deconstruct_info::check( const std::string &id ) const
 {
     if( !ter_set.is_valid() ) {
-    debugmsg( "deconstruct result terrain %s of %s does not exist", ter_set.c_str(), id );
+        debugmsg( "deconstruct result terrain %s of %s does not exist", ter_set.c_str(), id );
     }
     map_common_deconstruct_info::check( id );
 }
@@ -1428,7 +1428,7 @@ void map_ter_deconstruct_info::check( const std::string &id ) const
 void map_furn_deconstruct_info::check( const std::string &id ) const
 {
     if( !furn_set.is_valid() ) {
-    debugmsg( "deconstruct result furniture %s of %s does not exist", furn_set.c_str(), id );
+        debugmsg( "deconstruct result furniture %s of %s does not exist", furn_set.c_str(), id );
     }
     map_common_deconstruct_info::check( id );
 }
@@ -1442,70 +1442,70 @@ void ter_t::check() const
 {
     map_data_common_t::check();
     if( bash ) {
-    bash->check( id.c_str() );
+        bash->check( id.c_str() );
     }
     if( deconstruct ) {
-    deconstruct->check( id.c_str() );
+        deconstruct->check( id.c_str() );
     }
 
     if( !base_item.is_null() && bash.has_value() &&
         bash.value().drop_group != Item_spawn_data_EMPTY_GROUP ) {
-    // in the future, maybe, if base_item would be used more widely,
-    // there would be a reason to not error about it or make some boolean to permit it
-    // but right now let's treat it as a bug
-    debugmsg( R"(terrain %s defines "bash"->"items", but "item" is presented, which is unnecessary - bash result would be picked from %s uncrafting recipe.)",
-              id.c_str(), base_item.c_str() );
+        // in the future, maybe, if base_item would be used more widely,
+        // there would be a reason to not error about it or make some boolean to permit it
+        // but right now let's treat it as a bug
+        debugmsg( R"(terrain %s defines "bash"->"items", but "item" is presented, which is unnecessary - bash result would be picked from %s uncrafting recipe.)",
+                  id.c_str(), base_item.c_str() );
     }
 
     if( !base_item.is_null() && deconstruct.has_value() && !deconstruct.value().drop_group.is_null() ) {
-    debugmsg( R"(terrain %s defines "deconstruct"->"items", but "item" is presented, which is unnecessary - deconstruction would be set as %s.)",
-              id.c_str(), base_item.c_str() );
+        debugmsg( R"(terrain %s defines "deconstruct"->"items", but "item" is presented, which is unnecessary - deconstruction would be set as %s.)",
+                  id.c_str(), base_item.c_str() );
     }
 
     if( !transforms_into.is_valid() ) {
-    debugmsg( "invalid transforms_into %s for %s", transforms_into.c_str(), id.c_str() );
+        debugmsg( "invalid transforms_into %s for %s", transforms_into.c_str(), id.c_str() );
     }
 
     // Validate open/close transforms
     if( !open.is_valid() ) {
-    debugmsg( "invalid terrain %s for opening %s", open.c_str(), id.c_str() );
+        debugmsg( "invalid terrain %s for opening %s", open.c_str(), id.c_str() );
     }
     if( !close.is_valid() ) {
-    debugmsg( "invalid terrain %s for closing %s", close.c_str(), id.c_str() );
+        debugmsg( "invalid terrain %s for closing %s", close.c_str(), id.c_str() );
     }
     // Check transition consistency for opening/closing terrain. Has an obvious
     // exception for locked terrains - those aren't expected to be locked again
     if( open && open->close && open->close != id && !has_flag( ter_furn_flag::TFLAG_LOCKED ) ) {
-    debugmsg( "opening terrain %s for %s doesn't reciprocate", open.c_str(), id.c_str() );
+        debugmsg( "opening terrain %s for %s doesn't reciprocate", open.c_str(), id.c_str() );
     }
     if( close && close->open && close->open != id && !has_flag( ter_furn_flag::TFLAG_LOCKED ) ) {
-    debugmsg( "closing terrain %s for %s doesn't reciprocate", close.c_str(), id.c_str() );
+        debugmsg( "closing terrain %s for %s doesn't reciprocate", close.c_str(), id.c_str() );
     }
 
     // Validate curtain transforms
     if( has_examine( iexamine::curtains ) && !has_curtains() ) {
-    debugmsg( "%s is a curtain, but has no curtain_transform", id.c_str() );
+        debugmsg( "%s is a curtain, but has no curtain_transform", id.c_str() );
     }
     if( !has_examine( iexamine::curtains ) && has_curtains() ) {
-    debugmsg( "%s is not a curtain, but has curtain_transform", id.c_str() );
+        debugmsg( "%s is not a curtain, but has curtain_transform", id.c_str() );
     }
     if( !curtain_transform.is_empty() && !curtain_transform.is_valid() ) {
-    debugmsg( "%s has invalid curtain transform target %s", id.c_str(), curtain_transform.c_str() );
+        debugmsg( "%s has invalid curtain transform target %s", id.c_str(), curtain_transform.c_str() );
     }
 
     // Validate generic transforms
     if( transforms_into && transforms_into == id ) {
-    debugmsg( "%s transforms_into itself", id.c_str() );
+        debugmsg( "%s transforms_into itself", id.c_str() );
     }
 
-for( const emit_id &e : emissions ) {
-    if( !e.is_valid() ) {
+    for( const emit_id &e : emissions ) {
+        if( !e.is_valid() ) {
             debugmsg( "ter %s has invalid emission %s set", id.c_str(), e.str().c_str() );
         }
     }
     if( has_flag( ter_furn_flag::TFLAG_EASY_DECONSTRUCT ) && !deconstruct ) {
-    debugmsg( "ter %s has EASY_DECONSTRUCT flag but cannot be deconstructed",
-              id.c_str() );
+        debugmsg( "ter %s has EASY_DECONSTRUCT flag but cannot be deconstructed",
+                  id.c_str() );
     }
 }
 
@@ -1600,41 +1600,41 @@ void furn_t::check() const
 {
     map_data_common_t::check();
     if( bash ) {
-    bash->check( id.c_str() );
+        bash->check( id.c_str() );
     }
     if( deconstruct ) {
-    deconstruct->check( id.c_str() );
+        deconstruct->check( id.c_str() );
     }
 
     if( !base_item.is_null() && bash.has_value() &&
         bash.value().drop_group != Item_spawn_data_EMPTY_GROUP ) {
-    debugmsg( R"(furniture %s defines "bash"->"items", but "item" is presented, which is unnecessary - bash result would be picked from %s uncrafting recipe.)",
-              id.c_str(), base_item.c_str() );
+        debugmsg( R"(furniture %s defines "bash"->"items", but "item" is presented, which is unnecessary - bash result would be picked from %s uncrafting recipe.)",
+                  id.c_str(), base_item.c_str() );
     }
 
     if( !base_item.is_null() && deconstruct.has_value() && !deconstruct.value().drop_group.is_null() ) {
-    debugmsg( R"(furniture %s defines "deconstruct"->"items", but "item" is presented, which is unnecessary - deconstruction would be set as %s.)",
-              id.c_str(), base_item.c_str() );
+        debugmsg( R"(furniture %s defines "deconstruct"->"items", but "item" is presented, which is unnecessary - deconstruction would be set as %s.)",
+                  id.c_str(), base_item.c_str() );
     }
 
     if( !open.is_valid() ) {
-    debugmsg( "invalid furniture %s for opening %s", open.c_str(), id.c_str() );
+        debugmsg( "invalid furniture %s for opening %s", open.c_str(), id.c_str() );
     }
     if( !close.is_valid() ) {
-    debugmsg( "invalid furniture %s for closing %s", close.c_str(), id.c_str() );
+        debugmsg( "invalid furniture %s for closing %s", close.c_str(), id.c_str() );
     }
-for( const emit_id &e : emissions ) {
-    if( !e.is_valid() ) {
+    for( const emit_id &e : emissions ) {
+        if( !e.is_valid() ) {
             debugmsg( "furn %s has invalid emission %s set", id.c_str(),
                       e.str().c_str() );
         }
     }
     if( plant && !plant->transform.is_valid() ) {
-    debugmsg( "Invalid furniture %s for plant transform in furn %s", plant->transform.c_str(),
-              id.c_str() );
+        debugmsg( "Invalid furniture %s for plant transform in furn %s", plant->transform.c_str(),
+                  id.c_str() );
     }
     if( plant && !plant->base.is_valid() ) {
-    debugmsg( "Invalid furniture %s for plant base in furn %s", plant->base.c_str(), id.c_str() );
+        debugmsg( "Invalid furniture %s for plant base in furn %s", plant->base.c_str(), id.c_str() );
     }
 }
 

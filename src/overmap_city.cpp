@@ -291,7 +291,7 @@ void overmap::place_building( const tripoint_om_omt &p, om_direction::type dir, 
                                                 placed_unique_buildings );
         if( can_place_special( *building_tid, building_pos, building_dir, false ) ) {
             std::vector<tripoint_om_omt> used_tripoints = place_special( *building_tid, building_pos,
-                building_dir, town, false, false );
+                    building_dir, town, false, false );
             for( const tripoint_om_omt &p : used_tripoints ) {
                 city_tiles.insert( p.xy() );
             }
@@ -468,7 +468,7 @@ void overmap::clear_cities()
 bool overmap::is_in_city( const tripoint_om_omt &p ) const
 {
     if( !city_tiles.empty() ) {
-    return city_tiles.find( p.xy() ) != city_tiles.end();
+        return city_tiles.find( p.xy() ) != city_tiles.end();
     } else {
         // Legacy handling
         return distance_to_city( p ) == 0;
@@ -479,7 +479,7 @@ std::optional<int> overmap::distance_to_city( const tripoint_om_omt &p,
         int max_dist_to_check ) const
 {
     if( !city_tiles.empty() ) {
-    for( int i = 0; i <= max_dist_to_check; i++ ) {
+        for( int i = 0; i <= max_dist_to_check; i++ ) {
             for( const tripoint_om_omt &tile : closest_points_first( p, i, i ) ) {
                 if( is_in_city( tile ) ) {
                     return i;

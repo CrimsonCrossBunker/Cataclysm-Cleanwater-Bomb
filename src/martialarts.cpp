@@ -153,8 +153,8 @@ void weapon_category::verify_weapon_categories()
 
 void weapon_category::check() const
 {
-for( const proficiency_id &prof : proficiencies_ ) {
-    if( !prof.is_valid() ) {
+    for( const proficiency_id &prof : proficiencies_ ) {
+        if( !prof.is_valid() ) {
             debugmsg( "Proficiency %s does not exist in weapon category %s", prof.str(), id.str() );
         }
     }
@@ -355,7 +355,7 @@ void ma_technique::verify_ma_techniques()
 void ma_technique::check() const
 {
     if( attack_vectors.empty() && !dummy && !defensive && !grab_break && !miss_recovery ) {
-    debugmsg( "MA technique %s is missing an attack vector", id.c_str() );
+        debugmsg( "MA technique %s is missing an attack vector", id.c_str() );
     }
 }
 
@@ -433,7 +433,7 @@ class ma_buff_reader : public generic_typed_reader<ma_buff_reader>
     public:
         mabuff_id get_next( const JsonValue &jin ) const {
             if( jin.test_string() ) {
-            return mabuff_id( jin.get_string() );
+                return mabuff_id( jin.get_string() );
             }
             JsonObject jsobj = jin.get_object();
             ma_buffs.load( jsobj, "" );
@@ -734,7 +734,7 @@ bool ma_requirements::buff_requirements_satisfied( const Character &u ) const
 bool ma_requirements::is_valid_character( const Character &u ) const
 {
     if( !buff_requirements_satisfied( u ) ) {
-    add_msg_debug( debugmode::DF_MELEE, "Buff requirements not satisfied, attack discarded" );
+        add_msg_debug( debugmode::DF_MELEE, "Buff requirements not satisfied, attack discarded" );
         return false;
     }
 
@@ -759,12 +759,12 @@ bool ma_requirements::is_valid_character( const Character &u ) const
     bool valid_melee = !strictly_unarmed && ( forced_unarmed || melee_ok );
 
     if( !valid_unarmed && !valid_melee ) {
-    add_msg_debug( debugmode::DF_MELEE, "Weapon/technique conflict, attack discarded" );
+        add_msg_debug( debugmode::DF_MELEE, "Weapon/technique conflict, attack discarded" );
         return false;
     }
 
-for( const auto &pr : min_skill ) {
-    if( ( cqb ? 5 : static_cast<int>( u.get_skill_level( pr.first ) ) ) < pr.second ) {
+    for( const auto &pr : min_skill ) {
+        if( ( cqb ? 5 : static_cast<int>( u.get_skill_level( pr.first ) ) ) < pr.second ) {
             add_msg_debug( debugmode::DF_MELEE, "Skill level requirement %d not satisfied, attack discarded",
                            pr.second );
             return false;
@@ -772,8 +772,8 @@ for( const auto &pr : min_skill ) {
     }
 
     if( !req_char_flags.empty() ) {
-    bool has_flag = false;
-    for( const json_character_flag &flag : req_char_flags ) {
+        bool has_flag = false;
+        for( const json_character_flag &flag : req_char_flags ) {
             if( u.has_flag( flag ) ) {
                 has_flag = true;
             }
@@ -784,16 +784,16 @@ for( const auto &pr : min_skill ) {
         }
     }
 
-for( const json_character_flag &flag : req_char_flags_all ) {
-    if( !u.has_flag( flag ) ) {
+    for( const json_character_flag &flag : req_char_flags_all ) {
+        if( !u.has_flag( flag ) ) {
             add_msg_debug( debugmode::DF_MELEE, "Required flags(all) not found, attack discarded" );
             return false;
         }
     }
 
     if( !forbidden_char_flags.empty() ) {
-    bool has_flag = false;
-    for( const json_character_flag &flag : forbidden_char_flags ) {
+        bool has_flag = false;
+        for( const json_character_flag &flag : forbidden_char_flags ) {
             if( u.has_flag( flag ) ) {
                 has_flag = true;
             }
@@ -805,8 +805,8 @@ for( const json_character_flag &flag : req_char_flags_all ) {
     }
 
     if( !weapon_categories_allowed.empty() ) {
-    bool valid_weap_cat = false;
-    for( const weapon_category_id &w_cat : weapon_categories_allowed ) {
+        bool valid_weap_cat = false;
+        for( const weapon_category_id &w_cat : weapon_categories_allowed ) {
             if( u.used_weapon() && u.used_weapon()->typeId()->weapon_category.count( w_cat ) > 0 ) {
                 valid_weap_cat = true;
             }
@@ -822,13 +822,13 @@ for( const json_character_flag &flag : req_char_flags_all ) {
 
 bool ma_requirements::is_valid_weapon( const item &i ) const
 {
-for( const flag_id &flag : req_flags ) {
-    if( !i.has_flag( flag ) ) {
+    for( const flag_id &flag : req_flags ) {
+        if( !i.has_flag( flag ) ) {
             return false;
         }
     }
-for( const auto &pr : min_damage ) {
-    if( i.damage_melee( pr.first ) < pr.second ) {
+    for( const auto &pr : min_damage ) {
+        if( i.damage_melee( pr.first ) < pr.second ) {
             return false;
         }
     }
@@ -1086,8 +1086,8 @@ bool ma_buff::is_stealthy() const
 
 bool ma_buff::has_flag( const json_character_flag &flag ) const
 {
-for( const json_character_flag &q : flags ) {
-    if( q == flag ) {
+    for( const json_character_flag &q : flags ) {
+        if( q == flag ) {
             return true;
         }
     }
@@ -1174,7 +1174,7 @@ static void simultaneous_add( Character &u, const std::vector<mabuff_id> &buffs 
             buffer.push_back( &buff );
         }
     }
-    for( const ma_buff * &elem : buffer ) {
+    for( const ma_buff *&elem : buffer ) {
         elem->apply_buff( u );
     }
 }
@@ -1182,88 +1182,88 @@ static void simultaneous_add( Character &u, const std::vector<mabuff_id> &buffs 
 void martialart::remove_all_buffs( Character &u ) const
 {
     // Remove static buffs
-for( const auto &elem : static_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : static_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove onmove buffs
-for( const auto &elem : onmove_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : onmove_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove onpause buffs
-for( const auto &elem : onpause_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : onpause_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove onhit buffs
-for( const auto &elem : onhit_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : onhit_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove onattack buffs
-for( const auto &elem : onattack_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : onattack_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove ondodge buffs
-for( const auto &elem : ondodge_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : ondodge_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove onblock buffs
-for( const auto &elem : onblock_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : onblock_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove ongethit buffs
-for( const auto &elem : ongethit_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : ongethit_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove onmiss buffs
-for( const auto &elem : onmiss_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : onmiss_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove oncrit buffs
-for( const auto &elem : oncrit_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : oncrit_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
     }
 
     // Remove onkill buffs
-for( const auto &elem : onkill_buffs ) {
-    const efftype_id eff_id = elem->get_effect_id();
+    for( const auto &elem : onkill_buffs ) {
+        const efftype_id eff_id = elem->get_effect_id();
         if( u.has_effect( eff_id ) && !elem->persists ) {
             u.remove_effect( eff_id );
         }
@@ -1328,8 +1328,8 @@ void martialart::apply_onkill_buffs( Character &u ) const
 void martialart::activate_eocs( Character &u,
                                 const std::vector<effect_on_condition_id> &eocs ) const
 {
-for( const effect_on_condition_id &eoc : eocs ) {
-    dialogue d( get_talker_for( u ), nullptr );
+    for( const effect_on_condition_id &eoc : eocs ) {
+        dialogue d( get_talker_for( u ), nullptr );
         eoc->activate_activation_only( d, "a martial art activation", "martial art being activated",
                                        "martial art" );
     }
@@ -1392,8 +1392,8 @@ void martialart::apply_onkill_eocs( Character &u ) const
 
 bool martialart::has_technique( const Character &u, const matec_id &tec_id ) const
 {
-for( const matec_id &elem : techniques ) {
-    const ma_technique &tec = elem.obj();
+    for( const matec_id &elem : techniques ) {
+        const ma_technique &tec = elem.obj();
         if( tec.is_valid_character( u ) && tec.id == tec_id ) {
             return true;
         }
@@ -1404,7 +1404,7 @@ for( const matec_id &elem : techniques ) {
 bool martialart::has_weapon( const itype_id &itt ) const
 {
     return weapons.count( itt ) > 0 ||
-    std::any_of( itt->weapon_category.begin(), itt->weapon_category.end(),
+           std::any_of( itt->weapon_category.begin(), itt->weapon_category.end(),
     [&]( const weapon_category_id & weap ) {
         return weapon_category.count( weap ) > 0;
     } );
@@ -1413,14 +1413,14 @@ bool martialart::has_weapon( const itype_id &itt ) const
 bool martialart::weapon_valid( const item_location &it ) const
 {
     if( allow_all_weapons ) {
-    return true;
-}
+        return true;
+    }
 
-if( !it && !strictly_melee ) {
-    return true;
-}
+    if( !it && !strictly_melee ) {
+        return true;
+    }
 
-if( it && has_weapon( it->typeId() ) ) {
+    if( it && has_weapon( it->typeId() ) ) {
         return true;
     }
 
@@ -1452,7 +1452,7 @@ std::vector<matec_id> character_martial_arts::get_all_techniques( const item_loc
     }
     // If we have any items that also provide techniques
     const std::vector<item_location> tech_providing_items = u.cache_get_items_with(
-            json_flag_PROVIDES_TECHNIQUES );
+                json_flag_PROVIDES_TECHNIQUES );
     for( const item_location &it : tech_providing_items ) {
         const std::set<matec_id> &item_techs = it->get_techniques();
         tecs.insert( tecs.end(), item_techs.begin(), item_techs.end() );
@@ -1495,8 +1495,8 @@ ma_technique character_martial_arts::get_miss_recovery( const Character &owner )
 }
 
 std::optional<std::pair<attack_vector_id, sub_bodypart_str_id>>
-character_martial_arts::choose_attack_vector( const Character &user,
-        const matec_id &tech ) const
+        character_martial_arts::choose_attack_vector( const Character &user,
+                const matec_id &tech ) const
 {
     // Use the simple weighted list to handle picking semi-randomly
     attack_vector_id ret;
@@ -1744,21 +1744,21 @@ bool character_martial_arts::can_nonstandard_block( const Character &owner ) con
 {
     // No nonstandard limb that blocks
     if( !owner.has_flag( json_flag_NONSTANDARD_BLOCK ) && !owner.has_flag( json_flag_ALWAYS_BLOCK ) ) {
-    return false;
-}
+        return false;
+    }
 
-const martialart &ma = style_selected.obj();
-// Bionic combatives won't help with nonstandard anatomy
-const int unarmed_skill = owner.get_skill_level(
-                              skill_unarmed );
-const bool block_with_skill = unarmed_skill >= ma.nonstandard_block;
+    const martialart &ma = style_selected.obj();
+    // Bionic combatives won't help with nonstandard anatomy
+    const int unarmed_skill = owner.get_skill_level(
+                                  skill_unarmed );
+    const bool block_with_skill = unarmed_skill >= ma.nonstandard_block;
 
-// Filter out the case where the flagged BP is overencumbered/broken but blocking score is contributed by arms/legs
+    // Filter out the case where the flagged BP is overencumbered/broken but blocking score is contributed by arms/legs
 
-// Success conditions
-// Return true if the limbs which would always block can block
-if( owner.has_flag( json_flag_ALWAYS_BLOCK ) ) {
-    for( const bodypart_id &bp : owner.get_all_body_parts_with_flag( json_flag_ALWAYS_BLOCK ) ) {
+    // Success conditions
+    // Return true if the limbs which would always block can block
+    if( owner.has_flag( json_flag_ALWAYS_BLOCK ) ) {
+        for( const bodypart_id &bp : owner.get_all_body_parts_with_flag( json_flag_ALWAYS_BLOCK ) ) {
             if( owner.get_part( bp )->get_limb_score( owner, limb_score_block ) >= 0.25f ) {
                 return true;
             }
@@ -1766,7 +1766,7 @@ if( owner.has_flag( json_flag_ALWAYS_BLOCK ) ) {
     }
     // Return true if we're skilled enough to block and we have at least one limb ready to block
     if( block_with_skill ) {
-    for( const bodypart_id &bp : owner.get_all_body_parts_with_flag( json_flag_NONSTANDARD_BLOCK ) ) {
+        for( const bodypart_id &bp : owner.get_all_body_parts_with_flag( json_flag_NONSTANDARD_BLOCK ) ) {
             if( owner.get_part( bp )->get_limb_score( owner, limb_score_block ) >= 0.25f ) {
                 return true;
             }
@@ -2048,11 +2048,11 @@ void character_martial_arts::add_martialart( const matype_id &ma_id )
 bool Character::can_autolearn( const matype_id &ma_id ) const
 {
     if( ma_id.obj().autolearn_skills.empty() ) {
-    return false;
-}
+        return false;
+    }
 
-for( const std::pair<std::string, int> &elem : ma_id.obj().autolearn_skills ) {
-    const skill_id skill_req( elem.first );
+    for( const std::pair<std::string, int> &elem : ma_id.obj().autolearn_skills ) {
+        const skill_id skill_req( elem.first );
         const int required_level = elem.second;
 
         if( required_level > static_cast<int>( get_skill_level( skill_req ) ) ) {

@@ -1861,8 +1861,8 @@ void crafting_ui_impl::draw_components( const requirement_data &req,
     // Compute how many of a given component the player has on hand
     const auto avail_count = [&crafting_inv, &filter]( const item_comp & ic ) -> int {
         if( item::count_by_charges( ic.type ) )
-    {
-        return crafting_inv.charges_of( ic.type, INT_MAX, filter );
+        {
+            return crafting_inv.charges_of( ic.type, INT_MAX, filter );
         }
         return crafting_inv.amount_of( ic.type, false, INT_MAX, filter );
     };
@@ -1889,14 +1889,14 @@ void crafting_ui_impl::draw_components( const requirement_data &req,
         }
         const auto comp_rank = [&]( const item_comp * ic ) -> int {
             if( ic->has( crafting_inv, filter, batch_size ) )
-        {
-            return 0;
-        }
-        return avail_count( *ic ) > 0 ? 1 : 2;
-    };
-    std::stable_sort( sorted_alts.begin(), sorted_alts.end(),
-    [&]( const item_comp * a, const item_comp * b ) {
-        return comp_rank( a ) < comp_rank( b );
+            {
+                return 0;
+            }
+            return avail_count( *ic ) > 0 ? 1 : 2;
+        };
+        std::stable_sort( sorted_alts.begin(), sorted_alts.end(),
+        [&]( const item_comp * a, const item_comp * b ) {
+            return comp_rank( a ) < comp_rank( b );
         } );
 
         const bool is_expanded = expanded_comp_groups.count( gi ) > 0;
@@ -2304,8 +2304,8 @@ void crafting_ui_impl::recalculate_recipes()
             picking.insert( picking.end(), filtered_recipes.begin(), filtered_recipes.end() );
         } else {
             const std::pair<std::vector<const recipe *>, bool> result = recipes_from_cat(
-                    *available_recipes,
-                    crafting_category_id( tab.cur() ), subtab.cur() );
+                        *available_recipes,
+                        crafting_category_id( tab.cur() ), subtab.cur() );
             picking = result.first;
             skip_hidden = result.second;
             show_hidden = result.second;

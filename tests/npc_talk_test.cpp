@@ -1266,7 +1266,7 @@ TEST_CASE( "npc_compare_int", "[npc_talk]" )
 
     const int extra_response_pos = std::distance( expected_responses.begin(),
                                    std::find( expected_responses.begin(), expected_responses.end(),
-                                       "time_since_cataclysm in days > 3" ) ) + 1;
+                                           "time_since_cataclysm in days > 3" ) ) + 1;
     expected_responses.insert( expected_responses.begin() + extra_response_pos, extra_test_response );
     expected_answers = expected_responses.size();
     gen_response_lines( d, expected_answers );

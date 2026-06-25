@@ -55,25 +55,25 @@ static const item_category_id item_category_container( "container" );
 item item::in_its_container( int qty ) const
 {
     return in_container( type->default_container.value_or( itype_id::NULL_ID() ), qty,
-    type->default_container_sealed, type->default_container_variant.value_or( "" ) );
+                         type->default_container_sealed, type->default_container_variant.value_or( "" ) );
 }
 
 item item::in_container( const itype_id &cont, int qty, bool sealed,
                          const std::string &variant ) const
 {
     if( cont.is_null() ) {
-    return *this;
-}
+        return *this;
+    }
 
-if( qty <= 0 ) {
-    qty = count();
+    if( qty <= 0 ) {
+        qty = count();
     }
     item container( cont, birthday() );
     if( !variant.empty() ) {
-    container.set_itype_variant( variant );
+        container.set_itype_variant( variant );
     }
     if( container.is_container() || container.is_estorage() ) {
-    container.fill_with( *this, qty );
+        container.fill_with( *this, qty );
         container.invlet = invlet;
         if( sealed ) {
             container.seal();
@@ -286,14 +286,14 @@ bool split_stackable_container_contents_from_stack( item &it, item &empty_stack 
     empty_stack = it;
     it.charges = 1;
     empty_stack.charges = old_charges - 1;
-    empty_stack.get_contents().clear_pockets_if( []( const item_pocket &pocket ) {
+    empty_stack.get_contents().clear_pockets_if( []( const item_pocket & pocket ) {
         return pocket.is_type( pocket_type::CONTAINER );
     } );
     it.update_inherited_flags();
     empty_stack.update_inherited_flags();
     DebugLog( D_INFO, D_MAIN ) << string_format(
-        "Loaded stackable container %s with contents and %d charges; split off %d empty container(s).",
-        it.tname(), old_charges, old_charges - 1 );
+                                   "Loaded stackable container %s with contents and %d charges; split off %d empty container(s).",
+                                   it.tname(), old_charges, old_charges - 1 );
     return true;
 }
 
@@ -373,9 +373,9 @@ bool item::is_container() const
 bool item::is_container_with_restriction() const
 {
     if( !is_container() ) {
-    return false;
-}
-return contents.is_restricted_container();
+        return false;
+    }
+    return contents.is_restricted_container();
 }
 
 bool item::is_single_container_with_restriction() const
@@ -501,10 +501,10 @@ bool item::is_container_full( bool allow_bucket ) const
 bool item::can_unload() const
 {
     if( has_flag( flag_NO_UNLOAD ) ) {
-    return false;
-}
+        return false;
+    }
 
-return contents.can_unload_liquid();
+    return contents.can_unload_liquid();
 }
 
 bool item::contains_no_solids() const
@@ -734,7 +734,7 @@ units::volume item::get_volume_capacity_recursive( const std::function<bool( con
         units::volume &out_volume_expansion ) const
 {
     return contents.volume_capacity_recursive( include_pocket, check_pocket_tree,
-           out_volume_expansion );
+            out_volume_expansion );
 }
 
 
@@ -755,7 +755,7 @@ units::volume item::get_remaining_volume_recursive( const std::function<bool( co
         units::volume &out_volume_expansion ) const
 {
     return contents.remaining_volume_recursive( include_pocket, check_pocket_tree,
-           out_volume_expansion );
+            out_volume_expansion );
 }
 
 units::mass item::get_remaining_weight_capacity( const bool unrestricted_pockets_only ) const
@@ -915,12 +915,12 @@ int item::fill_with( const item &contained, const int amount,
 bool item::can_holster( const item &obj ) const
 {
     if( !type->can_use( "holster" ) ) {
-    return false; // item is not a holster
-}
+        return false; // item is not a holster
+    }
 
-const holster_actor *ptr = dynamic_cast<const holster_actor *>
-                           ( type->get_use( "holster" )->get_actor_ptr() );
-return ptr->can_holster( *this, obj );
+    const holster_actor *ptr = dynamic_cast<const holster_actor *>
+                               ( type->get_use( "holster" )->get_actor_ptr() );
+    return ptr->can_holster( *this, obj );
 }
 
 bool item::will_spill() const
@@ -955,12 +955,12 @@ int item::get_pocket_size() const
 {
     // set the amount of space that will be used on the vest based on the size of the item
     if( has_flag( flag_PALS_SMALL ) ) {
-    return 1;
-} else if( has_flag( flag_PALS_MEDIUM ) ) {
-    return 2;
-} else {
-    return 3;
-}
+        return 1;
+    } else if( has_flag( flag_PALS_MEDIUM ) ) {
+        return 2;
+    } else {
+        return 3;
+    }
 }
 
 bool item::can_attach_as_pocket() const

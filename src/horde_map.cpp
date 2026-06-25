@@ -21,7 +21,7 @@ horde_entity *horde_map::entity_at( const tripoint_om_ms &p )
     // TODO reconsider pruning p down to tripoint_om_ms in the first place.
     tripoint_abs_ms entity_loc = project_combine( location, p );
     std::unordered_map<tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>>::iterator
-    active_monster_submap = active_monster_map.find( submap_offset );
+            active_monster_submap = active_monster_map.find( submap_offset );
     bool active_map_exists = active_monster_submap != active_monster_map.end() &&
                              !active_monster_submap->second.empty();
     if( active_map_exists ) {
@@ -32,7 +32,7 @@ horde_entity *horde_map::entity_at( const tripoint_om_ms &p )
         }
     }
     std::unordered_map<tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>>::iterator
-    idle_monster_submap = idle_monster_map.find( submap_offset );
+            idle_monster_submap = idle_monster_map.find( submap_offset );
     bool idle_map_exists = idle_monster_submap != idle_monster_map.end() &&
                            !idle_monster_submap->second.empty();
     if( idle_map_exists ) {
@@ -43,7 +43,7 @@ horde_entity *horde_map::entity_at( const tripoint_om_ms &p )
         }
     }
     std::unordered_map<tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>>::iterator
-    dormant_monster_submap = dormant_monster_map.find( submap_offset );
+            dormant_monster_submap = dormant_monster_map.find( submap_offset );
     bool dormant_map_exists = dormant_monster_submap != dormant_monster_map.end() &&
                               !dormant_monster_submap->second.empty();
     if( dormant_map_exists ) {
@@ -54,7 +54,7 @@ horde_entity *horde_map::entity_at( const tripoint_om_ms &p )
         }
     }
     std::unordered_map<tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>>::iterator
-    immobile_monster_submap = immobile_monster_map.find( submap_offset );
+            immobile_monster_submap = immobile_monster_map.find( submap_offset );
     bool immobile_map_exists = immobile_monster_submap != immobile_monster_map.end() &&
                                !immobile_monster_submap->second.empty();
     if( immobile_map_exists ) {
@@ -139,9 +139,9 @@ std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> horde
         return result; // Bail out, blacklisted monster or something's wrong.
     }
     std::unordered_map <tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>> &target_map =
-        id->has_flag( mon_flag_DORMANT ) ? dormant_monster_map :
-        is_alert( *id ) ? idle_monster_map :
-        immobile_monster_map;
+                id->has_flag( mon_flag_DORMANT ) ? dormant_monster_map :
+                is_alert( *id ) ? idle_monster_map :
+                immobile_monster_map;
     point_abs_om omp;
     tripoint_om_sm sm;
     std::tie( omp, sm ) = project_remain<coords::om>( project_to<coords::sm>( p ) );
@@ -156,10 +156,10 @@ std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> horde
     const tripoint_abs_ms &p, const monster &mon )
 {
     std::unordered_map <tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>> &target_map =
-        mon.type->has_flag( mon_flag_DORMANT ) ? dormant_monster_map :
-        !is_alert( *mon.type ) ? immobile_monster_map :
-        ( mon.has_dest() || mon.wandf > 0 ) ? active_monster_map :
-        idle_monster_map;
+                mon.type->has_flag( mon_flag_DORMANT ) ? dormant_monster_map :
+                !is_alert( *mon.type ) ? immobile_monster_map :
+                ( mon.has_dest() || mon.wandf > 0 ) ? active_monster_map :
+                idle_monster_map;
     std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> result;
     point_abs_om omp;
     tripoint_om_sm sm;
@@ -237,10 +237,10 @@ void horde_map::signal_entities( const tripoint_abs_ms &origin, int volume )
 void horde_map::insert( std::unordered_map<tripoint_abs_ms, horde_entity>::node_type &&node )
 {
     std::unordered_map <tripoint_om_sm, std::unordered_map<tripoint_abs_ms, horde_entity>> &target_map =
-        node.mapped().get_type()->has_flag( mon_flag_DORMANT ) ? dormant_monster_map :
-        node.mapped().is_active() ? active_monster_map :
-        is_alert( *node.mapped().get_type() ) ? idle_monster_map :
-        immobile_monster_map;
+                node.mapped().get_type()->has_flag( mon_flag_DORMANT ) ? dormant_monster_map :
+                node.mapped().is_active() ? active_monster_map :
+                is_alert( *node.mapped().get_type() ) ? idle_monster_map :
+                immobile_monster_map;
     point_abs_om omp;
     tripoint_om_sm sm;
     std::tie( omp, sm ) = project_remain<coords::om>( project_to<coords::sm> ( node.key() ) );

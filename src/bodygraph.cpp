@@ -209,10 +209,10 @@ void bodygraph::finalize()
 void bodygraph::check() const
 {
     if( parts.empty() ) {
-    debugmsg( "body_graph \"%s\" defined without parts.", id.c_str() );
+        debugmsg( "body_graph \"%s\" defined without parts.", id.c_str() );
     }
-for( const auto &bgp : parts ) {
-    if( utf8_width( bgp.first ) > 1 ) {
+    for( const auto &bgp : parts ) {
+        if( utf8_width( bgp.first ) > 1 ) {
             debugmsg( "part \"%s\" in body_graph \"%s\" is more than 1 character.", bgp.first, id.c_str() );
         }
         if( bgp.second.bodyparts.empty() && bgp.second.sub_bodyparts.empty() ) {

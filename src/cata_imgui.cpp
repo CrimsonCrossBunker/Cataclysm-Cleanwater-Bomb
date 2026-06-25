@@ -25,18 +25,18 @@ static ImGuiKey cata_key_to_imgui( int cata_key );
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #if defined(HEADLESS)
-// Headless has no terminal and thus no curses header. cata_imgui only needs a
-// few curses mouse constants below to build ImTui mouse events, which the
-// headless ImTui platform shim discards. Define them locally instead of
-// pulling in <curses.h>. BUTTON5_PRESSED is intentionally left undefined so the
-// mousewheel branch compiles out.
-#  define KEY_MOUSE        0x199
-#  define BUTTON1_PRESSED  0x0002
-#  define BUTTON1_RELEASED 0x0001
-#  define BUTTON3_PRESSED  0x0800
-#  define BUTTON3_RELEASED 0x0400
+    // Headless has no terminal and thus no curses header. cata_imgui only needs a
+    // few curses mouse constants below to build ImTui mouse events, which the
+    // headless ImTui platform shim discards. Define them locally instead of
+    // pulling in <curses.h>. BUTTON5_PRESSED is intentionally left undefined so the
+    // mousewheel branch compiles out.
+    #define KEY_MOUSE        0x199
+    #define BUTTON1_PRESSED  0x0002
+    #define BUTTON1_RELEASED 0x0001
+    #define BUTTON3_PRESSED  0x0800
+    #define BUTTON3_RELEASED 0x0400
 #else
-#include <curses.h>
+    #include <curses.h>
 #endif
 #pragma GCC diagnostic pop
 #include <imtui/imtui-impl-ncurses.h>
@@ -714,14 +714,14 @@ bool cataimgui::client::any_window_shown()
 
 bool cataimgui::client::want_capture_mouse()
 {
-    ImGuiContext* ctx = ImGui::GetCurrentContext();
-    if (!ctx) {
+    ImGuiContext *ctx = ImGui::GetCurrentContext();
+    if( !ctx ) {
         return false;
     }
 
     // 检查悬停的窗口是否是 QUERY_POPUP（窗口名以 QUERY_POPUP 开头）
-    if (ctx->HoveredWindow && ctx->HoveredWindow->Name) {
-        if (strncmp(ctx->HoveredWindow->Name, "QUERY_POPUP", 11) == 0) {
+    if( ctx->HoveredWindow && ctx->HoveredWindow->Name ) {
+        if( strncmp( ctx->HoveredWindow->Name, "QUERY_POPUP", 11 ) == 0 ) {
             // QUERY_POPUP 窗口不捕获鼠标，让游戏处理点击
             return false;
         }
@@ -1006,7 +1006,7 @@ cataimgui::window::~window()
 void cataimgui::window::hide_if_hidden() const
 {
     if( hide_ui ) {
-    ImGuiWindow *w = ImGui::GetCurrentWindowRead();
+        ImGuiWindow *w = ImGui::GetCurrentWindowRead();
         ImGui::SetWindowHiddenAndSkipItemsForCurrentFrame( w );
     }
 }

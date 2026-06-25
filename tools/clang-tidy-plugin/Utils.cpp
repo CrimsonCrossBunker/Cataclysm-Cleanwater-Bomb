@@ -40,28 +40,28 @@ NameConvention::NameConvention( StringRef xName )
 NameConvention::MatchResult NameConvention::Match( StringRef name ) const
 {
     if( name.empty() ) {
-    return None;
-}
-
-StringRef Root = atEnd ? name.drop_back() : name.drop_front();
-if( Root != root ) {
-    return None;
-}
-
-char Dim = atEnd ? name.back() : name.front();
-switch( Dim ) {
-    case 'x':
-    case 'X':
-        return XName;
-    case 'y':
-    case 'Y':
-        return YName;
-    case 'z':
-    case 'Z':
-        return ZName;
-    default:
         return None;
-}
+    }
+
+    StringRef Root = atEnd ? name.drop_back() : name.drop_front();
+    if( Root != root ) {
+        return None;
+    }
+
+    char Dim = atEnd ? name.back() : name.front();
+    switch( Dim ) {
+        case 'x':
+        case 'X':
+            return XName;
+        case 'y':
+        case 'Y':
+            return YName;
+        case 'z':
+        case 'Z':
+            return ZName;
+        default:
+            return None;
+    }
 }
 
 } // namespace clang::tidy::cata

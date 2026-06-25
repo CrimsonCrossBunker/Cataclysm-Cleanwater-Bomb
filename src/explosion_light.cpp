@@ -14,11 +14,16 @@ template<>
 std::string enum_to_string<vfx_easing>( vfx_easing data )
 {
     switch( data ) {
-        case vfx_easing::linear: return "linear";
-        case vfx_easing::ease_in: return "ease_in";
-        case vfx_easing::ease_out: return "ease_out";
-        case vfx_easing::smoothstep: return "smoothstep";
-        case vfx_easing::last: break;
+        case vfx_easing::linear:
+            return "linear";
+        case vfx_easing::ease_in:
+            return "ease_in";
+        case vfx_easing::ease_out:
+            return "ease_out";
+        case vfx_easing::smoothstep:
+            return "smoothstep";
+        case vfx_easing::last:
+            break;
     }
     cata_fatal( "Invalid vfx_easing" );
 }

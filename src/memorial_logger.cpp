@@ -83,9 +83,9 @@ memorial_log_entry::memorial_log_entry( time_point time, const oter_type_str_id 
 std::string memorial_log_entry::to_string() const
 {
     if( preformatted_ ) {
-    return *preformatted_;
-} else {
-    return "| " + ::to_string( time_ ) + " | " + oter_name_ + " | " + message_;
+        return *preformatted_;
+    } else {
+        return "| " + ::to_string( time_ ) + " | " + oter_name_ + " | " + message_;
     }
 }
 
@@ -104,7 +104,7 @@ void memorial_log_entry::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
     if( preformatted_ ) {
-    jsout.member( "preformatted", preformatted_ );
+        jsout.member( "preformatted", preformatted_ );
     } else {
         jsout.member( "time", time_ );
         jsout.member( "oter_id", oter_id_ );
@@ -420,8 +420,8 @@ void memorial_logger::write_json_memorial( std::ostream &memorial_file ) const
     jsout.member( "stats", get_stats() );
 
     std::map<string_id<score>, cata_variant> scores;
-for( const score *scr : get_stats().valid_scores() ) {
-    scores.emplace( scr->id, scr->value( get_stats() ) );
+    for( const score *scr : get_stats().valid_scores() ) {
+        scores.emplace( scr->id, scr->value( get_stats() ) );
     }
     jsout.member( "scores", scores );
 

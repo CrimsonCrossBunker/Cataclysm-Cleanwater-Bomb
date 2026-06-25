@@ -268,7 +268,7 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         // Even with food and water in inventory, BT returns idle.
         test_npc.i_add( item( itype_sandwich_cheese_grilled ) );
         const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+                    Item_spawn_data_test_bottle_water );
         test_npc.i_add( water_items.front() );
         CHECK( npc_needs.tick( &oracle ) == "idle" );
     }
@@ -300,7 +300,7 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         REQUIRE( oracle.needs_water_badly( "" ) == behavior::status_t::running );
         REQUIRE( oracle.needs_food_badly( "" ) == behavior::status_t::running );
         const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+                    Item_spawn_data_test_bottle_water );
         test_npc.i_add( water_items.front() );
         test_npc.i_add( item( itype_sandwich_cheese_grilled ) );
         REQUIRE( oracle.has_water( "" ) == behavior::status_t::running );
@@ -318,7 +318,7 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         REQUIRE( oracle.needs_water_badly( "" ) == behavior::status_t::running );
         REQUIRE( oracle.needs_food_badly( "" ) == behavior::status_t::running );
         const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+                    Item_spawn_data_test_bottle_water );
         test_npc.i_add( water_items.front() );
         test_npc.i_add( item( itype_sandwich_cheese_grilled ) );
         REQUIRE( oracle.has_water( "" ) == behavior::status_t::running );
@@ -338,7 +338,7 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         REQUIRE( oracle.needs_water_badly( "" ) == behavior::status_t::running );
         REQUIRE( oracle.needs_food_badly( "" ) == behavior::status_t::running );
         const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+                    Item_spawn_data_test_bottle_water );
         test_npc.i_add( water_items.front() );
         test_npc.i_add( item( itype_sandwich_cheese_grilled ) );
         REQUIRE( oracle.has_water( "" ) == behavior::status_t::running );
@@ -359,7 +359,7 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         test_npc.worn.wear_item( test_npc, item( itype_backpack ), false, false );
         test_npc.i_add( item( itype_sweater ) );
         const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+                    Item_spawn_data_test_bottle_water );
         test_npc.i_add( water_items.front() );
         REQUIRE( oracle.can_obtain_warmth( "" ) == behavior::status_t::running );
         REQUIRE( oracle.has_water( "" ) == behavior::status_t::running );
@@ -385,7 +385,7 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         test_npc.i_add( tool_with_ammo( itype_lighter, 20 ) );
         test_npc.i_add( item( itype_2x4 ) );
         const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+                    Item_spawn_data_test_bottle_water );
         test_npc.i_add( water_items.front() );
         // find_fire_spot needs map cache for move_cost/is_flammable.
         get_map().build_map_cache( 0 );
@@ -448,7 +448,7 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         REQUIRE( oracle.can_sleep( "" ) == behavior::status_t::running );
         REQUIRE( oracle.needs_water_badly( "" ) == behavior::status_t::running );
         const item_group::ItemList water_items = item_group::items_from(
-                Item_spawn_data_test_bottle_water );
+                    Item_spawn_data_test_bottle_water );
         test_npc.i_add( water_items.front() );
         REQUIRE( oracle.has_water( "" ) == behavior::status_t::running );
         CHECK( npc_needs.tick( &oracle ) == "go_to_sleep" );
@@ -568,7 +568,7 @@ TEST_CASE( "tree_tick_full_returns_score", "[behavior]" )
     // Give warmth source (inventory sweater) and water source (inventory).
     test_npc.i_add( item( itype_sweater ) );
     const item_group::ItemList water_items = item_group::items_from(
-            Item_spawn_data_test_bottle_water );
+                Item_spawn_data_test_bottle_water );
     test_npc.i_add( water_items.front() );
 
     map &here = get_map();

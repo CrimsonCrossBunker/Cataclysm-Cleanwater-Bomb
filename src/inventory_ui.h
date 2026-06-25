@@ -165,8 +165,8 @@ class inventory_entry
 
         const item_location &any_item() const {
             if( locations.empty() ) {
-            debugmsg( "inventory_entry::any_item called on a non-item entry.  "
-                      "Test inventory_entry::is_item before calling this function." );
+                debugmsg( "inventory_entry::any_item called on a non-item entry.  "
+                          "Test inventory_entry::is_item before calling this function." );
                 return item_location::nowhere;
             } else {
                 return locations.front();
@@ -491,9 +491,9 @@ class inventory_column
         // whether or not to indent contained entries
         bool indent_entries() const {
             if( indent_entries_override ) {
-            return *indent_entries_override;
-        } else {
-            return preset.indent_entries();
+                return *indent_entries_override;
+            } else {
+                return preset.indent_entries();
             }
         }
 

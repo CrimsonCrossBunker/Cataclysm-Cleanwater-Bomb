@@ -1005,7 +1005,7 @@ bool bodypart::is_limb_overencumbered( const Creature &mon ) const
 bool bodypart::has_conditional_flag( const Creature &mon, const json_character_flag &flag ) const
 {
     return id->conditional_flags.count( flag ) > 0 && hp_cur > id->health_limit &&
-    !is_limb_overencumbered( mon );
+           !is_limb_overencumbered( mon );
 }
 
 std::set<matec_id> bodypart::get_limb_techs( const Creature &mon ) const
@@ -1177,8 +1177,8 @@ bool bodypart::has_wounds() const
 
 bool bodypart::has_wound( const wound_type_id wd ) const
 {
-for( const wound &wound : wounds ) {
-    if( wound.type == wd ) {
+    for( const wound &wound : wounds ) {
+        if( wound.type == wd ) {
             return true;
         }
     }

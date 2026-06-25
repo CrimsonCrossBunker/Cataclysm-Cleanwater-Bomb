@@ -1611,8 +1611,8 @@ bool trapfunc::map_regen( const tripoint_bub_ms &p, Creature *c, item * )
             const update_mapgen_id &regen_mapgen = here.tr_at( p ).map_regen_target();
             here.remove_trap( p );
             const ret_val<void> has_colliding_vehicle = run_mapgen_update_func( regen_mapgen, omt_pos, {},
-                nullptr,
-                false );
+                    nullptr,
+                    false );
             if( !has_colliding_vehicle.success() ) {
                 popup( _( "Failed to generate the new map, probably due to collision with %s vehicle/appliance." ),
                        has_colliding_vehicle.str() );

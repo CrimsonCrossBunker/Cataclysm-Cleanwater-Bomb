@@ -59,9 +59,9 @@ inv_chars( "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#&()+.:;=@[\\
 bool invlet_wrapper::valid( const int invlet ) const
 {
     if( invlet > std::numeric_limits<char>::max() || invlet < std::numeric_limits<char>::min() ) {
-    return false;
-}
-return find( static_cast<char>( invlet ) ) != std::string::npos;
+        return false;
+    }
+    return find( static_cast<char>( invlet ) ) != std::string::npos;
 }
 
 invlet_favorites::invlet_favorites( const std::unordered_map<itype_id, std::string> &map )
@@ -571,7 +571,7 @@ void inventory::form_from_map( map *here, const tripoint_bub_ms &origin, int ran
     // If we need a clear path we care about the reachability of points
     if( clear_path ) {
         const std::vector<tripoint_bub_ms> &reachable_pts = here->reachable_flood_steps( origin, range, 1,
-            100 );
+                100 );
         form_from_map( *here, reachable_pts, pl, assign_invlet );
     } else {
         std::vector<tripoint_bub_ms> reachable_pts;
@@ -814,8 +814,8 @@ void inventory::dump( std::vector<item *> &dest )
 
 void inventory::dump( std::vector<const item *> &dest ) const
 {
-for( const auto &elem : items ) {
-    for( const item &elem_stack_iter : elem ) {
+    for( const auto &elem : items ) {
+        for( const item &elem_stack_iter : elem ) {
             dest.push_back( &elem_stack_iter );
         }
     }
@@ -916,8 +916,8 @@ int inventory::worst_item_value( npc *p ) const
 
 bool inventory::has_enough_painkiller( int pain ) const
 {
-for( const auto &elem : items ) {
-    const item &it = elem.front();
+    for( const auto &elem : items ) {
+        const item &it = elem.front();
         if( ( pain <= 35 && ( it.typeId() == itype_aspirin  || it.typeId() == itype_acetaminophen ||
                               it.typeId() == itype_ibuprofen ) ) ||
             ( pain >= 50 && it.typeId() == itype_oxycodone ) ||
@@ -1210,14 +1210,14 @@ invlets_bitset inventory::allocated_invlets() const
 const itype_bin &inventory::get_binned_items() const
 {
     if( binned ) {
-    return binned_items;
-}
+        return binned_items;
+    }
 
-binned_items.clear();
+    binned_items.clear();
 
-// HACK: Hack warning
-inventory *this_nonconst = const_cast<inventory *>( this );
-this_nonconst->visit_items( [ this ]( item * e, item * ) {
+    // HACK: Hack warning
+    inventory *this_nonconst = const_cast<inventory *>( this );
+    this_nonconst->visit_items( [ this ]( item * e, item * ) {
         binned_items[ e->typeId() ].push_back( e );
         for( const item *it : e->softwares() ) {
             binned_items[it->typeId()].push_back( it );

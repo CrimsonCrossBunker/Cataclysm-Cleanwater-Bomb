@@ -391,7 +391,7 @@ item_location prepare_item( avatar &guy, map &here, item &it,
     switch( cur_container_loc ) {
         case container_location::inventory: {
             std::optional<std::list<item>::iterator> worn = guy.wear_item( item(
-                    itype_test_restricted_container_holder ), false );
+                        itype_test_restricted_container_holder ), false );
             REQUIRE( worn.has_value() );
             ret_val<void> ret = ( **worn ).put_in( it, pocket_type::CONTAINER );
             INFO( ret.str() );
@@ -432,7 +432,7 @@ item_location prepare_item( avatar &guy, map &here, item &it,
 }
 
 std::pair<std::optional<item_result>, std::vector<item_result>> scenario_final_state(
-    scenario cur_scenario, bool will_spill_outer, bool do_spill )
+            scenario cur_scenario, bool will_spill_outer, bool do_spill )
 {
     std::optional<item_result> original_location;
     std::vector<item_result> ground;
@@ -654,7 +654,7 @@ void test_scenario::run()
     std::vector<item_result> worn_results;
     std::optional<item_result> wielded_results;
     std::pair<std::optional<item_result>, std::vector<item_result>> intended_result =
-        scenario_final_state( cur_scenario, will_spill_outer, do_spill );
+                scenario_final_state( cur_scenario, will_spill_outer, do_spill );
     const std::optional<item_result> &original_location = intended_result.first;
     std::vector<item_result> &ground = intended_result.second;
 

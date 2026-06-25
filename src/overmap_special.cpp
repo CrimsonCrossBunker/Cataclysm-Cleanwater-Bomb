@@ -184,10 +184,10 @@ overmap_special::overmap_special( const overmap_special_id &i, const overmap_spe
 bool overmap_special::can_spawn( int city_size ) const
 {
     if( get_constraints().occurrences.empty() ) {
-    return false;
-}
+        return false;
+    }
 
-return city_size != 0 || get_constraints().city_size.min <= city_size;
+    return city_size != 0 || get_constraints().city_size.min <= city_size;
 }
 
 bool overmap_special::requires_city() const
@@ -200,14 +200,14 @@ bool overmap_special::can_belong_to_city( const tripoint_om_omt &p, const city &
         const overmap &omap ) const
 {
     if( !requires_city() ) {
-    return true;
-}
-if( !cit || !constraints_.city_size.contains( cit.size ) ) {
-    return false;
-}
-if( constraints_.city_distance.max > std::max( OMAPX, OMAPY ) ) {
-    // Only care that we're more than min away from a city
-    return !omap.approx_distance_to_city( p, constraints_.city_distance.min ).has_value();
+        return true;
+    }
+    if( !cit || !constraints_.city_size.contains( cit.size ) ) {
+        return false;
+    }
+    if( constraints_.city_distance.max > std::max( OMAPX, OMAPY ) ) {
+        // Only care that we're more than min away from a city
+        return !omap.approx_distance_to_city( p, constraints_.city_distance.min ).has_value();
     }
     const std::optional<int> dist = omap.approx_distance_to_city( p, constraints_.city_distance.max );
     // Found a city within max and it's greater than min away
@@ -270,7 +270,7 @@ special_placement_result overmap_special::place(
     const city &cit, bool must_be_unexplored ) const
 {
     if( has_eoc() ) {
-    dialogue d( get_talker_for( get_avatar() ), nullptr );
+        dialogue d( get_talker_for( get_avatar() ), nullptr );
         get_eoc()->apply_true_effects( d );
     }
     const bool blob = has_flag( "BLOB" );
@@ -308,8 +308,8 @@ void overmap_special::load( const JsonObject &jo, const std::string_view src )
                 std::dynamic_pointer_cast<const fixed_overmap_special_data>( data_ ).get();
             // then initialize loaded data correctly
             shared_ptr_fast<fixed_overmap_special_data> fixed_data = !!existing ?
-                make_shared_fast<fixed_overmap_special_data>( *existing ) :
-                make_shared_fast<fixed_overmap_special_data>();
+                    make_shared_fast<fixed_overmap_special_data>( *existing ) :
+                    make_shared_fast<fixed_overmap_special_data>();
             optional( jo, was_loaded, "overmaps", fixed_data->terrains );
             if( is_special ) {
                 optional( jo, was_loaded, "connections", fixed_data->connections );
@@ -323,8 +323,8 @@ void overmap_special::load( const JsonObject &jo, const std::string_view src )
                 std::dynamic_pointer_cast<const mutable_overmap_special_data>( data_ ).get();
             // then initialize loaded data correctly
             shared_ptr_fast<mutable_overmap_special_data> mutable_data = !!existing ?
-                make_shared_fast<mutable_overmap_special_data>( *existing ) :
-                make_shared_fast<mutable_overmap_special_data>( id );
+                    make_shared_fast<mutable_overmap_special_data>( *existing ) :
+                    make_shared_fast<mutable_overmap_special_data>( id );
             // If existing, then id may have changed on this load
             mutable_data->parent_id = id;
             mutable_data->load( jo, was_loaded );

@@ -67,7 +67,7 @@ struct has_src_member<T, std::void_t<decltype( std::declval<T &>().src.emplace_b
         reported = true;
         DebugLog( D_INFO, D_MAIN ) << __FILE__ << ":" << __LINE__ << ": " << "Tried check if '" <<
                                    n.id.str() << "' had a duplicate, but type '" << demangle( typeid( T ).name() ) <<
-                                                  "' does not track object sources";
+                                   "' does not track object sources";
     }
 
     /** If those conditions are satisfied, keep track of where this item has been modified */

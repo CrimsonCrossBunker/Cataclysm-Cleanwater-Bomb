@@ -67,7 +67,7 @@ template <typename T> struct weighted_dbl_or_var_list {
 
         bool is_constant() const {
             if( !_precalced ) {
-            debugmsg( "weighted_dbl_or_var_list precalc has been invalidated, call weighted_dbl_or_var_list::precalc() first" );
+                debugmsg( "weighted_dbl_or_var_list precalc has been invalidated, call weighted_dbl_or_var_list::precalc() first" );
             }
             return _is_constant;
         }
@@ -115,8 +115,8 @@ template <typename T> struct weighted_dbl_or_var_list {
          * @param func The callback function.
          */
         void apply( std::function<void( const T & )> func ) const {
-for( const std::pair<T, dbl_or_var> &itr : objects ) {
-            func( itr.first );
+            for( const std::pair<T, dbl_or_var> &itr : objects ) {
+                func( itr.first );
             }
         }
 
@@ -139,7 +139,7 @@ for( const std::pair<T, dbl_or_var> &itr : objects ) {
          */
         const T *pick( unsigned int randi ) const {
             if( get_weight() > 0 ) {
-            return &( objects[pick_ent( randi )].first );
+                return &( objects[pick_ent( randi )].first );
             }
             return nullptr;
         }
@@ -176,8 +176,8 @@ for( const std::pair<T, dbl_or_var> &itr : objects ) {
          * in the weighted list it will return 0.
          */
         double get_specific_weight( const T &obj ) const {
-for( const std::pair<T, dbl_or_var> &itr : objects ) {
-            if( itr.first == obj ) {
+            for( const std::pair<T, dbl_or_var> &itr : objects ) {
+                if( itr.first == obj ) {
                     return itr.second.evaluate( d() );
                 }
             }
@@ -189,10 +189,10 @@ for( const std::pair<T, dbl_or_var> &itr : objects ) {
          */
         double get_weight() const {
             if( is_constant() ) {
-            return _constant_total_weight;
-        } else {
-            double ret = 0.0;
-            for( const std::pair<T, dbl_or_var> &itr : objects ) {
+                return _constant_total_weight;
+            } else {
+                double ret = 0.0;
+                for( const std::pair<T, dbl_or_var> &itr : objects ) {
                     ret += itr.second.evaluate( d() );
                 }
                 return ret;

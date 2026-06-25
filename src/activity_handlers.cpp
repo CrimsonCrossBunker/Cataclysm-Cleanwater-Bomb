@@ -488,7 +488,7 @@ void repair_item_finish( player_activity *act, Character *you, bool no_menu )
         // Remember our level: we want to stop retrying on level up
         const int old_level = you->get_skill_level( actor->used_skill );
         const repair_item_actor::attempt_hint attempt = actor->repair( *you, *used_tool,
-            fix_location, repeat == repeat_type::REFIT_ONCE || repeat == repeat_type::REFIT_FULL );
+                fix_location, repeat == repeat_type::REFIT_ONCE || repeat == repeat_type::REFIT_FULL );
         // Warning: The above call to `repair_item_actor::repair` might
         // invalidate the item and the item_location, for example when
         // spilling items from spillable containers. It is therefore

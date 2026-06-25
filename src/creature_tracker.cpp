@@ -201,16 +201,16 @@ void creature_tracker::rebuild_cache()
 bool creature_tracker::is_present( Creature *creature ) const
 {
     if( creature->is_monster() ) {
-    if( const auto iter = monsters_by_location.find( creature->pos_abs() );
+        if( const auto iter = monsters_by_location.find( creature->pos_abs() );
             iter != monsters_by_location.end() ) {
             if( static_cast<const Creature *>( iter->second.get() ) == creature ) {
                 return !iter->second->is_dead();
             }
         }
     } else if( creature->is_avatar() ) {
-    return true;
-} else if( creature->is_npc() ) {
-    for( const shared_ptr_fast<npc> &cur_npc : active_npc ) {
+        return true;
+    } else if( creature->is_npc() ) {
+        for( const shared_ptr_fast<npc> &cur_npc : active_npc ) {
             if( static_cast<const Creature *>( cur_npc.get() ) == creature ) {
                 return !cur_npc->is_dead();
             }

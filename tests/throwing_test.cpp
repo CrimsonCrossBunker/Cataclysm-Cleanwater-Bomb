@@ -59,7 +59,7 @@ struct throw_test_pstats {
 std::ostream &operator<<( std::ostream &stream, const throw_test_pstats &pstats )
 {
     return stream << "STR: " << pstats.str << " DEX: " << pstats.dex <<
-                     " PER: " << pstats.per << " SKL: " << pstats.skill_lvl;
+           " PER: " << pstats.per << " SKL: " << pstats.skill_lvl;
 }
 } // namespace
 

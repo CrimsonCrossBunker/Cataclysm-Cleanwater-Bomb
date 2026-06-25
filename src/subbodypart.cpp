@@ -14,7 +14,7 @@ generic_factory<sub_body_part_type> sub_body_part_factory( "sub body part" );
 
 // groups all the bodypart into a shared bucket
 std::unordered_map<sub_bodypart_str_id, std::vector<sub_bodypart_str_id>>
-combined_similar_sub_bodyparts;
+        combined_similar_sub_bodyparts;
 
 } // namespace
 

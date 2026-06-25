@@ -94,14 +94,14 @@ class basic_animation
             } while( true );
         }
 
-private:
-    int_least64_t delay;
+    private:
+        int_least64_t delay;
 };
 
 class explosion_animation : public basic_animation
 {
-public:
-    explosion_animation() :
+    public:
+        explosion_animation() :
             basic_animation( EXPLOSION_MULTIPLIER ) {
         }
 };
@@ -123,7 +123,7 @@ class bullet_animation : public basic_animation
             // Skip artificial animation delay to greatly reduce the realtime
             // delay between shots during player target practice activity
             if( !skip_bullet_animation_delay() ) {
-            basic_animation::progress();
+                basic_animation::progress();
             }
         }
 };
@@ -930,7 +930,7 @@ void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &trajectory, co
     // the path, so a long shot's line lingers a touch longer than a short one,
     // capped so it never overstays.
     const float line_life_ms = std::min( 400.0f,
-                                          static_cast<float>( delay_ms ) * static_cast<float>( points.size() ) );
+                                         static_cast<float>( delay_ms ) * static_cast<float>( points.size() ) );
     const float line_per_ms = 1.0f / std::max( 1.0f, line_life_ms );
 
     tilecontext->init_bullet_anim( points, sprites, rotations, as_line,
@@ -957,7 +957,8 @@ void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, con
     add_draw_callback( line_cb );
     bullet_animation().progress();
 }
-void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &/*trajectory*/, const char /*bullet*/,
+void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &/*trajectory*/,
+                              const char /*bullet*/,
                               const bool /*as_line*/, const std::string &/*custom_sprite*/ )
 {
     // Curses has no asynchronous projectile path; callers fall back to the
@@ -1243,7 +1244,7 @@ void draw_weather_curses( const catacurses::window &win, const weather_printable
 void game::draw_weather( const weather_printable &w ) const
 {
     if( !use_tiles ) {
-    draw_weather_curses( w_terrain, w );
+        draw_weather_curses( w_terrain, w );
         return;
     }
 
@@ -1287,7 +1288,7 @@ void draw_sct_curses( const game &g )
 void game::draw_sct() const
 {
     if( use_tiles ) {
-    tilecontext->init_draw_sct();
+        tilecontext->init_draw_sct();
     } else {
         draw_sct_curses( *this );
     }
@@ -1322,7 +1323,7 @@ void game::draw_zones( const tripoint_bub_ms &start, const tripoint_bub_ms &end,
                        const tripoint_rel_ms &offset ) const
 {
     if( use_tiles ) {
-    tilecontext->init_draw_zones( start, end, offset );
+        tilecontext->init_draw_zones( start, end, offset );
     } else {
         draw_zones_curses( w_terrain, start, end, offset );
     }

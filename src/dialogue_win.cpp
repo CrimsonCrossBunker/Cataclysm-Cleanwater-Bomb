@@ -121,7 +121,7 @@ void dialogue_window::handle_scrolling( std::string &action, input_context &ctxt
 void dialogue_window::set_up_scrolling( input_context &ctxt ) const
 {
     if( !is_computer && !is_not_conversation ) {
-    ctxt.register_action( "LOOK_AT" );
+        ctxt.register_action( "LOOK_AT" );
         ctxt.register_action( "SIZE_UP_STATS" );
         ctxt.register_action( "ASSESS_PERSONALITY" );
         ctxt.register_action( "YELL" );
@@ -169,9 +169,9 @@ void dialogue_window::print_header( const std::string &name ) const
 {
     draw_border( d_win );
     if( is_computer ) {
-    mvwprintz( d_win, point( 2, 1 ), default_color(), _( "Interaction: %s" ), name );
+        mvwprintz( d_win, point( 2, 1 ), default_color(), _( "Interaction: %s" ), name );
     } else if( !is_not_conversation ) {
-    mvwprintz( d_win, point( 2, 1 ), default_color(), _( "Dialogue: %s" ), name );
+        mvwprintz( d_win, point( 2, 1 ), default_color(), _( "Dialogue: %s" ), name );
     }
     const int xmax = getmaxx( d_win );
     int x_debug = 15 + utf8_width( name );
@@ -181,7 +181,7 @@ void dialogue_window::print_header( const std::string &name ) const
     std::array<bool, flag_count> debug_flags = { show_dynamic_line_conditionals, show_response_conditionals, show_dynamic_line_effects, show_response_effects, show_all_responses };
     std::array<std::string, flag_count> debug_show_toggle = { "DL_COND", "RESP_COND", "DL_EFF", "RESP_EFF", "ALL_RESP" };
     if( debug_mode ) {
-    for( int i = 0; i < flag_count; i++ ) {
+        for( int i = 0; i < flag_count; i++ ) {
             mvwprintz( d_win, point( x_debug, 1 ), debug_flags[i] ? c_yellow : c_brown, debug_show_toggle[i] );
             x_debug += utf8_width( debug_show_toggle[i] ) + 1;
         }
@@ -196,9 +196,9 @@ void dialogue_window::print_header( const std::string &name ) const
     mvwaddch( d_win, point( xmax - 1, ybar ), LINE_XOXX );
     wattroff( d_win, BORDER_COLOR );
     if( is_computer ) {
-    mvwprintz( d_win, point( 2, ybar + 1 ), default_color(), _( "Your input:" ) );
+        mvwprintz( d_win, point( 2, ybar + 1 ), default_color(), _( "Your input:" ) );
     } else if( is_not_conversation ) {
-    mvwprintz( d_win, point( 2, ybar + 1 ), default_color(), _( "What do you do?" ) );
+        mvwprintz( d_win, point( 2, ybar + 1 ), default_color(), _( "What do you do?" ) );
     } else {
         mvwprintz( d_win, point( 2, ybar + 1 ), default_color(), _( "Your response:" ) );
     }

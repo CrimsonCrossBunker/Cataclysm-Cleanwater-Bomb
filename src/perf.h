@@ -27,14 +27,14 @@ struct cata_timer {
 
             void print_stats_recursively( std::string_view prefix = "" ) const {
                 DebugLog( DebugLevel::D_WARNING,
-                D_MAIN ) << prefix << name << ": " << std::to_string( duration ) << "us (avg: " << std::to_string(
-                    duration / count ) << "us) (count: " << count << ")";
+                          D_MAIN ) << prefix << name << ": " << std::to_string( duration ) << "us (avg: " << std::to_string(
+                                       duration / count ) << "us) (count: " << count << ")";
                 std::string child_prefix;
                 child_prefix.reserve( prefix.length() + 2 );
                 child_prefix += prefix;
                 child_prefix += "  ";
-for( const auto& [name, timer] : child_timers ) {
-                timer.print_stats_recursively( child_prefix );
+                for( const auto& [name, timer] : child_timers ) {
+                    timer.print_stats_recursively( child_prefix );
                 }
             }
         };

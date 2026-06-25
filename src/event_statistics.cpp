@@ -235,7 +235,7 @@ struct value_constraint {
 
     void check( const std::string &name, const cata_variant_type input_type ) const {
         if( equals_statistic_ ) {
-        if( !equals_statistic_->is_valid() ) {
+            if( !equals_statistic_->is_valid() ) {
                 debugmsg( "constraint for event_transformation %s refers to invalid statistic %s",
                           name, equals_statistic_->str() );
                 return;
@@ -265,12 +265,12 @@ struct value_constraint {
             }
         };
 
-for( const cata_variant &e : equals_any_ ) {
-        check_one( e );
+        for( const cata_variant &e : equals_any_ ) {
+            check_one( e );
         }
 
         if( val_comp_ ) {
-        check_one( ( *val_comp_ ).second );
+            check_one( ( *val_comp_ ).second );
         }
     }
 
@@ -490,8 +490,8 @@ struct event_transformation_impl : public event_transformation::impl {
         void event_added( const cata::event &e, stats_tracker &stats ) override {
             EventVector transformed =
                 transformation_->match_and_transform( e.data(), cached_value_constraints_ );
-for( cata::event::data_type &d : transformed ) {
-            cata::event new_event( e.type(), e.time(), std::move( d ) );
+            for( cata::event::data_type &d : transformed ) {
+                cata::event new_event( e.type(), e.time(), std::move( d ) );
                 data_.add( new_event );
                 stats.transformed_set_changed( transformation_->id_, new_event );
             }
@@ -695,8 +695,8 @@ for( cata::event::data_type &d : transformed ) {
     }
 
     monotonically monotonicity() const override {
-for( const std::pair<std::string, value_constraint> &constraint : constraints_ ) {
-        if( !constraint.second.is_constant() ) {
+        for( const std::pair<std::string, value_constraint> &constraint : constraints_ ) {
+            if( !constraint.second.is_constant() ) {
                 return monotonically::unknown;
             }
         }
@@ -849,9 +849,9 @@ struct event_statistic_field_summary : event_statistic::impl {
 
     cata_variant_type type() const override {
         if( IntField ) {
-        return cata_variant_type::int_;
-    } else {
-        cata::event::fields_type source_fields = source->fields();
+            return cata_variant_type::int_;
+        } else {
+            cata::event::fields_type source_fields = source->fields();
             auto it = source_fields.find( field );
             if( it == source_fields.end() ) {
                 return cata_variant_type::void_;
@@ -1012,14 +1012,14 @@ struct event_statistic_minimum : event_statistic_field_summary<true> {
     monotonically monotonicity() const override {
         // If the source is increasing (adding more events)
         if( is_increasing( source->monotonicity() ) ) {
-        // Then the minimum value will be decreasing
-        return monotonically::decreasing;
-    } else {
-        return monotonically::unknown;
+            // Then the minimum value will be decreasing
+            return monotonically::decreasing;
+        } else {
+            return monotonically::unknown;
+        }
     }
-}
 
-std::unique_ptr<impl> clone() const override {
+    std::unique_ptr<impl> clone() const override {
         return std::make_unique<event_statistic_minimum>( *this );
     }
 };
@@ -1085,13 +1085,13 @@ struct event_statistic_unique_value : event_statistic_field_summary<false> {
 
     monotonically monotonicity() const override {
         if( source->is_game_start() ) {
-        return monotonically::constant;
-    } else {
-        return monotonically::unknown;
+            return monotonically::constant;
+        } else {
+            return monotonically::unknown;
+        }
     }
-}
 
-std::unique_ptr<impl> clone() const override {
+    std::unique_ptr<impl> clone() const override {
         return std::make_unique<event_statistic_unique_value>( *this );
     }
 };
@@ -1154,13 +1154,13 @@ struct event_statistic_first_value : event_statistic_field_summary<false> {
 
     monotonically monotonicity() const override {
         if( source->is_game_start() ) {
-        return monotonically::constant;
-    } else {
-        return monotonically::unknown;
+            return monotonically::constant;
+        } else {
+            return monotonically::unknown;
+        }
     }
-}
 
-std::unique_ptr<impl> clone() const override {
+    std::unique_ptr<impl> clone() const override {
         return std::make_unique<event_statistic_first_value>( *this );
     }
 };
@@ -1216,13 +1216,13 @@ struct event_statistic_last_value : event_statistic_field_summary<false> {
 
     monotonically monotonicity() const override {
         if( source->is_game_start() ) {
-        return monotonically::constant;
-    } else {
-        return monotonically::unknown;
+            return monotonically::constant;
+        } else {
+            return monotonically::unknown;
+        }
     }
-}
 
-std::unique_ptr<impl> clone() const override {
+    std::unique_ptr<impl> clone() const override {
         return std::make_unique<event_statistic_last_value>( *this );
     }
 };
@@ -1327,6 +1327,6 @@ void score::load( const JsonObject &jo, std::string_view )
 void score::check() const
 {
     if( !stat_.is_valid() ) {
-    debugmsg( "score %s refers to invalid statistic %s", id.str(), stat_.str() );
+        debugmsg( "score %s refers to invalid statistic %s", id.str(), stat_.str() );
     }
 }

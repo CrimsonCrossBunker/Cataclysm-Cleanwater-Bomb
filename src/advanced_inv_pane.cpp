@@ -94,17 +94,17 @@ bool advanced_inventory_pane::is_filtered( const advanced_inv_listitem &it ) con
 bool advanced_inventory_pane::is_filtered( const item &it ) const
 {
     if( it.has_flag( json_flag_HIDDEN_ITEM ) ) {
-    return true;
-}
-if( filter.empty() ) {
-    return false;
-}
-return !filter_function( it );
+        return true;
+    }
+    if( filter.empty() ) {
+        return false;
+    }
+    return !filter_function( it );
 }
 
 /** converts a raw list of items to "stacks" - items that are not count_by_charges that otherwise stack go into one stack */
 static std::vector<std::vector<item_location>> item_list_to_stack(
-    const item_location &parent, std::list<item *> item_list )
+            const item_location &parent, std::list<item *> item_list )
 {
     std::vector<std::vector<item_location>> ret;
     for( auto iter_outer = item_list.begin(); iter_outer != item_list.end(); ++iter_outer ) {
@@ -157,7 +157,7 @@ std::vector<advanced_inv_listitem> avatar::get_AIM_inventory( const advanced_inv
     size_t item_index = 0;
 
     std::vector<advanced_inv_listitem> items = worn.get_AIM_inventory( item_index, *this, pane,
-        square );
+            square );
 
     item_location weapon = get_wielded_item();
     if( weapon && weapon->is_container() ) {
@@ -258,8 +258,8 @@ void advanced_inventory_pane::add_items_from_area( advanced_inv_area &square,
             return;
         }
         const advanced_inv_area::itemstack &stacks = is_in_vehicle ?
-            square.i_stacked( square.get_vehicle_stack() ) :
-            square.i_stacked( m.i_at( square.pos ) );
+                square.i_stacked( square.get_vehicle_stack() ) :
+                square.i_stacked( m.i_at( square.pos ) );
 
         map_cursor loc_cursor( square.pos );
         for( size_t x = 0; x < stacks.size(); ++x ) {

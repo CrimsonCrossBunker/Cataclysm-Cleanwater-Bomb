@@ -56,8 +56,8 @@ const cata::flat_set<oter_type_str_id> &overmap_location::get_all_terrains() con
 
 void overmap_location::check() const
 {
-for( const auto &element : terrains ) {
-    if( !element.is_valid() ) {
+    for( const auto &element : terrains ) {
+        if( !element.is_valid() ) {
             debugmsg( "In overmap location \"%s\", terrain \"%s\" is invalid.", id.c_str(), element.c_str() );
         }
     }

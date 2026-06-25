@@ -72,8 +72,8 @@ std::string recipe::get_description( const Character &crafter ) const
 int recipe::get_difficulty( const Character &crafter ) const
 {
     if( is_practice() && skill_used ) {
-    return clamp( static_cast<int>( crafter.get_all_skills().get_skill_level( skill_used ) ),
-                  practice_data->min_difficulty, practice_data->max_difficulty );
+        return clamp( static_cast<int>( crafter.get_all_skills().get_skill_level( skill_used ) ),
+                      practice_data->min_difficulty, practice_data->max_difficulty );
     } else {
         return difficulty;
     }
@@ -82,10 +82,10 @@ int recipe::get_difficulty( const Character &crafter ) const
 int recipe::get_skill_cap() const
 {
     if( is_practice() ) {
-    return practice_data->skill_limit - 1;
-} else {
-    return difficulty * 1.25;
-}
+        return practice_data->skill_limit - 1;
+    } else {
+        return difficulty * 1.25;
+    }
 }
 
 crafting_cost_context crafting_cost_context::for_recipe( const Character &guy,
@@ -1069,18 +1069,18 @@ void recipe::finalize_step_proficiencies()
 std::string recipe::get_consistency_error() const
 {
     if( category.is_valid() && category->is_building ) {
-    if( is_blueprint() || oter_str_id( result_.c_str() ).is_valid() ) {
+        if( is_blueprint() || oter_str_id( result_.c_str() ).is_valid() ) {
             return std::string();
         }
         return "defines invalid result";
     }
 
     if( !item::type_is_defined( result_ ) ) {
-    return "defines invalid result";
-}
+        return "defines invalid result";
+    }
 
-const auto is_invalid_bp = []( const std::pair<itype_id, int> &elem ) {
-    return !item::type_is_defined( elem.first );
+    const auto is_invalid_bp = []( const std::pair<itype_id, int> &elem ) {
+        return !item::type_is_defined( elem.first );
     };
 
     if( std::any_of( byproducts.begin(), byproducts.end(), is_invalid_bp ) ) {
@@ -1088,19 +1088,19 @@ const auto is_invalid_bp = []( const std::pair<itype_id, int> &elem ) {
     }
 
     if( !contained && !container.is_null() ) {
-    return "defines container but not contained";
-}
+        return "defines container but not contained";
+    }
 
-if( !item::type_is_defined( container ) ) {
-    return "specifies unknown container";
-}
+    if( !item::type_is_defined( container ) ) {
+        return "specifies unknown container";
+    }
 
-const auto is_invalid_skill = []( const std::pair<skill_id, int> &elem ) {
-    return !elem.first.is_valid();
+    const auto is_invalid_skill = []( const std::pair<skill_id, int> &elem ) {
+        return !elem.first.is_valid();
     };
 
     if( ( skill_used && !skill_used.is_valid() ) ||
-            std::any_of( required_skills.begin(), required_skills.end(), is_invalid_skill ) ) {
+        std::any_of( required_skills.begin(), required_skills.end(), is_invalid_skill ) ) {
         return "uses invalid skill";
     }
 
@@ -1132,32 +1132,32 @@ std::vector<item> recipe::create_result( bool set_components, bool is_food,
     item newit( result_, calendar::turn );
 
     if( !variant().empty() ) {
-    newit.set_itype_variant( variant() );
+        newit.set_itype_variant( variant() );
     }
 
     if( newit.has_flag( flag_VARSIZE ) ) {
-    newit.set_flag( flag_FIT );
+        newit.set_flag( flag_FIT );
     }
 
     // Newly-crafted items are perfect by default. Inspect their materials to see if they shouldn't be
     if( used ) {
-    newit.inherit_flags( *used, *this );
+        newit.inherit_flags( *used, *this );
     }
 
-for( const flag_id &flag : flags_to_delete ) {
-    newit.unset_flag( flag );
+    for( const flag_id &flag : flags_to_delete ) {
+        newit.unset_flag( flag );
     }
 
     // If the recipe has a `FULL_MAGAZINE` flag, fill it with ammo
     if( newit.is_magazine() && has_flag( flag_FULL_MAGAZINE ) ) {
-    if( const std::optional<ammotype> at = item::ammotype_of( newit.ammo_default() ) ) {
+        if( const std::optional<ammotype> at = item::ammotype_of( newit.ammo_default() ) ) {
             newit.ammo_set( newit.ammo_default(), newit.ammo_capacity( *at ) );
         }
     }
 
     // if the first component has compatible pockets, try to preserve the contents
     if( used && !used->empty() ) {
-    const item_components::type_vector_pair &first_component_pair = *used->begin();
+        const item_components::type_vector_pair &first_component_pair = *used->begin();
 
         if( first_component_pair.second.size() == 1 ) {
             const item &first_component = first_component_pair.second.front();
@@ -1172,18 +1172,18 @@ for( const flag_id &flag : flags_to_delete ) {
 
     bool is_cooked = hot_result() || removes_raw();
     if( set_components ) {
-    set_new_comps( newit, amount, used, is_food, is_cooked );
+        set_new_comps( newit, amount, used, is_food, is_cooked );
     }
 
     if( contained ) {
-    newit = newit.in_container( container, amount, sealed, container_variant );
+        newit = newit.in_container( container, amount, sealed, container_variant );
         return { newit };
     } else if( newit.count_by_charges() ) {
-    newit.charges = amount;
-    return { newit };
-} else {
-    std::vector<item> items;
-    for( int i = 0; i < amount; i++ ) {
+        newit.charges = amount;
+        return { newit };
+    } else {
+        std::vector<item> items;
+        for( int i = 0; i < amount; i++ ) {
             if( set_components ) {
                 set_new_comps( newit, amount, used, is_food, is_cooked );
             }
@@ -1430,8 +1430,8 @@ std::vector<proficiency_id> recipe::required_proficiencies() const
 
 bool recipe::character_has_required_proficiencies( const Character &c ) const
 {
-for( const proficiency_id &id : required_proficiencies() ) {
-    if( !c.has_proficiency( id ) && !helpers_have_proficiencies( c, id ) ) {
+    for( const proficiency_id &id : required_proficiencies() ) {
+        if( !c.has_proficiency( id ) && !helpers_have_proficiencies( c, id ) ) {
             return false;
         }
     }
@@ -1480,14 +1480,14 @@ float recipe::proficiency_time_maluses( const Character &crafter,
                                         const book_proficiency_bonuses &books ) const
 {
     if( has_steps() && time > 0 ) {
-    // For step recipes, compute as effective ratio from per-step aggregation
-    crafting_cost_context ctx{ books, {} };
-    return static_cast<float>( time_to_craft_moves( crafter, ctx ) ) /
+        // For step recipes, compute as effective ratio from per-step aggregation
+        crafting_cost_context ctx{ books, {} };
+        return static_cast<float>( time_to_craft_moves( crafter, ctx ) ) /
                static_cast<float>( time );
     }
     float total_malus = 1.0f;
-for( const recipe_proficiency &prof : get_proficiencies() ) {
-    total_malus *= proficiency_time_malus( crafter, prof, books );
+    for( const recipe_proficiency &prof : get_proficiencies() ) {
+        total_malus *= proficiency_time_malus( crafter, prof, books );
     }
     return total_malus;
 }
@@ -1511,10 +1511,10 @@ double recipe::step_budget_moves( const Character &guy, size_t step_idx, int bat
     const recipe_step &s = steps_[step_idx];
     double t = s.time;
     if( ( flags & recipe_time_flag::ignore_proficiencies ) != recipe_time_flag::ignore_proficiencies ) {
-    t *= proficiency_time_maluses_for_step( guy, s, ctx.books );
+        t *= proficiency_time_maluses_for_step( guy, s, ctx.books );
     }
     if( step_idx < ctx.tool_speeds.size() ) {
-    t *= ctx.tool_speeds[step_idx];
+        t *= ctx.tool_speeds[step_idx];
     }
     return s.batch_info.apply( t, batch );
 }
@@ -1599,11 +1599,11 @@ std::vector<float> compute_tool_speeds( const recipe &rec, const Character &craf
 float recipe::max_proficiency_time_maluses( const Character & ) const
 {
     if( has_steps() && time > 0 ) {
-    // For step recipes, compute max malus from per-step data.
-    // Required profs (time_multiplier=0) contribute 1.0 (no penalty),
-    // not 0.0 which would drag the weighted average down.
-    double total = 0.0;
-    for( const recipe_step &s : steps_ ) {
+        // For step recipes, compute max malus from per-step data.
+        // Required profs (time_multiplier=0) contribute 1.0 (no penalty),
+        // not 0.0 which would drag the weighted average down.
+        double total = 0.0;
+        for( const recipe_step &s : steps_ ) {
             float step_malus = 1.0f;
             for( const recipe_proficiency &prof : s.proficiencies ) {
                 step_malus *= prof.time_multiplier > 0.0f ? prof.time_multiplier : 1.0f;
@@ -1613,10 +1613,10 @@ float recipe::max_proficiency_time_maluses( const Character & ) const
         return static_cast<float>( total / time );
     }
     float total_malus = 1.0f;
-for( const recipe_proficiency &prof : get_proficiencies() ) {
-    total_malus *= prof.time_multiplier;
-}
-return total_malus;
+    for( const recipe_proficiency &prof : get_proficiencies() ) {
+        total_malus *= prof.time_multiplier;
+    }
+    return total_malus;
 }
 
 static float proficiency_skill_malus( const Character &crafter, const recipe_proficiency &prof,
@@ -1775,7 +1775,7 @@ std::string batch_savings::savings_string() const
 std::string recipe::batch_savings_string() const
 {
     if( has_steps() ) {
-    return _( "varies by step" );
+        return _( "varies by step" );
     }
     return batch_info.savings_string();
 }
@@ -1810,11 +1810,11 @@ std::string recipe::result_name( const bool decorated ) const
 bool recipe::will_be_blacklisted() const
 {
     if( requirements_.is_blacklisted() ) {
-    return true;
-}
+        return true;
+    }
 
-auto any_is_blacklisted = []( const std::vector<std::pair<requirement_id, int>> &reqs ) {
-    auto req_is_blacklisted = []( const std::pair<requirement_id, int> &req ) {
+    auto any_is_blacklisted = []( const std::vector<std::pair<requirement_id, int>> &reqs ) {
+        auto req_is_blacklisted = []( const std::pair<requirement_id, int> &req ) {
             return req.first->is_blacklisted();
         };
 
@@ -1822,10 +1822,10 @@ auto any_is_blacklisted = []( const std::vector<std::pair<requirement_id, int>> 
     };
 
     if( any_is_blacklisted( reqs_internal ) || any_is_blacklisted( reqs_external ) ) {
-    return true;
-}
-for( const recipe_step &step : steps_ ) {
-    if( any_is_blacklisted( step.reqs_internal ) ||
+        return true;
+    }
+    for( const recipe_step &step : steps_ ) {
+        if( any_is_blacklisted( step.reqs_internal ) ||
             any_is_blacklisted( step.reqs_external ) ) {
             return true;
         }
@@ -1848,7 +1848,7 @@ std::function<bool( const item & )> recipe::get_component_filter(
         static_cast<bool>( flags & recipe_filter_flags::no_favorite );
     std::function<bool( const item & )> rotten_filter = return_true<item>;
     if( recipe_forbids_rotten || flags_forbid_rotten ) {
-    rotten_filter = []( const item & component ) {
+        rotten_filter = []( const item & component ) {
             return !component.rotten();
         };
     }
@@ -1856,7 +1856,7 @@ std::function<bool( const item & )> recipe::get_component_filter(
     // Disallow crafting using favorited items as components
     std::function<bool( const item & )> favorite_filter = return_true<item>;
     if( flags_forbid_favorites ) {
-    favorite_filter = []( const item & component ) {
+        favorite_filter = []( const item & component ) {
             return !component.is_favorite;
         };
     }
@@ -1866,7 +1866,7 @@ std::function<bool( const item & )> recipe::get_component_filter(
     // Otherwise forbid them
     std::function<bool( const item & )> frozen_filter = return_true<item>;
     if( result.has_temperature() && !hot_result() ) {
-    frozen_filter = []( const item & component ) {
+        frozen_filter = []( const item & component ) {
             return !component.has_flag( flag_FROZEN ) || component.has_flag( flag_EDIBLE_FROZEN );
         };
     }
@@ -1875,7 +1875,7 @@ std::function<bool( const item & )> recipe::get_component_filter(
     // This is primarily used to require a fully charged battery, but works for any magazine.
     std::function<bool( const item & )> magazine_filter = return_true<item>;
     if( has_flag( "NEED_FULL_MAGAZINE" ) ) {
-    magazine_filter = []( const item & component ) {
+        magazine_filter = []( const item & component ) {
             if( component.ammo_remaining( ) == 0 ) {
                 return false;
             }
@@ -1886,7 +1886,7 @@ std::function<bool( const item & )> recipe::get_component_filter(
     }
 
     return [ rotten_filter, favorite_filter, frozen_filter,
-    magazine_filter ]( const item & component ) {
+                   magazine_filter ]( const item & component ) {
         return is_crafting_component( component ) &&
                rotten_filter( component ) &&
                favorite_filter( component ) &&
@@ -1928,8 +1928,8 @@ bool recipe::npc_can_craft( std::string & ) const
 
 bool recipe::has_attention_steps() const
 {
-for( const recipe_step &s : steps_ ) {
-    if( s.attention != step_attention::none ) {
+    for( const recipe_step &s : steps_ ) {
+        if( s.attention != step_attention::none ) {
             return true;
         }
     }
@@ -1939,9 +1939,9 @@ for( const recipe_step &s : steps_ ) {
 bool recipe::has_remaining_attention_steps( int from_step ) const
 {
     if( from_step < 0 ) {
-    from_step = 0;
-}
-for( int i = from_step; i < static_cast<int>( steps_.size() ); ++i ) {
+        from_step = 0;
+    }
+    for( int i = from_step; i < static_cast<int>( steps_.size() ); ++i ) {
         if( steps_[i].attention != step_attention::none ) {
             return true;
         }
@@ -2020,7 +2020,7 @@ const std::vector<std::pair<std::string, int>>  &recipe::blueprint_excludes() co
 const parameterized_build_reqs &recipe::blueprint_build_reqs() const
 {
     if( !bp_build_reqs ) {
-    cata_fatal( "Accessing absent blueprint_build_reqs in recipe %s", ident().str() );
+        cata_fatal( "Accessing absent blueprint_build_reqs in recipe %s", ident().str() );
     }
     return *bp_build_reqs;
 }
@@ -2115,7 +2115,7 @@ bool recipe::hot_result() const
     //
     // TODO: Make this less of a hack
     if( item( result_ ).has_temperature() ) {
-    const requirement_data::alter_tool_comp_vector &tool_lists = simple_requirements().get_tools();
+        const requirement_data::alter_tool_comp_vector &tool_lists = simple_requirements().get_tools();
         for( const std::vector<tool_comp> &tools : tool_lists ) {
             for( const tool_comp &t : tools ) {
                 if( ( t.type == itype_hotplate ) || ( t.type == itype_atomic_coffeepot ) ) {

@@ -259,7 +259,7 @@ class recipe
         /** If recipe can be used for disassembly fetch the combined requirements */
         requirement_data disassembly_requirements() const {
             if( reversible ) {
-            return simple_requirements().disassembly_requirements();
+                return simple_requirements().disassembly_requirements();
             } else {
                 return {};
             }

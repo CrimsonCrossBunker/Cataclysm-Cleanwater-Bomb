@@ -157,10 +157,10 @@ const field_entry *field::find_field( const field_type_id &field_type_to_find,
                                       const bool alive_only ) const
 {
     if( !_displayed_field_type ) {
-    return nullptr;
-}
-const auto it = _field_type_list->find( field_type_to_find );
-if( it != _field_type_list->end() && ( !alive_only || it->second.is_field_alive() ) ) {
+        return nullptr;
+    }
+    const auto it = _field_type_list->find( field_type_to_find );
+    if( it != _field_type_list->end() && ( !alive_only || it->second.is_field_alive() ) ) {
         return &it->second;
     }
     return nullptr;
@@ -289,8 +289,8 @@ int field::total_move_cost() const
 
 bool field::any_negative_move_cost() const
 {
-for( const auto &fld : *_field_type_list ) {
-    if( fld.second.get_intensity_level().move_cost < 0 ) {
+    for( const auto &fld : *_field_type_list ) {
+        if( fld.second.get_intensity_level().move_cost < 0 ) {
             return true;
         }
     }

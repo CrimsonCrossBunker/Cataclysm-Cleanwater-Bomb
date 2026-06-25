@@ -245,13 +245,13 @@ float Character::limb_score_crafting_speed_multiplier( const recipe &rec ) const
 float Character::pain_crafting_speed_multiplier( const recipe &rec ) const
 {
     return rec.has_flag( flag_AFFECTED_BY_PAIN ) ? std::max( 0.0f,
-    1.0f - ( get_perceived_pain() / 100.0f ) ) : 1.0f;
+            1.0f - ( get_perceived_pain() / 100.0f ) ) : 1.0f;
 }
 
 float Character::mut_crafting_speed_multiplier( const recipe &rec ) const
 {
     return rec.has_flag( flag_NO_ENCHANTMENT ) ? 1.0f : 1.0 + enchantment_cache->get_value_multiply(
-    enchant_vals::mod::CRAFTING_SPEED_MULTIPLIER );
+               enchant_vals::mod::CRAFTING_SPEED_MULTIPLIER );
 }
 
 template<typename T>
@@ -349,7 +349,7 @@ float Character::crafting_speed_multiplier( const item &craft,
         float cached_workbench_multiplier ) const
 {
     if( !craft.is_craft() ) {
-    debugmsg( "Can't calculate crafting speed multiplier of non-craft '%s'", craft.tname() );
+        debugmsg( "Can't calculate crafting speed multiplier of non-craft '%s'", craft.tname() );
         return 1.0f;
     }
 
@@ -370,31 +370,31 @@ float Character::crafting_speed_multiplier( const item &craft,
                               pain_multi;
 
     if( light_multi <= 0.0f ) {
-    add_msg_if_player( m_bad, _( "You can no longer see well enough to keep crafting." ) );
+        add_msg_if_player( m_bad, _( "You can no longer see well enough to keep crafting." ) );
         return 0.0f;
     }
     if( bench_multi <= 0.1f || ( bench_multi <= 0.33f && total_multi <= 0.2f ) ) {
-    add_msg_if_player( m_bad, _( "The %s is too large and/or heavy to work on.  You may want to"
-                                 " use a workbench or a lifting tool." ), craft.tname() );
+        add_msg_if_player( m_bad, _( "The %s is too large and/or heavy to work on.  You may want to"
+                                     " use a workbench or a lifting tool." ), craft.tname() );
         return 0.0f;
     }
     if( morale_multi <= 0.2f || ( morale_multi <= 0.33f && total_multi <= 0.2f ) ) {
-    add_msg_if_player( m_bad, _( "Your morale is too low to continue crafting." ) );
+        add_msg_if_player( m_bad, _( "Your morale is too low to continue crafting." ) );
         return 0.0f;
     }
 
     if( pain_multi <= 0.1f ) {
-    add_msg_if_player( m_bad, _( "You can't continue due the immense pain in your body." ) );
+        add_msg_if_player( m_bad, _( "You can't continue due the immense pain in your body." ) );
         return 0.0f;
     }
 
     if( total_multi <= 0.2f ) {
-    add_msg_if_player( m_bad, _( "Your progress is so slow that you give up in frustration." ) );
+        add_msg_if_player( m_bad, _( "Your progress is so slow that you give up in frustration." ) );
         return 0.0f;
     }
 
     if( calendar::once_every( 1_hours ) && total_multi < 0.75f ) {
-    if( light_multi <= 0.5f ) {
+        if( light_multi <= 0.5f ) {
             add_msg_if_player( m_bad, _( "You can't see well and are working slowly." ) );
         }
         if( bench_multi <= 0.5f ) {
@@ -480,13 +480,13 @@ int Character::available_assistant_count( const recipe &rec ) const
 // Characters around you should assist in batch production if they have the skills
 {
     if( rec.is_practice() ) {
-    return 0;
-}
-// TODO: Cache them in activity, include them in modifier calculations
-const std::vector<Character *> helpers = get_crafting_helpers();
-return std::count_if( helpers.begin(), helpers.end(),
-[&]( const Character * guy ) {
-    return guy->get_skill_level( rec.skill_used ) >= rec.difficulty;
+        return 0;
+    }
+    // TODO: Cache them in activity, include them in modifier calculations
+    const std::vector<Character *> helpers = get_crafting_helpers();
+    return std::count_if( helpers.begin(), helpers.end(),
+    [&]( const Character * guy ) {
+        return guy->get_skill_level( rec.skill_used ) >= rec.difficulty;
     } );
 }
 
@@ -579,8 +579,8 @@ static std::vector<const item *> get_eligible_containers_recursive( const item &
 
 void outfit::get_eligible_containers_for_crafting( std::vector<const item *> &conts ) const
 {
-for( const item &it : worn ) {
-    std::vector<const item *> eligible = get_eligible_containers_recursive( it, false );
+    for( const item &it : worn ) {
+        std::vector<const item *> eligible = get_eligible_containers_recursive( it, false );
         conts.insert( conts.begin(), eligible.begin(), eligible.end() );
     }
 }
@@ -640,10 +640,10 @@ bool Character::can_start_craft( const recipe *rec, recipe_filter_flags flags,
                                  int batch_size ) const
 {
     if( !rec ) {
-    return false;
-}
+        return false;
+    }
 
-if( !rec->character_has_required_proficiencies( *this ) ) {
+    if( !rec->character_has_required_proficiencies( *this ) ) {
         return false;
     }
 
@@ -1047,8 +1047,8 @@ inflight_alarm_choices compute_inflight_alarm_choices(
 }
 
 std::optional<std::vector<attention_plan>> show_craft_planning_modal(
-    const recipe &rec, const Character &crafter, int batch, int from_step,
-    const std::vector<attention_plan> &existing, const item *current_craft )
+        const recipe &rec, const Character &crafter, int batch, int from_step,
+        const std::vector<attention_plan> &existing, const item *current_craft )
 {
     // Headless contexts (tests) cannot open the planning uilist; behave like an
     // NPC with implicit-wait plans instead of blocking on UI.
@@ -2307,7 +2307,7 @@ float Character::item_destruction_chance( const recipe &making ) const
 int item::get_next_failure_point() const
 {
     if( !is_craft() ) {
-    debugmsg( "get_next_failure_point() called on non-craft '%s.'  Aborting.", tname() );
+        debugmsg( "get_next_failure_point() called on non-craft '%s.'  Aborting.", tname() );
         return INT_MAX;
     }
     return craft_data_->next_failure_point >= 0 ? craft_data_->next_failure_point : INT_MAX;
@@ -2412,7 +2412,7 @@ bool item::handle_craft_failure( Character &crafter )
 requirement_data item::get_continue_reqs() const
 {
     if( !is_craft() ) {
-    debugmsg( "get_continue_reqs() called on non-craft '%s.'  Aborting.", tname() );
+        debugmsg( "get_continue_reqs() called on non-craft '%s.'  Aborting.", tname() );
         return requirement_data();
     }
     return requirement_data::continue_requirements( craft_data_->comps_used, components );
@@ -2667,7 +2667,7 @@ bool Character::can_continue_craft( item &craft, const requirement_data &continu
 
         auto std_filter = [&rec]( const item & it ) {
             return rec.get_component_filter()( it ) && ( it.is_container_empty() ||
-                   !it.is_watertight_container() );
+                    !it.is_watertight_container() );
         };
         const std::function<bool( const item & )> no_rotten_filter =
             rec.get_component_filter( recipe_filter_flags::no_rotten );
@@ -2808,8 +2808,8 @@ bool Character::can_continue_craft( item &craft, const requirement_data &continu
             const bool prior_full = prior.size() == rec.steps().size();
             bool cancelled = false;
             std::vector<std::vector<step_tool_alloc>> fresh =
-                select_step_tool_allocs( *this, rec, batch_size, map_inv, cancelled,
-                                         prior_full ? cur : -1 );
+                    select_step_tool_allocs( *this, rec, batch_size, map_inv, cancelled,
+                                             prior_full ? cur : -1 );
             if( cancelled ) {
                 return false;
             }
@@ -2892,17 +2892,17 @@ const requirement_data *Character::select_requirements(
 {
     cata_assert( !alternatives.empty() );
     if( alternatives.size() == 1 || !is_avatar() ) {
-    return alternatives.front();
+        return alternatives.front();
     }
 
     uilist menu;
 
-for( const requirement_data *req : alternatives ) {
-    // Write with a large width and then just re-join the lines, because
-    // uilist does its own wrapping and we want to rely on that.
-    std::vector<std::string> component_lines =
-        req->get_folded_components_list( TERMX - 4, c_light_gray, inv, filter, batch, "",
-                                         requirement_display_flags::no_unavailable );
+    for( const requirement_data *req : alternatives ) {
+        // Write with a large width and then just re-join the lines, because
+        // uilist does its own wrapping and we want to rely on that.
+        std::vector<std::string> component_lines =
+            req->get_folded_components_list( TERMX - 4, c_light_gray, inv, filter, batch, "",
+                                             requirement_display_flags::no_unavailable );
         menu.addentry_desc( "", string_join( component_lines, "\n" ) );
     }
 
@@ -2912,10 +2912,10 @@ for( const requirement_data *req : alternatives ) {
     menu.query();
 
     if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= alternatives.size() ) {
-    return nullptr;
-}
+        return nullptr;
+    }
 
-return alternatives[menu.ret];
+    return alternatives[menu.ret];
 }
 
 /* selection of component if a recipe requirement has multiple options (e.g. 'duct tap' or 'welder') */
@@ -3061,7 +3061,7 @@ comp_selection<item_comp> Character::select_item_component( const std::vector<it
             BOTH
         };
         auto get_ingredient_description = [&player_character, &map_inv, &filter,
-                                           &is_food, &remove_raw]( const inventory_source & inv_source,
+                                                              &is_food, &remove_raw]( const inventory_source & inv_source,
         const itype_id & ingredient_type, const int &count ) {
             std::string text;
             int available = 0;
@@ -3087,7 +3087,7 @@ comp_selection<item_comp> Character::select_item_component( const std::vector<it
                     text = _( "%s (%d/%d nearby & on person)" );
                     kcal_values = map_inv.kcal_range( ingredient_type, filter, player_character );
                     const std::pair<int, int> kcal_values_tmp = player_character.kcal_range( ingredient_type, filter,
-                        player_character );
+                            player_character );
                     kcal_values.first = std::min( kcal_values.first, kcal_values_tmp.first );
                     kcal_values.second = std::max( kcal_values.second, kcal_values_tmp.second );
                     available = item::count_by_charges( ingredient_type ) ?
@@ -3213,7 +3213,7 @@ std::list<item> Character::consume_items( const comp_selection<item_comp> &is, i
     }
     // populate a grid of spots that can be reached
     const std::vector<tripoint_bub_ms> &reachable_pts = m.reachable_flood_steps( pos_bub(),
-        PICKUP_RANGE, 1, 100 );
+            PICKUP_RANGE, 1, 100 );
     return consume_items( m, is, batch, filter, reachable_pts, select_ind, disable_preference );
 }
 
@@ -3226,7 +3226,7 @@ std::list<item> Character::consume_items( map &m, const comp_selection<item_comp
         return filter( it ) && is_preferred_component( it );
     };
     std::function<bool( const item & )> preferred_filter = disable_preference ? filter :
-        active_preferred_filter;
+            active_preferred_filter;
 
     std::list<item> ret;
 
@@ -3706,9 +3706,9 @@ bool Character::consume_step_tool_targets( item &craft, const std::vector<int> &
         return *map_inv;
     };
     const auto shortfall = [&]( const std::map<itype_id, int> &need, int which ) -> bool {
-for( const std::pair<const itype_id, int> &n : need )
-    {
-        bool ok = which == 0 ? has_charges( n.first, n.second )
+        for( const std::pair<const itype_id, int> &n : need )
+        {
+            bool ok = which == 0 ? has_charges( n.first, n.second )
             : which == 1 ? get_map_inv().has_charges( n.first, n.second )
             : crafting_inventory().has_charges( n.first, n.second );
             if( !ok ) {
@@ -3944,7 +3944,7 @@ void Character::consume_tools( const std::vector<tool_comp> &tools, int batch )
 ret_val<void> Character::can_disassemble( const item &obj, const read_only_visitable &inv ) const
 {
     if( !obj.is_disassemblable() ) {
-    return ret_val<void>::make_failure( _( "You cannot disassemble this." ) );
+        return ret_val<void>::make_failure( _( "You cannot disassemble this." ) );
     }
 
     const recipe &r = recipe_dictionary::get_uncraft( ( obj.typeId() == itype_disassembly ) ?
@@ -3952,23 +3952,23 @@ ret_val<void> Character::can_disassemble( const item &obj, const read_only_visit
 
     // check sufficient light
     if( lighting_craft_speed_multiplier( r ) == 0.0f ) {
-    return ret_val<void>::make_failure( _( "You can't see to craft!" ) );
+        return ret_val<void>::make_failure( _( "You can't see to craft!" ) );
     }
 
     // refuse to disassemble rotten items
     if( obj.goes_bad() && obj.rotten() ) {
-    return ret_val<void>::make_failure( _( "It's too rotten to salvage anything." ) );
+        return ret_val<void>::make_failure( _( "It's too rotten to salvage anything." ) );
     }
 
     // refuse to disassemble items containing monsters/pets
     std::string monster = obj.get_var( "contained_name" );
     if( !monster.empty() ) {
-    return ret_val<void>::make_failure( _( "You must remove the %s before you can disassemble this." ),
-                                        monster );
+        return ret_val<void>::make_failure( _( "You must remove the %s before you can disassemble this." ),
+                                            monster );
     }
 
     if( !obj.is_ammo() ) { //we get ammo quantity to disassemble later on
-    if( obj.count_by_charges() ) {
+        if( obj.count_by_charges() ) {
             // Create a new item to get the default charges
             int qty = 0;
             // it should always only create one item if batch size is 1, but just to be sure loop over results
@@ -3984,8 +3984,8 @@ ret_val<void> Character::can_disassemble( const item &obj, const read_only_visit
     }
     const requirement_data &dis = r.disassembly_requirements();
 
-for( const auto &opts : dis.get_qualities() ) {
-    for( const quality_requirement &qual : opts ) {
+    for( const auto &opts : dis.get_qualities() ) {
+        for( const quality_requirement &qual : opts ) {
             if( !qual.has( inv, return_true<item> ) ) {
                 // Here should be no dot at the end of the string as 'to_string()' provides it.
                 return ret_val<void>::make_failure( _( "You need %s" ), qual.to_string() );
@@ -3993,10 +3993,10 @@ for( const auto &opts : dis.get_qualities() ) {
         }
     }
 
-for( const auto &opts : dis.get_tools() ) {
-    const bool found = std::any_of( opts.begin(), opts.end(),
-    [&]( const tool_comp & tool ) {
-        return ( tool.count <= 0 && inv.has_tools( tool.type, 1 ) ) ||
+    for( const auto &opts : dis.get_tools() ) {
+        const bool found = std::any_of( opts.begin(), opts.end(),
+        [&]( const tool_comp & tool ) {
+            return ( tool.count <= 0 && inv.has_tools( tool.type, 1 ) ) ||
                    ( tool.count  > 0 && inv.has_charges( tool.type, tool.count ) );
         } );
 

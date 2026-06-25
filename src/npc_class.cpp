@@ -212,7 +212,7 @@ bool shopkeeper_item_group::can_restock( npc const &guy ) const
 std::string shopkeeper_item_group::get_refusal() const
 {
     if( refusal.empty() ) {
-    return _( "<npc_faction> faction does not trust you enough." );
+        return _( "<npc_faction> faction does not trust you enough." );
     }
 
     return refusal.translated();
@@ -389,28 +389,28 @@ const std::vector<shopkeeper_item_group> &npc_class::get_shopkeeper_items() cons
 const shopkeeper_cons_rates &npc_class::get_shopkeeper_cons_rates() const
 {
     if( shop_cons_rates_id.is_null() ) {
-    shopkeeper_cons_rates static const null_rates;
-    return null_rates;
-}
-return shop_cons_rates_id.obj();
+        shopkeeper_cons_rates static const null_rates;
+        return null_rates;
+    }
+    return shop_cons_rates_id.obj();
 }
 
 const shopkeeper_blacklist &npc_class::get_shopkeeper_blacklist() const
 {
     if( shop_blacklist_id.is_null() ) {
-    shopkeeper_blacklist static const null_blacklist;
-    return null_blacklist;
-}
-return shop_blacklist_id.obj();
+        shopkeeper_blacklist static const null_blacklist;
+        return null_blacklist;
+    }
+    return shop_blacklist_id.obj();
 }
 
 const shopkeeper_whitelist &npc_class::get_shopkeeper_whitelist() const
 {
     if( shop_whitelist_id.is_null() ) {
-    shopkeeper_whitelist static const null_whitelist;
-    return null_whitelist;
-}
-return shop_whitelist_id.obj();
+        shopkeeper_whitelist static const null_whitelist;
+        return null_whitelist;
+    }
+    return shop_whitelist_id.obj();
 }
 
 faction_price_rule const *npc_class::get_price_rules( item const &it, npc const &guy ) const

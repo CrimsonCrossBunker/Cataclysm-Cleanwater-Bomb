@@ -253,11 +253,11 @@ bool advanced_inv_area::can_store_in_vehicle() const
 {
     // disallow for non-valid vehicle locations
     if( id > AIM_DRAGGED || id < AIM_SOUTHWEST ) {
-    return false;
-}
-// Prevent AIM access to activated dishwasher, washing machine, or autoclave.
-if( veh != nullptr && vstor >= 0 ) {
-    return !veh->part( vstor ).is_cleaner_on();
+        return false;
+    }
+    // Prevent AIM access to activated dishwasher, washing machine, or autoclave.
+    if( veh != nullptr && vstor >= 0 ) {
+        return !veh->part( vstor ).is_cleaner_on();
     } else {
         return false;
     }
@@ -266,7 +266,7 @@ if( veh != nullptr && vstor >= 0 ) {
 vehicle_stack advanced_inv_area::get_vehicle_stack() const
 {
     if( !can_store_in_vehicle() ) {
-    debugmsg( "advanced_inv_area::get_vehicle_stack when can_store_in_vehicle is false" );
+        debugmsg( "advanced_inv_area::get_vehicle_stack when can_store_in_vehicle is false" );
     }
     return veh->get_items( veh->part( vstor ) );
 }
@@ -287,7 +287,7 @@ advanced_inv_area::itemstack advanced_inv_area::i_stacked( T items )
         if( iter != cache.end() ) {
             // check to see if it stacks with each item in a stack, not just front()
             for( const int &idx : iter->second ) {
-                for( item * &it : stacks[idx] ) {
+                for( item *&it : stacks[idx] ) {
                     if( ( got_stacked = it->display_stacked_with( elem ) ) ) {
                         stacks[idx].push_back( &elem );
                         break;

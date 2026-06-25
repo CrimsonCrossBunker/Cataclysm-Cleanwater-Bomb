@@ -97,7 +97,7 @@ std::string help::get_dir_grid()
             movement = string_replace( movement, "<" + action_ident( dir ) + string_format( "_%d>", i ),
                                        i < keys.size()
                                        ? string_format( "<color_light_blue>%s</color>",
-                                           keys[i].short_description() )
+                                               keys[i].short_description() )
                                        : "<color_red>?</color>" );
         }
     }
@@ -106,7 +106,7 @@ std::string help::get_dir_grid()
 }
 
 std::map<int, inclusive_rectangle<point>> help::draw_menu( const catacurses::window &win,
-        int selected, std::map<int, input_event> &hotkeys ) const
+                                       int selected, std::map<int, input_event> &hotkeys ) const
 {
     std::map<int, inclusive_rectangle<point>> opt_map;
 

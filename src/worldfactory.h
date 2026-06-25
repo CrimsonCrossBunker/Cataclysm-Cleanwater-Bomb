@@ -169,10 +169,10 @@ class worldfactory
 
         void draw_modselection_borders( const catacurses::window &win, const input_context &ctxtp );
         std::map<int, inclusive_rectangle<point>> draw_mod_list( const catacurses::window &w, int &start,
-                size_t cursor, const std::vector<mod_id> &mods,
-                bool is_active_list, const std::string &text_if_empty,
-                const catacurses::window &w_shift, bool recalc_start,
-                const std::vector<mod_id> &potential_conflicts = std::vector<mod_id>() );
+                                               size_t cursor, const std::vector<mod_id> &mods,
+                                               bool is_active_list, const std::string &text_if_empty,
+                                               const catacurses::window &w_shift, bool recalc_start,
+                                               const std::vector<mod_id> &potential_conflicts = std::vector<mod_id>() );
 
         WORLD *add_world( std::unique_ptr<WORLD> retworld );
 

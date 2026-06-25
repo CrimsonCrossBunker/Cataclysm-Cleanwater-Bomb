@@ -106,7 +106,7 @@ struct nutrients {
     private:
         /** vitamins potentially provided by this comestible (if any) */
         std::map<vitamin_id, std::variant<int, vitamin_units::mass>>
-        vitamins_; // NOLINT(cata-serialize)
+                vitamins_; // NOLINT(cata-serialize)
 };
 
 // Contains all information that can pass out of (or into) a stomach

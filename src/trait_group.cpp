@@ -144,7 +144,7 @@ Trait_list Single_trait_creator::create( RecursionList & /* rec */ ) const
 void Single_trait_creator::check_consistency() const
 {
     if( !id.is_valid() ) {
-    debugmsg( "trait id %s is unknown", id.c_str() );
+        debugmsg( "trait id %s is unknown", id.c_str() );
     }
 }
 
@@ -191,7 +191,7 @@ Trait_list Trait_group_creator::create( RecursionList &rec ) const
 void Trait_group_creator::check_consistency() const
 {
     if( id.is_valid() ) {
-    debugmsg( "trait group id %s is unknown", id.c_str() );
+        debugmsg( "trait group id %s is unknown", id.c_str() );
     }
 }
 
@@ -217,8 +217,8 @@ void Trait_group::add_group_entry( const Trait_group_tag &gid, int probability )
 
 void Trait_group::check_consistency() const
 {
-for( const auto &creator : creators ) {
-    creator->check_consistency();
+    for( const auto &creator : creators ) {
+        creator->check_consistency();
     }
 }
 
@@ -237,8 +237,8 @@ bool Trait_group::remove_trait( const trait_id &tid )
 
 bool Trait_group::has_trait( const trait_id &tid ) const
 {
-for( const auto &creator : creators ) {
-    if( creator->has_trait( tid ) ) {
+    for( const auto &creator : creators ) {
+        if( creator->has_trait( tid ) ) {
             return true;
         }
     }

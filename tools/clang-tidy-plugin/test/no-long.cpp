@@ -94,7 +94,7 @@ void Bf()
     B<12> b1;
     // This exercises an obscure corner case where a defaulted operator= will
     // cause the compiler to generate code involving an unsigned long variable.
-    b1 = static_cast < B<12> && > ( b0 );
+    b1 = static_cast < B<12> && >( b0 );
 }
 
 template<typename T>

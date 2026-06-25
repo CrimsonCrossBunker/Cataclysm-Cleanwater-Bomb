@@ -161,8 +161,8 @@ class item_location::impl
     private:
         void ensure_unpacked() const {
             if( needs_unpacking ) {
-            item *i = nullptr;
-            if( uid_hint > 0 ) {
+                item *i = nullptr;
+                if( uid_hint > 0 ) {
                     i = unpack_by_uid( uid_hint );
                 }
                 if( !i && uid_hint == 0 ) {
@@ -272,12 +272,12 @@ class item_location::impl::item_on_map : public item_location::impl
 
         void serialize( JsonOut &js ) const override {
             if( !target() ) {
-            item_location::nowhere.serialize( js );
+                item_location::nowhere.serialize( js );
                 return;
             }
             int idx = find_index( cur, target() );
             if( idx < 0 ) {
-            item_location::nowhere.serialize( js );
+                item_location::nowhere.serialize( js );
                 return;
             }
             js.start_object();
@@ -285,7 +285,7 @@ class item_location::impl::item_on_map : public item_location::impl
             js.member( "position", pos_abs() );
             js.member( "idx", idx );
             if( target()->uid().is_valid() ) {
-            js.member( "uid", target()->uid().get_value() );
+                js.member( "uid", target()->uid().get_value() );
             }
             js.end_object();
         }
@@ -335,7 +335,7 @@ class item_location::impl::item_on_map : public item_location::impl
                 }
             };
             if( !obj.is_null() ) {
-            return get_local_location( ch, ch.i_add( obj, should_stack ) );
+                return get_local_location( ch, ch.i_add( obj, should_stack ) );
             } else {
                 item_location inv = ch.i_add( *target(), should_stack, nullptr, target() );
                 remove_item();
@@ -359,19 +359,19 @@ class item_location::impl::item_on_map : public item_location::impl
 
         int obtain_cost( const Character &ch, int qty ) const override {
             if( !target() ) {
-            return 0;
+                return 0;
+            }
+
+            item *obj = target();
+            int mv = ch.item_handling_cost( *obj, true, MAP_HANDLING_PENALTY, qty );
+            mv += 100 * rl_dist( ch.pos_bub(), cur.pos_bub() );
+
+            // TODO: handle unpacking costs
+
+            return mv;
         }
 
-        item *obj = target();
-        int mv = ch.item_handling_cost( *obj, true, MAP_HANDLING_PENALTY, qty );
-        mv += 100 * rl_dist( ch.pos_bub(), cur.pos_bub() );
-
-        // TODO: handle unpacking costs
-
-        return mv;
-    }
-
-    void remove_item() override {
+        void remove_item() override {
             on_contents_changed();
             cur.remove_item( *what );
         }
@@ -402,7 +402,7 @@ class item_location::impl::item_on_person : public item_location::impl
 
         bool ensure_who_unpacked() const {
             if( !who ) {
-            who = g->critter_by_id<Character>( who_id );
+                who = g->critter_by_id<Character>( who_id );
                 if( !who ) {
                     // If we failed to find it throw a debug message cause we're probably going to crash soon
                     debugmsg( "Failed to find item_location owner with character_id %d", who_id.get_value() );
@@ -424,16 +424,16 @@ class item_location::impl::item_on_person : public item_location::impl
 
         void serialize( JsonOut &js ) const override {
             if( !ensure_who_unpacked() ) {
-            item_location::nowhere.serialize( js );
+                item_location::nowhere.serialize( js );
                 return;
             }
             if( !target() ) {
-            item_location::nowhere.serialize( js );
+                item_location::nowhere.serialize( js );
                 return;
             }
             int idx = find_index( *who, target() );
             if( idx < 0 ) {
-            item_location::nowhere.serialize( js );
+                item_location::nowhere.serialize( js );
                 return;
             }
             js.start_object();
@@ -441,57 +441,57 @@ class item_location::impl::item_on_person : public item_location::impl
             js.member( "character", who_id );
             js.member( "idx", idx );
             if( target()->uid().is_valid() ) {
-            js.member( "uid", target()->uid().get_value() );
+                js.member( "uid", target()->uid().get_value() );
             }
             js.end_object();
         }
 
         item *unpack( int idx ) const override {
             if( !ensure_who_unpacked() ) {
-            return nullptr;
+                return nullptr;
+            }
+            return retrieve_index( *who, idx );
         }
-        return retrieve_index( *who, idx );
-    }
 
-    item *unpack_by_uid( int64_t uid ) const override {
+        item *unpack_by_uid( int64_t uid ) const override {
             if( !ensure_who_unpacked() ) {
-            return nullptr;
+                return nullptr;
+            }
+            return retrieve_by_uid( *who, uid );
         }
-        return retrieve_by_uid( *who, uid );
-    }
 
-    type where() const override {
+        type where() const override {
             return type::character;
         }
 
         tripoint_bub_ms pos_bub( const map &here ) const override {
             if( !ensure_who_unpacked() ) {
-            return tripoint_bub_ms::zero;
+                return tripoint_bub_ms::zero;
+            }
+            return who->pos_bub( here );
         }
-        return who->pos_bub( here );
-    }
 
-    tripoint_abs_ms pos_abs() const override {
+        tripoint_abs_ms pos_abs() const override {
             if( !ensure_who_unpacked() ) {
-            return tripoint_abs_ms::invalid;
+                return tripoint_abs_ms::invalid;
+            }
+            return who->pos_abs();
         }
-        return who->pos_abs();
-    }
 
-    Character *carrier() const override {
+        Character *carrier() const override {
             if( !ensure_who_unpacked() ) {
-            return nullptr;
+                return nullptr;
+            }
+            return who;
         }
-        return who;
-    }
 
-    std::string describe( const Character *ch ) const override {
+        std::string describe( const Character *ch ) const override {
             if( !target() || !ensure_who_unpacked() ) {
-            return std::string();
+                return std::string();
             }
 
             if( ch == who ) {
-            auto parents = who->parents( *target() );
+                auto parents = who->parents( *target() );
                 if( !parents.empty() && who->is_worn( *parents.back() ) ) {
                     return parents.back()->type_name();
 
@@ -518,7 +518,7 @@ class item_location::impl::item_on_person : public item_location::impl
 
             item obj = target()->split( qty );
             if( !obj.is_null() ) {
-            return ch.i_add( obj, should_stack );
+                return ch.i_add( obj, should_stack );
             } else {
                 item_location inv = ch.i_add( *target(), should_stack, nullptr, target() );
                 remove_item();  // This also takes off the item from whoever wears it.
@@ -541,13 +541,13 @@ class item_location::impl::item_on_person : public item_location::impl
 
         int obtain_cost( const Character &ch, int qty ) const override {
             if( !target() || !ensure_who_unpacked() ) {
-            return 0;
-        }
+                return 0;
+            }
 
-        int mv = 0;
-        item *obj = target();
-        if( who->is_wielding( *obj ) ) {
-            mv = who->item_handling_cost( *obj, false, 0, qty );
+            int mv = 0;
+            item *obj = target();
+            if( who->is_wielding( *obj ) ) {
+                mv = who->item_handling_cost( *obj, false, 0, qty );
             } else {
                 // then we are wearing it
                 mv = who->item_handling_cost( *obj, true, INVENTORY_HANDLING_PENALTY / 2, qty );
@@ -555,21 +555,21 @@ class item_location::impl::item_on_person : public item_location::impl
             }
 
             if( &ch != who ) {
-            // TODO: implement movement cost for transferring item between characters
+                // TODO: implement movement cost for transferring item between characters
+            }
+
+            return mv;
         }
 
-        return mv;
-    }
-
-    void remove_item() override {
+        void remove_item() override {
             if( !ensure_who_unpacked() ) {
-            return;
+                return;
+            }
+            on_contents_changed();
+            who->remove_item( *what );
         }
-        on_contents_changed();
-        who->remove_item( *what );
-    }
 
-    void on_contents_changed() override {
+        void on_contents_changed() override {
             target()->on_contents_changed();
         }
 
@@ -679,7 +679,7 @@ class item_location::impl::item_on_vehicle : public item_location::impl
                 debugmsg( "item in vehicle part without cargo storage" );
             }
             if( ch ) {
-            res += " " + direction_suffix( ch->pos_abs(), part_pos.pos_abs() );
+                res += " " + direction_suffix( ch->pos_abs(), part_pos.pos_abs() );
             }
             return res;
         }
@@ -690,7 +690,7 @@ class item_location::impl::item_on_vehicle : public item_location::impl
             on_contents_changed();
             item obj = target()->split( qty );
             if( !obj.is_null() ) {
-            return ch.i_add( obj, should_stack );
+                return ch.i_add( obj, should_stack );
             } else {
                 item_location inv = ch.i_add( *target(), should_stack, nullptr, target() );
                 remove_item();
@@ -713,20 +713,20 @@ class item_location::impl::item_on_vehicle : public item_location::impl
 
         int obtain_cost( const Character &ch, int qty ) const override {
             if( !target() ) {
-            return 0;
+                return 0;
+            }
+
+            map &here = get_map();
+            item *obj = target();
+            int mv = ch.item_handling_cost( *obj, true, VEHICLE_HANDLING_PENALTY, qty );
+            mv += 100 * rl_dist( ch.pos_bub( here ), cur.veh.bub_part_pos( here, cur.part ) );
+
+            // TODO: handle unpacking costs
+
+            return mv;
         }
 
-        map &here = get_map();
-        item *obj = target();
-        int mv = ch.item_handling_cost( *obj, true, VEHICLE_HANDLING_PENALTY, qty );
-        mv += 100 * rl_dist( ch.pos_bub( here ), cur.veh.bub_part_pos( here, cur.part ) );
-
-        // TODO: handle unpacking costs
-
-        return mv;
-    }
-
-    void remove_item() override {
+        void remove_item() override {
             on_contents_changed();
             vehicle_part &vp = cur.veh.part( cur.part );
             item &base = vp.base;
@@ -768,10 +768,10 @@ class item_location::impl::item_in_container : public item_location::impl
         // Legacy: positional index for old-save compat (#85905). UID is now preferred.
         int calc_index() const {
             if( !container ) {
-            return -1;
-        }
-        int idx = 0;
-for( const item *it : container->all_items_container_top() ) {
+                return -1;
+            }
+            int idx = 0;
+            for( const item *it : container->all_items_container_top() ) {
                 if( target() == it ) {
                     return idx;
                 }
@@ -801,12 +801,12 @@ for( const item *it : container->all_items_container_top() ) {
 
         void serialize( JsonOut &js ) const override {
             if( !target() ) {
-            item_location::nowhere.serialize( js );
+                item_location::nowhere.serialize( js );
                 return;
             }
             int idx = calc_index();
             if( idx < 0 ) {
-            item_location::nowhere.serialize( js );
+                item_location::nowhere.serialize( js );
                 return;
             }
             js.start_object();
@@ -814,7 +814,7 @@ for( const item *it : container->all_items_container_top() ) {
             js.member( "type", "in_container" );
             js.member( "parent", container );
             if( target()->uid().is_valid() ) {
-            js.member( "uid", target()->uid().get_value() );
+                js.member( "uid", target()->uid().get_value() );
             }
             js.end_object();
         }
@@ -839,7 +839,7 @@ for( const item *it : container->all_items_container_top() ) {
 
         std::string describe( const Character * ) const override {
             if( !target() ) {
-            return std::string();
+                return std::string();
             }
             return string_format( _( "inside %s" ), container->tname() );
         }
@@ -875,14 +875,14 @@ for( const item *it : container->all_items_container_top() ) {
 
             on_contents_changed();
             if( container.held_by( ch ) ) {
-            // we don't need to move it in this case, it's in a pocket
-            // we just charge the obtain cost and leave it in place. otherwise
-            // it's liable to end up back in the same pocket, where shenanigans ensue
-            return item_location( container, target() );
+                // we don't need to move it in this case, it's in a pocket
+                // we just charge the obtain cost and leave it in place. otherwise
+                // it's liable to end up back in the same pocket, where shenanigans ensue
+                return item_location( container, target() );
             }
             if( target()->made_of( phase_id::LIQUID ) && container->num_item_stacks() == 1 ) {
-            item_location inv =
-                ch.i_add( *container, should_stack, nullptr, &*container, false );
+                item_location inv =
+                    ch.i_add( *container, should_stack, nullptr, &*container, false );
                 if( inv == item_location::nowhere ) {
                     DebugLog( D_INFO, DC_ALL )
                             << "failed to add item " << target()->tname()
@@ -895,7 +895,7 @@ for( const item *it : container->all_items_container_top() ) {
 
             const item obj = target()->split( qty );
             if( !obj.is_null() ) {
-            return ch.i_add( obj, should_stack,/*avoid=*/nullptr, nullptr,/*allow_drop=*/false );
+                return ch.i_add( obj, should_stack,/*avoid=*/nullptr, nullptr,/*allow_drop=*/false );
             } else {
                 item_location inv = ch.i_add( *target(), should_stack,/*avoid=*/nullptr,
                                               target(), /*allow_drop=*/false );
@@ -931,12 +931,12 @@ for( const item *it : container->all_items_container_top() ) {
 
         int obtain_cost( const Character &ch, int qty ) const override {
             if( !target() ) {
-            return 0;
-        }
+                return 0;
+            }
 
-        const int container_mv = parent_pocket()->moves();
-        if( container_mv == 0 ) {
-            debugmsg( "ERROR: %s does not contain %s", container->tname(), target()->tname() );
+            const int container_mv = parent_pocket()->moves();
+            if( container_mv == 0 ) {
+                debugmsg( "ERROR: %s does not contain %s", container->tname(), target()->tname() );
                 return 0;
             }
 
@@ -945,7 +945,7 @@ for( const item *it : container->all_items_container_top() ) {
                            primary_cost );
             int parent_obtain_cost = container.obtain_cost( ch, qty );
             if( container->get_use( "holster" ) ) {
-            if( ch.is_worn( *container ) ) {
+                if( ch.is_worn( *container ) ) {
                     primary_cost = ch.item_retrieve_cost( *target(), *container, false, container_mv );
                 } else {
                     primary_cost = ch.item_retrieve_cost( *target(), *container );
@@ -953,13 +953,13 @@ for( const item *it : container->all_items_container_top() ) {
                 // for holsters, we should not include the cost of wielding the holster itself
                 parent_obtain_cost = 0;
             } else if( container.where() != item_location::type::container ) {
-            // Worn items don't need to be retrieved, just accessed.
-            parent_obtain_cost = 0;
+                // Worn items don't need to be retrieved, just accessed.
+                parent_obtain_cost = 0;
+            }
+            return primary_cost + parent_obtain_cost;
         }
-        return primary_cost + parent_obtain_cost;
-    }
 
-    units::volume volume_capacity() const override {
+        units::volume volume_capacity() const override {
             return parent_pocket()->remaining_volume();
         }
 
@@ -1218,7 +1218,7 @@ ret_val<void> item_location::parents_can_contain_recursive( item *it ) const
 ret_val<int> item_location::max_charges_by_parent_recursive( const item &it ) const
 {
     if( !has_parent() ) {
-    return ret_val<int>::make_success( item::INFINITE_CHARGES );
+        return ret_val<int>::make_success( item::INFINITE_CHARGES );
     }
 
     float weight_multiplier = 1.0f;
@@ -1233,11 +1233,11 @@ ret_val<int> item_location::max_charges_by_parent_recursive( const item &it ) co
 
     //Repeat until top-most container reached
     while( current_location.has_parent() ) {
-    //Multiply weight and volume multipliers for each container
-    weight_multiplier = weight_multiplier * current_pocket_data->weight_multiplier;
-    volume_multiplier = volume_multiplier * current_pocket_data->volume_multiplier;
-    //Inserting into rigid pockets will not affect parent volume so stop keeping track
-    if( current_pocket->rigid() ) {
+        //Multiply weight and volume multipliers for each container
+        weight_multiplier = weight_multiplier * current_pocket_data->weight_multiplier;
+        volume_multiplier = volume_multiplier * current_pocket_data->volume_multiplier;
+        //Inserting into rigid pockets will not affect parent volume so stop keeping track
+        if( current_pocket->rigid() ) {
             volume_multiplier = 0.0f;
         };
 
@@ -1264,11 +1264,11 @@ ret_val<int> item_location::max_charges_by_parent_recursive( const item &it ) co
 
     int charges_weight = it.charges_per_weight( max_weight, true );
     if( charges_weight == 0 ) {
-    return ret_val<int>::make_failure( 0, _( "item is too heavy for a parent pocket" ) );
+        return ret_val<int>::make_failure( 0, _( "item is too heavy for a parent pocket" ) );
     }
     int charges_volume = it.charges_per_volume( max_volume, true );
     if( charges_volume == 0 ) {
-    return ret_val<int>::make_failure( 0, _( "item is too big for a parent pocket" ) );
+        return ret_val<int>::make_failure( 0, _( "item is too big for a parent pocket" ) );
     }
 
     return ret_val<int>::make_success( std::min( charges_weight, charges_volume ) );
@@ -1277,7 +1277,7 @@ ret_val<int> item_location::max_charges_by_parent_recursive( const item &it ) co
 bool item_location::eventually_contains( item_location loc ) const
 {
     while( loc.has_parent() ) {
-    if( ( loc = loc.parent_item() ) == *this ) {
+        if( ( loc = loc.parent_item() ) == *this ) {
             return true;
         }
     }
@@ -1432,7 +1432,7 @@ bool item_location::protected_from_liquids() const
 {
     // check if inside a watertight which is not an open_container
     if( has_parent() ) {
-    item_location parent = parent_item();
+        item_location parent = parent_item();
 
         // parent can protect the item against water
         if( parent->is_watertight_container() && !parent->will_spill() ) {
@@ -1510,19 +1510,19 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
     // in-bounds.  Owners must call rebuild_for_item once back in range.
     auto try_map_at = [uid, &here]( const tripoint_abs_ms & abs ) -> item_location {
         if( !here.inbounds( here.get_bub( abs ) ) )
-    {
-        return item_location::nowhere;
-    }
-    map_cursor mc( abs );
-    item *found = retrieve_by_uid( mc, uid );
-    if( found == nullptr )
-    {
-        return item_location::nowhere;
-    }
-    return item_location( mc, found );
-};
+        {
+            return item_location::nowhere;
+        }
+        map_cursor mc( abs );
+        item *found = retrieve_by_uid( mc, uid );
+        if( found == nullptr )
+        {
+            return item_location::nowhere;
+        }
+        return item_location( mc, found );
+    };
 
-switch( hint.where ) {
+    switch( hint.where ) {
         case item_locator_hint::place::character: {
             const character_id *cid = std::get_if<character_id>( &hint.location );
             if( cid != nullptr && cid->is_valid() ) {

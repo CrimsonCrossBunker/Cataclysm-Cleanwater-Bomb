@@ -1548,11 +1548,11 @@ class npc : public Character
         // falls back to persistent guard_pos (from mission/dialogue assignment).
         std::optional<tripoint_abs_ms> get_effective_guard_pos() const {
             if( ai_cache.guard_pos ) {
-            return ai_cache.guard_pos;
+                return ai_cache.guard_pos;
+            }
+            return guard_pos;
         }
-        return guard_pos;
-    }
-    void clear_ai_guard_pos() {
+        void clear_ai_guard_pos() {
             ai_cache.guard_pos = std::nullopt;
         }
         // Set cache guard_pos without touching persistent guard_pos.

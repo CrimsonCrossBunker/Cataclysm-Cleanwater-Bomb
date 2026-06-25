@@ -231,7 +231,7 @@ template<typename valueT, typename... funcT>
 valueT value_or_var_pair<valueT, funcT...>::evaluate( const_dialogue const &d ) const
 {
     if( max ) {
-    return rng( min.evaluate( d ), max->evaluate( d ) );
+        return rng( min.evaluate( d ), max->evaluate( d ) );
     }
     return min.evaluate( d );
 }

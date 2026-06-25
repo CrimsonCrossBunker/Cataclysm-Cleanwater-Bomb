@@ -75,8 +75,8 @@ namespace behavior
 status_t character_oracle_t::needs_warmth_badly( std::string_view ) const
 {
     // Use player::temp_conv to predict whether the Character is "in trouble".
-for( const bodypart_id &bp : subject->get_all_body_parts() ) {
-    if( subject->get_part_temp_conv( bp ) <= BODYTEMP_VERY_COLD ) {
+    for( const bodypart_id &bp : subject->get_all_body_parts() ) {
+        if( subject->get_part_temp_conv( bp ) <= BODYTEMP_VERY_COLD ) {
             return status_t::running;
         }
     }
@@ -87,31 +87,31 @@ status_t character_oracle_t::needs_water_badly( std::string_view ) const
 {
     // NO_NPC_FOOD disables thirst for NPCs.
     if( !subject->needs_food() ) {
+        return status_t::success;
+    }
+    // Check thirst threshold.
+    if( subject->get_thirst() > 520 ) {
+        return status_t::running;
+    }
     return status_t::success;
-}
-// Check thirst threshold.
-if( subject->get_thirst() > 520 ) {
-    return status_t::running;
-}
-return status_t::success;
 }
 
 status_t character_oracle_t::needs_food_badly( std::string_view ) const
 {
     // NO_NPC_FOOD disables hunger for NPCs.
     if( !subject->needs_food() ) {
-    return status_t::success;
-}
-// Short-term: stomach empty and actively starving.
-if( subject->get_hunger() >= 300 && subject->get_starvation() > base_metabolic_rate ) {
-    return status_t::running;
-}
-// Long-term: severe caloric deficit (same threshold as address_needs extreme path).
-if( subject->get_stored_kcal() + subject->stomach.get_calories() <
+        return status_t::success;
+    }
+    // Short-term: stomach empty and actively starving.
+    if( subject->get_hunger() >= 300 && subject->get_starvation() > base_metabolic_rate ) {
+        return status_t::running;
+    }
+    // Long-term: severe caloric deficit (same threshold as address_needs extreme path).
+    if( subject->get_stored_kcal() + subject->stomach.get_calories() <
         subject->get_healthy_kcal() * 3 / 4 ) {
-    return status_t::running;
-}
-return status_t::success;
+        return status_t::running;
+    }
+    return status_t::success;
 }
 
 status_t character_oracle_t::can_wear_warmer_clothes( std::string_view ) const
@@ -236,25 +236,25 @@ status_t character_oracle_t::needs_sleep_badly( std::string_view ) const
 float character_oracle_t::thirst_urgency( std::string_view ) const
 {
     if( !subject->needs_food() ) {
-    return 0.0f;
-}
-// 0 = hydrated, 1 = dehydration death (threshold 1200, character_health.cpp).
-static constexpr float death_threshold = 1200.0f;
-return std::clamp( subject->get_thirst() / death_threshold, 0.0f, 1.0f );
+        return 0.0f;
+    }
+    // 0 = hydrated, 1 = dehydration death (threshold 1200, character_health.cpp).
+    static constexpr float death_threshold = 1200.0f;
+    return std::clamp( subject->get_thirst() / death_threshold, 0.0f, 1.0f );
 }
 
 float character_oracle_t::hunger_urgency( std::string_view ) const
 {
     if( !subject->needs_food() ) {
-    return 0.0f;
-}
-// 0 = healthy weight, 1 = starvation death (stored_kcal <= 0, character_health.cpp).
-const int healthy = subject->get_healthy_kcal();
-if( healthy <= 0 ) {
-    return 0.0f;
-}
-const float kcal_frac = static_cast<float>( subject->get_stored_kcal() ) / healthy;
-return std::clamp( 1.0f - kcal_frac, 0.0f, 1.0f );
+        return 0.0f;
+    }
+    // 0 = healthy weight, 1 = starvation death (stored_kcal <= 0, character_health.cpp).
+    const int healthy = subject->get_healthy_kcal();
+    if( healthy <= 0 ) {
+        return 0.0f;
+    }
+    const float kcal_frac = static_cast<float>( subject->get_stored_kcal() ) / healthy;
+    return std::clamp( 1.0f - kcal_frac, 0.0f, 1.0f );
 }
 
 float character_oracle_t::warmth_urgency( std::string_view ) const
@@ -282,12 +282,12 @@ status_t character_oracle_t::can_sleep( std::string_view ) const
     // net effect depends on location and luck -- the oracle can't
     // evaluate those without knowing where the NPC will sleep.
     if( subject->has_effect( effect_meth ) ) {
+        return status_t::failure;
+    }
+    if( subject->get_sleepiness() >= static_cast<int>( sleepiness_levels::TIRED ) ) {
+        return status_t::running;
+    }
     return status_t::failure;
-}
-if( subject->get_sleepiness() >= static_cast<int>( sleepiness_levels::TIRED ) ) {
-    return status_t::running;
-}
-return status_t::failure;
 }
 
 float character_oracle_t::sleepiness_urgency( std::string_view ) const

@@ -86,8 +86,8 @@ void weather_type::finalize()
 
 void weather_type::check() const
 {
-for( const auto &type : required_weathers ) {
-    if( !type.is_valid() ) {
+    for( const auto &type : required_weathers ) {
+        if( !type.is_valid() ) {
             debugmsg( "Weather type %s does not exist.", type.c_str() );
         }
     }

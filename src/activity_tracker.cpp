@@ -12,9 +12,9 @@
 int activity_tracker::weariness() const
 {
     if( intake > tracker ) {
-    return tracker / 2000;
-}
-return ( tracker - intake * 0.5 ) / 1000;
+        return tracker / 2000;
+    }
+    return ( tracker - intake * 0.5 ) / 1000;
 }
 
 // Called every 5 minutes, when activity level is logged
@@ -169,8 +169,8 @@ void activity_tracker::reset_activity_level()
 
 std::string activity_tracker::activity_level_str() const
 {
-for( const std::pair<const float, std::string> &member : activity_levels_str_map ) {
-    if( current_activity <= member.first ) {
+    for( const std::pair<const float, std::string> &member : activity_levels_str_map ) {
+        if( current_activity <= member.first ) {
             return member.second;
         }
     }

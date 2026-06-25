@@ -91,7 +91,7 @@ class map_test_case
          * Gathers info written in out stream and arranges it into 2d grid which is returned.
          */
         std::vector<std::vector<std::string>> map_tiles_str( const
-                std::function<void( tile, std::ostringstream &out )> &callback );
+                                           std::function<void( tile, std::ostringstream &out )> &callback );
 
         /**
          * Invokes callback for each tile of the input map.
@@ -254,7 +254,7 @@ std::string expected( map_test_case &t );
 // definitions of template functions
 template<typename R>
 std::vector<std::vector<R>> map_test_case::map_tiles(
-    const std::function<R( map_test_case::tile )> &callback )
+                             const std::function<R( map_test_case::tile )> &callback )
 {
     std::vector<std::vector<R>> ret;
 

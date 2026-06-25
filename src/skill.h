@@ -180,7 +180,7 @@ class SkillLevel
 
         int knowledgeExperience( bool raw = false ) const {
             return raw ? _knowledgeExperience : _knowledgeExperience / ( 100 * ( _knowledgeLevel + 1 ) *
-            ( _knowledgeLevel + 1 ) );
+                    ( _knowledgeLevel + 1 ) );
         }
 
         int rustAccumulator() const {

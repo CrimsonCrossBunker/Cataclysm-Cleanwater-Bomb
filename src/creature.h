@@ -682,9 +682,9 @@ class Creature : public viewer
         bool has_effect_with_flag( const flag_id &flag, const bodypart_id &bp ) const;
         bool has_effect_with_flag( const flag_id &flag ) const;
         std::vector<std::reference_wrapper<const effect>> get_effects_with_flag(
-            const flag_id &flag ) const;
+                    const flag_id &flag ) const;
         std::vector<std::reference_wrapper<const effect>> get_effects_from_bp(
-            const bodypart_id &bp ) const;
+                    const bodypart_id &bp ) const;
         std::vector<std::reference_wrapper<const effect>> get_effects() const;
 
         /** Return the effect that matches the given arguments exactly. */
@@ -1113,19 +1113,19 @@ class Creature : public viewer
         void add_msg_player_or_npc( const char *const player_msg, const char *const npc_msg,
                                     const Args &... args ) const {
             return add_msg_player_or_npc( string_format( player_msg, args... ),
-            string_format( npc_msg, args... ) );
+                                          string_format( npc_msg, args... ) );
         }
         template<typename ...Args>
         void add_msg_player_or_npc( const std::string &player_msg, const std::string &npc_msg,
                                     const Args &... args ) const {
             return add_msg_player_or_npc( string_format( player_msg, args... ),
-            string_format( npc_msg, args... ) );
+                                          string_format( npc_msg, args... ) );
         }
         template<typename ...Args>
         void add_msg_player_or_npc( const translation &player_msg, const translation &npc_msg,
                                     const Args &... args ) const {
             return add_msg_player_or_npc( string_format( player_msg.translated(), args... ),
-            string_format( npc_msg.translated(), args... ) );
+                                          string_format( npc_msg.translated(), args... ) );
         }
         template<typename ...Args>
         void add_msg_player_or_npc( const game_message_params &params, const char *const player_msg,
@@ -1169,19 +1169,19 @@ class Creature : public viewer
         void add_msg_player_or_say( const char *const player_msg, const char *const npc_speech,
                                     const Args &... args ) const {
             return add_msg_player_or_say( string_format( player_msg, args... ),
-            string_format( npc_speech, args... ) );
+                                          string_format( npc_speech, args... ) );
         }
         template<typename ...Args>
         void add_msg_player_or_say( const std::string &player_msg, const std::string &npc_speech,
                                     const Args &... args ) const {
             return add_msg_player_or_say( string_format( player_msg, args... ),
-            string_format( npc_speech, args... ) );
+                                          string_format( npc_speech, args... ) );
         }
         template<typename ...Args>
         void add_msg_player_or_say( const translation &player_msg, const translation &npc_speech,
                                     const Args &... args ) const {
             return add_msg_player_or_say( string_format( player_msg.translated(), args... ),
-            string_format( npc_speech.translated(), args... ) );
+                                          string_format( npc_speech.translated(), args... ) );
         }
         template<typename ...Args>
         void add_msg_player_or_say( const game_message_params &params, const char *const player_msg,

@@ -284,7 +284,7 @@ class JsonObjectInputArchive : public JsonObject
          * JsonOutputArchive, so it can be used when the archive type is a template parameter.
          */
         template<typename T>
-        bool io( const std::string &name, T * &pointer,
+        bool io( const std::string &name, T *&pointer,
                  const std::function<void( const std::string & )> &load,
                  const std::function<std::string( const T & )> &save, bool required = false ) {
             // Only used by the matching function in the output archive classes.
@@ -321,7 +321,7 @@ class JsonObjectInputArchive : public JsonObject
             return true;
         }
         template<typename T>
-        bool io( const std::string &name, T * &pointer,
+        bool io( const std::string &name, T *&pointer,
                  const std::function<void( const std::string & )> &load,
                  const std::function<std::string( const T & )> &save, required_tag ) {
             return io<T>( name, pointer, load, save, true );

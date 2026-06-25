@@ -558,7 +558,7 @@ TEST_CASE( "map_route_player_into_unreachable_tiles", "[map][pathfinding]" )
         }
         WHEN( "map::route does pathfinding to any adjacent tile of an unpassable tile" ) {
             const std::vector<tripoint_bub_ms> path = m.route( pc,
-                pathfinding_target::adjacent( not_passable ) );
+                    pathfinding_target::adjacent( not_passable ) );
             THEN( "route ends on one of the adjacent tiles" ) {
                 const std::vector<tripoint_bub_ms> expected_path = {
                     { 66, 65, 0 }, { 67, 65, 0 }
@@ -582,7 +582,7 @@ TEST_CASE( "map_route_player_into_unreachable_tiles", "[map][pathfinding]" )
         place_obstacle( m, obstacles );
         WHEN( "map::route does pathfinding" ) {
             const std::vector<tripoint_bub_ms> path = m.route( pc,
-                pathfinding_target::adjacent( not_passable ) );
+                    pathfinding_target::adjacent( not_passable ) );
             THEN( "it does not find any route" ) {
                 CHECK( path.empty() );
             }

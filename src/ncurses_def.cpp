@@ -635,7 +635,7 @@ void check_encoding()
         do {
             const char *unicode_error_msg =
                 _( "You don't seem to have a valid Unicode locale.  You may see some weird "
-               "characters (e.g. empty boxes or question marks).  You have been warned." );
+                   "characters (e.g. empty boxes or question marks).  You have been warned." );
             catacurses::erase();
             const int maxx = getmaxx( catacurses::stdscr );
             fold_and_print( catacurses::stdscr, point::zero, maxx, c_white, unicode_error_msg );

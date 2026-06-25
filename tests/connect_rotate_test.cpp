@@ -26,7 +26,7 @@ class cata_tiles_test_helper
                                         const std::bitset<NUM_TERCONN> &connect_group,
                                         const std::bitset<NUM_TERCONN> &rotate_to_group ) {
             map::get_connect_values( tripoint_bub_ms( p ), subtile, rotation, connect_group,
-                                            rotate_to_group, {} );
+                                     rotate_to_group, {} );
         }
 };
 

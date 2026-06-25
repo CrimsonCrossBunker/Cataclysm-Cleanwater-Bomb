@@ -118,7 +118,7 @@ void monfaction::inherit_parent_attitude_rec(
 {
     // already processed, just populate the return list and exit
     if( !processed.count( id ) ) {
-    if( !is_root() ) {
+        if( !is_root() ) {
             base_faction->inherit_parent_attitude_rec( processed, child_attitudes );
         }
         // wish we had 'map::merge'
@@ -126,9 +126,9 @@ void monfaction::inherit_parent_attitude_rec(
             attitude_map.emplace( ci.first, ci.second );
         }
     }
-for( const auto &att : attitude_map ) {
-    // child attitude settings overwrite those of a parent
-    child_attitudes[att.first] = att.second;
+    for( const auto &att : attitude_map ) {
+        // child attitude settings overwrite those of a parent
+        child_attitudes[att.first] = att.second;
     }
     processed.insert( id );
 }
@@ -136,8 +136,8 @@ for( const auto &att : attitude_map ) {
 void monfaction::populate_attitude_vec() const
 {
     attitude_vec.clear();
-for( const monfaction &f : faction_factory.get_all() ) {
-    const std::optional<mf_attitude> &attitude = attitude_rec( f.id );
+    for( const monfaction &f : faction_factory.get_all() ) {
+        const std::optional<mf_attitude> &attitude = attitude_rec( f.id );
         if( !attitude ) {
             debugmsg( "Invalid faction relations (no relation found): %s -> %s",
                       id.c_str(), f.id.c_str() );

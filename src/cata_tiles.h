@@ -1328,7 +1328,7 @@ class cata_tiles
         // int, angle, bool represents part_mod, veh_dir, and highlight respectively
         // point represents the mount direction
         std::map<tripoint_bub_ms, std::tuple<vpart_id, int, units::angle, bool, point_rel_ms>>
-        vpart_override;
+                vpart_override;
         // int represents spawn count
         std::map<tripoint_bub_ms, std::tuple<mtype_id, int, bool, Creature::Attitude>> monster_override;
 

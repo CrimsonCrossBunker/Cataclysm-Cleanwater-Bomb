@@ -673,7 +673,7 @@ TEST_CASE( "craft_data_root_alloc_shape_follows_timed_steps",
     REQUIRE( rec.steps()[0].attention != step_attention::unattended );
     REQUIRE( rec.steps()[1].attention == step_attention::unattended );
     const std::vector<std::vector<tool_comp>> &root_groups =
-        rec.root_requirements().get_tools();
+            rec.root_requirements().get_tools();
     REQUIRE( root_groups.size() == 1 );
     REQUIRE_FALSE( root_groups[0].empty() );
     const tool_comp root_tool = root_groups[0].front();

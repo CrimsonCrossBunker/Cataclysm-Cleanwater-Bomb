@@ -194,8 +194,8 @@ bool Character::has_morale_to_read() const
 
 void outfit::check_and_recover_morale( player_morale &test_morale ) const
 {
-for( const item &wit : worn ) {
-    test_morale.on_item_wear( wit );
+    for( const item &wit : worn ) {
+        test_morale.on_item_wear( wit );
     }
 }
 

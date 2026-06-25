@@ -323,7 +323,7 @@ void mission_start::reveal_refugee_center( mission *miss )
         t.reveal_radius = 3;
         target_pos = mission_util::assign_mission_target( t, d );
         const tripoint_abs_omt dest_refugee_center = overmap_buffer.find_closest( *target_pos,
-            "evac_center_18", 1, false );
+                "evac_center_18", 1, false );
         overmap_buffer.reveal_route( dest_road, dest_refugee_center, 1, false );
 
         add_msg( _( "You mark the refugee center and the road that leads to it…" ) );

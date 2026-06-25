@@ -11,7 +11,7 @@
 
 #include "cata_assert.h"
 #if SDL_MAJOR_VERSION >= 3
-#include "cata_shader.h"
+    #include "cata_shader.h"
 #endif
 #include "debug.h"
 #include "point.h"

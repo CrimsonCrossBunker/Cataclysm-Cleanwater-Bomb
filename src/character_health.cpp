@@ -255,17 +255,17 @@ std::string enum_to_string<blood_type>( blood_type data )
 bool Character::can_recover_oxygen() const
 {
     return get_limb_score( limb_score_breathing ) > 0.5f && !is_underwater() &&
-    !has_effect_with_flag( json_flag_GRAB ) && !( has_bionic( bio_synlungs ) &&
-    !has_active_bionic( bio_synlungs ) );
+           !has_effect_with_flag( json_flag_GRAB ) && !( has_bionic( bio_synlungs ) &&
+                   !has_active_bionic( bio_synlungs ) );
 }
 
 bool Character::is_warm() const
 {
     if( has_flag( json_flag_NO_BODY_HEAT ) ) {
-    return false;
-} else {
-    return true;
-}
+        return false;
+    } else {
+        return true;
+    }
 }
 
 int Character::get_fat_to_hp() const
@@ -305,14 +305,14 @@ void Character::react_to_felt_pain( int intensity )
 bool Character::is_dead_state() const
 {
     if( cached_dead_state.has_value() ) {
-    return cached_dead_state.value();
+        return cached_dead_state.value();
     }
 
     cached_dead_state = false;
     // we want to warn the player with a debug message if they are invincible. this should be unimportant once wounds exist and bleeding is how you die.
     bool has_vitals = false;
-for( const bodypart_id &bp : get_all_body_parts( get_body_part_flags::only_main ) ) {
-    if( bp->is_vital ) {
+    for( const bodypart_id &bp : get_all_body_parts( get_body_part_flags::only_main ) ) {
+        if( bp->is_vital ) {
             has_vitals = true;
             if( get_part_hp_cur( bp ) <= 0 ) {
                 cached_dead_state = true;
@@ -321,7 +321,7 @@ for( const bodypart_id &bp : get_all_body_parts( get_body_part_flags::only_main 
         }
     }
     if( !has_vitals ) {
-    debugmsg( _( "WARNING!  %s has no vital part and is invincible." ), disp_name() );
+        debugmsg( _( "WARNING!  %s has no vital part and is invincible." ), disp_name() );
     }
     return false;
 }
@@ -848,19 +848,19 @@ int Character::get_stored_kcal() const
 int Character::kcal_speed_penalty() const
 {
     if( !needs_food() ) {
-    return 0;
-}
-static const std::vector<std::pair<float, float>> starv_thresholds = { {
-        std::make_pair( 0.0f, -90.0f ),
+        return 0;
+    }
+    static const std::vector<std::pair<float, float>> starv_thresholds = { {
+            std::make_pair( 0.0f, -90.0f ),
             std::make_pair( character_weight_category::emaciated, -50.f ),
             std::make_pair( character_weight_category::underweight, -25.0f ),
             std::make_pair( character_weight_category::normal, 0.0f )
         }
     };
     if( get_kcal_percent() > 0.95f ) {
-    return 0;
-} else {
-    return std::round( multi_lerp( starv_thresholds, get_bmi_fat() ) );
+        return 0;
+    } else {
+        return std::round( multi_lerp( starv_thresholds, get_bmi_fat() ) );
     }
 }
 
@@ -983,7 +983,7 @@ int Character::get_thirst() const
 int Character::get_instant_thirst() const
 {
     return thirst - std::max( units::to_milliliter<int>
-           ( stomach.get_water() / 10 ), 0 );
+                              ( stomach.get_water() / 10 ), 0 );
 }
 
 void Character::mod_thirst( int nthirst )
@@ -1075,17 +1075,17 @@ int Character::get_sleep_deprivation() const
 bool Character::is_deaf() const
 {
     return get_effect_int( effect_deaf ) > 2 || worn_with_flag( flag_DEAF ) ||
-    has_flag( json_flag_DEAF ) || has_effect( effect_narcosis ) ||
-    ( has_trait( trait_M_SKIN3 ) &&
-    get_map().has_flag_ter_or_furn( ter_furn_flag::TFLAG_FUNGUS, pos_bub() )
-    && in_sleep_state() );
+           has_flag( json_flag_DEAF ) || has_effect( effect_narcosis ) ||
+           ( has_trait( trait_M_SKIN3 ) &&
+             get_map().has_flag_ter_or_furn( ter_furn_flag::TFLAG_FUNGUS, pos_bub() )
+             && in_sleep_state() );
 }
 
 bool Character::is_mute() const
 {
     return has_flag( flag_MUTE ) || worn_with_flag( flag_MUTE ) ||
-    ( has_trait( trait_PROF_FOODP ) && !( is_wearing( itype_foodperson_mask ) ||
-    is_wearing( itype_foodperson_mask_on ) ) );
+           ( has_trait( trait_PROF_FOODP ) && !( is_wearing( itype_foodperson_mask ) ||
+                   is_wearing( itype_foodperson_mask_on ) ) );
 }
 
 void Character::on_damage_of_type( const effect_source &source, int adjusted_damage,
@@ -1395,20 +1395,20 @@ int Character::weariness_transition_level() const
 float Character::maximum_exertion_level() const
 {
     switch( weariness_level() ) {
-    case 0:
-        return EXTRA_EXERCISE;
-    case 1:
-        return ACTIVE_EXERCISE;
-    case 2:
-        return BRISK_EXERCISE;
-    case 3:
-        return MODERATE_EXERCISE;
-    case 4:
-        return LIGHT_EXERCISE;
-    case 5:
-    default:
-        return NO_EXERCISE;
-}
+        case 0:
+            return EXTRA_EXERCISE;
+        case 1:
+            return ACTIVE_EXERCISE;
+        case 2:
+            return BRISK_EXERCISE;
+        case 3:
+            return MODERATE_EXERCISE;
+        case 4:
+            return LIGHT_EXERCISE;
+        case 5:
+        default:
+            return NO_EXERCISE;
+    }
 }
 
 float Character::exertion_adjusted_move_multiplier( float level ) const
@@ -1919,13 +1919,13 @@ bool Character::is_hibernating() const
     // life like that--but since there's much less fluid reserve than food reserve,
     // simply using the same numbers won't work.
     return has_effect( effect_sleep ) && get_kcal_percent() > 0.8f &&
-    get_thirst() <= 80 && has_active_mutation( trait_HIBERNATE );
+           get_thirst() <= 80 && has_active_mutation( trait_HIBERNATE );
 }
 
 bool Character::is_blind() const
 {
     return worn_with_flag( flag_BLIND ) ||
-    has_flag( json_flag_BLIND ) || get_limb_score( limb_score_vision ) <= 0;
+           has_flag( json_flag_BLIND ) || get_limb_score( limb_score_vision ) <= 0;
 }
 
 float Character::rest_quality() const
@@ -2068,7 +2068,7 @@ float Character::get_bmi_lean() const
     //strength BMIs decrease to zero as you starve (muscle atrophy)
     // CCB: 调整瘦体重BMI公式，降低力量对体重的贡献
     if( get_bmi_fat() < character_weight_category::normal ) {
-    const stat_mod wpen = get_weight_penalty();
+        const stat_mod wpen = get_weight_penalty();
         return 14.0f + ( get_str_base() / 4.0f ) - wpen.strength;
     }
     return 14.0f + ( get_str_base() / 4.0f );
@@ -2077,7 +2077,7 @@ float Character::get_bmi_lean() const
 float Character::get_bmi_fat() const
 {
     return ( get_stored_kcal() / KCAL_PER_KG ) / ( std::pow( height() / 100.0f,
-    2 ) * get_cached_organic_size() );
+            2 ) * get_cached_organic_size() );
 }
 
 bool Character::has_calorie_deficit() const
@@ -2088,7 +2088,7 @@ bool Character::has_calorie_deficit() const
 units::mass Character::bodyweight() const
 {
     return std::max( 1_gram, enchantment_cache->modify_value( enchant_vals::mod::WEIGHT,
-           bodyweight_fat() + bodyweight_lean() ) );
+                     bodyweight_fat() + bodyweight_lean() ) );
 }
 
 units::mass Character::bodyweight_fat() const
@@ -2103,8 +2103,8 @@ units::mass Character::bodyweight_lean() const
     //for example a tail with a hit size of 10 means our lean mass is 10% greater
     //or if we chop off our arms and legs to get bionic replacements, we're down to about 42% of our original lean mass
     return get_cached_organic_size() * units::from_kilogram( get_bmi_lean() * std::pow(
-    height() / 100.0f,
-    2 ) );
+                height() / 100.0f,
+                2 ) );
 }
 
 float Character::fat_ratio() const
@@ -2132,7 +2132,7 @@ int Character::ugliness() const
 int Character::get_bmr() const
 {
     return base_bmr() * std::ceil( clamp( activity_history.average_activity(), NO_EXERCISE,
-    maximum_exertion_level() ) );
+                                          maximum_exertion_level() ) );
 }
 
 int Character::get_stim() const
@@ -2202,8 +2202,8 @@ void Character::invalidate_leak_level_cache()
 int Character::get_stamina() const
 {
     if( is_npc() ) {
-    // No point in doing a bunch of checks on NPCs for now since they can't use stamina.
-    return get_stamina_max();
+        // No point in doing a bunch of checks on NPCs for now since they can't use stamina.
+        return get_stamina_max();
     }
     return stamina;
 }
@@ -2211,22 +2211,22 @@ int Character::get_stamina() const
 int Character::get_stamina_max() const
 {
     if( is_npc() ) {
-    // No point in doing a bunch of checks on NPCs for now since they can't use stamina.
-    return 10000;
-}
-// Since adding cardio, 'player_max_stamina' is really 'base max stamina' and gets further modified
-// by your CV fitness.  Name has been kept this way to avoid needing to change the code.
-// Default base maximum stamina and cardio scaling are defined in data/core/game_balance.json
-static const std::string player_max_stamina( "PLAYER_MAX_STAMINA_BASE" );
-static const std::string player_cardiofit_stamina_scale( "PLAYER_CARDIOFIT_STAMINA_SCALING" );
+        // No point in doing a bunch of checks on NPCs for now since they can't use stamina.
+        return 10000;
+    }
+    // Since adding cardio, 'player_max_stamina' is really 'base max stamina' and gets further modified
+    // by your CV fitness.  Name has been kept this way to avoid needing to change the code.
+    // Default base maximum stamina and cardio scaling are defined in data/core/game_balance.json
+    static const std::string player_max_stamina( "PLAYER_MAX_STAMINA_BASE" );
+    static const std::string player_cardiofit_stamina_scale( "PLAYER_CARDIOFIT_STAMINA_SCALING" );
 
-// Cardiofit stamina mod defaults to 5, and get_cardiofit() should return a value in the vicinity
-// of 1000-3000, so this should add somewhere between 3000 to 15000 stamina.
-int max_stamina = get_option<int>( player_max_stamina ) +
-                  get_option<int>( player_cardiofit_stamina_scale ) * get_cardiofit();
-max_stamina = enchantment_cache->modify_value( enchant_vals::mod::MAX_STAMINA, max_stamina );
+    // Cardiofit stamina mod defaults to 5, and get_cardiofit() should return a value in the vicinity
+    // of 1000-3000, so this should add somewhere between 3000 to 15000 stamina.
+    int max_stamina = get_option<int>( player_max_stamina ) +
+                      get_option<int>( player_cardiofit_stamina_scale ) * get_cardiofit();
+    max_stamina = enchantment_cache->modify_value( enchant_vals::mod::MAX_STAMINA, max_stamina );
 
-return max_stamina;
+    return max_stamina;
 }
 
 void Character::set_stamina( int new_stamina )
@@ -2385,13 +2385,13 @@ void Character::update_stamina( int turns )
 int Character::get_cardiofit() const
 {
     if( is_npc() ) {
-    // No point in doing a bunch of checks on NPCs for now since they can't use cardio.
-    return 2 * get_cardio_acc_base();
+        // No point in doing a bunch of checks on NPCs for now since they can't use cardio.
+        return 2 * get_cardio_acc_base();
     }
 
     if( has_bionic( bio_synlungs ) ) {
-    // If you have the synthetic lungs bionic your cardioacc is forced to a specific value
-    return 3 * get_cardio_acc_base();
+        // If you have the synthetic lungs bionic your cardioacc is forced to a specific value
+        return 3 * get_cardio_acc_base();
     }
 
     const int cardio_base = get_cardio_acc();
@@ -2407,15 +2407,15 @@ int Character::get_cardiofit() const
 
     // Negative effects of health are doubled, up to 40% cardio
     if( health_mod < 0.0f ) {
-    health_mod *= 2.0f;
-}
+        health_mod *= 2.0f;
+    }
 
-// Add up all of our cardio mods.
-float cardio_modifier = mut_mod + athletics_mod + prof_mod + health_mod;
-// Modify cardio accumulator by our cardio mods.
-const int cardio_fitness = static_cast<int>( cardio_base * cardio_modifier );
+    // Add up all of our cardio mods.
+    float cardio_modifier = mut_mod + athletics_mod + prof_mod + health_mod;
+    // Modify cardio accumulator by our cardio mods.
+    const int cardio_fitness = static_cast<int>( cardio_base * cardio_modifier );
 
-return cardio_fitness;
+    return cardio_fitness;
 }
 
 int Character::get_cardio_acc() const
@@ -3000,9 +3000,9 @@ void Character::update_vitamins( const vitamin_id &vit )
 void Character::rooted_message() const
 {
     if( ( has_trait( trait_ROOTS2 ) || has_trait( trait_ROOTS3 ) || has_trait( trait_CHLOROMORPH ) ) &&
-    get_map().has_flag( ter_furn_flag::TFLAG_PLOWABLE, pos_bub() ) &&
-    is_barefoot() ) {
-    add_msg( m_info, _( "You sink your roots into the soil." ) );
+        get_map().has_flag( ter_furn_flag::TFLAG_PLOWABLE, pos_bub() ) &&
+        is_barefoot() ) {
+        add_msg( m_info, _( "You sink your roots into the soil." ) );
     }
 }
 
@@ -3073,17 +3073,17 @@ int Character::heartrate_bpm() const
 {
     //Dead have no heartbeat usually and no heartbeat in omnicell
     if( is_dead_state() || has_trait( trait_SLIMESPAWNER ) ) {
-    return 0;
-}
+        return 0;
+    }
 
-int average_heartbeat = avg_nat_bpm * get_heartrate_index();
+    int average_heartbeat = avg_nat_bpm * get_heartrate_index();
 
-// minor moment-to-moment variation
-average_heartbeat += rng( -5, 5 );
+    // minor moment-to-moment variation
+    average_heartbeat += rng( -5, 5 );
 
-//Chemical imbalance makes this less predictable. It's possible this range needs tweaking
-if( has_trait( trait_CHEMIMBALANCE ) ) {
-    average_heartbeat += rng( -15, 15 );
+    //Chemical imbalance makes this less predictable. It's possible this range needs tweaking
+    if( has_trait( trait_CHEMIMBALANCE ) ) {
+        average_heartbeat += rng( -15, 15 );
     }
 
     return average_heartbeat;
@@ -3108,16 +3108,16 @@ float Character::adjust_for_focus( float amount ) const
 bool Character::can_hear( const tripoint_bub_ms &source, const int volume ) const
 {
     if( is_deaf() ) {
-    return false;
-}
+        return false;
+    }
 
-// source is in-ear and at our square, we can hear it
-if( source == pos_bub() && volume == 0 ) {
-    return true;
-}
-const int dist = rl_dist( source, pos_bub() );
-const float volume_multiplier = hearing_ability();
-return ( volume - get_weather().weather_id->sound_attn ) * volume_multiplier >= dist;
+    // source is in-ear and at our square, we can hear it
+    if( source == pos_bub() && volume == 0 ) {
+        return true;
+    }
+    const int dist = rl_dist( source, pos_bub() );
+    const float volume_multiplier = hearing_ability();
+    return ( volume - get_weather().weather_id->sound_attn ) * volume_multiplier >= dist;
 }
 
 float Character::hearing_ability() const
@@ -3346,15 +3346,15 @@ int Character::get_lift_assist() const
 bool Character::immune_to( const bodypart_id &bp, damage_unit dam ) const
 {
     if( is_immune_damage( dam.type ) ||
-    has_effect( effect_incorporeal ) || has_flag( json_flag_CANNOT_TAKE_DAMAGE ) ) {
-    return true;
-}
+        has_effect( effect_incorporeal ) || has_flag( json_flag_CANNOT_TAKE_DAMAGE ) ) {
+        return true;
+    }
 
-passive_absorb_hit( bp, dam );
+    passive_absorb_hit( bp, dam );
 
-worn.damage_mitigate( bp, dam );
+    worn.damage_mitigate( bp, dam );
 
-return dam.amount <= 0;
+    return dam.amount <= 0;
 }
 
 int Character::get_pain() const
@@ -3409,10 +3409,10 @@ void Character::set_pain( int npain )
 int Character::get_perceived_pain() const
 {
     if( get_effect_int( effect_adrenaline ) > 1 ) {
-    return 0;
-}
+        return 0;
+    }
 
-return std::max( get_pain() - get_painkiller(), 0 );
+    return std::max( get_pain() - get_painkiller(), 0 );
 }
 
 int Character::hp_percentage() const

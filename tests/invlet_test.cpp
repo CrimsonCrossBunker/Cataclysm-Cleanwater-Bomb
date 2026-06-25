@@ -456,7 +456,7 @@ static void invlet_test( avatar &dummy, const inventory_location from, const inv
         const invlet_state first_invlet_state = static_cast<invlet_state>( id % INVLET_STATE_NUM );
         // how to assign invlet to the second item
         const invlet_state second_invlet_state = static_cast<invlet_state>( id / INVLET_STATE_NUM %
-            INVLET_STATE_NUM );
+                INVLET_STATE_NUM );
         // the test steps
         const test_action action = static_cast<test_action>( id / INVLET_STATE_NUM / INVLET_STATE_NUM %
                                    TEST_ACTION_NUM );
@@ -579,7 +579,7 @@ static void stack_invlet_test( avatar &dummy, inventory_location from, inventory
     ss << "actually the two items have " <<
        ( item_at( dummy, "1", to ).invlet != item_at( dummy, "2",
                from ).invlet ? "different" : "the same" ) <<
-                      " invlets" << std::endl;
+       " invlets" << std::endl;
     INFO( ss.str() );
     REQUIRE( item_at( dummy, "1", to ).typeId() == tshirt1.typeId() );
     REQUIRE( item_at( dummy, "2", from ).typeId() == tshirt2.typeId() );
@@ -636,7 +636,7 @@ static void swap_invlet_test( avatar &dummy, inventory_location loc )
 
     std::stringstream ss;
     ss << "1. add two items of the same type to " << location_desc( loc ) <<
-          ", and ensure them do not stack" << std::endl;
+       ", and ensure them do not stack" << std::endl;
     ss << "2. assign different invlets to the two items" << std::endl;
     ss << "3. swap the invlets by assign one of the items with the invlet of the other item" <<
        std::endl;
@@ -681,7 +681,7 @@ static void merge_invlet_test( avatar &dummy, inventory_location from )
         invlet_state second_invlet_state = static_cast<invlet_state>( id / INVLET_STATE_NUM );
         // what the invlet should be for the merged stack
         invlet_state expected_merged_invlet_state = first_invlet_state != NONE ? first_invlet_state :
-            second_invlet_state;
+                second_invlet_state;
         char expected_merged_invlet = first_invlet_state != NONE ? invlet_1 : second_invlet_state != NONE ?
                                       invlet_2 : 0;
 
@@ -717,9 +717,9 @@ static void merge_invlet_test( avatar &dummy, inventory_location from )
         std::stringstream ss;
         ss << "1. add two stackable items to the inventory and " << location_desc( from ) << std::endl;
         ss << "2. assign " << invlet_state_desc( first_invlet_state ) << " invlet " << invlet_1 <<
-              " to the item in the inventory " << std::endl;
+           " to the item in the inventory " << std::endl;
         ss << "3. assign " << invlet_state_desc( second_invlet_state ) << " invlet " << invlet_2 <<
-              " to the " << location_desc( from ) << std::endl;
+           " to the " << location_desc( from ) << std::endl;
         ss << "4. " << move_action_desc( 0, from, INVENTORY ) << std::endl;
         ss << "expect the stack in the inventory to have " << invlet_state_desc(
                expected_merged_invlet_state ) << " invlet " << expected_merged_invlet << std::endl;

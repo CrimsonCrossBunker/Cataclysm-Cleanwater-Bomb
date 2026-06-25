@@ -119,13 +119,13 @@ class statistics
          */
         bool uncertain_about( const epsilon_threshold &t ) const {
             return !test_threshold( t ) && // Inside target
-            t.midpoint - t.epsilon < upper() && // Below target
-            t.midpoint + t.epsilon > lower(); // Above target
+                   t.midpoint - t.epsilon < upper() && // Below target
+                   t.midpoint + t.epsilon > lower(); // Above target
         }
 
         bool test_threshold( const epsilon_threshold &t ) const {
             return ( t.midpoint - t.epsilon ) < lower() &&
-            ( t.midpoint + t.epsilon ) > upper();
+                   ( t.midpoint + t.epsilon ) > upper();
         }
         bool test_threshold( const upper_lower_threshold &t ) const {
             return t.lower_thresh < lower() && t.upper_thresh > upper();

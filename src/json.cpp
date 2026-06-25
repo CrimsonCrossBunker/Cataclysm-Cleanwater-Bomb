@@ -144,9 +144,9 @@ void TextJsonObject::report_unvisited() const
 {
 #ifndef CATA_IN_TOOL
     if( report_unvisited_members && !reported_unvisited_members &&
-    !std::uncaught_exceptions() ) {
-    reported_unvisited_members = true;
-    for( const std::pair<const std::string, int> &p : positions ) {
+        !std::uncaught_exceptions() ) {
+        reported_unvisited_members = true;
+        for( const std::pair<const std::string, int> &p : positions ) {
             const std::string &name = p.first;
             if( !visited_members.count( name ) ) {
                 try {
@@ -207,7 +207,7 @@ int TextJsonObject::verify_position( std::string_view name,
                                      const bool throw_exception ) const
 {
     if( !jsin ) {
-    if( throw_exception ) {
+        if( throw_exception ) {
             throw JsonError( str_cat( "member lookup on empty object: ", name ) );
         }
         // 0 is always before the opening brace,
@@ -245,7 +245,7 @@ std::string TextJsonObject::str() const
     allow_omitted_members();
 
     if( jsin && end_ >= start ) {
-    return jsin->substr( start, end_ - start );
+        return jsin->substr( start, end_ - start );
     } else {
         return "{}";
     }
@@ -255,11 +255,11 @@ void TextJsonObject::throw_error_at( std::string_view name, const std::string &e
 {
     mark_visited( name );
     if( !jsin ) {
-    throw JsonError( err );
+        throw JsonError( err );
     }
     const int pos = verify_position( name, false );
     if( pos ) {
-    jsin->seek( pos );
+        jsin->seek( pos );
     }
     jsin->error( err );
 }
@@ -267,7 +267,7 @@ void TextJsonObject::throw_error_at( std::string_view name, const std::string &e
 void TextJsonArray::throw_error( const std::string &err ) const
 {
     if( !jsin ) {
-    throw JsonError( err );
+        throw JsonError( err );
     }
     jsin->error( err );
 }
@@ -275,7 +275,7 @@ void TextJsonArray::throw_error( const std::string &err ) const
 void TextJsonArray::throw_error( int idx, const std::string &err ) const
 {
     if( !jsin ) {
-    throw JsonError( err );
+        throw JsonError( err );
     }
     if( idx >= 0 && static_cast<size_t>( idx ) < positions.size() ) {
         jsin->seek( positions[idx] );
@@ -296,7 +296,7 @@ void TextJsonArray::string_error( const int idx, const int offset, const std::st
 void TextJsonObject::throw_error( const std::string &err ) const
 {
     if( !jsin ) {
-    throw JsonError( err );
+        throw JsonError( err );
     }
     jsin->error( err );
 }
@@ -312,12 +312,12 @@ TextJsonIn *TextJsonObject::get_raw( std::string_view name ) const
 json_source_location TextJsonObject::get_source_location() const
 {
     if( !jsin ) {
-    throw JsonError( "TextJsonObject::get_source_location called when stream is null" );
+        throw JsonError( "TextJsonObject::get_source_location called when stream is null" );
     }
     json_source_location loc;
     loc.path = jsin->get_path();
     if( !loc.path ) {
-    jsin->seek( start );
+        jsin->seek( start );
         jsin->error( "TextJsonObject::get_source_location called but the path is unknown" );
     }
     loc.offset = start;
@@ -579,7 +579,7 @@ std::string TextJsonArray::str()
 void TextJsonArray::verify_index( const size_t i ) const
 {
     if( !jsin ) {
-    throw JsonError( "tried to access empty array." );
+        throw JsonError( "tried to access empty array." );
     } else if( i >= positions.size() ) {
         jsin->seek( start );
         std::stringstream err;
@@ -694,64 +694,64 @@ TextJsonObject TextJsonArray::get_object( const size_t i ) const
 bool TextJsonArray::test_null() const
 {
     if( !has_more() ) {
-    return false;
-}
-jsin->seek( positions[index] );
-return jsin->test_null();
+        return false;
+    }
+    jsin->seek( positions[index] );
+    return jsin->test_null();
 }
 
 bool TextJsonArray::test_bool() const
 {
     if( !has_more() ) {
-    return false;
-}
-jsin->seek( positions[index] );
-return jsin->test_bool();
+        return false;
+    }
+    jsin->seek( positions[index] );
+    return jsin->test_bool();
 }
 
 bool TextJsonArray::test_number() const
 {
     if( !has_more() ) {
-    return false;
-}
-jsin->seek( positions[index] );
-return jsin->test_number();
+        return false;
+    }
+    jsin->seek( positions[index] );
+    return jsin->test_number();
 }
 
 bool TextJsonArray::test_string() const
 {
     if( !has_more() ) {
-    return false;
-}
-jsin->seek( positions[index] );
-return jsin->test_string();
+        return false;
+    }
+    jsin->seek( positions[index] );
+    return jsin->test_string();
 }
 
 bool TextJsonArray::test_bitset() const
 {
     if( !has_more() ) {
-    return false;
-}
-jsin->seek( positions[index] );
-return jsin->test_bitset();
+        return false;
+    }
+    jsin->seek( positions[index] );
+    return jsin->test_bitset();
 }
 
 bool TextJsonArray::test_array() const
 {
     if( !has_more() ) {
-    return false;
-}
-jsin->seek( positions[index] );
-return jsin->test_array();
+        return false;
+    }
+    jsin->seek( positions[index] );
+    return jsin->test_array();
 }
 
 bool TextJsonArray::test_object() const
 {
     if( !has_more() ) {
-    return false;
-}
-jsin->seek( positions[index] );
-return jsin->test_object();
+        return false;
+    }
+    jsin->seek( positions[index] );
+    return jsin->test_object();
 }
 
 /* random-access type checking */
