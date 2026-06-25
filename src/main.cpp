@@ -86,6 +86,10 @@ class ui_adaptor;
     #include "sdltiles.h"
 #endif
 
+#if defined(TILES)
+#   include "sdltiles.h"
+#endif
+
 #if defined(__ANDROID__)
 #include <android/log.h>
 #include <unistd.h>
