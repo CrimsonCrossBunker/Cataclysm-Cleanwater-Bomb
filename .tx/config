@@ -1,12 +1,13 @@
 [main]
 host = https://www.transifex.com
 
-[o:cataclysm-dda-translators:p:cataclysm-dda:r:master-cataclysm-dda]
-file_filter  = lang/po/<lang>.po
-source_file  = lang/po/cataclysm-dda.pot
-source_lang  = en
-type         = PO
-minimum_perc = 0
+# CDDA 主 PO —— 停用，避免误从上游拉取
+# [o:cataclysm-dda-translators:p:cataclysm-dda:r:master-cataclysm-dda]
+# file_filter  = lang/po/<lang>.po
+# source_file  = lang/po/cataclysm-dda.pot
+# source_lang  = en
+# type         = PO
+# minimum_perc = 0
 
 # CDDA credits/motd 资源 —— 暂时停用,避免 pull 时误拉覆盖本仓库文件
 # [o:cataclysm-dda-translators:p:cataclysm-dda:r:credits-master]
