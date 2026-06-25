@@ -1011,17 +1011,19 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     }
 
                     tile_render_info::sprite sprite_var{ ll, invisible };
-                    // Capture terrain semantic content here, in the dirty-gated
-                    // draw-cache rebuild, mirroring draw_terrain's normal
-                    // (visible, non-override) branch. draw_terrain still draws
-                    // from live here.ter(); this captured copy feeds the
-                    // equivalence check in draw_terrain that proves the two agree
-                    // (the first step toward drawing from cached content instead
-                    // of reading the map live). Override/memory branches are not
-                    // captured: overrides are only populated transiently by
-                    // explosion/construction/editmap previews, and the memory
-                    // branch is the invisible path, both left for later work.
+                    // Capture static-layer semantic content here, in the
+                    // dirty-gated draw-cache rebuild, mirroring each draw_*
+                    // layer function's normal (visible, non-override) branch.
+                    // The layer functions still draw from the live map; these
+                    // captured copies feed the equivalence checks in those
+                    // functions that prove the two agree (the first step toward
+                    // drawing from cached content instead of reading the map
+                    // live). Override/memory branches are not captured: overrides
+                    // are only populated transiently by explosion/construction/
+                    // editmap previews, and the memory branch is the invisible
+                    // path, both left for later work.
                     if( !invisible[0] ) {
+                        // Terrain
                         const ter_id &cap_t = here.ter( pos );
                         if( cap_t ) {
                             int cap_subtile = 0;
@@ -1036,6 +1038,53 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                                               rotate_group );
                             }
                             sprite_var.set_ter_content( cap_t, cap_subtile, cap_rotation );
+                        }
+                        // Furniture
+                        const furn_id &cap_f = here.furn( pos );
+                        if( cap_f ) {
+                            const std::array<int, 4> fn = {
+                                static_cast<int>( here.furn( pos + point::south ) ),
+                                static_cast<int>( here.furn( pos + point::east ) ),
+                                static_cast<int>( here.furn( pos + point::west ) ),
+                                static_cast<int>( here.furn( pos + point::north ) )
+                            };
+                            int cap_subtile = 0;
+                            int cap_rotation = 0;
+                            const std::bitset<NUM_TERCONN> &connect_group = cap_f.obj().connect_to_groups;
+                            const std::bitset<NUM_TERCONN> &rotate_group = cap_f.obj().rotate_to_groups;
+                            if( connect_group.any() ) {
+                                map::get_furn_connect_values( pos, cap_subtile, cap_rotation, connect_group,
+                                                              rotate_group, {} );
+                            } else {
+                                map::get_tile_values_with_ter( pos, cap_f.to_i(), fn, cap_subtile, cap_rotation,
+                                                               rotate_group );
+                            }
+                            sprite_var.set_furn_content( cap_f, cap_subtile, cap_rotation );
+                        }
+                        // Trap (only when the avatar can actually see it, matching draw_trap)
+                        const trap &cap_tr = here.tr_at( pos );
+                        if( !cap_tr.is_null() && cap_tr.can_see( pos, you ) ) {
+                            const std::array<int, 4> tn = {
+                                static_cast<int>( here.tr_at( pos + point::south ).loadid ),
+                                static_cast<int>( here.tr_at( pos + point::east ).loadid ),
+                                static_cast<int>( here.tr_at( pos + point::west ).loadid ),
+                                static_cast<int>( here.tr_at( pos + point::north ).loadid )
+                            };
+                            int cap_subtile = 0;
+                            int cap_rotation = 0;
+                            map::get_tile_values( cap_tr.loadid.to_i(), tn, cap_subtile, cap_rotation, 0 );
+                            sprite_var.set_trap_content( cap_tr.loadid, cap_subtile, cap_rotation );
+                        }
+                        // Partial construction (no orientation; presence only)
+                        sprite_var.part_con_content = here.partial_con_at( pos ) != nullptr;
+                        // Graffiti (rotation depends only on passability; text is
+                        // the semantic content). Always recorded for visible tiles
+                        // so the check can also catch a stale "appeared" graffiti.
+                        if( here.has_graffiti_at( pos ) ) {
+                            sprite_var.set_graffiti_content( here.graffiti_at( pos ),
+                                                             here.passable( pos ) ? 1 : 0 );
+                        } else {
+                            sprite_var.set_graffiti_content( std::string{}, 0 );
                         }
                     }
 
@@ -1198,23 +1247,47 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         lit_level ll = var->ll;
                         std::array<bool, 5> invisible = var->invisible;
 
-                        // Hand draw_terrain the terrain content captured for this
-                        // tile during the draw-cache rebuild so it can verify its
-                        // own live read against the cached copy. Only meaningful
-                        // for the terrain layer; null ter means nothing was
-                        // captured (skip the check). Gated by the
+                        // Hand each static-layer draw function the content
+                        // captured for this tile during the draw-cache rebuild so
+                        // it can verify its own live read against the cached copy.
+                        // Only the layer matching the current draw fn is armed;
+                        // every other m_check_* flag is cleared so a stale capture
+                        // never triggers a false mismatch. Gated by the
                         // CATA_VERIFY_DRAW_CACHE env var so it never spams normal
                         // builds — opt in when verifying the cache. Temporary: the
-                        // check goes away once draw_terrain reads from the cache.
+                        // checks go away once the layer functions read from the
+                        // cache.
                         static const bool verify_draw_cache =
                             std::getenv( "CATA_VERIFY_DRAW_CACHE" ) != nullptr;
-                        if( verify_draw_cache && f == &cata_tiles::draw_terrain ) {
-                            m_check_ter_content = static_cast<bool>( var->ter_content );
-                            m_cur_ter_content = var->ter_content;
-                            m_cur_ter_content_subtile = var->ter_content_subtile;
-                            m_cur_ter_content_rotation = var->ter_content_rotation;
-                        } else {
-                            m_check_ter_content = false;
+                        m_check_ter_content = false;
+                        m_check_furn_content = false;
+                        m_check_trap_content = false;
+                        m_check_part_con_content = false;
+                        m_check_graffiti_content = false;
+                        if( verify_draw_cache ) {
+                            if( f == &cata_tiles::draw_terrain ) {
+                                m_check_ter_content = static_cast<bool>( var->ter_content );
+                                m_cur_ter_content = var->ter_content;
+                                m_cur_ter_content_subtile = var->ter_content_subtile;
+                                m_cur_ter_content_rotation = var->ter_content_rotation;
+                            } else if( f == &cata_tiles::draw_furniture ) {
+                                m_check_furn_content = static_cast<bool>( var->furn_content );
+                                m_cur_furn_content = var->furn_content;
+                                m_cur_furn_content_subtile = var->furn_content_subtile;
+                                m_cur_furn_content_rotation = var->furn_content_rotation;
+                            } else if( f == &cata_tiles::draw_trap ) {
+                                m_check_trap_content = static_cast<bool>( var->trap_content );
+                                m_cur_trap_content = var->trap_content;
+                                m_cur_trap_content_subtile = var->trap_content_subtile;
+                                m_cur_trap_content_rotation = var->trap_content_rotation;
+                            } else if( f == &cata_tiles::draw_part_con ) {
+                                m_check_part_con_content = !var->invisible[0];
+                                m_cur_part_con_content = var->part_con_content;
+                            } else if( f == &cata_tiles::draw_graffiti ) {
+                                m_check_graffiti_content = var->graffiti_captured;
+                                m_cur_graffiti_content = var->graffiti_content;
+                                m_cur_graffiti_content_rotation = var->graffiti_content_rotation;
+                            }
                         }
 
                         if( f == &cata_tiles::draw_vpart_no_roof || f == &cata_tiles::draw_vpart_roof ) {
@@ -3591,6 +3664,20 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
             map::get_tile_values_with_ter( p, f.to_i(), neighborhood, subtile, rotation, rotate_group );
         }
         const std::string &fname = f.id().str();
+        // Verify the furniture content captured into the draw cache matches this
+        // live read (see draw_terrain for the rationale). Only the normal
+        // non-overridden branch is checked. Temporary: dropped once the layer
+        // functions read from the cache.
+        if( m_check_furn_content && !neighborhood_overridden ) {
+            if( m_cur_furn_content != f || m_cur_furn_content_subtile != subtile ||
+                m_cur_furn_content_rotation != rotation ) {
+                debugmsg( "draw-cache furniture mismatch at %s: cached "
+                          "%s/sub%d/rot%d vs live %s/sub%d/rot%d",
+                          p.to_string(), m_cur_furn_content.id().str(),
+                          m_cur_furn_content_subtile, m_cur_furn_content_rotation,
+                          f.id().str(), subtile, rotation );
+            }
+        }
         // draw the actual furniture if there's no override
         if( !neighborhood_overridden ) {
             return draw_from_id_string( fname, TILE_CATEGORY::FURNITURE, empty_string, p, subtile,
@@ -3674,6 +3761,20 @@ bool cata_tiles::draw_trap( const tripoint_bub_ms &p, const lit_level ll, int &h
         int rotation = 0;
         map::get_tile_values( tr.loadid.to_i(), neighborhood, subtile, rotation, 0 );
         const std::string trname = tr.loadid.id().str();
+        // Verify the trap content captured into the draw cache matches this live
+        // read (see draw_terrain for the rationale). Only the normal
+        // non-overridden branch is checked. Temporary: dropped once the layer
+        // functions read from the cache.
+        if( m_check_trap_content && !neighborhood_overridden ) {
+            if( m_cur_trap_content != tr.loadid || m_cur_trap_content_subtile != subtile ||
+                m_cur_trap_content_rotation != rotation ) {
+                debugmsg( "draw-cache trap mismatch at %s: cached "
+                          "%s/sub%d/rot%d vs live %s/sub%d/rot%d",
+                          p.to_string(), m_cur_trap_content.id().str(),
+                          m_cur_trap_content_subtile, m_cur_trap_content_rotation,
+                          tr.loadid.id().str(), subtile, rotation );
+            }
+        }
         // draw the actual trap if there's no override
         if( !neighborhood_overridden ) {
             return draw_from_id_string( trname, TILE_CATEGORY::TRAP, empty_string, p, subtile,
@@ -3726,6 +3827,16 @@ bool cata_tiles::draw_part_con( const tripoint_bub_ms &p, const lit_level ll, in
                                 const std::array<bool, 5> &invisible )
 {
     map &here = get_map();
+    const bool live_part_con = here.partial_con_at( p ) != nullptr && !invisible[0];
+    // Verify the partial-construction presence captured into the draw cache
+    // matches this live read (see draw_terrain for the rationale). Captured for
+    // every visible tile, so this also catches a construction that appeared or
+    // vanished without the cache being rebuilt. Temporary: dropped once the
+    // layer functions read from the cache.
+    if( m_check_part_con_content && m_cur_part_con_content != live_part_con ) {
+        debugmsg( "draw-cache partial-construction mismatch at %s: cached %d vs live %d",
+                  p.to_string(), m_cur_part_con_content, live_part_con );
+    }
     if( here.partial_con_at( p ) != nullptr && !invisible[0] ) {
         std::string const &trname = tr_unfinished_construction.str();
         return draw_from_id_string( trname, TILE_CATEGORY::TRAP, empty_string, p, 0,
@@ -3740,6 +3851,22 @@ bool cata_tiles::draw_graffiti( const tripoint_bub_ms &p, const lit_level ll, in
     map &here = get_map();
     const auto override = graffiti_override.find( p );
     const bool overridden = override != graffiti_override.end();
+    // Verify the graffiti content captured into the draw cache matches this live
+    // read (see draw_terrain for the rationale). Only the normal non-overridden
+    // path is checked (capture skipped overrides); placed before the early-out
+    // so it also catches graffiti that appeared or vanished without a cache
+    // rebuild. Temporary: dropped once the layer functions read from the cache.
+    if( m_check_graffiti_content && !overridden ) {
+        const bool live_has = here.has_graffiti_at( p );
+        const std::string live_text = live_has ? here.graffiti_at( p ) : std::string{};
+        const int live_rotation = live_has ? ( here.passable( p ) ? 1 : 0 ) : 0;
+        if( m_cur_graffiti_content != live_text ||
+            ( live_has && m_cur_graffiti_content_rotation != live_rotation ) ) {
+            debugmsg( "draw-cache graffiti mismatch at %s: cached \"%s\"/rot%d vs live \"%s\"/rot%d",
+                      p.to_string(), m_cur_graffiti_content, m_cur_graffiti_content_rotation,
+                      live_text, live_rotation );
+        }
+    }
     if( overridden ? !override->second : ( invisible[0] || !here.has_graffiti_at( p ) ) ) {
         return false;
     }

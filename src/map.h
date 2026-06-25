@@ -381,18 +381,39 @@ struct tile_render_info {
         lit_level ll;
         std::array<bool, 5> invisible;
 
-        // Terrain semantic content (type id + connection subtile/rotation)
-        // captured during the dirty-gated draw-cache rebuild. This is the first
-        // step of moving the renderer's per-tile reads out of the live draw path
-        // and into the cached draw points, so the renderer can eventually draw
-        // from cached data instead of reading the map directly every frame.
-        // For now it is not consumed for drawing — draw_terrain still reads
-        // here.ter() live; this captured copy only feeds an equivalence check
-        // that proves the two agree. ter is null when nothing was captured
-        // (memory / override / invisible tiles).
+        // Static-layer semantic content (type id + connection subtile/rotation,
+        // graffiti text, partial-construction presence) captured during the
+        // dirty-gated draw-cache rebuild. This is the first step of moving the
+        // renderer's per-tile reads out of the live draw path and into the
+        // cached draw points, so the renderer can eventually draw from cached
+        // data instead of reading the map directly every frame.
+        //
+        // Only the static layers are captured here — terrain, furniture, trap,
+        // partial construction, graffiti — because the rebuild runs only when
+        // the cache is marked dirty (player action), which matches how often
+        // these change. Dynamic content (fields, items, vehicles, creatures)
+        // changes every turn and is left on the live path for now.
+        //
+        // For now none of this is consumed for drawing — the draw_* layer
+        // functions still read here.ter()/furn()/... live; these captured
+        // copies only feed an equivalence check that proves the two agree.
+        // A null/empty content field means nothing was captured for that layer
+        // (memory / override / invisible tiles, or simply nothing present).
         ter_id ter_content;
         int ter_content_subtile = 0;
         int ter_content_rotation = 0;
+        furn_id furn_content;
+        int furn_content_subtile = 0;
+        int furn_content_rotation = 0;
+        trap_id trap_content;
+        int trap_content_subtile = 0;
+        int trap_content_rotation = 0;
+        bool part_con_content = false;
+        // Graffiti is captured as text + rotation; empty text means no graffiti
+        // was present on this visible tile (distinct from "not captured").
+        bool graffiti_captured = false;
+        std::string graffiti_content;
+        int graffiti_content_rotation = 0;
 
         sprite( const lit_level ll, const std::array<bool, 5> &inv )
             : ll( ll ), invisible( inv ) {}
@@ -401,6 +422,21 @@ struct tile_render_info {
             ter_content = t;
             ter_content_subtile = subtile;
             ter_content_rotation = rotation;
+        }
+        void set_furn_content( const furn_id &f, const int subtile, const int rotation ) {
+            furn_content = f;
+            furn_content_subtile = subtile;
+            furn_content_rotation = rotation;
+        }
+        void set_trap_content( const trap_id &tr, const int subtile, const int rotation ) {
+            trap_content = tr;
+            trap_content_subtile = subtile;
+            trap_content_rotation = rotation;
+        }
+        void set_graffiti_content( const std::string &text, const int rotation ) {
+            graffiti_captured = true;
+            graffiti_content = text;
+            graffiti_content_rotation = rotation;
         }
     };
 
