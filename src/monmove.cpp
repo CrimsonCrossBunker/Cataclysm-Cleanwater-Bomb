@@ -682,7 +682,12 @@ void monster::plan()
         const bool will_throw_self_at_vehicle = !get_pathfinding_settings().avoid_dangerous_fields;
         if( !target_vehicles.empty() && will_throw_self_at_vehicle ) {
             tripoint_bub_ms target_pt = random_entry( target_vehicles );
-            Character *driver = here.veh_at( target_pt )->vehicle().get_driver( here );
+            const optional_vpart_position vp = here.veh_at( target_pt );
+            // target_pt comes from the moving-vehicle part list, but veh_at() can still
+            // return an empty optional for it (out-of-bounds, inactive z-level cache, or a
+            // part-list/cache position mismatch). operator-> would then build a vehicle&
+            // from uninitialized storage and crash in get_driver(); guard the optional.
+            Character *driver = vp ? vp->vehicle().get_driver( here ) : nullptr;
             // NOTE: no hostility check here, we already filtered for that when deciding vehicle targets.
             if( driver ) {
                 mon_plan.target = driver;
