@@ -13,6 +13,13 @@ add_library(
         third-party
         INTERFACE)
 
+# Asio (header-only networking)
+target_include_directories(
+        third-party
+        SYSTEM
+        INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/asio/asio/include)
+
 # Flatbuffers
 file(GLOB FLATBUFFERS_HEADERS flatbuffers/**/*.h)
 file(GLOB FLATBUFFERS_SOURCES flatbuffers/*.cpp)
