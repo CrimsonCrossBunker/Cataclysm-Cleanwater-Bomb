@@ -458,6 +458,11 @@ class tileset
             overexposed_tile_values.clear();
             memory_tile_values.clear();
             silhouette_tile_values.clear();
+            // The tinted-tile cache keys on the raw base-texture pointers we just
+            // freed (see cata_tiles_color.cpp::get_tinted_tile). Leaving it populated
+            // would let a replay-reallocated texture collide with a stale key and
+            // return a dangling/wrong tinted sprite, so drop it alongside the atlases.
+            tinted_tile_values.clear();
         }
 
         tile_type &create_tile_type( const std::string &id, tile_type &&new_tile_type );
