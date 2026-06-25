@@ -650,8 +650,6 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                              ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
     const int draw_min_z = std::max( you.posz() - fov_3d_z_range, -OVERMAP_DEPTH );
 
-    const level_cache &ch = here.access_cache( center.z() );
-
     // Map memory should be at least the size of the view range
     // so that new tiles can be memorized, and at least the size of the display
     // since at farthest zoom displayed area may be bigger than view range.
