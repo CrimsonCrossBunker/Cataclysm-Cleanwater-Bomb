@@ -1492,8 +1492,9 @@ static void sleep()
        and loop until we get a valid answer. */
     as_m.query();
 
+    bool save_before_sleep = false;
     if( as_m.ret == 1 ) {
-        g->quicksave();
+        save_before_sleep = true;
     } else if( as_m.ret == 2 || as_m.ret < 0 ) {
         return;
     }
@@ -1535,6 +1536,10 @@ static void sleep()
         } else if( as_m.ret < 0 ) {
             return;
         }
+    }
+
+    if( save_before_sleep ) {
+        g->quicksave();
     }
 
     player_character.set_moves( 0 );
