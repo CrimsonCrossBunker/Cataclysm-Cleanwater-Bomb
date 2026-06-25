@@ -139,6 +139,9 @@ Thumbs.db
 cscope.*
 tags
 
+# Translation files (pulled from Transifex at CI time)
+/lang/po/*.po
+
 # Generated translation source
 /lang/po/*.pot
 
