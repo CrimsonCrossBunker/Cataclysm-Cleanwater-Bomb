@@ -7,7 +7,8 @@
 #include "input_enums.h" // IWYU pragma: keep  (input_event)
 
 // Deterministic input record/replay harness — phase 0.5 of the sim/render
-// decoupling plan (see .claude/plans/sim-render-decoupling-plan.md).
+// decoupling work (a build target that runs the game loop headlessly for tests
+// and reproducible replay).
 //
 // Goal: capture the stream of input_events from an interactive session, then
 // feed the exact same stream back during a headless re-run so that, given the

@@ -1,7 +1,8 @@
 // Headless platform backend.
 //
-// Phase 0 of the simulate/present decoupling (see plan
-// sim-render-decoupling-plan.md). This file is the curses-free analogue of
+// Phase 0 of the simulate/present decoupling: a build target that runs the game
+// loop with no terminal and no SDL, for tests and deterministic replay. This
+// file is the curses-free analogue of
 // ncurses_def.cpp / wincurse.cpp: it provides the catacurses interface, the
 // platform entry points, the input_manager hooks, the nc_color helpers, and
 // the ImTui ncurses-platform shims -- but touches no terminal at all.
@@ -284,10 +285,10 @@ void input_manager::set_timeout( const int delay )
 // nc_color helpers (curses-free bit layout).
 //
 // This is a byte-for-byte copy of the software implementation in
-// cursesport.cpp:525-557 (the SDL-tiles / wincon path). It is NOT the same as
-// ncurses_def.cpp's version, which uses real ncurses COLOR_PAIR()/A_BOLD macros
-// and the 2-arg nc_color ctor. The three backends partition by #if guard so
-// only one nc_color definition ever links.
+// cursesport.cpp (the nc_color helpers in the SDL-tiles / wincon path). It is
+// NOT the same as ncurses_def.cpp's version, which uses real ncurses
+// COLOR_PAIR()/A_BOLD macros and the 2-arg nc_color ctor. The three backends
+// partition by #if guard so only one nc_color definition ever links.
 //
 // TODO(phase1): the two software copies (here + cursesport.cpp) could share one
 // backend-neutral TU, but the guard union that selects them (TUI / HEADLESS /

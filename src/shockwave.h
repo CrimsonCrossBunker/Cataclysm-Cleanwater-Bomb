@@ -9,7 +9,7 @@
 // window once per frame; when a shockwave is active that blit is done through a
 // distorted triangle mesh, refracting the already-rendered scene (including the
 // phase-one light overlay) along an expanding ring. No GPU shader is involved, so
-// it works on both SDL2 and SDL3 — see the shockwave-distortion plan.
+// it works on both SDL2 and SDL3.
 
 // Live shockwave parameters, expressed entirely in screen pixels so the present
 // path can consume them without any tile/coordinate context. The explosion light

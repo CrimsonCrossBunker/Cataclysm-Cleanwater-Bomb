@@ -447,7 +447,7 @@ enum MULTITILE_TYPE {
 
 // Bitmask of cardinal-direction neighbours used by tile orientation helpers.
 // Moved from cata_tiles.h so map-side code can compute orientation without
-// depending on the tiles subsystem (see sim-render-decoupling-plan.md §1).
+// depending on the tiles subsystem.
 enum class NEIGHBOUR {
     SOUTH = 1,
     EAST  = 2,

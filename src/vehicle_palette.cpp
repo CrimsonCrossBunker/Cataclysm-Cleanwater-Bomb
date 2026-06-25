@@ -86,20 +86,25 @@ int VehiclePalette::fuzzy_to_index( const vpart_id &id ) const
     return -1;
 }
 
-std::vector<RGBColor> VehiclePalette::pick_colors() const
+std::vector<std::optional<RGBColor>> VehiclePalette::pick_colors() const
 {
-    std::vector<RGBColor> result;
+    // One slot per color group, positionally aligned with fuzzy_to_index()'s
+    // return value: a group that rolls nothing (empty / all-zero-weight) keeps an
+    // empty slot instead of being skipped, so a later group is never silently
+    // shifted onto an earlier group's parts.
+    std::vector<std::optional<RGBColor>> result;
+    result.reserve( colors.size() );
     for( const weighted_int_list<std::string> &colorlist : colors ) {
         const std::string *colorstr = colorlist.pick();
         if( !colorstr ) {
+            result.emplace_back();
             continue;
         }
         const std::optional<RGBColor> color = RGBColor::try_parse( *colorstr );
-        if( color ) {
-            result.push_back( *color );
-        } else {
+        if( !color ) {
             debugmsg( "Invalid Color %s in Vehicle Palette %s", *colorstr, id.str() );
         }
+        result.push_back( color );
     }
     return result;
 }
