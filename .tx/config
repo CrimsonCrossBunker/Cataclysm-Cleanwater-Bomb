@@ -8,17 +8,26 @@ source_lang  = en
 type         = PO
 minimum_perc = 0
 
-[o:cataclysm-dda-translators:p:cataclysm-dda:r:credits-master]
-file_filter  = data/credits/<lang>.credits
-source_file  = data/credits/en.credits
-source_lang  = en
-type         = TXT
-minimum_perc = 20
+# CDDA credits/motd 资源 —— 暂时停用,避免 pull 时误拉覆盖本仓库文件
+# [o:cataclysm-dda-translators:p:cataclysm-dda:r:credits-master]
+# file_filter  = data/credits/<lang>.credits
+# source_file  = data/credits/en.credits
+# source_lang  = en
+# type         = TXT
+# minimum_perc = 20
 
-[o:cataclysm-dda-translators:p:cataclysm-dda:r:motd-master]
-file_filter  = data/motd/<lang>.motd
-source_file  = data/motd/en.motd
+# [o:cataclysm-dda-translators:p:cataclysm-dda:r:motd-master]
+# file_filter  = data/motd/<lang>.motd
+# source_file  = data/motd/en.motd
+# source_lang  = en
+# type         = TXT
+# minimum_perc = 20
+
+# ── 自有项目 Cataclysm-Cleanwater-Bomb (复制 CDDA 全部翻译的目标) ──
+[o:Cataclysm-Cleanwater-Bomb:p:cataclysm-cleanwater-bomb:r:cataclysm-dda]
+file_filter  = lang/po/<lang>.po
+source_file  = lang/po/cataclysm-dda.pot
 source_lang  = en
-type         = TXT
-minimum_perc = 20
+type         = PO
+minimum_perc = 0
 
