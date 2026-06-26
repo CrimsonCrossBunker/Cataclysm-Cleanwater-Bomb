@@ -4,7 +4,7 @@
     "id": "PLAYER_MAX_ATTR_VALUE",
     "name": "Remove attribute limits",
     "authors": [ "LunaGlaze" ],
-    "description": "This mod adjusts the player's attribute cap to `int.max-2`, effectively removing the attribute cap restriction. This mod needs to be placed at the bottom of the sorted list for it to work correctly.",
+    "description": "This mod adjusts the player's attribute cap to `int.max-2`, effectively removing the attribute cap restriction.  This mod needs to be placed at the bottom of the sorted list for it to work correctly.",
     "category": "rebalance",
     "dependencies": [ "dda" ]
   },
