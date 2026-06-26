@@ -752,9 +752,26 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // reallocating every step. Freeing here was the dominant movement-time cost
         // (profiled: std::map _Erase_tree + vector reserve/realloc churn). All access
         // is via operator[], so leftover empty rows are indistinguishable from absent.
-        here.draw_points_cache.soft_clear();
+        here.draw_points_cache.tiles.soft_clear();
         here.overlay_strings_cache.clear();
         here.color_blocks_cache = {};
+
+        // Populate view_snapshot metadata. The region is parameterised
+        // explicitly (observer + viewport) so a non-avatar observer or a
+        // different viewport region can produce its own snapshot later
+        // without changing any rendering code.
+        // origin.z = draw_min_z (bottom z-level of the viewport),
+        // observer_z = centre z-level of the viewport (avatar's current z).
+        here.draw_points_cache.origin = here.get_abs(
+            tripoint_bub_ms( min_visible.x, min_visible.y, draw_min_z ) );
+        here.draw_points_cache.observer_z = center.z();
+        here.draw_points_cache.size = point( max_col - min_col, max_row - min_row );
+        here.draw_points_cache.observer = you.getID();
+
+        // Monotonic generation counter: bumped once per snapshot rebuild
+        // (dirty gate), not per render frame, so the server can use it as an
+        // authoritative state version for client interpolation.
+        here.draw_points_cache.generation++;
 
         if( g->display_overlay_state( ACTION_DISPLAY_VEHICLE_AI ) ) {
             for( const wrapped_vehicle &elem : here.get_vehicles() ) {
@@ -776,7 +793,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         for( int row = min_row; row < max_row; row ++ ) {
             // Reserve columns on each row
             for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel -- ) {
-                here.draw_points_cache[zlevel][row].reserve( std::max( 0, max_col - min_col ) );
+                here.draw_points_cache.tiles[zlevel][row].reserve( std::max( 0, max_col - min_col ) );
             }
             for( int col = min_col; col < max_col; col ++ ) {
                 const std::optional<point> temp = tile_to_player( { col, row } );
@@ -807,7 +824,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             invisible[0] = true;
                         } else {
                             if( would_apply_vision_effects( offscreen_type ) ) {
-                                here.draw_points_cache[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
+                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
                                         tile_render_info::vision_effect{ offscreen_type } );
                             }
                             break;
@@ -999,7 +1016,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                     || you.sees_with_specials( *critter ) ) ) ) {
                                 invisible[0] = true;
                             } else {
-                                here.draw_points_cache[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
+                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
                                         tile_render_info::vision_effect{ vis_type } );
                                 break;
                             }
@@ -1087,7 +1104,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         }
                     }
 
-                    here.draw_points_cache[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
+                    here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
                             sprite_var );
                     // Stop building draw points below when floor reached
                     if( here.dont_draw_lower_floor( pos ) ) {
@@ -1167,7 +1184,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             //   (a) we can skip bounds/sprite tracking for tiles that won't be tinted,
             //   (b) the overlay pass later can iterate only tinted tiles.
             std::vector<tile_render_info *> row_tinted;
-            for( tile_render_info &p : here.draw_points_cache[cur_zlevel][row] ) {
+            for( tile_render_info &p : here.draw_points_cache.tiles[cur_zlevel][row] ) {
                 p.com.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
                 p.com.needs_tint = false;
                 if( !zlev_has_color ) {
@@ -1230,7 +1247,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 const bool track_bounds = !iso &&
                                           f != &cata_tiles::draw_zone_mark &&
                                           f != &cata_tiles::draw_zombie_revival_indicators;
-                for( tile_render_info &p : here.draw_points_cache[cur_zlevel][row] ) {
+                for( tile_render_info &p : here.draw_points_cache.tiles[cur_zlevel][row] ) {
                     const bool ortho_tint = track_bounds && p.com.needs_tint;
                     m_cur_bounds = ortho_tint ? &p.com.bounds : nullptr;
                     m_cur_tint_sprites = ortho_tint ? &p.com.tint_sprites : nullptr;
@@ -1571,7 +1588,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     // display number of monsters to spawn in mapgen preview
     for( int row = top_any_tile_range.p_min.y; row < top_any_tile_range.p_max.y; row ++ ) {
-        for( const tile_render_info &p : here.draw_points_cache[center.z()][row] ) {
+        for( const tile_render_info &p : here.draw_points_cache.tiles[center.z()][row] ) {
             const tile_render_info::sprite *const
             var = std::get_if<tile_render_info::sprite>( &p.var );
             if( !var ) {
@@ -3369,7 +3386,7 @@ bool cata_tiles::draw_sprite_at(
     ( void )shader_bound;
 #endif
     // this reference passes all the way back up the call chain back to
-    // cata_tiles::draw() here.draw_points_cache[z][row][col].com.height_3d
+    // cata_tiles::draw() here.draw_points_cache.tiles[z][row][col].com.height_3d
     // where we are accumulating the height of every sprite stacked up in a tile
     height_3d += tile.height_3d;
     return true;
@@ -3518,23 +3535,31 @@ bool cata_tiles::draw_terrain( const tripoint_bub_ms &p, const lit_level ll, int
             }
         }
     }
+    // Normal path: read from the cache populated during the rebuild pass.
+    // No live map access — terrain content and orientation were captured
+    // when the draw cache was rebuilt (dirty-gated).
+    if( !invisible[0] && !neighborhood_overridden ) {
+        const tile_render_info::sprite &cap =
+            std::get<tile_render_info::sprite>( m_cur_tile->var );
+
+        if( !cap.ter_content ) {
+            return false;
+        }
+        // Legacy mode does not draw fog sprites
+        if( fov_3d_z_range == 0 && cap.ter_content.id().str() == "t_open_air" ) {
+            return false;
+        }
+        return draw_from_id_string( cap.ter_content.id().str(), TILE_CATEGORY::TERRAIN, empty_string,
+                                    p, cap.ter_content_subtile, cap.ter_content_rotation,
+                                    ll, nv_goggles_activated, height_3d );
+    }
+    // Override / memory / invisible path: live-read from the map because
+    // override previews and memory tiles are not captured into the cache.
     const ter_id &t = here.ter( p );
     const std::string &tname = t.id().str();
     // Legacy mode does not draw fog sprites
     if( fov_3d_z_range == 0 && tname == "t_open_air" ) {
         return false;
-    }
-    if( t && !invisible[0] && !neighborhood_overridden ) {
-        // Draw the terrain from the content captured into the draw cache during
-        // the rebuild pass. The capture mirrored this branch's orientation
-        // computation, so the renderer no longer reads the map live here. The
-        // override and memory branches below still read live because their
-        // content is not captured into the cache.
-        const tile_render_info::sprite &cap =
-            std::get<tile_render_info::sprite>( m_cur_tile->var );
-        return draw_from_id_string( cap.ter_content.id().str(), TILE_CATEGORY::TERRAIN, empty_string,
-                                    p, cap.ter_content_subtile, cap.ter_content_rotation,
-                                    ll, nv_goggles_activated, height_3d );
     }
     if( invisible[0] ? overridden : neighborhood_overridden ) {
         // and then draw the override terrain
@@ -3588,19 +3613,25 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
             }
         }
     }
-    map &here = get_map();
-    const furn_id &f = here.furn( p );
-    if( f && !invisible[0] && !neighborhood_overridden ) {
-        // Draw the furniture from the content captured into the draw cache
-        // during the rebuild pass (see draw_terrain). The override and memory
-        // branches below still read live.
+    // Normal path: read from the cache populated during the rebuild pass.
+    // No live map access — furniture content and orientation were captured
+    // when the draw cache was rebuilt (dirty-gated).
+    if( !invisible[0] && !neighborhood_overridden ) {
         const tile_render_info::sprite &cap =
             std::get<tile_render_info::sprite>( m_cur_tile->var );
+
+        if( !cap.furn_content ) {
+            return false;
+        }
         return draw_from_id_string( cap.furn_content.id().str(), TILE_CATEGORY::FURNITURE,
                                     empty_string, p, cap.furn_content_subtile,
                                     cap.furn_content_rotation,
                                     ll, nv_goggles_activated, height_3d );
     }
+    // Override / memory / invisible path: live-read from the map because
+    // override previews and memory tiles are not captured into the cache.
+    map &here = get_map();
+    const furn_id &f = here.furn( p );
     if( invisible[0] ? overridden : neighborhood_overridden ) {
         // and then draw the override furniture
         const furn_id &f2 = overridden ? override->second : f;
@@ -3664,20 +3695,26 @@ bool cata_tiles::draw_trap( const tripoint_bub_ms &p, const lit_level ll, int &h
         }
     }
 
-    avatar &you = get_avatar();
-    map &here = get_map();
-    const trap &tr = here.tr_at( p );
-    if( !tr.is_null() && !invisible[0] && tr.can_see( p, you ) && !neighborhood_overridden ) {
-        // Draw the trap from the content captured into the draw cache during the
-        // rebuild pass (see draw_terrain). The visibility gate above mirrors the
-        // capture condition. The override and memory branches below still read
-        // live.
+    // Normal path: read from the cache populated during the rebuild pass.
+    // The rebuild only captures a trap when it is visible to the avatar
+    // (tr.can_see gate), so a non-null trap_content here implies both
+    // "trap present" and "trap visible to the observer".  No live map access.
+    if( !invisible[0] && !neighborhood_overridden ) {
         const tile_render_info::sprite &cap =
             std::get<tile_render_info::sprite>( m_cur_tile->var );
+
+        if( !cap.trap_content ) {
+            return false;
+        }
         return draw_from_id_string( cap.trap_content.id().str(), TILE_CATEGORY::TRAP, empty_string,
                                     p, cap.trap_content_subtile, cap.trap_content_rotation,
                                     ll, nv_goggles_activated, height_3d );
     }
+    // Override / memory / invisible path: live-read from the map because
+    // override previews and memory tiles are not captured into the cache.
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const trap &tr = here.tr_at( p );
     if( overridden || ( !invisible[0] && neighborhood_overridden &&
                         tr.can_see( p, you ) ) ) {
         // and then draw the override trap
