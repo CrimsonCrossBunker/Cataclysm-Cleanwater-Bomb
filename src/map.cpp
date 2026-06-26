@@ -607,6 +607,18 @@ void map::update_map_memory( avatar &you )
     const int z = you.posz();
     const level_cache &ch = here.access_cache( z );
 
+    // Ensure the player's map-memory cache covers the window this pass is about
+    // to memorize. The render paths (map::draw for curses, cata_tiles for tiles)
+    // prepare this region before memorizing, but Stage 1 moved the memorize into
+    // this sim pass without bringing the prepare along. Without it, set_tile_*
+    // silently no-ops for any tile whose memory submap is not yet allocated
+    // (region edge / freshly entered area), and the dirty flag is still cleared
+    // afterwards — so non-connecting terrain such as grass, which is memorized
+    // exactly once and never re-dirtied, is lost permanently and renders black.
+    you.prepare_map_memory_region(
+        here.get_abs( tripoint_bub_ms( min_visible.x, min_visible.y, z ) ),
+        here.get_abs( tripoint_bub_ms( max_visible.x, max_visible.y, z ) ) );
+
     // Mirrors cata_tiles::apply_visible: a neighbour is "invisible" for
     // orientation purposes if it falls outside the view window or fails the
     // visibility test (anything other than a CLEAR view).
