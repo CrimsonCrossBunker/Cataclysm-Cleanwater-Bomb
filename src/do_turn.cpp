@@ -572,10 +572,12 @@ bool game::do_turn()
     avatar &u = get_avatar();
     map &m = get_map();
     // If controlling a vehicle that is owned by someone else
-    if( u.in_vehicle && u.controlling_vehicle ) {
-        vehicle *veh = veh_pointer_or_null( m.veh_at( u.pos_bub() ) );
-        if( veh && !veh->handle_potential_theft( u, true ) ) {
-            veh->handle_potential_theft( u, false, false );
+    if( calendar::once_every( 1_minutes ) ) {
+        if( u.in_vehicle && u.controlling_vehicle ) {
+            vehicle *veh = veh_pointer_or_null( m.veh_at( u.pos_bub() ) );
+            if( veh && !veh->handle_potential_theft( u, true ) ) {
+                veh->handle_potential_theft( u, false, false );
+            }
         }
     }
 
