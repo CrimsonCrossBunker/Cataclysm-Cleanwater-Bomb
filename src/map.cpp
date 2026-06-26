@@ -644,6 +644,19 @@ void map::update_map_memory( avatar &you )
                 memorize_vpart_at( here, you, p, invisible );
                 here.memory_cache_dec_set_dirty( p, false );
             }
+            // Clear the terrain-memory dirty flag now that this pass has
+            // memorized the terrain content, mirroring the decoration clear
+            // above. Only in tiles mode: in curses mode the same flag also
+            // gates symbol memorization in map::draw_maptile, which consumes
+            // and clears it there, so clearing it here would starve that path.
+            // (Before, the tiles render path cleared this flag; moving the
+            // clear into this sim pass keeps it in lockstep with the memorize,
+            // so terrain that does not re-dirty itself every pass — anything
+            // without connects_to, e.g. grass — is no longer at risk of having
+            // the flag cleared by a redraw before this pass memorizes it.)
+            if( is_draw_tiles_mode() ) {
+                here.memory_cache_ter_set_dirty( p, false );
+            }
         }
     }
 }

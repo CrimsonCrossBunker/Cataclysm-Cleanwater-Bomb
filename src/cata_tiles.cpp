@@ -1503,9 +1503,6 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                                      direction::NORTH ) );
                 }
             }
-            if( !var->invisible[0] ) {
-                here.memory_cache_ter_set_dirty( p.com.pos, false );
-            }
         }
     }
     // tile overrides are already drawn in the previous code
