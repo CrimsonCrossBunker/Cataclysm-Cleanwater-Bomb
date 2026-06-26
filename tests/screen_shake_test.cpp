@@ -1,7 +1,9 @@
+#include <stdlib.h>
+#include <algorithm>
+#include <cmath>
+
 #include "cata_catch.h"
 #include "screen_shake.h"
-
-#include <cmath>
 
 // Pure-function tests for the screen-shake core. screen_shake_offset() has no SDL
 // or options dependency, so the damped-oscillation math can be verified directly.

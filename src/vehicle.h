@@ -48,6 +48,7 @@
 #include "tileray.h"
 #include "type_id.h"
 #include "units.h"
+#include "veh_type.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -66,6 +67,7 @@ class vpart_variant;
 enum class ter_furn_flag : int;
 enum vpart_bitflags : int;
 struct itype;
+struct vehicle_prototype;
 struct RGBColor;
 struct RGBColorPair;
 struct vehicle_part;

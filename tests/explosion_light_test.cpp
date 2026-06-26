@@ -1,3 +1,7 @@
+#include <stdint.h>
+#include <array>
+#include <vector>
+
 #include "cata_catch.h"
 #include "explosion_light.h"
 
