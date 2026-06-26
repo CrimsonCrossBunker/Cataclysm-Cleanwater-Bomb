@@ -790,14 +790,20 @@ bool game::do_turn()
     // replenish avatar moves
     u.process_turn();
 
-    // Refresh visibility so update_map_memory operates on a current snapshot.
-    m.update_visibility_cache( u.posz() );
-
     // Update player map memory from the current field of view.  This used to
     // happen lazily inside the tiles draw path; running it here in the sim loop
     // (after the map cache is built, before the visibility cache is
-    // invalidated) lets rendering become pure-read.
-    m.update_map_memory( u );
+    // invalidated) lets rendering become pure-read and keeps memory on the sim
+    // side (required by autodrive / NPC pathing that consume it).
+    // Skip only during view-blocking activities (sleeping / reading / long-wait
+    // / crafting) — the same condition that triggers handle_progress_ui's
+    // wait popup.  During those the player cannot see the world, so per-turn
+    // memorisation is pure waste and the source of the stutter.
+    const bool in_long_wait = u.has_effect( effect_sleep ) ||
+                              static_cast<bool>( u.activity.get_progress_message( u ) );
+    if( !in_long_wait ) {
+        m.update_map_memory( u );
+    }
 
     if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
         ui_manager::redraw();
