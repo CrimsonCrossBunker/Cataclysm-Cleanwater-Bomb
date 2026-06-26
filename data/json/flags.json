@@ -1649,6 +1649,10 @@
     "type": "json_flag"
   },
   {
+    "id": "IMPERIAL_ROAD_TRAVELER",
+    "type": "json_flag"
+  },
+  {
     "id": "INEDIBLE",
     "type": "json_flag"
   },
