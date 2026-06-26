@@ -969,7 +969,21 @@ static void haul()
             drop_locations result = selector.execute( true );
             haulable_items.clear();
             for( const drop_location &dl : result ) {
-                haulable_items.push_back( dl.first );
+                if( dl.first->count_by_charges() && dl.second < dl.first->charges ) {
+                    // Partial stack selected: split the item on the ground so the haul
+                    // list gets a correctly-sized item_location.
+                    item_location loc = dl.first;
+                    item_location split_loc = loc.split_stack( dl.second );
+                    if( split_loc ) {
+                        haulable_items.push_back( split_loc );
+                    } else {
+                        debugmsg( "Failed to split %s for hauling, hauling entire stack.",
+                                  dl.first->display_name() );
+                        haulable_items.push_back( dl.first );
+                    }
+                } else {
+                    haulable_items.push_back( dl.first );
+                }
             }
             if( haulable_items != player_character.haul_list ) {
                 player_character.suppress_autohaul = true;

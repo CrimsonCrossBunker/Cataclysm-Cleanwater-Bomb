@@ -506,7 +506,7 @@ void advanced_inventory::print_items( side p, bool active )
         }
 
         //print "amount" column
-        int it_amt = sitem.stacks;
+        int it_amt = sitem.amount;
         if( it_amt > 1 ) {
             print_color = thiscolor;
             if( it_amt > 9999 ) {
@@ -682,8 +682,8 @@ struct advanced_inv_sorter {
                 break;
             }
             case SORTBY_STACKS:
-                if( d1.stacks != d2.stacks ) {
-                    return d1.stacks > d2.stacks;
+                if( d1.amount != d2.amount ) {
+                    return d1.amount > d2.amount;
                 }
                 break;
         }
