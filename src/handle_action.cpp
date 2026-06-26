@@ -1499,8 +1499,22 @@ static void sleep()
         return;
     }
 
-    if( !g->warn_player_maybe_anger_local_faction( false, true ) ) {
-        return; // player declined to annoy locals by illegally sleeping in their territory
+    bool may_illegally = false;
+    if( vp ) {
+        vehicle *veh = veh_pointer_or_null( vp );
+        if( veh && !veh->is_owned_by( player_character ) ) {
+            may_illegally = true;
+        }
+    }
+    if( here.has_furn( p ) ) {
+        if( !here.has_flag( "FREE_TO_EXAMINE", p ) ) {
+            may_illegally = true;
+        }
+    }
+    if( may_illegally ) {
+        if( !g->warn_player_maybe_anger_local_faction( false, true ) ) {
+            return; // player declined to annoy locals by illegally sleeping in their territory
+        }
     }
 
     time_duration try_sleep_dur = 24_hours;
