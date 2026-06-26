@@ -66,15 +66,15 @@
     ]
   },
   {
-    "type": "practice",
-    "id": "prac_tsow_thresh_wild_rice",
+    "type": "recipe",
+    "id": "tsow_thresh_wild_rice",
     "activity_level": "LIGHT_EXERCISE",
     "category": "CC_FOOD",
     "subcategory": "CSC_FOOD_OTHER",
     "name": "从带穗草杆中脱粒野米",
     "description": "把带穗的草杆揉搓、筛选，尝试分离出其中可食用的野米。每根草杆都有十分之一的机会含有一小把野米。",
     "skill_used": "survival",
-    "practice_data": { "min_difficulty": 0, "max_difficulty": 0, "skill_limit": 1 },
+    "difficulty": 0,
     "time": "10 m",
     "autolearn": [ [ "survival", 0 ] ],
     "components": [ [ [ "tsow_grass_stalk_with_seed", 10 ] ] ],
