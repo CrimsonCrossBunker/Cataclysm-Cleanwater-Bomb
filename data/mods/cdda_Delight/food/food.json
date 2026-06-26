@@ -117,5 +117,89 @@
     "id": "spaghetti_bolognese",
     "copy-from": "spaghetti_bolognese",
     "consumption_effect_on_conditions": [ "eoc_cd_delight_spaghetti_bolognese" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "gateau_st_honore",
+    "copy-from": "gateau_st_honore",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_gateau_st_honore" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "religieuse_au_chocolat",
+    "copy-from": "religieuse_au_chocolat",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_religieuse_au_chocolat" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "cake2",
+    "copy-from": "cake2",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_cake2" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "baklava",
+    "copy-from": "baklava",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_baklava" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "brownie",
+    "copy-from": "brownie",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_brownie" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "foie_gras",
+    "copy-from": "foie_gras",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_foie_gras" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "confit_meat",
+    "copy-from": "confit_meat",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_confit_meat" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "sarma",
+    "copy-from": "sarma",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_sarma" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "kiymali_pide",
+    "copy-from": "kiymali_pide",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_kiymali_pide" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "manti",
+    "copy-from": "manti",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_manti" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "lasagne",
+    "copy-from": "lasagne",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_lasagne" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "spaghetti_pesto",
+    "copy-from": "spaghetti_pesto",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_spaghetti_pesto" ]
   }
 ]

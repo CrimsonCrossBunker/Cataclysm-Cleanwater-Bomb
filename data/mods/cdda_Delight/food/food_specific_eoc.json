@@ -159,5 +159,169 @@
         "variables": { "intensity": 2, "duration": 3600, "max_duration": 10800 }
       }
     ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_gateau_st_honore",
+    "//": "gateau_st_honore：智力增强5级+专注回复3级，单份持续1800秒，最长叠加18000秒（recipe产出10个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_intelligence_enhancement_apply",
+        "variables": { "intensity": 5, "duration": 1800, "max_duration": 18000 }
+      },
+      {
+        "run_eocs": "eoc_cd_delight_focus_regen_apply",
+        "variables": { "intensity": 3, "duration": 1800, "max_duration": 18000 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_religieuse_au_chocolat",
+    "//": "religieuse_au_chocolat：智力增强3级+专注回复2级，单份持续1500秒，最长叠加15000秒（recipe产出10个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_intelligence_enhancement_apply",
+        "variables": { "intensity": 3, "duration": 1500, "max_duration": 15000 }
+      },
+      {
+        "run_eocs": "eoc_cd_delight_focus_regen_apply",
+        "variables": { "intensity": 2, "duration": 1500, "max_duration": 15000 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_cake2",
+    "//": "cake2：专注回复3级+智力增强2级，单份持续1500秒，最长叠加18000秒（recipe产出12个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_focus_regen_apply",
+        "variables": { "intensity": 3, "duration": 1500, "max_duration": 18000 }
+      },
+      {
+        "run_eocs": "eoc_cd_delight_intelligence_enhancement_apply",
+        "variables": { "intensity": 2, "duration": 1500, "max_duration": 18000 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_baklava",
+    "//": "baklava：专注回复2级，单份持续1200秒，最长叠加8400秒（recipe产出7个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_focus_regen_apply",
+        "variables": { "intensity": 2, "duration": 1200, "max_duration": 8400 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_brownie",
+    "//": "brownie：专注回复2级，单份持续1800秒，最长叠加7200秒（recipe产出4个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_focus_regen_apply",
+        "variables": { "intensity": 2, "duration": 1800, "max_duration": 7200 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_foie_gras",
+    "//": "foie_gras：感知增强3级，单份持续3600秒，最长叠加3600秒（recipe产出1个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_perception_enhancement_apply",
+        "variables": { "intensity": 3, "duration": 3600, "max_duration": 3600 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_confit_meat",
+    "//": "confit_meat：力量增强3级+饱足3级，单份持续7200秒，最长叠加7200秒（recipe产出1个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_strength_enhancement_apply",
+        "variables": { "intensity": 3, "duration": 7200, "max_duration": 7200 }
+      },
+      {
+        "run_eocs": "eoc_cd_delight_satiety_apply",
+        "variables": { "intensity": 3, "duration": 7200, "max_duration": 7200 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_sarma",
+    "//": "sarma：力量增强3级+饱足3级，单份持续1800秒，最长叠加7200秒（recipe产出4个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_strength_enhancement_apply",
+        "variables": { "intensity": 3, "duration": 1800, "max_duration": 7200 }
+      },
+      {
+        "run_eocs": "eoc_cd_delight_satiety_apply",
+        "variables": { "intensity": 3, "duration": 1800, "max_duration": 7200 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_kiymali_pide",
+    "//": "kiymali_pide：力量增强2级+饱足3级，单份持续1200秒，最长叠加7200秒（recipe产出6个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_strength_enhancement_apply",
+        "variables": { "intensity": 2, "duration": 1200, "max_duration": 7200 }
+      },
+      {
+        "run_eocs": "eoc_cd_delight_satiety_apply",
+        "variables": { "intensity": 3, "duration": 1200, "max_duration": 7200 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_manti",
+    "//": "manti：力量增强2级+饱足2级，单份持续720秒，最长叠加7200秒（recipe产出10个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_strength_enhancement_apply",
+        "variables": { "intensity": 2, "duration": 720, "max_duration": 7200 }
+      },
+      {
+        "run_eocs": "eoc_cd_delight_satiety_apply",
+        "variables": { "intensity": 2, "duration": 720, "max_duration": 7200 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_lasagne",
+    "//": "lasagne：饱足3级+滋养2级，单份持续2700秒，最长叠加10800秒（recipe产出4个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_satiety_apply",
+        "variables": { "intensity": 3, "duration": 2700, "max_duration": 10800 }
+      },
+      {
+        "run_eocs": "eoc_cd_delight_nourishment_apply",
+        "variables": { "intensity": 2, "duration": 2700, "max_duration": 10800 }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_spaghetti_pesto",
+    "//": "spaghetti_pesto：智力增强2级，单份持续3600秒，最长叠加3600秒（recipe产出1个）。",
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_intelligence_enhancement_apply",
+        "variables": { "intensity": 2, "duration": 3600, "max_duration": 3600 }
+      }
+    ]
   }
 ]
