@@ -7,7 +7,9 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <set>
 #include <string>
 #include <string_view>
@@ -662,6 +664,13 @@ class overmapbuffer
         bool is_findable_location( const tripoint_abs_omt &location, const omt_find_params &params );
 
         std::unordered_map< point_abs_om, std::unique_ptr< overmap > > overmaps;
+
+        /** shared_mutex for concurrent overmap reads from background workers.
+         *  Workers doing pathfinding / horde scans can read overmaps concurrently
+         *  under a shared_lock; the main thread takes an exclusive lock only on
+         *  write (get on miss, clear, place_special). */
+        mutable std::shared_mutex overmaps_mutex_;
+
         /**
          * Set of overmap coordinates of overmaps that are known
          * to not exist on disk. See @ref get_existing for usage.

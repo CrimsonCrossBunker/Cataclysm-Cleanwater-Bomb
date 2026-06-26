@@ -100,26 +100,39 @@ cata_path overmapbuffer::player_filename( const point_abs_om &p )
 
 overmap &overmapbuffer::get( const point_abs_om &p )
 {
+    // Fast path: cache hit (no lock needed — pointer value is stable once set,
+    // and overmap objects are never deleted until clear())
     if( last_requested_overmap != nullptr && last_requested_overmap->pos() == p ) {
         return *last_requested_overmap;
     }
 
-    const auto it = overmaps.find( p );
-    if( it != overmaps.end() ) {
-        return *( last_requested_overmap = it->second.get() );
+    // Try shared (read) lock first
+    {
+        std::shared_lock<std::shared_mutex> lk( overmaps_mutex_ );
+        const auto it = overmaps.find( p );
+        if( it != overmaps.end() ) {
+            return *( last_requested_overmap = it->second.get() );
+        }
     }
 
-    // That constructor loads an existing overmap or creates a new one.
-    overmap &new_om = *( overmaps[ p ] = std::make_unique<overmap>( p ) );
-    global_state.overmap_count++;
-    new_om.populate();
-    // Note: fix_mongroups might load other overmaps, so overmaps.back() is not
-    // necessarily the overmap at (x,y)
-    fix_mongroups( new_om );
-    fix_npcs( new_om );
+    // Cache miss: upgrade to exclusive (write) lock
+    {
+        std::unique_lock<std::shared_mutex> lk( overmaps_mutex_ );
+        // Double-check: another thread may have inserted while upgrading
+        const auto it = overmaps.find( p );
+        if( it != overmaps.end() ) {
+            return *( last_requested_overmap = it->second.get() );
+        }
 
-    last_requested_overmap = &new_om;
-    return new_om;
+        overmap &new_om = *( overmaps[ p ] = std::make_unique<overmap>( p ) );
+        global_state.overmap_count++;
+        new_om.populate();
+        fix_mongroups( new_om );
+        fix_npcs( new_om );
+
+        last_requested_overmap = &new_om;
+        return new_om;
+    }
 }
 
 void overmapbuffer::create_custom_overmap( const point_abs_om &p, overmap_special_batch &specials )
