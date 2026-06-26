@@ -12,9 +12,10 @@
 #include <vector>
 
 #include "hsv_color.h"
-#include "json.h"
 #include "type_id.h"
 #include "weighted_list.h"
+
+class JsonObject;
 
 /**
  * Random vehicle color palette. Ported from Cataclysm: Bright Nights.

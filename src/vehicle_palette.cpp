@@ -5,15 +5,14 @@
 // group and pick_colors() rolls one weighted-random color per group. Colors are
 // referenced by name (resolved through RGBColor::try_parse -> named_colors.json).
 
-#include <cstddef>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "hsv_color.h"
-#include "json.h"
 #include "type_id.h"
 
 // Only ever accessed from this translation unit (all lookups route through the

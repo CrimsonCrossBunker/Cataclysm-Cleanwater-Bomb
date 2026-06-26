@@ -1,10 +1,10 @@
-#include "cata_catch.h"
-#include "vfx_emit.h"
-
 #include <algorithm>
 #include <vector>
 
+#include "cata_catch.h"
 #include "coordinates.h"
+#include "point.h"
+#include "vfx_emit.h"
 
 static bool has_tile( const std::vector<tripoint_bub_ms> &v, const tripoint_bub_ms &p )
 {

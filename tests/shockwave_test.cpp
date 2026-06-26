@@ -1,7 +1,8 @@
+#include <cmath>
+#include <initializer_list> 
+
 #include "cata_catch.h"
 #include "shockwave.h"
-
-#include <cmath>
 
 // Pure-function tests for the shockwave warp core. shockwave_vertex_offset() has
 // no SDL dependency, so the radial-displacement math can be verified directly.

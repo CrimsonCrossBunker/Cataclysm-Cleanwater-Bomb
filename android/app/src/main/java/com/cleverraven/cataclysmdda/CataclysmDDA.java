@@ -19,6 +19,8 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.lyhglytx.cataclysmcb.NativeUI;
+
 public class CataclysmDDA extends SDLActivity {
     private static final String TAG = "CDDA";
     public static final String PREF_SYSTEM_UI_MODE = "Android system UI mode";
