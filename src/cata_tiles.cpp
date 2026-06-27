@@ -1127,6 +1127,33 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_creature_columns.insert( cpos.xy() );
     }
 
+    // Refresh the per-tile field cache every frame.  Fields can appear
+    // between the dirty-gated rebuild and the layer loop (e.g. an
+    // intermediate draw during handle_action consumes the dirty flag
+    // before a later action creates the field), so a one-shot
+    // rebuild-time capture is insufficient.  The same row / z-level
+    // bounds as the rebuild are used.
+    {
+        map &here = get_map();
+        for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel-- ) {
+            for( int row = min_row; row < max_row; row++ ) {
+                for( tile_render_info &tri : here.draw_points_cache.tiles[zlevel][row] ) {
+                    tile_render_info::sprite *const var =
+                        std::get_if<tile_render_info::sprite>( &tri.var );
+                    if( !var || var->invisible[0] ) {
+                        continue;
+                    }
+                    const field &f = here.field_at( tri.com.pos );
+                    const field_type_id disp_fld = f.displayed_field_type();
+                    if( disp_fld ) {
+                        var->set_field_content( disp_fld,
+                                               f.displayed_intensity() );
+                    }
+                }
+            }
+        }
+    }
+
     // List all layers for a single z-level
     const std::array<decltype( &cata_tiles::draw_furniture ), 11> drawing_layers = {{
             &cata_tiles::draw_terrain, &cata_tiles::draw_furniture, &cata_tiles::draw_graffiti, &cata_tiles::draw_trap, &cata_tiles::draw_part_con,
@@ -3856,10 +3883,18 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
 {
     const auto fld_override = field_override.find( p );
     const bool fld_overridden = fld_override != field_override.end();
+    // Primary field type from the per-frame draw-points cache.
+    // fd_null means no displayable field is present on this tile.
+    const tile_render_info::sprite &cap =
+        std::get<tile_render_info::sprite>( m_cur_tile->var );
+    const field_type_id &cached_fld = cap.field_content;
+    const field_type_id &fld = fld_overridden ?
+                               fld_override->second : cached_fld;
+    // The full field object is still read live — it is needed for
+    // per-field-entry iteration in the non-override path below.
     map &here = get_map();
     const field &f = here.field_at( p );
-    const field_type_id &fld = fld_overridden ?
-                               fld_override->second : f.displayed_field_type();
+
     bool ret_draw_field = false;
     bool ret_draw_items = false;
 

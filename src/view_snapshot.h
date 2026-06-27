@@ -125,8 +125,8 @@ struct tile_render_info {
         // Only the static layers are captured here — terrain, furniture, trap,
         // partial construction, graffiti — because the rebuild runs only when
         // the cache is marked dirty (player action), which matches how often
-        // these change. Dynamic content (fields, items, vehicles, creatures)
-        // changes every turn and is left on the live path for now.
+        // these change.  Fields are captured per-frame in draw(); items,
+        // vehicles, and creatures remain on the live path for now.
         //
         // A null/empty content field means nothing was captured for that layer
         // (memory / override / invisible tiles, or simply nothing present).
@@ -145,6 +145,16 @@ struct tile_render_info {
         bool graffiti_captured = false;
         std::string graffiti_content;
         int graffiti_content_rotation = 0;
+
+        // Field data captured every frame just before the layer loop.
+        // Fields can appear between the dirty-gated rebuild and draw
+        // time (an intermediate draw during handle_action can consume
+        // the dirty flag before a later action creates the field),
+        // so a one-shot rebuild-time capture is insufficient.
+        // Default-constructed field_type_id (null) means no displayable
+        // field is present on this tile.
+        field_type_id field_content;
+        int field_intensity = 0;
 
         sprite( const lit_level ll, const std::array<bool, 5> &inv )
             : ll( ll ), invisible( inv ) {}
@@ -168,6 +178,10 @@ struct tile_render_info {
             graffiti_captured = true;
             graffiti_content = text;
             graffiti_content_rotation = rotation;
+        }
+        void set_field_content( const field_type_id &fid, const int intensity ) {
+            field_content = fid;
+            field_intensity = intensity;
         }
     };
 
@@ -232,6 +246,11 @@ class draw_points_cache_t
                         r.clear(); // keep capacity
                     }
                 }
+                // Range-based for support for per-z-level row iteration.
+                auto begin()       { return rows.begin(); }
+                auto end()         { return rows.end(); }
+                auto begin() const { return rows.begin(); }
+                auto end()   const { return rows.end(); }
             private:
                 int row_base = 0;
                 bool initialized = false;
