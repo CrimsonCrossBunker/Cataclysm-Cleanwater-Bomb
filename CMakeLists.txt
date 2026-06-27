@@ -1,11 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-option(TILES "Build graphical tileset version." "OFF")
-option(USE_SDL3 "Build against SDL3 instead of SDL2 (requires TILES)." "${TILES}")
-if (USE_SDL3)
-    set(VCPKG_MANIFEST_FEATURES "sdl3")
-elseif (TILES)
-    set(VCPKG_MANIFEST_FEATURES "sdl2")
-endif()
+
 project(CataclysmDDA)
 
 list(APPEND CMAKE_MODULE_PATH
@@ -19,6 +13,8 @@ set(CMAKE_TLS_VERIFY ON)
 
 # Build options
 include(CMakeDependentOption)
+option(TILES "Build graphical tileset version." "OFF")
+option(USE_SDL3 "Build against SDL3 instead of SDL2 (requires TILES)." "${TILES}")
 option(CURSES "Build curses version." "ON")
 option(HEADLESS "Build headless version (no terminal/SDL; in-memory ImTui text renderer). For tests, replay, and server." "OFF")
 option(SOUND "Support for in-game sounds & music." "OFF")
