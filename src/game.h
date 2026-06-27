@@ -219,7 +219,7 @@ class game
         void simulate_turn_prefix();       // world progression: calendar, weather, NPCs, hordes
         bool do_avatar_action_loop();      // player input & action; returns true if game over
         void simulate_turn_suffix();       // post-action simulation: creatures, map cache, memory
-        void present_turn();               // rendering, audio, UI, cleanup
+        void present_turn();               // rendering, audio, UI
 
         /** Loads static data that does not depend on mods or similar. */
         void load_static_data();
@@ -1349,6 +1349,7 @@ class game
          *  run at a different rate than the simulation without losing cached
          *  visibility state. */
         bool skip_mid_step_render = false; // NOLINT(cata-serialize)
+
         /** Is Zone manager open or not - changes graphics of some zone tiles */
         bool zones_manager_open = false; // NOLINT(cata-serialize)
 

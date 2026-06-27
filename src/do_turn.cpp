@@ -810,30 +810,22 @@ void game::simulate_turn_suffix()
     if( !in_long_wait ) {
         m.update_map_memory( u );
     }
-}
 
-void game::present_turn()
-{
-    avatar &u = get_avatar();
-    map &m = get_map();
-
-    if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
-        ui_manager::redraw();
-        refresh_display();
-    }
-
-    if( m.get_abs_sub().z() >= 0 && !u.is_underwater() ) {
+    // Per-turn world-state updates previously ran inside present_turn().
+    // Moving them here keeps simulation advancing every tick regardless of
+    // whether the renderer is gated.
+    if( levz >= 0 && !u.is_underwater() ) {
         handle_weather_effects( get_weather().weather_id );
     }
-
-    handle_progress_ui();
 
     m.invalidate_visibility_cache();
 
     u.update_bodytemp();
-    weather_manager &weather = get_weather();
-    u.update_body_wetness( *weather.weather_precise );
-    u.apply_wetness_morale( weather.temperature );
+    {
+        weather_manager &weather = get_weather();
+        u.update_body_wetness( *weather.weather_precise );
+        u.apply_wetness_morale( weather.temperature );
+    }
 
     if( calendar::once_every( 1_minutes ) ) {
         u.update_morale();
@@ -847,6 +839,25 @@ void game::present_turn()
         u.check_and_recover_morale();
     }
 
+    // reset player noise
+    u.volume = 0;
+
+    // Calculate bionic power balance
+    u.power_balance = u.get_power_level() - u.power_prev_turn;
+    u.power_prev_turn = u.get_power_level();
+}
+
+void game::present_turn()
+{
+    avatar &u = get_avatar();
+
+    if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
+        ui_manager::redraw();
+        refresh_display();
+    }
+
+    handle_progress_ui();
+
     if( !u.is_deaf() ) {
         sfx::remove_hearing_loss();
     }
@@ -854,13 +865,6 @@ void game::present_turn()
     sfx::do_vehicle_engine_sfx();
     sfx::do_vehicle_exterior_engine_sfx();
     sfx::do_low_stamina_sfx();
-
-    // reset player noise
-    u.volume = 0;
-
-    // Calculate bionic power balance
-    u.power_balance = u.get_power_level() - u.power_prev_turn;
-    u.power_prev_turn = u.get_power_level();
 
 #if defined(EMSCRIPTEN)
     // This will cause a prompt to be shown if the window is closed, until the
