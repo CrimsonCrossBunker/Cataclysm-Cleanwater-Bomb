@@ -125,8 +125,8 @@ struct tile_render_info {
         // Only the static layers are captured here — terrain, furniture, trap,
         // partial construction, graffiti — because the rebuild runs only when
         // the cache is marked dirty (player action), which matches how often
-        // these change.  Fields are captured per-frame in draw(); items,
-        // vehicles, and creatures remain on the live path for now.
+        // these change.  Fields and items are captured per-frame in draw();
+        // vehicles and creatures remain on the live path for now.
         //
         // A null/empty content field means nothing was captured for that layer
         // (memory / override / invisible tiles, or simply nothing present).
@@ -156,6 +156,19 @@ struct tile_render_info {
         field_type_id field_content;
         int field_intensity = 0;
 
+        // Item data for the topmost visible item, captured per-frame
+        // alongside fields.  Items can appear or disappear between the
+        // dirty-gated rebuild and the layer loop (monster drops, pickup
+        // during handle_action, etc.), so a one-shot rebuild-time
+        // capture is insufficient.
+        // Default-constructed itype_id (null) means no displayable
+        // topmost item is visible on this tile.
+        itype_id item_content;
+        mtype_id item_corpse_mtype;
+        std::string item_variant;
+        int item_count = 0;
+        bool sees_items = false;
+
         sprite( const lit_level ll, const std::array<bool, 5> &inv )
             : ll( ll ), invisible( inv ) {}
 
@@ -182,6 +195,15 @@ struct tile_render_info {
         void set_field_content( const field_type_id &fid, const int intensity ) {
             field_content = fid;
             field_intensity = intensity;
+        }
+        void set_item_content( const itype_id &it, const mtype_id &corpse_mt,
+                               const std::string &variant, const int count,
+                               const bool sees ) {
+            item_content = it;
+            item_corpse_mtype = corpse_mt;
+            item_variant = variant;
+            item_count = count;
+            sees_items = sees;
         }
     };
 
@@ -290,8 +312,6 @@ class draw_points_cache_t
 //    for the full TODO.
 //
 // 4. MISSING L3 DATA (not captured yet; live-read every frame):
-//    - field data (type + intensity)
-//    - item data (topmost item itype_id + count)
 //    - vehicle part data (vpart_id + display state + paint color name)
 //    - creature data (CreatureView: type id, facing, mount/summoner flags)
 //    - light scalar (float from lm[][]) — currently only computed RGBA tint is stored

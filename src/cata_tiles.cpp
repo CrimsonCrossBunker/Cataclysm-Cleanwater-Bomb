@@ -1154,6 +1154,52 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         }
     }
 
+    // Refresh the per-tile item cache every frame, right after the
+    // field refresh.  Items can appear or disappear between the
+    // dirty-gated rebuild and the layer loop for the same reasons as
+    // fields (intermediate draws during handle_action consume the
+    // dirty flag before a later action creates or removes items,
+    // monster drops, etc.), so a one-shot rebuild-time capture is
+    // insufficient.
+    {
+        map &here = get_map();
+        for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel-- ) {
+            for( int row = min_row; row < max_row; row++ ) {
+                for( tile_render_info &tri : here.draw_points_cache.tiles[zlevel][row] ) {
+                    tile_render_info::sprite *const var =
+                        std::get_if<tile_render_info::sprite>( &tri.var );
+                    if( !var || var->invisible[0] ) {
+                        continue;
+                    }
+                    if( here.sees_some_items( tri.com.pos,
+                                             get_player_character() ) ) {
+                        const maptile &tile = here.maptile_at( tri.com.pos );
+                        const int count =
+                            static_cast<int>( tile.get_item_count() );
+                        if( count > 0 ) {
+                            const item &itm = tile.get_uppermost_item();
+                            const mtype *const mon = itm.get_mtype();
+                            var->set_item_content(
+                                itm.typeId(),
+                                mon ? mon->id : mtype_id::NULL_ID(),
+                                itm.has_itype_variant()
+                                    ? itm.itype_variant().id : std::string{},
+                                count, true );
+                        } else {
+                            var->set_item_content( itype_id::NULL_ID(),
+                                mtype_id::NULL_ID(), std::string{},
+                                count, true );
+                        }
+                    } else {
+                        var->set_item_content( itype_id::NULL_ID(),
+                            mtype_id::NULL_ID(), std::string{},
+                            0, false );
+                    }
+                }
+            }
+        }
+    }
+
     // List all layers for a single z-level
     const std::array<decltype( &cata_tiles::draw_furniture ), 11> drawing_layers = {{
             &cata_tiles::draw_terrain, &cata_tiles::draw_furniture, &cata_tiles::draw_graffiti, &cata_tiles::draw_trap, &cata_tiles::draw_part_con,
@@ -4104,16 +4150,14 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
                 mon_id = std::get<1>( it_override->second );
                 hilite = std::get<2>( it_override->second );
                 it_type = item::find_type( it_id );
-            } else if( !invisible[0] && here.sees_some_items( p, get_player_character() ) ) {
-                const item &itm = tile.get_uppermost_item();
-                if( itm.has_itype_variant() ) {
-                    variant = itm.itype_variant().id;
+            } else if( !invisible[0] && cap.sees_items ) {
+                it_id = cap.item_content;
+                mon_id = cap.item_corpse_mtype;
+                if( !cap.item_variant.empty() ) {
+                    variant = cap.item_variant;
                 }
-                const mtype *const mon = itm.get_mtype();
-                it_id = itm.typeId();
-                mon_id = mon ? mon->id : mtype_id::NULL_ID();
-                hilite = tile.get_item_count() > 1;
-                it_type = itm.type;
+                hilite = cap.item_count > 1;
+                it_type = item::find_type( it_id );
             } else {
                 it_type = nullptr;
             }
@@ -4133,7 +4177,7 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
             }
         }
         // we may still need to draw the highlight
-        else if( tile.get_item_count() > 1 && here.sees_some_items( p, get_player_character() ) ) {
+        else if( cap.item_count > 1 && cap.sees_items ) {
             draw_item_highlight( p, height_3d );
         }
     }
