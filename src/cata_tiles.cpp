@@ -594,17 +594,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     has_animated_tiles_ = false;
 
-    // Advance creature move glides by real elapsed time before drawing so each
-    // sprite's offset reflects the current frame.
-    advance_creature_move_anims();
-    // Advance asynchronous explosion light overlays the same way.
-    advance_explosion_lights();
-    // Advance asynchronous bullet animations the same way.
-    advance_bullet_anims();
-    // Advance asynchronous SCT floating labels the same way.
-    advance_sct();
-    // Advance the sound-driven screen shake decay.
-    advance_screen_shake_frame();
+    // Advance all real-time transient effects (explosion lights, bullet
+    // tracers, creature glides, SCT labels, highlights, screen shake)
+    // by the elapsed wall-clock time before drawing so every sprite
+    // reflects the current frame.
+    advance_all_transient_effects();
 
     {
         //set clipping to prevent drawing over stuff we shouldn't
@@ -1633,7 +1627,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                    do_draw_bullet || do_draw_hit || do_draw_line ||
                    do_draw_cursor || do_draw_highlight || do_draw_weather ||
                    do_draw_sct || do_draw_zones || do_draw_async_anim ||
-                   has_sct();
+                   has_sct() || has_highlight();
 
     draw_footsteps_frame( center );
     if( in_animation ) {
@@ -1684,6 +1678,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         if( do_draw_highlight ) {
             draw_highlight();
             void_highlight();
+        }
+        if( has_highlight() ) {
+            draw_highlights( center.z() );
         }
         if( do_draw_async_anim ) {
             draw_async_anim();
@@ -2023,15 +2020,15 @@ static float lunge_out_and_back( float t )
     }
 }
 
-void cata_tiles::start_creature_move_anim( const tripoint_abs_ms &from_abs,
+effect_handle cata_tiles::start_creature_move_anim( const tripoint_abs_ms &from_abs,
         const tripoint_abs_ms &to_abs, bool is_player )
 {
     if( !get_option<bool>( "CREATURE_MOVE_ANIM" ) ) {
-        return;
+        return 0;
     }
     // The avatar's glide is additionally gated on the separate player option.
     if( is_player && !get_option<bool>( "PLAYER_MOVE_ANIM" ) ) {
-        return;
+        return 0;
     }
     const tripoint_rel_ms d = from_abs - to_abs;
     // A no-op "move" to the same tile happens when game::update_map re-sets the
@@ -2039,13 +2036,13 @@ void cata_tiles::start_creature_move_anim( const tripoint_abs_ms &from_abs,
     // NOT erase the glide the real move just registered, or the player never
     // animates. Leave any in-flight animation untouched.
     if( d.x() == 0 && d.y() == 0 && d.z() == 0 ) {
-        return;
+        return 0;
     }
     // Snap z-changes and teleports (jumps further than one tile): drop any stale
     // animation at the destination so the sprite appears instantly.
     if( d.z() != 0 || std::abs( d.x() ) > 1 || std::abs( d.y() ) > 1 ) {
         m_creature_anims.erase( to_abs );
-        return;
+        return 0;
     }
 
     const float total_ms = std::max( 1, get_option<int>( "CREATURE_MOVE_ANIM_TIME" ) );
@@ -2064,6 +2061,10 @@ void cata_tiles::start_creature_move_anim( const tripoint_abs_ms &from_abs,
     }
     // New animation overwrites any prior one for this creature and plays from 0.
     m_creature_anims[to_abs] = anim;
+    const effect_handle h = alloc_handle( effect_kind::creature_move,
+                                          &m_creature_anims[to_abs] );
+    m_creature_anims[to_abs].handle = h;
+    return h;
 }
 
 void cata_tiles::advance_creature_move_anims()
@@ -2096,9 +2097,15 @@ void cata_tiles::advance_creature_move_anims()
     // longer in real time after a heavy turn (imperceptible, and self-corrects).
     constexpr int64_t max_step_ms = 1000 / 15;
     const int64_t dt = std::min( dt_raw, max_step_ms );
+    map &here = get_map();
     for( auto it = m_creature_anims.begin(); it != m_creature_anims.end(); ) {
         it->second.progress += it->second.per_ms * static_cast<float>( dt );
-        if( it->second.progress >= 1.0f ) {
+        bool erase_this = ( it->second.progress >= 1.0f );
+        if( !erase_this && !here.inbounds( here.get_bub( it->first ) ) ) {
+            erase_this = true;
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->second.handle );
             it = m_creature_anims.erase( it );
         } else {
             ++it;
@@ -2106,7 +2113,12 @@ void cata_tiles::advance_creature_move_anims()
     }
     for( auto it = m_creature_hit_anims.begin(); it != m_creature_hit_anims.end(); ) {
         it->second.progress += it->second.per_ms * static_cast<float>( dt );
-        if( it->second.progress >= 1.0f ) {
+        bool erase_this = ( it->second.progress >= 1.0f );
+        if( !erase_this && !here.inbounds( here.get_bub( it->first ) ) ) {
+            erase_this = true;
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->second.handle );
             it = m_creature_hit_anims.erase( it );
         } else {
             ++it;
@@ -2122,14 +2134,14 @@ void cata_tiles::advance_creature_move_anims()
     }
 }
 
-void cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
+effect_handle cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
         const point &dir_tiles, bool is_player )
 {
     if( !get_option<bool>( "CREATURE_HIT_ANIM" ) ) {
-        return;
+        return 0;
     }
     if( is_player && !get_option<bool>( "PLAYER_HIT_ANIM" ) ) {
-        return;
+        return 0;
     }
     const float total_ms = std::max( 1, get_option<int>( "CREATURE_HIT_ANIM_TIME" ) );
     creature_hit_anim anim;
@@ -2148,6 +2160,10 @@ void cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float 
     }
     // Restart from the top if the creature is hit again mid-reaction.
     m_creature_hit_anims[pos_abs] = anim;
+    const effect_handle h = alloc_handle( effect_kind::creature_hit,
+                                          &m_creature_hit_anims[pos_abs] );
+    m_creature_hit_anims[pos_abs].handle = h;
+    return h;
 }
 
 void cata_tiles::start_creature_attack_anim( const tripoint_abs_ms &pos_abs,
@@ -5050,14 +5066,14 @@ void cata_tiles::init_custom_explosion_layer( const std::map<tripoint_bub_ms, ex
     do_draw_custom_explosion = true;
     custom_explosion_layer = layer;
 }
-void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
-                                       const explosion_light_str_id &effect,
-                                       const tripoint_bub_ms &center, float radius_tiles,
-                                       float per_ms, float end_progress,
-                                       bool circular_shockwave,
-                                       shockwave_state::sw_shape shock_shape,
-                                       const tripoint_bub_ms &shock_target,
-                                       float shock_half_angle )
+effect_handle cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
+        const explosion_light_str_id &effect,
+        const tripoint_bub_ms &center, float radius_tiles,
+        float per_ms, float end_progress,
+        bool circular_shockwave,
+        shockwave_state::sw_shape shock_shape,
+        const tripoint_bub_ms &shock_target,
+        float shock_half_angle )
 {
     // Append a new asynchronous blast; existing ones keep playing (concurrent
     // overlap). It advances itself each frame via advance_explosion_lights().
@@ -5074,6 +5090,10 @@ void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &i
     a.shock_target = shock_target;
     a.shock_half_angle = shock_half_angle;
     m_explosion_lights.push_back( std::move( a ) );
+    const effect_handle h = alloc_handle( effect_kind::explosion_light,
+                                          &m_explosion_lights.back() );
+    m_explosion_lights.back().handle = h;
+    return h;
 }
 // Elapsed steady-clock ms since the last tick stored in \p last_ms, capped so a
 // long stall (pause, heavy turn) advances at most one frame's worth instead of
@@ -5112,7 +5132,13 @@ void cata_tiles::advance_explosion_lights()
     }
     for( auto it = m_explosion_lights.begin(); it != m_explosion_lights.end(); ) {
         it->progress += it->per_ms * static_cast<float>( dt );
-        if( it->progress >= it->end_progress ) {
+        bool erase_this = ( it->progress >= it->end_progress );
+        // A centred blast leaves the bubble together with its centre.
+        if( !erase_this && !get_map().inbounds( it->center ) ) {
+            erase_this = true;
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->handle );
             it = m_explosion_lights.erase( it );
         } else {
             ++it;
@@ -5136,13 +5162,13 @@ void cata_tiles::advance_screen_shake_frame()
     }
     advance_screen_shake( dt );
 }
-void cata_tiles::init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
-                                   const std::vector<std::string> &sprites,
-                                   const std::vector<int> &rotations,
-                                   bool as_line, float per_ms )
+effect_handle cata_tiles::init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
+        const std::vector<std::string> &sprites,
+        const std::vector<int> &rotations,
+        bool as_line, float per_ms )
 {
     if( points.empty() ) {
-        return;
+        return 0;
     }
     active_bullet_anim anim;
     anim.points = points;
@@ -5150,13 +5176,6 @@ void cata_tiles::init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
     anim.rotations = rotations;
     anim.as_line = as_line;
     anim.per_ms = per_ms;
-    // Stagger full-auto bursts: every round of a burst registers in the same game
-    // tick (the fire_gun loop never yields a frame mid-burst), so without an offset
-    // they'd all start sweeping at once. Delay each new shot by a fixed gap times
-    // the number of rounds already queued in this same batch, capped so a big volley
-    // (many units in one turn) still wraps up promptly instead of dribbling out over
-    // seconds. Only count anims not yet advanced (head/life still zero) so a shot
-    // still flying from a previous turn doesn't inflate this burst's spacing.
     constexpr float burst_gap_ms = 55.0f;
     constexpr float max_stagger_ms = 275.0f;
     const auto pending = std::count_if( m_bullet_anims.begin(), m_bullet_anims.end(),
@@ -5166,6 +5185,10 @@ void cata_tiles::init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
     anim.start_delay_ms = std::min( max_stagger_ms,
                                     burst_gap_ms * static_cast<float>( pending ) );
     m_bullet_anims.push_back( std::move( anim ) );
+    const effect_handle h = alloc_handle( effect_kind::bullet,
+                                          &m_bullet_anims.back() );
+    m_bullet_anims.back().handle = h;
+    return h;
 }
 void cata_tiles::advance_bullet_anims()
 {
@@ -5196,6 +5219,7 @@ void cata_tiles::advance_bullet_anims()
             // The whole gun-line shows at once; per_ms counts its short life to 1.
             it->life += it->per_ms * step_ms;
             if( it->life >= 1.0f ) {
+                m_handle_index.erase( it->handle );
                 it = m_bullet_anims.erase( it );
                 continue;
             }
@@ -5203,9 +5227,16 @@ void cata_tiles::advance_bullet_anims()
             // The dot sweeps one point per per_ms step; done past the last point.
             it->head += it->per_ms * step_ms;
             if( it->head >= static_cast<float>( it->points.size() ) ) {
+                m_handle_index.erase( it->handle );
                 it = m_bullet_anims.erase( it );
                 continue;
             }
+        }
+        // Drop the tracer if all its path tiles have left the reality bubble.
+        if( !it->points.empty() && !any_tile_in_bubble( it->points ) ) {
+            m_handle_index.erase( it->handle );
+            it = m_bullet_anims.erase( it );
+            continue;
         }
         ++it;
     }
@@ -5405,8 +5436,8 @@ void cata_tiles::void_sct()
 
 // --- Asynchronous SCT (Scrolling Combat Text) ---
 
-void cata_tiles::init_sct( const tripoint_bub_ms &pos, const std::string &text,
-                           nc_color color, float duration_ms )
+effect_handle cata_tiles::init_sct( const tripoint_bub_ms &pos, const std::string &text,
+                                    nc_color color, float duration_ms )
 {
     sct_effect eff;
     eff.pos = pos;
@@ -5416,6 +5447,10 @@ void cata_tiles::init_sct( const tripoint_bub_ms &pos, const std::string &text,
     eff.elapsed_ms = 0.0f;
     eff.screen_y_offset = 0.0f;
     m_sct_effects.push_back( std::move( eff ) );
+    const effect_handle h = alloc_handle( effect_kind::sct,
+                                          &m_sct_effects.back() );
+    m_sct_effects.back().handle = h;
+    return h;
 }
 
 void cata_tiles::advance_sct()
@@ -5429,10 +5464,16 @@ void cata_tiles::advance_sct()
         return;
     }
     const float dt_s = static_cast<float>( dt ) / 1000.0f;
+    map &here = get_map();
     for( auto it = m_sct_effects.begin(); it != m_sct_effects.end(); ) {
         it->elapsed_ms += static_cast<float>( dt );
         it->screen_y_offset -= it->rise_speed_px_per_s * dt_s;
-        if( it->elapsed_ms >= it->duration_ms ) {
+        bool erase_this = ( it->elapsed_ms >= it->duration_ms );
+        if( !erase_this && !here.inbounds( it->pos ) ) {
+            erase_this = true;
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->handle );
             it = m_sct_effects.erase( it );
         } else {
             ++it;
@@ -5479,6 +5520,132 @@ void cata_tiles::draw_sct_frame( int view_z,
         }
     }
 }
+
+// --- Handle system ---
+
+effect_handle cata_tiles::alloc_handle( effect_kind kind, void *ptr )
+{
+    const effect_handle h = m_next_handle++;
+    m_handle_index[h] = { kind, ptr };
+    return h;
+}
+
+void cata_tiles::cancel_effect( effect_handle h )
+{
+    auto it = m_handle_index.find( h );
+    if( it == m_handle_index.end() ) {
+        return;
+    }
+    const effect_kind kind = it->second.kind;
+    m_handle_index.erase( it );
+
+    switch( kind ) {
+        case effect_kind::explosion_light:
+            for( auto e = m_explosion_lights.begin(); e != m_explosion_lights.end(); ++e ) {
+                if( e->handle == h ) { m_explosion_lights.erase( e ); return; }
+            }
+            break;
+        case effect_kind::bullet:
+            for( auto e = m_bullet_anims.begin(); e != m_bullet_anims.end(); ++e ) {
+                if( e->handle == h ) { m_bullet_anims.erase( e ); return; }
+            }
+            break;
+        case effect_kind::creature_move:
+            for( auto e = m_creature_anims.begin(); e != m_creature_anims.end(); ++e ) {
+                if( e->second.handle == h ) { m_creature_anims.erase( e ); return; }
+            }
+            break;
+        case effect_kind::creature_hit:
+            for( auto e = m_creature_hit_anims.begin(); e != m_creature_hit_anims.end(); ++e ) {
+                if( e->second.handle == h ) { m_creature_hit_anims.erase( e ); return; }
+            }
+            break;
+        case effect_kind::sct:
+            for( auto e = m_sct_effects.begin(); e != m_sct_effects.end(); ++e ) {
+                if( e->handle == h ) { m_sct_effects.erase( e ); return; }
+            }
+            break;
+        case effect_kind::highlight:
+            for( auto e = m_highlights.begin(); e != m_highlights.end(); ++e ) {
+                if( e->handle == h ) { m_highlights.erase( e ); return; }
+            }
+            break;
+    }
+}
+
+bool cata_tiles::any_tile_in_bubble( const std::vector<tripoint_bub_ms> &tiles ) const
+{
+    map &here = get_map();
+    for( const tripoint_bub_ms &t : tiles ) {
+        if( here.inbounds( t ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// --- Unified transient-effect advance ---
+
+void cata_tiles::advance_all_transient_effects()
+{
+    advance_creature_move_anims();
+    advance_explosion_lights();
+    advance_bullet_anims();
+    advance_sct();
+    advance_highlights();
+    advance_screen_shake_frame();
+}
+
+// --- Asynchronous highlight overlay ---
+
+effect_handle cata_tiles::add_highlight( const tripoint_bub_ms &pos, float duration_ms )
+{
+    highlight_effect h;
+    h.pos = pos;
+    h.life_ms = duration_ms;
+    m_highlights.push_back( h );
+    const effect_handle hl = alloc_handle( effect_kind::highlight,
+                                           &m_highlights.back() );
+    m_highlights.back().handle = hl;
+    return hl;
+}
+
+void cata_tiles::advance_highlights()
+{
+    if( m_highlights.empty() ) {
+        m_highlights_last_ms.reset();
+        return;
+    }
+    const int64_t dt = capped_frame_dt_ms( m_highlights_last_ms );
+    if( dt <= 0 ) {
+        return;
+    }
+    map &here = get_map();
+    for( auto it = m_highlights.begin(); it != m_highlights.end(); ) {
+        it->life_ms -= static_cast<float>( dt );
+        bool erase_this = ( it->life_ms <= 0.0f );
+        if( !erase_this && !here.inbounds( it->pos ) ) {
+            erase_this = true;
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->handle );
+            it = m_highlights.erase( it );
+        } else {
+            ++it;
+        }
+    }
+}
+
+void cata_tiles::draw_highlights( int view_z )
+{
+    for( const highlight_effect &h : m_highlights ) {
+        if( h.pos.z() != view_z ) {
+            continue;
+        }
+        draw_from_id_string( "highlight", h.pos, 0, 0, lit_level::LIT, false );
+    }
+}
+
 void cata_tiles::void_zones()
 {
     do_draw_zones = false;

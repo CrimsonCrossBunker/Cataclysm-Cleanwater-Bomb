@@ -6,6 +6,7 @@
 
 #include "color.h"
 #include "coords_fwd.h"
+#include "transient_effect.h"
 
 /** Floating combat-text label that rises from a tile and fades out over real
  *  time.  Managed asynchronously by cata_tiles so the caller can fire-and-
@@ -20,6 +21,8 @@ struct sct_effect {
     float elapsed_ms    = 0.0f;    // wall-clock ms since creation
     float rise_speed_px_per_s = 30.0f;
     float screen_y_offset     = 0.0f;  // current vertical offset in screen px
+
+    effect_handle handle = 0;  // for cancel_effect(); zero until registered
 };
 
 #endif
