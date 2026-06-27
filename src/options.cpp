@@ -1888,7 +1888,7 @@ void options_manager::add_options_interface()
            );
         add( "SMART_DEFAULT_DISPLAY_TYPE", page_id, to_translation( "Smart default display type" ),
              to_translation( "Auto-eval the default measure display type of item.  Liquid would display by volume.  Item that volume < 10ml and longest side < 10mm would display by weight.  JSON field display_type will override this option." ),
-             true
+             false
            );
     } );
 
@@ -3207,6 +3207,8 @@ void options_manager::add_options_debug()
          false
 #endif
        );
+
+    add_empty_line();
 
     add( "NO_ERROR_POPUP", "debug", to_translation( "No error popup" ),
          to_translation( "If enabled, debug message won't popup on the screen." ),
