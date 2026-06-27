@@ -669,26 +669,7 @@ bool game::do_turn()
                 sounds::process_sound_markers( &u );
                 if( !u.activity && uquit != QUIT_WATCH
                     && ( !u.has_distant_destination() || calendar::once_every( 10_seconds ) ) ) {
-                    wait_popup_reset();
-                    ui_manager::redraw();
-                    // A single turn can span several steps (roads, speed
-                    // effects, partial-move loops). Each step is rendered by the
-                    // redraw above, but the end-of-turn update_map_memory call
-                    // only sees the avatar's final position, so terrain visible
-                    // only mid-step would never be memorized. That is invisible
-                    // for connecting terrain (re-memorized every pass) but loses
-                    // non-connecting terrain such as grass, which is memorized
-                    // exactly once. Memorize the current field of view whenever
-                    // the avatar has actually moved since the last memorise,
-                    // reusing the visibility cache the redraw just rebuilt. The
-                    // position guard keeps single-step turns (the common case)
-                    // free: their start position was already memorized at the
-                    // previous turn's end.
-                    const tripoint_bub_ms mem_pos = u.pos_bub( m );
-                    if( mem_pos != last_memorized_pos ) {
-                        m.update_map_memory( u );
-                        last_memorized_pos = mem_pos;
-                    }
+                    render_mid_step( u, m, last_memorized_pos );
                 }
 
                 if( queue_screenshot ) {
@@ -857,4 +838,33 @@ bool game::do_turn()
 
     debug_menu::debug_capture::tick_if_active();
     return false;
+}
+
+void game::render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_pos )
+{
+    // Visibility cache must stay fresh even when the render is skipped:
+    // it is consumed by update_map_memory to decide which tiles were seen.
+    m.update_visibility_cache( u.posz() );
+
+    if( !skip_mid_step_render ) {
+        wait_popup_reset();
+        ui_manager::redraw();
+    }
+
+    // A single turn can span several steps (roads, speed effects,
+    // partial-move loops).  The end-of-turn update_map_memory call
+    // only sees the avatar's final position, so terrain visible only
+    // mid-step would never be memorized.  That is invisible for
+    // self-connecting terrain (re-memorized every pass) but loses
+    // non-connecting terrain such as grass, which is memorized
+    // exactly once.  Memorize the current field of view whenever the
+    // avatar has actually moved since the last memorize, using the
+    // visibility cache updated above.  The position guard keeps
+    // single-step turns (the common case) free: their start position
+    // was already memorized at the previous turn's end.
+    const tripoint_bub_ms mem_pos = u.pos_bub( m );
+    if( mem_pos != last_memorized_pos ) {
+        m.update_map_memory( u );
+        last_memorized_pos = mem_pos;
+    }
 }
