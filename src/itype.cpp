@@ -133,9 +133,7 @@ std::string itype::item_measure_prefix( unsigned int quantity, item_display_type
     const std::string option = get_option<std::string>( "MEASURE_PREFIX" );
     const bool force = get_option<bool>( "FORCE_MEASURE_PREFIX" );
     std::string result;
-    if( option == "count" && ( force || perfered == item_display_type::DEFAULT ) ) {
-        result = std::to_string( quantity );
-    } else if( display_type == item_display_type::BY_WEIGHT || (!force && perfered == item_display_type::BY_WEIGHT)  ) {
+    if( display_type == item_display_type::BY_WEIGHT || (!force && perfered == item_display_type::BY_WEIGHT)  ) {
         result = weight_to_string( weight * quantity, true, true );
     } else if( display_type == item_display_type::BY_VOLUME || (!force && perfered == item_display_type::BY_VOLUME) ) {
         units::volume volume_per_charge = volume;
@@ -146,13 +144,12 @@ std::string itype::item_measure_prefix( unsigned int quantity, item_display_type
     } else if( display_type == item_display_type::BY_LENGTH || (!force && perfered == item_display_type::BY_LENGTH) ) {
         // Note: item::length() has some special cases where this might not work well!
         result = length_to_string( longest_side * quantity, true );
-    } else {
-        result = std::to_string( quantity );
     }
     if( option == "both" ) {
-        result += std::to_string( quantity );
+        return result + std::to_string( quantity );
+    } else {
+        return std::to_string( quantity )
     }
-    return result;
 }
 
 std::string itype::nname( unsigned int quantity ) const
