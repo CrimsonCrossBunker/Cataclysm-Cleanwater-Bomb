@@ -148,7 +148,10 @@ std::string itype::item_measure_prefix( unsigned int quantity, item_display_type
         result = length_to_string( longest_side * quantity, true );
     }
     if( option == "both" ) {
-        result += format_string( ",%d", std::to_string( quantity ) );
+        if( !result.empty() ) {
+            result += ",";
+        }
+        result += std::to_string( quantity );
     }
     return result;
 }
