@@ -1461,9 +1461,11 @@ void veh_interact::calc_overview( map &here )
                         fmtstring = str_cat( "%s %s ", leak_marker, "%s", leak_marker );
                         offset = 0;
                     }
+                    std::string amoo_left = pt_ammo_cur->item_measure_prefix( pt.ammo_remaining(),
+                                            pt_ammo_cur->phase == phase_id::LIQUID ? item_display_type::BY_VOLUME :
+                                            item_display_type::DEFAULT );
                     right_print( w, y, offset, pt_ammo_cur->color,
-                                 string_format( fmtstring, specials, pt_ammo_cur->nname( 1 ),
-                                                pt_ammo_cur->item_measure_prefix( pt.ammo_remaining() ) ) );
+                                 string_format( fmtstring, specials, pt_ammo_cur->nname( 1 ), amoo_left ) );
                 } else {
                     if( pt.is_leaking() ) {
                         std::string outputstr = str_cat( leak_marker, "      ", leak_marker );
@@ -1474,17 +1476,18 @@ void veh_interact::calc_overview( map &here )
             auto no_tank_details = []( const vehicle_part & pt, const catacurses::window & w, int y ) {
                 if( !pt.ammo_current().is_null() ) {
                     const itype *pt_ammo_cur = item::find_type( pt.ammo_current() );
-                    double vol_L = to_liter( pt.ammo_remaining( ) * 250_ml /
-                                             pt_ammo_cur->stack_size );
+                    const std::string amount = pt_ammo_cur->item_measure_prefix(
+                                                    pt.ammo_remaining(),
+                                                    pt_ammo_cur->phase == phase_id::LIQUID ? item_display_type::BY_VOLUME :
+                                                    item_display_type::DEFAULT );
                     int offset = 1;
-                    std::string fmtstring = "%s  %5.1fL";
+                    std::string fmtstring = "%s  %s";
                     if( pt.is_leaking() ) {
-                        fmtstring = str_cat( "%s  ", leak_marker, "%5.1fL", leak_marker );
+                        fmtstring = str_cat( "%s  ", leak_marker, "%s", leak_marker );
                         offset = 0;
                     }
                     right_print( w, y, offset, pt_ammo_cur->color,
-                                 string_format( fmtstring, item::nname( pt.ammo_current() ),
-                                                round_up( vol_L, 1 ) ) );
+                                 string_format( fmtstring, item::nname( pt.ammo_current() ), amount ) );
                 }
             };
 

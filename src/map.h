@@ -47,6 +47,7 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "vpart_position.h"
+#include "view_snapshot.h"
 
 #if defined(TILES)
     #include "cata_tiles.h"
@@ -308,164 +309,6 @@ struct drawsq_params {
         //@}
 };
 
-// Accumulated screen-pixel bounding box of all sprites drawn for a single tile
-// during the current frame. Used by the ortho tint overlay to cover the full
-// sprite extent instead of a fixed tile_width x tile_height rect.
-// NOLINTNEXTLINE(cata-xy)
-struct sprite_screen_bounds {
-    int x = 0, y = 0, w = 0, h = 0;
-    bool valid = false;
-    // NOLINTNEXTLINE(cata-large-inline-function,cata-xy)
-    void expand( int rx, int ry, int rw, int rh ) {
-        if( !valid ) {
-            x = rx;
-            y = ry;
-            w = rw;
-            h = rh;
-            valid = true;
-        } else {
-            const int nx = x < rx ? x : rx; // NOLINT(cata-combine-locals-into-point)
-            const int ny = y < ry ? y : ry;
-            const int x2 = ( x + w > rx + rw ) ? x + w : rx + rw;
-            const int y2 = ( y + h > ry + rh ) ? y + h : ry + rh;
-            x = nx;
-            y = ny;
-            w = x2 - nx;
-            h = y2 - ny;
-        }
-    }
-};
-
-// Snapshot of a single sprite draw call, recorded during the layer loop so the
-// ortho tint overlay can replay the sprite as a white silhouette into a mask
-// texture. Captures everything needed to reproduce the draw at the same screen
-// position with the silhouette color filter variant.
-struct tint_sprite_record {
-    int sprite_index;      // index into tileset tile_values / silhouette_tile_values
-    struct { // NOLINT(cata-xy)
-        int x, y, w, h;
-    } destination;         // screen-space destination rect at time of draw
-    double angle;          // rotation angle (0, -90, 90)
-    int flip;              // CataFlipMode cast to int (avoids SDL include)
-};
-
-struct tile_render_info {
-    struct common {
-        const tripoint_bub_ms pos;
-        // accumulator for 3d tallness of sprites rendered here so far;
-        int height_3d = 0;
-        // Ortho tint overlay state, populated during the draw prepass and layer
-        // loop. For tiles where needs_tint is true:
-        //   bounds       - union of all content sprite screen rects (opaque only)
-        //   tint_sprites - draw records for silhouette mask replay
-        //   tint_color   - precomputed RGBA tint from the colored light cache
-        sprite_screen_bounds bounds;
-        small_literal_vector<tint_sprite_record, 4> tint_sprites;
-        bool needs_tint = false;
-        struct {
-            uint8_t r, g, b, a;
-        } tint_color = { 0, 0, 0, 0 };
-
-        common( const tripoint_bub_ms &pos, const int height_3d )
-            : pos( pos ), height_3d( height_3d ) {}
-    };
-
-    struct vision_effect {
-        visibility_type vis;
-
-        explicit vision_effect( const visibility_type vis )
-            : vis( vis ) {}
-    };
-
-    struct sprite {
-        lit_level ll;
-        std::array<bool, 5> invisible;
-
-        sprite( const lit_level ll, const std::array<bool, 5> &inv )
-            : ll( ll ), invisible( inv ) {}
-    };
-
-    common com;
-    std::variant<vision_effect, sprite> var;
-
-    tile_render_info( const common &com, const vision_effect &var )
-        : com( com ), var( var ) {}
-
-    tile_render_info( const common &com, const sprite &var )
-        : com( com ), var( var ) {}
-};
-
-#if defined(TILES)
-/**
- * Flat-storage replacement for the former
- * std::map<int, std::map<int, std::vector<tile_render_info>>> draw-points cache.
- *
- * The z dimension is a fixed array indexed by (zlevel + OVERMAP_DEPTH); the row
- * dimension is a contiguous vector offset by the first row touched. Both reuse
- * their buffers across frames (see soft_clear) so the per-move rebuild no longer
- * frees and reallocates std::map nodes / row vectors every step — that churn was
- * the dominant movement-time render cost. operator[] auto-grows like the old
- * std::map operator[], so an untouched [z][row] still reads back empty.
- */
-class draw_points_cache_t
-{
-    public:
-        using row_vec = std::vector<tile_render_info>;
-
-        // Row storage for a single z-level, addressed by absolute screen row.
-        // row_base is the absolute row of rows[0].
-        class level_rows
-        {
-            public:
-                row_vec &operator[]( const int row ) {
-                    if( !initialized ) {
-                        row_base = row;
-                        initialized = true;
-                    }
-                    if( row < row_base ) {
-                        // Prepend empty rows. tile_render_info has a const member
-                        // (deleted copy/move assignment), so vector::insert — which
-                        // shifts via assignment — won't compile. Rebuild front-to-back
-                        // using move-construction only.
-                        std::vector<row_vec> grown;
-                        grown.reserve( rows.size() + static_cast<size_t>( row_base - row ) );
-                        grown.resize( static_cast<size_t>( row_base - row ) );
-                        for( row_vec &r : rows ) {
-                            grown.push_back( std::move( r ) );
-                        }
-                        rows.swap( grown );
-                        row_base = row;
-                    }
-                    const size_t idx = static_cast<size_t>( row - row_base );
-                    if( idx >= rows.size() ) {
-                        rows.resize( idx + 1 );
-                    }
-                    return rows[idx];
-                }
-                void soft_clear() {
-                    for( row_vec &r : rows ) {
-                        r.clear(); // keep capacity
-                    }
-                }
-            private:
-                int row_base = 0;
-                bool initialized = false;
-                std::vector<row_vec> rows;
-        };
-
-        level_rows &operator[]( const int zlevel ) {
-            return levels[zlevel + OVERMAP_DEPTH];
-        }
-        void soft_clear() {
-            for( level_rows &lr : levels ) {
-                lr.soft_clear();
-            }
-        }
-    private:
-        std::array<level_rows, OVERMAP_LAYERS> levels;
-};
-#endif // TILES
-
 /**
  * Manage and cache data about a part of the map.
  *
@@ -572,6 +415,16 @@ class map
         void set_pathfinding_cache_dirty( int zlev );
         void set_pathfinding_cache_dirty( const tripoint_bub_ms &p );
         /*@}*/
+
+        // Mark the tiles draw-points cache for rebuild on the next frame.
+        // Terrain/furniture changes already trigger this transitively (they
+        // dirty the seen cache, which build_map_cache turns into a draw-cache
+        // rebuild), but the decoration-class mutators — traps, partial
+        // construction, graffiti — change none of the visibility caches, so
+        // they must request the rebuild explicitly or the cache would serve a
+        // stale snapshot of that content. No-op outside tiles builds / the
+        // reality bubble.
+        void set_draw_points_cache_dirty();
 
         void invalidate_map_cache( int zlev );
 
@@ -2521,7 +2374,7 @@ class map
 
 #if defined(TILES)
         bool draw_points_cache_dirty = true;
-        draw_points_cache_t draw_points_cache;
+        view_snapshot draw_points_cache;
         point_rel_ms prev_top_left;
         point_rel_ms prev_bottom_right;
         point prev_o;

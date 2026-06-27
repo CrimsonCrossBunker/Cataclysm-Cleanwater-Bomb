@@ -34,8 +34,11 @@
 #include "pimpl.h"
 #include "point.h"
 #include "sdl_geometry.h"
+#include "sct_effect.h"
 #include "sdl_wrappers.h"
 #include "shockwave.h"
+#include "transient_effect.h"
+#include "transient_visual_layer.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
@@ -63,6 +66,7 @@ class pixel_minimap;
 class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
+struct tile_render_info;
 
 namespace catacurses
 {
@@ -820,16 +824,17 @@ class cata_tiles
         // Registers (appends) a new asynchronous blast that advances itself each
         // frame; several may overlap. \p radius_tiles is the blast's max extent in
         // tiles (used to size the shockwave ring). \p per_ms / \p end_progress
-        // drive the real-time sweep.
-        void init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
-                                   const explosion_light_str_id &effect,
-                                   const tripoint_bub_ms &center, float radius_tiles,
-                                   float per_ms, float end_progress,
-                                   bool circular_shockwave = true,
-                                   shockwave_state::sw_shape shock_shape =
-                                       shockwave_state::sw_shape::disc,
-                                   const tripoint_bub_ms &shock_target = tripoint_bub_ms(),
-                                   float shock_half_angle = 0.0f );
+        // drive the real-time sweep.  Returns a handle so the caller can cancel
+        // the blast mid-flight via cancel_effect().
+        effect_handle init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
+                                            const explosion_light_str_id &effect,
+                                            const tripoint_bub_ms &center, float radius_tiles,
+                                            float per_ms, float end_progress,
+                                            bool circular_shockwave = true,
+                                            shockwave_state::sw_shape shock_shape =
+                                                shockwave_state::sw_shape::disc,
+                                            const tripoint_bub_ms &shock_target = tripoint_bub_ms(),
+                                            float shock_half_angle = 0.0f );
         // Advance all active explosion lights by real elapsed time and drop the
         // finished ones. Called once at the start of each draw().
         void advance_explosion_lights();
@@ -851,10 +856,11 @@ class cata_tiles
         //            false -> a single bullet sprite sweeps tile-to-tile along the
         //                     path (the classic moving-dot look).
         // per_ms drives the sweep (dot) or the life countdown (line).
-        void init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
-                               const std::vector<std::string> &sprites,
-                               const std::vector<int> &rotations,
-                               bool as_line, float per_ms );
+        // Returns a handle so the caller can cancel the tracer mid-flight.
+        effect_handle init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
+                                        const std::vector<std::string> &sprites,
+                                        const std::vector<int> &rotations,
+                                        bool as_line, float per_ms );
         // Advance all active bullet animations by real elapsed time, dropping the
         // finished ones. Called once at the start of each draw().
         void advance_bullet_anims();
@@ -867,6 +873,27 @@ class cata_tiles
         // recovery, like void_explosion_light), so stale tiles computed against old
         // metrics don't paint onto the rebuilt scene.
         void void_bullet_anim();
+
+        // --- Asynchronous SCT (Scrolling Combat Text) ---
+        // Fire-and-forget floating combat-text labels that rise and fade over real
+        // time.  Follows the same async model as explosion lights and bullet anims:
+        // the caller registers a label and returns immediately; the label advances
+        // every draw frame and is cleaned up when its duration expires.  Lives
+        // alongside the legacy overlay_strings SCT path (init_draw_sct / void_sct).
+        // Returns a handle so the caller can cancel the label mid-flight.
+        effect_handle init_sct( const tripoint_bub_ms &pos, const std::string &text, nc_color color,
+                                float duration_ms = 800.0f );
+        void advance_sct();
+        bool has_sct() const { return !m_sct_effects.empty(); }
+        void draw_sct_frame( int view_z,
+                             std::multimap<point, formatted_text> &overlay_strings );
+
+        // --- Unified transient-effect advance ---
+        // Advances all transient effects (explosion lights, bullet tracers,
+        // creature move glides, SCT labels, highlights, screen shake) by real
+        // elapsed time.  Called once at the start of draw() in place of the
+        // individual advance_* calls.
+        void advance_all_transient_effects();
 
         // Advance the sound-driven screen shake by real elapsed time. Called once at
         // the start of each draw(), alongside the other wall-clock animations.
@@ -905,9 +932,10 @@ class cata_tiles
         // the same creature and play from the start, so they never block the game.
         // No-op when the option is off, on z-changes, or on jumps further than one
         // tile (teleports snap instantly). \p is_player gates the avatar's glide on
-        // the separate PLAYER_MOVE_ANIM option.
-        void start_creature_move_anim( const tripoint_abs_ms &from_abs,
-                                       const tripoint_abs_ms &to_abs, bool is_player );
+        // the separate PLAYER_MOVE_ANIM option.  Returns a handle so the caller
+        // can cancel the glide mid-flight via cancel_effect().
+        effect_handle start_creature_move_anim( const tripoint_abs_ms &from_abs,
+                                                const tripoint_abs_ms &to_abs, bool is_player );
         // Advance all active glides by real elapsed time and drop finished ones.
         void advance_creature_move_anims();
         // True while any creature move glide is in flight. Used by the input loop
@@ -924,8 +952,9 @@ class cata_tiles
         // victim, in tiles); when zero, or when the curve option is "bounce", a
         // vertical pop-and-fall is used instead of a horizontal knockback.
         // \p is_player gates the avatar's reaction on the separate PLAYER_HIT_ANIM option.
-        void start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
-                                      const point &dir_tiles, bool is_player );
+        // Returns a handle so the caller can cancel via cancel_effect().
+        effect_handle start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
+                                               const point &dir_tiles, bool is_player );
         // True while any hit reaction is in flight.
         bool has_creature_hit_anim() const {
             return !m_creature_hit_anims.empty();
@@ -934,17 +963,22 @@ class cata_tiles
         // just struck a target in direction \p dir_tiles (attacker -> target, in
         // tiles): a quick lunge toward the target and back. No-op when the
         // CREATURE_ATTACK_ANIM option is off. \p is_player gates the avatar's lunge
-        // on the separate PLAYER_ATTACK_ANIM option.
-        void start_creature_attack_anim( const tripoint_abs_ms &pos_abs,
-                                         const point &dir_tiles, bool is_player );
+        // on the separate PLAYER_ATTACK_ANIM option.  Returns a handle so the
+        // caller can cancel the lunge mid-flight via cancel_effect().
+        effect_handle start_creature_attack_anim( const tripoint_abs_ms &pos_abs,
+                                                  const point &dir_tiles, bool is_player );
         // True while any attack lunge is in flight.
         bool has_creature_attack_anim() const {
             return !m_creature_attack_anims.empty();
         }
-        // True while any creature animation (glide, hit, or attack) is in flight.
+        // True while any creature or overlay animation (glide, hit, attack,
+        // SCT label, or highlight) is in flight.  Used by the input loop to
+        // raise its redraw rate so animations look smooth instead of stepping.
+        // (Explosion lights and bullet tracers have their own independent
+        // has_* gates that are checked separately in the in_animation gate.)
         bool has_creature_anim() const {
             return has_creature_move_anim() || has_creature_hit_anim() ||
-                   has_creature_attack_anim();
+                   has_creature_attack_anim() || has_sct() || has_highlight();
         }
 
         void draw_footsteps_frame( const tripoint_bub_ms &center );
@@ -962,6 +996,29 @@ class cata_tiles
         void init_draw_highlight( const tripoint_bub_ms &p );
         void draw_highlight();
         void void_highlight();
+
+        // --- Asynchronous highlight overlay ---
+        // Fire-and-forget highlight that fades over real time, following the
+        // same async model as explosion lights.  Lives alongside the legacy
+        // synchronous path (init_draw_highlight / void_highlight).
+        effect_handle add_highlight( const tripoint_bub_ms &pos,
+                                     float duration_ms = 500.0f );
+        void advance_highlights();
+        bool has_highlight() const { return !m_highlights.empty(); }
+        void draw_highlights( int view_z );
+
+        // --- Handle system ---
+        // Allocate a new handle for a freshly-created effect, registering
+        // its category in the handle index so cancel_effect() can later
+        // dispatch to the correct container.
+        effect_handle alloc_handle( effect_kind kind );
+        // Cancel an effect by its handle.  No-op if unknown.  Walks the
+        // matching container and erases the entry whose handle matches.
+        void cancel_effect( effect_handle h );
+        // True if at least one tile in `tiles` is inside the loaded map grid
+        // (the reality bubble).  Used by advance_* to drop effects that have
+        // left the player's vicinity.
+        bool any_tile_in_bubble( const std::vector<tripoint_bub_ms> &tiles ) const;
 
         void init_draw_weather( weather_printable weather, std::string name );
         void draw_weather_frame();
@@ -1126,6 +1183,18 @@ class cata_tiles
         sprite_screen_bounds *m_cur_bounds = nullptr;
         small_literal_vector<tint_sprite_record, 4> *m_cur_tint_sprites = nullptr;
 
+        // The cached draw point for the current tile, set by the layer loop
+        // before each draw_* call, mirroring the m_cur_bounds pattern (pass
+        // per-tile state to a layer function without changing the shared
+        // layer-fn signature). The static-layer draw functions read the
+        // terrain/furniture/trap/partial-construction/graffiti content captured
+        // on its sprite variant in their normal visible branch instead of
+        // reading the map live. A pointer to the outer tile_render_info (not the
+        // nested sprite) so the type stays forward-declarable here — cata_tiles.h
+        // must not include map.h (map.h includes this header). Null outside the
+        // sprite branch of the layer loop.
+        const tile_render_info *m_cur_tile = nullptr;
+
         // Set by draw_vpart around its draw_from_id_string call so the vehicle
         // part sprite gets recolored with the part's paint color; nullopt
         // otherwise. Consumed when building tile_render_params.
@@ -1146,6 +1215,7 @@ class cata_tiles
         // it). progress runs 0->1: at 0 the sprite is offset back to its old tile,
         // at 1 it sits on the real (new) tile.
         struct creature_move_anim {
+            effect_handle handle = 0;  // for cancel_effect(); zero until registered
             point delta_tiles;         // (old - new) tile delta, converted to pixels at draw time
             float progress = 0.0f;     // 0..1
             float per_ms = 0.0f;       // progress increment per millisecond
@@ -1160,6 +1230,7 @@ class cata_tiles
         // knockback-and-return, sharing the offset injection and deferred-overlay
         // path with the move glide.
         struct creature_hit_anim {
+            effect_handle handle = 0;  // for cancel_effect(); zero until registered
             float progress = 0.0f;     // 0..1
             float per_ms = 0.0f;       // progress increment per millisecond
             float magnitude_tiles = 0.5f; // peak displacement in tiles (damage-scaled)
@@ -1171,6 +1242,7 @@ class cata_tiles
         // Active per-creature attack lunges, keyed by the attacker's absolute
         // position: a quick lunge toward the struck target and back.
         struct creature_attack_anim {
+            effect_handle handle = 0;  // for cancel_effect(); zero until registered
             float progress = 0.0f;     // 0..1
             float per_ms = 0.0f;       // progress increment per millisecond
             float dist_tiles = 0.5f;   // peak lunge distance in tiles
@@ -1241,6 +1313,7 @@ class cata_tiles
         // player can act immediately. Several can overlap (concurrent blasts in one
         // turn). progress runs 0..end_progress; finished entries are dropped.
         struct active_explosion_light {
+            effect_handle handle = 0;  // for cancel_effect(); zero until registered
             std::map<tripoint_bub_ms, float> radial; // per-tile radial coord (0..1)
             explosion_light_str_id effect;
             tripoint_bub_ms center;
@@ -1273,6 +1346,7 @@ class cata_tiles
         // lights), so several concurrent shots overlap without blocking the turn.
         // Finished entries are dropped in advance_bullet_anims().
         struct active_bullet_anim {
+            effect_handle handle = 0;  // for cancel_effect(); zero until registered
             std::vector<tripoint_bub_ms> points; // visible flight path tiles
             std::vector<std::string> sprites;    // per-point sprite id
             std::vector<int> rotations;          // per-point rotation
@@ -1291,6 +1365,33 @@ class cata_tiles
         std::vector<active_bullet_anim> m_bullet_anims;
         // steady_clock timestamp (ms) of the last bullet-anim advance.
         std::optional<int64_t> m_bullet_anim_last_ms;
+
+        // Active asynchronous SCT labels.  Each rises from its tile and fades
+        // over real time.  Finished entries are dropped in advance_sct().
+        std::vector<sct_effect> m_sct_effects;
+        // steady_clock timestamp (ms) of the last SCT advance.
+        std::optional<int64_t> m_sct_last_ms;
+
+        // Active asynchronous highlight overlays.  Each fades over real time
+        // and is dropped when its life expires or it leaves the reality bubble.
+        struct highlight_effect {
+            tripoint_bub_ms pos;
+            float life_ms = 0.0f;          // remaining life
+            effect_handle handle = 0;       // for cancel_effect()
+        };
+        std::vector<highlight_effect> m_highlights;
+        // steady_clock timestamp (ms) of the last highlight advance.
+        std::optional<int64_t> m_highlights_last_ms;
+
+        // --- Handle infrastructure ---
+        // Entry in the handle index: stores only the effect category so
+        // cancel_effect() knows which container to search.
+        struct handle_entry { effect_kind kind; };
+        // Monotonically-increasing handle counter.  Zero means "no handle".
+        effect_handle m_next_handle = 1;
+        // Maps each allocated handle to its effect kind so cancel_effect()
+        // can dispatch to the correct container.
+        std::unordered_map<effect_handle, handle_entry> m_handle_index;
 
         std::vector<tripoint_bub_ms> bul_pos;
         std::vector<std::string> bul_id;
