@@ -146,8 +146,21 @@ struct tile_render_info {
         std::string graffiti_content;
         int graffiti_content_rotation = 0;
 
+        // Per-frame field data: field type + intensity captured every frame
+        // so draw_field_or_item can read from the cache instead of calling
+        // here.field_at() live.  Fields (fire, smoke, blood, acid, etc.)
+        // change per-turn and do not trigger the dirty-gated cache rebuild,
+        // hence per-frame capture.
+        field_type_id field_content;
+        int field_intensity = 0;
+
         sprite( const lit_level ll, const std::array<bool, 5> &inv )
             : ll( ll ), invisible( inv ) {}
+
+        void set_field_content( field_type_id fid, int intensity ) {
+            field_content = fid;
+            field_intensity = intensity;
+        }
 
         void set_ter_content( const ter_id &t, const int subtile, const int rotation ) {
             ter_content = t;
@@ -232,6 +245,14 @@ class draw_points_cache_t
                         r.clear(); // keep capacity
                     }
                 }
+
+                // Range-based for support so per-frame capture loops can iterate
+                // rows without knowing the row base.
+                auto begin() { return rows.begin(); }
+                auto end()   { return rows.end(); }
+                auto begin() const { return rows.begin(); }
+                auto end()   const { return rows.end(); }
+
             private:
                 int row_base = 0;
                 bool initialized = false;

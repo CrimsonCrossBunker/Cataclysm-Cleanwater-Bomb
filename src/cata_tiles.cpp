@@ -594,15 +594,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     has_animated_tiles_ = false;
 
-    // Advance creature move glides by real elapsed time before drawing so each
-    // sprite's offset reflects the current frame.
-    advance_creature_move_anims();
-    // Advance asynchronous explosion light overlays the same way.
-    advance_explosion_lights();
-    // Advance asynchronous bullet animations the same way.
-    advance_bullet_anims();
-    // Advance the sound-driven screen shake decay.
-    advance_screen_shake_frame();
+    // Advance all real-time transient effects (explosion lights, bullet tracers,
+    // creature move/hit/attack glides, SCT labels, screen shake).
+    advance_all_transient_effects();
 
     {
         //set clipping to prevent drawing over stuff we shouldn't
@@ -1131,6 +1125,35 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_creature_columns.insert( cpos.xy() );
     }
 
+    // Per-frame field capture: fields (fire, smoke, blood, acid, etc.) change
+    // per-turn and don't trigger the dirty-gated cache rebuild.  In 2A we fill
+    // the cache under an env-var gate and compare against the live read in
+    // draw_field_or_item; in 2B the gate is removed and the function switches
+    // fully to cache.
+    {
+        static const bool verify_field_cache = []() {
+            const char *v = getenv( "CATA_VERIFY_FIELD_CACHE" );
+            return v && ( strcmp( v, "1" ) == 0 || strcmp( v, "true" ) == 0 );
+        }();
+        if( verify_field_cache ) {
+            for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+                for( auto &row : here.draw_points_cache.tiles[z + OVERMAP_DEPTH] ) {
+                    for( tile_render_info &tri : row ) {
+                        tile_render_info::sprite *spr =
+                            std::get_if<tile_render_info::sprite>( &tri.var );
+                        if( !spr || spr->invisible[0] ) {
+                            continue;
+                        }
+                        const field &f = here.field_at( tri.com.pos );
+                        spr->set_field_content(
+                            f.displayed_field_type(),
+                            f.displayed_intensity() );
+                    }
+                }
+            }
+        }
+    }
+
     // List all layers for a single z-level
     const std::array<decltype( &cata_tiles::draw_furniture ), 11> drawing_layers = {{
             &cata_tiles::draw_terrain, &cata_tiles::draw_furniture, &cata_tiles::draw_graffiti, &cata_tiles::draw_trap, &cata_tiles::draw_part_con,
@@ -1271,6 +1294,13 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         // handed to the layer functions without changing their
                         // shared signature.
                         m_cur_tile = &p;
+
+                        // Arm per-frame field data for draw_field_or_item.
+                        // Follows the m_cur_tile pattern: per-tile state handed
+                        // to a layer function without changing its shared
+                        // signature.
+                        m_cur_field_content = var->field_content;
+                        m_cur_field_intensity = var->field_intensity;
 
                         if( f == &cata_tiles::draw_vpart_no_roof || f == &cata_tiles::draw_vpart_roof ) {
                             int temp_height_3d = p.com.height_3d;
@@ -1628,10 +1658,14 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     in_animation = do_draw_explosion || do_draw_custom_explosion ||
                    has_explosion_light_anim() ||
                    has_bullet_anim() ||
+                   has_sct() ||
                    do_draw_bullet || do_draw_hit || do_draw_line ||
                    do_draw_cursor || do_draw_highlight || do_draw_weather ||
-                   do_draw_sct || do_draw_zones || do_draw_async_anim;
+                   do_draw_sct || do_draw_zones || do_draw_async_anim ||
+                   has_highlight();
 
+    // Let the async-SCT draw path emit overlay_strings entries.
+    m_sct_overlay_strings = &overlay_strings;
     draw_footsteps_frame( center );
     if( in_animation ) {
         if( do_draw_explosion ) {
@@ -1664,8 +1698,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             void_weather();
         }
         if( do_draw_sct ) {
-            draw_sct_frame( overlay_strings );
+            draw_sct_frame_legacy( overlay_strings );
             void_sct();
+        }
+        if( has_sct() ) {
+            draw_sct_frame( center.z() );
         }
         if( do_draw_zones ) {
             draw_zones_frame();
@@ -1679,9 +1716,13 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             draw_highlight();
             void_highlight();
         }
+        if( has_highlight() ) {
+            draw_highlights( center.z() );
+        }
         if( do_draw_async_anim ) {
             draw_async_anim();
         }
+        m_sct_overlay_strings = nullptr;
     } else if( you.view_offset != tripoint_rel_ms::zero && !you.in_vehicle ) {
         // check to see if player is located at ter
         draw_from_id_string( "cursor", TILE_CATEGORY::NONE, empty_string,
@@ -2090,9 +2131,17 @@ void cata_tiles::advance_creature_move_anims()
     // longer in real time after a heavy turn (imperceptible, and self-corrects).
     constexpr int64_t max_step_ms = 1000 / 15;
     const int64_t dt = std::min( dt_raw, max_step_ms );
+    map &here = get_map();
     for( auto it = m_creature_anims.begin(); it != m_creature_anims.end(); ) {
         it->second.progress += it->second.per_ms * static_cast<float>( dt );
-        if( it->second.progress >= 1.0f ) {
+        bool erase_this = ( it->second.progress >= 1.0f );
+        if( !erase_this ) {
+            const tripoint_bub_ms bub = here.get_bub( it->first );
+            if( !here.inbounds( bub ) ) {
+                erase_this = true;
+            }
+        }
+        if( erase_this ) {
             it = m_creature_anims.erase( it );
         } else {
             ++it;
@@ -2100,7 +2149,15 @@ void cata_tiles::advance_creature_move_anims()
     }
     for( auto it = m_creature_hit_anims.begin(); it != m_creature_hit_anims.end(); ) {
         it->second.progress += it->second.per_ms * static_cast<float>( dt );
-        if( it->second.progress >= 1.0f ) {
+        bool erase_this = ( it->second.progress >= 1.0f );
+        if( !erase_this ) {
+            const tripoint_bub_ms bub = here.get_bub( it->first );
+            if( !here.inbounds( bub ) ) {
+                erase_this = true;
+            }
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->second.handle );
             it = m_creature_hit_anims.erase( it );
         } else {
             ++it;
@@ -2108,7 +2165,14 @@ void cata_tiles::advance_creature_move_anims()
     }
     for( auto it = m_creature_attack_anims.begin(); it != m_creature_attack_anims.end(); ) {
         it->second.progress += it->second.per_ms * static_cast<float>( dt );
-        if( it->second.progress >= 1.0f ) {
+        bool erase_this = ( it->second.progress >= 1.0f );
+        if( !erase_this ) {
+            const tripoint_bub_ms bub = here.get_bub( it->first );
+            if( !here.inbounds( bub ) ) {
+                erase_this = true;
+            }
+        }
+        if( erase_this ) {
             it = m_creature_attack_anims.erase( it );
         } else {
             ++it;
@@ -2116,14 +2180,14 @@ void cata_tiles::advance_creature_move_anims()
     }
 }
 
-void cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
+effect_handle cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
         const point &dir_tiles, bool is_player )
 {
     if( !get_option<bool>( "CREATURE_HIT_ANIM" ) ) {
-        return;
+        return 0;
     }
     if( is_player && !get_option<bool>( "PLAYER_HIT_ANIM" ) ) {
-        return;
+        return 0;
     }
     const float total_ms = std::max( 1, get_option<int>( "CREATURE_HIT_ANIM_TIME" ) );
     creature_hit_anim anim;
@@ -2142,6 +2206,9 @@ void cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float 
     }
     // Restart from the top if the creature is hit again mid-reaction.
     m_creature_hit_anims[pos_abs] = anim;
+    const effect_handle h = alloc_handle( effect_kind::creature_hit, &m_creature_hit_anims[pos_abs] );
+    m_creature_hit_anims[pos_abs].handle = h;
+    return h;
 }
 
 void cata_tiles::start_creature_attack_anim( const tripoint_abs_ms &pos_abs,
@@ -3823,6 +3890,30 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
     bool ret_draw_field = false;
     bool ret_draw_items = false;
 
+    // === 2A scaffolding: verify per-frame field cache against live map ===
+    // Gated by CATA_VERIFY_FIELD_CACHE env var.  In 2B the function switches
+    // fully to the cached values and this block is removed.
+    {
+        static const bool verify_field_cache = []() {
+            const char *v = getenv( "CATA_VERIFY_FIELD_CACHE" );
+            return v && ( strcmp( v, "1" ) == 0 || strcmp( v, "true" ) == 0 );
+        }();
+        if( verify_field_cache && !fld_overridden && !invisible[0] ) {
+            const field_type_id live_type  = f.displayed_field_type();
+            const int          live_intens = f.displayed_intensity();
+            if( live_type != m_cur_field_content ||
+                live_intens != m_cur_field_intensity ) {
+                debugmsg( "draw-cache field mismatch at %s: "
+                          "cache(%s,%d) != live(%s,%d)",
+                          p.to_string(),
+                          m_cur_field_content.id().str(),
+                          m_cur_field_intensity,
+                          live_type.id().str(),
+                          live_intens );
+            }
+        }
+    }
+
     auto draw_layer_field = [&]( const std::string & terfurn_key,
     const lit_level & ll, const field_entry & fe, const std::array<int, 4> &neighborhood ) {
         auto itt = tileset_ptr->field_layer_data.find( terfurn_key );
@@ -5044,14 +5135,14 @@ void cata_tiles::init_custom_explosion_layer( const std::map<tripoint_bub_ms, ex
     do_draw_custom_explosion = true;
     custom_explosion_layer = layer;
 }
-void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
-                                       const explosion_light_str_id &effect,
-                                       const tripoint_bub_ms &center, float radius_tiles,
-                                       float per_ms, float end_progress,
-                                       bool circular_shockwave,
-                                       shockwave_state::sw_shape shock_shape,
-                                       const tripoint_bub_ms &shock_target,
-                                       float shock_half_angle )
+effect_handle cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
+                                               const explosion_light_str_id &effect,
+                                               const tripoint_bub_ms &center, float radius_tiles,
+                                               float per_ms, float end_progress,
+                                               bool circular_shockwave,
+                                               shockwave_state::sw_shape shock_shape,
+                                               const tripoint_bub_ms &shock_target,
+                                               float shock_half_angle )
 {
     // Append a new asynchronous blast; existing ones keep playing (concurrent
     // overlap). It advances itself each frame via advance_explosion_lights().
@@ -5068,6 +5159,9 @@ void cata_tiles::init_explosion_light( const std::map<tripoint_bub_ms, float> &i
     a.shock_target = shock_target;
     a.shock_half_angle = shock_half_angle;
     m_explosion_lights.push_back( std::move( a ) );
+    const effect_handle h = alloc_handle( effect_kind::explosion_light, &m_explosion_lights.back() );
+    m_explosion_lights.back().handle = h;
+    return h;
 }
 // Elapsed steady-clock ms since the last tick stored in \p last_ms, capped so a
 // long stall (pause, heavy turn) advances at most one frame's worth instead of
@@ -5090,6 +5184,17 @@ int64_t cata_tiles::capped_frame_dt_ms( std::optional<int64_t> &last_ms )
     constexpr int64_t max_step_ms = 1000 / 15;
     return std::min( dt_raw, max_step_ms );
 }
+
+void cata_tiles::advance_all_transient_effects()
+{
+    advance_creature_move_anims();
+    advance_explosion_lights();
+    advance_bullet_anims();
+    advance_screen_shake_frame();
+    advance_sct();
+    advance_highlights();
+}
+
 void cata_tiles::advance_explosion_lights()
 {
     if( m_explosion_lights.empty() ) {
@@ -5104,9 +5209,18 @@ void cata_tiles::advance_explosion_lights()
     if( dt <= 0 ) {
         return;
     }
+    map &here = get_map();
     for( auto it = m_explosion_lights.begin(); it != m_explosion_lights.end(); ) {
         it->progress += it->per_ms * static_cast<float>( dt );
+        bool erase_this = false;
         if( it->progress >= it->end_progress ) {
+            erase_this = true;
+        } else if( !here.inbounds( it->center ) ) {
+            // All tiles of a centred blast leave the bubble together with its centre.
+            erase_this = true;
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->handle );
             it = m_explosion_lights.erase( it );
         } else {
             ++it;
@@ -5130,13 +5244,13 @@ void cata_tiles::advance_screen_shake_frame()
     }
     advance_screen_shake( dt );
 }
-void cata_tiles::init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
-                                   const std::vector<std::string> &sprites,
-                                   const std::vector<int> &rotations,
-                                   bool as_line, float per_ms )
+effect_handle cata_tiles::init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
+                                           const std::vector<std::string> &sprites,
+                                           const std::vector<int> &rotations,
+                                           bool as_line, float per_ms )
 {
     if( points.empty() ) {
-        return;
+        return 0;
     }
     active_bullet_anim anim;
     anim.points = points;
@@ -5160,6 +5274,9 @@ void cata_tiles::init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
     anim.start_delay_ms = std::min( max_stagger_ms,
                                     burst_gap_ms * static_cast<float>( pending ) );
     m_bullet_anims.push_back( std::move( anim ) );
+    const effect_handle h = alloc_handle( effect_kind::bullet, &m_bullet_anims.back() );
+    m_bullet_anims.back().handle = h;
+    return h;
 }
 void cata_tiles::advance_bullet_anims()
 {
@@ -5190,6 +5307,7 @@ void cata_tiles::advance_bullet_anims()
             // The whole gun-line shows at once; per_ms counts its short life to 1.
             it->life += it->per_ms * step_ms;
             if( it->life >= 1.0f ) {
+                m_handle_index.erase( it->handle );
                 it = m_bullet_anims.erase( it );
                 continue;
             }
@@ -5197,9 +5315,16 @@ void cata_tiles::advance_bullet_anims()
             // The dot sweeps one point per per_ms step; done past the last point.
             it->head += it->per_ms * step_ms;
             if( it->head >= static_cast<float>( it->points.size() ) ) {
+                m_handle_index.erase( it->handle );
                 it = m_bullet_anims.erase( it );
                 continue;
             }
+        }
+        // Drop the tracer if all its path tiles left the reality bubble.
+        if( !it->points.empty() && !any_tile_in_bubble( it->points ) ) {
+            m_handle_index.erase( it->handle );
+            it = m_bullet_anims.erase( it );
+            continue;
         }
         ++it;
     }
@@ -5396,6 +5521,221 @@ void cata_tiles::void_sct()
 {
     do_draw_sct = false;
 }
+
+effect_handle cata_tiles::init_sct( const tripoint_bub_ms &pos, const std::string &text,
+                                   nc_color color, float duration_ms )
+{
+    sct_effect eff;
+    eff.pos = pos;
+    eff.text = text;
+    eff.color = color;
+    eff.duration_ms = duration_ms;
+    eff.elapsed_ms = 0.0f;
+    eff.screen_y_offset = 0.0f;
+    m_sct_effects.push_back( std::move( eff ) );
+    const effect_handle h = alloc_handle( effect_kind::sct, &m_sct_effects.back() );
+    m_sct_effects.back().handle = h;
+    return h;
+}
+
+void cata_tiles::advance_sct()
+{
+    if( m_sct_effects.empty() ) {
+        m_sct_last_ms.reset();
+        return;
+    }
+    const int64_t dt = capped_frame_dt_ms( m_sct_last_ms );
+    if( dt <= 0 ) {
+        return;
+    }
+    const float dt_s = static_cast<float>( dt ) / 1000.0f;
+    map &here = get_map();
+    for( auto it = m_sct_effects.begin(); it != m_sct_effects.end(); ) {
+        it->elapsed_ms += static_cast<float>( dt );
+        it->screen_y_offset -= it->rise_speed_px_per_s * dt_s;
+        bool erase_this = ( it->elapsed_ms >= it->duration_ms );
+        if( !erase_this && !here.inbounds( it->pos ) ) {
+            erase_this = true;
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->handle );
+            it = m_sct_effects.erase( it );
+        } else {
+            ++it;
+        }
+    }
+}
+
+void cata_tiles::draw_sct_frame( int view_z )
+{
+    if( !m_sct_overlay_strings ) {
+        return;
+    }
+    const bool use_font = get_option<bool>( "ANIMATION_SCT_USE_FONT" );
+    for( const sct_effect &eff : m_sct_effects ) {
+        // Only draw effects on the z-level the camera is currently viewing.
+        if( eff.pos.z() != view_z ) {
+            continue;
+        }
+        // Alpha fades from 1.0 at start to 0.0 at end; skip fully faded labels.
+        const float alpha = 1.0f - ( eff.elapsed_ms / eff.duration_ms );
+        if( alpha <= 0.0f ) {
+            continue;
+        }
+
+        const point screen_p = player_to_screen( eff.pos.xy() ) +
+                               point( 0, static_cast<int>( eff.screen_y_offset ) );
+
+        const int FG = eff.color.to_color_pair_index();
+
+        if( use_font ) {
+            m_sct_overlay_strings->emplace(
+                screen_p,
+                formatted_text( eff.text, FG, text_alignment::center ) );
+        } else {
+            // Sprite-based path: draw each character as a coloured ascii tile.
+            int cx = 0;
+            for( const char ch : eff.text ) {
+                const std::string generic_id = get_ascii_tile_id(
+                    static_cast<uint32_t>( static_cast<unsigned char>( ch ) ), FG, -1 );
+                if( tileset_ptr->find_tile_type( generic_id ) ) {
+                    const point char_p = screen_p + point( cx * tile_width, 0 );
+                    if( const std::optional<point> tile_p = tile_to_player( char_p ) ) {
+                        draw_from_id_string( generic_id, TILE_CATEGORY::NONE, empty_string,
+                                             tripoint_bub_ms( point_bub_ms( *tile_p ), eff.pos.z() ),
+                                             0, 0, lit_level::LIT, false );
+                    }
+                }
+                ++cx;
+            }
+        }
+    }
+}
+
+effect_handle cata_tiles::alloc_handle( effect_kind kind, void *ptr )
+{
+    const effect_handle h = m_next_handle++;
+    m_handle_index[h] = { kind, ptr };
+    return h;
+}
+
+void cata_tiles::cancel_effect( effect_handle h )
+{
+    auto idx_it = m_handle_index.find( h );
+    if( idx_it == m_handle_index.end() ) {
+        return;
+    }
+    const effect_kind kind = idx_it->second.kind;
+    m_handle_index.erase( idx_it );
+
+    // Search the matching container for the element whose handle matches,
+    // and erase it.  Using the handle field (stored in the element on init)
+    // is safe even if vectors have reallocated since registration.
+    switch( kind ) {
+        case effect_kind::explosion_light:
+            for( auto it = m_explosion_lights.begin(); it != m_explosion_lights.end(); ++it ) {
+                if( it->handle == h ) {
+                    m_explosion_lights.erase( it );
+                    return;
+                }
+            }
+            break;
+        case effect_kind::bullet:
+            for( auto it = m_bullet_anims.begin(); it != m_bullet_anims.end(); ++it ) {
+                if( it->handle == h ) {
+                    m_bullet_anims.erase( it );
+                    return;
+                }
+            }
+            break;
+        case effect_kind::creature_hit:
+            for( auto it = m_creature_hit_anims.begin(); it != m_creature_hit_anims.end(); ++it ) {
+                if( it->second.handle == h ) {
+                    m_creature_hit_anims.erase( it );
+                    return;
+                }
+            }
+            break;
+        case effect_kind::sct:
+            for( auto it = m_sct_effects.begin(); it != m_sct_effects.end(); ++it ) {
+                if( it->handle == h ) {
+                    m_sct_effects.erase( it );
+                    return;
+                }
+            }
+            break;
+        case effect_kind::highlight:
+            for( auto it = m_highlights.begin(); it != m_highlights.end(); ++it ) {
+                if( it->handle == h ) {
+                    m_highlights.erase( it );
+                    return;
+                }
+            }
+            break;
+        case effect_kind::creature_move:
+            // move anims don't register handles — nothing to erase
+            break;
+    }
+}
+
+bool cata_tiles::any_tile_in_bubble( const std::vector<tripoint_bub_ms> &tiles ) const
+{
+    map &here = get_map();
+    for( const tripoint_bub_ms &t : tiles ) {
+        if( here.inbounds( t ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+effect_handle cata_tiles::add_highlight( const tripoint_bub_ms &pos, float duration_ms )
+{
+    highlight_effect h;
+    h.pos = pos;
+    h.life_ms = duration_ms;
+    m_highlights.push_back( h );
+    const effect_handle hl_handle = alloc_handle( effect_kind::highlight, &m_highlights.back() );
+    m_highlights.back().handle = hl_handle;
+    return hl_handle;
+}
+
+void cata_tiles::advance_highlights()
+{
+    if( m_highlights.empty() ) {
+        m_highlights_last_ms.reset();
+        return;
+    }
+    const int64_t dt = capped_frame_dt_ms( m_highlights_last_ms );
+    if( dt <= 0 ) {
+        return;
+    }
+    map &here = get_map();
+    for( auto it = m_highlights.begin(); it != m_highlights.end(); ) {
+        it->life_ms -= static_cast<float>( dt );
+        bool erase_this = ( it->life_ms <= 0.0f );
+        if( !erase_this && !here.inbounds( it->pos ) ) {
+            erase_this = true;
+        }
+        if( erase_this ) {
+            m_handle_index.erase( it->handle );
+            it = m_highlights.erase( it );
+        } else {
+            ++it;
+        }
+    }
+}
+
+void cata_tiles::draw_highlights( int view_z )
+{
+    for( const highlight_effect &h : m_highlights ) {
+        if( h.pos.z() != view_z ) {
+            continue;
+        }
+        draw_from_id_string( "highlight", h.pos, 0, 0, lit_level::LIT, false );
+    }
+}
+
 void cata_tiles::void_zones()
 {
     do_draw_zones = false;
@@ -5813,7 +6153,7 @@ void cata_tiles::draw_weather_frame()
     }
 }
 
-void cata_tiles::draw_sct_frame( std::multimap<point, formatted_text> &overlay_strings )
+void cata_tiles::draw_sct_frame_legacy( std::multimap<point, formatted_text> &overlay_strings )
 {
     const bool use_font = get_option<bool>( "ANIMATION_SCT_USE_FONT" );
     tripoint_bub_ms player_pos = get_player_character().pos_bub();

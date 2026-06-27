@@ -35,7 +35,9 @@
 #include "point.h"
 #include "sdl_geometry.h"
 #include "sdl_wrappers.h"
+#include "sct_effect.h"
 #include "shockwave.h"
+#include "transient_effect.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
@@ -822,15 +824,15 @@ class cata_tiles
         // frame; several may overlap. \p radius_tiles is the blast's max extent in
         // tiles (used to size the shockwave ring). \p per_ms / \p end_progress
         // drive the real-time sweep.
-        void init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
-                                   const explosion_light_str_id &effect,
-                                   const tripoint_bub_ms &center, float radius_tiles,
-                                   float per_ms, float end_progress,
-                                   bool circular_shockwave = true,
-                                   shockwave_state::sw_shape shock_shape =
-                                       shockwave_state::sw_shape::disc,
-                                   const tripoint_bub_ms &shock_target = tripoint_bub_ms(),
-                                   float shock_half_angle = 0.0f );
+        effect_handle init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
+                                           const explosion_light_str_id &effect,
+                                           const tripoint_bub_ms &center, float radius_tiles,
+                                           float per_ms, float end_progress,
+                                           bool circular_shockwave = true,
+                                           shockwave_state::sw_shape shock_shape =
+                                               shockwave_state::sw_shape::disc,
+                                           const tripoint_bub_ms &shock_target = tripoint_bub_ms(),
+                                           float shock_half_angle = 0.0f );
         // Advance all active explosion lights by real elapsed time and drop the
         // finished ones. Called once at the start of each draw().
         void advance_explosion_lights();
@@ -852,10 +854,10 @@ class cata_tiles
         //            false -> a single bullet sprite sweeps tile-to-tile along the
         //                     path (the classic moving-dot look).
         // per_ms drives the sweep (dot) or the life countdown (line).
-        void init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
-                               const std::vector<std::string> &sprites,
-                               const std::vector<int> &rotations,
-                               bool as_line, float per_ms );
+        effect_handle init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
+                                       const std::vector<std::string> &sprites,
+                                       const std::vector<int> &rotations,
+                                       bool as_line, float per_ms );
         // Advance all active bullet animations by real elapsed time, dropping the
         // finished ones. Called once at the start of each draw().
         void advance_bullet_anims();
@@ -876,6 +878,10 @@ class cata_tiles
         // returns the steady-clock ms since the tick stored in \p last_ms (which it
         // updates), clamped to one frame's worth, or 0 on the priming call.
         static int64_t capped_frame_dt_ms( std::optional<int64_t> &last_ms );
+
+        // Unified advance for all transient effects (explosion lights, bullets,
+        // creature anims, SCT, highlights).  Called once at the start of draw().
+        void advance_all_transient_effects();
 
         void init_draw_bullet( const tripoint_bub_ms &p, std::string name, int rotation = 0 );
         void init_draw_bullets( const std::vector<tripoint_bub_ms> &ps,
@@ -925,8 +931,8 @@ class cata_tiles
         // victim, in tiles); when zero, or when the curve option is "bounce", a
         // vertical pop-and-fall is used instead of a horizontal knockback.
         // \p is_player gates the avatar's reaction on the separate PLAYER_HIT_ANIM option.
-        void start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
-                                      const point &dir_tiles, bool is_player );
+        effect_handle start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
+                                              const point &dir_tiles, bool is_player );
         // True while any hit reaction is in flight.
         bool has_creature_hit_anim() const {
             return !m_creature_hit_anims.empty();
@@ -964,13 +970,42 @@ class cata_tiles
         void draw_highlight();
         void void_highlight();
 
+        // --- Asynchronous highlight overlay ---
+        // Mirrors the explosion-light async model: callers fire-and-forget a
+        // highlight that lasts for a fixed duration and then fades out.
+        effect_handle add_highlight( const tripoint_bub_ms &pos,
+                                     float duration_ms = 500.0f );
+        void advance_highlights();
+        bool has_highlight() const { return !m_highlights.empty(); }
+        void draw_highlights( int view_z );
+
         void init_draw_weather( weather_printable weather, std::string name );
         void draw_weather_frame();
         void void_weather();
 
         void init_draw_sct();
-        void draw_sct_frame( std::multimap<point, formatted_text> &overlay_strings );
+        void draw_sct_frame_legacy( std::multimap<point, formatted_text> &overlay_strings );
         void void_sct();
+
+        // --- Asynchronous SCT (Scrolling Combat Text) ---
+        // Mirrors the explosion-light async model: callers fire-and-forget a
+        // short floating text label that rises, fades, and expires by real time.
+        effect_handle init_sct( const tripoint_bub_ms &pos, const std::string &text, nc_color color,
+                                float duration_ms = 800.0f );
+        void advance_sct();
+        bool has_sct() const { return !m_sct_effects.empty(); }
+        void draw_sct_frame( int view_z );
+
+        // --- Handle system ---
+        // Allocate a handle for a newly-created effect, registering it in
+        // m_handle_index so cancel_effect() can later erase it by kind.
+        effect_handle alloc_handle( effect_kind kind, void *ptr );
+        // Cancel (erase) an effect by handle.  No-op if the handle is unknown.
+        void cancel_effect( effect_handle h );
+
+        // Returns true if at least one tile in `tiles` is inside the reality bubble
+        // (map::inbounds).  Used by advance_* to drop effects that have left the bubble.
+        bool any_tile_in_bubble( const std::vector<tripoint_bub_ms> &tiles ) const;
 
         void init_draw_zones( const tripoint_bub_ms &start, const tripoint_bub_ms &end,
                               const tripoint_rel_ms &offset );
@@ -1139,6 +1174,14 @@ class cata_tiles
         // sprite branch of the layer loop.
         const tile_render_info *m_cur_tile = nullptr;
 
+        // Per-frame field data, armed from the cache before draw_field_or_item.
+        // Follows the m_cur_bounds / m_cur_tile pattern: per-tile state handed
+        // to a layer function without changing its shared signature.  Uses
+        // field_type_id (from type_id.h, already included) so this header stays
+        // free of map.h.
+        field_type_id m_cur_field_content;
+        int m_cur_field_intensity = 0;
+
         // Set by draw_vpart around its draw_from_id_string call so the vehicle
         // part sprite gets recolored with the part's paint color; nullopt
         // otherwise. Consumed when building tile_render_params.
@@ -1159,6 +1202,7 @@ class cata_tiles
         // it). progress runs 0->1: at 0 the sprite is offset back to its old tile,
         // at 1 it sits on the real (new) tile.
         struct creature_move_anim {
+            effect_handle handle = 0;
             point delta_tiles;         // (old - new) tile delta, converted to pixels at draw time
             float progress = 0.0f;     // 0..1
             float per_ms = 0.0f;       // progress increment per millisecond
@@ -1173,6 +1217,7 @@ class cata_tiles
         // knockback-and-return, sharing the offset injection and deferred-overlay
         // path with the move glide.
         struct creature_hit_anim {
+            effect_handle handle = 0;
             float progress = 0.0f;     // 0..1
             float per_ms = 0.0f;       // progress increment per millisecond
             float magnitude_tiles = 0.5f; // peak displacement in tiles (damage-scaled)
@@ -1254,6 +1299,7 @@ class cata_tiles
         // player can act immediately. Several can overlap (concurrent blasts in one
         // turn). progress runs 0..end_progress; finished entries are dropped.
         struct active_explosion_light {
+            effect_handle handle = 0;
             std::map<tripoint_bub_ms, float> radial; // per-tile radial coord (0..1)
             explosion_light_str_id effect;
             tripoint_bub_ms center;
@@ -1286,6 +1332,7 @@ class cata_tiles
         // lights), so several concurrent shots overlap without blocking the turn.
         // Finished entries are dropped in advance_bullet_anims().
         struct active_bullet_anim {
+            effect_handle handle = 0;
             std::vector<tripoint_bub_ms> points; // visible flight path tiles
             std::vector<std::string> sprites;    // per-point sprite id
             std::vector<int> rotations;          // per-point rotation
@@ -1301,9 +1348,39 @@ class cata_tiles
             // hits zero.
             float start_delay_ms = 0.0f;
         };
+
+        // Asynchronous highlight overlay.
+        struct highlight_effect {
+            effect_handle handle = 0;
+            tripoint_bub_ms pos;
+            float life_ms = 0.0f;        // remaining time
+        };
+
         std::vector<active_bullet_anim> m_bullet_anims;
         // steady_clock timestamp (ms) of the last bullet-anim advance.
         std::optional<int64_t> m_bullet_anim_last_ms;
+
+        // Asynchronous SCT effects.
+        std::vector<sct_effect> m_sct_effects;
+        // steady_clock timestamp (ms) of the last SCT advance.
+        std::optional<int64_t> m_sct_last_ms;
+        // Set by draw() before the animation section so draw_sct_frame can
+        // emit formatted_text entries; null outside the animation phase.
+        std::multimap<point, formatted_text> *m_sct_overlay_strings = nullptr;
+
+        // Asynchronous highlight overlay.
+        std::vector<highlight_effect> m_highlights;
+        // steady_clock timestamp (ms) of the last highlights advance.
+        std::optional<int64_t> m_highlights_last_ms;
+
+        // Handle system: monotonically-increasing handle counter and
+        // handle → (kind, container-element-pointer) index.
+        struct handle_entry {
+            effect_kind kind = effect_kind::explosion_light;
+            void *ptr = nullptr;
+        };
+        effect_handle m_next_handle = 1;
+        std::unordered_map<effect_handle, handle_entry> m_handle_index;
 
         std::vector<tripoint_bub_ms> bul_pos;
         std::vector<std::string> bul_id;
