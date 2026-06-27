@@ -61,38 +61,25 @@ struct tint_sprite_record {
 };
 
 struct tile_render_info {
-    struct common {
+    // ═══ L3 semantic data — immutable after the dirty-gated rebuild ═══
+    // Belongs to the server↔client boundary: only the coordinate (pos) lives
+    // here; static content (ter/furn/trap etc.) is captured separately in
+    // sprite::*_content fields.  No L1-L2 rendering artifacts.
+    struct tile_view_data {
         const tripoint_bub_ms pos;
+        explicit tile_view_data( const tripoint_bub_ms &p ) : pos( p ) {}
+    };
 
-        // ═══ TODO(client-server): L1-L2 rendering state mixed into L3 snapshot ═══
-        //
-        // L1 = client-side: sprite selection, RGBA tint, visibility dimming
-        // L2 = client-side: draw-list ordering, scene composition, animation
-        // L3 = server↔client boundary: semantic type-ids, scalar light, flags
-        //
-        // The fields below — height_3d, bounds, tint_sprites, needs_tint, tint_color —
-        // are all L1-L2 rendering artifacts computed or mutated every frame during the
-        // layer loop.  They do NOT belong in the L3 semantic boundary: the server must
-        // not compute RGBA tint, screen-space bounds, or sprite recordings.  Only
-        // light_scalar (float) and light_color (semantic name, not RGB) cross the
-        // boundary.
-        //
-        // Worse, these fields are *mutated during consumption* — the layer loop writes
-        // height_3d, tint_color, bounds, and tint_sprites every frame.  An immutable
-        // snapshot model requires splitting common into:
-        //   tile_view_data  (L3, const after rebuild): pos, static content, visibility,
-        //                    light scalar + semantic light color
-        //   tile_render_scratch (L1-L2, per-frame mutable): height_3d, bounds,
-        //                    tint_sprites, needs_tint, tint_color
-        //
-        // height_3d is additionally used as a save/restore scratch variable during
-        // vehicle drawing, which is fundamentally incompatible with an immutable
-        // snapshot.
-
-        // accumulator for 3d tallness of sprites rendered here so far;
+    // ═══ L1-L2 rendering scratch — per-frame mutable ═══
+    // All fields are recomputed or mutated every frame during the layer loop.
+    // They are purely client-side (sprite bounds, tint RGBA, height stack) and
+    // must never appear in a server-produced snapshot.
+    struct tile_render_scratch {
+        // Accumulator for 3d tallness of sprites rendered here so far; also
+        // used as a save/restore scratch variable during vehicle drawing.
         int height_3d = 0;
-        // Ortho tint overlay state, populated during the draw prepass and layer
-        // loop. For tiles where needs_tint is true:
+        // Ortho tint overlay state, populated during the draw prepass and
+        // layer loop.  For tiles where needs_tint is true:
         //   bounds       - union of all content sprite screen rects (opaque only)
         //   tint_sprites - draw records for silhouette mask replay
         //   tint_color   - precomputed RGBA tint from the colored light cache
@@ -103,8 +90,7 @@ struct tile_render_info {
             uint8_t r, g, b, a;
         } tint_color = { 0, 0, 0, 0 };
 
-        common( const tripoint_bub_ms &pos, const int height_3d )
-            : pos( pos ), height_3d( height_3d ) {}
+        explicit tile_render_scratch( int h3d = 0 ) : height_3d( h3d ) {}
     };
 
     struct vision_effect {
@@ -234,14 +220,17 @@ struct tile_render_info {
         }
     };
 
-    common com;
+    tile_view_data view;
+    tile_render_scratch scratch;
     std::variant<vision_effect, sprite> var;
 
-    tile_render_info( const common &com, const vision_effect &var )
-        : com( com ), var( var ) {}
+    tile_render_info( const tile_view_data &v, const tile_render_scratch &s,
+                      const vision_effect &var )
+        : view( v ), scratch( s ), var( var ) {}
 
-    tile_render_info( const common &com, const sprite &var )
-        : com( com ), var( var ) {}
+    tile_render_info( const tile_view_data &v, const tile_render_scratch &s,
+                      const sprite &var )
+        : view( v ), scratch( s ), var( var ) {}
 };
 
 /**
@@ -324,19 +313,17 @@ class draw_points_cache_t
 // currently carries a pre-existing working buffer (draw_points_cache_t) that
 // mixes L3 semantic data with L1-L2 rendering artifacts.  Known gaps:
 //
-// 1. COORDINATE SPLIT: origin is tripoint_abs_ms, but tile_render_info::common::pos
+// 1. COORDINATE SPLIT: origin is tripoint_abs_ms, but tile_view_data::pos
 //    is tripoint_bub_ms (bubble-relative).  Server-side snapshots must use world-
 //    absolute coordinates throughout.
 //
-// 2. MUTABLE DURING CONSUMPTION: the layer loop writes height_3d, tint_color, bounds,
-//    and tint_sprites into the cache every frame.  A true snapshot must be immutable
-//    after production.  Requires splitting tile_render_info into tile_view_data (L3,
-//    const) and tile_render_scratch (L1-L2, mutable).
+// 2. ✅ RESOLVED: tile_render_info split into tile_view_data (L3, const pos) and
+//    tile_render_scratch (L1-L2, per-frame mutable).  The layer loop no longer
+//    writes rendering state into the same struct that holds the semantic coordinate.
 //
-// 3. FALSE SUMMIT: despite the name, this struct is NOT yet a clean L3 boundary type.
-//    The tiles member contains RGBA tint (L1), screen-space bounds (L2), and sprite
-//    recordings (L1) — all client-side computations.  See tile_render_info::common
-//    for the full TODO.
+// 3. ✅ RESOLVED: RGBA tint, screen-space bounds, and sprite recordings are
+//    confined to tile_render_scratch; tile_view_data contains only the L3
+//    coordinate.  The false summit has been flattened.
 //
 // 4. MISSING L3 DATA (not captured yet; live-read every frame):
 //    - creature data (CreatureView: type id, facing, mount/summoner flags)
