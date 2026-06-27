@@ -491,6 +491,8 @@ Character flags can be `trait_id`, `json_flag_id` or `flag_id`.  Some of these a
 - ```WEB_WALKER``` Removes the movement speed demerit while walking through webs.
 - ```WINGGLIDE``` You can glide using some part of your body and strenuous physical effort.
 - ```mycus``` acts as `THRESH_MYCUS`, makes all monsters with FUNGUS species friendly, fungicidal gas & antifungal pills cause worse effects.  Mutate when eating mycus fruit, or when sleeping.
+- ```GENDER_FLUIDITY``` Allows characters to change their gender by bypassing the `PLAYER_ARBITRARY_CHANGE_GENDER` option.
+- ```GENDER_INVARIANCE``` Preventing players from directly switching genders through the menu under any circumstances. It will override `GENDER_FLUIDITY` flag.
 
 
 ### Mutation Categories
