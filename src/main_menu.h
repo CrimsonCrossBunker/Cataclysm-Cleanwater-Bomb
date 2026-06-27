@@ -39,10 +39,12 @@ class main_menu
         std::vector<std::string> vNewGameSubItems;
         std::vector<std::string> vNewGameHints;
         std::vector< std::vector<std::string> > vWorldHotkeys;
+        std::vector< std::vector<std::string> > vNewGameHotkeys;
+        std::vector<std::string> vCoopSubItems;
+        std::vector< std::vector<std::string> > vCoopHotkeys;
         std::vector<std::string> vSettingsSubItems;
         std::vector< std::vector<std::string> > vSettingsHotkeys;
         std::vector< std::vector<std::string> > vMenuHotkeys; // hotkeys for the vMenuItems
-        std::vector< std::vector<std::string> > vNewGameHotkeys;
         std::string vdaytip; //tip of the day
 
         /**
