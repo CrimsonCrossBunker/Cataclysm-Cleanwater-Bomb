@@ -215,6 +215,12 @@ class game
         // independently of the tick rate without losing cached visibility state.
         void render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_pos );
 
+        // do_turn decomposition — each method handles a distinct phase of the game loop.
+        void simulate_turn_prefix();       // world progression: calendar, weather, NPCs, hordes
+        bool do_avatar_action_loop();      // player input & action; returns true if game over
+        void simulate_turn_suffix();       // post-action simulation: creatures, map cache, memory
+        void present_turn();               // rendering, audio, UI, cleanup
+
         /** Loads static data that does not depend on mods or similar. */
         void load_static_data();
 
