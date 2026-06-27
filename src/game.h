@@ -209,6 +209,11 @@ class game
         * @return true if game is over (death, saved, quit, etc)
         */
         bool do_turn();
+        // Refresh visibility cache and optionally redraw during multi-step movement.
+        // The visibility update always runs (map memory consumes it); the redraw
+        // is gated by skip_mid_step_render so the frame rate can be controlled
+        // independently of the tick rate without losing cached visibility state.
+        void render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_pos );
 
         /** Loads static data that does not depend on mods or similar. */
         void load_static_data();
@@ -1333,6 +1338,11 @@ class game
         bool critter_died = false; // NOLINT(cata-serialize)
         /** Is this the first redraw since waiting (sleeping or activity) started */
         bool first_redraw_since_waiting_started = true; // NOLINT(cata-serialize)
+        /** When set, mid-step redraws inside the avatar action loop are bypassed;
+         *  visibility and map-memory updates still proceed.  Lets the renderer
+         *  run at a different rate than the simulation without losing cached
+         *  visibility state. */
+        bool skip_mid_step_render = false; // NOLINT(cata-serialize)
         /** Is Zone manager open or not - changes graphics of some zone tiles */
         bool zones_manager_open = false; // NOLINT(cata-serialize)
 
