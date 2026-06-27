@@ -34,6 +34,7 @@
 #include "pimpl.h"
 #include "point.h"
 #include "sdl_geometry.h"
+#include "sct_effect.h"
 #include "sdl_wrappers.h"
 #include "shockwave.h"
 #include "type_id.h"
@@ -869,6 +870,19 @@ class cata_tiles
         // metrics don't paint onto the rebuilt scene.
         void void_bullet_anim();
 
+        // --- Asynchronous SCT (Scrolling Combat Text) ---
+        // Fire-and-forget floating combat-text labels that rise and fade over real
+        // time.  Follows the same async model as explosion lights and bullet anims:
+        // the caller registers a label and returns immediately; the label advances
+        // every draw frame and is cleaned up when its duration expires.  Lives
+        // alongside the legacy overlay_strings SCT path (init_draw_sct / void_sct).
+        void init_sct( const tripoint_bub_ms &pos, const std::string &text, nc_color color,
+                       float duration_ms = 800.0f );
+        void advance_sct();
+        bool has_sct() const { return !m_sct_effects.empty(); }
+        void draw_sct_frame( int view_z,
+                             std::multimap<point, formatted_text> &overlay_strings );
+
         // Advance the sound-driven screen shake by real elapsed time. Called once at
         // the start of each draw(), alongside the other wall-clock animations.
         void advance_screen_shake_frame();
@@ -1304,6 +1318,12 @@ class cata_tiles
         std::vector<active_bullet_anim> m_bullet_anims;
         // steady_clock timestamp (ms) of the last bullet-anim advance.
         std::optional<int64_t> m_bullet_anim_last_ms;
+
+        // Active asynchronous SCT labels.  Each rises from its tile and fades
+        // over real time.  Finished entries are dropped in advance_sct().
+        std::vector<sct_effect> m_sct_effects;
+        // steady_clock timestamp (ms) of the last SCT advance.
+        std::optional<int64_t> m_sct_last_ms;
 
         std::vector<tripoint_bub_ms> bul_pos;
         std::vector<std::string> bul_id;

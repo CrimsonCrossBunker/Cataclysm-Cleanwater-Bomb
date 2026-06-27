@@ -601,6 +601,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     advance_explosion_lights();
     // Advance asynchronous bullet animations the same way.
     advance_bullet_anims();
+    // Advance asynchronous SCT floating labels the same way.
+    advance_sct();
     // Advance the sound-driven screen shake decay.
     advance_screen_shake_frame();
 
@@ -1630,7 +1632,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                    has_bullet_anim() ||
                    do_draw_bullet || do_draw_hit || do_draw_line ||
                    do_draw_cursor || do_draw_highlight || do_draw_weather ||
-                   do_draw_sct || do_draw_zones || do_draw_async_anim;
+                   do_draw_sct || do_draw_zones || do_draw_async_anim ||
+                   has_sct();
 
     draw_footsteps_frame( center );
     if( in_animation ) {
@@ -1666,6 +1669,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         if( do_draw_sct ) {
             draw_sct_frame( overlay_strings );
             void_sct();
+        }
+        if( has_sct() ) {
+            draw_sct_frame( center.z(), overlay_strings );
         }
         if( do_draw_zones ) {
             draw_zones_frame();
@@ -5395,6 +5401,83 @@ void cata_tiles::void_weather()
 void cata_tiles::void_sct()
 {
     do_draw_sct = false;
+}
+
+// --- Asynchronous SCT (Scrolling Combat Text) ---
+
+void cata_tiles::init_sct( const tripoint_bub_ms &pos, const std::string &text,
+                           nc_color color, float duration_ms )
+{
+    sct_effect eff;
+    eff.pos = pos;
+    eff.text = text;
+    eff.color = color;
+    eff.duration_ms = duration_ms;
+    eff.elapsed_ms = 0.0f;
+    eff.screen_y_offset = 0.0f;
+    m_sct_effects.push_back( std::move( eff ) );
+}
+
+void cata_tiles::advance_sct()
+{
+    if( m_sct_effects.empty() ) {
+        m_sct_last_ms.reset();
+        return;
+    }
+    const int64_t dt = capped_frame_dt_ms( m_sct_last_ms );
+    if( dt <= 0 ) {
+        return;
+    }
+    const float dt_s = static_cast<float>( dt ) / 1000.0f;
+    for( auto it = m_sct_effects.begin(); it != m_sct_effects.end(); ) {
+        it->elapsed_ms += static_cast<float>( dt );
+        it->screen_y_offset -= it->rise_speed_px_per_s * dt_s;
+        if( it->elapsed_ms >= it->duration_ms ) {
+            it = m_sct_effects.erase( it );
+        } else {
+            ++it;
+        }
+    }
+}
+
+void cata_tiles::draw_sct_frame( int view_z,
+                                 std::multimap<point, formatted_text> &overlay_strings )
+{
+    const bool use_font = get_option<bool>( "ANIMATION_SCT_USE_FONT" );
+    for( const sct_effect &eff : m_sct_effects ) {
+        if( eff.pos.z() != view_z ) {
+            continue;
+        }
+        const float alpha = 1.0f - ( eff.elapsed_ms / eff.duration_ms );
+        if( alpha <= 0.0f ) {
+            continue;
+        }
+
+        const point screen_p = player_to_screen( eff.pos.xy() ) +
+                               point( 0, static_cast<int>( eff.screen_y_offset ) );
+        const int FG = eff.color.to_color_pair_index();
+
+        if( use_font ) {
+            overlay_strings.emplace(
+                screen_p,
+                formatted_text( eff.text, FG, text_alignment::center ) );
+        } else {
+            int cx = 0;
+            for( const char ch : eff.text ) {
+                const std::string generic_id = get_ascii_tile_id(
+                    static_cast<uint32_t>( static_cast<unsigned char>( ch ) ), FG, -1 );
+                if( tileset_ptr->find_tile_type( generic_id ) ) {
+                    const point char_p = screen_p + point( cx * tile_width, 0 );
+                    if( const std::optional<point> tile_p = tile_to_player( char_p ) ) {
+                        draw_from_id_string( generic_id, TILE_CATEGORY::NONE, empty_string,
+                                             tripoint_bub_ms( point_bub_ms( *tile_p ), eff.pos.z() ),
+                                             0, 0, lit_level::LIT, false );
+                    }
+                }
+                ++cx;
+            }
+        }
+    }
 }
 void cata_tiles::void_zones()
 {
