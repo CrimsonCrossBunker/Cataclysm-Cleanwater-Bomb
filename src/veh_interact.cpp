@@ -1461,7 +1461,7 @@ void veh_interact::calc_overview( map &here )
                         fmtstring = str_cat( "%s %s ", leak_marker, "%s", leak_marker );
                         offset = 0;
                     }
-                    std::string amoo_left = pt_ammo_cur.item_measure_prefix( pt.ammo_remaining(),
+                    std::string amoo_left = pt_ammo_cur->item_measure_prefix( pt.ammo_remaining(),
                                             pt_ammo_cur->phase == phase_id::LIQUID ? item_display_type::BY_VOLUME :
                                             item_display_type::DEFAULT );
                     right_print( w, y, offset, pt_ammo_cur->color,
