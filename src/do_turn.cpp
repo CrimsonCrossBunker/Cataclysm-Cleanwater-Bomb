@@ -542,6 +542,18 @@ bool game::do_turn()
 
     drain_renderer_recovery();
 
+    simulate_turn_prefix();
+    if( do_avatar_action_loop() ) {
+        return turn_handler::cleanup_at_end();
+    }
+    simulate_turn_suffix();
+    present_turn();
+
+    return false;
+}
+
+void game::simulate_turn_prefix()
+{
     weather_manager &weather = get_weather();
 
     // Increment game turn
@@ -643,6 +655,12 @@ bool game::do_turn()
     if( u.is_deaf() ) {
         sfx::do_hearing_loss();
     }
+}
+
+bool game::do_avatar_action_loop()
+{
+    avatar &u = get_avatar();
+    map &m = get_map();
 
     // avatar processes human input through handle_action()
     if( !u.has_effect( effect_sleep ) || uquit == QUIT_WATCH ) {
@@ -702,7 +720,7 @@ bool game::do_turn()
                 }
 
                 if( is_game_over() ) {
-                    return turn_handler::cleanup_at_end();
+                    return true;
                 }
 
                 if( uquit == QUIT_WATCH ) {
@@ -742,6 +760,13 @@ bool game::do_turn()
             }
         }
     }
+    return false;
+}
+
+void game::simulate_turn_suffix()
+{
+    avatar &u = get_avatar();
+    map &m = get_map();
 
     if( driving_view_offset.x() != 0 || driving_view_offset.y() != 0 ) {
         // Still have a view offset, but might not be driving anymore,
@@ -804,14 +829,20 @@ bool game::do_turn()
     if( !in_long_wait ) {
         m.update_map_memory( u );
     }
+}
+
+void game::present_turn()
+{
+    avatar &u = get_avatar();
+    map &m = get_map();
 
     if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
         ui_manager::redraw();
         refresh_display();
     }
 
-    if( levz >= 0 && !u.is_underwater() ) {
-        handle_weather_effects( weather.weather_id );
+    if( m.get_abs_sub().z() >= 0 && !u.is_underwater() ) {
+        handle_weather_effects( get_weather().weather_id );
     }
 
     handle_progress_ui();
@@ -819,6 +850,7 @@ bool game::do_turn()
     m.invalidate_visibility_cache();
 
     u.update_bodytemp();
+    weather_manager &weather = get_weather();
     u.update_body_wetness( *weather.weather_precise );
     u.apply_wetness_morale( weather.temperature );
 
@@ -856,5 +888,4 @@ bool game::do_turn()
 #endif
 
     debug_menu::debug_capture::tick_if_active();
-    return false;
 }
