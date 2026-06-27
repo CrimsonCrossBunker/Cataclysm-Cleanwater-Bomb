@@ -338,8 +338,15 @@ class draw_points_cache_t
 //    recordings (L1) — all client-side computations.  See tile_render_info::common
 //    for the full TODO.
 //
-// 4. MISSING L3 DATA (not captured yet; live-read every frame):
-//    - creature data (CreatureView: type id, facing, mount/summoner flags)
+// 4. DATA NOT CAPTURED (some by design, some future work):
+//    - creature data: intentionally left on the live path.  Creatures are
+//      live objects (not value-type data) whose rendering reads deeply from
+//      member state (type, facing, effects, flags, mount, summoner).  A
+//      snapshot would require deep-copying state that changes mid-frame
+//      (death, spawn).  The existing m_creature_positions per-frame
+//      precomputation already provides an effective fast-path.  Creature
+//      L3 schema belongs in the network serialization layer, not the
+//      single-process cache.
 //    - light scalar (float from lm[][]) — currently only computed RGBA tint is stored
 //    - memorized tile content (for invisible/memory tiles)
 //    - per-tile version (for delta encoding)
