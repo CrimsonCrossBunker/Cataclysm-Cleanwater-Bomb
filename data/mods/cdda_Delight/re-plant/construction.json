@@ -33,7 +33,7 @@
     "time": "40 m",
     "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
     "pre_terrain": "t_dirt",
-    "post_terrain": "t_cd_delight_fertile_bed",
+    "post_terrain": "f_cd_delight_fertile",
     "components": [
       [ [ "tsow_fertile_soil", 50 ] ]
     ]
@@ -46,7 +46,7 @@
     "required_skills": [ [ "survival", 1 ] ],
     "time": "20 m",
     "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
-    "pre_terrain": "t_cd_delight_fertile_bed",
+    "pre_terrain": "f_cd_delight_fertile",
     "post_terrain": "f_cd_delight_paddy",
     "components": [
       [ [ "material_soil", 10 ] ],
@@ -61,7 +61,7 @@
     "required_skills": [ [ "survival", 1 ] ],
     "time": "15 m",
     "qualities": [ [ { "id": "CUT", "level": 1 } ] ],
-    "pre_terrain": "t_cd_delight_fertile_bed",
+    "pre_terrain": "f_cd_delight_fertile",
     "post_terrain": "f_cd_delight_trellis",
     "components": [
       [ [ "stick", 4 ] ],

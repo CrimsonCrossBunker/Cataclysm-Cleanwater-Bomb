@@ -6,7 +6,7 @@
     "condition": { "expects_vars": [ "effect_id", "intensity", "duration", "max_intensity", "end_var", "max_duration" ] },
     "effect": [
       {
-        "math": [ "v_effective_max_duration = _max_duration > 0 ? _max_duration : _duration" ]
+        "math": [ "_effective_max_duration = _max_duration > 0 ? _max_duration : _duration" ]
       },
       {
         "if": { "math": [ "_intensity <= 0" ] },
@@ -25,7 +25,7 @@
                     "duration": "PERMANENT"
                   },
                   {
-                    "math": [ "v_end_var = time('now') + min(_duration, v_effective_max_duration) * time('1 s')" ]
+                    "math": [ "v_end_var = time('now') + min(_duration, _effective_max_duration) * time('1 s')" ]
                   }
                 ],
                 "else": [
@@ -33,7 +33,7 @@
                     "if": { "math": [ "_intensity == u_effect_intensity(_effect_id)" ] },
                     "then": [
                       {
-                        "math": [ "v_end_var = min(v_end_var + _duration * time('1 s'), time('now') + v_effective_max_duration * time('1 s'))" ]
+                        "math": [ "v_end_var = min(v_end_var + _duration * time('1 s'), time('now') + _effective_max_duration * time('1 s'))" ]
                       }
                     ]
                   }
@@ -47,7 +47,7 @@
                 "duration": "PERMANENT"
               },
               {
-                "math": [ "v_end_var = time('now') + min(_duration, v_effective_max_duration) * time('1 s')" ]
+                "math": [ "v_end_var = time('now') + min(_duration, _effective_max_duration) * time('1 s')" ]
               }
             ]
           }

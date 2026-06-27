@@ -8,7 +8,7 @@
     "color": "cyan",
     "move_cost_mod": 1,
     "required_str": 3,
-    "looks_like": "t_dirt",
+    "looks_like": "f_planter",
     "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "LIQUIDCONT", "CD_DELIGHT_PADDY" ],
     "examine_action": "dirtmound",
     "plant_data": { "transform": "f_cd_delight_paddy_seed" },
@@ -18,9 +18,7 @@
       "sound": "squish.",
       "sound_fail": "squelch.",
       "furn_set": "f_null",
-      "items": [
-        { "item": "material_soil", "count": [ 1, 2 ] }
-      ]
+      "items": [ { "item": "material_soil", "count": [ 1, 2 ] } ]
     }
   },
   {
@@ -36,22 +34,36 @@
     "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "CD_DELIGHT_TRELLIS" ],
     "examine_action": "dirtmound",
     "plant_data": { "transform": "f_cd_delight_trellis_seed" },
-    "deconstruct": {
-      "items": [
-        { "item": "stick", "count": [ 2, 4 ] },
-        { "item": "string_36", "count": [ 0, 1 ] }
-      ]
-    },
+    "deconstruct": { "items": [ { "item": "stick", "count": [ 2, 4 ] }, { "item": "string_36", "count": [ 0, 1 ] } ] },
     "bash": {
       "str_min": 3,
       "str_max": 8,
       "sound": "crack.",
       "sound_fail": "whish.",
       "furn_set": "f_null",
-      "items": [
-        { "item": "stick", "count": [ 1, 2 ] },
-        { "item": "string_36", "count": [ 0, 1 ], "prob": 50 }
-      ]
+      "items": [ { "item": "stick", "count": [ 1, 2 ] }, { "item": "string_36", "count": [ 0, 1 ], "prob": 50 } ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_fertile",
+    "name": "沃土种植床",
+    "description": "一块用肥沃土壤整平的种植床，土质疏松、养分充足，可以直接播种。",
+    "symbol": "#",
+    "color": "brown_green",
+    "move_cost_mod": 0,
+    "required_str": 3,
+    "looks_like": "t_dirtmound",
+    "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "CD_DELIGHT_FERTILE" ],
+    "examine_action": "dirtmound",
+    "plant_data": { "transform": "f_cd_delight_fertile_seed" },
+    "bash": {
+      "str_min": 2,
+      "str_max": 6,
+      "sound": "thump.",
+      "sound_fail": "whish.",
+      "furn_set": "f_null",
+      "items": [ { "item": "material_soil", "count": [ 1, 2 ] } ]
     }
   },
   {
@@ -63,10 +75,16 @@
     "color": "brown",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_seed",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEED", "DONT_REMOVE_ROTTEN" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 1, "str_max": 5, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_fertile_seedling", "base": "f_null", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_seedling",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -77,10 +95,16 @@
     "color": "green",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_seedling",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEEDLING", "DONT_REMOVE_ROTTEN" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 2, "str_max": 6, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_fertile_mature", "base": "f_null", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_mature",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -91,10 +115,16 @@
     "color": "green",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_mature",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_MATURE", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 3, "str_max": 8, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_fertile_harvest", "base": "f_null", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_harvest",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -106,10 +136,26 @@
     "coverage": 30,
     "move_cost_mod": 0,
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_HARVEST", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "looks_like": "f_planter_harvest",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_HARVEST",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
     "examine_action": "harvest_plant_ex",
     "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_fertile_overgrown", "base": "f_null", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_overgrown",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -121,10 +167,26 @@
     "coverage": 50,
     "move_cost_mod": 0,
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_OVERGROWN", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "looks_like": "f_planter_unharvested_overgrown",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_OVERGROWN",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
     "examine_action": "clear_overgrown",
     "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_fertile_overgrown", "base": "f_null", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_overgrown",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -135,10 +197,16 @@
     "color": "brown",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_seed",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEED", "DONT_REMOVE_ROTTEN" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 1, "str_max": 5, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_paddy_seedling", "base": "f_cd_delight_paddy", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_seedling",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -149,10 +217,16 @@
     "color": "green",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_seedling",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEEDLING", "DONT_REMOVE_ROTTEN" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 2, "str_max": 6, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_paddy_mature", "base": "f_cd_delight_paddy", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_mature",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -163,10 +237,16 @@
     "color": "green",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_mature",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_MATURE", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 3, "str_max": 8, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_paddy_harvest", "base": "f_cd_delight_paddy", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_harvest",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -178,10 +258,26 @@
     "coverage": 30,
     "move_cost_mod": 0,
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_HARVEST", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "looks_like": "f_planter_harvest",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_HARVEST",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
     "examine_action": "harvest_plant_ex",
     "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_paddy_overgrown", "base": "f_cd_delight_paddy", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_overgrown",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -193,10 +289,26 @@
     "coverage": 50,
     "move_cost_mod": 0,
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_OVERGROWN", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "looks_like": "f_planter_unharvested_overgrown",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_OVERGROWN",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
     "examine_action": "clear_overgrown",
     "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_paddy_overgrown", "base": "f_cd_delight_paddy", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_overgrown",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -207,10 +319,16 @@
     "color": "brown",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_seed",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEED", "DONT_REMOVE_ROTTEN" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 1, "str_max": 5, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_trellis_seedling", "base": "f_cd_delight_trellis", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_seedling",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -221,10 +339,16 @@
     "color": "green",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_seedling",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEEDLING", "DONT_REMOVE_ROTTEN" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 2, "str_max": 6, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_trellis_mature", "base": "f_cd_delight_trellis", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_mature",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -235,10 +359,16 @@
     "color": "green",
     "move_cost_mod": 0,
     "required_str": -1,
+    "looks_like": "f_planter_mature",
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_MATURE", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 3, "str_max": 8, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_trellis_harvest", "base": "f_cd_delight_trellis", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_harvest",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -250,10 +380,26 @@
     "coverage": 30,
     "move_cost_mod": 0,
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_HARVEST", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "looks_like": "f_planter_harvest",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_HARVEST",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
     "examine_action": "harvest_plant_ex",
     "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_trellis_overgrown", "base": "f_cd_delight_trellis", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_overgrown",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   },
   {
     "type": "furniture",
@@ -265,9 +411,25 @@
     "coverage": 50,
     "move_cost_mod": 0,
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_OVERGROWN", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "looks_like": "f_planter_unharvested_overgrown",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_OVERGROWN",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
     "examine_action": "clear_overgrown",
     "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_cd_delight_trellis_overgrown", "base": "f_cd_delight_trellis", "growth_multiplier": 1.5, "harvest_multiplier": 1.5 }
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_overgrown",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
   }
 ]
