@@ -820,7 +820,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             invisible[0] = true;
                         } else {
                             if( would_apply_vision_effects( offscreen_type ) ) {
-                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
+                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos }, tile_render_info::tile_render_scratch{},
                                         tile_render_info::vision_effect{ offscreen_type } );
                             }
                             break;
@@ -1012,7 +1012,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                     || you.sees_with_specials( *critter ) ) ) ) {
                                 invisible[0] = true;
                             } else {
-                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
+                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos }, tile_render_info::tile_render_scratch{},
                                         tile_render_info::vision_effect{ vis_type } );
                                 break;
                             }
@@ -1100,7 +1100,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         }
                     }
 
-                    here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::common{ pos, 0},
+                    here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos }, tile_render_info::tile_render_scratch{},
                             sprite_var );
                     // Stop building draw points below when floor reached
                     if( here.dont_draw_lower_floor( pos ) ) {
@@ -1143,7 +1143,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     if( !var || var->invisible[0] ) {
                         continue;
                     }
-                    const field &f = here.field_at( tri.com.pos );
+                    const field &f = here.field_at( tri.view.pos );
                     const field_type_id disp_fld = f.displayed_field_type();
                     if( disp_fld ) {
                         var->set_field_content( disp_fld,
@@ -1171,9 +1171,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     if( !var || var->invisible[0] ) {
                         continue;
                     }
-                    if( here.sees_some_items( tri.com.pos,
+                    if( here.sees_some_items( tri.view.pos,
                                              get_player_character() ) ) {
-                        const maptile &tile = here.maptile_at( tri.com.pos );
+                        const maptile &tile = here.maptile_at( tri.view.pos );
                         const int count =
                             static_cast<int>( tile.get_item_count() );
                         if( count > 0 ) {
@@ -1220,7 +1220,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         continue;
                     }
                     // 1. Override check (unconditional)
-                    const auto ov = vp_ov.find( tri.com.pos );
+                    const auto ov = vp_ov.find( tri.view.pos );
                     if( ov != vp_ov.end() && std::get<0>( ov->second ) ) {
                         const char part_mod = std::get<1>( ov->second );
                         var->set_vpart_content(
@@ -1238,7 +1238,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     if( !var->invisible[0] ) {
                         // 2. Normal: read live vehicle data
                         const optional_vpart_position ovp =
-                            here.veh_at( tri.com.pos );
+                            here.veh_at( tri.view.pos );
                         if( ovp ) {
                             const vehicle &veh = ovp->vehicle();
                             const vpart_display vd =
@@ -1264,7 +1264,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         // 3. Memory: invisible tile
                         const memorized_tile &t =
                             get_vpart_memory_at(
-                                here.get_abs( tri.com.pos ) );
+                                here.get_abs( tri.view.pos ) );
                         std::string_view tid = t.get_dec_id();
                         if( !tid.empty() ) {
                             std::string_view tvar;
@@ -1349,8 +1349,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             //   (b) the overlay pass later can iterate only tinted tiles.
             std::vector<tile_render_info *> row_tinted;
             for( tile_render_info &p : here.draw_points_cache.tiles[cur_zlevel][row] ) {
-                p.com.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
-                p.com.needs_tint = false;
+                p.scratch.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
+                p.scratch.needs_tint = false;
                 if( !zlev_has_color ) {
                     continue;
                 }
@@ -1362,7 +1362,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     continue;
                 }
                 const light_color_rgb &lc =
-                    zlev_cache.light_color_cache[p.com.pos.x()][p.com.pos.y()];
+                    zlev_cache.light_color_cache[p.view.pos.x()][p.view.pos.y()];
                 if( !lc.is_colored() ) {
                     continue;
                 }
@@ -1379,26 +1379,26 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 }
                 // Alpha: ratio of saturated energy to total scalar light.
                 // Effect is subtle under bright ambient, vivid in darkness.
-                const float scalar = zlev_cache.lm[p.com.pos.x()][p.com.pos.y()].max();
+                const float scalar = zlev_cache.lm[p.view.pos.x()][p.view.pos.y()].max();
                 const float ratio = scalar > 0.1f ? std::min( 1.0f, sat_mag / scalar ) : 0.0f;
                 const Uint8 alpha = static_cast<Uint8>( ratio * 80.0f );
                 if( alpha == 0 ) {
                     continue;
                 }
                 // Normalize saturated color to full brightness for the SDL tint.
-                p.com.tint_color = {
+                p.scratch.tint_color = {
                     static_cast<Uint8>( sat_r / sat_mag * 255.0f ),
                     static_cast<Uint8>( sat_g / sat_mag * 255.0f ),
                     static_cast<Uint8>( sat_b / sat_mag * 255.0f ),
                     alpha
                 };
-                p.com.needs_tint = true;
+                p.scratch.needs_tint = true;
                 row_tinted.push_back( &p );
                 // Ortho tiles need bounds tracking and sprite recording for the
                 // silhouette mask path. Reset per-frame state here.
                 if( !iso ) {
-                    p.com.bounds = {};
-                    p.com.tint_sprites.clear();
+                    p.scratch.bounds = {};
+                    p.scratch.tint_sprites.clear();
                 }
             }
             // --- Layer loop ---
@@ -1412,13 +1412,13 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                           f != &cata_tiles::draw_zone_mark &&
                                           f != &cata_tiles::draw_zombie_revival_indicators;
                 for( tile_render_info &p : here.draw_points_cache.tiles[cur_zlevel][row] ) {
-                    const bool ortho_tint = track_bounds && p.com.needs_tint;
-                    m_cur_bounds = ortho_tint ? &p.com.bounds : nullptr;
-                    m_cur_tint_sprites = ortho_tint ? &p.com.tint_sprites : nullptr;
+                    const bool ortho_tint = track_bounds && p.scratch.needs_tint;
+                    m_cur_bounds = ortho_tint ? &p.scratch.bounds : nullptr;
+                    m_cur_tint_sprites = ortho_tint ? &p.scratch.tint_sprites : nullptr;
                     if( const tile_render_info::vision_effect * const
                         var = std::get_if<tile_render_info::vision_effect>( &p.var ) ) {
                         if( f == &cata_tiles::draw_terrain ) {
-                            apply_vision_effects( p.com.pos, var->vis, p.com.height_3d );
+                            apply_vision_effects( p.view.pos, var->vis, p.scratch.height_3d );
                         }
                     } else if( const tile_render_info::sprite * const
                                var = std::get_if<tile_render_info::sprite>( &p.var ) ) {
@@ -1437,24 +1437,24 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         m_cur_tile = &p;
 
                         if( f == &cata_tiles::draw_vpart_no_roof || f == &cata_tiles::draw_vpart_roof ) {
-                            int temp_height_3d = p.com.height_3d;
+                            int temp_height_3d = p.scratch.height_3d;
                             // Reset height_3d to base when drawing vehicles
-                            p.com.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
+                            p.scratch.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
                             // Draw
-                            if( !( this->*f )( p.com.pos, ll, p.com.height_3d, invisible ) ) {
+                            if( !( this->*f )( p.view.pos, ll, p.scratch.height_3d, invisible ) ) {
                                 // If no vpart drawn, revert height_3d changes
-                                p.com.height_3d = temp_height_3d;
+                                p.scratch.height_3d = temp_height_3d;
                             }
                         } else if( f == &cata_tiles::draw_critter_at ) {
                             // Draw
-                            if( !( this->*f )( p.com.pos, ll, p.com.height_3d, invisible ) && do_draw_shadow &&
-                                here.dont_draw_lower_floor( p.com.pos ) ) {
+                            if( !( this->*f )( p.view.pos, ll, p.scratch.height_3d, invisible ) && do_draw_shadow &&
+                                here.dont_draw_lower_floor( p.view.pos ) ) {
                                 // Draw shadow of flying critters on bottom-most tile if no other critter drawn
-                                draw_critter_above( p.com.pos, ll, p.com.height_3d, invisible );
+                                draw_critter_above( p.view.pos, ll, p.scratch.height_3d, invisible );
                             }
                         } else {
                             // Draw
-                            ( this->*f )( p.com.pos, ll, p.com.height_3d, invisible );
+                            ( this->*f )( p.view.pos, ll, p.scratch.height_3d, invisible );
                         }
                     }
                 }
@@ -1488,12 +1488,12 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     // from the original tint overlay code).
                     SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
                     for( const tile_render_info *tp : row_tinted ) {
-                        const point screen = player_to_screen( tp->com.pos.xy() );
+                        const point screen = player_to_screen( tp->view.pos.xy() );
                         const SDL_Rect draw_rect = {
                             screen.x, screen.y - zlev_base, tile_width, tile_height
                         };
-                        const SDL_Color tc = { tp->com.tint_color.r, tp->com.tint_color.g,
-                                               tp->com.tint_color.b, tp->com.tint_color.a
+                        const SDL_Color tc = { tp->scratch.tint_color.r, tp->scratch.tint_color.g,
+                                               tp->scratch.tint_color.b, tp->scratch.tint_color.a
                                              };
                         geometry->rect( renderer, draw_rect, tc );
                     }
@@ -1574,7 +1574,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             RenderFillRect( renderer, &clear_rect );
 
                             for( const tile_render_info *bp : batch_tiles ) {
-                                for( const tint_sprite_record &rec : bp->com.tint_sprites ) {
+                                for( const tint_sprite_record &rec : bp->scratch.tint_sprites ) {
                                     const texture *sil = tileset_ptr->get_silhouette_tile( rec.sprite_index );
                                     if( !sil ) {
                                         continue;
@@ -1621,7 +1621,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
                     SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
                     for( const tile_render_info *tp : row_tinted ) {
-                        const point screen = player_to_screen( tp->com.pos.xy() );
+                        const point screen = player_to_screen( tp->view.pos.xy() );
                         const SDL_Rect tile_rect = {
                             screen.x, screen.y - zlev_base, tile_width, tile_height
                         };
@@ -1636,18 +1636,18 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         // (boxy glow instead of outline-hugging) but avoids the crash;
                         // other backends keep the precise silhouette mask.
                         const bool simple = gpu_d3d12_mode ||
-                                            !tp->com.bounds.valid ||
-                                            tp->com.tint_sprites.empty() ||
-                                            ( tp->com.bounds.x >= tile_rect.x &&
-                                              tp->com.bounds.y >= tile_rect.y &&
-                                              tp->com.bounds.x + tp->com.bounds.w <= tile_rect.x + tile_rect.w &&
-                                              tp->com.bounds.y + tp->com.bounds.h <= tile_rect.y + tile_rect.h );
+                                            !tp->scratch.bounds.valid ||
+                                            tp->scratch.tint_sprites.empty() ||
+                                            ( tp->scratch.bounds.x >= tile_rect.x &&
+                                              tp->scratch.bounds.y >= tile_rect.y &&
+                                              tp->scratch.bounds.x + tp->scratch.bounds.w <= tile_rect.x + tile_rect.w &&
+                                              tp->scratch.bounds.y + tp->scratch.bounds.h <= tile_rect.y + tile_rect.h );
                         if( simple ) {
                             // Must flush any pending complex batch before drawing
                             // a simple tile to preserve correct draw order.
                             flush_tint_batch();
-                            const SDL_Color tc = { tp->com.tint_color.r, tp->com.tint_color.g,
-                                                   tp->com.tint_color.b, tp->com.tint_color.a
+                            const SDL_Color tc = { tp->scratch.tint_color.r, tp->scratch.tint_color.g,
+                                                   tp->scratch.tint_color.b, tp->scratch.tint_color.a
                                                  };
 #if SDL_MAJOR_VERSION >= 3
                             // SDL3's straight-alpha draw-color modulation renders the fill
@@ -1673,8 +1673,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         // Accumulate into the current batch or start a new one.
 
                         // Color change forces a new batch.
-                        const SDL_Color tile_tc = { tp->com.tint_color.r, tp->com.tint_color.g,
-                                                    tp->com.tint_color.b, tp->com.tint_color.a
+                        const SDL_Color tile_tc = { tp->scratch.tint_color.r, tp->scratch.tint_color.g,
+                                                    tp->scratch.tint_color.b, tp->scratch.tint_color.a
                                                   };
                         if( batch_tiles.empty() ||
                             std::memcmp( &batch_color, &tile_tc, sizeof( SDL_Color ) ) != 0 ) {
@@ -1687,16 +1687,16 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         if( !batch_tiles.empty() ) {
                             // NOLINTNEXTLINE(cata-combine-locals-into-point)
                             const int new_x = std::min( batch_union.x,
-                                                        tp->com.bounds.x );
-                            const int new_y = std::min( batch_union.y, tp->com.bounds.y );
+                                                        tp->scratch.bounds.x );
+                            const int new_y = std::min( batch_union.y, tp->scratch.bounds.y );
                             const int new_r = std::max( batch_union.x + batch_union.w,
-                                                        tp->com.bounds.x + tp->com.bounds.w );
+                                                        tp->scratch.bounds.x + tp->scratch.bounds.w );
                             const int new_b = std::max( batch_union.y + batch_union.h,
-                                                        tp->com.bounds.y + tp->com.bounds.h );
+                                                        tp->scratch.bounds.y + tp->scratch.bounds.h );
                             const int64_t union_area = static_cast<int64_t>( new_r - new_x ) *
                                                        ( new_b - new_y );
                             const int64_t sum_area = batch_sum_area +
-                                                     static_cast<int64_t>( tp->com.bounds.w ) * tp->com.bounds.h;
+                                                     static_cast<int64_t>( tp->scratch.bounds.w ) * tp->scratch.bounds.h;
                             if( union_area > sum_area * 2 ) {
                                 flush_tint_batch();
                                 batch_color = tile_tc;
@@ -1705,19 +1705,19 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         // Grow the batch union rect to include this tile.
                         if( batch_tiles.empty() ) {
                             batch_union = {
-                                tp->com.bounds.x, tp->com.bounds.y,
-                                tp->com.bounds.w, tp->com.bounds.h
+                                tp->scratch.bounds.x, tp->scratch.bounds.y,
+                                tp->scratch.bounds.w, tp->scratch.bounds.h
                             };
-                            batch_sum_area = static_cast<int64_t>( tp->com.bounds.w ) * tp->com.bounds.h;
+                            batch_sum_area = static_cast<int64_t>( tp->scratch.bounds.w ) * tp->scratch.bounds.h;
                         } else {
-                            const int nx = std::min( batch_union.x, tp->com.bounds.x );
-                            const int ny = std::min( batch_union.y, tp->com.bounds.y );
+                            const int nx = std::min( batch_union.x, tp->scratch.bounds.x );
+                            const int ny = std::min( batch_union.y, tp->scratch.bounds.y );
                             const int nr = std::max( batch_union.x + batch_union.w,
-                                                     tp->com.bounds.x + tp->com.bounds.w );
+                                                     tp->scratch.bounds.x + tp->scratch.bounds.w );
                             const int nb = std::max( batch_union.y + batch_union.h,
-                                                     tp->com.bounds.y + tp->com.bounds.h );
+                                                     tp->scratch.bounds.y + tp->scratch.bounds.h );
                             batch_union = { nx, ny, nr - nx, nb - ny };
-                            batch_sum_area += static_cast<int64_t>( tp->com.bounds.w ) * tp->com.bounds.h;
+                            batch_sum_area += static_cast<int64_t>( tp->scratch.bounds.w ) * tp->scratch.bounds.h;
                         }
                         batch_tiles.push_back( tp );
                     }
@@ -1758,7 +1758,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             if( !var ) {
                 continue;
             }
-            const auto mon_override = monster_override.find( p.com.pos );
+            const auto mon_override = monster_override.find( p.view.pos );
             if( mon_override != monster_override.end() ) {
                 const int count = std::get<1>( mon_override->second );
                 const bool more = std::get<2>( mon_override->second );
@@ -1767,7 +1767,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     if( more ) {
                         text += "+";
                     }
-                    overlay_strings.emplace( player_to_screen( p.com.pos.xy() ) + half_tile,
+                    overlay_strings.emplace( player_to_screen( p.view.pos.xy() ) + half_tile,
                                              formatted_text( text, catacurses::red,
                                                      direction::NORTH ) );
                 }
@@ -3594,7 +3594,7 @@ bool cata_tiles::draw_sprite_at(
     ( void )shader_bound;
 #endif
     // this reference passes all the way back up the call chain back to
-    // cata_tiles::draw() here.draw_points_cache.tiles[z][row][col].com.height_3d
+    // cata_tiles::draw() here.draw_points_cache.tiles[z][row][col].scratch.height_3d
     // where we are accumulating the height of every sprite stacked up in a tile
     height_3d += tile.height_3d;
     return true;
