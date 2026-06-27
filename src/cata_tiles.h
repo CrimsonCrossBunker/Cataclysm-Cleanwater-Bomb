@@ -35,6 +35,7 @@
 #include "point.h"
 #include "sdl_geometry.h"
 #include "sdl_wrappers.h"
+#include "shockwave.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
@@ -62,6 +63,7 @@ class pixel_minimap;
 class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
+struct tile_render_info;
 
 namespace catacurses
 {
@@ -127,14 +129,6 @@ const std::unordered_map<std::string, TILE_CATEGORY> to_TILE_CATEGORY = {
     {"overmap_weather", TILE_CATEGORY::OVERMAP_WEATHER},
     {"map_extra", TILE_CATEGORY::MAP_EXTRA},
     {"overmap_note", TILE_CATEGORY::OVERMAP_NOTE}
-};
-
-enum class NEIGHBOUR {
-    SOUTH = 1,
-    EAST = 2,
-    WEST = 4,
-    NORTH = 8,
-    last
 };
 
 class tile_lookup_res
@@ -465,6 +459,11 @@ class tileset
             overexposed_tile_values.clear();
             memory_tile_values.clear();
             silhouette_tile_values.clear();
+            // The tinted-tile cache keys on the raw base-texture pointers we just
+            // freed (see cata_tiles_color.cpp::get_tinted_tile). Leaving it populated
+            // would let a replay-reallocated texture collide with a stale key and
+            // return a dangling/wrong tinted sprite, so drop it alongside the atlases.
+            tinted_tile_values.clear();
         }
 
         tile_type &create_tile_type( const std::string &id, tile_type &&new_tile_type );
@@ -723,29 +722,6 @@ class cata_tiles
                            const point &offset, bool allow_diagonal_rota = false );
 
         /* Tile Picking */
-        void get_tile_values( int t, const std::array<int, 4> &tn, int &subtile, int &rotation,
-                              char rotation_targets );
-        // as get_tile_values, but for unconnected tiles, infer rotation from surrounding walls
-        void get_tile_values_with_ter( const tripoint_bub_ms &p, int t, const std::array<int, 4> &tn,
-                                       int &subtile, int &rotation,
-                                       const std::bitset<NUM_TERCONN> &rotate_to_group );
-        static void get_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
-                                        const std::bitset<NUM_TERCONN> &connect_group,
-                                        const std::bitset<NUM_TERCONN> &rotate_to_group,
-                                        const std::map<tripoint_bub_ms, ter_id> &ter_override );
-        static void get_furn_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
-                                             const std::bitset<NUM_TERCONN> &connect_group,
-                                             const std::bitset<NUM_TERCONN> &rotate_to_group,
-                                             const std::map<tripoint_bub_ms, furn_id> &furn_override );
-        void get_terrain_orientation( const tripoint_bub_ms &p, int &rota, int &subtile,
-                                      const std::map<tripoint_bub_ms, ter_id> &ter_override,
-                                      const std::array<bool, 5> &invisible,
-                                      const std::bitset<NUM_TERCONN> &rotate_group );
-
-        static void get_rotation_and_subtile( char val, char rot_to, int &rota, int &subtile );
-        static int get_rotation_unconnected( char rot_to );
-        static int get_rotation_edge_ns( char rot_to );
-        static int get_rotation_edge_ew( char rot_to );
 
         /** Map memory */
         const memorized_tile &get_terrain_memory_at( const tripoint_abs_ms &p ) const;
@@ -758,29 +734,29 @@ class cata_tiles
         bool apply_vision_effects( const tripoint_bub_ms &pos, visibility_type visibility, int &height_3d );
         void draw_square_below( const point_bub_ms &p, const nc_color &col, int sizefactor );
         bool draw_terrain( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                           const std::array<bool, 5> &invisible, bool memorize_only );
+                           const std::array<bool, 5> &invisible );
         bool draw_furniture( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                             const std::array<bool, 5> &invisible, bool memorize_only );
+                             const std::array<bool, 5> &invisible );
         bool draw_graffiti( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                            const std::array<bool, 5> &invisible, bool memorize_only );
+                            const std::array<bool, 5> &invisible );
         bool draw_trap( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                        const std::array<bool, 5> &invisible, bool memorize_only );
+                        const std::array<bool, 5> &invisible );
         bool draw_part_con( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                            const std::array<bool, 5> &invisible, bool memorize_only );
+                            const std::array<bool, 5> &invisible );
         bool draw_field_or_item( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                                 const std::array<bool, 5> &invisible, bool memorize_only );
+                                 const std::array<bool, 5> &invisible );
         bool draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                         const std::array<bool, 5> &invisible, bool roof, bool memorize_only );
+                         const std::array<bool, 5> &invisible, bool roof );
         bool draw_vpart_no_roof( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                                 const std::array<bool, 5> &invisible, bool memorize_only );
+                                 const std::array<bool, 5> &invisible );
         bool draw_vpart_roof( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                              const std::array<bool, 5> &invisible, bool memorize_only );
+                              const std::array<bool, 5> &invisible );
         // Paint color to tint the vehicle part displayed at \p mount of \p veh,
         // or nullopt when it is unpainted or the VEHICLE_PART_COLOR option is off.
         std::optional<RGBColor> get_vpart_tint( const vehicle &veh,
                                                 const point_rel_ms &mount ) const;
         bool draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                              const std::array<bool, 5> &invisible, bool memorize_only );
+                              const std::array<bool, 5> &invisible );
         bool draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                                  const std::array<bool, 5> &invisible );
 
@@ -790,9 +766,9 @@ class cata_tiles
         // by player_to_screen; zero for terrain/everything else.
         point m_entity_draw_offset;
         bool draw_zone_mark( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
-                             const std::array<bool, 5> &invisible, bool memorize_only );
+                             const std::array<bool, 5> &invisible );
         bool draw_zombie_revival_indicators( const tripoint_bub_ms &pos, lit_level ll, int &height_3d,
-                                             const std::array<bool, 5> &invisible, bool memorize_only );
+                                             const std::array<bool, 5> &invisible );
         void draw_zlevel_overlay( const tripoint_bub_ms &p, lit_level ll, int &height_3d );
         void draw_entity_with_overlays( const Character &ch, const tripoint_bub_ms &p, lit_level ll,
                                         int &height_3d, FacingDirection facing_override = FacingDirection::NONE );
@@ -849,7 +825,12 @@ class cata_tiles
         void init_explosion_light( const std::map<tripoint_bub_ms, float> &intensity,
                                    const explosion_light_str_id &effect,
                                    const tripoint_bub_ms &center, float radius_tiles,
-                                   float per_ms, float end_progress );
+                                   float per_ms, float end_progress,
+                                   bool circular_shockwave = true,
+                                   shockwave_state::sw_shape shock_shape =
+                                       shockwave_state::sw_shape::disc,
+                                   const tripoint_bub_ms &shock_target = tripoint_bub_ms(),
+                                   float shock_half_angle = 0.0f );
         // Advance all active explosion lights by real elapsed time and drop the
         // finished ones. Called once at the start of each draw().
         void advance_explosion_lights();
@@ -860,6 +841,33 @@ class cata_tiles
         }
         void draw_explosion_light_frame( int view_z );
         void void_explosion_light();
+
+        // --- Asynchronous bullet animation (ANIMATION_PROJECTILES_ASYNC) -----
+        // Mirrors the explosion-light async model: a shot registers its visible
+        // flight path here and returns immediately, so the game keeps running and
+        // many units firing in one turn don't each block the main thread. The
+        // animation advances by real elapsed time every frame.
+        //   as_line  true  -> the whole path shows at once for a short life (the
+        //                     BULLETS_AS_LASERS gun-line look).
+        //            false -> a single bullet sprite sweeps tile-to-tile along the
+        //                     path (the classic moving-dot look).
+        // per_ms drives the sweep (dot) or the life countdown (line).
+        void init_bullet_anim( const std::vector<tripoint_bub_ms> &points,
+                               const std::vector<std::string> &sprites,
+                               const std::vector<int> &rotations,
+                               bool as_line, float per_ms );
+        // Advance all active bullet animations by real elapsed time, dropping the
+        // finished ones. Called once at the start of each draw().
+        void advance_bullet_anims();
+        // True while any async bullet animation is playing (raises idle redraw rate).
+        bool has_bullet_anim() const {
+            return !m_bullet_anims.empty();
+        }
+        void draw_bullet_anim_frame( int view_z );
+        // Drop all in-flight bullet animations (used on tileset reload / renderer
+        // recovery, like void_explosion_light), so stale tiles computed against old
+        // metrics don't paint onto the rebuilt scene.
+        void void_bullet_anim();
 
         // Advance the sound-driven screen shake by real elapsed time. Called once at
         // the start of each draw(), alongside the other wall-clock animations.
@@ -1119,6 +1127,18 @@ class cata_tiles
         sprite_screen_bounds *m_cur_bounds = nullptr;
         small_literal_vector<tint_sprite_record, 4> *m_cur_tint_sprites = nullptr;
 
+        // The cached draw point for the current tile, set by the layer loop
+        // before each draw_* call, mirroring the m_cur_bounds pattern (pass
+        // per-tile state to a layer function without changing the shared
+        // layer-fn signature). The static-layer draw functions read the
+        // terrain/furniture/trap/partial-construction/graffiti content captured
+        // on its sprite variant in their normal visible branch instead of
+        // reading the map live. A pointer to the outer tile_render_info (not the
+        // nested sprite) so the type stays forward-declarable here — cata_tiles.h
+        // must not include map.h (map.h includes this header). Null outside the
+        // sprite branch of the layer loop.
+        const tile_render_info *m_cur_tile = nullptr;
+
         // Set by draw_vpart around its draw_from_id_string call so the vehicle
         // part sprite gets recolored with the part's paint color; nullopt
         // otherwise. Consumed when building tile_render_params.
@@ -1241,12 +1261,49 @@ class cata_tiles
             float progress = 0.0f;
             float per_ms = 0.0f;       // progress increment per millisecond
             float end_progress = 1.0f; // progress value at which the blast is done
+            // Whether the shockwave (if the recipe has one) is an expanding ring
+            // centred on `center`. True for radial blasts (disc). False for
+            // directional shapes (line/cone): the shockwave is built from
+            // shock_shape + shock_target + shock_half_angle instead of a centred
+            // circle. See draw_explosion_light_frame.
+            bool circular_shockwave = true;
+            // Directional shockwave geometry, used only when circular_shockwave is
+            // false. shock_shape selects line vs cone; shock_target gives the
+            // direction the front sweeps toward (from `center`); shock_half_angle
+            // is the cone's half-width in radians (0 for line).
+            shockwave_state::sw_shape shock_shape = shockwave_state::sw_shape::disc;
+            tripoint_bub_ms shock_target;
+            float shock_half_angle = 0.0f;
         };
         std::vector<active_explosion_light> m_explosion_lights;
         // steady_clock timestamp (ms) of the last advance, for real-time stepping.
         std::optional<int64_t> m_explosion_light_last_ms;
         // Same, for the sound-driven screen shake decay.
         std::optional<int64_t> m_screen_shake_last_ms;
+
+        // Active asynchronous bullet animations. Each is registered when a shot
+        // fires and advances by real elapsed time every frame (like the explosion
+        // lights), so several concurrent shots overlap without blocking the turn.
+        // Finished entries are dropped in advance_bullet_anims().
+        struct active_bullet_anim {
+            std::vector<tripoint_bub_ms> points; // visible flight path tiles
+            std::vector<std::string> sprites;    // per-point sprite id
+            std::vector<int> rotations;          // per-point rotation
+            bool as_line = false;                // whole-line vs moving-dot
+            float head = 0.0f;                   // dot: float index along points
+            float life = 0.0f;                   // line: progress 0..1 over its life
+            float per_ms = 0.0f;                 // advance rate per ms
+            // Countdown (ms) before this shot's animation starts. Staggers the
+            // rounds of a full-auto burst (which all register in the same tick,
+            // before any frame advances) so they fly in sequence — the "哒哒哒"
+            // rhythm — instead of as one simultaneous wall of bullets. Counts down
+            // in advance_bullet_anims(); the anim is invisible and frozen until it
+            // hits zero.
+            float start_delay_ms = 0.0f;
+        };
+        std::vector<active_bullet_anim> m_bullet_anims;
+        // steady_clock timestamp (ms) of the last bullet-anim advance.
+        std::optional<int64_t> m_bullet_anim_last_ms;
 
         std::vector<tripoint_bub_ms> bul_pos;
         std::vector<std::string> bul_id;
@@ -1289,7 +1346,7 @@ class cata_tiles
         // int, angle, bool represents part_mod, veh_dir, and highlight respectively
         // point represents the mount direction
         std::map<tripoint_bub_ms, std::tuple<vpart_id, int, units::angle, bool, point_rel_ms>>
-        vpart_override;
+                vpart_override;
         // int represents spawn count
         std::map<tripoint_bub_ms, std::tuple<mtype_id, int, bool, Creature::Attitude>> monster_override;
 

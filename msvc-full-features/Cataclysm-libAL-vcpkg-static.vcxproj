@@ -13,6 +13,10 @@
       <Configuration>Debug-NoTiles</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-NoTilesHeadless|x64">
+      <Configuration>Debug-NoTilesHeadless</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|ARM64EC">
       <Configuration>Debug</Configuration>
       <Platform>ARM64EC</Platform>
@@ -35,6 +39,10 @@
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release-NoTiles|x64">
       <Configuration>Release-NoTiles</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-NoTilesHeadless|x64">
+      <Configuration>Release-NoTilesHeadless</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|ARM64EC">
@@ -78,14 +86,14 @@
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Debug-NoTiles'" Label="Configuration">
+  <PropertyGroup Condition="$(Configuration.StartsWith('Debug-NoTiles'))" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release-NoTiles'" Label="Configuration">
+  <PropertyGroup Condition="$(Configuration.StartsWith('Release-NoTiles'))" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
@@ -108,18 +116,22 @@
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Debug-NoTiles'">
+  <PropertyGroup Condition="$(Configuration.StartsWith('Debug-NoTiles'))">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release-NoTiles'">
+  <PropertyGroup Condition="$(Configuration.StartsWith('Release-NoTiles'))">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>_CONSOLE;SDL_SOUND;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Headless has no audio backend: omit SDL_SOUND so cata_allocator.cpp
+           and friends do not pull SDL headers (the fork is SDL3-only and a
+           headless build links neither SDL nor curses). -->
+      <PreprocessorDefinitions Condition="!$(Configuration.Contains(Headless))">_CONSOLE;SDL_SOUND;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="$(Configuration.Contains(Headless))">_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -129,7 +141,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug-NoTiles'">
+  <ItemDefinitionGroup Condition="$(Configuration.StartsWith('Debug-NoTiles'))">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
@@ -149,7 +161,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release-NoTiles'">
+  <ItemDefinitionGroup Condition="$(Configuration.StartsWith('Release-NoTiles'))">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>

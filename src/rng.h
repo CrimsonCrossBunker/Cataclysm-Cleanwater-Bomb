@@ -124,10 +124,10 @@ inline auto random_entry_opt( C &container ) ->
 std::optional<decltype( std::ref( *container.begin() ) )>
 {
     if( container.empty() ) {
-    return std::nullopt;
-}
-auto iter = container.begin();
-std::advance( iter, rng( 0, container.size() - 1 ) );
+        return std::nullopt;
+    }
+    auto iter = container.begin();
+    std::advance( iter, rng( 0, container.size() - 1 ) );
     return std::ref( *iter );
 }
 /**

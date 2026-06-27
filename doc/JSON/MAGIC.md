@@ -1032,6 +1032,7 @@ Character status value  | Description
 `KNOCKBACK_RESIST`      | The amount knockback effects you, 0 is the regular amount, -100 would be double effect, 100 would be no effect.
 `KNOCKDOWN_RESIST`      | The amount knockdown effects you, currently *only* having 100 or greater knockdown_resist makes you immune to knockdown.
 `LEARNING_FOCUS`        | Amount of bonus focus you have for learning purposes.
+`FOCUS_REGEN`           | The speed at which focus recovers, and it only affects situations where focus changes positively.
 `LUMINATION`            | Character produces light.
 `MAX_HP`                | 
 `MAX_MANA`              | 

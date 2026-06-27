@@ -419,7 +419,7 @@ static nc_color construction_color( const construction_group_str_id &group, bool
         col = c_white;
     } else {
         std::vector<const construction *> cons = player_can_build_valid_constructions( player_character,
-            player_character.crafting_inventory(), group );
+                player_character.crafting_inventory(), group );
         if( !cons.empty() ) {
             col = c_white;
             for( const auto &pr : cons.front()->required_skills ) {
@@ -458,8 +458,8 @@ static std::string furniture_qualities_string( const furn_id &fid )
 }
 
 static std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
-valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
-                                 const inventory &total_inv, avatar &player_character );
+        valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
+                const inventory &total_inv, avatar &player_character );
 
 static shared_ptr_fast<game::draw_callback_t> construction_preview_callback(
     const std::map<tripoint_bub_ms, const construction *> &valid,
@@ -602,7 +602,7 @@ construction_id construction_menu( const bool blueprint )
     g->invalidate_main_ui_adaptor();
 #endif
     std::unique_ptr<restore_on_out_of_scope<tripoint_rel_ms>> restore_view =
-        std::make_unique<restore_on_out_of_scope<tripoint_rel_ms>>( player_character.view_offset );
+                std::make_unique<restore_on_out_of_scope<tripoint_rel_ms>>( player_character.view_offset );
 
     const auto recalc_buffer = [&]() {
         //leave room for top and bottom UI text
@@ -967,7 +967,7 @@ construction_id construction_menu( const bool blueprint )
     const std::optional<tripoint_bub_ms> mouse_pos; // dummy
     bool blink = true;
     shared_ptr_fast<game::draw_callback_t> draw_preview = construction_preview_callback(
-            con_preview, mouse_pos, blink );
+                con_preview, mouse_pos, blink );
     g->add_draw_callback( draw_preview );
 
     do {
@@ -1164,7 +1164,7 @@ std::vector<const construction *> player_can_build_valid_constructions( Characte
     // check all with the same group to see if player can build any
     // if so, it will be added to the result
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction * &con : cons ) {
+    for( const construction *&con : cons ) {
         if( player_can_build( you, inv, *con ) ) {
             result.push_back( con );
         }
@@ -1177,7 +1177,7 @@ bool player_can_build( Character &you, const read_only_visitable &inv,
 {
     // check all with the same group to see if player can build any
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction * &con : cons ) {
+    for( const construction *&con : cons ) {
         if( player_can_build( you, inv, *con ) ) {
             return true;
         }
@@ -1208,7 +1208,7 @@ bool player_can_see_to_build( Character &you, const construction_group_str_id &g
         return true;
     }
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction * &con : cons ) {
+    for( const construction *&con : cons ) {
         if( con->dark_craftable ) {
             return true;
         }
@@ -1332,8 +1332,8 @@ bool can_construct( const construction &con )
 }
 
 std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
-valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
-                                 const inventory &total_inv, avatar &player_character )
+        valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
+                const inventory &total_inv, avatar &player_character )
 {
     std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>> ret;
     std::map<tripoint_bub_ms, const construction *> &valid = ret.first;
@@ -1360,7 +1360,7 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
     const inventory &total_inv = player_character.crafting_inventory();
 
     std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
-    valid_pair = valid_constructions_near_player( groups, total_inv, player_character );
+            valid_pair = valid_constructions_near_player( groups, total_inv, player_character );
     std::map<tripoint_bub_ms, const construction *> &valid = valid_pair.first;
     std::vector<const construction *> &cons = valid_pair.second;
     map &here = get_map();
@@ -1378,13 +1378,13 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
 #endif
 
     shared_ptr_fast<game::draw_callback_t> draw_preview = construction_preview_callback(
-            valid, mouse_pos, blink );
+                valid, mouse_pos, blink );
     g->add_draw_callback( draw_preview );
 
     const tripoint_bub_ms &loc = player_character.pos_bub();
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent(
-            loc, _( "Construct where?" ),
-            /*allow_vertical=*/false, /*timeout=*/get_option<int>( "BLINK_SPEED" ),
+                loc, _( "Construct where?" ),
+                /*allow_vertical=*/false, /*timeout=*/get_option<int>( "BLINK_SPEED" ),
     [&]( const input_context & ctxt, const std::string & action ) {
         if( action == "TIMEOUT" ) {
             blink = !blink;
@@ -1393,7 +1393,7 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
         }
         if( action == "MOUSE_MOVE" ) {
             const std::optional<tripoint_bub_ms> mouse_pos_raw = ctxt.get_coordinates(
-                    g->w_terrain, g->ter_view_p.raw().xy(), true );
+                        g->w_terrain, g->ter_view_p.raw().xy(), true );
             if( mouse_pos_raw.has_value() && mouse_pos_raw->z() == loc.z()
                 && mouse_pos_raw->x() >= loc.x() - 1 && mouse_pos_raw->x() <= loc.x() + 1
                 && mouse_pos_raw->y() >= loc.y() - 1 && mouse_pos_raw->y() <= loc.y() + 1 ) {
@@ -1927,7 +1927,7 @@ void construct::done_deconstruct( const tripoint_bub_ms &p, Character &player_ch
             // Uses a modified version of the complete_construction formula using 20 minutes with halved yield before the multiplier
             player_character.practice( skill.id,
                                        static_cast<int>( skill.multiplier * ( 5.0 / 6.0 ) * ( 10 + 7.5 * ( skill.min +
-                                           skill.max ) ) ), skill.max );
+                                               skill.max ) ) ), skill.max );
         }
     };
 
@@ -2644,7 +2644,7 @@ std::vector<construction_id> find_build_sequence( const std::string &target_id,
 
     std::queue<std::string> terrain_queue;
     std::unordered_map<std::string, std::pair<const construction *, std::string>>
-    parent; // pre, cons , post
+            parent; // pre, cons , post
     std::unordered_set<std::string> visited;
 
     terrain_queue.push( target_id );

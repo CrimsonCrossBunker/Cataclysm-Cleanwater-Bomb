@@ -49,16 +49,16 @@ class tiny_bitset
 
         ~tiny_bitset() noexcept {
             if( !is_inline() ) {
-            free( real_heap_allocation() );
+                free( real_heap_allocation() );
             }
         }
 
         // Nontrivial copy constructor due to heap allocation potential
         tiny_bitset( const tiny_bitset &rhs ) noexcept {
             if( rhs.is_inline() ) {
-            storage_ = rhs.storage_;
-        } else {
-            resize( rhs.capacity() );
+                storage_ = rhs.storage_;
+            } else {
+                resize( rhs.capacity() );
                 memcpy( bits(), rhs.bits(), rhs.size() / kBitsPerBlock );
             }
         }
@@ -139,7 +139,7 @@ class tiny_bitset
 
         size_t size() const {
             if( is_inline() ) {
-            return ( storage_ & kInlineSizeMask ) >> kInlineSizeBitsOffset;
+                return ( storage_ & kInlineSizeMask ) >> kInlineSizeBitsOffset;
             } else {
                 return *real_heap_allocation();
             }

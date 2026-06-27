@@ -175,7 +175,7 @@ class effect_type
     protected:
         uint32_t get_effect_modifier_key( mod_action action, uint8_t reduction_level ) const {
             return static_cast<uint8_t>( action ) << 0 |
-                                                  reduction_level << 8;
+                   reduction_level << 8;
         }
 
         void extract_effect(

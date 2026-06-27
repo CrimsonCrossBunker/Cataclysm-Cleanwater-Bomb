@@ -1286,7 +1286,7 @@ void main_menu::world_tab( const std::string &worldname )
                                    ( saves[char_menu.ret].base_path() + ".zones.json" );
             int zone_count = 0;
             clipboard_personal_zones = zone_manager::copy_personal_zones( zones_file,
-                                           zone_count );
+                                       zone_count );
             if( zone_count > 0 ) {
                 popup( n_gettext( "Copied %d personal zone.",
                                   "Copied %d personal zones.", zone_count ), zone_count );
@@ -1324,7 +1324,7 @@ void main_menu::world_tab( const std::string &worldname )
             cata_path zones_file = cur_world->folder_path() /
                                    ( saves[char_menu.ret].base_path() + ".zones.json" );
             if( zone_manager::paste_personal_zones( zones_file,
-                    clipboard_personal_zones ) ) {
+                                                    clipboard_personal_zones ) ) {
                 popup( _( "Personal zones pasted successfully." ) );
             } else {
                 popup( _( "Failed to write zones data." ) );

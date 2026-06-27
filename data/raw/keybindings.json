@@ -5043,7 +5043,11 @@
     "id": "SWITCH_LISTS",
     "category": "INVENTORY",
     "name": "Switch lists",
-    "bindings": [ { "input_method": "keyboard_any", "key": "TAB" }, { "input_method": "gamepad", "key": "R_RADIAL_N" } ]
+    "bindings": [
+      { "input_method": "keyboard_any", "key": "TAB" },
+      { "input_method": "keyboard_any", "key": "LEFT" },
+      { "input_method": "gamepad", "key": "R_RADIAL_N" }
+    ]
   },
   {
     "type": "keybinding",

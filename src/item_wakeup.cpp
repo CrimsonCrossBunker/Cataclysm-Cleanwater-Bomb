@@ -389,15 +389,15 @@ std::optional<time_point> item_wakeup_manager::get( int64_t uid,
 std::optional<scheduled_wakeup_info> item_wakeup_manager::peek_next_wakeup() const
 {
     if( heap_.empty() ) {
-    return std::nullopt;
-}
-const entry_iter top = heap_.front();
-scheduled_wakeup_info info;
-info.uid = top->uid;
-info.kind = top->kind;
-info.when = top->when;
-info.hint = top->hint;
-return info;
+        return std::nullopt;
+    }
+    const entry_iter top = heap_.front();
+    scheduled_wakeup_info info;
+    info.uid = top->uid;
+    info.kind = top->kind;
+    info.when = top->when;
+    info.hint = top->hint;
+    return info;
 }
 
 std::vector<scheduled_wakeup_info> item_wakeup_manager::dump() const
@@ -494,8 +494,8 @@ void item_wakeup_manager::serialize( JsonOut &jsout ) const
     jsout.start_array();
     std::vector<entry_iter> live;
     live.reserve( by_key_.size() );
-for( const std::pair<const key_t, entry_iter> &kv : by_key_ ) {
-    live.push_back( kv.second );
+    for( const std::pair<const key_t, entry_iter> &kv : by_key_ ) {
+        live.push_back( kv.second );
     }
     std::sort( live.begin(), live.end(),
     []( const entry_iter & a, const entry_iter & b ) {
@@ -508,9 +508,9 @@ for( const std::pair<const key_t, entry_iter> &kv : by_key_ ) {
         return static_cast<int>( a->kind ) < static_cast<int>( b->kind );
     } );
     cata_assert( entries_.size() >= live.size() );
-for( const entry_iter &it : live ) {
-    const entry &e = *it;
-    jsout.start_object();
+    for( const entry_iter &it : live ) {
+        const entry &e = *it;
+        jsout.start_object();
         jsout.member( "uid", e.uid );
         jsout.member( "kind", kind_to_string( e.kind ) );
         jsout.member( "when", e.when );

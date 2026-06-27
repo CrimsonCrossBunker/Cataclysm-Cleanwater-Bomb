@@ -853,7 +853,7 @@ static_assert( SEEY == 12, "Reminder to update submap tests when SEEY changes." 
 static JsonValue submap_empty = json_loader::from_string( submap_empty_ss );
 static JsonValue submap_terrain_rle = json_loader::from_string( submap_terrain_rle_ss );
 static JsonValue submap_terrain_with_invalid_ter_ids = json_loader::from_string(
-        submap_terrain_with_invalid_ter_ids_ss );
+            submap_terrain_with_invalid_ter_ids_ss );
 static JsonValue submap_furniture = json_loader::from_string( submap_furniture_ss );
 static JsonValue submap_trap = json_loader::from_string( submap_trap_ss );
 static JsonValue submap_rad = json_loader::from_string( submap_rad_ss );
@@ -866,7 +866,7 @@ static JsonValue submap_construction = json_loader::from_string( submap_construc
 static JsonValue submap_computer = json_loader::from_string( submap_computer_ss );
 static JsonValue submap_cosmetic = json_loader::from_string( submap_cosmetic_ss );
 static JsonValue submap_ter_furn_pre_migration = json_loader::from_string(
-        submap_ter_furn_pre_migration_ss );
+            submap_ter_furn_pre_migration_ss );
 static JsonValue submap_fd_pre_migration = json_loader::from_string( submap_fd_pre_migration_ss );
 
 static void load_from_jsin( submap &sm, const JsonValue &jsin )

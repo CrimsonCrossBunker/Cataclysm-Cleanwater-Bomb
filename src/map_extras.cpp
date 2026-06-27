@@ -1324,24 +1324,24 @@ bool map_extra::is_valid_for( const mapgendata &md ) const
 bool map_extra::potentially_visible_at( om_vision_level vis ) const
 {
     switch( visibility ) {
-    case map_extra_visibility::none:
-        return false;
-    case map_extra_visibility::always:
-        return true;
-    case map_extra_visibility::vague:
-        return vis >= om_vision_level::vague;
-    case map_extra_visibility::outlines:
-        return vis >= om_vision_level::outlines;
-    case map_extra_visibility::details:
-        return vis >= om_vision_level::details;
-    case map_extra_visibility::full:
-        return vis >= om_vision_level::full;
-    case map_extra_visibility::same_tile: // this is a weird case and has it's own checks
-        return true;
-    case map_extra_visibility::LAST:
-        return false;
-}
-return false;
+        case map_extra_visibility::none:
+            return false;
+        case map_extra_visibility::always:
+            return true;
+        case map_extra_visibility::vague:
+            return vis >= om_vision_level::vague;
+        case map_extra_visibility::outlines:
+            return vis >= om_vision_level::outlines;
+        case map_extra_visibility::details:
+            return vis >= om_vision_level::details;
+        case map_extra_visibility::full:
+            return vis >= om_vision_level::full;
+        case map_extra_visibility::same_tile: // this is a weird case and has it's own checks
+            return true;
+        case map_extra_visibility::LAST:
+            return false;
+    }
+    return false;
 }
 
 void map_extra::load( const JsonObject &jo, std::string_view )
@@ -1384,8 +1384,8 @@ void map_extra::finalize() const
 void map_extra::check() const
 {
     switch( generator_method ) {
-    case map_extra_method::map_extra_function: {
-        const map_extra_pointer mx_func = MapExtras::get_function( map_extra_id( generator_id ) );
+        case map_extra_method::map_extra_function: {
+            const map_extra_pointer mx_func = MapExtras::get_function( map_extra_id( generator_id ) );
             if( mx_func == nullptr ) {
                 debugmsg( "invalid map extra function (%s) defined for map extra (%s)", generator_id, id.str() );
             }

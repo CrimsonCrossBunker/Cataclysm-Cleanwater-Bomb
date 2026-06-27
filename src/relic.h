@@ -49,7 +49,7 @@ class relic_procgen_data
 
             int calc_power( T level ) const {
                 return std::round( level * static_cast<float>( power_per_increment ) /
-                static_cast<float>( increment ) );
+                                   static_cast<float>( increment ) );
             }
 
             bool was_loaded = false;
@@ -74,7 +74,7 @@ class relic_procgen_data
 
             int calc_power( int level ) const {
                 return base_power + std::round( level *
-                       static_cast<float>( power_per_increment ) / static_cast<float>( increment ) );
+                                                static_cast<float>( power_per_increment ) / static_cast<float>( increment ) );
             }
 
             bool was_loaded = false;

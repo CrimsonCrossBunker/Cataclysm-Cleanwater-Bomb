@@ -133,8 +133,8 @@ item *item_stack::stacks_with( const item &it )
 
 const item *item_stack::stacks_with( const item &it ) const
 {
-for( const item &here : *items ) {
-    if( here.stacks_with( it ) ) {
+    for( const item &here : *items ) {
+        if( here.stacks_with( it ) ) {
             return &here;
         }
     }

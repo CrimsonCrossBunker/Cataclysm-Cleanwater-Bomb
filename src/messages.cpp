@@ -93,12 +93,12 @@ struct game_message {
 
     nc_color get_color( const time_point &current ) const {
         if( is_new( current ) ) {
-        // color for new messages
-        return msgtype_to_color( type, false );
+            // color for new messages
+            return msgtype_to_color( type, false );
 
         } else if( is_recent( current ) ) {
-        // color for slightly old messages
-        return msgtype_to_color( type, true );
+            // color for slightly old messages
+            return msgtype_to_color( type, true );
         }
 
         // color for old messages

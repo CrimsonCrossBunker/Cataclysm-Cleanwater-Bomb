@@ -96,10 +96,10 @@ input_event::input_event( const std::set<keymod_t> &mod, const int s, const inpu
 int input_event::get_first_input() const
 {
     if( sequence.empty() ) {
-    return UNKNOWN_UNICODE;
-}
+        return UNKNOWN_UNICODE;
+    }
 
-return sequence[0];
+    return sequence[0];
 }
 
 bool input_event::operator!=( const input_event &other ) const
@@ -877,8 +877,8 @@ const action_attributes &input_manager::get_action_attributes(
     bool use_basic_action_contexts )
 {
     t_action_contexts &action_contexts_ref = use_basic_action_contexts
-        ? basic_action_contexts
-        : action_contexts;
+            ? basic_action_contexts
+            : action_contexts;
 
     if( context != default_context_id ) {
         // Check if the action exists in the provided context
@@ -914,7 +914,7 @@ const action_attributes &input_manager::get_action_attributes(
 translation input_manager::get_default_action_name( const std::string &action_id ) const
 {
     const t_action_contexts::const_iterator default_action_context = action_contexts.find(
-            default_context_id );
+                default_context_id );
     if( default_action_context == action_contexts.end() ) {
         return no_translation( action_id );
     }

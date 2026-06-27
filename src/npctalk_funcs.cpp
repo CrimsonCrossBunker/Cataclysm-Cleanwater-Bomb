@@ -112,7 +112,7 @@ void talk_function::assign_mission( npc &p )
         return;
     } else if( miss->is_assigned() ) {
         DebugLog( D_WARNING, D_MAIN ) << "assign_mission: mission_id: " << miss->mission_id().str() <<
-                                         " is already assigned!";
+                                      " is already assigned!";
         return;
     }
     miss->assign( get_avatar() );
@@ -407,7 +407,7 @@ void talk_function::goto_location( npc &p )
     time_duration ETA = time_between_npc_OM_moves * tiles_to_travel;
     ETA = ETA * rng_float( 0.8, 1.2 ); // Add +-20% variance in our estimate
     if( !query_yn(
-            _( "Estimated time to arrival: %1$s  \nTiles to travel: %2$s  \nIs this path and destination acceptable?" ),
+            _( "Estimated time to arrival: %1$s  \nTiles to travel: %2$d  \nIs this path and destination acceptable?" ),
             to_string_approx( ETA ), tiles_to_travel ) ) {
         p.goal = npc::no_goal_point;
         p.omt_path.clear();
@@ -1043,7 +1043,7 @@ void talk_function::drop_stolen_item( npc &p )
 {
     bool dropped = false;
     Character &player_character = get_player_character();
-    for( item * &elem : player_character.inv_dump() ) {
+    for( item *&elem : player_character.inv_dump() ) {
         dropped |= drop_stolen_item( *elem, p );
     }
     if( dropped ) {

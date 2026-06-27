@@ -300,10 +300,10 @@ void ui_adaptor::invalidation_consistency_and_optimization()
 void ui_adaptor::invalidate_ui() const
 {
     if( invalidated ) {
-    return;
-}
-auto it = ui_stack.cbegin();
-for( ; it < ui_stack.cend(); ++it ) {
+        return;
+    }
+    auto it = ui_stack.cbegin();
+    for( ; it < ui_stack.cend(); ++it ) {
         if( &it->get() == this ) {
             break;
         }

@@ -255,7 +255,7 @@ void print_colored_text( const catacurses::window &w, const point &p, nc_color &
 
         if( seg[0] == '<' ) {
             const color_tag_parse_result::tag_type type = update_color_stack(
-                    color_stack, seg, color_error );
+                        color_stack, seg, color_error );
             if( type != color_tag_parse_result::non_color_tag ) {
                 seg = rm_prefix( seg );
             }
@@ -772,11 +772,11 @@ void border_helper::draw_border( const catacurses::window &win, nc_color border_
                 const point pbottom( x, end.y - 1 );
                 if( x > beg.x ) {
                     border_connection_map.value()[ptop].left =
-                                             border_connection_map.value()[pbottom].left = true;
+                        border_connection_map.value()[pbottom].left = true;
                 }
                 if( x < end.x - 1 ) {
                     border_connection_map.value()[ptop].right =
-                                             border_connection_map.value()[pbottom].right = true;
+                        border_connection_map.value()[pbottom].right = true;
                 }
             }
             for( int y = beg.y; y < end.y; ++y ) {
@@ -784,11 +784,11 @@ void border_helper::draw_border( const catacurses::window &win, nc_color border_
                 const point pright( end.x - 1, y );
                 if( y > beg.y ) {
                     border_connection_map.value()[pleft].top =
-                                             border_connection_map.value()[pright].top = true;
+                        border_connection_map.value()[pright].top = true;
                 }
                 if( y < end.y - 1 ) {
                     border_connection_map.value()[pleft].bottom =
-                                             border_connection_map.value()[pright].bottom = true;
+                        border_connection_map.value()[pright].bottom = true;
                 }
             }
         }
@@ -1092,16 +1092,16 @@ static const std::vector<ItemFilterPrefix> item_filter_prefixes = {
 };
 
 static const translation item_filter_help_1 = to_translation(
-        "The default is to search item names.  Some single-character prefixes "
-        "can be used with a colon <color_red>:</color> to search in other ways.  Additional filters "
-        "are separated by commas <color_red>,</color>.\n"
-        "Example: back,flash,aid, ,band\n\n" // NOLINT(cata-text-style): literal comma
-    );
+            "The default is to search item names.  Some single-character prefixes "
+            "can be used with a colon <color_red>:</color> to search in other ways.  Additional filters "
+            "are separated by commas <color_red>,</color>.\n"
+            "Example: back,flash,aid, ,band\n\n" // NOLINT(cata-text-style): literal comma
+        );
 static const translation item_filter_help_2 = to_translation(
-        "\nPlace [<color_red>--</color>] in front to include only matching items.\n"
-        // An example of how to exclude items with - when filtering items.
-        "Example: steel,-chunk,--c:spare parts"
-    );
+            "\nPlace [<color_red>--</color>] in front to include only matching items.\n"
+            // An example of how to exclude items with - when filtering items.
+            "Example: steel,-chunk,--c:spare parts"
+        );
 
 std::string item_filter_rule_string( const item_filter_type type )
 {
@@ -1491,11 +1491,11 @@ input_event draw_item_info( const std::function<catacurses::window()> &init_wind
             }
         }
         item_info_bar.offset_x( data.scrollbar_left ? 0 : getmaxx( win ) - 1 )
-                     .offset_y( data.without_border && data.use_full_win ? 0 : 1 )
-                     .content_size( folded.size() ).viewport_size( height )
-                     .viewport_pos( *data.ptr_selected )
-                     .scroll_to_last( false )
-                     .apply( win );
+        .offset_y( data.without_border && data.use_full_win ? 0 : 1 )
+        .content_size( folded.size() ).viewport_size( height )
+        .viewport_pos( *data.ptr_selected )
+        .scroll_to_last( false )
+        .apply( win );
         if( !data.without_border ) {
             draw_custom_border( win, buffer.empty() );
         }
@@ -1831,7 +1831,7 @@ std::map<std::string, inclusive_rectangle<point>> draw_tabs( const catacurses::w
     auto it = std::find( tab_texts.begin(), tab_texts.end(), current_tab );
     cata_assert( it != tab_texts.end() );
     std::map<size_t, inclusive_rectangle<point>> tab_map =
-        draw_tabs( w, tab_texts, it - tab_texts.begin() );
+                draw_tabs( w, tab_texts, it - tab_texts.begin() );
     std::map<std::string, inclusive_rectangle<point>> ret_map;
     for( size_t i = 0; i < tab_texts.size(); i++ ) {
         if( tab_map.count( i ) > 0 ) {
@@ -2026,7 +2026,7 @@ void scrollbar::apply( const catacurses::window &window, const bool draw_unneede
 {
     scrollbar_area = inclusive_rectangle<point>( point( getbegx( window ) + offset_x_v,
                      getbegy( window ) + offset_y_v ), point( getbegx( window ) + offset_x_v,
-                         getbegy( window ) + offset_y_v + viewport_size_v ) );
+                             getbegy( window ) + offset_y_v + viewport_size_v ) );
     if( viewport_size_v >= content_size_v || content_size_v <= 0 ) {
         // scrollbar not needed, optionally fill output area with vertical border line
         if( draw_unneeded ) {
@@ -2423,10 +2423,10 @@ void scrolling_text_view::draw( const nc_color &base_color )
 
     if( max_offset() > 0 ) {
         text_view_scrollbar.content_size( text_.size() ).
-                           viewport_pos( offset_ ).
-                           viewport_size( height ).
-                           scroll_to_last( false ).
-                           apply( w_ );
+        viewport_pos( offset_ ).
+        viewport_size( height ).
+        scroll_to_last( false ).
+        apply( w_ );
     } else {
         text_view_scrollbar = scrollbar();
         // No scrollbar; we need to draw the window edge instead
@@ -2855,7 +2855,7 @@ std::string satiety_bar( const int calpereffv )
     const float scaled_max = std::sqrt( max_cal_per_effective_vol );
     const float scaled_cal = std::sqrt( calpereffv );
     const std::pair<std::string, nc_color> nourishment_bar = get_bar(
-            scaled_cal, scaled_max, 5, true );
+                scaled_cal, scaled_max, 5, true );
     // Colorize the bar.
     std::string result = colorize( nourishment_bar.first, nourishment_bar.second );
     // Pad to 5 characters with dots.
@@ -2998,7 +2998,7 @@ void scrollingcombattext::add( const point &pos, direction p_oDir,
 std::string scrollingcombattext::cSCT::getText( const std::string &type ) const
 {
     if( !sText2.empty() ) {
-    if( oDir == oUpLeft || oDir == oDownLeft || oDir == oLeft ) {
+        if( oDir == oUpLeft || oDir == oDownLeft || oDir == oLeft ) {
             if( type == "first" ) {
                 return sText2 + " ";
 
@@ -3013,16 +3013,16 @@ std::string scrollingcombattext::cSCT::getText( const std::string &type ) const
             }
         }
     } else if( type == "second" ) {
-    return {};
-}
+        return {};
+    }
 
-return sText;
+    return sText;
 }
 
 game_message_type scrollingcombattext::cSCT::getMsgType( const std::string &type ) const
 {
     if( !sText2.empty() ) {
-    if( oDir == oUpLeft || oDir == oDownLeft || oDir == oLeft ) {
+        if( oDir == oUpLeft || oDir == oDownLeft || oDir == oLeft ) {
             if( type == "first" ) {
                 return gmt2;
             }
@@ -3039,7 +3039,7 @@ game_message_type scrollingcombattext::cSCT::getMsgType( const std::string &type
 int scrollingcombattext::cSCT::getPosX() const
 {
     if( getStep() > 0 ) {
-    int iDirOffset = ( oDir == oRight ) ? 1 : ( ( oDir == oLeft ) ? -1 : 0 );
+        int iDirOffset = ( oDir == oRight ) ? 1 : ( ( oDir == oLeft ) ? -1 : 0 );
 
         if( oDir == oUp || oDir == oDown ) {
 
@@ -3065,7 +3065,7 @@ int scrollingcombattext::cSCT::getPosX() const
 int scrollingcombattext::cSCT::getPosY() const
 {
     if( getStep() > 0 ) {
-    int iDirOffset = ( oDir == oDown ) ? 1 : ( ( oDir == oUp ) ? -1 : 0 );
+        int iDirOffset = ( oDir == oDown ) ? 1 : ( ( oDir == oUp ) ? -1 : 0 );
 
         if( iso_mode ) {
             if( oDir == oLeft || oDir == oRight ) {

@@ -55,7 +55,7 @@ bool cannot_gain_skill_or_prof( const Character &crafter, const recipe &recp )
 const book_proficiency_bonuses &availability::get_book_bonuses() const
 {
     if( !cached_book_bonuses ) {
-    cached_book_bonuses = crafter.book_bonuses_nearby();
+        cached_book_bonuses = crafter.book_bonuses_nearby();
     }
     return *cached_book_bonuses;
 }
@@ -63,8 +63,8 @@ const book_proficiency_bonuses &availability::get_book_bonuses() const
 float availability::get_proficiency_time_maluses() const
 {
     if( proficiency_time_maluses < 0 ) {
-    proficiency_time_maluses = rec->proficiency_time_maluses(
-                                   crafter, get_book_bonuses() );
+        proficiency_time_maluses = rec->proficiency_time_maluses(
+                                       crafter, get_book_bonuses() );
     }
 
     return proficiency_time_maluses;
@@ -73,7 +73,7 @@ float availability::get_proficiency_time_maluses() const
 float availability::get_max_proficiency_time_maluses() const
 {
     if( max_proficiency_time_maluses < 0 ) {
-    max_proficiency_time_maluses = rec->max_proficiency_time_maluses( crafter );
+        max_proficiency_time_maluses = rec->max_proficiency_time_maluses( crafter );
     }
 
     return max_proficiency_time_maluses;
@@ -82,8 +82,8 @@ float availability::get_max_proficiency_time_maluses() const
 float availability::get_proficiency_skill_maluses() const
 {
     if( proficiency_skill_maluses < 0 ) {
-    proficiency_skill_maluses = rec->proficiency_skill_maluses(
-                                    crafter, get_book_bonuses() );
+        proficiency_skill_maluses = rec->proficiency_skill_maluses(
+                                        crafter, get_book_bonuses() );
     }
 
     return proficiency_skill_maluses;
@@ -92,7 +92,7 @@ float availability::get_proficiency_skill_maluses() const
 float availability::get_max_proficiency_skill_maluses() const
 {
     if( max_proficiency_skill_maluses < 0 ) {
-    max_proficiency_skill_maluses = rec->max_proficiency_skill_maluses( crafter );
+        max_proficiency_skill_maluses = rec->max_proficiency_skill_maluses( crafter );
     }
 
     return max_proficiency_skill_maluses;
@@ -146,43 +146,43 @@ availability::availability( Character &_crafter, const recipe *r, int batch_size
 nc_color availability::selected_color() const
 {
     if( !can_craft && is_nested_category ) {
-    return h_blue;
-} else if( !can_craft ) {
-    return h_dark_gray;
-} else if( !crafter_has_primary_skill && is_nested_category ) {
-    return h_magenta;
-} else if( !crafter_has_primary_skill ) {
-    return h_light_red;
-} else if( is_nested_category ) {
-    return h_light_blue;
-} else if( would_use_rotten || useless_practice ) {
-    return has_all_skills ? h_brown : h_red;
-} else if( would_use_favorite ) {
-    return has_all_skills ? h_pink : h_red;
-} else {
-    return has_all_skills ? h_white : h_yellow;
-}
+        return h_blue;
+    } else if( !can_craft ) {
+        return h_dark_gray;
+    } else if( !crafter_has_primary_skill && is_nested_category ) {
+        return h_magenta;
+    } else if( !crafter_has_primary_skill ) {
+        return h_light_red;
+    } else if( is_nested_category ) {
+        return h_light_blue;
+    } else if( would_use_rotten || useless_practice ) {
+        return has_all_skills ? h_brown : h_red;
+    } else if( would_use_favorite ) {
+        return has_all_skills ? h_pink : h_red;
+    } else {
+        return has_all_skills ? h_white : h_yellow;
+    }
 }
 
 nc_color availability::color( bool ignore_missing_skills ) const
 {
     if( !can_craft && is_nested_category ) {
-    return c_blue;
-} else if( !can_craft ) {
-    return c_dark_gray;
-} else if( !crafter_has_primary_skill && is_nested_category ) {
-    return c_magenta;
-} else if( !crafter_has_primary_skill ) {
-    return c_light_red;
-} else if( is_nested_category ) {
-    return c_light_blue;
-} else if( would_use_rotten || useless_practice ) {
-    return has_all_skills || ignore_missing_skills ? c_brown : c_red;
-} else if( would_use_favorite ) {
-    return has_all_skills ? c_pink : c_red;
-} else {
-    return has_all_skills || ignore_missing_skills ? c_white : c_yellow;
-}
+        return c_blue;
+    } else if( !can_craft ) {
+        return c_dark_gray;
+    } else if( !crafter_has_primary_skill && is_nested_category ) {
+        return c_magenta;
+    } else if( !crafter_has_primary_skill ) {
+        return c_light_red;
+    } else if( is_nested_category ) {
+        return c_light_blue;
+    } else if( would_use_rotten || useless_practice ) {
+        return has_all_skills || ignore_missing_skills ? c_brown : c_red;
+    } else if( would_use_favorite ) {
+        return has_all_skills ? c_pink : c_red;
+    } else {
+        return has_all_skills || ignore_missing_skills ? c_white : c_yellow;
+    }
 }
 
 bool availability::check_can_craft_nested( Character &_crafter, const recipe &r )
@@ -928,7 +928,7 @@ static void recursively_expand_recipes( std::vector<const recipe *> &current,
     const bool want_unread = highlight_unread_recipes && unread_recipes_first;
     const crafting_cost_context sort_ctx{ crafter.book_bonuses_nearby(), {} };
     std::stable_sort( tmp.begin(), tmp.end(), [
-                          &crafter, &availability_cache, want_unread, &sort_ctx
+                       &crafter, &availability_cache, want_unread, &sort_ctx
     ]( const recipe * const a, const recipe * const b ) {
         const bool a_read = !want_unread || uistate.read_recipes.count( a->ident() );
         const bool b_read = !want_unread || uistate.read_recipes.count( b->ident() );
@@ -1030,7 +1030,7 @@ recipe_list_data build_recipe_list(
         const bool want_unread = highlight_unread && unread_first;
         const crafting_cost_context sort_ctx{ crafter.book_bonuses_nearby(), {} };
         std::stable_sort( result.entries.begin(), result.entries.end(), [
-                              &crafter, &availability_cache, want_unread, &sort_ctx
+                       &crafter, &availability_cache, want_unread, &sort_ctx
         ]( const recipe * const a, const recipe * const b ) {
             const bool a_read = !want_unread || uistate.read_recipes.count( a->ident() );
             const bool b_read = !want_unread || uistate.read_recipes.count( b->ident() );

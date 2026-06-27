@@ -166,10 +166,10 @@ struct talk_effect_fun_t {
         likely_rewards_t &get_likely_rewards();
         void operator()( dialogue &d ) const {
             if( !function ) {
-            return;
+                return;
+            }
+            function( d );
         }
-        function( d );
-    }
 };
 
 #endif // CATA_SRC_DIALOGUE_HELPERS_H

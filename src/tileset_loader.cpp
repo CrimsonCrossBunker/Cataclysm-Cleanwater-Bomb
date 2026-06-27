@@ -290,7 +290,7 @@ void tileset_cache::loader::create_textures_from_tile_atlas( const SDL_Surface_P
     for( tiles_pixel_color_entry &entry : tile_values_data ) {
         std::vector<texture> *tile_values = std::get<0>( entry );
         color_pixel_function_pointer color_pixel_function = get_color_pixel_function( std::get<1>
-            ( entry ) );
+                ( entry ) );
         if( !color_pixel_function ) {
             copy_surface_to_texture( scan_surf, offset, *tile_values, opaque_bounds, abandon_gate );
         } else {
@@ -705,17 +705,17 @@ void tileset_cache::loader::process_variations_after_loading(
     weighted_int_list<std::vector<int>> &vs ) const
 {
     // loop through all of the variations
-for( auto &v : vs ) {
-    // in a given variation, erase any invalid sprite ids
-    v.first.erase(
-        std::remove_if(
-            v.first.begin(),
-            v.first.end(),
-    [&]( int id ) {
-        return id >= offset || id < 0;
-    } ),
-    v.first.end()
-    );
+    for( auto &v : vs ) {
+        // in a given variation, erase any invalid sprite ids
+        v.first.erase(
+            std::remove_if(
+                v.first.begin(),
+                v.first.end(),
+        [&]( int id ) {
+            return id >= offset || id < 0;
+        } ),
+        v.first.end()
+        );
     }
     // erase any variations with no valid sprite ids left
     vs.erase(
@@ -726,7 +726,7 @@ for( auto &v : vs ) {
         return o.first.empty();
     }
         ),
-        vs.end()
+    vs.end()
     );
     // populate the bookkeeping table used for selecting sprite variations
     vs.precalc();
@@ -914,7 +914,7 @@ void tileset_cache::loader::parse_mappings( const JsonObject &config )
         }
     }
     dbg( D_INFO ) << "Tile Width: " << ts.tile_width << " Tile Height: " << ts.tile_height <<
-                     " Tile Definitions: " << ts.tile_ids.size();
+                  " Tile Definitions: " << ts.tile_ids.size();
 }
 
 /**
@@ -946,7 +946,7 @@ void tileset_cache::loader::load_tile_spritelists( const JsonObject &entry,
 {
     // json array indicates rotations or variations
     if( entry.has_array( objname ) ) {
-    JsonArray g_array = entry.get_array( objname );
+        JsonArray g_array = entry.get_array( objname );
         // int elements of array indicates rotations
         // create one variation, populate sprite_ids with list of ints
         if( g_array.test_int() ) {
@@ -996,7 +996,7 @@ void tileset_cache::loader::load_tile_spritelists( const JsonObject &entry,
     }
     // json int indicates a single sprite id
     else if( entry.has_int( objname ) && entry.get_int( objname ) >= 0 ) {
-    vs.add( std::vector<int>( {entry.get_int( objname ) + sprite_id_offset} ), 1 );
+        vs.add( std::vector<int>( {entry.get_int( objname ) + sprite_id_offset} ), 1 );
     }
 }
 atlas_upload_interrupt tileset_cache::loader::upload_atlases( tileset &ts,

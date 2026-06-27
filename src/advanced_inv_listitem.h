@@ -46,10 +46,17 @@ class advanced_inv_listitem
          */
         bool autopickup = false;
         /**
-         * The stack count represented by this item, should be >= 1, should be 1
-         * for anything counted by charges.
+         * The number of item stacks represented by this entry (>= 1).
+         * Used for volume/weight totals.  For display quantity, see @ref amount.
          */
         int stacks = 0;
+        /**
+         * The quantity shown in the amount column. Equals @ref stacks for
+         * discrete items and for ammo/liquids (whose charge count already shows
+         * in the name), but for "stackable" resources it is the summed
+         * charges so the amount column reflects the real quantity.
+         */
+        int amount = 0;
         /**
          * The volume of all the items in this stack, used for sorting.
          */

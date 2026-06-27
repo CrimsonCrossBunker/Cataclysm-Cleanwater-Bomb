@@ -100,7 +100,7 @@ void scent_map::shift( const point_rel_ms &sm_shift )
 int scent_map::get( const tripoint_bub_ms &p ) const
 {
     if( inbounds( p ) && grscent[p.x()][p.y()] > 0 ) {
-    return get_unsafe( p );
+        return get_unsafe( p );
     }
     return 0;
 }
@@ -148,7 +148,7 @@ bool scent_map::inbounds( const tripoint_bub_ms &p ) const
     const int levz = here.get_abs_sub().z();
     const bool scent_map_z_level_inbounds = ( p.z() == levz ) ||
                                             ( std::abs( p.z() - levz ) == SCENT_MAP_Z_REACH &&
-                                                here.valid_move( p, tripoint_bub_ms( p.xy(), levz ), false, true ) );
+                                                    here.valid_move( p, tripoint_bub_ms( p.xy(), levz ), false, true ) );
     if( !scent_map_z_level_inbounds ) {
         return false;
     }

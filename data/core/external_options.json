@@ -520,5 +520,12 @@
     "//": "The maximum number of overmaps that an intersection can deviate from its gridded position. Cannot be greater than or equal to row / 2 or column / 2, may cause bugs for > row / 4, column / 4.",
     "stype": "int",
     "value": 2
+  },
+  {
+    "type": "EXTERNAL_OPTION",
+    "name": "PLAYER_ARBITRARY_CHANGE_GENDER",
+    "//": "The default value is true; when this option is false, it prevents players from switching genders in the player_display menu. Some special character json flag can bypass this configuration option.",
+    "stype": "bool",
+    "value": true
   }
 ]

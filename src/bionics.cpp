@@ -986,7 +986,7 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
         }
     } else if( bio.id == bio_emp ) {
         if( const std::optional<tripoint_bub_ms> pnt = choose_adjacent(
-                _( "Create an EMP where?" ) ) ) {
+                    _( "Create an EMP where?" ) ) ) {
             add_msg_activate();
             explosion_handler::emp_blast( *pnt );
             mod_moves( -100 );
@@ -1224,12 +1224,12 @@ ret_val<void> Character::can_deactivate_bionic( bionic &bio, bool eff_only ) con
 {
 
     if( bio.incapacitated_time > 0_turns ) {
-    return ret_val<void>::make_failure( _( "Your %s is shorting out and can't be deactivated." ),
-                                        bio.info().name );
+        return ret_val<void>::make_failure( _( "Your %s is shorting out and can't be deactivated." ),
+                                            bio.info().name );
     }
 
     if( !eff_only ) {
-    if( !bio.powered ) {
+        if( !bio.powered ) {
             // It's already off!
             return ret_val<void>::make_failure();
         }
@@ -1953,12 +1953,12 @@ void Character::bionics_uninstall_failure( monster &installer, Character &patien
 bool Character::has_enough_anesth( const itype &cbm, Character &patient ) const
 {
     if( !cbm.bionic ) {
-    debugmsg( "has_enough_anesth( const itype *cbm ): %s is not a bionic", cbm.get_id().str() );
+        debugmsg( "has_enough_anesth( const itype *cbm ): %s is not a bionic", cbm.get_id().str() );
         return false;
     }
 
     if( patient.has_bionic( bio_painkiller ) || patient.has_flag( json_flag_PAIN_IMMUNE ) ||
-            patient.has_flag( json_flag_MANUAL_CBM_INSTALLATION ) || has_trait( trait_DEBUG_BIONICS ) ) {
+        patient.has_flag( json_flag_MANUAL_CBM_INSTALLATION ) || has_trait( trait_DEBUG_BIONICS ) ) {
         return true;
     }
 
@@ -1972,15 +1972,15 @@ bool Character::has_enough_anesth( const itype &cbm, Character &patient ) const
 bool Character::has_enough_anesth( const itype &cbm ) const
 {
     if( has_bionic( bio_painkiller ) || has_flag( json_flag_PAIN_IMMUNE ) ||
-    has_flag( json_flag_MANUAL_CBM_INSTALLATION ) || has_trait( trait_DEBUG_BIONICS ) ) {
-    return true;
-}
-const int weight = units::to_kilogram( bodyweight() ) / 10;
-const requirement_data req_anesth = *requirement_data_anesthetic *
-                                    cbm.bionic->difficulty * 2 * weight;
-if( !req_anesth.can_make_with_inventory( crafting_inventory(),
-        is_crafting_component ) ) {
-    std::string buffer = _( "You don't have enough anesthetic to perform the installation." );
+        has_flag( json_flag_MANUAL_CBM_INSTALLATION ) || has_trait( trait_DEBUG_BIONICS ) ) {
+        return true;
+    }
+    const int weight = units::to_kilogram( bodyweight() ) / 10;
+    const requirement_data req_anesth = *requirement_data_anesthetic *
+                                        cbm.bionic->difficulty * 2 * weight;
+    if( !req_anesth.can_make_with_inventory( crafting_inventory(),
+            is_crafting_component ) ) {
+        std::string buffer = _( "You don't have enough anesthetic to perform the installation." );
         buffer += "\n";
         buffer += req_anesth.list_missing();
         popup( buffer, PF_NONE );
@@ -2006,11 +2006,11 @@ void Character::consume_anesth_requirement( const itype &cbm, Character &patient
 bool Character::has_installation_requirement( const bionic_id &bid ) const
 {
     if( bid->installation_requirement.is_empty() ) {
-    return false;
-}
+        return false;
+    }
 
-if( !bid->installation_requirement->can_make_with_inventory( crafting_inventory(),
-        is_crafting_component ) ) {
+    if( !bid->installation_requirement->can_make_with_inventory( crafting_inventory(),
+            is_crafting_component ) ) {
         std::string buffer = _( "You don't have the required components to perform the installation." );
         buffer += "\n";
         buffer += bid->installation_requirement->list_missing();
@@ -2461,7 +2461,7 @@ bool Character::can_install_bionics( const itype &type, Character &installer, bo
                                      int skill_level ) const
 {
     if( !type.bionic ) {
-    debugmsg( "Tried to install NULL bionic" );
+        debugmsg( "Tried to install NULL bionic" );
         return false;
     }
     if( has_trait( trait_DEBUG_BIONICS ) || has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {
@@ -2486,16 +2486,16 @@ bool Character::can_install_bionics( const itype &type, Character &installer, bo
     int chance_of_success = bionic_success_chance( autodoc, skill_level, difficult, installer );
 
     std::vector<std::string> conflicting_muts;
-for( const trait_id &mid : bioid->canceled_mutations ) {
-    if( has_trait( mid ) ) {
+    for( const trait_id &mid : bioid->canceled_mutations ) {
+        if( has_trait( mid ) ) {
             conflicting_muts.push_back( mutation_name( mid ) );
         }
     }
 
     if( !conflicting_muts.empty() &&
-            !query_yn(
-                _( "Installing this bionic will remove the conflicting traits: %s.  Continue anyway?" ),
-                enumerate_as_string( conflicting_muts ) ) ) {
+        !query_yn(
+            _( "Installing this bionic will remove the conflicting traits: %s.  Continue anyway?" ),
+            enumerate_as_string( conflicting_muts ) ) ) {
         return false;
     }
 
@@ -2515,7 +2515,7 @@ for( const trait_id &mid : bioid->canceled_mutations ) {
 
     Character &player_character = get_player_character();
     if( chance_of_success >= 100 ) {
-    if( !player_character.query_yn(
+        if( !player_character.query_yn(
                 _( "Are you sure you wish to install the selected bionic?" ),
                 100 - chance_of_success ) ) {
             return false;
@@ -2765,8 +2765,8 @@ std::vector<bionic_id> Character::get_bionics() const
 
 bool Character::has_bionic( const bionic_id &b ) const
 {
-for( const bionic_id &bid : get_bionics() ) {
-    if( bid == b ) {
+    for( const bionic_id &bid : get_bionics() ) {
+        if( bid == b ) {
             return true;
         }
     }
@@ -2775,8 +2775,8 @@ for( const bionic_id &bid : get_bionics() ) {
 
 bool Character::has_active_bionic( const bionic_id &b ) const
 {
-for( const bionic &i : *my_bionics ) {
-    if( i.id == b ) {
+    for( const bionic &i : *my_bionics ) {
+        if( i.id == b ) {
             if( i.is_safe_fuel_on() &&
                 get_power_level() + 1_kJ > get_max_power_level() * std::min( 1.0f, i.get_safe_fuel_thresh() ) ) {
                 // Inactive due to fuel treshold
@@ -2918,8 +2918,8 @@ bionic_uid Character::add_bionic( const bionic_id &b, bionic_uid parent_uid,
 
 std::optional<bionic *> Character::find_bionic_by_type( const bionic_id &b ) const
 {
-for( bionic &bio : *my_bionics ) {
-    if( bio.id == b ) {
+    for( bionic &bio : *my_bionics ) {
+        if( bio.id == b ) {
             return &bio;
         }
     }
@@ -2929,11 +2929,11 @@ for( bionic &bio : *my_bionics ) {
 std::optional<bionic *> Character::find_bionic_by_uid( bionic_uid bio_uid ) const
 {
     if( !bio_uid ) {
-    return std::nullopt;
-}
+        return std::nullopt;
+    }
 
-for( bionic &bio : *my_bionics ) {
-    if( bio.get_uid() == bio_uid ) {
+    for( bionic &bio : *my_bionics ) {
+        if( bio.get_uid() == bio_uid ) {
             return &bio;
         }
     }
@@ -3041,10 +3041,10 @@ bool bionic::has_flag( const std::string &flag ) const
 int bionic::get_quality( const quality_id &quality ) const
 {
     if( weapon.typeId().is_empty() ) {
-    return INT_MIN;
-}
+        return INT_MIN;
+    }
 
-return weapon.get_quality( quality );
+    return weapon.get_quality( quality );
 }
 
 bool bionic::has_weapon() const
@@ -3060,7 +3060,7 @@ bool bionic::can_install_weapon() const
 bool bionic::can_install_weapon( const item &new_weapon ) const
 {
     return !id->installable_weapon_flags.empty() &&
-    new_weapon.has_any_flag( id->installable_weapon_flags );
+           new_weapon.has_any_flag( id->installable_weapon_flags );
 }
 
 item bionic::get_weapon() const
@@ -3220,16 +3220,16 @@ void bionic::serialize( JsonOut &json ) const
     json.member( "bionic_uid", uid );
     json.member( "parent_uid", parent_uid );
     if( incapacitated_time > 0_turns ) {
-    json.member( "incapacitated_time", incapacitated_time );
+        json.member( "incapacitated_time", incapacitated_time );
     }
     if( is_safe_fuel_on() ) {
-    json.member( "safe_fuel_threshold", safe_fuel_threshold );
+        json.member( "safe_fuel_threshold", safe_fuel_threshold );
     }
     json.member( "show_sprite", show_sprite );
     json.member( "auto_shutdown", auto_shutdown );
 
     if( has_weapon() ) {
-    json.member( "weapon", weapon );
+        json.member( "weapon", weapon );
     }
 
     json.end_object();
@@ -3421,8 +3421,8 @@ std::vector<bionic_id> Character::get_fueled_bionics() const
 
 bionic_id Character::get_remote_fueled_bionic() const
 {
-for( const bionic_id &bid : get_bionics() ) {
-    if( bid->is_remote_fueled ) {
+    for( const bionic_id &bid : get_bionics() ) {
+        if( bid->is_remote_fueled ) {
             return bid;
         }
     }
@@ -3611,7 +3611,7 @@ void bionic::set_parent_uid( bionic_uid new_uid )
 bionic_uid Character::generate_bionic_uid() const
 {
     if( !next_bionic_uid ) {
-    update_last_bionic_uid();
+        update_last_bionic_uid();
     }
     return next_bionic_uid++;
 }

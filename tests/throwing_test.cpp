@@ -15,6 +15,7 @@
 #include "item.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "monster.h"
 #include "npc.h"
 #include "player_helpers.h"
@@ -58,7 +59,7 @@ struct throw_test_pstats {
 std::ostream &operator<<( std::ostream &stream, const throw_test_pstats &pstats )
 {
     return stream << "STR: " << pstats.str << " DEX: " << pstats.dex <<
-                     " PER: " << pstats.per << " SKL: " << pstats.skill_lvl;
+           " PER: " << pstats.per << " SKL: " << pstats.skill_lvl;
 }
 } // namespace
 

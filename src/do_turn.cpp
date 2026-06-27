@@ -41,6 +41,7 @@
 #include "help.h"
 #include "input.h"
 #include "input_context.h"
+#include "input_replay.h"
 #include "item_wakeup.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -133,8 +134,12 @@ bool cleanup_at_end()
         g->save_achievements();
 
         g->death_screen();
+        // See game::save(): freeze the wall-clock delta under replay so playtime
+        // (and anything derived from the game_over event) is reproducible.
         std::chrono::seconds time_since_load =
-            std::chrono::duration_cast<std::chrono::seconds>(
+            replay_mode == replay_mode_t::replay
+            ? std::chrono::seconds( 0 )
+            : std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now() - g->time_of_last_load );
         std::chrono::seconds total_time_played = g->time_played_at_last_load + time_since_load;
         get_event_bus().send<event_type::game_over>( total_time_played );
@@ -146,7 +151,7 @@ bool cleanup_at_end()
         std::vector<std::string> characters = g->list_active_saves();
         // remove current player from the active characters list, as they are dead
         std::vector<std::string>::iterator curchar = std::find( characters.begin(),
-            characters.end(), u.get_save_id() );
+                characters.end(), u.get_save_id() );
         if( curchar != characters.end() ) {
             characters.erase( curchar );
         }
@@ -428,7 +433,7 @@ void overmap_npc_move()
         }
     }
     bool npcs_need_reload = false;
-    for( npc * &elem : travelling_npcs ) {
+    for( npc *&elem : travelling_npcs ) {
         if( elem->has_omt_destination() ) {
             if( !elem->omt_path.empty() ) {
                 if( rl_dist( elem->omt_path.back(), elem->pos_abs_omt() ) > 2 ) {
@@ -521,6 +526,16 @@ void game::handle_progress_ui()
 
 bool game::do_turn()
 {
+    // If a replay's input log has drained, save and request quit before doing
+    // any more simulation. Checked at the top of every turn so it fires no matter
+    // which input path drained the log (avatar action loop, a modal menu, a
+    // query); a single in-loop check missed cases where the avatar loop was not
+    // re-entered. One-shot, so it only triggers the save once.
+    if( input_replay::replay_just_finished() ) {
+        save();
+        uquit = QUIT_SAVED;
+    }
+
     if( is_game_over() ) {
         return turn_handler::cleanup_at_end();
     }
@@ -557,10 +572,12 @@ bool game::do_turn()
     avatar &u = get_avatar();
     map &m = get_map();
     // If controlling a vehicle that is owned by someone else
-    if( u.in_vehicle && u.controlling_vehicle ) {
-        vehicle *veh = veh_pointer_or_null( m.veh_at( u.pos_bub() ) );
-        if( veh && !veh->handle_potential_theft( u, true ) ) {
-            veh->handle_potential_theft( u, false, false );
+    if( calendar::once_every( 1_minutes ) ) {
+        if( u.in_vehicle && u.controlling_vehicle ) {
+            vehicle *veh = veh_pointer_or_null( m.veh_at( u.pos_bub() ) );
+            if( veh && !veh->handle_potential_theft( u, true ) ) {
+                veh->handle_potential_theft( u, false, false );
+            }
         }
     }
 
@@ -630,6 +647,11 @@ bool game::do_turn()
     // avatar processes human input through handle_action()
     if( !u.has_effect( effect_sleep ) || uquit == QUIT_WATCH ) {
         if( u.get_moves() > 0 || uquit == QUIT_WATCH ) {
+            // Tracks the position last memorized inside the step loop below.
+            // Seeded with the turn-start position, which the previous turn's
+            // end-of-turn update_map_memory already recorded, so a turn that is
+            // a single step (the common case) triggers no extra memorise here.
+            tripoint_bub_ms last_memorized_pos = u.pos_bub( m );
             while( u.get_moves() > 0 || uquit == QUIT_WATCH ) {
 
                 // handle_action() may cause map updates, creatures to die
@@ -649,6 +671,24 @@ bool game::do_turn()
                     && ( !u.has_distant_destination() || calendar::once_every( 10_seconds ) ) ) {
                     wait_popup_reset();
                     ui_manager::redraw();
+                    // A single turn can span several steps (roads, speed
+                    // effects, partial-move loops). Each step is rendered by the
+                    // redraw above, but the end-of-turn update_map_memory call
+                    // only sees the avatar's final position, so terrain visible
+                    // only mid-step would never be memorized. That is invisible
+                    // for connecting terrain (re-memorized every pass) but loses
+                    // non-connecting terrain such as grass, which is memorized
+                    // exactly once. Memorize the current field of view whenever
+                    // the avatar has actually moved since the last memorise,
+                    // reusing the visibility cache the redraw just rebuilt. The
+                    // position guard keeps single-step turns (the common case)
+                    // free: their start position was already memorized at the
+                    // previous turn's end.
+                    const tripoint_bub_ms mem_pos = u.pos_bub( m );
+                    if( mem_pos != last_memorized_pos ) {
+                        m.update_map_memory( u );
+                        last_memorized_pos = mem_pos;
+                    }
                 }
 
                 if( queue_screenshot ) {
@@ -749,6 +789,21 @@ bool game::do_turn()
 
     // replenish avatar moves
     u.process_turn();
+
+    // Update player map memory from the current field of view.  This used to
+    // happen lazily inside the tiles draw path; running it here in the sim loop
+    // (after the map cache is built, before the visibility cache is
+    // invalidated) lets rendering become pure-read and keeps memory on the sim
+    // side (required by autodrive / NPC pathing that consume it).
+    // Skip only during view-blocking activities (sleeping / reading / long-wait
+    // / crafting) — the same condition that triggers handle_progress_ui's
+    // wait popup.  During those the player cannot see the world, so per-turn
+    // memorisation is pure waste and the source of the stutter.
+    const bool in_long_wait = u.has_effect( effect_sleep ) ||
+                              static_cast<bool>( u.activity.get_progress_message( u ) );
+    if( !in_long_wait ) {
+        m.update_map_memory( u );
+    }
 
     if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
         ui_manager::redraw();

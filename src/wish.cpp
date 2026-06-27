@@ -179,13 +179,13 @@ class wish_mutate_callback: public uilist_callback
 
         float desired_extra_space_right( ) override {
             return std::min( ImGui::GetMainViewport()->Size.x / 2.0f,
-            std::max( TERMX / 2, TERMX - 50 ) * ImGui::CalcTextSize( "X" ).x );
+                             std::max( TERMX / 2, TERMX - 50 ) * ImGui::CalcTextSize( "X" ).x );
         }
 
         void refresh( uilist *menu ) override {
             if( !started ) {
-            started = true;
-            for( const mutation_branch &traits_iter : mutation_branch::get_all() ) {
+                started = true;
+                for( const mutation_branch &traits_iter : mutation_branch::get_all() ) {
                     vTraits.push_back( traits_iter.id );
                     pTraits[traits_iter.id] = you->has_trait( traits_iter.id );
                 }
@@ -520,9 +520,9 @@ void debug_menu::wisheffect( Creature &p )
         efmenu.addentry( 1, true, 'b', _( "Change body part" ) );
         only_active = false;
 
-for( const std::pair<const efftype_id, effect_type> &eff : get_effect_types() )
-    {
-        const effect &plyeff = p.get_effect( eff.first, bp );
+        for( const std::pair<const efftype_id, effect_type> &eff : get_effect_types() )
+        {
+            const effect &plyeff = p.get_effect( eff.first, bp );
             if( plyeff.is_null() ) {
                 effects.emplace_back( &*eff.first );
             } else {
@@ -536,8 +536,8 @@ for( const std::pair<const efftype_id, effect_type> &eff : get_effect_types() )
         } );
 
         for( size_t i = 0; i < effect_size; ++i )
-    {
-        const effect &eff = effects[i];
+        {
+            const effect &eff = effects[i];
             uilist_entry entry{static_cast<int>( i + offset ), true, -2, eff.get_id().str()};
 
             int duration = to_seconds<int>( eff.get_duration() );
@@ -694,7 +694,7 @@ class wish_monster_callback: public uilist_callback
 
         float desired_extra_space_right( ) override {
             return std::min( ImGui::GetMainViewport()->Size.x / 2.0f,
-            std::max( TERMX / 2, TERMX - 50 ) * ImGui::CalcTextSize( "X" ).x );
+                             std::max( TERMX / 2, TERMX - 50 ) * ImGui::CalcTextSize( "X" ).x );
         }
 
         void refresh( uilist *menu ) override {
@@ -936,18 +936,18 @@ class wish_item_callback: public uilist_callback
 
         void select( uilist *menu ) override {
             if( menu->selected < 0 ) {
-            return;
-        }
-        examine_pos = 0;
-        chosen_snippet_id = { -1, "" };
-        renew_snippet = true;
-        const itype &selected_itype = *standard_itype_ids[menu->selected];
-        // Make liquids "contained" by default (toggled with CONTAINER action)
-        incontainer = selected_itype.phase == phase_id::LIQUID;
-        // Clear instance flags when switching items
-        flags.clear();
-        // Grab default flags for the itype (added with the FLAG action)
-        itype_flags = debug_menu::iterable_to_string( selected_itype.get_flags(), " ",
+                return;
+            }
+            examine_pos = 0;
+            chosen_snippet_id = { -1, "" };
+            renew_snippet = true;
+            const itype &selected_itype = *standard_itype_ids[menu->selected];
+            // Make liquids "contained" by default (toggled with CONTAINER action)
+            incontainer = selected_itype.phase == phase_id::LIQUID;
+            // Clear instance flags when switching items
+            flags.clear();
+            // Grab default flags for the itype (added with the FLAG action)
+            itype_flags = debug_menu::iterable_to_string( selected_itype.get_flags(), " ",
             []( const flag_id & f ) {
                 return f.str();
             } );
@@ -995,7 +995,7 @@ class wish_item_callback: public uilist_callback
                     const std::string cat = selected_itype.snippet_category;
                     if( SNIPPET.has_category( cat ) ) {
                         std::vector<std::pair<snippet_id, std::string>> snippes = SNIPPET.get_snippets_by_category( cat,
-                            true );
+                                true );
                         if( !snippes.empty() ) {
                             uilist snipp_query;
                             snipp_query.text = _( "Choose snippet type." );
@@ -1035,7 +1035,7 @@ class wish_item_callback: public uilist_callback
 
         float desired_extra_space_right( ) override {
             return std::min( ImGui::GetMainViewport()->Size.x / 2.0f,
-            std::max( TERMX / 2, TERMX - 50 ) * ImGui::CalcTextSize( "X" ).x );
+                             std::max( TERMX / 2, TERMX - 50 ) * ImGui::CalcTextSize( "X" ).x );
         }
 
         void refresh( uilist *menu ) override {
@@ -1364,8 +1364,8 @@ void debug_menu::wishskill( Character *you, bool change_theory )
             }
             skmenu.text = string_format( _( "%s set to %d" ), skill.name(), get_level( skill ) );
             skmenu.entries[skill_id + skoffset].txt = string_format( _( "@ %d: %s  " ),
-                get_level( skill ),
-                skill.name() );
+                    get_level( skill ),
+                    skill.name() );
             skmenu.entries[skill_id + skoffset].text_color =
                 get_level( skill ) == origskills[skill_id] ?
                 skmenu.text_color : c_yellow;
@@ -1395,7 +1395,7 @@ void debug_menu::wishskill( Character *you, bool change_theory )
                     }
 
                     skmenu.entries[skill_id + skoffset].txt = string_format( _( "@ %d: %s  " ),
-                        get_level( skill ), skill.name() );
+                            get_level( skill ), skill.name() );
 
                     you->get_skill_level_object( skill.ident() ).practice();
                     skmenu.entries[skill_id + skoffset].text_color =

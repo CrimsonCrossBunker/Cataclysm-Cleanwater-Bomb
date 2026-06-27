@@ -305,21 +305,21 @@ bool trap::detect_trap( const tripoint_bub_ms &pos, const Character &p ) const
 bool trap::can_see( const tripoint_bub_ms &pos, const Character &p ) const
 {
     if( is_null() ) {
-    // There is no trap at all, so logically one can not see it.
-    return false;
-}
-if( is_always_invisible() ) {
-    return false;
-}
-return visibility < 0 || p.knows_trap( pos );
+        // There is no trap at all, so logically one can not see it.
+        return false;
+    }
+    if( is_always_invisible() ) {
+        return false;
+    }
+    return visibility < 0 || p.knows_trap( pos );
 }
 
 void trap::trigger( const tripoint_bub_ms &pos ) const
 {
     if( is_null() ) {
-    return;
-}
-act( pos, nullptr, nullptr );
+        return;
+    }
+    act( pos, nullptr, nullptr );
 }
 
 void trap::trigger( const tripoint_bub_ms &pos, Creature &creature ) const
@@ -335,11 +335,11 @@ void trap::trigger( const tripoint_bub_ms &pos, item &item ) const
 void trap::trigger( const tripoint_bub_ms &pos, Creature *creature, item *item ) const
 {
     if( is_null() ) {
-    return;
-}
-const bool is_real_creature = creature != nullptr && !creature->is_hallucination();
-if( is_real_creature || item != nullptr ) {
-    bool triggered = act( pos, creature, item );
+        return;
+    }
+    const bool is_real_creature = creature != nullptr && !creature->is_hallucination();
+    if( is_real_creature || item != nullptr ) {
+        bool triggered = act( pos, creature, item );
         if( triggered && is_real_creature ) {
             if( Character *ch = creature->as_character() ) {
                 get_event_bus().send<event_type::character_triggers_trap>( ch->getID(), id );
@@ -390,10 +390,10 @@ bool trap::triggered_by_sound( int vol, int dist ) const
 
 void trap::on_disarmed( map &m, const tripoint_bub_ms &p ) const
 {
-for( const trap::comp &i : components ) {
-    m.spawn_item( p.xy(), i.item_type, i.quantity, i.charges );
+    for( const trap::comp &i : components ) {
+        m.spawn_item( p.xy(), i.item_type, i.quantity, i.charges );
     }
-for( const tripoint_bub_ms &dest : m.points_in_radius( p, trap_radius ) ) {
+    for( const tripoint_bub_ms &dest : m.points_in_radius( p, trap_radius ) ) {
         m.remove_trap( dest );
     }
 }
@@ -455,5 +455,5 @@ void trap::finalize_all()
 std::string trap::debug_describe() const
 {
     return string_format( _( "Visible: %d\nAvoidance: %d\nDifficulty: %d\nBenign: %s" ), visibility,
-    avoidance, difficulty, is_benign() ? _( "Yes" ) : _( "No" ) );
+                          avoidance, difficulty, is_benign() ? _( "Yes" ) : _( "No" ) );
 }

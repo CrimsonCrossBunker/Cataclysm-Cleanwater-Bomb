@@ -363,7 +363,7 @@ bool game::load( const save_t &name )
                     if( world_generator->active_world->has_compression_enabled() ) {
                         std::optional<zzip> z = zzip::load( ( save_file_path + zzip_suffix ).get_unrelative_path() );
                         abort = !z.has_value() ||
-                                  !read_from_zzip_optional( z.value(), save_file_path.get_unrelative_path().filename(),
+                        !read_from_zzip_optional( z.value(), save_file_path.get_unrelative_path().filename(),
                         [this]( std::string_view sv ) {
                             unserialize( std::string{ sv } );
                         } );
@@ -438,7 +438,7 @@ bool game::load( const save_t &name )
                     validate_camps();
                     validate_linked_vehicles();
                     update_map( u );
-                    for( item * &e : u.inv_dump() ) {
+                    for( item *&e : u.inv_dump() ) {
                         e->set_owner( get_player_character() );
                     }
                     // legacy, needs to be here as we access the map.
@@ -448,7 +448,7 @@ bool game::load( const save_t &name )
                         // The vehicle stores the IDs of the boarded players, so update it, too.
                         if( u.in_vehicle ) {
                             if( const std::optional<vpart_reference> vp = here.veh_at(
-                                    u.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
+                                        u.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
                                 vp->part().passenger_id = u.getID();
                             }
                         }
@@ -741,8 +741,15 @@ bool game::save_external_options_record()
 
 bool game::save()
 {
+    // total_time_played accumulates real wall-clock seconds, which is inherently
+    // non-deterministic. Under input replay we freeze the delta at 0 so the
+    // persisted playtime (written to both .pt and the character .sav) is
+    // reproducible -- otherwise two A/B replay runs differ by the seconds they
+    // happened to take. This is the only non-sim source the replay harness found.
     std::chrono::seconds time_since_load =
-        std::chrono::duration_cast<std::chrono::seconds>(
+        replay_mode == replay_mode_t::replay
+        ? std::chrono::seconds( 0 )
+        : std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::steady_clock::now() - time_of_last_load );
     std::chrono::seconds total_time_played = time_played_at_last_load + time_since_load;
     events().send<event_type::game_save>( time_since_load, total_time_played );
@@ -806,7 +813,7 @@ void game::write_memorial_file( std::string sLastWords )
 {
     const std::string &memorial_dir = PATH_INFO::memorialdir();
     const std::string &memorial_active_world_dir = memorial_dir +
-        world_generator->active_world->world_name + "/";
+            world_generator->active_world->world_name + "/";
 
     //Check if both dirs exist. Nested assure_dir_exist fails if the first dir of the nested dir does not exist.
     if( !assure_dir_exist( memorial_dir ) ) {
@@ -817,7 +824,7 @@ void game::write_memorial_file( std::string sLastWords )
 
     if( !assure_dir_exist( memorial_active_world_dir ) ) {
         dbg( D_ERROR ) <<
-        "game:write_memorial_file: Unable to make active world directory in memorial directory.";
+                       "game:write_memorial_file: Unable to make active world directory in memorial directory.";
         debugmsg( "Could not make '%s' directory", memorial_active_world_dir );
         return;
     }
@@ -955,7 +962,7 @@ void game::snapshot_menu()
     while( true ) {
         const save_snapshot::menu_selection sel =
             save_snapshot::query_snapshot_menu( world_dir, _( "Snapshots" ),
-                    _( "Load this snapshot" ) );
+                                                _( "Load this snapshot" ) );
 
         if( sel.action == save_snapshot::menu_action::none ) {
             return;

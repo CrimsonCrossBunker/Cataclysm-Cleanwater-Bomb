@@ -509,7 +509,22 @@ static std::set<tripoint_bub_ms> spell_effect_area( const spell &sp, const tripo
             const std::string exp_name = "explosion_" + sp.id().str();
             explosion_handler::draw_custom_explosion( explosion_colors, exp_name );
         } else {
-            explosion_handler::draw_custom_explosion( explosion_colors, std::nullopt, light, target );
+            // Shape the light's propagation. A blast blooms radially from the
+            // target epicentre (circular shockwave ring). A line or cone is
+            // directional: the wave sweeps out from the caster, so pass the
+            // caster tile as the origin and the spell target as the sweep
+            // direction. The shockwave front follows the shape — a flat beam for
+            // a line, an arc (sp.aoe() degrees) for a cone — instead of a centred
+            // ring. The light cover and screen shake play in every case.
+            const bool directional = sp.shape() == spell_shape::line ||
+                                     sp.shape() == spell_shape::cone;
+            const tripoint_bub_ms origin = directional ? caster.pos_bub() : target;
+            const std::optional<tripoint_bub_ms> shock_target =
+                directional ? std::optional<tripoint_bub_ms>( target ) : std::nullopt;
+            const double arc = sp.shape() == spell_shape::cone
+                               ? static_cast<double>( sp.aoe( caster ) ) : 0.0;
+            explosion_handler::draw_custom_explosion( explosion_colors, std::nullopt, light,
+                    origin, !directional, shock_target, arc );
         }
     }
     return targets;
@@ -1047,7 +1062,7 @@ void spell_effect::remove_field( const spell &sp, Creature &caster, const tripoi
 {
     const field_type_id &target_field_type_id = field_type_id( sp.effect_data() );
     std::pair<field, tripoint_bub_ms> field_removed = spell_remove_field( sp, target_field_type_id,
-        center, caster );
+            center, caster );
 
     for( const std::pair<const field_type_id, field_entry> &fd : std::get<0>( field_removed ) ) {
         if( fd.first.is_valid() && !fd.first.id().is_null() ) {
@@ -1376,8 +1391,8 @@ static bool add_summoned_mon( const tripoint_bub_ms &pos, const time_duration &t
     if( !permanent ) {
         spawned_mon.set_summon_time( time );
     }
-    spawned_mon.no_extra_death_drops = !sp.has_flag( spell_flag::SPAWN_WITH_DEATH_DROPS );
-    spawned_mon.no_corpse_quiet = sp.has_flag( spell_flag::NO_CORPSE_QUIET );
+    spawned_mon.death_drops = sp.has_flag( spell_flag::SPAWN_WITH_DEATH_DROPS );
+    spawned_mon.spawn_corpse = !sp.has_flag( spell_flag::NO_CORPSE_QUIET );
     spawned_mon.set_summoner( &caster );
     return true;
 }
@@ -1929,7 +1944,7 @@ void spell_effect::dash( const spell &sp, Creature &caster, const tripoint_bub_m
     spell_effect::override_parameters params( sp, caster );
     params.range = sp.aoe( caster );
     const std::set<tripoint_bub_ms> hit_area = spell_effect_cone_range_override( params, source,
-        far_target );
+            far_target );
     damage_targets( sp, caster, hit_area );
 }
 
@@ -2102,7 +2117,7 @@ void spell_effect::slime_split_on_death( const spell &sp, Creature &caster,
                     const int used_mass = std::min( mass, slime_id->speed - 15 );
                     mass -= used_mass;
                     blob->set_speed_base( used_mass );
-                    blob->no_extra_death_drops = !sp.has_flag( spell_flag::SPAWN_WITH_DEATH_DROPS );
+                    blob->death_drops = sp.has_flag( spell_flag::SPAWN_WITH_DEATH_DROPS );
                     summoned_slimes.push_back( mon.get() );
                     if( mass < mon_blob_small->speed / 2 ) {
                         break;

@@ -149,7 +149,7 @@ class watcher_set
         template<typename Class, typename... FnArgs, typename... Args>
         void send_to_all( void ( Class::*mem_fn )( FnArgs... ), Args &&... args ) const {
             static_assert( std::is_base_of_v<Class, Watcher>,
-            "Watcher must be derived from Class" );
+                           "Watcher must be derived from Class" );
             // Sending an event to a watcher can cause it to be erased, so we
             // need to always ensure we have the next iterator prepared in
             // advance.
@@ -225,13 +225,13 @@ class stats_tracker : public event_subscriber
         // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map<event_type, watcher_set<event_multiset_watcher>> event_type_watchers;
         std::unordered_map<string_id<event_transformation>, watcher_set<event_multiset_watcher>>
-        event_transformation_watchers; // NOLINT(cata-serialize)
+                event_transformation_watchers; // NOLINT(cata-serialize)
         // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map<string_id<event_statistic>, watcher_set<stat_watcher>> stat_watchers;
         std::unordered_map<string_id<event_transformation>, std::unique_ptr<stats_tracker_state>>
-        event_transformation_states; // NOLINT(cata-serialize)
+                event_transformation_states; // NOLINT(cata-serialize)
         std::unordered_map<string_id<event_statistic>, std::unique_ptr<stats_tracker_state>>
-        stat_states; // NOLINT(cata-serialize)
+                stat_states; // NOLINT(cata-serialize)
 
         std::unordered_set<string_id<score>> initial_scores;
 };

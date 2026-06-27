@@ -19,7 +19,7 @@
 #include "translations.h"
 
 #if defined(TILES)
-#include "sdl_utils.h"
+    #include "sdl_utils.h"
 #endif
 
 static std::unordered_map<RGBColor, std::string> named_colors = {};
@@ -55,9 +55,9 @@ std::pair<RGBColor, std::string> RGBColor::random_named( std::string fuzzy_match
 
     std::vector<decltype( named_colors )::value_type> candidates;
     std::copy_if( named_colors.begin(), named_colors.end(), std::back_inserter( candidates ),
-    [&]( const std::pair<const RGBColor, std::string> & c ) {
+    [&]( const std::pair<const RGBColor, std::string> &c ) {
         const std::string::const_iterator it = std::search( c.second.begin(), c.second.end(),
-                fuzzy_match.begin(), fuzzy_match.end(), char_cmp_ignore_case );
+                                               fuzzy_match.begin(), fuzzy_match.end(), char_cmp_ignore_case );
         return it != c.second.end();
     } );
     return random_entry( candidates );
@@ -86,7 +86,8 @@ std::string RGBColor::friendly_name() const
                           + ( ( ( 767 - r_mean ) * b * b ) >> 8 ) );
     };
 
-    const std::unordered_map<RGBColor, std::string>::iterator nearest = similar_name_cache.find( *this );
+    const std::unordered_map<RGBColor, std::string>::iterator nearest = similar_name_cache.find(
+                *this );
     if( nearest != similar_name_cache.end() ) {
         return nearest->second;
     }
@@ -96,9 +97,9 @@ std::string RGBColor::friendly_name() const
     }
 
     const std::unordered_map<RGBColor, std::string>::iterator min = std::min_element(
-            named_colors.begin(), named_colors.end(),
-    [&]( const std::pair<const RGBColor, std::string> & a,
-         const std::pair<const RGBColor, std::string> & b ) {
+                named_colors.begin(), named_colors.end(),
+                [&]( const std::pair<const RGBColor, std::string> &a,
+    const std::pair<const RGBColor, std::string> &b ) {
         return distFunc( a.first, *this ) < distFunc( b.first, *this );
     } );
     std::string similar_name = string_format( _( "%s (Off-Brand)" ), min->second );
@@ -244,7 +245,8 @@ RGBColor tint_blend( const RGBColor &base, const RGBColor &tint )
     };
     // Pegtop-style overlay used by CBN to preserve the source sprite's shading.
     const auto overlay = []( const uint8_t b, const uint8_t blend ) -> uint8_t {
-        if( b > 127 ) {
+        if( b > 127 )
+        {
             return static_cast<uint8_t>( std::clamp<int>( 255 - ( std::max( 255 - blend, 1 ) ) *
                                          ( ( 255 - b ) * 255 / 127 ) / 255, 0, 255 ) );
         }
@@ -308,7 +310,7 @@ static RGBColor rgb_from_hex_string( std::string str )
         str = str.substr( 1 );
     }
 
-    if( str.empty() || std::any_of( str.begin(), str.end(), []( const char & c ) {
+    if( str.empty() || std::any_of( str.begin(), str.end(), []( const char &c ) {
     return !std::isxdigit( static_cast<unsigned char>( c ) );
     } ) ) {
         debugmsg( "Invalid color value: %s", str );
@@ -388,7 +390,7 @@ std::optional<RGBColor> RGBColor::try_parse( const std::string &str )
         return curses_color_to_RGB( cm.get( nc_id ) );
     }
 
-    for( const std::pair<const RGBColor, std::string> & entry : named_colors ) {
+    for( const std::pair<const RGBColor, std::string> &entry : named_colors ) {
         if( str.size() == entry.second.size() &&
             std::equal( str.begin(), str.end(), entry.second.begin(), char_cmp_ignore_case ) ) {
             return entry.first;

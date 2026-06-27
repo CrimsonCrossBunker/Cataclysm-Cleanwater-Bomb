@@ -47,6 +47,7 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "vpart_position.h"
+#include "view_snapshot.h"
 
 #if defined(TILES)
     #include "cata_tiles.h"
@@ -60,6 +61,7 @@ class window;
 } // namespace catacurses
 class Character;
 class Creature;
+class avatar;
 class basecamp;
 class character_id;
 class computer;
@@ -307,164 +309,6 @@ struct drawsq_params {
         //@}
 };
 
-// Accumulated screen-pixel bounding box of all sprites drawn for a single tile
-// during the current frame. Used by the ortho tint overlay to cover the full
-// sprite extent instead of a fixed tile_width x tile_height rect.
-// NOLINTNEXTLINE(cata-xy)
-struct sprite_screen_bounds {
-    int x = 0, y = 0, w = 0, h = 0;
-    bool valid = false;
-    // NOLINTNEXTLINE(cata-large-inline-function,cata-xy)
-    void expand( int rx, int ry, int rw, int rh ) {
-        if( !valid ) {
-            x = rx;
-            y = ry;
-            w = rw;
-            h = rh;
-            valid = true;
-        } else {
-            const int nx = x < rx ? x : rx; // NOLINT(cata-combine-locals-into-point)
-            const int ny = y < ry ? y : ry;
-            const int x2 = ( x + w > rx + rw ) ? x + w : rx + rw;
-            const int y2 = ( y + h > ry + rh ) ? y + h : ry + rh;
-            x = nx;
-            y = ny;
-            w = x2 - nx;
-            h = y2 - ny;
-        }
-    }
-};
-
-// Snapshot of a single sprite draw call, recorded during the layer loop so the
-// ortho tint overlay can replay the sprite as a white silhouette into a mask
-// texture. Captures everything needed to reproduce the draw at the same screen
-// position with the silhouette color filter variant.
-struct tint_sprite_record {
-    int sprite_index;      // index into tileset tile_values / silhouette_tile_values
-    struct { // NOLINT(cata-xy)
-        int x, y, w, h;
-    } destination;         // screen-space destination rect at time of draw
-    double angle;          // rotation angle (0, -90, 90)
-    int flip;              // CataFlipMode cast to int (avoids SDL include)
-};
-
-struct tile_render_info {
-    struct common {
-        const tripoint_bub_ms pos;
-        // accumulator for 3d tallness of sprites rendered here so far;
-        int height_3d = 0;
-        // Ortho tint overlay state, populated during the draw prepass and layer
-        // loop. For tiles where needs_tint is true:
-        //   bounds       - union of all content sprite screen rects (opaque only)
-        //   tint_sprites - draw records for silhouette mask replay
-        //   tint_color   - precomputed RGBA tint from the colored light cache
-        sprite_screen_bounds bounds;
-        small_literal_vector<tint_sprite_record, 4> tint_sprites;
-        bool needs_tint = false;
-        struct {
-            uint8_t r, g, b, a;
-        } tint_color = { 0, 0, 0, 0 };
-
-        common( const tripoint_bub_ms &pos, const int height_3d )
-            : pos( pos ), height_3d( height_3d ) {}
-    };
-
-    struct vision_effect {
-        visibility_type vis;
-
-        explicit vision_effect( const visibility_type vis )
-            : vis( vis ) {}
-    };
-
-    struct sprite {
-        lit_level ll;
-        std::array<bool, 5> invisible;
-
-        sprite( const lit_level ll, const std::array<bool, 5> &inv )
-            : ll( ll ), invisible( inv ) {}
-    };
-
-    common com;
-    std::variant<vision_effect, sprite> var;
-
-    tile_render_info( const common &com, const vision_effect &var )
-        : com( com ), var( var ) {}
-
-    tile_render_info( const common &com, const sprite &var )
-        : com( com ), var( var ) {}
-};
-
-#if defined(TILES)
-/**
- * Flat-storage replacement for the former
- * std::map<int, std::map<int, std::vector<tile_render_info>>> draw-points cache.
- *
- * The z dimension is a fixed array indexed by (zlevel + OVERMAP_DEPTH); the row
- * dimension is a contiguous vector offset by the first row touched. Both reuse
- * their buffers across frames (see soft_clear) so the per-move rebuild no longer
- * frees and reallocates std::map nodes / row vectors every step — that churn was
- * the dominant movement-time render cost. operator[] auto-grows like the old
- * std::map operator[], so an untouched [z][row] still reads back empty.
- */
-class draw_points_cache_t
-{
-    public:
-        using row_vec = std::vector<tile_render_info>;
-
-        // Row storage for a single z-level, addressed by absolute screen row.
-        // row_base is the absolute row of rows[0].
-        class level_rows
-        {
-            public:
-                row_vec &operator[]( const int row ) {
-                    if( !initialized ) {
-                        row_base = row;
-                        initialized = true;
-                    }
-                    if( row < row_base ) {
-                        // Prepend empty rows. tile_render_info has a const member
-                        // (deleted copy/move assignment), so vector::insert — which
-                        // shifts via assignment — won't compile. Rebuild front-to-back
-                        // using move-construction only.
-                        std::vector<row_vec> grown;
-                        grown.reserve( rows.size() + static_cast<size_t>( row_base - row ) );
-                        grown.resize( static_cast<size_t>( row_base - row ) );
-                        for( row_vec &r : rows ) {
-                            grown.push_back( std::move( r ) );
-                        }
-                        rows.swap( grown );
-                        row_base = row;
-                    }
-                    const size_t idx = static_cast<size_t>( row - row_base );
-                    if( idx >= rows.size() ) {
-                        rows.resize( idx + 1 );
-                    }
-                    return rows[idx];
-                }
-                void soft_clear() {
-                    for( row_vec &r : rows ) {
-                        r.clear(); // keep capacity
-                    }
-                }
-            private:
-                int row_base = 0;
-                bool initialized = false;
-                std::vector<row_vec> rows;
-        };
-
-        level_rows &operator[]( const int zlevel ) {
-            return levels[zlevel + OVERMAP_DEPTH];
-        }
-        void soft_clear() {
-            for( level_rows &lr : levels ) {
-                lr.soft_clear();
-            }
-        }
-    private:
-        std::array<level_rows, OVERMAP_LAYERS> levels;
-};
-#endif // TILES
-
 /**
  * Manage and cache data about a part of the map.
  *
@@ -572,6 +416,16 @@ class map
         void set_pathfinding_cache_dirty( const tripoint_bub_ms &p );
         /*@}*/
 
+        // Mark the tiles draw-points cache for rebuild on the next frame.
+        // Terrain/furniture changes already trigger this transitively (they
+        // dirty the seen cache, which build_map_cache turns into a draw-cache
+        // rebuild), but the decoration-class mutators — traps, partial
+        // construction, graffiti — change none of the visibility caches, so
+        // they must request the rebuild explicitly or the cache would serve a
+        // stale snapshot of that content. No-op outside tiles builds / the
+        // reality bubble.
+        void set_draw_points_cache_dirty();
+
         void invalidate_map_cache( int zlev );
 
         // @returns true if map memory decoration should be re/memorized
@@ -584,6 +438,16 @@ class map
         void memory_cache_ter_set_dirty( const tripoint_bub_ms &p, bool value ) const;
         // clears map memory for points occupied by vehicle and marks "dirty" for re-memorizing
         void memory_clear_vehicle_points( const vehicle &veh ) const;
+
+        // Sim-side map-memory update pass (Stage 1 of sim/render decoupling).
+        // Walks the avatar's current field of view and writes everything just
+        // seen into player map memory (terrain/furniture/trap/partial-construction/
+        // vehicle-part), computing subtile/rotation via the map:: orientation
+        // helpers.  This used to live in the tiles draw path (memorize_only); it
+        // now runs in do_turn so rendering can become pure-read.  Must be called
+        // after the map cache is built and before the visibility cache is
+        // invalidated.
+        void update_map_memory( avatar &you );
 
         /**
          * A pre-filter for bresenham LOS.
@@ -1098,6 +962,42 @@ class map
                                         const std::map<tripoint_bub_ms, ter_id> &override = {},
                                         const std::map<tripoint_bub_ms, furn_id> &override_f = {} ) const;
 
+        // -----------------------------------------------------------------------
+        // Sim-side tile orientation helpers (Stage 1 of sim/render decoupling).
+        // Extracted from cata_tiles so the memory-update pass in do_turn can
+        // compute subtile/rotation when memorising seen tiles, without depending
+        // on the tiles subsystem.
+        // -----------------------------------------------------------------------
+        // Pure-math rotation helpers (no map state needed).
+        static void get_rotation_and_subtile( char val, char rot_to, int &rotation, int &subtile );
+        static int  get_rotation_unconnected( char rot_to );
+        static int  get_rotation_edge_ns( char rot_to );
+        static int  get_rotation_edge_ew( char rot_to );
+
+        // Terrain/furniture connection values + orientation — call get_map() internally.
+        // ter_override / furn_override are populated only on the render preview path;
+        // pass empty maps from the sim-side memory-update pass.
+        static void get_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
+                                        const std::bitset<NUM_TERCONN> &connect_group,
+                                        const std::bitset<NUM_TERCONN> &rotate_to_group,
+                                        const std::map<tripoint_bub_ms, ter_id> &ter_override = {} );
+        static void get_furn_connect_values( const tripoint_bub_ms &p, int &subtile, int &rotation,
+                                             const std::bitset<NUM_TERCONN> &connect_group,
+                                             const std::bitset<NUM_TERCONN> &rotate_to_group,
+                                             const std::map<tripoint_bub_ms, furn_id> &furn_override = {} );
+        static void get_terrain_orientation( const tripoint_bub_ms &p, int &rota, int &subtile,
+                                             const std::map<tripoint_bub_ms, ter_id> &ter_override,
+                                             const std::array<bool, 5> &invisible,
+                                             const std::bitset<NUM_TERCONN> &rotate_group );
+        // Compute subtile/rotation from a 4-neighbour sameness mask.
+        static void get_tile_values( int t, const std::array<int, 4> &tn, int &subtile, int &rotation,
+                                     char rotation_targets );
+        // as get_tile_values, but for unconnected tiles, infer rotation from surrounding walls
+        static void get_tile_values_with_ter( const tripoint_bub_ms &p, int t,
+                                              const std::array<int, 4> &tn,
+                                              int &subtile, int &rotation,
+                                              const std::bitset<NUM_TERCONN> &rotate_to_group );
+
         /**
          * Returns the full harvest list, for spawning.
          */
@@ -1112,6 +1012,8 @@ class map
         bool ter_set( const point_bub_ms &p, const ter_id &new_terrain, bool avoid_creatures = false ) {
             return ter_set( tripoint_bub_ms( p, abs_sub.z() ), new_terrain, avoid_creatures );
         }
+
+        void kill_creature( const tripoint_bub_ms &p, bool remove_corpse );
 
         std::string tername( const tripoint_bub_ms &p ) const;
 
@@ -2429,6 +2331,7 @@ class map
         // Clips the area to map bounds
         tripoint_range<tripoint_bub_ms> points_in_rectangle(
             const tripoint_bub_ms &from, const tripoint_bub_ms &to ) const;
+        // despite named "radius", returns a square
         tripoint_range<tripoint_bub_ms> points_in_radius(
             const tripoint_bub_ms &center, size_t radius, size_t radiusz = 0 ) const;
 
@@ -2471,7 +2374,7 @@ class map
 
 #if defined(TILES)
         bool draw_points_cache_dirty = true;
-        draw_points_cache_t draw_points_cache;
+        view_snapshot draw_points_cache;
         point_rel_ms prev_top_left;
         point_rel_ms prev_bottom_right;
         point prev_o;

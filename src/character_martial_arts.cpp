@@ -142,9 +142,9 @@ std::string character_martial_arts::enumerate_known_styles( const itype_id &weap
 std::string character_martial_arts::selected_style_name( const Character &owner ) const
 {
     if( style_selected->force_unarmed || style_selected->weapon_valid( owner.get_wielded_item() ) ) {
-    return style_selected->name.translated();
+        return style_selected->name.translated();
     } else if( owner.is_armed() ) {
-    return _( "Normal" );
+        return _( "Normal" );
     } else {
         return _( "No Style" );
     }
@@ -165,11 +165,11 @@ std::vector<matype_id> character_martial_arts::get_unknown_styles( const charact
 std::vector<matype_id> character_martial_arts::get_known_styles( bool teachable_only ) const
 {
     if( !teachable_only ) {
-    return ma_styles;
-}
-std::vector<matype_id> ret;
-for( const matype_id &i : ma_styles ) {
-    if( i->teachable ) {
+        return ma_styles;
+    }
+    std::vector<matype_id> ret;
+    for( const matype_id &i : ma_styles ) {
+        if( i->teachable ) {
             ret.push_back( i );
         }
     }

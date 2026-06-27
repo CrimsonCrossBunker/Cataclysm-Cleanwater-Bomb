@@ -42,6 +42,7 @@
 本项目继承原作许可协议：
 
 - CC-BY-SA 3.0 及兼容条款
+- 翻译署名：译文复制自 Cataclysm-DDA，原译者信息保留于各语言文件头部，详见 [TRANSLATION_CREDITS.md](./TRANSLATION_CREDITS.md)
 
 ----
 
@@ -81,3 +82,4 @@ We are committed to a collaborative developer-player relationship, reject the "N
 ## License
 This project inherits the license from the original game:
 - CC-BY-SA 3.0 and compatible terms
+- Translation Attribution: Translations derived from Cataclysm-DDA, original translator credits preserved in language file headers, see [TRANSLATION_CREDITS.md](./TRANSLATION_CREDITS.md)

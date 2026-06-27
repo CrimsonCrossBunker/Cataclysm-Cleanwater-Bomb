@@ -104,7 +104,7 @@ void overmap::place_river( const std::vector<const overmap *> &neighbor_overmaps
     }
     //Note: this is a list of *segments*; the points in this list are not always adjacent!
     std::vector<point_om_omt> segmented_curve = cubic_bezier( river_start, control_p1,
-        control_p2, river_end, n_segs );
+            control_p2, river_end, n_segs );
     //remove index-adjacent duplicate points
     auto iter = std::unique( segmented_curve.begin(), segmented_curve.end() );
     segmented_curve.erase( iter, segmented_curve.end() );

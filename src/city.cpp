@@ -84,7 +84,7 @@ void city::load( const JsonObject &jo, std::string_view )
 void city::check() const
 {
     if( get_option<bool>( "SELECT_STARTING_CITY" ) && city::get_all().empty() ) {
-    debugmsg( "Overmap cities need to be defined when `SELECT_STARTING_CITY` option is set to `true`!" );
+        debugmsg( "Overmap cities need to be defined when `SELECT_STARTING_CITY` option is set to `true`!" );
     }
 }
 

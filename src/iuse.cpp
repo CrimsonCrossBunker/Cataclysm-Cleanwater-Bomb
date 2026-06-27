@@ -1556,14 +1556,16 @@ std::optional<int> iuse::petfood( Character *p, item *it, const tripoint_bub_ms 
     }
 
     const std::optional<tripoint_bub_ms> pnt = choose_adjacent( string_format(
-            _( "Tame which animal with %s?" ),
-            it->tname() ) );
+                _( "Tame which animal with %s?" ),
+                it->tname() ) );
     if( !pnt ) {
         return std::nullopt;
     }
 
     creature_tracker &creatures = get_creature_tracker();
-    if( monster *const mon = creatures.creature_at<monster>( *pnt, true ) ) {
+    monster *const mon = creatures.creature_at<monster>( *pnt, true );
+
+    if( mon != nullptr && !mon->type->petfood.food.empty() ) {
         p->mod_moves( -to_moves<int>( 1_seconds ) );
 
         bool can_feed = false;
@@ -1685,9 +1687,9 @@ std::optional<int> iuse::radio_mod( Character *p, item *, const tripoint_bub_ms 
         _( "You modify your %1$s to listen for the %2$s activation signal on the radio." ),
         modded.tname(), colorname );
     modded.set_flag( flag_RADIO_ACTIVATION )
-          .set_flag( flag_RADIOCARITEM )
-          .set_flag( flag_RADIO_MOD )
-          .set_flag( newtag );
+    .set_flag( flag_RADIOCARITEM )
+    .set_flag( flag_RADIO_MOD )
+    .set_flag( newtag );
     return 1;
 }
 
@@ -1730,7 +1732,7 @@ std::optional<int> iuse::remove_all_mods( Character *p, item *, const tripoint_b
 static bool good_fishing_spot( const tripoint_bub_ms &pos, Character *p )
 {
     std::unordered_set<tripoint_bub_ms> fishable_locations = g->get_fishable_locations_bub(
-            MAX_VIEW_DISTANCE, pos );
+                MAX_VIEW_DISTANCE, pos );
     std::vector<monster *> fishables = g->get_fishable_monsters( fishable_locations );
     map &here = get_map();
     // isolated little body of water with no definite fish population
@@ -1889,7 +1891,7 @@ std::optional<int> iuse::fish_trap_tick( Character *p, item *it, const tripoint_
 
         //get the fishables around the trap's spot
         std::unordered_set<tripoint_bub_ms> fishable_locations = g->get_fishable_locations_bub(
-                MAX_VIEW_DISTANCE, pos );
+                    MAX_VIEW_DISTANCE, pos );
         std::vector<monster *> fishables = g->get_fishable_monsters( fishable_locations );
         for( int i = 0; i < fishes; i++ ) {
             player.practice( skill_survival, rng( 3, 10 ) );
@@ -1910,7 +1912,7 @@ std::optional<int> iuse::fish_trap_tick( Character *p, item *it, const tripoint_
                 //lets say it is a 5% chance per fish to catch
                 if( one_in( 20 ) ) {
                     const std::vector<mtype_id> fish_group = MonsterGroupManager::GetMonstersFromGroup(
-                            GROUP_FISH, true );
+                                GROUP_FISH, true );
                     const mtype_id &fish_mon = random_entry_ref( fish_group );
                     //Yes, we can put fishes in the trap like knives in the boot,
                     //and then get fishes via activation of the item,
@@ -2375,20 +2377,6 @@ std::optional<int> iuse::manage_exosuit( Character *p, item *it, const tripoint_
     return 0;
 }
 
-std::optional<int> iuse::unpack_item( Character *p, item *it, const tripoint_bub_ms & )
-{
-    if( p->cant_do_underwater() ) {
-        return std::nullopt;
-    }
-    std::string oname = it->typeId().str() + "_on";
-    p->mod_moves( -to_moves<int>( 10_seconds ) );
-    p->add_msg_if_player( _( "You unpack your %s for use." ), it->tname() );
-    it->convert( itype_id( oname ), p ).active = false;
-    // Check if unpacking led to invalid container state
-    p->invalidate_inventory_validity_cache();
-    return 0;
-}
-
 std::optional<int> iuse::pack_cbm( Character *p, item *it, const tripoint_bub_ms & )
 {
     item_location bionic = g->inv_map_splice( []( const item & e ) {
@@ -2540,29 +2528,6 @@ std::optional<int> iuse::purify_water( Character *p, item *purifier, item_locati
     return std::nullopt;
 }
 
-std::optional<int> iuse::water_tablets( Character *p, item *it, const tripoint_bub_ms & )
-{
-    map &here = get_map();
-
-    if( p->cant_do_mounted() ) {
-        return std::nullopt;
-    }
-
-    item_location obj = g->inv_map_splice( [&here]( const item_location & e ) {
-        return ( !e->empty() && e->has_item_with( []( const item & it ) {
-            return it.typeId() == itype_water || it.typeId() == itype_water_murky;
-        } ) ) || ( ( e->typeId() == itype_water || e->typeId() == itype_water_murky ) &&
-                   here.has_flag_furn( ter_furn_flag::TFLAG_LIQUIDCONT, e.pos_bub( here ) ) );
-    }, _( "Purify what?" ), 1, _( "You don't have water to purify." ) );
-
-    if( !obj ) {
-        p->add_msg_if_player( m_info, _( "You don't have that item!" ) );
-        return std::nullopt;
-    }
-
-    return purify_water( p, it, obj );
-}
-
 std::optional<int> iuse::directional_antenna( Character *p, item *it, const tripoint_bub_ms & )
 {
     // Find out if we have an active radio
@@ -2648,9 +2613,9 @@ std::optional<int> iuse::radio_tick( Character *, item *it, const tripoint_bub_m
         add_msg_debug( debugmode::DF_RADIO, "Message: '%s' at %d%% noise", message, static_chance );
         message = obscure_message( message, [&static_chance]() -> obscure_message_action {
             if( x_in_y( static_chance, 100 ) )
-        {
-            // Gradually replace random characters with noise as distance increases
-            if( one_in( 3 ) && static_chance - rng( 0, 25 ) < 50 ) {
+            {
+                // Gradually replace random characters with noise as distance increases
+                if( one_in( 3 ) && static_chance - rng( 0, 25 ) < 50 ) {
                     // Replace with random character
                     return replace_character_randomly{};
                 }
@@ -2851,8 +2816,8 @@ std::optional<int> iuse::crowbar( Character *p, item *it, const tripoint_bub_ms 
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = ( pos != p->pos_bub( here ) ) ?
-        pos : choose_adjacent_highlight(
-            here, _( "Pry where?" ), _( "There is nothing to pry nearby." ), f, false );
+            pos : choose_adjacent_highlight(
+                here, _( "Pry where?" ), _( "There is nothing to pry nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -3228,7 +3193,7 @@ std::optional<int> iuse::geiger( Character *p, item *it, const tripoint_bub_ms &
             };
 
             const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight( here,  _( "Scan whom?" ),
-                _( "There is no one to scan nearby." ), f, false );
+                    _( "There is no one to scan nearby." ), f, false );
             if( !pnt_ ) {
                 return std::nullopt;
             }
@@ -4676,7 +4641,7 @@ std::optional<int> iuse::chop_tree( Character *p, item *it, const tripoint_bub_m
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-            here, _( "Chop down which tree?" ), _( "There is no tree to chop down nearby." ), f, false );
+                here, _( "Chop down which tree?" ), _( "There is no tree to chop down nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -4720,14 +4685,14 @@ std::optional<int> iuse::chop_logs( Character *p, item *it, const tripoint_bub_m
     };
     map &here = get_map();
     const std::function<bool( const tripoint_bub_ms & )> f = [&allowed_ter_id,
-        &here]( const tripoint_bub_ms & pnt ) {
+    &here]( const tripoint_bub_ms & pnt ) {
         const ter_id &type = here.ter( pnt );
         const bool is_allowed_terrain = allowed_ter_id.find( type.id() ) != allowed_ter_id.end();
         return is_allowed_terrain;
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-            here, _( "Chop which tree trunk?" ), _( "There is no tree trunk to chop nearby." ), f, false );
+                here, _( "Chop which tree trunk?" ), _( "There is no tree trunk to chop nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -4776,7 +4741,7 @@ std::optional<int> iuse::oxytorch( Character *p, item *it, const tripoint_bub_ms
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-            here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
+                here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -4833,7 +4798,7 @@ std::optional<int> iuse::hacksaw( Character *p, item *it, const tripoint_bub_ms 
 
 
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-            here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
+                here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -4886,8 +4851,8 @@ std::optional<int> iuse::hacksaw( Character *p, item *it, const tripoint_bub_ms 
         query += "\n";
         query += string_format( _( "This will require: %s." ),
                                 it->format_consumption_requirements( "HACKSAW",
-                                    gun_mode_DEFAULT,
-                                    std::max( 1, turns ) ) );
+                                        gun_mode_DEFAULT,
+                                        std::max( 1, turns ) ) );
     } else if( it->ammo_required() ) {
         const int charges_needed = it->ammo_required() * required_moves / 100;
         query += "\n";
@@ -4929,7 +4894,7 @@ std::optional<int> iuse::boltcutters( Character *p, item *it, const tripoint_bub
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-            here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
+                here, _( "Cut up metal where?" ), _( "There is no metal to cut up nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -4959,7 +4924,7 @@ std::optional<int> iuse::mop( Character *p, item *it, const tripoint_bub_ms & )
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-            here, _( "Mop where?" ), _( "There is nothing to mop nearby." ), f, false );
+                here, _( "Mop where?" ), _( "There is nothing to mop nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -5829,7 +5794,7 @@ std::optional<int> iuse::efiledevice( Character *p, item *it, const tripoint_bub
 
     //gets nearby storage devices
     const drop_locations &processed_devices = game_menus::inv::edevice_select( *p, used_edevice,
-        not_browsing, auto_include_used_device, false, new_action );
+            not_browsing, auto_include_used_device, false, new_action );
     if( processed_devices.empty() ) {
         return std::nullopt;
     }
@@ -6005,7 +5970,7 @@ static std::string format_object_pair( const std::pair<std::string, int> &pair,
 static std::string format_object_pair_article( const std::pair<std::string, int> &pair )
 {
     return format_object_pair( pair, pgettext( "Article 'a', replace it with empty "
-                                               "string if it is not used in language", "a " ) );
+                               "string if it is not used in language", "a " ) );
 }
 static std::string format_object_pair_no_article( const std::pair<std::string, int> &pair )
 {
@@ -6352,8 +6317,8 @@ static item::extended_photo_def photo_def_for_camera_point( const tripoint_bub_m
             description_figures_appearance[ figure_name ] = figure_appearance;
 
             object_names_collection obj_collection = enumerate_objects_around_point( current, 1, aim_point, 2,
-                camera_pos, min_visible_volume, true,
-                ignored_points, vehicles_recorded );
+                    camera_pos, min_visible_volume, true,
+                    ignored_points, vehicles_recorded );
             std::string figure_text = pose + obj_collection.figure_text;
 
             if( !figure_effects.empty() ) {
@@ -8128,7 +8093,7 @@ std::optional<int> iuse::directional_hologram( Character *p, item *it, const tri
         return std::nullopt;
     }
     const std::optional<tripoint_bub_ms> posp = choose_adjacent(
-            _( "Choose hologram direction." ) );
+                _( "Choose hologram direction." ) );
     if( !posp ) {
         return std::nullopt;
     }
@@ -8258,7 +8223,7 @@ std::optional<int> iuse::capture_monster_act( Character *p, item *it, const trip
         const std::string query = string_format( _( "Grab which creature to place in the %s?" ),
                                   it->tname() );
         const std::optional<tripoint_bub_ms> target_ = choose_adjacent_highlight( here, query,
-            _( "There is no creature nearby you can capture." ), adjacent_capturable, false );
+                _( "There is no creature nearby you can capture." ), adjacent_capturable, false );
         if( !target_ ) {
             p->add_msg_if_player( m_info, _( "You can't use a %s there." ), it->tname() );
             return std::nullopt;
@@ -8317,8 +8282,8 @@ static std::optional<std::pair<tripoint_bub_ms, itype_id>> appliance_heater_sele
 {
     map &here = get_map();
     const std::optional<tripoint_bub_ms> pt = choose_adjacent_highlight( here,
-        _( "Select an appliance." ),
-        _( "There is no appliance nearby." ), ACTION_EXAMINE, false );
+            _( "Select an appliance." ),
+            _( "There is no appliance nearby." ), ACTION_EXAMINE, false );
     if( !pt ) {
         p->add_msg_if_player( m_info, _( "You haven't selected any appliance." ) );
         return std::nullopt;
@@ -8764,7 +8729,7 @@ std::optional<int> iuse::wash_items( Character *p, bool soft_items, bool hard_it
                           );
     int available_cleanser = std::max( {
         crafting_inv.charges_of( itype_soap ),
-        crafting_inv.charges_of( itype_detergent ),
+        crafting_inv.amount_of( itype_detergent ),
         crafting_inv.charges_of( itype_liquid_soap, INT_MAX, is_liquid )
     } );
 
@@ -8832,7 +8797,7 @@ std::optional<int> iuse::wash_items( Character *p, bool soft_items, bool hard_it
                               required.water );
         return std::nullopt;
     } else if( !crafting_inv.has_charges( itype_soap, required.cleanser ) &&
-               !crafting_inv.has_charges( itype_detergent, required.cleanser ) &&
+               !crafting_inv.has_amount( itype_detergent, required.cleanser ) &&
                !crafting_inv.has_charges( itype_liquid_soap, required.cleanser, is_liquid ) ) {
         p->add_msg_if_player( _( "You need %1$i charges of cleansing agent to wash these items." ),
                               required.cleanser );
@@ -9011,7 +8976,7 @@ std::optional<int> iuse::post_up( Character *p, item *it, const tripoint_bub_ms 
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-            here, _( "Post to which wall?" ), _( "There is no applicable wall nearby." ), f, false );
+                here, _( "Post to which wall?" ), _( "There is no applicable wall nearby." ), f, false );
     if( !pnt_ ) {
         return std::nullopt;
     }
@@ -9051,9 +9016,9 @@ std::optional<int> iuse::play_game( Character *p, item *it, const tripoint_bub_m
     int winner_index = -1;
 
     auto assign_game_activity = [&play_time, &entertain_item, &entertain_players,
-    &winner_index]( Character * p ) {
+                &winner_index]( Character * p ) {
         tabletop_game_activity_actor tabletop_game_act( play_time, entertain_item, entertain_players,
-            winner_index );
+                winner_index );
         p->assign_activity( tabletop_game_act );
     };
 

@@ -326,8 +326,8 @@ std::string player_difficulty::get_expertise_difficulty( const Character &u ) co
 
     // focus
     per += focus_weighting * static_cast<float>( u.calc_focus_equilibrium(
-               true ) - average.calc_focus_equilibrium(
-               true ) ) / static_cast<float>( average.calc_focus_equilibrium( true ) );
+                true ) - average.calc_focus_equilibrium(
+                true ) ) / static_cast<float>( average.calc_focus_equilibrium( true ) );
 
     // reading speed negative is good
     per -= reading_weighting * static_cast<float>( u.read_speed() - average.read_speed() ) /
@@ -335,7 +335,7 @@ std::string player_difficulty::get_expertise_difficulty( const Character &u ) co
 
     // how much each point of experience is worth to your character
     per += learn_weighting * static_cast<float>( u.adjust_for_focus( 100 ) -
-           average.adjust_for_focus( 100 ) ) / static_cast<float>( average.adjust_for_focus( 100 ) );
+            average.adjust_for_focus( 100 ) ) / static_cast<float>( average.adjust_for_focus( 100 ) );
 
     return format_output( percent_band, per );
 }

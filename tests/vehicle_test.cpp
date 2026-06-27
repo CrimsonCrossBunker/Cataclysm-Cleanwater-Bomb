@@ -650,8 +650,8 @@ static void rack_check( const rack_preset &preset )
         vehicle &racked_veh = *vehs[rack_act.racked_vehicle_index];
 
         const std::vector<vehicle_part *> rack_parts = racking_veh.get_parts_at( &m, rack_act.rack_pos,
-            "BIKE_RACK_VEH",
-            part_status_flag::available );
+                "BIKE_RACK_VEH",
+                part_status_flag::available );
         REQUIRE( rack_parts.size() == 1 );
         const int rack_idx = racking_veh.index_of_part( rack_parts[0] );
         REQUIRE( rack_idx >= 0 );
@@ -668,7 +668,7 @@ static void rack_check( const rack_preset &preset )
 
         std::string error = capture_debugmsg_during( [&u, &racking_veh, &this_rackable]() {
             bikerack_racking_activity_actor racking_actor( racking_veh,
-                *this_rackable->veh, this_rackable->racks );
+                    *this_rackable->veh, this_rackable->racks );
             // racked_veh, this_rackable->veh and vehs[] element are invalid past this point
             complete_activity( u, racking_actor );
         } );
@@ -684,7 +684,7 @@ static void rack_check( const rack_preset &preset )
         }
 
         const optional_vpart_position ovp_racked = m.veh_at(
-                preset.positions[rack_act.racked_vehicle_index] );
+                    preset.positions[rack_act.racked_vehicle_index] );
         REQUIRE( ovp_racked.has_value() );
         if( !rack_act.expect_failure ) {
             REQUIRE( &ovp_racked->vehicle() == &racking_veh );
@@ -913,7 +913,7 @@ static vehicle_part *setup_squish_test_return_wheel( map &here, const tripoint_b
 {
     REQUIRE( here.veh_at( test_point ).avail_part_with_feature( "WHEEL" ) );
     std::vector<vehicle_part *> wheels_vector = veh_ptr->get_parts_at( &here, test_point, "WHEEL",
-        part_status_flag::available );
+            part_status_flag::available );
     REQUIRE( !wheels_vector.empty() );
     vehicle_part *vp_wheel = wheels_vector.front();
     REQUIRE( !here.has_items( test_point ) );

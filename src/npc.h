@@ -1548,11 +1548,11 @@ class npc : public Character
         // falls back to persistent guard_pos (from mission/dialogue assignment).
         std::optional<tripoint_abs_ms> get_effective_guard_pos() const {
             if( ai_cache.guard_pos ) {
-            return ai_cache.guard_pos;
+                return ai_cache.guard_pos;
+            }
+            return guard_pos;
         }
-        return guard_pos;
-    }
-    void clear_ai_guard_pos() {
+        void clear_ai_guard_pos() {
             ai_cache.guard_pos = std::nullopt;
         }
         // Set cache guard_pos without touching persistent guard_pos.
@@ -1627,8 +1627,6 @@ class npc : public Character
         // times their opinion has increased from chatting, upper bounds on 'forgiveness'
         int opinion_values_raised = 0;
         bool hallucination = false; // If true, NPC is an hallucination
-        bool spawn_corpse = true;
-        bool quiet_death = false; // supress messages about death
         std::vector<npc_need> needs;
         std::optional<int> confident_range_cache;
         // Dummy point that indicates that the goal is invalid.

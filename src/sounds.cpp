@@ -1490,27 +1490,27 @@ void sfx::sound_thread::operator()() const
     std::string weapon_variant = weapon_id.str();
 
     if( weapon_skill == skill_bashing ) {
-    skill_variant = ( weapon_volume > 8 ) ? "big_bash" : "small_bash";
+        skill_variant = ( weapon_volume > 8 ) ? "big_bash" : "small_bash";
     } else if( weapon_skill == skill_cutting ) {
-    skill_variant = ( weapon_volume > 6 ) ? "big_cutting" : "small_cutting";
+        skill_variant = ( weapon_volume > 6 ) ? "big_cutting" : "small_cutting";
     } else if( weapon_skill == skill_stabbing ) {
-    skill_variant = ( weapon_volume > 4 ) ? "big_stabbing" : "small_stabbing";
+        skill_variant = ( weapon_volume > 4 ) ? "big_stabbing" : "small_stabbing";
     } else if( weapon_skill == skill_unarmed ) {
-    skill_variant = "unarmed";
-} else {
-    skill_variant = "default";
-}
+        skill_variant = "unarmed";
+    } else {
+        skill_variant = "default";
+    }
 
-if( has_exact_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night ) ) {
-    play_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night,
-                        vol_src, ang_src, 0.8, 1.2 );
+    if( has_exact_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night ) ) {
+        play_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night,
+                            vol_src, ang_src, 0.8, 1.2 );
     } else {
         play_variant_sound( "melee_swing", skill_variant, seas_str, indoors, night,
                             vol_src, ang_src, 0.8, 1.2 );
     }
 
     if( hit ) {
-    const int sleep_time = weapon_volume * ( targ_mon ? rng( 12, 16 ) : rng( 9, 12 ) );
+        const int sleep_time = weapon_volume * ( targ_mon ? rng( 12, 16 ) : rng( 9, 12 ) );
         std::string melee_hit_material = ( targ_mon &&
                                            material == "steel" ) ? "melee_hit_metal" : "melee_hit_flesh";
 
@@ -1615,7 +1615,7 @@ void sfx::do_danger_music()
     }
     audio_muted = false;
     int hostiles = 0;
-    for( Creature * &critter : player_character.get_visible_creatures( 40 ) ) {
+    for( Creature *&critter : player_character.get_visible_creatures( 40 ) ) {
         if( player_character.attitude_to( *critter ) == Creature::Attitude::HOSTILE ) {
             hostiles++;
         }

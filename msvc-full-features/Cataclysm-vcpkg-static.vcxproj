@@ -13,6 +13,10 @@
       <Configuration>Debug-NoTiles</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-NoTilesHeadless|x64">
+      <Configuration>Debug-NoTilesHeadless</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|ARM64EC">
       <Configuration>Debug</Configuration>
       <Platform>ARM64EC</Platform>
@@ -35,6 +39,10 @@
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release-NoTiles|x64">
       <Configuration>Release-NoTiles</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-NoTilesHeadless|x64">
+      <Configuration>Release-NoTilesHeadless</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|ARM64EC">
@@ -80,14 +88,14 @@
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Debug-NoTiles'" Label="Configuration">
+  <PropertyGroup Condition="$(Configuration.StartsWith('Debug-NoTiles'))" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release-NoTiles'" Label="Configuration">
+  <PropertyGroup Condition="$(Configuration.StartsWith('Release-NoTiles'))" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
@@ -157,6 +165,14 @@
     <EmbedManifest>false</EmbedManifest>
     <TargetName>cataclysm-notiles</TargetName>
   </PropertyGroup>
+  <!-- Headless (the *-NoTilesHeadless configs) gets its own exe name so it does
+       not overwrite the curses-backed notiles binary. Placed after the
+       per-config TargetName blocks so it wins (MSBuild last-wins). EmbedManifest
+       is set here too because no exact-match block above covers this config. -->
+  <PropertyGroup Condition="$(Configuration.Contains(Headless))">
+    <EmbedManifest>false</EmbedManifest>
+    <TargetName>cataclysm-headless</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="!$(Configuration.Contains(NoTiles))">
     <ClCompile>
       <PreprocessorDefinitions>_WINDOWS;USE_WINMAIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -185,7 +201,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug-NoTiles'">
+  <ItemDefinitionGroup Condition="$(Configuration.StartsWith('Debug-NoTiles'))">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
@@ -206,7 +222,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release-NoTiles'">
+  <ItemDefinitionGroup Condition="$(Configuration.StartsWith('Release-NoTiles'))">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>

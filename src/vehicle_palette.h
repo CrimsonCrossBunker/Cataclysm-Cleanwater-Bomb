@@ -7,13 +7,15 @@
 // Palettes are defined in data/json/vehicle_palette.json.
 
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "hsv_color.h"
-#include "json.h"
 #include "type_id.h"
 #include "weighted_list.h"
+
+class JsonObject;
 
 /**
  * Random vehicle color palette. Ported from Cataclysm: Bright Nights.
@@ -34,8 +36,13 @@ class VehiclePalette
         /** Returns the color-group index a part id belongs to, or -1 if none matches. */
         int fuzzy_to_index( const vpart_id &id ) const;
 
-        /** Rolls one weighted-random color per color group. */
-        std::vector<RGBColor> pick_colors() const;
+        /**
+         * Rolls one weighted-random color per color group. The result is indexed
+         * the SAME way as @ref fuzzy_to_index: result[i] is the color for group i.
+         * A group that rolls nothing (empty / all-zero-weight) yields nullopt in
+         * its slot rather than being dropped, so later groups keep their indices.
+         */
+        std::vector<std::optional<RGBColor>> pick_colors() const;
 
     private:
         vpalette_id id;

@@ -111,9 +111,9 @@ static radio_contact_result can_radio_contact( const Character &alpha, const Cha
                 const int radio_tower_boost = 5;
                 // find camps that are near player or npc
                 const std::vector<camp_reference> &camps_near_player = overmap_buffer.get_camps_near(
-                        alpha.pos_abs_sm(), send_range * radio_tower_boost );
+                            alpha.pos_abs_sm(), send_range * radio_tower_boost );
                 const std::vector<camp_reference> &camps_near_npc = overmap_buffer.get_camps_near(
-                        beta.pos_abs_sm(), recv_range * radio_tower_boost );
+                            beta.pos_abs_sm(), recv_range * radio_tower_boost );
                 bool camp_to_npc = false;
                 bool camp_to_camp = false;
                 for( const camp_reference &i : camps_near_player ) {
@@ -633,8 +633,8 @@ void faction_ui::your_follower_display()
         }
     }
     const std::string best_combat_skill_text = string_format( "%s: %d",
-        picked_follower->best_combat_skill( combat_skills::NO_GENERAL ).first.obj().name(),
-        picked_follower->best_combat_skill( combat_skills::NO_GENERAL ).second );
+            picked_follower->best_combat_skill( combat_skills::NO_GENERAL ).first.obj().name(),
+            picked_follower->best_combat_skill( combat_skills::NO_GENERAL ).second );
 
     const std::string space = std::string( "  " );
 
@@ -744,7 +744,7 @@ void faction_ui::other_faction_display()
 
     // Can you contact them by radio
     const std::vector<npc *> applicable_repres = get_known_faction_radio_representative(
-            picked_faction );
+                picked_faction );
     if( !applicable_repres.empty() ) {
         cataimgui::draw_colored_text( _( "You know someone from this faction you can contact by radio." ),
                                       c_green, col_width );

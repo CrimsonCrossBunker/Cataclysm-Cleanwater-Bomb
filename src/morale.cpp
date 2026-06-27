@@ -143,8 +143,8 @@ std::string player_morale::morale_point::get_name() const
 int player_morale::morale_point::get_net_bonus() const
 {
     return bonus * ( ( !is_permanent() && age > decay_start ) ?
-    logarithmic_range( to_turns<int>( decay_start ), to_turns<int>( duration ),
-    to_turns<int>( age ) ) : 1 );
+                     logarithmic_range( to_turns<int>( decay_start ), to_turns<int>( duration ),
+                                        to_turns<int>( age ) ) : 1 );
 }
 
 int player_morale::morale_point::get_net_bonus( const morale_mult &mult ) const
@@ -366,8 +366,8 @@ void player_morale::set_permanent( const morale_type &type, int bonus, const ity
 
 int player_morale::has( const morale_type &type, const itype *item_type ) const
 {
-for( const morale_point &m : points ) {
-    if( m.matches( type, item_type ) ) {
+    for( const morale_point &m : points ) {
+        if( m.matches( type, item_type ) ) {
             return m.get_net_bonus();
         }
     }
@@ -486,7 +486,7 @@ int player_morale::get_total_positive_value() const
 int player_morale::get_level() const
 {
     if( !level_is_valid ) {
-    const morale_mult mult = get_temper_mult();
+        const morale_mult mult = get_temper_mult();
 
         int sum_of_positive_squares = 0;
         int sum_of_negative_squares = 0;
@@ -607,8 +607,8 @@ void player_morale::display( int focus_eq, int pain_penalty, int sleepiness_pena
 
             int max_width() const {
                 if( sep_line ) {
-                return 0;
-            } else if( right.empty() ) {
+                    return 0;
+                } else if( right.empty() ) {
                     return left_padding + utf8_width( left ) + right_padding;
                 } else {
                     return left_padding + utf8_width( left ) + middle_padding_max
@@ -664,8 +664,8 @@ void player_morale::display( int focus_eq, int pain_penalty, int sleepiness_pena
         morale_line{ morale_line::separation_line {} },
 
         positive_morale.empty() &&negative_morale.empty() ?
-                       morale_line( _( "Nothing affects your morale" ), c_dark_gray ) :
-                       morale_line( _( "Source" ), _( "Value" ), c_light_gray ),
+        morale_line( _( "Nothing affects your morale" ), c_dark_gray ) :
+        morale_line( _( "Source" ), _( "Value" ), c_light_gray ),
     };
 
     struct middle_morale_line {

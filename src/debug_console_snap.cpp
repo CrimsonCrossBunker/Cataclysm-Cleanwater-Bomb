@@ -749,9 +749,9 @@ std::function<std::string()> eoc_state( effect_on_condition_id eid )
         const std::string &id = eid.str();
         auto search = []( const std::string & needle, const queued_eocs & q )
         -> std::optional<time_point> {
-for( const queued_eoc &qe : q.list )
-        {
-            if( qe.eoc.str() == needle ) {
+            for( const queued_eoc &qe : q.list )
+            {
+                if( qe.eoc.str() == needle ) {
                     return qe.time;
                 }
             }

@@ -261,7 +261,7 @@ struct const_dialogue {
 
         global_variables::impl_t const &get_context() const;
         const std::unordered_map<std::string, std::function<bool( const_dialogue const & )>>
-        &get_conditionals() const;
+                &get_conditionals() const;
         void amend_callstack( const std::string &value );
         std::string get_callstack() const;
 
@@ -429,10 +429,10 @@ struct dynamic_line_t {
 
         std::string operator()( dialogue &d ) const {
             if( !function ) {
-            return std::string{};
+                return std::string{};
+            }
+            return function( d );
         }
-        return function( d );
-    }
 };
 
 /**
@@ -441,9 +441,9 @@ struct dynamic_line_t {
  */
 class json_talk_response
 {
-private:
-    talk_response actual_response;
-    std::function<bool( const_dialogue const & )> condition;
+    private:
+        talk_response actual_response;
+        std::function<bool( const_dialogue const & )> condition;
         bool has_condition_ = false;
         bool is_switch = false;
         bool is_default = false;

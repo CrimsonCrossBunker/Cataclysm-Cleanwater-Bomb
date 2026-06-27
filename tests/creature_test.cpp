@@ -57,7 +57,7 @@ static void calculate_bodypart_distribution( const bool can_attack_high,
 
     for( int i = 0; i < num_tests; ++i ) {
         selected_part_histogram[defender.select_body_part( -1, -1, can_attack_high,
-                                hit_roll )]++;
+                                                           hit_roll )]++;
     }
 
     float total_weight = 0.0f;

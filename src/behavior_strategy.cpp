@@ -27,8 +27,8 @@ using namespace behavior;
 behavior_return sequential_t::evaluate( const oracle_t *subject,
                                         const std::vector<const node_t *> children ) const
 {
-for( const node_t *child : children ) {
-    behavior_return outcome = child->tick( subject );
+    for( const node_t *child : children ) {
+        behavior_return outcome = child->tick( subject );
         if( outcome.result == status_t::running || outcome.result == status_t::failure ) {
             return outcome;
         }
@@ -40,8 +40,8 @@ for( const node_t *child : children ) {
 behavior_return fallback_t::evaluate( const oracle_t *subject,
                                       const std::vector<const node_t *> children ) const
 {
-for( const node_t *child : children ) {
-    behavior_return outcome = child->tick( subject );
+    for( const node_t *child : children ) {
+        behavior_return outcome = child->tick( subject );
         if( outcome.result == status_t::running || outcome.result == status_t::success ) {
             return outcome;
         }
@@ -53,8 +53,8 @@ for( const node_t *child : children ) {
 behavior_return sequential_until_done_t::evaluate( const oracle_t *subject,
         const std::vector<const node_t *> children ) const
 {
-for( const node_t *child : children ) {
-    behavior_return outcome = child->tick( subject );
+    for( const node_t *child : children ) {
+        behavior_return outcome = child->tick( subject );
         if( outcome.result == status_t::running ) {
             return outcome;
         }

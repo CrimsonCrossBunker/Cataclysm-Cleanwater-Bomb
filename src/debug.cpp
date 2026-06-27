@@ -570,6 +570,9 @@ void realDebugmsg( const char *filename, const char *line, const char *funcname,
 #endif
     }
 #endif //
+    if( get_option<bool>( "NO_ERROR_POPUP" ) ) {
+        return;
+    }
 
     // Show excessive repetition prompt once per excessive set
     bool excess_repetition = rep_folder.repeat_count == repetition_folder::repetition_threshold;
@@ -778,7 +781,7 @@ std::ostream &DebugFile::get_file()
 void DebugFile::init( DebugOutput output_mode, const cata_path &filename )
 {
     std::shared_ptr<std::ostringstream> str_buffer = std::dynamic_pointer_cast<std::ostringstream>
-        ( file );
+            ( file );
 
     bool rename_failed = false;
     const cata_path oldfile = filename + ".prev";
@@ -816,8 +819,8 @@ void DebugFile::init( DebugOutput output_mode, const cata_path &filename )
         DebugLog( D_ERROR, DC_ALL ) << "Moving the previous log file to "
                                     << oldfile << " failed.\n"
                                     << "Check the file permissions.  This "
-                                       "program will continue to use the "
-                                       "previous log file.";
+                                    "program will continue to use the "
+                                    "previous log file.";
     }
     if( str_buffer && file ) {
         *file << str_buffer->str();
@@ -1988,12 +1991,12 @@ std::string game_info::game_report()
     }
 
     report <<
-    "- OS: " << operating_system() << "\n" <<
-    "    - OS Version: " << os_version << "\n" <<
-    "- Game Version: " << game_version() << " [" << bitness() << "]\n" <<
-    "- Graphics Version: " << graphics_version() << "\n" <<
-    "- Game Language: " << lang_translated << " [" << lang << "]\n" <<
-    "- Mods loaded: [\n    " << mods_loaded() << "\n]\n";
+           "- OS: " << operating_system() << "\n" <<
+           "    - OS Version: " << os_version << "\n" <<
+           "- Game Version: " << game_version() << " [" << bitness() << "]\n" <<
+           "- Graphics Version: " << graphics_version() << "\n" <<
+           "- Game Language: " << lang_translated << " [" << lang << "]\n" <<
+           "- Mods loaded: [\n    " << mods_loaded() << "\n]\n";
 
     return report.str();
 }

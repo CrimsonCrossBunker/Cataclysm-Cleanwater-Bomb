@@ -154,7 +154,7 @@ void ter_furn_transform::load( const JsonObject &jo, std::string_view )
 
 template<class T, class K>
 std::optional<ter_furn_data<T>> ter_furn_transform::find_transform( const
-        std::map<K, ter_furn_data<T>> &list, const K &key ) const
+                             std::map<K, ter_furn_data<T>> &list, const K &key ) const
 {
     const auto result_iter = list.find( key );
     if( result_iter == list.cend() ) {
@@ -224,18 +224,18 @@ void ter_furn_transform::transform( map &m, const tripoint_bub_ms &location ) co
     avatar &you = get_avatar();
     const ter_id &ter_at_loc = m.ter( location );
     std::optional<std::pair<ter_str_id, std::pair<translation, bool>>> ter_potential = next_ter(
-            ter_at_loc->id );
+                ter_at_loc->id );
     const furn_id &furn_at_loc = m.furn( location );
     std::optional<std::pair<furn_str_id, std::pair<translation, bool>>> furn_potential = next_furn(
-            furn_at_loc->id );
+                furn_at_loc->id );
     const trap_str_id trap_at_loc = m.maptile_at( location ).get_trap().id();
     std::optional<std::pair<trap_str_id, std::pair<translation, bool>>> trap_potential = next_trap(
-            trap_at_loc );
+                trap_at_loc );
 
     const field &field_at_loc = m.field_at( location );
     for( const auto &fld : field_at_loc ) {
         std::optional<std::pair<field_type_id, std::pair<translation, bool>>> field_potential = next_field(
-                fld.first );
+                    fld.first );
         if( field_potential ) {
             m.add_field( location, field_potential->first, fld.second.get_field_intensity(),
                          fld.second.get_field_age(), true );

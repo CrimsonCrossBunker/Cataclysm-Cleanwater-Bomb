@@ -502,23 +502,23 @@ void uilist::register_uilist_inputs( input_context &ctxt ) const
     ctxt.register_action( "HOME", to_translation( "Go to first entry" ) );
     ctxt.register_action( "END", to_translation( "Go to last entry" ) );
     if( allow_cancel ) {
-    ctxt.register_action( "UILIST.QUIT" );
+        ctxt.register_action( "UILIST.QUIT" );
     }
     ctxt.register_action( "MOUSE_MOVE" );
     if( allow_confirm ) {
-    ctxt.register_action( "CONFIRM" );
+        ctxt.register_action( "CONFIRM" );
         ctxt.register_action( "SELECT" );
     }
     ctxt.register_action( "UILIST.FILTER" );
     if( !categories.empty() ) {
-    ctxt.register_action( "UILIST.LEFT" );
+        ctxt.register_action( "UILIST.LEFT" );
         ctxt.register_action( "UILIST.RIGHT" );
     }
     ctxt.register_action( "ANY_INPUT" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
     //TODO: redundant, remove
-for( const auto &additional_action : additional_actions ) {
-    ctxt.register_action( additional_action.first, additional_action.second );
+    for( const auto &additional_action : additional_actions ) {
+        ctxt.register_action( additional_action.first, additional_action.second );
     }
 }
 

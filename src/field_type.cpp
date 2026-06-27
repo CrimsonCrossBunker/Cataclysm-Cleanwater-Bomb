@@ -149,7 +149,7 @@ template<>
 int_id<field_type> string_id<field_type>::id_or( const int_id<field_type> &fallback ) const
 {
     if( get_all_field_types().initialized ) {
-    return get_all_field_types().convert( *this, fallback, false );
+        return get_all_field_types().convert( *this, fallback, false );
     }
     return fallback;
 }
@@ -205,7 +205,7 @@ void field_type::load( const JsonObject &jo, std::string_view )
     for( const JsonObject jao : jo.get_array( "intensity_levels" ) ) {
         field_intensity_level intensity_level;
         field_intensity_level fallback_intensity_level = !intensity_levels.empty() ? intensity_levels.back()
-            : intensity_level;
+                : intensity_level;
         optional( jao, was_loaded, "name", intensity_level.name, fallback_intensity_level.name );
         optional( jao, was_loaded, "sym", intensity_level.symbol, unicode_codepoint_from_symbol_reader,
                   fallback_intensity_level.symbol );

@@ -682,7 +682,12 @@ void monster::plan()
         const bool will_throw_self_at_vehicle = !get_pathfinding_settings().avoid_dangerous_fields;
         if( !target_vehicles.empty() && will_throw_self_at_vehicle ) {
             tripoint_bub_ms target_pt = random_entry( target_vehicles );
-            Character *driver = here.veh_at( target_pt )->vehicle().get_driver( here );
+            const optional_vpart_position vp = here.veh_at( target_pt );
+            // target_pt comes from the moving-vehicle part list, but veh_at() can still
+            // return an empty optional for it (out-of-bounds, inactive z-level cache, or a
+            // part-list/cache position mismatch). operator-> would then build a vehicle&
+            // from uninitialized storage and crash in get_driver(); guard the optional.
+            Character *driver = vp ? vp->vehicle().get_driver( here ) : nullptr;
             // NOTE: no hostility check here, we already filtered for that when deciding vehicle targets.
             if( driver ) {
                 mon_plan.target = driver;
@@ -2082,7 +2087,7 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
     // Allows climbing monsters to move on terrain with movecost <= 0
     Creature *critter = get_creature_tracker().creature_at( destination, is_hallucination() );
     const std::vector<field_type_id> impassable_field_ids = here.get_impassable_field_type_ids_at(
-            destination );
+                destination );
 
     // Check for permanent blockers. Includes terrain, impassable fieldeffects, traps and other.
     if( !force && !can_move_to( destination ) ) {
@@ -2507,8 +2512,8 @@ void monster::stumble_base( const bool is_voluntary )
         // (Unless they can swim/are aquatic)
         // But let them wander OUT of water if they are there.
         const bool avoiding_stepping_into_water = avoid_water &&
-            here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest ) &&
-            !here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos_bub() );
+                here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest ) &&
+                !here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos_bub() );
 
 
         // If the stumble is voluntary (just moving around), don't step into water or known danger tiles

@@ -977,7 +977,7 @@ unload_sort_options set_unload_options( Character &you, const tripoint_abs_ms &s
     unload_sort_options zone_sort_options;
 
     std::vector<zone_data const *> const zones = mgr.get_zones_at( src, zone_type_UNLOAD_ALL,
-        _fac_id( you ) );
+            _fac_id( you ) );
 
     // set rules from all zones in stack
     for( zone_data const *zone : zones ) {
@@ -1977,7 +1977,7 @@ activity_reason_info multi_vehicle_deconstruct_activity_actor::multi_activity_ca
     vehicle *veh = veh_pointer_or_null( here.veh_at( src_loc ) );
 
     activity_reason_info common_vehicle_work = vehicle_work_can_do( act, you, src_loc,
-        already_working_indexes, veh );
+            already_working_indexes, veh );
     if( !common_vehicle_work.can_do ) {
         return common_vehicle_work;
     }
@@ -2045,7 +2045,7 @@ activity_reason_info multi_vehicle_repair_activity_actor::multi_activity_can_do(
     vehicle *veh = veh_pointer_or_null( here.veh_at( src_loc ) );
 
     activity_reason_info common_vehicle_work = vehicle_work_can_do( act, you, src_loc,
-        already_working_indexes, veh );
+            already_working_indexes, veh );
     if( !common_vehicle_work.can_do ) {
         return common_vehicle_work;
     }
@@ -2424,7 +2424,7 @@ activity_reason_info multi_craft_activity_actor::multi_activity_can_do( Characte
             const inventory &inv = you.crafting_inventory( src_loc, PICKUP_RANGE, false );
             const recipe &r = to_craft->get_making();
             std::vector<std::vector<item_comp>> item_comp_vector =
-                to_craft->get_continue_reqs().get_components();
+                                                 to_craft->get_continue_reqs().get_components();
             std::vector<std::vector<quality_requirement>> quality_comp_vector;
             std::vector<std::vector<tool_comp>> tool_comp_vector;
             if( r.has_steps() ) {
@@ -2878,8 +2878,8 @@ void add_basecamp_storage_to_loot_zone_list(
 } //namespace multi_activity_actor
 
 std::vector<std::tuple<tripoint_bub_ms, itype_id, int>>
-fetch_required_activity_actor::requirements_map( Character &you,
-        const int distance )
+        fetch_required_activity_actor::requirements_map( Character &you,
+                const int distance )
 {
     std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirement_map;
     if( !fetch_activity_valid( you ) ) {
@@ -3208,7 +3208,7 @@ bool fetch_required_activity_actor::fetch_activity(
         return false;
     }
     const std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> mental_item_map =
-        requirements_map( you, distance );
+                requirements_map( you, distance );
     int pickup_count = 1;
     map_stack items_there = here.i_at( src_loc );
     const units::volume volume_allowed = you.free_space();
@@ -3565,7 +3565,7 @@ std::unordered_set<tripoint_abs_ms> no_same_tile_locations( Character &you,
         const activity_id &act_id )
 {
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-        act_id );
+            act_id );
     multi_activity_actor::prune_same_tile_locations( you, src_set );
 
     return src_set;
@@ -3582,7 +3582,7 @@ multi_build_construction_activity_actor::multi_activity_locations(
 
     // multiple construction will form a list of targets based on blueprint zones and unfinished constructions
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-        act_id );
+            act_id );
     for( const tripoint_bub_ms &elem : here.points_in_radius( you.pos_bub(), MAX_VIEW_DISTANCE ) ) {
         partial_con *pc = here.partial_con_at( elem );
         if( pc ) {
@@ -3623,7 +3623,7 @@ std::unordered_set<tripoint_abs_ms> multi_study_activity_actor::multi_activity_l
     std::unordered_set<tripoint_abs_ms> src_set;
 
     std::unordered_set<tripoint_abs_ms> all_zone_tiles = mgr.get_near( zone_type_STUDY_ZONE, abspos,
-        MAX_VIEW_DISTANCE, nullptr, _fac_id( you ) );
+            MAX_VIEW_DISTANCE, nullptr, _fac_id( you ) );
     for( const tripoint_abs_ms &zone_pos : all_zone_tiles ) {
         if( find_study_book( zone_pos, you ) ) {
             src_set.insert( zone_pos );
@@ -3657,7 +3657,7 @@ std::unordered_set<tripoint_abs_ms> multi_fish_activity_actor::multi_activity_lo
     const activity_id act_id = get_type();
     map &here = get_map();
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-        act_id );
+            act_id );
 
     for( auto src_set_iter = src_set.begin(); src_set_iter != src_set.end(); ) {
         const tripoint_bub_ms set_pt = here.get_bub( *src_set_iter );
@@ -3677,7 +3677,7 @@ std::unordered_set<tripoint_abs_ms> multi_mop_activity_actor::multi_activity_loc
     const activity_id act_id = get_type();
     map &here = get_map();
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-        act_id );
+            act_id );
     for( auto src_set_iter = src_set.begin(); src_set_iter != src_set.end(); ) {
         const tripoint_bub_ms set_pt = here.get_bub( *src_set_iter );
         if( !here.mopsafe_field_at( set_pt ) ) {

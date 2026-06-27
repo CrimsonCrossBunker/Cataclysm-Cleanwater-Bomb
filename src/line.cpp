@@ -845,17 +845,17 @@ rl_vec3d rl_vec3d::normalized() const
 rl_vec2d rl_vec2d::rotated( float angle ) const
 {
     return rl_vec2d(
-           x * std::cos( angle ) - y * std::sin( angle ),
-    x * std::sin( angle ) + y * std::cos( angle )
-    );
+               x * std::cos( angle ) - y * std::sin( angle ),
+               x * std::sin( angle ) + y * std::cos( angle )
+           );
 }
 
 rl_vec3d rl_vec3d::rotated( float angle ) const
 {
     return rl_vec3d(
-           x * std::cos( angle ) - y * std::sin( angle ),
-    x * std::sin( angle ) + y * std::cos( angle )
-    );
+               x * std::cos( angle ) - y * std::sin( angle ),
+               x * std::sin( angle ) + y * std::cos( angle )
+           );
 }
 
 float rl_vec2d::dot_product( const rl_vec2d &v ) const
@@ -876,9 +876,9 @@ bool rl_vec2d::is_null() const
 point rl_vec2d::as_point() const
 {
     return point(
-           std::round( x ),
-    std::round( y )
-    );
+               std::round( x ),
+               std::round( y )
+           );
 }
 
 bool rl_vec3d::is_null() const
@@ -889,10 +889,10 @@ bool rl_vec3d::is_null() const
 tripoint rl_vec3d::as_point() const
 {
     return tripoint(
-           std::round( x ),
-    std::round( y ),
-    std::round( z )
-    );
+               std::round( x ),
+               std::round( y ),
+               std::round( z )
+           );
 }
 
 // scale.

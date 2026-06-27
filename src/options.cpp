@@ -185,8 +185,8 @@ bool option_slider::option_slider_level::remove( const std::string &opt )
 void option_slider::option_slider_level::apply_opts( options_manager::options_container &OPTIONS )
 const
 {
-for( const opt_slider_option &opt : _opts ) {
-    auto iter = OPTIONS.find( opt._opt );
+    for( const opt_slider_option &opt : _opts ) {
+        auto iter = OPTIONS.find( opt._opt );
         if( iter != OPTIONS.end() ) {
             iter->second.setValue( opt._val );
         }
@@ -647,12 +647,12 @@ bool options_manager::cOpt::hasPrerequisite() const
 bool options_manager::cOpt::checkPrerequisite() const
 {
     if( !hasPrerequisite() ) {
-    return true;
-}
-bool isPrerequisiteFulfilled = false;
-const std::string prerequisite_option_value = get_options().get_option( sPrerequisite ).getValue();
-for( const std::string &sAllowedPrerequisiteValue : sPrerequisiteAllowedValues ) {
-    if( prerequisite_option_value == sAllowedPrerequisiteValue ) {
+        return true;
+    }
+    bool isPrerequisiteFulfilled = false;
+    const std::string prerequisite_option_value = get_options().get_option( sPrerequisite ).getValue();
+    for( const std::string &sAllowedPrerequisiteValue : sPrerequisiteAllowedValues ) {
+        if( prerequisite_option_value == sAllowedPrerequisiteValue ) {
             isPrerequisiteFulfilled = true;
             break;
         }
@@ -664,43 +664,43 @@ for( const std::string &sAllowedPrerequisiteValue : sPrerequisiteAllowedValues )
 bool options_manager::cOpt::is_hidden() const
 {
     switch( hide ) {
-    case COPT_NO_HIDE: // NOLINT(bugprone-branch-clone)
-        return false;
+        case COPT_NO_HIDE: // NOLINT(bugprone-branch-clone)
+            return false;
 
-    case COPT_SDL_HIDE:
+        case COPT_SDL_HIDE:
 #if defined(TILES)
-        return true;
+            return true;
 #else
-        return false;
+            return false;
 #endif
 
-    case COPT_CURSES_HIDE: // NOLINT(bugprone-branch-clone)
+        case COPT_CURSES_HIDE: // NOLINT(bugprone-branch-clone)
 #if !defined(TILES) // If not defined, it's the curses interface.
-        return true;
+            return true;
 #else
-        return false;
+            return false;
 #endif
 
-    case COPT_POSIX_CURSES_HIDE:
-        // Check if we on windows and using wincurses.
+        case COPT_POSIX_CURSES_HIDE:
+            // Check if we on windows and using wincurses.
 #if defined(TILES) || defined(_WIN32)
-        return false;
+            return false;
 #else
-        return true;
+            return true;
 #endif
 
-    case COPT_NO_SOUND_HIDE:
+        case COPT_NO_SOUND_HIDE:
 #if !defined(SDL_SOUND) // If not defined, we have no sound support.
-        return true;
+            return true;
 #else
-        return false;
+            return false;
 #endif
 
-    case COPT_ALWAYS_HIDE:
-        return true;
-}
-// Make compiler happy, this is unreachable.
-return false;
+        case COPT_ALWAYS_HIDE:
+            return true;
+    }
+    // Make compiler happy, this is unreachable.
+    return false;
 }
 
 std::string options_manager::cOpt::getName() const
@@ -775,7 +775,7 @@ template<typename T>
 std::optional<T> options_manager::cOpt::_convert() const
 {
     if constexpr( std::is_same_v<T, std::string> ) {
-    return getValue( true );
+        return getValue( true );
     } else {
         if( eType == CVT_BOOL ) {
             return static_cast<T>( bSet );
@@ -938,8 +938,8 @@ int options_manager::cOpt::getIntPos( const int iSearch ) const
 
 std::string options_manager::cOpt::getGroupName() const
 {
-for( const PageItem &i : get_options().find_page( getPage() ).items_ ) {
-    if( i.type == ItemType::Option && i.data == getName() ) {
+    for( const PageItem &i : get_options().find_page( getPage() ).items_ ) {
+        if( i.type == ItemType::Option && i.data == getName() ) {
             return get_options().find_group( i.group ).name_.translated();
         }
     }
@@ -1251,7 +1251,7 @@ void options_manager::search_resource(
         // Get the resource list from the search path.
         std::map<std::string, std::string> resources;
         std::vector<id_and_option> resource_names = build_resource_list( resources, resource_name,
-            search_path, resource_filename );
+                search_path, resource_filename );
 
         // Add any new resources from this path to the result containers.
         // First, add to the resource mapping.
@@ -1280,7 +1280,7 @@ void options_manager::search_resource(
         // Get the resource list from the search path.
         std::map<std::string, cata_path> resources;
         std::vector<id_and_option> resource_names = build_resource_list( resources, resource_name,
-            search_path, resource_filename );
+                search_path, resource_filename );
 
         // Add any new resources from this path to the result containers.
         // First, add to the resource mapping.
@@ -1842,19 +1842,19 @@ void options_manager::add_options_interface()
         add( "USE_CELSIUS", page_id, to_translation( "Temperature units" ),
              to_translation( "Switch between Fahrenheit, Celsius, and Kelvin." ),
         { { "fahrenheit", to_translation( "Fahrenheit" ) }, { "celsius", to_translation( "Celsius" ) }, { "kelvin", to_translation( "Kelvin" ) } },
-        "fahrenheit"
+        "celsius"
            );
 
         add( "USE_METRIC_SPEEDS", page_id, to_translation( "Speed units" ),
              to_translation( "Switch between mph, km/h, and tiles/turn." ),
         { { "mph", to_translation( "mph" ) }, { "km/h", to_translation( "km/h" ) }, { "t/t", to_translation( "tiles/turn" ) } },
-        ( SystemLocale::UseMetricSystem().value_or( false ) ? "km/h" : "mph" )
+        ( SystemLocale::UseMetricSystem().value_or( true ) ? "km/h" : "mph" )
            );
 
         add( "USE_METRIC_WEIGHTS", page_id, to_translation( "Mass units" ),
              to_translation( "Switch between lbs and kg." ),
         { { "lbs", to_translation( "lbs" ) }, { "kg", to_translation( "kg" ) } },
-        ( SystemLocale::UseMetricSystem().value_or( false ) ? "kg" : "lbs" )
+        ( SystemLocale::UseMetricSystem().value_or( true ) ? "kg" : "lbs" )
            );
 
         add( "VOLUME_UNITS", page_id, to_translation( "Volume units" ),
@@ -1865,16 +1865,14 @@ void options_manager::add_options_interface()
         add( "DISTANCE_UNITS", page_id, to_translation( "Distance units" ),
              to_translation( "Switch between metric and imperial distance units." ),
         { { "metric", to_translation( "Metric" ) }, { "imperial", to_translation( "Imperial" ) } },
-        ( SystemLocale::UseMetricSystem().value_or( false ) ? "metric" : "imperial" ) );
+        ( SystemLocale::UseMetricSystem().value_or( true ) ? "metric" : "imperial" ) );
 
         add( "24_HOUR", page_id, to_translation( "Time format" ),
-             to_translation( "12h: AM/PM, e.g. 7:31 AM - Military: 24h Military, e.g. 0731 - 24h: Normal 24h, e.g. 7:31" ),
-             //~ 12h time, e.g.  11:59pm
-        {   { "12h", to_translation( "12h" ) },
-            //~ Military time, e.g.  2359
-            { "military", to_translation( "Military" ) },
-            //~ 24h time, e.g.  23:59
-            { "24h", to_translation( "24h" ) }
+             to_translation( "12h: AM/PM, e.g. 7:31:47 PM - 24h: Normal 24h, e.g. 21:31:47 - Military: 24h Military, e.g. 2131.47" ),
+        {
+            { "12h", to_translation( "12h" ) },
+            { "24h", to_translation( "24h" ) },
+            { "military", to_translation( "Military" ) }
         },
         "12h" );
         add( "SHOW_MONTHS", page_id, to_translation( "Show day/month" ),
@@ -1883,6 +1881,11 @@ void options_manager::add_options_interface()
         add( "SHOW_VITAMIN_MASS", page_id, to_translation( "Show vitamin masses" ),
              to_translation( "Display the masses of vitamins in addition to units/RDA values in item descriptions." ),
              true );
+        add( "MEASURE_PREFIX", page_id, to_translation( "Item measure prefix" ),
+             to_translation( "The measure unit of item prefix.  Both - both measure unit and count, e.g. '1kg,4'.  Unit - measure unit first, e.g. '1kg'.  Count - count only, e.g. '4'." ),
+        { { "both", to_translation( "Both" ) }, { "unit", to_translation( "Unit" ) }, { "count", to_translation( "Count" ) } },
+        "both"
+           );
     } );
 
     add_empty_line();
@@ -2122,7 +2125,7 @@ void options_manager::add_options_interface()
 
         add( "REVERSE_STEERING", page_id, to_translation( "Reverse steering direction in reverse" ),
              to_translation( "If true, when driving a vehicle in reverse, steering should also reverse like real life." ),
-             false
+             true
            );
     } );
 
@@ -2344,6 +2347,13 @@ void options_manager::add_options_graphics()
            );
 
         get_option( "ANIMATION_PROJECTILES" ).setPrerequisite( "ANIMATIONS" );
+
+        add( "ANIMATION_PROJECTILES_ASYNC", page_id, to_translation( "Asynchronous projectiles" ),
+             to_translation( "If true, projectile animations play in the background and the game continues immediately after a shot, so many units firing in one turn no longer stutter frame-by-frame.  The animation lags slightly behind the game state (damage is resolved before the bullet visually lands).  If false, each shot blocks until its animation finishes." ),
+             true
+           );
+
+        get_option( "ANIMATION_PROJECTILES_ASYNC" ).setPrerequisite( "ANIMATION_PROJECTILES" );
 
         add( "BULLETS_AS_LASERS", page_id, to_translation( "Draw bullets as lines" ),
              to_translation( "If true, projectiles are drawn as a line of images along their whole flight path, and the animation lasts only one frame." ),
@@ -2594,9 +2604,10 @@ void options_manager::add_options_graphics()
              true, COPT_CURSES_HIDE
            );
 
+        const std::string lang = SystemLocale::Language().value_or( "" );
         add( "IMGUI_LOAD_CHINESE", page_id, to_translation( "Chinese glyph ranges in ImGui" ),
              to_translation( "If true, ImGui will add glyphs of full Chinese, include zh_CN, zh_TW, ja. Use this option when your need all Chinese glyphs.  Requires restart." ),
-             false, COPT_CURSES_HIDE
+             ( lang == "zh_CN" || lang == "zh_TW" || lang == "ja" ), COPT_CURSES_HIDE
            );
     } );
 #endif // TILES
@@ -2816,7 +2827,7 @@ void options_manager::add_options_graphics()
 
         add( "PIXEL_MINIMAP_BLINK", page_id, to_translation( "Hostile creature beacon blink speed" ),
              to_translation( "Controls how fast the hostile creature beacons blink on the pixel minimap.  Value is multiplied by 200ms.  0 = disabled." ),
-             0, 50, 10, COPT_CURSES_HIDE
+             0, 50, 5, COPT_CURSES_HIDE
            );
 
         get_option( "PIXEL_MINIMAP_BLINK" ).setPrerequisite( "PIXEL_MINIMAP" );
@@ -3191,6 +3202,11 @@ void options_manager::add_options_debug()
 #else
          false
 #endif
+       );
+
+    add( "NO_ERROR_POPUP", "debug", to_translation( "No error popup" ),
+         to_translation( "If enabled, debug message won't popup on the screen." ),
+         false
        );
 }
 
@@ -3605,10 +3621,10 @@ options_manager::PageItem::fmt_tooltip( const std::string &group_id,
                                         const options_manager::options_container &cont ) const
 {
     switch( type ) {
-    case ItemType::BlankLine:
-        return "";
-    case ItemType::GroupHeader: {
-        return get_options().find_group( group_id ).tooltip_.translated();
+        case ItemType::BlankLine:
+            return "";
+        case ItemType::GroupHeader: {
+            return get_options().find_group( group_id ).tooltip_.translated();
         }
         case ItemType::Option: {
             const std::string &opt_name = data;
@@ -3665,8 +3681,8 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
     // temporary alias so the code below does not need to be changed
     options_container &OPTIONS = options;
     options_container &ACTIVE_WORLD_OPTIONS = world_options.has_value() ?
-        *world_options.value() :
-        OPTIONS;
+            *world_options.value() :
+            OPTIONS;
 
     options_container OPTIONS_OLD = OPTIONS;
     options_container WOPTIONS_OLD = ACTIVE_WORLD_OPTIONS;
@@ -3781,8 +3797,8 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         draw_borders_internal( w_options_header, vert_lines );
 
         options_manager::options_container &cOPTIONS = ( ingame || world_options_only ) &&
-            iCurrentPage == iWorldOptPage ?
-            ACTIVE_WORLD_OPTIONS : OPTIONS;
+                iCurrentPage == iWorldOptPage ?
+                ACTIVE_WORLD_OPTIONS : OPTIONS;
 
         const Page &page = pages_[iCurrentPage];
         const std::vector<PageItem> &page_items = page.items_;
@@ -3962,8 +3978,8 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         auto &page_items = page.items_;
 
         options_manager::options_container &cOPTIONS = ( ingame || world_options_only ) &&
-            iCurrentPage == iWorldOptPage ?
-            ACTIVE_WORLD_OPTIONS : OPTIONS;
+                iCurrentPage == iWorldOptPage ?
+                ACTIVE_WORLD_OPTIONS : OPTIONS;
 
         std::string action = ctxt.handle_input();
 
@@ -4271,8 +4287,8 @@ void options_manager::serialize( JsonOut &json ) const
 {
     json.start_array();
 
-for( const Page &p : pages_ ) {
-    for( const PageItem &it : p.items_ ) {
+    for( const Page &p : pages_ ) {
+        for( const PageItem &it : p.items_ ) {
             if( it.type != ItemType::Option ) {
                 continue;
             }

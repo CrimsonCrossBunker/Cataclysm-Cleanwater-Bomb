@@ -250,7 +250,7 @@ struct sfx_map {
 
         const std::vector<sound_effect> *find( const sfx_args &key ) const {
             return find_sfx( effects, key.id, key.variant, season_from_string( key.season ),
-            in_or_out_from_int( bool_or( key.indoors, -1 ) ), tod_from_int( bool_or( key.night, -1 ) ) );
+                             in_or_out_from_int( bool_or( key.indoors, -1 ) ), tod_from_int( bool_or( key.night, -1 ) ) );
         }
 
         std::vector<sound_effect> *end() const {
@@ -261,8 +261,8 @@ struct sfx_map {
                                                const std::string &season, const std::optional<bool> &is_indoors,
                                                const std::optional<bool> &is_night ) const {
             return find_closest_sfx( effects, id, "", variant, "default", season_from_string( season ),
-            sfx_season::NONE, in_or_out_from_int( bool_or( is_indoors, -1 ) ), sfx_in_or_out::EITHER,
-            tod_from_int( bool_or( is_night, -1 ) ), sfx_time_of_day::ANY );
+                                     sfx_season::NONE, in_or_out_from_int( bool_or( is_indoors, -1 ) ), sfx_in_or_out::EITHER,
+                                     tod_from_int( bool_or( is_night, -1 ) ), sfx_time_of_day::ANY );
         }
 
         const std::vector<sound_effect> *find_no_fallback( const std::string &id,
@@ -270,8 +270,8 @@ struct sfx_map {
                 const std::string &season, const std::optional<bool> &is_indoors,
                 const std::optional<bool> &is_night ) const {
             return find_closest_sfx( effects, id, "", variant, "", season_from_string( season ),
-            sfx_season::NONE, in_or_out_from_int( bool_or( is_indoors, -1 ) ), sfx_in_or_out::EITHER,
-            tod_from_int( bool_or( is_night, -1 ) ), sfx_time_of_day::ANY );
+                                     sfx_season::NONE, in_or_out_from_int( bool_or( is_indoors, -1 ) ), sfx_in_or_out::EITHER,
+                                     tod_from_int( bool_or( is_night, -1 ) ), sfx_time_of_day::ANY );
         }
 
     private:

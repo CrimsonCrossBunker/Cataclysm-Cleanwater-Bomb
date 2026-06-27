@@ -17,7 +17,8 @@
     "sealed": false,
     "symbol": "!",
     "color": "cyan",
-    "looks_like": "ether"
+    "looks_like": "ether",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -82,7 +83,7 @@
     "price_postapoc": "0 cent",
     "name": { "str_sp": "graphite powder" },
     "symbol": "!",
-    "description": "A handful of graphite in powder form.  Produces gray or black marks that are easily erased, but otherwise resistant to moisture, most chemicals, ultraviolet radiation, and natural aging.  Useful as a dry lubricant in metalworking, mixed with clay to form crucibles or creating casting molds, or mixed with oil to create a lubricant",
+    "description": "A handful of graphite in powder form.  Produces gray or black marks that are easily erased, but otherwise resistant to moisture, most chemicals, ultraviolet radiation, and natural aging.  Useful as a dry lubricant in metalworking, mixed with clay to form crucibles or creating casting molds, or mixed with oil to create a lubricant.",
     "material": [ "dense_powder_nonflam" ],
     "display_type": "BY_WEIGHT",
     "volume": "1 ml",
@@ -296,7 +297,7 @@
     "name": { "str_sp": "slaked lime powder" },
     "symbol": "=",
     "color": "white",
-    "description": " A handful of slaked lime, a white odorless powder with many uses.  Also known as calcium hydroxide.",
+    "description": "A handful of slaked lime, a white odorless powder with many uses.  Also known as calcium hydroxide.",
     "material": [ "slaked_lime" ],
     "volume": "1 ml",
     "weight": "2211 mg",
@@ -310,7 +311,7 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "name": { "str_sp": "sand", "ctxt": "material" },
-    "display_type": "BY_VOLUME",
+    "display_type": "BY_WEIGHT",
     "symbol": "=",
     "color": "dark_gray",
     "description": "A handful of New England sand.  If you had a stoked furnace, you could turn it into glass.  Otherwise, it's only good for making cement.",
@@ -425,7 +426,8 @@
     "charges": 2,
     "category": "chems",
     "freezing_point": -8,
-    "conditional_names": [ { "type": "FLAG", "condition": "DIRTY", "name": "bleach spill" } ]
+    "conditional_names": [ { "type": "FLAG", "condition": "DIRTY", "name": "bleach spill" } ],
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -445,7 +447,8 @@
     "phase": "liquid",
     "stack_size": 1,
     "category": "chems",
-    "ammo_type": "ammonia_liquid"
+    "ammo_type": "ammonia_liquid",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -467,7 +470,8 @@
     "phase": "liquid",
     "charges": 2,
     "category": "chems",
-    "freezing_point": -78
+    "freezing_point": -78,
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -492,7 +496,8 @@
     "phase": "liquid",
     "charges": 4,
     "category": "chems",
-    "fun": -30
+    "fun": -30,
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -581,7 +586,9 @@
     "material": [ "powder" ],
     "volume": "1 ml",
     "//2": "Previously 10 doses to a gram, so about 400 to the pound.",
-    "fun": -15
+    "fun": -15,
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -622,7 +629,8 @@
     "phase": "liquid",
     "category": "chems",
     "freezing_point": -2,
-    "fun": -1
+    "fun": -1,
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -646,7 +654,8 @@
     "phase": "liquid",
     "category": "chems",
     "freezing_point": -2,
-    "fun": -1
+    "fun": -1,
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -662,7 +671,8 @@
     "material": [ "powder" ],
     "volume": "3 ml",
     "weight": "1760 mg",
-    "container": "bag_plastic_small"
+    "container": "bag_plastic_small",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -677,7 +687,9 @@
     "container": "bag_plastic_small",
     "material": [ "powder_nonflam" ],
     "volume": "1 ml",
-    "weight": "36 mg"
+    "weight": "36 mg",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -693,7 +705,8 @@
     "material": [ "dense_powder" ],
     "volume": "1 ml",
     "weight": "7140 mg",
-    "//": "Density 7.14g/cm³"
+    "//": "Density 7.14g/cm³",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -709,7 +722,8 @@
     "material": [ "dense_powder" ],
     "volume": "1 ml",
     "weight": "5606 mg",
-    "//": "Density: 5.606 g/cm3"
+    "//": "Density: 5.606 g/cm3",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -725,7 +739,8 @@
     "material": [ "dense_powder" ],
     "volume": "1 ml",
     "weight": "5026 mg",
-    "//": "density: 5.026 g/cm3"
+    "//": "density: 5.026 g/cm3",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -738,7 +753,9 @@
     "description": "A moisturized mixture of zinc chloride and manganese dioxide, slightly acidic.  It can be used in the production of zinc-carbon batteries.",
     "material": [ "powder_nonflam" ],
     "volume": "1 ml",
-    "weight": "500 mg"
+    "weight": "500 mg",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -753,7 +770,9 @@
     "container": "bag_plastic_small",
     "material": [ "powder_nonflam" ],
     "volume": "1 ml",
-    "weight": "2900 mg"
+    "weight": "2900 mg",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -768,7 +787,9 @@
     "container": "bag_plastic_small",
     "material": [ "powder_nonflam" ],
     "volume": "1 ml",
-    "weight": "3140 mg"
+    "weight": "3140 mg",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -784,7 +805,8 @@
     "material": [ "dense_powder" ],
     "volume": "1 ml",
     "weight": "1984 mg",
-    "//": "density: 1.984 g/cm3"
+    "//": "density: 1.984 g/cm3",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -801,7 +823,8 @@
     "volume": "1 ml",
     "weight": "2120 mg",
     "//": "density: 2.12 g/cm3 (25 °C)",
-    "container": "bottle_plastic_small"
+    "container": "bottle_plastic_small",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -823,7 +846,8 @@
     "phase": "liquid",
     "container": "bottle_glass",
     "freezing_point": -36,
-    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true }
+    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true },
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -844,7 +868,8 @@
     "phase": "liquid",
     "container": "bottle_glass",
     "freezing_point": -50,
-    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true }
+    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true },
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -862,7 +887,8 @@
     "material": [ "acetone" ],
     "ammo_type": "components",
     "phase": "liquid",
-    "container": "bottle_glass"
+    "container": "bottle_glass",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -884,7 +910,8 @@
     "phase": "liquid",
     "container": "bottle_glass",
     "freezing_point": -42,
-    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true }
+    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true },
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -900,7 +927,8 @@
     "material": [ "powder_nonflam" ],
     "volume": "1 ml",
     "weight": "5220 mg",
-    "//": "density: 5.22 g/cm3"
+    "//": "density: 5.22 g/cm3",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -938,7 +966,8 @@
     "material": [ "dense_powder" ],
     "volume": "1 ml",
     "weight": "2220 mg",
-    "//": "density: 2.22 g/cm3"
+    "//": "density: 2.22 g/cm3",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -954,7 +983,8 @@
     "material": [ "dense_powder" ],
     "volume": "1 ml",
     "weight": "2710 mg",
-    "//": "density: 2.71 g/cm3"
+    "//": "density: 2.71 g/cm3",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -992,7 +1022,8 @@
     "weight": "325 g",
     "ammo_type": "components",
     "phase": "liquid",
-    "container": "bottle_glass"
+    "container": "bottle_glass",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1039,7 +1070,9 @@
     "material": [ "powder_nonflam" ],
     "volume": "1 ml",
     "weight": "1 g",
-    "container": "bag_canvas"
+    "container": "bag_canvas",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1055,7 +1088,9 @@
     "material": [ "powder_nonflam" ],
     "volume": "1 ml",
     "weight": "1 g",
-    "container": "bag_canvas"
+    "container": "bag_canvas",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1069,9 +1104,9 @@
     "color": "white",
     "description": "A handful of saltpeter powder.  Sometimes used as a fertilizer, this ubiquitous nitrate is the principal constituent of black gunpowder and simple rocket propellants, such as rocket candy.",
     "material": [ "powder_nonflam" ],
+    "display_type": "BY_WEIGHT",
     "volume": "50 ml",
-    "weight": "5275 mg",
-    "container": "bag_canvas"
+    "weight": "5275 mg"
   },
   {
     "type": "ITEM",
@@ -1101,7 +1136,9 @@
     "material": [ "powder_nonflam" ],
     "volume": "5 ml",
     "weight": "13350 mg",
-    "container": "bag_canvas"
+    "container": "bag_canvas",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1119,7 +1156,8 @@
     "material": [ "acid" ],
     "ammo_type": "components",
     "phase": "liquid",
-    "container": "bottle_glass"
+    "container": "bottle_glass",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1136,7 +1174,8 @@
     "weight": "300 g",
     "ammo_type": "components",
     "phase": "liquid",
-    "container": "bottle_glass"
+    "container": "bottle_glass",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1152,7 +1191,9 @@
     "volume": "5 ml",
     "weight": "10 g",
     "//": "Weight might not be accurate.",
-    "container": "bag_canvas"
+    "container": "bag_canvas",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1167,7 +1208,9 @@
     "material": [ "powder" ],
     "volume": "1 ml",
     "weight": "1 g",
-    "container": "bag_canvas"
+    "container": "bag_canvas",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1199,7 +1242,9 @@
     "material": [ "dense_powder" ],
     "//": "Density of RDX/Hexogen is 1.858 g/cm3",
     "volume": "1 ml",
-    "weight": "1858 mg"
+    "weight": "1858 mg",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1214,7 +1259,9 @@
     "material": [ "dense_powder" ],
     "//": "Density of composition B is 1.65 g/cm3",
     "volume": "1 ml",
-    "weight": "1650 mg"
+    "weight": "1650 mg",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1225,12 +1272,14 @@
     "name": { "str_sp": "HMTD powder" },
     "symbol": "=",
     "color": "white",
-    "description": "Hexamine peroxide: this fine, yellowish powder is a powerful primary explosive, used to initiate detonation of more stable explosives, such as RDX.  Relatively stable, but best not store it for too long.  Widely used pre-Cataclysm in amateur-made blasting caps",
+    "description": "Hexamine peroxide: this fine, yellowish powder is a powerful primary explosive, used to initiate detonation of more stable explosives, such as RDX.  Relatively stable, but best not store it for too long.  Widely used pre-Cataclysm in amateur-made blasting caps.",
     "material": [ "dense_powder" ],
     "//": "Density of RDX is 1.57 g/cm3",
     "volume": "1 ml",
     "weight": "1570 mg",
-    "container": "bag_plastic_small"
+    "container": "bag_plastic_small",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1246,7 +1295,9 @@
     "//": "Detonation velocity about 2500–3000 m/s near 0.5 g/cm3",
     "volume": "1 ml",
     "weight": "500 mg",
-    "container": "bag_plastic_small"
+    "container": "bag_plastic_small",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1273,13 +1324,11 @@
     "material": [ "powder" ],
     "weight": "1 g",
     "color": "white",
-    "use_action": [ "WATER_TABLETS" ],
     "comestible_type": "MED",
     "symbol": "!",
     "//": "Modeled after camping-scale aquatabs (https://cdn.shopify.com/s/files/1/0371/7506/6755/files/2020-49mg_insert.pdf?v=1592588294).  Usage procedure is: clarify and decant water, add tablets, mix for 10 minutes, wait for 30.",
     "//2": "The recommended usage is 1 tablet per L, going to 2 tablets if cloudy/stained/cold",
     "//3": "The same company manufactures larger tablets for larger volumes, but the amount of active ingredient per litre of water is roughly equivalent and the procedure is similar",
-    "//4": "The infrastructure does not currently exist for modelling whether water is cloudy.",
     "//5": "Based on this: usage is modeled in-game as: 1. Spend 5m/1L with significant batch savings to decant, 2. Add tablets 3. Assume mixing can be arranged, 4. wait 40 minutes for clean water.",
     "description": "Intended for the clarification and disinfection of unsafe drinking water while camping or traveling, this sodium dichloroisocyanurate-based purification tablet removes dangerous contaminants using powerful chemicals.  The label says to use one tablet per liter (4 units of water).",
     "price": "9 cent",
@@ -1287,7 +1336,9 @@
     "volume": "2 ml",
     "flags": [ "NO_INGEST", "WATER_DISSOLVE" ],
     "//6": "The ratio of how much water can be purified per tablet (maximum).  Should match the water_purifying recipe",
-    "variables": { "water_per_tablet": 4 }
+    "variables": { "water_per_tablet": 4 },
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1458,7 +1509,8 @@
     "volume": "250 ml",
     "charges": 1,
     "phase": "liquid",
-    "category": "chems"
+    "category": "chems",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1511,7 +1563,8 @@
     "charges": 1,
     "phase": "liquid",
     "category": "chems",
-    "fun": -20
+    "fun": -20,
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1533,7 +1586,8 @@
     "charges": 1,
     "phase": "liquid",
     "category": "chems",
-    "fun": -20
+    "fun": -20,
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1604,7 +1658,9 @@
     "charges": 1,
     "//": "0.7134 g/cm3",
     "weight": "713 mg",
-    "phase": "liquid"
+    "phase": "liquid",
+    "display_type": "BY_VOLUME",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1626,7 +1682,9 @@
     "charges": 1,
     "//": "1.1004 g/cm3",
     "weight": "1100 mg",
-    "phase": "liquid"
+    "phase": "liquid",
+    "display_type": "BY_VOLUME",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1648,7 +1706,8 @@
     "charges": 1,
     "//": "1.489 g/cm3 at 25C",
     "weight": "1489 mg",
-    "phase": "liquid"
+    "phase": "liquid",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1670,7 +1729,8 @@
     "charges": 1,
     "//": "1.07 g/cm3",
     "weight": "1070 mg",
-    "phase": "liquid"
+    "phase": "liquid",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1691,7 +1751,8 @@
     "charges": 1,
     "phase": "liquid",
     "freezing_point": 5,
-    "flags": [ "INEDIBLE" ]
+    "flags": [ "INEDIBLE" ],
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1712,7 +1773,8 @@
     "charges": 1,
     "phase": "liquid",
     "freezing_point": -95,
-    "flags": [ "INEDIBLE" ]
+    "flags": [ "INEDIBLE" ],
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1732,7 +1794,8 @@
     "volume": "15 ml",
     "weight": "20 g",
     "charges": 1,
-    "phase": "liquid"
+    "phase": "liquid",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -1834,7 +1897,9 @@
     "material": [ "wood" ],
     "symbol": ".",
     "color": "brown",
-    "looks_like": "bb"
+    "looks_like": "bb",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "rosin",
@@ -1848,7 +1913,9 @@
     "price_postapoc": "1 cent",
     "material": [ "wood" ],
     "symbol": "=",
-    "color": "yellow"
+    "color": "yellow",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "acetylene",
@@ -1870,7 +1937,8 @@
     "phase": "liquid",
     "explode_in_fire": true,
     "explosion": { "power": 20, "shrapnel": 0 },
-    "flags": [ "NO_DROP", "IRREMOVABLE" ]
+    "flags": [ "NO_DROP", "IRREMOVABLE" ],
+    "display_type": "BY_VOLUME"
   },
   {
     "id": "formic_acid",
@@ -1893,7 +1961,8 @@
     "explosion": { "power": 5, "shrapnel": 0 },
     "flags": [ "NUTRIENT_OVERRIDE" ],
     "//": "Needed so calories from alcohol used to produce this aren't carried over to items using this as preservative",
-    "looks_like": "ether"
+    "looks_like": "ether",
+    "display_type": "BY_VOLUME"
   },
   {
     "id": "latex",
@@ -1911,7 +1980,8 @@
     "charges": 1,
     "stack_size": 100,
     "phase": "liquid",
-    "looks_like": "milk"
+    "looks_like": "milk",
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -2006,7 +2076,9 @@
     "ammo_type": "components",
     "container": "test_tube",
     "symbol": ";",
-    "color": "light_green"
+    "color": "light_green",
+    "display_type": "BY_VOLUME",
+    "stackable": true
   },
   {
     "id": "conc_paralytic",
@@ -2034,7 +2106,8 @@
     "price": "20 USD",
     "price_postapoc": "2 USD",
     "count": 1,
-    "stack_size": 1
+    "stack_size": 1,
+    "display_type": "BY_VOLUME"
   },
   {
     "id": "red_phosphorous",
@@ -2057,7 +2130,7 @@
     "type": "ITEM",
     "category": "chems",
     "name": { "str_sp": "scrapings of red phosphorous powder" },
-    "description": "A small collection of red phosphorous scrapings, scavenged from match heads.An allotrope of the element phosphorous.  It's what you use to light matches, but can also be used in the synthesis of methamphetamine.  You could use it to make bombs, and if you were truly desperate you might even be able to use it as a propellant for bullets.",
+    "description": "A small collection of red phosphorous scrapings, scavenged from match heads.  An allotrope of the element phosphorous.  It's what you use to light matches, but can also be used in the synthesis of methamphetamine.  You could use it to make bombs, and if you were truly desperate you might even be able to use it as a propellant for bullets.",
     "weight": "100 mg",
     "volume": "1 ml",
     "container": "bottle_plastic_small",
@@ -2109,7 +2182,8 @@
     "color": "dark_gray",
     "looks_like": "chem_ethanol",
     "//": "1.082 g/cm3",
-    "freezing_point": -73
+    "freezing_point": -73,
+    "display_type": "BY_VOLUME"
   },
   {
     "id": "iodine_crystal",
@@ -2125,7 +2199,8 @@
     "symbol": "=",
     "color": "dark_gray",
     "price": "1 cent",
-    "price_postapoc": "1 cent"
+    "price_postapoc": "1 cent",
+    "display_type": "BY_WEIGHT"
   },
   {
     "type": "ITEM",
@@ -2146,7 +2221,8 @@
     "phase": "liquid",
     "flags": [ "DETERGENT" ],
     "comestible_type": "INVALID",
-    "charges": 5
+    "charges": 5,
+    "display_type": "BY_VOLUME"
   },
   {
     "id": "pine_resin",
@@ -2182,7 +2258,8 @@
     "sealed": true,
     "symbol": "s",
     "color": "light_gray",
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "UNRECOVERABLE" ],
+    "display_type": "BY_VOLUME"
   },
   {
     "type": "ITEM",
@@ -2309,7 +2386,8 @@
     "count": 100,
     "price_postapoc": "5 cents",
     "phase": "liquid",
-    "flags": [ "UNRECOVERABLE", "NO_SALVAGE" ]
+    "flags": [ "UNRECOVERABLE", "NO_SALVAGE" ],
+    "display_type": "BY_VOLUME"
   },
   {
     "id": "glue_strong",

@@ -1123,7 +1123,7 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
             if( blink && uistate.overmap_debug_mongroup ) {
                 // TODO Check if this tile is a target of the currently highlighted horde.
                 std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                        omp );
+                            omp );
                 if( !hordes.empty() ) {
                     ter_sym = "+";
                 } else {
@@ -1240,7 +1240,7 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
         const std::string &note_text = overmap_buffer.note( cursor_pos );
         if( !note_text.empty() ) {
             const std::tuple<char, nc_color, size_t> note_info = get_note_display_info(
-                    note_text );
+                        note_text );
             const size_t pos = std::get<2>( note_info );
             if( pos != std::string::npos ) {
                 corner_text.emplace_back( std::get<1>( note_info ), note_text.substr( pos ) );
@@ -1766,7 +1766,7 @@ static void place_ter_or_special( const ui_adaptor &om_ui, tripoint_abs_omt &cur
                 curs.z()++;
             } else if( action == "SELECT" ) {
                 if( std::optional<tripoint_rel_omt> mouse_pos = ctxt.get_coordinates_rel_omt( g->w_overmap,
-                    point::zero, true ); mouse_pos ) {
+                        point::zero, true ); mouse_pos ) {
                     curs = curs + mouse_pos->xy();
                 }
             } else if( action == "zoom_out" ) {
@@ -1848,7 +1848,7 @@ static void modify_horde_func( tripoint_abs_omt &curs )
 {
     overmap &map_at_cursor = overmap_buffer.get( project_to<coords::om>( curs ).xy() );
     std::vector<std::reference_wrapper<mongroup>> hordes =
-        map_at_cursor.debug_unsafe_get_groups_at( curs );
+                map_at_cursor.debug_unsafe_get_groups_at( curs );
     if( hordes.empty() ) {
         if( !query_yn( _( "No hordes there.  Would you like to make a new horde?" ) ) ) {
             return;

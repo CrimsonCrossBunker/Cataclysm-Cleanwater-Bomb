@@ -17,7 +17,7 @@
 #include "game.h"
 #include "item.h"
 #include "map.h"
-#include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "mutation.h"
 #include "player_helpers.h"
 #include "point.h"
@@ -277,7 +277,7 @@ struct swim_scenario {
 
     std::string name() const {
         return string_format( "move: %s, stats: %s, skills: %s, gear: %s, traits: %s", move_mode.str(),
-        config.stats_name, config.skills_name, config.gear_name, config.traits_name );
+                              config.stats_name, config.skills_name, config.gear_name, config.traits_name );
     }
 };
 } // namespace

@@ -58,9 +58,15 @@ static void show_pickup_message( const PickupMap &mapPickup )
 {
     for( const auto &entry : mapPickup ) {
         if( entry.second.first.invlet != 0 ) {
-            add_msg( _( "You pick up: %d %s [%c]" ), entry.second.second,
-                     entry.second.first.display_name( entry.second.second ), entry.second.first.invlet );
-        } else if( entry.second.first.count_by_charges() ) {
+            if( entry.second.first.count_by_charges() && !entry.second.first.is_stackable() ) {
+                // display_name of ammo/liquids already includes the count
+                add_msg( _( "You pick up: %s [%c]" ),
+                         entry.second.first.display_name( entry.second.second ), entry.second.first.invlet );
+            } else {
+                add_msg( _( "You pick up: %d %s [%c]" ), entry.second.second,
+                         entry.second.first.display_name( entry.second.second ), entry.second.first.invlet );
+            }
+        } else if( entry.second.first.count_by_charges() && !entry.second.first.is_stackable() ) {
             add_msg( _( "You pick up: %s" ), entry.second.first.display_name( entry.second.second ) );
         } else {
             add_msg( _( "You pick up: %d %s" ), entry.second.second,

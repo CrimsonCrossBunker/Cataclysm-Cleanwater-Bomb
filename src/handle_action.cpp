@@ -702,7 +702,7 @@ static void open( const std::optional<tripoint_bub_ms> &p = std::nullopt )
         } else {
             // If there are any OPENABLE parts here, they must be already open or locked
             if( const std::optional<vpart_reference> openable_part = vp.part_with_feature( "OPENABLE",
-                true ); openable_part.has_value() ) {
+                    true ); openable_part.has_value() ) {
                 const std::string name = openable_part->info().name();
                 if( vp->vehicle().part( openable_part->part_index() ).locked ) {
                     add_msg( m_info, _( "That %s is locked." ), name );
@@ -895,7 +895,7 @@ static void haul()
     bool autohaul = player_character.is_autohauling();
     std::vector<item_location> &haul_list = player_character.haul_list;
     std::vector<item_location> haulable_items = get_map().get_haulable_items(
-            player_character.pos_bub() );
+                player_character.pos_bub() );
     int haul_qty = haul_list.size();
     std::string &haul_filter = player_character.hauling_filter;
 
@@ -969,7 +969,21 @@ static void haul()
             drop_locations result = selector.execute( true );
             haulable_items.clear();
             for( const drop_location &dl : result ) {
-                haulable_items.push_back( dl.first );
+                if( dl.first->count_by_charges() && dl.second < dl.first->charges ) {
+                    // Partial stack selected: split the item on the ground so the haul
+                    // list gets a correctly-sized item_location.
+                    item_location loc = dl.first;
+                    item_location split_loc = loc.split_stack( dl.second );
+                    if( split_loc ) {
+                        haulable_items.push_back( split_loc );
+                    } else {
+                        debugmsg( "Failed to split %s for hauling, hauling entire stack.",
+                                  dl.first->display_name() );
+                        haulable_items.push_back( dl.first );
+                    }
+                } else {
+                    haulable_items.push_back( dl.first );
+                }
             }
             if( haulable_items != player_character.haul_list ) {
                 player_character.suppress_autohaul = true;
@@ -1468,7 +1482,7 @@ static void sleep()
     }
 
     // check for deactivating any currently played music instrument.
-    for( item * &item : player_character.inv_dump() ) {
+    for( item *&item : player_character.inv_dump() ) {
         if( item->active && item->get_use( "musical_instrument" ) != nullptr ) {
             player_character.add_msg_if_player( _( "You stop playing your %s before trying to sleep." ),
                                                 item->tname() );
@@ -1492,14 +1506,29 @@ static void sleep()
        and loop until we get a valid answer. */
     as_m.query();
 
+    bool save_before_sleep = false;
     if( as_m.ret == 1 ) {
-        g->quicksave();
+        save_before_sleep = true;
     } else if( as_m.ret == 2 || as_m.ret < 0 ) {
         return;
     }
 
-    if( !g->warn_player_maybe_anger_local_faction( false, true ) ) {
-        return; // player declined to annoy locals by illegally sleeping in their territory
+    bool may_illegally = false;
+    if( vp ) {
+        vehicle *veh = veh_pointer_or_null( vp );
+        if( veh && !veh->is_owned_by( player_character ) ) {
+            may_illegally = true;
+        }
+    }
+    if( here.has_furn( p ) ) {
+        if( !here.has_flag( "FREE_TO_EXAMINE", p ) ) {
+            may_illegally = true;
+        }
+    }
+    if( may_illegally ) {
+        if( !g->warn_player_maybe_anger_local_faction( false, true ) ) {
+            return; // player declined to annoy locals by illegally sleeping in their territory
+        }
     }
 
     time_duration try_sleep_dur = 24_hours;
@@ -1515,7 +1544,7 @@ static void sleep()
         as_m.reset();
         as_m.text = can_hibernate ?
                     _( "You're engorged to hibernate.  The alarm would only attract attention.  "
-           "Set an alarm anyway?" ) :
+                       "Set an alarm anyway?" ) :
                     _( "You have an alarm clock.  Set an alarm?" );
         as_m.text += deaf_text;
 
@@ -1535,6 +1564,10 @@ static void sleep()
         } else if( as_m.ret < 0 ) {
             return;
         }
+    }
+
+    if( save_before_sleep ) {
+        g->quicksave();
     }
 
     player_character.set_moves( 0 );
@@ -2055,11 +2088,11 @@ bool Character::cast_spell( spell &sp, bool fake_spell,
 bool bionic::activate_spell( Character &caster ) const
 {
     if( !caster.is_avatar() || !id->spell_on_activate ) {
-    // the return value tells us if the spell fails. if it has no spell it can't fail
-    return true;
-}
-spell sp = id->spell_on_activate->get_spell( caster );
-return caster.cast_spell( sp, true );
+        // the return value tells us if the spell fails. if it has no spell it can't fail
+        return true;
+    }
+    spell sp = id->spell_on_activate->get_spell( caster );
+    return caster.cast_spell( sp, true );
 }
 
 void game::open_consume_item_menu()
@@ -2093,8 +2126,8 @@ static void handle_debug_mode()
     // returns if entry became active
     auto debugmode_entry_setup = []( uilist_entry & entry, bool active ) -> void {
         if( active )
-    {
-        entry.extratxt.txt = entry.hotkey->short_description() + " " + _( "A" );
+        {
+            entry.extratxt.txt = entry.hotkey->short_description() + " " + _( "A" );
             entry.extratxt.color = c_white_green;
             entry.text_color = c_green;
         } else
@@ -3499,8 +3532,8 @@ bool game::handle_action()
             }
 
             const std::optional<tripoint_bub_ms> mouse_pos = ctxt.get_coordinates( w_terrain,
-                ter_view_p.raw().xy(),
-                true );
+                    ter_view_p.raw().xy(),
+                    true );
             if( !mouse_pos ) {
                 return false;
             }

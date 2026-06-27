@@ -118,21 +118,21 @@ void ammo_effect::load( const JsonObject &jo, std::string_view )
 
 void ammo_effect::check() const
 {
-for( const aoe_field_effect &aoe : aoe_field_types ) {
-    if( !aoe.field_type.is_valid() ) {
+    for( const aoe_field_effect &aoe : aoe_field_types ) {
+        if( !aoe.field_type.is_valid() ) {
             debugmsg( "Ammo effect %s aoe section uses invalid field type %s", id.str(), aoe.field_type.str() );
         }
     }
 
-for( const trail_field_effect &trail : trail_field_types ) {
-    if( !trail.field_type.is_valid() ) {
+    for( const trail_field_effect &trail : trail_field_types ) {
+        if( !trail.field_type.is_valid() ) {
             debugmsg( "Ammo effect %s trail section uses invalid field type %s", id.str(),
                       trail.field_type.str() );
         }
     }
 
-for( const fake_spell &spell : spell_data ) {
-    if( !spell.is_valid() ) {
+    for( const fake_spell &spell : spell_data ) {
+        if( !spell.is_valid() ) {
             debugmsg( "Ammo effect %s spell section uses invalid spell id %s", id.str(), spell.id.str() );
         }
     }

@@ -406,7 +406,7 @@ class TextJsonIn
         /// Overload that calls a member function `T::deserialize(const TextJsonValue&)`, if available.
         template<typename T>
         auto read( T &v, bool throw_on_error = false ) -> decltype( v.deserialize(
-                std::declval<const TextJsonValue &>() ), true ) {
+                    std::declval<const TextJsonValue &>() ), true ) {
             try {
                 v.deserialize( this->get_value() );
                 return true;
@@ -606,7 +606,7 @@ class TextJsonIn
                             read( run_l, throw_on_error ) &&
                             end_array()
                           ) { // all is good
-                            const auto insert_loaded_item = [&v]( T &&loaded ) {
+                            const auto insert_loaded_item = [&v]( T && loaded ) {
                                 if( stackable_container_contents_need_split( loaded ) ) {
                                     T empty_stack;
                                     split_stackable_container_contents_from_stack( loaded, empty_stack );
@@ -1144,14 +1144,14 @@ class TextJsonObject
         template<typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
         E get_enum_value( const std::string &name, const E fallback ) const {
             if( !has_member( name ) ) {
-            return fallback;
+                return fallback;
+            }
+            mark_visited( name );
+            jsin->seek( verify_position( name ) );
+            return jsin->get_enum_value<E>();
         }
-        mark_visited( name );
-        jsin->seek( verify_position( name ) );
-        return jsin->get_enum_value<E>();
-    }
-    template<typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
-    E get_enum_value( const std::string_view name ) const {
+        template<typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
+        E get_enum_value( const std::string_view name ) const {
             mark_visited( name );
             jsin->seek( verify_position( name ) );
             return jsin->get_enum_value<E>();

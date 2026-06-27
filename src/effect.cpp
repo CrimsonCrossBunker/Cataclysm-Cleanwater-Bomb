@@ -593,8 +593,8 @@ void effect_type::check_consistency()
 void effect_type::verify() const
 {
     if( death_event.has_value() ) {
-    const std::unordered_map<std::string, cata_variant_type> &fields = cata::event::get_fields(
-            *death_event );
+        const std::unordered_map<std::string, cata_variant_type> &fields = cata::event::get_fields(
+                    *death_event );
         // Only allow events inheriting from event_spec_character at the moment.
         if( fields.size() != 1 || fields.count( "character" ) != 1 ) {
             debugmsg( "Invalid death event type %s in effect_type %s", "lol",
@@ -623,7 +623,7 @@ bool effect_type::use_name_ints() const
 bool effect_type::use_desc_ints( bool reduced ) const
 {
     if( reduced ) {
-    return static_cast<size_t>( max_intensity ) <= reduced_desc.size();
+        return static_cast<size_t>( max_intensity ) <= reduced_desc.size();
     } else {
         return static_cast<size_t>( max_intensity ) <= desc.size();
     }
@@ -632,18 +632,18 @@ bool effect_type::use_desc_ints( bool reduced ) const
 game_message_type effect_type::lose_game_message_type( int intensity ) const
 {
     switch( get_rating( intensity ) ) {
-    case m_good:
-        return m_bad;
-    case m_bad:
-        return m_good;
-    case m_neutral:
-        return m_neutral;
-    case m_mixed:
-        return m_mixed;
-    default:
-        // Should never happen
-        return m_neutral;
-}
+        case m_good:
+            return m_bad;
+        case m_bad:
+            return m_good;
+        case m_neutral:
+            return m_neutral;
+        case m_mixed:
+            return m_mixed;
+        default:
+            // Should never happen
+            return m_neutral;
+    }
 }
 void effect_type::add_apply_msg( int intensity ) const
 {
@@ -662,8 +662,8 @@ void effect_type::add_apply_msg( int intensity ) const
 std::string effect_type::get_apply_memorial_log( const memorial_gender gender ) const
 {
     switch( gender ) {
-    case memorial_gender::male:
-        return pgettext( "memorial_male", apply_memorial_log.c_str() );
+        case memorial_gender::male:
+            return pgettext( "memorial_male", apply_memorial_log.c_str() );
         case memorial_gender::female:
             return pgettext( "memorial_female", apply_memorial_log.c_str() );
     }
@@ -676,8 +676,8 @@ std::string effect_type::get_remove_message() const
 std::string effect_type::get_remove_memorial_log( const memorial_gender gender ) const
 {
     switch( gender ) {
-    case memorial_gender::male:
-        return pgettext( "memorial_male", remove_memorial_log.c_str() );
+        case memorial_gender::male:
+            return pgettext( "memorial_male", remove_memorial_log.c_str() );
         case memorial_gender::female:
             return pgettext( "memorial_female", remove_memorial_log.c_str() );
     }
@@ -775,15 +775,15 @@ bool effect::is_null() const
 std::string effect::disp_name() const
 {
     if( eff_type->name.empty() ) {
-    debugmsg( "No names for effect type, ID: %s", eff_type->id.c_str() );
+        debugmsg( "No names for effect type, ID: %s", eff_type->id.c_str() );
         return "";
     }
 
     // End result should look like "name (l. arm)" or "name [intensity] (l. arm)"
     std::string ret;
     if( eff_type->use_name_ints() ) {
-    const translation &d_name = eff_type->name[ std::min<size_t>( intensity,
-                                eff_type->name.size() ) - 1 ];
+        const translation &d_name = eff_type->name[ std::min<size_t>( intensity,
+                                                      eff_type->name.size() ) - 1 ];
         if( d_name.empty() ) {
             return std::string();
         }
@@ -802,7 +802,7 @@ std::string effect::disp_name() const
         }
     }
     if( bp != bodypart_str_id::NULL_ID() ) {
-    ret += string_format( " (%s)", body_part_name( bp.id() ) );
+        ret += string_format( " (%s)", body_part_name( bp.id() ) );
     }
 
     return ret;
@@ -1012,7 +1012,7 @@ std::string effect::disp_desc( bool reduced ) const
 std::string effect::disp_short_desc( bool reduced ) const
 {
     if( eff_type->use_desc_ints( reduced ) ) {
-    if( reduced ) {
+        if( reduced ) {
             return eff_type->reduced_desc[intensity - 1].translated();
         } else {
             return eff_type->desc[intensity - 1].translated();
@@ -1209,7 +1209,7 @@ int effect::get_max_effective_intensity() const
 int effect::get_effective_intensity() const
 {
     if( eff_type->max_effective_intensity > 0 ) {
-    return std::min( eff_type->max_effective_intensity, intensity );
+        return std::min( eff_type->max_effective_intensity, intensity );
     } else {
         return intensity;
     }
@@ -1318,7 +1318,7 @@ int effect::get_avg_mod( const std::string &arg, bool reduced ) const
 int effect::get_amount( const std::string &arg, bool reduced ) const
 {
     return static_cast<int>( eff_type->get_mod_value( arg, mod_action::AMOUNT, reduced,
-           get_effective_intensity() ) );
+                             get_effective_intensity() ) );
 }
 
 int effect::get_min_val( const std::string &arg, bool reduced ) const
@@ -1469,11 +1469,11 @@ std::string effect::get_speed_name() const
     // USes the speed_mod_name if one exists, else defaults to the first entry in "name".
     // But make sure the name for this intensity actually exists!
     if( !eff_type->speed_mod_name.empty() ) {
-    return eff_type->speed_mod_name.translated();
+        return eff_type->speed_mod_name.translated();
     } else if( eff_type->use_name_ints() ) {
-    return eff_type->name[ std::min<size_t>( intensity, eff_type->name.size() ) - 1 ].translated();
+        return eff_type->name[ std::min<size_t>( intensity, eff_type->name.size() ) - 1 ].translated();
     } else if( !eff_type->name.empty() ) {
-    return eff_type->name[0].translated();
+        return eff_type->name[0].translated();
     } else {
         return "";
     }
@@ -1654,7 +1654,7 @@ std::vector<effect_dur_mod> effect::get_effect_dur_scaling() const
 bool effect::kill_roll( bool reduced ) const
 {
     const std::vector<std::pair<int, int>> &chances = reduced ? eff_type->red_kill_chance :
-        eff_type->kill_chance;
+                                        eff_type->kill_chance;
     if( chances.empty() ) {
         return false;
     }
@@ -1672,11 +1672,11 @@ std::string effect::get_death_message() const
 event_type effect::death_event() const
 {
     if( eff_type->death_event.has_value() ) {
-    return *eff_type->death_event;
-}
+        return *eff_type->death_event;
+    }
 
-debugmsg( "Asked for death event from effect of type %s, but it lacks one!", eff_type->id.str() );
-return event_type::num_event_types;
+    debugmsg( "Asked for death event from effect of type %s, but it lacks one!", eff_type->id.str() );
+    return event_type::num_event_types;
 }
 
 void reset_effect_types()

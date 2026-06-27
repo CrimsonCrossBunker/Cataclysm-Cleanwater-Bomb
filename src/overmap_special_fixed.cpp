@@ -80,8 +80,8 @@ void fixed_overmap_special_data::finalize(
 void fixed_overmap_special_data::finalize_mapgen_parameters( mapgen_parameters &params,
         const std::string &context ) const
 {
-for( const overmap_special_terrain &t : terrains ) {
-    if( !t.terrain.is_valid() ) {
+    for( const overmap_special_terrain &t : terrains ) {
+        if( !t.terrain.is_valid() ) {
             if( oter_str_id( t.terrain.str() + "_north" ).is_valid() ) {
                 debugmsg( "In %s, terrain \"%s\" rotates, but is specified without a "
                           "rotation.", context, t.terrain.str() );

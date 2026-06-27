@@ -445,6 +445,17 @@ enum MULTITILE_TYPE {
     num_multitile_types
 };
 
+// Bitmask of cardinal-direction neighbours used by tile orientation helpers.
+// Moved from cata_tiles.h so map-side code can compute orientation without
+// depending on the tiles subsystem.
+enum class NEIGHBOUR {
+    SOUTH = 1,
+    EAST  = 2,
+    WEST  = 4,
+    NORTH = 8,
+    last
+};
+
 enum class reachability_cache_quadrant : int {
     NE, SE, NW, SW
 };

@@ -245,14 +245,14 @@ static void check_traits( const std::set<trait_id> &traits, const string_id<scen
 
 void scenario::check() const
 {
-for( const auto &p : professions ) {
-    if( !p.is_valid() ) {
+    for( const auto &p : professions ) {
+        if( !p.is_valid() ) {
             debugmsg( "profession %s for scenario %s does not exist", p.c_str(), id.c_str() );
         }
     }
 
-for( const string_id<profession> &hobby : hobby_exclusion ) {
-    if( !hobby.is_valid() ) {
+    for( const string_id<profession> &hobby : hobby_exclusion ) {
+        if( !hobby.is_valid() ) {
             debugmsg( "hobby %s for scenario %s does not exist", hobby.str(), id.str() );
         } else if( !hobby->is_hobby() ) {
             debugmsg( "hobby %s for scenario %s is a profession", hobby.str(), id.str() );
@@ -260,22 +260,22 @@ for( const string_id<profession> &hobby : hobby_exclusion ) {
     }
 
     std::unordered_set<string_id<profession>> professions_set;
-for( const auto &p : professions ) {
-    if( professions_set.count( p ) == 1 ) {
+    for( const auto &p : professions ) {
+        if( professions_set.count( p ) == 1 ) {
             debugmsg( "Duplicate profession %s in scenario %s.", p.c_str(), this->id.c_str() );
         } else {
             professions_set.insert( p );
         }
     }
 
-for( const start_location_id &l : _allowed_locs ) {
-    if( !l.is_valid() ) {
+    for( const start_location_id &l : _allowed_locs ) {
+        if( !l.is_valid() ) {
             debugmsg( "starting location %s for scenario %s does not exist", l.c_str(), id.c_str() );
         }
     }
 
     if( blacklist ) {
-    if( professions.empty() ) {
+        if( professions.empty() ) {
             debugmsg( "Scenario %s: Use an empty whitelist to whitelist everything.", id.c_str() );
         } else {
             permitted_professions(); // Debug msg if every profession is blacklisted
@@ -290,14 +290,14 @@ for( const start_location_id &l : _allowed_locs ) {
         debugmsg( "there is no map extra with id %s", _map_extra.str() );
     }
 
-for( const auto &e : eoc() ) {
+    for( const auto &e : eoc() ) {
         if( !e.is_valid() ) {
             debugmsg( "effect on condition %s for scenario %s does not exist", e.c_str(), id.c_str() );
         }
     }
 
-for( const auto &m : _missions ) {
-    if( !m.is_valid() ) {
+    for( const auto &m : _missions ) {
+        if( !m.is_valid() ) {
             debugmsg( "starting mission %s for scenario %s does not exist", m.c_str(), id.c_str() );
         }
 
@@ -321,7 +321,7 @@ const string_id<scenario> &scenario::ident() const
 std::string scenario::gender_appropriate_name( bool male ) const
 {
     if( male ) {
-    return _name_male.translated();
+        return _name_male.translated();
     } else {
         return _name_female.translated();
     }
@@ -330,7 +330,7 @@ std::string scenario::gender_appropriate_name( bool male ) const
 std::string scenario::description( bool male ) const
 {
     if( male ) {
-    return _description_male.translated();
+        return _description_male.translated();
     } else {
         return _description_female.translated();
     }
@@ -364,7 +364,7 @@ void scen_blacklist::load( const JsonObject &jo, std::string_view )
 {
     if( !scenarios.empty() ) {
         DebugLog( D_INFO, DC_ALL ) <<
-        "Attempted to load scenario blacklist with an existing scenario blacklist, resetting blacklist info";
+                                   "Attempted to load scenario blacklist with an existing scenario blacklist, resetting blacklist info";
         reset_scenarios_blacklist();
     }
 
@@ -422,13 +422,13 @@ void reset_scenarios_blacklist()
 std::vector<string_id<profession>> scenario::permitted_professions( bool is_npc ) const
 {
     if( !cached_permitted_professions.empty() ) {
-    return cached_permitted_professions;
-}
+        return cached_permitted_professions;
+    }
 
-const std::vector<profession> &all = profession::get_all();
-std::vector<string_id<profession>> &res = cached_permitted_professions;
-for( const profession &p : all ) {
-    if( p.is_hobby() || p.is_blacklisted() || ( is_npc && !p.chargen_allow_npc() ) ) {
+    const std::vector<profession> &all = profession::get_all();
+    std::vector<string_id<profession>> &res = cached_permitted_professions;
+    for( const profession &p : all ) {
+        if( p.is_hobby() || p.is_blacklisted() || ( is_npc && !p.chargen_allow_npc() ) ) {
             continue;
         }
         const bool present = std::find( professions.begin(), professions.end(),
@@ -455,7 +455,7 @@ for( const profession &p : all ) {
     }
 
     if( res.empty() ) {
-    debugmsg( "Why would you blacklist every profession?" );
+        debugmsg( "Why would you blacklist every profession?" );
         res.push_back( profession::generic()->ident() );
     }
     return res;
@@ -464,13 +464,13 @@ for( const profession &p : all ) {
 std::vector<string_id<profession>> scenario::permitted_hobbies( bool is_npc ) const
 {
     if( !cached_permitted_hobbies.empty() ) {
-    return cached_permitted_hobbies;
-}
+        return cached_permitted_hobbies;
+    }
 
-std::vector<string_id<profession>> all = profession::get_all_hobbies();
-std::vector<string_id<profession>> &res = cached_permitted_hobbies;
-for( const string_id<profession> &hobby : all ) {
-    if( hobby->is_blacklisted() ) {
+    std::vector<string_id<profession>> all = profession::get_all_hobbies();
+    std::vector<string_id<profession>> &res = cached_permitted_hobbies;
+    for( const string_id<profession> &hobby : all ) {
+        if( hobby->is_blacklisted() ) {
             continue;
         }
         if( scenario_traits_conflict_with_profession_traits( *hobby ) ) {
@@ -490,7 +490,7 @@ for( const string_id<profession> &hobby : all ) {
     }
 
     if( res.empty() ) {
-    debugmsg( "Why would you blacklist every hobby?" );
+        debugmsg( "Why would you blacklist every hobby?" );
         res.insert( res.end(), all.begin(), all.end() );
     }
 
@@ -499,14 +499,14 @@ for( const string_id<profession> &hobby : all ) {
 
 bool scenario::scenario_traits_conflict_with_profession_traits( const profession &p ) const
 {
-for( const auto &pt : p.get_forbidden_traits() ) {
-    if( is_locked_trait( pt ) ) {
+    for( const auto &pt : p.get_forbidden_traits() ) {
+        if( is_locked_trait( pt ) ) {
             return true;
         }
     }
 
-for( trait_and_var &pt : p.get_locked_traits() ) {
-    if( is_forbidden_trait( pt.trait ) ) {
+    for( trait_and_var &pt : p.get_locked_traits() ) {
+        if( is_forbidden_trait( pt.trait ) ) {
             return true;
         }
     }
@@ -514,8 +514,8 @@ for( trait_and_var &pt : p.get_locked_traits() ) {
     //  check if:
     //  locked traits for scenario prevent taking locked traits for professions
     //  locked traits for professions prevent taking locked traits for scenario
-for( const trait_id &st : get_locked_traits() ) {
-    for( trait_and_var &pt : p.get_locked_traits() ) {
+    for( const trait_id &st : get_locked_traits() ) {
+        for( trait_and_var &pt : p.get_locked_traits() ) {
             if( are_conflicting_traits( st, pt.trait ) || are_conflicting_traits( pt.trait, st ) ) {
                 return true;
             }
@@ -550,7 +550,7 @@ const profession *scenario::weighted_random_profession( bool is_npc ) const
 std::string scenario::prof_count_str() const
 {
     if( professions.empty() ) {
-    return _( "All" );
+        return _( "All" );
     }
     return blacklist ? _( "Almost all" ) : _( "Limited" );
 }
@@ -709,8 +709,8 @@ ret_val<void> scenario::can_pick() const
 bool scenario_sorter::operator()( const scenario *a, const scenario *b ) const
 {
     if( cities_enabled ) {
-    // The generic ("Unemployed") profession should be listed first.
-    const scenario *gen = scenario::generic();
+        // The generic ("Unemployed") profession should be listed first.
+        const scenario *gen = scenario::generic();
         if( b == gen ) {
             return false;
         } else if( a == gen ) {
@@ -729,7 +729,7 @@ bool scenario_sorter::operator()( const scenario *a, const scenario *b ) const
     if( !cities_enabled && a->has_flag( "CITY_START" ) != b->has_flag( "CITY_START" ) ) {
         return a->has_flag( "CITY_START" ) < b->has_flag( "CITY_START" );
     } else if( sort_by_points ) {
-    return a->point_cost() < b->point_cost();
+        return a->point_cost() < b->point_cost();
     } else {
         return localized_compare( a->gender_appropriate_name( male ),
                                   b->gender_appropriate_name( male ) );

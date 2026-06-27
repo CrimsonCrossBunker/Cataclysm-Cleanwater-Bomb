@@ -706,8 +706,8 @@
     "description": "A feather from a bird.  Useful for fletching arrows.",
     "material": [ "cotton" ],
     "flags": [ "NO_SALVAGE" ],
-    "volume": "250 ml",
-    "weight": "1 g"
+    "volume": "1 ml",
+    "weight": "10 mg"
   },
   {
     "type": "ITEM",
@@ -722,7 +722,7 @@
     "material": [ "down_feathers" ],
     "flags": [ "NO_SALVAGE" ],
     "volume": "1 ml",
-    "weight": "10 mg"
+    "weight": "1 mg"
   },
   {
     "type": "ITEM",
@@ -1063,14 +1063,14 @@
     "stackable": true,
     "stack_size": 200,
     "category": "spare_parts",
-    "price": "10 USD",
-    "price_postapoc": "8 USD",
+    "price": "7 cent",
+    "price_postapoc": "0 cent",
     "name": { "str_sp": "copper" },
     "symbol": "=",
     "color": "yellow",
     "description": "Some scrap bits of copper.  Could be used to craft things, such as makeshift ammunition.",
     "material": [ "copper" ],
-    "volume": "128 ml",
+    "volume": "1 ml",
     "weight": "5 g",
     "//": "200*5g / 8.63g/ml = ~115.87ml. Add 10% to take an uneven chunk into account = 127.46ml rounded upwards to 128ml."
   },

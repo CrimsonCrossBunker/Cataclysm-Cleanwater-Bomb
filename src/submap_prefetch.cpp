@@ -14,12 +14,11 @@ submap_prefetcher::submap_prefetcher() = default;
 
 submap_prefetcher::~submap_prefetcher()
 {
-    running_ = false;
-    cv_.notify_all();
-    parked_cv_.notify_all();
-    if( worker_.joinable() ) {
-        worker_.join();
-    }
+    // Delegate to stop_worker() rather than re-implementing teardown: it flips
+    // running_/started_ under mutex_ (so the worker can't miss the wakeup and
+    // hang join()) and is idempotent, so this is safe whether or not clear()
+    // already stopped the worker during world teardown.
+    stop_worker();
 }
 
 int submap_prefetcher::quad_dist( const tripoint_abs_omt &a, const tripoint_abs_omt &center )

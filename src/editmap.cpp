@@ -252,7 +252,7 @@ bool editmap_ui::get_direction( tripoint_rel_ms &p, const std::string &action,
         p.z() = 1;
     } else if( action == "SELECT" ) {
         const std::optional<tripoint_bub_ms> mouse_pos = ctxt.get_coordinates(
-                g->w_terrain, g->ter_view_p.raw().xy(), true );
+                    g->w_terrain, g->ter_view_p.raw().xy(), true );
         if( !mouse_pos ) {
             return false;
         }
@@ -1555,7 +1555,7 @@ void editmap_ui::cleartmpmap( smallmap &tmpmap ) const
     tmpmap.delete_unmerged_submaps();
 
     for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
-    level_cache &ch = tmpmap.get_cache( z );
+        level_cache &ch = tmpmap.get_cache( z );
         ch.clear_vehicle_cache();
         ch.vehicle_list.clear();
         ch.zone_vehicles.clear();
@@ -1589,15 +1589,15 @@ void editmap_ui::draw_select_menu()
         _( "Generate new mapgen" ),
         string_format( _( "Brush: %s" ), io::enum_to_string( brush.shape_basic_brush ) ),
         string_format( _( "[%s] Terrain: %s (%s)" ), get_drawing_symbol( brush.drawing_terrain ),
-        brush.selected_terrain->name(), brush.selected_terrain.id().c_str() ),
+                       brush.selected_terrain->name(), brush.selected_terrain.id().c_str() ),
         string_format( _( "[%s] Furniture: %s (%s)" ), get_drawing_symbol( brush.drawing_furniture ),
-        brush.selected_furniture->name(), brush.selected_furniture.id().c_str() ),
+                       brush.selected_furniture->name(), brush.selected_furniture.id().c_str() ),
         string_format( _( "[%s] Trap: %s (%s)" ), get_drawing_symbol( brush.drawing_trap ),
-        brush.selected_trap->name(), brush.selected_trap.id().c_str() ),
+                       brush.selected_trap->name(), brush.selected_trap.id().c_str() ),
         string_format( _( "[%s] Field: %s (%s)" ), get_drawing_symbol( brush.drawing_field ),
-        brush.selected_field->get_name(), brush.selected_field.id().c_str() ),
+                       brush.selected_field->get_name(), brush.selected_field.id().c_str() ),
         string_format( _( "[%s] Radiation: %d" ),
-        get_drawing_symbol( brush.drawing_radiation ),  brush.selected_radiation )
+                       get_drawing_symbol( brush.drawing_radiation ),  brush.selected_radiation )
     };
 
     cataimgui::TextColoredParagraphNewline( c_light_gray, _( "? to view keybindings" ) );

@@ -48,6 +48,7 @@
 #include "tileray.h"
 #include "type_id.h"
 #include "units.h"
+#include "veh_type.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -66,6 +67,7 @@ class vpart_variant;
 enum class ter_furn_flag : int;
 enum vpart_bitflags : int;
 struct itype;
+struct vehicle_prototype;
 struct RGBColor;
 struct RGBColorPair;
 struct vehicle_part;
@@ -478,7 +480,6 @@ struct vehicle_part {
         point_rel_ms mount;
 
         /** mount translated to face.dir [0] and turn_dir [1] */
-        // NOLINTNEXTLINE(cata-use-named-point-constants)
         std::array<tripoint_rel_ms, 2> precalc = { { tripoint_rel_ms( -1, -1, 0 ), tripoint_rel_ms( -1, -1, 0 ) } };
 
         /** temporarily held projected position */
@@ -1473,7 +1474,7 @@ class vehicle
         // Given a part and a flag, returns the indices of all contiguously adjacent parts
         // with the same flag on the X and Y Axis
         std::vector<std::vector<int>> find_lines_of_parts( int part, const std::string &flag,
-                bool only_healthy = true ) const;
+                                   bool only_healthy = true ) const;
 
         // Translate mount coordinates "p" using current pivot direction and anchor and return tile coordinates
         point_rel_ms coord_translate( const point_rel_ms &p ) const;

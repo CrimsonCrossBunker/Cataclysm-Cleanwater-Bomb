@@ -92,16 +92,16 @@ item_action_generator::~item_action_generator() = default;
 bool item::item_has_uses_recursive( bool contents_only ) const
 {
     if( !contents_only && !type->use_methods.empty() ) {
-    return true;
-}
+        return true;
+    }
 
-return contents.item_has_uses_recursive();
+    return contents.item_has_uses_recursive();
 }
 
 bool item_contents::item_has_uses_recursive() const
 {
-for( const item_pocket &pocket : contents ) {
-    if( pocket.is_type( pocket_type::CONTAINER ) &&
+    for( const item_pocket &pocket : contents ) {
+        if( pocket.is_type( pocket_type::CONTAINER ) &&
             pocket.item_has_uses_recursive() ) {
             return true;
         }
@@ -112,8 +112,8 @@ for( const item_pocket &pocket : contents ) {
 
 bool item_pocket::item_has_uses_recursive() const
 {
-for( const item &it : contents ) {
-    if( it.item_has_uses_recursive() ) {
+    for( const item &it : contents ) {
+        if( it.item_has_uses_recursive() ) {
             return true;
         }
     }
@@ -263,9 +263,9 @@ void item_action_generator::load_item_action( const JsonObject &jo )
 
 void item_action_generator::check_consistency() const
 {
-for( const auto &elem : item_actions ) {
-    const item_action &action = elem.second;
-    if( !Item_factory::has_iuse( action.id ) ) {
+    for( const auto &elem : item_actions ) {
+        const item_action &action = elem.second;
+        if( !Item_factory::has_iuse( action.id ) ) {
             debugmsg( "Item action \"%s\" isn't known to the game.  Check item action definitions in JSON.",
                       action.id.c_str() );
         }
@@ -402,10 +402,10 @@ void game::item_action_menu( item_location loc )
 std::string use_function::get_type() const
 {
     if( actor ) {
-    return actor->type;
-} else {
-    return errstring;
-}
+        return actor->type;
+    } else {
+        return errstring;
+    }
 }
 
 ret_val<void> iuse_actor::can_use( const Character &, const item &, map *,
@@ -432,7 +432,7 @@ std::string iuse_actor::get_description() const
 std::string use_function::get_name() const
 {
     if( actor ) {
-    return actor->get_name();
+        return actor->get_name();
     } else {
         return errstring;
     }
@@ -441,7 +441,7 @@ std::string use_function::get_name() const
 std::string use_function::get_description() const
 {
     if( actor ) {
-    return actor->get_description();
+        return actor->get_description();
     } else {
         return errstring;
     }

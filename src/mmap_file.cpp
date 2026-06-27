@@ -207,7 +207,7 @@ struct file_impl : mmap_file::impl {
     ~file_impl() override {
         unmap_view();
         if( file != INVALID_HANDLE_VALUE ) {
-        CloseHandle( file );
+            CloseHandle( file );
         }
     }
 #else
@@ -243,7 +243,7 @@ struct file_impl : mmap_file::impl {
     ~file_impl() override {
         unmap_view();
         if( file != -1 ) {
-        close( file );
+            close( file );
         }
     }
 #endif

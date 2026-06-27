@@ -152,7 +152,7 @@ TEST_CASE( "requirement_extension", "[requirement]" )
 
     SECTION( "multigroup_tool_extension" ) {
         const std::vector<std::vector<tool_comp>> &req_tool =
-            requirement_data_explosives_casting_standard->get_tools();
+                requirement_data_explosives_casting_standard->get_tools();
 
         REQUIRE( !req_tool.empty() );
         REQUIRE( req_tool.size() == 2 );

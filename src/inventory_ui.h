@@ -165,8 +165,8 @@ class inventory_entry
 
         const item_location &any_item() const {
             if( locations.empty() ) {
-            debugmsg( "inventory_entry::any_item called on a non-item entry.  "
-                      "Test inventory_entry::is_item before calling this function." );
+                debugmsg( "inventory_entry::any_item called on a non-item entry.  "
+                          "Test inventory_entry::is_item before calling this function." );
                 return item_location::nowhere;
             } else {
                 return locations.front();
@@ -419,9 +419,6 @@ class inventory_column
         get_entries_t get_entries( const ffilter_t &filter_func,
                                    bool include_hidden = false ) const;
 
-        // orders the child entries in this column to be under their parent
-        void order_by_parent();
-
         inventory_entry *find_by_invlet( int invlet ) const;
         inventory_entry *find_by_location( item_location const &loc, bool hidden = false ) const;
 
@@ -494,9 +491,9 @@ class inventory_column
         // whether or not to indent contained entries
         bool indent_entries() const {
             if( indent_entries_override ) {
-            return *indent_entries_override;
-        } else {
-            return preset.indent_entries();
+                return *indent_entries_override;
+            } else {
+                return preset.indent_entries();
             }
         }
 
@@ -1192,7 +1189,7 @@ class pickup_selector : public inventory_multiselector
         bool wield( int &count );
         bool wear();
         void remove_from_to_use( item_location &it );
-        void reopen_menu();
+        void reopen_menu( const item_location &next_item );
         const std::set<tripoint_bub_ms> where;
 };
 

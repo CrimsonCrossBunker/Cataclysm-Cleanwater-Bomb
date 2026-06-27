@@ -66,6 +66,8 @@
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
+#include "explosion.h"
+#include "explosion_light.h"
 #include "faction.h"
 #include "filesystem.h"
 #include "game.h"
@@ -87,6 +89,7 @@
 #include "magic.h"
 #include "map.h"
 #include "map_extras.h"
+#include "map_helpers.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "mapgen.h"
@@ -115,6 +118,7 @@
 #include "pimpl.h"
 #include "point.h"
 #include "popup.h"
+#include "proficiency.h"
 #include "recipe_dictionary.h"
 #include "relic.h"
 #include "requirements.h"
@@ -136,6 +140,7 @@
 #include "units_utility.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vfx_emit.h"
 #include "vitamin.h"
 #include "vpart_position.h"
 #include "weather.h"
@@ -231,6 +236,7 @@ std::string enum_to_string<debug_menu::debug_menu_index>( debug_menu::debug_menu
         case debug_menu::debug_menu_index::WIND_DIRECTION: return "WIND_DIRECTION";
         case debug_menu::debug_menu_index::WIND_SPEED: return "WIND_SPEED";
         case debug_menu::debug_menu_index::GEN_SOUND: return "GEN_SOUND";
+        case debug_menu::debug_menu_index::VFX_PREVIEW: return "VFX_PREVIEW";
         case debug_menu::debug_menu_index::KILL_MONS: return "KILL_MONS";
         case debug_menu::debug_menu_index::DISPLAY_HORDES: return "DISPLAY_HORDES";
         case debug_menu::debug_menu_index::TEST_IT_GROUP: return "TEST_IT_GROUP";
@@ -293,6 +299,7 @@ std::string enum_to_string<debug_menu::debug_menu_index>( debug_menu::debug_menu
         case debug_menu::debug_menu_index::EXPORT_FOLLOWER: return "EXPORT_FOLLOWER";
         case debug_menu::debug_menu_index::EXPORT_SELF: return "EXPORT_SELF";
 		case debug_menu::debug_menu_index::QUICK_SETUP: return "QUICK_SETUP";
+		case debug_menu::debug_menu_index::QUICK_SETUP_CLEAR_MAP: return "QUICK_SETUP_CLEAR_MAP";
 		case debug_menu::debug_menu_index::TOGGLE_SETUP_MUTATION: return "TOGGLE_SETUP_MUTATION";
 		case debug_menu::debug_menu_index::NORMALIZE_BODY_STAT: return "NORMALIZE_BODY_STAT";
 		case debug_menu::debug_menu_index::SIX_MILLION_DOLLAR_SURVIVOR: return "SIX_MILLION_DOLLAR_SURVIVOR";
@@ -490,10 +497,10 @@ void write_min_archive()
                     }
                 }
                 std::filesystem::path min_mmr_save_rel = ( std::filesystem::path{ entry_filename } / // NOLINT(cata-u8-path)
-                    entry_filename ).concat( ".cold" + std::string( zzip_suffix ) ); // NOLINT(cata-u8-path)
+                        entry_filename ).concat( ".cold" + std::string( zzip_suffix ) ); // NOLINT(cata-u8-path)
                 std::filesystem::path min_mmr_temp_zzip_path = ( PATH_INFO::world_base_save_path() /
-                    min_mmr_save_rel +
-                    ".temp" ).get_unrelative_path();
+                        min_mmr_save_rel +
+                        ".temp" ).get_unrelative_path();
                 {
                     std::optional<zzip> min_mmr_temp_zzip = zzip::load( min_mmr_temp_zzip_path, mmr_dict );
                     if( !min_mmr_temp_zzip ||
@@ -542,8 +549,8 @@ class mission_debug
 
 // Used for quick setup
 static std::vector<trait_id> setup_traits{trait_DEBUG_BIONICS, trait_DEBUG_CLAIRVOYANCE, trait_DEBUG_CLOAK,
-    trait_DEBUG_HS, trait_DEBUG_LIGHT, trait_DEBUG_LS, trait_DEBUG_MANA, trait_DEBUG_MIND_CONTROL,
-    trait_DEBUG_NODMG, trait_DEBUG_NOTEMP, trait_DEBUG_STAMINA, trait_DEBUG_SPEED};
+           trait_DEBUG_HS, trait_DEBUG_LIGHT, trait_DEBUG_LS, trait_DEBUG_MANA, trait_DEBUG_MIND_CONTROL,
+           trait_DEBUG_NODMG, trait_DEBUG_NOTEMP, trait_DEBUG_STAMINA, trait_DEBUG_SPEED};
 
 static std::string first_word( const std::string &str )
 {
@@ -637,6 +644,13 @@ static int player_uilist()
 
 static void normalize_body( Character &u )
 {
+    for( const std::pair<const skill_id, SkillLevel> &pair : u.get_all_skills() ) {
+        u.set_knowledge_level( pair.first, 0 );
+        u.set_skill_level( pair.first, 0 );
+    }
+    u.forget_all_recipes();
+    u._proficiencies->clear();
+    u.initialize( true );
     u.clear_effects();
     u.clear_morale();
     u.clear_vitamins();
@@ -1082,6 +1096,7 @@ static int map_uilist()
         { uilist_entry( debug_menu_index::WIND_DIRECTION, true, 'd', _( "Change wind direction" ) ) },
         { uilist_entry( debug_menu_index::WIND_SPEED, true, 's', _( "Change wind speed" ) ) },
         { uilist_entry( debug_menu_index::GEN_SOUND, true, 'S', _( "Generate sound" ) ) },
+        { uilist_entry( debug_menu_index::VFX_PREVIEW, true, 'V', _( "Preview explosion VFX" ) ) },
         { uilist_entry( debug_menu_index::KILL_MONS, true, 'K', _( "Kill all monsters" ) ) },
         { uilist_entry( debug_menu_index::CHANGE_TIME, true, 't', _( "Change time" ) ) },
         { uilist_entry( debug_menu_index::FORCE_TEMP, true, 'T', _( "Force temperature" ) ) },
@@ -1098,6 +1113,7 @@ static int quick_setup_uilist()
 {
     const std::vector<uilist_entry> uilist_initializer = {
         { uilist_entry( debug_menu_index::QUICK_SETUP, true, 'Q', _( "Quick setup…" ) ) },
+        { uilist_entry( debug_menu_index::QUICK_SETUP_CLEAR_MAP, true, 'm', _( "Clear map" ) ) },
         { uilist_entry( debug_menu_index::TOGGLE_SETUP_MUTATION, true, 't', _( "Toggle debug mutations" ) ) },
         { uilist_entry( debug_menu_index::NORMALIZE_BODY_STAT, true, 'n', _( "Normalize body stats" ) ) },
         { uilist_entry( debug_menu_index::SIX_MILLION_DOLLAR_SURVIVOR, true, 'B', _( "Install ALL bionics" ) ) },
@@ -1629,17 +1645,17 @@ static void change_spells( Character &character )
     // keep the same spell selected
     auto spell_middle_or_id = [&]( const spell_id & spellid ) -> void {
         if( spellid.is_empty() )
-    {
-        spell_selected = 0;
-        return;
-    }
+        {
+            spell_selected = 0;
+            return;
+        }
 
-    // in case we don't find anything, keep selection in the middle of screen
-    const size_t spells_relative_size = spells_relative.size();
-    spell_selected = std::min( ( TERMY - 2 ) / 2, static_cast<int>( spells_relative_size ) / 2 );
-    for( size_t i = 0; i < spells_relative_size; ++i )
-    {
-        if( std::get<0>( *spells_relative[i] ).id == spellid ) {
+        // in case we don't find anything, keep selection in the middle of screen
+        const size_t spells_relative_size = spells_relative.size();
+        spell_selected = std::min( ( TERMY - 2 ) / 2, static_cast<int>( spells_relative_size ) / 2 );
+        for( size_t i = 0; i < spells_relative_size; ++i )
+        {
+            if( std::get<0>( *spells_relative[i] ).id == spellid ) {
                 spell_selected = i;
                 break;
             }
@@ -1648,9 +1664,9 @@ static void change_spells( Character &character )
 
     // reset spells_relative vector
     auto reset_spells_relative = [&]() -> void {
-for( spell_tuple &spt : spells_all )
-    {
-        spells_relative.emplace_back( &spt );
+        for( spell_tuple &spt : spells_all )
+        {
+            spells_relative.emplace_back( &spt );
         }
     };
 
@@ -1868,7 +1884,7 @@ static void teleport_overmap( bool specific_coordinates = false )
         where = coord_popup.query_coordinate();
     } else {
         const std::optional<tripoint_rel_ms> dir_ = choose_direction(
-                _( "Where is the desired overmap?" ) );
+                    _( "Where is the desired overmap?" ) );
         if( !dir_ ) {
             return;
         }
@@ -3161,8 +3177,8 @@ static void draw_benchmark( const int max_difference )
     }
 
     DebugLog( D_INFO, DC_ALL ) << "Draw benchmark:\n" <<
-                                  "\n| USE_TILES |  RENDERER | FRAMEBUFFER_ACCEL | USE_COLOR_MODULATED_TEXTURES | FPS |" <<
-                                  "\n|:---:|:---:|:---:|:---:|:---:|\n| " <<
+                               "\n| USE_TILES |  RENDERER | FRAMEBUFFER_ACCEL | USE_COLOR_MODULATED_TEXTURES | FPS |" <<
+                               "\n|:---:|:---:|:---:|:---:|:---:|\n| " <<
                                get_option<bool>( "USE_TILES" ) << " | " <<
 #if !defined(__ANDROID__)
                                get_option<std::string>( "RENDERER" ) << " | " <<
@@ -3581,6 +3597,80 @@ static void gen_sound()
                    volume ) );
 }
 
+static void vfx_preview()
+{
+    // Pick an explosion_light recipe to preview.
+    const std::vector<explosion_light> &recipes = explosion_lights::get_all();
+    if( recipes.empty() ) {
+        popup( _( "No explosion_light recipes are loaded." ) );
+        return;
+    }
+    uilist rmenu;
+    rmenu.text = _( "Explosion VFX recipe to preview" );
+    for( size_t i = 0; i < recipes.size(); i++ ) {
+        rmenu.addentry( static_cast<int>( i ), true, MENU_AUTOASSIGN, "%s", recipes[i].id.str() );
+    }
+    rmenu.query();
+    if( rmenu.ret < 0 || rmenu.ret >= static_cast<int>( recipes.size() ) ) {
+        return;
+    }
+    const explosion_light_str_id light = recipes[rmenu.ret].id;
+
+    // Pick a shape.
+    uilist smenu;
+    smenu.text = _( "Shape" );
+    smenu.addentry( 0, true, 'd', _( "Disc (radial blast)" ) );
+    smenu.addentry( 1, true, 'l', _( "Line (beam)" ) );
+    smenu.addentry( 2, true, 'c', _( "Cone (fan)" ) );
+    smenu.addentry( 3, true, 'p', _( "Point" ) );
+    smenu.query();
+    if( smenu.ret < 0 ) {
+        return;
+    }
+
+    vfx_emit e;
+    e.light = light;
+    e.origin = get_avatar().pos_bub();
+    switch( smenu.ret ) {
+        case 0:
+            e.shape = vfx_shape::disc;
+            e.radius = 6;
+            break;
+        case 1:
+            e.shape = vfx_shape::line;
+            e.radius = 3;  // width
+            e.range = 10;
+            break;
+        case 2:
+            e.shape = vfx_shape::cone;
+            e.arc_degrees = 60;
+            e.range = 10;
+            break;
+        default:
+            e.shape = vfx_shape::point;
+            break;
+    }
+
+    // Disc/point are centred on a picked tile; line/cone sweep from the avatar
+    // toward a picked target.
+    if( e.shape == vfx_shape::disc || e.shape == vfx_shape::point ) {
+        const std::optional<tripoint_bub_ms> where = g->look_around();
+        if( !where ) {
+            return;
+        }
+        e.origin = *where;
+        e.target = *where;
+    } else {
+        const std::optional<tripoint_bub_ms> where = g->look_around();
+        if( !where ) {
+            return;
+        }
+        e.target = *where;
+    }
+
+    explosion_handler::play_vfx( e );
+}
+
 static void import_folower()
 {
     cata_path export_dir{ cata_path::root_path::user,  "export_dir" };
@@ -3637,7 +3727,7 @@ static void kill_area()
     }
 
     const tripoint_range<tripoint_bub_ms> points = here.points_in_rectangle(
-            tripoint_bub_ms( first.position.value() ), tripoint_bub_ms( second.position.value() ) );
+                tripoint_bub_ms( first.position.value() ), tripoint_bub_ms( second.position.value() ) );
 
     std::vector<Creature *> creatures = g->get_creatures_if(
     [&points]( const Creature & critter ) -> bool {
@@ -4452,6 +4542,12 @@ const std::vector<debug_action_entry> &all_actions()
             }
         },
         {
+            debug_menu_index::VFX_PREVIEW, translate_marker( "Preview explosion VFX" ), "explosion vfx light shockwave preview", "Map", []()
+            {
+                vfx_preview();
+            }
+        },
+        {
             debug_menu_index::PRINT_OVERMAPS, translate_marker( "Print overmaps" ), "overmap print dump", "Map", []()
             {
                 print_overmaps();
@@ -4531,7 +4627,7 @@ const std::vector<debug_action_entry> &all_actions()
                     testfile << "|;when;type;key;string_id;strength;map_point;faction_id;" << std::endl;
                     for( const timed_event &te : get_timed_events().get_all() ) {
                         testfile << "|;" << to_string( te.when ) << ";" << static_cast<int>( te.type ) << ";" << te.key <<
-                                    ";" << te.string_id << ";" << te.strength << ";" << te.map_point << ";" << te.faction_id << ";" <<
+                                 ";" << te.string_id << ";" << te.strength << ";" << te.map_point << ";" << te.faction_id << ";" <<
                                  std::endl;
                     }
                 }, "timed_event_list" );
@@ -4751,6 +4847,12 @@ const std::vector<debug_action_entry> &all_actions()
             debug_menu_index::QUICK_SETUP, translate_marker( "Quick setup" ), "quick setup", "Game", []()
             {
                 do_debug_quick_setup();
+            }
+        },
+        {
+            debug_menu_index::QUICK_SETUP_CLEAR_MAP, translate_marker( "Clear map" ), "Clear map", "Game", []()
+            {
+                clear_map( -OVERMAP_DEPTH, OVERMAP_HEIGHT );
             }
         },
         {

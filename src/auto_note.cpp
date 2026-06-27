@@ -199,7 +199,7 @@ bool auto_note_settings::has_auto_note_enabled( const map_extra_id &mapExtId,
         bool bCharacter ) const
 {
     if( bCharacter ) {
-    return character_autoNoteEnabled.count( mapExtId ) != 0;
+        return character_autoNoteEnabled.count( mapExtId ) != 0;
     } else {
         return global_autoNoteDisabled.count( mapExtId ) == 0;
     }
@@ -379,7 +379,7 @@ void auto_note_manager_gui::show()
 
         // TODO: Show info about custom symbols (hotkey, hint, state)
         std::string header_info_custom_symbols = string_format( _( "<color_light_green>%1$s</color> %2$s" ),
-            ctxt.get_desc( "CHANGE_MAPEXTRA_CHARACTER" ), _( "Change a symbol for map extra" ) );
+                ctxt.get_desc( "CHANGE_MAPEXTRA_CHARACTER" ), _( "Change a symbol for map extra" ) );
         // NOLINTNEXTLINE(cata-use-named-point-constants)
         fold_and_print( w_header, point( 0, 1 ), FULL_SCREEN_WIDTH - 2, c_white,
                         header_info_custom_symbols );
@@ -488,7 +488,7 @@ void auto_note_manager_gui::show()
         const map_extra_id &currentItem = ( bCharacter ? char_displayCache :
                                             global_displayCache )[currentLine];
         std::pair<const map_extra, bool> &entry = ( bCharacter ? char_mapExtraCache :
-            global_mapExtraCache )[currentItem];
+                global_mapExtraCache )[currentItem];
         const int scroll_rate = cacheSize > 20 ? 10 : 3;
 
         if( navigate_ui_list( action, currentLine, scroll_rate, cacheSize, true ) ) {

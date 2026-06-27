@@ -178,8 +178,8 @@ bool inventory::has_quality( const quality_id &qual, int level, int qty ) const
 /** @relates visitable */
 bool vehicle_selector::has_quality( const quality_id &qual, int level, int qty ) const
 {
-for( const vehicle_cursor &cursor : *this ) {
-    if( cursor.ignore_vpart ) {
+    for( const vehicle_cursor &cursor : *this ) {
+        if( cursor.ignore_vpart ) {
             continue;
         }
 
@@ -195,7 +195,7 @@ for( const vehicle_cursor &cursor : *this ) {
 bool vehicle_cursor::has_quality( const quality_id &qual, int level, int qty ) const
 {
     if( !ignore_vpart ) {
-    qty -= has_quality_from_vpart( veh, part, qual, level, qty );
+        qty -= has_quality_from_vpart( veh, part, qual, level, qty );
     }
     return qty <= 0 ? true : has_quality_internal( *this, qual, level, qty ) == qty;
 }
@@ -203,8 +203,8 @@ bool vehicle_cursor::has_quality( const quality_id &qual, int level, int qty ) c
 /** @relates visitable */
 bool Character::has_quality( const quality_id &qual, int level, int qty ) const
 {
-for( const bionic &bio : *this->my_bionics ) {
-    if( bio.get_quality( qual ) >= level ) {
+    for( const bionic &bio : *this->my_bionics ) {
+        if( bio.get_quality( qual ) >= level ) {
             if( qty <= 1 ) {
                 return true;
             }
@@ -213,14 +213,14 @@ for( const bionic &bio : *this->my_bionics ) {
         }
     }
 
-for( const trait_id &mut : get_functioning_mutations() ) {
+    for( const trait_id &mut : get_functioning_mutations() ) {
         const auto &q = mut->provided_qualities.find( qual );
         if( q != mut->provided_qualities.end() ) {
             return true;
         }
     }
 
-for( const bodypart_id &bp : get_all_body_parts() ) {
+    for( const bodypart_id &bp : get_all_body_parts() ) {
         for( const bp_qualities_provided &bp_q : bp->qualities ) {
             if( bp_q.quality == qual && bp_q.level >= level &&
                 float( get_part_hp_cur( bp ) ) / float( get_part_hp_max( bp ) ) >= bp_q.disable_percent ) {
@@ -447,8 +447,8 @@ VisitResponse item::visit_items(
 VisitResponse inventory::visit_items(
     const std::function<VisitResponse( item *, item * )> &func ) const
 {
-for( const auto &stack : items ) {
-    for( const item &it : stack ) {
+    for( const auto &stack : items ) {
+        for( const item &it : stack ) {
             if( visit_internal( func, &it ) == VisitResponse::ABORT ) {
                 return VisitResponse::ABORT;
             }
@@ -461,8 +461,8 @@ for( const auto &stack : items ) {
 VisitResponse temp_crafting_inventory::visit_items(
     const std::function<VisitResponse( item *, item * )> &func ) const
 {
-for( item *it : items ) {
-    if( visit_internal( func, it ) == VisitResponse::ABORT ) {
+    for( item *it : items ) {
+        if( visit_internal( func, it ) == VisitResponse::ABORT ) {
             return VisitResponse::ABORT;
         }
     }
@@ -472,8 +472,8 @@ for( item *it : items ) {
 VisitResponse outfit::visit_items( const std::function<VisitResponse( item *, item * )> &func )
 const
 {
-for( const item &e : worn ) {
-    if( visit_internal( func, &e ) == VisitResponse::ABORT ) {
+    for( const item &e : worn ) {
+        if( visit_internal( func, &e ) == VisitResponse::ABORT ) {
             return VisitResponse::ABORT;
         }
     }
@@ -485,16 +485,16 @@ VisitResponse Character::visit_items( const std::function<VisitResponse( item *,
 const
 {
     if( !weapon.is_null() &&
-    visit_internal( func, &weapon ) == VisitResponse::ABORT ) {
-    return VisitResponse::ABORT;
-}
+        visit_internal( func, &weapon ) == VisitResponse::ABORT ) {
+        return VisitResponse::ABORT;
+    }
 
-if( worn.visit_items( func ) == VisitResponse::ABORT ) {
-    return VisitResponse::ABORT;
-}
+    if( worn.visit_items( func ) == VisitResponse::ABORT ) {
+        return VisitResponse::ABORT;
+    }
 
-for( const item *e : get_pseudo_items() ) {
-    if( visit_internal( func, e ) == VisitResponse::ABORT ) {
+    for( const item *e : get_pseudo_items() ) {
+        if( visit_internal( func, e ) == VisitResponse::ABORT ) {
             return VisitResponse::ABORT;
         }
     }
@@ -535,7 +535,7 @@ VisitResponse map_cursor::visit_items(
     const std::function<VisitResponse( item *, item * )> &func ) const
 {
     if( get_map().inbounds( pos_bub() ) ) {
-    return visit_items_internal( &get_map(), pos_bub(), func );
+        return visit_items_internal( &get_map(), pos_bub(), func );
     } else {
         tinymap here; // Tinymap is sufficient. Only looking at single location, so no Z level need.
         // pos returns the pos_bub location of the target relative to the reality bubble
@@ -552,8 +552,8 @@ VisitResponse map_cursor::visit_items(
 VisitResponse map_selector::visit_items(
     const std::function<VisitResponse( item *, item * )> &func ) const
 {
-for( map_cursor &cursor : * ( const_cast<map_selector *>( this ) ) ) {
-    if( cursor.visit_items( func ) == VisitResponse::ABORT ) {
+    for( map_cursor &cursor : * ( const_cast<map_selector *>( this ) ) ) {
+        if( cursor.visit_items( func ) == VisitResponse::ABORT ) {
             return VisitResponse::ABORT;
         }
     }
@@ -580,8 +580,8 @@ VisitResponse vehicle_cursor::visit_items(
 VisitResponse vehicle_selector::visit_items(
     const std::function<VisitResponse( item *, item * )> &func ) const
 {
-for( const vehicle_cursor &cursor :  *this ) {
-    if( cursor.visit_items( func ) == VisitResponse::ABORT ) {
+    for( const vehicle_cursor &cursor :  *this ) {
+        if( cursor.visit_items( func ) == VisitResponse::ABORT ) {
             return VisitResponse::ABORT;
         }
     }
@@ -1206,7 +1206,7 @@ int Character::amount_of( const itype_id &what, bool pseudo, int limit,
                           const std::function<bool( const item & )> &filter ) const
 {
     if( pseudo ) {
-    for( const item *pseudos : get_pseudo_items() ) {
+        for( const item *pseudos : get_pseudo_items() ) {
             if( pseudos->typeId() == what ) {
                 return 1;
             }
@@ -1214,9 +1214,9 @@ int Character::amount_of( const itype_id &what, bool pseudo, int limit,
     }
 
     if( what == itype_apparatus && pseudo ) {
-    int qty = 0;
-    visit_items( [&qty, &limit, &filter]( const item * e, item * ) {
-        if( e->get_quality( qual_SMOKE_PIPE ) >= 1 && filter( *e ) ) {
+        int qty = 0;
+        visit_items( [&qty, &limit, &filter]( const item * e, item * ) {
+            if( e->get_quality( qual_SMOKE_PIPE ) >= 1 && filter( *e ) ) {
                 qty = sum_no_wrap( qty, 1 );
             }
             return qty < limit ? VisitResponse::SKIP : VisitResponse::ABORT;

@@ -16,7 +16,7 @@
 #include <string>
 #include <typeinfo>
 
-#if !(defined(WIN32) || defined(TILES) || defined(CYGWIN))
+#if !(defined(WIN32) || defined(TILES) || defined(CYGWIN)) && !defined(HEADLESS)
     #include <curses.h>
 #endif
 
@@ -140,7 +140,7 @@ extern "C" {
             default:
                 return;
         }
-#if !(defined(WIN32) || defined(TILES)) && !defined(CYGWIN)
+#if !(defined(WIN32) || defined(TILES)) && !defined(CYGWIN) && !defined(HEADLESS)
         endwin();
 #endif
         if( !isDebuggerActive() ) {

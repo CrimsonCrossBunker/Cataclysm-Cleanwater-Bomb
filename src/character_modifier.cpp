@@ -341,13 +341,13 @@ float character_modifier::modifier( const Character &c, const skill_id &skill ) 
 {
     // use builtin to calculate modifier
     if( !builtin.empty() ) {
-    return call_builtin( builtin, c, skill );
+        return call_builtin( builtin, c, skill );
     }
 
     float score = 0.0f;
     bool sc_assigned = false;
-for( const auto &sc : limbscores ) {
-    float mod_sc = c.get_limb_score( sc.first, limbtype, override_encumb, override_wounds );
+    for( const auto &sc : limbscores ) {
+        float mod_sc = c.get_limb_score( sc.first, limbtype, override_encumb, override_wounds );
         mod_sc = limbscore_modop == MULT ? pow( mod_sc, sc.second ) : mod_sc * sc.second;
         if( !sc_assigned ) {
             score = mod_sc;
@@ -369,22 +369,22 @@ for( const auto &sc : limbscores ) {
 
     // score == 0
     if( score < std::numeric_limits<float>::epsilon() ) {
-    return min_val > std::numeric_limits<float>::epsilon() ? min_val :
+        return min_val > std::numeric_limits<float>::epsilon() ? min_val :
                max_val > std::numeric_limits<float>::epsilon() ? max_val : 0.0f;
     }
     if( nominator > std::numeric_limits<float>::epsilon() ) {
-    score = ( nominator / denominator ) / score;
+        score = ( nominator / denominator ) / score;
     } else {
         score /= denominator;
     }
     if( subtractor > std::numeric_limits<float>::epsilon() ) {
-    score -= subtractor;
-}
-if( max_val > std::numeric_limits<float>::epsilon() ) {
-    score = std::min( max_val, score );
+        score -= subtractor;
+    }
+    if( max_val > std::numeric_limits<float>::epsilon() ) {
+        score = std::min( max_val, score );
     }
     if( min_val > std::numeric_limits<float>::epsilon() ) {
-    score = std::max( min_val, score );
+        score = std::max( min_val, score );
     }
     return score;
 }
@@ -392,15 +392,15 @@ if( max_val > std::numeric_limits<float>::epsilon() ) {
 std::string character_modifier::mod_type_str() const
 {
     switch( modtype ) {
-    case ADD:
-        return "+";
-    case MULT:
-        return "x";
-    case NONE:
-    default:
-        break;
-}
-return std::string();
+        case ADD:
+            return "+";
+        case MULT:
+            return "x";
+        case NONE:
+        default:
+            break;
+    }
+    return std::string();
 }
 
 float Character::get_modifier( const character_modifier_id &mod, const skill_id &skill ) const

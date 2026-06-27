@@ -33,7 +33,7 @@ class value_ptr : public std::unique_ptr<T>
         template<typename Stream = JsonOut>
         void serialize( Stream &jsout ) const {
             if( this->get() ) {
-            this->get()->serialize( jsout );
+                this->get()->serialize( jsout );
             } else {
                 jsout.write_null();
             }

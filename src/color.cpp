@@ -819,7 +819,6 @@ static void draw_header( const catacurses::window &w )
                             _( "Load a <C>olor theme" ) ) + 2;
     shortcut_print( w, point( tmpx, 1 ), c_white, c_light_green, _( "Load <T>emplate" ) );
 
-    // NOLINTNEXTLINE(cata-use-named-point-constants)
     mvwprintz( w, point( 0, 2 ), c_white, _( "Some color changes may require a restart." ) );
 
     wattron( w, BORDER_COLOR );
@@ -1018,7 +1017,7 @@ void color_manager::show_gui()
             uilist ui_colors;
 
             const color_manager::color_struct &entry = std::next( name_color_map.begin(),
-                iCurrentLine )->second;
+                    iCurrentLine )->second;
 
             std::string sColorType = _( "Normal" );
             std::string sSelected = entry.name_custom;
@@ -1115,8 +1114,8 @@ void color_manager::load_custom( const cata_path &sPath )
 void color_manager::serialize( JsonOut &json ) const
 {
     json.start_array();
-for( const color_struct &entry : color_array ) {
-    if( !entry.name_custom.empty() || !entry.name_invert_custom.empty() ) {
+    for( const color_struct &entry : color_array ) {
+        if( !entry.name_custom.empty() || !entry.name_invert_custom.empty() ) {
             json.start_object();
 
             json.member( "name", id_to_name( entry.col_id ) );

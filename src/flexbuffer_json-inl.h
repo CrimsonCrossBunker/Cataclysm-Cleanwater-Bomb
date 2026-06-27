@@ -87,8 +87,8 @@ class JsonObject::const_iterator
         JsonMember operator*() const {
             object_.mark_visited( pos_ );
             return JsonMember(
-                   object_.keys_[pos_].AsString(),
-            object_[pos_] );
+                       object_.keys_[pos_].AsString(),
+                       object_[pos_] );
         }
 
     private:
@@ -111,7 +111,7 @@ inline auto JsonObject::end() const -> const_iterator
 inline JsonValue::operator std::string() const
 {
     if( json_.IsString() ) {
-    return json_.AsString().str();
+        return json_.AsString().str();
     }
     throw_error( "Expected a string, got " + flexbuffer_type_to_string( json_.GetType() ) );
 }
@@ -119,7 +119,7 @@ inline JsonValue::operator std::string() const
 inline JsonValue::operator int() const
 {
     if( json_.IsIntOrUint() ) {
-    return static_cast<int>( json_.AsInt64() );
+        return static_cast<int>( json_.AsInt64() );
     }
     throw_error( "Expected an int, got " + flexbuffer_type_to_string( json_.GetType() ) );
 }
@@ -127,7 +127,7 @@ inline JsonValue::operator int() const
 inline JsonValue::operator int64_t() const
 {
     if( json_.IsIntOrUint() ) {
-    return static_cast<int64_t>( json_.AsInt64() );
+        return static_cast<int64_t>( json_.AsInt64() );
     }
     throw_error( "Expected an int64_t, got " + flexbuffer_type_to_string( json_.GetType() ) );
 }
@@ -135,8 +135,8 @@ inline JsonValue::operator int64_t() const
 inline JsonValue::operator uint64_t() const
 {
     if( json_.IsIntOrUint() ) {
-    // These are always stored as signed ints.
-    int64_t signed_value = json_.AsInt64();
+        // These are always stored as signed ints.
+        int64_t signed_value = json_.AsInt64();
         if( signed_value >= 0 ) {
             return static_cast<uint64_t>( signed_value );
         }
@@ -148,8 +148,8 @@ inline JsonValue::operator uint64_t() const
 inline JsonValue::operator unsigned() const
 {
     if( json_.IsIntOrUint() ) {
-    // These are always stored as signed ints.
-    int64_t signed_value = json_.AsInt64();
+        // These are always stored as signed ints.
+        int64_t signed_value = json_.AsInt64();
         if( signed_value >= 0 ) {
             return static_cast<unsigned int>( signed_value );
         }
@@ -161,7 +161,7 @@ inline JsonValue::operator unsigned() const
 inline JsonValue::operator bool() const
 {
     if( json_.IsBool() ) {
-    return json_.AsBool();
+        return json_.AsBool();
     }
     throw_error( "Expected a bool, got " + flexbuffer_type_to_string( json_.GetType() ) );
 }
@@ -169,7 +169,7 @@ inline JsonValue::operator bool() const
 inline JsonValue::operator double() const
 {
     if( json_.IsNumeric() ) {
-    return json_.AsDouble();
+        return json_.AsDouble();
     }
     throw_error( "Expected a double, got " + flexbuffer_type_to_string( json_.GetType() ) );
 }
@@ -354,7 +354,7 @@ template<typename T, typename U>
 bool JsonValue::read( std::pair<T, U> &p, bool throw_on_error ) const
 {
     if( !test_array() ) {
-    return error_or_false( throw_on_error, "Expected json array encoding pair" );
+        return error_or_false( throw_on_error, "Expected json array encoding pair" );
     }
     try {
         JsonArray ja = get_array();
@@ -406,7 +406,7 @@ template <typename T, size_t N>
 bool JsonValue::read( std::array<T, N> &v, bool throw_on_error ) const
 {
     if( !test_array() ) {
-    return error_or_false( throw_on_error, "Expected json array" );
+        return error_or_false( throw_on_error, "Expected json array" );
     }
     try {
         JsonArray ja = get_array();
@@ -440,7 +440,7 @@ template <typename T, std::enable_if_t<
 bool JsonValue::read( T &v, bool throw_on_error ) const
 {
     if( !test_array() ) {
-    return error_or_false( throw_on_error, "Expected json array" );
+        return error_or_false( throw_on_error, "Expected json array" );
     }
     try {
         v.clear();
@@ -465,7 +465,7 @@ template <typename T>
 bool JsonValue::read( enum_bitset<T> &v, bool throw_on_error ) const
 {
     if( !test_array() ) {
-    return error_or_false( throw_on_error, "Expected json array" );
+        return error_or_false( throw_on_error, "Expected json array" );
     }
     try {
         v = {};
@@ -496,7 +496,7 @@ template <typename T, std::enable_if_t<std::is_same_v<T, item>>* >
 bool JsonValue::read( cata::colony<T> &v, bool throw_on_error ) const
 {
     if( !test_array() ) {
-    return error_or_false( throw_on_error, "Expected json array" );
+        return error_or_false( throw_on_error, "Expected json array" );
     }
     try {
         v.clear();
@@ -512,7 +512,7 @@ bool JsonValue::read( cata::colony<T> &v, bool throw_on_error ) const
                 if( rle_element[ 0 ].read( element, throw_on_error ) &&
                     rle_element[ 1 ].read( run_l, throw_on_error )
                   ) { // all is good
-                    const auto insert_loaded_item = [&v]( T &&loaded ) {
+                    const auto insert_loaded_item = [&v]( T && loaded ) {
                         if( stackable_container_contents_need_split( loaded ) ) {
                             T empty_stack;
                             split_stackable_container_contents_from_stack( loaded, empty_stack );
@@ -562,7 +562,7 @@ template < typename T, std::enable_if_t < !std::is_same_v<T, item> > * >
 bool JsonValue::read( cata::colony<T> &v, bool throw_on_error ) const
 {
     if( !test_array() ) {
-    return error_or_false( throw_on_error, "Expected json array" );
+        return error_or_false( throw_on_error, "Expected json array" );
     }
     try {
         v.clear();
@@ -589,7 +589,7 @@ template < typename T, std::enable_if_t <
 bool JsonValue::read( T &m, bool throw_on_error ) const
 {
     if( !test_object() ) {
-    return error_or_false( throw_on_error, "Expected json object" );
+        return error_or_false( throw_on_error, "Expected json object" );
     }
     try {
         m.clear();
@@ -641,7 +641,7 @@ inline JsonValue JsonArray::operator[]( size_t idx ) const
     // which we need to track visited fields.
 
     if( idx < size_ ) {
-    mark_visited( idx );
+        mark_visited( idx );
         flexbuffers::Reference value;
         if( json_.IsFixedTypedVector() ) {
             value = json_.AsFixedTypedVector()[ idx ];

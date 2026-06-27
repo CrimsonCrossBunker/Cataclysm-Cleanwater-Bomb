@@ -13,7 +13,7 @@ class nc_color;
 struct input_event;
 using ImGuiInputTextFlags = int;
 
-#if defined(IMTUI) || !(defined(WIN32) || defined(TILES))
+#if defined(IMTUI) || defined(HEADLESS) || !(defined(WIN32) || defined(TILES))
     #define TUI
 #endif
 
@@ -128,6 +128,10 @@ class client
         static bool want_capture_mouse();
         // True if an ImGui text field or shortcut has keyboard focus.
         static bool want_capture_keyboard();
+        // True if an ImGui text-entry widget is focused and wants character input.
+        static bool want_text_input();
+        // Drop the active ImGui item so a focused text widget releases input.
+        static void clear_text_focus();
 };
 
 #ifndef TUI

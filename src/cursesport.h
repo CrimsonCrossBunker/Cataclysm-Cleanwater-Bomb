@@ -2,7 +2,7 @@
 #ifndef CATA_SRC_CURSESPORT_H
 #define CATA_SRC_CURSESPORT_H
 
-#if defined(IMTUI) || !(defined(TILES) || defined(WIN32))
+#if defined(IMTUI) || defined(HEADLESS) || !(defined(TILES) || defined(WIN32))
     #define TUI
 #endif
 

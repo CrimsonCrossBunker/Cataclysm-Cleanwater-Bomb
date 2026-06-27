@@ -84,11 +84,11 @@
 #include "worldfactory.h"
 
 #if defined(TILES)
-// For the character paper-doll preview: tilecontext / cata_tiles::render_character_preview,
-// the USE_CHARACTER_PREVIEW option, and the use_tiles cache.
-#include "cached_options.h"
-#include "cata_tiles.h"
-#include "sdltiles.h"
+    // For the character paper-doll preview: tilecontext / cata_tiles::render_character_preview,
+    // the USE_CHARACTER_PREVIEW option, and the use_tiles cache.
+    #include "cached_options.h"
+    #include "cata_tiles.h"
+    #include "sdltiles.h"
 #endif
 
 static const std::string flag_CHALLENGE( "CHALLENGE" );
@@ -879,8 +879,8 @@ bool avatar::create( character_type type, const std::string &tempname )
     auto nameExists = [&]( const std::string & name ) {
         return world_generator->active_world->save_exists( save_t::from_save_id( name ) ) &&
                !query_yn( _( "A save with the name '%s' already exists in this world.\n"
-                      "Saving will overwrite the already existing character.\n\n"
-                      "Continue anyways?" ), name );
+                             "Saving will overwrite the already existing character.\n\n"
+                             "Continue anyways?" ), name );
     };
     set_body();
 
@@ -2110,9 +2110,9 @@ void draw_time_game_start()
 void draw_location( const avatar &you )
 {
     std::string random_start_location_text = string_format( n_gettext(
-            "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
-            "<color_red>* Random location *</color> (<color_white>%d</color> variants)",
-            get_scenario()->start_location_targets_count() ), get_scenario()->start_location_targets_count() );
+                "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
+                "<color_red>* Random location *</color> (<color_white>%d</color> variants)",
+                get_scenario()->start_location_targets_count() ), get_scenario()->start_location_targets_count() );
 
     if( get_scenario()->start_location_targets_count() == 1 ) {
         random_start_location_text = get_scenario()->start_location().obj().name();
@@ -2589,7 +2589,11 @@ void character_creator_ui::setup_new_uilist()
                         if( key == CHARACTER_CREATOR_TRAITS_NEGATIVE.translated() && entry_trait->points < 0 ) {
                             return true;
                         }
-                        if( key == CHARACTER_CREATOR_TRAITS_NEUTRAL.translated() && entry_trait->points == 0 ) {
+                        if( key == CHARACTER_CREATOR_TRAITS_NEUTRAL.translated() && entry_trait->points == 0 &&
+                            !entry_trait->vanity ) {
+                            return true;
+                        }
+                        if( key == CHARACTER_CREATOR_TRAITS_COSMETIC.translated() && entry_trait->vanity ) {
                             return true;
                         }
                     }
@@ -2604,6 +2608,8 @@ void character_creator_ui::setup_new_uilist()
                                           CHARACTER_CREATOR_TRAITS_NEGATIVE.translated() );
                 new_uilist->add_category( CHARACTER_CREATOR_TRAITS_NEUTRAL.translated(),
                                           CHARACTER_CREATOR_TRAITS_NEUTRAL.translated() );
+                new_uilist->add_category( CHARACTER_CREATOR_TRAITS_COSMETIC.translated(),
+                                          CHARACTER_CREATOR_TRAITS_COSMETIC.translated() );
                 break;
             }
             case CHARCREATOR_SKILLS: {
@@ -3081,9 +3087,11 @@ bool character_creator_ui::display()
 
     while( !cc_uistate.finished_character_creator ) {
 
+        input_context &current_tab_input = get_current_tab_input();
+        input_context::scoped_activation active_tab_context( current_tab_input );
+
         ui_manager::redraw();
         std::shared_ptr<uilist> current_tab_uilist = get_current_tab_uilist();
-        input_context &current_tab_input = get_current_tab_input();
         if( current_tab_uilist ) {
             cc_uilist_current = current_tab_uilist->create_or_get_ui();
             if( current_tab_uilist->query_setup() ) {
@@ -3162,7 +3170,8 @@ void character_creator_ui_impl::draw_backgrounds()
     cc_uistate.recalc_hobby_list( u );
     cc_uistate.recalc_hobbies_taken_list( u );
 
-    if( ImGui::BeginTable( "BACKGROUNDS_MAIN", list_detail_columns(), CHARACTER_CREATOR_TABLE_FLAGS ) ) {
+    if( ImGui::BeginTable( "BACKGROUNDS_MAIN", list_detail_columns(),
+                           CHARACTER_CREATOR_TABLE_FLAGS ) ) {
 
         const profession_id selected_hobby = cc_uistate.get_selected_hobby();
         if( !selected_hobby.is_null() ) {
@@ -3548,9 +3557,9 @@ static int choose_location( const avatar &you )
     select_location.text = _( "Select a starting location." );
     int offset = 1;
     const std::string random_start_location_text = string_format( n_gettext(
-            "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
-            "<color_red>* Random location *</color> (<color_white>%d</color> variants)",
-            get_scenario()->start_location_targets_count() ), get_scenario()->start_location_targets_count() );
+                "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
+                "<color_red>* Random location *</color> (<color_white>%d</color> variants)",
+                get_scenario()->start_location_targets_count() ), get_scenario()->start_location_targets_count() );
     uilist_entry entry_random_start_location( RANDOM_START_LOC_ENTRY, true, -1,
             random_start_location_text );
     select_location.entries.emplace_back( entry_random_start_location );
@@ -3599,8 +3608,8 @@ bool character_creator_ui::handle_action( const std::string &action )
     auto mod_stat_base = [&you]( int mod_value ) {
         character_stat selected_stat = static_cast<character_stat>( cc_uistate.selected_stat_index );
         cc_uistate.stats[cc_uistate.selected_stat_index] = std::clamp(
-                cc_uistate.stats[cc_uistate.selected_stat_index] + mod_value,
-                CHARACTER_STAT_MIN, CHARACTER_STAT_MAX );
+                    cc_uistate.stats[cc_uistate.selected_stat_index] + mod_value,
+                    CHARACTER_STAT_MIN, CHARACTER_STAT_MAX );
         set_stat_base( you, selected_stat, cc_uistate.stats[cc_uistate.selected_stat_index] );
     };
     auto mod_skill = [&you]( int mod_value ) {

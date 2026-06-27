@@ -15,6 +15,7 @@
 #include "magic_spell_effect_helpers.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "messages.h"
 #include "npc.h"
 #include "player_helpers.h"
@@ -161,7 +162,7 @@ TEST_CASE( "remove_field_fd_fatigue", "[magic]" )
     std::string tear_in_reality_msg;
 
     const auto capture_removal_messages = [ &odd_ripple_msg, &swirling_air_msg,
-    &tear_in_reality_msg ]() {
+                     &tear_in_reality_msg ]() {
         odd_ripple_msg = "";
         swirling_air_msg = "";
         tear_in_reality_msg = "";

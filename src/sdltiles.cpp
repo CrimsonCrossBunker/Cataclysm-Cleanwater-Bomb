@@ -2,7 +2,7 @@
 #include "sdltiles.h" // IWYU pragma: associated
 
 #if SDL_MAJOR_VERSION >= 3
-#include "cata_shader.h"
+    #include "cata_shader.h"
 #endif
 #include "cuboid_rectangle.h"
 #include "point.h"
@@ -60,6 +60,7 @@
 #include "horde_entity.h"
 #include "input.h"
 #include "input_context.h"
+#include "input_replay.h"
 #include "json.h"
 #include "line.h"
 #include "loading_ui.h"
@@ -149,7 +150,7 @@ static Uint32 pixel_format = SDL_PIXELFORMAT_UNKNOWN;
 static SDL_Texture_Ptr display_buffer;
 static GeometryRenderer_Ptr geometry;
 #if SDL_MAJOR_VERSION >= 3
-static std::unique_ptr<cata_shader::variant_pass> shared_variant_pass;
+    static std::unique_ptr<cata_shader::variant_pass> shared_variant_pass;
 #endif
 #if defined(__ANDROID__)
     static SDL_Texture_Ptr touch_joystick;
@@ -306,6 +307,22 @@ static point compute_drawable_dims()
     return point{ pw, ph };
 }
 
+#if !defined(__ANDROID__)
+// Present rect in drawable px: largest integer buffer multiple that fits
+// (absorbs SCALING_FACTOR + HiDPI), top-left, remainder border. A fractional
+// fit would grid the minimap. Inverted by window_to_display_buffer_coords.
+static SDL_Rect get_display_buffer_render_rect()
+{
+    const point b = compute_display_buffer_dims();
+    const point d = compute_drawable_dims();
+    if( b.x <= 0 || b.y <= 0 ) {
+        return SDL_Rect{ 0, 0, 0, 0 };
+    }
+    const int scale = std::max( 1, std::min( d.x / b.x, d.y / b.y ) );
+    return SDL_Rect{ 0, 0, b.x * scale, b.y * scale };
+}
+#endif
+
 // Test-only injected drawable pixels. The headless dummy backend reports backing
 // pixels equal to the logical window, so a DPI-only change cannot be produced
 // through SDL; a non-negative override stands in. Inert at the -1 default.
@@ -458,10 +475,35 @@ static void detect_renderer_backend()
     const char *actual_name = props != 0
                               ? SDL_GetStringProperty( props, SDL_PROP_RENDERER_NAME_STRING, "" )
                               : "";
-    dbg( D_INFO ) << "SDL renderer in use: " << ( actual_name ? actual_name : "unknown" );
+    // Diagnostic: the selected renderer name alone is not enough to predict the
+    // mid-frame render-target-switch crash. When the renderer is "gpu", the real
+    // culprit is the backing SDL_gpu device driver (direct3d12 vs vulkan): the
+    // crash was only seen on direct3d12. Use DebugLog(..., DC_ALL) rather than the
+    // file-local dbg() macro: dbg() logs under category D_SDL, which is filtered
+    // out of debug.log by default, so it would never land. DC_ALL always shows.
+    const char *gpu_driver = "n/a";
+    SDL_GPUDevice *gpu_dev = props != 0
+                             ? static_cast<SDL_GPUDevice *>( SDL_GetPointerProperty(
+                                         props, SDL_PROP_RENDERER_GPU_DEVICE_POINTER, nullptr ) )
+                             : nullptr;
+    if( gpu_dev ) {
+        const char *drv = SDL_GetGPUDeviceDriver( gpu_dev );
+        if( drv ) {
+            gpu_driver = drv;
+        }
+    }
+    DebugLog( D_INFO, DC_ALL ) << "SDL renderer in use: "
+                               << ( actual_name ? actual_name : "unknown" )
+                               << "; backing GPU driver: " << gpu_driver;
     if( actual_name && std::string( actual_name ).find( "direct3d" ) != std::string::npos ) {
         direct3d_mode = true;
     }
+    // The "gpu" renderer on the D3D12 driver crashes on mid-frame render-target
+    // switches (see gpu_d3d12_mode doc). Detect that exact combination so the
+    // tint overlay can avoid its render-target-switching path on this backend.
+    gpu_d3d12_mode = actual_name &&
+                     std::string( actual_name ) == "gpu" &&
+                     std::string( gpu_driver ).find( "direct3d12" ) != std::string::npos;
 #endif
 }
 
@@ -494,9 +536,9 @@ static void rebuild_geometry_strategy( bool software_renderer )
 static Uint32 renderer_watch_window_id = 0;
 
 #if SDL_MAJOR_VERSION >= 3
-static bool SDLCALL renderer_event_watch( void *userdata, SDL_Event *event )
+    static bool SDLCALL renderer_event_watch( void *userdata, SDL_Event *event )
 #else
-static int SDLCALL renderer_event_watch( void *userdata, SDL_Event *event )
+    static int SDLCALL renderer_event_watch( void *userdata, SDL_Event *event )
 #endif
 {
     renderer_resource_coordinator *coord =
@@ -707,7 +749,7 @@ static void WinCreate()
         && only_spirv_shader_artifacts_present() ) {
         SDL_SetHint( SDL_HINT_GPU_DRIVER, "vulkan" );
         dbg( D_INFO ) << "Only SPIR-V shader artifacts present; biasing SDL3 "
-                         "GPU device toward Vulkan.";
+                      "GPU device toward Vulkan.";
     }
 #  else
     SDL_SetHint( SDL_HINT_RENDER_DRIVER, "gpu,opengl" );
@@ -722,7 +764,7 @@ static void WinCreate()
             software_renderer = true;
         } else if( !SetupRenderTarget() ) {
             dbg( D_ERROR ) <<
-            "Failed to initialize display buffer under accelerated rendering, falling back to software rendering.";
+                           "Failed to initialize display buffer under accelerated rendering, falling back to software rendering.";
             software_renderer = true;
             display_buffer.reset();
             renderer.reset();
@@ -1090,7 +1132,8 @@ static bool blit_display_buffer_warped( int shake_dx, int shake_dy )
             }
         }
         return out;
-    }();
+    }
+    ();
 
     return RenderTexturedMesh( renderer, display_buffer, xy.data(), uv.data(),
                                num_vertices, idx.data(), static_cast<int>( idx.size() ) );
@@ -1155,15 +1198,13 @@ void refresh_display()
     // mesh). Falls back to a straight copy if the warp is unsupported or inactive —
     // no behaviour change in the common case beyond the shake translation.
     if( !blit_display_buffer_warped( shake_dx, shake_dy ) ) {
-        if( shake_dx != 0 || shake_dy != 0 ) {
-            // Size the dstrect to the render coordinate space (what a null-dst
-            // RenderCopy fills), not the raw output, so the offset copy fills the
-            // same region as every other frame under HiDPI / integer scaling and
-            // only translates by the shake rather than rescaling the scene.
-            int rw = 0;
-            int rh = 0;
-            GetRenderCoordinateSpaceSize( renderer, &rw, &rh );
-            SDL_Rect dstrect{ shake_dx, shake_dy, rw, rh };
+        // Integer-scaled top-left blit; remainder is border. A null full-window
+        // blit would fractionally scale and grid the minimap. The shake offset
+        // translates the present rect rather than rescaling the scene.
+        SDL_Rect dstrect = get_display_buffer_render_rect();
+        if( dstrect.w > 0 && dstrect.h > 0 ) {
+            dstrect.x += shake_dx;
+            dstrect.y += shake_dy;
             RenderCopy( renderer, display_buffer, nullptr, &dstrect );
         } else {
             RenderCopy( renderer, display_buffer, nullptr, nullptr );
@@ -1275,12 +1316,20 @@ SDL_Point window_to_display_buffer_coords( SDL_Point window_pt )
     int win_w = 0;
     int win_h = 0;
     GetWindowSize( window.get(), &win_w, &win_h );
-    if( win_w <= 0 || win_h <= 0 ) {
+    const point draw = compute_drawable_dims();
+    const SDL_Rect dst = get_display_buffer_render_rect();
+    if( win_w <= 0 || win_h <= 0 || draw.x <= 0 || draw.y <= 0 || dst.w <= 0 || dst.h <= 0 ) {
         return window_pt;
     }
+    // Invert the present rect: logical coords to drawable px, then through the
+    // rect to buffer px. Points past it land in the border.
+    const point p{
+        static_cast<int>( static_cast<int64_t>( window_pt.x ) * draw.x / win_w ),
+        static_cast<int>( static_cast<int64_t>( window_pt.y ) * draw.y / win_h )
+    };
     return SDL_Point{
-        static_cast<int>( static_cast<int64_t>( window_pt.x ) * buf_w / win_w ),
-        static_cast<int>( static_cast<int64_t>( window_pt.y ) * buf_h / win_h )
+        static_cast<int>( static_cast<int64_t>( p.x - dst.x ) * buf_w / dst.w ),
+        static_cast<int>( static_cast<int64_t>( p.y - dst.y ) * buf_h / dst.h )
     };
 #endif
 }
@@ -2946,7 +2995,7 @@ recovery_drain_planner::action recovery_drain_planner::finish_retry_action()
 }
 
 static std::optional<std::pair<tripoint_abs_omt, std::string>> get_mission_arrow(
-    const inclusive_cuboid<tripoint_abs_omt> &overmap_area, const tripoint_abs_omt &center )
+            const inclusive_cuboid<tripoint_abs_omt> &overmap_area, const tripoint_abs_omt &center )
 {
     const tripoint_abs_omt mission_target = get_avatar().get_active_mission_target();
 
@@ -2972,7 +3021,7 @@ static std::optional<std::pair<tripoint_abs_omt, std::string>> get_mission_arrow
     }
 
     const std::vector<tripoint_abs_omt> traj = line_to( center,
-        tripoint_abs_omt( mission_target.xy(), center.z() ) );
+            tripoint_abs_omt( mission_target.xy(), center.z() ) );
 
     if( traj.empty() ) {
         debugmsg( "Failed to gen overmap mission trajectory %s %s",
@@ -3065,7 +3114,7 @@ std::pair<std::string, bool> cata_tiles::get_omt_id_rotation_and_subtile(
             }
         }
 
-        get_rotation_and_subtile( val, -1, rota, subtile );
+        map::get_rotation_and_subtile( val, -1, rota, subtile );
     } else if( ot_type.has_flag( oter_flags::water ) ) {
         // water looks nicer if it connects together
         char val = 0;
@@ -3077,7 +3126,7 @@ std::pair<std::string, bool> cata_tiles::get_omt_id_rotation_and_subtile(
             }
         }
 
-        get_rotation_and_subtile( val, -1, rota, subtile );
+        map::get_rotation_and_subtile( val, -1, rota, subtile );
     } else {
         // 'Regular', nonlinear terrain only needs to worry about rotation, not
         // subtile
@@ -3242,7 +3291,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             if( vision != om_vision_level::unseen ) {
                 if( draw_overlays && uistate.overmap_debug_mongroup ) {
                     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                            omp );
+                                omp );
                     if( !hordes.empty() ) {
                         draw_from_id_string( "mon_zombie", omp, 0, 0, lit_level::LIT, false );
                     }
@@ -3425,7 +3474,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
 
         // only draw in full tiles so it doesn't get cut off
         const std::optional<std::pair<tripoint_abs_omt, std::string>> mission_arrow =
-            get_mission_arrow( full_om_tile_area, center_pos );
+                    get_mission_arrow( full_om_tile_area, center_pos );
         if( mission_arrow ) {
             draw_from_id_string( mission_arrow->second, global_omt_to_draw_position( mission_arrow->first ), 0,
                                  0, lit_level::LIT, false );
@@ -3494,7 +3543,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         const std::string &note_text = overmap_buffer.note( center_pos );
         if( !note_text.empty() ) {
             const std::tuple<char, nc_color, size_t> note_info = overmap_ui::get_note_display_info(
-                    note_text );
+                        note_text );
             const size_t pos = std::get<2>( note_info );
             if( pos != std::string::npos ) {
                 notes_window_text.emplace_back( std::get<1>( note_info ), note_text.substr( pos ) );
@@ -3582,7 +3631,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
 
                 if( seg[0] == '<' ) {
                     const color_tag_parse_result::tag_type type = update_color_stack(
-                            color_stack, seg, report_color_error::no );
+                                color_stack, seg, report_color_error::no );
                     if( type != color_tag_parse_result::non_color_tag ) {
                         seg = rm_prefix( seg );
                     }
@@ -4529,7 +4578,7 @@ bool ignore_action_for_quick_shortcuts( const std::string &action )
              || action == "MOVE_ARMOR" // maps to ENTER
              || action == "ANY_INPUT"
              || action ==
-                       "DELETE_TEMPLATE" // strictly we shouldn't have this one, but I don't like seeing the "d" on the main menu by default. :)
+             "DELETE_TEMPLATE" // strictly we shouldn't have this one, but I don't like seeing the "d" on the main menu by default. :)
            );
 }
 
@@ -4732,12 +4781,36 @@ void draw_terminal_size_preview()
     }
 }
 
+// Mark the frame dirty after an Android keyboard / shortcut-bar state change so
+// the strip is rebuilt to reflect the new state on the next draw pass.
+static void android_request_repaint()
+{
+    needupdate = true;
+    ui_manager::redraw_invalidated();
+}
+
+// The SDL "text input active" flag can be set while the keyboard never actually
+// appeared on screen, which would wrongly hide the shortcut strip. Trust the
+// platform IME-insets report once we have one; fall back to the SDL flag only
+// until the first report arrives.
+static bool android_keyboard_occludes_shortcuts()
+{
+    if( !IsTextInputActive( ::window.get() ) ) {
+        return false;
+    }
+    SDL_Rect frame;
+    bool has_frame = false;
+    bool visible = false;
+    visible_frame_inbox.read_frame( frame, has_frame, visible );
+    return has_frame ? ( visible && frame.h > 0 ) : true;
+}
+
 // Draw quick shortcuts on top of the game view
 void draw_quick_shortcuts()
 {
 
     if( !quick_shortcuts_enabled ||
-        IsTextInputActive( ::window.get() ) ||
+        android_keyboard_occludes_shortcuts() ||
         ( get_option<bool>( "ANDROID_HIDE_HOLDS" ) && !is_quick_shortcut_touch && finger_down_time > 0 &&
           GetTicks() - finger_down_time >= static_cast<uint32_t>(
               get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) ) { // player is swipe + holding in a direction
@@ -5093,6 +5166,16 @@ bool is_string_input( input_context &ctx )
            || category == "HELP_KEYBINDINGS";
 }
 
+// True when the soft keyboard is legitimately wanted for this context and CDDA
+// must not auto-hide it or convert keystrokes to quick shortcuts: a legacy
+// string-input/curses context, an inventory quantity field, or a focused ImGui
+// text widget (ImGui drives SDL text-input itself; CDDA defers to it).
+static bool android_wants_text_input( input_context &ctx )
+{
+    return is_string_input( ctx ) || ctx.allow_text_entry
+           || cataimgui::client::want_text_input();
+}
+
 int get_key_event_from_string( const std::string &str )
 {
     if( !str.empty() ) {
@@ -5305,8 +5388,7 @@ static void CheckMessages()
 
         // If we were in an allow_text_entry input context, and text input is still active, and we're auto-managing keyboard, hide it.
         if( touch_input_context.allow_text_entry &&
-            !new_input_context->allow_text_entry &&
-            !is_string_input( *new_input_context ) &&
+            !android_wants_text_input( *new_input_context ) &&
             IsTextInputActive( ::window.get() ) &&
             get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
             focus_aware_stop_text_input();
@@ -5510,6 +5592,7 @@ static void CheckMessages()
             if( !quick_shortcuts_toggle_handled ) {
                 quick_shortcuts_enabled = !quick_shortcuts_enabled;
                 quick_shortcuts_toggle_handled = true;
+                android_request_repaint();
                 refresh_display();
 
                 // Display an Android toast message
@@ -5539,9 +5622,9 @@ static void CheckMessages()
                 while( SDL_PollEvent( &ev ) ) {
                     if( ev.type == CATA_FINGERUP ) {
                         third_finger_down_x = third_finger_curr_x = second_finger_down_x = second_finger_curr_x =
-                        finger_down_x = finger_curr_x = -1.0f;
+                                                  finger_down_x = finger_curr_x = -1.0f;
                         third_finger_down_y = third_finger_curr_y = second_finger_down_y = second_finger_curr_y =
-                        finger_down_y = finger_curr_y = -1.0f;
+                                                  finger_down_y = finger_curr_y = -1.0f;
                         is_two_finger_touch = false;
                         is_three_finger_touch = false;
                         finger_down_time = 0;
@@ -5696,7 +5779,7 @@ static void CheckMessages()
                             last_input = input_event( lc, input_event_t::keyboard_char );
 #if defined(__ANDROID__)
                             if( !android_is_hardware_keyboard_available() ) {
-                                if( !is_string_input( touch_input_context ) && !touch_input_context.allow_text_entry ) {
+                                if( !android_wants_text_input( touch_input_context ) ) {
                                     if( get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
                                         focus_aware_stop_text_input();
                                     }
@@ -5706,7 +5789,7 @@ static void CheckMessages()
                                         !inp_mngr.get_keyname( lc, input_event_t::keyboard_char ).empty() ) {
                                         qsl.remove( last_input );
                                         add_quick_shortcut( qsl, last_input, false, true );
-                                        ui_manager::redraw_invalidated();
+                                        android_request_repaint();
                                         refresh_display();
                                     }
                                 } else if( lc == '\n' || lc == KEY_ESCAPE ) {
@@ -5728,11 +5811,17 @@ static void CheckMessages()
                     if( GetKeysym( ev ).sym == SDLK_AC_BACK ) {
                         if( ticks - ac_back_down_time <= static_cast<uint32_t>
                             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-                            if( IsTextInputActive( ::window.get() ) ) {
+                            if( cataimgui::client::want_text_input() ) {
+                                // ImGui owns the keyboard while a text widget is
+                                // focused. Defocus it so ImGui releases text input
+                                // and the keyboard dismisses.
+                                cataimgui::client::clear_text_focus();
+                            } else if( IsTextInputActive( ::window.get() ) ) {
                                 focus_aware_stop_text_input();
                             } else {
                                 focus_aware_start_text_input();
                             }
+                            android_request_repaint();
                         }
                         ac_back_down_time = 0;
                     }
@@ -5764,7 +5853,7 @@ static void CheckMessages()
                             last_input = input_event( lc, input_event_t::keyboard_char );
 #if defined(__ANDROID__)
                             if( !android_is_hardware_keyboard_available() ) {
-                                if( !is_string_input( touch_input_context ) && !touch_input_context.allow_text_entry ) {
+                                if( !android_wants_text_input( touch_input_context ) ) {
                                     if( get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
                                         focus_aware_stop_text_input();
                                     }
@@ -5773,7 +5862,7 @@ static void CheckMessages()
                                                                  touch_input_context.get_category() )];
                                     qsl.remove( last_input );
                                     add_quick_shortcut( qsl, last_input, false, true );
-                                    ui_manager::redraw_invalidated();
+                                    android_request_repaint();
                                     refresh_display();
                                 } else if( lc == '\n' || lc == KEY_ESCAPE ) {
                                     if( get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
@@ -6133,15 +6222,15 @@ static void CheckMessages()
                             }
                         }
                         third_finger_down_x = third_finger_curr_x = second_finger_down_x = second_finger_curr_x =
-                        finger_down_x = finger_curr_x = -1.0f;
+                                                  finger_down_x = finger_curr_x = -1.0f;
                         third_finger_down_y = third_finger_curr_y = second_finger_down_y = second_finger_curr_y =
-                        finger_down_y = finger_curr_y = -1.0f;
+                                                  finger_down_y = finger_curr_y = -1.0f;
                         is_two_finger_touch = false;
                         is_three_finger_touch = false;
                         finger_down_time = 0;
                         finger_repeat_time = 0;
-                        needupdate = true; // ensure virtual joystick and quick shortcuts are updated properly
-                        ui_manager::redraw_invalidated();
+                        // ensure virtual joystick and quick shortcuts are updated properly
+                        android_request_repaint();
                         refresh_display(); // as above, but actually redraw it now as well
                     } else if( slot == 1 ) {
                         if( is_two_finger_touch ) {
@@ -6424,7 +6513,7 @@ void catacurses::init_interface()
 #endif // SOUND
 
     font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.fontwidth, fl.fontheight,
-           windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
+            windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
     gui_font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.fontwidth, fl.fontheight,
                windowsPalette, fl.gui_typeface, fl.fontsize, fl.fontblending );
     map_font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.map_fontwidth,
@@ -6521,6 +6610,16 @@ void input_manager::pump_events()
 // is simply a wrapper around this.
 input_event input_manager::get_input_event( const keyboard_mode preferred_keyboard_mode )
 {
+    // Replay takes precedence over the test_mode guard: a replaying session
+    // sources input from the log instead of polling SDL.
+    if( input_replay::is_replaying() ) {
+        input_event replayed;
+        if( input_replay::try_replay( replayed ) ) {
+            previously_pressed_key = replayed.get_first_input();
+            return replayed;
+        }
+        // Replay log exhausted: fall through to normal polling.
+    }
     if( test_mode ) {
         // input should be skipped in caller's code
         throw std::runtime_error( "input_manager::get_input_event called in test mode" );
@@ -6609,6 +6708,7 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     }
 #endif
 
+    input_replay::on_record( last_input );
     return last_input;
 }
 
@@ -6718,23 +6818,23 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
     ( void ) center_cursor;
 
     if( !coordinate_input_received ) {
-    return std::nullopt;
-}
+        return std::nullopt;
+    }
 
-const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
-const window_dimensions dim = get_window_dimensions( capture_win );
+    const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
+    const window_dimensions dim = get_window_dimensions( capture_win );
 
-const point &win_min = dim.window_pos_pixel;
-point win_size = dim.window_size_pixel;
-point logical_coordinate = coordinate;
-const int scaling_factor = get_scaling_factor();
+    const point &win_min = dim.window_pos_pixel;
+    point win_size = dim.window_size_pixel;
+    point logical_coordinate = coordinate;
+    const int scaling_factor = get_scaling_factor();
 
-// convert window size and coordinate to logical if UI is scaled
-if( scaling_factor > 1 ) {
-    logical_coordinate.x /= scaling_factor;
-    logical_coordinate.y /= scaling_factor;
+    // convert window size and coordinate to logical if UI is scaled
+    if( scaling_factor > 1 ) {
+        logical_coordinate.x /= scaling_factor;
+        logical_coordinate.y /= scaling_factor;
 
-    const bool is_terrain_or_overmap = ( use_tiles && g && capture_win == g->w_terrain ) ||
+        const bool is_terrain_or_overmap = ( use_tiles && g && capture_win == g->w_terrain ) ||
                                            ( use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap );
         if( !is_terrain_or_overmap ) {
             win_size.x /= scaling_factor;
@@ -6748,21 +6848,21 @@ if( scaling_factor > 1 ) {
     // Check if click is within bounds of the window we care about
     const half_open_rectangle<point> win_bounds( win_min, win_max );
     if( !win_bounds.contains( logical_coordinate ) ) {
-    return std::nullopt;
-}
+        return std::nullopt;
+    }
 
-const point screen_pos = logical_coordinate - win_min;
+    const point screen_pos = logical_coordinate - win_min;
 
-const bool use_isometric = g->w_overmap &&
-                           capture_win == g->w_overmap ? false : g->is_tileset_isometric();
+    const bool use_isometric = g->w_overmap &&
+                               capture_win == g->w_overmap ? false : g->is_tileset_isometric();
 
-// convert tile size to logical if UI is scaled
-point logical_tile_size;
-if( scaling_factor > 1 ) {
-    const bool is_terrain = use_tiles && g && capture_win == g->w_terrain;
-    const bool is_overmap = use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap;
+    // convert tile size to logical if UI is scaled
+    point logical_tile_size;
+    if( scaling_factor > 1 ) {
+        const bool is_terrain = use_tiles && g && capture_win == g->w_terrain;
+        const bool is_overmap = use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap;
 
-    if( is_terrain ) {
+        if( is_terrain ) {
             logical_tile_size.x = tilecontext->get_tile_width();
             logical_tile_size.y = tilecontext->get_tile_height();
         } else if( is_overmap ) {

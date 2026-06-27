@@ -10,6 +10,7 @@
 #include "cuboid_rectangle.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "monster.h"
@@ -106,7 +107,7 @@ TEST_CASE( "visitable_zone_surface_test" )
     // Underground room.
     const tripoint_bub_ms underground_stairs_room{ 70, 30, -1 };
     const tripoint_bub_ms underground_stairs_up = underground_stairs_room +
-        tripoint::south_east * 3;
+            tripoint::south_east * 3;
     const tripoint_bub_ms underground_stairs_down = underground_stairs_up + tripoint::above;
     // Elevated building with stairs to the surface.
     const tripoint_bub_ms stilts_building{ 80, 30, 1 };

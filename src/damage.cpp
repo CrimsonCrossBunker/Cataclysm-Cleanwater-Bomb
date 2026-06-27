@@ -399,9 +399,9 @@ void damage_instance::onhit_effects( Creature *source, Creature *target ) const
 
 void damage_type::onhit_effects( Creature *source, Creature *target ) const
 {
-for( const effect_on_condition_id &eoc : onhit_eocs ) {
-    dialogue d( source == nullptr ? nullptr : get_talker_for( source ),
-                target == nullptr ? nullptr : get_talker_for( target ) );
+    for( const effect_on_condition_id &eoc : onhit_eocs ) {
+        dialogue d( source == nullptr ? nullptr : get_talker_for( source ),
+                    target == nullptr ? nullptr : get_talker_for( target ) );
 
         eoc->activate_activation_only( d, "a damage type effect", "damage type effect being activated",
                                        "damage type" );
@@ -437,9 +437,9 @@ void damage_instance::ondamage_effects( Creature *source, Creature *target,
 void damage_type::ondamage_effects( Creature *source, Creature *target, bodypart_str_id bp,
                                     double total_damage, double damage_taken ) const
 {
-for( const effect_on_condition_id &eoc : ondamage_eocs ) {
-    dialogue d( source == nullptr ? nullptr : get_talker_for( source ),
-                target == nullptr ? nullptr : get_talker_for( target ) );
+    for( const effect_on_condition_id &eoc : ondamage_eocs ) {
+        dialogue d( source == nullptr ? nullptr : get_talker_for( source ),
+                    target == nullptr ? nullptr : get_talker_for( target ) );
 
         d.set_value( "damage_taken", damage_taken );
         d.set_value( "total_damage", total_damage );
@@ -475,8 +475,8 @@ damage_instance damage_instance::di_considering_length( units::length barrel_len
 
 bool damage_instance::has_damage_by_barrel() const
 {
-for( const damage_unit &du : damage_units ) {
-    if( !du.barrels.empty() ) {
+    for( const damage_unit &du : damage_units ) {
+        if( !du.barrels.empty() ) {
             return true;
         }
     }
@@ -588,7 +588,7 @@ bool damage_instance::handle_proportional( const JsonValue &jval )
         prop_damage.res_mult *= read_proportional_entry( jo, "armor_multiplier" );
         prop_damage.unconditional_res_mult *= read_proportional_entry( jo, "constant_armor_multiplier" );
         prop_damage.unconditional_damage_mult *= read_proportional_entry( jo,
-            "constant_damage_multiplier" );
+                "constant_damage_multiplier" );
         float barrel_mult = read_proportional_entry( jo, "amount" );
         for( barrel_desc &bd : prop_damage.barrels ) {
             bd.amount *= barrel_mult;
@@ -768,7 +768,7 @@ float resistances::type_resist( const damage_type_id &dt ) const
 float resistances::get_effective_resist( const damage_unit &du ) const
 {
     return std::max( type_resist( du.type ) - du.res_pen,
-    0.0f ) * du.res_mult * du.unconditional_res_mult;
+                     0.0f ) * du.res_mult * du.unconditional_res_mult;
 }
 
 bool resistances::operator==( const resistances &other )

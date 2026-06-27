@@ -146,12 +146,12 @@ std::unique_ptr<mattack_actor> leap_actor::clone() const
 bool leap_actor::call( monster &z ) const
 {
     if( !z.has_dest() || !z.can_act() || !z.move_effects( false ) ) {
-    add_msg_debug( debugmode::DF_MATTACK, "Monster has no destination or can't act" );
+        add_msg_debug( debugmode::DF_MATTACK, "Monster has no destination or can't act" );
         return false;
     }
 
     if( has_condition ) {
-    dialogue d( get_talker_for( &z ), nullptr );
+        dialogue d( get_talker_for( &z ), nullptr );
         if( !condition( d ) ) {
             add_msg_debug( debugmode::DF_MATTACK, "Attack conditionals failed" );
             return false;
@@ -164,7 +164,7 @@ bool leap_actor::call( monster &z ) const
     const float best_float = rl_dist( z.pos_abs(), target_abs );
     add_msg_debug( debugmode::DF_MATTACK, "Target distance %.1f", best_float );
     if( best_float < min_consider_range || best_float > max_consider_range ) {
-    add_msg_debug( debugmode::DF_MATTACK, "Best float outside of considered range" );
+        add_msg_debug( debugmode::DF_MATTACK, "Best float outside of considered range" );
         return false;
     }
 
@@ -172,7 +172,7 @@ bool leap_actor::call( monster &z ) const
     // int here will make the jumps more random
     int best = std::numeric_limits<int>::max();
     if( !allow_no_target && z.attack_target() == nullptr ) {
-    add_msg_debug( debugmode::DF_MATTACK, "Leaping without a target disabled" );
+        add_msg_debug( debugmode::DF_MATTACK, "Leaping without a target disabled" );
         return false;
     }
     map &here = get_map();
@@ -181,8 +181,8 @@ bool leap_actor::call( monster &z ) const
                    target.to_string_writable() );
 
     std::multimap<int, tripoint_bub_ms> candidates;
-for( const tripoint_bub_ms &candidate : here.points_in_radius( z.pos_bub(), max_range ) ) {
-    if( candidate == z.pos_bub() ) {
+    for( const tripoint_bub_ms &candidate : here.points_in_radius( z.pos_bub(), max_range ) ) {
+        if( candidate == z.pos_bub() ) {
             add_msg_debug( debugmode::DF_MATTACK, "Monster at coordinates %s",
                            candidate.to_string_writable() );
             continue;
@@ -215,10 +215,10 @@ for( const tripoint_bub_ms &candidate : here.points_in_radius( z.pos_bub(), max_
         }
         candidates.emplace( candidate_dist, candidate );
     }
-for( const auto &candidate : candidates ) {
-    const int &cur_dist = candidate.first;
-    const tripoint_bub_ms &dest = candidate.second;
-    if( cur_dist > best && !random_leap ) {
+    for( const auto &candidate : candidates ) {
+        const int &cur_dist = candidate.first;
+        const tripoint_bub_ms &dest = candidate.second;
+        if( cur_dist > best && !random_leap ) {
             add_msg_debug( debugmode::DF_MATTACK,
                            "Distance %d larger than previous best %d, candidate discarded", cur_dist, best );
             break;
@@ -254,7 +254,7 @@ for( const auto &candidate : candidates ) {
     }
 
     if( options.empty() ) {
-    add_msg_debug( debugmode::DF_MATTACK, "No acceptable leap candidates" );
+        add_msg_debug( debugmode::DF_MATTACK, "No acceptable leap candidates" );
         return false;    // Nowhere to leap!
     }
 
@@ -265,11 +265,11 @@ for( const auto &candidate : candidates ) {
     z.setpos( here, chosen );
     seen |= player_view.sees( here, z ); // ... or we can see them land
     if( seen && get_option<bool>( "LOG_MONSTER_MOVEMENT" ) ) {
-    add_msg( message, z.name() );
+        add_msg( message, z.name() );
     }
 
-for( const mon_effect_data &eff : self_effects ) {
-    if( x_in_y( eff.chance, 100 ) ) {
+    for( const mon_effect_data &eff : self_effects ) {
+        if( x_in_y( eff.chance, 100 ) ) {
             z.add_effect( eff.id, time_duration::from_turns( rng( eff.duration.first, eff.duration.second ) ),
                           eff.permanent,
                           rng( eff.intensity.first, eff.intensity.second ) );
@@ -364,18 +364,18 @@ void mon_spellcasting_actor::load_internal( const JsonObject &obj, const std::st
 bool mon_spellcasting_actor::call( monster &mon ) const
 {
     if( !mon.can_act() ) {
-    return false;
-}
+        return false;
+    }
 
-if( !mon.attack_target() && !allow_no_target ) {
-    // this is an attack. there is no reason to attack if there isn't a real target.
-    // Unless we don't need one
-    return false;
-}
+    if( !mon.attack_target() && !allow_no_target ) {
+        // this is an attack. there is no reason to attack if there isn't a real target.
+        // Unless we don't need one
+        return false;
+    }
 
-if( has_condition ) {
-    dialogue d( get_talker_for( &mon ),
-                allow_no_target ? nullptr : get_talker_for( mon.attack_target() ) );
+    if( has_condition ) {
+        dialogue d( get_talker_for( &mon ),
+                    allow_no_target ? nullptr : get_talker_for( mon.attack_target() ) );
         if( !condition( d ) ) {
             add_msg_debug( debugmode::DF_MATTACK, "Attack conditionals failed" );
             return false;
@@ -388,7 +388,7 @@ if( has_condition ) {
     spell_instance.set_message( spell_data.trigger_message );
 
     if( !spell_data.self && !allow_no_target ) {
-    Creature *tgt_creature = get_creature_tracker().creature_at( target );
+        Creature *tgt_creature = get_creature_tracker().creature_at( target );
         if( tgt_creature && mon.is_underwater() && !tgt_creature->is_underwater() &&
             get_map().has_flag_ter_or_furn( ter_furn_flag::TFLAG_SWIM_UNDER, mon.pos_bub() ) ) {
             return false;
@@ -402,7 +402,7 @@ if( has_condition ) {
 
     std::string target_name;
     if( const Creature *target_monster = get_creature_tracker().creature_at( target ) ) {
-    target_name = target_monster->disp_name();
+        target_name = target_monster->disp_name();
     }
 
     add_msg_if_player_sees( target, spell_instance.message(), mon.disp_name(),
@@ -946,7 +946,7 @@ bool melee_actor::call( monster &z ) const
             add_msg_debug( debugmode::DF_MATTACK, "Exclusive grab, begin filtering" );
             map &here = get_map();
             const tripoint_range<tripoint_bub_ms> &surrounding = here.points_in_radius( target->pos_bub(), 1,
-                0 );
+                    0 );
             creature_tracker &creatures = get_creature_tracker();
 
             for( const effect &eff : target->get_effects_with_flag( json_flag_GRAB ) ) {
@@ -1206,8 +1206,8 @@ void bite_actor::on_damage( monster &z, Creature &target, dealt_damage_instance 
 
     // only do bitey things if the limb is fleshy
     if( !hit->has_flag( json_flag_BIONIC_LIMB ) ) {
-    // first, do regular zombie infections
-    if( x_in_y( infection_chance, 100 ) ) {
+        // first, do regular zombie infections
+        if( x_in_y( infection_chance, 100 ) ) {
             if( target.has_effect( effect_bite, hit.id() ) ) {
                 add_msg_debug( debugmode::DF_MATTACK, "Incrementing bitten effect on %s", hit->name );
                 target.add_effect( effect_bite, 40_minutes, hit, true );
@@ -1364,7 +1364,7 @@ bool gun_actor::call( monster &z ) const
             }
             untargeted = true; // no living targets, try to find moving car parts
             const std::set<tripoint_bub_ms> moving_veh_parts = here
-                .get_moving_vehicle_targets( z, get_max_range() );
+                    .get_moving_vehicle_targets( z, get_max_range() );
             if( moving_veh_parts.empty() ) {
                 return false;
             }
@@ -1397,7 +1397,7 @@ bool gun_actor::call( monster &z ) const
 bool gun_actor::try_target( monster &z, Creature &target ) const
 {
     if( require_sunlight && !g->is_in_sunlight( z.pos_bub() ) ) {
-    add_msg_debug( debugmode::DF_MATTACK, "Requires sunlight" );
+        add_msg_debug( debugmode::DF_MATTACK, "Requires sunlight" );
         if( one_in( 3 ) ) {
             add_msg_if_player_sees( z, failure_msg.translated(), z.name() );
         }
@@ -1412,7 +1412,7 @@ bool gun_actor::try_target( monster &z, Creature &target ) const
                                   !target.has_effect( effect_was_laserlocked );
 
     if( not_targeted || not_laser_locked ) {
-    if( targeting_volume > 0 && !targeting_sound.empty() ) {
+        if( targeting_volume > 0 && !targeting_sound.empty() ) {
             sounds::sound( z.pos_bub(), targeting_volume, sounds::sound_t::alarm,
                            targeting_sound );
         }
@@ -1433,11 +1433,11 @@ bool gun_actor::try_target( monster &z, Creature &target ) const
     }
 
     if( require_targeting ) {
-    z.add_effect( effect_targeted, time_duration::from_turns( targeting_timeout_extend ) );
+        z.add_effect( effect_targeted, time_duration::from_turns( targeting_timeout_extend ) );
     }
     if( laser_lock ) {
-    // To prevent spamming laser locks when the player can tank that stuff somehow
-    target.add_effect( effect_was_laserlocked, 5_turns );
+        // To prevent spamming laser locks when the player can tank that stuff somehow
+        target.add_effect( effect_was_laserlocked, 5_turns );
     }
     return true;
 }

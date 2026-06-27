@@ -460,7 +460,8 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
         // here on the main thread, because it builds submap/string_id state that is
         // not safe to touch from the worker.
         std::optional<std::string> prefetched = g_submap_prefetcher.take( om_addr );
-        if( prefetched ) {
+        if( prefetched )
+        {
             try {
                 JsonValue jsin = json_loader::from_string( std::move( *prefetched ) );
                 deserialize( jsin );
@@ -473,14 +474,14 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
         }
 
         if( world_generator->active_world->has_compression_enabled() )
-    {
-        cata_path zzip_name = dirname;
-        zzip_name += zzip_suffix;
-        // Consult the cached entry listing before touching the archive: a column
-        // walked back over re-probes ~84 absent quads, and without this each one
-        // paid a fresh zzip::load (mmap + footer parse). nullptr == archive missing.
-        const std::unordered_set<std::string> *listing = zzip_listing( zzip_name );
-        if( !listing || listing->find( file_name ) == listing->end() ) {
+        {
+            cata_path zzip_name = dirname;
+            zzip_name += zzip_suffix;
+            // Consult the cached entry listing before touching the archive: a column
+            // walked back over re-probes ~84 absent quads, and without this each one
+            // paid a fresh zzip::load (mmap + footer parse). nullptr == archive missing.
+            const std::unordered_set<std::string> *listing = zzip_listing( zzip_name );
+            if( !listing || listing->find( file_name ) == listing->end() ) {
                 return false;
             }
 

@@ -844,8 +844,8 @@ std::map<std::string, inclusive_rectangle<point>> draw_tabs( const catacurses::w
 template<typename TabList, typename CurrentTab, typename = std::enable_if_t<
              std::is_same_v<CurrentTab,
                             std::remove_const_t<typename TabList::value_type::first_type>>>>
-std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
-        const TabList &tab_list, const CurrentTab &current_tab )
+             std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
+                     const TabList &tab_list, const CurrentTab &current_tab )
 {
     std::vector<std::string> tab_text;
     std::transform( tab_list.begin(), tab_list.end(), std::back_inserter( tab_text ),
@@ -858,7 +858,7 @@ std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::wi
     } );
     cata_assert( current_tab_it != tab_list.end() );
     std::map<size_t, inclusive_rectangle<point>> tab_map =
-        draw_tabs( w, tab_text, std::distance( tab_list.begin(), current_tab_it ) );
+                draw_tabs( w, tab_text, std::distance( tab_list.begin(), current_tab_it ) );
 
     std::map<CurrentTab, inclusive_rectangle<point>> ret_map;
     size_t i = 0;
@@ -876,8 +876,8 @@ std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::wi
 template<typename TabList, typename TabKeys, typename CurrentTab, typename = std::enable_if_t<
              std::is_same_v<CurrentTab,
                             std::remove_const_t<typename TabList::value_type::first_type>>>>
-std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
-        const TabList &tab_list, const TabKeys &keys, const CurrentTab &current_tab )
+             std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
+                     const TabList &tab_list, const TabKeys &keys, const CurrentTab &current_tab )
 {
     std::vector<typename TabList::value_type> ordered_tab_list;
     for( const auto &key : keys ) {
@@ -1329,7 +1329,7 @@ class tab_list
 
         std::string cur() const {
             if( _list->empty() ) {
-            return std::string();
+                return std::string();
             }
             return ( *_list )[_index];
         }
