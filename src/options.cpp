@@ -1886,6 +1886,14 @@ void options_manager::add_options_interface()
         { { "both", to_translation( "Both" ) }, { "unit", to_translation( "Unit" ) }, { "count", to_translation( "Count" ) } },
         "both"
            );
+        add( "FORCE_MEASURE_PREFIX", page_id, to_translation( "Force measure prefix" ),
+             to_translation( "Force using Item measure prefix option in some context (current only affect tank/ammo in vehicle UI)." ),
+             false
+           );
+        add( "SMART_DEFAULT_DISPLAY_TYPE", page_id, to_translation( "Smart default display type" ),
+             to_translation( "Auto-eval the default measure display type of item.  Liquid would display by volume.  Item that volume < 10ml and longest side < 10mm would display by weight.  JSON field display_type will override this option." ),
+             true
+           );
     } );
 
     add_empty_line();
@@ -3203,6 +3211,8 @@ void options_manager::add_options_debug()
          false
 #endif
        );
+
+    add_empty_line();
 
     add( "NO_ERROR_POPUP", "debug", to_translation( "No error popup" ),
          to_translation( "If enabled, debug message won't popup on the screen." ),

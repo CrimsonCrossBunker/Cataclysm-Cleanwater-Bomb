@@ -4494,7 +4494,6 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "integral_weight", integral_weight, not_negative_mass, -1_gram );
     optional( jo, was_loaded, "volume", volume );
     optional( jo, was_loaded, "longest_side", longest_side, -1_mm );
-    optional( jo, was_loaded, "display_type", display_type, item_display_type::DEFAULT );
     optional( jo, was_loaded, "price", price, not_negative_money, 0_cent );
     optional( jo, was_loaded, "price_postapoc", price_post, not_negative_money, -1_cent );
     optional( jo, was_loaded, "stackable", stackable_ );
@@ -4583,6 +4582,15 @@ void itype::load( const JsonObject &jo, std::string_view src )
 
     optional( jo, was_loaded, "chat_topics", chat_topics );
     optional( jo, was_loaded, "phase", phase, phase_id::SOLID );
+    item_display_type default_display_type = item_display_type::DEFAULT;
+    if( get_option<bool>( "SMART_DEFAULT_DISPLAY_TYPE" ) ) {
+        if( phase == phase_id::LIQUID ) {
+            default_display_type = item_display_type::BY_VOLUME;
+        } else if( volume < 10_ml && longest_side < 10_mm ) {
+            default_display_type = item_display_type::BY_WEIGHT;
+        }
+    }
+    optional( jo, was_loaded, "display_type", display_type, default_display_type );
 
     optional( jo, was_loaded, "nanofab_template_group", nanofab_template_group );
 

@@ -128,30 +128,26 @@ std::string itype::get_item_type_string() const
     return "misc";
 }
 
-std::string itype::item_measure_prefix( unsigned int quantity ) const
+std::string itype::item_measure_prefix( unsigned int quantity, item_display_type perfered ) const
 {
     const std::string option = get_option<std::string>( "MEASURE_PREFIX" );
-    std::string fmt;
-    if( option == "both" ) {
-        fmt = "%1$s,%2$d";
-    } else if( option == "unit" ) {
-        fmt = "%1$s";
-    } else {
-        return std::to_string( quantity );
-    }
-    if( display_type == item_display_type::BY_WEIGHT ) {
-        return string_format( fmt, weight_to_string( weight * quantity, true, true ), quantity );
-    } else if( display_type == item_display_type::BY_VOLUME ) {
-        units::volume volume_per_charge = volume;
-        if( count_by_charges() && stack_size > 0 ) {
-            volume_per_charge = volume / stack_size;
-        }
-        return string_format( fmt, vol_to_string( volume_per_charge * quantity, true, true ), quantity );
-    } else if( display_type == item_display_type::BY_LENGTH ) {
+    const bool force = get_option<bool>( "FORCE_DISPLAY_TYPE" );
+    std::string result;
+    if( display_type == item_display_type::BY_WEIGHT || (!force && perfered == item_display_type::BY_WEIGHT)  ) {
+        result = weight_to_string( weight * quantity, true, true );
+    } else if( display_type == item_display_type::BY_VOLUME || (!force && perfered == item_display_type::BY_VOLUME) ) {
+        result = vol_to_string( count_by_charges() &&
+                                stack_size > 0 ? volume : units::volume(volume * quantity), true, true );
+    } else if( display_type == item_display_type::BY_LENGTH || (!force && perfered == item_display_type::BY_LENGTH) ) {
         // Note: item::length() has some special cases where this might not work well!
-        return string_format( fmt, length_to_string( longest_side * quantity, true ), quantity );
+        result = length_to_string( longest_side * quantity, true );
+    } else if( option == "count" ) {
+        result = std::to_string( quantity );
     }
-    return std::to_string( quantity );
+    if( option == "both" ) {
+        result += std::to_string( quantity );
+    }
+    return result;
 }
 
 std::string itype::nname( unsigned int quantity ) const
