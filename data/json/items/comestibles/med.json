@@ -2421,7 +2421,7 @@
     "subtypes": [ "COMESTIBLE" ],
     "comestible_type": "MED",
     "name": { "str": "testosterone injection" },
-    "description": "A small vial of pale yellow, sterile, oily testosterone cyclopentadiate injection. Clinically, it is primarily used to treat androgen deficiency in cisgender men and is a core drug in FTM hormone replacement therapy. Some athletes may also use it. It effectively maintains androgen levels in the body. You will need a syringe to inject it.",
+    "description": "A small vial of pale yellow, sterile, oily testosterone cyclopentadiate injection.  Clinically, it is primarily used to treat androgen deficiency in cisgender men and is a core drug in FTM hormone replacement therapy.  Some athletes may also use it.  It effectively maintains androgen levels in the body.  You will need a syringe to inject it.",
     "material": [ "glass" ],
     "weight": "15 g",
     "volume": "10 ml",
