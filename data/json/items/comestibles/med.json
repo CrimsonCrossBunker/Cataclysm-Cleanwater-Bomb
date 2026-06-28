@@ -2416,6 +2416,24 @@
     "use_action": { "type": "consume_drug", "activation_message": "You set the pill under your tongue and let it dissolve." }
   },
   {
+    "id": "testosterone",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "MED",
+    "name": { "str": "testosterone injection" },
+    "description": "A small vial of pale yellow, sterile, oily testosterone cyclopentadiate injection. Clinically, it is primarily used to treat androgen deficiency in cisgender men and is a core drug in FTM hormone replacement therapy. Some athletes may also use it. It effectively maintains androgen levels in the body. You will need a syringe to inject it.",
+    "material": [ "drug_filler" ],
+    "weight": "80 mg",
+    "volume": "1 ml",
+    "price": "50 cent",
+    "price_postapoc": "10 cent",
+    "symbol": "!",
+    "container": "vial_glass",
+    "color": "yellow",
+    "flags": [ "NO_TEMP" ],
+    "use_action": { "type": "consume_drug", "tools_needed": { "syringe": -1 }, "activation_message": "You inject yourself with the injector." }
+  },
+  {
     "id": "sunscreen",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
