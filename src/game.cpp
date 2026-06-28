@@ -481,8 +481,8 @@ game::game() :
     debug_menu::debug_capture::instance().on_game_load( events() );
     world_generator = std::make_unique<worldfactory>();
     // Create the render backend.  For HEADLESS builds this is a null no-op;
-    // for TILES builds this returns nullptr in 4A because SDL is not yet
-    // initialised at this point (the real SDL backend will be created in 4B
+    // for TILES builds this returns nullptr because SDL is not yet
+    // initialised at this point (the SDL backend will be created later,
     // after init_ui() sets up the SDL window and tilecontext).
     render_backend_ptr = create_render_backend();
     // do nothing, everything that was in here is moved to init_data() which is called immediately after g = new game; in main.cpp

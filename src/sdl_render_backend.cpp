@@ -10,15 +10,16 @@ sdl_render_backend::~sdl_render_backend() = default;
 
 bool sdl_render_backend::present()
 {
-    // Stage 4A: shell — the backend exists but is not wired into any call
-    // path yet.  present_turn() still calls ui_manager::redraw() directly.
-    // In 4B this will forward to tiles->draw(…).
+    // Shell — the backend exists but is not wired into any call path yet.
+    // present_turn() still calls ui_manager::redraw() directly.
+    // Will forward to tiles->draw(…) once SDL resources are wired.
     return true;
 }
 
 void sdl_render_backend::resize( int, int )
 {
-    // Stage 4A: no-op.  4B will notify tiles of the new viewport size.
+    // No-op — viewport-size notification will be forwarded to the tile
+    // context once SDL resources are wired.
 }
 
 void sdl_render_backend::flush()
@@ -34,8 +35,9 @@ const char *sdl_render_backend::name() const
     return "sdl";
 }
 
-// Stage 4A placeholder — returns nullptr.  In 4B this will return
-// std::make_unique<sdl_render_backend>() once SDL init timing is resolved.
+// Placeholder — returns nullptr until SDL init timing is resolved.
+// Will return std::make_unique<sdl_render_backend>() once the SDL
+// window and tilecontext lifetime are sorted out.
 std::unique_ptr<render_backend> create_render_backend()
 {
     return nullptr;

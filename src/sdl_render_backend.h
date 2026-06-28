@@ -18,10 +18,10 @@ class cata_tiles;
  * are confined to the implementation file; no caller of render_backend
  * ever sees them.
  *
- * Stage 4A: default-constructed with no cata_tiles instance.  present()
- *           is a no-op that returns true.
- * Stage 4B: receives SDL resources via init() and wires present() to
- *           cata_tiles::draw().
+ * Currently default-constructed with no active cata_tiles instance;
+ * present() is a no-op that returns true.  SDL resource wiring happens
+ * through a separate init() step once the SDL window and tilecontext
+ * are available.
  */
 class sdl_render_backend : public render_backend
 {

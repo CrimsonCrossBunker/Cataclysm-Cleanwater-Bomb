@@ -1381,7 +1381,7 @@ class game
 
         // Render backend — owns the presentation-side pipeline.
         // Created during SDL / headless init via create_render_backend().
-        // nullptr until initialised; present_turn() should null-guard until 4B.
+        // nullptr until the SDL window is available; callers must null-guard.
         std::unique_ptr<render_backend> render_backend_ptr; // NOLINT(cata-serialize)
     public:
         void wait_popup_reset();

@@ -17,8 +17,9 @@
  *   SDL backend  → wraps cata_tiles::draw()
  *   null backend → no-op (headless / server use)
  *
- * Stage 4A: interface shells only — no callers switched yet.
- * Stage 4B: present(const view_snapshot&) added, present_turn() wired through.
+ * The snapshot parameter is intentionally deferred — view_snapshot currently
+ * lives inside the TILES preprocessor guard and cannot yet be referenced from
+ * this renderer-agnostic header.  It will be added once the type is relocated.
  */
 class render_backend
 {
@@ -34,10 +35,10 @@ class render_backend
          * @return true on success; false signals a non-recoverable backend
          *         error (device lost, etc.) so the caller may rebuild.
          *
-         * @note  In 4A the signature is parameterless because view_snapshot
-         *        lives inside #if defined(TILES) and cannot be referenced from
-         *        this TILES-agnostic header.  The snapshot parameter will be
-         *        added in 4B once view_snapshot moves outside the guard.
+         * @note  The signature is currently parameterless because view_snapshot
+         *        is guarded by #if defined(TILES) and cannot be referenced from
+         *        this renderer-agnostic header.  A const view_snapshot& parameter
+         *        will be added once the type moves outside that guard.
          */
         virtual bool present() = 0;
 
