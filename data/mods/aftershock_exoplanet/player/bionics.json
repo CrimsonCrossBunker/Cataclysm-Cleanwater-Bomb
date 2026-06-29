@@ -340,12 +340,12 @@
     "learned_proficiencies": [ "prof_helicopter_pilot" ]
   },
   {
-  "id": "afs_bio_neurosoft_aircraft_mechanic",
-  "type": "bionic",
-  "name": { "str": "Neurosoft: Airframe and Powerplant Mechanic" },
-  "description": "A brain implant that grants instinctual knowledge about the repair of flying machines.",
-  "occupied_bodyparts": [ [ "head", 2 ] ],
-  "learned_proficiencies": [ "prof_aircraft_mechanic" ]
+    "id": "afs_bio_neurosoft_aircraft_mechanic",
+    "type": "bionic",
+    "name": { "str": "Neurosoft: Airframe and Powerplant Mechanic" },
+    "description": "A brain implant that grants instinctual knowledge about the repair of flying machines.",
+    "occupied_bodyparts": [ [ "head", 2 ] ],
+    "learned_proficiencies": [ "prof_aircraft_mechanic" ]
   },
   {
     "id": "afs_bio_translocator",
