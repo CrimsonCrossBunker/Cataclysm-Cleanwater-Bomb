@@ -118,6 +118,7 @@ cataimgui::client::client()
     ImTui_ImplNcurses_Init();
     ImTui_ImplText_Init();
     ImGuiIO &io = ImGui::GetIO();
+    io.ConfigErrorRecoveryEnableAssert = false;
 
     ( void )io;
 
@@ -309,6 +310,7 @@ cataimgui::client::client( const SDL_Renderer_Ptr &sdl_renderer, const SDL_Windo
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
+    io.ConfigErrorRecoveryEnableAssert = false;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigInputTrickleEventQueue = false;
