@@ -10,6 +10,7 @@
         [ "afs_bio_linguistic_coprocessor", 10 ],
         [ "afs_bio_dopamine_stimulators", 10 ],
         [ "afs_bio_neurosoft_aeronautics", 5 ],
+        [ "afs_bio_neurosoft_aircraft_mechanic", 5 ],
         [ "bio_shield_weak", 25 ],
         [ "afs_bio_translocator", 5 ],
         [ "bio_shock_absorber", 2 ],
@@ -86,6 +87,7 @@
     "extend": {
       "items": [
         [ "afs_bio_neurosoft_aeronautics", 10 ],
+        [ "afs_bio_neurosoft_aircraft_mechanic", 10 ],
         [ "afs_bio_beavy_batteries", 10 ],
         [ "afs_bio_melee_counteraction", 10 ],
         [ "afs_bio_melee_optimization_unit", 10 ],
@@ -157,6 +159,7 @@
       [ "afs_bio_monowhip", 10 ],
       [ "afs_bio_melee_optimization_unit", 10 ],
       [ "afs_bio_neurosoft_aeronautics", 10 ],
+      [ "afs_bio_neurosoft_aircraft_mechanic", 10 ],
       [ "afs_bio_dopamine_stimulators", 10 ],
       [ "bio_shield_heavy", 1 ],
       [ "afs_bio_translocator", 5 ],
@@ -174,6 +177,7 @@
         [ "afs_bio_melee_counteraction", 10 ],
         [ "afs_bio_melee_optimization_unit", 10 ],
         [ "afs_bio_neurosoft_aeronautics", 10 ],
+        [ "afs_bio_neurosoft_aircraft_mechanic", 10 ],
         [ "afs_bio_dopamine_stimulators", 10 ],
         [ "afs_bio_monowhip", 10 ],
         [ "afs_bio_blood_plus", 10 ],

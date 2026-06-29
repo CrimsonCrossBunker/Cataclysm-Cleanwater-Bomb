@@ -7198,8 +7198,11 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
             here.furn( examp )->plant != nullptr ) {
             here.furn_set( examp, here.furn( examp )->plant->transform );
         } else if( seed_id->seed->required_terrain_flag == ter_furn_flag::TFLAG_PLANTABLE ) {
+            const ter_t &terrain = here.ter( examp ).obj();
             if( here.ter( examp ).id() == ter_t_greenhouse_tilled ) {
                 here.set( examp, ter_t_greenhouse, furn_f_plant_seed );
+            } else if( terrain.plant != nullptr ) {
+                here.set( examp, terrain.id, terrain.plant->transform );
             } else {
                 here.set( examp, ter_t_dirt, furn_f_plant_seed );
             }
@@ -10280,10 +10283,6 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
         planted = who.use_amount( fertilizer, 1 );
     }
 
-    // Reduce the amount of time it takes until the next stage of the plant by
-    // 20% of a seasons length. (default 2.8 days).
-    const time_duration fertilizerEpoch = calendar::season_length() * 0.2;
-
     // Can't use item_stack::only_item() since there might be fertilizer
     map_stack items = here.i_at( plant_position );
     const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
@@ -10296,15 +10295,47 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
         return;
     }
 
-    // TODO: item should probably clamp the value on its own
-    seed->set_birthday( seed->birthday() - fertilizerEpoch );
-    // The plant furniture has the NOITEM token which prevents adding items on that square,
-    // spawned items are moved to an adjacent field instead, but the fertilizer token
-    // must be on the square of the plant, therefore this hack:
-    const furn_id &old_furn = here.furn( plant_position );
-    here.furn_set( plant_position, furn_str_id::NULL_ID() );
-    here.spawn_item( plant_position, fertilizer, 1, 1, calendar::turn );
-    here.furn_set( plant_position, old_furn );
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
+        seed->type->seed->get_growth_stages();
+
+    // Find current stage index based on the furniture's growth flag
+    int current_stage_idx = -1;
+    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
+        if( here.has_flag_furn( growth_stages[i].first.str(), plant_position ) ) {
+            current_stage_idx = i;
+            break;
+        }
+    }
+
+    if( current_stage_idx < 0 || current_stage_idx + 1 >= static_cast<int>( growth_stages.size() ) ) {
+        add_msg( m_info, _( "The %s is too mature to benefit from fertilizer." ),
+                 seed->get_plant_name() );
+        act.set_to_null();
+        return;
+    }
+
+    // Time required to reach the next stage, accounting for the plant furniture's growth speed
+    time_duration time_to_next_stage = 0_seconds;
+    for( int i = 0; i <= current_stage_idx; ++i ) {
+        time_to_next_stage += growth_stages[i].second;
+    }
+    const float growth_multiplier = here.furn( plant_position )->plant->growth_multiplier;
+    time_to_next_stage = time_to_next_stage / growth_multiplier;
+
+    time_duration remaining = time_to_next_stage - seed->age();
+    if( remaining < 0_seconds ) {
+        remaining = 0_seconds;
+    }
+
+    // Shorten remaining time: 20% base + 5% per survival level, capped at 50%
+    const double survival_level = who.get_skill_level( skill_survival );
+    const double reduction_pct = std::min( 0.20 + 0.05 * survival_level, 0.50 );
+
+    const time_duration reduction = remaining * reduction_pct;
+    seed->set_birthday( seed->birthday() - reduction );
+
+    // Apply any stage advances immediately
+    here.grow_plant( plant_position );
 
     //~ %1$s: plant name, %2$s: fertilizer name
     add_msg( m_info, _( "You fertilize the %1$s with the %2$s." ), seed->get_plant_name(),
@@ -10370,8 +10401,9 @@ ret_val<void> multi_farm_activity_actor::can_fertilize( Character &,
     if( !here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, tile ) ) {
         return ret_val<void>::make_failure( _( "Tile isn't a plant" ) );
     }
-    if( here.i_at( tile ).size() > 1 ) {
-        return ret_val<void>::make_failure( _( "Tile is already fertilized" ) );
+    if( here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_HARVEST, tile ) ||
+        here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_OVERGROWN, tile ) ) {
+        return ret_val<void>::make_failure( _( "Tile is too mature to fertilize" ) );
     }
     return ret_val<void>::make_success();
 }
@@ -13041,7 +13073,7 @@ void wash_activity_actor::finish( player_activity &act, Character &p )
         act.set_to_null();
         return;
     } else if( !crafting_inv.has_charges( itype_soap, requirements.cleanser ) &&
-               !crafting_inv.has_amount( itype_detergent, requirements.cleanser ) &&
+               !crafting_inv.has_charges( itype_detergent, requirements.cleanser ) &&
                !crafting_inv.has_charges( itype_liquid_soap, requirements.cleanser,
                                           is_liquid_crafting_component ) ) {
         p.add_msg_if_player( _( "You need %1$i charges of cleansing agent to wash these items." ),

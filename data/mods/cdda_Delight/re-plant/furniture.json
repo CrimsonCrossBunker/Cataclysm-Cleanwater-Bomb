@@ -1,0 +1,435 @@
+[
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_paddy",
+    "name": "水田",
+    "description": "一块经过整平、蓄有浅水的稻田，适合种植香蒲、莲花、野米和蔓越莓等喜湿作物。作物在这里生长更快、产量更高。",
+    "symbol": "=",
+    "color": "cyan",
+    "move_cost_mod": 1,
+    "required_str": 3,
+    "looks_like": "f_planter",
+    "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "LIQUIDCONT", "CD_DELIGHT_PADDY" ],
+    "examine_action": "dirtmound",
+    "plant_data": { "transform": "f_cd_delight_paddy_seed" },
+    "bash": {
+      "str_min": 2,
+      "str_max": 6,
+      "sound": "squish.",
+      "sound_fail": "squelch.",
+      "furn_set": "f_null",
+      "items": [ { "item": "material_soil", "count": [ 1, 2 ] } ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_trellis",
+    "name": "种植架",
+    "description": "用木棍和绳索搭成的攀爬架，适合种植啤酒花、葡萄、豆类、黄瓜和番茄等需要支撑的植物。作物在这里生长更快、产量更高。",
+    "symbol": "#",
+    "color": "brown",
+    "move_cost_mod": 1,
+    "required_str": 4,
+    "looks_like": "f_planter",
+    "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "CD_DELIGHT_TRELLIS" ],
+    "examine_action": "dirtmound",
+    "plant_data": { "transform": "f_cd_delight_trellis_seed" },
+    "deconstruct": { "items": [ { "item": "stick", "count": [ 2, 4 ] }, { "item": "string_36", "count": [ 0, 1 ] } ] },
+    "bash": {
+      "str_min": 3,
+      "str_max": 8,
+      "sound": "crack.",
+      "sound_fail": "whish.",
+      "furn_set": "f_null",
+      "items": [ { "item": "stick", "count": [ 1, 2 ] }, { "item": "string_36", "count": [ 0, 1 ], "prob": 50 } ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_fertile",
+    "name": "沃土种植床",
+    "description": "一块用肥沃土壤整平的种植床，土质疏松、养分充足，可以直接播种。",
+    "symbol": "#",
+    "color": "brown_green",
+    "move_cost_mod": 0,
+    "required_str": 3,
+    "looks_like": "t_dirtmound",
+    "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "CD_DELIGHT_FERTILE" ],
+    "examine_action": "dirtmound",
+    "plant_data": { "transform": "f_cd_delight_fertile_seed" },
+    "bash": {
+      "str_min": 2,
+      "str_max": 6,
+      "sound": "thump.",
+      "sound_fail": "whish.",
+      "furn_set": "f_null",
+      "items": [ { "item": "material_soil", "count": [ 1, 2 ] } ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_fertile_seed",
+    "name": "沃土中的种子",
+    "description": "一颗刚播下的种子，埋在肥沃的土壤中。",
+    "symbol": "^",
+    "color": "brown",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_seed",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEED", "DONT_REMOVE_ROTTEN" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 1, "str_max": 5, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_seedling",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_fertile_seedling",
+    "name": "沃土中的幼苗",
+    "description": "一颗在沃土中刚发芽的幼苗。",
+    "symbol": "^",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_seedling",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEEDLING", "DONT_REMOVE_ROTTEN" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 2, "str_max": 6, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_mature",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_fertile_mature",
+    "name": "沃土中成熟的作物",
+    "description": "一株在沃土中茁壮成长、即将可以收获的作物。",
+    "symbol": "#",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_mature",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_MATURE", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 3, "str_max": 8, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_harvest",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_fertile_harvest",
+    "name": "沃土中可收获的作物",
+    "description": "一株在沃土中完全成熟、等待收获的作物。",
+    "symbol": "#",
+    "color": "light_green",
+    "coverage": 30,
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_harvest",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_HARVEST",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
+    "examine_action": "harvest_plant_ex",
+    "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_overgrown",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_fertile_overgrown",
+    "name": "沃土中杂草丛生的作物",
+    "description": "这片沃土曾被精心耕作，如今却长满了杂草。",
+    "symbol": "#",
+    "color": "red",
+    "coverage": 50,
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_unharvested_overgrown",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_OVERGROWN",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
+    "examine_action": "clear_overgrown",
+    "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_fertile_overgrown",
+      "base": "f_cd_delight_fertile",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_paddy_seed",
+    "name": "水田中的种子",
+    "description": "一颗刚播下的种子，浸在水田的浅水中。",
+    "symbol": "=",
+    "color": "brown",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_seed",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEED", "DONT_REMOVE_ROTTEN" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 1, "str_max": 5, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_seedling",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_paddy_seedling",
+    "name": "水田中的幼苗",
+    "description": "一颗在水田中刚发芽的幼苗。",
+    "symbol": "=",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_seedling",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEEDLING", "DONT_REMOVE_ROTTEN" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 2, "str_max": 6, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_mature",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_paddy_mature",
+    "name": "水田中成熟的作物",
+    "description": "一株在水田中茁壮成长、即将可以收获的作物。",
+    "symbol": "=",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_mature",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_MATURE", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 3, "str_max": 8, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_harvest",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_paddy_harvest",
+    "name": "水田中可收获的作物",
+    "description": "一株在水田中完全成熟、等待收获的作物。",
+    "symbol": "#",
+    "color": "light_green",
+    "coverage": 30,
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_harvest",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_HARVEST",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
+    "examine_action": "harvest_plant_ex",
+    "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_overgrown",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_paddy_overgrown",
+    "name": "水田中杂草丛生的作物",
+    "description": "这片水田曾被精心耕作，如今却长满了杂草。",
+    "symbol": "#",
+    "color": "red",
+    "coverage": 50,
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_unharvested_overgrown",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_OVERGROWN",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
+    "examine_action": "clear_overgrown",
+    "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_paddy_overgrown",
+      "base": "f_cd_delight_paddy",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_trellis_seed",
+    "name": "种植架上的种子",
+    "description": "一颗刚播下、依靠种植架支撑的种子。",
+    "symbol": "#",
+    "color": "brown",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_seed",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEED", "DONT_REMOVE_ROTTEN" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 1, "str_max": 5, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_seedling",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_trellis_seedling",
+    "name": "种植架上的幼苗",
+    "description": "一颗在种植架上刚发芽、开始攀援的幼苗。",
+    "symbol": "#",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_seedling",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEEDLING", "DONT_REMOVE_ROTTEN" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 2, "str_max": 6, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_mature",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_trellis_mature",
+    "name": "种植架上成熟的作物",
+    "description": "一株在种植架上茁壮成长、即将可以收获的攀援作物。",
+    "symbol": "#",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_mature",
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_MATURE", "DONT_REMOVE_ROTTEN", "SMALL_HIDE" ],
+    "examine_action": "aggie_plant",
+    "bash": { "str_min": 3, "str_max": 8, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_harvest",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_trellis_harvest",
+    "name": "种植架上可收获的作物",
+    "description": "一株在种植架上完全成熟、等待收获的攀援作物。",
+    "symbol": "#",
+    "color": "light_green",
+    "coverage": 30,
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_harvest",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_HARVEST",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
+    "examine_action": "harvest_plant_ex",
+    "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_overgrown",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_cd_delight_trellis_overgrown",
+    "name": "种植架上杂草丛生的作物",
+    "description": "这个种植架曾被精心照料，如今却缠满了枯藤杂草。",
+    "symbol": "#",
+    "color": "red",
+    "coverage": 50,
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "looks_like": "f_planter_unharvested_overgrown",
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "GROWTH_OVERGROWN",
+      "DONT_REMOVE_ROTTEN",
+      "SMALL_HIDE"
+    ],
+    "examine_action": "clear_overgrown",
+    "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
+    "plant_data": {
+      "transform": "f_cd_delight_trellis_overgrown",
+      "base": "f_cd_delight_trellis",
+      "growth_multiplier": 1.5,
+      "harvest_multiplier": 1.5
+    }
+  }
+]

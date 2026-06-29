@@ -880,6 +880,13 @@
   },
   {
     "type": "item_group",
+    "id": "testosterone_hrt",
+    "subtype": "collection",
+    "container-item": "box_paper_small",
+    "entries": [ { "item": "testosterone", "count": [ 1, 13 ] } ]
+  },
+  {
+    "type": "item_group",
     "id": "sunscreen_bottle",
     "subtype": "distribution",
     "entries": [ { "item": "sunscreen", "container-item": "bottle_plastic_small" } ]

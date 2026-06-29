@@ -24,7 +24,6 @@
       { "item": "strong_antibiotic", "prob": 10, "container-item": "null" },
       { "item": "antifungal", "prob": 10, "container-item": "null" },
       { "item": "weak_antibiotic", "prob": 10, "container-item": "null" },
-      { "item": "estrogen", "prob": 10, "container-item": "null" },
       { "item": "birth_control", "prob": 10, "container-item": "null" },
       { "item": "aspirin", "prob": 10, "container-item": "null" },
       { "item": "metaprolol", "prob": 10, "container-item": "null" },
@@ -34,7 +33,9 @@
       { "item": "antihistamine", "prob": 10, "container-item": "null" },
       { "item": "prophylactic_antivenom", "prob": 10, "container-item": "null" },
       { "item": "prozac", "prob": 10, "container-item": "null" },
-      { "item": "bfipowder", "prob": 10, "container-item": "null" }
+      { "item": "bfipowder", "prob": 10, "container-item": "null" },
+      { "item": "estrogen", "prob": 10, "container-item": "null" },
+      { "item": "testosterone", "prob": 10, "container-item": "null" }
     ]
   },
   {

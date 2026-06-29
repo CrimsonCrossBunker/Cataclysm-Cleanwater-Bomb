@@ -1,0 +1,414 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_generic_apply",
+    "//": "通用施加/刷新接口。传入 effect_id、intensity、duration、max_intensity、end_var、max_duration。",
+    "condition": { "expects_vars": [ "effect_id", "intensity", "duration", "max_intensity", "end_var", "max_duration" ] },
+    "effect": [
+      {
+        "math": [ "_effective_max_duration = _max_duration > 0 ? _max_duration : _duration" ]
+      },
+      {
+        "if": { "math": [ "_intensity <= 0" ] },
+        "then": [ { "u_lose_effect": [ { "context_val": "effect_id" } ] } ],
+        "else": [
+          {
+            "if": { "u_has_effect": { "context_val": "effect_id" } },
+            "then": [
+              {
+                "if": { "math": [ "_intensity > u_effect_intensity(_effect_id)" ] },
+                "then": [
+                  { "u_lose_effect": [ { "context_val": "effect_id" } ] },
+                  {
+                    "u_add_effect": { "context_val": "effect_id" },
+                    "intensity": { "math": [ "clamp(_intensity, 1, _max_intensity)" ] },
+                    "duration": "PERMANENT"
+                  },
+                  {
+                    "math": [ "v_end_var = time('now') + min(_duration, _effective_max_duration) * time('1 s')" ]
+                  }
+                ],
+                "else": [
+                  {
+                    "if": { "math": [ "_intensity == u_effect_intensity(_effect_id)" ] },
+                    "then": [
+                      {
+                        "math": [ "v_end_var = min(v_end_var + _duration * time('1 s'), time('now') + _effective_max_duration * time('1 s'))" ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "else": [
+              {
+                "u_add_effect": { "context_val": "effect_id" },
+                "intensity": { "math": [ "clamp(_intensity, 1, _max_intensity)" ] },
+                "duration": "PERMANENT"
+              },
+              {
+                "math": [ "v_end_var = time('now') + min(_duration, _effective_max_duration) * time('1 s')" ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_generic_tick",
+    "//": "通用到期检查。传入 effect_id、end_var、stacks_var。",
+    "condition": { "expects_vars": [ "effect_id", "end_var", "stacks_var" ] },
+    "effect": [
+      {
+        "if": { "math": [ "time('now') >= v_end_var" ] },
+        "then": [
+          { "u_lose_effect": [ { "context_val": "effect_id" } ] },
+          { "math": [ "v_stacks_var = 0" ] }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_strength_enhancement_apply",
+    "//": "力量增强：传入 intensity、duration、max_duration 后调用通用施加接口。",
+    "condition": { "expects_vars": [ "intensity", "duration", "max_duration" ] },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_apply",
+        "variables": {
+          "effect_id": "cd_delight_strength_enhancement",
+          "intensity": { "context_val": "intensity" },
+          "duration": { "context_val": "duration" },
+          "max_intensity": 10,
+          "end_var": "u_cd_delight_strength_end",
+          "max_duration": { "context_val": "max_duration" }
+        }
+      },
+      { "u_message": "一股灼热的力量顺着血管涌入双臂，肌肉纤维仿佛在兴奋地歌唱！", "type": "good" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_strength_enhancement_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "5 s",
+    "//": "力量增强到期检查。",
+    "condition": { "u_has_effect": "cd_delight_strength_enhancement" },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_tick",
+        "variables": {
+          "effect_id": "cd_delight_strength_enhancement",
+          "end_var": "u_cd_delight_strength_end",
+          "stacks_var": "u_cd_delight_strength_stacks"
+        }
+      },
+      {
+        "if": { "not": { "u_has_effect": "cd_delight_strength_enhancement" } },
+        "then": [ { "u_message": "那股澎湃的力量感如潮水般退去，双臂重新恢复了常态。", "type": "mixed" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_dexterity_enhancement_apply",
+    "//": "敏捷增强：传入 intensity、duration、max_duration 后调用通用施加接口。",
+    "condition": { "expects_vars": [ "intensity", "duration", "max_duration" ] },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_apply",
+        "variables": {
+          "effect_id": "cd_delight_dexterity_enhancement",
+          "intensity": { "context_val": "intensity" },
+          "duration": { "context_val": "duration" },
+          "max_intensity": 10,
+          "end_var": "u_cd_delight_dexterity_end",
+          "max_duration": { "context_val": "max_duration" }
+        }
+      },
+      { "u_message": "你的身体变得无比轻盈，仿佛连空气都会主动为你让开道路！", "type": "good" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_dexterity_enhancement_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "5 s",
+    "//": "敏捷增强到期检查。",
+    "condition": { "u_has_effect": "cd_delight_dexterity_enhancement" },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_tick",
+        "variables": {
+          "effect_id": "cd_delight_dexterity_enhancement",
+          "end_var": "u_cd_delight_dexterity_end",
+          "stacks_var": "u_cd_delight_dexterity_stacks"
+        }
+      },
+      {
+        "if": { "not": { "u_has_effect": "cd_delight_dexterity_enhancement" } },
+        "then": [ { "u_message": "轻盈感渐渐消散，空气恢复了往日的阻力。", "type": "mixed" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_perception_enhancement_apply",
+    "//": "感知增强：传入 intensity、duration、max_duration 后调用通用施加接口。",
+    "condition": { "expects_vars": [ "intensity", "duration", "max_duration" ] },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_apply",
+        "variables": {
+          "effect_id": "cd_delight_perception_enhancement",
+          "intensity": { "context_val": "intensity" },
+          "duration": { "context_val": "duration" },
+          "max_intensity": 10,
+          "end_var": "u_cd_delight_perception_end",
+          "max_duration": { "context_val": "max_duration" }
+        }
+      },
+      { "u_message": "世界的色彩骤然鲜明，连最细微的声响与气味都逃不过你的感官！", "type": "good" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_perception_enhancement_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "5 s",
+    "//": "感知增强到期检查。",
+    "condition": { "u_has_effect": "cd_delight_perception_enhancement" },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_tick",
+        "variables": {
+          "effect_id": "cd_delight_perception_enhancement",
+          "end_var": "u_cd_delight_perception_end",
+          "stacks_var": "u_cd_delight_perception_stacks"
+        }
+      },
+      {
+        "if": { "not": { "u_has_effect": "cd_delight_perception_enhancement" } },
+        "then": [ { "u_message": "感官重新蒙上了一层薄纱，世界又变得不那么清晰了。", "type": "mixed" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_intelligence_enhancement_apply",
+    "//": "智力增强：传入 intensity、duration、max_duration 后调用通用施加接口。",
+    "condition": { "expects_vars": [ "intensity", "duration", "max_duration" ] },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_apply",
+        "variables": {
+          "effect_id": "cd_delight_intelligence_enhancement",
+          "intensity": { "context_val": "intensity" },
+          "duration": { "context_val": "duration" },
+          "max_intensity": 10,
+          "end_var": "u_cd_delight_intelligence_end",
+          "max_duration": { "context_val": "max_duration" }
+        }
+      },
+      { "u_message": "思绪如闪电般划过脑海，复杂的难题在刹那间变得井井有条！", "type": "good" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_intelligence_enhancement_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "5 s",
+    "//": "智力增强到期检查。",
+    "condition": { "u_has_effect": "cd_delight_intelligence_enhancement" },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_tick",
+        "variables": {
+          "effect_id": "cd_delight_intelligence_enhancement",
+          "end_var": "u_cd_delight_intelligence_end",
+          "stacks_var": "u_cd_delight_intelligence_stacks"
+        }
+      },
+      {
+        "if": { "not": { "u_has_effect": "cd_delight_intelligence_enhancement" } },
+        "then": [ { "u_message": "灵感的火花逐渐黯淡，脑海重新归于平静的常态。", "type": "mixed" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_detoxification_apply",
+    "//": "解毒：传入 intensity、duration、max_duration 后调用通用施加接口。",
+    "condition": { "expects_vars": [ "intensity", "duration", "max_duration" ] },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_apply",
+        "variables": {
+          "effect_id": "cd_delight_detoxification",
+          "intensity": { "context_val": "intensity" },
+          "duration": { "context_val": "duration" },
+          "max_intensity": 20,
+          "end_var": "u_cd_delight_detoxification_end",
+          "max_duration": { "context_val": "max_duration" }
+        }
+      },
+      { "u_message": "一股清凉在血脉中游走，像温柔的水流将体内的污秽缓缓带出。", "type": "good" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_detoxification_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "15 m",
+    "//": "每15分钟结算一次：降低 mutant_toxin，强度*15；同时检查是否到期。",
+    "condition": { "u_has_effect": "cd_delight_detoxification" },
+    "effect": [
+      {
+        "math": [
+          "u_vitamin('mutant_toxin') = max(u_vitamin('mutant_toxin') - 15 * u_effect_intensity('cd_delight_detoxification'), 0)"
+        ]
+      },
+      {
+        "run_eocs": "eoc_cd_delight_generic_tick",
+        "variables": {
+          "effect_id": "cd_delight_detoxification",
+          "end_var": "u_cd_delight_detoxification_end",
+          "stacks_var": "u_cd_delight_detoxification_stacks"
+        }
+      },
+      {
+        "if": { "not": { "u_has_effect": "cd_delight_detoxification" } },
+        "then": [ { "u_message": "最后一丝清凉从体内散去，排毒的力量已经消退。", "type": "mixed" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_focus_regen_apply",
+    "//": "专注回复：传入 intensity、duration、max_duration 后调用通用施加接口。",
+    "condition": { "expects_vars": [ "intensity", "duration", "max_duration" ] },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_apply",
+        "variables": {
+          "effect_id": "cd_delight_focus_regen",
+          "intensity": { "context_val": "intensity" },
+          "duration": { "context_val": "duration" },
+          "max_intensity": 10,
+          "end_var": "u_cd_delight_focus_end",
+          "max_duration": { "context_val": "max_duration" }
+        }
+      },
+      { "u_message": "杂念如潮水般退去，你的精神变得前所未有的专注！", "type": "good" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_focus_regen_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "5 s",
+    "//": "专注回复到期检查。",
+    "condition": { "u_has_effect": "cd_delight_focus_regen" },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_tick",
+        "variables": {
+          "effect_id": "cd_delight_focus_regen",
+          "end_var": "u_cd_delight_focus_end",
+          "stacks_var": "u_cd_delight_focus_stacks"
+        }
+      },
+      {
+        "if": { "not": { "u_has_effect": "cd_delight_focus_regen" } },
+        "then": [ { "u_message": "专注的状态悄然崩解，思绪又开始向四面八方飘散。", "type": "mixed" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_satiety_apply",
+    "//": "饱足：传入 intensity、duration、max_duration 后调用通用施加接口。",
+    "condition": { "expects_vars": [ "intensity", "duration", "max_duration" ] },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_apply",
+        "variables": {
+          "effect_id": "cd_delight_satiety",
+          "intensity": { "context_val": "intensity" },
+          "duration": { "context_val": "duration" },
+          "max_intensity": 10,
+          "end_var": "u_cd_delight_satiety_end",
+          "max_duration": { "context_val": "max_duration" }
+        }
+      },
+      { "u_message": "温热的饱足感在胃里化开，四肢百骸都充满了复苏的活力！", "type": "good" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_satiety_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "5 s",
+    "//": "饱足到期检查。",
+    "condition": { "u_has_effect": "cd_delight_satiety" },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_tick",
+        "variables": {
+          "effect_id": "cd_delight_satiety",
+          "end_var": "u_cd_delight_satiety_end",
+          "stacks_var": "u_cd_delight_satiety_stacks"
+        }
+      },
+      {
+        "if": { "not": { "u_has_effect": "cd_delight_satiety" } },
+        "then": [ { "u_message": "饱腹感逐渐淡去，身体恢复往日的疲惫节奏。", "type": "mixed" } ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_nourishment_apply",
+    "//": "滋养：传入 intensity、duration、max_duration 后调用通用施加接口。",
+    "condition": { "expects_vars": [ "intensity", "duration", "max_duration" ] },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_apply",
+        "variables": {
+          "effect_id": "cd_delight_nourishment",
+          "intensity": { "context_val": "intensity" },
+          "duration": { "context_val": "duration" },
+          "max_intensity": 10,
+          "end_var": "u_cd_delight_nourishment_end",
+          "max_duration": { "context_val": "max_duration" }
+        }
+      },
+      { "u_message": "一股温润的生机在血脉中流淌，伤口仿佛在欢呼着愈合！", "type": "good" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "eoc_cd_delight_nourishment_tick",
+    "eoc_type": "RECURRING",
+    "recurrence": "5 s",
+    "//": "滋养到期检查。",
+    "condition": { "u_has_effect": "cd_delight_nourishment" },
+    "effect": [
+      {
+        "run_eocs": "eoc_cd_delight_generic_tick",
+        "variables": {
+          "effect_id": "cd_delight_nourishment",
+          "end_var": "u_cd_delight_nourishment_end",
+          "stacks_var": "u_cd_delight_nourishment_stacks"
+        }
+      },
+      {
+        "if": { "not": { "u_has_effect": "cd_delight_nourishment" } },
+        "then": [ { "u_message": "那股温润的生机悄然退去，身体又回归到平常的修复速度。", "type": "mixed" } ]
+      }
+    ]
+  }
+]

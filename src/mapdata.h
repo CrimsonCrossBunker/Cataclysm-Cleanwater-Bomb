@@ -383,6 +383,8 @@ enum class ter_furn_flag : int {
     TFLAG_ONE_DIMENSIONAL_X,
     TFLAG_ONE_DIMENSIONAL_Y,
     TFLAG_ONE_DIMENSIONAL_Z,
+    TFLAG_CD_DELIGHT_PADDY,
+    TFLAG_CD_DELIGHT_TRELLIS,
 
     NUM_TFLAG_FLAGS
 };
@@ -710,6 +712,8 @@ struct ter_t : map_data_common_t {
     cata::value_ptr<activity_data_ter> hacksaw; // Hacksaw action data
     cata::value_ptr<activity_data_ter> oxytorch; // Oxytorch action data
     cata::value_ptr<activity_data_ter> prying;  // Prying action data
+
+    cata::value_ptr<plant_data> plant;
 
     std::string trap_id_str;     // String storing the id string of the trap.
     ter_str_id transforms_into; // Transform into what terrain?

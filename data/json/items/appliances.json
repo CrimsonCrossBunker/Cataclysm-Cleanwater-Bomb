@@ -492,5 +492,18 @@
     "weight": "140 kg",
     "price": "1 kUSD",
     "price_postapoc": "10 USD"
+  },
+  {
+    "type": "ITEM",
+    "id": "electric_cooker",
+    "name": { "str": "disconnected electric cooker" },
+    "description": "An electric cooker designed to automatically heat and cook food placed inside.  Needs to be placed and plugged into a power source.",
+    "looks_like": "f_oven",
+    "symbol": "#",
+    "color": "dark_gray",
+    "material": [ "budget_steel" ],
+    "longest_side": "60 cm",
+    "volume": "25 L",
+    "weight": "15 kg"
   }
 ]

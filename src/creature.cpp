@@ -284,11 +284,6 @@ bool Creature::will_be_cramped_in_vehicle_tile( map &here, const tripoint_abs_ms
             return true;
         }
 
-        if( size == creature_size::huge &&
-            !vp_there.part_with_feature( "HUGE_OK", false ) ) {
-            return true;
-        }
-
         // free_cargo * 0.75 < critter_volume && critter_volume <= free_cargo
         if( free_cargo * 0.75 < critter_volume ) {
             if( !mon || !( mon->type->bodytype == "snake" || mon->type->bodytype == "blob" ||

@@ -230,6 +230,32 @@
   },
   {
     "type": "furniture",
+    "id": "f_electric_cooker",
+    "name": "electric cooker",
+    "description": "An electric cooker designed to automatically heat and cook food placed inside.  You could disconnect it and plug it into a working power grid.",
+    "symbol": "#",
+    "color": "dark_gray",
+    "move_cost_mod": 2,
+    "coverage": 60,
+    "required_str": 8,
+    "mass": "15 kg",
+    "examine_action": { "type": "appliance_convert", "furn_set": "f_null", "item": "electric_cooker" },
+    "flags": [
+      "PLACE_ITEM",
+      "TRANSPARENT",
+      "EASY_DECONSTRUCT",
+      "CONTAINER",
+      "BLOCKSDOOR",
+      "MOUNTABLE",
+      "SMALL_HIDE",
+      "NO_SELF_CONNECT"
+    ],
+    "item": "electric_cooker",
+    "max_volume": "20 L",
+    "bash": { "str_min": 8, "str_max": 30, "sound": "metal screeching!", "sound_fail": "clang!" }
+  },
+  {
+    "type": "furniture",
     "id": "f_gas_oven",
     "name": "gas oven",
     "looks_like": "f_oven",

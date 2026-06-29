@@ -542,6 +542,18 @@ bool game::do_turn()
 
     drain_renderer_recovery();
 
+    simulate_turn_prefix();
+    if( do_avatar_action_loop() ) {
+        return turn_handler::cleanup_at_end();
+    }
+    simulate_turn_suffix();
+    present_turn();
+
+    return false;
+}
+
+void game::simulate_turn_prefix()
+{
     weather_manager &weather = get_weather();
 
     // Increment game turn
@@ -643,6 +655,12 @@ bool game::do_turn()
     if( u.is_deaf() ) {
         sfx::do_hearing_loss();
     }
+}
+
+bool game::do_avatar_action_loop()
+{
+    avatar &u = get_avatar();
+    map &m = get_map();
 
     // avatar processes human input through handle_action()
     if( !u.has_effect( effect_sleep ) || uquit == QUIT_WATCH ) {
@@ -669,26 +687,7 @@ bool game::do_turn()
                 sounds::process_sound_markers( &u );
                 if( !u.activity && uquit != QUIT_WATCH
                     && ( !u.has_distant_destination() || calendar::once_every( 10_seconds ) ) ) {
-                    wait_popup_reset();
-                    ui_manager::redraw();
-                    // A single turn can span several steps (roads, speed
-                    // effects, partial-move loops). Each step is rendered by the
-                    // redraw above, but the end-of-turn update_map_memory call
-                    // only sees the avatar's final position, so terrain visible
-                    // only mid-step would never be memorized. That is invisible
-                    // for connecting terrain (re-memorized every pass) but loses
-                    // non-connecting terrain such as grass, which is memorized
-                    // exactly once. Memorize the current field of view whenever
-                    // the avatar has actually moved since the last memorise,
-                    // reusing the visibility cache the redraw just rebuilt. The
-                    // position guard keeps single-step turns (the common case)
-                    // free: their start position was already memorized at the
-                    // previous turn's end.
-                    const tripoint_bub_ms mem_pos = u.pos_bub( m );
-                    if( mem_pos != last_memorized_pos ) {
-                        m.update_map_memory( u );
-                        last_memorized_pos = mem_pos;
-                    }
+                    render_mid_step( u, m, last_memorized_pos );
                 }
 
                 if( queue_screenshot ) {
@@ -702,7 +701,7 @@ bool game::do_turn()
                 }
 
                 if( is_game_over() ) {
-                    return turn_handler::cleanup_at_end();
+                    return true;
                 }
 
                 if( uquit == QUIT_WATCH ) {
@@ -742,6 +741,13 @@ bool game::do_turn()
             }
         }
     }
+    return false;
+}
+
+void game::simulate_turn_suffix()
+{
+    avatar &u = get_avatar();
+    map &m = get_map();
 
     if( driving_view_offset.x() != 0 || driving_view_offset.y() != 0 ) {
         // Still have a view offset, but might not be driving anymore,
@@ -805,22 +811,21 @@ bool game::do_turn()
         m.update_map_memory( u );
     }
 
-    if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
-        ui_manager::redraw();
-        refresh_display();
-    }
-
+    // Per-turn world-state updates previously ran inside present_turn().
+    // Moving them here keeps simulation advancing every tick regardless of
+    // whether the renderer is gated.
     if( levz >= 0 && !u.is_underwater() ) {
-        handle_weather_effects( weather.weather_id );
+        handle_weather_effects( get_weather().weather_id );
     }
-
-    handle_progress_ui();
 
     m.invalidate_visibility_cache();
 
     u.update_bodytemp();
-    u.update_body_wetness( *weather.weather_precise );
-    u.apply_wetness_morale( weather.temperature );
+    {
+        weather_manager &weather = get_weather();
+        u.update_body_wetness( *weather.weather_precise );
+        u.apply_wetness_morale( weather.temperature );
+    }
 
     if( calendar::once_every( 1_minutes ) ) {
         u.update_morale();
@@ -834,6 +839,25 @@ bool game::do_turn()
         u.check_and_recover_morale();
     }
 
+    // reset player noise
+    u.volume = 0;
+
+    // Calculate bionic power balance
+    u.power_balance = u.get_power_level() - u.power_prev_turn;
+    u.power_prev_turn = u.get_power_level();
+}
+
+void game::present_turn()
+{
+    avatar &u = get_avatar();
+
+    if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
+        ui_manager::redraw();
+        refresh_display();
+    }
+
+    handle_progress_ui();
+
     if( !u.is_deaf() ) {
         sfx::remove_hearing_loss();
     }
@@ -842,13 +866,6 @@ bool game::do_turn()
     sfx::do_vehicle_exterior_engine_sfx();
     sfx::do_low_stamina_sfx();
 
-    // reset player noise
-    u.volume = 0;
-
-    // Calculate bionic power balance
-    u.power_balance = u.get_power_level() - u.power_prev_turn;
-    u.power_prev_turn = u.get_power_level();
-
 #if defined(EMSCRIPTEN)
     // This will cause a prompt to be shown if the window is closed, until the
     // game is saved.
@@ -856,5 +873,33 @@ bool game::do_turn()
 #endif
 
     debug_menu::debug_capture::tick_if_active();
-    return false;
+}
+
+void game::render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_pos )
+{
+    // Visibility cache must stay fresh even when the render is skipped:
+    // it is consumed by update_map_memory to decide which tiles were seen.
+    m.update_visibility_cache( u.posz() );
+
+    if( !skip_mid_step_render ) {
+        wait_popup_reset();
+        ui_manager::redraw();
+    }
+
+    // A single turn can span several steps (roads, speed effects,
+    // partial-move loops).  The end-of-turn update_map_memory call
+    // only sees the avatar's final position, so terrain visible only
+    // mid-step would never be memorized.  That is invisible for
+    // self-connecting terrain (re-memorized every pass) but loses
+    // non-connecting terrain such as grass, which is memorized
+    // exactly once.  Memorize the current field of view whenever the
+    // avatar has actually moved since the last memorize, using the
+    // visibility cache updated above.  The position guard keeps
+    // single-step turns (the common case) free: their start position
+    // was already memorized at the previous turn's end.
+    const tripoint_bub_ms mem_pos = u.pos_bub( m );
+    if( mem_pos != last_memorized_pos ) {
+        m.update_map_memory( u );
+        last_memorized_pos = mem_pos;
+    }
 }

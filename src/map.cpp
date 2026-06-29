@@ -6736,12 +6736,22 @@ static bool process_map_items( map &here, item_stack &items, safe_reference<item
     return false;
 }
 
+static void process_auto_cooker( vehicle &cur_veh, int part, map &here )
+{
+    cur_veh.process_auto_cooker_part( here, part );
+}
+
 static void process_vehicle_items( vehicle &cur_veh, int part )
 {
     map &here = get_map();
 
     vehicle_part &vp = cur_veh.part( part );
     const vpart_info &vpi = vp.info();
+
+    const bool auto_cooker_here = vpi.has_flag( VPFLAG_AUTO_COOKER ) && vp.enabled;
+    if( auto_cooker_here ) {
+        process_auto_cooker( cur_veh, part, here );
+    }
 
     const bool washer_here = vp.enabled &&
                              ( vpi.has_flag( VPFLAG_WASHING_MACHINE ) ||
@@ -10022,6 +10032,8 @@ void map::grow_plant( const tripoint_bub_ms &p )
                                     ( ter_furn_flag::TFLAG_GROWTH_SEED ) );
     time_duration time_to_grow_to_this_stage = 0_seconds;
 
+    const float growth_multiplier = furn.plant->growth_multiplier;
+
     for( const auto &pair : growth_stages ) {
         if( has_flag_furn( pair.first.str(), p ) ) {
             current_stage = pair.first;
@@ -10030,7 +10042,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
             target_stage = pair.first;
         } // Don't break the loop for the case where time has been rewound.
         // Advance to the time of the next stage for the next iteration.
-        time_to_grow_to_this_stage += pair.second;
+        time_to_grow_to_this_stage += pair.second / growth_multiplier;
     }
 
     const auto check_flag = []( const std::string & to_check ) {

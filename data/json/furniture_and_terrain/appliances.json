@@ -1316,5 +1316,39 @@
     "size": "200 L",
     "requirements": { "removal": { "time": "5 s" } },
     "variants": [ { "symbols": "&", "symbols_broken": "-" } ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "app_electric_cooker",
+    "name": { "str": "electric cooker" },
+    "item": "electric_cooker",
+    "categories": [ "utility" ],
+    "location": "center",
+    "description": "An electric cooker connected to a power grid.  Place raw food inside and activate it to automatically cook meals.",
+    "color": "dark_gray",
+    "broken_color": "light_gray",
+    "durability": 40,
+    "damage_modifier": 10,
+    "damage_reduction": { "all": 5 },
+    "flags": [ "APPLIANCE", "CARGO", "COVERED", "OBSTACLE", "AUTO_COOKER", "ENABLED_DRAINS_EPOWER" ],
+    "size": "20 L",
+    "epower": "-750 W",
+    "requirements": {
+      "repair": {
+        "skills": [ [ "mechanics", 2 ], [ "electronics", 1 ] ],
+        "time": "20 m",
+        "using": [ [ "repair_welding_standard", 2 ], [ "soldering_standard", 3 ] ]
+      },
+      "removal": { "time": "1 m" }
+    },
+    "breaks_into": [
+      { "item": "plastic_chunk", "count": [ 2, 5 ] },
+      { "item": "mc_steel_chunk", "count": [ 2, 4 ] },
+      { "item": "sheet_metal_small", "count": [ 2, 6 ] },
+      { "item": "scrap", "count": [ 2, 5 ] },
+      { "item": "element", "count": [ 0, 1 ] },
+      { "item": "cable", "count": [ 1, 2 ] }
+    ],
+    "variants": [ { "symbols": "#", "symbols_broken": "x" } ]
   }
 ]

@@ -242,6 +242,11 @@ struct islot_comestible {
         /** Reference to item that will be received after smoking current item */
         itype_id smoking_result;
 
+        /** Reference to item that will be received after cooking current item in an electric cooker */
+        itype_id cook_result;
+        /** Energy required to cook the item in an electric cooker */
+        units::energy cook_cost_energy = 0_J;
+
         /*
         * For the few rare cases where default nutrition needs to be accessible. Prefer using
         * default_character_compute_effective_nutrients unless absolutely necessary.
@@ -293,6 +298,10 @@ struct islot_comestible {
 
         int get_default_nutr() const {
             return default_nutrition.kcal() / kcal_per_nutr;
+        }
+
+        int get_fun() const {
+            return fun;
         }
 
         /** The monster that is drawn from when the item rots away */
@@ -1727,8 +1736,7 @@ struct itype {
 
         std::string get_item_type_string() const;
 
-        std::string item_measure_prefix( unsigned int quantity,
-                                         item_display_type perfered = item_display_type::DEFAULT ) const;
+        std::string item_measure_prefix( unsigned int quantity ) const;
 
         // Returns the name of the item type in the correct language and with respect to its grammatical number,
         // based on quantity (example: item type "anvil", nname(4) would return "anvils" (as in "4 anvils").

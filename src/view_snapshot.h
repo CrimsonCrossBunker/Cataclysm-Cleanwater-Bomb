@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -13,6 +14,7 @@
 #include "coords_fwd.h"
 #include "enums.h"
 #include "game_constants.h"
+#include "hsv_color.h"
 #include "type_id.h"
 
 #if defined(TILES)
@@ -59,38 +61,25 @@ struct tint_sprite_record {
 };
 
 struct tile_render_info {
-    struct common {
+    // ═══ L3 semantic data — immutable after the dirty-gated rebuild ═══
+    // Belongs to the server↔client boundary: only the coordinate (pos) lives
+    // here; static content (ter/furn/trap etc.) is captured separately in
+    // sprite::*_content fields.  No L1-L2 rendering artifacts.
+    struct tile_view_data {
         const tripoint_bub_ms pos;
+        explicit tile_view_data( const tripoint_bub_ms &p ) : pos( p ) {}
+    };
 
-        // ═══ TODO(client-server): L1-L2 rendering state mixed into L3 snapshot ═══
-        //
-        // L1 = client-side: sprite selection, RGBA tint, visibility dimming
-        // L2 = client-side: draw-list ordering, scene composition, animation
-        // L3 = server↔client boundary: semantic type-ids, scalar light, flags
-        //
-        // The fields below — height_3d, bounds, tint_sprites, needs_tint, tint_color —
-        // are all L1-L2 rendering artifacts computed or mutated every frame during the
-        // layer loop.  They do NOT belong in the L3 semantic boundary: the server must
-        // not compute RGBA tint, screen-space bounds, or sprite recordings.  Only
-        // light_scalar (float) and light_color (semantic name, not RGB) cross the
-        // boundary.
-        //
-        // Worse, these fields are *mutated during consumption* — the layer loop writes
-        // height_3d, tint_color, bounds, and tint_sprites every frame.  An immutable
-        // snapshot model requires splitting common into:
-        //   tile_view_data  (L3, const after rebuild): pos, static content, visibility,
-        //                    light scalar + semantic light color
-        //   tile_render_scratch (L1-L2, per-frame mutable): height_3d, bounds,
-        //                    tint_sprites, needs_tint, tint_color
-        //
-        // height_3d is additionally used as a save/restore scratch variable during
-        // vehicle drawing, which is fundamentally incompatible with an immutable
-        // snapshot.
-
-        // accumulator for 3d tallness of sprites rendered here so far;
+    // ═══ L1-L2 rendering scratch — per-frame mutable ═══
+    // All fields are recomputed or mutated every frame during the layer loop.
+    // They are purely client-side (sprite bounds, tint RGBA, height stack) and
+    // must never appear in a server-produced snapshot.
+    struct tile_render_scratch {
+        // Accumulator for 3d tallness of sprites rendered here so far; also
+        // used as a save/restore scratch variable during vehicle drawing.
         int height_3d = 0;
-        // Ortho tint overlay state, populated during the draw prepass and layer
-        // loop. For tiles where needs_tint is true:
+        // Ortho tint overlay state, populated during the draw prepass and
+        // layer loop.  For tiles where needs_tint is true:
         //   bounds       - union of all content sprite screen rects (opaque only)
         //   tint_sprites - draw records for silhouette mask replay
         //   tint_color   - precomputed RGBA tint from the colored light cache
@@ -101,8 +90,7 @@ struct tile_render_info {
             uint8_t r, g, b, a;
         } tint_color = { 0, 0, 0, 0 };
 
-        common( const tripoint_bub_ms &pos, const int height_3d )
-            : pos( pos ), height_3d( height_3d ) {}
+        explicit tile_render_scratch( int h3d = 0 ) : height_3d( h3d ) {}
     };
 
     struct vision_effect {
@@ -125,8 +113,8 @@ struct tile_render_info {
         // Only the static layers are captured here — terrain, furniture, trap,
         // partial construction, graffiti — because the rebuild runs only when
         // the cache is marked dirty (player action), which matches how often
-        // these change. Dynamic content (fields, items, vehicles, creatures)
-        // changes every turn and is left on the live path for now.
+        // these change.  Fields, items, and vehicle parts are captured
+        // per-frame in draw(); creatures remain on the live path for now.
         //
         // A null/empty content field means nothing was captured for that layer
         // (memory / override / invisible tiles, or simply nothing present).
@@ -145,6 +133,42 @@ struct tile_render_info {
         bool graffiti_captured = false;
         std::string graffiti_content;
         int graffiti_content_rotation = 0;
+
+        // Field data captured every frame just before the layer loop.
+        // Fields can appear between the dirty-gated rebuild and draw
+        // time (an intermediate draw during handle_action can consume
+        // the dirty flag before a later action creates the field),
+        // so a one-shot rebuild-time capture is insufficient.
+        // Default-constructed field_type_id (null) means no displayable
+        // field is present on this tile.
+        field_type_id field_content;
+        int field_intensity = 0;
+
+        // Item data for the topmost visible item, captured per-frame
+        // alongside fields.  Items can appear or disappear between the
+        // dirty-gated rebuild and the layer loop (monster drops, pickup
+        // during handle_action, etc.), so a one-shot rebuild-time
+        // capture is insufficient.
+        // Default-constructed itype_id (null) means no displayable
+        // topmost item is visible on this tile.
+        itype_id item_content;
+        mtype_id item_corpse_mtype;
+        std::string item_variant;
+        int item_count = 0;
+        bool sees_items = false;
+
+        // Vehicle part data captured per-frame.  Vehicles move and parts
+        // change state every turn (movement, open/close, break), so a
+        // one-shot rebuild-time capture is insufficient.
+        // Default-constructed vpart_id (null) means no vehicle part is
+        // present on this tile.
+        vpart_id vpart_content;
+        int vpart_subtile = 0;           // 0 = normal, open_, broken
+        int vpart_rotation = 0;          // angle_to_dir4(face.dir - 270°)
+        std::string vpart_variant;       // variant id string
+        std::string vpart_carried_furn;  // carried furniture id
+        bool vpart_has_cargo = false;    // for cargo highlight
+        std::optional<RGBColor> vpart_tint;  // custom paint color
 
         sprite( const lit_level ll, const std::array<bool, 5> &inv )
             : ll( ll ), invisible( inv ) {}
@@ -169,16 +193,44 @@ struct tile_render_info {
             graffiti_content = text;
             graffiti_content_rotation = rotation;
         }
+        void set_field_content( const field_type_id &fid, const int intensity ) {
+            field_content = fid;
+            field_intensity = intensity;
+        }
+        void set_item_content( const itype_id &it, const mtype_id &corpse_mt,
+                               const std::string &variant, const int count,
+                               const bool sees ) {
+            item_content = it;
+            item_corpse_mtype = corpse_mt;
+            item_variant = variant;
+            item_count = count;
+            sees_items = sees;
+        }
+        void set_vpart_content( const vpart_id &id, const int subtile,
+                                 const int rotation, const std::string &variant,
+                                 const std::string &carried_furn, const bool has_cargo,
+                                 const std::optional<RGBColor> &tint ) {
+            vpart_content = id;
+            vpart_subtile = subtile;
+            vpart_rotation = rotation;
+            vpart_variant = variant;
+            vpart_carried_furn = carried_furn;
+            vpart_has_cargo = has_cargo;
+            vpart_tint = tint;
+        }
     };
 
-    common com;
+    tile_view_data view;
+    tile_render_scratch scratch;
     std::variant<vision_effect, sprite> var;
 
-    tile_render_info( const common &com, const vision_effect &var )
-        : com( com ), var( var ) {}
+    tile_render_info( const tile_view_data &v, const tile_render_scratch &s,
+                      const vision_effect &var )
+        : view( v ), scratch( s ), var( var ) {}
 
-    tile_render_info( const common &com, const sprite &var )
-        : com( com ), var( var ) {}
+    tile_render_info( const tile_view_data &v, const tile_render_scratch &s,
+                      const sprite &var )
+        : view( v ), scratch( s ), var( var ) {}
 };
 
 /**
@@ -232,6 +284,11 @@ class draw_points_cache_t
                         r.clear(); // keep capacity
                     }
                 }
+                // Range-based for support for per-z-level row iteration.
+                auto begin()       { return rows.begin(); }
+                auto end()         { return rows.end(); }
+                auto begin() const { return rows.begin(); }
+                auto end()   const { return rows.end(); }
             private:
                 int row_base = 0;
                 bool initialized = false;
@@ -256,24 +313,19 @@ class draw_points_cache_t
 // currently carries a pre-existing working buffer (draw_points_cache_t) that
 // mixes L3 semantic data with L1-L2 rendering artifacts.  Known gaps:
 //
-// 1. COORDINATE SPLIT: origin is tripoint_abs_ms, but tile_render_info::common::pos
+// 1. COORDINATE SPLIT: origin is tripoint_abs_ms, but tile_view_data::pos
 //    is tripoint_bub_ms (bubble-relative).  Server-side snapshots must use world-
 //    absolute coordinates throughout.
 //
-// 2. MUTABLE DURING CONSUMPTION: the layer loop writes height_3d, tint_color, bounds,
-//    and tint_sprites into the cache every frame.  A true snapshot must be immutable
-//    after production.  Requires splitting tile_render_info into tile_view_data (L3,
-//    const) and tile_render_scratch (L1-L2, mutable).
+// 2. ✅ RESOLVED: tile_render_info split into tile_view_data (L3, const pos) and
+//    tile_render_scratch (L1-L2, per-frame mutable).  The layer loop no longer
+//    writes rendering state into the same struct that holds the semantic coordinate.
 //
-// 3. FALSE SUMMIT: despite the name, this struct is NOT yet a clean L3 boundary type.
-//    The tiles member contains RGBA tint (L1), screen-space bounds (L2), and sprite
-//    recordings (L1) — all client-side computations.  See tile_render_info::common
-//    for the full TODO.
+// 3. ✅ RESOLVED: RGBA tint, screen-space bounds, and sprite recordings are
+//    confined to tile_render_scratch; tile_view_data contains only the L3
+//    coordinate.  The false summit has been flattened.
 //
 // 4. MISSING L3 DATA (not captured yet; live-read every frame):
-//    - field data (type + intensity)
-//    - item data (topmost item itype_id + count)
-//    - vehicle part data (vpart_id + display state + paint color name)
 //    - creature data (CreatureView: type id, facing, mount/summoner flags)
 //    - light scalar (float from lm[][]) — currently only computed RGBA tint is stored
 //    - memorized tile content (for invisible/memory tiles)

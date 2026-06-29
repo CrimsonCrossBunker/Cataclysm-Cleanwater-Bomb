@@ -42,6 +42,7 @@
       },
       { "run_eocs": [ "EOC_SKY_ISLAND_DIMENSION_SHIFT_CHARACTER_EFFECTS" ] },
       { "u_teleport": { "global_val": "OM_temp" }, "force_safe": true },
+      { "clear_dimension": "dimension_sky_island_mission" },
       {
         "if": { "math": [ "si_npcs_will_join_raid == 1" ] },
         "then": {
@@ -238,13 +239,20 @@
           "EOC_return_heal"
         ]
       },
-      { "clear_dimension": "dimension_sky_island_mission" },
       {
         "if": { "math": [ "skyisland_merchant_stall == 1" ] },
         "then": { "run_eocs": "EOC_SKY_ISLAND_RANDOM_MERCHANTS" }
       },
       { "math": [ "timeawayfromhome = 0 - bonuspulses" ] }
     ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_SKY_dimension_clear",
+    "eoc_type": "EVENT",
+    "required_event": "game_save",
+    "condition": { "and": [ { "current_dimension": "" }, { "not": { "u_has_any_effect": [ "warpsickness" ] } } ] },
+    "effect": [ { "clear_dimension": "dimension_sky_island_mission" } ]
   },
   {
     "type": "effect_on_condition",

@@ -1,4 +1,4 @@
-# Translating Cataclysm: DDA
+# Translating Cataclysm: CB
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -26,7 +26,7 @@
 
 ## Translators
 
-The official location for translating Cataclysm: DDA is the
+The official location for translating Cataclysm: CB is the
 [Transifex translations project][1].
 
 Some of the currently supported languages are:
@@ -58,7 +58,7 @@ the [Translations Team Discussion][2] subforum.
 ### Getting Started
 
 To begin translating, head over the [translation project][1] and click on the
-"Help Translate Cataclysm: DDA" button.
+"Help Translate Cataclysm-Cleanwater-Bomb" button.
 This should take you to a page where you can either create a free account on
 Transifex, or login using GitHub, Google+ or LinkedIn.
 
@@ -103,7 +103,7 @@ See [Transifex's documentation][3] for more information.
 
 ### Glossary
 
-This glossary is intended to help explain some CDDA-specific terms and their
+This glossary is intended to help explain some CCB-specific terms and their
 etymology in order to help translations.
 
 * **Exodii**: The Exodii are a bunch of humans from another dimension.  When
@@ -147,24 +147,24 @@ don't be surprised to see other contexts appearing for other strings.
 
 ### Tips
 
-There are issues specific to Cataclysm: DDA which translators should be aware of.
+There are issues specific to Cataclysm: CB which translators should be aware of.
 These include the use of terms like `%s` and `%3$d` (leave them as they are),
 and the use of tags like `<name>`, which shouldn't be translated.
 
 Information about these and any other issues specific to individual languages,
-can be found in Cataclysm: DDA's [language notes folder][4].
+can be found in Cataclysm: CB's [language notes folder][4].
 
 General notes for all translators are in `README_all_translators.txt`,
 and notes specific to a language may be stored as `<lang_id>.txt`,
 for example `de.txt` for German.
 
-Cataclysm: DDA has more than 50000 translatable strings, including all mods shipped
+Cataclysm: CB has more than 50000 translatable strings, including all mods shipped
 with the game but don't be discouraged. The more translators there are, the easier it
 becomes 😄.
 
 ## Developers
 
-Cataclysm: DDA uses a modified version of [GNU gettext][5] to display translated texts.
+Cataclysm: CB uses a modified version of [GNU gettext][5] to display translated texts.
 
 Using `gettext` requires two actions:
 
@@ -363,7 +363,7 @@ function twice.
 
 ### Recommendations
 
-In Cataclysm: DDA, some classes, like `itype` and `mtype`, provide a wrapper
+In Cataclysm: CB, some classes, like `itype` and `mtype`, provide a wrapper
 for the translation functions, called `nname`.
 
 When an empty string is marked for translation, it is always translated into
@@ -417,8 +417,8 @@ You can also change the language in game options if both are installed.
 
 You can see statistics for how complete each translation is in [Transifex translations project][1] or in-game language selection menu.
 
-[1]: https://explore.transifex.com/cataclysm-dda-translators/cataclysm-dda/
-[2]: https://discourse.cataclysmdda.org/c/game-talk/translations-team-discussion
+[1]: https://explore.transifex.com/Cataclysm-Cleanwater-Bomb/cataclysm-cleanwater-bomb/
+[2]: https://discord.gg/EAf2mKHEnK
 [3]: https://docs.transifex.com/
 [4]: ../lang/notes
 [5]: https://www.gnu.org/software/gettext/

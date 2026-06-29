@@ -687,6 +687,16 @@ double item_count_eval( const_dialogue const &d, char scope, std::vector<diag_va
     return d.const_actor( is_beta( scope ) )->get_amount( itype_id( params[0].str( d ) ) );
 }
 
+double food_fun_eval( const_dialogue const &d, char /* scope */,
+                      std::vector<diag_value> const &params, diag_kwargs const & /* kwargs */ )
+{
+    const itype_id id( params[0].str( d ) );
+    if( !id->comestible ) {
+        return 0;
+    }
+    return id->comestible->get_fun();
+}
+
 double item_rad_eval( const_dialogue const &d, char scope, std::vector<diag_value> const &params,
                       diag_kwargs const &kwargs )
 {
@@ -1989,6 +1999,7 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "hp", { "un", 1, hp_eval, hp_ass } },
     { "hp_max", { "un", 1, hp_max_eval } },
     { "item_count", { "un", 1, item_count_eval } },
+    { "food_fun", { "g", 1, food_fun_eval } },
     { "item_rad", { "un", 1, item_rad_eval, {}, { "aggregate" } } },
     { "item_burnt", { "un", 0, item_burnt_eval, item_burnt_ass, { "format" } } },
     { "melee_damage", { "un", 1, melee_damage_eval } },

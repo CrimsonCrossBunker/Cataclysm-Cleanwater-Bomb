@@ -178,6 +178,17 @@
     "difficulty": 8
   },
   {
+    "id": "afs_bio_neurosoft_aircraft_mechanic",
+    "copy-from": "bionic_general",
+    "type": "ITEM",
+    "subtypes": [ "BIONIC_ITEM" ],
+    "name": { "str": "Neurosoft: Airframe and Powerplant Mechanic CBM" },
+    "description": "A brain implant that grants instinctual knowledge about the repair of flying machines.",
+    "price": "10 kUSD",
+    "price_postapoc": "1 kUSD",
+    "difficulty": 8
+  },
+  {
     "id": "afs_bio_cranialbomb",
     "copy-from": "bionic_general",
     "type": "ITEM",

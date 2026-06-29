@@ -122,7 +122,8 @@
       { "item": "diazepam", "prob": 10 },
       { "item": "syringe", "prob": 20 },
       { "group": "birth_control", "prob": 25 },
-      { "group": "estrogen_hrt", "prob": 2 }
+      { "group": "estrogen_hrt", "prob": 1 },
+      { "group": "testosterone_hrt", "prob": 1 }
     ]
   }
 ]

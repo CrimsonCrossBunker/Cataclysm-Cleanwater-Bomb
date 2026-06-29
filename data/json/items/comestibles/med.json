@@ -2404,7 +2404,7 @@
     "subtypes": [ "COMESTIBLE" ],
     "comestible_type": "MED",
     "name": { "str": "estrogen pill" },
-    "description": "A sublingual tablet of estradiol, meant to increase the level of estrogen in the body.  It's a lifesaving medicine for some transgender individuals.",
+    "description": "A sublingual tablet of estradiol, meant to increase the level of estrogen in the body.  It is primarily used to treat estrogen deficiency in cisgender women or to artificially re-establish a menstrual cycle.  But it's a lifesaving medicine for some transgender individuals.",
     "material": [ "drug_filler" ],
     "weight": "80 mg",
     "volume": "1 ml",
@@ -2414,6 +2414,27 @@
     "color": "white",
     "flags": [ "NO_TEMP" ],
     "use_action": { "type": "consume_drug", "activation_message": "You set the pill under your tongue and let it dissolve." }
+  },
+  {
+    "id": "testosterone",
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "comestible_type": "MED",
+    "name": { "str": "testosterone injection" },
+    "description": "A small vial of pale yellow, sterile, oily testosterone cyclopentadiate injection.  Clinically, it is primarily used to treat androgen deficiency in cisgender men and is a core drug in FTM hormone replacement therapy.  Some athletes may also use it.  It effectively maintains androgen levels in the body.  You will need a syringe to inject it.",
+    "material": [ "glass" ],
+    "weight": "15 g",
+    "volume": "10 ml",
+    "price": "4500 cent",
+    "price_postapoc": "250 cent",
+    "symbol": "!",
+    "color": "yellow",
+    "flags": [ "NO_INGEST", "NO_TEMP" ],
+    "use_action": {
+      "type": "consume_drug",
+      "tools_needed": { "syringe": -1 },
+      "activation_message": "You inject yourself with the injector."
+    }
   },
   {
     "id": "sunscreen",

@@ -1964,16 +1964,17 @@ class map
          */
         void fill_funnels( const tripoint_bub_ms &p, const time_point &since );
         /**
-         * Try to grow a harvestable plant to the next stage(s).
-         */
-        void grow_plant( const tripoint_bub_ms &p );
-        /**
          * Try to grow fruits on static plants (not planted by the player)
          * @param p Place to restock
          * @param time_since_last_actualize Time since this function has been
          * called the last time.
          */
         void restock_fruits( const tripoint_bub_ms &p, const time_duration &time_since_last_actualize );
+    public:
+        /**
+         * Try to grow a harvestable plant to the next stage(s).
+         */
+        void grow_plant( const tripoint_bub_ms &p );
         /**
          * Produce sap on tapped maple trees
          * @param p Location of tapped tree
@@ -1981,7 +1982,6 @@ class map
          * called the last time.
          */
         void produce_sap( const tripoint_bub_ms &p, const time_duration &time_since_last_actualize );
-    public:
         /**
         * Removes the tree at 'p' and produces a trunk_yield length line of trunks in the 'dir'
         * direction from 'p', leaving a stump behind at 'p'.

@@ -1,0 +1,205 @@
+[
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "milk",
+    "copy-from": "milk",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_milk_detox" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "milk_choc",
+    "copy-from": "milk_choc",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_milk_detox" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "milk_reconstituted",
+    "copy-from": "milk_reconstituted",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_milk_detox" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "milk_raw",
+    "copy-from": "milk_raw",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_milk_detox" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "milk_UHT",
+    "copy-from": "milk_UHT",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_milk_detox" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "milk_evap",
+    "copy-from": "milk_evap",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_milk_detox" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "royal_beef",
+    "copy-from": "royal_beef",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_royal_beef" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "meat_fried",
+    "copy-from": "meat_fried",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_meat_fried" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "lahmacun",
+    "copy-from": "lahmacun",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_lahmacun" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "sushi_meatroll",
+    "copy-from": "sushi_meatroll",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_sushi_meatroll" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "meatball",
+    "copy-from": "meatball",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_meatball" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "scrapple",
+    "copy-from": "scrapple",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_scrapple" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "pelmeni",
+    "copy-from": "pelmeni",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_pelmeni" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "soup_lobsterstew",
+    "copy-from": "soup_lobsterstew",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_soup_lobsterstew" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "amatriciana_pasta",
+    "copy-from": "amatriciana_pasta",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_amatriciana_pasta" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "pasta_carbonara",
+    "copy-from": "pasta_carbonara",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_pasta_carbonara" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "spaghetti_bolognese",
+    "copy-from": "spaghetti_bolognese",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_spaghetti_bolognese" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "gateau_st_honore",
+    "copy-from": "gateau_st_honore",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_gateau_st_honore" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "religieuse_au_chocolat",
+    "copy-from": "religieuse_au_chocolat",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_religieuse_au_chocolat" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "cake2",
+    "copy-from": "cake2",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_cake2" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "baklava",
+    "copy-from": "baklava",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_baklava" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "brownie",
+    "copy-from": "brownie",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_brownie" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "foie_gras",
+    "copy-from": "foie_gras",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_foie_gras" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "confit_meat",
+    "copy-from": "confit_meat",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_confit_meat" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "sarma",
+    "copy-from": "sarma",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_sarma" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "kiymali_pide",
+    "copy-from": "kiymali_pide",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_kiymali_pide" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "manti",
+    "copy-from": "manti",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_manti" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "lasagne",
+    "copy-from": "lasagne",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_lasagne" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "spaghetti_pesto",
+    "copy-from": "spaghetti_pesto",
+    "consumption_effect_on_conditions": [ "eoc_cd_delight_spaghetti_pesto" ]
+  }
+]

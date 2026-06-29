@@ -1,5 +1,6 @@
 #include "game.h"
 #include "map_memory.h"
+#include "render_backend.h"
 
 #include <algorithm>
 #include <bitset>
@@ -479,6 +480,11 @@ game::game() :
     events().subscribe( &*eoc_events_ptr );
     debug_menu::debug_capture::instance().on_game_load( events() );
     world_generator = std::make_unique<worldfactory>();
+    // Create the render backend.  For HEADLESS builds this is a null no-op;
+    // for TILES builds this returns nullptr because SDL is not yet
+    // initialised at this point (the SDL backend will be created later,
+    // after init_ui() sets up the SDL window and tilecontext).
+    render_backend_ptr = create_render_backend();
     // do nothing, everything that was in here is moved to init_data() which is called immediately after g = new game; in main.cpp
     // The reason for this move is so that g is not uninitialized when it gets to installing the parts into vehicles.
 }

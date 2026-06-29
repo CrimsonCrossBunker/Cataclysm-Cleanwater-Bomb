@@ -112,6 +112,13 @@
     "bindings": [ { "input_method": "keyboard_char", "key": "D" }, { "input_method": "keyboard_code", "key": "d", "mod": [ "shift" ] } ]
   },
   {
+    "id": "TOGGLE_AUTO_COOKER",
+    "type": "keybinding",
+    "category": "VEHICLE",
+    "name": "Toggle electric cooker",
+    "bindings": [ { "input_method": "keyboard_char", "key": "E" }, { "input_method": "keyboard_code", "key": "e", "mod": [ "shift" ] } ]
+  },
+  {
     "id": "GET_ITEMS",
     "type": "keybinding",
     "category": "VEHICLE",

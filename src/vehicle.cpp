@@ -73,6 +73,7 @@
 #include "player_activity.h"
 #include "pocket_type.h"
 #include "proficiency.h"
+#include "recipe.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "sounds.h"
@@ -8650,6 +8651,192 @@ static bool is_sm_tile_outside( const tripoint_abs_ms &real_global_pos )
               sm->get_furn( p ).obj().has_flag( ter_furn_flag::TFLAG_INDOORS ) );
 }
 
+bool vehicle::is_auto_cookable( const item &it )
+{
+    return it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
+           !it.get_comestible()->cook_result.is_empty();
+}
+
+static item *find_unfinished_cookable( item &it )
+{
+    if( vehicle::is_auto_cookable( it ) ) {
+        const islot_comestible &comest = *it.get_comestible();
+        const int target_energy_kj = units::to_kilojoule<int>( comest.cook_cost_energy );
+        const int energy_done = std::stoi( it.get_var( "cook_energy_done", "0" ) );
+
+        if( energy_done < target_energy_kj ) {
+            return &it;
+        }
+    }
+
+    for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
+        item *found = find_unfinished_cookable( *content );
+        if( found != nullptr ) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+item *vehicle::auto_cooker_current_item( vehicle_part &vp )
+{
+    vehicle_stack items = get_items( vp );
+    for( item &it : items ) {
+        item *found = find_unfinished_cookable( it );
+        if( found != nullptr ) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
+void vehicle::finish_auto_cooked_item( item &it, const islot_comestible &comest )
+{
+    item result( comest.cook_result, calendar::turn );
+    if( it.count_by_charges() ) {
+        result.charges = it.charges;
+    }
+
+    result.set_relative_rot( it.get_relative_rot() );
+
+    recipe rec;
+    result.inherit_flags( it, rec );
+    if( !result.has_flag( flag_NUTRIENT_OVERRIDE ) && !comest.cooks_like.is_empty() ) {
+        item component( comest.cooks_like, it.birthday(), 1 );
+        result.components.add( component );
+        result.recipe_charges = it.count();
+    }
+    result.set_flag_recursive( flag_COOKED );
+
+    it = result;
+}
+
+bool vehicle::advance_auto_cooker_item_once( item &it, int energy_per_turn_kj )
+{
+    const islot_comestible &comest = *it.get_comestible();
+    const int target_energy_kj = units::to_kilojoule<int>( comest.cook_cost_energy );
+
+    int energy_done = std::stoi( it.get_var( "cook_energy_done", "0" ) );
+    const int energy_remaining = target_energy_kj - energy_done;
+    if( energy_remaining > 0 ) {
+        energy_done += std::min( energy_per_turn_kj, energy_remaining );
+    }
+
+    it.set_var( "cook_energy_done", std::to_string( energy_done ) );
+
+    const bool finished = energy_done >= target_energy_kj;
+    if( finished ) {
+        finish_auto_cooked_item( it, comest );
+    }
+    return finished;
+}
+
+void vehicle::process_auto_cooker_part( map &here, int p )
+{
+    static_cast<void>( here );
+    vehicle_part &vp = parts[p];
+    item *current = auto_cooker_current_item( vp );
+
+    if( current == nullptr ) {
+        vp.enabled = false;
+        add_msg( m_info, _( "The electric cooker has finished and turns off." ) );
+        return;
+    }
+
+    // The part's epower is drained by power_parts(); here we just advance cooking progress.
+    const units::power cook_power = -vp.info().epower;
+    const int energy_per_turn_kj = std::max( 1, power_to_energy_bat( cook_power, 1_turns ) );
+    advance_auto_cooker_item_once( *current, energy_per_turn_kj );
+}
+
+void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elapsed )
+{
+    vehicle_part &vp = parts[p];
+    if( !vp.enabled || !vp.info().has_flag( VPFLAG_AUTO_COOKER ) ) {
+        return;
+    }
+
+    if( to_turns<int>( elapsed ) <= 0 ) {
+        return;
+    }
+
+    // Pay the standby/accessory cost for all enabled drains over the elapsed period.
+    // The auto-cooker's epower is included here, so its cooking energy is already paid.
+    const units::power standby_power = total_accessory_epower();
+    if( standby_power < 0_W ) {
+        const int standby_energy = std::abs( power_to_energy_bat( standby_power, elapsed ) );
+        const int standby_deficit = discharge_battery( here, standby_energy );
+        if( standby_deficit > 0 ) {
+            // Battery couldn't even cover standby drain. Shut everything down,
+            // matching power_parts() behavior when the battery dies.
+            for( const vpart_reference &drain_vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
+                vehicle_part &pt = drain_vp.part();
+                if( pt.info().epower < 0_W ) {
+                    pt.enabled = false;
+                    pt.power_disabled = true;
+                }
+            }
+            return;
+        }
+    }
+
+    // Gather all unfinished cookable items in one scan (including items inside containers).
+    struct pending_item {
+        item *it;
+        int target_energy_kj;
+        int energy_done;
+    };
+    std::vector<pending_item> pending;
+    pending.reserve( 64 );
+
+    const auto gather_pending = [&]( item & it, auto & gather ) -> void {
+        if( is_auto_cookable( it ) ) {
+            const islot_comestible &comest = *it.get_comestible();
+            const int target_energy_kj = units::to_kilojoule<int>( comest.cook_cost_energy );
+            const int energy_done = std::stoi( it.get_var( "cook_energy_done", "0" ) );
+
+            if( energy_done < target_energy_kj ) {
+                pending.push_back( { &it, target_energy_kj, energy_done } );
+            }
+        }
+        for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
+            gather( *content, gather );
+        }
+    };
+
+    {
+        vehicle_stack items = get_items( vp );
+        for( item &it : items ) {
+            gather_pending( it, gather_pending );
+        }
+    }
+
+    if( pending.empty() ) {
+        vp.enabled = false;
+        return;
+    }
+
+    // Cooking energy available over the elapsed time (already paid via the standby drain above).
+    const units::power cook_power = -vp.info().epower;
+    int energy_remaining = power_to_energy_bat( cook_power, elapsed );
+
+    // Apply energy to items in order until exhausted.
+    for( pending_item &pi : pending ) {
+        const int needed = pi.target_energy_kj - pi.energy_done;
+        const int applied = std::min( needed, energy_remaining );
+        pi.energy_done += applied;
+        energy_remaining -= applied;
+
+        pi.it->set_var( "cook_energy_done", std::to_string( pi.energy_done ) );
+        if( pi.energy_done >= pi.target_energy_kj ) {
+            finish_auto_cooked_item( *pi.it, *pi.it->get_comestible() );
+        }
+        if( energy_remaining <= 0 ) {
+            break;
+        }
+    }
+}
+
 void vehicle::update_time( map &here, const time_point &update_to )
 {
     const time_point update_from = last_update;
@@ -8673,18 +8860,16 @@ void vehicle::update_time( map &here, const time_point &update_to )
 
     // Weather stuff, only for z-levels >= 0
     // TODO: Have it wash cars from blood?
-    if( funnels.empty() && solar_panels.empty() && wind_turbines.empty() && water_wheels.empty() ) {
-        return;
-    }
-    // Get one weather data set per vehicle, they don't differ much across vehicle area
-    const weather_sum accum_weather = sum_conditions( update_from, update_to,
-                                      pos_abs() );
-    // make some reference objects to use to check for reload
-    const item water( itype_water );
-    const item water_clean( itype_water_clean );
+    if( !funnels.empty() || !solar_panels.empty() || !wind_turbines.empty() || !water_wheels.empty() ) {
+        // Get one weather data set per vehicle, they don't differ much across vehicle area
+        const weather_sum accum_weather = sum_conditions( update_from, update_to,
+                                          pos_abs() );
+        // make some reference objects to use to check for reload
+        const item water( itype_water );
+        const item water_clean( itype_water_clean );
 
-    for( int idx : funnels ) {
-        const vehicle_part &pt = parts[idx];
+        for( int idx : funnels ) {
+            const vehicle_part &pt = parts[idx];
 
         // we need an unbroken funnel mounted on the exterior of the vehicle
         if( pt.is_unavailable() || !is_sm_tile_outside( abs_part_pos( pt ) ) ) {
@@ -8722,41 +8907,48 @@ void vehicle::update_time( map &here, const time_point &update_to )
             invalidate_mass();
         }
     }
-
-    if( !solar_panels.empty() ) {
-        units::power epower = 0_W;
-        for( const int p : solar_panels ) {
-            const vehicle_part &vp = parts[p];
-            const tripoint_bub_ms pos = bub_part_pos( here, vp );
-            if( vp.is_unavailable() || !is_sm_tile_outside( here.get_abs( pos ) ) ) {
-                continue;
+        if( !solar_panels.empty() ) {
+            units::power epower = 0_W;
+            for( const int p : solar_panels ) {
+                const vehicle_part &vp = parts[p];
+                const tripoint_bub_ms pos = bub_part_pos( here, vp );
+                if( vp.is_unavailable() || !is_sm_tile_outside( here.get_abs( pos ) ) ) {
+                    continue;
+                }
+                epower += part_epower( vp );
             }
-            epower += part_epower( vp );
+            double intensity = accum_weather.radiant_exposure / max_sun_irradiance() / to_seconds<float>
+                               ( elapsed );
+            int energy_bat = power_to_energy_bat( epower * intensity, elapsed );
+            if( energy_bat > 0 ) {
+                add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from solar panels", name, energy_bat );
+                charge_battery( here, energy_bat );
+            }
         }
-        double intensity = accum_weather.radiant_exposure / max_sun_irradiance() / to_seconds<float>
-                           ( elapsed );
-        int energy_bat = power_to_energy_bat( epower * intensity, elapsed );
-        if( energy_bat > 0 ) {
-            add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from solar panels", name, energy_bat );
-            charge_battery( here, energy_bat );
+        if( !wind_turbines.empty() ) {
+            // TODO: use accum_weather wind data to backfill wind turbine
+            // generation capacity.
+            units::power epower = total_wind_epower( here );
+            int energy_bat = power_to_energy_bat( epower, elapsed );
+            if( energy_bat > 0 ) {
+                add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from wind turbines", name, energy_bat );
+                charge_battery( here, energy_bat );
+            }
+        }
+        if( !water_wheels.empty() ) {
+            units::power epower = total_water_wheel_epower( here );
+            int energy_bat = power_to_energy_bat( epower, elapsed );
+            if( energy_bat > 0 ) {
+                add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from water wheels", name, energy_bat );
+                charge_battery( here, energy_bat );
+            }
         }
     }
-    if( !wind_turbines.empty() ) {
-        // TODO: use accum_weather wind data to backfill wind turbine
-        // generation capacity.
-        units::power epower = total_wind_epower( here );
-        int energy_bat = power_to_energy_bat( epower, elapsed );
-        if( energy_bat > 0 ) {
-            add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from wind turbines", name, energy_bat );
-            charge_battery( here, energy_bat );
-        }
-    }
-    if( !water_wheels.empty() ) {
-        units::power epower = total_water_wheel_epower( here );
-        int energy_bat = power_to_energy_bat( epower, elapsed );
-        if( energy_bat > 0 ) {
-            add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from water wheels", name, energy_bat );
-            charge_battery( here, energy_bat );
+
+    // Catch up auto cookers that were running while the vehicle was off-map.
+    for( const vpart_reference &vp : get_all_parts() ) {
+        if( vp.info().has_flag( VPFLAG_AUTO_COOKER ) && vp.part().enabled ) {
+            catch_up_auto_cooker( here, vp.part_index(), elapsed );
         }
     }
 }

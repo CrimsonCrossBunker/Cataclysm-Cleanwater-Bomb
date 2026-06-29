@@ -1552,6 +1552,11 @@
   },
   {
     "type": "construction_group",
+    "id": "place_electric_cooker",
+    "name": "place electric cooker"
+  },
+  {
+    "type": "construction_group",
     "id": "place_autoclave",
     "name": "Place Autoclave"
   },

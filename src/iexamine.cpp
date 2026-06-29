@@ -2836,7 +2836,7 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
             int plant_count = rng( skillLevel / 2, skillLevel );
             const auto &fp = here.furn( examp )->plant;
             plant_count *= fp->harvest_multiplier;
-            plant_count = std::min( std::max( plant_count, 1 ), 12 );
+            plant_count = std::max( plant_count, 1 );
             int seedCount = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
             for( item &i : get_harvest_items( type, plant_count, seedCount, true ) ) {
                 if( from_activity ) {
