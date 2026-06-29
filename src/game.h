@@ -40,6 +40,8 @@
 // The reference to the one and only game instance.
 class game;
 
+class render_backend;
+
 extern std::unique_ptr<game> g;
 
 extern const int savegame_version;
@@ -1376,6 +1378,11 @@ class game
         weak_ptr_fast<ui_adaptor> main_ui_adaptor; // NOLINT(cata-serialize)
 
         std::unique_ptr<static_popup> wait_popup; // NOLINT(cata-serialize)
+
+        // Render backend — owns the presentation-side pipeline.
+        // Created during SDL / headless init via create_render_backend().
+        // nullptr until the SDL window is available; callers must null-guard.
+        std::unique_ptr<render_backend> render_backend_ptr; // NOLINT(cata-serialize)
     public:
         void wait_popup_reset();
 
