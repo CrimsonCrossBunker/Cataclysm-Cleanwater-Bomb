@@ -4596,10 +4596,8 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "phase", phase, phase_id::SOLID );
     item_display_type default_display_type = item_display_type::DEFAULT;
     if( get_option<bool>( "SMART_DEFAULT_DISPLAY_TYPE" ) ) {
-        if( phase == phase_id::LIQUID ) {
+        if( phase == phase_id::LIQUID && volume > 0_ml ) {
             default_display_type = item_display_type::BY_VOLUME;
-        } else if( volume < 10_ml && longest_side < 10_mm ) {
-            default_display_type = item_display_type::BY_WEIGHT;
         }
     }
     optional( jo, was_loaded, "display_type", display_type, default_display_type );
