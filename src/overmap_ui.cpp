@@ -57,6 +57,7 @@
 #include "mapgendata.h"
 #include "messages.h"
 #include "mission.h"
+#include "mp_gamestate.h"
 #include "mongroup.h"
 #include "mtype.h"
 #include "npc.h"
@@ -791,6 +792,7 @@ class map_notes_callback : public uilist_callback
                     if( overmap_buffer.has_note( note_location() ) &&
                         query_yn( _( "Really delete note?" ) ) ) {
                         overmap_buffer.delete_note( note_location() );
+                        cata_mp::mp_sync_note_delete( note_location() );
                     }
                     menu->ret = UILIST_MAP_NOTE_DELETED;
                     return true;
@@ -1424,6 +1426,7 @@ static bool create_note( const tripoint_abs_omt &curs, std::optional<std::string
         }
     } else if( !esc_pressed && old_note != new_note ) {
         overmap_buffer.add_note( curs, new_note );
+        cata_mp::mp_sync_note_add( curs, new_note );
         return true;
     }
     return false;
@@ -2255,13 +2258,15 @@ static tripoint_abs_omt display()
             create_note( curs );
         } else if( action == "DELETE_NOTE" ) {
             if( overmap_buffer.has_note( curs ) && query_yn( _( "Really delete note?" ) ) ) {
-                overmap_buffer.delete_note( curs );
+            overmap_buffer.delete_note( curs );
+            cata_mp::mp_sync_note_delete( curs );
             }
         } else if( action == "MARK_DANGER" ) {
             const int danger_radius = overmap_buffer.note_danger_radius( curs );
             if( danger_radius >= 0 &&
                 query_yn( _( "Remove dangerous mark?" ) ) ) {
                 overmap_buffer.mark_note_dangerous( curs, 0, false );
+                cata_mp::mp_sync_note_danger( curs, 0, false );
             } else {
                 bool has_note = overmap_buffer.has_note( curs );
                 if( !has_note ) {
@@ -2274,6 +2279,7 @@ static tripoint_abs_omt display()
                     if( query_int( amount, true, _( "Danger radius in overmap squares? (0-%d)" ),
                                    max_amount ) && amount >= 0 && amount <= max_amount ) {
                         overmap_buffer.mark_note_dangerous( curs, amount, true );
+                        cata_mp::mp_sync_note_danger( curs, amount, true );
                     }
                 }
             }

@@ -102,6 +102,8 @@
 #include "mission.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "mp_gamestate.h"
+#include "mp_client_conn.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -1536,6 +1538,9 @@ void game::chat( const std::optional<tripoint_bub_ms> &p )
     if( !message.empty() ) {
         add_msg( _( "You yell %s" ), message );
         u.shout( string_format( _( "%s yelling %s" ), u.disp_name(), message ), is_order );
+        if( cata_mp::is_client_mode() ) {
+            cata_mp::mp_relay_shout( volume, is_order );
+        }
     }
     if( !emote_msg.empty() ) {
         add_msg( emote_msg );
