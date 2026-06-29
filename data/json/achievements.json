@@ -911,8 +911,8 @@
   {
     "id": "achievement_lvl_10_computer",
     "type": "achievement",
-    "name": "Still not quite like Kevin",
-    "description": "It's not cheating.  It's debugging.",
+    "name": "Baldness and Wigs",
+    "description": "No stereotype! So are you from the Neumann school or the Turing school?",
     "requirements": [
       {
         "event_statistic": "num_gains_computer_level_10",
