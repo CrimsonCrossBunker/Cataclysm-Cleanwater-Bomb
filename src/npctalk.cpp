@@ -6190,6 +6190,74 @@ talk_effect_fun_t::func f_set_string_var( const JsonObject &jo, std::string_view
     };
 }
 
+talk_effect_fun_t::func f_sample_range( const JsonObject &jo, std::string_view member,
+                                        std::string_view )
+{
+    JsonObject sample = jo.get_object( member );
+    dbl_or_var count = get_dbl_or_var( sample, "count" );
+    dbl_or_var min = get_dbl_or_var( sample, "min" );
+    dbl_or_var max = get_dbl_or_var( sample, "max" );
+    const bool replace = sample.get_bool( "replace", false );
+
+    std::vector<var_info> target_vars;
+    for( const JsonValue target : sample.get_array( "target_vars" ) ) {
+        target_vars.push_back( read_var_info( target.get_object() ) );
+    }
+    if( target_vars.empty() ) {
+        sample.throw_error( "sample_range target_vars must not be empty" );
+    }
+
+    return [count, min, max, replace, target_vars]( dialogue & d ) {
+        int sample_count = static_cast<int>( std::round( count.evaluate( d ) ) );
+        const int range_min = static_cast<int>( std::round( min.evaluate( d ) ) );
+        const int range_max = static_cast<int>( std::round( max.evaluate( d ) ) );
+
+        if( sample_count < 0 ) {
+            debugmsg( "sample_range count must not be negative.  %s", d.get_callstack() );
+            return;
+        }
+        if( range_min > range_max ) {
+            debugmsg( "sample_range min must not be greater than max.  %s", d.get_callstack() );
+            return;
+        }
+
+        const int population = range_max - range_min + 1;
+        if( !replace && sample_count > population ) {
+            debugmsg( "sample_range count is larger than the range without replacement.  %s",
+                      d.get_callstack() );
+            sample_count = population;
+        }
+        if( sample_count > static_cast<int>( target_vars.size() ) ) {
+            debugmsg( "sample_range count is larger than target_vars.  %s", d.get_callstack() );
+            sample_count = static_cast<int>( target_vars.size() );
+        }
+
+        std::vector<int> samples;
+        samples.reserve( sample_count );
+        if( replace ) {
+            for( int i = 0; i < sample_count; ++i ) {
+                samples.push_back( rng( range_min, range_max ) );
+            }
+        } else {
+            std::vector<int> values;
+            values.reserve( population );
+            for( int value = range_min; value <= range_max; ++value ) {
+                values.push_back( value );
+            }
+            for( int i = 0; i < sample_count; ++i ) {
+                const int swap_index = rng( i, population - 1 );
+                std::swap( values[i], values[swap_index] );
+                samples.push_back( values[i] );
+            }
+        }
+
+        for( int i = 0; i < static_cast<int>( samples.size() ); ++i ) {
+            const var_info &target = target_vars[i];
+            write_var_value( target.type, target.name, &d, static_cast<double>( samples[i] ) );
+        }
+    };
+}
+
 talk_effect_fun_t::func f_set_condition( const JsonObject &jo, std::string_view member,
         std::string_view )
 {
@@ -8514,6 +8582,7 @@ parsers = {
     { "u_pickup_items", "npc_pickup_items", jarg::object, &talk_effect_fun::f_pickup_items },
     { "companion_mission", jarg::string, &talk_effect_fun::f_companion_mission },
     { "copy_var", jarg::member, &talk_effect_fun::f_copy_var },
+    { "sample_range", jarg::object, &talk_effect_fun::f_sample_range },
     { "reveal_map", jarg::object, &talk_effect_fun::f_reveal_map },
     { "reveal_route", jarg::object, &talk_effect_fun::f_reveal_route },
     { "closest_city", jarg::object, &talk_effect_fun::f_closest_city },

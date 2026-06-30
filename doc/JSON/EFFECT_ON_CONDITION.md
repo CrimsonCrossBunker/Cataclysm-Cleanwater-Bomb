@@ -3833,6 +3833,67 @@ No talker is needed.
 { "copy_var": { "context_val": "bodypart" }, "target_var": { "global_val": "IMPREGNATED_BODYPART" } }
 ```
 
+#### `sample_range`
+Generate random integer samples from an inclusive range and store them in variables.
+
+| Syntax | Optionality | Value  | Info |
+| --- | --- | --- | --- |
+| "sample_range" | **mandatory** | object | Sampling configuration |
+| "count" | **mandatory** | int or [variable object](#variable-object) | Number of values to sample |
+| "min" | **mandatory** | int or [variable object](#variable-object) | Inclusive lower bound |
+| "max" | **mandatory** | int or [variable object](#variable-object) | Inclusive upper bound |
+| "replace" | optional | boolean | If true, values are sampled with replacement and may repeat. Default false |
+| "target_vars" | **mandatory** | array of [variable objects](#variable-object) | Variables to receive sampled values in order |
+
+When `replace` is false, the sample is drawn without replacement using a partial shuffle, so every combination of sampled values from the range is equally likely. If `count` is larger than the range size without replacement, it is clamped at runtime.
+
+##### Valid talkers:
+
+No talker is needed unless storing into `u_val` or `npc_val`.
+
+##### Examples
+
+Pick three unique numbers from 1 to 10 and store them in context variables:
+```jsonc
+{
+  "sample_range": {
+    "count": 3,
+    "min": 1,
+    "max": 10,
+    "replace": false,
+    "target_vars": [
+      { "context_val": "sample_1" },
+      { "context_val": "sample_2" },
+      { "context_val": "sample_3" }
+    ]
+  }
+}
+```
+
+Pick ten unique numbers and store them in explicit NPC variables:
+```jsonc
+{
+  "sample_range": {
+    "count": 10,
+    "min": 1,
+    "max": 177,
+    "replace": false,
+    "target_vars": [
+      { "npc_val": "sale_slot_1_index" },
+      { "npc_val": "sale_slot_2_index" },
+      { "npc_val": "sale_slot_3_index" },
+      { "npc_val": "sale_slot_4_index" },
+      { "npc_val": "sale_slot_5_index" },
+      { "npc_val": "sale_slot_6_index" },
+      { "npc_val": "sale_slot_7_index" },
+      { "npc_val": "sale_slot_8_index" },
+      { "npc_val": "sale_slot_9_index" },
+      { "npc_val": "sale_slot_10_index" }
+    ]
+  }
+}
+```
+
 #### `set_string_var`
 Store string from `set_string_var` in the variable object `target_var`
 
