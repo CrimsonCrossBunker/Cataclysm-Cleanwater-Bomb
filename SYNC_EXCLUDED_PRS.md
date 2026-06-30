@@ -18,6 +18,7 @@
 | PR | 合并日 | 标题 | 状态 |
 |---|---|---|---|
 | #87620 | 2026-06-14 | Remove hardcoded water boiling | 未同步 |
+| #87632 | 2026-06-23 | Move map_helpers from tests/ to src/ | 已回退 (6f8279c) |
 | #87432 | 2026-06-06 | Add some random fungus to the groundcover pool | 已回退 (9acf97c) |
 | #87411 | 2026-06-04 | Gold is worthless | 未同步 |
 | #87332 | 2026-05-31 | De-charge graphite, nuts and bolts | 在库待回退 |
