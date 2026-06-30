@@ -11,7 +11,6 @@
 #include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
-#include "map_helpers_tests.h"
 #include "player_helpers.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"

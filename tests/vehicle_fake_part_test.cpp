@@ -12,7 +12,6 @@
 #include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
-#include "map_helpers_tests.h"
 #include "pathfinding.h"
 #include "player_helpers.h"
 #include "point.h"

@@ -32,7 +32,6 @@
 #include "magic.h"
 #include "map.h"
 #include "map_helpers.h"
-#include "map_helpers_tests.h"
 #include "map_iterator.h"
 #include "map_selector.h"
 #include "mapdata.h"

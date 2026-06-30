@@ -128,8 +128,6 @@ class proficiency_set
         learning_proficiency &fetch_learning( const proficiency_id &target );
 
     public:
-        void clear();
-
         std::vector<display_proficiency> display() const;
         // True if the proficiency is learned;
         bool practice( const proficiency_id &practicing, const time_duration &amount,

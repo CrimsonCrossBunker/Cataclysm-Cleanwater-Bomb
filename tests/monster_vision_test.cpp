@@ -5,7 +5,6 @@
 #include "coordinates.h"
 #include "map.h"
 #include "map_helpers.h"
-#include "map_helpers_tests.h"
 #include "monster.h"
 #include "point.h"
 #include "type_id.h"
