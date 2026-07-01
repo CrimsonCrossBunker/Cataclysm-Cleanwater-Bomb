@@ -847,8 +847,7 @@
     "phase": "liquid",
     "container": "bottle_glass",
     "freezing_point": -36,
-    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true },
-    "display_type": "BY_VOLUME"
+    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true }
   },
   {
     "type": "ITEM",
@@ -870,8 +869,7 @@
     "phase": "liquid",
     "container": "bottle_glass",
     "freezing_point": -50,
-    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true },
-    "display_type": "BY_VOLUME"
+    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true }
   },
   {
     "type": "ITEM",
@@ -890,8 +888,7 @@
     "material": [ "acetone" ],
     "ammo_type": "components",
     "phase": "liquid",
-    "container": "bottle_glass",
-    "display_type": "BY_VOLUME"
+    "container": "bottle_glass"
   },
   {
     "type": "ITEM",
@@ -914,8 +911,7 @@
     "phase": "liquid",
     "container": "bottle_glass",
     "freezing_point": -42,
-    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true },
-    "display_type": "BY_VOLUME"
+    "drop_action": { "type": "emit_actor", "emits": [ "emit_acid_drop" ], "scale_qty": true }
   },
   {
     "type": "ITEM",
@@ -1161,8 +1157,7 @@
     "material": [ "acid" ],
     "ammo_type": "components",
     "phase": "liquid",
-    "container": "bottle_glass",
-    "display_type": "BY_VOLUME"
+    "container": "bottle_glass"
   },
   {
     "type": "ITEM",
@@ -1967,8 +1962,7 @@
     "explosion": { "power": 5, "shrapnel": 0 },
     "flags": [ "NUTRIENT_OVERRIDE" ],
     "//": "Needed so calories from alcohol used to produce this aren't carried over to items using this as preservative",
-    "looks_like": "ether",
-    "display_type": "BY_VOLUME"
+    "looks_like": "ether"
   },
   {
     "id": "latex",
