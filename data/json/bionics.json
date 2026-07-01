@@ -403,8 +403,8 @@
     "description": "Your reaction time has been greatly enhanced with bionic nerve stimulators, giving you a +2 bonus to dexterity while powered.  However, you will suffer penalties while unpowered.",
     "occupied_bodyparts": [ [ "head", 3 ], [ "torso", 6 ], [ "arm_l", 3 ], [ "arm_r", 3 ], [ "leg_l", 7 ], [ "leg_r", 7 ] ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "DEXTERITY", "add": 5 } ] },
-      { "values": [ { "value": "DEXTERITY", "add": -3 } ] }
+      { "condition": "ACTIVE", "values": [ { "value": "DEXTERITY", "add": 2 } ] },
+      { "condition": "INACTIVE", "values": [ { "value": "DEXTERITY", "multiply": -1 } ] }
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -578,8 +578,8 @@
     "description": "Your vision is greatly enhanced, giving you a +2 bonus to perception while powered.  However, you suffer penalties while unpowered.",
     "occupied_bodyparts": [ [ "eyes", 1 ] ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "PERCEPTION", "add": 5 } ] },
-      { "values": [ { "value": "PERCEPTION", "add": -3 } ] }
+      { "condition": "ACTIVE", "values": [ { "value": "PERCEPTION", "add": 2 } ] },
+      { "condition": "INACTIVE", "values": [ { "value": "PERCEPTION", "multiply": -1 } ] }
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -847,8 +847,8 @@
     "cant_remove_reason": "The bionic is now critical to the continued functionality of the user's brain.",
     "occupied_bodyparts": [ [ "head", 6 ] ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "INTELLIGENCE", "add": 5 } ] },
-      { "values": [ { "value": "INTELLIGENCE", "add": -3 } ] }
+      { "condition": "ACTIVE", "values": [ { "value": "INTELLIGENCE", "add": 2 } ] },
+      { "condition": "INACTIVE", "values": [ { "value": "INTELLIGENCE", "multiply": -1 } ] }
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -1294,8 +1294,8 @@
     "description": "Your muscular system has been surgically enhanced with myomer fibers, giving you a +2 bonus to strength while powered.  However, you will suffer penalties if unpowered.",
     "occupied_bodyparts": [ [ "torso", 6 ], [ "arm_l", 4 ], [ "arm_r", 4 ], [ "leg_l", 8 ], [ "leg_r", 8 ] ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "STRENGTH", "add": 5 } ] },
-      { "values": [ { "value": "STRENGTH", "add": -3 } ] }
+      { "condition": "ACTIVE", "values": [ { "value": "STRENGTH", "add": 2 } ] },
+      { "condition": "INACTIVE", "values": [ { "value": "INTELLIGENCE", "multiply": -1 } ] }
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
