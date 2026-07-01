@@ -56,6 +56,8 @@
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
+#include "veh_type.h"
+#include "vehicle.h"
 #include "weather.h"
 #include "weather_gen.h"
 #include "weather_type.h"
@@ -88,6 +90,19 @@ bool is_beta( char scope )
         default:
             return false;
     }
+}
+
+int vehicle_part_base_price( const vehicle &veh, bool practical )
+{
+    int ret = 0;
+    for( const vpart_reference &vpr : veh.get_all_parts() ) {
+        const vehicle_part &vp = vpr.part();
+        if( vp.removed ) {
+            continue;
+        }
+        ret += vp.get_base().price_no_contents( practical );
+    }
+    return ret;
 }
 
 constexpr bool is_true( double dbl )
@@ -1080,14 +1095,43 @@ double price_eval( const_dialogue const &d, char scope,
                    std::vector<diag_value> const & /* params */,
                    diag_kwargs const & /* kwargs */ )
 {
-    return d.const_actor( is_beta( scope ) )->get_price();
+    const_talker const *actor = d.const_actor( is_beta( scope ) );
+    if( const vehicle *veh = actor->get_const_vehicle() ) {
+        return vehicle_part_base_price( *veh, false );
+    }
+    return actor->get_price();
 }
 
 double price_postapoc_eval( const_dialogue const &d, char scope,
                             std::vector<diag_value> const & /* params */,
                             diag_kwargs const & /* kwargs */ )
 {
-    return d.const_actor( is_beta( scope ) )->get_price_postapoc();
+    const_talker const *actor = d.const_actor( is_beta( scope ) );
+    if( const vehicle *veh = actor->get_const_vehicle() ) {
+        return vehicle_part_base_price( *veh, true );
+    }
+    return actor->get_price_postapoc();
+}
+
+double vehicle_prototype_price_eval( const_dialogue const &d, char /* scope */,
+                                     std::vector<diag_value> const &params,
+                                     diag_kwargs const & /* kwargs */ )
+{
+    const vproto_id proto_id( params[0].str( d ) );
+    if( !proto_id.is_valid() ) {
+        throw math::runtime_error( R"(Unknown vehicle prototype "%s")", proto_id.str() );
+    }
+    return proto_id->blueprint ? vehicle_part_base_price( *proto_id->blueprint, false ) : 0;
+}
+
+double vehicle_prototype_price_postapoc_eval( const_dialogue const &d, char /* scope */,
+        std::vector<diag_value> const &params, diag_kwargs const & /* kwargs */ )
+{
+    const vproto_id proto_id( params[0].str( d ) );
+    if( !proto_id.is_valid() ) {
+        throw math::runtime_error( R"(Unknown vehicle prototype "%s")", proto_id.str() );
+    }
+    return proto_id->blueprint ? vehicle_part_base_price( *proto_id->blueprint, true ) : 0;
 }
 
 void pain_ass( double val, dialogue &d, char scope, std::vector<diag_value> const & /* params */,
@@ -2014,6 +2058,8 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "pain", { "un", 0, pain_eval, pain_ass, { "type" } } },
     { "price", { "un", 0, price_eval } },
     { "price_postapoc", { "un", 0, price_postapoc_eval } },
+    { "vehicle_prototype_price", { "g", 1, vehicle_prototype_price_eval } },
+    { "vehicle_prototype_price_postapoc", { "g", 1, vehicle_prototype_price_postapoc_eval } },
     { "school_level", { "un", 1, school_level_eval } },
     { "school_level_adjustment", { "un", 1, school_level_adjustment_eval, school_level_adjustment_ass } },
     { "spellcasting_adjustment", { "u", 1, {}, spellcasting_adjustment_ass, { "mod", "school", "spell", "flag_whitelist", "flag_blacklist" } } },

@@ -1230,6 +1230,14 @@ conditional_t::func f_is_vehicle( bool is_npc )
     };
 }
 
+conditional_t::func f_vehicle_owned_by_avatar( bool is_npc )
+{
+    return [is_npc]( const_dialogue const & d ) {
+        const vehicle *veh = d.const_actor( is_npc )->get_const_vehicle();
+        return veh && veh->is_owned_by( get_avatar() );
+    };
+}
+
 conditional_t::func f_player_see( bool is_npc )
 {
     const map &here = get_map();
@@ -2625,6 +2633,7 @@ parsers_simple = {
     {"u_is_item", "npc_is_item", &conditional_fun::f_is_item },
     {"u_is_furniture", "npc_is_furniture", &conditional_fun::f_is_furniture },
     {"u_is_vehicle", "npc_is_vehicle", &conditional_fun::f_is_vehicle },
+    {"u_vehicle_owned_by_avatar", "npc_vehicle_owned_by_avatar", &conditional_fun::f_vehicle_owned_by_avatar },
     {"has_ammo", &conditional_fun::f_has_ammo },
     {"player_see_u", "player_see_npc", &conditional_fun::f_player_see },
     {"u_see_npc", "npc_see_u", &conditional_fun::f_see_opposite },

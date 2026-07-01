@@ -2602,6 +2602,13 @@ void parse_tags( std::string &phrase, const_talker const &u, const_talker const 
             // resolve nest
             parse_tags( var, u, me, d, item_type );
             phrase.replace( fa, l, itype_id( var )->description.translated() );
+        } else if( tag.find( "<vehicle_name:" ) == 0 ) {
+            std::string var = tag.substr( tag.find( ':' ) + 1 );
+            // remove the trailing >
+            var.pop_back();
+            // resolve nest
+            parse_tags( var, u, me, d, item_type );
+            phrase.replace( fa, l, vproto_id( var )->name.translated() );
         } else if( tag.find( "<trait_name:" ) == 0 ) {
             std::string var = tag.substr( tag.find( ':' ) + 1 );
             // remove the trailing >

@@ -81,6 +81,11 @@ void talker_vehicle::remove_effect( const efftype_id &eff_id, const std::string 
     me_veh->remove_effect( eff_id );
 }
 
+void talker_vehicle::die( map *here )
+{
+    here->destroy_vehicle( me_veh );
+}
+
 std::vector<std::string> talker_vehicle_const::get_topics( bool ) const
 {
     return me_veh_const->chat_topics;
