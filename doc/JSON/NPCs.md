@@ -392,6 +392,7 @@ Certain entries like the snippets above are taken from the game state as opposed
 | `<global_val:VAR>`                            | N/A            | gets replaced with the global variable VAR
 | `<item_name:ID>`                              | N/A            | gets replaced with the name of the item from ID
 | `<item_description:ID>`                       | N/A            | gets replaced with the description of the item from ID
+| `<vehicle_name:ID>`                           | N/A            | gets replaced with the name of the vehicle prototype from ID
 | `<trait_name:ID>`                             | N/A            | gets replaced with the name of the trait from ID
 | `<trait_description:ID>`                      | N/A            | gets replaced with the description of the trait from ID (avatar variant of trait is used, if avatar has such trait)
 | `<spell_name:ID>`                             | N/A            | gets replaced with the name of the spell from ID
@@ -402,7 +403,7 @@ Certain entries like the snippets above are taken from the game state as opposed
 | `<time_survived>`                             | N/A            | gets replaced with time since start of the game
 | `<total_kills>`                               | N/A            | gets replaced with total kills of the avatar
 
-item_name and similar tags, that parse the text out of the id, are able to parse the tags of variables, so it is possible to use `<item_name:<global_val:VAR>>`
+item_name, vehicle_name and similar tags, that parse the text out of the id, are able to parse the tags of variables, so it is possible to use `<item_name:<global_val:VAR>>`
 
 ---
 
@@ -1039,6 +1040,7 @@ Condition | Type | Description
 `"mission_goal" or "npc_mission_goal" or "u_mission_goal"` | string or [variable object](#variable-object) | `true` if u or the NPC's current mission has the same goal as `mission_goal`.
 `"u_has_activity" or "npc_has_activity" | simple string | `true` if the [selected talker](EFFECT_ON_CONDITION.md#alpha-and-beta-talkers) is currently performing an [activity](/doc/PLAYER_ACTIVITY.md).
 `"u_is_travelling" or "npc_is_travelling" | simple string | `true` if the [selected talker](EFFECT_ON_CONDITION.md#alpha-and-beta-talkers) has a current destination. Note that this just checks the destination exists, not whether u or npc is actively moving to it.
+`"u_vehicle_owned_by_avatar" or "npc_vehicle_owned_by_avatar"` | simple string | `true` if the selected talker is a vehicle owned by the avatar.
 `"mission_complete" or "npc_mission_complete" or "u_mission_complete"` | simple string | `true` if u or the NPC has completed the other's current mission.
 `"mission_incomplete" or "npc_mission_incomplete" or "u_mission_incomplete"` | simple string | `true` if u or the NPC hasn't completed the other's current mission.
 `"mission_failed" or "npc_mission_failed" or "u_mission_failed"` | simple string | `true` if u or the NPC has failed the other's current mission.
@@ -1438,8 +1440,10 @@ _some functions support array arguments or kwargs, denoted with square brackets 
 | oxygen()   |  ✅  |   ✅   | u, n  | Return or set the characters oxygen level.<br/><br/>Example:<br/>`{ "math": [ "u_oxygen() -= 1" ] }` Reduces the alpha talker's oxygen level by 1 provided it was greater than 0<br/>|
 | oxygen_max()   |  ✅  |   ❌   | u, n  | Return the characters max oxygen level.<br/><br/>Example:<br/>`{ "math": [ "u_oxygen() = max(u_oxygen(), 0.5 * u_oxygen_max())" ] }` Increases the alpha talker's oxygen level to half the max if it was below that<br/>|
 | pain()     |  ✅  |   ✅   | u, n  | Return or set pain.  Optional kwargs:<br/>`type`: `s/v` - return the value of specific format or assign in specific way.  Can be `perceived` ( for return, return pain value minus painkillers; for assigning, apply pain taking into account possible mutations, effects, cbms etc (pain sentitivity or pain deafness, for example)) or `raw` (for return, return flat amount of pain; for assigning, bypasses all checks).  If not used, `raw` is used by default. <br/> Example:<br/>`{ "math": [ "n_pain() = u_pain() + 9000" ] }` <br/>`{ "math": [ "u_pain('type': 'perceived' ) >= 40" ] }` <br/>`{ "math": [ "u_pain('type': 'perceived' ) += 22" ] }` |
-| price()     |  ✅  |   ❌   | u, n  | Return pre apocalypse item price in cents. <br/> Example:<br/>`{ "math": [ "item_price = n_price()" ] }, { "u_message": "Pre Apocalypse Price: <global_val:item_price>." }` |
-| price_postapoc()     |  ✅  |   ❌   | u, n  | Return post apocalypse item price in cents. <br/> Example:<br/>`{ "math": [ "item_price = n_price_postapoc()" ] }, { "u_message": "Post Apocalypse Price: <global_val:item_price>." }` |
+| price()     |  ✅  |   ❌   | u, n  | Return pre apocalypse item price, or estimated vehicle part base price, in cents. <br/> Example:<br/>`{ "math": [ "item_price = n_price()" ] }, { "u_message": "Pre Apocalypse Price: <global_val:item_price>." }` |
+| price_postapoc()     |  ✅  |   ❌   | u, n  | Return post apocalypse item price, or estimated vehicle part base price, in cents. <br/> Example:<br/>`{ "math": [ "item_price = n_price_postapoc()" ] }, { "u_message": "Post Apocalypse Price: <global_val:item_price>." }` |
+| vehicle_prototype_price(`s`/`v`)     |  ✅  |   ❌   | N/A<br/>(global)  | Return the estimated pre apocalypse price of a vehicle prototype in cents. The estimate sums the base item price of each real installed vehicle part.<br/><br/>Example:<br/>`{ "math": [ "car_price = vehicle_prototype_price('car')" ] }` |
+| vehicle_prototype_price_postapoc(`s`/`v`)     |  ✅  |   ❌   | N/A<br/>(global)  | Return the estimated post apocalypse price of a vehicle prototype in cents. The estimate sums the base item price of each real installed vehicle part.<br/><br/>Example:<br/>`{ "math": [ "car_price = vehicle_prototype_price_postapoc('car')" ] }` |
 | proficiency(`s`/`v`)    |  ✅   |   ✅  | u, n  | Return or set proficiency<br/>Argument is proficiency ID.<br/><br/> Optional kwargs:<br/>`format`: `s` - `percent` return or set how many percent done the learning is. `permille` does likewise for permille. `time_spent` return or set total time spent. `time_left` return or set the remaining time. `total_time_required` return total time required to train a given proficiency (read only).<br/>`direct`: `true`/`false`/`d` - false (default) perform the adjustment by practicing the proficiency for the given amount of time. This will likely result in different values than specified. `true` perform the adjustment directly, bypassing other factors that may affect it.<br/><br/>Example:<br/>`{ "math": [ "u_proficiency('prof_intro_chemistry', 'format': 'percent') = 50" ] }`|
 | school_level(`s`/`v`)    |  ✅   |   ❌  | u, n  | Return the highest level of spells known of that school.<br/>Argument is school ID.<br/><br/>Example:<br/>`"condition": { "math": [ "u_school_level('MAGUS') >= 3"] }`|
 | school_level_adjustment(`s`/`v`)    |   ✅  |  ✅   | u, n  | Return or set temporary caster level adjustment. Only useable by EoCs that trigger on the event `opens_spellbook`. Old values will be reset to 0 before the event triggers. To avoid overwriting values from other EoCs, it is recommended to adjust the values here with `+=` or `-=` instead of setting it to an absolute value.<br/>Argument is school ID.<br/><br/>Example:<br/>`{ "math": [ "u_school_level_adjustment('MAGUS')++"] }`|

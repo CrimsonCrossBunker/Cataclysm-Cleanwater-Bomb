@@ -29,6 +29,7 @@ dynamic_line_string_keys = [
     "u_is_avatar", "npc_is_avatar", "u_is_npc", "npc_is_npc",
     "u_is_character", "npc_is_character", "u_is_monster", "npc_is_monster",
     "u_is_item", "npc_is_item", "u_is_furniture", "npc_is_furniture",
+    "u_vehicle_owned_by_avatar", "npc_vehicle_owned_by_avatar",
     "player_see_u", "player_see_npc",
     "u_is_driven", "npc_is_driven",
     "u_is_remote_controlled", "npc_is_remote_controlled",

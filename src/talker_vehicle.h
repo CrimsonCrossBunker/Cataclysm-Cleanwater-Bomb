@@ -90,6 +90,7 @@ class talker_vehicle: public talker_vehicle_const, public talker_cloner<talker_v
         void add_effect( const efftype_id &eff_id, const time_duration &dur, const std::string &,
                          bool permanent, bool, int intensity ) override;
         void remove_effect( const efftype_id &eff_id, const std::string & ) override;
+        void die( map *here ) override;
 
     private:
         vehicle *me_veh{};
