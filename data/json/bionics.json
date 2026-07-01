@@ -817,7 +817,7 @@
     "id": "bio_hydraulics",
     "type": "bionic",
     "name": { "str": "Hydraulic Muscles" },
-    "description": "While activated, your muscles will be greatly enhanced, setting your strength to 20.",
+    "description": "While activated, your muscles will be greatly enhanced, increasing  your strength by 10, with a minimum setting to 20.",
     "occupied_bodyparts": [ [ "torso", 10 ], [ "arm_l", 8 ], [ "arm_r", 8 ], [ "leg_l", 10 ], [ "leg_r", 10 ] ],
     "flags": [ "BIONIC_TOGGLED", "BIONIC_NPC_USABLE" ],
     "enchantments": [ { "condition": "ACTIVE", "ench_effects": [ { "effect": "bio_hydraulics_eff", "intensity": 1 } ] } ],
