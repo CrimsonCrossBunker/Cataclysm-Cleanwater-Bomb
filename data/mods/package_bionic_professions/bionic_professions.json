@@ -792,7 +792,9 @@
       "bio_armor_legs",
       "bio_armor_eyes",
       "bio_razors",
-      "bio_power_storage"
+      "bio_power_storage",
+      "bio_betavoltaic",
+      "bio_betavoltaic"
     ],
     "items": {
       "both": {
