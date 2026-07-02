@@ -82,6 +82,7 @@ namespace
 class wish_mutate_callback: public uilist_callback
 {
     public:
+        cataimgui::scroll desc_scroll = cataimgui::scroll::none;
         // Last menu entry
         int lastlen = 0;
         // Feedback message
@@ -159,7 +160,16 @@ class wish_mutate_callback: public uilist_callback
         }
 
         wish_mutate_callback() = default;
-        bool key( const input_context &, const input_event &event, int entnum, uilist *menu ) override {
+        bool key( const input_context &ctxt, const input_event &event, int entnum, uilist *menu ) override {
+            const std::string &action = ctxt.input_to_action( event );
+            if( action == "SCROLL_DESC_UP" ) {
+                desc_scroll = cataimgui::scroll::page_up;
+                return true;
+            }
+            if( action == "SCROLL_DESC_DOWN" ) {
+                desc_scroll = cataimgui::scroll::page_down;
+                return true;
+            }
             if( event.get_first_input() == 't' && you->has_trait( vTraits[ entnum ] ) ) {
                 if( !you->has_base_trait( vTraits[ entnum ] ) ) {
                     you->unset_mutation( vTraits[ entnum ] );
@@ -208,6 +218,7 @@ class wish_mutate_callback: public uilist_callback
             if( ImGui::BeginChild( "mutation info", info_size )
                 && menu->previewing >= 0 && static_cast<size_t>( menu->previewing ) < vTraits.size()
               ) {
+                cataimgui::set_scroll( desc_scroll );
                 const mutation_branch &mdata = vTraits[menu->previewing].obj();
 
                 ImGui::TextUnformatted( mdata.valid ? _( "Valid" ) : _( "Nonvalid" ) );
@@ -274,6 +285,11 @@ class wish_mutate_callback: public uilist_callback
 void debug_menu::wishmutate( Character *you )
 {
     uilist wmenu;
+    wmenu.input_category = "WISH_ITEM";
+    wmenu.additional_actions = {
+        { "SCROLL_DESC_UP", translation() },
+        { "SCROLL_DESC_DOWN", translation() },
+    };
     int c = 0;
 
     for( const mutation_branch &traits_iter : mutation_branch::get_all() ) {
@@ -661,6 +677,7 @@ namespace
 class wish_monster_callback: public uilist_callback
 {
     public:
+        cataimgui::scroll desc_scroll = cataimgui::scroll::none;
         // last menu entry
         int lastent;
         // feedback message
@@ -682,8 +699,17 @@ class wish_monster_callback: public uilist_callback
             lastent = -2;
         }
 
-        bool key( const input_context &, const input_event &event, int /*entnum*/,
+        bool key( const input_context &ctxt, const input_event &event, int /*entnum*/,
                   uilist * /*menu*/ ) override {
+            const std::string &action = ctxt.input_to_action( event );
+            if( action == "SCROLL_DESC_UP" ) {
+                desc_scroll = cataimgui::scroll::page_up;
+                return true;
+            }
+            if( action == "SCROLL_DESC_DOWN" ) {
+                desc_scroll = cataimgui::scroll::page_down;
+                return true;
+            }
             if( event.get_first_input() == 'f' ) {
                 friendly = !friendly;
                 // Force tmp monster regen
@@ -728,6 +754,7 @@ class wish_monster_callback: public uilist_callback
             // 1 line for ctxt + 0 to 2 lines for msg
             info_size.y -= ( 1.0 + lines_for_msg( msg ) ) * ImGui::GetTextLineHeightWithSpacing();
             if( ImGui::BeginChild( "monster info", info_size ) && valid_entnum ) {
+                cataimgui::set_scroll( desc_scroll );
                 std::string header = string_format( "#%d: %s (%d)%s", entnum, tmp.type->id.c_str(), group,
                                                     hallucination ? _( " (hallucination)" ) : "" );
                 ImGui::SetCursorPosX( ( ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(
@@ -851,6 +878,11 @@ void debug_menu::wishmonster( const std::optional<tripoint_bub_ms> &p )
     std::vector<const mtype *> mtypes;
 
     uilist wmenu;
+    wmenu.input_category = "WISH_ITEM";
+    wmenu.additional_actions = {
+        { "SCROLL_DESC_UP", translation() },
+        { "SCROLL_DESC_DOWN", translation() },
+    };
     setup_wishmonster( wmenu, mtypes );
     wish_monster_callback cb( mtypes );
     wmenu.callback = &cb;
@@ -915,7 +947,7 @@ namespace
 class wish_item_callback: public uilist_callback
 {
     public:
-        int examine_pos;
+        cataimgui::scroll desc_scroll = cataimgui::scroll::none;
         bool incontainer;
         bool spawn_everything;
         bool renew_snippet;
@@ -943,7 +975,7 @@ class wish_item_callback: public uilist_callback
             if( menu->selected < 0 ) {
                 return;
             }
-            examine_pos = 0;
+            desc_scroll = cataimgui::scroll::begin;
             chosen_snippet_id = { -1, "" };
             renew_snippet = true;
             const itype &selected_itype = *standard_itype_ids[menu->selected];
@@ -1025,10 +1057,10 @@ class wish_item_callback: public uilist_callback
                 return true;
             }
             if( action == "SCROLL_DESC_UP" ) {
-                examine_pos = std::max( examine_pos - 1, 0 );
+                desc_scroll = cataimgui::scroll::page_up;
             }
             if( action == "SCROLL_DESC_DOWN" ) {
-                examine_pos += 1;
+                desc_scroll = cataimgui::scroll::page_down;
             }
             if( cur_key == KEY_LEFT || cur_key == KEY_RIGHT ) {
                 // For Renew snippet_id.
