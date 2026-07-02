@@ -106,6 +106,7 @@
       { "item": "bio_armor_eyes", "prob": 3 },
       { "item": "bio_razors", "prob": 3 },
       { "item": "bio_power_storage", "prob": 2 },
+      { "item": "bio_betavoltaic", "prob": 4 },
       { "item": "bio_glowy", "prob": 1 },
       { "item": "bio_sleep_shutdown", "prob": 1 },
       { "item": "bio_faulty_electromagnetic_leak", "prob": 1 },

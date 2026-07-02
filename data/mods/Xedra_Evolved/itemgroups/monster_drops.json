@@ -481,6 +481,7 @@
       { "item": "bio_ears", "prob": 3 },
       { "item": "bio_claws", "prob": 3 },
       { "item": "bio_power_storage", "prob": 2 },
+      { "item": "bio_betavoltaic", "prob": 2 },
       { "item": "bio_fuel_cell_vamp_blood", "prob": 4 },
       { "item": "bio_glowy", "prob": 1 },
       { "item": "bio_sleep_shutdown", "prob": 1 },
