@@ -502,7 +502,7 @@
   {
     "id": "AID_bio_trickle",
     "type": "MIGRATION",
-    "replace": "letter"
+    "replace": "bio_betavoltaic"
   },
   {
     "id": "AID_bio_pitch_perfect",
@@ -777,7 +777,7 @@
   {
     "id": "bio_trickle",
     "type": "MIGRATION",
-    "replace": "burnt_out_bionic"
+    "replace": "bio_betavoltaic"
   },
   {
     "id": "ballistic_vest_heavy_arms",
