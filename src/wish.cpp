@@ -9,6 +9,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -67,6 +68,14 @@
 static const efftype_id effect_pet( "pet" );
 
 static const mongroup_id GROUP_ZOMBIE( "GROUP_ZOMBIE" );
+
+static float lines_for_msg( std::string_view msg )
+{
+    if( msg.empty() ) {
+        return 0.0;
+    }
+    return 1.0 + static_cast<float>( std::count( msg.begin(), msg.end(), '\n' ) );
+}
 
 namespace
 {
@@ -193,7 +202,12 @@ class wish_mutate_callback: public uilist_callback
 
             ImGui::TableSetColumnIndex( 2 );
 
-            if( menu->previewing >= 0 && static_cast<size_t>( menu->previewing ) < vTraits.size() ) {
+            ImVec2 info_size = ImGui::GetContentRegionAvail( );
+            // 1 line for ctxt + 0 to 1 line for msg
+            info_size.y -= ( 1.0 + lines_for_msg( msg ) ) * ImGui::GetTextLineHeightWithSpacing();
+            if( ImGui::BeginChild( "mutation info", info_size )
+                && menu->previewing >= 0 && static_cast<size_t>( menu->previewing ) < vTraits.size()
+              ) {
                 const mutation_branch &mdata = vTraits[menu->previewing].obj();
 
                 ImGui::TextUnformatted( mdata.valid ? _( "Valid" ) : _( "Nonvalid" ) );
@@ -237,13 +251,10 @@ class wish_mutate_callback: public uilist_callback
                 ImGui::NewLine();
                 ImGui::TextWrapped( "%s", you->mutation_desc( mdata.id ).c_str() );
             }
-
-            float y = ImGui::GetContentRegionMax().y - 3 * ImGui::GetTextLineHeightWithSpacing();
-            if( ImGui::GetCursorPosY() < y ) {
-                ImGui::SetCursorPosY( y );
+            ImGui::EndChild();
+            if( !msg.empty() ) {
+                ImGui::TextColored( c_green, "%s", msg.c_str() );
             }
-            ImGui::TextColored( c_green, "%s", msg.c_str() );
-            msg.clear();
             input_context ctxt( menu->input_category, keyboard_mode::keycode );
 
             cataimgui::TextKeybinding( ctxt, "UILIST.FILTER", _( "Find" ),
@@ -698,60 +709,54 @@ class wish_monster_callback: public uilist_callback
         }
 
         void refresh( uilist *menu ) override {
-            ImVec2 info_size = ImGui::GetContentRegionAvail( );
-            info_size.x = desired_extra_space_right( );
-            ImGui::TableSetColumnIndex( 2 );
-            if( ImGui::BeginChild( "monster info", info_size ) ) {
-                const int entnum = menu->previewing;
-                const bool valid_entnum = entnum >= 0 && static_cast<size_t>( entnum ) < mtypes.size();
-                if( entnum != lastent ) {
-                    lastent = entnum;
-                    if( valid_entnum ) {
-                        tmp = monster( mtypes[ entnum ]->id );
-                        if( friendly ) {
-                            tmp.friendly = -1;
-                        }
-                    } else {
-                        tmp = monster();
-                    }
-                }
-
+            const int entnum = menu->previewing;
+            const bool valid_entnum = entnum >= 0 && static_cast<size_t>( entnum ) < mtypes.size();
+            if( entnum != lastent ) {
+                lastent = entnum;
                 if( valid_entnum ) {
-                    std::string header = string_format( "#%d: %s (%d)%s", entnum, tmp.type->id.c_str(), group,
-                                                        hallucination ? _( " (hallucination)" ) : "" );
-                    ImGui::SetCursorPosX( ( ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(
-                                                header.c_str() ).x ) * 0.5 );
-                    ImGui::TextColored( c_cyan, "%s", header.c_str() );
-
-                    // show debug info
-                    restore_on_out_of_scope<bool> restore_debugmode( debug_mode );
-                    debug_mode = true;
-                    tmp.print_info_imgui();
+                    tmp = monster( mtypes[ entnum ]->id );
+                    if( friendly ) {
+                        tmp.friendly = -1;
+                    }
+                } else {
+                    tmp = monster();
                 }
+            }
 
-                float y = ImGui::GetContentRegionMax().y - 3 * ImGui::GetTextLineHeightWithSpacing();
-                if( ImGui::GetCursorPosY() < y ) {
-                    ImGui::SetCursorPosY( y );
-                }
-                ImGui::TextColored( c_green, "%s", msg.c_str() );
-                msg.clear();
-                input_context ctxt( menu->input_category, keyboard_mode::keycode );
+            ImGui::TableSetColumnIndex( 2 );
+            ImVec2 info_size = ImGui::GetContentRegionAvail( );
+            // 1 line for ctxt + 0 to 2 lines for msg
+            info_size.y -= ( 1.0 + lines_for_msg( msg ) ) * ImGui::GetTextLineHeightWithSpacing();
+            if( ImGui::BeginChild( "monster info", info_size ) && valid_entnum ) {
+                std::string header = string_format( "#%d: %s (%d)%s", entnum, tmp.type->id.c_str(), group,
+                                                    hallucination ? _( " (hallucination)" ) : "" );
+                ImGui::SetCursorPosX( ( ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(
+                                            header.c_str() ).x ) * 0.5 );
+                ImGui::TextColored( c_cyan, "%s", header.c_str() );
 
-                cataimgui::TextKeybinding( ctxt, "UILIST.FILTER", _( "Find" ),
-                                           menu->filtering && ( !menu->filter.empty() ) );
-                cataimgui::TextListSeparator();
-                cataimgui::TextKeybinding( ctxt, "f",      _( "Friendly" ),       friendly );
-                cataimgui::TextListSeparator();
-                cataimgui::TextKeybinding( ctxt, "h",      _( "Hallucination" ),  hallucination );
-                cataimgui::TextListSeparator();
-                cataimgui::TextKeybinding( ctxt, "i",      _( "Increase Group" ), false );
-                cataimgui::TextListSeparator();
-                cataimgui::TextKeybinding( ctxt, "d",      _( "Decrease Group" ), false );
-                cataimgui::TextListSeparator();
-                cataimgui::TextKeybinding( ctxt, "UILIST.QUIT", _( "Quit" ),      false );
-
+                // show debug info
+                restore_on_out_of_scope<bool> restore_debugmode( debug_mode );
+                debug_mode = true;
+                tmp.print_info_imgui();
             }
             ImGui::EndChild();
+            if( !msg.empty() ) {
+                ImGui::TextColored( c_green, "%s", msg.c_str() );
+            }
+            input_context ctxt( menu->input_category, keyboard_mode::keycode );
+
+            cataimgui::TextKeybinding( ctxt, "UILIST.FILTER", _( "Find" ),
+                                       menu->filtering && ( !menu->filter.empty() ) );
+            cataimgui::TextListSeparator();
+            cataimgui::TextKeybinding( ctxt, "f",      _( "Friendly" ),       friendly );
+            cataimgui::TextListSeparator();
+            cataimgui::TextKeybinding( ctxt, "h",      _( "Hallucination" ),  hallucination );
+            cataimgui::TextListSeparator();
+            cataimgui::TextKeybinding( ctxt, "i",      _( "Increase Group" ), false );
+            cataimgui::TextListSeparator();
+            cataimgui::TextKeybinding( ctxt, "d",      _( "Decrease Group" ), false );
+            cataimgui::TextListSeparator();
+            cataimgui::TextKeybinding( ctxt, "UILIST.QUIT", _( "Quit" ),      false );
         }
 
         ~wish_monster_callback() override = default;
@@ -1072,19 +1077,21 @@ class wish_item_callback: public uilist_callback
                 info = tmp.get_info( true );
             }
 
-            ImVec2 info_size = ImGui::GetContentRegionAvail();
-            info_size.x = desired_extra_space_right( );
-            info_size.y -= ( 3.0 * ImGui::GetTextLineHeightWithSpacing() ) - ImGui::GetFrameHeightWithSpacing();
-
             ImGui::TableSetColumnIndex( 2 );
+            ImVec2 info_size = ImGui::GetContentRegionAvail();
+            // 1 line for ctxt + 0 to 1 line for msg
+            info_size.y -= ( 1.0 + lines_for_msg( msg ) ) * ImGui::GetTextLineHeightWithSpacing();
+
             if( ImGui::BeginChild( "wish item", info_size ) ) {
+                cataimgui::set_scroll( desc_scroll );
                 ImGui::SetCursorPosX( ( info_size.x - ImGui::CalcTextSize( header.c_str() ).x ) * 0.5 );
                 ImGui::TextColored( c_cyan, "%s", header.c_str() );
                 display_item_info( info, {} );
             }
             ImGui::EndChild();
-
-            ImGui::TextColored( c_green, "%s", msg.c_str() );
+            if( !msg.empty() ) {
+                ImGui::TextColored( c_green, "%s", msg.c_str() );
+            }
             input_context ctxt( menu->input_category, keyboard_mode::keycode );
 
             cataimgui::TextKeybinding( ctxt, "UILIST.FILTER", _( "Find" ),
