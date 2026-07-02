@@ -246,14 +246,14 @@ class wish_mutate_callback: public uilist_callback
             msg.clear();
             input_context ctxt( menu->input_category, keyboard_mode::keycode );
 
-            cataimgui::TextKeybinding( ctxt, "FILTER", _( "Find" ),
+            cataimgui::TextKeybinding( ctxt, "UILIST.FILTER", _( "Find" ),
                                        menu->filtering && ( !menu->filter.empty() ) );
             cataimgui::TextListSeparator();
             cataimgui::TextKeybinding( ctxt, "t",      _( "Toggle base trait" ),  false );
             cataimgui::TextListSeparator();
             cataimgui::TextKeybinding( ctxt, "a",      _( "Show active traits" ), only_active );
             cataimgui::TextListSeparator();
-            cataimgui::TextKeybinding( ctxt, "QUIT",   _( "Quit" ),               false );
+            cataimgui::TextKeybinding( ctxt, "UILIST.QUIT", _( "Quit" ),          false );
         }
 
         ~wish_mutate_callback() override = default;
@@ -737,7 +737,7 @@ class wish_monster_callback: public uilist_callback
                 msg.clear();
                 input_context ctxt( menu->input_category, keyboard_mode::keycode );
 
-                cataimgui::TextKeybinding( ctxt, "FILTER", _( "Find" ),
+                cataimgui::TextKeybinding( ctxt, "UILIST.FILTER", _( "Find" ),
                                            menu->filtering && ( !menu->filter.empty() ) );
                 cataimgui::TextListSeparator();
                 cataimgui::TextKeybinding( ctxt, "f",      _( "Friendly" ),       friendly );
@@ -748,7 +748,7 @@ class wish_monster_callback: public uilist_callback
                 cataimgui::TextListSeparator();
                 cataimgui::TextKeybinding( ctxt, "d",      _( "Decrease Group" ), false );
                 cataimgui::TextListSeparator();
-                cataimgui::TextKeybinding( ctxt, "QUIT",   _( "Quit" ),           false );
+                cataimgui::TextKeybinding( ctxt, "UILIST.QUIT", _( "Quit" ),      false );
 
             }
             ImGui::EndChild();
@@ -872,7 +872,7 @@ void debug_menu::wishmonster( const std::optional<tripoint_bub_ms> &p )
                 }
                 input_context ctxt( wmenu.input_category, keyboard_mode::keycode );
                 cb.msg = string_format( _( "Spawned %d monsters, choose another or [%s] to quit." ),
-                                        num_spawned, ctxt.get_desc( "QUIT" ) );
+                                        num_spawned, ctxt.get_desc( "UILIST.QUIT" ) );
                 if( num_spawned == 0 ) {
                     cb.msg += _( "\nTarget location is not suitable for placing this kind of monster.  Choose a different target or [i]ncrease the groups size." );
                 }
@@ -1087,7 +1087,7 @@ class wish_item_callback: public uilist_callback
             ImGui::TextColored( c_green, "%s", msg.c_str() );
             input_context ctxt( menu->input_category, keyboard_mode::keycode );
 
-            cataimgui::TextKeybinding( ctxt, "FILTER",     _( "Find" ),
+            cataimgui::TextKeybinding( ctxt, "UILIST.FILTER", _( "Find" ),
                                        menu->filtering && ( !menu->filter.empty() ) );
             cataimgui::TextListSeparator();
             cataimgui::TextKeybinding( ctxt, "CONTAINER",  _( "Container" ),  incontainer );
@@ -1098,7 +1098,7 @@ class wish_item_callback: public uilist_callback
             cataimgui::TextListSeparator();
             cataimgui::TextKeybinding( ctxt, "SNIPPET",    _( "Snippet" ),    chosen_snippet_id.first != -1 );
             cataimgui::TextListSeparator();
-            cataimgui::TextKeybinding( ctxt, "QUIT",       _( "Quit" ),       false );
+            cataimgui::TextKeybinding( ctxt, "UILIST.QUIT", _( "Quit" ),      false );
         }
 };
 } // namespace
@@ -1222,7 +1222,7 @@ void debug_menu::wishitem( Character *you, const tripoint_bub_ms &pos )
                 if( amount > 0 ) {
                     input_context ctxt( wmenu.input_category, keyboard_mode::keycode );
                     cb.msg = string_format( _( "Wish granted.  Wish for more or hit [%s] to quit." ),
-                                            ctxt.get_desc( "QUIT" ) );
+                                            ctxt.get_desc( "UILIST.QUIT" ) );
                 }
             }
             uistate.wishitem_selected = wmenu.selected;
