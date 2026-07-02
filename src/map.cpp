@@ -23,6 +23,7 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_type_traits.h"
+#include "cata_utility.h"
 #include "character.h"
 #include "character_id.h"
 #include "clzones.h"
@@ -124,6 +125,16 @@ static const ammo_effect_str_id ammo_effect_LIGHTNING( "LIGHTNING" );
 static const ammo_effect_str_id ammo_effect_PLASMA( "PLASMA" );
 
 static const ammotype ammo_battery( "battery" );
+
+static const furn_str_id furn_f_rope_up( "f_rope_up" );
+
+static void erase_cached_vehicle_ladders( std::map<tripoint_bub_ms, std::pair<vehicle *, int> > &cache,
+        const vehicle *veh )
+{
+    erase_if( cache, [veh]( const std::pair<const tripoint_bub_ms, std::pair<vehicle *, int>> &entry ) {
+        return entry.second.first == veh;
+    } );
+}
 
 static const bionic_id bio_shock_absorber( "bio_shock_absorber" );
 
@@ -788,6 +799,8 @@ void map::add_vehicle_to_cache( vehicle *veh )
         return;
     }
 
+    erase_cached_vehicle_ladders( cached_veh_ladders, veh );
+
     // Get parts
     for( const vpart_reference &vpr : veh->get_all_parts_with_fakes() ) {
         if( vpr.part().removed ) {
@@ -800,9 +813,19 @@ void map::add_vehicle_to_cache( vehicle *veh )
             ch.set_veh_exists_at( p, true );
             set_transparency_cache_dirty( p );
         }
-        int part = veh->part_with_feature( static_cast<int>( vpr.part_index() ), VPFLAG_LADDER, true );
+        const int part = veh->avail_part_with_feature( static_cast<int>( vpr.part_index() ),
+                         VPFLAG_LADDER );
         if( part != -1 ) {
-            cached_veh_rope[p.xy()] = std::make_pair( veh, part );
+            const vehicle_part &ladder_part = veh->part( part );
+            const int length = ladder_part.info().ladder_length();
+            const tripoint_bub_ms ladder_top = veh->bub_part_pos( *this, ladder_part );
+            for( int dz = 0; dz <= length; ++dz ) {
+                tripoint_bub_ms ladder_pos = ladder_top;
+                ladder_pos.z() -= dz;
+                if( inbounds_z( ladder_pos.z() ) ) {
+                    cached_veh_ladders[ladder_pos] = std::make_pair( veh, part );
+                }
+            }
         }
     }
 }
@@ -821,7 +844,7 @@ void map::clear_vehicle_point_from_cache( vehicle *veh, const tripoint_bub_ms &p
         }
         ch->clear_veh_from_veh_cached_parts( pt, veh );
     }
-    cached_veh_rope.erase( pt.xy() );
+    erase_cached_vehicle_ladders( cached_veh_ladders, veh );
 }
 
 void map::clear_vehicle_level_caches( )
@@ -832,11 +855,12 @@ void map::clear_vehicle_level_caches( )
             ch->clear_vehicle_cache();
         }
     }
-    cached_veh_rope.clear();
+    cached_veh_ladders.clear();
 }
 
 void map::remove_vehicle_from_cache( vehicle *veh, int zmin, int zmax )
 {
+    erase_cached_vehicle_ladders( cached_veh_ladders, veh );
     for( int gridz = zmin; gridz <= zmax; gridz++ ) {
         level_cache *const ch = get_cache_lazy( gridz );
         if( ch != nullptr ) {
@@ -3554,20 +3578,117 @@ int map::climb_difficulty( const tripoint_bub_ms &p ) const
     return std::max( 0, best_difficulty - blocks_movement );
 }
 
-bool map::has_rope_at( tripoint_bub_ms pt ) const
+std::optional<vpart_reference> map::vehicle_ladder_at( const tripoint_bub_ms &pt ) const
 {
-    if( cached_veh_rope.count( pt.xy() ) > 0 ) {
-        const auto &veh_pair = get_rope_at( pt.xy() );
-        vehicle *veh = veh_pair.first;
-        int veh_part = veh_pair.second;
-        return veh->part( veh_part ).info().ladder_length() >= veh->pos_bub( *this ).z() - pt.z();
+    if( const std::optional<vpart_reference> ladder =
+            veh_at( pt ).avail_part_with_feature( VPFLAG_LADDER ) ) {
+        return ladder;
     }
-    return false;
+
+    const auto cached = cached_veh_ladders.find( pt );
+    if( cached == cached_veh_ladders.end() ) {
+        return std::nullopt;
+    }
+
+    vehicle *veh = cached->second.first;
+    const int veh_part = cached->second.second;
+    if( veh == nullptr || veh_part < 0 || veh_part >= veh->part_count() ) {
+        return std::nullopt;
+    }
+
+    const int available_ladder_part = veh->avail_part_with_feature( veh_part, VPFLAG_LADDER );
+    if( available_ladder_part < 0 ) {
+        return std::nullopt;
+    }
+
+    vehicle_part &part = veh->part( available_ladder_part );
+    const tripoint_bub_ms ladder_top = veh->bub_part_pos( *this, part );
+    const int z_delta = ladder_top.z() - pt.z();
+    if( ladder_top.xy() != pt.xy() || z_delta < 0 || z_delta > part.info().ladder_length() ) {
+        return std::nullopt;
+    }
+
+    for( int z = ladder_top.z() - 1; z > pt.z(); --z ) {
+        const tripoint_bub_ms midpoint( pt.xy(), z );
+        if( !is_open_air( midpoint ) || veh_at( midpoint ) ) {
+            return std::nullopt;
+        }
+    }
+
+    return vpart_reference( *veh, available_ladder_part );
 }
 
-std::pair<vehicle *, int> map::get_rope_at( const point_bub_ms &pt ) const
+std::optional<tripoint_bub_ms> map::vehicle_ladder_destination( const tripoint_bub_ms &from,
+        const int movez ) const
 {
-    return cached_veh_rope.at( pt );
+    const std::optional<vpart_reference> ladder = vehicle_ladder_at( from );
+    if( !ladder || movez == 0 ) {
+        return std::nullopt;
+    }
+
+    const tripoint_bub_ms ladder_top = ladder->pos_bub( *this );
+    const int length = ladder->info().ladder_length();
+    const int current_offset = ladder_top.z() - from.z();
+    if( current_offset < 0 || current_offset > length ) {
+        return std::nullopt;
+    }
+
+    if( movez > 0 ) {
+        if( current_offset == 0 ) {
+            return std::nullopt;
+        }
+        for( int z = from.z() + 1; z < ladder_top.z(); ++z ) {
+            const tripoint_bub_ms midpoint( from.xy(), z );
+            if( !is_open_air( midpoint ) && !veh_at( midpoint ) ) {
+                return std::nullopt;
+            }
+        }
+        return ladder_top;
+    }
+
+    const int max_descent = length - current_offset;
+    if( max_descent <= 0 ) {
+        return std::nullopt;
+    }
+    if( current_offset > 0 &&
+        ( !is_open_air( from ) || veh_at( from ) ) ) {
+        return std::nullopt;
+    }
+
+    tripoint_bub_ms dest = from;
+    for( int dist = 1; dist <= max_descent; ++dist ) {
+        const tripoint_bub_ms candidate( from.xy(), from.z() - dist );
+        dest = candidate;
+        if( !is_open_air( candidate ) || veh_at( candidate ) ) {
+            break;
+        }
+    }
+
+    return dest;
+}
+
+std::optional<furn_id> map::vehicle_ladder_furniture_at( const tripoint_bub_ms &pt ) const
+{
+    if( has_furn( pt ) ) {
+        return std::nullopt;
+    }
+
+    const std::optional<vpart_reference> ladder = vehicle_ladder_at( pt );
+    if( !ladder || ladder->pos_bub( *this ) == pt ) {
+        return std::nullopt;
+    }
+
+    const furn_str_id visual_furn( ladder->info().looks_like );
+    if( visual_furn.is_valid() && !visual_furn.is_null() ) {
+        return visual_furn.id();
+    }
+
+    return furn_f_rope_up.id();
+}
+
+bool map::has_vehicle_ladder_at( const tripoint_bub_ms &pt ) const
+{
+    return vehicle_ladder_at( pt ).has_value();
 }
 
 bool map::has_floor( const tripoint_bub_ms &p ) const
@@ -8528,8 +8649,16 @@ bool map::draw_maptile( const catacurses::window &w, const tripoint_bub_ms &p,
     nc_color tercol;
     const ter_t &curr_ter = params.terrain_override().is_null()
                             ? curr_maptile.get_ter_t() : params.terrain_override().obj();
-    const furn_t &curr_furn = params.furniture_override().is_null()
-                              ? curr_maptile.get_furn_t() : params.furniture_override().obj();
+    const furn_id actual_furn = curr_maptile.get_furn();
+    const std::optional<furn_id> vehicle_ladder_furn =
+        params.furniture_override().is_null() && !actual_furn ?
+        vehicle_ladder_furniture_at( p ) : std::nullopt;
+    const furn_t *curr_furn = &curr_maptile.get_furn_t();
+    if( !params.furniture_override().is_null() ) {
+        curr_furn = &params.furniture_override().obj();
+    } else if( vehicle_ladder_furn ) {
+        curr_furn = &vehicle_ladder_furn->obj();
+    }
     const trap &curr_trap = curr_maptile.get_trap().obj();
     const field &curr_field = curr_maptile.get_field();
     int sym;
@@ -8547,10 +8676,10 @@ bool map::draw_maptile( const catacurses::window &w, const tripoint_bub_ms &p,
     }
 
     avatar &player_character = get_avatar();
-    if( curr_furn.id ) {
-        sym = curr_furn.symbol();
-        tercol = curr_furn.color();
-        if( !( player_character.get_grab_type() == object_type::FURNITURE
+    if( curr_furn->id ) {
+        sym = curr_furn->symbol();
+        tercol = curr_furn->color();
+        if( !vehicle_ladder_furn && !( player_character.get_grab_type() == object_type::FURNITURE
                && p == player_character.pos_bub() + player_character.grab_point ) ) {
             memory_sym = sym;
         }
@@ -8739,15 +8868,19 @@ void map::draw_from_above( const catacurses::window &w, const tripoint_bub_ms &p
     int sym = ' ';
 
     const ter_t &curr_ter = curr_tile.get_ter_t();
-    const furn_t &curr_furn = curr_tile.get_furn_t();
+    const furn_id actual_furn = curr_tile.get_furn();
+    const std::optional<furn_id> vehicle_ladder_furn = !actual_furn ?
+            vehicle_ladder_furniture_at( p ) : std::nullopt;
+    const furn_t *curr_furn = vehicle_ladder_furn ? &vehicle_ladder_furn->obj() :
+                              &curr_tile.get_furn_t();
     int part_below;
     const vehicle *veh;
-    if( curr_furn.has_flag( ter_furn_flag::TFLAG_SEEN_FROM_ABOVE ) ) {
-        sym = curr_furn.symbol();
-        tercol = curr_furn.color();
-    } else if( curr_furn.movecost < 0 ) {
+    if( curr_furn->has_flag( ter_furn_flag::TFLAG_SEEN_FROM_ABOVE ) ) {
+        sym = curr_furn->symbol();
+        tercol = curr_furn->color();
+    } else if( curr_furn->movecost < 0 ) {
         sym = '.';
-        tercol = curr_furn.color();
+        tercol = curr_furn->color();
     } else if( ( veh = veh_at_internal( p, part_below ) ) != nullptr ) {
         const vpart_position vpp( const_cast<vehicle &>( *veh ), part_below );
         const vpart_display vd = veh->get_display_of_tile( vpp.mount_pos(), true, true, true );

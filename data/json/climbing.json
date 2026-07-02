@@ -83,7 +83,7 @@
   {
     "type": "climbing_aid",
     "id": "vehicle",
-    "//": "Currently this applies to any part of any vehicle.  Trickier than most climbing.",
+    "//": "Climbing onto a nearby vehicle body is trickier than most climbing.",
     "slip_chance_mod": -8,
     "down": {
       "menu_text": "Climb down onto the vehicle here.",
@@ -92,6 +92,20 @@
       "max_height": 1
     },
     "condition": { "type": "veh", "flag": "INITIAL_PART" }
+  },
+  {
+    "type": "climbing_aid",
+    "id": "veh_LADDER",
+    "//": "Vehicle ladders use the installed part length as their effective max height.",
+    "copy-from": "generic_stepladder",
+    "down": {
+      "menu_text": "Climb down the vehicle ladder.",
+      "confirm_text": "Climb down the vehicle ladder?",
+      "msg_after": "You climb down the vehicle ladder.",
+      "max_height": 999,
+      "easy_climb_back_up": 999
+    },
+    "condition": { "type": "veh", "flag": "LADDER" }
   },
   {
     "type": "climbing_aid",

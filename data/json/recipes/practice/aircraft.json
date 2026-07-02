@@ -1,0 +1,30 @@
+[
+  {
+    "id": "prac_airship_piloting",
+    "type": "practice",
+    "activity_level": "NO_EXERCISE",
+    "category": "CC_PRACTICE",
+    "subcategory": "CSC_PRACTICE_MECHANICS",
+    "name": "airship piloting drills",
+    "description": "Practice airship piloting with a flight manual, reviewing lift, ballast, wind drift, and propeller steering procedures.",
+    "skill_used": "driving",
+    "proficiencies": [ { "proficiency": "prof_airship_pilot", "time_multiplier": 1, "skill_penalty": 0 } ],
+    "time": "1 h",
+    "practice_data": { "min_difficulty": 0, "max_difficulty": 1, "skill_limit": 3 },
+    "book_learn": [ [ "book_airship_piloting", 0 ] ]
+  },
+  {
+    "id": "prac_helicopter_piloting",
+    "type": "practice",
+    "activity_level": "NO_EXERCISE",
+    "category": "CC_PRACTICE",
+    "subcategory": "CSC_PRACTICE_MECHANICS",
+    "name": "helicopter piloting drills",
+    "description": "Practice helicopter piloting with a flight manual, reviewing cyclic, collective, anti-torque, hover, and emergency procedures.",
+    "skill_used": "driving",
+    "proficiencies": [ { "proficiency": "prof_helicopter_pilot", "time_multiplier": 1, "skill_penalty": 0 } ],
+    "time": "1 h",
+    "practice_data": { "min_difficulty": 0, "max_difficulty": 1, "skill_limit": 3 },
+    "book_learn": [ [ "book_airship_piloting", 0 ] ]
+  }
+]

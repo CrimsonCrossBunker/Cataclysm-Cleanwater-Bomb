@@ -1,6 +1,7 @@
 #include "climbing.h"
 
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 #include "cata_utility.h"
@@ -10,6 +11,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "map.h"
+#include "veh_type.h"
 #include "vpart_position.h"
 
 template <typename E> struct enum_traits;
@@ -352,10 +354,27 @@ climbing_aid::condition_list climbing_aid::detect_conditions( Character &you,
         cond.range = fall.pos_top().z() - pos.z();
         return here.has_flag( cond.flag, pos );
     };
-    auto detect_vehicle = [&fall]( condition & cond ) {
-        // TODO implement flags and range?
+    auto detect_vehicle = [&here, &fall]( condition & cond ) {
+        if( cond.flag == "LADDER" ) {
+            for( int dz = 0; dz <= fall.height; ++dz ) {
+                tripoint_bub_ms pos = fall.pos_top();
+                pos.z() -= dz;
+                const std::optional<vpart_reference> ladder = here.vehicle_ladder_at( pos );
+                if( !ladder ) {
+                    continue;
+                }
+                const int distance_from_ladder_top = ladder->pos_bub( here ).z() - fall.pos_top().z();
+                if( distance_from_ladder_top < 0 ) {
+                    continue;
+                }
+                cond.range = ladder->info().ladder_length() - distance_from_ladder_top;
+                return cond.range > 0;
+            }
+            return false;
+        }
+
         cond.range = 1;
-        return fall.veh_just_below();
+        return here.veh_at( fall.pos_just_below() ).avail_part_with_feature( cond.flag ).has_value();
     };
 
     detect_conditions_sub( list, category::character, detect_you_character_flag );

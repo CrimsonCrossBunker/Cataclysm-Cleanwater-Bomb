@@ -3810,12 +3810,30 @@ bool cata_tiles::draw_terrain( const tripoint_bub_ms &p, const lit_level ll, int
 bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, int &height_3d,
                                  const std::array<bool, 5> &invisible )
 {
-    const auto override = furniture_override.find( p );
-    const bool overridden = override != furniture_override.end();
+    map &here = get_map();
+    const auto display_override =
+        [this, &here]( const tripoint_bub_ms &q,
+                       const bool allow_vehicle_ladder ) -> std::optional<furn_id> {
+            const auto override = furniture_override.find( q );
+            if( override != furniture_override.end() ) {
+                return override->second;
+            }
+            return allow_vehicle_ladder ? here.vehicle_ladder_furniture_at( q ) : std::nullopt;
+        };
+    const auto explicit_override = furniture_override.find( p );
+    const bool explicitly_overridden = explicit_override != furniture_override.end();
+    std::optional<furn_id> override;
+    if( explicitly_overridden ) {
+        override = explicit_override->second;
+    } else if( !invisible[0] ) {
+        override = display_override( p, true );
+    }
+    const bool vehicle_ladder_overridden = override.has_value() && !explicitly_overridden;
+    const bool overridden = override.has_value();
     bool neighborhood_overridden = overridden;
     if( !neighborhood_overridden ) {
-        for( const point &dir : neighborhood ) {
-            if( furniture_override.find( p + dir ) != furniture_override.end() ) {
+        for( std::size_t i = 0; i < neighborhood.size(); ++i ) {
+            if( display_override( p + neighborhood[i], !invisible[i + 1] ) ) {
                 neighborhood_overridden = true;
                 break;
             }
@@ -3838,18 +3856,17 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
     }
     // Override / memory / invisible path: live-read from the map because
     // override previews and memory tiles are not captured into the cache.
-    map &here = get_map();
     const furn_id &f = here.furn( p );
     if( invisible[0] ? overridden : neighborhood_overridden ) {
         // and then draw the override furniture
-        const furn_id &f2 = overridden ? override->second : f;
+        const furn_id f2 = overridden ? *override : f;
         if( f2 ) {
             // both the current and neighboring overrides may change the appearance
             // of the tile, so always re-calculate it.
-            const auto furn = [&]( const tripoint_bub_ms & q, const bool invis ) -> furn_id {
-                const auto it = furniture_override.find( q );
-                return it != furniture_override.end() ? it->second :
-                ( !overridden || !invis ) ? here.furn( q ) : furn_str_id::NULL_ID().id();
+            const auto furn = [&]( const tripoint_bub_ms &q, const bool invis ) -> furn_id {
+                const std::optional<furn_id> override = display_override( q, !invis );
+                return override ? *override :
+                       ( !overridden || !invis ) ? here.furn( q ) : furn_str_id::NULL_ID().id();
             };
             const std::array<int, 4> neighborhood = {
                 static_cast<int>( furn( p + point::south, invisible[1] ) ),
@@ -3859,20 +3876,22 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
             };
             int subtile = 0;
             int rotation = 0;
-            const std::bitset<NUM_TERCONN> &connect_group = f.obj().connect_to_groups;
-            const std::bitset<NUM_TERCONN> &rotate_group = f.obj().rotate_to_groups;
+            const furn_id &tile_values_furn = vehicle_ladder_overridden ? f2 : f;
+            const std::bitset<NUM_TERCONN> &connect_group = tile_values_furn.obj().connect_to_groups;
+            const std::bitset<NUM_TERCONN> &rotate_group = tile_values_furn.obj().rotate_to_groups;
 
             if( connect_group.any() ) {
                 map::get_furn_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
             } else {
-                map::get_tile_values_with_ter( p, f.to_i(), neighborhood, subtile, rotation, rotate_group );
+                map::get_tile_values_with_ter( p, tile_values_furn.to_i(), neighborhood, subtile,
+                                               rotation, rotate_group );
             }
             map::get_tile_values_with_ter( p, f2.to_i(), neighborhood, subtile, rotation, 0 );
             const std::string &fname = f2.id().str();
             // tile overrides are never memorized
             // tile overrides are always shown with full visibility
-            const lit_level lit = overridden ? lit_level::LIT : ll;
-            const bool nv = overridden ? false : nv_goggles_activated;
+            const lit_level lit = explicitly_overridden ? lit_level::LIT : ll;
+            const bool nv = explicitly_overridden ? false : nv_goggles_activated;
             return draw_from_id_string( fname, TILE_CATEGORY::FURNITURE, empty_string, p, subtile,
                                         rotation, lit, nv, height_3d );
         }

@@ -11122,6 +11122,29 @@ static bool climb_affordance_menu_decode( int retval, climbing_aid_id &aid_id )
     return false;
 }
 
+static bool is_vehicle_ladder_aid( const climbing_aid &aid )
+{
+    return aid.base_condition.cat == climbing_aid::category::veh &&
+           aid.base_condition.flag == "LADDER";
+}
+
+static int effective_vehicle_ladder_climb_height( const climbing_aid &aid,
+        const climbing_aid::condition_list &conditions, const int base_height )
+{
+    if( !is_vehicle_ladder_aid( aid ) ) {
+        return base_height;
+    }
+
+    for( const climbing_aid::condition &cond : conditions ) {
+        if( cond.cat == aid.base_condition.cat && cond.flag == aid.base_condition.flag &&
+            cond.range > 0 ) {
+            return std::min( base_height, cond.range );
+        }
+    }
+
+    return 0;
+}
+
 void game::climb_down_menu_gen( const tripoint_bub_ms &examp, uilist &cmenu )
 {
     // NOTE this menu may be merged with the iexamine::ledge menu, manage keys carefully!
@@ -11167,16 +11190,18 @@ void game::climb_down_menu_gen( const tripoint_bub_ms &examp, uilist &cmenu )
     }
 
     for( const climbing_aid *aid : aids ) {
+        const int effective_max_height = effective_vehicle_ladder_climb_height( *aid, conditions,
+                                         aid->down.max_height );
         // Enable climbing aid unless it would deploy furniture in occupied tiles.
         bool enable_aid = true;
         if( aid->down.deploys_furniture() &&
-            fall.height_until_furniture < std::min( fall.height, aid->down.max_height ) ) {
+            fall.height_until_furniture < std::min( fall.height, effective_max_height ) ) {
             // Can't deploy because it would overwrite existing furniture.
             enable_aid = false;
         }
 
         // Certain climbing aids can't be used for partial descent.
-        if( !aid->down.allow_remaining_height && aid->down.max_height < fall.height ) {
+        if( !aid->down.allow_remaining_height && effective_max_height < fall.height ) {
             // TODO this check could block the safest non-deploying aid!
             enable_aid = false;
         }
@@ -11244,6 +11269,15 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
 
     // Scan the height of the drop and what's in the way.
     const climbing_aid::fall_scan fall( examp );
+    const climbing_aid::condition_list conditions = climbing_aid::detect_conditions( you, examp );
+    const int effective_max_height = effective_vehicle_ladder_climb_height( aid, conditions,
+                                     aid.down.max_height );
+    const int effective_easy_climb_back_up = effective_vehicle_ladder_climb_height( aid, conditions,
+            aid.down.easy_climb_back_up );
+    if( is_vehicle_ladder_aid( aid ) && effective_max_height <= 0 ) {
+        you.add_msg_if_player( _( "You can't reach that vehicle climbing aid." ) );
+        return;
+    }
 
     int estimated_climb_cost = you.climbing_cost( tripoint_bub_ms( fall.pos_bottom() ), examp );
     const float fall_mod = you.fall_damage_mod();
@@ -11271,7 +11305,7 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
 
     // Rough messaging about safety.  "seems safe" can leave a 1-2% chance unlike "perfectly safe".
     bool levitating = u.has_flag( json_flag_LEVITATION );
-    bool seems_perfectly_safe = slip_chance < -5 && aid.down.max_height >= fall.height;
+    bool seems_perfectly_safe = slip_chance < -5 && effective_max_height >= fall.height;
     if( !levitating ) {
         if( seems_perfectly_safe ) {
             query = _( "It <color_green>seems perfectly safe</color> to climb down like this." );
@@ -11309,9 +11343,9 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
         query += hint_fall_damage;
     }
 
-    if( fall.height > aid.down.max_height && !levitating ) {
+    if( fall.height > effective_max_height && !levitating ) {
         // Warn the player that they will fall even after a successful climb
-        int remaining_height = fall.height - aid.down.max_height;
+        int remaining_height = fall.height - effective_max_height;
         query += "\n";
         query += string_format( n_gettext(
                                     "Even if you climb down safely, you will fall <color_yellow>at least %d story</color>.",
@@ -11320,7 +11354,7 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
     }
 
     // Certain climbing aids make it easy to climb back up, usually by making furniture.
-    if( aid.down.easy_climb_back_up >= fall.height ) {
+    if( effective_easy_climb_back_up >= fall.height ) {
         estimated_climb_cost = 50;
     }
 
@@ -11363,7 +11397,7 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
     add_msg_debug( debugmode::DF_GAME, "Climbing aid: %s / deploy furniture %d", std::string( aid_id ),
                    int( deploy_affordance ) );
     add_msg_debug( debugmode::DF_GAME, "Slip chance %d / est damage %d", slip_chance, damage_estimate );
-    add_msg_debug( debugmode::DF_GAME, "We can descend %d / total height %d", aid.down.max_height,
+    add_msg_debug( debugmode::DF_GAME, "We can descend %d / total height %d", effective_max_height,
                    fall.height );
 
     if( !levitating && ( !seems_perfectly_safe || !easy_climb_back_up ) ) {
@@ -11390,7 +11424,7 @@ void game::climb_down_using( const tripoint_bub_ms &examp, climbing_aid_id aid_i
 
     // Descent: perform one slip check per level
     tripoint_bub_ms descent_pos = examp;
-    for( int i = 0; i < fall.height && i < aid.down.max_height; ++i ) {
+    for( int i = 0; i < fall.height && i < effective_max_height; ++i ) {
         if( g->slip_down( climb_maneuver::down, aid_id, false ) ) {
             // The player has slipped and probably fallen.
             return;

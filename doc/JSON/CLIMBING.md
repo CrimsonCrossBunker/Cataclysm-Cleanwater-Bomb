@@ -50,8 +50,8 @@ For the most part, each climbing aid will have a unique condition, with possible
 Mandatory.  String.  One of the following.
 
 * `ter_furn`:  One of the tiles on the climbing route has terrain or furniture with the given `flag`.
-* `veh`:  One of the tiles on the climbing route has a vehicle part with the given `flag`
-  * Flag detection is currently unsupported and a `veh` condition will be activated by the presence of any vehicle.
+* `veh`:  One of the tiles on the climbing route has a vehicle part with the given `flag`.
+  Vehicle `LADDER` parts use their `length` as the effective range.
 * `character`:  The one climbing has the given `flag`.
 * `trait`:  The one climbing has the trait named by the `flag` field.
 * `item`:  The character climbing has the item identified by the `flag` field in their inventory.

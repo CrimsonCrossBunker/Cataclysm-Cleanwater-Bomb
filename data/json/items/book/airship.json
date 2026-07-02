@@ -18,10 +18,6 @@
     "time": "50 m",
     "read_fun": 1,
     "melee_damage": { "bash": 4 },
-    "read_skill": "driving",
-    "proficiencies": [
-      { "proficiency": "prof_airship_pilot", "time_factor": 0.7, "fail_factor": 0.5 },
-      { "proficiency": "prof_helicopter_pilot", "time_factor": 0.7, "fail_factor": 0.5 }
-    ]
+    "read_skill": "driving"
   }
 ]
