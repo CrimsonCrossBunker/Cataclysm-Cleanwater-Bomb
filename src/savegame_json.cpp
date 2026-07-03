@@ -2208,7 +2208,7 @@ void npc::load( const JsonObject &data )
 
     int misstmp = 0;
     int atttmp = 0;
-    std::string facID;
+    faction_id facID;
     std::string comp_miss_role;
     tripoint_abs_omt comp_miss_pt;
     std::string companion_mission_role;
@@ -2262,7 +2262,11 @@ void npc::load( const JsonObject &data )
     }
 
     if( data.read( "my_fac", facID ) ) {
-        fac_id = faction_id( facID );
+        if( facID.is_valid() ) {
+            fac_id = facID;
+        } else {
+            fac_id = faction_id::NULL_ID();
+        }
     }
     int temp_fac_api_ver = 0;
     if( data.read( "faction_api_ver", temp_fac_api_ver ) ) {
