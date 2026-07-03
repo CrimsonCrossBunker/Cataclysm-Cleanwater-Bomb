@@ -2389,15 +2389,10 @@ int Character::get_cardiofit() const
         return 2 * get_cardio_acc_base();
     }
 
-    if( has_bionic( bio_synlungs ) ) {
-        // If you have the synthetic lungs bionic your cardioacc is forced to a specific value
-        return 3 * get_cardio_acc_base();
-    }
-
     const int cardio_base = get_cardio_acc();
 
-    // Mut mod contains the base 1.0f for all modifiers
-    const float mut_mod = enchantment_cache->modify_value( enchant_vals::mod::CARDIO_MULTIPLIER, 1 );
+    // Ench mod contains the base 1.0f for all modifiers
+    const float ench_mod = enchantment_cache->modify_value( enchant_vals::mod::CARDIO_MULTIPLIER, 1 );
     // 1 point of athletics skill = 1% more cardio, up to 10% cardio
     const float athletics_mod = get_skill_level( skill_swimming ) / 100.0f;
     // At some point we might have proficiencies that affect this.
@@ -2411,7 +2406,11 @@ int Character::get_cardiofit() const
     }
 
     // Add up all of our cardio mods.
-    float cardio_modifier = mut_mod + athletics_mod + prof_mod + health_mod;
+    float cardio_modifier = ench_mod + athletics_mod + prof_mod + health_mod;
+    if( has_bionic( bio_synlungs ) ) {
+        // If you have synthetic lung bionics, your cardioaccuracy multiplier will be calculated using a special algorithm.
+        cardio_modifier = ( 4 + cardio_modifier + ench_mod ) / 3.0f;
+    }
     // Modify cardio accumulator by our cardio mods.
     const int cardio_fitness = static_cast<int>( cardio_base * cardio_modifier );
 
