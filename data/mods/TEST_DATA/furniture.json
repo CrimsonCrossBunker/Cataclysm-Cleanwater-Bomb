@@ -211,5 +211,69 @@
       { "copy_var": { "context_val": "this" }, "target_var": { "global_val": "this" } },
       { "copy_var": { "context_val": "pos" }, "target_var": { "global_val": "pos" } }
     ]
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_high_water",
+    "name": "Test high-water planter",
+    "description": "Test planter with high water capacity and consumption.",
+    "symbol": "^",
+    "color": "green",
+    "move_cost_mod": 1,
+    "required_str": 10,
+    "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT" ],
+    "plant_data": { "transform": "test_f_planter_high_water_seed", "max_water_storage": 200, "water_consumption_multiplier": 3.0 }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_high_water_seed",
+    "name": "Test high-water planter seed",
+    "description": "Test planter seed stage inheriting water stats from base.",
+    "symbol": "^",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_SEED" ],
+    "examine_action": "aggie_plant",
+    "plant_data": { "transform": "test_f_planter_high_water_seedling", "base": "test_f_planter_high_water" }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_high_water_seedling",
+    "name": "Test high-water planter seedling",
+    "description": "Test planter seedling stage inheriting water stats from base.",
+    "symbol": "^",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_SEEDLING" ],
+    "examine_action": "aggie_plant",
+    "plant_data": { "transform": "test_f_planter_high_water_mature", "base": "test_f_planter_high_water" }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_high_water_mature",
+    "name": "Test high-water planter mature",
+    "description": "Test planter mature stage inheriting water stats from base.",
+    "symbol": "^",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_MATURE" ],
+    "examine_action": "aggie_plant",
+    "plant_data": { "transform": "test_f_planter_high_water_harvest", "base": "test_f_planter_high_water" }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_high_water_harvest",
+    "name": "Test high-water planter harvest",
+    "description": "Test planter harvest stage inheriting water stats from base.",
+    "symbol": "^",
+    "color": "green",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_HARVEST" ],
+    "examine_action": "harvest_plant_ex",
+    "plant_data": { "base": "test_f_planter_high_water" }
   }
 ]

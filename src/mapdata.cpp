@@ -573,7 +573,7 @@ bool furn_workbench_info::load( const JsonObject &jsobj, std::string_view member
 }
 
 plant_data::plant_data() : transform( furn_str_id::NULL_ID() ), base( furn_str_id::NULL_ID() ),
-    growth_multiplier( 1.0f ), harvest_multiplier( 1.0f ) {}
+    growth_multiplier( 1.0f ), harvest_multiplier( 1.0f ), max_water_storage( 0 ) {}
 
 bool plant_data::load( const JsonObject &jsobj, std::string_view member )
 {
@@ -583,6 +583,8 @@ bool plant_data::load( const JsonObject &jsobj, std::string_view member )
     optional( j, false, "base", base, furn_str_id::NULL_ID() );
     optional( j, false, "growth_multiplier", growth_multiplier, 1.0f );
     optional( j, false, "harvest_multiplier", harvest_multiplier, 1.0f );
+    optional( j, false, "max_water_storage", max_water_storage, 0 );
+    optional( j, false, "water_consumption_multiplier", water_consumption_multiplier, 1.0f );
 
     return true;
 }
@@ -1642,6 +1644,14 @@ void furn_t::check() const
     }
     if( plant && !plant->base.is_valid() ) {
         debugmsg( "Invalid furniture %s for plant base in furn %s", plant->base.c_str(), id.c_str() );
+    }
+    if( plant ) {
+        if( plant->max_water_storage < 0 ) {
+            debugmsg( "%s: plant_data max_water_storage must be >= 0", id.c_str() );
+        }
+        if( plant->water_consumption_multiplier <= 0.0f ) {
+            debugmsg( "%s: plant_data water_consumption_multiplier must be > 0", id.c_str() );
+        }
     }
 }
 

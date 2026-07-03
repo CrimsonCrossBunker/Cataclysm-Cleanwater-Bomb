@@ -3544,6 +3544,7 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                 }
                 break;
             case farm_ops::harvest:
+                farm_map.grow_plant( pos );
                 if( farm_map.furn( pos ) == furn_f_plant_harvest ) {
                     // Can't use item_stack::only_item() since there might be fertilizer
                     map_stack items = farm_map.i_at( pos );

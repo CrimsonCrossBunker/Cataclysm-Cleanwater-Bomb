@@ -29,6 +29,7 @@
 #include "field.h"
 #include "field_type.h"
 #include "flag.h"
+#include "iexamine.h"
 #include "item.h"
 #include "iteminfo_query.h"
 #include "lightmap.h"
@@ -339,6 +340,18 @@ void game::print_furniture_info( const tripoint_bub_ms &lp, const catacurses::wi
                             quality_string.substr( 0, strpos + 1 ) );
             // Delete used token
             quality_string.erase( 0, strpos + 1 );
+        }
+    }
+
+    // Show irrigation status for plantable furniture
+    if( f->plant ) {
+        here.grow_plant( lp );
+        const std::string water_desc = iexamine::plant_water_description( here, lp );
+        if( !water_desc.empty() ) {
+            for( const std::string &water_line : string_split( water_desc, '\n' ) ) {
+                fold_and_print( w_look, point( column, ++line ), max_width, c_light_gray,
+                                water_line );
+            }
         }
     }
 }

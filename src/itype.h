@@ -1285,6 +1285,10 @@ struct islot_seed {
          * Terrain tag required to plant the seed.
          */
         ter_furn_flag required_terrain_flag = ter_furn_flag::TFLAG_PLANTABLE;
+        /**
+         * How much water the planted crop consumes per day.  Only used when planted in irrigable furniture.
+         */
+        int water_consumption = irrigation::DEFAULT_SEED_WATER_CONSUMPTION;
         islot_seed() = default;
 
         const std::vector<std::pair<flag_id, time_duration>> &get_growth_stages() const;

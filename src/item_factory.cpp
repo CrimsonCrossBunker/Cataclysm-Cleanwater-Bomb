@@ -2790,6 +2790,10 @@ void Item_factory::check_definitions() const
                     msg += string_format( "invalid byproduct id %s\n", b.c_str() );
                 }
             }
+            if( type->seed->water_consumption < 0 ) {
+                msg += string_format( "seed %s has negative water_consumption\n",
+                                      type->id.c_str() );
+            }
         }
         if( type->book ) {
             if( type->book->skill && !type->book->skill.is_valid() ) {
@@ -3857,6 +3861,8 @@ void islot_seed::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "byproducts", byproducts );
     optional( jo, was_loaded, "required_terrain_flag", required_terrain_flag,
               ter_furn_flag::TFLAG_PLANTABLE );
+    optional( jo, was_loaded, "water_consumption", water_consumption,
+              irrigation::DEFAULT_SEED_WATER_CONSUMPTION );
 }
 
 void islot_gunmod::deserialize( const JsonObject &jo )

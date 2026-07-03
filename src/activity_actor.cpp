@@ -7193,6 +7193,9 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
             used_seed.front().erase_var( "activity_var" );
         }
         used_seed.front().set_flag( json_flag_HIDDEN_ITEM );
+        iexamine::set_plant_water( used_seed.front(), 0 );
+        iexamine::set_plant_last_water_check( used_seed.front(), calendar::turn );
+        iexamine::set_plant_effective_growth_turns( used_seed.front(), 0 );
         here.add_item_or_charges( examp, used_seed.front() );
         if( here.has_flag_furn( seed_id->seed->required_terrain_flag, examp ) &&
             here.furn( examp )->plant != nullptr ) {
@@ -10298,43 +10301,43 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
         seed->type->seed->get_growth_stages();
 
-    // Find current stage index based on the furniture's growth flag
-    int current_stage_idx = -1;
-    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
-        if( here.has_flag_furn( growth_stages[i].first.str(), plant_position ) ) {
-            current_stage_idx = i;
-            break;
-        }
-    }
+    const float growth_multiplier = here.furn( plant_position )->plant->growth_multiplier;
 
-    if( current_stage_idx < 0 || current_stage_idx + 1 >= static_cast<int>( growth_stages.size() ) ) {
+    // Time required to reach the mature stage in effective growth units.
+    const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( growth_stages );
+    if( mature_stage_idx < 0 ) {
+        add_msg( m_info, _( "The %s is too mature to benefit from fertilizer." ),
+                 seed->get_plant_name() );
+        act.set_to_null();
+        return;
+    }
+    const time_duration mature_threshold = iexamine::get_plant_stage_threshold( growth_stages,
+            mature_stage_idx );
+
+    // Current effective growth time (new saves) or estimate from age (old saves).
+    const time_duration current_effective = iexamine::get_plant_effective_growth_time( *seed,
+            growth_multiplier );
+
+    const time_duration distance_to_mature = mature_threshold - current_effective;
+    if( distance_to_mature <= 0_seconds ) {
         add_msg( m_info, _( "The %s is too mature to benefit from fertilizer." ),
                  seed->get_plant_name() );
         act.set_to_null();
         return;
     }
 
-    const float growth_multiplier = here.furn( plant_position )->plant->growth_multiplier;
-
-    // Total time required for the entire plant life cycle, accounting for the plant furniture's growth speed
-    time_duration total_lifecycle = 0_seconds;
-    for( const auto &stage : growth_stages ) {
-        total_lifecycle += stage.second / growth_multiplier;
-    }
-
-    time_duration remaining = total_lifecycle - seed->age();
-    if( remaining < 0_seconds ) {
-        remaining = 0_seconds;
-    }
-
-    // Shorten remaining time: 20% base + 5% per survival level, capped at 50%
+    // Shorten the distance to mature: 20% base + 5% per survival level, capped at 50%.
     const double survival_level = who.get_skill_level( skill_survival );
     const double reduction_pct = std::min( 0.20 + 0.05 * survival_level, 0.50 );
 
-    const time_duration reduction = remaining * reduction_pct;
-    seed->set_birthday( seed->birthday() - reduction );
+    const time_duration reduction = distance_to_mature * reduction_pct;
+    const time_duration new_effective = current_effective + reduction;
 
-    // Apply any stage advances immediately
+    // Advance effective growth time and keep birthday in sync with it.
+    iexamine::set_plant_effective_growth_turns( *seed, to_turns<int>( new_effective ) );
+    seed->set_birthday( calendar::turn - new_effective / growth_multiplier );
+
+    // Apply any stage advances immediately.
     here.grow_plant( plant_position );
 
     //~ %1$s: plant name, %2$s: fertilizer name
@@ -10401,10 +10404,15 @@ ret_val<void> multi_farm_activity_actor::can_fertilize( Character &,
     if( !here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, tile ) ) {
         return ret_val<void>::make_failure( _( "Tile isn't a plant" ) );
     }
-    if( here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_HARVEST, tile ) ||
-        here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_OVERGROWN, tile ) ) {
+
+    // Authoritative check based on effective growth time: mature, harvestable,
+    // or overgrown plants cannot benefit from fertilizer.
+    if( iexamine::is_plant_mature( here, tile ) ||
+        iexamine::is_plant_harvestable( here, tile ) ||
+        iexamine::is_plant_overgrown( here, tile ) ) {
         return ret_val<void>::make_failure( _( "Tile is too mature to fertilize" ) );
     }
+
     return ret_val<void>::make_success();
 }
 

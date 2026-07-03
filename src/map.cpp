@@ -49,6 +49,7 @@
 #include "fragment_cloud.h"
 #include "fungal_effects.h"
 #include "game.h"
+#include "game_constants.h"
 #include "harvest.h"
 #include "iexamine.h"
 #include "input.h"
@@ -10159,23 +10160,120 @@ void map::grow_plant( const tripoint_bub_ms &p )
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
                 seed->type->seed->get_growth_stages();
 
+    // Water / irrigation handling.  Irrigable furniture/plants consume water daily to grow faster.
+    // We simulate day-by-day and switch furniture/growth_multiplier when the plant advances stages.
+    time_duration effective_growth_time = 0_seconds;
+    const int initial_max_water = iexamine::get_plant_max_water( furn );
+    if( initial_max_water > 0 ) {
+        const time_point last_check = iexamine::get_plant_last_water_check( *seed );
+        if( last_check == time_point::from_turn( 0 ) ||
+            !seed->has_var( "seed_effective_growth_turns" ) ) {
+            // Old saves / first actualization: estimate effective growth time from current age,
+            // but clamp to at least the threshold of the current stage to avoid regressing.
+            effective_growth_time = seed->age() * furn.plant->growth_multiplier;
+            const int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p, growth_stages );
+            const time_duration min_effective_for_stage =
+                iexamine::get_plant_stage_threshold( growth_stages, current_stage_idx );
+            if( effective_growth_time < min_effective_for_stage ) {
+                effective_growth_time = min_effective_for_stage;
+            }
+            iexamine::set_plant_water( *seed, 0 );
+            iexamine::set_plant_last_water_check( *seed, calendar::turn );
+            iexamine::set_plant_effective_growth_turns( *seed,
+                    to_turns<int>( effective_growth_time ) );
+        } else {
+            const time_duration elapsed = calendar::turn - last_check;
+            const int elapsed_days = to_days<int>( elapsed );
+            int effective_growth_turns = iexamine::get_plant_effective_growth_turns( *seed );
+            effective_growth_time = time_duration::from_turns( effective_growth_turns );
+
+            if( elapsed_days > 0 ) {
+                const int base_daily_consumption = iexamine::get_seed_water_consumption( *seed );
+                int current_water = iexamine::get_plant_water( *seed );
+
+                // Determine starting stage index from current furniture flag.
+                int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p, growth_stages );
+
+                // Precompute cumulative thresholds for each stage boundary.
+                std::vector<time_duration> stage_thresholds;
+                stage_thresholds.reserve( growth_stages.size() );
+                time_duration acc = 0_seconds;
+                for( const auto &stage : growth_stages ) {
+                    acc += stage.second;
+                    stage_thresholds.push_back( acc );
+                }
+
+                furn_id current_furn_id = furn( p );
+
+                for( int day = 0; day < elapsed_days; ++day ) {
+                    const furn_t &current_furn = current_furn_id.obj();
+                    const int max_water = iexamine::get_plant_max_water( current_furn );
+                    const float base_mult = current_furn.plant ?
+                                            current_furn.plant->growth_multiplier : 1.0f;
+                    const float consumption_mult = iexamine::get_plant_water_consumption_multiplier(
+                                                       current_furn );
+                    const int daily_consumption = std::max( 1,
+                                                            static_cast<int>( base_daily_consumption * consumption_mult ) );
+
+                    // Rainwater collection for outdoor irrigable planters.
+                    if( !this->is_roofed( p ) ) {
+                        const weather_type_id w = current_weather( this->get_abs( p ),
+                                          last_check + day * 1_days );
+                        const int rain_water = iexamine::rain_water_for_weather( w );
+                        if( rain_water > 0 ) {
+                            current_water = std::min( max_water, current_water + rain_water );
+                        }
+                    }
+
+                    // Proportional irrigation bonus: partial water gives partial bonus.
+                    const float water_ratio = std::min( 1.0f,
+                                                        static_cast<float>( current_water ) / daily_consumption );
+                    const float water_bonus = 1.0f + irrigation::MAX_IRRIGATION_GROWTH_BONUS * water_ratio;
+                    const int consumed = std::min( current_water, daily_consumption );
+                    current_water -= consumed;
+                    effective_growth_time += 1_days * base_mult * water_bonus;
+
+                    // Advance through as many stages as today's effective growth allows.
+                    while( current_stage_idx + 1 < static_cast<int>( growth_stages.size() ) &&
+                           effective_growth_time >= stage_thresholds[current_stage_idx] ) {
+                        const furn_t &cf = current_furn_id.obj();
+                        current_stage_idx++;
+                        if( cf.plant && !cf.plant->transform.is_null() ) {
+                            current_furn_id = furn_id( cf.plant->transform );
+                        }
+                    }
+                }
+
+                iexamine::set_plant_water( *seed, current_water );
+                iexamine::set_plant_last_water_check( *seed,
+                        last_check + elapsed_days * 1_days );
+                iexamine::set_plant_effective_growth_turns( *seed,
+                        to_turns<int>( effective_growth_time ) );
+            }
+        }
+    } else {
+        // Non-irrigated plants grow strictly with real time.  Keep the
+        // authoritative effective-growth-time variable in sync so helpers that
+        // rely on it agree with the stage computed here.
+        effective_growth_time = seed->age() * furn.plant->growth_multiplier;
+        iexamine::set_plant_effective_growth_turns( *seed, to_turns<int>( effective_growth_time ) );
+    }
+
     flag_id current_stage = flag_id( io::enum_to_string<ter_furn_flag>
                                      ( ter_furn_flag::TFLAG_GROWTH_SEED ) );
     flag_id target_stage = flag_id( io::enum_to_string<ter_furn_flag>
                                     ( ter_furn_flag::TFLAG_GROWTH_SEED ) );
     time_duration time_to_grow_to_this_stage = 0_seconds;
 
-    const float growth_multiplier = furn.plant->growth_multiplier;
-
     for( const auto &pair : growth_stages ) {
         if( has_flag_furn( pair.first.str(), p ) ) {
             current_stage = pair.first;
         }
-        if( seed->age() >= time_to_grow_to_this_stage ) {
+        if( effective_growth_time >= time_to_grow_to_this_stage ) {
             target_stage = pair.first;
         } // Don't break the loop for the case where time has been rewound.
         // Advance to the time of the next stage for the next iteration.
-        time_to_grow_to_this_stage += pair.second / growth_multiplier;
+        time_to_grow_to_this_stage += pair.second;
     }
 
     const auto check_flag = []( const std::string & to_check ) {

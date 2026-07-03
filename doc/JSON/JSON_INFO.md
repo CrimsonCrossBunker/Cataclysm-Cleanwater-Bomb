@@ -3968,7 +3968,9 @@ If skill is specified, multiplier defaults to 1.0, min to 0 and max to 10.
   "transform": "f_planter_harvest",
   "base": "f_planter",
   "growth_multiplier": 1.2,
-  "harvest_multiplier": 0.8
+  "harvest_multiplier": 0.8,
+  "max_water_storage": 100,
+  "water_consumption_multiplier": 1.0
 }
 ```
 
@@ -3991,6 +3993,14 @@ A flat multiplier on the growth speed on the plant. For numbers greater than one
 ##### `harvest_multiplier`
 
 A flat multiplier on the harvest count of the plant. For numbers greater than one, the plant will give more produce from harvest, for numbers less than one it will give less produce from harvest.
+
+##### `max_water_storage`
+
+(Optional) How much water this planting furniture can store for irrigation.  If greater than zero, the furniture can be watered and a plant growing here will consume water daily to grow faster.  Growth speed is proportional to the available water: full `water_consumption` gives a 1.5x bonus, half gives a 1.25x bonus, and no water gives normal growth.  Outdoor planters also collect rainwater during rainy weather, up to this cap.  The value is read from the base furniture for growth-stage furniture via the `base` field.  Defaults to 0 (not irrigable).  The daily water consumption is defined per-seed via the `water_consumption` field and defaults to 20.
+
+##### `water_consumption_multiplier`
+
+(Optional) A multiplier applied to the seed's daily `water_consumption` for plants growing in this furniture.  Values greater than 1.0 make the plant consume water faster (e.g. a drier or more porous planter), while values less than 1.0 make it consume water slower.  Defaults to 1.0.  The effective daily consumption is also clamped to a minimum of 1.
 
 ### clothing_mod
 

@@ -170,6 +170,12 @@ struct plant_data {
     float growth_multiplier;
     // What percent of the normal harvest this crop gives
     float harvest_multiplier;
+    // Maximum water storage for irrigable planting furniture (e.g. planters).  0 means not irrigable.
+    int max_water_storage = 0;
+    // Multiplier on daily water consumption for plants in this furniture.
+    // Values > 1.0 make the plant thirstier; values < 1.0 make it more drought-tolerant.
+    // Defaults to 1.0 (normal).
+    float water_consumption_multiplier = 1.0f;
     plant_data();
     bool load( const JsonObject &jsobj, std::string_view member );
 };

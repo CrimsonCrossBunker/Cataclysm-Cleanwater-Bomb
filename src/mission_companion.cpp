@@ -1678,6 +1678,7 @@ void talk_function::field_harvest( npc &p, const std::string &place )
     swap_map swap( *bay.cast_to_map() );
 
     for( const tripoint_omt_ms &plot : bay.points_on_zlevel() ) {
+        bay.grow_plant( plot );
         map_stack items = bay.i_at( plot );
         if( bay.furn( plot ) == furn_f_plant_harvest && !items.empty() ) {
             // Can't use item_stack::only_item() since there might be fertilizer
@@ -1725,6 +1726,7 @@ void talk_function::field_harvest( npc &p, const std::string &place )
     }
 
     for( const tripoint_omt_ms &plot : bay.points_on_zlevel() ) {
+        bay.grow_plant( plot );
         if( bay.furn( plot ) == furn_f_plant_harvest ) {
             // Can't use item_stack::only_item() since there might be fertilizer
             map_stack items = bay.i_at( plot );
