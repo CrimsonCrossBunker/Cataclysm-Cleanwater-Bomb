@@ -14,8 +14,7 @@
     "symbol": ".",
     "color": "brown",
     "//": "Note that in most cases this item typically represents many seeds, enough to fill an entire tile with plants.",
-    "vitamins": [ [ "veggy_allergen", 1 ] ],
-    "stackable": true
+    "vitamins": [ [ "veggy_allergen", 1 ] ]
   },
   {
     "abstract": "seed_fruit",
