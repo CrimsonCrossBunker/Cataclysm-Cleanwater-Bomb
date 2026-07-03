@@ -204,7 +204,8 @@
     "price_postapoc": "10 cent",
     "description": "A small bolt of garishly-colored faux fur, roughly six inches square.  Can be made into patchwork faux fur sheets or used to repair faux fur fabric.",
     "flags": [ "NO_SALVAGE" ],
-    "material": [ "faux_fur" ]
+    "material": [ "faux_fur" ],
+    "stackable": true
   },
   {
     "type": "ITEM",

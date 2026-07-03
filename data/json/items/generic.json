@@ -3031,7 +3031,8 @@
     "flags": [ "NO_SALVAGE" ],
     "weight": "3 g",
     "volume": "23 ml",
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "id": "light_bulb",
