@@ -2411,8 +2411,16 @@ int Character::get_cardiofit() const
         // If you have synthetic lung bionics, your cardioaccuracy multiplier will be calculated using a special algorithm.
         cardio_modifier = ( 4 + cardio_modifier + ench_mod ) / 3.0f;
     }
+    
     // Modify cardio accumulator by our cardio mods.
     const int cardio_fitness = static_cast<int>( cardio_base * cardio_modifier );
+
+    if( has_bionic( bio_synlungs ) ) {
+        // If you have synthetic lung bionics, your cardioaccuracy will have a minimum guaranteed value.
+        if( cardio_fitness < 3 * get_cardio_acc_base() ) {
+            return 3 * get_cardio_acc_base();
+        }
+    }
 
     return cardio_fitness;
 }
