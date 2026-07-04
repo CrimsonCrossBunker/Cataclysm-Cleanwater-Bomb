@@ -165,6 +165,7 @@
   {
     "id": "test_vit_override",
     "type": "vitamin",
+    "vit_type": "vitamin",
     "name": { "str": "Override Replaced" },
     "min": -200,
     "max": 200,
