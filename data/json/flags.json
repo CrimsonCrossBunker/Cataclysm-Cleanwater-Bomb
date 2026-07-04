@@ -511,7 +511,7 @@
   {
     "id": "COSPLAY_PROPS",
     "type": "json_flag",
-    "info": "This clothing is <info>cosplay prop</info>. It may be fragile or not durable."
+    "info": "This clothing is <info>cosplay prop</info>. It may be fragile or not durable, or completely unusable as a weapon."
   },
   {
     "id": "ONE_PER_LAYER",
