@@ -404,7 +404,7 @@
     "occupied_bodyparts": [ [ "head", 3 ], [ "torso", 6 ], [ "arm_l", 3 ], [ "arm_r", 3 ], [ "leg_l", 7 ], [ "leg_r", 7 ] ],
     "enchantments": [
       { "condition": "ACTIVE", "values": [ { "value": "DEXTERITY", "add": 2 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "DEXTERITY", "multiply": -1 } ] }
+      { "condition": "INACTIVE", "values": [ { "value": "DEXTERITY", "add": -1 } ] }
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -579,7 +579,7 @@
     "occupied_bodyparts": [ [ "eyes", 1 ] ],
     "enchantments": [
       { "condition": "ACTIVE", "values": [ { "value": "PERCEPTION", "add": 2 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "PERCEPTION", "multiply": -1 } ] }
+      { "condition": "INACTIVE", "values": [ { "value": "PERCEPTION", "add": -1 } ] }
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -848,7 +848,7 @@
     "occupied_bodyparts": [ [ "head", 6 ] ],
     "enchantments": [
       { "condition": "ACTIVE", "values": [ { "value": "INTELLIGENCE", "add": 2 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "INTELLIGENCE", "multiply": -1 } ] }
+      { "condition": "INACTIVE", "values": [ { "value": "INTELLIGENCE", "add": -1 } ] }
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -1295,7 +1295,7 @@
     "occupied_bodyparts": [ [ "torso", 6 ], [ "arm_l", 4 ], [ "arm_r", 4 ], [ "leg_l", 8 ], [ "leg_r", 8 ] ],
     "enchantments": [
       { "condition": "ACTIVE", "values": [ { "value": "STRENGTH", "add": 2 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "INTELLIGENCE", "multiply": -1 } ] }
+      { "condition": "INACTIVE", "values": [ { "value": "STRENGTH", "add": -1 } ] }
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
