@@ -159,6 +159,8 @@ The container fields `flags`, `disease`, `disease_excess`, and `decays_into` sup
 
 `extend` appends entries to the inherited container; `delete` removes matching entries. For `disease`, `disease_excess`, and `decays_into`, the entry in `delete` must exactly match the pair you want to remove.
 
+Note: `decays_into` is stored as a vector, so extending it with a `vitamin_id` that already exists adds a second independent decay rule rather than adding the amounts together.
+
 `relative` and `proportional` are **not** supported for vitamin fields.
 
 ## flags
