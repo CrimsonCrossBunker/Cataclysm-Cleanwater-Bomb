@@ -372,14 +372,6 @@
     "goal_condition": {
       "or": [
         { "u_has_item_with_flag": "COSPLAY_COSTUME" },
-        { "u_has_item": "flag_jumpsuit" },
-        { "u_has_item": "jumpsuit_skeleton" },
-        { "u_has_item": "mummy_jumpsuit" },
-        { "u_has_item": "bodysuit_lycra" },
-        { "u_has_item": "fursuit" },
-        { "u_has_item": "bondage_suit" },
-        { "u_has_item": "clown_suit" },
-        { "u_has_item": "jumpsuit_skeleton_zipped" },
         { "u_has_item": "maid_dress" },
         { "u_has_item": "mummy_dress" },
         { "u_has_item": "bee_dress" },

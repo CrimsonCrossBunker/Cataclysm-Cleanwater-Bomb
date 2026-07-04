@@ -21,7 +21,7 @@
     "warmth": 20,
     "material_thickness": 1,
     "environmental_protection": 1,
-    "flags": [ "VARSIZE", "SKINTIGHT" ]
+    "flags": [ "VARSIZE", "SKINTIGHT", "COSPLAY_COSTUME" ]
   },
   {
     "id": "bodysuit_lycra",
@@ -39,7 +39,7 @@
     "color": "blue",
     "warmth": 15,
     "material_thickness": 1,
-    "flags": [ "VARSIZE", "SKINTIGHT", "WATER_FRIENDLY" ],
+    "flags": [ "VARSIZE", "SKINTIGHT", "WATER_FRIENDLY", "COSPLAY_COSTUME" ],
     "armor": [
       {
         "coverage": 100,
@@ -184,7 +184,7 @@
     ],
     "warmth": 10,
     "material_thickness": 0.1,
-    "flags": [ "VARSIZE", "POCKETS", "OUTER" ]
+    "flags": [ "VARSIZE", "POCKETS", "OUTER", "COSPLAY_COSTUME" ]
   },
   {
     "id": "denim_overalls",
@@ -254,7 +254,7 @@
   },
   {
     "copy-from": "jumpsuit",
-    "extend": { "flags": [ "HOOD" ] },
+    "extend": { "flags": [ "HOOD", "COSPLAY_COSTUME" ] },
     "relative": { "weight": "50 g" },
     "id": "flag_jumpsuit",
     "type": "ITEM",
@@ -475,7 +475,7 @@
     },
     "warmth": 10,
     "material_thickness": 0.2,
-    "extend": { "flags": [ "HOOD" ] }
+    "extend": { "flags": [ "HOOD", "COSPLAY_COSTUME" ] }
   },
   {
     "id": "jumpsuit_skeleton_zipped",
@@ -519,7 +519,7 @@
     ],
     "warmth": 10,
     "material_thickness": 0.2,
-    "flags": [ "VARSIZE", "POCKETS", "HOOD" ]
+    "flags": [ "VARSIZE", "POCKETS", "HOOD", "COSPLAY_COSTUME" ]
   },
   {
     "id": "technician_coveralls",
@@ -774,7 +774,7 @@
     "warmth": 50,
     "material_thickness": 2,
     "environmental_protection": 2,
-    "flags": [ "OUTER" ],
+    "flags": [ "OUTER", "COSPLAY_COSTUME" ],
     "variant_type": "generic",
     "variants": [
       {
