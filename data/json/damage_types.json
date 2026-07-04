@@ -192,6 +192,7 @@
     "type": "damage_type",
     "physical": false,
     "magic_color": "green",
+    "bash_conversion_factor": 0.0,
     "name": { "ctxt": "damage_type", "str": "biological" },
     "immune_flags": { "character": [ "BIO_IMMUNE" ], "monster": [ "BIOLOGICALPROOF" ] },
     "no_resist": true
