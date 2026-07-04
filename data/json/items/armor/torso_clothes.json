@@ -513,7 +513,7 @@
     ],
     "warmth": 10,
     "material_thickness": 0.2,
-    "flags": [ "VARSIZE", "POCKETS", "HOOD" ]
+    "flags": [ "VARSIZE", "POCKETS", "HOOD", "COSPLAY_COSTUME" ]
   },
   {
     "id": "blazer",
@@ -1667,7 +1667,7 @@
     ],
     "warmth": 10,
     "material_thickness": 0.1,
-    "flags": [ "VARSIZE" ]
+    "flags": [ "VARSIZE", "COSPLAY_COSTUME" ]
   },
   {
     "id": "maid_dress_xl",
@@ -1731,7 +1731,7 @@
     ],
     "warmth": 2,
     "material_thickness": 0.1,
-    "flags": [ "VARSIZE" ]
+    "flags": [ "VARSIZE", "COSPLAY_COSTUME" ]
   },
   {
     "id": "maid_dress_short_xl",
@@ -1773,7 +1773,7 @@
       { "covers": [ "leg_l", "leg_r" ], "specifically_covers": [ "leg_upper_l", "leg_upper_r" ], "coverage": 40 }
     ],
     "material_thickness": 0.1,
-    "flags": [ "VARSIZE", "SKINTIGHT", "FRAGILE" ]
+    "flags": [ "VARSIZE", "SKINTIGHT", "FRAGILE", "COSPLAY_COSTUME" ]
   },
   {
     "id": "ninja_dress",
