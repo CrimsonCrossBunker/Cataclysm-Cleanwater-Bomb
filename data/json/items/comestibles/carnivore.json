@@ -658,7 +658,9 @@
     "fun": -18,
     "use_action": [ "POISON" ],
     "contamination": [ { "disease": "bad_food", "probability": 100 } ],
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "meat_cooked",

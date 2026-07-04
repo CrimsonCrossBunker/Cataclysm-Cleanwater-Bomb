@@ -155,7 +155,8 @@
       },
       "WASH_HARD_ITEMS"
     ],
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
