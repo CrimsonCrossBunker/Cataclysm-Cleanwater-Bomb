@@ -327,30 +327,30 @@ void Character::update_body( const time_point &from, const time_point &to )
         }
     }
 
-    for( const auto &v : vitamin::all() ) {
-        const time_duration rate = vitamin_rate( v.first );
+    for( const vitamin &v : vitamin::all() ) {
+        const time_duration rate = vitamin_rate( v.id );
 
         // No blood volume regeneration if body lacks fluids
-        if( v.first == vitamin_blood && has_effect( effect_hypovolemia ) && get_thirst() > 240 ) {
+        if( v.id == vitamin_blood && has_effect( effect_hypovolemia ) && get_thirst() > 240 ) {
             continue;
         }
 
         if( rate > 0_turns ) {
             int qty = ticks_between( from, to, rate );
             if( qty > 0 ) {
-                vitamin_mod( v.first, 0 - qty );
+                vitamin_mod( v.id, 0 - qty );
             }
 
         } else if( rate < 0_turns ) {
             // mutations can result in vitamins being generated (but never accumulated)
             int qty = ticks_between( from, to, -rate );
             if( qty > 0 ) {
-                vitamin_mod( v.first, qty );
+                vitamin_mod( v.id, qty );
             }
         }
-        if( calendar::once_every( 24_hours ) && v.first->type() == vitamin_type::VITAMIN ) {
-            const int &vit_quantity = get_daily_vitamin( v.first, true );
-            const int RDA = vitamin_RDA( v.first, vit_quantity );
+        if( calendar::once_every( 24_hours ) && v.type() == vitamin_type::VITAMIN ) {
+            const int &vit_quantity = get_daily_vitamin( v.id, true );
+            const int RDA = vitamin_RDA( v.id, vit_quantity );
             if( RDA >= 50 ) {
                 mod_daily_health( 1, 200 );
             }
@@ -359,7 +359,7 @@ void Character::update_body( const time_point &from, const time_point &to )
             }
 
             // once we've checked daily intake we should reset it
-            reset_daily_vitamin( v.first );
+            reset_daily_vitamin( v.id );
         }
     }
 

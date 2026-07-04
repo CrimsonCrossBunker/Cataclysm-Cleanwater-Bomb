@@ -2039,9 +2039,9 @@ static void character_edit_needs_menu( Character &you )
     const auto &vits = vitamin::all();
     int vitamin_entry_base = 11;
     int vitamin_idx = 0;
-    for( const auto &v : vits ) {
+    for( const vitamin &v : vits ) {
         smenu.addentry( vitamin_entry_base + vitamin_idx, true, 0, _( "%s: daily %d, overall %d" ),
-                        v.second.name(), you.get_daily_vitamin( v.first ), you.vitamin_get( v.first ) );
+                        v.name(), you.get_daily_vitamin( v.id ), you.vitamin_get( v.id ) );
         ++vitamin_idx;
     }
     smenu.query();
@@ -2869,9 +2869,9 @@ static void faction_edit_larder_menu( faction *fac )
         uilist smenu;
         smenu.addentry( 0, true, 'l', _( "kcal: have stored %i" ), entry.kcal() );
         const auto &vits = vitamin::all();
-        for( const auto &v : vits ) {
-            smenu.addentry( -1, true, 0, _( "%s: have stored %d" ), v.second.name(),
-                            entry.get_vitamin( v.first ) );
+        for( const vitamin &v : vits ) {
+            smenu.addentry( -1, true, 0, _( "%s: have stored %d" ), v.name(),
+                            entry.get_vitamin( v.id ) );
         }
 
         smenu.query();

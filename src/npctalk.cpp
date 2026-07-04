@@ -7447,8 +7447,8 @@ talk_effect_fun_t::func f_foreach( const JsonObject &jo, std::string_view member
                     list.push_back( m.id.str() );
                 }
             } else if( target == "vitamin" ) {
-                for( const std::pair<const vitamin_id, vitamin> &v : vitamin::all() ) {
-                    list.push_back( v.first.str() );
+                for( const vitamin &v : vitamin::all() ) {
+                    list.push_back( v.id.str() );
                 }
             }
         } else if( type == "item_group" ) {

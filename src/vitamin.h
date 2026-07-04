@@ -2,10 +2,10 @@
 #ifndef CATA_SRC_VITAMIN_H
 #define CATA_SRC_VITAMIN_H
 
-#include <map>
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -16,6 +16,7 @@
 
 class JsonObject;
 template <typename T> struct enum_traits;
+template <typename T> class generic_factory;
 
 enum class vitamin_type : int {
     VITAMIN,
@@ -32,11 +33,16 @@ struct enum_traits<vitamin_type> {
 
 class vitamin
 {
-    public:
-        vitamin() : id_( vitamin_id( "null" ) ), rate_( 1_hours ) {}
+        friend class generic_factory<vitamin>;
 
-        const vitamin_id &id() const {
-            return id_;
+    public:
+        vitamin_id id;
+        bool was_loaded = false;
+
+        vitamin() : id( vitamin_id( "null" ) ), rate_( 1_hours ) {}
+
+        const vitamin_id &get_id() const {
+            return id;
         }
 
         const vitamin_type &type() const {
@@ -44,7 +50,7 @@ class vitamin
         }
 
         bool is_null() const {
-            return id_ == vitamin_id( "null" );
+            return id == vitamin_id( "null" );
         }
 
         std::string name() const {
@@ -92,10 +98,10 @@ class vitamin
         int severity( int qty ) const;
 
         /** Load vitamin from JSON definition */
-        static void load_vitamin( const JsonObject &jo );
+        void load( const JsonObject &jo, std::string_view src );
 
         /** Get all currently loaded vitamins */
-        static const std::map<vitamin_id, vitamin> &all();
+        static const std::vector<vitamin> &all();
 
         /** Check consistency of all loaded vitamins */
         static void check_consistency();
@@ -117,7 +123,6 @@ class vitamin
         std::pair<std::string, std::string> mass_str_from_units( int units ) const;
 
     private:
-        vitamin_id id_;
         vitamin_type type_ = vitamin_type::num_vitamin_types;
         translation name_;
         std::optional<vitamin_units::mass> weight_per_unit;
@@ -131,5 +136,12 @@ class vitamin
         std::vector<std::pair<vitamin_id, int>> decays_into_;
         std::set<std::string> flags_;
 };
+
+namespace vitamins
+{
+void load( const JsonObject &jo, const std::string &src );
+void check();
+void reset();
+} // namespace vitamins
 
 #endif // CATA_SRC_VITAMIN_H

@@ -796,20 +796,20 @@ void Character::load( const JsonObject &data )
 
     JsonObject vits = data.get_object( "vitamin_levels" );
     vits.allow_omitted_members();
-    for( const std::pair<const vitamin_id, vitamin> &v : vitamin::all() ) {
-        if( vits.has_member( v.first.str() ) ) {
-            int lvl = vits.get_int( v.first.str() );
-            vitamin_levels[v.first] = clamp( lvl, v.first->min(), v.first->max() );
+    for( const vitamin &v : vitamin::all() ) {
+        if( vits.has_member( v.id.str() ) ) {
+            int lvl = vits.get_int( v.id.str() );
+            vitamin_levels[v.id] = clamp( lvl, v.min(), v.max() );
         }
     }
     JsonObject vits_daily = data.get_object( "daily_vitamins" );
     vits_daily.allow_omitted_members();
-    for( const std::pair<const vitamin_id, vitamin> &v : vitamin::all() ) {
-        if( vits_daily.has_member( v.first.str() ) ) {
-            JsonArray vals = vits_daily.get_array( v.first.str() );
+    for( const vitamin &v : vitamin::all() ) {
+        if( vits_daily.has_member( v.id.str() ) ) {
+            JsonArray vals = vits_daily.get_array( v.id.str() );
             int speculative = vals.next_int();
             int lvl = vals.next_int();
-            daily_vitamins[v.first] = { speculative, lvl };
+            daily_vitamins[v.id] = { speculative, lvl };
         }
     }
     data.read( "consumption_history", consumption_history );

@@ -658,9 +658,9 @@ void Character::clear_vitamins()
 {
     vitamin_levels.clear();
     daily_vitamins.clear();
-    for( const auto &[vitamin_id, vitamin] : vitamin::all() ) {
-        vitamin_levels[vitamin_id] = 0;
-        daily_vitamins[vitamin_id] = { 0, 0 };
+    for( const vitamin &vit : vitamin::all() ) {
+        vitamin_levels[vit.id] = 0;
+        daily_vitamins[vit.id] = { 0, 0 };
     }
 }
 
@@ -1015,9 +1015,9 @@ ret_val<edible_rating> Character::will_eat( const item &food, bool interactive )
 
     // To avoid hardcoding a check for mutant_toxin we instead iterate all vitamin types.
     // Break this out into its own function?
-    for( const auto &v : vitamin::all() ) {
-        if( v.first->type() == vitamin_type::TOXIN ) {
-            if( food.has_vitamin( v.first ) ) {
+    for( const vitamin &v : vitamin::all() ) {
+        if( v.type() == vitamin_type::TOXIN ) {
+            if( food.has_vitamin( v.id ) ) {
                 // NOTE: Purely visual information. Nausea is not actually a symptom of consuming mutant toxin.
                 add_consequence( _( "This is disgusting!" ), NAUSEA );
             }

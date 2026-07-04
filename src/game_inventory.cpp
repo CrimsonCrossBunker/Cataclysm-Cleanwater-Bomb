@@ -1026,26 +1026,26 @@ static std::string get_consume_needs_hint( Character &you )
     // add info about vitamins as well
     hint.append( _( "Vitamin Intake: " ) );
 
-    for( const auto &v : vitamin::all() ) {
-        if( v.first->type() != vitamin_type::VITAMIN || v.first->has_flag( "OBSOLETE" ) ) {
+    for( const vitamin &v : vitamin::all() ) {
+        if( v.type() != vitamin_type::VITAMIN || v.has_flag( "OBSOLETE" ) ) {
             //skip non vitamins
             continue;
         }
 
-        const int &guessed_daily_vit_quantity = you.get_daily_vitamin( v.first, false );
-        const int &vit_percent = you.vitamin_RDA( v.first, guessed_daily_vit_quantity );
+        const int &guessed_daily_vit_quantity = you.get_daily_vitamin( v.id, false );
+        const int &vit_percent = you.vitamin_RDA( v.id, guessed_daily_vit_quantity );
 
         if( has_tracker ) {
-            desc = std::make_pair( string_format( _( "%s: %d%%.  " ), v.second.name(), vit_percent ), c_white );
+            desc = std::make_pair( string_format( _( "%s: %d%%.  " ), v.name(), vit_percent ), c_white );
         } else {
             if( vit_percent >= 90 ) {
-                desc = std::make_pair( string_format( _( "%s: %s.  " ), v.second.name(), _( "plenty" ) ), c_white );
+                desc = std::make_pair( string_format( _( "%s: %s.  " ), v.name(), _( "plenty" ) ), c_white );
             } else if( vit_percent >= 50 ) {
-                desc = std::make_pair( string_format( _( "%s: %s.  " ), v.second.name(), _( "some" ) ), c_white );
+                desc = std::make_pair( string_format( _( "%s: %s.  " ), v.name(), _( "some" ) ), c_white );
             } else if( vit_percent > 0 ) {
-                desc = std::make_pair( string_format( _( "%s: %s.  " ), v.second.name(), _( "little" ) ), c_white );
+                desc = std::make_pair( string_format( _( "%s: %s.  " ), v.name(), _( "little" ) ), c_white );
             } else {
-                desc = std::make_pair( string_format( _( "%s: %s.  " ), v.second.name(), _( "none" ) ), c_white );
+                desc = std::make_pair( string_format( _( "%s: %s.  " ), v.name(), _( "none" ) ), c_white );
             }
         }
         hint.append( colorize( desc.first, desc.second ) );

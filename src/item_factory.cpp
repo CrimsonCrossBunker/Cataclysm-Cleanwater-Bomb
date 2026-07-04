@@ -816,11 +816,11 @@ void Item_factory::finalize_pre( itype &obj )
             auto mat = obj.materials;
 
             // For comestibles composed of multiple edible materials we calculate the average.
-            for( const auto &v : vitamin::all() ) {
-                if( !vitamins.count( v.first ) ) {
+            for( const vitamin &v : vitamin::all() ) {
+                if( !vitamins.count( v.id ) ) {
                     for( const auto &m : mat ) {
-                        double amount = m.first->vitamin( v.first ) * healthy / mat.size();
-                        obj.comestible->default_nutrition.add_vitamin( v.first, std::ceil( amount ) );
+                        double amount = m.first->vitamin( v.id ) * healthy / mat.size();
+                        obj.comestible->default_nutrition.add_vitamin( v.id, std::ceil( amount ) );
                     }
                 }
             }

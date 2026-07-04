@@ -6,30 +6,30 @@
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
+#include "generic_factory.h"
 #include "options.h"
 #include "units.h"
 #include "units_utility.h"
 
-static std::map<vitamin_id, vitamin> vitamins_all;
+namespace
+{
+
+generic_factory<vitamin> vitamin_factory( "vitamin" );
+
+} // namespace
 
 /** @relates string_id */
 template<>
 bool string_id<vitamin>::is_valid() const
 {
-    return vitamins_all.count( *this );
+    return vitamin_factory.is_valid( *this );
 }
 
 /** @relates string_id */
 template<>
 const vitamin &string_id<vitamin>::obj() const
 {
-    const auto found = vitamins_all.find( *this );
-    if( found == vitamins_all.end() ) {
-        debugmsg( "Tried to get invalid vitamin: %s", c_str() );
-        static const vitamin null_vitamin{};
-        return null_vitamin;
-    }
-    return found->second;
+    return vitamin_factory.obj( *this );
 }
 
 int vitamin::severity( int qty ) const
@@ -49,74 +49,58 @@ int vitamin::severity( int qty ) const
     return 0;
 }
 
-void vitamin::load_vitamin( const JsonObject &jo )
+void vitamin::load( const JsonObject &jo, const std::string_view )
 {
-    vitamin vit;
+    mandatory( jo, was_loaded, "name", name_ );
 
-    vit.id_ = vitamin_id( jo.get_string( "id" ) );
-    jo.read( "name", vit.name_ );
-    vit.deficiency_ = efftype_id::NULL_ID();
-    jo.read( "deficiency", vit.deficiency_ );
-    vit.excess_ = efftype_id::NULL_ID();
-    jo.read( "excess", vit.excess_ );
-    vit.min_ = jo.get_int( "min" );
-    vit.max_ = jo.get_int( "max", 0 );
-    vit.rate_ = read_from_json_string<time_duration>( jo.get_member( "rate" ), time_duration::units );
-
-    if( jo.has_string( "weight_per_unit" ) ) {
-        vit.weight_per_unit = read_from_json_string( jo.get_member( "weight_per_unit" ),
-                              vitamin_units::mass_units );
-    }
-
-    if( !jo.has_string( "vit_type" ) ) {
+    if( jo.has_string( "vit_type" ) ) {
+        type_ = jo.get_enum_value<vitamin_type>( "vit_type" );
+    } else if( !was_loaded ) {
         jo.throw_error_at( "vit_type", "vitamin must have a vitamin type" );
     }
-    vit.type_ = jo.get_enum_value<vitamin_type>( "vit_type" );
 
-    for( JsonArray e : jo.get_array( "disease" ) ) {
-        vit.disease_.emplace_back( e.get_int( 0 ), e.get_int( 1 ) );
+    mandatory( jo, was_loaded, "min", min_ );
+    optional( jo, was_loaded, "max", max_, 0 );
+    mandatory( jo, was_loaded, "rate", rate_ );
+
+    optional( jo, was_loaded, "deficiency", deficiency_, efftype_id::NULL_ID() );
+
+    optional( jo, was_loaded, "excess", excess_, efftype_id::NULL_ID() );
+
+    if( jo.has_string( "weight_per_unit" ) ) {
+        weight_per_unit = read_from_json_string( jo.get_member( "weight_per_unit" ),
+                              vitamin_units::mass_units );
+    } else if( !was_loaded ) {
+        weight_per_unit.reset();
     }
 
-    for( JsonArray e : jo.get_array( "disease_excess" ) ) {
-        vit.disease_excess_.emplace_back( e.get_int( 0 ), e.get_int( 1 ) );
-    }
-
-    for( JsonArray e : jo.get_array( "decays_into" ) ) {
-        vit.decays_into_.emplace_back( vitamin_id( e.get_string( 0 ) ), e.get_int( 1 ) );
-    }
-
-    for( std::string e : jo.get_array( "flags" ) ) {
-        vit.flags_.insert( e );
-    }
-
-    if( vitamins_all.find( vit.id_ ) != vitamins_all.end() ) {
-        jo.throw_error_at( "id", "parsed vitamin overwrites existing definition" );
-    } else {
-        vitamins_all[ vit.id_ ] = vit;
-    }
+    optional( jo, was_loaded, "disease", disease_ );
+    optional( jo, was_loaded, "disease_excess", disease_excess_ );
+    optional( jo, was_loaded, "decays_into", decays_into_ );
+    optional( jo, was_loaded, "flags", flags_ );
 }
 
-const std::map<vitamin_id, vitamin> &vitamin::all()
+const std::vector<vitamin> &vitamin::all()
 {
-    return vitamins_all;
+    return vitamin_factory.get_all();
 }
 
 void vitamin::check_consistency()
 {
-    for( const auto &v : vitamins_all ) {
-        if( !( v.second.deficiency_.is_null() || v.second.deficiency_.is_valid() ) ) {
-            debugmsg( "vitamin %s has unknown deficiency %s", v.second.id_.c_str(),
-                      v.second.deficiency_.c_str() );
+    for( const vitamin &v : vitamin_factory.get_all() ) {
+        if( !( v.deficiency_.is_null() || v.deficiency_.is_valid() ) ) {
+            debugmsg( "vitamin %s has unknown deficiency %s", v.id.c_str(),
+                      v.deficiency_.c_str() );
         }
-        if( !( v.second.excess_.is_null() || v.second.excess_.is_valid() ) ) {
-            debugmsg( "vitamin %s has unknown excess %s", v.second.id_.c_str(), v.second.excess_.c_str() );
+        if( !( v.excess_.is_null() || v.excess_.is_valid() ) ) {
+            debugmsg( "vitamin %s has unknown excess %s", v.id.c_str(), v.excess_.c_str() );
         }
     }
 }
 
 void vitamin::reset()
 {
-    vitamins_all.clear();
+    vitamin_factory.reset();
 }
 
 float vitamin::RDA_to_default( int percent ) const
@@ -137,7 +121,7 @@ int vitamin::units_from_mass( vitamin_units::mass val ) const
 {
     if( !weight_per_unit.has_value() ) {
         debugmsg( "Tried to convert vitamin in mass to units, but %s doesn't support mass for vitamins",
-                  id_.str() );
+                  id.str() );
         return 1;
     }
     return val / *weight_per_unit;
@@ -171,3 +155,23 @@ std::string enum_to_string<vitamin_type>( vitamin_type data )
     cata_fatal( "Invalid vitamin_type" );
 }
 } // namespace io
+
+namespace vitamins
+{
+
+void load( const JsonObject &jo, const std::string &src )
+{
+    vitamin_factory.load( jo, src );
+}
+
+void check()
+{
+    vitamin::check_consistency();
+}
+
+void reset()
+{
+    vitamin_factory.reset();
+}
+
+} // namespace vitamins

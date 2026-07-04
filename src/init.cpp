@@ -294,7 +294,7 @@ void DynamicDataLoader::initialize()
     add( "activity_type", &activity_type::load_all );
     add( "addiction_type", &add_type::load_add_types );
     add( "movement_mode", &move_mode::load_move_mode );
-    add( "vitamin", &vitamin::load_vitamin );
+    add( "vitamin", &vitamins::load );
     add( "material", &materials::load );
     add( "bash_damage_profile", &bash_damage_profile::load_all );
     add( "bionic", &bionic_data::load_bionic );
@@ -786,7 +786,7 @@ void DynamicDataLoader::unload_data()
     VehiclePlacement::reset();
     VehicleSpawn::reset();
     vehicles::reset_prototypes();
-    vitamin::reset();
+    vitamins::reset();
     vehicles::parts::reset();
     vpart_category::reset();
     vpart_location::reset();
@@ -967,7 +967,7 @@ void DynamicDataLoader::check_consistency()
                     requirement_data::check_consistency();
                 }
             },
-            { _( "Vitamins" ), &vitamin::check_consistency },
+            { _( "Vitamins" ), &vitamins::check },
             { _( "Weather types" ), &weather_types::check_consistency },
             { _( "Weapon categories" ), &weapon_category::verify_weapon_categories },
             { _( "Effect on conditions" ), &effect_on_conditions::check_consistency },
