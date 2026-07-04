@@ -2124,11 +2124,11 @@ static void character_edit_needs_menu( Character &you )
         default:
             if( smenu.ret >= vitamin_entry_base &&
                 smenu.ret < vitamin_entry_base + static_cast<int>( vits.size() ) ) {
-                auto iter = std::next( vits.begin(), smenu.ret - vitamin_entry_base );
-                value = you.vitamin_get( iter->first );
+                const vitamin &vit = *std::next( vits.begin(), smenu.ret - vitamin_entry_base );
+                value = you.vitamin_get( vit.id );
                 if( query_int( value, true, _( "Set %s to?" ),
-                               iter->second.name() ) ) {
-                    you.vitamin_set( iter->first, value );
+                               vit.name() ) ) {
+                    you.vitamin_set( vit.id, value );
                 }
             }
     }
@@ -2885,10 +2885,10 @@ static void faction_edit_larder_menu( faction *fac )
                 break;
             default:
                 if( smenu.ret >= 1 && smenu.ret < static_cast<int>( vits.size() + 1 ) ) {
-                    auto iter = std::next( vits.begin(), smenu.ret - 1 );
-                    value = entry.get_vitamin( iter->first );
-                    if( query_int( value, true, _( "Set %s to?" ), iter->second.name() ) ) {
-                        entry.set_vitamin( iter->first, value );
+                    const vitamin &vit = *std::next( vits.begin(), smenu.ret - 1 );
+                    value = entry.get_vitamin( vit.id );
+                    if( query_int( value, true, _( "Set %s to?" ), vit.name() ) ) {
+                        entry.set_vitamin( vit.id, value );
                     }
                 }
         }
