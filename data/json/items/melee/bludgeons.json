@@ -495,7 +495,7 @@
     "material": [ "wood", "aluminum" ],
     "to_hit": { "grip": "weapon", "length": "short", "surface": "any", "balance": "neutral" },
     "price_postapoc": "1 USD 50 cent",
-    "extend": { "flags": [ "WATER_BREAK_ACTIVE" ] },
+    "extend": { "flags": [ "WATER_BREAK_ACTIVE", "COSPLAY_PROPS" ] },
     "charges_per_use": 1,
     "use_action": {
       "type": "transform",
