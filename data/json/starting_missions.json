@@ -372,20 +372,11 @@
     "goal_condition": {
       "or": [
         { "u_has_item_with_flag": "COSPLAY_COSTUME" },
-        { "u_has_item": "robe_wizard" },
         { "u_has_item": "ninja_dress" },
         { "u_has_item": "ninja_dress_sleeveless" },
-        { "u_has_item": "jacket_ninja" },
         { "u_has_item": "santa_dress" },
         { "u_has_item": "santa_dress_short" },
-        { "u_has_item": "santa_dress_long" },
-        { "u_has_item": "santa_jacket" },
-        { "u_has_item": "santa_jacket_short" },
-        { "u_has_item": "grim_reaper_robe" },
-        { "u_has_item": "grim_reaper_robe_faceless" },
-        { "u_has_item": "ghost_robe" },
-        { "u_has_item": "jedi_cloak" },
-        { "u_has_item": "zentai" }
+        { "u_has_item": "santa_dress_long" }
       ]
     },
     "difficulty": 2,
