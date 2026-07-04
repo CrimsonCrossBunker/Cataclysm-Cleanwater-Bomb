@@ -1712,7 +1712,7 @@
     "warmth": 10,
     "material_thickness": 0.2,
     "environmental_protection": 1,
-    "flags": [ "OVERSIZE", "HOOD", "BELTED", "ALLOWS_GASTROPOD_FOOT" ],
+    "flags": [ "OVERSIZE", "HOOD", "BELTED", "ALLOWS_GASTROPOD_FOOT", "COSPLAY_COSTUME" ],
     "armor": [
       { "encumbrance": 2, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
       {

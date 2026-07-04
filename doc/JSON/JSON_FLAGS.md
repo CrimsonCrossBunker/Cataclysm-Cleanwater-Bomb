@@ -189,6 +189,7 @@ Some armor flags, such as `WATCH` and `ALARMCLOCK` are compatible with other ite
 - ```CANT_WEAR``` This item can't be worn directly.
 - ```COLLAR``` This piece of clothing has a wide collar that can keep your mouth warm when it is mostly unencumbered.
 - ```COMBAT_TOGGLEABLE``` This item is meant to be toggled during combat.  Used by NPCs to determine if they will toggle it on during combat.  This only supports simple `transform` actions.
+- ```COSPLAY_COSTUME``` This flag indicates that the outfit is a cosplay costume. It's somewhat of a continuation of the old 'FANCY', but currently it's only used for the 'Find some cosplay suits' quest and doesn't mean the stylish trait will be revived.
 - ```DEAF``` Makes the player deaf.
 - ```DECAY_EXPOSED_ATMOSPHERE``` Consumable will go bad once exposed to the atmosphere (such as MREs).
 - ```ELECTRIC_IMMUNE``` This gear completely protects you from electric discharges.
@@ -826,6 +827,7 @@ These flags can be applied via JSON item definition to most items.  Not to be co
 - ```CRUTCHES``` Item with this flag helps characters not to fall down if their legs are broken.
 - ```CUSTOM_EXPLOSION``` Flag, automatically applied to items that has defined `explosion` data in definition.  See `JSON_INFO.md`.
 - ```CUT_HARVEST``` You need a grass-cutting tool like sickle to harvest this plant.
+- ```COSPLAY_PROPS``` This flag implies that the outfit is a cosplay prop. Currently, it's purely descriptive, similar to `COSPLAY_COSTUME`.
 - ```DAMAGE_VEHICLE_WHEELS``` This item can damage a vehicle's wheels when it is run over.
 - ```DANGEROUS``` NPCs will not accept this item.  Explosion iuse actor implies this flag.  Implies `NPC_THROW_NOW`.
 - ```DETERGENT``` This item can be used as a detergent in a washing machine.

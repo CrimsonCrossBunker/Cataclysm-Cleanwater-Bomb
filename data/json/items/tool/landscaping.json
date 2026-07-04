@@ -182,7 +182,8 @@
     "longest_side": "150 cm",
     "price": "30 USD",
     "price_postapoc": "5 cent",
-    "material": [ "plastic" ]
+    "material": [ "plastic" ],
+    "flags": [ "COSPLAY_PROPS" ]
   },
   {
     "id": "shovel",

@@ -504,6 +504,18 @@
     "type": "json_flag"
   },
   {
+    "id": "COSPLAY_COSTUME",
+    "type": "json_flag",
+    "info": "This clothing is <info>cosplay costume</info>.",
+    "conflicts": [ "COSPLAY_PROPS" ]
+  },
+  {
+    "id": "COSPLAY_PROPS",
+    "type": "json_flag",
+    "info": "This item is <info>cosplay prop</info>.",
+    "conflicts": [ "COSPLAY_COSTUME" ]
+  },
+  {
     "id": "ONE_PER_LAYER",
     "type": "json_flag",
     "info": "<info>Only one</info> item can be worn on this clothing layer."

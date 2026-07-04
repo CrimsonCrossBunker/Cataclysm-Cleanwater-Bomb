@@ -1757,7 +1757,7 @@
     ],
     "warmth": 10,
     "material_thickness": 0.2,
-    "flags": [ "OUTER", "VARSIZE", "POCKETS", "ALLOWS_GASTROPOD_FOOT" ]
+    "flags": [ "OUTER", "VARSIZE", "POCKETS", "ALLOWS_GASTROPOD_FOOT", "COSPLAY_COSTUME" ]
   },
   {
     "id": "jacket_leather",
@@ -2641,7 +2641,7 @@
     ],
     "warmth": 8,
     "material_thickness": 0.1,
-    "flags": [ "UNRESTRICTED", "OUTER", "ALLOWS_NATURAL_ATTACKS", "ALLOWS_GASTROPOD_FOOT" ]
+    "flags": [ "UNRESTRICTED", "OUTER", "ALLOWS_NATURAL_ATTACKS", "ALLOWS_GASTROPOD_FOOT", "COSPLAY_COSTUME" ]
   },
   {
     "id": "ghost_robe_sheet",
@@ -2750,7 +2750,7 @@
     },
     "warmth": 10,
     "material_thickness": 0.1,
-    "flags": [ "UNRESTRICTED", "OUTER", "ALLOWS_NATURAL_ATTACKS", "ALLOWS_GASTROPOD_FOOT" ]
+    "flags": [ "UNRESTRICTED", "OUTER", "ALLOWS_NATURAL_ATTACKS", "ALLOWS_GASTROPOD_FOOT", "COSPLAY_COSTUME" ]
   },
   {
     "id": "grim_reaper_robe_faceless",
@@ -2870,7 +2870,7 @@
     ],
     "warmth": 15,
     "material_thickness": 1.5,
-    "flags": [ "VARSIZE", "OUTER", "HOOD", "ALLOWS_GASTROPOD_FOOT" ]
+    "flags": [ "VARSIZE", "OUTER", "HOOD", "ALLOWS_GASTROPOD_FOOT", "COSPLAY_COSTUME" ]
   },
   {
     "id": "samghati",
@@ -2978,7 +2978,7 @@
     ],
     "warmth": 40,
     "environmental_protection": 2,
-    "flags": [ "VARSIZE", "POCKETS", "OUTER" ]
+    "flags": [ "VARSIZE", "POCKETS", "OUTER", "COSPLAY_COSTUME" ]
   },
   {
     "id": "santa_jacket_short",
@@ -3022,7 +3022,7 @@
     ],
     "warmth": 15,
     "environmental_protection": 1,
-    "flags": [ "VARSIZE", "OUTER" ]
+    "flags": [ "VARSIZE", "OUTER", "COSPLAY_COSTUME" ]
   },
   {
     "id": "ski_jacket",
