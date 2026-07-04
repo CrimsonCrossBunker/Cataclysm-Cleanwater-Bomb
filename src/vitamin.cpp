@@ -74,10 +74,10 @@ void vitamin::load( const JsonObject &jo, const std::string_view )
         weight_per_unit.reset();
     }
 
-    optional( jo, was_loaded, "disease", disease_ );
-    optional( jo, was_loaded, "disease_excess", disease_excess_ );
-    optional( jo, was_loaded, "decays_into", decays_into_ );
-    optional( jo, was_loaded, "flags", flags_ );
+    optional( jo, was_loaded, "disease", disease_, pair_reader<int, int>{} );
+    optional( jo, was_loaded, "disease_excess", disease_excess_, pair_reader<int, int>{} );
+    optional( jo, was_loaded, "decays_into", decays_into_, pair_reader<vitamin_id, int>{} );
+    optional( jo, was_loaded, "flags", flags_, string_reader{} );
 }
 
 const std::vector<vitamin> &vitamin::all()

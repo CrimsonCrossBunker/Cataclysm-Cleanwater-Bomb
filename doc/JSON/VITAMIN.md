@@ -138,7 +138,28 @@ You can also overwrite an existing vitamin definition by using the same `id`. Th
 }
 ```
 
-Note: `extend`, `delete`, `relative`, and `proportional` are **not** supported for vitamin fields.
+### `extend` and `delete`
+
+The container fields `flags`, `disease`, `disease_excess`, and `decays_into` support `extend` and `delete` when used with `copy-from`:
+
+```jsonc
+{
+  "id": "iron_mod",
+  "type": "vitamin",
+  "copy-from": "iron",
+  "extend": {
+    "flags": [ "NO_MAGICAL_MUTATION" ],
+    "disease": [ [ -12001, -14000 ] ]
+  },
+  "delete": {
+    "flags": [ "FOO" ]
+  }
+}
+```
+
+`extend` appends entries to the inherited container; `delete` removes matching entries. For `disease`, `disease_excess`, and `decays_into`, the entry in `delete` must exactly match the pair you want to remove.
+
+`relative` and `proportional` are **not** supported for vitamin fields.
 
 ## flags
 
