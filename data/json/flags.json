@@ -506,13 +506,13 @@
   {
     "id": "COSPLAY_COSTUME",
     "type": "json_flag",
-    "info": "This clothing is <info>cosplay costume</info>. It is unlikely to designed for high-intensity combat or sports.",
+    "info": "This clothing is <info>cosplay costume</info>.",
     "conflicts": [ "COSPLAY_PROPS" ]
   },
   {
     "id": "COSPLAY_PROPS",
     "type": "json_flag",
-    "info": "This clothing is <info>cosplay prop</info>. It may be fragile or not durable, or completely unusable as a weapon.",
+    "info": "This clothing is <info>cosplay prop</info>.",
     "conflicts": [ "COSPLAY_COSTUME" ]
   },
   {
