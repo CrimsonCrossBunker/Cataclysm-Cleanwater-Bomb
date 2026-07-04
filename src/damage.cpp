@@ -128,7 +128,7 @@ void damage_type::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "material_required", material_required );
     optional( jo, was_loaded, "mon_difficulty", mon_difficulty );
     optional( jo, was_loaded, "no_resist", no_resist );
-    optional( jo, was_loaded, "bash_conversion_factor", bash_conversion_factor, 0.0 );
+    optional( jo, was_loaded, "bash_conversion_factor", bash_conversion_factor, physical ? 0.5 : 0.1 );
     if( jo.has_object( "immune_flags" ) ) {
         JsonObject jsobj = jo.get_object( "immune_flags" );
         if( jsobj.has_array( "monster" ) ) {

@@ -56,6 +56,7 @@
     "magic_color": "yellow",
     "name": { "ctxt": "damage_type", "str": "telekinetic" },
     "skill": "metaphysics",
+    "bash_conversion_factor": 0.9,
     "derived_from": [ "bash", 0.9 ],
     "immune_flags": { "character": [ "TELEKIN_SHIELD" ], "monster": [ "TELEKIN_IMMUNE" ] },
     "ondamage_eocs": [ "EOC_TELEKINETIC_DAMAGE_KNOCKDOWN_CHANCE", "EOC_TELEKINETIC_DAMAGE_STAGGER_CHANCE" ]
@@ -100,6 +101,7 @@
     "magic_color": "white",
     "name": { "ctxt": "damage_type", "str": "telepathic" },
     "skill": "metaphysics",
+    "bash_conversion_factor": 0.0,
     "immune_flags": { "character": [ "TEEPSHIELD", "PSYSHIELD_PROTECT" ], "monster": [ "TEEP_IMMUNE" ] },
     "ondamage_eocs": [ "EOC_TELEPATHIC_DAMAGE_PSYSHIELD_CHECK", "EOC_TELEPATHIC_DAMAGE_STUN_HIVE_CHANCE" ]
   },

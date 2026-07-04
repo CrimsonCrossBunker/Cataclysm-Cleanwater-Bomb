@@ -34,6 +34,7 @@
     "magic_color": "light_gray",
     "name": { "ctxt": "damage_type", "str": "cut" },
     "skill": "cutting",
+    "bash_conversion_factor": 0.75,
     "mon_difficulty": true,
     "material_required": true,
     "immune_flags": { "character": [ "CUT_IMMUNE" ] }
@@ -59,6 +60,7 @@
     "magic_color": "light_red",
     "name": { "ctxt": "damage_type", "str": "pierce" },
     "skill": "stabbing",
+    "bash_conversion_factor": 0.6,
     "mon_difficulty": true,
     "//2": "derived from cut only for monster defs",
     "derived_from": [ "cut", 0.8 ],
@@ -81,6 +83,7 @@
     "type": "damage_type",
     "physical": true,
     "magic_color": "light_red",
+    "bash_conversion_factor": 0.5,
     "mon_difficulty": true,
     "name": { "ctxt": "damage_type", "str": "ballistic" },
     "material_required": true,
@@ -189,6 +192,7 @@
     "type": "damage_type",
     "physical": false,
     "magic_color": "green",
+    "bash_conversion_factor": 0.0,
     "name": { "ctxt": "damage_type", "str": "biological" },
     "immune_flags": { "character": [ "BIO_IMMUNE" ], "monster": [ "BIOLOGICALPROOF" ] },
     "no_resist": true

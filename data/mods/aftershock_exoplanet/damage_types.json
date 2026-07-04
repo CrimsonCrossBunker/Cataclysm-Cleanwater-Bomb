@@ -4,6 +4,7 @@
     "type": "damage_type",
     "physical": true,
     "magic_color": "pink",
+    "bash_conversion_factor": 0.4,
     "name": { "ctxt": "damage_type", "str": "plasma" },
     "derived_from": [ "heat", 0.4 ]
   },
@@ -23,6 +24,7 @@
     "type": "damage_type",
     "physical": true,
     "magic_color": "red",
+    "bash_conversion_factor": 0.4,
     "name": { "ctxt": "damage_type", "str": "laser" },
     "derived_from": [ "heat", 1 ]
   },
@@ -46,6 +48,7 @@
     "magic_color": "red",
     "name": { "ctxt": "damage_type", "str": "heat" },
     "skill": "cutting",
+    "bash_conversion_factor": 0.7,
     "mon_difficulty": true,
     "derived_from": [ "heat", 1 ],
     "immune_flags": { "character": [ "CUT_IMMUNE" ] }
@@ -125,6 +128,7 @@
     "magic_color": "yellow",
     "name": { "ctxt": "damage_type", "str": "telekinetic" },
     "skill": "metaphysics",
+    "bash_conversion_factor": 0.9,
     "derived_from": [ "bash", 0.9 ],
     "immune_flags": { "character": [ "TELEKIN_SHIELD" ], "monster": [ "TELEKIN_IMMUNE" ] },
     "ondamage_eocs": [ "EOC_TELEKINETIC_DAMAGE_KNOCKDOWN_CHANCE", "EOC_TELEKINETIC_DAMAGE_STAGGER_CHANCE" ]

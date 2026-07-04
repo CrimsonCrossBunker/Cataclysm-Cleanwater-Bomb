@@ -6,6 +6,7 @@
     "magic_color": "light_gray",
     "name": "cold iron cut",
     "skill": "cutting",
+    "bash_conversion_factor": 0.75,
     "derived_from": [ "cut", 1 ],
     "immune_flags": { "character": [ "IRONSWORN" ], "monster": [ "IRONWROUGHT" ] }
   },
@@ -48,6 +49,7 @@
     "magic_color": "light_gray",
     "name": "cold iron stab",
     "skill": "stabbing",
+    "bash_conversion_factor": 0.6,
     "derived_from": [ "stab", 1 ],
     "immune_flags": { "character": [ "IRONSWORN" ], "monster": [ "IRONWROUGHT" ] }
   },
