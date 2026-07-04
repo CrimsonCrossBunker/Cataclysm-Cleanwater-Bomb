@@ -85,6 +85,7 @@
     "physical": false,
     "magic_color": "h_white",
     "name": { "ctxt": "damage_type", "str": "sonic" },
+    "bash_conversion_factor": 0.4,
     "derived_from": [ "bash", 0.4 ],
     "mon_difficulty": true,
     "material_required": false
@@ -129,6 +130,7 @@
     "physical": false,
     "magic_color": "white_magenta",
     "name": { "ctxt": "damage_type", "str": "gravity" },
+    "bash_conversion_factor": 0.8,
     "mon_difficulty": true,
     "material_required": false
   },
