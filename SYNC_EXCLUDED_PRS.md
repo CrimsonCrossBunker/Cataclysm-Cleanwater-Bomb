@@ -83,7 +83,7 @@ de-charge 系列此前的回退工作多数已作废（分支回到 master），
 | PR | 文件 | 处理方式 |
 |---|---|---|
 | #87891 (detergent group spawn) | `collections_domestic.json` 等 4 文件 | 保留 fork 的 stackable/charges 模型，不取上游的 group 式 spawn |
-| #87897 (bleach 装瓶) | `SUS/domestic.json`, `collections_domestic.json`, `mil_base_z-1.json` 等 | 保留 fork 的 charges 计法；仅取 display/container 改进 |
+| #87897 (bleach 装瓶) | `SUS/domestic.json`, `collections_domestic.json`, `mil_base_z-1.json`, `chemicals_and_resources.json` | 保留 fork 的 charges 计法；merge 误取上游 bleach volume/charges/container → 后修恢复 |
 
 **同步的 PR 编号**：#87678, #87746, #87802, #87819, #87826, #87836, #87837, #87838, #87843, #87844, #87845, #87848, #87852, #87853, #87854, #87855, #87856, #87857, #87858, #87859, #87863, #87873, #87875, #87881, #87897, #87900
 
