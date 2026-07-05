@@ -1,5 +1,6 @@
 #include <string>
 
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
@@ -33,6 +34,7 @@ static const furn_str_id furn_f_test_plant_seedling( "test_f_plant_seedling" );
 
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
 static const itype_id itype_fertilizer_commercial( "fertilizer_commercial" );
+static const itype_id itype_fertilizer_liquid( "fertilizer_liquid" );
 static const itype_id itype_fungal_seeds( "fungal_seeds" );
 static const itype_id itype_marloss_seed( "marloss_seed" );
 static const itype_id itype_test_seed_eoc( "test_seed_eoc" );
@@ -334,6 +336,64 @@ TEST_CASE( "plant_fertilize_reduces_remaining_time", "[plant][fertilize]" )
     const std::string reduction = get_globals().get_global_value( "test_fertilize_reduction_turns" ).to_string();
     REQUIRE( !reduction.empty() );
     CHECK( std::stoi( reduction ) > 0 );
+}
+
+TEST_CASE( "plant_cannot_be_fertilized_twice", "[plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.add_item( plot, item( itype_test_seed_eoc ) );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+    u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
+    u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
+
+    iexamine::fertilize_plant( u, plot, itype_fertilizer_commercial );
+    process_activity( u );
+
+    item *seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( seed != nullptr );
+    CHECK( iexamine::is_plant_fertilized( *seed ) );
+
+    ret_val<void> second_fertilize = multi_farm_activity_actor::can_fertilize( u, plot );
+    CHECK( !second_fertilize.success() );
+}
+
+TEST_CASE( "plant_fertilizer_quality_affects_reduction", "[plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    const tripoint_bub_ms plot_commercial = u.pos_bub() + tripoint::east;
+    const tripoint_bub_ms plot_liquid = u.pos_bub() + tripoint::west;
+    here.add_item( plot_commercial, item( itype_test_seed_eoc ) );
+    here.furn_set( plot_commercial, furn_f_test_plant_seedling );
+    here.add_item( plot_liquid, item( itype_test_seed_eoc ) );
+    here.furn_set( plot_liquid, furn_f_test_plant_seedling );
+
+    u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
+    u.i_add( item( itype_fertilizer_liquid, calendar::turn ) );
+
+    iexamine::fertilize_plant( u, plot_commercial, itype_fertilizer_commercial );
+    process_activity( u );
+    iexamine::fertilize_plant( u, plot_liquid, itype_fertilizer_liquid );
+    process_activity( u );
+
+    item *seed_commercial = iexamine::get_seed_at( here, plot_commercial );
+    item *seed_liquid = iexamine::get_seed_at( here, plot_liquid );
+    REQUIRE( seed_commercial != nullptr );
+    REQUIRE( seed_liquid != nullptr );
+
+    // Commercial fertilizer has quality 1.0, liquid fertilizer has quality 0.8.
+    CHECK( iexamine::get_plant_effective_growth_turns( *seed_commercial ) >
+           iexamine::get_plant_effective_growth_turns( *seed_liquid ) );
 }
 
 TEST_CASE( "plant_water_eoc_and_event", "[plant][water]" )

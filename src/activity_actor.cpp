@@ -10300,13 +10300,6 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
 
     map &here = get_map();
 
-    std::list<item> planted;
-    if( fertilizer->count_by_charges() ) {
-        planted = who.use_charges( fertilizer, 1 );
-    } else {
-        planted = who.use_amount( fertilizer, 1 );
-    }
-
     // Can't use item_stack::only_item() since there might be fertilizer
     map_stack items = here.i_at( plant_position );
     const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
@@ -10347,15 +10340,32 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
         return;
     }
 
-    // Shorten the distance to mature: 20% base + 5% per survival level, capped at 50%.
+    // Now that we know the plant can actually benefit, consume the fertilizer.
+    std::list<item> planted;
+    if( fertilizer->count_by_charges() ) {
+        planted = who.use_charges( fertilizer, 1 );
+    } else {
+        planted = who.use_amount( fertilizer, 1 );
+    }
+    if( planted.empty() ) {
+        debugmsg( "Failed to consume fertilizer %s", fertilizer.c_str() );
+        act.set_to_null();
+        return;
+    }
+
+    // Shorten the distance to mature: 20% base + 5% per survival level, multiplied by
+    // the fertilizer's quality, capped at 50%.
     const double survival_level = who.get_skill_level( skill_survival );
-    const double reduction_pct = std::min( 0.20 + 0.05 * survival_level, 0.50 );
+    const double fertilizer_quality = fertilizer->fertilizer_quality;
+    const double reduction_pct = std::min( ( 0.20 + 0.05 * survival_level ) * fertilizer_quality,
+                                           0.50 );
 
     const time_duration reduction = distance_to_mature * reduction_pct;
     const time_duration new_effective = current_effective + reduction;
 
-    // Advance effective growth time and keep birthday in sync with it.
+    // Advance effective growth time, mark the plant as fertilized, and keep birthday in sync.
     iexamine::set_plant_effective_growth_turns( *seed, to_turns<int>( new_effective ) );
+    iexamine::set_plant_fertilized( *seed, true );
     seed->set_birthday( calendar::turn - new_effective / growth_multiplier );
 
     // Apply any stage advances immediately.
@@ -10460,6 +10470,16 @@ ret_val<void> multi_farm_activity_actor::can_fertilize( Character &,
         iexamine::is_plant_harvestable( here, tile ) ||
         iexamine::is_plant_overgrown( here, tile ) ) {
         return ret_val<void>::make_failure( _( "Tile is too mature to fertilize" ) );
+    }
+
+    // A plant can only benefit from fertilizer once.
+    map_stack items = here.i_at( tile );
+    const map_stack::iterator seed = std::find_if( items.begin(), items.end(),
+                                                   []( const item & it ) {
+                                                       return it.is_seed();
+                                                   } );
+    if( seed != items.end() && iexamine::is_plant_fertilized( *seed ) ) {
+        return ret_val<void>::make_failure( _( "This plant has already been fertilized." ) );
     }
 
     return ret_val<void>::make_success();

@@ -4656,6 +4656,7 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "charged_qualities", charged_qualities, item_quality_reader {} );
 
     optional( jo, was_loaded, "properties", properties );
+    optional( jo, was_loaded, "fertilizer_quality", fertilizer_quality );
 
     optional( jo, was_loaded, "max_worn", max_worn, MAX_WORN_PER_TYPE );
 

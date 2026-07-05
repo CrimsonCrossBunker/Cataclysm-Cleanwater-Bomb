@@ -434,6 +434,14 @@ static itype_id get_first_fertilizer_itype( Character &you, const tripoint_abs_m
                 continue;
             }
             return fertilizer_inv.front()->typeId();
+        } else {
+            // If the farm plot has no specific fertilizer configured,
+            // fall back to any item with the FERTILIZER flag.
+            std::vector<item_location> fertilizer_inv = you.cache_get_items_with( flag_FERTILIZER );
+            if( fertilizer_inv.empty() ) {
+                continue;
+            }
+            return fertilizer_inv.front()->typeId();
         }
     }
     return itype_id::NULL_ID();

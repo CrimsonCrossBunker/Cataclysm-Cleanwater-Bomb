@@ -184,6 +184,8 @@ ret_val<void> can_fertilize( Character &you, const tripoint_bub_ms &tile,
 int get_plant_max_water( const furn_t &furn );
 float get_plant_water_consumption_multiplier( const furn_t &furn );
 item *get_seed_at( map &here, const tripoint_bub_ms &p );
+bool is_plant_fertilized( const item &seed );
+void set_plant_fertilized( item &seed, bool fertilized );
 int get_plant_water( const item &seed );
 void set_plant_water( item &seed, int water );
 int get_seed_water_consumption( const item &seed );

@@ -2961,8 +2961,7 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
 
     const std::string pname = seed->get_plant_name();
     const bool can_harvest = is_plant_harvestable( here, examp );
-    const bool can_fertilize = !is_plant_mature( here, examp ) && !can_harvest &&
-                               here.i_at( examp ).size() <= 1;
+    const bool can_fertilize = multi_farm_activity_actor::can_fertilize( you, examp ).success();
     const bool can_water = get_plant_max_water( here.furn( examp ).obj() ) > 0;
 
     uilist smenu;
@@ -3049,6 +3048,16 @@ item *iexamine::get_seed_at( map &here, const tripoint_bub_ms &p )
         }
     }
     return nullptr;
+}
+
+bool iexamine::is_plant_fertilized( const item &seed )
+{
+    return static_cast<int>( seed.get_var( "seed_fertilized", 0.0 ) ) != 0;
+}
+
+void iexamine::set_plant_fertilized( item &seed, const bool fertilized )
+{
+    seed.set_var( "seed_fertilized", fertilized ? 1 : 0 );
 }
 
 int iexamine::get_plant_water( const item &seed )
@@ -3222,6 +3231,11 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
             desc += string_format( _( "\n<color_yellow>Moisture low; growth is normal.</color>" ) );
         } else {
             desc += string_format( _( "\n<color_red>Dry; growth is normal.</color>" ) );
+        }
+        if( is_plant_fertilized( *seed ) ) {
+            desc += string_format( _( "\n<color_green>Fertilized.</color>" ) );
+        } else {
+            desc += string_format( _( "\n<color_light_gray>Not fertilized.</color>" ) );
         }
         return desc;
     }

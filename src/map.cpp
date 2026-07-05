@@ -10153,7 +10153,14 @@ void map::grow_plant( const tripoint_bub_ms &p )
             return it.display_name();
         } );
         i_clear( p );
-        furn_set( p, furn_str_id::NULL_ID() );
+        // Preserve the base (usually tilled earth) instead of reverting to bare
+        // ground, so old saves or corrupted tiles remain farmable rather than
+        // instantly requiring new tilling and triggering a planting fetch loop.
+        if( initial_furn.plant ) {
+            furn_set( p, initial_furn.plant->base );
+        } else {
+            furn_set( p, furn_str_id::NULL_ID() );
+        }
         return;
     }
 
