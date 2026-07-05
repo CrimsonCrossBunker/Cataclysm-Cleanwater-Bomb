@@ -5608,5 +5608,26 @@
     "category": "STRING_EDITOR",
     "//": "'?' is treated as text input, so a different key is used.",
     "bindings": [ { "input_method": "keyboard_any", "key": "F1" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "coop_chat",
+    "name": "Co-op chat",
+    "category": "DEFAULTMODE",
+    "bindings": [ { "input_method": "keyboard_any", "key": "C", "mod": [ "shift" ] } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "pass_item",
+    "name": "Pass item to partner",
+    "category": "DEFAULTMODE",
+    "bindings": [ { "input_method": "keyboard_any", "key": "G", "mod": [ "shift" ] } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "high_five",
+    "name": "High five partner",
+    "category": "DEFAULTMODE",
+    "bindings": [ { "input_method": "keyboard_any", "key": "F", "mod": [ "shift" ] } ]
   }
 ]

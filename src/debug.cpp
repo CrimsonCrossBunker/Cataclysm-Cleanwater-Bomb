@@ -37,6 +37,7 @@
 #include "input.h"
 #include "loading_ui.h"
 #include "mod_manager.h"
+#include "mp_gamestate.h"
 #include "options.h"
 #include "output.h"
 #include "path_info.h"
@@ -1996,7 +1997,8 @@ std::string game_info::game_report()
            "- Game Version: " << game_version() << " [" << bitness() << "]\n" <<
            "- Graphics Version: " << graphics_version() << "\n" <<
            "- Game Language: " << lang_translated << " [" << lang << "]\n" <<
-           "- Mods loaded: [\n    " << mods_loaded() << "\n]\n";
+            "- Mods loaded: [\n    " << mods_loaded() << "\n]\n" <<
+            "- MP: " << cata_mp::mp_game_report_section() << "\n";
 
     return report.str();
 }

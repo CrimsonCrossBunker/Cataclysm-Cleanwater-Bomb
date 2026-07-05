@@ -1,5 +1,6 @@
 #include "character.h"
 
+#define MP_ENABLED
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -73,6 +74,10 @@
 #include "messages.h"
 #include "monster.h"
 #include "morale.h"
+#ifdef MP_ENABLED
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#endif
 #include "move_mode.h"
 #include "mtype.h"
 #include "mutation.h"
@@ -5348,6 +5353,13 @@ void Character::assign_activity( const player_activity &act )
 
     activity.start_or_resume( *this, resuming );
 
+#ifdef MP_ENABLED
+    if( is_avatar() && cata_mp::is_client_mode() && activity ) {
+        cata_mp::set_client_turn_activity( activity.id().str() );
+        cata_mp::client_send_activity_start( activity.id().str() );
+    }
+#endif
+
     if( is_npc() ) {
         cancel_stashed_activity();
         npc *guy = dynamic_cast<npc *>( this );
@@ -6416,7 +6428,13 @@ std::vector<Creature *> Character::get_targetable_creatures( const int range, bo
         {
             in_range = false;
         }
-        bool valid_target = this != &critter && pos_abs() != critter.pos_abs() && attitude_to( critter ) != Creature::Attitude::FRIENDLY;
+        bool valid_target = this != &critter && pos_abs() != critter.pos_abs() &&
+#ifdef MP_ENABLED
+                            attitude_to( critter ) != Creature::Attitude::FRIENDLY &&
+                            !( critter.as_npc() && cata_mp::is_partner_npc( critter.as_npc()->getID() ) );
+#else
+                            attitude_to( critter ) != Creature::Attitude::FRIENDLY;
+#endif
         return valid_target && in_range && can_see;
     } );
 }
@@ -6989,6 +7007,11 @@ void Character::gravity_check()
     if( has_flag( json_flag_PHASE_MOVEMENT ) ) {
         return; // debug trait immunity to gravity, walls etc
     }
+#ifdef MP_ENABLED
+    if( cata_mp::client_suppress_self_gravity( *this ) ) {
+        return; // host-authoritative: client avatar never self-falls
+    }
+#endif
     map &here = get_map();
     if( here.is_open_air( pos_bub() ) && !in_vehicle && !has_effect_with_flag( json_flag_GLIDING ) &&
         here.try_fall( pos_bub(), this ) ) {
@@ -7001,6 +7024,11 @@ void Character::gravity_check( map *here )
     if( has_flag( json_flag_PHASE_MOVEMENT ) ) {
         return; // debug trait immunity to gravity, walls etc
     }
+#ifdef MP_ENABLED
+    if( cata_mp::client_suppress_self_gravity( *this ) ) {
+        return; // host-authoritative: client avatar never self-falls
+    }
+#endif
     const tripoint_bub_ms pos = pos_bub( *here );
     if( here->is_open_air( pos ) && !in_vehicle && !has_effect_with_flag( json_flag_GLIDING ) &&
         here->try_fall( pos, this ) ) {
