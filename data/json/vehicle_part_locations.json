@@ -127,6 +127,14 @@
   },
   {
     "type": "vehicle_part_location",
+    "id": "damping",
+    "name": "Damping",
+    "desc": "A location for shock-absorbing and damping vehicle parts",
+    "z_order": 1,
+    "list_order": 13
+  },
+  {
+    "type": "vehicle_part_location",
     "id": "anywhere",
     "name": "Anywhere",
     "desc": "Can be installed in any location",
