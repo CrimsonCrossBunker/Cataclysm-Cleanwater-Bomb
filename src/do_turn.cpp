@@ -1,4 +1,7 @@
 #include "do_turn.h"
+#include "mp_queue.h"
+#include "mp_gamestate.h"
+#include "mp_client_conn.h"
 
 #if defined(EMSCRIPTEN)
     #include <emscripten.h>
@@ -6,6 +9,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <thread>
 #include <map>
 #include <memory>
 #include <optional>
@@ -59,6 +63,7 @@
 #include "npc.h"
 #include "options.h"
 #include "output.h"
+#include "overmap_ui.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
@@ -135,6 +140,11 @@ bool cleanup_at_end()
         //save achievements entry
         g->save_achievements();
 
+        // Notify connected clients before the death screen takes focus so they
+        // see "partner died" instead of a raw socket-drop spam.
+        if( cata_mp::is_hosting() ) {
+            cata_mp::notify_client_host_died();
+        }
         g->death_screen();
         // See game::save(): freeze the wall-clock delta under replay so playtime
         // (and anything derived from the game_over event) is reproducible.
@@ -237,7 +247,7 @@ bool cleanup_at_end()
 
 } // namespace turn_handler
 
-void handle_key_blocking_activity()
+void handle_key_blocking_activity( int timeout )
 {
     if( test_mode ) {
         return;
@@ -246,13 +256,30 @@ void handle_key_blocking_activity()
     const bool has_unfinished_activity = u.activity && (
             u.activity.id()->based_on() == based_on_type::NEITHER
             || u.activity.moves_left > 0 );
-    if( has_unfinished_activity || u.has_destination() ) {
+    // MP-locked host has no activity but should still be able to zoom, check
+    // inventory, see messages, etc. while waiting for the client to act.
+    if( has_unfinished_activity || u.has_destination()
+        || cata_mp::is_host_waiting_for_client() ) {
         input_context ctxt = get_default_mode_input_context();
-        const std::string action = ctxt.handle_input( 0 );
+        const std::string action = ctxt.handle_input( timeout );
+        if( cata_mp::is_hosting() && cata_mp::is_host_waiting_for_client() &&
+            !action.empty() && action != "ANY_INPUT" && action != "TIMEOUT" ) {
+            cata_mp::mp_log( "[cdda-mp] HOST-LOCKED-INPUT: action=\"" + action + "\"" );
+        }
+        if( cata_mp::is_client_mode() &&
+            !action.empty() && action != "ANY_INPUT" && action != "TIMEOUT" ) {
+            cata_mp::mp_log( "[cdda-mp] CLI-LOCKED-INPUT: action=\"" + action + "\"" );
+        }
         bool refresh = true;
         if( action == "pause" ) {
             if( u.activity.is_interruptible_with_kb() ) {
-                g->cancel_activity_query( _( "Confirm:" ) );
+                if( cata_mp::is_client_mode() ) {
+                    u.cancel_activity();
+                    u.abort_automove();
+                    u.resume_backlog_activity();
+                } else {
+                    g->cancel_activity_query( _( "Confirm:" ) );
+                }
             }
         } else if( action == "zoom_in" ) {
             g->zoom_in();
@@ -260,12 +287,18 @@ void handle_key_blocking_activity()
         } else if( action == "zoom_out" ) {
             g->zoom_out();
             g->mark_main_ui_adaptor_resize();
+        } else if( action == "map" ) {
+            ui::omap::display();
         } else if( action == "player_data" ) {
             u.disp_info( true );
+        } else if( action == "morale" ) {
+            u.disp_morale();
         } else if( action == "messages" ) {
             Messages::display_messages();
         } else if( action == "help" ) {
             get_help().display_help();
+        } else if( action == "coop_chat" ) {
+            cata_mp::mp_open_chat();
         } else if( action != "HELP_KEYBINDINGS" ) {
             refresh = false;
         }
@@ -288,10 +321,14 @@ void monmove()
     map &m = get_map();
     avatar &u = get_avatar();
 
+    int mon_count = 0;
+    std::string mon_slow_log;
     for( monster &critter : g->all_monsters() ) {
         if( !m.inbounds( critter.pos_abs() ) ) {
             continue;
         }
+        ++mon_count;
+        const auto mon_t0 = std::chrono::steady_clock::now();
         const tripoint_bub_ms critter_pos = critter.pos_bub( m );
 
         // Critters in impassable tiles get pushed away, unless it's not impassable for them
@@ -363,6 +400,20 @@ void monmove()
                 u.wake_up();
             }
         }
+
+        if( cata_mp::is_hosting() ) {
+            const int mon_ms = static_cast<int>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - mon_t0 ).count() );
+            if( mon_ms >= 10 ) {
+                mon_slow_log += " " + critter.type->id.str() + "=" + std::to_string( mon_ms ) + "ms";
+            }
+        }
+    }
+
+    if( cata_mp::is_hosting() && !mon_slow_log.empty() ) {
+        cata_mp::mp_log( "[cdda-mp] monmove slow monsters (count=" +
+                         std::to_string( mon_count ) + "):" + mon_slow_log );
     }
 
     g->cleanup_dead();
@@ -374,6 +425,12 @@ void monmove()
 
     // Now, do active NPCs.
     for( npc &guy : g->all_npcs() ) {
+        // Remote player NPCs are driven by network input, not AI.
+        if( cata_mp::is_remote_player( guy.getID() ) ) {
+            cata_mp::mp_tick_proxy_activity( guy );
+            continue;
+        }
+        const auto npc_t0 = std::chrono::steady_clock::now();
         int turns = 0;
         int real_count = 0;
         const int count_limit = std::max( 10, guy.get_moves() / 64 );
@@ -415,6 +472,17 @@ void monmove()
 
         if( !guy.is_dead() ) {
             guy.npc_update_body();
+        }
+
+        if( cata_mp::is_hosting() ) {
+            const int npc_ms = static_cast<int>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - npc_t0 ).count() );
+            if( npc_ms >= 10 ) {
+                cata_mp::mp_log( "[cdda-mp] monmove slow NPC: " + guy.get_name() +
+                                 " activity=" + guy.activity.id().str() +
+                                 " " + std::to_string( npc_ms ) + "ms" );
+            }
         }
     }
     g->cleanup_dead();
@@ -485,6 +553,15 @@ void game::handle_progress_ui()
     } else if( const std::optional<std::string> progress = u.activity.get_progress_message( u ) ) {
         wait_redraw = true;
         wait_message = *progress;
+        // MP: when our local activity is ACT_HELP_PARTNER, mirror the partner's
+        // reported progress.  Our own moves_total uses a long fallback that
+        // doesn't track the actual craft/build/etc the partner is doing.
+        if( ( cata_mp::is_client_mode() || cata_mp::is_hosting() ) &&
+            u.activity.id().str() == "ACT_HELP_PARTNER" ) {
+            wait_message = string_format( _( "%s: %d%%" ),
+                                          u.activity.get_verb().translated(),
+                                          cata_mp::partner_activity_pct() );
+        }
         if( u.activity.is_interruptible() && u.activity.interruptable_with_kb ) {
             wait_message += string_format( _( "\n%s to interrupt" ), press_x( ACTION_PAUSE ) );
         }
@@ -495,11 +572,37 @@ void game::handle_progress_ui()
         } else {
             wait_refresh_rate = 5_minutes;
         }
+        // In lockstep MP, cap to 1_turns so the progress bar updates every grant
+        // cycle.  In FF mode turns race at CPU speed — don't cap here, handled below.
+        if( cata_mp::is_client_mode() || cata_mp::is_hosting() ) {
+            if( !cata_mp::should_fast_forward() ) {
+                wait_refresh_rate = 1_turns;
+            }
+        }
     }
     if( wait_redraw ) {
-        if( first_redraw_since_waiting_started ||
-            calendar::once_every( std::min( 1_minutes, wait_refresh_rate ) ) ) {
-            if( first_redraw_since_waiting_started || calendar::once_every( wait_refresh_rate ) ) {
+        // FF mode: bypass the calendar gate entirely and use a wall-clock cap
+        // (~100ms = ~10 Hz).  This lets thousands of game turns race through
+        // per second while the progress popup still updates smoothly.
+        static auto s_last_ff_redraw = std::chrono::steady_clock::time_point {};
+        const bool ff_active = cata_mp::should_fast_forward();
+        const bool ff_redraw_due = [&] {
+            if( !ff_active ) {
+                return false;
+            }
+            const auto now = std::chrono::steady_clock::now();
+            if( first_redraw_since_waiting_started ||
+                std::chrono::duration_cast<std::chrono::milliseconds>( now - s_last_ff_redraw ).count() >= 100 ) {
+                s_last_ff_redraw = now;
+                return true;
+            }
+            return false;
+        }();
+        if( ff_redraw_due ||
+            ( !ff_active && ( first_redraw_since_waiting_started ||
+                              calendar::once_every( std::min( 1_minutes, wait_refresh_rate ) ) ) ) ) {
+            if( ff_redraw_due || first_redraw_since_waiting_started ||
+                calendar::once_every( wait_refresh_rate ) ) {
                 ui_manager::redraw();
             }
 
@@ -547,6 +650,22 @@ bool game::do_turn()
     drain_renderer_recovery();
 
     simulate_turn_prefix();
+
+    // Process multiplayer events from network thread.
+    cata_mp::process_mp_events();
+    // Apply server state updates received since the last turn (client mode).
+    cata_mp::client_process_incoming();
+    // Resolve any blocking UI deferred out of the recv path.
+    cata_mp::client_resolve_pending_ui();
+    // Lockstep: grant the client their turn at the start of each game turn.
+    if( cata_mp::is_hosting() ) {
+        cata_mp::grant_client_turn();
+    }
+    // Keep the MP debug HUD alive whenever multiplayer is active.
+    if( cata_mp::is_client_mode() || cata_mp::is_host_mode() ) {
+        cata_mp::ensure_mp_hud();
+    }
+
     if( do_avatar_action_loop() ) {
         return turn_handler::cleanup_at_end();
     }
@@ -567,7 +686,12 @@ void game::simulate_turn_prefix()
         weather.on_game_start();
     } else {
         gamemode->per_turn();
-        calendar::turn += 1_turns;
+        // MP callout: client-mode locks the calendar until a grant brings
+        // moves > 0; otherwise the clock races forward ~10 turns/sec while
+        // waiting and diverges from the host.
+        if( cata_mp::should_advance_calendar() ) {
+            calendar::turn += 1_turns;
+        }
     }
     //used for dimension swapping
     if( swapping_dimensions ) {
@@ -599,7 +723,9 @@ void game::simulate_turn_prefix()
     }
 
     // If you're inside a wall or something and haven't been telefragged, let's get you out.
-    if( ( m.impassable( u.pos_bub() ) && !m.impassable_field_at( u.pos_bub() ) ) &&
+    // In client MP mode the server is authoritative for position.
+    if( !cata_mp::is_client_mode() &&
+        ( m.impassable( u.pos_bub() ) && !m.impassable_field_at( u.pos_bub() ) ) &&
         !m.has_flag( ter_furn_flag::TFLAG_CLIMBABLE, u.pos_bub() ) ) {
         u.stagger();
     }
@@ -622,10 +748,13 @@ void game::simulate_turn_prefix()
 
     debug_hour_timer.print_time();
 
-    u.update_body();
+    // Per-turn body update. In SP this is one turn; in MP-client it must catch
+    // up the host-driven calendar's jumps.
+    cata_mp::mp_do_turn_update_body( u );
 
-    // Auto-save if autosave is enabled
-    if( get_option<bool>( "AUTOSAVE" ) &&
+    // Auto-save if autosave is enabled (suppressed in client mode — server owns saves)
+    if( !cata_mp::is_client_mode() &&
+        get_option<bool>( "AUTOSAVE" ) &&
         calendar::once_every( 1_turns * get_option<int>( "AUTOSAVE_TURNS" ) ) &&
         !u.is_dead_state() ) {
         autosave();
@@ -640,9 +769,40 @@ void game::simulate_turn_prefix()
 
     perhaps_add_random_npc( /* ignore_spawn_timers_and_rates = */ false );
 
+    // In server mode the avatar is a simulation host, not a controllable player.
+    if( cata_mp::is_server_mode() ) {
+        u.set_moves( 0 );
+        u.set_hunger( 0 );
+        u.set_thirst( 0 );
+        u.set_sleep_deprivation( 0 );
+        u.set_stamina( u.get_stamina_max() );
+        u.healall( 100 );
+    }
+
     // process avatar activities (ignoring user input)
+    // Snapshot moves and activity ID before the loop for client dispatch.
+    const int pre_activity_moves = u.get_moves();
+    const activity_id pre_activity_id = u.activity ? u.activity.id() : activity_id::NULL_ID();
+    if( cata_mp::is_client_mode() ) {
+        // Snapshot this turn's activity id for the wire.
+        cata_mp::set_client_turn_activity( pre_activity_id ? pre_activity_id.str()
+                                           : std::string() );
+        // Client busy-loop fix: yield to network thread when we have an activity
+        // but no moves to tick it.
+        if( pre_activity_id && pre_activity_moves <= 0 ) {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+    }
     while( u.get_moves() > 0 && u.activity ) {
         u.activity.do_turn( u );
+    }
+    // Ticks effects/needs once per elapsed game-turn, discards process_turn's move
+    // regen (client moves come from server grants).
+    cata_mp::mp_do_turn_process_turn( u );
+    // Client: if a wait activity consumed the server-granted moves this turn,
+    // dispatch "wait" so the server advances its timeline in sync.
+    if( cata_mp::is_client_mode() && pre_activity_moves > 0 && u.get_moves() <= 0 ) {
+        cata_mp::client_dispatch_wait_for_activity( pre_activity_id );
     }
 
     // Process NPC sound events before they move or they hear themselves talking
@@ -667,6 +827,10 @@ bool game::do_avatar_action_loop()
     ZoneScoped;
     avatar &u = get_avatar();
     map &m = get_map();
+
+    // Capture pre-loop state for MP client dispatch.
+    const int pre_act_moves = u.get_moves();
+    const bool pre_act_had_activity = static_cast<bool>( u.activity );
 
     // avatar processes human input through handle_action()
     if( !u.has_effect( effect_sleep ) || uquit == QUIT_WATCH ) {
@@ -701,9 +865,24 @@ bool game::do_avatar_action_loop()
                     queue_screenshot = false;
                 }
 
-                if( handle_action() ) {
-                    ++moves_since_last_save;
-                    u.action_taken();
+                {
+                    const unsigned long long pre_msg = cata_mp::is_hosting() ? Messages::size() :
+                                                       0;
+                    if( handle_action() ) {
+                        ++moves_since_last_save;
+                        u.action_taken();
+                        if( cata_mp::is_hosting() ) {
+                            cata_mp::host_capture_avatar_msgs( pre_msg );
+                            cata_mp::host_broadcast_post_action();
+                        }
+                    }
+                }
+
+                // Pump MP events after each host action so the remote player's
+                // queued actions are processed immediately.
+                if( cata_mp::is_hosting() ) {
+                    cata_mp::process_mp_events();
+                    cata_mp::ensure_mp_hud();
                 }
 
                 if( is_game_over() ) {
@@ -715,21 +894,69 @@ bool game::do_avatar_action_loop()
                 }
 
                 // avatar processes moves for activities started by handle_action()
+                const activity_id iter_pre_act = u.activity ? u.activity.id()
+                                                 : activity_id::NULL_ID();
                 while( u.get_moves() > 0 && u.activity ) {
                     u.activity.do_turn( u );
                 }
+                // Client: if a multi-turn activity just ended mid-input-loop,
+                // emit the end signal immediately and burn remaining moves to ack.
+                const std::string &mid_iter_act = cata_mp::get_client_turn_activity();
+                const bool mid_iter_orphan =
+                    !mid_iter_act.empty() && !u.activity;
+                if( cata_mp::is_client_mode() && ( iter_pre_act || mid_iter_orphan ) && !u.activity ) {
+                    const std::string ended_id = iter_pre_act ? iter_pre_act.str() : mid_iter_act;
+                    cata_mp::set_client_turn_activity( std::string() );
+                    cata_mp::client_send_activity_end( ended_id );
+                    if( !cata_mp::is_client_waiting_for_ack() ) {
+                        u.set_moves( 0 );
+                        cata_mp::client_dispatch_wait_for_activity(
+                            activity_id(), /*force_idle=*/true );
+                    }
+                }
+            }
+            // Client: detect activity end post-loop.
+            const std::string &post_loop_act = cata_mp::get_client_turn_activity();
+            const bool post_orphan = !post_loop_act.empty() && !u.activity;
+            const bool activity_just_ended = ( pre_act_had_activity || post_orphan ) && !u.activity;
+            const bool moves_consumed = pre_act_moves > 0 && u.get_moves() <= 0;
+            if( cata_mp::is_client_mode() && activity_just_ended ) {
+                const std::string ended_id = pre_act_had_activity ? u.activity ?
+                    activity_id::NULL_ID().str() : "" : post_loop_act;
+                cata_mp::set_client_turn_activity( std::string() );
+                if( !ended_id.empty() ) {
+                    cata_mp::client_send_activity_end( ended_id );
+                }
+            }
+            if( cata_mp::is_client_mode() &&
+                ( moves_consumed || activity_just_ended ) &&
+                !cata_mp::is_client_waiting_for_ack() ) {
+                cata_mp::client_dispatch_wait_for_activity(
+                    u.activity ? u.activity.id() : activity_id::NULL_ID(), /*force_idle=*/true );
             }
             // Reset displayed sound markers now that the turn is over.
-            // We only want this to happen if the player had a chance to examine the sounds.
             sounds::reset_markers();
         } else {
             // Rate limit key polling to 10 times a second.
+            // Client mode: enabled — handle_input(0) is non-blocking unless the
+            // user actually presses an interrupt key, in which case the
+            // cancel-confirmation popup blocking briefly is the correct UX.
             static auto start = std::chrono::time_point_cast<std::chrono::milliseconds>(
                                     std::chrono::steady_clock::now() );
             const auto now = std::chrono::time_point_cast<std::chrono::milliseconds>(
                                  std::chrono::steady_clock::now() );
             if( ( now - start ).count() > 100 ) {
-                handle_key_blocking_activity();
+                // Client: detect activity cancellation during passive wait.
+                const bool had_act_pre = cata_mp::is_client_mode() && u.activity;
+                handle_key_blocking_activity( 0 );
+                if( cata_mp::is_client_mode() && had_act_pre && !u.activity ) {
+                    cata_mp::set_client_turn_activity( std::string() );
+                    cata_mp::client_send_activity_end( "" );
+                    if( !cata_mp::is_client_waiting_for_ack() ) {
+                        cata_mp::client_dispatch_wait_for_activity(
+                            activity_id(), /*force_idle=*/true );
+                    }
+                }
                 start = now;
             }
 
@@ -795,7 +1022,16 @@ void game::simulate_turn_suffix()
     get_creature_tracker().precompute_all_zones();
 
     // process monster and npc turn
-    monmove();
+    // Lockstep: wait for the client to ack this turn before running monster AI.
+    if( cata_mp::is_hosting() ) {
+        cata_mp::wait_for_client_action();
+        // Skip monmove when fast-forwarding through a wait activity.
+        if( !cata_mp::host_is_in_wait_activity() ) {
+            monmove();
+        }
+    } else {
+        monmove();
+    }
 
     if( calendar::once_every( time_between_npc_OM_moves ) ) {
         overmap_npc_move();

@@ -1,5 +1,6 @@
 #include "activity_actor.h"
 
+#define MP_ENABLED
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -95,6 +96,10 @@
 #include "math_parser_diag_value.h"
 #include "memory_fast.h"
 #include "messages.h"
+#ifdef MP_ENABLED
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#endif
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
@@ -11527,6 +11532,15 @@ void vehicle_activity_actor::start( player_activity &act, Character & )
 
 void vehicle_activity_actor::finish( player_activity &act, Character &you )
 {
+#ifdef MP_ENABLED
+    if( cata_mp::is_client_mode() && you.is_avatar() ) {
+        const std::string payload = ::serialize( *this );
+        const std::string action_json =
+            "{\"type\":\"action\",\"action\":\"vehicle_construct\","
+            "\"actor\":" + payload + "}";
+        cata_mp::client_send( cata_mp::client_enrich_action( action_json ) );
+    }
+#endif
     map &here = get_map();
     //Grab this now, in case the vehicle gets shifted
     const optional_vpart_position vp = here.veh_at( here.get_bub( vp_location ) );

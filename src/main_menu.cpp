@@ -21,6 +21,8 @@
     #include <emscripten.h>
 #endif
 
+#define MP_ENABLED
+
 #include "auto_pickup.h"
 #include "avatar.h"
 #include "cata_path.h"
@@ -42,6 +44,10 @@
 #include "mapbuffer.h"
 #include "mapsharing.h"
 #include "messages.h"
+#ifdef MP_ENABLED
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#endif
 #include "music.h"
 #include "options.h"
 #include "output.h"
@@ -72,6 +78,7 @@ namespace
 enum class main_menu_opts : int {
     MOTD = 0,
     NEWCHAR,
+    COOP,
     LOADCHAR,
     WORLD,
     TUTORIAL,
@@ -142,7 +149,14 @@ std::vector<int> main_menu::print_menu_items( const catacurses::window &w_in,
         ret.push_back( utf8_width_notags( text.c_str() ) );
 
         std::string temp = shortcut_text( iSel == i ? hilite( c_yellow ) : c_yellow, vItems[i] );
+#ifdef MP_ENABLED
+        const bool is_coop = main && i == static_cast<size_t>( getopt( main_menu_opts::COOP ) );
+        const nc_color color = iSel == i ? hilite( c_white )
+                               : ( is_coop ? c_light_green : c_white );
+        text += string_format( "[%s]", colorize( temp, color ) );
+#else
         text += string_format( "[%s]", colorize( temp, iSel == i ? hilite( c_white ) : c_white ) );
+#endif
     }
 
     int text_width = utf8_width_notags( text.c_str() );
@@ -213,6 +227,18 @@ void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_lin
                 }
             }
             break;
+#ifdef MP_ENABLED
+        case main_menu_opts::COOP:
+            for( int i = 0; static_cast<size_t>( i ) < vCoopSubItems.size(); i++ ) {
+                nc_color clr = i == sel2 ? hilite( c_light_green ) : c_light_green;
+                sub_opts.push_back( shortcut_text( clr, vCoopSubItems[i] ) );
+                int len = utf8_width( shortcut_text( clr, vCoopSubItems[i] ), true );
+                if( len > xlen ) {
+                    xlen = len;
+                }
+            }
+            break;
+#endif
         case main_menu_opts::LOADCHAR:
         case main_menu_opts::WORLD: {
             const bool extra_opt = sel == getopt( main_menu_opts::WORLD );
@@ -228,7 +254,11 @@ void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_lin
                     clr = c_light_cyan;
                 }
                 sub_opts.push_back( colorize( string_format( "%s (%d)", name, savegames_count ),
-                                              ( sel2 == i + ( extra_opt ? 1 : 0 ) ) ? hilite( clr ) : clr ) );
+                                              ( sel2 == i + ( extra_opt ? 1 : 0 ) ) ? hilite( clr ) : clr )
+#ifdef MP_ENABLED
+                                    + colorize( cata_mp::mp_world_marker_badge( name ), c_light_green )
+#endif
+                                  );
                 int len = utf8_width( sub_opts.back(), true );
                 if( len > xlen ) {
                     xlen = len;
@@ -310,12 +340,24 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
     // Draw horizontal line
     mvwhline( w_open, point( 1, window_height - 4 ), c_white, LINE_OXOX, window_width - 2 );
 
+#ifdef MP_ENABLED
+    const std::string mp_status = cata_mp::mp_menu_coop_status_text();
+    if( !mp_status.empty() ) {
+        center_print( w_open, window_height - 2, c_light_green, mp_status );
+    } else if( iSel == getopt( main_menu_opts::NEWCHAR ) ) {
+        center_print( w_open, window_height - 2, c_yellow, vNewGameHints[sel2] );
+    } else {
+        center_print( w_open, window_height - 2, c_red,
+                      _( "Bugs?  Suggestions?  Use links in MOTD to report them." ) );
+    }
+#else
     if( iSel == getopt( main_menu_opts::NEWCHAR ) ) {
         center_print( w_open, window_height - 2, c_yellow, vNewGameHints[sel2] );
     } else {
         center_print( w_open, window_height - 2, c_red,
                       _( "Bugs?  Suggestions?  Use links in MOTD to report them." ) );
     }
+#endif
 
     center_print( w_open, window_height - 1, c_light_cyan, string_format( _( "Tip of the day: %s" ),
                   vdaytip ) );
@@ -464,12 +506,17 @@ void main_menu::init_strings()
     vMenuItems.clear();
     vMenuItems.emplace_back( pgettext( "Main Menu", "<M|m>OTD" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "<N|n>ew Game" ) );
+#ifdef MP_ENABLED
+    vMenuItems.emplace_back( pgettext( "Main Menu", "Co-<O|o>p" ) );
+#endif
     vMenuItems.emplace_back( pgettext( "Main Menu", "Lo<a|A>d" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "<W|w>orld" ) );
-    vMenuItems.emplace_back( pgettext( "Main Menu", "T<u|U>torial Game" ) );
+    vMenuItems.emplace_back( pgettext( "Main Menu", "T<u|U>torial" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "Se<t|T>tings" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "H<e|E|?>lp" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "<C|c>redits" ) );
+#ifdef MP_ENABLED
+#endif
 #if !defined(EMSCRIPTEN)
     vMenuItems.emplace_back( pgettext( "Main Menu", "<Q|q>uit" ) );
 #endif
@@ -499,6 +546,17 @@ void main_menu::init_strings()
     for( const std::string &item : vNewGameSubItems ) {
         vNewGameHotkeys.push_back( get_hotkeys( item ) );
     }
+
+#ifdef MP_ENABLED
+    vCoopSubItems.clear();
+    vCoopSubItems.emplace_back( pgettext( "Main Menu|Co-op", "<H|h>ost a session" ) );
+    vCoopSubItems.emplace_back( pgettext( "Main Menu|Co-op", "<J|j>oin a session" ) );
+    vCoopHotkeys.clear();
+    vCoopHotkeys.reserve( vCoopSubItems.size() );
+    for( const std::string &item : vCoopSubItems ) {
+        vCoopHotkeys.push_back( get_hotkeys( item ) );
+    }
+#endif
 
     // determine hotkeys from translated menu item text
     vMenuHotkeys.clear();
@@ -729,6 +787,20 @@ bool main_menu::opening_screen()
                 }
             }
         }
+#ifdef MP_ENABLED
+        if( sel1 == getopt( main_menu_opts::COOP ) ) {
+            for( int i = 0; !match && static_cast<size_t>( i ) < vCoopSubItems.size(); ++i ) {
+                for( const std::string &hotkey : vCoopHotkeys[i] ) {
+                    if( sInput.text == hotkey ) {
+                        sel2 = i;
+                        action = "CONFIRM";
+                        match = true;
+                        break;
+                    }
+                }
+            }
+        }
+#endif
 
         // handle mouse click
         if( action == "SELECT" || action == "MOUSE_MOVE" ) {
@@ -742,7 +814,8 @@ bool main_menu::opening_screen()
                         on_move();
                     }
                     if( action == "SELECT" &&
-                        ( sel1 == getopt( main_menu_opts::HELP ) || sel1 == getopt( main_menu_opts::QUIT ) ) ) {
+                        ( sel1 == getopt( main_menu_opts::HELP )
+                          || sel1 == getopt( main_menu_opts::QUIT ) ) ) {
                         action = "CONFIRM";
                     }
                     ui_manager::redraw();
@@ -813,6 +886,11 @@ bool main_menu::opening_screen()
                 case main_menu_opts::NEWCHAR:
                     max_item_count = vNewGameSubItems.size();
                     break;
+#ifdef MP_ENABLED
+                case main_menu_opts::COOP:
+                    max_item_count = vCoopSubItems.size();
+                    break;
+#endif
                 case main_menu_opts::SETTINGS:
                     max_item_count = vSettingsSubItems.size();
                     break;
@@ -907,7 +985,13 @@ bool main_menu::opening_screen()
                     break;
                 case main_menu_opts::LOADCHAR:
                     if( static_cast<std::size_t>( sel2 ) < world_generator->get_all_worlds().size() ) {
-                        start = load_character_tab( world_generator->get_world_name( sel2 ) );
+                        const std::string wn = world_generator->get_world_name( sel2 );
+#ifdef MP_ENABLED
+                        if( !cata_mp::mp_load_promote_prompt( wn ) ) {
+                            break;
+                        }
+#endif
+                        start = load_character_tab( wn );
                         if( start ) {
                             load_game = true;
                         }
@@ -918,6 +1002,238 @@ bool main_menu::opening_screen()
                 case main_menu_opts::NEWCHAR:
                     start = new_character_tab();
                     break;
+#ifdef MP_ENABLED
+                case main_menu_opts::COOP: {
+                    auto pick_char_type = []() -> int {
+                        constexpr int RET_CUSTOM = 10;
+                        constexpr int RET_PRESET = 11;
+                        constexpr int RET_RANDOM = 12;
+                        constexpr int RET_CANCEL = 19;
+                        uilist cpick;
+                        cpick.title = _( "Co-op: choose character" );
+                        cpick.entries.emplace_back( RET_CUSTOM, true, 'c', _( "Custom Character" ) );
+                        cpick.entries.emplace_back( RET_PRESET, true, 'p', _( "Preset Character" ) );
+                        cpick.entries.emplace_back( RET_RANDOM, true, 'r', _( "Random Character" ) );
+                        cpick.entries.emplace_back( RET_CANCEL, true, 'q', _( "Cancel" ) );
+                        cpick.query();
+                        switch( cpick.ret ) {
+                            case RET_CUSTOM:
+                                return 0;
+                            case RET_PRESET:
+                                return 1;
+                            case RET_RANDOM:
+                                return 2;
+                            default:
+                                return -1;
+                        }
+                    };
+                    if( sel2 == 0 ) {
+                        if( !cata_mp::mp_menu_start_host_session() ) {
+                            break;
+                        }
+                        const bool any_worlds = !world_generator->get_all_worlds().empty();
+                        uilist hflow;
+                        hflow.title = _( "Co-op: host a session" );
+                        hflow.entries.emplace_back( 0, true, 'n', _( "New character" ) );
+                        hflow.entries.emplace_back( 1, any_worlds, 'l', _( "Load saved world" ) );
+                        hflow.entries.emplace_back( -1, true, 'q', _( "Cancel co-op" ) );
+                        hflow.query();
+                        if( hflow.ret == 0 ) {
+                            uilist wflow;
+                            wflow.title = _( "Co-op: world for new character" );
+                            if( !any_worlds ) {
+                                wflow.text = _( "No existing worlds yet — create a new one." );
+                            }
+                            wflow.entries.emplace_back( 0, any_worlds, 'e', _( "Use existing world" ) );
+                            wflow.entries.emplace_back( 1, true, 'n', _( "Create new world" ) );
+                            wflow.entries.emplace_back( -1, true, 'q', _( "Cancel" ) );
+                            wflow.query();
+                            if( wflow.ret < 0 ) {
+                                cata_mp::mp_menu_cancel_host();
+                                break;
+                            }
+                            if( wflow.ret == 1 ) {
+                                WORLD *neww = world_generator->make_new_world();
+                                if( neww == nullptr ) {
+                                    cata_mp::mp_menu_cancel_host();
+                                    break;
+                                }
+                                if( !query_yn(
+                                        _( "World '%s' created.\n\nContinue to character creation?" ),
+                                        neww->world_name.c_str() ) ) {
+                                    cata_mp::mp_menu_cancel_host();
+                                    break;
+                                }
+                            }
+                            const int ct = pick_char_type();
+                            if( ct < 0 ) {
+                                cata_mp::mp_menu_cancel_host();
+                                break;
+                            }
+                            sel2 = ct;
+                            start = new_character_tab();
+                            if( !start ) {
+                                cata_mp::mp_menu_cancel_host();
+                                sel2 = 0;
+                            }
+                        } else if( hflow.ret == 1 ) {
+                            std::vector<std::string> coop_w;
+                            std::vector<std::string> solo_w;
+                            for( const auto &kv : world_generator->get_all_worlds() ) {
+                                ( cata_mp::mp_world_has_history( kv.first ) ? coop_w : solo_w )
+                                .push_back( kv.first );
+                            }
+                            if( coop_w.empty() && solo_w.empty() ) {
+                                popup( _( "No worlds to load.\n\nCreate one from Host > New character, or from the main menu under World." ) );
+                                break;
+                            }
+                            std::vector<std::string> wnames;
+                            wnames.reserve( coop_w.size() + solo_w.size() );
+                            wnames.insert( wnames.end(), coop_w.begin(), coop_w.end() );
+                            wnames.insert( wnames.end(), solo_w.begin(), solo_w.end() );
+
+                            uilist wpick;
+                            wpick.title = _( "Co-op: load saved world" );
+                            int idx = 0;
+                            for( const std::string &name : wnames ) {
+                                const bool has_coop = cata_mp::mp_world_has_history( name );
+                                const std::string display = name +
+                                                            ( has_coop ? colorize( cata_mp::mp_world_marker_badge( name ), c_light_green )
+                                                              : "  " + colorize( "(solo)", c_dark_gray ) );
+                                wpick.entries.emplace_back( idx++, true, MENU_AUTOASSIGN, display );
+                            }
+                            wpick.entries.emplace_back( -1, true, 'q', _( "Cancel" ) );
+                            wpick.query();
+                            if( wpick.ret < 0 || static_cast<size_t>( wpick.ret ) >= wnames.size() ) {
+                                break;
+                            }
+                            const std::string chosen_w = wnames[wpick.ret];
+                            {
+                                std::vector<std::string> block_reasons;
+                                std::vector<std::string> warn_reasons;
+                                if( cata_mp::mp_world_coop_block( chosen_w, block_reasons,
+                                                                  warn_reasons ) ) {
+                                    std::string msg = _( "This world can't be hosted in co-op:" );
+                                    for( const std::string &r : block_reasons ) {
+                                        msg += "\n  - " + r;
+                                    }
+                                    msg += _( "\n\nPick a different world or create a new one." );
+                                    popup( "%s", msg );
+                                    break;
+                                }
+                                if( !warn_reasons.empty() ) {
+                                    std::string msg = _( "This world may not work fully in co-op:" );
+                                    for( const std::string &r : warn_reasons ) {
+                                        msg += "\n  - " + r;
+                                    }
+                                    msg += _( "\n\nHost it anyway?" );
+                                    if( !query_yn( "%s", msg ) ) {
+                                        break;
+                                    }
+                                }
+                            }
+                            start = load_character_tab( chosen_w );
+                            if( start ) {
+                                load_game = true;
+                            }
+                        } else {
+                            cata_mp::mp_menu_cancel_host();
+                        }
+                    } else if( sel2 == 1 ) {
+                        if( !cata_mp::mp_menu_join_session() ) {
+                            break;
+                        }
+                        const bool any_worlds_with_saves = [] {
+                            for( const auto &kv : world_generator->get_all_worlds() ) {
+                                if( !kv.second->world_saves.empty() ) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }();
+                        const std::string host_world = cata_mp::mp_client_host_world_name();
+                        const std::string host_player = cata_mp::mp_client_host_player_name();
+                        if( !host_world.empty() ) {
+                            static std::string s_announced_host;
+                            const std::string host_key = host_player + "@" + host_world;
+                            if( host_key != s_announced_host ) {
+                                s_announced_host = host_key;
+                                if( host_player.empty() ) {
+                                    popup( _( "Joining world \"%s\"." ), host_world );
+                                } else {
+                                    popup( _( "Joining %s's game.\nWorld: \"%s\"" ),
+                                           host_player, host_world );
+                                }
+                            }
+                        }
+                        std::string join_title;
+                        if( host_world.empty() ) {
+                            join_title = _( "Co-op: join a session" );
+                        } else if( host_player.empty() ) {
+                            join_title = string_format( _( "Joining \"%s\"" ), host_world );
+                        } else {
+                            join_title = string_format( _( "Joining \"%s\" — %s's game" ),
+                                                        host_world, host_player );
+                        }
+                        uilist jflow;
+                        jflow.title = join_title;
+                        jflow.entries.emplace_back( 0, true, 'n', _( "New character" ) );
+                        jflow.entries.emplace_back( 1, any_worlds_with_saves, 'l',
+                                                    _( "Load existing character" ) );
+                        jflow.entries.emplace_back( -1, true, 'q', _( "Cancel" ) );
+                        jflow.query();
+                        if( jflow.ret < 0 ) {
+                            break;
+                        }
+                        if( jflow.ret == 1 ) {
+                            std::vector<std::string> wnames;
+                            for( const auto &kv : world_generator->get_all_worlds() ) {
+                                if( !kv.second->world_saves.empty() ) {
+                                    wnames.push_back( kv.first );
+                                }
+                            }
+                            std::string chosen_world;
+                            if( wnames.size() == 1 ) {
+                                chosen_world = wnames[0];
+                            } else {
+                                uilist wpick;
+                                wpick.title = join_title;
+                                int idx = 0;
+                                for( const std::string &name : wnames ) {
+                                    const bool has_coop = cata_mp::mp_world_has_history( name );
+                                    const std::string display = name +
+                                                                ( has_coop ? colorize( cata_mp::mp_world_marker_badge( name ),
+                                                                        c_light_green )
+                                                                  : "  " + colorize( "(solo)", c_dark_gray ) );
+                                    wpick.entries.emplace_back( idx++, true, MENU_AUTOASSIGN, display );
+                                }
+                                wpick.entries.emplace_back( -1, true, 'q', _( "Cancel" ) );
+                                wpick.query();
+                                if( wpick.ret < 0 || static_cast<size_t>( wpick.ret ) >= wnames.size() ) {
+                                    break;
+                                }
+                                chosen_world = wnames[wpick.ret];
+                            }
+                            start = load_character_tab( chosen_world );
+                            if( start ) {
+                                load_game = true;
+                            }
+                        } else {
+                            const int ct = pick_char_type();
+                            if( ct < 0 ) {
+                                break;
+                            }
+                            if( !cata_mp::mp_ensure_client_scratch_world() ) {
+                                popup( _( "Couldn't prepare a client scratch world." ) );
+                                break;
+                            }
+                            sel2 = ct;
+                            start = new_character_tab();
+                        }
+                    }
+                    break;
+                }
+#endif
                 case main_menu_opts::MOTD:
                 case main_menu_opts::CREDITS:
                 default:

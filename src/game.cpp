@@ -1,3 +1,4 @@
+#define MP_ENABLED
 #include "game.h"
 #include "map_memory.h"
 #include "render_backend.h"
@@ -150,6 +151,7 @@
 #include "map_iterator.h"
 #include "map_selector.h"
 #include "mapbuffer.h"
+#include "thread_pool.h"
 #include "mapdata.h"
 #include "mapsharing.h"
 #include "maptile_fwd.h"
@@ -162,6 +164,10 @@
 #include "monster.h"
 #include "monstergenerator.h"
 #include "move_mode.h"
+#ifdef MP_ENABLED
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#endif
 #include "mtype.h"
 #include "npc.h"
 #include "npctrade.h"
@@ -840,6 +846,9 @@ bool game::start_game()
     }
 
     seed = rng_bits();
+#ifdef MP_ENABLED
+    cata_mp::mp_client_prepare_spawn();
+#endif
     new_game = true;
     start_calendar();
     weather.nextweather = calendar::turn;
@@ -868,10 +877,21 @@ bool game::start_game()
 
     const start_location &start_loc = u.random_start_location ? scen->random_start_location().obj() :
                                       u.start_location.obj();
+#ifdef MP_ENABLED
+    tripoint_abs_omt omtstart = cata_mp::is_client_mode()
+                                ? cata_mp::mp_client_spawn_omt()
+                                : tripoint_abs_omt::invalid;
+#else
     tripoint_abs_omt omtstart = tripoint_abs_omt::invalid;
+#endif
     std::unordered_map<std::string, std::string> associated_parameters;
     const bool select_starting_city = get_option<bool>( "SELECT_STARTING_CITY" );
     do {
+#ifdef MP_ENABLED
+        if( !omtstart.is_invalid() ) {
+            break;
+        }
+#endif
         if( select_starting_city ) {
             if( !u.starting_city.has_value() ) {
                 u.starting_city = random_entry( city::get_all() );
@@ -3624,7 +3644,11 @@ void game::draw_ter( const tripoint_bub_ms &center, const bool looking, const bo
                   point( POSX - pos.x(), POSY - pos.y() ), c_white, 'X' );
     }
 
+#ifdef MP_ENABLED
+    if( ( u.controlling_vehicle || cata_mp::client_ctrl_veh() ) && !looking ) {
+#else
     if( u.controlling_vehicle && !looking ) {
+#endif
         draw_veh_dir_indicator( false );
         draw_veh_dir_indicator( true );
     }
@@ -3637,6 +3661,28 @@ std::optional<tripoint_rel_ms> game::get_veh_dir_indicator_location( bool next )
     if( !get_option<bool>( "VEHICLE_DIR_INDICATOR" ) ) {
         return std::nullopt;
     }
+#ifdef MP_ENABLED
+    if( cata_mp::is_client_mode() && cata_mp::client_ctrl_veh() ) {
+        vehicle *veh = nullptr;
+        if( const optional_vpart_position vp = here.veh_at( u.pos_bub() ) ) {
+            veh = &vp->vehicle();
+        } else {
+            const tripoint_abs_ms vabs = cata_mp::client_ctrl_veh_abs();
+            if( here.inbounds( vabs ) ) {
+                if( const optional_vpart_position cvp = here.veh_at( here.get_bub( vabs ) ) ) {
+                    veh = &cvp->vehicle();
+                }
+            }
+        }
+        if( !veh ) {
+            return std::nullopt;
+        }
+        rl_vec2d face = next ? veh->dir_vec() : veh->face_vec();
+        float r = 10.0f;
+        return tripoint_rel_ms( static_cast<int>( r * face.x ), static_cast<int>( r * face.y ),
+                                u.posz() );
+    }
+#endif
     const optional_vpart_position vp = here.veh_at( u.pos_bub() );
     if( !vp ) {
         return std::nullopt;
@@ -4090,6 +4136,10 @@ void game::mon_info_update( )
     if( newseen == 0 && safe_mode == SAFE_MODE_STOP ) {
         set_safe_mode( SAFE_MODE_ON );
     }
+
+#ifdef MP_ENABLED
+    cata_mp::mp_log_safemode_check( newseen, mostseen, static_cast<int>( safe_mode ) );
+#endif
 
     previous_turn = calendar::turn;
     mostseen = newseen;
@@ -5341,6 +5391,10 @@ bool game::npc_menu( npc &who )
         talk = 0,
         swap_pos,
         push,
+        tap_shoulder,
+        help_with_task,
+        pass_item,
+        high_five,
         examine_wounds,
         examine_status,
         use_item,
@@ -5355,16 +5409,47 @@ bool game::npc_menu( npc &who )
 
     uilist amenu;
     amenu.text = string_format( _( "What to do with %s?" ), who.disp_name() );
-    amenu.addentry( talk, true, 't', _( "Talk" ) );
+#ifdef MP_ENABLED
+    if( !cata_mp::is_partner_npc( who.getID() ) ) {
+#endif
+        amenu.addentry( talk, true, 't', _( "Talk" ) );
+#ifdef MP_ENABLED
+    }
+#endif
     amenu.addentry( swap_pos, obeys && !who.is_mounted() &&
                     !u.is_mounted(), 's', _( "Swap positions" ) );
     amenu.addentry( push, ( debug_mode || ( !who.is_enemy() && !who.in_sleep_state() ) ) &&
                     !who.is_mounted(), 'p', _( "Push away" ) );
+#ifdef MP_ENABLED
+    if( ( cata_mp::is_client_mode() || cata_mp::is_hosting() ) &&
+        cata_mp::is_partner_npc( who.getID() ) &&
+        cata_mp::is_partner_in_wait_activity() ) {
+        amenu.addentry( tap_shoulder, true, 't', _( "Tap on shoulder" ) );
+    }
+    if( ( cata_mp::is_client_mode() || cata_mp::is_hosting() ) &&
+        cata_mp::is_partner_npc( who.getID() ) &&
+        cata_mp::partner_activity_accepts_help() &&
+        !u.activity ) {
+        amenu.addentry( help_with_task, true, 'h', _( "Help with task" ) );
+    }
+    if( ( cata_mp::is_client_mode() || cata_mp::is_hosting() ) &&
+        cata_mp::is_partner_npc( who.getID() ) ) {
+        amenu.addentry( pass_item, true, 'g', _( "Pass item" ) );
+        amenu.addentry( high_five, true, 'f', _( "High five" ) );
+    }
+#endif
     amenu.addentry( examine_wounds, true, 'w', _( "Examine wounds" ) );
     amenu.addentry( examine_status, true, 'e', _( "Examine status" ) );
     amenu.addentry( use_item, true, 'i', _( "Use item on" ) );
-    amenu.addentry( sort_armor, true, 'r', _( "Sort armor" ) );
-    amenu.addentry( attack, true, 'a', _( "Attack" ) );
+#ifdef MP_ENABLED
+    const bool partner = cata_mp::is_partner_npc( who.getID() );
+    if( !partner ) {
+#endif
+        amenu.addentry( sort_armor, true, 'r', _( "Sort armor" ) );
+        amenu.addentry( attack, true, 'a', _( "Attack" ) );
+#ifdef MP_ENABLED
+    }
+#endif
     if( !who.is_player_ally() ) {
         amenu.addentry( disarm, who.is_armed(), 'd', _( "Disarm" ) );
         amenu.addentry( steal, !who.is_enemy(), 'S', _( "Steal" ) );
@@ -5375,20 +5460,39 @@ bool game::npc_menu( npc &who )
     amenu.query();
 
     const int choice = amenu.ret;
+#ifdef MP_ENABLED
+    const bool mp_partner = cata_mp::is_client_mode() &&
+                            cata_mp::is_partner_npc( who.getID() );
+#endif
     if( choice == talk ) {
         u.talk_to( get_talker_for( who ) );
     } else if( choice == swap_pos ) {
         if( !prompt_dangerous_tile( who.pos_bub() ) ) {
             return true;
         }
-        if( u.get_grab_type() == object_type::NONE ) {
-            // TODO: Make NPCs protest when displaced onto dangerous crap
-            add_msg( _( "You swap places with %s." ), who.get_name() );
-            swap_critters( u, who );
-            // TODO: Make that depend on stuff
-            u.mod_moves( -200 );
-        } else {
+        if( u.get_grab_type() != object_type::NONE ) {
             add_msg( _( "You cannot swap places while grabbing something." ) );
+        } else {
+#ifdef MP_ENABLED
+            if( mp_partner ) {
+                add_msg( _( "You swap places with %s." ), who.get_name() );
+                cata_mp::client_send( cata_mp::client_enrich_action(
+                    "{\"type\":\"action\",\"action\":\"swap_with_partner\"}" ) );
+                cata_mp::client_mark_action_sent();
+                u.mod_moves( -200 );
+            } else {
+#endif
+                // TODO: Make NPCs protest when displaced onto dangerous crap
+                add_msg( _( "You swap places with %s." ), who.get_name() );
+                swap_critters( u, who );
+                // TODO: Make that depend on stuff
+                u.mod_moves( -200 );
+#ifdef MP_ENABLED
+                if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {
+                    cata_mp::mark_partner_swap_pending();
+                }
+            }
+#endif
         }
     } else if( choice == push ) {
         if( !obeys ) {
@@ -5402,15 +5506,63 @@ bool game::npc_menu( npc &who )
             who.form_opinion( u );
 
         }
-        // TODO: Make NPCs protest when displaced onto dangerous crap
-        tripoint_bub_ms oldpos = who.pos_bub();
-        who.move_away_from( u.pos_bub(), true );
-        u.mod_moves( -20 );
-        if( oldpos != who.pos_bub() ) {
-            add_msg( _( "%s moves out of the way." ), who.get_name() );
+#ifdef MP_ENABLED
+        if( mp_partner ) {
+            add_msg( _( "You push %s." ), who.get_name() );
+            cata_mp::client_send( cata_mp::client_enrich_action(
+                "{\"type\":\"action\",\"action\":\"push_partner\"}" ) );
+            cata_mp::client_mark_action_sent();
+            u.mod_moves( -20 );
         } else {
-            add_msg( m_warning, _( "%s has nowhere to go!" ), who.get_name() );
+#endif
+            // TODO: Make NPCs protest when displaced onto dangerous crap
+            tripoint_bub_ms oldpos = who.pos_bub();
+            who.move_away_from( u.pos_bub(), true );
+            u.mod_moves( -20 );
+            if( oldpos != who.pos_bub() ) {
+                add_msg( _( "%s moves out of the way." ), who.get_name() );
+#ifdef MP_ENABLED
+                if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {
+                    cata_mp::mark_partner_push_pending();
+                }
+#endif
+            } else {
+                add_msg( m_warning, _( "%s has nowhere to go!" ), who.get_name() );
+            }
+#ifdef MP_ENABLED
         }
+#endif
+    } else if( choice == tap_shoulder ) {
+#ifdef MP_ENABLED
+        if( mp_partner ) {
+            add_msg( _( "You tap %s on the shoulder." ), who.get_name() );
+            cata_mp::client_send( cata_mp::client_enrich_action(
+                                      "{\"type\":\"action\",\"action\":\"tap_partner\"}" ) );
+            cata_mp::client_mark_action_sent();
+            u.mod_moves( -10 );
+        } else if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {
+            add_msg( _( "You tap %s on the shoulder." ), who.get_name() );
+            cata_mp::mark_wake_client_pending();
+            u.mod_moves( -10 );
+        }
+#endif
+    } else if( choice == help_with_task ) {
+#ifdef MP_ENABLED
+        static const activity_id ACT_HELP_PARTNER( "ACT_HELP_PARTNER" );
+        constexpr int help_fallback_moves = 1'000'000;
+        const int partner_total = cata_mp::partner_activity_moves_total();
+        const int duration = partner_total > 0 ? partner_total : help_fallback_moves;
+        u.assign_activity( ACT_HELP_PARTNER, duration );
+        add_msg( m_info, _( "You join %s to help with their task." ), who.name );
+#endif
+    } else if( choice == pass_item ) {
+#ifdef MP_ENABLED
+        cata_mp::mp_handle_pass_item();
+#endif
+    } else if( choice == high_five ) {
+#ifdef MP_ENABLED
+        cata_mp::mp_high_five();
+#endif
     } else if( choice == examine_wounds ) {
         ///\EFFECT_PER slightly increases precision when examining NPCs' wounds
         ///\EFFECT_FIRSTAID increases precision when examining NPCs' wounds
@@ -10351,6 +10503,20 @@ static void prefetch_leading_edge( const map &here, const point_rel_sm &shift )
 
     for( const auto &entry : quads ) {
         MAPBUFFER.prefetch_quad( entry.first, entry.second );
+    }
+
+    // Also dispatch full OMT loads to the thread pool.  Each worker thread
+    // reads + deserializes the quad directly into the in-memory buffer,
+    // skipping the byte-buffer round-trip.  Uniform terrain is generated too.
+    // Duplicate submaps are deferred to pending_destroy_submaps_ and drained
+    // on the main thread in do_turn().
+    cata_thread_pool &pool = get_thread_pool();
+    if( pool.num_workers() > 0 ) {
+        for( const auto &entry : quads ) {
+            pool.submit( [omt = entry.first]() {
+                MAPBUFFER.preload_omt( omt );
+            } );
+        }
     }
 }
 

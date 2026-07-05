@@ -31,8 +31,10 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "mapdata.h"
-#include "math_defines.h"
+#include "messages.h"
 #include "monster.h"
+#include "mp_gamestate.h"
+#include "mp_client_conn.h"
 #include "mtype.h"
 #include "npc.h"
 #include "profiling.h"
@@ -649,6 +651,25 @@ void map::generate_lightmap( const int zlev )
                                       enchant_vals::mod::LUMINATION, true );
             if( critter_luminance > 0 ) {
                 apply_light_source( mp, critter_luminance );
+            }
+        }
+    }
+
+    // MP: inject partner luminance as a light source at their proxy NPC position.
+    if( cata_mp::is_client_mode() ) {
+        npc *host_npc = g->critter_by_id<npc>( cata_mp::get_host_npc_character_id() );
+        if( host_npc ) {
+            float host_lum = cata_mp::get_host_luminance();
+            if( host_lum > 0 ) {
+                apply_light_source( host_npc->pos_bub(), host_lum );
+            }
+        }
+    } else if( cata_mp::is_hosting() ) {
+        npc *remote_npc = g->critter_by_id<npc>( cata_mp::get_remote_player_npc_character_id() );
+        if( remote_npc ) {
+            float remote_lum = cata_mp::get_remote_player_luminance();
+            if( remote_lum > 0 ) {
+                apply_light_source( remote_npc->pos_bub(), remote_lum );
             }
         }
     }
