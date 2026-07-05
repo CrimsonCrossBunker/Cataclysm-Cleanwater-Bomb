@@ -2,8 +2,8 @@
   {
     "type": "effect_type",
     "id": "cd_delight_strength_enhancement",
-    "name": [ "力量增强" ],
-    "desc": [ "你的力量得到了增强。每级强度提升 10% 力量。" ],
+    "name": [ "Strength Enhancement" ],
+    "desc": [ "Your strength has been enhanced.  Each intensity level increases strength by 10%." ],
     "rating": "good",
     "max_intensity": 10,
     "show_in_info": true,
@@ -11,20 +11,15 @@
     "enchantments": [
       {
         "condition": "ALWAYS",
-        "values": [
-          {
-            "value": "STRENGTH",
-            "multiply": { "math": [ "u_effect_intensity('cd_delight_strength_enhancement') * 0.10" ] }
-          }
-        ]
+        "values": [ { "value": "STRENGTH", "multiply": { "math": [ "u_effect_intensity('cd_delight_strength_enhancement') * 0.10" ] } } ]
       }
     ]
   },
   {
     "type": "effect_type",
     "id": "cd_delight_dexterity_enhancement",
-    "name": [ "敏捷增强" ],
-    "desc": [ "你的敏捷得到了增强。每级强度提升 10% 敏捷。" ],
+    "name": [ "Dexterity Enhancement" ],
+    "desc": [ "Your dexterity has been enhanced.  Each intensity level increases dexterity by 10%." ],
     "rating": "good",
     "max_intensity": 10,
     "show_in_info": true,
@@ -33,10 +28,7 @@
       {
         "condition": "ALWAYS",
         "values": [
-          {
-            "value": "DEXTERITY",
-            "multiply": { "math": [ "u_effect_intensity('cd_delight_dexterity_enhancement') * 0.10" ] }
-          }
+          { "value": "DEXTERITY", "multiply": { "math": [ "u_effect_intensity('cd_delight_dexterity_enhancement') * 0.10" ] } }
         ]
       }
     ]
@@ -44,8 +36,8 @@
   {
     "type": "effect_type",
     "id": "cd_delight_perception_enhancement",
-    "name": [ "感知增强" ],
-    "desc": [ "你的感知得到了增强。每级强度提升 10% 感知。" ],
+    "name": [ "Perception Enhancement" ],
+    "desc": [ "Your perception has been enhanced.  Each intensity level increases perception by 10%." ],
     "rating": "good",
     "max_intensity": 10,
     "show_in_info": true,
@@ -54,10 +46,7 @@
       {
         "condition": "ALWAYS",
         "values": [
-          {
-            "value": "PERCEPTION",
-            "multiply": { "math": [ "u_effect_intensity('cd_delight_perception_enhancement') * 0.10" ] }
-          }
+          { "value": "PERCEPTION", "multiply": { "math": [ "u_effect_intensity('cd_delight_perception_enhancement') * 0.10" ] } }
         ]
       }
     ]
@@ -65,8 +54,8 @@
   {
     "type": "effect_type",
     "id": "cd_delight_intelligence_enhancement",
-    "name": [ "智力增强" ],
-    "desc": [ "你的智力得到了增强。每级强度提升 10% 智力。" ],
+    "name": [ "Intelligence Enhancement" ],
+    "desc": [ "Your intelligence has been enhanced.  Each intensity level increases intelligence by 10%." ],
     "rating": "good",
     "max_intensity": 10,
     "show_in_info": true,
@@ -86,8 +75,8 @@
   {
     "type": "effect_type",
     "id": "cd_delight_detoxification",
-    "name": [ "解毒" ],
-    "desc": [ "你正在排出体内的变异毒素。每级强度每15分钟多降低15点毒素。" ],
+    "name": [ "Detoxification" ],
+    "desc": [ "You are flushing mutant toxins from your body.  Each intensity level reduces toxin by 15 points every 15 minutes." ],
     "rating": "good",
     "max_intensity": 20,
     "show_in_info": true,
@@ -96,8 +85,10 @@
   {
     "type": "effect_type",
     "id": "cd_delight_focus_regen",
-    "name": [ "专注回复" ],
-    "desc": [ "你的精神高度集中，专注度的恢复速度得到了提升。每级强度提高 10% 专注回复速度。" ],
+    "name": [ "Focus Regeneration" ],
+    "desc": [
+      "Your mind is highly focused, and your focus regeneration speed is increased.  Each intensity level improves focus regeneration by 10%."
+    ],
     "rating": "good",
     "max_intensity": 10,
     "show_in_info": true,
@@ -105,20 +96,17 @@
     "enchantments": [
       {
         "condition": "ALWAYS",
-        "values": [
-          {
-            "value": "FOCUS_REGEN",
-            "multiply": { "math": [ "u_effect_intensity('cd_delight_focus_regen') * 0.10" ] }
-          }
-        ]
+        "values": [ { "value": "FOCUS_REGEN", "multiply": { "math": [ "u_effect_intensity('cd_delight_focus_regen') * 0.10" ] } } ]
       }
     ]
   },
   {
     "type": "effect_type",
     "id": "cd_delight_satiety",
-    "name": [ "饱足" ],
-    "desc": [ "你感到心满意足，身体的活力正在快速恢复。每级强度提高 10% 耐力回复速度。" ],
+    "name": [ "Satiety" ],
+    "desc": [
+      "You feel deeply satisfied, and your body's vitality is recovering quickly.  Each intensity level increases stamina regeneration by 10%."
+    ],
     "rating": "good",
     "max_intensity": 10,
     "show_in_info": true,
@@ -126,20 +114,17 @@
     "enchantments": [
       {
         "condition": "ALWAYS",
-        "values": [
-          {
-            "value": "REGEN_STAMINA",
-            "multiply": { "math": [ "u_effect_intensity('cd_delight_satiety') * 0.10" ] }
-          }
-        ]
+        "values": [ { "value": "REGEN_STAMINA", "multiply": { "math": [ "u_effect_intensity('cd_delight_satiety') * 0.10" ] } } ]
       }
     ]
   },
   {
     "type": "effect_type",
     "id": "cd_delight_nourishment",
-    "name": [ "滋养" ],
-    "desc": [ "温润的生机在体内流淌，伤口与疲劳都在加速愈合。每级强度提高 10% 生命回复速度。" ],
+    "name": [ "Nourishment" ],
+    "desc": [
+      "A soothing vitality flows through your body, accelerating healing of wounds and fatigue.  Each intensity level increases HP regeneration by 10%."
+    ],
     "rating": "good",
     "max_intensity": 10,
     "show_in_info": true,
@@ -147,12 +132,7 @@
     "enchantments": [
       {
         "condition": "ALWAYS",
-        "values": [
-          {
-            "value": "REGEN_HP",
-            "multiply": { "math": [ "u_effect_intensity('cd_delight_nourishment') * 0.10" ] }
-          }
-        ]
+        "values": [ { "value": "REGEN_HP", "multiply": { "math": [ "u_effect_intensity('cd_delight_nourishment') * 0.10" ] } } ]
       }
     ]
   }

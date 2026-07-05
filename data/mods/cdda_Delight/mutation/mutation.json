@@ -2,8 +2,8 @@
   {
     "type": "mutation",
     "id": "DELIGHT_FIRST_TASTE",
-    "name": { "str": "清晨味蕾" },
-    "description": "你对每天的第一口食物有着特殊的敏感，那份滋味会被深深地铭记在身体里，直到新的一天开始。",
+    "name": { "str": "Morning Taste" },
+    "description": "You have a special sensitivity to the first bite of food each day, and that flavor is etched into your body until the next day begins.",
     "points": 1,
     "starting_trait": true,
     "purifiable": false,

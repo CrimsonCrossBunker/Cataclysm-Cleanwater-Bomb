@@ -2,27 +2,27 @@
   {
     "type": "construction_group",
     "id": "cd_delight_build_fertile_bed",
-    "name": "建造沃土种植地"
+    "name": "Build Fertile Planting Bed"
   },
   {
     "type": "construction_group",
     "id": "cd_delight_build_paddy",
-    "name": "建造水田"
+    "name": "Build Paddy Field"
   },
   {
     "type": "construction_group",
     "id": "cd_delight_build_trellis",
-    "name": "建造种植架"
+    "name": "Build Trellis"
   },
   {
     "type": "construction_group",
     "id": "tsow_dig_underbrush",
-    "name": "挖掘灌木"
+    "name": "Dig Up Shrub"
   },
   {
     "type": "construction_group",
     "id": "tsow_plant_underbrush",
-    "name": "种植灌木"
+    "name": "Plant Shrub"
   },
   {
     "type": "construction",
@@ -34,9 +34,7 @@
     "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
     "pre_terrain": "t_dirt",
     "post_terrain": "f_cd_delight_fertile",
-    "components": [
-      [ [ "tsow_fertile_soil", 50 ] ]
-    ]
+    "components": [ [ [ "tsow_fertile_soil", 50 ] ] ]
   },
   {
     "type": "construction",
@@ -48,11 +46,7 @@
     "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
     "pre_terrain": "f_cd_delight_fertile",
     "post_terrain": "f_cd_delight_paddy",
-    "components": [
-      [ [ "material_soil", 10 ] ],
-      [ [ "stick", 2 ] ],
-      [ [ "water", 20 ] ]
-    ]
+    "components": [ [ [ "material_soil", 10 ] ], [ [ "stick", 2 ] ], [ [ "water", 20 ] ] ]
   },
   {
     "type": "construction",
@@ -64,11 +58,7 @@
     "qualities": [ [ { "id": "CUT", "level": 1 } ], [ { "id": "HAMMER", "level": 1 } ] ],
     "pre_terrain": "f_cd_delight_fertile",
     "post_terrain": "f_cd_delight_trellis",
-    "components": [
-      [ [ "stick_long", 8 ], [ "stick", 16 ] ],
-      [ [ "rope_30", 6 ], [ "rope_makeshift_30", 6 ] ],
-      [ [ "nail", 10 ] ]
-    ]
+    "components": [ [ [ "stick_long", 8 ], [ "stick", 16 ] ], [ [ "rope_30", 6 ], [ "rope_makeshift_30", 6 ] ], [ [ "nail", 10 ] ] ]
   },
   {
     "type": "construction",
@@ -438,10 +428,7 @@
     "qualities": [ [ { "id": "GRASS_CUT", "level": 1 } ] ],
     "required_skills": [ [ "survival", 0 ] ],
     "time": "4 m",
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 1, 2 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 1, 2 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_dead",
     "post_terrain": "t_grass"
@@ -454,10 +441,7 @@
     "qualities": [ [ { "id": "GRASS_CUT", "level": 2 } ] ],
     "required_skills": [ [ "survival", 0 ] ],
     "time": "40 s",
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 2, 4 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 1, 2 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 2, 4 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 1, 2 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_dead",
     "post_terrain": "t_grass"
@@ -470,10 +454,7 @@
     "qualities": [ [ { "id": "GRASS_CUT", "level": 1 } ] ],
     "required_skills": [ [ "survival", 0 ] ],
     "time": "4 m",
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 1, 3 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 1, 3 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_long",
     "post_terrain": "t_grass"
@@ -486,10 +467,7 @@
     "qualities": [ [ { "id": "GRASS_CUT", "level": 2 } ] ],
     "required_skills": [ [ "survival", 0 ] ],
     "time": "40 s",
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 3, 6 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 1, 3 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 3, 6 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 1, 3 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_long",
     "post_terrain": "t_grass"
@@ -502,10 +480,7 @@
     "qualities": [ [ { "id": "GRASS_CUT", "level": 1 } ] ],
     "required_skills": [ [ "survival", 0 ] ],
     "time": "5 m",
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 2, 4 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 1, 2 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 2, 4 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 1, 2 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_tall",
     "post_terrain": "t_grass"
@@ -518,10 +493,7 @@
     "qualities": [ [ { "id": "GRASS_CUT", "level": 2 } ] ],
     "required_skills": [ [ "survival", 0 ] ],
     "time": "50 s",
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 4, 8 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 2, 4 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 4, 8 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 2, 4 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_tall",
     "post_terrain": "t_grass"
@@ -534,10 +506,7 @@
     "required_skills": [ [ "survival", 0 ] ],
     "time": "6 m",
     "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 0, 1 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 0, 1 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_dead",
     "post_terrain": "t_dirt"
@@ -550,10 +519,7 @@
     "required_skills": [ [ "survival", 0 ] ],
     "time": "6 m",
     "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 0, 1 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 0, 1 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_long",
     "post_terrain": "t_dirt"
@@ -566,10 +532,7 @@
     "required_skills": [ [ "survival", 0 ] ],
     "time": "8 m",
     "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
-    "byproducts": [
-      { "item": "straw_pile", "count": [ 1, 2 ] },
-      { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] }
-    ],
+    "byproducts": [ { "item": "straw_pile", "count": [ 1, 2 ] }, { "item": "tsow_grass_stalk_with_seed", "count": [ 0, 1 ] } ],
     "pre_special": "check_empty_lite",
     "pre_terrain": "t_grass_tall",
     "post_terrain": "t_dirt"

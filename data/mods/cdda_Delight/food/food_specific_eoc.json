@@ -4,7 +4,7 @@
     "id": "eoc_cd_delight_milk_detox",
     "//": "饮用奶类时施加一层解毒效果，强度1，基础持续1小时，最长叠加6小时。",
     "effect": [
-      { "u_message": "温润的奶液滑过喉咙，像是一双温柔的手抚过疲惫的内脏。", "type": "good" },
+      { "u_message": "Warm milk glides down your throat, like a gentle hand soothing your weary insides.", "type": "good" },
       {
         "run_eocs": "eoc_cd_delight_detoxification_apply",
         "variables": { "intensity": 1, "duration": 3600, "max_duration": 21600 }
@@ -31,10 +31,7 @@
     "id": "eoc_cd_delight_meat_fried",
     "//": "炸肉：饱足2级，基础持续1小时，最长叠加1小时（recipe产出1个）。",
     "effect": [
-      {
-        "run_eocs": "eoc_cd_delight_satiety_apply",
-        "variables": { "intensity": 2, "duration": 3600, "max_duration": 3600 }
-      }
+      { "run_eocs": "eoc_cd_delight_satiety_apply", "variables": { "intensity": 2, "duration": 3600, "max_duration": 3600 } }
     ]
   },
   {
@@ -42,10 +39,7 @@
     "id": "eoc_cd_delight_lahmacun",
     "//": "土耳其薄饼：饱足2级+滋养2级+力量增强2级，基础持续45分钟，最长叠加3小时（recipe产出4个）。",
     "effect": [
-      {
-        "run_eocs": "eoc_cd_delight_satiety_apply",
-        "variables": { "intensity": 2, "duration": 2700, "max_duration": 10800 }
-      },
+      { "run_eocs": "eoc_cd_delight_satiety_apply", "variables": { "intensity": 2, "duration": 2700, "max_duration": 10800 } },
       {
         "run_eocs": "eoc_cd_delight_nourishment_apply",
         "variables": { "intensity": 2, "duration": 2700, "max_duration": 10800 }
@@ -83,10 +77,7 @@
     "id": "eoc_cd_delight_scrapple",
     "//": "玉米肉饼：饱足1级，基础持续37.5分钟，最长叠加5小时（recipe产出8个）。",
     "effect": [
-      {
-        "run_eocs": "eoc_cd_delight_satiety_apply",
-        "variables": { "intensity": 1, "duration": 2250, "max_duration": 18000 }
-      }
+      { "run_eocs": "eoc_cd_delight_satiety_apply", "variables": { "intensity": 1, "duration": 2250, "max_duration": 18000 } }
     ]
   },
   {
@@ -120,10 +111,7 @@
     "id": "eoc_cd_delight_amatriciana_pasta",
     "//": "阿马特里切意面：饱足3级+智力2级，基础持续45分钟，最长叠加3小时（recipe产出4个）。",
     "effect": [
-      {
-        "run_eocs": "eoc_cd_delight_satiety_apply",
-        "variables": { "intensity": 3, "duration": 2700, "max_duration": 10800 }
-      },
+      { "run_eocs": "eoc_cd_delight_satiety_apply", "variables": { "intensity": 3, "duration": 2700, "max_duration": 10800 } },
       {
         "run_eocs": "eoc_cd_delight_intelligence_enhancement_apply",
         "variables": { "intensity": 2, "duration": 2700, "max_duration": 10800 }
@@ -135,10 +123,7 @@
     "id": "eoc_cd_delight_pasta_carbonara",
     "//": "卡邦尼意面：饱足3级+力量2级，基础持续45分钟，最长叠加3小时（recipe产出4个）。",
     "effect": [
-      {
-        "run_eocs": "eoc_cd_delight_satiety_apply",
-        "variables": { "intensity": 3, "duration": 2700, "max_duration": 10800 }
-      },
+      { "run_eocs": "eoc_cd_delight_satiety_apply", "variables": { "intensity": 3, "duration": 2700, "max_duration": 10800 } },
       {
         "run_eocs": "eoc_cd_delight_strength_enhancement_apply",
         "variables": { "intensity": 2, "duration": 2700, "max_duration": 10800 }
@@ -150,10 +135,7 @@
     "id": "eoc_cd_delight_spaghetti_bolognese",
     "//": "博洛尼亚肉酱面：饱足3级+滋养2级，基础持续1小时，最长叠加3小时（recipe产出3个）。",
     "effect": [
-      {
-        "run_eocs": "eoc_cd_delight_satiety_apply",
-        "variables": { "intensity": 3, "duration": 3600, "max_duration": 10800 }
-      },
+      { "run_eocs": "eoc_cd_delight_satiety_apply", "variables": { "intensity": 3, "duration": 3600, "max_duration": 10800 } },
       {
         "run_eocs": "eoc_cd_delight_nourishment_apply",
         "variables": { "intensity": 2, "duration": 3600, "max_duration": 10800 }
@@ -303,10 +285,7 @@
     "id": "eoc_cd_delight_lasagne",
     "//": "lasagne：饱足3级+滋养2级，单份持续2700秒，最长叠加10800秒（recipe产出4个）。",
     "effect": [
-      {
-        "run_eocs": "eoc_cd_delight_satiety_apply",
-        "variables": { "intensity": 3, "duration": 2700, "max_duration": 10800 }
-      },
+      { "run_eocs": "eoc_cd_delight_satiety_apply", "variables": { "intensity": 3, "duration": 2700, "max_duration": 10800 } },
       {
         "run_eocs": "eoc_cd_delight_nourishment_apply",
         "variables": { "intensity": 2, "duration": 2700, "max_duration": 10800 }

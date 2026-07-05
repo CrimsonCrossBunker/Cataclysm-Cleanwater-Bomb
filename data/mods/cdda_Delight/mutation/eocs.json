@@ -12,7 +12,7 @@
           { "math": [ "u_delight_first_taste_fun = food_fun(_itype)" ] },
           { "math": [ "u_delight_first_taste_day = time('now', 'unit': 'days')" ] },
           {
-            "u_message": "你品尝到了今天第一份食物，它的美味度为 <u_val:delight_first_taste_fun>。",
+            "u_message": "You tasted your first meal of the day, and its deliciousness was <u_val:delight_first_taste_fun>.",
             "type": "good"
           }
         ]

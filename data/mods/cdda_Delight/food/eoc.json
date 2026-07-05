@@ -5,9 +5,7 @@
     "//": "通用施加/刷新接口。传入 effect_id、intensity、duration、max_intensity、end_var、max_duration。",
     "condition": { "expects_vars": [ "effect_id", "intensity", "duration", "max_intensity", "end_var", "max_duration" ] },
     "effect": [
-      {
-        "math": [ "_effective_max_duration = _max_duration > 0 ? _max_duration : _duration" ]
-      },
+      { "math": [ "_effective_max_duration = _max_duration > 0 ? _max_duration : _duration" ] },
       {
         "if": { "math": [ "_intensity <= 0" ] },
         "then": [ { "u_lose_effect": [ { "context_val": "effect_id" } ] } ],
@@ -24,9 +22,7 @@
                     "intensity": { "math": [ "clamp(_intensity, 1, _max_intensity)" ] },
                     "duration": "PERMANENT"
                   },
-                  {
-                    "math": [ "v_end_var = time('now') + min(_duration, _effective_max_duration) * time('1 s')" ]
-                  }
+                  { "math": [ "v_end_var = time('now') + min(_duration, _effective_max_duration) * time('1 s')" ] }
                 ],
                 "else": [
                   {
@@ -46,9 +42,7 @@
                 "intensity": { "math": [ "clamp(_intensity, 1, _max_intensity)" ] },
                 "duration": "PERMANENT"
               },
-              {
-                "math": [ "v_end_var = time('now') + min(_duration, _effective_max_duration) * time('1 s')" ]
-              }
+              { "math": [ "v_end_var = time('now') + min(_duration, _effective_max_duration) * time('1 s')" ] }
             ]
           }
         ]
@@ -63,10 +57,7 @@
     "effect": [
       {
         "if": { "math": [ "time('now') >= v_end_var" ] },
-        "then": [
-          { "u_lose_effect": [ { "context_val": "effect_id" } ] },
-          { "math": [ "v_stacks_var = 0" ] }
-        ]
+        "then": [ { "u_lose_effect": [ { "context_val": "effect_id" } ] }, { "math": [ "v_stacks_var = 0" ] } ]
       }
     ]
   },
@@ -87,7 +78,10 @@
           "max_duration": { "context_val": "max_duration" }
         }
       },
-      { "u_message": "一股灼热的力量顺着血管涌入双臂，肌肉纤维仿佛在兴奋地歌唱！", "type": "good" }
+      {
+        "u_message": "A blazing surge of strength races through your arms, and your muscles seem to sing with excitement!",
+        "type": "good"
+      }
     ]
   },
   {
@@ -108,7 +102,9 @@
       },
       {
         "if": { "not": { "u_has_effect": "cd_delight_strength_enhancement" } },
-        "then": [ { "u_message": "那股澎湃的力量感如潮水般退去，双臂重新恢复了常态。", "type": "mixed" } ]
+        "then": [
+          { "u_message": "That surging strength fades like a tide, and your arms return to their usual state.", "type": "mixed" }
+        ]
       }
     ]
   },
@@ -129,7 +125,10 @@
           "max_duration": { "context_val": "max_duration" }
         }
       },
-      { "u_message": "你的身体变得无比轻盈，仿佛连空气都会主动为你让开道路！", "type": "good" }
+      {
+        "u_message": "Your body becomes incredibly light, as if the air itself is making way for you!",
+        "type": "good"
+      }
     ]
   },
   {
@@ -150,7 +149,7 @@
       },
       {
         "if": { "not": { "u_has_effect": "cd_delight_dexterity_enhancement" } },
-        "then": [ { "u_message": "轻盈感渐渐消散，空气恢复了往日的阻力。", "type": "mixed" } ]
+        "then": [ { "u_message": "The lightness gradually fades, and the air returns to its usual resistance.", "type": "mixed" } ]
       }
     ]
   },
@@ -171,7 +170,10 @@
           "max_duration": { "context_val": "max_duration" }
         }
       },
-      { "u_message": "世界的色彩骤然鲜明，连最细微的声响与气味都逃不过你的感官！", "type": "good" }
+      {
+        "u_message": "The world suddenly becomes vividly clear, and even the faintest sounds and scents are impossible to miss!",
+        "type": "good"
+      }
     ]
   },
   {
@@ -192,7 +194,7 @@
       },
       {
         "if": { "not": { "u_has_effect": "cd_delight_perception_enhancement" } },
-        "then": [ { "u_message": "感官重新蒙上了一层薄纱，世界又变得不那么清晰了。", "type": "mixed" } ]
+        "then": [ { "u_message": "Your senses grow cloudy again, and the world becomes less sharp.", "type": "mixed" } ]
       }
     ]
   },
@@ -213,7 +215,10 @@
           "max_duration": { "context_val": "max_duration" }
         }
       },
-      { "u_message": "思绪如闪电般划过脑海，复杂的难题在刹那间变得井井有条！", "type": "good" }
+      {
+        "u_message": "Thoughts streak through your mind like lightning, and complex problems suddenly become clear!",
+        "type": "good"
+      }
     ]
   },
   {
@@ -234,7 +239,7 @@
       },
       {
         "if": { "not": { "u_has_effect": "cd_delight_intelligence_enhancement" } },
-        "then": [ { "u_message": "灵感的火花逐渐黯淡，脑海重新归于平静的常态。", "type": "mixed" } ]
+        "then": [ { "u_message": "The spark of inspiration gradually fades, and your mind returns to a calm state.", "type": "mixed" } ]
       }
     ]
   },
@@ -255,7 +260,10 @@
           "max_duration": { "context_val": "max_duration" }
         }
       },
-      { "u_message": "一股清凉在血脉中游走，像温柔的水流将体内的污秽缓缓带出。", "type": "good" }
+      {
+        "u_message": "A cool sensation flows through your veins, like a gentle stream washing away the filth inside you.",
+        "type": "good"
+      }
     ]
   },
   {
@@ -281,7 +289,9 @@
       },
       {
         "if": { "not": { "u_has_effect": "cd_delight_detoxification" } },
-        "then": [ { "u_message": "最后一丝清凉从体内散去，排毒的力量已经消退。", "type": "mixed" } ]
+        "then": [
+          { "u_message": "The last trace of coolness fades from your body, and the detoxifying power is gone.", "type": "mixed" }
+        ]
       }
     ]
   },
@@ -302,7 +312,10 @@
           "max_duration": { "context_val": "max_duration" }
         }
       },
-      { "u_message": "杂念如潮水般退去，你的精神变得前所未有的专注！", "type": "good" }
+      {
+        "u_message": "Distracting thoughts recede like a tide, and your mind becomes more focused than ever!",
+        "type": "good"
+      }
     ]
   },
   {
@@ -323,7 +336,9 @@
       },
       {
         "if": { "not": { "u_has_effect": "cd_delight_focus_regen" } },
-        "then": [ { "u_message": "专注的状态悄然崩解，思绪又开始向四面八方飘散。", "type": "mixed" } ]
+        "then": [
+          { "u_message": "Your focused state quietly breaks apart, and your thoughts begin to wander again.", "type": "mixed" }
+        ]
       }
     ]
   },
@@ -344,7 +359,10 @@
           "max_duration": { "context_val": "max_duration" }
         }
       },
-      { "u_message": "温热的饱足感在胃里化开，四肢百骸都充满了复苏的活力！", "type": "good" }
+      {
+        "u_message": "A warm sense of satiety spreads through your stomach, and every part of you is filled with renewed energy!",
+        "type": "good"
+      }
     ]
   },
   {
@@ -365,7 +383,12 @@
       },
       {
         "if": { "not": { "u_has_effect": "cd_delight_satiety" } },
-        "then": [ { "u_message": "饱腹感逐渐淡去，身体恢复往日的疲惫节奏。", "type": "mixed" } ]
+        "then": [
+          {
+            "u_message": "The feeling of fullness gradually fades, and your body returns to its usual tired rhythm.",
+            "type": "mixed"
+          }
+        ]
       }
     ]
   },
@@ -386,7 +409,10 @@
           "max_duration": { "context_val": "max_duration" }
         }
       },
-      { "u_message": "一股温润的生机在血脉中流淌，伤口仿佛在欢呼着愈合！", "type": "good" }
+      {
+        "u_message": "A warm vitality flows through your veins, and your wounds seem to rejoice as they heal!",
+        "type": "good"
+      }
     ]
   },
   {
@@ -407,7 +433,12 @@
       },
       {
         "if": { "not": { "u_has_effect": "cd_delight_nourishment" } },
-        "then": [ { "u_message": "那股温润的生机悄然退去，身体又回归到平常的修复速度。", "type": "mixed" } ]
+        "then": [
+          {
+            "u_message": "That warm vitality quietly fades, and your body returns to its ordinary healing speed.",
+            "type": "mixed"
+          }
+        ]
       }
     ]
   }
