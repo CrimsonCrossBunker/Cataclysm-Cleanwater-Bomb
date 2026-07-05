@@ -637,6 +637,9 @@
     "min_aoe": 1,
     "max_aoe": 8,
     "aoe_increment": 0.3333,
+    "min_damage": 5,
+    "max_damage": 25,
+    "damage_increment": 1,
     "flags": [ "ENHANCEMENT_SPELL", "SOMATIC", "VERBAL", "NO_LEGS", "NO_HANDS" ]
   },
   {

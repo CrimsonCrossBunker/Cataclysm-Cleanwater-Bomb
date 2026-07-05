@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
@@ -82,7 +83,6 @@ class translation;
 static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_teleglow( "teleglow" );
 
-static const flag_id json_flag_FERTILIZER( "FERTILIZER" );
 static const flag_id json_flag_FIT( "FIT" );
 
 static const itype_id itype_fertilizer( "fertilizer" );
@@ -1467,35 +1467,19 @@ void spell_effect::fertilize_plant( const spell &sp, Creature &caster,
 
     std::set<tripoint_bub_ms> area = spell_effect_area( sp, target, caster );
     ::map &here = get_map();
+    Character *planter = caster.as_character();
+    if( planter == nullptr ) {
+        return;
+    }
     for( const tripoint_bub_ms &tile : area ) {
-
-        if( !here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, tile ) ) {
-            continue;
-        }
-        // Can't use item_stack::only_item() since there might be fertilizer
-        map_stack items = here.i_at( tile );
-        map_stack::iterator fertilizer = std::find_if( items.begin(), items.end(), []( const item & it ) {
-            return it.has_flag( json_flag_FERTILIZER );
-        }
-                                                     );
-        if( fertilizer != items.end() ) {
+        // Use the same fertilization validity check as normal farming activities.
+        if( !multi_farm_activity_actor::can_fertilize( *planter, tile ).success() ) {
             continue;
         }
         // Reduce the amount of time it takes until the next stage of the plant by
         // the spell's damage (1% per damage point) relative to season length
         const time_duration fertilizerEpoch = calendar::season_length() * ( static_cast<float>( sp.damage(
                 caster ) ) / 100.0f );
-
-        const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-            return it.is_seed();
-        } );
-
-        if( seed == items.end() ) {
-            debugmsg( "Missing seed for plant at %s", target.to_string() );
-            here.i_clear( target );
-            here.furn_set( target, furn_str_id::NULL_ID() );
-            return;
-        }
 
         // Synchronize before reading / mutating the authoritative effective growth time.
         here.grow_plant( tile );
@@ -1513,6 +1497,7 @@ void spell_effect::fertilize_plant( const spell &sp, Creature &caster,
 
         iexamine::set_plant_effective_growth_turns( *synced_seed,
                 to_turns<int>( new_effective ) );
+        iexamine::set_plant_fertilized( *synced_seed, true );
         synced_seed->set_birthday( calendar::turn - new_effective / growth_multiplier );
 
         // Apply any stage advances immediately.
@@ -1521,30 +1506,27 @@ void spell_effect::fertilize_plant( const spell &sp, Creature &caster,
         // Re-fetch the seed in case grow_plant / EOCs moved or removed it.
         synced_seed = iexamine::get_seed_at( here, tile );
         if( synced_seed != nullptr ) {
-            Character *planter = caster.as_character();
-            if( planter != nullptr ) {
-                const furn_str_id furn_id = here.furn( tile ).id();
-                get_event_bus().send<event_type::character_fertilizes_plant>(
-                    planter->getID(), here.get_abs( tile ).raw(), synced_seed->typeId(), furn_id,
-                    itype_fertilizer, to_turns<int>( fertilizerEpoch ) );
+            const furn_str_id furn_id = here.furn( tile ).id();
+            get_event_bus().send<event_type::character_fertilizes_plant>(
+                planter->getID(), here.get_abs( tile ).raw(), synced_seed->typeId(), furn_id,
+                itype_fertilizer, to_turns<int>( fertilizerEpoch ) );
 
-                const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, tile );
-                const std::string stage = stage_idx >= 0 ?
-                                          synced_seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
-                const std::map<std::string, std::string> string_ctx = {
-                    { "fertilizer_id", itype_fertilizer.str() }
-                };
-                const std::map<std::string, double> num_ctx = {
-                    { "reduction_turns", static_cast<double>( to_turns<int>( fertilizerEpoch ) ) },
-                    { "actor_is_npc", planter->is_npc() ? 1.0 : 0.0 }
-                };
-                if( furn.plant ) {
-                    iexamine::run_plant_eocs( furn.plant->eoc_on_fertilize, *planter, here, tile,
-                                               *synced_seed, stage, stage, string_ctx, num_ctx );
-                }
-                iexamine::run_plant_eocs( synced_seed->type->seed->eoc_on_fertilize, *planter, here,
-                                           tile, *synced_seed, stage, stage, string_ctx, num_ctx );
+            const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, tile );
+            const std::string stage = stage_idx >= 0 ?
+                                      synced_seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
+            const std::map<std::string, std::string> string_ctx = {
+                { "fertilizer_id", itype_fertilizer.str() }
+            };
+            const std::map<std::string, double> num_ctx = {
+                { "reduction_turns", static_cast<double>( to_turns<int>( fertilizerEpoch ) ) },
+                { "actor_is_npc", planter->is_npc() ? 1.0 : 0.0 }
+            };
+            if( furn.plant ) {
+                iexamine::run_plant_eocs( furn.plant->eoc_on_fertilize, *planter, here, tile,
+                                           *synced_seed, stage, stage, string_ctx, num_ctx );
             }
+            iexamine::run_plant_eocs( synced_seed->type->seed->eoc_on_fertilize, *planter, here,
+                                       tile, *synced_seed, stage, stage, string_ctx, num_ctx );
         }
 
         // The plant furniture has the NOITEM token which prevents adding items on that square,
