@@ -5,7 +5,7 @@
     "//CCB": "撤销 PR #86581 — 恢复僵尸尸体的实用性",
     "subtype": "collection",
     "entries": [
-      { "item": "bleach", "charges": [ 1, -1 ], "prob": 40, "container-item": "jug_plastic", "sealed": false },
+      { "group": "bleach_jug_part", "charges": [ 1, -1 ], "prob": 40 },
       { "item": "ammonia_liquid", "charges": [ 6, -1 ], "prob": 40, "container-item": "pressure_tank" },
       {
         "distribution": [
