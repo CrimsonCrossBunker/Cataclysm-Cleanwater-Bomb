@@ -1995,7 +1995,7 @@
     "categories": [ "warfare" ],
     "color": "dark_gray",
     "broken_color": "dark_gray",
-    "durability": 600,
+    "durability": 660,
     "item": "alloy_plate",
     "location": "armor",
     "//": "240 cm weld to install, 60 cm weld per damage quadrant",
