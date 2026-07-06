@@ -10352,6 +10352,19 @@ static void prefetch_leading_edge( const map &here, const point_rel_sm &shift )
     for( const auto &entry : quads ) {
         MAPBUFFER.prefetch_quad( entry.first, entry.second );
     }
+
+    // TODO: preload_omt() was planned as a thread-pool-based direct
+    // deserialisation path but was never implemented in mapbuffer.  The
+    // existing submap_prefetcher (prefetch_quad above) already handles
+    // background loading via its own dedicated worker thread.
+    // cata_thread_pool &pool = get_thread_pool();
+    // if( pool.num_workers() > 0 ) {
+    //     for( const auto &entry : quads ) {
+    //         pool.submit( [omt = entry.first]() {
+    //             MAPBUFFER.preload_omt( omt );
+    //         } );
+    //     }
+    // }
 }
 
 point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
