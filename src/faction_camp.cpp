@@ -3547,7 +3547,8 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                 break;
             case farm_ops::harvest:
                 farm_map.grow_plant( pos );
-                if( farm_map.furn( pos ) == furn_f_plant_harvest ) {
+                if( iexamine::is_plant_harvestable( farm_map,
+                        farm_map.get_bub( farm_map.get_abs( pos ) ) ) ) {
                     // Can't use item_stack::only_item() since there might be fertilizer
                     map_stack items = farm_map.i_at( pos );
                     const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
