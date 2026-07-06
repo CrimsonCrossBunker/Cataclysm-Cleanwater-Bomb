@@ -4,6 +4,6 @@
 # 来源: CleverRaven/Cataclysm-DDA (cdda-upstream/master)
 # 目标: LYHGLYTX/Cataclysm-Cleanwater-Bomb (master)
 # 提交数: 113
-# 上游 PR: #87869–#87907 (11 个)
-# 冲突: 4 (全部 de-charge/display_type 相关)
-# 解决: 全部按 SYNC_EXCLUDED_PRS.md 保留 CCB 版本
+# 上游 PR: #87869–#87907 (10 个，剔除 #87899)
+# 冲突: 1 (#87897 bleach，保留 CCB charges)
+# 排除: #87899 (de-charge 系列), #87900 (BY_WEIGHT)
