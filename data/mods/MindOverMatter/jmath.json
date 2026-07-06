@@ -139,13 +139,13 @@
     "type": "jmath_function",
     "id": "matrix_awakening_odds",
     "num_args": 1,
-    "return": "100 * (e ^ ( ( _0 - max( (u_has_trait('MORE_PSI_ALPHA') * 0.75), 0) ) / -1.7) )"
+    "return": "100 * (e ^ ( ( _0 - max( (u_enchant_val('awakening_odds_traits_mod', 0) * 0.75), 0) ) / -1.7) )"
   },
   {
     "type": "jmath_function",
     "id": "portal_storm_awakening_odds",
     "num_args": 1,
-    "return": "100 * (e ^ ( ( _0 - max( (u_has_trait('MORE_PSI_ALPHA') * 0.75), 0) ) / -3) )"
+    "return": "100 * (e ^ ( ( _0 - max( (u_enchant_val('awakening_odds_traits_mod', 0) * 0.75), 0) ) / -3) )"
   },
   {
     "type": "jmath_function",

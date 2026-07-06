@@ -8,6 +8,9 @@
     "description": "Your expanded mind is far more capable of understanding Netherum Mathematics than a mere human's.  You have an greater chance of awakening new psionic paths.",
     "prereqs": [ "INT_ALPHA" ],
     "threshreq": [ "THRESH_ALPHA" ],
-    "category": [ "ALPHA" ]
+    "category": [ "ALPHA" ],
+    "enchantments": [
+      { "condition": "ALWAYS", "custom": [ { "value": "awakening_odds_traits_mod", "add": 1 } ] }
+    ]
   }
 ]
