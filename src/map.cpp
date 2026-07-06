@@ -7579,7 +7579,7 @@ std::list<item> map::use_amount( const tripoint_bub_ms &origin, const int range,
                                  const itype_id &type,
                                  int &quantity, const std::function<bool( const item & )> &filter, bool select_ind )
 {
-    const std::vector<tripoint_bub_ms> &reachable_pts = reachable_flood_steps( origin, range, 1, 100 );
+    const std::vector<tripoint_bub_ms> &reachable_pts = reachable_item_points( origin, range, 1, 100 );
     return use_amount( reachable_pts, type, quantity, filter, select_ind );
 }
 
@@ -7710,7 +7710,7 @@ std::list<item> map::use_charges( const tripoint_bub_ms &origin, const int range
                                   basecamp *bcp, bool in_tools )
 {
     // populate a grid of spots that can be reached
-    const std::vector<tripoint_bub_ms> &reachable_pts = reachable_flood_steps( origin, range, 1, 100 );
+    const std::vector<tripoint_bub_ms> &reachable_pts = reachable_item_points( origin, range, 1, 100 );
     return use_charges( reachable_pts, type, quantity, filter, bcp, in_tools );
 }
 
@@ -7742,7 +7742,7 @@ units::energy map::consume_ups( const std::vector<tripoint_bub_ms> &reachable_pt
 units::energy map::consume_ups( const tripoint_bub_ms &origin, const int range, units::energy qty )
 {
     // populate a grid of spots that can be reached
-    const std::vector<tripoint_bub_ms> &reachable_pts = reachable_flood_steps( origin, range, 1, 100 );
+    const std::vector<tripoint_bub_ms> &reachable_pts = reachable_item_points( origin, range, 1, 100 );
     return consume_ups( reachable_pts, qty );
 }
 
@@ -9353,6 +9353,31 @@ std::vector<tripoint_bub_ms> map::reachable_flood_steps( const tripoint_bub_ms &
     return reachable_pts;
 }
 
+std::vector<tripoint_bub_ms> map::reachable_item_points( const tripoint_bub_ms &f, int range,
+        const int cost_min, const int cost_max ) const
+{
+    std::vector<tripoint_bub_ms> reachable_pts = reachable_flood_steps( f, range, cost_min,
+            cost_max );
+
+    const optional_vpart_position origin_vp = veh_at( f );
+    if( !origin_vp || !origin_vp->vehicle().is_flying_in_air() ) {
+        return reachable_pts;
+    }
+
+    const vehicle &veh = origin_vp->vehicle();
+    for( const tripoint_abs_ms &abs_pt : veh.get_points() ) {
+        const tripoint_bub_ms p = get_bub( abs_pt );
+        if( !inbounds( p ) || p.z() != f.z() || rl_dist( f, p ) > range ) {
+            continue;
+        }
+        if( std::find( reachable_pts.begin(), reachable_pts.end(), p ) == reachable_pts.end() ) {
+            reachable_pts.push_back( p );
+        }
+    }
+
+    return reachable_pts;
+}
+
 bool map::clear_path( const tripoint_bub_ms &f, const tripoint_bub_ms &t, const int range,
                       const int cost_min, const int cost_max ) const
 {
@@ -9443,7 +9468,7 @@ void map::for_each_reachable_item( const tripoint_bub_ms &center, int radius,
                                    const Character *ch,
                                    const std::function<void( const item & )> &fn )
 {
-    for( const tripoint_bub_ms &p : reachable_flood_steps( center, radius, 1, 100 ) ) {
+    for( const tripoint_bub_ms &p : reachable_item_points( center, radius, 1, 100 ) ) {
         if( accessible_items( p ) ) {
             for( const item &it : i_at( p ) ) {
                 if( ch && !it.is_owned_by( *ch, true ) ) {

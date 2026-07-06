@@ -24,6 +24,7 @@
 #include "cursesdef.h"
 #include "debug.h"
 #include "enums.h"
+#include "field.h"
 #include "flood_fill.h"
 #include "hash_utils.h"
 #include "map.h"
@@ -145,8 +146,6 @@
  * is traversing via roads across long distances.
  */
 
-static const ter_str_id ter_t_open_air( "t_open_air" );
-
 static constexpr int OMT_SIZE = coords::map_squares_per( coords::omt );
 static constexpr int NAV_MAP_NUM_OMT = 2;
 static constexpr int NAV_MAP_SIZE_X = NAV_MAP_NUM_OMT * OMT_SIZE;
@@ -166,6 +165,28 @@ static constexpr int VMIPH_PER_TPS = static_cast<int>( vehicles::vmiph_per_tile 
 
 namespace
 {
+static bool air_autodrive_allows( map &here, const tripoint_bub_ms &pt )
+{
+    if( here.is_open_air( pt ) ) {
+        return true;
+    }
+    // Treetops are sparse support terrain above ground; flying vehicles can pass over them.
+    if( pt.z() <= 0 ||
+        !here.has_flag_ter( ter_furn_flag::TFLAG_TRANSPARENT, pt ) ||
+        !here.has_flag_ter( ter_furn_flag::TFLAG_UNSTABLE, pt ) ||
+        !here.has_flag_ter( ter_furn_flag::TFLAG_SINGLE_SUPPORT, pt ) ) {
+        return false;
+    }
+
+    if( here.get_impassable_field_at( pt ).has_value() || here.impassable_ter_furn( pt ) ) {
+        return false;
+    }
+
+    return !here.is_bashable_ter_furn( pt, false ) ||
+           here.move_cost_ter_furn( pt ) == 2 ||
+           here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NOCOLLIDE, pt );
+}
+
 /**
  * Data type representing a vehicle orientation, which corresponds to an angle that is
  * a multiple of TURNING_INCREMENT degrees, measured from the x axis.
@@ -766,9 +787,9 @@ bool vehicle::autodrive_controller::check_drivable( map &here, const tripoint_bu
                 return false;
             }
             if( avatar.get_memorized_tile( pt_abs ) == mm_submap::default_tile ) {
-                // apparently open air doesn't get memorized, so pretend it is or else
-                // we can't fly helicopters due to the many unseen tiles behind the driver
-                if( !( data.air_ok && here.ter( pt ) == ter_t_open_air ) ) {
+                // Some air-drivable tiles don't get memorized, so pretend they are visible
+                // or flying vehicles can't plan through open air or treetops.
+                if( !( data.air_ok && air_autodrive_allows( here, pt ) ) ) {
                     return false;
                 }
             }
@@ -803,10 +824,12 @@ bool vehicle::autodrive_controller::check_drivable( map &here, const tripoint_bu
     if( terrain == ter_str_id::NULL_ID() ) {
         return false;
     }
-    // open air is an obstacle to non-flying vehicles; it is drivable
-    // for flying vehicles
-    if( terrain == ter_t_open_air ) {
-        return data.air_ok;
+    // Open air and treetops are obstacles to non-flying vehicles, but not to flying vehicles.
+    if( data.air_ok && air_autodrive_allows( here, pt ) ) {
+        return true;
+    }
+    if( here.is_open_air( pt ) ) {
+        return false;
     }
     const ter_t &terrain_type = terrain.obj();
     // watercraft can drive on water
@@ -973,8 +996,8 @@ void vehicle::autodrive_controller::precompute_data( map &here )
         // initialize car and driver properties
         data.land_ok = driven_veh.valid_wheel_config( here );
         data.water_ok = driven_veh.can_float( here );
-        data.air_ok = driven_veh.has_sufficient_rotorlift( here );
         data.is_flying = driven_veh.is_rotorcraft( here ) && driven_veh.is_flying_in_air();
+        data.air_ok = data.is_flying;
         data.max_cautious_speed_tps = std::min(
                                           data.is_flying ? MAX_AIR_SPEED_TPS : MAX_CAUTIOUS_SPEED_TPS,
                                           driven_veh.safe_velocity( here ) / VMIPH_PER_TPS
