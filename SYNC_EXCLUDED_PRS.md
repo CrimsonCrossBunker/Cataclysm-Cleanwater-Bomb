@@ -88,3 +88,20 @@ de-charge 系列此前的回退工作多数已作废（分支回到 master），
 **同步的 PR 编号**：#87678, #87746, #87802, #87819, #87826, #87836, #87837, #87838, #87843, #87844, #87845, #87848, #87852, #87853, #87854, #87855, #87856, #87857, #87858, #87859, #87863, #87873, #87875, #87881, #87897, #87900
 
 **本次新增排除项**：#87891（detergent group spawn，与 fork stackable 模型冲突）
+
+
+### sync-cdda-20260706 (2026-07-06)
+
+同步范围：从 sync-cdda-20260705（#87900）到 upstream/master HEAD（2026-07-06），共 113 commits。
+
+**冲突处理（全部 de-charge/display_type，按本文件策略保留 CCB 版本）：**
+
+| PR | 文件 | 处理方式 |
+|---|---|---|
+| #87897 (bleach 装瓶) | `SUS/domestic.json`, `collections_domestic.json` | 保留 CCB charges，不取 upstream group |
+| #87899 (沙袋去量化) | `locations.json` | 保留 CCB material_sand + charges |
+| #87900 (detergent 按重量) | `collections_domestic.json`, `chemicals_and_resources.json` | 保留 CCB BY_WEIGHT + stackable |
+
+**同步 PR（新）：** #87869, #87884, #87893, #87896, #87898, #87899, #87902, #87903, #87904, #87905, #87907
+
+**无新增排除项。**
