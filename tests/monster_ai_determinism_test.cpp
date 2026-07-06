@@ -7,6 +7,7 @@
 #include "creature.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "monster.h"
 #include "monster_helpers.h"
 #include "point.h"

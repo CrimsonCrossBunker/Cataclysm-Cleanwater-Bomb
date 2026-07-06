@@ -10505,19 +10505,19 @@ static void prefetch_leading_edge( const map &here, const point_rel_sm &shift )
         MAPBUFFER.prefetch_quad( entry.first, entry.second );
     }
 
-    // Also dispatch full OMT loads to the thread pool.  Each worker thread
-    // reads + deserializes the quad directly into the in-memory buffer,
-    // skipping the byte-buffer round-trip.  Uniform terrain is generated too.
-    // Duplicate submaps are deferred to pending_destroy_submaps_ and drained
-    // on the main thread in do_turn().
-    cata_thread_pool &pool = get_thread_pool();
-    if( pool.num_workers() > 0 ) {
-        for( const auto &entry : quads ) {
-            pool.submit( [omt = entry.first]() {
-                MAPBUFFER.preload_omt( omt );
-            } );
-        }
-    }
+    // TODO: preload_omt() was planned as a thread-pool-based direct
+    // deserialisation path but was never implemented.  The existing
+    // submap_prefetcher (prefetch_quad above) already handles background
+    // loading via its own dedicated worker thread.  This block is disabled
+    // until preload_omt is actually implemented in mapbuffer.
+    // cata_thread_pool &pool = get_thread_pool();
+    // if( pool.num_workers() > 0 ) {
+    //     for( const auto &entry : quads ) {
+    //         pool.submit( [omt = entry.first]() {
+    //             MAPBUFFER.preload_omt( omt );
+    //         } );
+    //     }
+    // }
 }
 
 point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
