@@ -515,7 +515,8 @@
         "monster_message": "%1$s gestures and heat-haze shimmers around them for a moment."
       }
     ],
-    "death_drops": "changeling_lord_summer_death_drops"
+    "death_drops": "changeling_lord_summer_death_drops",
+    "luminance": 5000
   },
   {
     "type": "MONSTER",
