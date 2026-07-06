@@ -556,7 +556,6 @@ class monster : public Creature
         int friendly = 0;
         int anger = 0;
         int morale = 2;
-        uint32_t mp_net_id = 0; // MP: network ID for multiplayer monster tracking
     private:
         int amount_eaten = 0;
         void recheck_fed_status();

@@ -1,6 +1,5 @@
 #include "npc.h"
 
-#define MP_ENABLED
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -52,9 +51,6 @@
 #include "iuse_actor.h"
 #include "magic.h"
 #include "map.h"
-#ifdef MP_ENABLED
-#include "mp_gamestate.h"
-#endif
 #include "map_iterator.h"
 #include "mapdata.h"
 #include "messages.h"
@@ -2064,12 +2060,6 @@ void npc::decide_needs()
 
 void npc::say( const std::string &line, const sounds::sound_t spriority ) const
 {
-#ifdef MP_ENABLED
-    if( cata_mp::is_remote_player( getID() ) ) {
-        return;
-    }
-#endif
-
     std::string formatted_line = line;
     Character &player_character = get_player_character();
     parse_tags( formatted_line, player_character, *this );
@@ -3661,21 +3651,11 @@ void npc::process_turn()
 
     // NPCs shouldn't be using stamina, but if they have, set it back to max
     // If the stamina is higher than the max (Languorous), set it back to max
-#ifdef MP_ENABLED
-    if( !cata_mp::is_remote_player( getID() ) &&
-        calendar::once_every( 1_minutes ) && get_stamina() != get_stamina_max() ) {
-#else
     if( calendar::once_every( 1_minutes ) && get_stamina() != get_stamina_max() ) {
-#endif
         set_stamina( get_stamina_max() );
     }
 
-#ifdef MP_ENABLED
-    if( !cata_mp::is_remote_player( getID() ) &&
-        is_player_ally() && calendar::once_every( 1_hours ) &&
-#else
     if( is_player_ally() && calendar::once_every( 1_hours ) &&
-#endif
         get_hunger() < 200 && get_thirst() < 100 && op_of_u.trust < 5 ) {
         // Friends who are well fed will like you more
         // 24 checks per day, best case chance at trust 0 is 1 in 48 for +1 trust per 2 days

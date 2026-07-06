@@ -1,6 +1,5 @@
 #include "crafting.h"
 
-#define MP_ENABLED
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -91,9 +90,6 @@
 #include "visitable.h"
 #include "vpart_position.h"
 #include "weather.h"
-#ifdef MP_ENABLED
-#include "mp_gamestate.h"
-#endif
 
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
@@ -4524,40 +4520,21 @@ std::vector<Character *> Character::get_crafting_helpers() const
 {
     return g->get_characters_if( [this]( const Character & guy ) {
         // NPCs can help craft if awake, taking orders, within pickup range and have clear path
-#ifdef MP_ENABLED
-        const bool is_mp_partner = cata_mp::is_partner_npc( guy.getID() );
-        return getID() != guy.getID()
-               && guy.is_npc()
-               && ( !is_mp_partner || cata_mp::is_partner_helping_us() )
-               && !guy.in_sleep_state()
-               && guy.is_obeying( *this )
-               && rl_dist( guy.pos_bub(), pos_bub() ) < PICKUP_RANGE
-               && get_map().clear_path( pos_bub(), guy.pos_bub(), PICKUP_RANGE, 1, 100 );
-#else
         return getID() != guy.getID()
                && guy.is_npc()
                && !guy.in_sleep_state()
                && guy.is_obeying( *this )
                && rl_dist( guy.pos_bub(), pos_bub() ) < PICKUP_RANGE
                && get_map().clear_path( pos_bub(), guy.pos_bub(), PICKUP_RANGE, 1, 100 );
-#endif
     } );
 }
 
 std::vector<Character *> Character::get_crafting_group() const
 {
     return g->get_characters_if( [this]( const Character & guy ) {
-#ifdef MP_ENABLED
-        const bool is_mp_partner = cata_mp::is_partner_npc( guy.getID() );
-        return guy.is_ally( *this )
-               && ( !is_mp_partner || cata_mp::is_partner_helping_us() )
-               && rl_dist( guy.pos_bub(), pos_bub() ) < PICKUP_RANGE
-               && get_map().clear_path( pos_bub(), guy.pos_bub(), PICKUP_RANGE, 1, 100 );
-#else
         return guy.is_ally( *this )
                && rl_dist( guy.pos_bub(), pos_bub() ) < PICKUP_RANGE
                && get_map().clear_path( pos_bub(), guy.pos_bub(), PICKUP_RANGE, 1, 100 );
-#endif
     } );
 }
 

@@ -105,11 +105,6 @@
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
-#define MP_ENABLED
-#include "mp_client_conn.h"
-#include "mp_gamestate.h"
-#include "npc.h"
-#include "line.h"
 
 enum class direction : unsigned int;
 
@@ -334,21 +329,7 @@ input_context game::get_player_input( std::string &action )
         wPrint.wtype = weather.weather_id;
         wPrint.vdrops.clear();
 
-        // MP: BOTH sides poll on input TIMEOUT — the client to process the
-        // host's grant and ack, the host (via wait_for_client_action's
-        // mp_poll_input) to DETECT that ack. At 125ms each lockstep turn waited
-        // up to ~125ms on BOTH legs (~195ms median measured) -> red turn-signal
-        // flicker past the 400ms hysteresis and host activities paced to the
-        // round-trip. 30ms for either MP role keeps the per-turn wait well under
-        // 400ms. SP stays 125ms; animations are time-based (ANIMATION_DELAY) so
-        // faster polling doesn't speed them up.
-        // MP-HOOK: verify - CCB has gliding/FPS animation code, MP doesn't;
-        // placed before the gliding dynamic timeout adjustment.
-#ifdef MP_ENABLED
-        ctxt.set_timeout( ( cata_mp::is_client_mode() || cata_mp::is_host_mode() ) ? 30 : 125 );
-#else
         ctxt.set_timeout( 125 );
-#endif
 
         shared_ptr_fast<game::draw_callback_t> animation_cb =
         make_shared_fast<game::draw_callback_t>( [&]() {
@@ -382,11 +363,7 @@ input_context game::get_player_input( std::string &action )
                 const int fps = std::clamp( get_option<int>( "CREATURE_MOVE_ANIM_FPS" ), 15, 144 );
                 ctxt.set_timeout( std::max( 1, 1000 / fps ) );
             } else {
-#ifdef MP_ENABLED
-                ctxt.set_timeout( ( cata_mp::is_client_mode() || cata_mp::is_host_mode() ) ? 30 : 125 );
-#else
                 ctxt.set_timeout( 125 );
-#endif
             }
             // Gate the discrete step-based animations to their original cadence.
             bool do_discrete_step = true;
@@ -521,72 +498,15 @@ input_context game::get_player_input( std::string &action )
                 g->invalidate_main_ui_adaptor();
             }
 
-            // MP-HOOK: verify - MP process_mp_events/client_process_incoming hooks
-            // placed before redraw_invalidated; MP version had simpler animation loop.
-#ifdef MP_ENABLED
-            // Host: process queued client actions on every animation frame so
-            // the client gets combat feedback within ~125 ms instead of waiting
-            // for the host's next keypress.
-            if( cata_mp::is_hosting() ) {
-                cata_mp::process_mp_events();
-            }
-            // Client: pull server monster/position updates on every frame so
-            // monsters move visually without advancing local game time.
-            if( cata_mp::is_client_mode() && action == "TIMEOUT" ) {
-                cata_mp::client_process_incoming();
-                g->invalidate_main_ui_adaptor();
-            }
-#endif
-
             ui_manager::redraw_invalidated();
-#ifdef MP_ENABLED
-            // Client: when the avatar has an active multi-turn activity,
-            // exit the input poll on TIMEOUT regardless of TURN_DURATION so
-            // the do_turn loop ticks the activity and dispatches a wait.
-            if( cata_mp::is_client_mode() && action == "TIMEOUT" &&
-                get_avatar().activity ) {
-                break;
-            }
-            // Host symmetric escape: when wait_for_client_action() called us
-            // via mp_poll_input() and the partner has already acked this turn,
-            // unblock immediately instead of sitting on a host keypress.
-            if( cata_mp::is_hosting() && action == "TIMEOUT" &&
-                cata_mp::is_host_waiting_for_client() &&
-                ( cata_mp::client_acted_this_turn() ||
-                  cata_mp::partner_in_interactive_activity() ) ) {
-                break;
-            }
-#endif
         } while( handle_mouseview( ctxt, action ) && uquit != QUIT_WATCH
                  && ( action != "TIMEOUT" || !current_turn.has_timeout_elapsed() ) );
         ctxt.reset_timeout();
     } else {
-#ifdef MP_ENABLED
-        ctxt.set_timeout( ( cata_mp::is_client_mode() || cata_mp::is_host_mode() ) ? 30 : 125 );
-#else
         ctxt.set_timeout( 125 );
-#endif
         while( handle_mouseview( ctxt, action ) ) {
-            if( action == "TIMEOUT" ) {
-                if( current_turn.has_timeout_elapsed() ) {
-                    break;
-                }
-#ifdef MP_ENABLED
-                if( cata_mp::is_hosting() ) {
-                    cata_mp::process_mp_events();
-                    if( cata_mp::is_host_waiting_for_client() &&
-                        cata_mp::client_acted_this_turn() ) {
-                        break;
-                    }
-                }
-                if( cata_mp::is_client_mode() ) {
-                    cata_mp::client_process_incoming();
-                    g->invalidate_main_ui_adaptor();
-                    if( get_avatar().activity ) {
-                        break;
-                    }
-                }
-#endif
+            if( action == "TIMEOUT" && current_turn.has_timeout_elapsed() ) {
+                break;
             }
         }
         ctxt.reset_timeout();
@@ -2019,9 +1939,6 @@ static void fire()
         int sel = uilist( _( "Draw what?" ), options );
         if( sel >= 0 ) {
             actions[sel]();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action();
-#endif
             return;
         }
     }
@@ -2475,638 +2392,9 @@ static std::vector<action_id> get_actions_move_mode()
     };
 }
 
-#ifdef MP_ENABLED
-// Actions the host may take while locked (moves <= 0, waiting for client).
-static const std::set<action_id> host_ui_actions = {
-    ACTION_ZOOM_IN, ACTION_ZOOM_OUT,
-    ACTION_MAP, ACTION_LIST_ITEMS,
-    ACTION_INVENTORY, ACTION_COMPARE, ACTION_ORGANIZE,
-    ACTION_LOOK,
-    ACTION_HELP, ACTION_MESSAGES,
-    ACTION_PL_INFO, ACTION_MORALE,
-    ACTION_FACTIONS, ACTION_MISSIONS, ACTION_MEDICAL,
-    ACTION_MUTATIONS, ACTION_BIONICS,
-    ACTION_DIARY,
-    ACTION_PICKUP, ACTION_PICKUP_ALL, ACTION_LOOT,
-    ACTION_CRAFT, ACTION_RECRAFT, ACTION_LONGCRAFT,
-    ACTION_DISASSEMBLE,
-    ACTION_BUTCHER,
-    ACTION_TOGGLE_RUN, ACTION_TOGGLE_CROUCH, ACTION_TOGGLE_PRONE,
-    ACTION_CYCLE_MOVE, ACTION_CYCLE_MOVE_REVERSE,
-    ACTION_OPTIONS, ACTION_TOGGLE_PANEL_ADM,
-    ACTION_AUTOPICKUP, ACTION_AUTONOTES,
-    ACTION_SAFEMODE, ACTION_DISTRACTION_MANAGER,
-    ACTION_TOGGLE_SAFEMODE, ACTION_TOGGLE_AUTOSAFE,
-    ACTION_IGNORE_ENEMY, ACTION_WHITELIST_ENEMY,
-    ACTION_COLOR, ACTION_WORLD_MODS,
-    ACTION_QUICKSAVE, ACTION_SAVE,
-    ACTION_KEYBINDINGS,
-    ACTION_MAIN_MENU,
-    ACTION_EXPORT_BUG_REPORT_ARCHIVE,
-    ACTION_COOP_CHAT,
-};
-#endif
-
 bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
 {
-#ifdef MP_ENABLED
-    // MP-HOOK: verify - client action dispatch block. The MP version places
-    // this at the start of do_regular_action before local variable declarations.
-    // CCB's surrounding context (mount/shell/incorporeal/shapeshift checks) is
-    // moved after the MP block; verify these still gate correctly for MP actions.
-    // In client mode, intercept movement: predict locally then send to server.
-    // The server's delta response (received via client_process_incoming next turn)
-    // corrects the position if prediction was wrong (e.g. attack triggered instead of move).
-    if( cata_mp::is_client_mode() ) {
-        const bool mp_locked = player_character.get_moves() <= 0;
-
-        // Pure display/UI actions — always free, work even while locked.
-        if( act == ACTION_ZOOM_IN ) {
-            zoom_in();
-            return false;
-        }
-        if( act == ACTION_ZOOM_OUT ) {
-            zoom_out();
-            return false;
-        }
-        if( act == ACTION_LIST_ITEMS ) {
-            list_surroundings();
-            return false;
-        }
-        if( act == ACTION_MORALE ) {
-            player_character.disp_morale();
-            return false;
-        }
-
-        // Quickload would trash the MP session by reloading from disk.
-        if( act == ACTION_QUICKLOAD ) {
-            return false;
-        }
-
-        if( mp_locked ) {
-            static const std::set<action_id> menu_allowed_while_locked = {
-                ACTION_PICKUP, ACTION_PICKUP_ALL,
-                ACTION_BUTCHER, ACTION_LOOT,
-                ACTION_CRAFT, ACTION_RECRAFT, ACTION_LONGCRAFT,
-                ACTION_DISASSEMBLE,
-            };
-            static const std::set<action_id> blocked_while_locked = {
-                ACTION_WEAR, ACTION_TAKE_OFF, ACTION_WIELD,
-                ACTION_EAT, ACTION_OPEN_CONSUME,
-                ACTION_DROP, ACTION_DIR_DROP,
-                ACTION_UNLOAD, ACTION_UNLOAD_CONTAINER, ACTION_INSERT_ITEM,
-                ACTION_MEND, ACTION_SORT_ARMOR,
-                ACTION_RELOAD_ITEM, ACTION_RELOAD_WEAPON, ACTION_RELOAD_WIELDED,
-                ACTION_USE, ACTION_USE_WIELDED, ACTION_READ,
-                ACTION_PASS_ITEM, ACTION_HIGH_FIVE,
-                ACTION_CHAT,
-                ACTION_FIRE, ACTION_FIRE_BURST, ACTION_AUTOATTACK,
-                ACTION_THROW, ACTION_THROW_WIELDED,
-                ACTION_CAST_SPELL, ACTION_RECAST_SPELL,
-                ACTION_SMASH,
-                ACTION_CONSTRUCT,
-                ACTION_GRAB, ACTION_HAUL, ACTION_HAUL_TOGGLE,
-                ACTION_OPEN, ACTION_CLOSE, ACTION_PEEK,
-                ACTION_EXAMINE, ACTION_EXAMINE_AND_PICKUP,
-                ACTION_CONTROL_VEHICLE,
-                ACTION_SLEEP, ACTION_WORKOUT, ACTION_WAIT,
-            };
-            if( menu_allowed_while_locked.count( act ) ) {
-                cata_mp::mp_log( "[cdda-mp] CLI-LOCKED-ALLOW: act=" +
-                                  std::to_string( act ) );
-            } else if( blocked_while_locked.count( act ) ) {
-                cata_mp::mp_log( "[cdda-mp] CLI-LOCKED-BLOCK: act=" +
-                                  std::to_string( act ) );
-                return false;
-            }
-        }
-
-        static const std::map<action_id, std::string> action_to_dir = {
-            { ACTION_MOVE_FORTH,       "n"  },
-            { ACTION_MOVE_BACK,        "s"  },
-            { ACTION_MOVE_RIGHT,       "e"  },
-            { ACTION_MOVE_LEFT,        "w"  },
-            { ACTION_MOVE_FORTH_RIGHT, "ne" },
-            { ACTION_MOVE_FORTH_LEFT,  "nw" },
-            { ACTION_MOVE_BACK_RIGHT,  "se" },
-            { ACTION_MOVE_BACK_LEFT,   "sw" },
-        };
-        int mp_dispatch_pre_moves = 0;
-        const auto mp_dispatch = [&]( const std::string & json, bool charge_from_caller = false ) {
-            const std::string full_json = json.substr( 0, json.size() - 1 )
-                                           + ",\"move_mode\":\"" + player_character.move_mode.str() + "\""
-                                           + "}";
-            const bool had_grant = charge_from_caller
-                                    ? mp_dispatch_pre_moves > 0
-                                    : player_character.get_moves() > 0;
-            cata_mp::mp_log( std::string( "[cdda-mp] mp_dispatch act=" ) +
-                              action_ident( act ) + " path=" +
-                              ( had_grant && !cata_mp::is_client_waiting_for_ack() ? "SEND" : "DROP" ) +
-                              " moves=" + std::to_string( player_character.get_moves() ) +
-                              " ack=" + std::to_string( cata_mp::is_client_waiting_for_ack() ) +
-                              " json=" + full_json.substr( 0, 60 ) );
-            if( had_grant && !cata_mp::is_client_waiting_for_ack() ) {
-                cata_mp::client_send( cata_mp::client_enrich_action( full_json ) );
-                if( !charge_from_caller ) {
-                    player_character.set_moves( 0 );
-                }
-                cata_mp::client_mark_action_sent();
-            }
-        };
-
-        auto it = action_to_dir.find( act );
-        if( it != action_to_dir.end() ) {
-            const std::string &dir = it->second;
-
-            static const std::map<std::string, tripoint> dir_to_offset = {
-                { "n",  tripoint(  0, -1, 0 ) }, { "s",  tripoint(  0,  1, 0 ) },
-                { "e",  tripoint(  1,  0, 0 ) }, { "w",  tripoint( -1,  0, 0 ) },
-                { "ne", tripoint(  1, -1, 0 ) }, { "nw", tripoint( -1, -1, 0 ) },
-                { "se", tripoint(  1,  1, 0 ) }, { "sw", tripoint( -1,  1, 0 ) },
-            };
-            map &here = get_map();
-            const tripoint_bub_ms cur_pos = player_character.pos_bub();
-            const auto offset_it = dir_to_offset.find( dir );
-            const tripoint_bub_ms next_pos = offset_it != dir_to_offset.end()
-                                              ? cur_pos + offset_it->second
-                                              : cur_pos;
-
-            // Vehicle control mode: route movement to pldrive instead of walk.
-            if( cata_mp::client_ctrl_veh() ) {
-                cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: ctrl_veh path" );
-                const int dx = offset_it != dir_to_offset.end() ? offset_it->second.x : 0;
-                const int dy = offset_it != dir_to_offset.end() ? offset_it->second.y : 0;
-
-                if( dx != 0 ) {
-                    const std::string json = "{\"type\":\"action\",\"action\":\"pldrive\""
-                                              ",\"dx\":" + std::to_string( dx ) +
-                                              ",\"dy\":" + std::to_string( dy ) + "}";
-                    mp_dispatch( json );
-                } else if( dy != 0 ) {
-                    const std::string full =
-                        std::string( "{\"type\":\"action\",\"action\":\"cruise\""
-                                      ",\"dy\":" ) + std::to_string( dy )
-                        + ",\"move_mode\":\"" + player_character.move_mode.str() + "\"}";
-                    cata_mp::client_send( cata_mp::client_enrich_action( full ) );
-                    map &pvmap = get_map();
-                    const tripoint_abs_ms pvabs = cata_mp::client_ctrl_veh_abs();
-                    if( pvmap.inbounds( pvabs ) ) {
-                        if( const optional_vpart_position pvp =
-                                pvmap.veh_at( pvmap.get_bub( pvabs ) ) ) {
-                            pvp->vehicle().cruise_thrust( pvmap, -dy * 400 );
-                        }
-                    }
-                }
-                return true;
-            }
-
-            if( offset_it != dir_to_offset.end() ) {
-                if( here.impassable( next_pos ) ) {
-                    const tripoint_abs_ms next_abs = here.get_abs( next_pos );
-                    const bool has_creature = static_cast<bool>(
-                                                 get_creature_tracker().find( next_abs ) );
-                    const bool openable = here.open_door( player_character, next_pos,
-                                                          true, true );
-                    const object_type cur_grab = player_character.get_grab_type();
-                    const tripoint_bub_ms grab_target =
-                        player_character.pos_bub() + player_character.grab_point;
-                    const bool next_is_grab_target =
-                        cur_grab != object_type::NONE && grab_target == next_pos;
-                    cata_mp::mp_log( "[cdda-mp] MOVE-IMPASS-CHECK: dir=" + dir +
-                                     " next=(" + std::to_string( next_pos.x() ) + "," +
-                                     std::to_string( next_pos.y() ) + ")" +
-                                     " grab_type=" + std::to_string( static_cast<int>( cur_grab ) ) +
-                                     " grab_target=(" + std::to_string( grab_target.x() ) + "," +
-                                     std::to_string( grab_target.y() ) + ")" +
-                                     " has_creature=" + std::to_string( has_creature ) +
-                                     " openable=" + std::to_string( openable ) +
-                                     " next_is_grab_target=" + std::to_string( next_is_grab_target ) );
-                    if( !has_creature && !openable && !next_is_grab_target ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: wall bump dir=" + dir +
-                                          " moves=" + std::to_string( player_character.get_moves() ) );
-                        return false;
-                    }
-                }
-                const tripoint_abs_ms next_abs = here.get_abs( next_pos );
-                npc *hnpc = g->critter_by_id<npc>(
-                                cata_mp::get_host_npc_character_id() );
-                if( hnpc && here.get_abs( hnpc->pos_bub() ) == next_abs ) {
-                    if( player_character.get_moves() <= 0 ) {
-                        cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-BLOCKED: locked, moves<=0" );
-                        return true;
-                    }
-                    cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-OPEN: moves=" +
-                                      std::to_string( player_character.get_moves() ) );
-                    g->npc_menu( *hnpc );
-                    cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-CLOSE: moves=" +
-                                      std::to_string( player_character.get_moves() ) );
-                    return true;
-                }
-
-                if( const auto dvp =
-                        here.veh_at( next_pos ).part_with_feature( "BOARDABLE", true ) ) {
-                    if( !dvp->vehicle().handle_potential_theft( player_character ) ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: declined boardable theft" );
-                        return true;
-                    }
-                }
-            }
-
-            {
-                const player_activity &pact = player_character.activity;
-                static const activity_id act_wait( "ACT_WAIT" );
-                static const activity_id act_wait_stamina( "ACT_WAIT_STAMINA" );
-                static const activity_id act_wait_weather( "ACT_WAIT_WEATHER" );
-                static const activity_id act_wait_npc( "ACT_WAIT_NPC" );
-                if( pact && ( pact.id() == act_wait || pact.id() == act_wait_stamina ||
-                              pact.id() == act_wait_weather || pact.id() == act_wait_npc ) ) {
-                    cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: blocked by wait-activity " +
-                                     pact.id().str() );
-                    player_character.set_moves( 0 );
-                    return true;
-                }
-            }
-
-            if( player_character.is_waiting_to_change_mode_mode() ) {
-                const move_mode_id desired = player_character.get_desired_move_mode();
-                player_character.set_movement_mode( desired );
-                if( player_character.move_mode != desired ) {
-                    player_character.cycle_desired_move_mode();
-                }
-            }
-
-            if( offset_it != dir_to_offset.end() ) {
-                std::vector<std::string> harmful_stuff = g->get_dangerous_tile( next_pos );
-                if( !harmful_stuff.empty() ) {
-                    const std::string opt = get_option<std::string>( "DANGEROUS_TERRAIN_WARNING_PROMPT" );
-                    if( opt == "ALWAYS" &&
-                        !g->prompt_dangerous_tile( next_pos, &harmful_stuff ) ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: danger-prompt ALWAYS declined" );
-                        return true;
-                    } else if( opt == "RUNNING" &&
-                               ( !player_character.is_running() ||
-                                 !g->prompt_dangerous_tile( next_pos, &harmful_stuff ) ) ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: danger-prompt RUNNING blocked" );
-                        add_msg( m_warning,
-                                 _( "Stepping into that %1$s looks risky.  Run into it if you wish to enter anyway." ),
-                                 enumerate_as_string( harmful_stuff ) );
-                        return true;
-                    } else if( opt == "CROUCHING" &&
-                               ( !player_character.is_crouching() ||
-                                 !g->prompt_dangerous_tile( next_pos, &harmful_stuff ) ) ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: danger-prompt CROUCHING blocked" );
-                        add_msg( m_warning,
-                                 _( "Stepping into that %1$s looks risky.  Crouch and move into it if you wish to enter anyway." ),
-                                 enumerate_as_string( harmful_stuff ) );
-                        return true;
-                    } else if( opt == "NEVER" && !player_character.is_running() ) {
-                        cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: danger-prompt NEVER blocked" );
-                        add_msg( m_warning,
-                                 _( "Stepping into that %1$s looks risky.  Run into it if you wish to enter anyway." ),
-                                 enumerate_as_string( harmful_stuff ) );
-                        return true;
-                    }
-                }
-            }
-
-            if( offset_it != dir_to_offset.end() ) {
-                mp_dispatch_pre_moves = player_character.get_moves();
-                const bool will_send = player_character.get_moves() > 0 &&
-                                        !cata_mp::is_client_waiting_for_ack();
-                if( will_send ) {
-                    const bool diag = ( std::abs( offset_it->second.x ) +
-                                        std::abs( offset_it->second.y ) ) == 2;
-                    const int mcost   = here.combined_movecost( cur_pos, next_pos );
-                    const int ap_cost = player_character.run_cost( mcost, diag );
-                    const int pre_moves = player_character.get_moves();
-                    const int pre_stam = player_character.get_stamina();
-                    player_character.mod_moves( -ap_cost );
-                    player_character.burn_move_stamina( pre_moves - player_character.get_moves() );
-                    cata_mp::mp_log( "[cdda-mp] CLI-MOVE-COST dir=" + dir +
-                                     " trigdist=" + std::to_string( trigdist ) +
-                                     " circ_opt=" + std::to_string( get_option<bool>( "CIRCLEDIST" ) ) +
-                                     " diag=" + std::to_string( diag ) +
-                                     " mcost=" + std::to_string( mcost ) +
-                                     " ap_cost=" + std::to_string( ap_cost ) +
-                                     " moves=" + std::to_string( pre_moves ) + "->" +
-                                     std::to_string( player_character.get_moves() ) +
-                                     " stam=" + std::to_string( pre_stam ) + "->" +
-                                     std::to_string( player_character.get_stamina() ) +
-                                     " ter=" + here.ter( next_pos ).id().str() );
-                    player_character.set_activity_level(
-                        player_character.current_movement_mode()->exertion_level() );
-                    if( player_character.is_running() && !player_character.can_run() ) {
-                        player_character.reset_move_mode();
-                    }
-                }
-            }
-            if( !mp_locked && offset_it != dir_to_offset.end() &&
-                !g->is_tileset_isometric() ) {
-                if( offset_it->second.x > 0 ) {
-                    player_character.facing = FacingDirection::RIGHT;
-                } else if( offset_it->second.x < 0 ) {
-                    player_character.facing = FacingDirection::LEFT;
-                }
-            }
-            int ramp_dz = 0;
-            if( offset_it != dir_to_offset.end() ) {
-                if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, next_pos ) ) {
-                    ramp_dz = 1;
-                } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, next_pos ) ) {
-                    ramp_dz = -1;
-                }
-            }
-            const std::string json = ramp_dz == 0
-                ? "{\"type\":\"action\",\"action\":\"move\",\"dir\":\"" + dir + "\"}"
-                : "{\"type\":\"action\",\"action\":\"move\",\"dir\":\"" + dir + "\",\"dz\":"
-                  + std::to_string( ramp_dz ) + "}";
-            mp_dispatch( json, /*charge_from_caller=*/true );
-            return true;
-        }
-        if( act == ACTION_PAUSE ) {
-            if( player_character.activity && player_character.activity.is_interruptible_with_kb() ) {
-                g->cancel_activity_query( _( "Confirm:" ) );
-                return true;
-            }
-            mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
-            return true;
-        }
-        if( act == ACTION_WAIT ) {
-            wait();
-            if( player_character.activity ) {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
-            }
-            return true;
-        }
-        if( act == ACTION_SMASH && cata_mp::client_ctrl_veh() ) {
-            mp_dispatch( "{\"type\":\"action\",\"action\":\"handbrake\"}" );
-            return true;
-        }
-        if( act == ACTION_SMASH ) {
-            const std::optional<tripoint_bub_ms> smashp =
-                choose_adjacent( _( "Smash where?" ), false );
-            if( !smashp ) {
-                return true;
-            }
-            const tripoint_abs_ms abs_target = get_map().get_abs( *smashp );
-            const auto bash_map = player_character.smash_ability();
-            int total_bash = 0;
-            for( const auto &[dtype, val] : bash_map ) {
-                total_bash += val;
-            }
-            const std::string json =
-                "{\"type\":\"action\",\"action\":\"smash\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
-                ",\"y\":" + std::to_string( abs_target.y() ) +
-                ",\"z\":" + std::to_string( abs_target.z() ) +
-                ",\"bash\":" + std::to_string( total_bash ) + "}";
-            if( get_map().is_bashable( *smashp ) ) {
-                player_character.burn_energy_arms( 2 * player_character.get_standard_stamina_cost() );
-            }
-            cata_mp::mp_log( "[cdda-mp] CLI-SMASH-STAM stam=" +
-                              std::to_string( player_character.get_stamina() ) +
-                              " bash=" + std::to_string( total_bash ) );
-            cata_mp::client_set_autosmash_json( json );
-            mp_dispatch( json );
-            return true;
-        }
-        if( act == ACTION_OPEN ) {
-            const std::optional<tripoint_bub_ms> doorpos =
-                choose_adjacent( _( "Open where?" ), false );
-            if( !doorpos ) {
-                return true;
-            }
-            get_map().open_door( player_character, *doorpos, true, false );
-            const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
-            const std::string json =
-                "{\"type\":\"action\",\"action\":\"open\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
-                ",\"y\":" + std::to_string( abs_target.y() ) +
-                ",\"z\":" + std::to_string( abs_target.z() ) + "}";
-            mp_dispatch( json );
-            return true;
-        }
-        if( act == ACTION_CLOSE ) {
-            const std::optional<tripoint_bub_ms> doorpos =
-                choose_adjacent( _( "Close where?" ), false );
-            if( !doorpos ) {
-                return true;
-            }
-            doors::close_door( get_map(), player_character, *doorpos );
-            const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
-            const std::string json =
-                "{\"type\":\"action\",\"action\":\"close\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
-                ",\"y\":" + std::to_string( abs_target.y() ) +
-                ",\"z\":" + std::to_string( abs_target.z() ) + "}";
-            mp_dispatch( json );
-            return true;
-        }
-
-        if( act == ACTION_SLEEP ) {
-            add_msg( m_info, "Sleep is not yet available in multiplayer." );
-            return false;
-        }
-
-        if( act == ACTION_LOOK ) {
-            const int moves_before = player_character.get_moves();
-            g->look_around();
-            if( player_character.get_moves() < moves_before ) {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
-                return true;
-            }
-            return false;
-        }
-
-        if( act == ACTION_PICKUP || act == ACTION_PICKUP_ALL ) {
-            map &phere = get_map();
-            const tripoint_bub_ms ppos = player_character.pos_bub();
-            const tripoint_abs_ms abs_pos = phere.get_abs( ppos );
-            std::vector<std::string> before_types;
-            for( const item &it : phere.i_at( ppos ) ) {
-                before_types.push_back( it.typeId().str() );
-            }
-
-            if( act == ACTION_PICKUP_ALL ) {
-                pickup_all();
-            } else {
-                pickup();
-            }
-
-            {
-                static const activity_id ACT_PICKUP_ID( "ACT_PICKUP" );
-                if( player_character.activity.id() == ACT_PICKUP_ID ) {
-                    const int saved_moves = player_character.get_moves();
-                    player_character.set_moves( 100000 );
-                    while( player_character.activity.id() == ACT_PICKUP_ID ) {
-                        player_character.activity.do_turn( player_character );
-                    }
-                    player_character.set_moves( saved_moves );
-                }
-            }
-
-            std::vector<std::string> after_types;
-            for( const item &it : phere.i_at( ppos ) ) {
-                after_types.push_back( it.typeId().str() );
-            }
-            std::multiset<std::string> remaining( after_types.begin(), after_types.end() );
-            std::string items_json;
-            bool first = true;
-            for( const std::string &t : before_types ) {
-                auto rem_it = remaining.find( t );
-                if( rem_it != remaining.end() ) {
-                    remaining.erase( rem_it );
-                } else {
-                    if( !first ) {
-                        items_json += ',';
-                    }
-                    first = false;
-                    items_json += "{\"t\":\"" + t + "\"}";
-                }
-            }
-
-            if( !items_json.empty() ) {
-                const std::string json =
-                    "{\"type\":\"action\",\"action\":\"pickup\""
-                    ",\"x\":" + std::to_string( abs_pos.x() ) +
-                    ",\"y\":" + std::to_string( abs_pos.y() ) +
-                    ",\"z\":" + std::to_string( abs_pos.z() ) +
-                    ",\"items\":[" + items_json + "]}";
-                mp_dispatch( json );
-            }
-            return true;
-        }
-
-        if( act == ACTION_DROP || act == ACTION_DIR_DROP ) {
-            tripoint_bub_ms drop_pos = player_character.pos_bub();
-            if( act == ACTION_DIR_DROP ) {
-                const std::optional<tripoint_bub_ms> pnt = choose_adjacent( _( "Drop where?" ) );
-                if( !pnt ) {
-                    return true;
-                }
-                drop_pos = *pnt;
-            }
-            drop_in_direction( drop_pos );
-            if( player_character.activity ) {
-                add_msg( m_info, _( "Now dropping items, %s to interrupt." ),
-                         press_x( ACTION_PAUSE ) );
-            }
-            return true;
-        }
-
-        if( act == ACTION_WEAR ) {
-            std::vector<item *> worn_before;
-            player_character.worn.inv_dump( worn_before );
-
-            wear();
-
-            {
-                static const activity_id ACT_WEAR_ID( "ACT_WEAR" );
-                if( player_character.activity.id() == ACT_WEAR_ID ) {
-                    const int saved_moves = player_character.get_moves();
-                    player_character.set_moves( 100000 );
-                    while( player_character.activity.id() == ACT_WEAR_ID ) {
-                        player_character.activity.do_turn( player_character );
-                    }
-                    player_character.set_moves( saved_moves );
-                }
-            }
-
-            std::vector<item *> worn_after;
-            player_character.worn.inv_dump( worn_after );
-
-            if( worn_after.size() != worn_before.size() ) {
-                cata_mp::mp_client_post_action();
-            }
-            return true;
-        }
-
-        if( act == ACTION_TAKE_OFF ) {
-            std::vector<item *> worn_before;
-            player_character.worn.inv_dump( worn_before );
-
-            takeoff();
-
-            std::vector<item *> worn_after;
-            player_character.worn.inv_dump( worn_after );
-
-            if( worn_after.size() != worn_before.size() ) {
-                cata_mp::mp_client_post_action();
-            }
-            return true;
-        }
-
-        if( act == ACTION_EAT ) {
-            if( !avatar_action::eat_here( player_character ) ) {
-                item_location loc = game_menus::inv::consume();
-                if( loc ) {
-                    const std::string itype = loc->typeId().str();
-                    avatar_action::eat_or_use( player_character, loc );
-                    mp_dispatch( "{\"type\":\"action\",\"action\":\"eat\",\"item\":\"" + itype + "\"}" );
-                    if( player_character.activity ) {
-                        add_msg( m_info, _( "Now consuming, %s to interrupt." ),
-                                 press_x( ACTION_PAUSE ) );
-                    }
-                }
-            } else {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"eat\",\"item\":\"\"}" );
-            }
-            return true;
-        }
-
-        if( act == ACTION_CONTROL_VEHICLE ) {
-            if( cata_mp::client_ctrl_veh() ) {
-                map &vmap = get_map();
-                const tripoint_abs_ms vabs = cata_mp::client_ctrl_veh_abs();
-                if( vmap.inbounds( vabs ) ) {
-                    const tripoint_bub_ms vbub = vmap.get_bub( vabs );
-                    if( const optional_vpart_position ovp = vmap.veh_at( vbub ) ) {
-                        vehicle &veh = ovp->vehicle();
-                        tripoint_bub_ms ctrl_pos = vbub;
-                        for( const vpart_reference &vpr : veh.get_avail_parts( "CONTROLS" ) ) {
-                            ctrl_pos = vpr.pos_bub( vmap );
-                            break;
-                        }
-                        veh.interact_with( &vmap, ctrl_pos );
-                    }
-                }
-            } else {
-                cata_mp::mp_log( "[cdda-mp] ^: client ctrl_veh hit, moves=" +
-                                  std::to_string( player_character.get_moves() ) +
-                                  " ack=" + std::to_string( cata_mp::is_client_waiting_for_ack() ) );
-                map &cv_map = get_map();
-                const tripoint_bub_ms cv_pos = player_character.pos_bub();
-                if( const optional_vpart_position ovp = cv_map.veh_at( cv_pos ) ) {
-                    vehicle &veh = ovp->vehicle();
-                    if( !veh.handle_potential_theft( player_character ) ) {
-                        return true;
-                    }
-                    if( veh.is_locked ) {
-                        veh.interact_with( &cv_map, cv_pos );
-                        return true;
-                    }
-                }
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"control_vehicle\"}" );
-            }
-            return true;
-        }
-
-        if( act == ACTION_PICK_STYLE ) {
-            cata_mp::mp_log( "[cdda-mp] client local-only action: pick_style" );
-        }
-    }
-
-    // Host waiting for client action: allow pure UI actions, block everything else.
-    if( cata_mp::is_hosting() && player_character.get_moves() <= 0 ) {
-        if( !host_ui_actions.count( act ) ) {
-            cata_mp::mp_log( "[cdda-mp] HOST-LOCKED-BLOCK: act=" + std::to_string( act ) );
-            return false;
-        }
-        cata_mp::mp_log( "[cdda-mp] HOST-LOCKED-ALLOW: act=" + std::to_string( act ) );
-    }
-#endif
-
     map &here = get_map();
 
     item_location weapon = player_character.get_wielded_item();
@@ -3168,11 +2456,6 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_TIMEOUT:
-#ifdef MP_ENABLED
-            if( cata_mp::is_client_mode() && player_character.activity ) {
-                break;
-            }
-#endif
             if( check_safe_mode_allowed( false ) ) {
                 player_character.pause();
             }
@@ -3499,54 +2782,25 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             }
             break;
 
-        case ACTION_GRAB: {
-#ifdef MP_ENABLED
-            object_type mp_pre_grab_type = player_character.get_grab_type();
-            tripoint_rel_ms mp_pre_grab_point = player_character.grab_point;
-#endif
+        case ACTION_GRAB:
             grab( mouse_target );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_dispatch_grab_if_changed( mp_pre_grab_type, mp_pre_grab_point );
-#endif
             break;
-        }
 
-        case ACTION_HAUL: {
-#ifdef MP_ENABLED
-            const bool mp_pre_hauling = player_character.is_hauling();
-#endif
+        case ACTION_HAUL:
             haul();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_dispatch_hauling_if_changed( mp_pre_hauling );
-#endif
             break;
-        }
 
-        case ACTION_HAUL_TOGGLE: {
-#ifdef MP_ENABLED
-            const bool mp_pre_hauling = player_character.is_hauling();
-#endif
+        case ACTION_HAUL_TOGGLE:
             haul_toggle();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_dispatch_hauling_if_changed( mp_pre_hauling );
-#endif
             break;
-        }
 
         case ACTION_BUTCHER:
             butcher( mouse_target );
             break;
 
-        case ACTION_CHAT: {
-#ifdef MP_ENABLED
-            const int pre_chat_moves = player_character.get_moves();
-#endif
+        case ACTION_CHAT:
             chat( mouse_target );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_chat_moves );
-#endif
             break;
-        }
 
         case ACTION_PEEK:
             if( mouse_target ) {
@@ -3580,29 +2834,15 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             game_menus::inv::swap_letters();
             break;
 
-        case ACTION_USE: {
+        case ACTION_USE:
             // Shell-users are presumed to be able to mess with their inventories, etc
             // while in the shell.  Eating, gear-changing, and item use are OK.
-#ifdef MP_ENABLED
-            const int pre_use_moves = player_character.get_moves();
-#endif
             avatar_action::use_item( player_character );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_use_moves );
-#endif
             break;
-        }
 
-        case ACTION_USE_WIELDED: {
-#ifdef MP_ENABLED
-            const int pre_use_moves = player_character.get_moves();
-#endif
+        case ACTION_USE_WIELDED:
             player_character.use_wielded();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_use_moves );
-#endif
             break;
-        }
 
         case ACTION_WEAR:
             wear();
@@ -3633,157 +2873,63 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             item_location loc = game_menus::inv::wield();
             if( loc ) {
                 player_character.wield( loc );
-#ifdef MP_ENABLED
-                cata_mp::mp_client_post_action();
-#endif
             }
             break;
         }
 
-#ifdef MP_ENABLED
-        case ACTION_PASS_ITEM:
-            cata_mp::mp_handle_pass_item();
-            break;
-
-        case ACTION_HIGH_FIVE:
-            cata_mp::mp_high_five();
-            break;
-
-        case ACTION_COOP_CHAT:
-            cata_mp::mp_open_chat();
-            break;
-#endif
-
         case ACTION_PICK_STYLE:
             player_character.martial_arts_data->pick_style( player_character );
-#ifdef MP_ENABLED
-            cata_mp::client_resync_worn();
-#endif
             break;
 
-        case ACTION_RELOAD_ITEM: {
-#ifdef MP_ENABLED
-            const int pre_reload_moves = player_character.get_moves();
-#endif
+        case ACTION_RELOAD_ITEM:
             reload_item();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_reload_moves );
-#endif
             break;
-        }
 
-        case ACTION_RELOAD_WEAPON: {
-#ifdef MP_ENABLED
-            const int pre_reload_moves = player_character.get_moves();
-#endif
+        case ACTION_RELOAD_WEAPON:
             reload_weapon();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_reload_moves );
-#endif
             break;
-        }
 
-        case ACTION_RELOAD_WIELDED: {
-#ifdef MP_ENABLED
-            const int pre_reload_moves = player_character.get_moves();
-#endif
+        case ACTION_RELOAD_WIELDED:
             reload_wielded();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_reload_moves );
-#endif
             break;
-        }
 
-        case ACTION_UNLOAD: {
-#ifdef MP_ENABLED
-            const int pre_unload_moves = player_character.get_moves();
-#endif
+        case ACTION_UNLOAD:
             avatar_action::unload( player_character );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_unload_moves );
-#endif
             break;
-        }
 
-        case ACTION_MEND: {
-#ifdef MP_ENABLED
-            const int pre_mend_moves = player_character.get_moves();
-#endif
+        case ACTION_MEND:
             avatar_action::mend( player_character, item_location() );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_mend_moves );
-#endif
             break;
-        }
 
         case ACTION_THROW: {
-#ifdef MP_ENABLED
-            const int pre_throw_moves = player_character.get_moves();
-#endif
             item_location loc;
             avatar_action::plthrow( player_character, loc );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_throw_moves );
-#endif
             break;
         }
 
         case ACTION_THROW_WIELDED: {
-#ifdef MP_ENABLED
-            const int pre_throw_moves = player_character.get_moves();
-#endif
             avatar_action::plthrow_wielded( player_character );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_throw_moves );
-#endif
             break;
         }
 
-        case ACTION_FIRE: {
-#ifdef MP_ENABLED
-            const int pre_fire_moves = player_character.get_moves();
-#endif
+        case ACTION_FIRE:
             fire();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_fire_moves );
-#endif
             break;
-        }
 
-        case ACTION_CAST_SPELL: {
-#ifdef MP_ENABLED
-            const int pre_cast_moves = player_character.get_moves();
-#endif
+        case ACTION_CAST_SPELL:
             cast_spell();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_cast_moves );
-#endif
             break;
-        }
 
-        case ACTION_RECAST_SPELL: {
-#ifdef MP_ENABLED
-            const int pre_cast_moves = player_character.get_moves();
-#endif
+        case ACTION_RECAST_SPELL:
             cast_spell( true );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_cast_moves );
-#endif
             break;
-        }
 
         case ACTION_FIRE_BURST: {
-#ifdef MP_ENABLED
-            const int pre_burst_moves = player_character.get_moves();
-#endif
             if( weapon ) {
                 if( weapon->gun_set_mode( gun_mode_BURST ) || weapon->gun_set_mode( gun_mode_AUTO ) ) {
                     avatar_action::fire_wielded_weapon( player_character );
                 }
             }
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_burst_moves );
-#endif
             break;
         }
 
@@ -3819,39 +2965,18 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             }
             break;
 
-        case ACTION_INSERT_ITEM: {
-#ifdef MP_ENABLED
-            const int pre_insert_moves = player_character.get_moves();
-#endif
+        case ACTION_INSERT_ITEM:
             insert_item();
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_insert_moves );
-#endif
             break;
-        }
 
-        case ACTION_UNLOAD_CONTAINER: {
+        case ACTION_UNLOAD_CONTAINER:
             // You CAN drop things to your own tile while in the shell.
-#ifdef MP_ENABLED
-            const int pre_unload_moves = player_character.get_moves();
-#endif
             unload_container( mouse_target );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_unload_moves );
-#endif
             break;
-        }
 
-        case ACTION_DROP: {
-#ifdef MP_ENABLED
-            const int pre_drop_moves = player_character.get_moves();
-#endif
+        case ACTION_DROP:
             drop_in_direction( player_character.pos_bub() );
-#ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_drop_moves );
-#endif
             break;
-        }
         case ACTION_DIR_DROP: {
             std::optional<tripoint_bub_ms> pnt = mouse_target;
             if( !pnt ) {
@@ -3860,15 +2985,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( pnt ) {
                 if( *pnt != player_character.pos_bub() && in_shell ) {
                     add_msg( m_info, _( "You can't drop things to another tile while you're in your shell." ) );
-    } else {
-        // MP-HOOK: verify - non-animation branch timeout and MP poll hooks
-#ifdef MP_ENABLED
-                    const int pre_drop_moves = player_character.get_moves();
-#endif
+                } else {
                     drop_in_direction( *pnt );
-#ifdef MP_ENABLED
-                    cata_mp::mp_client_post_action( pre_drop_moves );
-#endif
                 }
             }
             break;
@@ -4004,38 +3122,16 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_SAVE:
-#ifdef MP_ENABLED
-            if( cata_mp::is_client_mode() ) {
-                if( query_yn( _( "Save and disconnect? Your character will be saved locally so you can load it on rejoin." ) ) ) {
-                    if( save() ) {
-                        cata_mp::mp_notify_session_ending();
-                        player_character.set_moves( 0 );
-                        uquit = QUIT_SAVED;
-                    }
-                }
-            } else if( query_yn( _( "Save and quit?" ) ) ) {
-                if( save() ) {
-                    cata_mp::mp_notify_session_ending();
-                    player_character.set_moves( 0 );
-                    uquit = QUIT_SAVED;
-                    cata_mp::mp_log( "[mp-quit] HOST save&quit: saved + notified, uquit=QUIT_SAVED set" );
-                }
-            }
-#else
             if( query_yn( _( "Save and quit?" ) ) ) {
                 if( save() ) {
                     player_character.set_moves( 0 );
                     uquit = QUIT_SAVED;
                 }
             }
-#endif
             break;
 
         case ACTION_QUICKSAVE:
             quicksave();
-#ifdef MP_ENABLED
-            cata_mp::mp_after_quicksave();
-#endif
             return false;
 
         case ACTION_QUICKLOAD:
@@ -4262,12 +3358,6 @@ bool game::handle_action()
     // Check if we have an auto-move destination
     if( player_character.has_destination() ) {
         act = player_character.get_next_auto_move_direction();
-#ifdef MP_ENABLED
-        if( cata_mp::is_client_mode() ) {
-            cata_mp::mp_log( std::string( "[cdda-mp] HA-AUTOMOVE: dest=on next=" ) +
-                              action_ident( act ) );
-        }
-#endif
         if( act == ACTION_NULL ) {
             add_msg( m_info, _( "Auto-move canceled" ) );
             player_character.abort_automove();
@@ -4289,13 +3379,6 @@ bool game::handle_action()
         // No auto-move, ask player for input
         ctxt = get_player_input( action );
     }
-
-#ifdef MP_ENABLED
-    if( cata_mp::is_client_mode() && action != "TIMEOUT" ) {
-        cata_mp::mp_log( "[cdda-mp] HA-ACTION: action=\"" + action +
-                          "\" moves=" + std::to_string( player_character.get_moves() ) );
-    }
-#endif
 
     // Remove asynchronous animations if any action taken before the input timeout
     // Otherwise repeated input can cause animations to accumulate as the timeout is never reached
@@ -4333,28 +3416,10 @@ bool game::handle_action()
             // No auto-move actions have or can be set at this point.
             player_character.clear_destination();
             destination_preview.clear();
-#ifdef MP_ENABLED
-            cata_mp::mp_log( "[cdda-mp] MAIN-MENU: enter" );
-#endif
             act = handle_main_menu();
-#ifdef MP_ENABLED
-            cata_mp::mp_log( "[cdda-mp] MAIN-MENU: exit, act=" + std::to_string( static_cast<int>( act ) ) );
-#endif
             if( act == ACTION_NULL ) {
-#ifdef MP_ENABLED
-                cata_mp::mp_log( "[cdda-mp] MAIN-MENU: dismissed (ACTION_NULL), returning false" );
-#endif
                 return false;
             }
-#ifdef MP_ENABLED
-            // Re-gate: handle_main_menu may return an AP-costing action.
-            // If the host is locked, block it.
-            if( cata_mp::is_hosting() && player_character.get_moves() <= 0 &&
-                !host_ui_actions.count( act ) ) {
-                add_msg( m_info, _( "Waiting for partner — can't do that yet." ) );
-                return false;
-            }
-#endif
         }
 
 #if defined(TILES)
@@ -4486,12 +3551,6 @@ bool game::handle_action()
         return false;
     }
 
-#ifdef MP_ENABLED
-    // Client mode: if an action moved the avatar without going through mp_dispatch
-    // (e.g. climbing stairs), catch the position change and sync it.
-    const tripoint_abs_ms pre_action_pos = player_character.pos_abs();
-#endif
-
     // This has no action unless we're in a special game mode.
     gamemode->pre_action( act );
 
@@ -4514,21 +3573,6 @@ bool game::handle_action()
     if( act != ACTION_PAUSE ) {
         player_character.magic->break_channeling( player_character );
     }
-
-#ifdef MP_ENABLED
-    // Client mode: if an action moved the avatar without going through mp_dispatch
-    if( cata_mp::is_client_mode() && player_character.pos_abs() != pre_action_pos &&
-        act != ACTION_TIMEOUT && before_action_moves > 0 ) {
-        const std::string json =
-            "{\"type\":\"action\",\"action\":\"teleport\""
-            ",\"x\":" + std::to_string( player_character.pos_abs().x() ) +
-            ",\"y\":" + std::to_string( player_character.pos_abs().y() ) +
-            ",\"z\":" + std::to_string( player_character.pos_abs().z() ) +
-            ",\"move_mode\":\"" + player_character.move_mode.str() + "\"}";
-        cata_mp::client_send( cata_mp::client_enrich_action( json ) );
-        cata_mp::client_mark_action_sent();
-    }
-#endif
 
     gamemode->post_action( act );
 

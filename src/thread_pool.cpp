@@ -90,7 +90,7 @@ cata_thread_pool &get_thread_pool()
         // Respect the "disable multi-threading" setting.  This is read via
         // get_option<bool>() directly (not the cached parallel_enabled global)
         // because cache_to_globals() has not yet run at pool-init time.
-        if( has_option( "MULTITHREADING_ENABLED" ) && !get_option<bool>( "MULTITHREADING_ENABLED" ) )
+        if( !get_option<bool>( "MULTITHREADING_ENABLED" ) )
         {
             return 0u;
         }

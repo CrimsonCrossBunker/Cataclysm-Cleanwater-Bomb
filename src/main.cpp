@@ -22,7 +22,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <thread>
 #if defined(_WIN32)
     #include "cata_allocator.h"
     #include "platform_win.h"
@@ -63,10 +62,6 @@
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
-#define MP_ENABLED
-#include "mp_server.h"
-#include "mp_gamestate.h"
-#include "mp_client_conn.h"
 #include "cata_imgui.h"
 #if defined(MACOSX) || defined(__CYGWIN__)
     #include <unistd.h> // getpid()
@@ -292,17 +287,10 @@ struct cli_opts {
     bool noverify = false;
     bool check_mods = false;
     std::vector<std::string> opts;
-    std::string world;
+    std::string world; /** if set try to load first save in this world on startup */
     bool disable_ascii_art = false;
-    std::string replay_record;
-    std::string replay_play;
-    bool server_mode = false;
-    bool host_mode = false;
-    bool client_mode = false;
-    std::string client_host;
-    uint16_t client_port = 8080;
-    std::string client_name;
-    std::string server_password;
+    std::string replay_record; /** if set, record input events to this path */
+    std::string replay_play;   /** if set, replay input events from this path */
 };
 
 cli_opts parse_commandline( int argc, const char **argv )
@@ -570,64 +558,6 @@ cli_opts parse_commandline( int argc, const char **argv )
                 1,
                 []( int, const char **params ) -> int {
                     PATH_INFO::set_motd( params[0] );
-                    return 1;
-                }
-            },
-            {
-                "--server", {},
-                "Run as dedicated headless multiplayer server",
-                section_default,
-                0,
-                [&result]( int, const char ** ) -> int {
-                    result.server_mode = true;
-                    return 0;
-                }
-            },
-            {
-                "--host", {},
-                "Host a multiplayer session (listen server)",
-                section_default,
-                0,
-                [&result]( int, const char ** ) -> int {
-                    result.host_mode = true;
-                    return 0;
-                }
-            },
-            {
-                "--port", "<port>",
-                "TCP port for multiplayer server (default 8080)",
-                section_default,
-                1,
-                [&result]( int, const char **params ) -> int {
-                    result.client_port = static_cast<uint16_t>( std::stoi( params[0] ) );
-                    return 1;
-                }
-            },
-            {
-                "--password", "<string>",
-                "Password for multiplayer server",
-                section_default,
-                1,
-                [&result]( int, const char **params ) -> int {
-                    result.server_password = params[0];
-                    return 1;
-                }
-            },
-            {
-                "--client", "<host:port>",
-                "Connect to multiplayer server as client",
-                section_default,
-                1,
-                [&result]( int, const char **params ) -> int {
-                    result.client_mode = true;
-                    const std::string arg = params[0];
-                    const auto colon = arg.rfind( ':' );
-                    if( colon != std::string::npos ) {
-                        result.client_host = arg.substr( 0, colon );
-                        result.client_port = static_cast<uint16_t>( std::stoi( arg.substr( colon + 1 ) ) );
-                    } else {
-                        result.client_host = arg;
-                    }
                     return 1;
                 }
             },
@@ -904,28 +834,6 @@ int main( int argc, const char *argv[] )
     game_ui::init_ui();
 
     g = std::make_unique<game>();
-
-    // Multiplayer mode setup
-#ifdef MP_ENABLED
-    if( cli.server_mode ) {
-        cata_mp::set_server_mode( true );
-    } else if( cli.client_mode ) {
-        cata_mp::set_client_mode( true );
-        cata_mp::client_connect( cli.client_host, cli.client_port,
-                                 cli.client_name, cli.server_password,
-                                 getVersionString() );
-    } else if( cli.host_mode ) {
-        cata_mp::set_host_mode( true );
-        const uint16_t port = cli.client_port;
-        const std::string password = cli.server_password;
-        const std::string ver = getVersionString();
-        std::thread host_thread( [port, password, ver]() {
-            cata_mp::run_server( port, password, ver );
-        } );
-        host_thread.detach();
-        printf( "[cdda-mp] Hosting on port %d — waiting for player 2...\n", port );
-    }
-#endif
 
     // First load and initialize everything that does not
     // depend on the mods.

@@ -1,6 +1,5 @@
 #include "map.h"
 
-#define MP_ENABLED
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -73,9 +72,6 @@
 #include "mapdata.h"
 #include "mapgen.h"
 #include "material.h"
-#ifdef MP_ENABLED
-#include "mp_gamestate.h"
-#endif
 #include "math_defines.h"
 #include "mission.h"
 #include "memory_fast.h"
@@ -1161,9 +1157,6 @@ void map::vehmove()
         if( !vehproceed( vehicle_list ) ) {
             break;
         }
-#ifdef MP_ENABLED
-        cata_mp::host_broadcast_vehicle_step();
-#endif
     }
     // Process item removal on the vehicles that were modified this turn.
     // Use a copy because part_removal_cleanup can modify the container.
@@ -1319,17 +1312,6 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
     do {
         collisions.clear();
         veh.collision( *this, collisions, dp1, false );
-#ifdef MP_ENABLED
-        if( cata_mp::is_hosting() && !collisions.empty() ) {
-            for( const veh_collision &c : collisions ) {
-                cata_mp::mp_log( "[veh-coll] veh=" + veh.name +
-                                  " type=" + std::to_string( static_cast<int>( c.type ) ) +
-                                  " imp=" + std::to_string( c.imp ) +
-                                  " target=" + c.target_name +
-                                  " dp=" + std::to_string( dp1.x() ) + "," + std::to_string( dp1.y() ) );
-            }
-        }
-#endif
 
         // Vehicle collisions
         std::map<vehicle *, std::vector<veh_collision> > veh_collisions;

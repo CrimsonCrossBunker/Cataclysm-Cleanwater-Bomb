@@ -362,9 +362,6 @@ enum action_id : int {
     ACTION_TOGGLE_HOUR_TIMER,
     /** Interact with the current or nearby tile */
     ACTION_INTERACT,
-    ACTION_COOP_CHAT,
-    ACTION_PASS_ITEM,
-    ACTION_HIGH_FIVE,
     /** Not an action, serves as count of enumerated actions */
     NUM_ACTIONS
     /**@}*/

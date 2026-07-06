@@ -2990,11 +2990,11 @@ void options_manager::add_options_performance()
        );
 
     add( "MULTITHREADING_ENABLED", "performance",
-         to_translation( "Enable multithreading (highly unstable)" ),
+         to_translation( "Enable multithreading" ),
          to_translation( "Enable the persistent worker thread pool for parallelizing "
                          "game-logic work (cache rebuilds, monster AI, etc.).  "
-                         "Highly unstable: most subsystems are not yet wired to the pool, "
-                         "and multiplayer mode may cause data races.  "
+                         "Experimental: most subsystems are not yet wired to the pool, so "
+                         "the effect is limited until more call sites adopt it.  "
                          "Requires a restart after changing." ),
          false
        );
