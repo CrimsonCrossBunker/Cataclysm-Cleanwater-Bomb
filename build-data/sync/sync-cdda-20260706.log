@@ -1,0 +1,9 @@
+# sync-cdda-20260706 — 直链清径糖水炸弹 (CCB) 上游同步日志
+# ================================================================
+# 日期: 2026-07-06
+# 来源: CleverRaven/Cataclysm-DDA (cdda-upstream/master)
+# 目标: LYHGLYTX/Cataclysm-Cleanwater-Bomb (master)
+# 提交数: 113
+# 上游 PR: #87869–#87907 (11 个)
+# 冲突: 4 (全部 de-charge/display_type 相关)
+# 解决: 全部按 SYNC_EXCLUDED_PRS.md 保留 CCB 版本
