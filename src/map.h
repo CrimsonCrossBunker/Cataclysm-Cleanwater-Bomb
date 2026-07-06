@@ -704,6 +704,14 @@ class map
                 int cost_min, int cost_max ) const;
 
         /**
+         * Populates a vector of points that can provide reachable items.
+         * This matches reachable_flood_steps(), but also includes nearby parts
+         * of the same airborne vehicle as @p f so cargo remains usable in flight.
+         */
+        std::vector<tripoint_bub_ms> reachable_item_points( const tripoint_bub_ms &f, int range,
+                int cost_min, int cost_max ) const;
+
+        /**
          * Iteratively tries Bresenham lines with different biases
          * until it finds a clear line or decides there isn't one.
          * returns the line found, which may be the straight line, but blocked.
