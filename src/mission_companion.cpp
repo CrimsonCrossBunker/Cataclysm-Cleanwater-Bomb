@@ -78,7 +78,6 @@
 
 static const efftype_id effect_riding( "riding" );
 
-static const furn_str_id furn_f_plant_harvest( "f_plant_harvest" );
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
 
 static const item_group_id Item_spawn_data_farming_seeds( "farming_seeds" );

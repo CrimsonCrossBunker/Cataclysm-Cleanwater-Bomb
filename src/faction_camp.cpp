@@ -128,7 +128,6 @@ static const faction_mission_id faction_mission_camp_survey_expansion( "camp_sur
 static const faction_mission_id faction_mission_camp_survey_field( "camp_survey_field" );
 static const faction_mission_id faction_mission_camp_trapping( "camp_trapping" );
 
-static const furn_str_id furn_f_plant_harvest( "f_plant_harvest" );
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
 
 static const item_group_id
