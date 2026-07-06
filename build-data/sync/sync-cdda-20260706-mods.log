@@ -1,0 +1,18 @@
+# sync-cdda-20260706 — MOD 兼容性验证
+
+## Xedra_Evolved (CCB 已集成 mod)
+- eoc_strange_events.json: upstream 添加 { "current_dimension": "" } 条件
+  → 纯新增条件，无冲突，安全
+- changeling.json: upstream 添加 "luminance": 5000 到夏季之王
+  → 新字段，无冲突，安全
+- #87905 (xe-summer-march-lord-glowup): 同上，夏季之王发光度增强
+- #87869 (knack-bonuses): 魔法天赋加成调整
+  → 新数值，无冲突
+
+## 其他 MOD
+- #87893 (Aftershock 工具店): Aftershock mod 内容，CCB 未集成
+- #87903 (隔离协议办公室): ISO mod 内容，CCB 未集成
+- 以上 mod 不在 CCB 范围内，直接同步
+
+## 结论
+本次同步无 MOD 兼容性问题。所有 CCB 已集成 mod 的变更都是纯新增/数值调整。
