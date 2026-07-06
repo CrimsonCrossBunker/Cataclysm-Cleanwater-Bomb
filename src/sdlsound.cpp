@@ -37,6 +37,7 @@
 #include "units.h"
 #include "avatar.h"
 #include "game.h"
+#include "mp_gamestate.h"
 
 #define dbg(x) DebugLog((x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -715,6 +716,9 @@ void sfx::play_variant_sound( std::string_view id, std::string_view variant,
     opts.volume = selected_sound_effect.volume *
                   get_option<int>( "SOUND_EFFECT_VOLUME" ) * volume / ( 100 * 100 );
     sound_backend::play_oneshot( effect_to_play, opts );
+    if( cata_mp::is_hosting() ) {
+        cata_mp::host_queue_sfx( std::string( id ), std::string( variant ), volume );
+    }
 }
 
 void sfx::play_variant_sound( std::string_view id, std::string_view variant,
@@ -748,6 +752,9 @@ void sfx::play_variant_sound( std::string_view id, std::string_view variant,
     opts.positional = true;
     opts.pitch = is_pitched ? static_cast<float>( rng_float( pitch_min, pitch_max ) ) : 1.0f;
     sound_backend::play_oneshot( effect_to_play, opts );
+    if( cata_mp::is_hosting() ) {
+        cata_mp::host_queue_sfx( std::string( id ), std::string( variant ), volume );
+    }
 }
 
 void sfx::play_ambient_variant_sound( std::string_view id, std::string_view variant,
