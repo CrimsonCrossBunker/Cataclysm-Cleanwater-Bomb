@@ -259,3 +259,4 @@ Gemfile.lock
 VERSION.txt
 /replay_userdir/
 *.replay
+build-tracy/

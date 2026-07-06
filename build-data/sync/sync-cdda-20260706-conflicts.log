@@ -1,0 +1,19 @@
+# sync-cdda-20260706 — 冲突解决详情
+# 1 处真实冲突 (#87897 bleach)，其余由剔除的 #87899/#87900 造成
+
+## SUS/domestic.json (PR #87897 — bleach bottles)
+上游: chem_washing_soda charges→count, bleach item→bleach_jug_part group
+CCB:  保留 chem_washing_soda charges:[1,-1]
+      保留 bleach charges:[1,-1]
+
+## locations.json (已剔除 — PR #87899)
+上游: 删除 material_sand，material_soil charges→count [70,140]，无容器
+CCB:  保留 CCB 版本（#87899 已剔除，按排除表处理）
+
+## collections_domestic.json ×3 (已剔除 — PR #87897, #87900)
+上游: bleach→group, chem_washing_soda charges→count, detergent→group, borax→group
+CCB:  保留 CCB 版本（#87897 部分同步, #87900 未同步）
+
+## chemicals_and_resources.json ×2 (已剔除 — PR #87900)
+上游: 删除 display_type BY_WEIGHT/stackable, 体积/重量调大
+CCB:  保留 CCB 版本（#87900 未同步）

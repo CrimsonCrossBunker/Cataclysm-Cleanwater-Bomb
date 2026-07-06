@@ -1,0 +1,15 @@
+# sync-cdda-20260706 — 剔除/排除的上游 PR
+
+## 本次剔除
+
+| PR     | 标题                        | 理由 |
+|--------|-----------------------------|------|
+| #87899 | sack-o-pocalypsis          | de-charge 系列延续：沙/土去量化(charges→count)+移除容器，与 CCB charges+container 模型冲突 |
+
+## 本次排除（已在之前记录，本次仅处理冲突）
+
+| PR     | 标题                        | SYNC_EXCLUDED_PRS 状态 | 处理              |
+|--------|-----------------------------|------------------------|-------------------|
+| #87897 | bleach bottles, BY_VOLUME  | 部分同步               | 保留 CCB charges  |
+| #87900 | Display detergent by weight | 未同步                 | 保留 BY_WEIGHT    |
+

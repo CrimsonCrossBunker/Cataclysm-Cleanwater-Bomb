@@ -1,0 +1,18 @@
+# sync-cdda-20260706 — 上游 PR 清单
+# 来源: CleverRaven/Cataclysm-DDA, 2026-07-05 ~ 2026-07-06
+
+#87869 — Standing-Storm/knack-bonuses                  (Xedra 魔法加成)
+#87884 — d3c06f6b2a4 Fix grammar in Game Design textbook description (文档修正)
+#87893 — John-Candlebury/afs-tool-shop-stuff            (Aftershock 工具店)
+#87896 — ZiggyRogue/add-lagomorph-gland                 (添加兔形目腺体)
+#87898 — Fris0uman/no_blind_target_practice             (禁止黑暗靶练)
+#87902 — Standing-Storm/lilit-attack-fix               (莉莉特攻击修复)
+#87903 — John-Candlebury/iso-upgrade-office             (隔离协议办公室)
+#87904 — GuardianDll/hotwire                            (热接线防 immobilizer)
+#87905 — gettingusedto/xe-summer-march-lord-glowup      (夏至之主的发光度)
+#87907 — jorts pockets                                  (短裤口袋)
+
+# 已排除（冲突，保留 CCB 版本）:
+#87897 — bleach bottles, BY_VOLUME                       (在库待回退)
+#87899 — sack-o-pocalypsis                               (剔除 — de-charge 系列)
+#87900 — Display detergent by weight                     (未同步)

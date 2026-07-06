@@ -1,0 +1,12 @@
+# sync-cdda-20260706 — 源代码变更验证
+
+## src/vehicle_use.cpp (PR #87904 — hotwire)
+- 上游添加 immobilizer 检测: hotwire 仅在没有 immobilizer 故障时才有效
+- 纯新增逻辑，与 CCB 代码无冲突
+
+## 其他 src 文件
+- 本次同步无其他 C++ 源代码变更
+- 所有变更均在 data/ JSON 和 mod 目录
+
+## 结论
+源代码变更安全，无 CCB 专属代码冲突。
