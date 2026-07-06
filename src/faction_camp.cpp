@@ -3546,8 +3546,10 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                 break;
             case farm_ops::harvest:
                 farm_map.grow_plant( pos );
-                if( iexamine::is_plant_harvestable( farm_map,
-                        farm_map.get_bub( farm_map.get_abs( pos ) ) ) ) {
+            {
+                map *farm_map_ptr = farm_map.cast_to_map();
+                if( iexamine::is_plant_harvestable( *farm_map_ptr,
+                        farm_map_ptr->get_bub( farm_map.get_abs( pos ) ) ) ) {
                     // Can't use item_stack::only_item() since there might be fertilizer
                     map_stack items = farm_map.i_at( pos );
                     const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
@@ -3563,7 +3565,6 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                             plant_count = std::min( std::max( plant_count, 1 ), 12 );
                             int seed_cnt = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
 
-                            map *farm_map_ptr = farm_map.cast_to_map();
                             // Secure the seed type before EOCs or i_clear destroy the item.
                             const itype &seed_type = *seed->type;
 
@@ -3605,6 +3606,7 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                         }
                     }
                 }
+            }
                 break;
             default:
                 // let the callers handle no op argument

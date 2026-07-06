@@ -15,6 +15,7 @@
 #include "generic_factory.h"
 #include "iexamine.h"
 #include "item.h"
+#include "itype.h"
 #include "magic_ter_furn_transform.h"
 #include "map.h"
 #include "mapdata.h"
