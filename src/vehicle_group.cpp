@@ -189,14 +189,18 @@ void VehicleSpawn::load( const JsonObject &jo )
     for( JsonObject type : jo.get_array( "spawn_types" ) ) {
         if( type.has_object( "vehicle_json" ) ) {
             JsonObject vjo = type.get_object( "vehicle_json" );
-            spawn.add( type.get_float( "weight" ), make_shared_fast<VehicleFunction_json>( vjo ) );
+            const std::shared_ptr<VehicleFunction> func =
+                std::make_shared<VehicleFunction_json>( vjo );
+            spawn.add( type.get_float( "weight" ), func );
         } else if( type.has_string( "vehicle_function" ) ) {
             if( builtin_functions.count( type.get_string( "vehicle_function" ) ) == 0 ) {
                 type.throw_error_at( "vehicle_function", "load_vehicle_spawn: unable to find builtin function" );
             }
 
-            spawn.add( type.get_float( "weight" ), make_shared_fast<VehicleFunction_builtin>
-                       ( builtin_functions[type.get_string( "vehicle_function" )] ) );
+            const std::shared_ptr<VehicleFunction> func =
+                std::make_shared<VehicleFunction_builtin>(
+                    builtin_functions[type.get_string( "vehicle_function" )] );
+            spawn.add( type.get_float( "weight" ), func );
         } else {
             type.throw_error( "load_vehicle_spawn: missing required vehicle_json (object) or vehicle_function (string)." );
         }
@@ -210,7 +214,7 @@ void VehicleSpawn::reset()
 
 void VehicleSpawn::apply( map &m, const std::string &terrain_name ) const
 {
-    const shared_ptr_fast<VehicleFunction> *func = types.pick();
+    const std::shared_ptr<VehicleFunction> *func = types.pick();
     if( func == nullptr ) {
         debugmsg( "unable to find valid function for vehicle spawn" );
     } else {

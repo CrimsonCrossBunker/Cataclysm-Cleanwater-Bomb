@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_VEHICLE_GROUP_H
 #define CATA_SRC_VEHICLE_GROUP_H
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -10,7 +11,6 @@
 
 #include "coords_fwd.h"
 #include "mapgen_primitives.h"
-#include "memory_fast.h"
 #include "rng.h"
 #include "type_id.h"
 #include "units.h"
@@ -163,7 +163,7 @@ class VehicleSpawn
     public:
         VehicleSpawn() = default;
 
-        void add( const double &weight, const shared_ptr_fast<VehicleFunction> &func ) {
+        void add( const double &weight, const std::shared_ptr<VehicleFunction> &func ) {
             types.add( func, weight );
         }
 
@@ -186,7 +186,7 @@ class VehicleSpawn
         static void reset();
 
     private:
-        weighted_float_list<shared_ptr_fast<VehicleFunction>> types;
+        weighted_float_list<std::shared_ptr<VehicleFunction>> types;
 
         using FunctionMap = std::unordered_map<std::string, vehicle_gen_pointer>;
         static FunctionMap builtin_functions;
