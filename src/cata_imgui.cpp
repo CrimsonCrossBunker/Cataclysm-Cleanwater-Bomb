@@ -985,7 +985,8 @@ cataimgui::window::window( int window_flags )
 cataimgui::window::window( const std::string &id_, int window_flags ) : window( window_flags )
 {
     p_impl = std::make_unique<cataimgui::window_impl>( this );
-    id = id_ + "##" + std::to_string( uint64_t( this ) );
+    const std::string &safe_id = id_.empty() ? "window" : id_;
+    id = safe_id + "##" + std::to_string( uint64_t( this ) );
     is_open = true;
 }
 
