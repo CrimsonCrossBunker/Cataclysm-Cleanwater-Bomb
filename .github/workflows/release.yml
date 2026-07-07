@@ -31,14 +31,16 @@ jobs:
     permissions: write-all
     outputs:
       timestamp: ${{ steps.meta.outputs.time }}
+      tag_name: ${{ steps.meta.outputs.tag_name }}
     steps:
       - name: Generate release metadata
         id: meta
         run: |
           time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d-%H%M")
+          title_time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d %H:%M")
           echo "time=$time" >> $GITHUB_OUTPUT
-          echo "tag_name=ccb-experimental-${time}" >> $GITHUB_OUTPUT
-          echo "release_name=Cataclysm-Cleanwater-Bomb experimental build ${time}" >> $GITHUB_OUTPUT
+          echo "tag_name=${time}" >> $GITHUB_OUTPUT
+          echo "release_name=Experimental ${title_time}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
@@ -779,4 +781,4 @@ jobs:
                mv ./app/build/outputs/apk/experimental/release/*.apk ../ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.apk 
           fi
       - run: |
-          gh release upload ccb-experimental-${{ needs.release.outputs.timestamp }} ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.${{ matrix.ext }}
+          gh release upload '${{ needs.release.outputs.tag_name }}' ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.${{ matrix.ext }}
