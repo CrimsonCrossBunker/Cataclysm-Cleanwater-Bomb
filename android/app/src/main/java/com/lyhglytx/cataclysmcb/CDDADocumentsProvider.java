@@ -114,7 +114,7 @@ public class CDDADocumentsProvider extends DocumentsProvider {
             } else if (DocumentsContract.Root.COLUMN_DOCUMENT_ID.equals(col)) {
                 rowValues[i] = ROOT_DOCUMENT_ID;
             } else if (DocumentsContract.Root.COLUMN_ICON.equals(col)) {
-                rowValues[i] = R.drawable.ic_launcher;
+                rowValues[i] = R.mipmap.ic_launcher;
             } else if (DocumentsContract.Root.COLUMN_AVAILABLE_BYTES.equals(col)) {
                 // Available on API 23+
                 rowValues[i] = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? externalDataRoot.getFreeSpace() : 0L;
