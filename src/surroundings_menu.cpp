@@ -341,7 +341,8 @@ int item_tab_data::get_max_entity_width()
 
 std::optional<tripoint_rel_ms> item_tab_data::get_selected_pos()
 {
-    if( !selected_entry ) {
+    if( !selected_entry ||
+        std::find( filtered_list.begin(), filtered_list.end(), selected_entry ) == filtered_list.end() ) {
         return std::nullopt;
     }
 
@@ -492,7 +493,8 @@ int monster_tab_data::get_max_entity_width()
 
 std::optional<tripoint_rel_ms> monster_tab_data::get_selected_pos()
 {
-    if( !selected_entry ) {
+    if( !selected_entry ||
+        std::find( filtered_list.begin(), filtered_list.end(), selected_entry ) == filtered_list.end() ) {
         return std::nullopt;
     }
 
@@ -680,7 +682,8 @@ int terfurn_tab_data::get_max_entity_width()
 
 std::optional<tripoint_rel_ms> terfurn_tab_data::get_selected_pos()
 {
-    if( !selected_entry ) {
+    if( !selected_entry ||
+        std::find( filtered_list.begin(), filtered_list.end(), selected_entry ) == filtered_list.end() ) {
         return std::nullopt;
     }
 
