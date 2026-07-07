@@ -2677,11 +2677,7 @@ void monster::load( const JsonObject &data )
     }
     data.read( "mission_fused", mission_fused );
     // for migration, remove in 0.K
-    if( data.has_object( "no_extra_death_drops" ) ) {
-        bool no_extra_death_drops;
-        data.read( "no_extra_death_drops", no_extra_death_drops );
-        death_drops = !no_extra_death_drops;
-    }
+    data.read( "no_extra_death_drops", no_extra_death_drops );
     data.read( "death_drops", death_drops );
     data.read( "spawn_corpse", spawn_corpse );
     data.read( "death_message", death_message );
@@ -2771,6 +2767,7 @@ void monster::store( JsonOut &json ) const
     json.member( "faction", faction.id().str() );
     json.member( "mission_ids", mission_ids );
     json.member( "mission_fused", mission_fused );
+    json.member( "no_extra_death_drops", no_extra_death_drops );
     json.member( "death_drops", death_drops );
     json.member( "spawn_corpse", spawn_corpse );
     json.member( "death_message", death_message );

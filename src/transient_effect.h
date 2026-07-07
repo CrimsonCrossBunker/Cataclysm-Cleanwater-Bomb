@@ -21,4 +21,4 @@ enum class effect_kind : uint8_t {
     highlight,
 };
 
-#endif
+#endif // CATA_SRC_TRANSIENT_EFFECT_H

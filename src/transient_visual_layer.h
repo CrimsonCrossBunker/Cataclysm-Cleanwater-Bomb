@@ -15,4 +15,4 @@
 class transient_visual_layer {
 };
 
-#endif
+#endif // CATA_SRC_TRANSIENT_VISUAL_LAYER_H

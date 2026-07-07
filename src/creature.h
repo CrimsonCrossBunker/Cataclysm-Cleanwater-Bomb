@@ -1298,6 +1298,8 @@ class Creature : public viewer
         bool spawn_corpse = true;
         // drop everything this creature has in inventory
         bool death_drops = true;
+        // Death drop inventory was already generated, but corpse/dissectable drops still apply.
+        bool no_extra_death_drops = false;
 
     protected:
         bool fake = false;

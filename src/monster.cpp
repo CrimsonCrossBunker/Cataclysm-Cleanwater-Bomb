@@ -3243,7 +3243,7 @@ void monster::die( map *here, Creature *nkiller )
     }
 
     if( death_drops ) {
-        if( death_drops ) {
+        if( !no_extra_death_drops ) {
             drop_items_on_death( here, corpse.get_item() );
         }
         spawn_dissectables_on_death( corpse.get_item() );
@@ -3366,7 +3366,7 @@ void monster::generate_inventory( bool disableDrops )
         }
         inv.push_back( it );
     }
-    death_drops = !disableDrops;
+    no_extra_death_drops = disableDrops;
 }
 
 void monster::drop_items_on_death( map *here, item *corpse ) const

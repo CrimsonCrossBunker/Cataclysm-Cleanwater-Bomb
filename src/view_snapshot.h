@@ -254,6 +254,7 @@ class draw_points_cache_t
         class level_rows
         {
             public:
+                // NOLINTNEXTLINE(cata-large-inline-function)
                 row_vec &operator[]( const int row ) {
                     if( !initialized ) {
                         row_base = row;

@@ -25,4 +25,4 @@ struct sct_effect {
     effect_handle handle = 0;  // for cancel_effect(); zero until registered
 };
 
-#endif
+#endif // CATA_SRC_SCT_EFFECT_H

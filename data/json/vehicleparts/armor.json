@@ -25,7 +25,7 @@
     "type": "vehicle_part",
     "item": "spring_plate",
     "description": "A makeshift combination of springs and scrap that protects a particular section of a vehicle from the shock of impacts.  The springs can absorb a surprising amount of damage.",
-    "location": "damping",
+    "location": "armor",
     "categories": [ "warfare" ],
     "color": "dark_gray",
     "broken_color": "dark_gray",

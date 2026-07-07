@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <list>
@@ -14,9 +15,9 @@
 
 #include "bodypart.h"
 #include "calendar.h"
-#include "cata_variant.h"
 #include "cata_compiler_support.h"
 #include "cata_utility.h"
+#include "cata_variant.h"
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
@@ -58,6 +59,8 @@
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vpart_position.h"
+#include "vpart_range.h"
 #include "weather.h"
 #include "weather_gen.h"
 #include "weather_type.h"
@@ -1563,7 +1566,7 @@ void item_rot_ass( double val, dialogue &d, char scope, std::vector<diag_value> 
             double turns = val;
             if( !unit_val.is_empty() ) {
                 std::string_view unit = unit_val.str( d );
-                auto iter = std::find_if( time_duration::units.cbegin(), time_duration::units.cend(),
+                const auto *iter = std::find_if( time_duration::units.cbegin(), time_duration::units.cend(),
                 [&unit]( std::pair<std::string_view, time_duration> const & u ) {
                     return u.first == unit;
                 } );
