@@ -45,6 +45,7 @@
 #include "item.h"
 #include "item_location.h"
 #include "item_transformation.h"
+#include "iexamine.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
@@ -317,9 +318,11 @@ bool mattack::eat_crop( monster *z )
     int num_targets = 1;
     map &here = get_map();
     for( const tripoint_bub_ms &p : here.points_in_radius( z->pos_bub(), 1 ) ) {
+        // Synchronize before deciding whether this crop is edible.
+        here.grow_plant( p );
         if( here.has_flag( ter_furn_flag::TFLAG_PLANT, p ) &&
-            ( here.has_flag( ter_furn_flag::TFLAG_GROWTH_HARVEST, p ) ||
-              here.has_flag( ter_furn_flag::TFLAG_GROWTH_MATURE, p ) ) && one_in( num_targets ) ) {
+            ( iexamine::is_plant_harvestable( here, p ) ||
+              iexamine::is_plant_mature( here, p ) ) && one_in( num_targets ) ) {
             num_targets++;
             target = p;
         }

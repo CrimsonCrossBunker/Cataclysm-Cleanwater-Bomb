@@ -68,6 +68,10 @@ enum class event_type : int {
     character_wears_item,
     character_takeoff_item,
     character_armor_destroyed,
+    character_fertilizes_plant,
+    character_harvests_plant,
+    character_plants_seed,
+    character_waters_plant,
     consumes_marloss_item,
     crosses_marloss_threshold,
     crosses_mutation_threshold,
@@ -198,7 +202,7 @@ struct event_spec_character_item {
 // NOTE: Events are saved to the character file for later memorializing them. It's currently unsafe to ever remove any of these.
 // Removal will cause any save file with one of the saved events to be unable to load.
 // FIXME.
-static_assert( static_cast<int>( event_type::num_event_types ) == 109,
+static_assert( static_cast<int>( event_type::num_event_types ) == 113,
                "This static_assert is to remind you to add a specialization for your new "
                "event_type below" );
 
@@ -550,6 +554,55 @@ template<>
 struct event_spec<event_type::character_takeoff_item> : event_spec_character_item {};
 template<>
 struct event_spec<event_type::character_armor_destroyed> : event_spec_character_item {};
+
+template<>
+struct event_spec<event_type::character_fertilizes_plant> {
+    static constexpr std::array<event_field, 6> fields = { {
+            { "character", cata_variant_type::character_id },
+            { "pos", cata_variant_type::tripoint },
+            { "seed_id", cata_variant_type::itype_id },
+            { "furniture_id", cata_variant_type::furn_str_id },
+            { "fertilizer_id", cata_variant_type::itype_id },
+            { "reduction_turns", cata_variant_type::int_ },
+        }
+    };
+};
+
+template<>
+struct event_spec<event_type::character_harvests_plant> {
+    static constexpr std::array<event_field, 6> fields = { {
+            { "character", cata_variant_type::character_id },
+            { "pos", cata_variant_type::tripoint },
+            { "seed_id", cata_variant_type::itype_id },
+            { "furniture_id", cata_variant_type::furn_str_id },
+            { "plant_count", cata_variant_type::int_ },
+            { "seed_count", cata_variant_type::int_ },
+        }
+    };
+};
+
+template<>
+struct event_spec<event_type::character_plants_seed> {
+    static constexpr std::array<event_field, 4> fields = { {
+            { "character", cata_variant_type::character_id },
+            { "pos", cata_variant_type::tripoint },
+            { "seed_id", cata_variant_type::itype_id },
+            { "furniture_id", cata_variant_type::furn_str_id },
+        }
+    };
+};
+
+template<>
+struct event_spec<event_type::character_waters_plant> {
+    static constexpr std::array<event_field, 5> fields = { {
+            { "character", cata_variant_type::character_id },
+            { "pos", cata_variant_type::tripoint },
+            { "seed_id", cata_variant_type::itype_id },
+            { "furniture_id", cata_variant_type::furn_str_id },
+            { "water_added", cata_variant_type::int_ },
+        }
+    };
+};
 
 template<>
 struct event_spec<event_type::character_wields_item> : event_spec_character_item {};

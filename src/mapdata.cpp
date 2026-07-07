@@ -13,6 +13,7 @@
 #include "character.h"
 #include "color.h"
 #include "debug.h"
+#include "effect_on_condition.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "flag.h"
@@ -573,9 +574,10 @@ bool furn_workbench_info::load( const JsonObject &jsobj, std::string_view member
 }
 
 plant_data::plant_data() : transform( furn_str_id::NULL_ID() ), base( furn_str_id::NULL_ID() ),
-    growth_multiplier( 1.0f ), harvest_multiplier( 1.0f ) {}
+    growth_multiplier( 1.0f ), harvest_multiplier( 1.0f ), max_water_storage( 0 ) {}
 
-bool plant_data::load( const JsonObject &jsobj, std::string_view member )
+bool plant_data::load( const JsonObject &jsobj, std::string_view member,
+                       std::string_view src )
 {
     JsonObject j = jsobj.get_object( member );
 
@@ -583,6 +585,23 @@ bool plant_data::load( const JsonObject &jsobj, std::string_view member )
     optional( j, false, "base", base, furn_str_id::NULL_ID() );
     optional( j, false, "growth_multiplier", growth_multiplier, 1.0f );
     optional( j, false, "harvest_multiplier", harvest_multiplier, 1.0f );
+    optional( j, false, "max_water_storage", max_water_storage, 0 );
+    optional( j, false, "water_consumption_multiplier", water_consumption_multiplier, 1.0f );
+
+    auto load_eocs = [&]( const char *key, std::vector<effect_on_condition_id> &out ) {
+        if( j.has_array( key ) ) {
+            for( JsonValue jv : j.get_array( key ) ) {
+                out.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
+            }
+        }
+    };
+    load_eocs( "eoc_on_plant", eoc_on_plant );
+    load_eocs( "eoc_on_grow", eoc_on_grow );
+    load_eocs( "eoc_on_mature", eoc_on_mature );
+    load_eocs( "eoc_on_overgrow", eoc_on_overgrow );
+    load_eocs( "eoc_on_harvest", eoc_on_harvest );
+    load_eocs( "eoc_on_fertilize", eoc_on_fertilize );
+    load_eocs( "eoc_on_water", eoc_on_water );
 
     return true;
 }
@@ -1357,7 +1376,7 @@ void ter_t::load( const JsonObject &jo, const std::string &src )
 
     if( jo.has_object( "plant_data" ) ) {
         plant = cata::make_value<plant_data>();
-        plant->load( jo, "plant_data" );
+        plant->load( jo, "plant_data", src );
     }
 
     if( jo.has_object( "bash" ) ) {
@@ -1591,7 +1610,7 @@ void furn_t::load( const JsonObject &jo, const std::string &src )
     }
     if( jo.has_object( "plant_data" ) ) {
         plant = cata::make_value<plant_data>();
-        plant->load( jo, "plant_data" );
+        plant->load( jo, "plant_data", src );
     }
     if( jo.has_float( "surgery_skill_multiplier" ) ) {
         surgery_skill_multiplier = cata::make_value<float>( jo.get_float( "surgery_skill_multiplier" ) );
@@ -1642,6 +1661,14 @@ void furn_t::check() const
     }
     if( plant && !plant->base.is_valid() ) {
         debugmsg( "Invalid furniture %s for plant base in furn %s", plant->base.c_str(), id.c_str() );
+    }
+    if( plant ) {
+        if( plant->max_water_storage < 0 ) {
+            debugmsg( "%s: plant_data max_water_storage must be >= 0", id.c_str() );
+        }
+        if( plant->water_consumption_multiplier <= 0.0f ) {
+            debugmsg( "%s: plant_data water_consumption_multiplier must be > 0", id.c_str() );
+        }
     }
 }
 

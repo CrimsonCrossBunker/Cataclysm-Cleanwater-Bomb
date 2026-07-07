@@ -1171,6 +1171,10 @@ void memorial_logger::notify( const cata::event &e )
         case event_type::u_var_changed:
         case event_type::vehicle_moves:
         case event_type::character_butchered_corpse:
+        case event_type::character_fertilizes_plant:
+        case event_type::character_harvests_plant:
+        case event_type::character_plants_seed:
+        case event_type::character_waters_plant:
             break;
         case event_type::num_event_types: {
             debugmsg( "Invalid event type" );

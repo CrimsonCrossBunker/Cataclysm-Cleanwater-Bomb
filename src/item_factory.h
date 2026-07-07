@@ -315,7 +315,7 @@ class Item_factory
 
         template<typename SlotType>
         static void load_slot( const JsonObject &jo, bool was_loaded,
-                               cata::value_ptr<SlotType> &slotptr );
+                               cata::value_ptr<SlotType> &slotptr, std::string_view src );
 
         void load( relic &slot, const JsonObject &jo, std::string_view src );
 

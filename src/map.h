@@ -2512,6 +2512,9 @@ class tinymap : private map
         bool has_flag_furn( ter_furn_flag flag, const tripoint_omt_ms &p ) const {
             return map::has_flag_furn( flag, rebase_bub( p ) );
         }
+        void grow_plant( const tripoint_omt_ms &p ) {
+            map::grow_plant( rebase_bub( p ) );
+        }
         computer *add_computer( const tripoint_omt_ms &p, const std::string &name, int security ) {
             return map::add_computer( rebase_bub( p ), name, security );
         }

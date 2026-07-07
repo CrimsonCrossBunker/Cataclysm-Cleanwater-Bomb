@@ -3968,7 +3968,9 @@ If skill is specified, multiplier defaults to 1.0, min to 0 and max to 10.
   "transform": "f_planter_harvest",
   "base": "f_planter",
   "growth_multiplier": 1.2,
-  "harvest_multiplier": 0.8
+  "harvest_multiplier": 0.8,
+  "max_water_storage": 100,
+  "water_consumption_multiplier": 1.0
 }
 ```
 
@@ -3991,6 +3993,30 @@ A flat multiplier on the growth speed on the plant. For numbers greater than one
 ##### `harvest_multiplier`
 
 A flat multiplier on the harvest count of the plant. For numbers greater than one, the plant will give more produce from harvest, for numbers less than one it will give less produce from harvest.
+
+##### `max_water_storage`
+
+(Optional) How much water this planting furniture can store for irrigation.  If greater than zero, the furniture can be watered and a plant growing here will consume water daily to grow faster.  Growth speed is proportional to the available water: full `water_consumption` gives a 1.5x bonus, half gives a 1.25x bonus, and no water gives normal growth.  Outdoor planters also collect rainwater during rainy weather, up to this cap.  The value is read from the base furniture for growth-stage furniture via the `base` field.  Defaults to 0 (not irrigable).  The daily water consumption is defined per-seed via the `water_consumption` field and defaults to 20.
+
+##### `water_consumption_multiplier`
+
+(Optional) A multiplier applied to the seed's daily `water_consumption` for plants growing in this furniture.  Values greater than 1.0 make the plant consume water faster (e.g. a drier or more porous planter), while values less than 1.0 make it consume water slower.  Defaults to 1.0.  The effective daily consumption is also clamped to a minimum of 1.
+
+##### Plant lifecycle EOCs
+
+(Optional) Each of these fields is an array of `effect_on_condition` ids (or inline EOC definitions) that run at the corresponding lifecycle event.  Furniture EOCs run before seed EOCs.
+
+```jsonc
+"eoc_on_plant": [ "eoc_id" ],      // after a seed is planted here
+"eoc_on_grow": [ "eoc_id" ],       // each time the plant advances a growth stage
+"eoc_on_mature": [ "eoc_id" ],     // when the plant reaches the mature stage
+"eoc_on_overgrow": [ "eoc_id" ],   // when the plant reaches the overgrown stage
+"eoc_on_harvest": [ "eoc_id" ],    // just before the plant is harvested
+"eoc_on_fertilize": [ "eoc_id" ],  // after fertilizer is applied
+"eoc_on_water": [ "eoc_id" ]       // after water is poured on the plant
+```
+
+All plant lifecycle EOCs receive the following `context_val` variables: `plant_pos`, `plant_pos_x`, `plant_pos_y`, `plant_pos_z`, `seed_id`, `furniture_id`, `old_stage`, `new_stage`, `effective_growth_time`, `water`, and `actor_is_npc`.  `on_harvest` additionally receives `plant_count` and `seed_count`; `on_fertilize` receives `fertilizer_id` and `reduction_turns`; `on_water` receives `water_added`.
 
 ### clothing_mod
 

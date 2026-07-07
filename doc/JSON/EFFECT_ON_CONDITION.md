@@ -1783,7 +1783,11 @@ Every event EOC passes context vars with each of their key value pairs that the 
 | character_consumes_item |  | { "character", `character_id` },<br/> { "itype", `itype_id` }, | character / NONE |
 | character_dies |  | { "character", `character_id` }, | character / NONE |
 | character_eats_item |  | { "character", `character_id` },<br/> { "itype", `itype_id` }, | character / NONE |
+| character_fertilizes_plant | Triggers when a character fertilizes a plant. Sent before per-seed/per-furniture `eoc_on_fertilize` hooks. | { "character", `character_id` },<br/> { "pos", `tripoint` },<br/> { "seed_id", `itype_id` },<br/> { "furniture_id", `furn_str_id` },<br/> { "fertilizer_id", `itype_id` },<br/> { "reduction_turns", `int` }, | character / NONE |
 | character_finished_activity | Triggered when character finished or canceled activity | { "character", `character_id` },<br/> { "activity", `activity_id` },<br/> { "canceled", `bool` } | character / NONE |
+| character_harvests_plant | Triggers when a character harvests a plant. Sent before per-seed/per-furniture `eoc_on_harvest` hooks. Includes vehicle reaper harvests and special seed harvests (fungal/marloss). | { "character", `character_id` },<br/> { "pos", `tripoint` },<br/> { "seed_id", `itype_id` },<br/> { "furniture_id", `furn_str_id` },<br/> { "plant_count", `int` },<br/> { "seed_count", `int` }, | character / NONE |
+| character_plants_seed | Triggers when a character plants a seed. Sent before per-seed/per-furniture `eoc_on_plant` hooks. Includes vehicle planter seeding. | { "character", `character_id` },<br/> { "pos", `tripoint` },<br/> { "seed_id", `itype_id` },<br/> { "furniture_id", `furn_str_id` }, | character / NONE |
+| character_waters_plant | Triggers when a character waters a plant. Sent before per-seed/per-furniture `eoc_on_water` hooks. | { "character", `character_id` },<br/> { "pos", `tripoint` },<br/> { "seed_id", `itype_id` },<br/> { "furniture_id", `furn_str_id` },<br/> { "water_added", `int` }, | character / NONE |
 | character_forgets_spell |  | { "character", `character_id` },<br/> { "spell", `spell_id` } | character / NONE |
 | character_gains_effect |  | { "character", `character_id` },<br/> { "effect", `efftype_id` },<br/> { "bodypart", `bodypart_id` }, { "intensity", `int` }</br> | character / NONE |
 | character_gets_headshot |  | { "character", `character_id` } | character / NONE |
@@ -1873,6 +1877,8 @@ Every event EOC passes context vars with each of their key value pairs that the 
 | uses_debug_menu | | { "debug_menu_option", `debug_menu_index` }, | avatar / NONE |
 | u_var_changed | | { "var", `string` },<br/> { "value", `string` }, | avatar / NONE |
 | vehicle_moves | | { "avatar_on_board", `bool` },<br/> { "avatar_is_driving", `bool` },<br/> { "avatar_remote_control", `bool` },<br/> { "is_flying_aircraft", `bool` },<br/> { "is_floating_watercraft", `bool` },<br/> { "is_on_rails", `bool` },<br/> { "is_falling", `bool` },<br/> { "is_sinking", `bool` },<br/> { "is_skidding", `bool` },<br/> { "velocity", `int` }, // vehicle current velocity, mph * 100<br/> { "z", `int` }, | vehicle / avatar |
+
+**Note on plant events:** For fungal/marloss seed harvests, `flower_marloss` picking, and vehicle reaper overgrown cleanup, `character_harvests_plant` sets `plant_count` and `seed_count` to `0` because these paths do not produce normal harvest quantities.
 
 ## Context Variables For Other EOCs
 Other EOCs have some variables as well that they have access to, they are as follows:

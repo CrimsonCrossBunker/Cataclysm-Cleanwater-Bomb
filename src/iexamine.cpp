@@ -26,12 +26,14 @@
 #include "color.h"
 #include "construction.h"
 #include "construction_group.h"
+#include "condition.h"
 #include "coordinates.h"
 #include "craft_command.h"
 #include "crafting.h"
 #include "crafting_enums.h"
 #include "creature.h"
 #include "creature_tracker.h"
+#include "effect_on_condition.h"
 #include "cursesdef.h"
 #include "debug.h"
 #include "effect.h"
@@ -208,6 +210,8 @@ static const itype_id itype_stick( "stick" );
 static const itype_id itype_string_36( "string_36" );
 static const itype_id itype_unfinished_cac2( "unfinished_cac2" );
 static const itype_id itype_unfinished_charcoal( "unfinished_charcoal" );
+static const itype_id itype_water( "water" );
+static const itype_id itype_water_clean( "water_clean" );
 static const itype_id itype_withered( "withered" );
 
 static const json_character_flag json_flag_GLIDE( "GLIDE" );
@@ -2561,6 +2565,10 @@ void iexamine::flower_marloss( Character &you, const tripoint_bub_ms &examp )
         none( you, examp );
         return;
     }
+
+    get_event_bus().send<event_type::character_harvests_plant>(
+        you.getID(), here.get_abs( examp ).raw(), itype_marloss_seed, here.furn( examp ).id(), 0, 0 );
+
     here.furn_set( examp, furn_str_id::NULL_ID() );
     here.spawn_item( you.pos_bub(), itype_marloss_seed, 1, 3, calendar::turn );
     iexamine_helper::handle_harvest( you, itype_withered, false );
@@ -2742,7 +2750,10 @@ void iexamine::clear_overgrown( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
 
-    if( !here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_OVERGROWN, examp ) ) {
+    // Synchronize furniture flag with effective growth time before clearing.
+    here.grow_plant( examp );
+
+    if( !is_plant_overgrown( here, examp ) ) {
         debugmsg( "clear_overgrown called on tile which is not an overgrown crop!" );
         return;
     }
@@ -2759,6 +2770,10 @@ void iexamine::clear_overgrown( Character &you, const tripoint_bub_ms &examp )
 void iexamine::harvest_plant_ex( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
+
+    // Synchronize furniture flag with effective growth time before harvesting.
+    here.grow_plant( examp );
+
     // Can't use item_stack::only_item() since there might be fertilizer
     map_stack items = here.i_at( examp );
     const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
@@ -2772,7 +2787,7 @@ void iexamine::harvest_plant_ex( Character &you, const tripoint_bub_ms &examp )
         return;
     }
 
-    if( here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_HARVEST, examp ) ) {
+    if( is_plant_harvestable( here, examp ) ) {
         harvest_plant( you, examp, false );
     }
 }
@@ -2797,10 +2812,15 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
     }
 
     const itype_id &seedType = seed->typeId();
+    const furn_str_id old_furn_id = here.furn( examp ).id();
     if( seedType == itype_fungal_seeds ) {
+        get_event_bus().send<event_type::character_harvests_plant>(
+            you.getID(), here.get_abs( examp ).raw(), seedType, old_furn_id, 0, 0 );
         fungus( you, examp );
         here.i_clear( examp );
     } else if( seedType == itype_marloss_seed ) {
+        get_event_bus().send<event_type::character_harvests_plant>(
+            you.getID(), here.get_abs( examp ).raw(), seedType, old_furn_id, 0, 0 );
         fungus( you, examp );
         here.i_clear( examp );
         if( you.has_trait( trait_M_DEPENDENT ) && ( you.get_kcal_percent() < 0.8f ||
@@ -2827,9 +2847,6 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
             return;
         } else {
             const itype &type = *seed->type;
-            player_activity act( ACT_HARVEST, to_moves<int>( 60_seconds ) );
-            you.assign_activity( act );
-            here.i_clear( examp );
 
             int skillLevel = round( you.get_skill_level( skill_survival ) );
             ///\EFFECT_SURVIVAL increases number of plants harvested from a seed
@@ -2838,6 +2855,31 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
             plant_count *= fp->harvest_multiplier;
             plant_count = std::max( plant_count, 1 );
             int seedCount = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
+
+            // Send global event before per-seed/per-furniture hooks.
+            get_event_bus().send<event_type::character_harvests_plant>(
+                you.getID(), here.get_abs( examp ).raw(), type.get_id(), here.furn( examp ).id(),
+                plant_count, seedCount );
+
+            const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
+            const std::string stage = stage_idx >= 0 ? type.seed->get_growth_stages()[stage_idx].first.str() : "";
+            const std::map<std::string, std::string> string_ctx;
+            const std::map<std::string, double> num_ctx = {
+                { "plant_count", static_cast<double>( plant_count ) },
+                { "seed_count", static_cast<double>( seedCount ) },
+                { "actor_is_npc", you.is_npc() ? 1.0 : 0.0 }
+            };
+            if( fp ) {
+                run_plant_eocs( fp->eoc_on_harvest, you, here, examp, *seed, stage, stage, string_ctx,
+                                num_ctx );
+            }
+            run_plant_eocs( type.seed->eoc_on_harvest, you, here, examp, *seed, stage, stage, string_ctx,
+                            num_ctx );
+
+            player_activity act( ACT_HARVEST, to_moves<int>( 60_seconds ) );
+            you.assign_activity( act );
+            here.i_clear( examp );
+
             for( item &i : get_harvest_items( type, plant_count, seedCount, true ) ) {
                 if( from_activity ) {
                     i.set_var( "activity_var", you.name );
@@ -2904,13 +2946,13 @@ itype_id iexamine::choose_fertilizer( Character &you, const std::string &pname,
 void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
-    // Can't use item_stack::only_item() since there might be fertilizer
-    map_stack items = here.i_at( examp );
-    const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-        return it.is_seed();
-    } );
 
-    if( seed == items.end() ) {
+    // Synchronize furniture flag with effective growth time before presenting options.
+    here.grow_plant( examp );
+
+    item *seed = get_seed_at( here, examp );
+
+    if( seed == nullptr ) {
         debugmsg( "Missing seed for plant at %s", examp.to_string() );
         here.i_clear( examp );
         here.furn_set( examp, furn_str_id::NULL_ID() );
@@ -2918,20 +2960,481 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
     }
 
     const std::string pname = seed->get_plant_name();
+    const bool can_harvest = is_plant_harvestable( here, examp );
+    const bool can_fertilize = multi_farm_activity_actor::can_fertilize( you, examp ).success();
+    const bool can_water = get_plant_max_water( here.furn( examp ).obj() ) > 0;
 
-    if( here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_HARVEST, examp ) &&
-        query_yn( _( "Harvest the %s?" ), pname ) ) {
-        harvest_plant( you, examp, false );
-    } else if( !here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_HARVEST, examp ) ) {
-        if( here.i_at( examp ).size() > 1 ) {
-            add_msg( m_info, _( "This %s has already been fertilized." ), pname );
-            return;
-        }
-        itype_id fertilizer = choose_fertilizer( you, pname, true /*ask player for confirmation */ );
+    uilist smenu;
+    smenu.text = string_format( _( "What to do with the %s?" ), pname );
 
-        if( !fertilizer.is_empty() ) {
-            fertilize_plant( you, examp, fertilizer );
+    if( can_harvest ) {
+        smenu.addentry( 0, true, 'h', _( "Harvest" ) );
+    }
+    if( can_fertilize ) {
+        smenu.addentry( 1, true, 'f', _( "Fertilize" ) );
+    }
+    if( can_water ) {
+        smenu.addentry( 2, true, 'w', _( "Pour water" ) );
+    }
+    smenu.addentry( 3, true, 'q', _( "Cancel" ) );
+
+    smenu.query();
+
+    switch( smenu.ret ) {
+        case 0:
+            if( can_harvest ) {
+                harvest_plant( you, examp, false );
+            }
+            break;
+        case 1:
+            if( can_fertilize ) {
+                itype_id fertilizer = choose_fertilizer( you, pname, true );
+                if( !fertilizer.is_empty() ) {
+                    fertilize_plant( you, examp, fertilizer );
+                }
+            }
+            break;
+        case 2:
+            if( can_water ) {
+                water_plant( you, examp );
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+int iexamine::get_plant_max_water( const furn_t &furn )
+{
+    if( furn.plant ) {
+        if( furn.plant->max_water_storage > 0 ) {
+            return furn.plant->max_water_storage;
         }
+        if( !furn.plant->base.is_null() && furn.plant->base.is_valid() ) {
+            // If base is explicitly set, look up the base furniture's capacity.
+            const furn_t &base_furn = furn.plant->base.obj();
+            return base_furn.plant ? base_furn.plant->max_water_storage : 0;
+        }
+    }
+    return 0;
+}
+
+float iexamine::get_plant_water_consumption_multiplier( const furn_t &furn )
+{
+    if( !furn.plant ) {
+        return 1.0f;
+    }
+    const float mult = furn.plant->water_consumption_multiplier;
+    // A stage-specific non-default multiplier takes precedence.
+    if( mult != 1.0f ) {
+        return mult;
+    }
+    // Otherwise inherit from the base furniture, if any.
+    if( !furn.plant->base.is_null() && furn.plant->base.is_valid() ) {
+        const furn_t &base_furn = furn.plant->base.obj();
+        if( base_furn.plant && base_furn.plant->water_consumption_multiplier > 0.0f ) {
+            return base_furn.plant->water_consumption_multiplier;
+        }
+    }
+    return 1.0f;
+}
+
+item *iexamine::get_seed_at( map &here, const tripoint_bub_ms &p )
+{
+    map_stack items = here.i_at( p );
+    for( item &it : items ) {
+        if( it.is_seed() ) {
+            return &it;
+        }
+    }
+    return nullptr;
+}
+
+bool iexamine::is_plant_fertilized( const item &seed )
+{
+    return static_cast<int>( seed.get_var( "seed_fertilized", 0.0 ) ) != 0;
+}
+
+void iexamine::set_plant_fertilized( item &seed, const bool fertilized )
+{
+    seed.set_var( "seed_fertilized", fertilized ? 1 : 0 );
+}
+
+int iexamine::get_plant_water( const item &seed )
+{
+    return static_cast<int>( seed.get_var( "seed_water", 0.0 ) );
+}
+
+void iexamine::set_plant_water( item &seed, int water )
+{
+    seed.set_var( "seed_water", std::max( 0, water ) );
+}
+
+int iexamine::get_seed_water_consumption( const item &seed )
+{
+    if( seed.type && seed.type->seed ) {
+        return seed.type->seed->water_consumption;
+    }
+    return irrigation::DEFAULT_SEED_WATER_CONSUMPTION;
+}
+
+time_point iexamine::get_plant_last_water_check( const item &seed )
+{
+    return time_point::from_turn(
+               static_cast<int>( seed.get_var( "seed_last_water_check", 0.0 ) ) );
+}
+
+void iexamine::set_plant_last_water_check( item &seed, const time_point &turn )
+{
+    seed.set_var( "seed_last_water_check", to_turn<int>( turn ) );
+}
+
+int iexamine::get_plant_effective_growth_turns( const item &seed )
+{
+    return static_cast<int>( seed.get_var( "seed_effective_growth_turns", 0.0 ) );
+}
+
+void iexamine::set_plant_effective_growth_turns( item &seed, int turns )
+{
+    seed.set_var( "seed_effective_growth_turns", std::max( 0, turns ) );
+}
+
+void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
+{
+    map &here = get_map();
+    const furn_t &furn = here.furn( examp ).obj();
+    const int max_water = get_plant_max_water( furn );
+    if( max_water <= 0 ) {
+        you.add_msg_if_player( m_info, _( "This %s cannot hold water." ), furn.name() );
+        return;
+    }
+
+    item *seed = get_seed_at( here, examp );
+    if( seed == nullptr ) {
+        you.add_msg_if_player( m_info, _( "There is no plant here to water." ) );
+        return;
+    }
+
+    const itype_id *water_type = nullptr;
+    if( you.charges_of( itype_water_clean ) > 0 ) {
+        water_type = &itype_water_clean;
+    } else if( you.charges_of( itype_water ) > 0 ) {
+        water_type = &itype_water;
+    }
+
+    if( water_type == nullptr ) {
+        you.add_msg_if_player( m_info, _( "You have no water to pour." ) );
+        return;
+    }
+
+    const int current_water = get_plant_water( *seed );
+    if( current_water >= max_water ) {
+        you.add_msg_if_player( m_info, _( "The %s is already fully watered." ),
+                               seed->get_plant_name() );
+        return;
+    }
+
+    if( you.use_charges( *water_type, 1, -1 ).empty() ) {
+        you.add_msg_if_player( m_info, _( "You have no water to pour." ) );
+        return;
+    }
+
+    if( !seed->has_var( "seed_last_water_check" ) ) {
+        set_plant_last_water_check( *seed, calendar::turn );
+    }
+    set_plant_water( *seed, std::min( max_water, current_water + irrigation::WATER_PER_POUR ) );
+
+    // Send global event before per-seed/per-furniture hooks.
+    get_event_bus().send<event_type::character_waters_plant>(
+        you.getID(), here.get_abs( examp ).raw(), seed->typeId(), furn.id,
+        irrigation::WATER_PER_POUR );
+
+    const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
+    const std::string stage = stage_idx >= 0 ?
+                              seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
+    if( furn.plant ) {
+        run_plant_eocs( furn.plant->eoc_on_water, you, here, examp, *seed, stage, stage,
+                        {}, { { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) } } );
+    }
+    run_plant_eocs( seed->type->seed->eoc_on_water, you, here, examp, *seed, stage, stage,
+                    {}, { { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) } } );
+
+    you.add_msg_if_player( m_good, _( "You pour some water on the %s." ), seed->get_plant_name() );
+}
+
+bool iexamine::can_water_plant( Character &you, const tripoint_bub_ms &examp )
+{
+    map &here = get_map();
+    const furn_t &furn = here.furn( examp ).obj();
+    const int max_water = get_plant_max_water( furn );
+    if( max_water <= 0 ) {
+        return false;
+    }
+
+    item *seed = get_seed_at( here, examp );
+    if( seed == nullptr ) {
+        return false;
+    }
+
+    if( get_plant_water( *seed ) >= max_water ) {
+        return false;
+    }
+
+    return you.charges_of( itype_water_clean ) > 0 || you.charges_of( itype_water ) > 0;
+}
+
+int iexamine::rain_water_for_weather( const weather_type_id &weather )
+{
+    if( !weather->rains || weather->precip == precip_class::none ) {
+        return 0;
+    }
+
+    switch( weather->precip ) {
+        case precip_class::very_light:
+            return irrigation::RAIN_WATER_VERY_LIGHT;
+        case precip_class::light:
+            return irrigation::RAIN_WATER_LIGHT;
+        case precip_class::heavy:
+            return irrigation::RAIN_WATER_HEAVY;
+        default:
+            return 0;
+    }
+}
+
+std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms &p )
+{
+    const furn_t &furn = here.furn( p ).obj();
+    const int max_water = get_plant_max_water( furn );
+    if( max_water <= 0 ) {
+        return std::string();
+    }
+
+    item *seed = get_seed_at( here, p );
+    if( seed != nullptr ) {
+        // Defensive sync: make sure displayed water/age matches the authoritative
+        // effective growth time before any UI reads it.
+        here.grow_plant( p );
+        const int current_water = get_plant_water( *seed );
+        const int base_consumption = get_seed_water_consumption( *seed );
+        const float consumption_mult = get_plant_water_consumption_multiplier( furn );
+        const int consumption = std::max( 1,
+                                          static_cast<int>( base_consumption * consumption_mult ) );
+        std::string desc = string_format(
+                               _( "Water: <color_cyan>%d</color>/<color_cyan>%d</color>\n"
+                                  "Daily consumption: <color_cyan>%d</color>\n"
+                                  "%s" ),
+                               current_water, max_water, consumption,
+                               plant_age_description( *seed, furn.plant->growth_multiplier ).c_str() );
+        if( current_water >= consumption ) {
+            desc += string_format( _( "\n<color_green>Moisture sufficient for accelerated growth.</color>" ) );
+        } else if( current_water > 0 ) {
+            desc += string_format( _( "\n<color_yellow>Moisture low; growth is normal.</color>" ) );
+        } else {
+            desc += string_format( _( "\n<color_red>Dry; growth is normal.</color>" ) );
+        }
+        if( is_plant_fertilized( *seed ) ) {
+            desc += string_format( _( "\n<color_green>Fertilized.</color>" ) );
+        } else {
+            desc += string_format( _( "\n<color_light_gray>Not fertilized.</color>" ) );
+        }
+        return desc;
+    }
+
+    return string_format( _( "Empty planter.  Water capacity: <color_cyan>%d</color>." ),
+                          max_water );
+}
+
+int iexamine::get_plant_current_stage_idx( const map &here, const tripoint_bub_ms &p,
+        const std::vector<std::pair<flag_id, time_duration>> &growth_stages )
+{
+    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
+        if( here.has_flag_furn( growth_stages[i].first.str(), p ) ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int iexamine::get_plant_mature_stage_idx(
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages )
+{
+    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
+        if( growth_stages[i].first.str() == "GROWTH_MATURE" ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int iexamine::get_plant_harvest_stage_idx(
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages )
+{
+    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
+        if( growth_stages[i].first.str() == "GROWTH_HARVEST" ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int iexamine::get_plant_overgrown_stage_idx(
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages )
+{
+    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
+        if( growth_stages[i].first.str() == "GROWTH_OVERGROWN" ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+time_duration iexamine::get_plant_stage_threshold(
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages, int stage_idx )
+{
+    time_duration threshold = 0_seconds;
+    for( int i = 0; i < stage_idx && i < static_cast<int>( growth_stages.size() ); ++i ) {
+        threshold += growth_stages[i].second;
+    }
+    return threshold;
+}
+
+time_duration iexamine::get_plant_effective_growth_time( const item &seed, float growth_multiplier )
+{
+    if( seed.has_var( "seed_effective_growth_turns" ) ) {
+        return time_duration::from_turns( get_plant_effective_growth_turns( seed ) );
+    }
+    return seed.age() * growth_multiplier;
+}
+
+std::string iexamine::plant_age_description( const item &seed, float growth_multiplier )
+{
+    const time_duration effective_age = get_plant_effective_growth_time( seed, growth_multiplier ) /
+                                        growth_multiplier;
+    return string_format( _( "Age: <color_cyan>%s</color>" ), to_string( effective_age ) );
+}
+
+int iexamine::get_plant_stage_idx_from_effective_time(
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages,
+    const time_duration &effective_time )
+{
+    int stage_idx = 0;
+    time_duration threshold = 0_seconds;
+    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
+        threshold += growth_stages[i].second;
+        if( effective_time >= threshold ) {
+            stage_idx = i + 1;
+        } else {
+            break;
+        }
+    }
+    return std::min( stage_idx, static_cast<int>( growth_stages.size() ) - 1 );
+}
+
+int iexamine::get_plant_current_stage_idx_from_effective( map &here, const tripoint_bub_ms &p )
+{
+    item *seed = get_seed_at( here, p );
+    const furn_t &furn = here.furn( p ).obj();
+    if( seed == nullptr || seed->type == nullptr || seed->type->seed == nullptr || !furn.plant ) {
+        return -1;
+    }
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
+        seed->type->seed->get_growth_stages();
+    const time_duration effective_time = get_plant_effective_growth_time( *seed,
+            furn.plant->growth_multiplier );
+    return get_plant_stage_idx_from_effective_time( growth_stages, effective_time );
+}
+
+bool iexamine::is_plant_harvestable( map &here, const tripoint_bub_ms &p )
+{
+    item *seed = get_seed_at( here, p );
+    const furn_t &furn = here.furn( p ).obj();
+    if( seed == nullptr || seed->type == nullptr || seed->type->seed == nullptr || !furn.plant ) {
+        return false;
+    }
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
+        seed->type->seed->get_growth_stages();
+    const int harvest_stage_idx = get_plant_harvest_stage_idx( growth_stages );
+    if( harvest_stage_idx < 0 ) {
+        return false;
+    }
+    const int current_stage_idx = get_plant_current_stage_idx_from_effective( here, p );
+    return current_stage_idx >= harvest_stage_idx;
+}
+
+bool iexamine::is_plant_mature( map &here, const tripoint_bub_ms &p )
+{
+    item *seed = get_seed_at( here, p );
+    const furn_t &furn = here.furn( p ).obj();
+    if( seed == nullptr || seed->type == nullptr || seed->type->seed == nullptr || !furn.plant ) {
+        return false;
+    }
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
+        seed->type->seed->get_growth_stages();
+    const int mature_stage_idx = get_plant_mature_stage_idx( growth_stages );
+    if( mature_stage_idx < 0 ) {
+        return false;
+    }
+    const int current_stage_idx = get_plant_current_stage_idx_from_effective( here, p );
+    return current_stage_idx >= mature_stage_idx;
+}
+
+bool iexamine::is_plant_overgrown( map &here, const tripoint_bub_ms &p )
+{
+    item *seed = get_seed_at( here, p );
+    const furn_t &furn = here.furn( p ).obj();
+    if( seed == nullptr || seed->type == nullptr || seed->type->seed == nullptr || !furn.plant ) {
+        return false;
+    }
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
+        seed->type->seed->get_growth_stages();
+    const int overgrown_stage_idx = get_plant_overgrown_stage_idx( growth_stages );
+    if( overgrown_stage_idx < 0 ) {
+        return false;
+    }
+    const int current_stage_idx = get_plant_current_stage_idx_from_effective( here, p );
+    return current_stage_idx >= overgrown_stage_idx;
+}
+
+void iexamine::run_plant_eocs(
+    const std::vector<effect_on_condition_id> &eocs,
+    Character &alpha,
+    map &here,
+    const tripoint_bub_ms &plant_pos,
+    const item &seed,
+    const std::string &old_stage,
+    const std::string &new_stage,
+    const std::map<std::string, std::string> &string_context,
+    const std::map<std::string, double> &num_context )
+{
+    if( eocs.empty() ) {
+        return;
+    }
+
+    const tripoint_abs_ms abs_pos = here.get_abs( plant_pos );
+    dialogue d( get_talker_for( alpha ), nullptr );
+
+    write_var_value( var_type::context, "plant_pos", &d, abs_pos );
+    write_var_value( var_type::context, "plant_pos_x", &d, static_cast<double>( abs_pos.x() ) );
+    write_var_value( var_type::context, "plant_pos_y", &d, static_cast<double>( abs_pos.y() ) );
+    write_var_value( var_type::context, "plant_pos_z", &d, static_cast<double>( abs_pos.z() ) );
+    write_var_value( var_type::context, "seed_id", &d, seed.typeId().str() );
+    write_var_value( var_type::context, "furniture_id", &d, here.furn( plant_pos ).id().str() );
+    write_var_value( var_type::context, "old_stage", &d, old_stage );
+    write_var_value( var_type::context, "new_stage", &d, new_stage );
+    write_var_value( var_type::context, "effective_growth_time", &d,
+                     static_cast<double>( get_plant_effective_growth_turns( seed ) ) );
+    write_var_value( var_type::context, "water", &d,
+                     static_cast<double>( get_plant_water( seed ) ) );
+
+    for( const auto &kv : string_context ) {
+        write_var_value( var_type::context, kv.first, &d, kv.second );
+    }
+    for( const auto &kv : num_context ) {
+        write_var_value( var_type::context, kv.first, &d, kv.second );
+    }
+
+    for( const effect_on_condition_id &eoc : eocs ) {
+        eoc->activate_activation_only( d, "a plant lifecycle event", "plant event", "plant" );
     }
 }
 

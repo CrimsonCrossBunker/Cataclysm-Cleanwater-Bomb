@@ -33,6 +33,8 @@
 #include "debug.h"
 #include "enum_conversions.h"
 #include "enums.h"
+#include "event.h"
+#include "event_bus.h"
 #include "faction.h"
 #include "faction_camp.h"
 #include "flexbuffer_json.h"
@@ -49,6 +51,7 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "iexamine.h"
 #include "mapdata.h"
 #include "math_parser_diag_value.h"
 #include "memory_fast.h"
@@ -75,7 +78,6 @@
 
 static const efftype_id effect_riding( "riding" );
 
-static const furn_str_id furn_f_plant_harvest( "f_plant_harvest" );
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
 
 static const item_group_id Item_spawn_data_farming_seeds( "farming_seeds" );
@@ -1678,8 +1680,11 @@ void talk_function::field_harvest( npc &p, const std::string &place )
     swap_map swap( *bay.cast_to_map() );
 
     for( const tripoint_omt_ms &plot : bay.points_on_zlevel() ) {
+        bay.grow_plant( plot );
+        map *bay_map = bay.cast_to_map();
         map_stack items = bay.i_at( plot );
-        if( bay.furn( plot ) == furn_f_plant_harvest && !items.empty() ) {
+        if( iexamine::is_plant_harvestable( *bay_map, bay_map->get_bub( bay.get_abs( plot ) ) ) &&
+            !items.empty() ) {
             // Can't use item_stack::only_item() since there might be fertilizer
             map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
                 return it.is_seed();
@@ -1725,7 +1730,9 @@ void talk_function::field_harvest( npc &p, const std::string &place )
     }
 
     for( const tripoint_omt_ms &plot : bay.points_on_zlevel() ) {
-        if( bay.furn( plot ) == furn_f_plant_harvest ) {
+        bay.grow_plant( plot );
+        map *bay_map = bay.cast_to_map();
+        if( iexamine::is_plant_harvestable( *bay_map, bay_map->get_bub( bay.get_abs( plot ) ) ) ) {
             // Can't use item_stack::only_item() since there might be fertilizer
             map_stack items = bay.i_at( plot );
             map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
@@ -1741,11 +1748,37 @@ void talk_function::field_harvest( npc &p, const std::string &place )
                     int plant_count = rng( skillLevel / 2, skillLevel );
                     plant_count *= bay.furn( plot )->plant->harvest_multiplier;
                     plant_count = std::min( std::max( plant_count, 1 ), 12 );
+                    const int seed_cnt = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
+
+                    const tripoint_bub_ms bub_plot = bay_map->get_bub( bay.get_abs( plot ) );
+
+                    // Send global event before per-seed/per-furniture hooks.
+                    const furn_str_id furn_id = bay.furn( plot ).id();
+                    get_event_bus().send<event_type::character_harvests_plant>(
+                        p.getID(), bay.get_abs( plot ).raw(), seed->typeId(), furn_id,
+                        plant_count, seed_cnt );
+
+                    const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( *bay_map,
+                            bub_plot );
+                    const std::string stage = stage_idx >= 0 ?
+                                              seed_data.get_growth_stages()[stage_idx].first.str() : "";
+                    const std::map<std::string, double> num_ctx = {
+                        { "plant_count", static_cast<double>( plant_count ) },
+                        { "seed_count", static_cast<double>( seed_cnt ) },
+                        { "actor_is_npc", 1.0 }
+                    };
+                    const furn_t &current_furn = bay.furn( plot ).obj();
+                    if( current_furn.plant ) {
+                        iexamine::run_plant_eocs( current_furn.plant->eoc_on_harvest, p, *bay_map, bub_plot,
+                                                   *seed, stage, stage, {}, num_ctx );
+                    }
+                    iexamine::run_plant_eocs( seed_data.eoc_on_harvest, p, *bay_map, bub_plot, *seed,
+                                               stage, stage, {}, num_ctx );
 
                     // Multiply by the plant's and seed's base charges to mimic creating
                     // items similar to iexamine::harvest_plant
                     number_plants += plant_count * tmp.charges;
-                    number_seeds += std::max( 1, rng( plant_count / 4, plant_count / 2 ) ) * item_seed.charges;
+                    number_seeds += seed_cnt * item_seed.charges;
 
                     bay.i_clear( plot );
                     bay.furn_set( plot, furn_str_id::NULL_ID() );

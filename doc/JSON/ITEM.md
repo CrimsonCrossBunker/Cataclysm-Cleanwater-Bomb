@@ -1033,9 +1033,18 @@ Gun mods can be defined like this:
 ],
 "growth_temp": "7 C",                     // (optional, default 10 C). Celsius (C) or milli-Celsius(mC). Temperature required on the days this seed is planted and for every day with a growth stage. If below the required temperature it simply won't be plantable.
 "fruit_div": 2, // (optional, default is 1). Final amount of fruit charges produced is divided by this number. Works only if fruit item is counted by charges.
+"water_consumption": 20, // (optional, default is 20). How much water the planted crop consumes per day from irrigable planting furniture. While water is available, the plant grows 1.5 times faster.
 "required_terrain_flag": "PLANTABLE" // A tag that terrain and furniture would need to have in order for the seed to be plantable there.
 // Default is "PLANTABLE", and using this will cause any terain the plant is wrown on to turn into dirt once the plant is planted, unless furniture is used.
 // Using any other tag will not turn the terrain into dirt.
+// Plant lifecycle EOC hooks; see JSON_INFO.md "Plant lifecycle EOCs" for details.
+"eoc_on_plant": [ "eoc_id" ],
+"eoc_on_grow": [ "eoc_id" ],
+"eoc_on_mature": [ "eoc_id" ],
+"eoc_on_overgrow": [ "eoc_id" ],
+"eoc_on_harvest": [ "eoc_id" ],
+"eoc_on_fertilize": [ "eoc_id" ],
+"eoc_on_water": [ "eoc_id" ]
 ```
 
 ### Brewables

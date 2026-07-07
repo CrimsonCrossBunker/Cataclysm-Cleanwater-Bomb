@@ -23,6 +23,7 @@
 #include "dialogue.h"
 #include "effect_on_condition.h"
 #include "enums.h"
+#include "event_bus.h"
 #include "flat_set.h"
 #include "game.h"
 #include "game_inventory.h"
@@ -81,9 +82,7 @@ static const flag_id json_flag_IRREMOVABLE( "IRREMOVABLE" );
 static const flag_id json_flag_NO_PACKED( "NO_PACKED" );
 static const flag_id json_flag_PSEUDO( "PSEUDO" );
 
-static const furn_str_id furn_f_plant_harvest( "f_plant_harvest" );
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
-static const furn_str_id furn_f_plant_unharvested_overgrown( "f_plant_unharvested_overgrown" );
 
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 
@@ -1062,10 +1061,13 @@ void vehicle::operate_reaper( map &here )
         int plant_produced = rng( 1, vp.info().bonus );
         int seed_produced = rng( 1, 3 );
         const units::volume max_pickup_volume = vp.info().size / 20;
-        if( here.furn( reaper_pos ) == furn_f_plant_unharvested_overgrown ) {
+        here.grow_plant( reaper_pos );
+        const bool is_overgrown = iexamine::is_plant_overgrown( here, reaper_pos );
+        const bool is_harvestable = iexamine::is_plant_harvestable( here, reaper_pos );
+        if( is_overgrown ) {
             plant_produced = 0;
             seed_produced = 0;
-        } else if( here.furn( reaper_pos ) != furn_f_plant_harvest ) {
+        } else if( !is_harvestable ) {
             continue;
         }
         // Can't use item_stack::only_item() since there might be fertilizer
@@ -1078,9 +1080,32 @@ void vehicle::operate_reaper( map &here )
             // Otherworldly plants, the earth-made reaper can not handle those.
             continue;
         }
-        here.furn_set( reaper_pos, furn_str_id::NULL_ID() );
-        // Secure the seed type before i_clear destroys the item.
+
+        // Secure the seed type before EOCs or i_clear destroy the item.
         const itype &seed_type = *seed->type;
+
+        const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, reaper_pos );
+        const std::string stage = stage_idx >= 0 ?
+                                  seed_type.seed->get_growth_stages()[stage_idx].first.str() : "";
+        const std::map<std::string, double> num_ctx = {
+            { "plant_count", static_cast<double>( plant_produced ) },
+            { "seed_count", static_cast<double>( seed_produced ) },
+            { "actor_is_npc", 0.0 }
+        };
+        get_event_bus().send<event_type::character_harvests_plant>(
+            get_avatar().getID(), here.get_abs( reaper_pos ).raw(),
+            seed_type.get_id(), here.furn( reaper_pos ).id(),
+            plant_produced, seed_produced );
+
+        const furn_t &furn = here.furn( reaper_pos ).obj();
+        if( furn.plant ) {
+            iexamine::run_plant_eocs( furn.plant->eoc_on_harvest, get_avatar(), here, reaper_pos, *seed,
+                                       stage, stage, {}, num_ctx );
+        }
+        iexamine::run_plant_eocs( seed_type.seed->eoc_on_harvest, get_avatar(), here, reaper_pos,
+                                   *seed, stage, stage, {}, num_ctx );
+
+        here.furn_set( reaper_pos, furn_str_id::NULL_ID() );
         here.i_clear( reaper_pos );
         for( item &i : iexamine::get_harvest_items(
                  seed_type, plant_produced, seed_produced, false ) ) {
@@ -1137,6 +1162,27 @@ void vehicle::operate_planter( map &here )
                     here.add_item( loc, tmp );
                     i->charges--;
                 }
+
+                item *planted_seed = iexamine::get_seed_at( here, loc );
+                if( planted_seed != nullptr ) {
+                    const std::string seed_stage( "GROWTH_SEED" );
+                    const furn_t &new_furn = here.furn( loc ).obj();
+
+                    get_event_bus().send<event_type::character_plants_seed>(
+                        get_avatar().getID(), here.get_abs( loc ).raw(),
+                        planted_seed->typeId(), new_furn.id );
+
+                    const std::map<std::string, double> num_ctx = {
+                        { "actor_is_npc", 0.0 }
+                    };
+                    if( new_furn.plant ) {
+                        iexamine::run_plant_eocs( new_furn.plant->eoc_on_plant, get_avatar(), here, loc,
+                                                   *planted_seed, seed_stage, seed_stage, {}, num_ctx );
+                    }
+                    iexamine::run_plant_eocs( planted_seed->type->seed->eoc_on_plant, get_avatar(), here,
+                                               loc, *planted_seed, seed_stage, seed_stage, {}, num_ctx );
+                }
+
                 break;
             }
         }

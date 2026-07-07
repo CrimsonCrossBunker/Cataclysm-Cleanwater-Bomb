@@ -10,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 #include <tuple>
+#include <type_traits>
 #include <unordered_set>
 #include <variant>
 
@@ -2790,6 +2791,10 @@ void Item_factory::check_definitions() const
                     msg += string_format( "invalid byproduct id %s\n", b.c_str() );
                 }
             }
+            if( type->seed->water_consumption < 0 ) {
+                msg += string_format( "seed %s has negative water_consumption\n",
+                                      type->id.c_str() );
+            }
         }
         if( type->book ) {
             if( type->book->skill && !type->book->skill.is_valid() ) {
@@ -3117,73 +3122,78 @@ Item_spawn_data *Item_factory::get_group( const item_group_id &group_tag )
 
 template<typename SlotType>
 void Item_factory::load_slot( const JsonObject &jo, bool was_loaded,
-                              cata::value_ptr<SlotType> &slotptr )
+                              cata::value_ptr<SlotType> &slotptr, std::string_view src )
 {
     //make a slot if one doesn't already exist
     if( !was_loaded || !slotptr ) {
         slotptr = cata::make_value<SlotType>();
     }
-    slotptr->deserialize( jo );
+    if constexpr( std::is_invocable_v<decltype( &SlotType::deserialize ), SlotType *,
+                  const JsonObject &, std::string_view > ) {
+        slotptr->deserialize( jo, src );
+    } else {
+        slotptr->deserialize( jo );
+    }
     slotptr->was_loaded = true;
 }
 
-void itype::load_slots( const JsonObject &jo, bool was_loaded )
+void itype::load_slots( const JsonObject &jo, bool was_loaded, std::string_view src )
 {
     auto subtype_to_slot = [&]( const std::string & subtype ) {
         if( subtype == "ARMOR" ) {
-            Item_factory::load_slot( jo, was_loaded, armor );
+            Item_factory::load_slot( jo, was_loaded, armor, src );
         }
         if( subtype == "TOOL" ) {
-            Item_factory::load_slot( jo, was_loaded, tool );
+            Item_factory::load_slot( jo, was_loaded, tool, src );
         }
         if( subtype == "PET_ARMOR" ) {
-            Item_factory::load_slot( jo, was_loaded, pet_armor );
+            Item_factory::load_slot( jo, was_loaded, pet_armor, src );
         }
         if( subtype == "GUN" ) {
-            Item_factory::load_slot( jo, was_loaded, gun );
+            Item_factory::load_slot( jo, was_loaded, gun, src );
         }
         if( subtype == "GUNMOD" ) {
-            Item_factory::load_slot( jo, was_loaded, gunmod );
-            Item_factory::load_slot( jo, was_loaded, mod );
+            Item_factory::load_slot( jo, was_loaded, gunmod, src );
+            Item_factory::load_slot( jo, was_loaded, mod, src );
         }
         if( subtype == "AMMO" ) {
-            Item_factory::load_slot( jo, was_loaded, ammo );
+            Item_factory::load_slot( jo, was_loaded, ammo, src );
         }
         if( subtype == "MAGAZINE" ) {
-            Item_factory::load_slot( jo, was_loaded, magazine );
+            Item_factory::load_slot( jo, was_loaded, magazine, src );
         }
         if( subtype == "COMESTIBLE" ) {
-            Item_factory::load_slot( jo, was_loaded, comestible );
+            Item_factory::load_slot( jo, was_loaded, comestible, src );
         }
         if( subtype == "BOOK" ) {
-            Item_factory::load_slot( jo, was_loaded, book );
+            Item_factory::load_slot( jo, was_loaded, book, src );
         }
         if( subtype == "BIONIC_ITEM" ) {
-            Item_factory::load_slot( jo, was_loaded, bionic );
+            Item_factory::load_slot( jo, was_loaded, bionic, src );
         }
         if( subtype == "TOOLMOD" ) {
-            Item_factory::load_slot( jo, was_loaded, mod );
+            Item_factory::load_slot( jo, was_loaded, mod, src );
         }
         if( subtype == "ENGINE" ) {
-            Item_factory::load_slot( jo, was_loaded, engine );
+            Item_factory::load_slot( jo, was_loaded, engine, src );
         }
         if( subtype == "WHEEL" ) {
-            Item_factory::load_slot( jo, was_loaded, wheel );
+            Item_factory::load_slot( jo, was_loaded, wheel, src );
         }
         if( subtype == "SEED" ) {
-            Item_factory::load_slot( jo, was_loaded, seed );
+            Item_factory::load_slot( jo, was_loaded, seed, src );
         }
         if( subtype == "BREWABLE" ) {
-            Item_factory::load_slot( jo, was_loaded, brewable );
+            Item_factory::load_slot( jo, was_loaded, brewable, src );
         }
         if( subtype == "COMPOSTABLE" ) {
-            Item_factory::load_slot( jo, was_loaded, compostable );
+            Item_factory::load_slot( jo, was_loaded, compostable, src );
         }
         if( subtype == "MILLING" ) {
-            Item_factory::load_slot( jo, was_loaded, milling_data );
+            Item_factory::load_slot( jo, was_loaded, milling_data, src );
         }
         if( subtype == "ARTIFACT" ) {
-            Item_factory::load_slot( jo, was_loaded, relic_data );
+            Item_factory::load_slot( jo, was_loaded, relic_data, src );
         }
     };
 
@@ -3845,7 +3855,7 @@ void islot_compostable::deserialize( const JsonObject &jo )
     mandatory( jo, was_loaded, "compost_results", results, generic_result_reader{} );
 }
 
-void islot_seed::deserialize( const JsonObject &jo )
+void islot_seed::deserialize( const JsonObject &jo, std::string_view src )
 {
     optional( jo, was_loaded, "fruit_div", fruit_div, 1 );
     mandatory( jo, was_loaded, "plant_name", plant_name );
@@ -3857,6 +3867,23 @@ void islot_seed::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "byproducts", byproducts );
     optional( jo, was_loaded, "required_terrain_flag", required_terrain_flag,
               ter_furn_flag::TFLAG_PLANTABLE );
+    optional( jo, was_loaded, "water_consumption", water_consumption,
+              irrigation::DEFAULT_SEED_WATER_CONSUMPTION );
+
+    auto load_eocs = [&]( const char *key, std::vector<effect_on_condition_id> &out ) {
+        if( jo.has_array( key ) ) {
+            for( JsonValue jv : jo.get_array( key ) ) {
+                out.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
+            }
+        }
+    };
+    load_eocs( "eoc_on_plant", eoc_on_plant );
+    load_eocs( "eoc_on_grow", eoc_on_grow );
+    load_eocs( "eoc_on_mature", eoc_on_mature );
+    load_eocs( "eoc_on_overgrow", eoc_on_overgrow );
+    load_eocs( "eoc_on_harvest", eoc_on_harvest );
+    load_eocs( "eoc_on_fertilize", eoc_on_fertilize );
+    load_eocs( "eoc_on_water", eoc_on_water );
 }
 
 void islot_gunmod::deserialize( const JsonObject &jo )
@@ -4629,6 +4656,7 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "charged_qualities", charged_qualities, item_quality_reader {} );
 
     optional( jo, was_loaded, "properties", properties );
+    optional( jo, was_loaded, "fertilizer_quality", fertilizer_quality );
 
     optional( jo, was_loaded, "max_worn", max_worn, MAX_WORN_PER_TYPE );
 
@@ -4678,7 +4706,7 @@ void itype::load( const JsonObject &jo, std::string_view src )
     }
     optional( jo, was_loaded, "legacy_charges_per_use_factor", legacy_charges_per_use_factor, 1 );
 
-    load_slots( jo, was_loaded );
+    load_slots( jo, was_loaded, src );
 
     optional( jo, was_loaded, "expand_snippets", expand_snippets );
 

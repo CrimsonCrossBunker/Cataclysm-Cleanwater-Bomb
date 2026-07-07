@@ -95,7 +95,7 @@
     ],
     "examine_action": "clear_overgrown",
     "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_plant_unharvested_overgrown", "base": "f_null" }
+    "plant_data": { "transform": "f_plant_unharvested_overgrown", "base": "f_null", "max_water_storage": 100 }
   },
   {
     "type": "furniture",
@@ -120,7 +120,7 @@
     ],
     "examine_action": "harvest_plant_ex",
     "bash": { "str_min": 4, "str_max": 10, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_plant_unharvested_overgrown", "base": "f_null" }
+    "plant_data": { "transform": "f_plant_unharvested_overgrown", "base": "f_null", "max_water_storage": 100 }
   },
   {
     "type": "furniture",
@@ -134,7 +134,7 @@
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_MATURE", "SMALL_HIDE" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 3, "str_max": 8, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_plant_harvest", "base": "f_null" }
+    "plant_data": { "transform": "f_plant_harvest", "base": "f_null", "max_water_storage": 100 }
   },
   {
     "type": "furniture",
@@ -148,7 +148,7 @@
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "GROWTH_SEED", "DONT_REMOVE_ROTTEN" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 1, "str_max": 5, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_plant_seedling", "base": "f_null" }
+    "plant_data": { "transform": "f_plant_seedling", "base": "f_null", "max_water_storage": 100 }
   },
   {
     "type": "furniture",
@@ -162,7 +162,7 @@
     "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_SEEDLING" ],
     "examine_action": "aggie_plant",
     "bash": { "str_min": 2, "str_max": 6, "sound": "crunch.", "sound_fail": "whish." },
-    "plant_data": { "transform": "f_plant_mature", "base": "f_null" }
+    "plant_data": { "transform": "f_plant_mature", "base": "f_null", "max_water_storage": 100 }
   },
   {
     "type": "furniture",
@@ -197,7 +197,7 @@
         { "item": "material_soil", "count": [ 60, 75 ] }
       ]
     },
-    "plant_data": { "transform": "f_planter_seed" },
+    "plant_data": { "transform": "f_planter_seed", "max_water_storage": 100 },
     "examine_action": "dirtmound"
   },
   {

@@ -67,6 +67,7 @@ enum class do_activity_reason : int {
     NEEDS_PLANTING,         //* For farming - tile can be planted
     NEEDS_TILLING,          //* For farming - tile can be tilled
     NEEDS_FERTILIZING,          //* For farming - tile can be fertilized
+    NEEDS_WATERING,         //* For farming - tile can be watered
     BLOCKING_TILE,          // Something has made it's way onto the tile, so the activity cannot proceed
     NEEDS_BOOK_TO_LEARN,    //* There is book to learn
     NEEDS_CHOPPING,         //* There is wood there to be chopped
@@ -101,6 +102,8 @@ const std::vector<std::string> do_activity_reason_string = {
     "NEEDS_HARVESTING",
     "NEEDS_PLANTING",
     "NEEDS_TILLING",
+    "NEEDS_FERTILIZING",
+    "NEEDS_WATERING",
     "BLOCKING_TILE",
     "NEEDS_BOOK_TO_LEARN",
     "NEEDS_CHOPPING",

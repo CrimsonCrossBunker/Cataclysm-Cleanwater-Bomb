@@ -6,12 +6,16 @@
 #include <vector>
 
 #include "avatar.h"
+#include "calendar.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "enums.h"
 #include "field.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "iexamine.h"
+#include "item.h"
+#include "itype.h"
 #include "magic_ter_furn_transform.h"
 #include "map.h"
 #include "mapdata.h"
@@ -26,6 +30,49 @@ template<typename T> struct weighted_int_list;
 namespace
 {
 generic_factory<ter_furn_transform> ter_furn_transform_factory( "ter_furn_transform" );
+
+// When a transform changes plant furniture (e.g. a spell matures a crop in one
+// cast), the seed's effective growth time must be brought in line with the new
+// furniture stage.  Otherwise map::grow_plant sees a mature-looking plant whose
+// internal timer still claims it is a seedling and never advances it further.
+static void sync_plant_seed_after_furniture_transform( map &m, const tripoint_bub_ms &location )
+{
+    const furn_t &new_furn = m.furn( location ).obj();
+    if( !new_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+        return;
+    }
+
+    item *seed = iexamine::get_seed_at( m, location );
+    if( seed == nullptr || seed->type == nullptr || seed->type->seed == nullptr ||
+        !new_furn.plant ) {
+        return;
+    }
+
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
+        seed->type->seed->get_growth_stages();
+    const int new_stage_idx = iexamine::get_plant_current_stage_idx( m, location, growth_stages );
+    if( new_stage_idx < 0 ) {
+        return;
+    }
+
+    const float growth_multiplier = new_furn.plant->growth_multiplier;
+    if( growth_multiplier <= 0.0f ) {
+        return;
+    }
+    const time_duration threshold = iexamine::get_plant_stage_threshold( growth_stages,
+                                    new_stage_idx );
+    const time_duration current_effective = iexamine::get_plant_effective_growth_time( *seed,
+            growth_multiplier );
+
+    if( current_effective < threshold ) {
+        iexamine::set_plant_effective_growth_turns( *seed, to_turns<int>( threshold ) );
+        seed->set_birthday( calendar::turn - threshold / growth_multiplier );
+    } else {
+        // Keep the seed birthday consistent with the existing effective time.
+        seed->set_birthday( calendar::turn - current_effective / growth_multiplier );
+    }
+}
+
 } // namespace
 
 template<>
@@ -292,6 +339,7 @@ void ter_furn_transform::transform( map &m, const tripoint_bub_ms &location ) co
     }
     if( furn_potential ) {
         m.furn_set( location, furn_potential->first );
+        sync_plant_seed_after_furniture_transform( m, location );
         if( you.sees( m, location ) && !furn_potential->second.first.empty() ) {
             you.add_msg_if_player( furn_potential->second.first.translated(),
                                    furn_potential->second.second ? m_good : m_bad );

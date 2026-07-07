@@ -434,6 +434,14 @@ static itype_id get_first_fertilizer_itype( Character &you, const tripoint_abs_m
                 continue;
             }
             return fertilizer_inv.front()->typeId();
+        } else {
+            // If the farm plot has no specific fertilizer configured,
+            // fall back to any item with the FERTILIZER flag.
+            std::vector<item_location> fertilizer_inv = you.cache_get_items_with( flag_FERTILIZER );
+            if( fertilizer_inv.empty() ) {
+                continue;
+            }
+            return fertilizer_inv.front()->typeId();
         }
     }
     return itype_id::NULL_ID();
@@ -2323,6 +2331,11 @@ activity_reason_info multi_farm_activity_actor::multi_activity_can_do( Character
 {
 
     map &here = get_map();
+
+    // Synchronize furniture flag and effective growth time before deciding
+    // what this farm tile needs.
+    here.grow_plant( src_loc );
+
     zone_manager &mgr = zone_manager::get_manager();
     std::vector<zone_data> zones;
 
@@ -2333,11 +2346,11 @@ activity_reason_info multi_farm_activity_actor::multi_activity_can_do( Character
         ret_val<void>can_plant = !seed.is_empty() ?
                                  warm_enough_to_plant( src_loc, seed ) : ret_val<void>::make_success();
 
-        if( here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_OVERGROWN, src_loc ) ) {
+        if( iexamine::is_plant_overgrown( here, src_loc ) ) {
             return activity_reason_info::ok( do_activity_reason::NEEDS_CLEARING );
         }
 
-        if( here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_HARVEST, src_loc ) ) {
+        if( iexamine::is_plant_harvestable( here, src_loc ) ) {
             map_stack items = here.i_at( src_loc );
             const map_stack::iterator seed_iter =
             std::find_if( items.begin(), items.end(), []( const item & it ) {
@@ -2357,6 +2370,11 @@ activity_reason_info multi_farm_activity_actor::multi_activity_can_do( Character
                 // We can harvest this plant without any tools.
                 return activity_reason_info::ok( do_activity_reason::NEEDS_HARVESTING );
             }
+        }
+        // there's a plant that isn't overgrown or harvestable, water it if needed and possible
+        else if( here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, src_loc ) &&
+                 iexamine::can_water_plant( you, src_loc ) ) {
+            return activity_reason_info::ok( do_activity_reason::NEEDS_WATERING );
         }
         // there's a plant that isn't overgrown or harvestable, apply fertilizer if possible
         else if( here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, src_loc ) &&
@@ -2763,6 +2781,8 @@ std::optional<requirement_id> multi_farm_activity_actor::multi_activity_requirem
 
     if( reason == do_activity_reason::NEEDS_TILLING ) {
         return requirement_data_multi_farm_tilling;
+    } else if( reason == do_activity_reason::NEEDS_WATERING ) {
+        // no requirements, water is consumed directly by the action
     } else if( reason == do_activity_reason::NEEDS_FERTILIZING ) {
         // no requirements
     } else if( reason == do_activity_reason::NEEDS_PLANTING ) {
@@ -3694,18 +3714,21 @@ bool multi_farm_activity_actor::multi_activity_do( Character &you,
         const tripoint_abs_ms &src, const tripoint_bub_ms &src_loc )
 {
 
-    const map &here = get_map();
+    map &here = get_map();
     const zone_manager &mgr = zone_manager::get_manager();
     const do_activity_reason &reason = act_info.reason;
+
+    // Synchronize furniture flag with effective growth time before acting.
+    here.grow_plant( src_loc );
 
     // it was here earlier, in the space of one turn, maybe it got harvested by someone else.
     if( ( ( reason == do_activity_reason::NEEDS_HARVESTING ) ||
           ( reason == do_activity_reason::NEEDS_CUT_HARVESTING ) ) &&
-        here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_HARVEST, src_loc ) ) {
+        iexamine::is_plant_harvestable( here, src_loc ) ) {
         iexamine::harvest_plant( you, src_loc, true );
         return false;
     } else if( ( reason == do_activity_reason::NEEDS_CLEARING ) &&
-               here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_OVERGROWN, src_loc ) ) {
+               iexamine::is_plant_overgrown( here, src_loc ) ) {
         iexamine::clear_overgrown( you, src_loc );
         return false;
     } else if( reason == do_activity_reason::NEEDS_TILLING &&
@@ -3732,6 +3755,9 @@ bool multi_farm_activity_actor::multi_activity_do( Character &you,
             iexamine::plant_seed( you, src_loc, itype_id( seed ) );
             return false;
         }
+    } else if( reason == do_activity_reason::NEEDS_WATERING ) {
+        iexamine::water_plant( you, src_loc );
+        return false;
     } else if( reason == do_activity_reason::NEEDS_FERTILIZING ) {
         itype_id used_fertilizer = get_first_fertilizer_itype( you, src );
         if( !used_fertilizer.is_null() ) {

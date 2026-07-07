@@ -180,6 +180,21 @@ constexpr float very_obese = 15.0f;
 constexpr float morbidly_obese = 20.0f;
 } // namespace character_weight_category
 
+// Irrigation constants for plant growth.
+namespace irrigation
+{
+// Default daily water consumption for a seed if not specified in JSON.
+constexpr int DEFAULT_SEED_WATER_CONSUMPTION = 20;
+// Amount of water added to a plant by one pour action.
+constexpr int WATER_PER_POUR = 50;
+// Maximum growth speed bonus from full irrigation (0.5 means 1.0 -> 1.5x).
+constexpr float MAX_IRRIGATION_GROWTH_BONUS = 0.5f;
+// Rain water collected per day by precipitation intensity (charges of water).
+constexpr int RAIN_WATER_VERY_LIGHT = 10;
+constexpr int RAIN_WATER_LIGHT = 25;
+constexpr int RAIN_WATER_HEAVY = 50;
+} // namespace irrigation
+
 // these are the lower bounds of each of the health classes.
 namespace character_health_category
 {

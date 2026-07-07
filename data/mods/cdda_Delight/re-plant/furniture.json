@@ -11,7 +11,7 @@
     "looks_like": "f_planter",
     "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "LIQUIDCONT", "CD_DELIGHT_PADDY" ],
     "examine_action": "dirtmound",
-    "plant_data": { "transform": "f_cd_delight_paddy_seed" },
+    "plant_data": { "transform": "f_cd_delight_paddy_seed", "max_water_storage": 200 },
     "bash": {
       "str_min": 2,
       "str_max": 6,
@@ -33,7 +33,7 @@
     "looks_like": "f_planter",
     "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "CD_DELIGHT_TRELLIS" ],
     "examine_action": "dirtmound",
-    "plant_data": { "transform": "f_cd_delight_trellis_seed" },
+    "plant_data": { "transform": "f_cd_delight_trellis_seed", "max_water_storage": 100 },
     "deconstruct": { "items": [ { "item": "stick", "count": [ 2, 4 ] }, { "item": "string_36", "count": [ 0, 1 ] } ] },
     "bash": {
       "str_min": 3,
@@ -56,7 +56,7 @@
     "looks_like": "t_dirtmound",
     "flags": [ "TRANSPARENT", "PLANTABLE", "FLAT", "CD_DELIGHT_FERTILE" ],
     "examine_action": "dirtmound",
-    "plant_data": { "transform": "f_cd_delight_fertile_seed" },
+    "plant_data": { "transform": "f_cd_delight_fertile_seed", "max_water_storage": 100 },
     "bash": {
       "str_min": 2,
       "str_max": 6,

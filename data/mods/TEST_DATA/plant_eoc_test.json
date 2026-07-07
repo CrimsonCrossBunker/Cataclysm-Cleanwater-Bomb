@@ -1,0 +1,217 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_PLANT_PLANTED",
+    "effect": [ { "math": [ "test_planted = 1" ] } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_PLANT_GROW",
+    "effect": [
+      {
+        "copy_var": { "context_val": "new_stage" },
+        "target_var": { "global_val": "test_grow_stage" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_PLANT_MATURE",
+    "effect": [ { "math": [ "test_mature = 1" ] } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_PLANT_OVERGROW",
+    "effect": [ { "math": [ "test_overgrow = 1" ] } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_PLANT_HARVEST",
+    "effect": [
+      { "math": [ "test_harvest_count = _plant_count" ] }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_PLANT_FERTILIZE",
+    "effect": [
+      {
+        "copy_var": { "context_val": "fertilizer_id" },
+        "target_var": { "global_val": "test_fertilizer" }
+      },
+      { "math": [ "test_fertilize_reduction_turns = _reduction_turns" ] }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_PLANT_WATER",
+    "effect": [
+      { "math": [ "test_water_added = _water_added" ] }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_EVENT_PLANT_SEED",
+    "eoc_type": "EVENT",
+    "required_event": "character_plants_seed",
+    "effect": [
+      { "math": [ "test_event_plant = 1" ] },
+      {
+        "copy_var": { "context_val": "seed_id" },
+        "target_var": { "global_val": "test_event_plant_seed_id" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_EVENT_HARVEST_PLANT",
+    "eoc_type": "EVENT",
+    "required_event": "character_harvests_plant",
+    "effect": [
+      { "math": [ "test_event_harvest = _plant_count" ] },
+      {
+        "copy_var": { "context_val": "seed_id" },
+        "target_var": { "global_val": "test_event_harvest_seed_id" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_EVENT_FERTILIZE_PLANT",
+    "eoc_type": "EVENT",
+    "required_event": "character_fertilizes_plant",
+    "effect": [
+      {
+        "copy_var": { "context_val": "fertilizer_id" },
+        "target_var": { "global_val": "test_event_fertilizer_id" }
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_EVENT_WATER_PLANT",
+    "eoc_type": "EVENT",
+    "required_event": "character_waters_plant",
+    "effect": [
+      { "math": [ "test_event_water_added = _water_added" ] }
+    ]
+  },
+  {
+    "type": "ter_furn_transform",
+    "id": "ter_test_plant_seedling_to_mature",
+    "furniture": [
+      {
+        "result": "test_f_plant_mature",
+        "valid_furniture": [ "test_f_plant_seedling" ],
+        "message": "The test plant matures instantly."
+      }
+    ]
+  },
+  {
+    "type": "ter_furn_transform",
+    "id": "ter_test_plant_seed_to_harvest",
+    "furniture": [
+      {
+        "result": "test_f_plant_harvest",
+        "valid_furniture": [ "test_f_plant_seed" ],
+        "message": "The test plant ripens instantly."
+      }
+    ]
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_plant_seed",
+    "copy-from": "f_plant_seed",
+    "name": "test plant seed",
+    "plant_data": {
+      "transform": "test_f_plant_seedling",
+      "base": "f_null",
+      "eoc_on_plant": [ "EOC_TEST_PLANT_PLANTED" ],
+      "eoc_on_grow": [ "EOC_TEST_PLANT_GROW" ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_plant_seedling",
+    "copy-from": "f_plant_seedling",
+    "name": "test plant seedling",
+    "plant_data": {
+      "transform": "test_f_plant_mature",
+      "base": "f_null",
+      "eoc_on_grow": [ "EOC_TEST_PLANT_GROW" ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_plant_mature",
+    "copy-from": "f_plant_mature",
+    "name": "test plant mature",
+    "plant_data": {
+      "transform": "test_f_plant_harvest",
+      "base": "f_null",
+      "eoc_on_mature": [ "EOC_TEST_PLANT_MATURE" ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_plant_harvest",
+    "copy-from": "f_plant_harvest",
+    "name": "test plant harvest",
+    "plant_data": {
+      "transform": "test_f_plant_overgrown",
+      "base": "f_null",
+      "eoc_on_harvest": [ "EOC_TEST_PLANT_HARVEST" ]
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_plant_overgrown",
+    "copy-from": "f_plant_unharvested_overgrown",
+    "name": "test plant overgrown",
+    "plant_data": {
+      "transform": "test_f_plant_overgrown",
+      "base": "f_null",
+      "eoc_on_overgrow": [ "EOC_TEST_PLANT_OVERGROW" ]
+    }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "test_seed_eoc",
+    "copy-from": "soybean_seed",
+    "name": { "str_sp": "test EOC seeds" },
+    "description": "A fast-growing test seed with lifecycle EOC hooks.",
+    "plant_name": "test EOC plant",
+    "fruit": "raw_edamame",
+    "growth_stages": [
+      { "GROWTH_SEED": "1 hour" },
+      { "GROWTH_SEEDLING": "1 hour" },
+      { "GROWTH_MATURE": "1 hour" },
+      { "GROWTH_HARVEST": "1 hour" },
+      { "GROWTH_OVERGROWN": "1 hour" }
+    ],
+    "eoc_on_plant": [ "EOC_TEST_PLANT_PLANTED" ],
+    "eoc_on_grow": [ "EOC_TEST_PLANT_GROW" ],
+    "eoc_on_mature": [ "EOC_TEST_PLANT_MATURE" ],
+    "eoc_on_overgrow": [ "EOC_TEST_PLANT_OVERGROW" ],
+    "eoc_on_harvest": [ "EOC_TEST_PLANT_HARVEST" ],
+    "eoc_on_fertilize": [ "EOC_TEST_PLANT_FERTILIZE" ],
+    "eoc_on_water": [ "EOC_TEST_PLANT_WATER" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "SEED", "COMESTIBLE" ],
+    "id": "test_seed_simple",
+    "copy-from": "soybean_seed",
+    "name": { "str_sp": "test simple seeds" },
+    "description": "A fast-growing test seed without EOC hooks, used for pure growth logic tests.",
+    "plant_name": "test simple plant",
+    "fruit": "raw_edamame",
+    "growth_stages": [
+      { "GROWTH_SEED": "1 second" },
+      { "GROWTH_SEEDLING": "1 second" },
+      { "GROWTH_MATURE": "1 second" },
+      { "GROWTH_HARVEST": "1 second" }
+    ]
+  }
+]

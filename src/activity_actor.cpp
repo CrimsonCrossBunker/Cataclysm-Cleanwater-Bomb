@@ -7198,6 +7198,9 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
             used_seed.front().erase_var( "activity_var" );
         }
         used_seed.front().set_flag( json_flag_HIDDEN_ITEM );
+        iexamine::set_plant_water( used_seed.front(), 0 );
+        iexamine::set_plant_last_water_check( used_seed.front(), calendar::turn );
+        iexamine::set_plant_effective_growth_turns( used_seed.front(), 0 );
         here.add_item_or_charges( examp, used_seed.front() );
         if( here.has_flag_furn( seed_id->seed->required_terrain_flag, examp ) &&
             here.furn( examp )->plant != nullptr ) {
@@ -7214,6 +7217,27 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
         } else {
             here.furn_set( examp, furn_f_plant_seed );
         }
+
+        item *planted_seed = iexamine::get_seed_at( here, examp );
+        if( planted_seed != nullptr ) {
+            const furn_t &new_furn = here.furn( examp ).obj();
+
+            // Send global event before per-seed/per-furniture hooks.
+            get_event_bus().send<event_type::character_plants_seed>(
+                who.getID(), here.get_abs( examp ).raw(), planted_seed->typeId(), new_furn.id );
+
+            const std::string seed_stage( "GROWTH_SEED" );
+            const std::map<std::string, double> num_ctx = {
+                { "actor_is_npc", who.is_npc() ? 1.0 : 0.0 }
+            };
+            if( new_furn.plant ) {
+                iexamine::run_plant_eocs( new_furn.plant->eoc_on_plant, who, here, examp, *planted_seed,
+                                           seed_stage, seed_stage, {}, num_ctx );
+            }
+            iexamine::run_plant_eocs( planted_seed->type->seed->eoc_on_plant, who, here, examp,
+                                       *planted_seed, seed_stage, seed_stage, {}, num_ctx );
+        }
+
         who.add_msg_player_or_npc( _( "You plant some %s." ), _( "<npcname> plants some %s." ),
                                    item::nname( seed_id ) );
     }
@@ -10281,13 +10305,6 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
 
     map &here = get_map();
 
-    std::list<item> planted;
-    if( fertilizer->count_by_charges() ) {
-        planted = who.use_charges( fertilizer, 1 );
-    } else {
-        planted = who.use_amount( fertilizer, 1 );
-    }
-
     // Can't use item_stack::only_item() since there might be fertilizer
     map_stack items = here.i_at( plant_position );
     const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
@@ -10303,47 +10320,92 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
         seed->type->seed->get_growth_stages();
 
-    // Find current stage index based on the furniture's growth flag
-    int current_stage_idx = -1;
-    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
-        if( here.has_flag_furn( growth_stages[i].first.str(), plant_position ) ) {
-            current_stage_idx = i;
-            break;
-        }
-    }
+    const float growth_multiplier = here.furn( plant_position )->plant->growth_multiplier;
 
-    if( current_stage_idx < 0 || current_stage_idx + 1 >= static_cast<int>( growth_stages.size() ) ) {
+    // Time required to reach the mature stage in effective growth units.
+    const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( growth_stages );
+    if( mature_stage_idx < 0 ) {
+        add_msg( m_info, _( "The %s is too mature to benefit from fertilizer." ),
+                 seed->get_plant_name() );
+        act.set_to_null();
+        return;
+    }
+    const time_duration mature_threshold = iexamine::get_plant_stage_threshold( growth_stages,
+            mature_stage_idx );
+
+    // Current effective growth time (new saves) or estimate from age (old saves).
+    const time_duration current_effective = iexamine::get_plant_effective_growth_time( *seed,
+            growth_multiplier );
+
+    const time_duration distance_to_mature = mature_threshold - current_effective;
+    if( distance_to_mature <= 0_seconds ) {
         add_msg( m_info, _( "The %s is too mature to benefit from fertilizer." ),
                  seed->get_plant_name() );
         act.set_to_null();
         return;
     }
 
-    // Time required to reach the next stage, accounting for the plant furniture's growth speed
-    time_duration time_to_next_stage = 0_seconds;
-    for( int i = 0; i <= current_stage_idx; ++i ) {
-        time_to_next_stage += growth_stages[i].second;
+    // Now that we know the plant can actually benefit, consume the fertilizer.
+    std::list<item> planted;
+    if( fertilizer->count_by_charges() ) {
+        planted = who.use_charges( fertilizer, 1 );
+    } else {
+        planted = who.use_amount( fertilizer, 1 );
     }
-    const float growth_multiplier = here.furn( plant_position )->plant->growth_multiplier;
-    time_to_next_stage = time_to_next_stage / growth_multiplier;
-
-    time_duration remaining = time_to_next_stage - seed->age();
-    if( remaining < 0_seconds ) {
-        remaining = 0_seconds;
+    if( planted.empty() ) {
+        debugmsg( "Failed to consume fertilizer %s", fertilizer.c_str() );
+        act.set_to_null();
+        return;
     }
 
-    // Shorten remaining time: 20% base + 5% per survival level, capped at 50%
+    // Shorten the distance to mature: 20% base + 5% per survival level, multiplied by
+    // the fertilizer's quality, capped at 50%.
     const double survival_level = who.get_skill_level( skill_survival );
-    const double reduction_pct = std::min( 0.20 + 0.05 * survival_level, 0.50 );
+    const double fertilizer_quality = fertilizer->fertilizer_quality;
+    const double reduction_pct = std::min( ( 0.20 + 0.05 * survival_level ) * fertilizer_quality,
+                                           0.50 );
 
-    const time_duration reduction = remaining * reduction_pct;
-    seed->set_birthday( seed->birthday() - reduction );
+    const time_duration reduction = distance_to_mature * reduction_pct;
+    const time_duration new_effective = current_effective + reduction;
 
-    // Apply any stage advances immediately
+    // Advance effective growth time, mark the plant as fertilized, and keep birthday in sync.
+    iexamine::set_plant_effective_growth_turns( *seed, to_turns<int>( new_effective ) );
+    iexamine::set_plant_fertilized( *seed, true );
+    seed->set_birthday( calendar::turn - new_effective / growth_multiplier );
+
+    // Apply any stage advances immediately.
     here.grow_plant( plant_position );
 
+    item *fertilized_seed = iexamine::get_seed_at( here, plant_position );
+    if( fertilized_seed != nullptr ) {
+        const furn_t &furn = here.furn( plant_position ).obj();
+
+        // Send global event before per-seed/per-furniture hooks.
+        get_event_bus().send<event_type::character_fertilizes_plant>(
+            who.getID(), here.get_abs( plant_position ).raw(), fertilized_seed->typeId(), furn.id,
+            fertilizer, to_turns<int>( reduction ) );
+
+        const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, plant_position );
+        const std::string stage = stage_idx >= 0 ?
+                                  fertilized_seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
+        const std::map<std::string, std::string> string_ctx = {
+            { "fertilizer_id", fertilizer.str() }
+        };
+        const std::map<std::string, double> num_ctx = {
+            { "reduction_turns", static_cast<double>( to_turns<int>( reduction ) ) },
+            { "actor_is_npc", who.is_npc() ? 1.0 : 0.0 }
+        };
+        if( furn.plant ) {
+            iexamine::run_plant_eocs( furn.plant->eoc_on_fertilize, who, here, plant_position,
+                                       *fertilized_seed, stage, stage, string_ctx, num_ctx );
+        }
+        iexamine::run_plant_eocs( fertilized_seed->type->seed->eoc_on_fertilize, who, here, plant_position,
+                                   *fertilized_seed, stage, stage, string_ctx, num_ctx );
+    }
+
     //~ %1$s: plant name, %2$s: fertilizer name
-    add_msg( m_info, _( "You fertilize the %1$s with the %2$s." ), seed->get_plant_name(),
+    add_msg( m_info, _( "You fertilize the %1$s with the %2$s." ),
+             fertilized_seed ? fertilized_seed->get_plant_name() : planted.front().tname(),
              planted.front().tname() );
 
     act.set_to_null();
@@ -10406,10 +10468,25 @@ ret_val<void> multi_farm_activity_actor::can_fertilize( Character &,
     if( !here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, tile ) ) {
         return ret_val<void>::make_failure( _( "Tile isn't a plant" ) );
     }
-    if( here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_HARVEST, tile ) ||
-        here.has_flag_furn( ter_furn_flag::TFLAG_GROWTH_OVERGROWN, tile ) ) {
+
+    // Authoritative check based on effective growth time: mature, harvestable,
+    // or overgrown plants cannot benefit from fertilizer.
+    if( iexamine::is_plant_mature( here, tile ) ||
+        iexamine::is_plant_harvestable( here, tile ) ||
+        iexamine::is_plant_overgrown( here, tile ) ) {
         return ret_val<void>::make_failure( _( "Tile is too mature to fertilize" ) );
     }
+
+    // A plant can only benefit from fertilizer once.
+    map_stack items = here.i_at( tile );
+    const map_stack::iterator seed = std::find_if( items.begin(), items.end(),
+                                                   []( const item & it ) {
+                                                       return it.is_seed();
+                                                   } );
+    if( seed != items.end() && iexamine::is_plant_fertilized( *seed ) ) {
+        return ret_val<void>::make_failure( _( "This plant has already been fertilized." ) );
+    }
+
     return ret_val<void>::make_success();
 }
 

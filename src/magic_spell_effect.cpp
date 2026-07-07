@@ -31,14 +31,18 @@
 #include "dialogue_helpers.h"
 #include "effect_on_condition.h"
 #include "enums.h"
+#include "event.h"
+#include "event_bus.h"
 #include "explosion.h"
 #include "game_inventory.h"
+#include "iexamine.h"
 #include "field.h"
 #include "field_type.h"
 #include "fungal_effects.h"
 #include "game.h"
 #include "item.h"
 #include "item_group.h"
+#include "itype.h"
 #include "kill_tracker.h"
 #include "line.h"
 #include "magic.h"
@@ -78,7 +82,6 @@ class translation;
 static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_teleglow( "teleglow" );
 
-static const flag_id json_flag_FERTILIZER( "FERTILIZER" );
 static const flag_id json_flag_FIT( "FIT" );
 
 static const itype_id itype_fertilizer( "fertilizer" );
@@ -1463,44 +1466,70 @@ void spell_effect::fertilize_plant( const spell &sp, Creature &caster,
 
     std::set<tripoint_bub_ms> area = spell_effect_area( sp, target, caster );
     ::map &here = get_map();
+    Character *planter = caster.as_character();
+    if( planter == nullptr ) {
+        return;
+    }
     for( const tripoint_bub_ms &tile : area ) {
-
+        // Spell fertilization is a separate, repeatable growth-acceleration effect.
+        // It only requires a plant with a seed; it does not share the normal
+        // fertilization limits (maturity, already-fertilized, etc.).
         if( !here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, tile ) ) {
             continue;
         }
-        // Can't use item_stack::only_item() since there might be fertilizer
-        map_stack items = here.i_at( tile );
-        map_stack::iterator fertilizer = std::find_if( items.begin(), items.end(), []( const item & it ) {
-            return it.has_flag( json_flag_FERTILIZER );
-        }
-                                                     );
-        if( fertilizer != items.end() ) {
+
+        // Synchronize before reading / mutating the authoritative effective growth time.
+        here.grow_plant( tile );
+
+        item *synced_seed = iexamine::get_seed_at( here, tile );
+        if( synced_seed == nullptr ) {
             continue;
         }
-        // Reduce the amount of time it takes until the next stage of the plant by
-        // the spell's damage (1% per damage point) relative to season length
+
+        // Reduce the amount of time until maturity by the spell's damage
+        // (1% per damage point) relative to season length.
         const time_duration fertilizerEpoch = calendar::season_length() * ( static_cast<float>( sp.damage(
                 caster ) ) / 100.0f );
 
-        const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-            return it.is_seed();
-        } );
+        const furn_t &furn = here.furn( tile ).obj();
+        const float growth_multiplier = furn.plant ? furn.plant->growth_multiplier : 1.0f;
+        const time_duration current_effective = iexamine::get_plant_effective_growth_time(
+                    *synced_seed, growth_multiplier );
+        const time_duration new_effective = current_effective + fertilizerEpoch;
 
-        if( seed == items.end() ) {
-            debugmsg( "Missing seed for plant at %s", target.to_string() );
-            here.i_clear( target );
-            here.furn_set( target, furn_str_id::NULL_ID() );
-            return;
+        iexamine::set_plant_effective_growth_turns( *synced_seed,
+                to_turns<int>( new_effective ) );
+        synced_seed->set_birthday( calendar::turn - new_effective / growth_multiplier );
+
+        // Apply any stage advances immediately.
+        here.grow_plant( tile );
+
+        // Re-fetch the seed in case grow_plant / EOCs moved or removed it.
+        synced_seed = iexamine::get_seed_at( here, tile );
+        if( synced_seed != nullptr ) {
+            const furn_str_id furn_id = here.furn( tile ).id();
+            get_event_bus().send<event_type::character_fertilizes_plant>(
+                planter->getID(), here.get_abs( tile ).raw(), synced_seed->typeId(), furn_id,
+                itype_fertilizer, to_turns<int>( fertilizerEpoch ) );
+
+            const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( here, tile );
+            const std::string stage = stage_idx >= 0 ?
+                                      synced_seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
+            const std::map<std::string, std::string> string_ctx = {
+                { "fertilizer_id", itype_fertilizer.str() }
+            };
+            const std::map<std::string, double> num_ctx = {
+                { "reduction_turns", static_cast<double>( to_turns<int>( fertilizerEpoch ) ) },
+                { "actor_is_npc", planter->is_npc() ? 1.0 : 0.0 }
+            };
+            if( furn.plant ) {
+                iexamine::run_plant_eocs( furn.plant->eoc_on_fertilize, *planter, here, tile,
+                                           *synced_seed, stage, stage, string_ctx, num_ctx );
+            }
+            iexamine::run_plant_eocs( synced_seed->type->seed->eoc_on_fertilize, *planter, here,
+                                       tile, *synced_seed, stage, stage, string_ctx, num_ctx );
         }
 
-        seed->set_birthday( seed->birthday() - fertilizerEpoch );
-        // The plant furniture has the NOITEM token which prevents adding items on that square,
-        // spawned items are moved to an adjacent field instead, but the fertilizer token
-        // must be on the square of the plant, therefore this hack:
-        const furn_id &old_furn = here.furn( tile );
-        here.furn_set( tile, furn_str_id::NULL_ID() );
-        here.spawn_item( tile, itype_fertilizer, 1, 1, calendar::turn );
-        here.furn_set( tile, old_furn );
     }
 }
 

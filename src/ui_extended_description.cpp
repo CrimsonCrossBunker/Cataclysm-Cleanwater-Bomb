@@ -7,6 +7,7 @@
 #include "color.h"
 #include "creature.h"
 #include "creature_tracker.h"
+#include "iexamine.h"
 #include "map.h"
 #include "mapdata.h"
 #include "point.h"
@@ -69,6 +70,17 @@ static void draw_graffiti_text( const tripoint_bub_ms &p )
         cataimgui::draw_colored_text( get_player_character().has_trait( trait_ILLITERATE ) ?
                                       // NOLINTNEXTLINE(cata-text-style): the question mark does not end a sentence
                                       _( "Inscription: ???" ) : string_format( _( "Inscription: %s" ), graffiti ) );
+    }
+}
+
+static void draw_plant_water_text( const tripoint_bub_ms &p )
+{
+    map &here = get_map();
+    here.grow_plant( p );
+    std::string water_desc = iexamine::plant_water_description( here, p );
+    if( !water_desc.empty() ) {
+        ImGui::Separator();
+        cataimgui::draw_colored_text( water_desc );
     }
 }
 
@@ -186,6 +198,7 @@ void extended_description_window::draw_furniture_tab()
         } else {
             cataimgui::draw_colored_text( _( "You do not see any furniture here." ), c_light_gray );
         }
+        draw_plant_water_text( p );
         draw_sign_text( p );
         ImGui::EndTabItem();
     }

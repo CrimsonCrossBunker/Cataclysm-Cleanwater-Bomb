@@ -46,6 +46,7 @@
     "plant_name": "hops",
     "fruit": "hops",
     "byproducts": [ "straw_pile" ],
+    "water_consumption": 20,
     "growth_stages": [
       { "GROWTH_SEED": "30 days" },
       { "GROWTH_SEEDLING": "30 days" },
@@ -350,6 +351,7 @@
     "plant_name": "cabbage",
     "fruit": "cabbage_head",
     "byproducts": [ "withered" ],
+    "water_consumption": 20,
     "growth_stages": [
       { "GROWTH_SEED": "22 days" },
       { "GROWTH_SEEDLING": "21 days" },
@@ -392,6 +394,7 @@
     "fruit": "tomato",
     "seeds": false,
     "byproducts": [ "withered" ],
+    "water_consumption": 20,
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
       { "GROWTH_SEEDLING": "16 days" },
@@ -704,6 +707,7 @@
     "plant_name": "carrot",
     "fruit": "carrot",
     "byproducts": [ "withered" ],
+    "water_consumption": 20,
     "growth_stages": [
       { "GROWTH_SEED": "17 days" },
       { "GROWTH_SEEDLING": "16 days" },
@@ -725,6 +729,7 @@
     "fruit": "corn",
     "seeds": false,
     "byproducts": [ "withered" ],
+    "water_consumption": 25,
     "growth_stages": [
       { "GROWTH_SEED": "20 days" },
       { "GROWTH_SEEDLING": "20 days" },
@@ -1663,6 +1668,7 @@
     "plant_name": "wheat",
     "fruit": "wheat_stalks",
     "seeds": false,
+    "water_consumption": 20,
     "growth_stages": [
       { "GROWTH_SEED": "30 days" },
       { "GROWTH_SEEDLING": "30 days" },

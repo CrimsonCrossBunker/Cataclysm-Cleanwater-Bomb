@@ -404,7 +404,9 @@ bool loot_options::query_at_creation()
 
 bool plot_options::query_at_creation()
 {
-    return query_seed() != canceled;
+    bool query_seed_result = query_seed() != canceled;
+    query_fertilizer();
+    return query_seed_result;
 }
 
 bool unload_options::query_at_creation()
