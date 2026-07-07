@@ -314,10 +314,11 @@ public class SplashScreen extends Activity {
 
         private ScrollView createSettingsView() {
             ScrollView scrollView = new ScrollView(SplashScreen.this);
+            scrollView.setFillViewport(true);
             LinearLayout layout = new LinearLayout(SplashScreen.this);
             layout.setOrientation(LinearLayout.VERTICAL);
             int padding = (int)(24 * getResources().getDisplayMetrics().density);
-            layout.setPadding(padding, 0, padding, 0);
+            layout.setPadding(padding, padding, padding, padding);
 
             TextView displayModeLabel = new TextView(SplashScreen.this);
             displayModeLabel.setText(getString(R.string.androidSystemUiMode));
