@@ -116,6 +116,7 @@ overmap &overmapbuffer::get( const point_abs_om &p )
     }
 
     // Cache miss: upgrade to exclusive (write) lock
+    overmap *new_om_ptr;
     {
         std::unique_lock<std::shared_mutex> lk( overmaps_mutex_ );
         // Double-check: another thread may have inserted while upgrading
@@ -126,13 +127,14 @@ overmap &overmapbuffer::get( const point_abs_om &p )
 
         overmap &new_om = *( overmaps[ p ] = std::make_unique<overmap>( p ) );
         global_state.overmap_count++;
-        new_om.populate();
-        fix_mongroups( new_om );
-        fix_npcs( new_om );
-
+        new_om_ptr = &new_om;
         last_requested_overmap = &new_om;
-        return new_om;
     }
+
+    new_om_ptr->populate();
+    fix_mongroups( *new_om_ptr );
+    fix_npcs( *new_om_ptr );
+    return *new_om_ptr;
 }
 
 void overmapbuffer::create_custom_overmap( const point_abs_om &p, overmap_special_batch &specials )

@@ -2455,7 +2455,7 @@ void reset_scenario( avatar &u, const scenario *scen )
 }
 
 character_creator_ui_impl::character_creator_ui_impl( character_creator_ui *parent ) :
-    cataimgui::window( "",
+    cataimgui::window( "CHARACTER_CREATOR",
                        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                        ImGuiWindowFlags_NoNav )
 {
