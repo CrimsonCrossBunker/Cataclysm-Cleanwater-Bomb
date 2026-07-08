@@ -14369,6 +14369,7 @@ void zone_sort_activity_actor::return_items_to_source( Character &you,
 
 void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
 {
+    ( void )act;
     map &here = get_map();
     const zone_manager &mgr = zone_manager::get_manager();
 
@@ -14385,16 +14386,18 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
                    you.has_destination() ? 1 : 0,
                    picked_up_stuff.size(), dropoff_coords.size() );
 
-    // Dropping off
+    // Dropping off.  CCB keeps the reachability checks from route-based
+    // sorting, but performs the actual delivery directly so YO remains a
+    // fast sorting command instead of a walking-haul simulator.
     if( !dropoff_coords.empty() && !picked_up_stuff.empty() ) {
         auto dest_iter = dropoff_coords.begin();
         while( dest_iter != dropoff_coords.end() ) {
             const tripoint_abs_ms drop_dest = *dest_iter;
-            // Sometimes we loop back to here while still picking stuff up (because we spent all our moves picking up)
-            // Don't start trying to teleport-undrop at the destination until we're actually adjacent.
-            const bool is_adjacent_or_closer_to_dest = square_dist( abspos, drop_dest ) <= 1;
-
-            if( is_adjacent_or_closer_to_dest ) {
+            const tripoint_bub_ms drop_bub = here.get_bub( drop_dest );
+            if( here.inbounds( drop_bub ) && !here.is_open_air( drop_bub ) &&
+                ( square_dist( abspos, drop_dest ) <= 1 ||
+                  zone_sorting::route_length( you, drop_bub ) != INT_MAX ) ) {
+                bool charged_delivery = false;
                 auto iter = picked_up_stuff.begin();
                 // ensure validity of all item_locations before we start this - if any have been invalidated there's a bug somewhere earlier
                 for( item_location itm_loc : picked_up_stuff ) {
@@ -14418,7 +14421,6 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
                                               mgr.has_vehicle( drop_zt, drop_dest, fac_id ) &&
                                               !mgr.has_terrain( drop_zt, drop_dest, fac_id );
                     bool placed = false;
-                    const tripoint_bub_ms drop_bub = here.get_bub( drop_dest );
                     if( std::optional<vpart_reference> ovp = here.veh_at( drop_bub ).cargo() ) {
                         item copy( **iter );
                         if( ovp->vehicle().add_item( here, ovp->part(), copy ) ) {
@@ -14432,6 +14434,10 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
                         placed = ground.get_item() != nullptr;
                     }
                     if( placed ) {
+                        if( !charged_delivery && square_dist( abspos, drop_dest ) > 1 ) {
+                            you.mod_moves( -std::min( 100 * rl_dist( src_bub, drop_bub ), 500 ) );
+                            charged_delivery = true;
+                        }
                         you.mod_moves( -you.item_handling_cost( **iter ) );
                         if( const vehicle_cursor *veh_curs = iter->veh_cursor() ) {
                             vehicle &cart_with_items = veh_curs->veh;
@@ -14458,40 +14464,8 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
                 }
                 dest_iter = dropoff_coords.erase( dest_iter ); // Done dropping stuff here.
             } else {
-                dest_iter++; // Evaluate next dropoff
+                dest_iter = dropoff_coords.erase( dest_iter ); // No longer reachable or valid.
             }
-        }
-
-        // Items remain but no adjacent destinations. Route to nearest reachable
-        // dropoff, trying closest-first. Skip if still at source (keep picking up).
-        if( !picked_up_stuff.empty() && !dropoff_coords.empty() &&
-            !you.has_destination() && square_dist( you.pos_bub(), src_bub ) > 1 ) {
-            std::sort( dropoff_coords.begin(), dropoff_coords.end(),
-            [&abspos]( const tripoint_abs_ms & a, const tripoint_abs_ms & b ) {
-                return square_dist( abspos, a ) < square_dist( abspos, b );
-            } );
-
-            bool routed = false;
-            auto dest_it = dropoff_coords.begin();
-            while( dest_it != dropoff_coords.end() ) {
-                if( zone_sorting::route_to_destination( you, act, here.get_bub( *dest_it ), stage ) ) {
-                    routed = true;
-                    break;
-                }
-                dest_it = dropoff_coords.erase( dest_it );
-            }
-
-            if( !routed ) {
-                // All dropoff destinations unreachable after player left source.
-                // Defensive: route_length populated dropoff_coords earlier, but
-                // route_to_destination failed from the player's current position.
-                // Both use the same A* in a single turn, so this can't fire normally.
-                return_items_to_source( you, src_bub );
-                unreachable_sources.emplace( src );
-                stage = THINK;
-                you.mod_moves( -1 );
-            }
-            return;
         }
     }
 
@@ -14908,200 +14882,7 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
             return;
         }
 
-        // Batching: check if any unvisited source is strictly closer than
-        // the nearest destination and has compatible items we can carry.
-        // If so, detour there first to batch pickups into one delivery trip.
-        // Only attempt if we actually picked something up this call (freeze gate).
-        if( picked_up_this_pass ) {
-            // No-grab weight gate: skip batching if already over capacity
-            if( !you.is_avatar() || you.as_avatar()->get_grab_type() != object_type::VEHICLE ) {
-                if( you.weight_carried() > you.weight_capacity() ) {
-                    picked_up_this_pass = false;
-                }
-            }
-        }
-        int dest_dist = INT_MAX;
-        if( picked_up_this_pass ) {
-            for( const tripoint_abs_ms &dest : dropoff_coords ) {
-                if( square_dist( abspos, dest ) <= 1 ) {
-                    dest_dist = 0;
-                    break;
-                }
-                const tripoint_bub_ms dest_bub = here.get_bub( dest );
-                if( !here.inbounds( dest_bub ) ) {
-                    continue;
-                }
-                const int rd = zone_sorting::route_length( you, dest_bub );
-                dest_dist = std::min( dest_dist, rd );
-            }
-
-            // Skip entire batch candidate scan when all destinations are
-            // unreachable -- the Chebyshev filter (cheb >= dest_dist) would
-            // pass everything through, causing O(N) unfiltered A* probes.
-            if( dest_dist == INT_MAX ) {
-                picked_up_this_pass = false;
-            }
-        }
-        if( picked_up_this_pass ) {
-            // Pre-fetch cart cargo for per-item volume check
-            std::optional<vpart_reference> batch_cart_vp;
-            if( you.is_avatar() && you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
-                const tripoint_bub_ms cart_pos = you.pos_bub() + you.as_avatar()->grab_point;
-                batch_cart_vp = here.veh_at( cart_pos ).cargo();
-            }
-
-            // Build distance-sorted candidates using A* route distances.
-            // Pre-sort by Chebyshev (lower bound on route distance) and use it
-            // as a cheap filter before expensive A* calls.
-            std::vector<std::pair<int, tripoint_abs_ms>> batch_presorted;
-            for( const tripoint_abs_ms &candidate : coord_set ) {
-                if( candidate == src ) {
-                    continue;
-                }
-                if( unreachable_sources.count( candidate ) ) {
-                    continue;
-                }
-                const tripoint_bub_ms cand_bub = here.get_bub( candidate );
-                if( !here.inbounds( cand_bub ) ) {
-                    continue;
-                }
-                if( zone_sorting::ignore_zone_position( you, candidate,
-                                                        zone_sorting::ignore_contents( you, candidate ) ) ) {
-                    continue;
-                }
-                const int cheb = square_dist( abspos, candidate );
-                if( cheb >= dest_dist ) {
-                    // Chebyshev is a lower bound on route distance, so this
-                    // candidate can't possibly be closer than the destination.
-                    continue;
-                }
-                batch_presorted.emplace_back( cheb, candidate );
-            }
-            std::sort( batch_presorted.begin(), batch_presorted.end(),
-                       []( const std::pair<int, tripoint_abs_ms> &a,
-            const std::pair<int, tripoint_abs_ms> &b ) {
-                return a.first < b.first;
-            } );
-
-            // Compute actual A* route distances for survivors.
-            std::vector<std::pair<int, tripoint_abs_ms>> batch_candidates;
-            for( const auto &[cheb, candidate] : batch_presorted ) {
-                if( cheb <= 1 ) {
-                    // Adjacent -- no pathfinding needed.
-                    batch_candidates.emplace_back( 0, candidate );
-                    continue;
-                }
-                const tripoint_bub_ms cand_bub = here.get_bub( candidate );
-                const int rdist = zone_sorting::route_length( you, cand_bub );
-                if( rdist == INT_MAX ) {
-                    unreachable_sources.emplace( candidate );
-                    continue;
-                }
-                if( rdist >= dest_dist ) {
-                    // Closer by Chebyshev but not by actual route distance.
-                    continue;
-                }
-                batch_candidates.emplace_back( rdist, candidate );
-            }
-            std::sort( batch_candidates.begin(), batch_candidates.end(),
-                       []( const std::pair<int, tripoint_abs_ms> &a,
-            const std::pair<int, tripoint_abs_ms> &b ) {
-                return a.first < b.first;
-            } );
-
-            bool should_batch = false;
-            tripoint_abs_ms batch_target;
-            for( const auto &[cand_dist, candidate] : batch_candidates ) {
-                const tripoint_bub_ms cand_bub = here.get_bub( candidate );
-                const bool cand_has_terrain_unsorted =
-                    mgr.has_terrain( zone_type_LOOT_UNSORTED, candidate, fac_id );
-                const bool cand_has_vehicle_unsorted =
-                    mgr.has_vehicle( zone_type_LOOT_UNSORTED, candidate, fac_id );
-
-                for( const auto &[it, from_veh] : zone_sorting::populate_items( cand_bub ) ) {
-                    // Source binding filter (mirrors DO item loop)
-                    if( from_veh && !cand_has_vehicle_unsorted ) {
-                        continue;
-                    }
-                    if( !from_veh && !cand_has_terrain_unsorted ) {
-                        continue;
-                    }
-                    if( zone_sorting::sort_skip_item( you, it, other_activity_items,
-                                                      mgr.has( zone_type_LOOT_IGNORE_FAVORITES, candidate, fac_id ),
-                                                      candidate ) ) {
-                        continue;
-                    }
-                    // Destination compatibility: exact zone-type match
-                    const zone_type_id cand_zt = mgr.get_near_zone_type_for_item(
-                                                     *it, abspos, MAX_VIEW_DISTANCE, fac_id );
-                    if( cand_zt == zone_type_id::NULL_ID() ) {
-                        continue;
-                    }
-                    bool shares_dest = false;
-                    for( const tripoint_abs_ms &possible_dest : dropoff_coords ) {
-                        if( mgr.get_near_zone_type_for_item( *it, possible_dest, 0,
-                                                             fac_id ) == cand_zt ) {
-                            shares_dest = true;
-                            break;
-                        }
-                    }
-                    if( !shares_dest ) {
-                        continue;
-                    }
-                    // Per-item capacity check with weight gates
-                    bool fits = false;
-                    if( batch_cart_vp &&
-                        batch_cart_vp->items().free_volume() >= it->volume() ) {
-                        if( drag_worst_tile ) {
-                            const vehicle &bv = batch_cart_vp->vehicle();
-                            units::mass projected = bv.total_mass( here ) + it->weight();
-                            fits = ( bv.drag_str_req_at( here, *drag_worst_tile, projected ) <=
-                                     you.get_arm_str() );
-                        } else {
-                            fits = true;
-                        }
-                    }
-                    if( !fits && you.can_stash( *it ) ) {
-                        if( you.is_avatar() &&
-                            you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
-                            fits = true;
-                        } else {
-                            fits = ( you.weight_carried() + it->weight() <=
-                                     you.weight_capacity() );
-                        }
-                    }
-                    if( fits ) {
-                        should_batch = true;
-                        batch_target = candidate;
-                        break;
-                    }
-                }
-                if( should_batch ) {
-                    break;
-                }
-            }
-
-            if( should_batch ) {
-                add_msg_debug( debugmode::DF_ACTIVITY,
-                               "zone_sort DO: batching - detour to (%d,%d,%d) before delivery",
-                               batch_target.x(), batch_target.y(), batch_target.z() );
-                placement = batch_target;
-                num_processed = 0;
-                if( square_dist( abspos, batch_target ) <= 1 ) {
-                    // Already adjacent, re-enter DO to process batch target
-                    return;
-                }
-                if( zone_sorting::route_to_destination( you, act,
-                                                        here.get_bub( batch_target ), stage ) ) {
-                    return;
-                }
-                // Can't reach batch target, mark unreachable and fall through to delivery
-                unreachable_sources.emplace( batch_target );
-            }
-            // Reset after evaluation. Prevents infinite loops when a batch
-            // target has no pickable items (zero moves consumed per cycle).
-            picked_up_this_pass = false;
-        }
+        picked_up_this_pass = false;
 
         bool match = false;
         tripoint_abs_ms destination;
@@ -15165,23 +14946,10 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
         }
 
         add_msg_debug( debugmode::DF_ACTIVITY,
-                       "zone_sort DO: routing to dest (%d,%d,%d) with %zu items",
+                       "zone_sort DO: fast delivery to dest (%d,%d,%d) with %zu items",
                        destination.x(), destination.y(), destination.z(),
                        picked_up_stuff.size() );
-        // Already adjacent to destination - next do_turn enters the dropoff section directly.
-        if( square_dist( abspos, destination ) <= 1 ) {
-            return;
-        }
-        if( !zone_sorting::route_to_destination( you, act, here.get_bub( destination ), stage ) ) {
-            // Defensive: route_length passed (destination was in dropoff_coords)
-            // but route_to_destination failed. Both use the same A* in a single
-            // turn, so this shouldn't happen normally.
-            add_msg_debug( debugmode::DF_ACTIVITY,
-                           "zone_sort DO: route to dest FAILED, returning items, back to THINK" );
-            return_items_to_source( you, src_bub );
-            stage = THINK;
-            you.mod_moves( -1 );
-        }
+        return;
 
     } else if( !you.has_destination() ) {
         // This can happen legitimately when all destination zones are full
