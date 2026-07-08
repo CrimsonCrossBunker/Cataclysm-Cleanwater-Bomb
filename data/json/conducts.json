@@ -155,12 +155,6 @@
     "hidden_by": [ "conduct_vegan" ]
   },
   {
-    "id": "conduct_nudist",
-    "type": "conduct",
-    "name": "Nudist",
-    "requirements": [ { "event_statistic": "num_avatar_wears_item", "is": "<=", "target": 0, "description": "Wear no clothing" } ]
-  },
-  {
     "id": "conduct_speed_limit_35",
     "type": "conduct",
     "name": "Residential speed limit",
