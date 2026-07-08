@@ -9,10 +9,12 @@ const github = require('@actions/github');
  * 1 - github_token
  * 2 - new version
  * 3 - commit SHA of new release
+ * 4 - previous release tag
  */
 const token = process.argv[2];
 const version = process.argv[3];
 const comittish = process.argv[4];
+let previousTag = process.argv[5];
 const repo = process.env.REPOSITORY_NAME
 const owner = process.env.GITHUB_REPOSITORY_OWNER
 
@@ -39,24 +41,32 @@ function format_request_error(error) {
 async function main() {
   const client = github.getOctokit(token);
 
-  const latestReleaseResponse = await client.request(
-    'GET /repos/{owner}/{repo}/releases',
-    {
-      owner: owner,
-      repo: repo,
-      headers: {
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    }
-  ).catch((e) =>{
-    throw `${format_request_error(e)} ...when getting latest release`;
-  })
+  if (!previousTag) {
+    const latestReleaseResponse = await client.request(
+      'GET /repos/{owner}/{repo}/releases',
+      {
+        owner: owner,
+        repo: repo,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      }
+    ).catch((e) =>{
+      throw `${format_request_error(e)} ...when getting latest release`;
+    })
 
-  if (latestReleaseResponse.data) {
-    for (const responseData of latestReleaseResponse.data) {
-      if (responseData.draft == false && responseData.prerelease == true) {
-        previousTag = responseData.tag_name;
-	break;
+    if (latestReleaseResponse.data) {
+      const releases = latestReleaseResponse.data
+        .filter((responseData) =>
+          responseData.draft == false &&
+          responseData.prerelease == true &&
+          responseData.tag_name !== version
+        )
+        .sort((a, b) =>
+          new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at)
+        );
+      if (releases.length > 0) {
+        previousTag = releases[0].tag_name;
       }
     }
   }
