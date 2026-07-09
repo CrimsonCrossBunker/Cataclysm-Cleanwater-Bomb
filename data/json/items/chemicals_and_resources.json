@@ -471,8 +471,7 @@
     "phase": "liquid",
     "charges": 1,
     "category": "chems",
-    "freezing_point": -78,
-    "display_type": "BY_VOLUME"
+    "freezing_point": -78
   },
   {
     "type": "ITEM",
