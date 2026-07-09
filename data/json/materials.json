@@ -1329,7 +1329,8 @@
     "dmg_adj": [ "ripped", "torn", "shredded", "tattered" ],
     "bash_dmg_verb": "ripped",
     "cut_dmg_verb": "cut",
-    "resist": { "bash": 1.5, "cut": 2, "acid": 5, "heat": 3, "bullet": 5 },
+    "burn_data": [ { "immune": true }, { "immune": true }, { "immune": true } ],
+    "resist": { "bash": 1.5, "cut": 2, "acid": 5, "heat": 40, "bullet": 5 },
     "repair_difficulty": 4
   },
   {
@@ -1346,7 +1347,8 @@
     "dmg_adj": [ "ripped", "torn", "shredded", "tattered" ],
     "bash_dmg_verb": "ripped",
     "cut_dmg_verb": "cut",
-    "resist": { "bash": 3, "cut": 4, "acid": 5, "heat": 3, "bullet": 5 },
+    "burn_data": [ { "immune": true }, { "immune": true }, { "immune": true } ],
+    "resist": { "bash": 3, "cut": 4, "acid": 5, "heat": 40, "bullet": 5 },
     "repair_difficulty": 5
   },
   {

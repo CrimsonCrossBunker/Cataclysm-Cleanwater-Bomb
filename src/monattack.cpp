@@ -2012,8 +2012,8 @@ bool mattack::depart( monster *z )
     } else {
         add_msg_if_player_sees( *z, m_info, _( "The %s departs." ), z->name() );
     }
-    z->spawn_corpse = false;
-    z->death_drops = false;
+    z->no_corpse_quiet = true;
+    z->no_extra_death_drops = true;
     z->die( &here, nullptr );
     return true;
 }
@@ -2599,8 +2599,8 @@ bool mattack::photograph( monster *z )
             if( one_in( 3 ) ) {
                 add_msg( m_info, _( "The %s flashes a LED and departs.  Human officer on scene." ),
                          z->name() );
-                z->spawn_corpse = false;
-                z->death_drops = false;
+                z->no_corpse_quiet = true;
+                z->no_extra_death_drops = true;
                 z->die( &here, nullptr );
                 return false;
             } else {
@@ -2619,8 +2619,8 @@ bool mattack::photograph( monster *z )
             if( one_in( 4 ) ) {
                 add_msg( m_info, _( "The %s flashes a LED and departs.  Human officer on scene." ),
                          z->name() );
-                z->spawn_corpse = false;
-                z->death_drops = false;
+                z->no_corpse_quiet = true;
+                z->no_extra_death_drops = true;
                 z->die( &here, nullptr );
                 return false;
             } else {
@@ -2637,8 +2637,8 @@ bool mattack::photograph( monster *z )
             if( one_in( 3 ) ) {
                 add_msg( m_info, _( "The %s flashes a LED and departs.  SWAT's working the area." ),
                          z->name() );
-                z->spawn_corpse = false;
-                z->death_drops = false;
+                z->no_corpse_quiet = true;
+                z->no_extra_death_drops = true;
                 z->die( &here, nullptr );
                 return false;
             } else {
@@ -2654,8 +2654,8 @@ bool mattack::photograph( monster *z )
         // And you're wearing your badge
         if( player_character.is_wearing( itype_badge_marshal ) ) {
             add_msg( m_info, _( "The %s flashes a LED and departs.  The Feds got this." ), z->name() );
-            z->spawn_corpse = false;
-            z->death_drops = false;
+            z->no_corpse_quiet = true;
+            z->no_extra_death_drops = true;
             z->die( &here, nullptr );
             return false;
         }
@@ -4613,7 +4613,7 @@ bool mattack::zombie_fuse( monster *z )
                                 critter->name(), z->name() );
     }
     critter->death_drops = false;
-    critter->death_message = false;
+    critter->quiet_death = true;
     critter->die( &here, z );
     return true;
 }
@@ -4652,7 +4652,7 @@ bool mattack::eat_clone( monster *z )
                             _( "An orifice on the side of %s swells and splits open, and a monstrous tongue reaches out grabbing the nearest Daitya clone and sucking it back inside the Daitya!" ),
                             z->name() );
 
-    nearest_clone->death_message = false;
+    nearest_clone->quiet_death = true;
     nearest_clone->death_drops = false;
     nearest_clone->die( &here, z );
 
