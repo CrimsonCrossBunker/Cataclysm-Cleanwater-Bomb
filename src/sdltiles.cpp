@@ -17,12 +17,14 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <exception>
 #include <fstream>
 #include <iterator>
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <stack>
@@ -950,15 +952,56 @@ static_assert( std::atomic<uint32_t>::is_always_lock_free,
                "visible-frame inbox needs lock-free uint32 atomics on every shipped ABI" );
 
 static android_visible_frame_inbox visible_frame_inbox;
+static std::mutex extra_button_input_mutex;
+static std::deque<input_event> extra_button_inputs;
 
 extern "C" {
+
+    static void on_native_ime_insets_changed( jint left, jint top, jint right, jint bottom,
+            jboolean visible )
+    {
+        visible_frame_inbox.publish( left, top, right, bottom, visible == JNI_TRUE );
+    }
+
+    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_onNativeImeInsetsChanged(
+        JNIEnv *env, jclass jcls, jint left, jint top, jint right, jint bottom, jboolean visible )
+    {
+        ( void )env;
+        ( void )jcls;
+        on_native_ime_insets_changed( left, top, right, bottom, visible );
+    }
 
     JNIEXPORT void JNICALL Java_com_cleverraven_cataclysmdda_CataclysmDDA_onNativeImeInsetsChanged(
         JNIEnv *env, jclass jcls, jint left, jint top, jint right, jint bottom, jboolean visible )
     {
-        ( void )env; // unused
-        ( void )jcls; // unused
-        visible_frame_inbox.publish( left, top, right, bottom, visible == JNI_TRUE );
+        ( void )env;
+        ( void )jcls;
+        on_native_ime_insets_changed( left, top, right, bottom, visible );
+    }
+
+    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeButtonClick(
+        JNIEnv *env, jclass jcls, jstring text )
+    {
+        ( void )jcls;
+        if( text == nullptr ) {
+            return;
+        }
+
+        const char *raw_text = env->GetStringUTFChars( text, nullptr );
+        if( raw_text == nullptr ) {
+            return;
+        }
+
+        const std::string text_s( raw_text );
+        env->ReleaseStringUTFChars( text, raw_text );
+        if( text_s.empty() ) {
+            return;
+        }
+
+        input_event event( UTF8_getch( text_s ), input_event_t::keyboard_char );
+        event.text = text_s;
+        std::lock_guard<std::mutex> lock( extra_button_input_mutex );
+        extra_button_inputs.push_back( event );
     }
 
 } // "C"
@@ -5342,6 +5385,22 @@ static void focus_aware_stop_text_input()
 #endif
 }
 
+static bool pop_extra_button_input( input_event &event )
+{
+#if defined(__ANDROID__)
+    std::lock_guard<std::mutex> lock( extra_button_input_mutex );
+    if( extra_button_inputs.empty() ) {
+        return false;
+    }
+    event = extra_button_inputs.front();
+    extra_button_inputs.pop_front();
+    return true;
+#else
+    ( void )event;
+    return false;
+#endif
+}
+
 //Check for any window messages (keypress, paint, mousemove, etc)
 static void CheckMessages()
 {
@@ -5661,6 +5720,11 @@ static void CheckMessages()
 #endif
 
     last_input = input_event();
+
+    if( pop_extra_button_input( last_input ) ) {
+        text_refresh = true;
+        return;
+    }
 
     using cata::options::mouse;
 

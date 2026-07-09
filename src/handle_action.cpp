@@ -118,6 +118,11 @@ enum class direction : unsigned int;
     #include "screen_shake.h"
     #include "sdltiles.h"
 #endif
+#if defined(__ANDROID__)
+    #include <jni.h>
+
+    #include "sdl_wrappers.h"
+#endif
 
 static const bionic_id bio_remote( "bio_remote" );
 
@@ -2503,8 +2508,34 @@ static const std::set<action_id> host_ui_actions = {
     ACTION_KEYBINDINGS,
     ACTION_MAIN_MENU,
     ACTION_EXPORT_BUG_REPORT_ARCHIVE,
+    ACTION_MANAGE_ANDROID_EXTRA_BUTTONS,
     ACTION_COOP_CHAT,
 };
+#endif
+
+#if defined(__ANDROID__)
+static void manage_android_extra_buttons()
+{
+    JNIEnv *env = ( JNIEnv * )GetAndroidJNIEnv();
+    jobject activity = ( jobject )GetAndroidActivity();
+    if( env == nullptr || activity == nullptr ) {
+        return;
+    }
+    jclass clazz( env->GetObjectClass( activity ) );
+    if( clazz == nullptr ) {
+        env->DeleteLocalRef( activity );
+        return;
+    }
+    jmethodID method_id = env->GetMethodID( clazz, "showButtonManage", "()V" );
+    if( env->ExceptionCheck() ) {
+        env->ExceptionClear();
+    }
+    if( method_id != nullptr ) {
+        env->CallVoidMethod( activity, method_id );
+    }
+    env->DeleteLocalRef( activity );
+    env->DeleteLocalRef( clazz );
+}
 #endif
 
 bool game::do_regular_action( action_id &act, avatar &player_character,
@@ -3166,6 +3197,12 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_MAIN_MENU:
         case ACTION_KEYBINDINGS:
             break;
+
+#if defined(__ANDROID__)
+        case ACTION_MANAGE_ANDROID_EXTRA_BUTTONS:
+            manage_android_extra_buttons();
+            break;
+#endif
 
         case ACTION_TIMEOUT:
 #ifdef MP_ENABLED
