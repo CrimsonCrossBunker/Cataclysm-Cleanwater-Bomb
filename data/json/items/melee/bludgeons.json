@@ -426,7 +426,7 @@
     "material": [ "plastic" ],
     "to_hit": { "grip": "weapon", "length": "short", "surface": "any", "balance": "neutral" },
     "price_postapoc": "10 cent",
-    "extend": { "flags": [ "FRAGILE_MELEE" ] },
+    "extend": { "flags": [ "FRAGILE_MELEE", "COSPLAY_PROPS" ] },
     "melee_damage": { "bash": 2 }
   },
   {
@@ -442,7 +442,7 @@
     "material": [ "plastic" ],
     "to_hit": { "grip": "weapon", "length": "short", "surface": "any", "balance": "neutral" },
     "price_postapoc": "20 cent",
-    "extend": { "flags": [ "FRAGILE_MELEE", "WATER_BREAK_ACTIVE" ] },
+    "extend": { "flags": [ "FRAGILE_MELEE", "WATER_BREAK_ACTIVE", "COSPLAY_PROPS" ] },
     "charges_per_use": 1,
     "use_action": {
       "type": "transform",

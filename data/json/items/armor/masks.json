@@ -352,7 +352,7 @@
     "warmth": 5,
     "material_thickness": 0.2,
     "environmental_protection": 1,
-    "flags": [ "WATER_FRIENDLY" ],
+    "flags": [ "WATER_FRIENDLY", "COSPLAY_PROPS" ],
     "armor": [ { "encumbrance": 10, "coverage": 95, "covers": [ "eyes", "mouth" ] } ],
     "variant_type": "generic",
     "variants": [
@@ -519,7 +519,7 @@
     "warmth": 5,
     "material_thickness": 0.5,
     "environmental_protection": 1,
-    "flags": [ "FRAGILE" ],
+    "flags": [ "FRAGILE", "COSPLAY_PROPS" ],
     "armor": [ { "encumbrance": 14, "coverage": 95, "covers": [ "head", "mouth" ] } ]
   },
   {
@@ -538,7 +538,7 @@
     "warmth": 5,
     "material_thickness": 0.5,
     "environmental_protection": 1,
-    "flags": [ "FRAGILE" ],
+    "flags": [ "FRAGILE", "COSPLAY_PROPS" ],
     "armor": [ { "encumbrance": 8, "coverage": 95, "covers": [ "head", "mouth" ] } ],
     "variant_type": "generic",
     "variants": [

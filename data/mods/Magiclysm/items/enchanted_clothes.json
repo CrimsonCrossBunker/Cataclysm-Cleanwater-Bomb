@@ -25,7 +25,7 @@
     ],
     "material": [ "parabolan_wool" ],
     "material_thickness": 0.5,
-    "flags": [ "VARSIZE", "WATER_FRIENDLY", "RAINPROOF", "STURDY", "TRADER_KEEP_EQUIPPED" ],
+    "flags": [ "VARSIZE", "WATER_FRIENDLY", "RAINPROOF", "STURDY", "TRADER_KEEP_EQUIPPED", "COSPLAY_COSTUME" ],
     "passive_effects": [ { "id": "ench_parabolan_blouse" } ]
   },
   {
@@ -44,7 +44,7 @@
     "color": "brown",
     "armor": [ { "encumbrance": 2, "coverage": 95, "covers": [ "leg_l", "leg_r" ] } ],
     "material_thickness": 0.5,
-    "flags": [ "VARSIZE", "WATER_FRIENDLY", "RAINPROOF", "STURDY", "TRADER_KEEP_EQUIPPED" ],
+    "flags": [ "VARSIZE", "WATER_FRIENDLY", "RAINPROOF", "STURDY", "TRADER_KEEP_EQUIPPED", "COSPLAY_COSTUME" ],
     "passive_effects": [
       {
         "has": "WORN",

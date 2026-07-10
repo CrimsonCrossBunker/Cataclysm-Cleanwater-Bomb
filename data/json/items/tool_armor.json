@@ -4680,7 +4680,7 @@
       "need_charges": 1,
       "need_charges_msg": "The batteries are dead."
     },
-    "flags": [ "OUTER", "SUN_GLASSES" ],
+    "flags": [ "OUTER", "SUN_GLASSES", "COSPLAY_PROPS" ],
     "pocket_data": [
       {
         "pocket_type": "MAGAZINE_WELL",

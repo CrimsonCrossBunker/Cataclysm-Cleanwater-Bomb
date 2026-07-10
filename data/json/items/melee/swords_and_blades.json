@@ -2515,7 +2515,7 @@
       }
     ],
     "use_action": { "type": "holster", "holster_prompt": "Sheath sword", "holster_msg": "You sheath your %s" },
-    "flags": [ "CRUTCHES" ],
+    "flags": [ "CRUTCHES", "COSPLAY_PROPS" ],
     "weapon_category": [ "BATONS" ],
     "techniques": [ "PRECISE", "RAPID", "WBLOCK_2" ],
     "faults": [ { "fault_group": "staff_short" } ],

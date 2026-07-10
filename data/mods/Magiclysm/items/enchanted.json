@@ -144,7 +144,7 @@
     "color": "dark_gray",
     "warmth": 30,
     "material_thickness": 3,
-    "flags": [ "OVERSIZE", "HOOD", "OUTER", "NO_REPAIR", "STURDY", "TRADER_KEEP_EQUIPPED" ],
+    "flags": [ "OVERSIZE", "HOOD", "OUTER", "NO_REPAIR", "STURDY", "TRADER_KEEP_EQUIPPED", "COSPLAY_COSTUME" ],
     "armor": [ { "encumbrance": 4, "coverage": 85, "covers": [ "torso", "head", "arm_l", "arm_r", "leg_l", "leg_r" ] } ],
     "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "BONUS_DODGE", "add": 1 } ] } ]
   },
