@@ -1133,7 +1133,7 @@ class game
         bool do_regular_action( action_id &act, avatar &player_character,
                                 const std::optional<tripoint_bub_ms> &mouse_target );
         bool handle_action();
-        bool try_get_right_click_action( action_id &act, const tripoint_bub_ms &mouse_target );
+        bool try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_target );
         bool try_get_left_click_action( action_id &act, const tripoint_bub_ms &mouse_target );
         // If loc is empty then use all the items in character inventory including bionics.
         void item_action_menu( item_location loc = item_location() ); // Displays item action menu
