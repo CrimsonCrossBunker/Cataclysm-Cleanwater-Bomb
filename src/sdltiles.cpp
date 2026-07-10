@@ -139,6 +139,9 @@ std::unique_ptr<cata_tiles> overmap_tilecontext;
 static uint32_t lastupdate = 0;
 static uint32_t interval = 25;
 static bool needupdate = false;
+// Synthetic Android touch clicks carry their own coordinates.  Preserve them
+// instead of replacing them with the (usually stale) hardware mouse position.
+static bool last_input_has_explicit_mouse_pos = false;
 static bool need_invalidate_framebuffers = false;
 palette_array windowsPalette;
 
@@ -5817,7 +5820,14 @@ static void CheckMessages()
             finger_down_time > 0 &&
             ticks - finger_down_time > static_cast<uint32_t>
             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-            if( ticks - finger_repeat_time > finger_repeat_delay ) {
+            const float held_distance = std::hypot( finger_curr_x - finger_down_x,
+                                        finger_curr_y - finger_down_y );
+            const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
+                                        std::max( WindowWidth, WindowHeight );
+            const bool precision_hold = is_default_mode &&
+                                        get_option<bool>( "ANDROID_LONG_PRESS_CONTEXT" ) &&
+                                        held_distance < hold_deadzone;
+            if( !precision_hold && ticks - finger_repeat_time > finger_repeat_delay ) {
                 handle_finger_input( ticks );
                 finger_repeat_time = ticks;
                 // Prevent repeating inputs on the next call to this function if there is a fingerup event
@@ -5863,6 +5873,9 @@ static void CheckMessages()
 #endif
 
     last_input = input_event();
+#if defined(__ANDROID__)
+    last_input_has_explicit_mouse_pos = false;
+#endif
 
     if( pop_extra_button_input( last_input ) ) {
         text_refresh = true;
@@ -6449,9 +6462,29 @@ static void CheckMessages()
                                     }
                                 }
 
-                            } else if( ticks - finger_down_time <= static_cast<uint32_t>(
-                                           get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-                                handle_finger_input( ticks );
+                            } else {
+                                const float held_distance = std::hypot( finger_curr_x - finger_down_x,
+                                                            finger_curr_y - finger_down_y );
+                                const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
+                                                            std::max( WindowWidth, WindowHeight );
+                                const bool precision_hold = is_default_mode &&
+                                                            get_option<bool>( "ANDROID_LONG_PRESS_CONTEXT" ) &&
+                                                            ticks - finger_down_time > static_cast<uint32_t>(
+                                                                    get_option<int>( "ANDROID_INITIAL_DELAY" ) ) &&
+                                                            held_distance < hold_deadzone;
+                                if( precision_hold ) {
+                                    last_input = input_event( MouseInput::RightButtonReleased,
+                                                              input_event_t::mouse );
+                                    const SDL_Point touch_point = window_to_display_buffer_coords( SDL_Point{
+                                        static_cast<int>( std::lround( finger_curr_x ) ),
+                                        static_cast<int>( std::lround( finger_curr_y ) )
+                                    } );
+                                    last_input.mouse_pos = point( touch_point.x, touch_point.y );
+                                    last_input_has_explicit_mouse_pos = true;
+                                } else if( ticks - finger_down_time <= static_cast<uint32_t>(
+                                               get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
+                                    handle_finger_input( ticks );
+                                }
                             }
                         }
                         third_finger_down_x = third_finger_curr_x = second_finger_down_x = second_finger_curr_x =
@@ -6925,13 +6958,16 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     // Sample the raw mouse position (window coords) and convert into
     // display_buffer coords so canonical gameplay picking matches the
     // domain ImGui and tile draws use.
-    {
+    if( !last_input_has_explicit_mouse_pos ) {
         point raw;
         GetMouseState( &raw.x, &raw.y );
         const SDL_Point buf_pt = window_to_display_buffer_coords( SDL_Point{ raw.x, raw.y } );
         last_input.mouse_pos.x = buf_pt.x;
         last_input.mouse_pos.y = buf_pt.y;
     }
+#if defined(__ANDROID__)
+    last_input_has_explicit_mouse_pos = false;
+#endif
     if( last_input.type == input_event_t::keyboard_char ) {
         previously_pressed_key = last_input.get_first_input();
 #if defined(__ANDROID__)
