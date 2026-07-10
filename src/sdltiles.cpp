@@ -4557,6 +4557,7 @@ static bool needs_sdl_surface_visibility_refresh = true;
 
 input_context touch_input_context;
 static bool android_has_active_world();
+static void android_request_repaint();
 
 static bool android_map_zoom_context()
 {
