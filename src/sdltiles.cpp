@@ -93,6 +93,7 @@
 #include "uistate.h"
 #include "ui_manager.h"
 #include "wcwidth.h"
+#include "worldfactory.h"
 #include "cata_imgui.h"
 
 std::unique_ptr<cataimgui::client> imclient;
@@ -4517,9 +4518,14 @@ std::map<std::string, quick_shortcuts_t> quick_shortcuts_map;
 // quick shortcuts to disappear momentarily.
 input_context touch_input_context;
 
+static bool android_has_active_world()
+{
+    return world_generator && world_generator->active_world;
+}
+
 std::string get_quick_shortcut_name( const std::string &category )
 {
-    if( category == "DEFAULTMODE" &&
+    if( category == "DEFAULTMODE" && android_has_active_world() &&
         g->check_zone( zone_type_id( "NO_AUTO_PICKUP" ), get_player_character().pos_bub() ) &&
         get_option<bool>( "ANDROID_SHORTCUT_ZONE" ) ) {
         return "DEFAULTMODE____SHORTCUTS";
@@ -4566,7 +4572,8 @@ void get_quick_shortcut_dimensions( quick_shortcuts_t &qsl, float &border, float
 input_event *get_quick_shortcut_under_finger( bool down = false )
 {
 
-    if( !quick_shortcuts_enabled ) {
+    if( !quick_shortcuts_enabled ||
+        ( touch_input_context.get_category() == "DEFAULTMODE" && !android_has_active_world() ) ) {
         return NULL;
     }
 
@@ -4747,7 +4754,7 @@ bool remove_expired_actions_from_quick_shortcuts( const std::string &category )
     }
 
     // This should only ever be used on "DEFAULTMODE" category for gameplay shortcuts
-    if( category != "DEFAULTMODE" ) {
+    if( category != "DEFAULTMODE" || !android_has_active_world() ) {
         return false;
     }
 
@@ -4862,6 +4869,9 @@ void draw_quick_shortcuts()
 
     bool shortcut_right = get_option<std::string>( "ANDROID_SHORTCUT_POSITION" ) == "right";
     std::string &category = touch_input_context.get_category();
+    if( category == "DEFAULTMODE" && !android_has_active_world() ) {
+        return;
+    }
     bool is_default_mode = category == "DEFAULTMODE";
     quick_shortcuts_t &qsl = quick_shortcuts_map[get_quick_shortcut_name( category )];
     if( qsl.empty() || !touch_input_context.get_registered_manual_keys().empty() ) {
@@ -5234,7 +5244,8 @@ void handle_finger_input( uint32_t ticks )
     float delta_y = finger_curr_y - finger_down_y;
     float dist = std::sqrt( delta_x * delta_x + delta_y * delta_y ); // in pixel space
     bool handle_diagonals = touch_input_context.is_action_registered( "LEFTUP" );
-    bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE";
+    bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE" &&
+                           android_has_active_world();
     if( dist > ( get_option<float>( "ANDROID_DEADZONE_RANGE" ) * std::max( WindowWidth,
                  WindowHeight ) ) ) {
         if( !handle_diagonals ) {
@@ -5458,7 +5469,8 @@ static void CheckMessages()
         ui_manager::redraw_invalidated();
     }
 
-    bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE";
+    bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE" &&
+                           android_has_active_world();
     quick_shortcuts_t &qsl = quick_shortcuts_map[get_quick_shortcut_name(
                                  touch_input_context.get_category() )];
 
