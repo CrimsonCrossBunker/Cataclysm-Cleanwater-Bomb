@@ -1322,8 +1322,9 @@ static void bionic_install_common( npc &p, Character &patron, Character &patient
 
     //Makes the doctor awesome at installing but not perfect
     if( patient.can_install_bionics( it, p, false, 20 ) ) {
+        std::optional<item> source_item = *bionic.get_item();
         bionic.remove_item();
-        patient.install_bionics( it, p, false, 20 );
+        patient.install_bionics( it, p, false, 20, source_item );
     }
 }
 

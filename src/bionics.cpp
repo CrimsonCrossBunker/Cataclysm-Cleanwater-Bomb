@@ -2241,6 +2241,7 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
                                _( "<npcname>'s parts are jiggled back into their familiar places." ) );
         add_msg( m_good, _( "Successfully removed %s." ), bio.id.obj().name );
         const bionic_id bio_id = bio.id;
+        const std::optional<item> bio_source_item = bio.source_item;
         remove_bionic( bio );
         // remove dependent bionics
         std::vector<bionic> dependent_bionics;
@@ -2269,21 +2270,31 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
             add_msg( m_neutral, _( "%s removed with %s." ), dependent.id->name.translated(),
                      bio_id->name.translated() );
             get_event_bus().send<event_type::removes_cbm>( getID(), dependent.id );
+            const std::optional<item> dependent_source_item = dependent.source_item;
             remove_bionic( dependent );
             for( const trait_id &mid : dependent.id->give_mut_on_removal ) {
                 if( !has_trait( mid ) ) {
                     set_mutation( mid );
                 }
             }
-            item dependent_cbm( itype_burnt_out_bionic );
-            if( item::type_is_defined( dependent.id->itype() ) ) {
-                dependent_cbm = item( dependent.id->itype() );
+            if( dependent_source_item ) {
+                item dependent_cbm = *dependent_source_item;
+                dependent_cbm.set_flag( flag_FILTHY );
+                dependent_cbm.set_flag( flag_NO_STERILE );
+                dependent_cbm.set_flag( flag_NO_PACKED );
+                dependent_cbm.set_fault( fault_bionic_salvaged );
+                here.add_item( pos_bub(), dependent_cbm );
+            } else {
+                item dependent_cbm( itype_burnt_out_bionic );
+                if( item::type_is_defined( dependent.id->itype() ) ) {
+                    dependent_cbm = item( dependent.id->itype() );
+                }
+                dependent_cbm.set_flag( flag_FILTHY );
+                dependent_cbm.set_flag( flag_NO_STERILE );
+                dependent_cbm.set_flag( flag_NO_PACKED );
+                dependent_cbm.set_fault( fault_bionic_salvaged );
+                here.add_item( pos_bub(), dependent_cbm );
             }
-            dependent_cbm.set_flag( flag_FILTHY );
-            dependent_cbm.set_flag( flag_NO_STERILE );
-            dependent_cbm.set_flag( flag_NO_PACKED );
-            dependent_cbm.set_fault( fault_bionic_salvaged );
-            here.add_item( pos_bub(), dependent_cbm );
         }
 
         // give us any muts it's supposed to (silently) if removed
@@ -2293,15 +2304,24 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
             }
         }
 
-        item cbm( itype_burnt_out_bionic );
-        if( item::type_is_defined( bio_id->itype() ) ) {
-            cbm = item( bio_id->itype() );
+        if( bio_source_item ) {
+            item cbm = *bio_source_item;
+            cbm.set_flag( flag_FILTHY );
+            cbm.set_flag( flag_NO_STERILE );
+            cbm.set_flag( flag_NO_PACKED );
+            cbm.set_fault( fault_bionic_salvaged );
+            here.add_item( pos_bub(), cbm );
+        } else {
+            item cbm( itype_burnt_out_bionic );
+            if( item::type_is_defined( bio_id->itype() ) ) {
+                cbm = item( bio_id->itype() );
+            }
+            cbm.set_flag( flag_FILTHY );
+            cbm.set_flag( flag_NO_STERILE );
+            cbm.set_flag( flag_NO_PACKED );
+            cbm.set_fault( fault_bionic_salvaged );
+            here.add_item( pos_bub(), cbm );
         }
-        cbm.set_flag( flag_FILTHY );
-        cbm.set_flag( flag_NO_STERILE );
-        cbm.set_flag( flag_NO_PACKED );
-        cbm.set_fault( fault_bionic_salvaged );
-        here.add_item( pos_bub(), cbm );
     } else {
         get_event_bus().send<event_type::fails_to_remove_cbm>( getID(), bio.id );
         // for chance_of_success calculation, shift skill down to a float between ~0.4 - 30
@@ -2369,16 +2389,27 @@ bool Character::uninstall_bionic( const bionic &bio, monster &installer, Charact
             add_msg( m_mixed, _( "Successfully removed %s." ), bio.info().name );
         }
 
-        item cbm( itype_burnt_out_bionic );
-        if( item::type_is_defined( bio.info().itype() ) ) {
-            cbm = bionic_to_uninstall;
-        }
+        const std::optional<item> bio_source_item = bio.source_item;
+        const itype_id bio_itype = bio.info().itype();
         patient.remove_bionic( bio );
-        cbm.set_flag( flag_FILTHY );
-        cbm.set_flag( flag_NO_STERILE );
-        cbm.set_flag( flag_NO_PACKED );
-        cbm.set_fault( fault_bionic_salvaged );
-        here.add_item( patient.pos_bub(), cbm );
+        if( bio_source_item ) {
+            item cbm = *bio_source_item;
+            cbm.set_flag( flag_FILTHY );
+            cbm.set_flag( flag_NO_STERILE );
+            cbm.set_flag( flag_NO_PACKED );
+            cbm.set_fault( fault_bionic_salvaged );
+            here.add_item( patient.pos_bub(), cbm );
+        } else {
+            item cbm( itype_burnt_out_bionic );
+            if( item::type_is_defined( bio_itype ) ) {
+                cbm = bionic_to_uninstall;
+            }
+            cbm.set_flag( flag_FILTHY );
+            cbm.set_flag( flag_NO_STERILE );
+            cbm.set_flag( flag_NO_PACKED );
+            cbm.set_fault( fault_bionic_salvaged );
+            here.add_item( patient.pos_bub(), cbm );
+        }
     } else {
         bionics_uninstall_failure( installer, patient, difficulty, success, adjusted_skill );
     }
@@ -2539,7 +2570,7 @@ float Character::env_surgery_bonus( int radius ) const
 }
 
 bool Character::install_bionics( const itype &type, Character &installer, bool autodoc,
-                                 int skill_level )
+                                 int skill_level, const std::optional<item> &source_item )
 {
     if( !type.bionic ) {
         debugmsg( "Tried to install NULL bionic" );
@@ -2569,14 +2600,14 @@ bool Character::install_bionics( const itype &type, Character &installer, bool a
     if( installer.has_trait( trait_DEBUG_BIONICS ) ||
         installer.has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {
         perform_install( bioid, upbio_uid, difficulty, success, pl_skill, "NOT_MED",
-                         bioid->canceled_mutations, pos_bub() );
+                         bioid->canceled_mutations, pos_bub(), source_item );
         return true;
     }
     const std::string installer_name = installer.has_trait( trait_PROF_MED ) ||
                                        installer.has_trait( trait_PROF_AUTODOC ) ? installer.disp_name( true ) : "NOT_MED";
 
     assign_activity( bionic_operation_activity_actor( true, success, autodoc, pl_skill,
-                     difficulty, bioid, upbio_uid, installer_name ) );
+                     difficulty, bioid, upbio_uid, installer_name, source_item ) );
 
     for( const std::pair<const bodypart_str_id, size_t> &elem : bioid->occupied_bodyparts ) {
         add_effect( effect_under_operation, difficulty * 20_minutes, elem.first.id(), true, difficulty );
@@ -2587,7 +2618,8 @@ bool Character::install_bionics( const itype &type, Character &installer, bool a
 
 void Character::perform_install( const bionic_id &bid, bionic_uid upbio_uid, int difficulty,
                                  int success, int pl_skill, const std::string &installer_name,
-                                 const std::vector<trait_id> &trait_to_rem, const tripoint_bub_ms &patient_pos )
+                                 const std::vector<trait_id> &trait_to_rem, const tripoint_bub_ms &patient_pos,
+                                 const std::optional<item> &source_item )
 {
     // if we chop off a limb, our stored kcal should decrease proportionally
     float cached_healthy_kcal = get_healthy_kcal();
@@ -2608,7 +2640,7 @@ void Character::perform_install( const bionic_id &bid, bionic_uid upbio_uid, int
             add_msg( m_good, _( "Successfully installed %s." ), bid.obj().name );
         }
 
-        add_bionic( bid );
+        add_bionic( bid, 0, false, source_item );
 
         for( const trait_id &tid : trait_to_rem ) {
             if( has_trait( tid ) ) {
@@ -2832,7 +2864,8 @@ int Character::get_free_bionics_slots( const bodypart_id &bp ) const
 }
 
 bionic_uid Character::add_bionic( const bionic_id &b, bionic_uid parent_uid,
-                                  bool suppress_debug )
+                                  bool suppress_debug,
+                                  const std::optional<item> &source_item )
 {
     if( has_bionic( b ) && !b->dupes_allowed ) {
         if( !suppress_debug ) {
@@ -2850,14 +2883,14 @@ bionic_uid Character::add_bionic( const bionic_id &b, bionic_uid parent_uid,
     bionic_uid bio_uid = generate_bionic_uid();
 
     const char invlet = b->activated ? get_free_invlet( *this ) : ' ';
-    my_bionics->emplace_back( b, invlet, bio_uid, parent_uid );
+    my_bionics->emplace_back( b, invlet, bio_uid, parent_uid, source_item );
     bionic &bio = my_bionics->back();
     if( bio.id->activated_on_install ) {
         activate_bionic( bio );
     }
 
     for( const bionic_id &inc_bid : b->included_bionics ) {
-        add_bionic( inc_bid, bio_uid, suppress_debug );
+        add_bionic( inc_bid, bio_uid, suppress_debug, std::nullopt );
     }
 
     for( const std::pair<const spell_id, int> &spell_pair : b->learned_spells ) {
@@ -3225,6 +3258,9 @@ void bionic::serialize( JsonOut &json ) const
     if( has_weapon() ) {
         json.member( "weapon", weapon );
     }
+    if( source_item ) {
+        json.member( "source_item", *source_item );
+    }
 
     json.end_object();
 }
@@ -3299,6 +3335,10 @@ void bionic::deserialize( const JsonObject &jo )
 
     if( jo.has_member( "weapon" ) ) {
         jo.read( "weapon", weapon, true );
+    }
+    if( jo.has_member( "source_item" ) ) {
+        source_item = item();
+        jo.read( "source_item", *source_item );
     }
 
     // Suppress errors when loading old games

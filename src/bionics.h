@@ -213,10 +213,15 @@ struct bionic {
 
         bionic() : bionic( bionic_id( "bio_batteries" ), 'a', 0 ) { }
         bionic( bionic_id pid, char pinvlet, bionic_uid pbionic_uid,
-                bionic_uid pparent_uid = 0 ) : id( pid ), invlet( pinvlet ),
-            incapacitated_time( 0_turns ), uid( pbionic_uid ), parent_uid( pparent_uid ) {
+                bionic_uid pparent_uid = 0 ) : bionic( pid, pinvlet, pbionic_uid, pparent_uid, std::nullopt ) {}
+        bionic( bionic_id pid, char pinvlet, bionic_uid pbionic_uid,
+                bionic_uid pparent_uid, const std::optional<item> &psource_item ) : id( pid ),
+            invlet( pinvlet ), incapacitated_time( 0_turns ), source_item( psource_item ),
+            uid( pbionic_uid ), parent_uid( pparent_uid ) {
             initialize_pseudo_items( true );
         }
+
+        std::optional<item> source_item;
 
         const bionic_data &info() const {
             return *id;

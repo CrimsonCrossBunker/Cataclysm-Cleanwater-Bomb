@@ -1836,7 +1836,7 @@ void bionic_operation_activity_actor::do_turn( player_activity &act, Character &
                 }
 
                 who.perform_install( bid, upbio_uid, operation_difficulty, operation_success, operation_skill,
-                                     installer_name, bid->canceled_mutations, actor_pos );
+                                     installer_name, bid->canceled_mutations, actor_pos, source_item );
             } else {
                 debugmsg( _( "%s is not a valid bionic_id" ), bid.c_str() );
                 who.remove_effect( effect_under_operation );
@@ -1931,6 +1931,9 @@ void bionic_operation_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "installed_bionic", installed_bionic );
     jsout.member( "installer_name", installer_name );
     jsout.member( "uninstalled_bionic", uninstalled_bionic );
+    if( source_item ) {
+        jsout.member( "source_item", *source_item );
+    }
 
     jsout.end_object();
 }
@@ -1947,6 +1950,10 @@ std::unique_ptr<activity_actor> bionic_operation_activity_actor::deserialize( Js
     data.read( "installed_bionic", actor.installed_bionic );
     data.read( "installer_name", actor.installer_name );
     data.read( "uninstalled_bionic", actor.uninstalled_bionic );
+    if( data.has_member( "source_item" ) ) {
+        actor.source_item = item();
+        data.read( "source_item", *actor.source_item );
+    }
     return actor.clone();
 }
 
