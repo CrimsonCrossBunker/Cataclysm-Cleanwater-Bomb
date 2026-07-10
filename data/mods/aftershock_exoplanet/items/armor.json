@@ -67,7 +67,7 @@
     "color": "dark_gray",
     "warmth": 30,
     "material_thickness": 1,
-    "flags": [ "OVERSIZE", "HOOD", "OUTER", "NO_REPAIR", "STURDY" ],
+    "flags": [ "OVERSIZE", "HOOD", "OUTER", "NO_REPAIR", "STURDY", "COSPLAY_COSTUME" ],
     "armor": [ { "encumbrance": 4, "coverage": 85, "covers": [ "torso", "head", "arm_l", "arm_r", "leg_l", "leg_r" ] } ],
     "passive_effects": [
       {
