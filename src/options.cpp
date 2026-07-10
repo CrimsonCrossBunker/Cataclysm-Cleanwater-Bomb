@@ -3282,6 +3282,14 @@ void options_manager::add_options_android()
              to_translation( "If true, keep the game within the screen's safe area so it does not draw under the camera cutout or other unsafe edges.  If false, the game fills the entire screen.  This does not show or hide Android system bars." ),
              true
            );
+
+        add( "ANDROID_TERMINAL_SIZE", page_id, to_translation( "Terminal size" ),
+             to_translation( "Automatically match the terminal layout to the usable Android screen area.  Manual uses Terminal width and Terminal height instead." ),
+        {
+            { "auto", to_translation( "Automatic" ) },
+            { "manual", to_translation( "Manual" ) }
+        }, "auto"
+           );
     } );
 
     add_empty_line();
@@ -4250,7 +4258,11 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
             } else if( iter.first == "USE_LANG" ) {
                 lang_changed = true;
 
-            } else if( iter.first == "TERMINAL_X" || iter.first == "TERMINAL_Y" ) {
+            } else if( iter.first == "TERMINAL_X" || iter.first == "TERMINAL_Y" ||
+                       iter.first == "ANDROID_TERMINAL_SIZE" ||
+                       iter.first == "ANDROID_RENDER_SAFE_AREA" ||
+                       iter.first == "ANDROID_SHORTCUT_OVERLAP" ||
+                       iter.first == "ANDROID_SHORTCUT_HEIGHT" ) {
                 terminal_size_changed = true;
             }
         }
@@ -4300,8 +4312,11 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
     calendar::set_eternal_night( ::get_option<std::string>( "ETERNAL_TIME_OF_DAY" ) == "night" );
     calendar::set_eternal_day( ::get_option<std::string>( "ETERNAL_TIME_OF_DAY" ) == "day" );
 
-#if !defined(EMSCRIPTEN) && !defined(__ANDROID__) && !defined(TUI)
+#if !defined(EMSCRIPTEN) && !defined(TUI)
     if( terminal_size_changed ) {
+#if defined(__ANDROID__)
+        resize_term( ::get_option<int>( "TERMINAL_X" ), ::get_option<int>( "TERMINAL_Y" ) );
+#else
         int scaling_factor = get_scaling_factor();
         point TERM( ::get_option<int>( "TERMINAL_X" ), ::get_option<int>( "TERMINAL_Y" ) );
         TERM.x -= TERM.x % scaling_factor;
@@ -4313,6 +4328,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         save();
 
         resize_term( ::get_option<int>( "TERMINAL_X" ), ::get_option<int>( "TERMINAL_Y" ) );
+#endif
     }
 #else
     ( void ) terminal_size_changed;
