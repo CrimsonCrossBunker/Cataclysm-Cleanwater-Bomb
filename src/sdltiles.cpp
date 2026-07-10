@@ -347,6 +347,13 @@ static void refresh_drawable_dims()
 
 static bool apply_resize_layout( int w, int h );
 
+#if defined(__ANDROID__)
+// The Android window is created before SDL reports its final maximized size.
+// Keep this separate from the saved TERMINAL_X/Y values: automatic sizing must
+// not overwrite the user's manual fallback.
+static point get_android_terminal_size();
+#endif
+
 static bool SetupRenderTarget()
 {
     SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
@@ -688,6 +695,16 @@ static void WinCreate()
     ::window = CreateGameWindow( "", display, WindowWidth, WindowHeight, window_flags );
     throwErrorIf( !::window, "CreateWindow failed" );
 
+#if defined(__ANDROID__)
+    // Android expands the maximized window to the surface size during creation.
+    // Query it before allocating the render target so automatic terminal sizing
+    // can create a display buffer with the correct aspect ratio from frame one.
+    GetWindowSize( ::window.get(), &WindowWidth, &WindowHeight );
+    const point android_terminal = get_android_terminal_size();
+    TERMINAL_WIDTH = android_terminal.x;
+    TERMINAL_HEIGHT = android_terminal.y;
+#endif
+
     // Apply fullscreen after creation to preserve exclusive vs desktop distinction
     if( desired_fullscreen != FullscreenMode::windowed ) {
         SetWindowFullscreen( ::window.get(), desired_fullscreen );
@@ -1007,26 +1024,14 @@ extern "C" {
 
 } // "C"
 
+float android_get_display_density();
+static SDL_Rect get_android_content_bounds();
+
 SDL_Rect get_android_render_rect( float DisplayBufferWidth, float DisplayBufferHeight )
 {
-    // Aspect-fit the display buffer into a bounds rectangle. The bounds default to
-    // the whole window; with ANDROID_RENDER_SAFE_AREA the system safe area is used
-    // instead so the game stays clear of the camera cutout and other unsafe edges.
-    SDL_Rect bounds{ 0, 0, WindowWidth, WindowHeight };
-#if SDL_MAJOR_VERSION >= 3
-    if( get_option<bool>( "ANDROID_RENDER_SAFE_AREA" ) ) {
-        SDL_Rect safe;
-        if( SDL_GetWindowSafeArea( ::window.get(), &safe ) && safe.w > 0 && safe.h > 0 ) {
-            bounds = safe;
-        }
-    }
-#endif
-
-    // Reserve the on-screen shortcut strip along the bottom unless it overlaps.
-    // Keep at least one row so the aspect math never divides by a zero height.
-    if( !get_option<bool>( "ANDROID_SHORTCUT_OVERLAP" ) && quick_shortcuts_enabled ) {
-        bounds.h = std::max( 1, bounds.h - get_option<int>( "ANDROID_SHORTCUT_HEIGHT" ) );
-    }
+    // Aspect-fit the display buffer into the same usable bounds used for automatic
+    // terminal sizing.  This keeps the UI grid and the presented image aligned.
+    const SDL_Rect bounds = get_android_content_bounds();
 
     const float DisplayBufferAspect = DisplayBufferWidth / DisplayBufferHeight;
     const float BoundsAspect = static_cast<float>( bounds.w ) / static_cast<float>( bounds.h );
@@ -1062,6 +1067,65 @@ SDL_Rect get_android_render_rect( float DisplayBufferWidth, float DisplayBufferH
         }
     }
     return dstrect;
+}
+
+static int get_android_shortcut_height()
+{
+    constexpr float shortcut_authored_density = 3.0f; // 480p xxhdpi
+    const float density = std::max( 1.0f, android_get_display_density() );
+    return std::max( 1, static_cast<int>( std::floor( density / shortcut_authored_density *
+                              get_option<int>( "ANDROID_SHORTCUT_HEIGHT" ) ) ) );
+}
+
+static SDL_Rect get_android_content_bounds()
+{
+    // The bounds default to the whole window; with ANDROID_RENDER_SAFE_AREA the
+    // system safe area is used instead so the game stays clear of a cutout and
+    // other unsafe edges.
+    SDL_Rect bounds{ 0, 0, WindowWidth, WindowHeight };
+#if SDL_MAJOR_VERSION >= 3
+    if( get_option<bool>( "ANDROID_RENDER_SAFE_AREA" ) ) {
+        SDL_Rect safe;
+        if( SDL_GetWindowSafeArea( ::window.get(), &safe ) && safe.w > 0 && safe.h > 0 ) {
+            bounds = safe;
+        }
+    }
+#endif
+
+    // Reserve the on-screen shortcut strip along the bottom unless it overlaps.
+    // Keep at least one row so the aspect math never divides by a zero height.
+    if( !get_option<bool>( "ANDROID_SHORTCUT_OVERLAP" ) && quick_shortcuts_enabled ) {
+        bounds.h = std::max( 1, bounds.h - get_android_shortcut_height() );
+    }
+    return bounds;
+}
+
+static point get_android_terminal_size()
+{
+    if( get_option<std::string>( "ANDROID_TERMINAL_SIZE" ) == "manual" ) {
+        return point( get_option<int>( "TERMINAL_X" ), get_option<int>( "TERMINAL_Y" ) );
+    }
+
+    // Breeze uses a 144x36 terminal as its Android-friendly baseline.  A typical
+    // 1080 px-high xxhdpi phone has 360 dp of usable height, so a 10 dp row gives
+    // the same 36-row layout while deriving the width from the actual aspect ratio.
+    // This keeps the Breeze information density without hard-coding one phone shape.
+    constexpr float target_cell_height_dp = 10.0f;
+    constexpr int maximum_auto_terminal_width = 160;
+    constexpr int maximum_auto_terminal_height = 48;
+    const SDL_Rect bounds = get_android_content_bounds();
+    const float density = std::max( 1.0f, android_get_display_density() );
+    int rows = std::clamp( static_cast<int>( std::lround( bounds.h /
+                           ( density * target_cell_height_dp ) ) ),
+                           EVEN_MINIMUM_TERM_HEIGHT, maximum_auto_terminal_height );
+    rows -= rows % 2;
+
+    const float cell_aspect = static_cast<float>( fontwidth ) / static_cast<float>( fontheight );
+    int columns = std::clamp( static_cast<int>( std::lround( static_cast<float>( bounds.w ) /
+                                     static_cast<float>( bounds.h ) * rows / cell_aspect ) ),
+                              EVEN_MINIMUM_TERM_WIDTH, maximum_auto_terminal_width );
+    columns -= columns % 2;
+    return point( columns, rows );
 }
 
 #endif
@@ -4373,9 +4437,8 @@ static input_event sdl_keysym_to_keycode_evt( const CataKeysym &keysym )
     return evt;
 }
 
-// Refresh the window and drawable tracks from a new logical size, and on desktop
-// the terminal-derived layout. Returns whether the terminal layout was recomputed
-// (false on android, which keeps a window-independent terminal across rotation).
+// Refresh the window and drawable tracks from a new logical size, and recompute
+// the terminal layout when the platform or Android automatic sizing requires it.
 static bool apply_resize_layout( int w, int h )
 {
     const bool logical_changed = w != WindowWidth || h != WindowHeight;
@@ -4384,7 +4447,15 @@ static bool apply_resize_layout( int w, int h )
     refresh_drawable_dims();
 #if defined(__ANDROID__)
     ( void )logical_changed;
-    return false;
+    const point terminal = get_android_terminal_size();
+    const bool terminal_changed = terminal.x != TERMINAL_WIDTH || terminal.y != TERMINAL_HEIGHT;
+    if( terminal_changed ) {
+        TERMINAL_WIDTH = terminal.x;
+        TERMINAL_HEIGHT = terminal.y;
+        need_invalidate_framebuffers = true;
+        catacurses::stdscr = catacurses::newwin( TERMINAL_HEIGHT, TERMINAL_WIDTH, point::zero );
+    }
+    return terminal_changed;
 #else
     if( logical_changed ) {
         // A minimal window size is set during initialization, but some platforms
@@ -4400,12 +4471,20 @@ static bool apply_resize_layout( int w, int h )
 
 void resize_term( const int cell_w, const int cell_h )
 {
+#if defined(__ANDROID__)
+    // Android is always maximized; changing the SDL window size has no useful
+    // effect.  Re-evaluate the effective auto/manual terminal dimensions instead.
+    ( void )cell_w;
+    ( void )cell_h;
+    renderer_coordinator.notify_resize();
+#else
     const int w = cell_w * fontwidth * scaling_factor;
     const int h = cell_h * fontheight * scaling_factor;
     SetWindowSize( window.get(), w, h );
     // The resize is async: the coordinator applies it on the next drain, driven
     // by this hint and the resulting watched resize event.
     renderer_coordinator.notify_resize();
+#endif
 }
 
 void toggle_fullscreen_window()
