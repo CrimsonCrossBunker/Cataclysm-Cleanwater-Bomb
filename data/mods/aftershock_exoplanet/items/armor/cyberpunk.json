@@ -40,7 +40,7 @@
     "color": "yellow",
     "warmth": 10,
     "material_thickness": 1,
-    "flags": [ "VARSIZE" ],
+    "flags": [ "VARSIZE", "COSPLAY_COSTUME" ],
     "armor": [ { "encumbrance": 3, "coverage": 90, "covers": [ "torso", "arm_l", "arm_r" ] } ]
   },
   {
@@ -59,7 +59,7 @@
     "color": "yellow",
     "warmth": 10,
     "material_thickness": 1,
-    "flags": [ "VARSIZE" ],
+    "flags": [ "VARSIZE", "COSPLAY_COSTUME" ],
     "armor": [ { "encumbrance": 3, "coverage": 75, "covers": [ "torso", "leg_l", "leg_r" ] } ]
   },
   {
