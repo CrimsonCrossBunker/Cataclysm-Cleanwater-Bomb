@@ -36,6 +36,7 @@ import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,6 +53,10 @@ public class CataclysmDDA extends SDLActivity {
     private static final String EXTRA_BUTTON_PREFS = "extra_buttons";
     private static final String EXTRA_BUTTONS_KEY = "buttons";
     private static final float DEFAULT_BUTTON_TEXT_SIZE = 14f;
+    private static final int DEFAULT_BUTTON_WIDTH_DP = 64;
+    private static final int DEFAULT_BUTTON_HEIGHT_DP = 48;
+    private static final int MIN_BUTTON_SIZE_DP = 32;
+    private static final int MAX_BUTTON_SIZE_DP = 320;
     private static final int DEFAULT_BUTTON_TEXT_COLOR = 0xFFFFFFFF;
     private static final int DEFAULT_BUTTON_BG_COLOR = 0x00000000;
     private static final int[] BUTTON_PRESET_COLORS = {
@@ -493,6 +498,96 @@ public class CataclysmDDA extends SDLActivity {
         button.setTextSize((float)data.optDouble("textSize", DEFAULT_BUTTON_TEXT_SIZE));
         button.setTextColor(data.optInt("textColor", DEFAULT_BUTTON_TEXT_COLOR));
         button.setBackgroundColor(data.optInt("bgColor", DEFAULT_BUTTON_BG_COLOR));
+        applyButtonSize(button, data);
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
+    }
+
+    private int getButtonDimensionDp(Button button, boolean width) {
+        int pixels = width ? button.getWidth() : button.getHeight();
+        if (pixels <= 0 && button.getLayoutParams() != null) {
+            int layoutSize = width ? button.getLayoutParams().width : button.getLayoutParams().height;
+            if (layoutSize > 0) {
+                pixels = layoutSize;
+            }
+        }
+        int fallback = width ? DEFAULT_BUTTON_WIDTH_DP : DEFAULT_BUTTON_HEIGHT_DP;
+        int dp = pixels > 0 ? Math.round(pixels / getResources().getDisplayMetrics().density) : fallback;
+        return Math.max(MIN_BUTTON_SIZE_DP, Math.min(MAX_BUTTON_SIZE_DP, dp));
+    }
+
+    private void applyButtonSize(Button button, JSONObject data) {
+        int widthDp = data.optInt("width", -1);
+        int heightDp = data.optInt("height", -1);
+        if (widthDp <= 0 && heightDp <= 0) {
+            return;
+        }
+        ViewGroup.LayoutParams params = button.getLayoutParams();
+        if (params == null) {
+            params = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT);
+        }
+        params.width = widthDp > 0 ? dpToPx(widthDp) : ViewGroup.LayoutParams.WRAP_CONTENT;
+        params.height = heightDp > 0 ? dpToPx(heightDp) : ViewGroup.LayoutParams.WRAP_CONTENT;
+        button.setLayoutParams(params);
+    }
+
+    private void applyButtonSize(Button button, int widthDp, int heightDp) {
+        ViewGroup.LayoutParams params = button.getLayoutParams();
+        if (params == null) {
+            params = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT);
+        }
+        params.width = dpToPx(widthDp);
+        params.height = dpToPx(heightDp);
+        button.setLayoutParams(params);
+    }
+
+    private void addButtonDimensionControl(LinearLayout layout, String label, final int[] value,
+            final Button button, final int[] otherValue, final boolean width) {
+        TextView dimensionLabel = new TextView(this);
+        dimensionLabel.setText(label);
+        layout.addView(dimensionLabel);
+
+        LinearLayout dimensionRow = new LinearLayout(this);
+        dimensionRow.setOrientation(LinearLayout.HORIZONTAL);
+        dimensionRow.setGravity(Gravity.CENTER_VERTICAL);
+        SeekBar dimensionSeekBar = new SeekBar(this);
+        dimensionSeekBar.setMax(MAX_BUTTON_SIZE_DP - MIN_BUTTON_SIZE_DP);
+        dimensionSeekBar.setProgress(value[0] - MIN_BUTTON_SIZE_DP);
+        dimensionSeekBar.setLayoutParams(new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView dimensionValue = new TextView(this);
+        dimensionValue.setText(String.valueOf(value[0]) + "dp");
+        dimensionValue.setMinWidth(72);
+        dimensionValue.setGravity(Gravity.CENTER);
+        dimensionSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                value[0] = progress + MIN_BUTTON_SIZE_DP;
+                dimensionValue.setText(String.valueOf(value[0]) + "dp");
+                if (width) {
+                    applyButtonSize(button, value[0], otherValue[0]);
+                } else {
+                    applyButtonSize(button, otherValue[0], value[0]);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+        dimensionRow.addView(dimensionSeekBar);
+        dimensionRow.addView(dimensionValue);
+        layout.addView(dimensionRow);
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -562,6 +657,8 @@ public class CataclysmDDA extends SDLActivity {
             return;
         }
         final float[] textSize = { (float)data.optDouble("textSize", DEFAULT_BUTTON_TEXT_SIZE) };
+        final int[] buttonWidth = { data.optInt("width", getButtonDimensionDp(button, true)) };
+        final int[] buttonHeight = { data.optInt("height", getButtonDimensionDp(button, false)) };
         final int[] textColor = { data.optInt("textColor", DEFAULT_BUTTON_TEXT_COLOR) };
         final int[] bgColor = { data.optInt("bgColor", DEFAULT_BUTTON_BG_COLOR) };
         final boolean[] rapidFire = { data.optBoolean("rapidFire", false) };
@@ -607,6 +704,9 @@ public class CataclysmDDA extends SDLActivity {
         sizeRow.addView(sizeValue);
         layout.addView(sizeRow);
 
+        addButtonDimensionControl(layout, "按钮宽度", buttonWidth, button, buttonHeight, true);
+        addButtonDimensionControl(layout, "按钮高度", buttonHeight, button, buttonWidth, false);
+
         TextView textColorLabel = new TextView(this);
         textColorLabel.setText("文字颜色");
         layout.addView(textColorLabel);
@@ -640,14 +740,22 @@ public class CataclysmDDA extends SDLActivity {
         });
         layout.addView(rapidFireCheck);
 
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setFillViewport(true);
+        scrollView.addView(layout, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+
         new AlertDialog.Builder(this)
             .setTitle("按钮属性")
-            .setView(layout)
+            .setView(scrollView)
             .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     try {
                         data.put("textSize", textSize[0]);
+                        data.put("width", buttonWidth[0]);
+                        data.put("height", buttonHeight[0]);
                         data.put("textColor", textColor[0]);
                         data.put("bgColor", bgColor[0]);
                         data.put("rapidFire", rapidFire[0]);

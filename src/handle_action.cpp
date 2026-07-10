@@ -2541,6 +2541,16 @@ static void manage_android_extra_buttons()
 bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
 {
+#if defined(__ANDROID__)
+    // Extra-button management is a Java-side UI screen.  Handle it before
+    // touching map/terrain or movement-mode state; the main-menu path can be
+    // entered while those world objects are not ready for a regular action.
+    if( act == ACTION_MANAGE_ANDROID_EXTRA_BUTTONS ) {
+        manage_android_extra_buttons();
+        return false;
+    }
+#endif
+
 #ifdef MP_ENABLED
     // MP-HOOK: verify - client action dispatch block. The MP version places
     // this at the start of do_regular_action before local variable declarations.
@@ -3197,12 +3207,6 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_MAIN_MENU:
         case ACTION_KEYBINDINGS:
             break;
-
-#if defined(__ANDROID__)
-        case ACTION_MANAGE_ANDROID_EXTRA_BUTTONS:
-            manage_android_extra_buttons();
-            break;
-#endif
 
         case ACTION_TIMEOUT:
 #ifdef MP_ENABLED
