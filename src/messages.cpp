@@ -359,7 +359,8 @@ class messages_impl
             }
         }
 
-        std::vector<std::pair<std::string, std::string>> recent_messages( size_t count ) const {
+        std::vector<std::pair<std::string, std::string>> recent_messages( size_t count,
+                const bool with_formatting = false ) const {
             count = std::min( count, messages.size() );
 
             std::vector<std::pair<std::string, std::string>> result;
@@ -368,9 +369,16 @@ class messages_impl
             const int offset = static_cast<std::ptrdiff_t>( messages.size() - count );
 
             std::transform( begin( messages ) + offset, end( messages ), back_inserter( result ),
-            []( const game_message & msg ) {
+            [this, with_formatting]( const game_message & msg ) {
+                std::string text = msg.get_with_count();
+                if( with_formatting ) {
+                    if( !msg.is_recent( curmes ) ) {
+                        text = remove_color_tags( text );
+                    }
+                    text = colorize( text, msg.get_color( curmes ) );
+                }
                 return std::make_pair( to_string_time_of_day( msg.timestamp_in_turns ),
-                                       msg.get_with_count() );
+                                       std::move( text ) );
             } );
 
             return result;
@@ -434,6 +442,12 @@ bool message_exceeds_ttl( const game_message &message )
 std::vector<std::pair<std::string, std::string>> Messages::recent_messages( const size_t count )
 {
     return player_messages.recent_messages( count );
+}
+
+std::vector<std::pair<std::string, std::string>> Messages::recent_messages_with_formatting(
+    const size_t count )
+{
+    return player_messages.recent_messages( count, true );
 }
 
 bool Messages::has_debug_filter( debugmode::debug_filter type )

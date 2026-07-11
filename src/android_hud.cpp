@@ -7,6 +7,7 @@
 #include <mutex>
 #include <set>
 #include <sstream>
+#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
@@ -63,6 +64,17 @@ struct hud_action {
     }
 };
 
+struct hud_text_run {
+    std::string text;
+    int color = 0xffffffff;
+    bool bold = false;
+};
+
+struct hud_message {
+    std::string text;
+    std::vector<hud_text_run> runs;
+};
+
 struct queued_action {
     std::string id;
     int context_revision = 0;
@@ -81,7 +93,7 @@ struct hud_snapshot {
     std::vector<hud_body_part> body_parts;
     std::vector<hud_contact> hostile_contacts;
     std::vector<hud_overmap_cell> overmap_cells;
-    std::vector<std::string> messages;
+    std::vector<hud_message> messages;
     std::vector<hud_action> active_actions;
 };
 
@@ -196,6 +208,41 @@ int android_argb( const nc_color &color )
     const int b = std::clamp( static_cast<int>( rgba.z * 255.0f ), 0, 255 );
     return static_cast<int>( 0xff000000u | static_cast<unsigned int>( r << 16 ) |
                              static_cast<unsigned int>( g << 8 ) | static_cast<unsigned int>( b ) );
+}
+
+hud_message parse_formatted_message( const std::string &formatted )
+{
+    hud_message result;
+    std::stack<nc_color> colors;
+    colors.push( c_white );
+
+    for( std::string segment : split_by_color( formatted ) ) {
+        if( segment.empty() ) {
+            continue;
+        }
+        if( segment.front() == '<' ) {
+            const color_tag_parse_result::tag_type tag = update_color_stack(
+                        colors, segment, report_color_error::no );
+            if( tag != color_tag_parse_result::non_color_tag ) {
+                segment = rm_prefix( std::move( segment ) );
+            }
+        }
+        if( segment.empty() ) {
+            continue;
+        }
+
+        const nc_color color = colors.empty() ? c_white : colors.top();
+        const int argb = android_argb( color );
+        const bool bold = color.is_bold();
+        result.text += segment;
+        if( !result.runs.empty() && result.runs.back().color == argb &&
+            result.runs.back().bold == bold ) {
+            result.runs.back().text += segment;
+        } else {
+            result.runs.push_back( { std::move( segment ), argb, bold } );
+        }
+    }
+    return result;
 }
 
 } // namespace
@@ -329,8 +376,9 @@ void publish_snapshot( const avatar &player, const int safe_mode )
         }
     }
 
-    for( const std::pair<std::string, std::string> &message : Messages::recent_messages( 4 ) ) {
-        next.messages.push_back( remove_color_tags( message.second ) );
+    for( const std::pair<std::string, std::string> &message :
+         Messages::recent_messages_with_formatting( 4 ) ) {
+        next.messages.push_back( parse_formatted_message( message.second ) );
     }
 
     std::lock_guard<std::mutex> lock( hud_mutex );
@@ -407,7 +455,30 @@ std::string snapshot_json()
         json.end_object();
     }
     json.end_array();
-    json.member( "messages", latest_snapshot.messages );
+    json.member( "messages" );
+    json.start_array();
+    for( const hud_message &message : latest_snapshot.messages ) {
+        json.write( message.text );
+    }
+    json.end_array();
+    json.member( "formattedMessages" );
+    json.start_array();
+    for( const hud_message &message : latest_snapshot.messages ) {
+        json.start_object();
+        json.member( "text", message.text );
+        json.member( "runs" );
+        json.start_array();
+        for( const hud_text_run &run : message.runs ) {
+            json.start_object();
+            json.member( "text", run.text );
+            json.member( "color", run.color );
+            json.member( "bold", run.bold );
+            json.end_object();
+        }
+        json.end_array();
+        json.end_object();
+    }
+    json.end_array();
     json.end_object();
     json.end_object();
     return out.str();

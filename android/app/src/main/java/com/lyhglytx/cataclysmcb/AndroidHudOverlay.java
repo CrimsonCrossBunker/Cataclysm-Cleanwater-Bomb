@@ -8,8 +8,13 @@ import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -645,7 +650,7 @@ final class AndroidHudOverlay extends FrameLayout {
         }
     }
 
-    private String textForComponent(String type, JSONObject currentState) {
+    private CharSequence textForComponent(String type, JSONObject currentState) {
         if (TYPE_STATUS.equals(type)) {
             int stamina = currentState.optInt("stamina", 0);
             int staminaMax = Math.max(1, currentState.optInt("staminaMax", 1));
@@ -685,20 +690,51 @@ final class AndroidHudOverlay extends FrameLayout {
             return "周边\n可见威胁 " + count + "  个\n雷达只显示当前可见目标";
         }
         if (TYPE_MESSAGES.equals(type)) {
-            StringBuilder messages = new StringBuilder("消息\n");
-            JSONArray list = currentState.optJSONArray("messages");
-            if (list == null || list.length() == 0) {
-                return messages.append("暂无消息").toString();
-            }
-            for (int i = 0; i < list.length(); i++) {
-                if (i > 0) {
-                    messages.append("\n");
-                }
-                messages.append(list.optString(i));
-            }
-            return messages.toString();
+            return formattedMessages(currentState);
         }
         return COMPONENT_LABELS.get(type);
+    }
+
+    private CharSequence formattedMessages(JSONObject currentState) {
+        SpannableStringBuilder text = new SpannableStringBuilder("消息\n");
+        JSONArray messages = currentState.optJSONArray("formattedMessages");
+        if (messages == null || messages.length() == 0) {
+            JSONArray plainMessages = currentState.optJSONArray("messages");
+            if (plainMessages == null || plainMessages.length() == 0) {
+                return text.append("暂无消息");
+            }
+            for (int i = 0; i < plainMessages.length(); i++) {
+                if (i > 0) text.append('\n');
+                text.append(plainMessages.optString(i));
+            }
+            return text;
+        }
+
+        for (int i = 0; i < messages.length(); i++) {
+            if (i > 0) text.append('\n');
+            JSONObject message = messages.optJSONObject(i);
+            if (message == null) continue;
+            JSONArray runs = message.optJSONArray("runs");
+            if (runs == null || runs.length() == 0) {
+                text.append(message.optString("text"));
+                continue;
+            }
+            for (int j = 0; j < runs.length(); j++) {
+                JSONObject run = runs.optJSONObject(j);
+                if (run == null) continue;
+                int start = text.length();
+                text.append(run.optString("text"));
+                int end = text.length();
+                if (end <= start) continue;
+                text.setSpan(new ForegroundColorSpan(run.optInt("color", Color.WHITE)),
+                    start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                if (run.optBoolean("bold", false)) {
+                    text.setSpan(new StyleSpan(Typeface.BOLD), start, end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+            }
+        }
+        return text;
     }
 
     private void refreshSnapshot() {
