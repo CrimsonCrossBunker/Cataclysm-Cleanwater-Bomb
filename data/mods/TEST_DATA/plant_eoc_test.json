@@ -126,6 +126,7 @@
     "plant_data": {
       "transform": "test_f_plant_seedling",
       "base": "f_null",
+      "max_water_storage": 0,
       "eoc_on_plant": [ "EOC_TEST_PLANT_PLANTED" ],
       "eoc_on_grow": [ "EOC_TEST_PLANT_GROW" ]
     }
@@ -138,6 +139,7 @@
     "plant_data": {
       "transform": "test_f_plant_mature",
       "base": "f_null",
+      "max_water_storage": 0,
       "eoc_on_grow": [ "EOC_TEST_PLANT_GROW" ]
     }
   },
@@ -149,6 +151,7 @@
     "plant_data": {
       "transform": "test_f_plant_harvest",
       "base": "f_null",
+      "max_water_storage": 0,
       "eoc_on_mature": [ "EOC_TEST_PLANT_MATURE" ]
     }
   },
@@ -160,6 +163,7 @@
     "plant_data": {
       "transform": "test_f_plant_overgrown",
       "base": "f_null",
+      "max_water_storage": 0,
       "eoc_on_harvest": [ "EOC_TEST_PLANT_HARVEST" ]
     }
   },
@@ -171,6 +175,7 @@
     "plant_data": {
       "transform": "test_f_plant_overgrown",
       "base": "f_null",
+      "max_water_storage": 0,
       "eoc_on_overgrow": [ "EOC_TEST_PLANT_OVERGROW" ]
     }
   },

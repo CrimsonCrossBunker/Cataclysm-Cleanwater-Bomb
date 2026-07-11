@@ -134,6 +134,23 @@
     "final_casting_time": 600000
   },
   {
+    "id": "test_spell_fertilize_plant",
+    "type": "SPELL",
+    "name": "TEST Fertilize Plant",
+    "description": "A test spell that accelerates plant growth by a fixed amount.",
+    "effect": "fertilize_plant",
+    "shape": "blast",
+    "valid_targets": [ "ground" ],
+    "spell_class": "NONE",
+    "energy_source": "MANA",
+    "base_casting_time": 100,
+    "base_energy_cost": 1,
+    "min_damage": 25,
+    "max_damage": 25,
+    "min_aoe": 0,
+    "max_aoe": 0
+  },
+  {
     "id": "test_mon_mummy",
     "type": "MONSTER",
     "name": { "str": "toilet paper mummy", "str_pl": "toilet paper mummies" },

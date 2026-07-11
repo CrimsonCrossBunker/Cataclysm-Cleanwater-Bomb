@@ -15,11 +15,14 @@
 #include "iexamine.h"
 #include "item.h"
 #include "itype.h"
+#include "magic.h"
 #include "magic_ter_furn_transform.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "options.h"
 #include "player_helpers.h"
 #include "point.h"
+#include "skill.h"
 #include "type_id.h"
 #include "veh_type.h"
 #include "vehicle.h"
@@ -42,6 +45,8 @@ static const itype_id itype_test_seed_eoc( "test_seed_eoc" );
 static const itype_id itype_test_seed_simple( "test_seed_simple" );
 static const itype_id itype_water_clean( "water_clean" );
 
+static const skill_id skill_survival( "survival" );
+static const spell_id spell_test_fertilize_plant( "test_spell_fertilize_plant" );
 static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
 static const ter_furn_transform_id ter_test_plant_seedling_to_mature( "ter_test_plant_seedling_to_mature" );
 static const ter_furn_transform_id ter_test_plant_seed_to_harvest( "ter_test_plant_seed_to_harvest" );
@@ -259,23 +264,23 @@ TEST_CASE( "plant_effective_growth_time_authority", "[plant][growth]" )
     reset_test_globals();
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
-    here.ter_set( plot, ter_t_dirtmound );
-    u.i_add( item( itype_test_seed_simple ) );
+    // Use the test (non-irrigated) plant furniture so sub-day growth stages
+    // are processed immediately instead of being deferred to the daily loop.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seed );
 
-    iexamine::plant_seed( u, plot, itype_test_seed_simple );
-    process_activity( u );
-
-    item *seed = iexamine::get_seed_at( here, plot );
-    REQUIRE( seed != nullptr );
-    CHECK( iexamine::get_plant_effective_growth_turns( *seed ) == 0 );
-    CHECK( here.furn( plot ) == furn_f_plant_seed );
+    item *planted_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( planted_seed != nullptr );
+    CHECK( iexamine::get_plant_effective_growth_turns( *planted_seed ) == 0 );
 
     calendar::turn += 2_seconds;
     here.grow_plant( plot );
 
-    seed = iexamine::get_seed_at( here, plot );
-    REQUIRE( seed != nullptr );
-    CHECK( iexamine::get_plant_effective_growth_turns( *seed ) > 0 );
+    planted_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( planted_seed != nullptr );
+    CHECK( iexamine::get_plant_effective_growth_turns( *planted_seed ) > 0 );
     CHECK( iexamine::is_plant_mature( here, plot ) );
 
     calendar::turn += 2_seconds;
@@ -339,6 +344,51 @@ TEST_CASE( "plant_fertilize_reduces_remaining_time", "[plant][fertilize]" )
     const std::string reduction = get_globals().get_global_value( "test_fertilize_reduction_turns" ).to_string();
     REQUIRE( !reduction.empty() );
     CHECK( std::stoi( reduction ) > 0 );
+}
+
+TEST_CASE( "plant_fertilize_speed_independence", "[plant][fertilize][world_option]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Pre-actualize the seed at the seedling stage in base effective units.
+    item seed( itype_test_seed_eoc );
+    seed.set_birthday( calendar::turn );
+    // The seedling threshold is 1h of base effective time.
+    iexamine::set_plant_effective_growth_turns( seed, to_turns<int>( 1_hours ) );
+    iexamine::set_plant_last_water_check( seed, calendar::turn );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+
+    item *planted_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( planted_seed != nullptr );
+    const int effective_before = iexamine::get_plant_effective_growth_turns( *planted_seed );
+
+    u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
+    iexamine::fertilize_plant( u, plot, itype_fertilizer_commercial );
+    process_activity( u );
+
+    planted_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( planted_seed != nullptr );
+    const int effective_after = iexamine::get_plant_effective_growth_turns( *planted_seed );
+
+    // Commercial fertilizer with survival 0 reduces base remaining distance by 20%.
+    // Base remaining distance to mature = 2h - 1h = 1h.
+    // Effective advancement should be 0.2h, independent of CROP_GROWTH_SPEED.
+    const time_duration expected_increase = 1_hours * 0.20f;
+    CHECK( time_duration::from_turns( effective_after - effective_before ) == expected_increase );
 }
 
 TEST_CASE( "plant_cannot_be_fertilized_twice", "[plant][fertilize]" )
@@ -528,7 +578,7 @@ TEST_CASE( "ter_transform_syncs_plant_seed_effective_growth_time", "[plant][magi
     item *synced_seed = iexamine::get_seed_at( here, plot );
     REQUIRE( synced_seed != nullptr );
     CHECK( iexamine::get_plant_current_stage_idx_from_effective( here, plot ) >=
-           iexamine::get_plant_mature_stage_idx( synced_seed->type->seed->get_growth_stages() ) );
+           iexamine::get_plant_mature_stage_idx( *synced_seed->type->seed ) );
 
     // After the forced jump the plant should still be able to reach harvest
     // through normal growth processing.
@@ -555,4 +605,671 @@ TEST_CASE( "ter_transform_syncs_plant_seed_effective_growth_time", "[plant][magi
         REQUIRE( synced_seed2 != nullptr );
         CHECK( iexamine::is_plant_harvestable( here, plot ) );
     }
+}
+
+TEST_CASE( "crop_growth_speed_world_option", "[plant][world_option]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Use the test (non-irrigated) furniture so sub-day growth stages are
+    // processed immediately instead of being deferred to the daily loop.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn );
+    // Initialize the authoritative variables so the test exercises normal growth,
+    // not the old-save migration path.
+    iexamine::set_plant_effective_growth_turns( seed, 0 );
+    iexamine::set_plant_last_water_check( seed, calendar::turn );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seed );
+
+    item *planted_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( planted_seed != nullptr );
+    CHECK( here.furn( plot ) == furn_f_test_plant_seed );
+
+    // With double growth speed, 1 second of real time equals 2 seconds of effective growth.
+    calendar::turn += 1_seconds;
+    here.grow_plant( plot );
+
+    planted_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( planted_seed != nullptr );
+    CHECK( iexamine::get_plant_effective_growth_turns( *planted_seed ) >= to_turns<int>( 2_seconds ) );
+    CHECK( iexamine::is_plant_mature( here, plot ) );
+
+    // Another second should be enough to reach harvest.
+    calendar::turn += 1_seconds;
+    here.grow_plant( plot );
+
+    CHECK( iexamine::is_plant_harvestable( here, plot ) );
+}
+
+TEST_CASE( "crop_harvest_multiplier_world_option", "[plant][world_option]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+    u.set_skill_level( skill_survival, 2 );
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_HARVEST_MULTIPLIER"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.add_item( plot, item( itype_test_seed_eoc ) );
+    here.furn_set( plot, furn_f_test_plant_harvest );
+
+    iexamine::harvest_plant( u, plot, false );
+
+    const std::string harvest_count =
+        get_globals().get_global_value( "test_harvest_count" ).to_string();
+    REQUIRE( !harvest_count.empty() );
+    CHECK( std::stoi( harvest_count ) >= 2 );
+}
+
+TEST_CASE( "crop_water_consumption_world_option", "[plant][world_option][water]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.add_item( plot, item( itype_test_seed_eoc ) );
+    here.furn_set( plot, furn_f_planter_seed );
+    item *seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( seed != nullptr );
+    iexamine::set_plant_water( *seed, 100 );
+    iexamine::set_plant_effective_growth_turns( *seed, 0 );
+
+    // Advance time before recording the last check so the stored timestamp is
+    // non-zero.  This avoids the old-save actualization path and lets the
+    // irrigated daily loop see a full day of elapsed time.
+    calendar::turn += 1_days;
+    iexamine::set_plant_last_water_check( *seed, calendar::turn );
+
+    SECTION( "default consumption" ) {
+        options_manager::options_container world_opts = get_options().get_world_defaults();
+        get_options().set_world_options( &world_opts );
+        on_out_of_scope cleanup( [&]() {
+            get_options().set_world_options( nullptr );
+        } );
+
+        calendar::turn += 1_days;
+        here.grow_plant( plot );
+
+        seed = iexamine::get_seed_at( here, plot );
+        REQUIRE( seed != nullptr );
+        const int water_default = iexamine::get_plant_water( *seed );
+        CHECK( water_default < 100 );
+        CHECK( water_default >= 80 );
+    }
+
+    SECTION( "doubled consumption" ) {
+        options_manager::options_container world_opts = get_options().get_world_defaults();
+        world_opts["CROP_WATER_CONSUMPTION"].setValue( "2.0" );
+        get_options().set_world_options( &world_opts );
+        on_out_of_scope cleanup( [&]() {
+            get_options().set_world_options( nullptr );
+        } );
+
+        calendar::turn += 1_days;
+        here.grow_plant( plot );
+
+        seed = iexamine::get_seed_at( here, plot );
+        REQUIRE( seed != nullptr );
+        const int water_doubled = iexamine::get_plant_water( *seed );
+        CHECK( water_doubled < 100 );
+        CHECK( water_doubled <= 60 );
+    }
+}
+
+TEST_CASE( "crop_overgrown_enabled_world_option", "[plant][world_option]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_OVERGROWN_ENABLED"].setValue( "false" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.add_item( plot, item( itype_test_seed_eoc ) );
+    here.furn_set( plot, furn_f_test_plant_mature );
+
+    item *seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( seed != nullptr );
+
+    // Advance time before recording state so the last-check timestamp is non-zero.
+    // This prevents the non-irrigated path from falling back to seed age (which is
+    // also zero at turn zero) and makes the elapsed-time calculation meaningful.
+    calendar::turn += 1_hours;
+    iexamine::set_plant_last_water_check( *seed, calendar::turn );
+    // Enough effective time to normally reach overgrown stage.
+    iexamine::set_plant_effective_growth_turns( *seed, to_turns<int>( 10_hours ) );
+
+    calendar::turn += 1_hours;
+    here.grow_plant( plot );
+
+    seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( seed != nullptr );
+    // Overgrown must still be prevented.
+    CHECK( !iexamine::is_plant_overgrown( here, plot ) );
+    CHECK( here.furn( plot ) != furn_f_test_plant_overgrown );
+    // But the plant must be allowed to reach harvest, not be stuck at mature.
+    CHECK( here.furn( plot ) == furn_f_test_plant_harvest );
+    CHECK( iexamine::is_plant_harvestable( here, plot ) );
+}
+
+TEST_CASE( "crop_growth_speed_does_not_boost_ter_transform", "[plant][world_option][magic][ter_transform]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Advance time before creating the seed so the birthday and any derived
+    // timestamps stay positive.  At turn zero, subtracting the mature threshold
+    // produces a negative value that gets clamped back to zero.
+    calendar::turn += 1_days;
+
+    // Set up a seedling whose internal timer has not advanced at all.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+
+    REQUIRE( here.furn( plot ) == furn_f_test_plant_seedling );
+
+    REQUIRE( ter_test_plant_seedling_to_mature.is_valid() );
+    ter_test_plant_seedling_to_mature->transform( here, plot );
+
+    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+
+    item *synced_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( synced_seed != nullptr );
+
+    const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( *synced_seed->type->seed );
+    REQUIRE( mature_stage_idx >= 0 );
+    const time_duration mature_threshold = iexamine::get_plant_stage_threshold(
+            *synced_seed->type->seed, mature_stage_idx );
+    const float growth_multiplier = here.furn( plot )->plant->growth_multiplier;
+
+    // The transform should synchronize to the mature threshold in base time.
+    const time_duration expected_effective = mature_threshold;
+    const time_duration actual_effective = iexamine::get_plant_effective_growth_time(
+            *synced_seed, growth_multiplier );
+    CHECK( actual_effective == expected_effective );
+    CHECK( synced_seed->birthday() == calendar::turn - mature_threshold /
+            ( growth_multiplier * 2.0f ) );
+}
+
+TEST_CASE( "ter_transform_does_not_boost_stage_with_high_crop_speed",
+           "[plant][world_option][magic][ter_transform]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    calendar::turn += 1_days;
+
+    // Set up a seedling with zero effective growth time.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn );
+    // Initialize the authoritative variables so the subsequent grow_plant() sees
+    // zero elapsed time and does not advance the plant past the transformed stage.
+    iexamine::set_plant_effective_growth_turns( seed, 0 );
+    iexamine::set_plant_last_water_check( seed, calendar::turn );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+
+    REQUIRE( here.furn( plot ) == furn_f_test_plant_seedling );
+
+    // Transform to mature.  With CROP_GROWTH_SPEED = 2.0 the old code would have
+    // written effective = mature_threshold * 2, causing grow_plant to overshoot to
+    // harvest.  After the fix it must stay at mature even if grow_plant is called
+    // immediately.
+    REQUIRE( ter_test_plant_seedling_to_mature.is_valid() );
+    ter_test_plant_seedling_to_mature->transform( here, plot );
+
+    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+
+    here.grow_plant( plot );
+
+    // Should still be mature, not boosted to harvest.
+    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+    CHECK( !iexamine::is_plant_harvestable( here, plot ) );
+}
+
+TEST_CASE( "crop_growth_speed_does_not_boost_spell_fertilize", "[plant][world_option][magic]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.ter_set( plot, ter_t_dirtmound );
+
+    u.i_add( item( itype_test_seed_simple ) );
+    iexamine::plant_seed( u, plot, itype_test_seed_simple );
+    process_activity( u );
+
+    item *seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( seed != nullptr );
+    REQUIRE( seed->has_var( "seed_effective_growth_turns" ) );
+
+    // Let a small amount of real time pass so the plant has a non-zero base effective time.
+    calendar::turn += 1_seconds;
+    here.grow_plant( plot );
+
+    seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( seed != nullptr );
+    const float growth_multiplier = here.furn( plot )->plant->growth_multiplier;
+    const time_duration before_effective = iexamine::get_plant_effective_growth_time( *seed,
+            growth_multiplier );
+
+    const spell sp( spell_test_fertilize_plant );
+    spell_effect::fertilize_plant( sp, u, plot );
+
+    seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( seed != nullptr );
+    const time_duration after_effective = iexamine::get_plant_effective_growth_time( *seed,
+            growth_multiplier );
+
+    // The spell should advance the plant by 25% of its total growth duration,
+    // regardless of world speed.
+    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
+        seed->type->seed->get_growth_stages();
+    time_duration total_growth_time = 0_seconds;
+    for( const auto &stage : growth_stages ) {
+        total_growth_time += stage.second;
+    }
+    const time_duration expected_advance = total_growth_time * 0.25f;
+    CHECK( after_effective - before_effective == expected_advance );
+}
+
+TEST_CASE( "old_save_crop_actualization_scales_with_speed", "[plant][world_option]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Advance time before creating the old-format seed so the birthday is
+    // positive and age() reflects the intended 5 seconds.
+    calendar::turn += 1_days;
+
+    // Old-format seed: no seed_effective_growth_turns, birthday in the past.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn - 5_seconds );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+
+    // grow_plant actualizes the old save crop into the new base-time format.
+    here.grow_plant( plot );
+
+    item *synced_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( synced_seed != nullptr );
+    REQUIRE( synced_seed->has_var( "seed_effective_growth_turns" ) );
+
+    const float growth_multiplier = here.furn( plot )->plant->growth_multiplier;
+    const time_duration expected_effective = 5_seconds * growth_multiplier * 2.0f;
+    const time_duration actual_effective = iexamine::get_plant_effective_growth_time(
+            *synced_seed, growth_multiplier );
+    CHECK( actual_effective == expected_effective );
+}
+
+TEST_CASE( "mapgen_crop_actualization_scales_with_speed", "[plant][world_option][mapgen]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "4.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Simulate a mapgen-planted seed: birthday at start of cataclysm and a
+    // visual stage already set by the mapgen definition.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::start_of_cataclysm );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+
+    // Advance world time before actualization, as if the player is only now
+    // entering the reality bubble.
+    calendar::turn = calendar::start_of_cataclysm + 1_seconds;
+
+    here.grow_plant( plot );
+
+    item *synced_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( synced_seed != nullptr );
+    REQUIRE( synced_seed->has_var( "seed_effective_growth_turns" ) );
+
+    // With 4x speed, 1 second of real age should yield 4 seconds of base
+    // effective growth, pushing the plant well past the harvest threshold.
+    CHECK( iexamine::is_plant_harvestable( here, plot ) );
+
+    const float growth_multiplier = here.furn( plot )->plant->growth_multiplier;
+    const time_duration expected_effective = 1_seconds * growth_multiplier * 4.0f;
+    const time_duration actual_effective = iexamine::get_plant_effective_growth_time(
+            *synced_seed, growth_multiplier );
+    CHECK( actual_effective == expected_effective );
+}
+
+TEST_CASE( "old_save_slow_speed_does_not_regress_stage", "[plant][world_option]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "0.5" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Advance time before creating the old-format seed so the birthday is positive.
+    calendar::turn += 1_days;
+
+    // Old-format seed with very little real age but furniture already at mature.
+    // With 0.5x speed the un-clamped effective time would fall below the mature
+    // threshold, but the actualization must preserve the visible stage.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn - 1_seconds );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_mature );
+
+    here.grow_plant( plot );
+
+    item *synced_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( synced_seed != nullptr );
+    REQUIRE( synced_seed->has_var( "seed_effective_growth_turns" ) );
+
+    // The furniture stage is the authority: the plant must still read as mature.
+    CHECK( iexamine::is_plant_mature( here, plot ) );
+    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+
+    const float growth_multiplier = here.furn( plot )->plant->growth_multiplier;
+    const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( *synced_seed->type->seed );
+    REQUIRE( mature_stage_idx >= 0 );
+    const time_duration mature_threshold = iexamine::get_plant_stage_threshold(
+            *synced_seed->type->seed, mature_stage_idx );
+
+    // Effective time must be at least the mature threshold to match the visible stage,
+    // even though the real age is much smaller.
+    const time_duration actual_effective = iexamine::get_plant_effective_growth_time(
+            *synced_seed, growth_multiplier );
+    CHECK( actual_effective >= mature_threshold );
+}
+
+TEST_CASE( "plant_helper_follows_effective_time", "[plant][stage]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Furniture is still at seed, but the effective growth time already says harvest.
+    // The helper must follow effective time, not the stale furniture flag.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn );
+    iexamine::set_plant_effective_growth_turns( seed, to_turns<int>( 10_seconds ) );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seed );
+
+    CHECK( iexamine::is_plant_harvestable( here, plot ) );
+    CHECK( iexamine::is_plant_mature( here, plot ) );
+}
+
+TEST_CASE( "can_fertilize_syncs_furniture_with_effective_time", "[plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Furniture is seedling, but effective time is already past mature.
+    // can_fertilize() should call grow_plant() first, see the plant is mature,
+    // and reject fertilization.
+    item seed( itype_test_seed_eoc );
+    seed.set_birthday( calendar::turn );
+    // Effective time past mature (2h) but below overgrown (4h) so the result is
+    // deterministic regardless of CROP_OVERGROWN_ENABLED.
+    iexamine::set_plant_effective_growth_turns( seed, to_turns<int>( 150_minutes ) );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+
+    ret_val<void> result = multi_farm_activity_actor::can_fertilize( u, plot );
+    CHECK( !result.success() );
+    // grow_plant() should also have advanced the furniture to match effective time.
+    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+}
+
+namespace
+{
+static const furn_str_id furn_f_test_planter_high_water_seed( "test_f_planter_high_water_seed" );
+static const furn_str_id furn_f_test_planter_high_water_mature( "test_f_planter_high_water_mature" );
+
+// Verify that seed->birthday() is consistent with seed_effective_growth_turns for the
+// current world options.  This catches drift between the authoritative variable and
+// the derived birthday cache.
+void check_seed_birthday_consistency( const item &seed, float growth_multiplier,
+                                      float crop_growth_speed )
+{
+    REQUIRE( seed.has_var( "seed_effective_growth_turns" ) );
+    const time_duration effective = time_duration::from_turns(
+                                        iexamine::get_plant_effective_growth_turns( seed ) );
+    const time_point expected_birthday = calendar::turn - effective /
+                                         ( growth_multiplier * crop_growth_speed );
+    CHECK( seed.birthday() == expected_birthday );
+}
+} // namespace
+
+TEST_CASE( "plant_birthday_stays_consistent_after_fertilize", "[plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Advance time before creating the seed so the post-fertilize birthday does not
+    // get clamped to turn_zero by item::set_birthday.
+    calendar::turn += 1_days;
+
+    item seed( itype_test_seed_eoc );
+    seed.set_birthday( calendar::turn );
+    // Pre-initialize authoritative variables so the test exercises the normal path.
+    iexamine::set_plant_effective_growth_turns( seed, 0 );
+    iexamine::set_plant_last_water_check( seed, calendar::turn );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+    u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
+
+    item *planted_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( planted_seed != nullptr );
+
+    iexamine::fertilize_plant( u, plot, itype_fertilizer_commercial );
+    process_activity( u );
+
+    planted_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( planted_seed != nullptr );
+    check_seed_birthday_consistency( *planted_seed, here.furn( plot )->plant->growth_multiplier, 2.0f );
+}
+
+TEST_CASE( "plant_birthday_stays_consistent_after_transform", "[plant][magic][ter_transform]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    calendar::turn += 1_days;
+
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_plant_seedling );
+
+    REQUIRE( ter_test_plant_seedling_to_mature.is_valid() );
+    ter_test_plant_seedling_to_mature->transform( here, plot );
+
+    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+
+    item *synced_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( synced_seed != nullptr );
+    check_seed_birthday_consistency( *synced_seed, here.furn( plot )->plant->growth_multiplier, 2.0f );
+}
+
+TEST_CASE( "plant_old_save_irrigated_planter_migration", "[plant][world_option][water]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+
+    // Advance time so the seed's birthday can be positive.
+    calendar::turn += 1_days;
+
+    // Old-format seed in an irrigable planter: no seed_effective_growth_turns, but the
+    // furniture already shows a later stage.  The irrigated migration branch must still
+    // clamp effective time to the visible stage threshold.
+    item seed( itype_test_seed_simple );
+    seed.set_birthday( calendar::turn - 1_seconds );
+    seed.erase_var( "seed_effective_growth_turns" );
+    here.add_item( plot, seed );
+    here.furn_set( plot, furn_f_test_planter_high_water_seed );
+
+    here.grow_plant( plot );
+
+    item *synced_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( synced_seed != nullptr );
+    REQUIRE( synced_seed->has_var( "seed_effective_growth_turns" ) );
+
+    const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( *synced_seed->type->seed );
+    REQUIRE( mature_stage_idx >= 0 );
+    const time_duration mature_threshold = iexamine::get_plant_stage_threshold(
+            *synced_seed->type->seed, mature_stage_idx );
+
+    // The furniture is still at seed, so effective time only needs to be non-negative.
+    // The migration path deliberately preserves the original birthday (real planting time),
+    // so we only check that a valid effective time was created.
+    const time_duration actual_effective = iexamine::get_plant_effective_growth_time(
+            *synced_seed, here.furn( plot )->plant->growth_multiplier );
+    CHECK( actual_effective >= 0_seconds );
+
+    // Now test the mature-stage clamp by jumping the furniture forward and migrating again.
+    here.furn_set( plot, furn_f_test_planter_high_water_mature );
+    synced_seed->erase_var( "seed_effective_growth_turns" );
+    here.grow_plant( plot );
+
+    synced_seed = iexamine::get_seed_at( here, plot );
+    REQUIRE( synced_seed != nullptr );
+    const time_duration mature_effective = iexamine::get_plant_effective_growth_time(
+            *synced_seed, here.furn( plot )->plant->growth_multiplier );
+    CHECK( mature_effective >= mature_threshold );
 }
