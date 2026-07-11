@@ -1118,6 +1118,10 @@ class wish_item_callback: public uilist_callback
                 cataimgui::set_scroll( desc_scroll );
                 ImGui::SetCursorPosX( ( info_size.x - ImGui::CalcTextSize( header.c_str() ).x ) * 0.5 );
                 ImGui::TextColored( c_cyan, "%s", header.c_str() );
+                // The item information is a separate block.  Without an explicit
+                // newline it starts after the centered header, which leaves only
+                // the remaining line width for wrapping on narrow Android screens.
+                ImGui::NewLine();
                 display_item_info( info, {} );
             }
             ImGui::EndChild();

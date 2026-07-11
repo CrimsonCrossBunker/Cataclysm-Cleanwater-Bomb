@@ -18,13 +18,14 @@ if(EXISTS ${GIT_EXECUTABLE})
     endif()
 endif()
 
-message(NOTICE ${GIT_VERSION})
-
 if("${GIT_VERSION}" MATCHES "GIT-NOTFOUND")
     return()
 endif()
 
 if(GIT_VERSION)
+    string(TIMESTAMP BUILD_DATE "%Y-%m-%d")
+    string(PREPEND GIT_VERSION "${BUILD_DATE}-")
+    message(NOTICE ${GIT_VERSION})
     string(REPLACE "-NOTFOUND" "" GIT_VERSION ${GIT_VERSION})
     file(READ  ${CMAKE_SOURCE_DIR}/src/version.h VERSION_H)
     string(REGEX MATCH "#define VERSION \"(.+)\"" VERSION_H "${VERSION_H}")
@@ -47,4 +48,3 @@ build number: ${_timestamp}\n\
 commit sha: ${_sha1}\n\
 commit url: https://github.com/CleverRaven/Cataclysm-DDA/commit/${_sha1}"
 )
-

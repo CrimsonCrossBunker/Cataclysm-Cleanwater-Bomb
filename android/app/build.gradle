@@ -229,7 +229,9 @@ task generateVersionHeader() {
         println("Overriding version number to $override_version")
     }
 
-    def define = "// NOLINT(cata-header-guard)\n#define VERSION \"$override_version\"\n"
+    def buildDate = new Date().format('yyyy-MM-dd')
+    def versionWithDate = "${buildDate}-${override_version}"
+    def define = "// NOLINT(cata-header-guard)\n#define VERSION \"$versionWithDate\"\n"
     def versionHeader = new File("$version_header_path")
     if (!versionHeader.exists() || versionHeader.text != define) {
         versionHeader.text = define
