@@ -1278,13 +1278,15 @@ $(BUILD_PREFIX)$(TARGET_NAME).a: $(OBJS)
 
 .PHONY: version prefix
 version:
-	@( VERSION_STRING=$(VERSION) ; \
+	@( BUILD_DATE=$$(date +%Y-%m-%d) ; \
+	   VERSION_STRING="$$BUILD_DATE-$(VERSION)" ; \
         [ -e ".git" ] && \
           GITVERSION=$$( git describe --tags --always --match "[0-9A-Z]*.[0-9A-Z]*" --match "cdda-experimental-*" --exact-match 2>/dev/null || true ) && \
           GITSHA=$$( git rev-parse --short HEAD ) && \
           DIRTYFLAG=$$( [ -z "$$(git -c core.autocrlf=input -c core.safecrlf=false diff --numstat | grep -v lang/po/)" ] || echo "-dirty") && \
           VERSION_STRING="$$GITVERSION $$GITSHA$$DIRTYFLAG" && \
-          VERSION_STRING="$${VERSION_STRING## }" ; \
+          VERSION_STRING="$${VERSION_STRING## }" && \
+          VERSION_STRING="$$BUILD_DATE-$$VERSION_STRING" ; \
         [ -e "$(SRC_DIR)/version.h" ] && \
           OLDVERSION=$$(grep VERSION $(SRC_DIR)/version.h | cut -d '"' -f2) ; \
         if [ "x$$VERSION_STRING" != "x$$OLDVERSION" ]; then \
