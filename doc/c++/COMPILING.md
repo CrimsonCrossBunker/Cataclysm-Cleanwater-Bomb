@@ -175,7 +175,9 @@ To build the SDL2 fallback explicitly, pass `SDL3=0`:
 
     make -j2 TILES=1 SOUND=1 SDL3=0 RELEASE=1 USE_HOME_DIR=1
 
-For CMake, `-DTILES=ON` also defaults to SDL3; pass `-DUSE_SDL3=OFF` to build the SDL2 fallback.
+For CMake, `-DTILES=ON` also defaults to SDL3; pass `-DUSE_SDL3=OFF` to build the SDL2 fallback. For Windows MSVC, tiled configurations default to SDL3; pass `-p:UseSDL3=false` to build the SDL2 fallback.
+
+The Windows release builds use the same MSVC project for both variants: pass `-p:UseSDL3=false` for the SDL2 package and `-p:UseSDL3=true` for the SDL3 package.
 
 The -j2 flag means it will compile with two parallel processes. It can be omitted or changed to -j4 in a more modern processor. If there is no desire to have sound, those flags can also be omitted. The USE_HOME_DIR flag places the user files, like configurations and saves, into the home folder, making it easier for backups, and can also be omitted.
 
