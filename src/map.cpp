@@ -84,6 +84,7 @@
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
+#include "options.h"
 #include "output.h"
 #include "overmap.h"
 #include "overmap_map_data_cache.h"
@@ -10222,21 +10223,34 @@ void map::grow_plant( const tripoint_bub_ms &p )
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
                 seed->type->seed->get_growth_stages();
 
+    // Cache world options once per call; they are read repeatedly below.
+    const float crop_growth_speed = ::get_option<float>( "CROP_GROWTH_SPEED" );
+    const float crop_water_consumption = ::get_option<float>( "CROP_WATER_CONSUMPTION" );
+    const bool crop_overgrown_enabled = ::get_option<bool>( "CROP_OVERGROWN_ENABLED" );
+
     // Water / irrigation handling.  Irrigable furniture/plants consume water daily to grow faster.
     // We simulate day-by-day and switch furniture/growth_multiplier when the plant advances stages.
     time_duration effective_growth_time = 0_seconds;
     const int initial_max_water = iexamine::get_plant_max_water( initial_furn );
     if( initial_max_water > 0 ) {
         const time_point last_check = iexamine::get_plant_last_water_check( *seed );
-        if( last_check == time_point::from_turn( 0 ) ||
-            !seed->has_var( "seed_effective_growth_turns" ) ) {
-            // Old saves / first actualization: estimate effective growth time from current age,
-            // but clamp to at least the threshold of the current stage to avoid regressing.
-            effective_growth_time = seed->age() * initial_furn.plant->growth_multiplier;
-            const int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p, growth_stages );
+        if( !seed->has_var( "seed_effective_growth_turns" ) ||
+            last_check == time_point::from_turn( 0 ) ) {
+            // Old saves / first actualization: estimate effective growth time (base growth
+            // units) from current age, applying both the furniture multiplier and the world
+            // crop-growth-speed option so mapgen plants catch up consistently with player-grown
+            // crops.  Clamp to at least the threshold of the current stage so we never regress
+            // a plant that already visually advanced.
+            effective_growth_time = seed->age() * initial_furn.plant->growth_multiplier *
+                                    crop_growth_speed;
+            const int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p,
+                    growth_stages );
             const time_duration min_effective_for_stage =
-                iexamine::get_plant_stage_threshold( growth_stages, current_stage_idx );
+                iexamine::get_plant_stage_threshold( *seed->type->seed, current_stage_idx );
             if( effective_growth_time < min_effective_for_stage ) {
+                // Never let effective time fall below the current furniture stage,
+                // even when CROP_GROWTH_SPEED < 1.0.  Future growth still respects
+                // the world speed option; this just preserves already-visible progress.
                 effective_growth_time = min_effective_for_stage;
             }
             iexamine::set_plant_water( *seed, 0 );
@@ -10254,16 +10268,12 @@ void map::grow_plant( const tripoint_bub_ms &p )
                 int current_water = iexamine::get_plant_water( *seed );
 
                 // Determine starting stage index from current furniture flag.
-                int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p, growth_stages );
+                int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p,
+                        growth_stages );
 
-                // Precompute cumulative thresholds for each stage boundary.
-                std::vector<time_duration> stage_thresholds;
-                stage_thresholds.reserve( growth_stages.size() );
-                time_duration acc = 0_seconds;
-                for( const auto &stage : growth_stages ) {
-                    acc += stage.second;
-                    stage_thresholds.push_back( acc );
-                }
+                // Cumulative stage thresholds are precomputed during item finalize.
+                const std::vector<time_duration> &stage_thresholds =
+                    seed->type->seed->get_cumulative_stage_thresholds();
 
                 furn_id current_furn_id = furn( p );
 
@@ -10275,7 +10285,8 @@ void map::grow_plant( const tripoint_bub_ms &p )
                     const float consumption_mult = iexamine::get_plant_water_consumption_multiplier(
                                                        current_furn );
                     const int daily_consumption = std::max( 1,
-                                                            static_cast<int>( base_daily_consumption * consumption_mult ) );
+                            static_cast<int>( base_daily_consumption * consumption_mult *
+                                              crop_water_consumption ) );
 
                     // Rainwater collection for outdoor irrigable planters.
                     if( !this->is_roofed( p ) ) {
@@ -10289,11 +10300,14 @@ void map::grow_plant( const tripoint_bub_ms &p )
 
                     // Proportional irrigation bonus: partial water gives partial bonus.
                     const float water_ratio = std::min( 1.0f,
-                                                        static_cast<float>( current_water ) / daily_consumption );
-                    const float water_bonus = 1.0f + irrigation::MAX_IRRIGATION_GROWTH_BONUS * water_ratio;
+                                                        static_cast<float>( current_water ) /
+                                                        daily_consumption );
+                    const float water_bonus = 1.0f +
+                                              irrigation::MAX_IRRIGATION_GROWTH_BONUS * water_ratio;
                     const int consumed = std::min( current_water, daily_consumption );
                     current_water -= consumed;
-                    effective_growth_time += 1_days * base_mult * water_bonus;
+                    effective_growth_time += 1_days * base_mult * crop_growth_speed *
+                                             water_bonus;
 
                     // Advance through as many stages as today's effective growth allows.
                     while( current_stage_idx + 1 < static_cast<int>( growth_stages.size() ) &&
@@ -10314,7 +10328,8 @@ void map::grow_plant( const tripoint_bub_ms &p )
             }
         }
     } else {
-        // Non-irrigated plants grow strictly with real time.  Keep the
+        // Non-irrigated plants accumulate effective growth time scaled by the
+        // furniture multiplier and the world crop-growth-speed option.  Keep the
         // authoritative effective-growth-time variable in sync so helpers that
         // rely on it agree with the stage computed here.
         const time_point last_check = iexamine::get_plant_last_water_check( *seed );
@@ -10323,16 +10338,24 @@ void map::grow_plant( const tripoint_bub_ms &p )
         if( seed->has_var( "seed_effective_growth_turns" ) ) {
             effective_growth_time = time_duration::from_turns(
                                         iexamine::get_plant_effective_growth_turns( *seed ) );
-            effective_growth_time += elapsed * initial_furn.plant->growth_multiplier;
+            effective_growth_time += elapsed * initial_furn.plant->growth_multiplier *
+                                     crop_growth_speed;
         } else {
-            // Old saves: estimate from age, but clamp to the current furniture
-            // stage threshold so we never regress a plant that already visually
-            // advanced before this variable existed.
-            effective_growth_time = seed->age() * initial_furn.plant->growth_multiplier;
-            const int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p, growth_stages );
+            // Old saves: estimate effective growth time (base growth units) from age,
+            // applying both the furniture multiplier and the world crop-growth-speed option
+            // so mapgen plants catch up consistently with player-grown crops.  Clamp to the
+            // current furniture stage threshold so we never regress a plant that already
+            // visually advanced before this variable existed.
+            effective_growth_time = seed->age() * initial_furn.plant->growth_multiplier *
+                                    crop_growth_speed;
+            const int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p,
+                    growth_stages );
             const time_duration min_effective_for_stage =
-                iexamine::get_plant_stage_threshold( growth_stages, current_stage_idx );
+                iexamine::get_plant_stage_threshold( *seed->type->seed, current_stage_idx );
             if( effective_growth_time < min_effective_for_stage ) {
+                // Never let effective time fall below the current furniture stage,
+                // even when CROP_GROWTH_SPEED < 1.0.  Future growth still respects
+                // the world speed option; this just preserves already-visible progress.
                 effective_growth_time = min_effective_for_stage;
             }
         }
@@ -10365,14 +10388,27 @@ void map::grow_plant( const tripoint_bub_ms &p )
 
     const int start_stage_idx = static_cast<int>( std::distance(
             growth_stages.begin(),
-            std::find_if( growth_stages.begin(), growth_stages.end(), check_flag( current_stage.str() ) ) ) );
+            std::find_if( growth_stages.begin(), growth_stages.end(),
+                          check_flag( current_stage.str() ) ) ) );
 
-    const int stages_to_advance = std::distance(
-                                      std::find_if( growth_stages.begin(), growth_stages.end(), check_flag( current_stage.str() ) ),
-                                      std::find_if( growth_stages.begin(), growth_stages.end(), check_flag( target_stage.str() ) ) );
+    const int target_stage_idx = static_cast<int>( std::distance(
+            growth_stages.begin(),
+            std::find_if( growth_stages.begin(), growth_stages.end(),
+                          check_flag( target_stage.str() ) ) ) );
 
-    const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( growth_stages );
-    const int overgrown_stage_idx = iexamine::get_plant_overgrown_stage_idx( growth_stages );
+    const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( *seed->type->seed );
+    const int overgrown_stage_idx = iexamine::get_plant_overgrown_stage_idx( *seed->type->seed );
+
+    const bool overgrown_enabled = crop_overgrown_enabled;
+    // When overgrowth is disabled, clamp growth at the stage just before
+    // overgrown (usually harvest), not at mature.  Mature is too early and
+    // would prevent harvesting entirely.
+    const int max_allowed_stage_idx = overgrown_enabled || overgrown_stage_idx < 0
+                                      ? static_cast<int>( growth_stages.size() ) - 1
+                                      : overgrown_stage_idx - 1;
+    const int clamped_target_stage_idx = std::min( target_stage_idx, max_allowed_stage_idx );
+
+    const int stages_to_advance = clamped_target_stage_idx - start_stage_idx;
 
     add_msg_debug( debugmode::DF_MAP,
                    "Checking growth on a %s, aged %s. Current stage: %s. Target stage: %s. Advancing %d stages.",
@@ -10389,6 +10425,12 @@ void map::grow_plant( const tripoint_bub_ms &p )
     Character &alpha = get_avatar();
 
     for( int i = 0; i < stages_to_advance; i++ ) {
+        const int old_stage_idx = start_stage_idx + i;
+        const int new_stage_idx = start_stage_idx + i + 1;
+        if( new_stage_idx > max_allowed_stage_idx ) {
+            break;
+        }
+
         // EOCs from the previous iteration may have modified the tile; refresh the seed.
         item *current_seed = iexamine::get_seed_at( *this, p );
         if( current_seed == nullptr ) {
@@ -10417,8 +10459,6 @@ void map::grow_plant( const tripoint_bub_ms &p )
             break;
         }
 
-        const int old_stage_idx = start_stage_idx + i;
-        const int new_stage_idx = start_stage_idx + i + 1;
         const std::string old_stage = growth_stages[old_stage_idx].first.str();
         const std::string new_stage = growth_stages[new_stage_idx].first.str();
         const furn_t &new_furn = this->furn( p ).obj();
@@ -10729,7 +10769,9 @@ void map::actualize( const tripoint_rel_sm &grid )
                 fill_funnels( pnt, tmpsub->last_touched );
             }
 
-            grow_plant( pnt );
+            if( furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+                grow_plant( pnt );
+            }
 
             restock_fruits( pnt, time_since_last_actualize );
 

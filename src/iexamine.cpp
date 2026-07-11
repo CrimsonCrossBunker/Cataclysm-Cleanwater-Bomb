@@ -2852,7 +2852,8 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
             ///\EFFECT_SURVIVAL increases number of plants harvested from a seed
             int plant_count = rng( skillLevel / 2, skillLevel );
             const auto &fp = here.furn( examp )->plant;
-            plant_count *= fp->harvest_multiplier;
+            plant_count *= fp->harvest_multiplier *
+                           ::get_option<float>( "CROP_HARVEST_MULTIPLIER" );
             plant_count = std::max( plant_count, 1 );
             int seedCount = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
 
@@ -3050,6 +3051,12 @@ item *iexamine::get_seed_at( map &here, const tripoint_bub_ms &p )
     return nullptr;
 }
 
+item *iexamine::sync_and_get_seed_at( map &here, const tripoint_bub_ms &p )
+{
+    here.grow_plant( p );
+    return get_seed_at( here, p );
+}
+
 bool iexamine::is_plant_fertilized( const item &seed )
 {
     return static_cast<int>( seed.get_var( "seed_fertilized", 0.0 ) ) != 0;
@@ -3097,6 +3104,16 @@ int iexamine::get_plant_effective_growth_turns( const item &seed )
 void iexamine::set_plant_effective_growth_turns( item &seed, int turns )
 {
     seed.set_var( "seed_effective_growth_turns", std::max( 0, turns ) );
+}
+
+void iexamine::set_plant_effective_growth_time( item &seed, time_duration effective,
+        float growth_multiplier, float crop_growth_speed )
+{
+    effective = std::max( 0_seconds, effective );
+    set_plant_effective_growth_turns( seed, to_turns<int>( effective ) );
+    if( growth_multiplier > 0.0f && crop_growth_speed > 0.0f ) {
+        seed.set_birthday( calendar::turn - effective / ( growth_multiplier * crop_growth_speed ) );
+    }
 }
 
 void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
@@ -3217,8 +3234,10 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
         const int current_water = get_plant_water( *seed );
         const int base_consumption = get_seed_water_consumption( *seed );
         const float consumption_mult = get_plant_water_consumption_multiplier( furn );
+        const float crop_water_consumption = ::get_option<float>( "CROP_WATER_CONSUMPTION" );
         const int consumption = std::max( 1,
-                                          static_cast<int>( base_consumption * consumption_mult ) );
+                                          static_cast<int>( base_consumption * consumption_mult *
+                                                  crop_water_consumption ) );
         std::string desc = string_format(
                                _( "Water: <color_cyan>%d</color>/<color_cyan>%d</color>\n"
                                   "Daily consumption: <color_cyan>%d</color>\n"
@@ -3255,47 +3274,32 @@ int iexamine::get_plant_current_stage_idx( const map &here, const tripoint_bub_m
     return -1;
 }
 
-int iexamine::get_plant_mature_stage_idx(
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages )
+int iexamine::get_plant_mature_stage_idx( const islot_seed &seed_data )
 {
-    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
-        if( growth_stages[i].first.str() == "GROWTH_MATURE" ) {
-            return i;
-        }
-    }
-    return -1;
+    return seed_data.get_mature_stage_idx();
 }
 
-int iexamine::get_plant_harvest_stage_idx(
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages )
+int iexamine::get_plant_harvest_stage_idx( const islot_seed &seed_data )
 {
-    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
-        if( growth_stages[i].first.str() == "GROWTH_HARVEST" ) {
-            return i;
-        }
-    }
-    return -1;
+    return seed_data.get_harvest_stage_idx();
 }
 
-int iexamine::get_plant_overgrown_stage_idx(
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages )
+int iexamine::get_plant_overgrown_stage_idx( const islot_seed &seed_data )
 {
-    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
-        if( growth_stages[i].first.str() == "GROWTH_OVERGROWN" ) {
-            return i;
-        }
-    }
-    return -1;
+    return seed_data.get_overgrown_stage_idx();
 }
 
-time_duration iexamine::get_plant_stage_threshold(
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages, int stage_idx )
+time_duration iexamine::get_plant_stage_threshold( const islot_seed &seed_data, int stage_idx )
 {
-    time_duration threshold = 0_seconds;
-    for( int i = 0; i < stage_idx && i < static_cast<int>( growth_stages.size() ); ++i ) {
-        threshold += growth_stages[i].second;
+    if( stage_idx <= 0 ) {
+        return 0_seconds;
     }
-    return threshold;
+    const std::vector<time_duration> &thresholds = seed_data.get_cumulative_stage_thresholds();
+    const int idx = stage_idx - 1;
+    if( idx < static_cast<int>( thresholds.size() ) ) {
+        return thresholds[idx];
+    }
+    return thresholds.empty() ? 0_seconds : thresholds.back();
 }
 
 time_duration iexamine::get_plant_effective_growth_time( const item &seed, float growth_multiplier )
@@ -3308,26 +3312,34 @@ time_duration iexamine::get_plant_effective_growth_time( const item &seed, float
 
 std::string iexamine::plant_age_description( const item &seed, float growth_multiplier )
 {
-    const time_duration effective_age = get_plant_effective_growth_time( seed, growth_multiplier ) /
-                                        growth_multiplier;
-    return string_format( _( "Age: <color_cyan>%s</color>" ), to_string( effective_age ) );
+    time_duration effective_age;
+    if( seed.has_var( "seed_effective_growth_turns" ) ) {
+        // Effective growth time is stored in base growth units.  Divide by the
+        // furniture's growth multiplier to show an equivalent "default-speed" age
+        // that matches the growth stage computed from seed_effective_growth_turns.
+        effective_age = get_plant_effective_growth_time( seed, growth_multiplier ) /
+                        growth_multiplier;
+    } else {
+        // Old saves: show real age as a fallback.
+        effective_age = seed.age();
+    }
+    return string_format( _( "Effective age: <color_cyan>%s</color>" ),
+                          to_string( effective_age ) );
 }
 
-int iexamine::get_plant_stage_idx_from_effective_time(
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages,
-    const time_duration &effective_time )
+int iexamine::get_plant_stage_idx_from_effective_time( const islot_seed &seed_data,
+        const time_duration &effective_time )
 {
+    const std::vector<time_duration> &thresholds = seed_data.get_cumulative_stage_thresholds();
     int stage_idx = 0;
-    time_duration threshold = 0_seconds;
-    for( int i = 0; i < static_cast<int>( growth_stages.size() ); ++i ) {
-        threshold += growth_stages[i].second;
-        if( effective_time >= threshold ) {
+    for( int i = 0; i < static_cast<int>( thresholds.size() ); ++i ) {
+        if( effective_time >= thresholds[i] ) {
             stage_idx = i + 1;
         } else {
             break;
         }
     }
-    return std::min( stage_idx, static_cast<int>( growth_stages.size() ) - 1 );
+    return std::min( stage_idx, static_cast<int>( seed_data.get_growth_stages().size() ) - 1 );
 }
 
 int iexamine::get_plant_current_stage_idx_from_effective( map &here, const tripoint_bub_ms &p )
@@ -3337,11 +3349,9 @@ int iexamine::get_plant_current_stage_idx_from_effective( map &here, const tripo
     if( seed == nullptr || seed->type == nullptr || seed->type->seed == nullptr || !furn.plant ) {
         return -1;
     }
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
-        seed->type->seed->get_growth_stages();
     const time_duration effective_time = get_plant_effective_growth_time( *seed,
             furn.plant->growth_multiplier );
-    return get_plant_stage_idx_from_effective_time( growth_stages, effective_time );
+    return get_plant_stage_idx_from_effective_time( *seed->type->seed, effective_time );
 }
 
 bool iexamine::is_plant_harvestable( map &here, const tripoint_bub_ms &p )
@@ -3351,12 +3361,13 @@ bool iexamine::is_plant_harvestable( map &here, const tripoint_bub_ms &p )
     if( seed == nullptr || seed->type == nullptr || seed->type->seed == nullptr || !furn.plant ) {
         return false;
     }
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
-        seed->type->seed->get_growth_stages();
-    const int harvest_stage_idx = get_plant_harvest_stage_idx( growth_stages );
+    const int harvest_stage_idx = get_plant_harvest_stage_idx( *seed->type->seed );
     if( harvest_stage_idx < 0 ) {
         return false;
     }
+    // Effective growth time is the authoritative progress measure; furniture is
+    // just its visual representation. Callers should synchronize with grow_plant()
+    // before querying if they need the latest visual stage.
     const int current_stage_idx = get_plant_current_stage_idx_from_effective( here, p );
     return current_stage_idx >= harvest_stage_idx;
 }
@@ -3368,12 +3379,13 @@ bool iexamine::is_plant_mature( map &here, const tripoint_bub_ms &p )
     if( seed == nullptr || seed->type == nullptr || seed->type->seed == nullptr || !furn.plant ) {
         return false;
     }
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
-        seed->type->seed->get_growth_stages();
-    const int mature_stage_idx = get_plant_mature_stage_idx( growth_stages );
+    const int mature_stage_idx = get_plant_mature_stage_idx( *seed->type->seed );
     if( mature_stage_idx < 0 ) {
         return false;
     }
+    // Effective growth time is the authoritative progress measure; furniture is
+    // just its visual representation. Callers should synchronize with grow_plant()
+    // before querying if they need the latest visual stage.
     const int current_stage_idx = get_plant_current_stage_idx_from_effective( here, p );
     return current_stage_idx >= mature_stage_idx;
 }
@@ -3387,11 +3399,14 @@ bool iexamine::is_plant_overgrown( map &here, const tripoint_bub_ms &p )
     }
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
         seed->type->seed->get_growth_stages();
-    const int overgrown_stage_idx = get_plant_overgrown_stage_idx( growth_stages );
+    const int overgrown_stage_idx = get_plant_overgrown_stage_idx( *seed->type->seed );
     if( overgrown_stage_idx < 0 ) {
         return false;
     }
-    const int current_stage_idx = get_plant_current_stage_idx_from_effective( here, p );
+    // Overgrowth is a visible furniture stage.  When CROP_OVERGROWN_ENABLED is false
+    // grow_plant clamps the furniture at mature, so this check must reflect the
+    // actual furniture rather than the unclamped effective growth time.
+    const int current_stage_idx = get_plant_current_stage_idx( here, p, growth_stages );
     return current_stage_idx >= overgrown_stage_idx;
 }
 

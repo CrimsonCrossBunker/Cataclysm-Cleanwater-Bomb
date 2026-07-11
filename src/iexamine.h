@@ -25,6 +25,7 @@ class time_duration;
 class time_point;
 class vpart_reference;
 struct furn_t;
+struct islot_seed;
 struct itype;
 
 using seed_tuple = std::tuple<itype_id, std::string, int>;
@@ -184,6 +185,9 @@ ret_val<void> can_fertilize( Character &you, const tripoint_bub_ms &tile,
 int get_plant_max_water( const furn_t &furn );
 float get_plant_water_consumption_multiplier( const furn_t &furn );
 item *get_seed_at( map &here, const tripoint_bub_ms &p );
+// Sync the plant tile (grow_plant) and return the seed item, or nullptr if none.
+// This is the common pattern for callers that need authoritative plant state.
+item *sync_and_get_seed_at( map &here, const tripoint_bub_ms &p );
 bool is_plant_fertilized( const item &seed );
 void set_plant_fertilized( item &seed, bool fertilized );
 int get_plant_water( const item &seed );
@@ -191,8 +195,17 @@ void set_plant_water( item &seed, int water );
 int get_seed_water_consumption( const item &seed );
 time_point get_plant_last_water_check( const item &seed );
 void set_plant_last_water_check( item &seed, const time_point &turn );
+// Authoritative plant progress.  Value is in BASE growth units: one base unit is
+// the amount of growth a plant with furniture multiplier 1.0 gets in one turn at
+// CROP_GROWTH_SPEED 1.0.  Natural growth adds elapsed * growth_multiplier *
+// CROP_GROWTH_SPEED to this variable, but the stored value itself is independent
+// of the current world speed option.
 int get_plant_effective_growth_turns( const item &seed );
 void set_plant_effective_growth_turns( item &seed, int turns );
+// Set the authoritative effective growth time (in base growth units) and keep
+// the seed's birthday in sync so that age() remains consistent with it.
+void set_plant_effective_growth_time( item &seed, time_duration effective,
+                                      float growth_multiplier, float crop_growth_speed );
 void water_plant( Character &you, const tripoint_bub_ms &examp );
 bool can_water_plant( Character &you, const tripoint_bub_ms &examp );
 int rain_water_for_weather( const weather_type_id &weather );
@@ -201,18 +214,16 @@ std::string plant_water_description( map &here, const tripoint_bub_ms &p );
 // Plant growth helpers
 int get_plant_current_stage_idx( const map &here, const tripoint_bub_ms &p,
                                  const std::vector<std::pair<flag_id, time_duration>> &growth_stages );
-int get_plant_mature_stage_idx( const std::vector<std::pair<flag_id, time_duration>> &growth_stages );
-int get_plant_harvest_stage_idx( const std::vector<std::pair<flag_id, time_duration>> &growth_stages );
-int get_plant_overgrown_stage_idx( const std::vector<std::pair<flag_id, time_duration>> &growth_stages );
-time_duration get_plant_stage_threshold(
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages, int stage_idx );
+int get_plant_mature_stage_idx( const islot_seed &seed_data );
+int get_plant_harvest_stage_idx( const islot_seed &seed_data );
+int get_plant_overgrown_stage_idx( const islot_seed &seed_data );
+time_duration get_plant_stage_threshold( const islot_seed &seed_data, int stage_idx );
 time_duration get_plant_effective_growth_time( const item &seed, float growth_multiplier );
 std::string plant_age_description( const item &seed, float growth_multiplier );
 
 // Unified plant stage / maturity helpers based on effective growth time.
-int get_plant_stage_idx_from_effective_time(
-    const std::vector<std::pair<flag_id, time_duration>> &growth_stages,
-    const time_duration &effective_time );
+int get_plant_stage_idx_from_effective_time( const islot_seed &seed_data,
+        const time_duration &effective_time );
 int get_plant_current_stage_idx_from_effective( map &here, const tripoint_bub_ms &p );
 bool is_plant_harvestable( map &here, const tripoint_bub_ms &p );
 bool is_plant_mature( map &here, const tripoint_bub_ms &p );
