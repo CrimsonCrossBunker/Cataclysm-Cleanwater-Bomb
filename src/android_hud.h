@@ -16,10 +16,26 @@ class avatar;
 namespace android_hud
 {
 
-bool enqueue_action( const std::string &action );
+struct action_descriptor {
+    std::string id;
+    std::string label;
+};
+
+struct minimap_rect {
+    int x = 0;
+    int y = 0;
+    int width = 0;
+    int height = 0;
+    bool visible = false;
+};
+
+bool enqueue_action( const std::string &action, int context_revision = -1 );
 bool consume_action_for_context( const std::vector<std::string> &registered_actions,
                                  std::string &action );
-void set_active_actions( const std::vector<std::string> &registered_actions );
+void set_active_context( const std::string &category,
+                         const std::vector<action_descriptor> &registered_actions );
+void set_minimap_rect( const minimap_rect &rect );
+minimap_rect get_minimap_rect();
 
 void publish_snapshot( const avatar &player, int safe_mode );
 std::string snapshot_json();

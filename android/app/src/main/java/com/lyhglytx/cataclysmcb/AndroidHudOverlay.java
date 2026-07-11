@@ -18,7 +18,10 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.GridLayout;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -48,9 +51,10 @@ import java.util.UUID;
 final class AndroidHudOverlay extends FrameLayout {
     private static final String TAG = "AndroidHud";
     private static final String PREFS_NAME = "android_hud";
-    private static final String PREF_LAYOUTS = "layouts_v1";
-    private static final int SCHEMA_VERSION = 1;
-    private static final long SNAPSHOT_INTERVAL_MS = 250L;
+    private static final String PREF_LAYOUTS = "layouts_v2";
+    private static final String PREF_LAYOUTS_V1 = "layouts_v1";
+    private static final int SCHEMA_VERSION = 2;
+    private static final long SNAPSHOT_INTERVAL_MS = 100L;
     private static final long EDIT_LONG_PRESS_MS = 650L;
 
     private static final String TYPE_STATUS = "status";
@@ -58,7 +62,9 @@ final class AndroidHudOverlay extends FrameLayout {
     private static final String TYPE_EQUIPMENT = "equipment";
     private static final String TYPE_ENVIRONMENT = "environment";
     private static final String TYPE_MESSAGES = "messages";
-    private static final String TYPE_RADAR = "radar";
+    private static final String TYPE_PIXEL_MINIMAP = "pixel_minimap";
+    private static final String TYPE_OVERMAP = "overmap";
+    private static final String TYPE_DANGER_COMPASS = "danger_compass";
     private static final String TYPE_ACTIONS = "actions";
 
     private static final LinkedHashMap<String, String> COMPONENT_LABELS = createComponentLabels();
@@ -74,6 +80,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private final List<HudComponent> components = new ArrayList<>();
     private final Map<String, RenderedComponent> rendered = new HashMap<>();
     private final Set<String> availableActions = new HashSet<>();
+    private final LinkedHashMap<String, ActionInfo> actionInfos = new LinkedHashMap<>();
     private final LinearLayout editorBar;
     private final Runnable snapshotPoller = new Runnable() {
         @Override
@@ -102,6 +109,8 @@ final class AndroidHudOverlay extends FrameLayout {
     private boolean editing;
     private boolean blankTouchActive;
     private long lastSnapshotRevision = -1;
+    private int contextRevision;
+    private String currentContext = "DEFAULTMODE";
 
     AndroidHudOverlay(CataclysmDDA activity) {
         super(activity);
@@ -130,6 +139,7 @@ final class AndroidHudOverlay extends FrameLayout {
         started = false;
         handler.removeCallbacks(snapshotPoller);
         handler.removeCallbacks(blankLongPress);
+        activity.setHudMinimapRect(0, 0, 0, 0, false);
     }
 
     /** Called by the Activity before it dispatches a touch to SDL. */
@@ -162,7 +172,8 @@ final class AndroidHudOverlay extends FrameLayout {
         final String[] choices = {
             "编辑当前 HUD",
             "选择布局/预设",
-            "另存为新布局",
+            "为当前页面另存布局",
+            "折叠菜单与动画",
             "导入布局文件",
             "导出布局文件",
             "分享当前布局",
@@ -184,15 +195,18 @@ final class AndroidHudOverlay extends FrameLayout {
                             showSaveAsDialog();
                             break;
                         case 3:
-                            activity.importHudLayout();
+                            showBehaviorSettings();
                             break;
                         case 4:
-                            activity.exportHudLayout(exportCurrentLayout());
+                            activity.importHudLayout();
                             break;
                         case 5:
-                            activity.shareHudLayout(exportCurrentLayout());
+                            activity.exportHudLayout(exportCurrentLayout());
                             break;
                         case 6:
+                            activity.shareHudLayout(exportCurrentLayout());
+                            break;
+                        case 7:
                             confirmResetDefaults();
                             break;
                         default:
@@ -200,6 +214,76 @@ final class AndroidHudOverlay extends FrameLayout {
                     }
                 }
             })
+            .show();
+    }
+
+    private void showBehaviorSettings() {
+        final String[] choices = { "锚定网格 + 缩放淡入", "底部抽屉 + 滑出", "锚定网格 + 无动画" };
+        JSONObject settings = layoutStore.optJSONObject("settings");
+        String surface = settings == null ? "grid" : settings.optString("groupSurface", "grid");
+        String animation = settings == null ? "scale_fade" : settings.optString("animation", "scale_fade");
+        int selected = "drawer".equals(surface) ? 1 : ("none".equals(animation) ? 2 : 0);
+        new AlertDialog.Builder(activity)
+            .setTitle("折叠菜单与动画")
+            .setSingleChoiceItems(choices, selected, null)
+            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface dialog, int which) {
+                    int checked = ((AlertDialog) dialog).getListView().getCheckedItemPosition();
+                    try {
+                        JSONObject next = layoutStore.optJSONObject("settings");
+                        if (next == null) {
+                            next = new JSONObject();
+                            layoutStore.put("settings", next);
+                        }
+                        next.put("groupSurface", checked == 1 ? "drawer" : "grid");
+                        next.put("animation", checked == 2 ? "none" :
+                            (checked == 1 ? "slide" : "scale_fade"));
+                        next.put("animationMs", 180);
+                        saveLayoutStore();
+                    } catch (JSONException e) {
+                        Log.w(TAG, "Could not save HUD behavior", e);
+                    }
+                }
+            })
+            .setNeutralButton("动画速度", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface dialog, int which) {
+                    showAnimationSpeedDialog();
+                }
+            })
+            .setNegativeButton("取消", null)
+            .show();
+    }
+
+    private void showAnimationSpeedDialog() {
+        JSONObject settings = layoutStore.optJSONObject("settings");
+        int current = settings == null ? 180 : settings.optInt("animationMs", 180);
+        LinearLayout content = new LinearLayout(activity);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(18), dp(12), dp(18), dp(12));
+        final int[] selected = { current };
+        addSlider(content, "动画时长", 0, 400, current, new SliderCallback() {
+            @Override public void onChanged(int value) { selected[0] = value; }
+        });
+        new AlertDialog.Builder(activity)
+            .setTitle("动画速度（0 为关闭）")
+            .setView(content)
+            .setPositiveButton("保存", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface dialog, int which) {
+                    try {
+                        JSONObject next = layoutStore.optJSONObject("settings");
+                        if (next == null) {
+                            next = new JSONObject();
+                            layoutStore.put("settings", next);
+                        }
+                        next.put("animationMs", selected[0]);
+                        if (selected[0] == 0) next.put("animation", "none");
+                        saveLayoutStore();
+                    } catch (JSONException e) {
+                        Log.w(TAG, "Could not save animation duration", e);
+                    }
+                }
+            })
+            .setNegativeButton("取消", null)
             .show();
     }
 
@@ -257,6 +341,12 @@ final class AndroidHudOverlay extends FrameLayout {
             activeLayoutId = selectedImportedLayout;
             layoutStore.put("schema", SCHEMA_VERSION);
             layoutStore.put("active", activeLayoutId);
+            JSONObject overrides = layoutStore.optJSONObject("contextLayouts");
+            if (overrides == null) {
+                overrides = new JSONObject();
+                layoutStore.put("contextLayouts", overrides);
+            }
+            overrides.put(currentContext, activeLayoutId);
             saveLayoutStore();
             loadActiveLayout();
             Toast.makeText(activity, "已导入 HUD 布局", Toast.LENGTH_SHORT).show();
@@ -274,7 +364,7 @@ final class AndroidHudOverlay extends FrameLayout {
                 if (candidate.optInt("schema", 0) == SCHEMA_VERSION &&
                         candidate.optJSONObject("layouts") != null) {
                     layoutStore = candidate;
-                    activeLayoutId = candidate.optString("active", "combat");
+                    activeLayoutId = candidate.optString("active", "map");
                     if (candidate.optJSONObject("layouts").has(activeLayoutId)) {
                         return;
                     }
@@ -284,52 +374,121 @@ final class AndroidHudOverlay extends FrameLayout {
             }
         }
         layoutStore = createDefaultStore();
-        activeLayoutId = "combat";
+        activeLayoutId = "map";
+        migrateV1Layout();
         saveLayoutStore();
+    }
+
+    private void migrateV1Layout() {
+        String old = preferences.getString(PREF_LAYOUTS_V1, null);
+        if (old == null) {
+            return;
+        }
+        try {
+            JSONObject previous = new JSONObject(old);
+            JSONObject previousLayouts = previous.optJSONObject("layouts");
+            JSONObject layouts = layoutStore.getJSONObject("layouts");
+            if (previousLayouts == null) {
+                return;
+            }
+            java.util.Iterator<String> keys = previousLayouts.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                JSONObject migrated = sanitizeLayout(previousLayouts.optJSONObject(key));
+                if (migrated != null) {
+                    layouts.put("legacy-" + key, migrated);
+                }
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "Could not migrate v1 HUD layouts", e);
+        }
     }
 
     private JSONObject createDefaultStore() {
         JSONObject store = new JSONObject();
         try {
             JSONObject layouts = new JSONObject();
-            layouts.put("combat", createCombatLayout());
-            layouts.put("exploration", createExplorationLayout());
+            layouts.put("map", createMapLayout());
+            layouts.put("menu", createActionLayout("菜单", .58f, .58f, .40f, .39f));
+            layouts.put("inventory", createActionLayout("物品", .56f, .54f, .42f, .44f));
+            layouts.put("target", createTargetLayout());
+            layouts.put("world", createActionLayout("地图与查看", .58f, .55f, .40f, .43f));
+            layouts.put("crafting", createActionLayout("制作与建造", .55f, .52f, .43f, .46f));
+            layouts.put("text", createActionLayout("文本输入", .52f, .63f, .46f, .35f));
+            layouts.put("generic", createActionLayout("通用页面", .56f, .58f, .42f, .40f));
             store.put("schema", SCHEMA_VERSION);
-            store.put("active", "combat");
+            store.put("active", "map");
             store.put("layouts", layouts);
+            store.put("contextLayouts", new JSONObject());
+            JSONObject settings = new JSONObject();
+            settings.put("groupSurface", "grid");
+            settings.put("animation", "scale_fade");
+            settings.put("animationMs", 180);
+            store.put("settings", settings);
         } catch (JSONException e) {
             throw new IllegalStateException("Could not create default HUD layouts", e);
         }
         return store;
     }
 
-    private JSONObject createCombatLayout() throws JSONException {
+    private JSONObject createMapLayout() throws JSONException {
         JSONObject layout = new JSONObject();
-        layout.put("name", "紧凑战斗");
+        layout.put("name", "官方地图 HUD");
         JSONArray list = new JSONArray();
         list.put(newComponent(TYPE_STATUS, .02f, .03f, .27f, .14f, null).toJson());
         list.put(newComponent(TYPE_BODY, .02f, .19f, .23f, .38f, null).toJson());
         list.put(newComponent(TYPE_EQUIPMENT, .02f, .60f, .31f, .12f, null).toJson());
-        list.put(newComponent(TYPE_RADAR, .74f, .03f, .24f, .31f, null).toJson());
+        list.put(newComponent(TYPE_PIXEL_MINIMAP, .74f, .03f, .24f, .31f, null).toJson());
         list.put(newComponent(TYPE_MESSAGES, .30f, .74f, .38f, .22f, null).toJson());
         list.put(newComponent(TYPE_ACTIONS, .66f, .56f, .32f, .40f, DEFAULT_ACTIONS).toJson());
         layout.put("components", list);
         return layout;
     }
 
-    private JSONObject createExplorationLayout() throws JSONException {
+    private JSONObject createTargetLayout() throws JSONException {
         JSONObject layout = new JSONObject();
-        layout.put("name", "探索信息");
+        layout.put("name", "官方瞄准 HUD");
         JSONArray list = new JSONArray();
-        list.put(newComponent(TYPE_STATUS, .02f, .03f, .30f, .14f, null).toJson());
-        list.put(newComponent(TYPE_BODY, .02f, .19f, .25f, .42f, null).toJson());
-        list.put(newComponent(TYPE_EQUIPMENT, .02f, .64f, .36f, .12f, null).toJson());
-        list.put(newComponent(TYPE_ENVIRONMENT, .40f, .03f, .29f, .12f, null).toJson());
-        list.put(newComponent(TYPE_RADAR, .74f, .03f, .24f, .31f, null).toJson());
-        list.put(newComponent(TYPE_MESSAGES, .40f, .72f, .36f, .24f, null).toJson());
-        list.put(newComponent(TYPE_ACTIONS, .73f, .53f, .25f, .43f, DEFAULT_ACTIONS).toJson());
+        list.put(newComponent(TYPE_DANGER_COMPASS, .02f, .03f, .23f, .31f, null).toJson());
+        list.put(newComponent(TYPE_EQUIPMENT, .02f, .37f, .28f, .12f, null).toJson());
+        list.put(newComponent(TYPE_ACTIONS, .60f, .48f, .38f, .50f, null).toJson());
         layout.put("components", list);
         return layout;
+    }
+
+    private JSONObject createActionLayout(String name, float x, float y, float width, float height)
+            throws JSONException {
+        JSONObject layout = new JSONObject();
+        layout.put("name", "官方" + name + " HUD");
+        JSONArray list = new JSONArray();
+        list.put(newComponent(TYPE_ACTIONS, x, y, width, height, null).toJson());
+        layout.put("components", list);
+        return layout;
+    }
+
+    private String contextFamily(String context) {
+        if ("DEFAULTMODE".equals(context)) return "map";
+        if ("TARGET".equals(context)) return "target";
+        if ("LOOK".equals(context) || "OVERMAP".equals(context) ||
+                context.contains("MAP")) return "world";
+        if (context.contains("INVENTORY") || "INVENTORY".equals(context) ||
+                context.contains("ITEM")) return "inventory";
+        if (context.contains("CRAFT") || context.contains("CONSTRUCTION")) return "crafting";
+        if (context.contains("STRING") || context.contains("TEXT")) return "text";
+        if (context.contains("MENU") || context.contains("DIALOG") ||
+                context.contains("YES") || context.contains("UILIST") ||
+                "MAIN_MENU".equals(context) || "OPTIONS".equals(context)) return "menu";
+        return "generic";
+    }
+
+    private String layoutForContext(String context) {
+        JSONObject overrides = layoutStore.optJSONObject("contextLayouts");
+        String override = overrides == null ? "" : overrides.optString(context, "");
+        JSONObject layouts = layoutStore.optJSONObject("layouts");
+        if (!override.isEmpty() && layouts != null && layouts.has(override)) {
+            return override;
+        }
+        return contextFamily(context);
     }
 
     private HudComponent newComponent(String type, float x, float y, float width, float height,
@@ -382,6 +541,9 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void renderLayout() {
         for (RenderedComponent component : rendered.values()) {
+            if (component.content instanceof PixelMinimapView) {
+                ((PixelMinimapView) component.content).publishRect(false);
+            }
             removeView(component.host);
         }
         rendered.clear();
@@ -395,7 +557,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private void addRenderedComponent(final HudComponent component) {
         HudHostView host = new HudHostView(activity);
         host.setComponent(component);
-        host.setBackground(makePanelBackground(editing));
+        host.setBackground(backgroundFor(component));
         host.setAlpha(component.opacity / 100f);
         View content = createComponentContent(component);
         host.addView(content, new FrameLayout.LayoutParams(
@@ -407,8 +569,14 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private View createComponentContent(HudComponent component) {
-        if (TYPE_RADAR.equals(component.type)) {
-            return new RadarView(activity);
+        if (TYPE_PIXEL_MINIMAP.equals(component.type)) {
+            return new PixelMinimapView(activity);
+        }
+        if (TYPE_DANGER_COMPASS.equals(component.type)) {
+            return new DangerCompassView(activity);
+        }
+        if (TYPE_OVERMAP.equals(component.type)) {
+            return new OvermapView(activity);
         }
         if (TYPE_ACTIONS.equals(component.type)) {
             return new ActionPadView(activity, component.actions);
@@ -444,6 +612,16 @@ final class AndroidHudOverlay extends FrameLayout {
         params.leftMargin = Math.max(0, Math.min(left, Math.max(0, getWidth() - width)));
         params.topMargin = Math.max(0, Math.min(top, Math.max(0, getHeight() - height)));
         view.setLayoutParams(params);
+        if (view instanceof HudHostView) {
+            View content = ((HudHostView) view).getChildAt(0);
+            if (content instanceof PixelMinimapView) {
+                content.post(new Runnable() {
+                    @Override public void run() {
+                        ((PixelMinimapView) content).publishRect(true);
+                    }
+                });
+            }
+        }
     }
 
     private void updateRenderedState() {
@@ -454,12 +632,15 @@ final class AndroidHudOverlay extends FrameLayout {
         for (RenderedComponent component : rendered.values()) {
             if (component.content instanceof TextView) {
                 ((TextView) component.content).setText(textForComponent(component.model.type, currentState));
-            } else if (component.content instanceof RadarView) {
-                ((RadarView) component.content).setContacts(currentState.optJSONArray("hostiles"));
+            } else if (component.content instanceof DangerCompassView) {
+                ((DangerCompassView) component.content).setContacts(currentState.optJSONArray("hostiles"));
+            } else if (component.content instanceof OvermapView) {
+                ((OvermapView) component.content).setCells(currentState.optJSONArray("overmap"));
             } else if (component.content instanceof ActionPadView) {
-                ((ActionPadView) component.content).setAvailableActions(availableActions);
+                ((ActionPadView) component.content).setActionMetadata(actionInfos, currentContext,
+                    contextRevision);
             }
-            component.host.setBackground(makePanelBackground(editing));
+            component.host.setBackground(backgroundFor(component.model));
             component.host.setAlpha(component.model.opacity / 100f);
         }
     }
@@ -536,14 +717,36 @@ final class AndroidHudOverlay extends FrameLayout {
             }
             lastSnapshotRevision = revision;
             state = snapshot;
+            String nextContext = snapshot.optString("context", "DEFAULTMODE");
+            contextRevision = snapshot.optInt("contextRevision", 0);
             availableActions.clear();
+            actionInfos.clear();
             JSONArray actions = snapshot.optJSONArray("availableActions");
             if (actions != null) {
                 for (int i = 0; i < actions.length(); i++) {
                     availableActions.add(actions.optString(i));
                 }
             }
-            updateRenderedState();
+            JSONArray metadata = snapshot.optJSONArray("actions");
+            if (metadata != null) {
+                for (int i = 0; i < metadata.length(); i++) {
+                    ActionInfo info = ActionInfo.fromJson(metadata.optJSONObject(i));
+                    if (info != null) {
+                        actionInfos.put(info.id, info);
+                    }
+                }
+            }
+            if (!nextContext.equals(currentContext)) {
+                currentContext = nextContext;
+                activeLayoutId = layoutForContext(currentContext);
+                try {
+                    layoutStore.put("active", activeLayoutId);
+                } catch (JSONException ignored) {
+                }
+                loadActiveLayout();
+            } else {
+                updateRenderedState();
+            }
         } catch (JSONException e) {
             Log.w(TAG, "Ignoring malformed native HUD snapshot", e);
         }
@@ -678,11 +881,12 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private void showActionPicker(final HudComponent component) {
-        final List<String> ids = new ArrayList<>(ACTION_LABELS.keySet());
+        final List<String> ids = new ArrayList<>(actionInfos.keySet());
         final String[] labels = new String[ids.size()];
         final boolean[] checked = new boolean[ids.size()];
         for (int i = 0; i < ids.size(); i++) {
-            labels[i] = ACTION_LABELS.get(ids.get(i));
+            ActionInfo info = actionInfos.get(ids.get(i));
+            labels[i] = info == null ? ids.get(i) : info.label;
             checked[i] = component.actions.contains(ids.get(i));
         }
         new AlertDialog.Builder(activity)
@@ -701,9 +905,6 @@ final class AndroidHudOverlay extends FrameLayout {
                         if (checked[i]) {
                             component.actions.add(ids.get(i));
                         }
-                    }
-                    if (component.actions.isEmpty()) {
-                        component.actions.addAll(DEFAULT_ACTIONS);
                     }
                     renderLayout();
                     saveActiveLayout();
@@ -757,6 +958,7 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void addSlider(LinearLayout layout, String label, final int min, final int max,
             int value, final SliderCallback callback) {
+        final String suffix = label.contains("动画") ? " ms" : "%";
         TextView title = new TextView(activity);
         title.setText(label);
         layout.addView(title);
@@ -768,12 +970,12 @@ final class AndroidHudOverlay extends FrameLayout {
         SeekBar seekBar = new SeekBar(activity);
         seekBar.setMax(max - min);
         seekBar.setProgress(Math.max(0, Math.min(max - min, value - min)));
-        number.setText(String.valueOf(value) + "%");
+        number.setText(String.valueOf(value) + suffix);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 int actual = min + progress;
-                number.setText(String.valueOf(actual) + "%");
+                number.setText(String.valueOf(actual) + suffix);
                 callback.onChanged(actual);
             }
 
@@ -818,6 +1020,12 @@ final class AndroidHudOverlay extends FrameLayout {
                     activeLayoutId = ids.get(which);
                     try {
                         layoutStore.put("active", activeLayoutId);
+                        JSONObject overrides = layoutStore.optJSONObject("contextLayouts");
+                        if (overrides == null) {
+                            overrides = new JSONObject();
+                            layoutStore.put("contextLayouts", overrides);
+                        }
+                        overrides.put(currentContext, activeLayoutId);
                     } catch (JSONException e) {
                         Log.w(TAG, "Could not select HUD layout", e);
                     }
@@ -847,6 +1055,12 @@ final class AndroidHudOverlay extends FrameLayout {
                         copy.put("name", label);
                         layoutStore.getJSONObject("layouts").put(id, copy);
                         layoutStore.put("active", id);
+                        JSONObject overrides = layoutStore.optJSONObject("contextLayouts");
+                        if (overrides == null) {
+                            overrides = new JSONObject();
+                            layoutStore.put("contextLayouts", overrides);
+                        }
+                        overrides.put(currentContext, id);
                         activeLayoutId = id;
                         saveLayoutStore();
                         loadActiveLayout();
@@ -867,7 +1081,7 @@ final class AndroidHudOverlay extends FrameLayout {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     layoutStore = createDefaultStore();
-                    activeLayoutId = "combat";
+                    activeLayoutId = layoutForContext(currentContext);
                     saveLayoutStore();
                     loadActiveLayout();
                 }
@@ -958,6 +1172,15 @@ final class AndroidHudOverlay extends FrameLayout {
         return background;
     }
 
+    private GradientDrawable backgroundFor(HudComponent component) {
+        if (TYPE_PIXEL_MINIMAP.equals(component.type) && !editing) {
+            GradientDrawable transparent = new GradientDrawable();
+            transparent.setColor(Color.TRANSPARENT);
+            return transparent;
+        }
+        return makePanelBackground(editing);
+    }
+
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
@@ -991,7 +1214,9 @@ final class AndroidHudOverlay extends FrameLayout {
         labels.put(TYPE_EQUIPMENT, "装备状态");
         labels.put(TYPE_ENVIRONMENT, "周边信息");
         labels.put(TYPE_MESSAGES, "消息日志");
-        labels.put(TYPE_RADAR, "威胁雷达");
+        labels.put(TYPE_PIXEL_MINIMAP, "局部像素地图");
+        labels.put(TYPE_OVERMAP, "大地图地形");
+        labels.put(TYPE_DANGER_COMPASS, "危险罗盘");
         labels.put(TYPE_ACTIONS, "直接动作按钮组");
         return labels;
     }
@@ -1189,13 +1414,10 @@ final class AndroidHudOverlay extends FrameLayout {
             if (actions != null) {
                 for (int i = 0; i < actions.length(); i++) {
                     String action = actions.optString(i);
-                    if (ACTION_LABELS.containsKey(action)) {
+                    if (action != null && !action.isEmpty()) {
                         component.actions.add(action);
                     }
                 }
-            }
-            if (TYPE_ACTIONS.equals(type) && component.actions.isEmpty()) {
-                component.actions.addAll(DEFAULT_ACTIONS);
             }
             return component;
         }
@@ -1247,58 +1469,244 @@ final class AndroidHudOverlay extends FrameLayout {
         }
     }
 
+    private static final class ActionInfo {
+        String id;
+        String label;
+        String group;
+        boolean repeatable;
+        boolean dangerous;
+
+        static ActionInfo fromJson(JSONObject json) {
+            if (json == null || json.optString("id", "").isEmpty()) return null;
+            ActionInfo info = new ActionInfo();
+            info.id = json.optString("id");
+            info.label = json.optString("label", info.id);
+            info.group = json.optString("group", "context");
+            info.repeatable = json.optBoolean("repeatable", false);
+            info.dangerous = json.optBoolean("dangerous", false);
+            return info;
+        }
+    }
+
     private final class ActionPadView extends TableLayout {
-        private final Map<String, Button> actionButtons = new HashMap<>();
+        private final List<String> pinnedActions = new ArrayList<>();
+        private int renderedContextRevision = -1;
+        private PopupWindow openGroup;
 
         ActionPadView(Context context, List<String> actions) {
             super(context);
             setStretchAllColumns(true);
-            setActions(actions);
+            pinnedActions.addAll(actions);
         }
 
-        void setActions(List<String> actions) {
+        void setActionMetadata(LinkedHashMap<String, ActionInfo> actions, String context,
+                int revision) {
+            if (revision == renderedContextRevision) return;
+            renderedContextRevision = revision;
             removeAllViews();
-            actionButtons.clear();
+            final List<ActionInfo> direct = new ArrayList<>();
+            final LinkedHashMap<String, List<ActionInfo>> grouped = new LinkedHashMap<>();
+            Set<String> used = new HashSet<>();
+            for (String id : pinnedActions) {
+                ActionInfo info = actions.get(id);
+                if (info != null && used.add(id)) direct.add(info);
+            }
+            for (ActionInfo info : actions.values()) {
+                if (used.contains(info.id)) continue;
+                if ("primary".equals(info.group) || "navigation".equals(info.group)) {
+                    direct.add(info);
+                    used.add(info.id);
+                } else {
+                    if (!grouped.containsKey(info.group)) grouped.put(info.group, new ArrayList<ActionInfo>());
+                    grouped.get(info.group).add(info);
+                }
+            }
+            List<View> views = new ArrayList<>();
+            for (ActionInfo info : direct) views.add(createActionButton(info, null));
+            for (Map.Entry<String, List<ActionInfo>> entry : grouped.entrySet()) {
+                views.add(createGroupButton(entry.getKey(), entry.getValue()));
+            }
+            addButtonGrid(views);
+        }
+
+        private void addButtonGrid(List<View> views) {
             TableRow row = null;
-            for (int i = 0; i < actions.size(); i++) {
+            for (int i = 0; i < views.size(); i++) {
                 if (i % 3 == 0) {
                     row = new TableRow(activity);
                     addView(row, new TableLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 }
-                final String action = actions.get(i);
-                Button button = new Button(activity);
-                button.setAllCaps(false);
-                button.setText(ACTION_LABELS.containsKey(action) ? ACTION_LABELS.get(action) : action);
-                button.setTextSize(10f);
-                button.setPadding(0, 0, 0, 0);
-                button.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        if (!activity.enqueueHudAction(action)) {
-                            Toast.makeText(activity, "当前界面不能执行此动作", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-                row.addView(button, new TableRow.LayoutParams(0, dp(42), 1f));
-                actionButtons.put(action, button);
+                row.addView(views.get(i), new TableRow.LayoutParams(0, dp(42), 1f));
             }
         }
 
-        void setAvailableActions(Set<String> actions) {
-            for (Map.Entry<String, Button> entry : actionButtons.entrySet()) {
-                boolean enabled = actions.contains(entry.getKey());
-                entry.getValue().setEnabled(enabled);
-                entry.getValue().setAlpha(enabled ? 1f : .42f);
+        private Button createGroupButton(final String group, final List<ActionInfo> actions) {
+            Button button = makeButton(groupLabel(group) + " (" + actions.size() + ")");
+            button.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View anchor) { showActionGroup(anchor, group, actions); }
+            });
+            button.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override public boolean onLongClick(View view) {
+                    showGroupSurfacePicker(group);
+                    return true;
+                }
+            });
+            return button;
+        }
+
+        private void showGroupSurfacePicker(final String group) {
+            final String[] choices = { "跟随全局设置", "锚定网格", "底部抽屉" };
+            new AlertDialog.Builder(activity)
+                .setTitle(groupLabel(group) + "菜单样式")
+                .setItems(choices, new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            JSONObject settings = layoutStore.optJSONObject("settings");
+                            if (settings == null) {
+                                settings = new JSONObject();
+                                layoutStore.put("settings", settings);
+                            }
+                            JSONObject overrides = settings.optJSONObject("groupSurfaces");
+                            if (overrides == null) {
+                                overrides = new JSONObject();
+                                settings.put("groupSurfaces", overrides);
+                            }
+                            if (which == 0) overrides.remove(group);
+                            else overrides.put(group, which == 2 ? "drawer" : "grid");
+                            saveLayoutStore();
+                        } catch (JSONException e) {
+                            Log.w(TAG, "Could not save group menu style", e);
+                        }
+                    }
+                }).show();
+        }
+
+        @SuppressLint("ClickableViewAccessibility")
+        private Button createActionButton(final ActionInfo info, final PopupWindow owner) {
+            final Button button = makeButton(info.label);
+            if (info.dangerous) button.setTextColor(0xFFFF6B6B);
+            button.setOnTouchListener(new View.OnTouchListener() {
+                final Runnable repeater = new Runnable() {
+                    @Override public void run() {
+                        if (dispatch(info)) handler.postDelayed(this, 90L);
+                    }
+                };
+                @Override public boolean onTouch(View view, MotionEvent event) {
+                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                        dispatch(info);
+                        if (info.repeatable) handler.postDelayed(repeater, 350L);
+                        if (owner != null && !info.repeatable) owner.dismiss();
+                        return true;
+                    }
+                    if (event.getActionMasked() == MotionEvent.ACTION_UP ||
+                            event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                        handler.removeCallbacks(repeater);
+                        if (owner != null) owner.dismiss();
+                        return true;
+                    }
+                    return true;
+                }
+            });
+            return button;
+        }
+
+        private Button makeButton(String label) {
+            Button button = new Button(activity);
+            button.setAllCaps(false);
+            button.setText(label);
+            button.setTextSize(10f);
+            button.setPadding(0, 0, 0, 0);
+            return button;
+        }
+
+        private boolean dispatch(ActionInfo info) {
+            if (!activity.enqueueHudAction(info.id, contextRevision)) {
+                Toast.makeText(activity, "页面已切换，请重新操作", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+            return true;
+        }
+
+        private void showActionGroup(View anchor, String group, List<ActionInfo> actions) {
+            if (openGroup != null) openGroup.dismiss();
+            ScrollView scroll = new ScrollView(activity);
+            GridLayout grid = new GridLayout(activity);
+            grid.setColumnCount(3);
+            grid.setPadding(dp(6), dp(6), dp(6), dp(6));
+            scroll.addView(grid);
+            JSONObject settings = layoutStore.optJSONObject("settings");
+            String surface = settings == null ? "grid" : settings.optString("groupSurface", "grid");
+            JSONObject groupSurfaces = settings == null ? null : settings.optJSONObject("groupSurfaces");
+            if (groupSurfaces != null) surface = groupSurfaces.optString(group, surface);
+            boolean drawer = "drawer".equals(surface);
+            final PopupWindow popup = new PopupWindow(scroll,
+                drawer ? Math.max(dp(320), getWidth()) : dp(330),
+                drawer ? dp(260) : ViewGroup.LayoutParams.WRAP_CONTENT, true);
+            popup.setBackgroundDrawable(makePanelBackground(false));
+            popup.setOutsideTouchable(true);
+            for (ActionInfo info : actions) {
+                Button button = createActionButton(info, popup);
+                GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+                params.width = drawer ? 0 : dp(105);
+                params.height = dp(46);
+                if (drawer) params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+                grid.addView(button, params);
+            }
+            openGroup = popup;
+            if (drawer) popup.showAtLocation(AndroidHudOverlay.this, Gravity.BOTTOM, 0, 0);
+            else popup.showAsDropDown(anchor, 0, -anchor.getHeight());
+            animatePopup(scroll, settings);
+        }
+
+        private void animatePopup(View view, JSONObject settings) {
+            String animation = settings == null ? "scale_fade" : settings.optString("animation", "scale_fade");
+            int duration = settings == null ? 180 : settings.optInt("animationMs", 180);
+            if ("none".equals(animation)) return;
+            view.setAlpha(0f);
+            if ("slide".equals(animation)) {
+                view.setTranslationY(dp(32));
+                view.animate().alpha(1f).translationY(0f).setDuration(duration).start();
+            } else {
+                view.setScaleX(.86f);
+                view.setScaleY(.86f);
+                view.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(duration).start();
             }
         }
     }
 
-    private static final class RadarView extends View {
+    private String groupLabel(String group) {
+        if ("combat".equals(group)) return "战斗";
+        if ("items".equals(group)) return "物品";
+        if ("world".equals(group)) return "地图";
+        if ("character".equals(group)) return "角色";
+        if ("system".equals(group)) return "系统";
+        if ("text".equals(group)) return "输入/筛选";
+        return "当前页面";
+    }
+
+    private final class PixelMinimapView extends View {
+        PixelMinimapView(Context context) { super(context); setWillNotDraw(true); }
+        void publishRect(boolean visible) {
+            int[] location = new int[2];
+            getLocationOnScreen(location);
+            activity.setHudMinimapRect(location[0], location[1], getWidth(), getHeight(), visible && isShown());
+        }
+        @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+            super.onLayout(changed, left, top, right, bottom);
+            publishRect(true);
+        }
+        @Override protected void onDetachedFromWindow() {
+            publishRect(false);
+            super.onDetachedFromWindow();
+        }
+    }
+
+    private static final class DangerCompassView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private JSONArray contacts = new JSONArray();
 
-        RadarView(Context context) {
+        DangerCompassView(Context context) {
             super(context);
             paint.setStrokeWidth(2f);
         }
@@ -1340,7 +1748,32 @@ final class AndroidHudOverlay extends FrameLayout {
             }
             paint.setColor(Color.WHITE);
             paint.setTextSize(12f);
-            canvas.drawText("威胁雷达", 8f, 16f, paint);
+            canvas.drawText("危险罗盘", 8f, 16f, paint);
+        }
+    }
+
+    private static final class OvermapView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private JSONArray cells = new JSONArray();
+        OvermapView(Context context) { super(context); }
+        void setCells(JSONArray cells) { this.cells = cells == null ? new JSONArray() : cells; invalidate(); }
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int side = 7;
+            float cellW = getWidth() / (float) side;
+            float cellH = getHeight() / (float) side;
+            for (int i = 0; i < side * side; i++) {
+                JSONObject cell = i < cells.length() ? cells.optJSONObject(i) : null;
+                paint.setColor(cell == null ? 0xFF30343A : cell.optInt("color", 0xFF606870));
+                canvas.drawRect((i % side) * cellW, (i / side) * cellH,
+                    (i % side + 1) * cellW, (i / side + 1) * cellH, paint);
+                if (cell != null) {
+                    paint.setColor(Color.WHITE);
+                    paint.setTextSize(Math.min(cellW, cellH) * .7f);
+                    canvas.drawText(cell.optString("symbol", "?"), (i % side) * cellW + 2,
+                        (i / side + 1) * cellH - 2, paint);
+                }
+            }
         }
     }
 }

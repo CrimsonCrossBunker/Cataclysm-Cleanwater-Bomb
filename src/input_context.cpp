@@ -485,7 +485,12 @@ const std::string &input_context::handle_input( const int timeout )
     next_action.type = input_event_t::error;
     const std::string *result = &CATA_ERROR;
 #if defined(__ANDROID__)
-    android_hud::set_active_actions( registered_actions );
+    std::vector<android_hud::action_descriptor> android_actions;
+    android_actions.reserve( registered_actions.size() );
+    for( const std::string &action : registered_actions ) {
+        android_actions.push_back( { action, get_action_name( action ) } );
+    }
+    android_hud::set_active_context( category, android_actions );
     if( android_hud::consume_action_for_context( registered_actions, android_direct_action ) ) {
         inp_mngr.set_timeout( old_timeout );
         return android_direct_action;

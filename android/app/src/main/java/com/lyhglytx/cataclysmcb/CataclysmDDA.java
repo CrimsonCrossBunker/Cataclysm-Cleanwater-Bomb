@@ -286,8 +286,10 @@ public class CataclysmDDA extends SDLActivity {
         int left, int top, int right, int bottom, boolean visible);
 
     private static native void nativeButtonClick(String text);
-    private static native boolean nativeEnqueueHudAction(String actionId);
+    private static native boolean nativeEnqueueHudAction(String actionId, int contextRevision);
     private static native String nativeGetHudSnapshot();
+    private static native void nativeSetHudMinimapRect(int x, int y, int width, int height,
+        boolean visible);
 
     private void installHudOverlay() {
         if (mLayout == null || hudOverlay != null) {
@@ -298,9 +300,9 @@ public class CataclysmDDA extends SDLActivity {
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
-    boolean enqueueHudAction(String actionId) {
+    boolean enqueueHudAction(String actionId, int contextRevision) {
         try {
-            return nativeEnqueueHudAction(actionId);
+            return nativeEnqueueHudAction(actionId, contextRevision);
         } catch (UnsatisfiedLinkError e) {
             return false;
         }
@@ -311,6 +313,13 @@ public class CataclysmDDA extends SDLActivity {
             return nativeGetHudSnapshot();
         } catch (UnsatisfiedLinkError e) {
             return "";
+        }
+    }
+
+    void setHudMinimapRect(int x, int y, int width, int height, boolean visible) {
+        try {
+            nativeSetHudMinimapRect(x, y, width, height, visible);
+        } catch (UnsatisfiedLinkError ignored) {
         }
     }
 

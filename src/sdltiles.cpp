@@ -1004,7 +1004,7 @@ extern "C" {
     }
 
     JNIEXPORT jboolean JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeEnqueueHudAction(
-        JNIEnv *env, jclass jcls, jstring action )
+        JNIEnv *env, jclass jcls, jstring action, jint context_revision )
     {
         ( void )jcls;
         if( action == nullptr ) {
@@ -1018,7 +1018,7 @@ extern "C" {
 
         const std::string action_s( raw_action );
         env->ReleaseStringUTFChars( action, raw_action );
-        return android_hud::enqueue_action( action_s ) ? JNI_TRUE : JNI_FALSE;
+        return android_hud::enqueue_action( action_s, context_revision ) ? JNI_TRUE : JNI_FALSE;
     }
 
     JNIEXPORT jstring JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeGetHudSnapshot(
@@ -1027,6 +1027,14 @@ extern "C" {
         ( void )jcls;
         const std::string snapshot = android_hud::snapshot_json();
         return env->NewStringUTF( snapshot.c_str() );
+    }
+
+    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeSetHudMinimapRect(
+        JNIEnv *env, jclass jcls, jint x, jint y, jint width, jint height, jboolean visible )
+    {
+        ( void )env;
+        ( void )jcls;
+        android_hud::set_minimap_rect( { x, y, width, height, visible == JNI_TRUE } );
     }
 
     // Compatibility shim for an old, no-longer-rendered extra-button layout.
@@ -1327,6 +1335,13 @@ void refresh_display()
     dstrect.x += shake_dx;
     dstrect.y += shake_dy;
     RenderCopy( renderer, display_buffer, NULL, &dstrect );
+    const android_hud::minimap_rect hud_minimap = android_hud::get_minimap_rect();
+    if( hud_minimap.visible && hud_minimap.width > 0 && hud_minimap.height > 0 &&
+        g != nullptr && tilecontext != nullptr ) {
+        tilecontext->draw_minimap( point( hud_minimap.x, hud_minimap.y ),
+                                   { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
+                                   hud_minimap.width, hud_minimap.height );
+    }
 #else
     // When a shockwave is active, blit the frame through a distorted mesh so the
     // rendered scene refracts along the ring (the shake offset rides along on the
