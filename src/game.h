@@ -1077,6 +1077,11 @@ class game
                 size_t max = 0 ) const;
         bool prompt_dangerous_tile( const tripoint_bub_ms &dest_loc,
                                     std::vector<std::string> *harmful_stuff = nullptr ) const;
+        // Queue contextual actions after safely walking to a selected map tile.
+        bool queue_contextual_actions( const tripoint_bub_ms &target,
+                                       const std::vector<action_id> &actions );
+        // Execute one contextual action after a queued route reaches its target.
+        void execute_contextual_action( action_id action, const tripoint_bub_ms &target );
         // Pick up items from the given point
         void pickup( const tripoint_bub_ms &p );
         void chat( const std::optional<tripoint_bub_ms> &p = std::nullopt ); // Talk to a nearby NPC  'C'

@@ -169,6 +169,7 @@ static const activity_id ACT_CHOP_TREE( "ACT_CHOP_TREE" );
 static const activity_id ACT_CHURN( "ACT_CHURN" );
 static const activity_id ACT_CLEAR_RUBBLE( "ACT_CLEAR_RUBBLE" );
 static const activity_id ACT_CONSUME( "ACT_CONSUME" );
+static const activity_id ACT_CONTEXTUAL_ACTION( "ACT_CONTEXTUAL_ACTION" );
 static const activity_id ACT_CRACKING( "ACT_CRACKING" );
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
@@ -896,6 +897,68 @@ std::unique_ptr<activity_actor> bash_activity_actor::deserialize( JsonValue &jsi
     data.read( "target", actor.target );
 
     return actor.clone();
+}
+
+void contextual_action_activity_actor::do_turn( player_activity &act, Character &you )
+{
+    if( next_action >= actions.size() ) {
+        act.set_to_null();
+        return;
+    }
+    if( !g->check_safe_mode_allowed() ) {
+        you.add_msg_if_player( m_warning,
+                               _( "Queued actions paused because a hostile creature is nearby." ) );
+        act.set_to_null();
+        return;
+    }
+
+    if( next_action + 1 < actions.size() ) {
+        player_activity continuation( contextual_action_activity_actor( target, actions,
+                                      next_action + 1 ) );
+        continuation.auto_resume = true;
+        you.backlog.push_front( continuation );
+    }
+
+    const action_id action = actions[next_action];
+    const tripoint_bub_ms local_target = get_map().get_bub( target );
+    act.set_to_null();
+    g->execute_contextual_action( action, local_target );
+}
+
+void contextual_action_activity_actor::serialize( JsonOut &jsout ) const
+{
+    std::vector<int> serialized_actions;
+    serialized_actions.reserve( actions.size() );
+    for( const action_id action : actions ) {
+        serialized_actions.push_back( static_cast<int>( action ) );
+    }
+
+    jsout.start_object();
+    jsout.member( "target", target );
+    jsout.member( "actions", serialized_actions );
+    jsout.member( "next_action", next_action );
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> contextual_action_activity_actor::deserialize( JsonValue &jsin )
+{
+    tripoint_abs_ms target = tripoint_abs_ms::zero;
+    std::vector<int> serialized_actions;
+    size_t next_action = 0;
+
+    JsonObject data = jsin.get_object();
+    data.read( "target", target );
+    data.read( "actions", serialized_actions );
+    data.read( "next_action", next_action );
+
+    std::vector<action_id> actions;
+    actions.reserve( serialized_actions.size() );
+    for( const int action : serialized_actions ) {
+        actions.push_back( static_cast<action_id>( action ) );
+    }
+
+    return std::make_unique<contextual_action_activity_actor>( target, std::move( actions ),
+            next_action );
 }
 
 void gunmod_remove_activity_actor::start( player_activity &act, Character & )
@@ -15069,6 +15132,7 @@ deserialize_functions = {
     { ACT_CHURN, &churn_activity_actor::deserialize },
     { ACT_CLEAR_RUBBLE, &clear_rubble_activity_actor::deserialize },
     { ACT_CONSUME, &consume_activity_actor::deserialize },
+    { ACT_CONTEXTUAL_ACTION, &contextual_action_activity_actor::deserialize },
     { ACT_CRACKING, &safecracking_activity_actor::deserialize },
     { ACT_CRAFT, &craft_activity_actor::deserialize },
     { ACT_CRAFT_WAIT, &craft_activity_actor::deserialize },

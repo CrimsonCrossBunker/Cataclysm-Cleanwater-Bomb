@@ -2867,6 +2867,51 @@ bool game::try_get_left_click_action( action_id &act, const tripoint_bub_ms &mou
     return true;
 }
 
+bool game::queue_contextual_actions( const tripoint_bub_ms &target,
+                                     const std::vector<action_id> &actions )
+{
+    if( actions.empty() ) {
+        return false;
+    }
+
+    map &here = get_map();
+    for( const action_id action : actions ) {
+        if( !can_interact_at( action, here, target ) ) {
+            add_msg( m_info, _( "That action is no longer available at the selected tile." ) );
+            return false;
+        }
+    }
+
+    const bool needs_current_tile = std::any_of( actions.begin(), actions.end(),
+    []( const action_id action ) {
+        return action == ACTION_MOVE_UP || action == ACTION_MOVE_DOWN;
+    } );
+    if( needs_current_tile && target != u.pos_bub() ) {
+        add_msg( m_info, _( "Vertical movement can only be queued for your current tile." ) );
+        return false;
+    }
+
+    const player_activity queued_action( contextual_action_activity_actor( here.get_abs( target ), actions ) );
+    if( square_dist( target.xy(), u.pos_bub().xy() ) <= 1 ) {
+        u.assign_activity( queued_action );
+        return true;
+    }
+
+    const std::optional<std::vector<tripoint_bub_ms>> route = safe_route_to( u, target, 1,
+    []( const std::string & msg ) {
+        add_msg( msg );
+    } );
+    if( !route ) {
+        return false;
+    }
+
+    u.set_destination( *route, queued_action );
+    add_msg( m_info, n_gettext( "Queued %d action at the selected tile.",
+                                 "Queued %d actions at the selected tile.", actions.size() ),
+             static_cast<int>( actions.size() ) );
+    return true;
+}
+
 bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_target )
 {
     map &here = get_map();
@@ -2951,8 +2996,20 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
         mouse_target = *snapped;
     }
 
-    act = handle_interact( here, mouse_target );
-    return act != ACTION_NULL;
+    std::vector<action_id> actions;
+    while( true ) {
+        const action_id selected_action = handle_interact( here, mouse_target );
+        if( selected_action == ACTION_NULL ) {
+            break;
+        }
+        actions.push_back( selected_action );
+        if( !query_yn( _( "Queue another action for this tile?" ) ) ) {
+            break;
+        }
+    }
+
+    queue_contextual_actions( mouse_target, actions );
+    return false;
 #endif
 
     const bool is_adjacent = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 1;

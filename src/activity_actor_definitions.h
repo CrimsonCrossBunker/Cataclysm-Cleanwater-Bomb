@@ -12,6 +12,7 @@
 
 #include "activity_handlers.h"
 #include "activity_type.h"
+#include "action.h"
 #include "butchery.h"
 #include "calendar.h"
 #include "character.h"
@@ -614,6 +615,36 @@ class bash_activity_actor : public activity_actor
 
         std::unique_ptr<activity_actor> clone() const override {
             return std::make_unique<bash_activity_actor>( *this );
+        }
+
+        void serialize( JsonOut &jsout ) const override;
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+};
+
+class contextual_action_activity_actor : public activity_actor
+{
+    private:
+        tripoint_abs_ms target;
+        std::vector<action_id> actions;
+        size_t next_action = 0;
+
+    public:
+        contextual_action_activity_actor( const tripoint_abs_ms &target,
+                                          std::vector<action_id> actions,
+                                          size_t next_action = 0 ) :
+            target( target ), actions( std::move( actions ) ), next_action( next_action ) {}
+
+        const activity_id &get_type() const override {
+            static const activity_id ACT_CONTEXTUAL_ACTION( "ACT_CONTEXTUAL_ACTION" );
+            return ACT_CONTEXTUAL_ACTION;
+        }
+
+        void start( player_activity &, Character & ) override {}
+        void do_turn( player_activity &act, Character &you ) override;
+        void finish( player_activity &, Character & ) override {}
+
+        std::unique_ptr<activity_actor> clone() const override {
+            return std::make_unique<contextual_action_activity_actor>( *this );
         }
 
         void serialize( JsonOut &jsout ) const override;
