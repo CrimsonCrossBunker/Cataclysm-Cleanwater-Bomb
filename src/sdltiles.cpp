@@ -6018,6 +6018,21 @@ static void CheckMessages()
                                     }
                                 }
                             }
+                            // Android soft keyboards send control keys such as
+                            // backspace as KEYDOWN, followed by an empty
+                            // TEXTEDITING event.  Keep the control key as the
+                            // input returned to the text editor instead of
+                            // allowing that IME event to overwrite it while
+                            // this poll drains the SDL queue.
+                            const bool text_control_key =
+                                lc == KEY_BACKSPACE || lc == KEY_DC ||
+                                lc == KEY_LEFT || lc == KEY_RIGHT ||
+                                lc == KEY_UP || lc == KEY_DOWN ||
+                                lc == KEY_HOME || lc == KEY_END ||
+                                lc == KEY_ENTER || lc == '\n' || lc == KEY_ESCAPE;
+                            if( android_wants_text_input( touch_input_context ) && text_control_key ) {
+                                text_refresh = true;
+                            }
 #endif
                         }
                     } else {
