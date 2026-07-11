@@ -109,6 +109,7 @@ std::unique_ptr<cataimgui::client> imclient;
     #include <jni.h>
 
     #include "action.h"
+    #include "android_hud.h"
     #include "inventory.h"
     #include "map.h"
     #include "vehicle.h"
@@ -897,7 +898,11 @@ void draw_terminal_size_preview();
 void draw_quick_shortcuts();
 void draw_virtual_joystick();
 
-static bool quick_shortcuts_enabled = true;
+// The legacy SDL shortcut strip is retired in favour of the native Android
+// HUD.  Keep the underlying helpers compiled for now so old options/configs
+// remain harmless, but never render, reserve space for, or hit-test it.
+static constexpr bool android_legacy_shortcuts_enabled = false;
+static bool quick_shortcuts_enabled = android_legacy_shortcuts_enabled;
 
 // For previewing the terminal size with a transparent rectangle overlay when user is adjusting it in the settings
 static int preview_terminal_width = -1;
@@ -973,8 +978,6 @@ static_assert( std::atomic<uint32_t>::is_always_lock_free,
                "visible-frame inbox needs lock-free uint32 atomics on every shipped ABI" );
 
 static android_visible_frame_inbox visible_frame_inbox;
-static std::mutex extra_button_input_mutex;
-static std::deque<input_event> extra_button_inputs;
 
 extern "C" {
 
@@ -1000,29 +1003,49 @@ extern "C" {
         on_native_ime_insets_changed( left, top, right, bottom, visible );
     }
 
-    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeButtonClick(
-        JNIEnv *env, jclass jcls, jstring text )
+    JNIEXPORT jboolean JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeEnqueueHudAction(
+        JNIEnv *env, jclass jcls, jstring action )
     {
         ( void )jcls;
-        if( text == nullptr ) {
-            return;
+        if( action == nullptr ) {
+            return JNI_FALSE;
         }
 
-        const char *raw_text = env->GetStringUTFChars( text, nullptr );
-        if( raw_text == nullptr ) {
-            return;
+        const char *raw_action = env->GetStringUTFChars( action, nullptr );
+        if( raw_action == nullptr ) {
+            return JNI_FALSE;
         }
 
-        const std::string text_s( raw_text );
-        env->ReleaseStringUTFChars( text, raw_text );
-        if( text_s.empty() ) {
+        const std::string action_s( raw_action );
+        env->ReleaseStringUTFChars( action, raw_action );
+        return android_hud::enqueue_action( action_s ) ? JNI_TRUE : JNI_FALSE;
+    }
+
+    JNIEXPORT jstring JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeGetHudSnapshot(
+        JNIEnv *env, jclass jcls )
+    {
+        ( void )jcls;
+        const std::string snapshot = android_hud::snapshot_json();
+        return env->NewStringUTF( snapshot.c_str() );
+    }
+
+    // Compatibility shim for an old, no-longer-rendered extra-button layout.
+    // Its text is treated as an action ID and rejected unless it is part of the
+    // explicit HUD action catalogue; it can no longer inject keyboard input.
+    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeButtonClick(
+        JNIEnv *env, jclass jcls, jstring action )
+    {
+        ( void )jcls;
+        if( action == nullptr ) {
             return;
         }
-
-        input_event event( UTF8_getch( text_s ), input_event_t::keyboard_char );
-        event.text = text_s;
-        std::lock_guard<std::mutex> lock( extra_button_input_mutex );
-        extra_button_inputs.push_back( event );
+        const char *raw_action = env->GetStringUTFChars( action, nullptr );
+        if( raw_action == nullptr ) {
+            return;
+        }
+        const std::string action_s( raw_action );
+        env->ReleaseStringUTFChars( action, raw_action );
+        android_hud::enqueue_action( action_s );
     }
 
 } // "C"
@@ -1097,7 +1120,8 @@ static SDL_Rect get_android_content_bounds()
 
     // Reserve the on-screen shortcut strip along the bottom unless it overlaps.
     // Keep at least one row so the aspect math never divides by a zero height.
-    if( !get_option<bool>( "ANDROID_SHORTCUT_OVERLAP" ) && quick_shortcuts_enabled ) {
+    if( android_legacy_shortcuts_enabled && !get_option<bool>( "ANDROID_SHORTCUT_OVERLAP" ) &&
+        quick_shortcuts_enabled ) {
         bounds.h = std::max( 1, bounds.h - get_android_shortcut_height() );
     }
     return bounds;
@@ -1332,10 +1356,6 @@ void refresh_display()
 
 #if defined(__ANDROID__)
     draw_terminal_size_preview();
-    if( g ) {
-        draw_quick_shortcuts();
-    }
-    draw_virtual_joystick();
 #endif
     draw_gamepad_radial_menu();
     RenderPresent( renderer );
@@ -5530,22 +5550,6 @@ static void focus_aware_stop_text_input()
 #endif
 }
 
-static bool pop_extra_button_input( input_event &event )
-{
-#if defined(__ANDROID__)
-    std::lock_guard<std::mutex> lock( extra_button_input_mutex );
-    if( extra_button_inputs.empty() ) {
-        return false;
-    }
-    event = extra_button_inputs.front();
-    extra_button_inputs.pop_front();
-    return true;
-#else
-    ( void )event;
-    return false;
-#endif
-}
-
 //Check for any window messages (keypress, paint, mousemove, etc)
 static void CheckMessages()
 {
@@ -5876,11 +5880,6 @@ static void CheckMessages()
 #if defined(__ANDROID__)
     last_input_has_explicit_mouse_pos = false;
 #endif
-
-    if( pop_extra_button_input( last_input ) ) {
-        text_refresh = true;
-        return;
-    }
 
     using cata::options::mouse;
 
@@ -6282,7 +6281,8 @@ static void CheckMessages()
                         finger_down_y = finger_curr_y = GetFingerY( ev, WindowHeight );
                         finger_down_time = ticks;
                         finger_repeat_time = 0;
-                        is_quick_shortcut_touch = get_quick_shortcut_under_finger() != NULL;
+                        is_quick_shortcut_touch = android_legacy_shortcuts_enabled &&
+                                                  get_quick_shortcut_under_finger() != nullptr;
                         if( !is_quick_shortcut_touch ) {
                             update_finger_repeat_delay();
                         }

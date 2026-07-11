@@ -43,6 +43,9 @@
 
 #include "achievement.h"
 #include "action.h"
+#if defined(__ANDROID__)
+    #include "android_hud.h"
+#endif
 #include "activity_actor_definitions.h"
 #include "activity_handlers.h"
 #include "activity_item_handling.h"
@@ -3596,7 +3599,13 @@ void game::draw( ui_adaptor &ui )
     }
     wnoutrefresh( w_terrain );
 
+#if defined(__ANDROID__)
+    // Android owns its HUD in a native View overlay.  Do not render or reserve
+    // the terminal sidebar underneath it.
+    android_hud::publish_snapshot( u, static_cast<int>( safe_mode ) );
+#else
     draw_panels( true );
+#endif
 
     // Ensure that the cursor lands on the character when everything is drawn.
     // This allows screen readers to describe the area around the player, making it
