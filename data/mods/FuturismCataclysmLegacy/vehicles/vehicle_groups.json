@@ -1,0 +1,53 @@
+[
+  {
+    "id": "suburban_home",
+    "type": "vehicle_group",
+    "vehicles": [ [ "car_atomic", 1000 ], [ "suv_atomic", 1000 ], [ "compact_atomic", 300 ] ]
+  },
+  {
+    "id": "parkinglot",
+    "type": "vehicle_group",
+    "vehicles": [ [ "car_atomic", 1000 ], [ "car_sports_atomic", 100 ], [ "suv_atomic", 1000 ], [ "compact_atomic", 300 ] ]
+  },
+  {
+    "id": "parkinglotbasic",
+    "type": "vehicle_group",
+    "vehicles": [ [ "bubble_car", 50 ] ]
+  },
+  {
+    "type": "vehicle_group",
+    "id": "parking_garage",
+    "vehicles": [ [ "bubble_car", 200 ] ]
+  },
+  {
+    "type": "vehicle_group",
+    "id": "junkyard_vehicles",
+    "vehicles": [ [ "bubble_car", 20 ] ]
+  },
+  {
+    "type": "vehicle_group",
+    "id": "oa_vg_cs_vehicles",
+    "//": "For cs_car_showroom",
+    "vehicles": [ [ "bubble_car", 60 ] ]
+  },
+  {
+    "id": "city_vehicles",
+    "type": "vehicle_group",
+    "vehicles": [ [ "car_atomic", 1000 ], [ "suv_atomic", 1000 ], [ "compact_atomic", 500 ] ]
+  },
+  {
+    "id": "city_pileup",
+    "type": "vehicle_group",
+    "vehicles": [ [ "car_atomic", 1000 ], [ "suv_atomic", 1000 ], [ "compact_atomic", 300 ] ]
+  },
+  {
+    "id": "highway",
+    "type": "vehicle_group",
+    "vehicles": [ [ "car_atomic", 1500 ], [ "suv_atomic", 1500 ], [ "compact_atomic", 300 ] ]
+  },
+  {
+    "type": "vehicle_group",
+    "id": "atomic_city_cars",
+    "vehicles": [ [ "car_atomic", 1500 ], [ "suv_atomic", 1500 ], [ "compact_atomic", 300 ] ]
+  }
+]
