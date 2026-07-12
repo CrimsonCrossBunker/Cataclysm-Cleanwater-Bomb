@@ -67,6 +67,7 @@
       [ [ "solar_cell", 2 ] ],
       [ [ "tazer", 1 ] ]
     ]
+<<<<<<< HEAD
   },
   {
     "type": "recipe",
@@ -132,5 +133,7 @@
       [ [ "solar_cell", 2 ] ],
       [ [ "canister_empty", 1 ] ]
     ]
+=======
+>>>>>>> 5d24479c5c ([FCL] add inactive police bot)
   }
 ]

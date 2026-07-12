@@ -68,6 +68,7 @@
     "id": [ "broken_copbot" ],
     "type": "MIGRATION",
     "replace": "broken_fcl_copbot"
+<<<<<<< HEAD
   },
   {
     "id": [ "bot_molebot" ],
@@ -88,5 +89,7 @@
     "id": [ "broken_riotbot" ],
     "type": "MIGRATION",
     "replace": "broken_fcl_riotbot"
+=======
+>>>>>>> 5d24479c5c ([FCL] add inactive police bot)
   }
 ]

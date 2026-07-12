@@ -1,0 +1,10 @@
+[
+  {
+    "type": "monstergroup",
+    "id": "GROUP_ROBOT",
+    "monsters": [
+      { "monster": "mon_fcl_copbot", "weight": 0, "cost_multiplier": 0 },
+      { "monster": "mon_fcl_molebot", "weight": 40, "cost_multiplier": 0 }
+    ]
+  }
+]

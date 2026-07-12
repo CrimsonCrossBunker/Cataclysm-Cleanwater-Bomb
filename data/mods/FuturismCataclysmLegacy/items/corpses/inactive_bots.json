@@ -105,6 +105,7 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
+<<<<<<< HEAD
   },
   {
     "type": "ITEM",
@@ -195,5 +196,7 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
+=======
+>>>>>>> 5d24479c5c ([FCL] add inactive police bot)
   }
 ]

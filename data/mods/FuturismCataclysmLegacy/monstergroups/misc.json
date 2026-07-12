@@ -1,0 +1,10 @@
+[
+  {
+    "type": "monstergroup",
+    "id": "GROUP_YOUR_FEARS",
+    "//": "For monsters, spawned by hallucinator effects.  Must represent the awful monsters the player want never see.  Put here every asshole you want.",
+    "monsters": [
+      { "monster": "mon_fcl_riotbot" }
+    ]
+  }
+]

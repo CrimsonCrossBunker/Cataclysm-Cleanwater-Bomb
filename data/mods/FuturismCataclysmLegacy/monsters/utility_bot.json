@@ -63,6 +63,7 @@
       "STUN_IMMUNE"
     ],
     "armor": { "bash": 15, "cut": 20, "bullet": 30, "heat": 10 }
+<<<<<<< HEAD
   },
   {
     "id": "mon_fcl_molebot",
@@ -130,5 +131,7 @@
     ],
     "//": "Medium instead of heavy armor, since this is a 'non-military' robot.",
     "armor": { "bash": 15, "cut": 20, "bullet": 30, "heat": 10 }
+=======
+>>>>>>> 5d24479c5c ([FCL] add inactive police bot)
   }
 ]

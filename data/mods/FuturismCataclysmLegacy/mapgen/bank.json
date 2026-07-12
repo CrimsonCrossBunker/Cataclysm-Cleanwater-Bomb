@@ -1,0 +1,81 @@
+[
+  {
+    "type": "mapgen",
+    "om_terrain": [ "bank" ],
+    "weight": 100,
+    "object": {
+      "fill_ter": "t_floor",
+      "rows": [
+        "         S              ",
+        " #gggggggGgggggggggggg# ",
+        " #A..........CTC.CTC.p# ",
+        " #A...................w ",
+        " #...................§# ",
+        " #+|||-c-c-c-c-c||||..# ",
+        " #..§..l.l.l.l.l|s.+..w ",
+        " #..............|..|..# ",
+        " #..ccccccccp§..|£.|..# ",
+        " #|||||||||||||+||||%%# ",
+        " #.....*..............# ",
+        " w.....|.....§........# ",
+        " #.TTT.|....||+||+||+## ",
+        " #p.C.p|....|......|.c# ",
+        " #||||||....|...CT.|.c# ",
+        " #RRRRR|....|..CTC.|cc# ",
+        " #R$$$R|....||||||||||# ",
+        " #R___R|....|........p# ",
+        " #R___R|....|..C.C.C..# ",
+        " #Rt__MM...§|..TTTTTC.# ",
+        " #Rt__MM...|||.C.C.C..w ",
+        "4#RRRRR|6..+<|p......p# ",
+        " ###############w####w# ",
+        "                        "
+      ],
+      "palettes": [ "bank_palette" ],
+      "terrain": { " ": [ [ "t_region_groundcover_urban", 10 ], "t_region_shrub_decorative" ] },
+      "nested": { "§": { "chunks": [ "fire_extinguisher" ] } },
+      "place_monster": [ { "monster": "mon_fcl_copbot", "x": [ 7, 18 ], "y": [ 7, 18 ], "chance": 30, "repeat": 4 } ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "om_terrain": [ "bank_1" ],
+    "weight": 100,
+    "object": {
+      "fill_ter": "t_floor",
+      "rows": [
+        "   SS                   ",
+        " ggGGgggggggggg#######  ",
+        " gA.........ccx.|....## ",
+        " gA........C-C..+....p# ",
+        " gA....§....ccx.|aca..##",
+        " #|||%||...C-C..|aca..Dw",
+        " #LL|.d-....ccx.|aca..Dw",
+        " #..%.C-...C-C..|.....Dw",
+        " #LL|xx-....%..§|ee...##",
+        " #||||||hGh|||||||||%|# ",
+        " #£.*..+...|1   |dx...# ",
+        " #|||.s|...|    |dC...# ",
+        " #£.*.s|...|    |d..Cx# ",
+        "##||||||...h    ||.ddd# ",
+        "#RRRRRR|...G    |..||## ",
+        "#R$$$$R|§..h    |..xd#  ",
+        "#R____R||%||+||||..Cd#  ",
+        "#R_tt_R|...|.ddd|..pd#  ",
+        "#R_tt_R|...|.pCx|§.||#  ",
+        "#R_tt_MM...%.........#  ",
+        "#R____MM...|..C..|xCp#  ",
+        "#R$$$$R|6..|pddxp|ddd#  ",
+        "#RRRRRR###############  ",
+        "########4               "
+      ],
+      "palettes": [ "bank_palette" ],
+      "terrain": { " ": "t_region_groundcover_urban" },
+      "nested": {
+        "1": { "chunks": [ [ "bank_office_nest_no_safe", 3 ], [ "bank_office_nest_safe", 7 ] ] },
+        "§": { "chunks": [ "fire_extinguisher" ] }
+      },
+      "place_monster": [ { "monster": "mon_fcl_copbot", "x": [ 7, 18 ], "y": [ 7, 18 ], "chance": 30, "repeat": 4 } ]
+    }
+  }
+]
