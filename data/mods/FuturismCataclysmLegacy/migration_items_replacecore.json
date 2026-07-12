@@ -58,5 +58,15 @@
     "id": [ "broken_eyebot" ],
     "type": "MIGRATION",
     "replace": "broken_fcl_eyebot"
+  },
+  {
+    "id": [ "bot_copbot" ],
+    "type": "MIGRATION",
+    "replace": "fcl_bot_copbot"
+  },
+  {
+    "id": [ "broken_copbot" ],
+    "type": "MIGRATION",
+    "replace": "broken_fcl_copbot"
   }
 ]

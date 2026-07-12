@@ -32,5 +32,40 @@
       [ [ "quad_rotors", 1 ] ],
       [ [ "lens", 1 ] ]
     ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "BRISK_EXERCISE",
+    "result": "fcl_bot_copbot",
+    "category": "CC_ELECTRONIC",
+    "subcategory": "CSC_ELECTRONIC_OTHER",
+    "skill_used": "electronics",
+    "skills_required": [ [ "mechanics", 5 ], [ "computer", 6 ] ],
+    "reversible": true,
+    "decomp_learn": 8,
+    "book_learn": [ [ "schematics_copbot", 7 ] ],
+    "difficulty": 6,
+    "time": "130 m",
+    "//": "200cm weld",
+    "using": [ [ "soldering_standard", 20 ], [ "welding_standard", 200 ] ],
+    "qualities": [
+      { "id": "SCREW", "level": 1 },
+      { "id": "SCREW_FINE", "level": 1 },
+      { "id": "WRENCH", "level": 2 },
+      { "id": "WRENCH_FINE", "level": 1 }
+    ],
+    "components": [
+      [ [ "ai_module", 1 ] ],
+      [ [ "sensor_module", 1 ] ],
+      [ [ "memory_module", 1 ] ],
+      [ [ "pathfinding_module", 1 ] ],
+      [ [ "identification_module", 1 ] ],
+      [ [ "omni_wheel", 1 ] ],
+      [ [ "copbot_chassis", 1 ] ],
+      [ [ "android_arms", 1 ] ],
+      [ [ "power_supply", 4 ] ],
+      [ [ "solar_cell", 2 ] ],
+      [ [ "tazer", 1 ] ]
+    ]
   }
 ]

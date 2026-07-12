@@ -21,5 +21,29 @@
       [ [ "quad_rotors", 1 ] ],
       [ [ "lens", 1 ] ]
     ]
+  },
+  {
+    "result": "broken_fcl_copbot",
+    "type": "uncraft",
+    "activity_level": "MODERATE_EXERCISE",
+    "skill_used": "electronics",
+    "difficulty": 6,
+    "time": "2 h",
+    "//": "These robot corpses should really be moved into the butcher mechanic",
+    "using": [ [ "soldering_standard", 20 ], [ "welding_standard", 5 ] ],
+    "qualities": [ { "id": "SCREW", "level": 1 }, { "id": "SAW_M", "level": 1 } ],
+    "components": [
+      [ [ "ai_module", 1 ] ],
+      [ [ "sensor_module", 1 ] ],
+      [ [ "memory_module", 1 ] ],
+      [ [ "pathfinding_module", 1 ] ],
+      [ [ "identification_module", 1 ] ],
+      [ [ "omni_wheel", 1 ] ],
+      [ [ "copbot_chassis", 1 ] ],
+      [ [ "android_arms", 1 ] ],
+      [ [ "power_supply", 4 ] ],
+      [ [ "solar_cell", 2 ] ],
+      [ [ "tazer", 1 ] ]
+    ]
   }
 ]
