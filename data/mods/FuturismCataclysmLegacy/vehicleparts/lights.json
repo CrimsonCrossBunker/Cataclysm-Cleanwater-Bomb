@@ -3,7 +3,7 @@
     "id": "atomic_lamp",
     "type": "vehicle_part",
     "name": { "str": "atomic lamp" },
-    "item": "atomic_lamp",
+    "item": "fcl_atomic_lamp",
     "location": "on_ceiling",
     "categories": [ "lighting" ],
     "color": "light_blue",
@@ -25,7 +25,7 @@
     "copy-from": "atomic_lamp",
     "type": "vehicle_part",
     "name": { "str": "atomic nightlight" },
-    "item": "atomic_light",
+    "item": "fcl_atomic_light",
     "description": "A very dim light, self-powered by an atomic decay reaction that never stops.  When turned on, it illuminates a single square inside the vehicle that isn't suitable for crafting.",
     "bonus": 5,
     "folded_volume": "500 ml"
