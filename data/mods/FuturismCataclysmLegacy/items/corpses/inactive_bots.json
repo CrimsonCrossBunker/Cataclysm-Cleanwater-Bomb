@@ -17,23 +17,6 @@
     "melee_damage": { "bash": 6, "cut": 6 }
   },
   {
-    "abstract": "bot_eyebot_base",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "inactive eyebot", "//~": "NO_I18N" },
-    "looks_like": "broken_fcl_eyebot",
-    "price": "100 USD",
-    "price_postapoc": "100 USD",
-    "material": [ "steel", "plastic" ],
-    "weight": "62650 g",
-    "volume": "30 L",
-    "to_hit": -3,
-    "symbol": ";",
-    "color": "light_green",
-    "flags": [ "LEAK_DAM", "RADIOACTIVE", "TRADER_AVOID" ],
-    "melee_damage": { "bash": 4, "cut": 4 }
-  },
-  {
     "id": "fcl_bot_eyebot",
     "looks_like": "broken_fcl_eyebot",
     "type": "ITEM",
@@ -105,7 +88,6 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
-<<<<<<< HEAD
   },
   {
     "type": "ITEM",
@@ -196,7 +178,5 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
-=======
->>>>>>> 5d24479c5c ([FCL] add inactive police bot)
   }
 ]
