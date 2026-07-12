@@ -90,6 +90,7 @@ static const itype_id itype_test_backpack( "test_backpack" );
 static const itype_id itype_test_battery_disposable( "test_battery_disposable" );
 static const itype_id itype_test_boltcutter( "test_boltcutter" );
 static const itype_id itype_test_boltcutter_elec( "test_boltcutter_elec" );
+static const itype_id itype_test_eink_tablet_pc( "test_eink_tablet_pc" );
 static const itype_id itype_test_efile_copiable( "test_efile_copiable" );
 static const itype_id itype_test_hacksaw( "test_hacksaw" );
 static const itype_id itype_test_hacksaw_elec( "test_hacksaw_elec" );
@@ -1932,6 +1933,21 @@ TEST_CASE( "edevice", "[activity][edevice]" )
         REQUIRE( laptop_with_files->get_saved_recipes().empty() );
         REQUIRE( combined.size() == edevice_without_files->get_saved_recipes().size() );
     }
+}
+
+TEST_CASE( "ebooksave_activity_stops_if_ereader_is_lost", "[activity][ebooksave]" )
+{
+    avatar dummy;
+    item_location ereader = dummy.i_add( item( itype_test_eink_tablet_pc ) );
+    ebooksave_activity_actor actor( {}, ereader );
+    player_activity act( actor );
+
+    dummy.remove_item( *ereader );
+    REQUIRE_FALSE( ereader );
+
+    act.do_turn( dummy );
+
+    CHECK_FALSE( act );
 }
 
 static liquid_dest_opt dest_opt; // Defaults to LD_NULL, which is good enough when not used.

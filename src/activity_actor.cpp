@@ -3675,6 +3675,17 @@ void ebooksave_activity_actor::start( player_activity &act, Character &/*who*/ )
 
 void ebooksave_activity_actor::do_turn( player_activity &act, Character &who )
 {
+    // The device may have disappeared, or its item_location may have failed to
+    // resolve after loading a save.  Do not dereference a lost (or legacy
+    // index-mismatched) target.
+    if( !ereader || !ereader->is_estorage() ) {
+        who.add_msg_player_or_npc(
+            _( "You no longer have the e-book reader!" ),
+            _( "<npcname> no longer has the e-book reader!" ) );
+        act.set_to_null();
+        return;
+    }
+
     // only consume charges every pages_per_charge pages
     if( calendar::once_every( pages_per_charge * time_per_page ) ) {
         if( !ereader->ammo_sufficient( &who ) ) {
