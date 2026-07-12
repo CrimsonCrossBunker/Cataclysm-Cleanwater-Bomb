@@ -63,5 +63,32 @@
       "STUN_IMMUNE"
     ],
     "armor": { "bash": 15, "cut": 20, "bullet": 30, "heat": 10 }
+  },
+  {
+    "id": "mon_fcl_molebot",
+    "type": "MONSTER",
+    "name": { "str": "miner bot" },
+    "description": "A snake-like, segmented robot built to tunnel into the ground and detonate landmines.",
+    "default_faction": "utility_bot",
+    "bodytype": "snake",
+    "species": [ "ROBOT" ],
+    "volume": "62500 ml",
+    "weight": "81500 g",
+    "hp": 80,
+    "speed": 40,
+    "material": [ "steel" ],
+    "symbol": "R",
+    "color": "dark_gray",
+    "aggression": -10,
+    "morale": 100,
+    "melee_skill": 5,
+    "melee_dice": 1,
+    "melee_dice_sides": 10,
+    "melee_damage": [ { "damage_type": "cut", "amount": 10 } ],
+    "revert_to_itype": "fcl_bot_molebot",
+    "death_drops": { "groups": [ [ "robots", 4 ], [ "molebot", 1 ] ] },
+    "death_function": { "corpse_type": "BROKEN" },
+    "flags": [ "HEARS", "GOODHEARING", "DIGS", "NO_BREATHE", "ELECTRONIC", "COLDPROOF", "PATH_AVOID_DANGER", "STUN_IMMUNE" ],
+    "armor": { "bash": 5, "cut": 12, "bullet": 10 }
   }
 ]

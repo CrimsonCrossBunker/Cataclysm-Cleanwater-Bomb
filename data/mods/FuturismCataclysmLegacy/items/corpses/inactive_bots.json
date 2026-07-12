@@ -105,5 +105,50 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
+  },
+  {
+    "type": "ITEM",
+    "id": "broken_fcl_molebot",
+    "symbol": ",",
+    "color": "green",
+    "name": { "str": "broken miner bot" },
+    "category": "other",
+    "description": "A broken miner bot.  Much less threatening now that it's no longer capable of drilling anything.  Could be gutted for parts.",
+    "price": "200 USD",
+    "price_postapoc": "10 cent",
+    "material": [ "steel", "plastic" ],
+    "weight": "170200 g",
+    "volume": "62500 ml",
+    "to_hit": -3,
+    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
+    "melee_damage": { "bash": 6, "cut": 10 }
+  },
+  {
+    "id": "fcl_bot_molebot",
+    "looks_like": "broken_fcl_molebot",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "inactive miner bot" },
+    "description": "An inactive mining robot.  Using this item involves placing it on the ground and turning it on.  If reprogrammed and rewired successfully, the miner bot will respond to future commands.",
+    "weight": "81500 g",
+    "volume": "62500 ml",
+    "price": "250 USD",
+    "price_postapoc": "10 USD",
+    "to_hit": -3,
+    "material": [ "steel" ],
+    "symbol": ";",
+    "color": "light_green",
+    "use_action": {
+      "type": "place_monster",
+      "monster_id": "mon_fcl_molebot",
+      "friendly_msg": "The miner bot whirrs and tunnels into the ground.",
+      "hostile_msg": "The miner bot spins out of control and lunges at you.  Make way!",
+      "//": "Digging parameters need special attention but no (intentional) lethal weapons",
+      "difficulty": 3,
+      "moves": 100,
+      "skills": [ "electronics", "computer" ]
+    },
+    "flags": [ "SINGLE_USE" ],
+    "melee_damage": { "bash": 8 }
   }
 ]

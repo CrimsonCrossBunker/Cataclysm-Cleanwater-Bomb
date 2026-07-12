@@ -68,5 +68,15 @@
     "id": [ "broken_copbot" ],
     "type": "MIGRATION",
     "replace": "broken_fcl_copbot"
+  },
+  {
+    "id": [ "bot_molebot" ],
+    "type": "MIGRATION",
+    "replace": "fcl_bot_molebot"
+  },
+  {
+    "id": [ "broken_molebot" ],
+    "type": "MIGRATION",
+    "replace": "broken_fcl_molebot"
   }
 ]
