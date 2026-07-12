@@ -1,0 +1,33 @@
+[
+  {
+    "id": "hospital_bed",
+    "type": "item_group",
+    "copy-from": "hospital_bed",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_light", 1 ]
+      ]
+    }
+  },
+  {
+    "id": "subway",
+    "type": "item_group",
+    "copy-from": "subway",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_light", 1 ]
+      ]
+    }
+  },
+  {
+    "id": "lab_dorm",
+    "type": "item_group",
+    "copy-from": "lab_dorm",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_lamp", 1 ],
+        [ "fcl_atomic_light", 3 ]
+      ]
+    }
+  }
+]
