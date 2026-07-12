@@ -150,5 +150,50 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
+  },
+  {
+    "type": "ITEM",
+    "id": "broken_fcl_riotbot",
+    "symbol": ",",
+    "color": "green",
+    "name": { "str": "broken riot control bot" },
+    "category": "other",
+    "description": "A broken riot control bot.  Much less threatening now that it's out of gas.  Could be gutted for parts.",
+    "price": "300 USD",
+    "price_postapoc": "10 cent",
+    "material": [ "steel", "plastic" ],
+    "weight": "140000 g",
+    "volume": "62500 ml",
+    "to_hit": -3,
+    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
+    "melee_damage": { "bash": 6, "cut": 6 }
+  },
+  {
+    "id": "fcl_bot_riotbot",
+    "looks_like": "broken_fcl_riotbot",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "inactive riot control bot" },
+    "description": "An inactive riot control bot.  Using this item involves placing it on the ground and turning it on.  If reprogrammed and rewired successfully, the robot will bring order and peace to the horde.",
+    "weight": "81500 g",
+    "volume": "62500 ml",
+    "price": "350 USD",
+    "price_postapoc": "15 USD",
+    "to_hit": -3,
+    "material": [ "steel" ],
+    "symbol": ";",
+    "color": "light_green",
+    "use_action": {
+      "type": "place_monster",
+      "monster_id": "mon_fcl_riotbot",
+      "friendly_msg": "The riot control bot rolls into action.",
+      "hostile_msg": "The riot control bot gasses you and approaches with a pair of handcuffs!",
+      "//": "Pretty easy but you want to be careful with the gas",
+      "difficulty": 4,
+      "moves": 150,
+      "skills": [ "electronics", "computer" ]
+    },
+    "flags": [ "SINGLE_USE" ],
+    "melee_damage": { "bash": 8 }
   }
 ]

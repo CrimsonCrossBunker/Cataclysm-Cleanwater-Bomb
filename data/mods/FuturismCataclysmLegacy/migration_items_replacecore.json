@@ -78,5 +78,15 @@
     "id": [ "broken_molebot" ],
     "type": "MIGRATION",
     "replace": "broken_fcl_molebot"
+  },
+  {
+    "id": [ "bot_riotbot" ],
+    "type": "MIGRATION",
+    "replace": "fcl_bot_riotbot"
+  },
+  {
+    "id": [ "broken_riotbot" ],
+    "type": "MIGRATION",
+    "replace": "broken_fcl_riotbot"
   }
 ]
