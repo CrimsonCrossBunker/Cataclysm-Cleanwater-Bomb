@@ -27,6 +27,7 @@
 
 
 static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_bag_plastic( "bag_plastic" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_knife_combat( "knife_combat" );
 static const itype_id itype_test_9mm_ammo( "test_9mm_ammo" );
@@ -114,6 +115,50 @@ static int u_carry_amount( item &it )
         amount = std::min( weightmax, amount );
     }
     return amount;
+}
+
+TEST_CASE( "AIM_unload_nested_container_from_container_view", "[items][advanced_inv]" )
+{
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    // Give unloaded contents somewhere to go instead of dropping at the avatar's feet.
+    u.worn.wear_item( u, item( itype_debug_backpack ), false, false );
+
+    item inner_container( itype_bag_plastic );
+    REQUIRE( inner_container.put_in( item( itype_knife_combat ),
+                                     pocket_type::CONTAINER ).success() );
+    item outer_container( itype_backpack );
+    REQUIRE( outer_container.put_in( inner_container, pocket_type::CONTAINER ).success() );
+
+    map &here = get_map();
+    const tripoint_bub_ms pos = u.pos_bub();
+    item &outer_on_map = here.add_item_or_charges( pos, outer_container );
+
+    advanced_inventory advinv;
+    advinv.init();
+    init_panes( advinv, aim_location::AIM_CENTER, aim_location::AIM_INVENTORY );
+
+    advanced_inventory_pane &spane = advinv.get_pane( advinv.get_src() );
+    REQUIRE( spane.get_cur_item_ptr() );
+    REQUIRE( spane.get_cur_item_ptr()->items.front().get_item() == &outer_on_map );
+
+    advinv.process_action( "ITEMS_CONTAINER" );
+    recalc_panes( advinv );
+
+    REQUIRE( spane.get_area() == aim_location::AIM_CONTAINER );
+    REQUIRE( spane.get_cur_item_ptr() );
+    REQUIRE( spane.get_cur_item_ptr()->items.front()->typeId() == itype_bag_plastic );
+    REQUIRE_FALSE( spane.get_cur_item_ptr()->items.front()->empty_container() );
+
+    advinv.process_action( "UNLOAD_CONTAINER" );
+    REQUIRE( u.activity );
+    process_activity( u );
+
+    REQUIRE_FALSE( u.activity );
+    REQUIRE( u.has_amount( itype_knife_combat, 1 ) );
+    REQUIRE( outer_on_map.all_items_top().front()->empty_container() );
 }
 
 
