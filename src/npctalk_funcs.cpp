@@ -1,9 +1,12 @@
 #include "npctalk.h" // IWYU pragma: associated
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <list>
+#include <limits>
+#include <map>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -31,6 +34,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "faction.h"
+#include "fault.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
@@ -62,6 +66,10 @@
 #include "translations.h"
 #include "uilist.h"
 #include "viewer.h"
+#include "veh_interact.h"
+#include "veh_type.h"
+#include "vehicle.h"
+#include "vpart_range.h"
 
 static const efftype_id effect_allow_sleep( "allow_sleep" );
 static const efftype_id effect_asked_for_item( "asked_for_item" );
@@ -96,9 +104,85 @@ static const mtype_id mon_horse( "mon_horse" );
 static const zone_type_id zone_type_CAMP_FOOD( "CAMP_FOOD" );
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
 
+static const std::string vehicle_part_repair_target = "vehicle_part_repair_target";
+static const std::string vehicle_part_repair_valid = "vehicle_part_repair_selection_valid";
+static const std::string vehicle_part_repair_part_name = "vehicle_part_repair_part_name";
+static const std::string vehicle_part_repair_vehicle_name = "vehicle_part_repair_vehicle_name";
+static const std::string vehicle_part_repair_damage_percent = "vehicle_part_repair_damage_percent";
+static const std::string vehicle_part_repair_cost = "vehicle_part_repair_cost";
+static const std::string vehicle_part_repair_cost_text = "vehicle_part_repair_cost_text";
+static const std::string vehicle_part_repair_time = "vehicle_part_repair_time";
+static const std::string vehicle_part_repair_time_text = "vehicle_part_repair_time_text";
+static const std::string vehicle_part_repair_price_multiplier =
+    "vehicle_part_repair_price_multiplier";
+static const std::string vehicle_part_repair_status = "vehicle_part_repair_status";
+static const std::string vehicle_part_repair_part_index = "vehicle_part_repair_part_index";
+static const std::string vehicle_part_repair_part_id = "vehicle_part_repair_part_id";
+static const std::string vehicle_part_repair_mount_x = "vehicle_part_repair_mount_x";
+static const std::string vehicle_part_repair_mount_y = "vehicle_part_repair_mount_y";
+static const std::string vehicle_part_repair_damage = "vehicle_part_repair_damage";
+static const std::string vehicle_part_repair_degradation = "vehicle_part_repair_degradation";
+static const std::string vehicle_part_repair_faults = "vehicle_part_repair_faults";
+
 struct itype;
 
 static void spawn_animal( npc &p, const mtype_id &mon );
+
+static vehicle *marked_vehicle_part_repair_target( map &here )
+{
+    avatar &player_character = get_avatar();
+    for( wrapped_vehicle &wrapped : here.get_vehicles() ) {
+        vehicle &veh = *wrapped.v;
+        const diag_value *marker = veh.maybe_get_value( vehicle_part_repair_target );
+        if( marker && marker->is_str() && marker->str() == "yes" &&
+            veh.is_owned_by( player_character ) &&
+            !veh.player_in_control( here, player_character ) ) {
+            return &veh;
+        }
+    }
+    return nullptr;
+}
+
+static void clear_vehicle_part_repair_quote( npc &p )
+{
+    p.set_value( vehicle_part_repair_valid, 0 );
+    p.set_value( vehicle_part_repair_part_name, "" );
+    p.set_value( vehicle_part_repair_vehicle_name, "" );
+    p.set_value( vehicle_part_repair_damage_percent, 0 );
+    p.set_value( vehicle_part_repair_cost, 0 );
+    p.set_value( vehicle_part_repair_cost_text, format_money( 0 ) );
+    p.set_value( vehicle_part_repair_time, 0 );
+    p.set_value( vehicle_part_repair_time_text, "" );
+    p.set_value( vehicle_part_repair_status, "cancelled" );
+}
+
+static void clear_vehicle_part_repair_snapshot( vehicle &veh )
+{
+    veh.remove_value( vehicle_part_repair_part_index );
+    veh.remove_value( vehicle_part_repair_part_id );
+    veh.remove_value( vehicle_part_repair_mount_x );
+    veh.remove_value( vehicle_part_repair_mount_y );
+    veh.remove_value( vehicle_part_repair_damage );
+    veh.remove_value( vehicle_part_repair_degradation );
+    veh.remove_value( vehicle_part_repair_faults );
+}
+
+static bool vehicle_part_repair_is_selectable( const vehicle_part &part )
+{
+    return !part.removed && !part.is_fake && part.max_damage() > 0 && part.damage() > 0;
+}
+
+static std::string vehicle_part_repair_fault_snapshot( const vehicle_part &part )
+{
+    std::string result;
+    for( const fault_id &fault : part.faults() ) {
+        if( !result.empty() ) {
+            result += '\n';
+        }
+        result += fault.str();
+    }
+    return result;
+}
 
 void talk_function::nothing( npc & )
 {
@@ -311,6 +395,256 @@ void talk_function::do_vehicle_deconstruct( npc &p )
 void talk_function::do_vehicle_repair( npc &p )
 {
     p.assign_activity( multi_vehicle_repair_activity_actor() );
+}
+
+static int vehicle_part_repair_service_cost( const vehicle_part &part,
+        const double price_multiplier )
+{
+    if( !vehicle_part_repair_is_selectable( part ) || price_multiplier <= 0.0 ) {
+        return 0;
+    }
+    const int pristine_value = units::to_cent( part.info().base_item->price_post );
+    if( pristine_value <= 0 ) {
+        return 0;
+    }
+    const double damage_ratio = clamp( part.damage_percent(), 0.0, 1.0 );
+    const double calculated_cost = std::ceil( pristine_value * damage_ratio * price_multiplier );
+    return std::max( 1, static_cast<int>( std::min<double>( calculated_cost,
+                     std::numeric_limits<int>::max() ) ) );
+}
+
+static double vehicle_part_repair_multiplier( const npc &mechanic )
+{
+    const diag_value *value = mechanic.maybe_get_value( vehicle_part_repair_price_multiplier );
+    return value && value->is_dbl() && value->dbl() > 0.0 ? value->dbl() : 1.0;
+}
+
+static time_duration adjusted_fault_fix_time( const fault_fix &fix, const vehicle_part &part,
+        const Character &mechanic )
+{
+    time_duration result = fix.time;
+    for( const std::pair<const flag_id, float> &entry : fix.time_save_flags ) {
+        if( part.get_base().has_flag( entry.first ) ) {
+            result *= entry.second;
+        }
+    }
+    for( const std::pair<const proficiency_id, float> &entry : fix.time_save_profs ) {
+        if( mechanic.has_proficiency( entry.first ) ) {
+            result *= entry.second;
+        }
+    }
+    return result;
+}
+
+static time_duration vehicle_part_repair_service_time( const vehicle_part &part,
+        const Character &mechanic )
+{
+    const vpart_info &info = part.info();
+    if( part.is_broken() ) {
+        return std::max( 1_seconds, info.install_time( mechanic ) );
+    }
+
+    std::map<fault_fix_id, time_duration> selected_fixes;
+    for( const fault_id &fault : part.faults() ) {
+        const std::set<fault_fix_id> &fixes = fault->get_fixes();
+        if( fixes.empty() ) {
+            return std::max( 1_seconds, info.install_time( mechanic ) );
+        }
+
+        fault_fix_id fastest_fix = fault_fix_id::NULL_ID();
+        time_duration fastest_time = 0_seconds;
+        for( const fault_fix_id &fix_id : fixes ) {
+            const fault_fix &fix = *fix_id;
+            const time_duration candidate = adjusted_fault_fix_time( fix, part, mechanic );
+            if( fastest_fix.is_null() || candidate < fastest_time ) {
+                fastest_fix = fix_id;
+                fastest_time = candidate;
+            }
+        }
+        selected_fixes[fastest_fix] = fastest_time;
+    }
+
+    const int damage_levels = part.get_base().damage_level();
+    time_duration result = info.repair_time( mechanic ) * damage_levels;
+    for( const std::pair<const fault_fix_id, time_duration> &entry : selected_fixes ) {
+        result += entry.second;
+    }
+    return std::max( 1_seconds, result );
+}
+
+static void restore_vehicle_part_to_pristine( vehicle &veh, vehicle_part &part )
+{
+    item restored_base( part.get_base() );
+    restored_base.faults.clear();
+    restored_base.set_degradation( 0 );
+    restored_base.force_set_damage( 0 );
+    part.set_base( std::move( restored_base ) );
+    veh.refresh();
+}
+
+struct vehicle_part_repair_order {
+    vehicle *veh = nullptr;
+    int part_index = -1;
+};
+
+static std::optional<vehicle_part_repair_order> valid_vehicle_part_repair_order( npc &mechanic )
+{
+    map &here = get_map();
+    vehicle *veh = marked_vehicle_part_repair_target( here );
+    const diag_value *cost_value = mechanic.maybe_get_value( vehicle_part_repair_cost );
+    const int cost = cost_value && cost_value->is_dbl() ? static_cast<int>( cost_value->dbl() ) : 0;
+    if( veh == nullptr || cost <= 0 ) {
+        return std::nullopt;
+    }
+
+    const diag_value *index_value = veh->maybe_get_value( vehicle_part_repair_part_index );
+    if( index_value == nullptr || !index_value->is_dbl() ) {
+        return std::nullopt;
+    }
+    const int part_index = static_cast<int>( index_value->dbl() );
+    if( part_index < 0 || part_index >= veh->part_count() ) {
+        return std::nullopt;
+    }
+
+    const vehicle_part &part = veh->part( part_index );
+    const diag_value *part_id = veh->maybe_get_value( vehicle_part_repair_part_id );
+    const diag_value *mount_x = veh->maybe_get_value( vehicle_part_repair_mount_x );
+    const diag_value *mount_y = veh->maybe_get_value( vehicle_part_repair_mount_y );
+    const diag_value *damage = veh->maybe_get_value( vehicle_part_repair_damage );
+    const diag_value *degradation = veh->maybe_get_value( vehicle_part_repair_degradation );
+    const diag_value *faults = veh->maybe_get_value( vehicle_part_repair_faults );
+    const bool valid = part_id && part_id->is_str() && part_id->str() == part.info().id.str() &&
+                       mount_x && mount_x->is_dbl() &&
+                       static_cast<int>( mount_x->dbl() ) == part.mount.x() &&
+                       mount_y && mount_y->is_dbl() &&
+                       static_cast<int>( mount_y->dbl() ) == part.mount.y() &&
+                       damage && damage->is_dbl() &&
+                       static_cast<int>( damage->dbl() ) == part.damage() &&
+                       degradation && degradation->is_dbl() &&
+                       static_cast<int>( degradation->dbl() ) == part.degradation() &&
+                       faults && faults->is_str() &&
+                       faults->str() == vehicle_part_repair_fault_snapshot( part ) &&
+                       vehicle_part_repair_service_cost( part,
+                               vehicle_part_repair_multiplier( mechanic ) ) == cost;
+    if( !valid ) {
+        return std::nullopt;
+    }
+    return vehicle_part_repair_order{ veh, part_index };
+}
+
+static void refund_vehicle_part_repair( npc &mechanic, const std::string &status )
+{
+    const diag_value *cost_value = mechanic.maybe_get_value( vehicle_part_repair_cost );
+    const int cost = cost_value && cost_value->is_dbl() ? static_cast<int>( cost_value->dbl() ) : 0;
+    if( cost > 0 ) {
+        mechanic.op_of_u.owed += cost;
+    }
+    if( vehicle *veh = marked_vehicle_part_repair_target( get_map() ) ) {
+        clear_vehicle_part_repair_snapshot( *veh );
+    }
+    clear_vehicle_part_repair_quote( mechanic );
+    mechanic.set_value( vehicle_part_repair_status, status );
+    mechanic.remove_effect( effect_currently_busy );
+}
+
+void talk_function::select_vehicle_part_repair( npc &p )
+{
+    map &here = get_map();
+    clear_vehicle_part_repair_quote( p );
+    vehicle *veh = marked_vehicle_part_repair_target( here );
+    if( veh == nullptr ) {
+        p.set_value( vehicle_part_repair_status, "no_vehicle" );
+        return;
+    }
+    clear_vehicle_part_repair_snapshot( *veh );
+
+    const std::optional<vpart_reference> selected = veh_interact::select_part_at_grid( here, *veh,
+            []( const map &, const vehicle_part & part ) {
+        return vehicle_part_repair_is_selectable( part );
+    } );
+    if( !selected ) {
+        const vehicle_part_range all_parts = veh->get_all_parts();
+        const bool has_damaged_part = std::any_of( all_parts.begin(), all_parts.end(),
+        []( const vpart_reference & vpr ) {
+            return vehicle_part_repair_is_selectable( vpr.part() );
+        } );
+        p.set_value( vehicle_part_repair_status, has_damaged_part ? "cancelled" : "no_damage" );
+        return;
+    }
+
+    const vehicle_part &part = selected->part();
+    const int cost = vehicle_part_repair_service_cost( part, vehicle_part_repair_multiplier( p ) );
+    if( cost <= 0 ) {
+        p.set_value( vehicle_part_repair_status, "no_value" );
+        return;
+    }
+    const time_duration repair_time = vehicle_part_repair_service_time( part, p );
+
+    veh->set_value( vehicle_part_repair_part_index, selected->part_index() );
+    veh->set_value( vehicle_part_repair_part_id, part.info().id.str() );
+    veh->set_value( vehicle_part_repair_mount_x, part.mount.x() );
+    veh->set_value( vehicle_part_repair_mount_y, part.mount.y() );
+    veh->set_value( vehicle_part_repair_damage, part.damage() );
+    veh->set_value( vehicle_part_repair_degradation, part.degradation() );
+    veh->set_value( vehicle_part_repair_faults, vehicle_part_repair_fault_snapshot( part ) );
+
+    p.set_value( vehicle_part_repair_valid, 1 );
+    p.set_value( vehicle_part_repair_part_name, part.name() );
+    p.set_value( vehicle_part_repair_vehicle_name, veh->name );
+    p.set_value( vehicle_part_repair_damage_percent,
+                 static_cast<int>( std::ceil( part.damage_percent() * 100.0 ) ) );
+    p.set_value( vehicle_part_repair_cost, cost );
+    p.set_value( vehicle_part_repair_cost_text, format_money( cost ) );
+    p.set_value( vehicle_part_repair_time, to_turns<int>( repair_time ) );
+    p.set_value( vehicle_part_repair_time_text, to_string_approx( repair_time ) );
+    p.set_value( vehicle_part_repair_status, "quoted" );
+}
+
+void talk_function::start_vehicle_part_repair( npc &p )
+{
+    const std::optional<vehicle_part_repair_order> order = valid_vehicle_part_repair_order( p );
+    const diag_value *time_value = p.maybe_get_value( vehicle_part_repair_time );
+    if( !order || time_value == nullptr || !time_value->is_dbl() || time_value->dbl() <= 0 ) {
+        refund_vehicle_part_repair( p, "invalidated" );
+        add_msg( m_bad, _( "The selected vehicle part changed before repairs could begin.  %s credits you for the payment." ),
+                 p.get_name() );
+        return;
+    }
+    const time_duration repair_time = time_duration::from_turns( static_cast<int>( time_value->dbl() ) );
+    get_player_character().assign_activity( vehicle_part_repair_service_activity_actor(
+            repair_time, p.getID() ) );
+    p.add_effect( effect_currently_busy, repair_time );
+    p.set_value( vehicle_part_repair_status, "repairing" );
+    add_msg( m_info, _( "%s begins repairing the selected vehicle part." ), p.get_name() );
+}
+
+void talk_function::finish_vehicle_part_repair( npc &p )
+{
+    const std::optional<vehicle_part_repair_order> order = valid_vehicle_part_repair_order( p );
+    if( !order ) {
+        refund_vehicle_part_repair( p, "invalidated" );
+        add_msg( m_bad, _( "The selected vehicle part changed while repairs were underway.  %s credits you for the payment." ),
+                 p.get_name() );
+        return;
+    }
+
+    vehicle_part &part = order->veh->part( order->part_index );
+    const std::string part_name = part.name();
+    const std::string vehicle_name = order->veh->name;
+    clear_vehicle_part_repair_snapshot( *order->veh );
+    restore_vehicle_part_to_pristine( *order->veh, part );
+    clear_vehicle_part_repair_quote( p );
+    p.set_value( vehicle_part_repair_status, "complete" );
+    p.remove_effect( effect_currently_busy );
+    add_msg( m_good, _( "%1$s completely repairs the %2$s's %3$s." ), p.get_name(),
+             vehicle_name, part_name );
+}
+
+void talk_function::cancel_vehicle_part_repair( npc &p )
+{
+    refund_vehicle_part_repair( p, "cancelled" );
+    add_msg( m_info, _( "%s stops repairing the selected vehicle part and credits you for the payment." ),
+             p.get_name() );
 }
 
 void talk_function::do_chop_trees( npc &p )

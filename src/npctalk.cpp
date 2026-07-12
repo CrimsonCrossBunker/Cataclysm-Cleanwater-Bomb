@@ -8790,6 +8790,8 @@ void talk_effect_t::parse_string_effect( const std::string &effect_id, const Jso
             WRAP( do_chop_plank ),
             WRAP( do_vehicle_deconstruct ),
             WRAP( do_vehicle_repair ),
+            WRAP( select_vehicle_part_repair ),
+            WRAP( start_vehicle_part_repair ),
             WRAP( do_chop_trees ),
             WRAP( do_fishing ),
             WRAP( do_construction ),

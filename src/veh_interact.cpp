@@ -291,6 +291,28 @@ std::optional<vpart_reference> veh_interact::select_part( map &here, const vehic
     return res;
 }
 
+std::optional<vpart_reference> veh_interact::select_part_at_grid( map &here, vehicle &veh,
+        const part_selector &sel )
+{
+    const vehicle_part_range all_parts = veh.get_all_parts();
+    const bool has_matching_part = std::any_of( all_parts.begin(), all_parts.end(),
+    [&here, &sel]( const vpart_reference & vpr ) {
+        return sel( here, vpr.part() );
+    } );
+    if( !has_matching_part ) {
+        return std::nullopt;
+    }
+
+    veh_interact vehint( here, veh );
+    vehint.part_selection_mode = true;
+    vehint.part_selection_filter = sel;
+    const std::optional<int> selected_part_index = vehint.do_part_selection_loop( here );
+    if( !selected_part_index ) {
+        return std::nullopt;
+    }
+    return vpart_reference( veh, *selected_part_index );
+}
+
 /**
  * Creates a blank veh_interact window.
  */
@@ -625,6 +647,74 @@ void veh_interact::do_main_loop( map &here )
         if( sel_cmd != VEHICLE_QUIT ) {
             finish = true;
         }
+    }
+}
+
+std::optional<int> veh_interact::do_part_selection_loop( map &here )
+{
+    shared_ptr_fast<ui_adaptor> current_ui = create_or_get_ui_adaptor( here );
+
+    while( true ) {
+        calc_overview( here );
+        ui_manager::redraw();
+        const int description_scroll_lines = catacurses::getmaxy( w_parts ) - 4;
+        const std::string action = main_context.handle_input();
+        msg.reset();
+        if( const std::optional<tripoint_rel_ms> vec = main_context.get_direction_rel_ms( action ) ) {
+            move_cursor( here, vec->xy() );
+        } else if( action == "CONFIRM" ) {
+            if( const std::optional<int> selected = select_part_at_cursor( here ) ) {
+                return selected;
+            }
+        } else if( action == "QUIT" ) {
+            return std::nullopt;
+        } else if( action == "OVERVIEW_DOWN" ) {
+            move_overview_line( 1 );
+        } else if( action == "OVERVIEW_UP" ) {
+            move_overview_line( -1 );
+        } else if( action == "DESC_LIST_DOWN" ) {
+            move_cursor( here, point_rel_ms::zero, 1 );
+        } else if( action == "DESC_LIST_UP" ) {
+            move_cursor( here, point_rel_ms::zero, -1 );
+        } else if( action == "PAGE_DOWN" ) {
+            move_cursor( here, point_rel_ms::zero, description_scroll_lines );
+        } else if( action == "PAGE_UP" ) {
+            move_cursor( here, point_rel_ms::zero, -description_scroll_lines );
+        }
+    }
+}
+
+std::optional<int> veh_interact::select_part_at_cursor( map &here )
+{
+    std::vector<int> selectable_parts;
+    for( size_t i = 0; i < parts_here.size(); ++i ) {
+        vehicle_part &pt = veh->part( parts_here[i] );
+        if( part_selection_filter && part_selection_filter( here, pt ) ) {
+            selectable_parts.push_back( static_cast<int>( i ) );
+        }
+    }
+    if( selectable_parts.empty() ) {
+        msg = _( "There are no selectable parts at this position." );
+        return std::nullopt;
+    }
+
+    restore_on_out_of_scope previous_title( title );
+    title = _( "Choose a part here:" );
+    restore_on_out_of_scope previous_highlight( highlight_part );
+    shared_ptr_fast<ui_adaptor> current_ui = create_or_get_ui_adaptor( here );
+    int pos = 0;
+
+    while( true ) {
+        highlight_part = selectable_parts[pos];
+        ui_manager::redraw();
+        const std::string action = main_context.handle_input();
+        if( action == "CONFIRM" ) {
+            return parts_here[selectable_parts[pos]];
+        }
+        if( action == "QUIT" ) {
+            return std::nullopt;
+        }
+        move_in_list( pos, action, selectable_parts.size() );
     }
 }
 
@@ -2691,6 +2781,28 @@ void veh_interact::display_mode( const map &here )
         nc_color title_col = c_light_gray;
         // NOLINTNEXTLINE(cata-use-named-point-constants)
         print_colored_text( w_mode, point( 1, 0 ), title_col, title_col, title.value() );
+    } else if( part_selection_mode ) {
+        constexpr size_t action_cnt = 2;
+        const std::array<std::string, action_cnt> actions = { {
+                veh_act_desc( main_context, "CONFIRM",
+                              pgettext( "veh_interact", "select part" ),
+                              task_reason::CAN_DO ),
+                veh_act_desc( main_context, "QUIT",
+                              pgettext( "veh_interact", "back" ),
+                              task_reason::CAN_DO ),
+            }
+        };
+        std::array<int, action_cnt + 1> pos;
+        pos[0] = 0;
+        for( size_t i = 0; i < action_cnt; ++i ) {
+            pos[i + 1] = pos[i] + utf8_width( actions[i], true );
+        }
+        const int space = std::max<int>( getmaxx( w_mode ) - pos.back(), action_cnt + 1 );
+        for( size_t i = 0; i < action_cnt; ++i ) {
+            nc_color dummy = c_white;
+            print_colored_text( w_mode, point( pos[i] + space * ( i + 1 ) / ( action_cnt + 1 ), 0 ),
+                                dummy, c_white, actions[i] );
+        }
     } else {
         constexpr size_t action_cnt = 12;
         const std::array<std::string, action_cnt> actions = { {

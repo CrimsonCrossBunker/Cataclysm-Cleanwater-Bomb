@@ -259,6 +259,7 @@ static const activity_id ACT_UNLOAD_LOOT( "ACT_UNLOAD_LOOT" );
 static const activity_id ACT_VEHICLE( "ACT_VEHICLE" );
 static const activity_id ACT_VEHICLE_DECONSTRUCTION( "ACT_VEHICLE_DECONSTRUCTION" );
 static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
+static const activity_id ACT_VEHICLE_PART_REPAIR_SERVICE( "ACT_VEHICLE_PART_REPAIR_SERVICE" );
 static const activity_id ACT_VEHICLE_REPAIR( "ACT_VEHICLE_REPAIR" );
 static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
 static const activity_id ACT_VIBE( "ACT_VIBE" );
@@ -13971,6 +13972,53 @@ std::unique_ptr<activity_actor> wait_npc_activity_actor::deserialize( JsonValue 
     return actor.clone();
 }
 
+void vehicle_part_repair_service_activity_actor::start( player_activity &act, Character &who )
+{
+    wait_activity_actor::start( act, who );
+    act.index = mechanic_id.get_value();
+}
+
+void vehicle_part_repair_service_activity_actor::finish( player_activity &act, Character &who )
+{
+    npc *mechanic = g->find_npc( mechanic_id );
+    if( mechanic != nullptr ) {
+        talk_function::finish_vehicle_part_repair( *mechanic );
+    } else {
+        who.add_msg_if_player( m_bad,
+                              _( "The mechanic is no longer available, so the vehicle part was not repaired." ) );
+    }
+    act.set_to_null();
+}
+
+void vehicle_part_repair_service_activity_actor::canceled( player_activity &, Character &who )
+{
+    npc *mechanic = g->find_npc( mechanic_id );
+    if( mechanic != nullptr ) {
+        talk_function::cancel_vehicle_part_repair( *mechanic );
+    } else {
+        who.add_msg_if_player( m_bad,
+                              _( "The mechanic is no longer available, so the repair service could not be settled." ) );
+    }
+}
+
+void vehicle_part_repair_service_activity_actor::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+    jsout.member( "mechanic_id", mechanic_id );
+    jsout.member( "repair_time", initial_wait_time );
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> vehicle_part_repair_service_activity_actor::deserialize(
+    JsonValue &jsin )
+{
+    vehicle_part_repair_service_activity_actor actor;
+    JsonObject data = jsin.get_object();
+    data.read( "mechanic_id", actor.mechanic_id );
+    data.read( "repair_time", actor.initial_wait_time );
+    return actor.clone();
+}
+
 void zone_activity_actor::do_turn( player_activity &act, Character &you )
 {
     update_vehicle_zone_cache();
@@ -15159,6 +15207,8 @@ deserialize_functions = {
     { ACT_VEHICLE, &vehicle_activity_actor::deserialize },
     { ACT_VEHICLE_DECONSTRUCTION, &multi_vehicle_deconstruct_activity_actor::deserialize },
     { ACT_VEHICLE_FOLD, &vehicle_folding_activity_actor::deserialize },
+    { ACT_VEHICLE_PART_REPAIR_SERVICE,
+      &vehicle_part_repair_service_activity_actor::deserialize },
     { ACT_VEHICLE_REPAIR, &multi_vehicle_repair_activity_actor::deserialize },
     { ACT_VEHICLE_UNFOLD, &vehicle_unfolding_activity_actor::deserialize },
     { ACT_VIBE, &vibe_activity_actor::deserialize },
