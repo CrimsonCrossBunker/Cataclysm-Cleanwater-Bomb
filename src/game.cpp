@@ -5892,6 +5892,10 @@ void game::examine( const tripoint_bub_ms &examp, bool with_pickup )
 bool game::warn_player_maybe_anger_local_faction( bool really_bad_offense,
         bool asking_for_public_goods )
 {
+    if( !get_option<bool>( "FACTION_TERRITORY_CHECKS" ) ) {
+        return true;
+    }
+
     Character &player_character = get_player_character();
     std::optional<basecamp *> bcp = overmap_buffer.find_camp(
                                         player_character.pos_abs_omt().xy() );
