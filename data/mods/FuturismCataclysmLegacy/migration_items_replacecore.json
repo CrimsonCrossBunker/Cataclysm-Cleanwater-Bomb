@@ -1,0 +1,52 @@
+[
+  {
+    "type": "MIGRATION",
+    "id": "atomic_coffeepot",
+    "replace": "fcl_atomic_coffeemaker"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "atomic_lamp",
+    "replace": "fcl_atomic_lamp"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "atomic_lamp_off",
+    "replace": "fcl_atomic_lamp_off"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "atomic_light",
+    "replace": "fcl_atomic_light"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "atomic_light_off",
+    "replace": "fcl_atomic_light_off"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "wearable_atomic_light",
+    "replace": "fcl_atomic_headlamp"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "wearable_atomic_light_off",
+    "replace": "fcl_atomic_headlamp_off"
+  },
+  {
+    "id": "light_minus_atomic_battery_cell",
+    "type": "MIGRATION",
+    "replace": "fcl_light_minus_atomic_battery_cell"
+  },
+  {
+    "id": "light_atomic_battery_cell",
+    "type": "MIGRATION",
+    "replace": "fcl_light_atomic_battery_cell"
+  },
+  {
+    "id": "medium_atomic_battery_cell",
+    "type": "MIGRATION",
+    "replace": "fcl_medium_atomic_battery_cell"
+  }
+]

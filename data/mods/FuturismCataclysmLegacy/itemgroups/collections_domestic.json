@@ -1,0 +1,57 @@
+[
+  {
+    "id": "kitchen_appliances",
+    "//": "Mundane household appliances that you might find in a kitchen.",
+    "type": "item_group",
+    "copy-from": "kitchen_appliances",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_coffeemaker", 1 ]
+      ]
+    }
+  },
+  {
+    "id": "home_hw",
+    "type": "item_group",
+    "copy-from": "home_hw",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_lamp", 1 ],
+        [ "fcl_atomic_light", 1 ]
+      ]
+    }
+  },
+  {
+    "id": "livingroom",
+    "type": "item_group",
+    "copy-from": "livingroom",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_lamp", 1 ],
+        [ "fcl_atomic_light", 1 ]
+      ]
+    }
+  },
+  {
+    "id": "kitchen",
+    "type": "item_group",
+    "copy-from": "kitchen",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_lamp", 1 ],
+        [ "fcl_atomic_light", 1 ]
+      ]
+    }
+  },
+  {
+    "id": "bedroom",
+    "type": "item_group",
+    "copy-from": "bedroom",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_lamp", 2 ],
+        [ "fcl_atomic_light", 2 ]
+      ]
+    }
+  }
+]

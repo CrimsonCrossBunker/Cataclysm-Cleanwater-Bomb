@@ -1,0 +1,12 @@
+[
+  {
+    "type": "vehicle_part_migration",
+    "from": "atomic_lamp",
+    "to": "fcl_atomic_lamp"
+  },
+  {
+    "type": "vehicle_part_migration",
+    "from": "atomic_light",
+    "to": "fcl_atomic_light"
+  }
+]
