@@ -3142,6 +3142,14 @@ void options_manager::add_options_world_default()
              false
            );
 
+        add( "FACTION_TERRITORY_CHECKS", page_id,
+             to_translation( "Faction territory permission checks" ),
+             to_translation( "If true, actions performed without permission in another faction's territory "
+                             "may require confirmation and reduce faction relations.  If false, these "
+                             "territory checks are skipped." ),
+             false
+           );
+
         add( "BLACK_ROAD", page_id, to_translation( "Surrounded start" ),
              to_translation( "If true, spawn zombies at shelters.  Makes the starting game a lot harder." ),
              false
