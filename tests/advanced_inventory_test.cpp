@@ -1,11 +1,12 @@
 #include <algorithm>
 #include <climits>
-#include <initializer_list>
-#include <string>
-#include <vector>
-#include <map>
-#include <utility>
 #include <cstddef>
+#include <initializer_list>
+#include <list>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "advanced_inv.h"
 #include "advanced_inv_area.h"
@@ -15,15 +16,16 @@
 #include "cata_catch.h"
 #include "character_attire.h"
 #include "coordinates.h"
-#include "item_location.h"
 #include "item.h"
-#include "map_helpers.h"
+#include "item_location.h"
 #include "map.h"
+#include "map_helpers.h"
 #include "player_helpers.h"
+#include "pocket_type.h"
+#include "ret_val.h"
 #include "rng.h"
-
-#include "units.h"
 #include "type_id.h"
+#include "units.h"
 
 
 static const itype_id itype_backpack( "backpack" );
