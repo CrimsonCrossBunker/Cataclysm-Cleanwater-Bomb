@@ -1,0 +1,25 @@
+[
+  {
+    "result": "broken_fcl_eyebot",
+    "type": "uncraft",
+    "activity_level": "LIGHT_EXERCISE",
+    "skill_used": "electronics",
+    "difficulty": 2,
+    "time": "30 m",
+    "using": [ [ "soldering_standard", 3 ] ],
+    "qualities": [ { "id": "SCREW", "level": 1 } ],
+    "components": [
+      [ [ "ai_module", 1 ] ],
+      [ [ "identification_module", 1 ] ],
+      [ [ "pathfinding_module", 1 ] ],
+      [ [ "sensor_module", 1 ] ],
+      [ [ "small_storage_battery", 1 ] ],
+      [ [ "RAM", 1 ] ],
+      [ [ "processor", 1 ] ],
+      [ [ "scrap", 1 ] ],
+      [ [ "e_scrap", 1 ] ],
+      [ [ "quad_rotors", 1 ] ],
+      [ [ "lens", 1 ] ]
+    ]
+  }
+]

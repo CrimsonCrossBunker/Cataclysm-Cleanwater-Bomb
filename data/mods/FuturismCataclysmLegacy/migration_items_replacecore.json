@@ -48,5 +48,15 @@
     "id": "medium_atomic_battery_cell",
     "type": "MIGRATION",
     "replace": "fcl_medium_atomic_battery_cell"
+  },
+  {
+    "id": [ "bot_eyebot" ],
+    "type": "MIGRATION",
+    "replace": "fcl_bot_eyebot"
+  },
+  {
+    "id": [ "broken_eyebot" ],
+    "type": "MIGRATION",
+    "replace": "broken_fcl_eyebot"
   }
 ]
