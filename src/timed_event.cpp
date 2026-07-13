@@ -34,6 +34,7 @@
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
+#include "worldfactory.h"
 
 static const itype_id itype_petrified_eye( "petrified_eye" );
 
@@ -48,6 +49,11 @@ static const mtype_id mon_dsa_alien_dispatch( "mon_dsa_alien_dispatch" );
 static const mtype_id mon_sewer_snake( "mon_sewer_snake" );
 static const mtype_id mon_spider_cellar_giant( "mon_spider_cellar_giant" );
 static const mtype_id mon_spider_widow_giant( "mon_spider_widow_giant" );
+
+static const mtype_id mon_afs_copbot( "mon_afs_copbot" );
+static const mtype_id mon_afs_riotbot( "mon_afs_riotbot" );
+static const mtype_id mon_fcl_copbot( "mon_fcl_copbot" );
+static const mtype_id mon_fcl_riotbot( "mon_fcl_riotbot" );
 
 static const spell_id spell_dks_summon_alrp( "dks_summon_alrp" );
 
@@ -351,6 +357,34 @@ void timed_event::per_turn()
     Character &player_character = get_player_character();
     map &here = get_map();
     switch( type ) {
+
+        case timed_event_type::ROBOT_ATTACK: {
+            const tripoint_abs_sm u_pos = player_character.pos_abs_sm();
+            if( rl_dist( u_pos, map_point ) <= 4 ) {
+                mod_id afs_mod = mod_id("aftershock_exoplanet");
+                mod_id fcl_mod = mod_id("catalegacy_future");
+                int mod_load_type = 0;
+                for( const mod_id &mod : world_generator->active_world->active_mod_order ) {
+                    if( mod == afs_mod && mod_load_type == 0 ) {
+                        mod_load_type = 1;
+                    }
+                    if( mod == fcl_mod ) {
+                        mod_load_type = 2;
+                    }
+                }
+                if( mod_load_type > 0 ) {
+                    const mtype_id &robot_type = one_in( 2 ) ? ( mod_load_type == 1 ? mon_afs_copbot : mon_fcl_copbot ) : ( mod_load_type == 1 ? mon_afs_riotbot : mon_fcl_riotbot );
+
+                    get_event_bus().send<event_type::becomes_wanted>( player_character.getID() );
+                    point rob( u_pos.x() > map_point.x() ? 0 - SEEX * 2 : SEEX * 4,
+                               u_pos.y() > map_point.y() ? 0 - SEEY * 2 : SEEY * 4 );
+                    tripoint_bub_ms rob_final( tripoint( rob, u_pos.z() ) );
+                    g->place_critter_at( robot_type, rob_final );
+                }
+            }
+        }
+        break;
+
         case timed_event_type::SPAWN_WYRMS:
             if( here.get_abs_sub().z() >= 0 ) {
                 when -= 1_turns;
