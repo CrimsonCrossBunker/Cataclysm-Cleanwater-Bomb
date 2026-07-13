@@ -52,24 +52,6 @@
   },
   {
     "type": "item_group",
-    "id": "sewage_plant",
-    "copy-from": "sewage_plant",
-    "extend": {
-      "items": [
-        { "item": "bio_tools", "prob": 2 },
-        { "item": "bio_flashlight", "prob": 2 },
-        { "item": "bio_lighter", "prob": 2 },
-        { "item": "bio_magnet", "prob": 2 },
-        { "item": "bio_power_storage", "prob": 2 },
-        { "item": "bio_purifier", "prob": 2 },
-        { "item": "bio_heatsink", "prob": 2 },
-        { "item": "bio_blood_filter", "prob": 2 },
-        { "item": "bio_meteorologist", "prob": 2 }
-      ]
-    }
-  },
-  {
-    "type": "item_group",
     "id": "toxic_dump_equipment",
     "copy-from": "toxic_dump_equipment",
     "extend": {
