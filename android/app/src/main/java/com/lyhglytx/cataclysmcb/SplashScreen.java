@@ -27,8 +27,10 @@ import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.*;
 import android.preference.PreferenceManager;
+import android.provider.DocumentsContract;
 import android.util.Log;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -46,6 +48,28 @@ public class SplashScreen extends Activity {
     private AlertDialog accessibilityServicesAlert;
 
     public boolean[] mSettingsValues = { false, true, true };
+
+    private void openGameDataDirectory() {
+        String authority = getPackageName() + ".documents";
+        Uri rootUri = DocumentsContract.buildRootUri(authority, "external");
+        Intent intent = new Intent(Intent.ACTION_VIEW, rootUri);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        try {
+            startActivity(intent);
+        } catch (android.content.ActivityNotFoundException e) {
+            Intent fallback = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                fallback.putExtra(DocumentsContract.EXTRA_INITIAL_URI,
+                                  DocumentsContract.buildDocumentUri(authority, "root"));
+            }
+            try {
+                startActivity(fallback);
+            } catch (android.content.ActivityNotFoundException ignored) {
+                Log.w(TAG, "No file manager can open the game data directory");
+            }
+        }
+    }
     private int mSystemUiModeIndex = 0;
 
     private String getVersionName() {
@@ -341,6 +365,14 @@ public class SplashScreen extends Activity {
             addBooleanSetting(layout, 0, getString(R.string.softwareRendering));
             addBooleanSetting(layout, 1, getString(R.string.trapBackButton));
             addBooleanSetting(layout, 2, getString(R.string.nativeAndroidUI));
+
+            Button openDataDirectory = new Button(SplashScreen.this);
+            openDataDirectory.setText(getString(R.string.openGameDataDirectory));
+            openDataDirectory.setOnClickListener(v -> openGameDataDirectory());
+            layout.addView(openDataDirectory, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
             scrollView.addView(layout, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));

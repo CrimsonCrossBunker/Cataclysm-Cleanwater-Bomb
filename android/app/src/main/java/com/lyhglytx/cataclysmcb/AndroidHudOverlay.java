@@ -55,6 +55,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private static final String PREF_LAYOUTS_V1 = "layouts_v1";
     private static final int LAYOUT_SCHEMA_VERSION = 3;
     private static final int SNAPSHOT_SCHEMA_VERSION = 2;
+    private static final int DEFAULT_LAYOUTS_VERSION = 2;
     private static final long SNAPSHOT_INTERVAL_MS = 100L;
     private static final long EDIT_LONG_PRESS_MS = 650L;
 
@@ -286,6 +287,7 @@ final class AndroidHudOverlay extends FrameLayout {
                 if (candidate.optInt("schema", 0) == LAYOUT_SCHEMA_VERSION &&
                         candidate.optJSONObject("layouts") != null) {
                     layoutStore = candidate;
+                    upgradeDefaultLayouts(candidate);
                     activeLayoutId = layoutForContext(currentContext);
                     candidate.put("active", activeLayoutId);
                     saveLayoutStore();
@@ -305,6 +307,27 @@ final class AndroidHudOverlay extends FrameLayout {
             throw new IllegalStateException("Could not select default HUD layout", e);
         }
         saveLayoutStore();
+    }
+
+    private void upgradeDefaultLayouts(JSONObject store) throws JSONException {
+        if (store.optInt("defaultLayoutsVersion", 0) >= DEFAULT_LAYOUTS_VERSION) {
+            return;
+        }
+        JSONObject layouts = store.optJSONObject("layouts");
+        JSONObject overrides = store.optJSONObject("contextLayouts");
+        if (layouts != null && overrides != null) {
+            java.util.Iterator<String> contexts = overrides.keys();
+            while (contexts.hasNext()) {
+                String context = contexts.next();
+                String layoutId = overrides.optString(context, "");
+                // Regenerate only automatically-created per-context layouts.
+                // Saved-as, imported and legacy layouts keep their components.
+                if (layoutId.equals("context:" + context)) {
+                    layouts.put(layoutId, createLayoutForContext(context));
+                }
+            }
+        }
+        store.put("defaultLayoutsVersion", DEFAULT_LAYOUTS_VERSION);
     }
 
     private void migrateV2Layout() {
@@ -377,6 +400,7 @@ final class AndroidHudOverlay extends FrameLayout {
         JSONObject store = new JSONObject();
         try {
             store.put("schema", LAYOUT_SCHEMA_VERSION);
+            store.put("defaultLayoutsVersion", DEFAULT_LAYOUTS_VERSION);
             store.put("active", "");
             store.put("layouts", new JSONObject());
             store.put("contextLayouts", new JSONObject());
@@ -418,6 +442,13 @@ final class AndroidHudOverlay extends FrameLayout {
         JSONArray list = new JSONArray();
         list.put(newComponent(TYPE_ACTIONS, x, y, width, height, null).toJson());
         layout.put("components", list);
+        return layout;
+    }
+
+    private JSONObject createTouchLayout(String name) throws JSONException {
+        JSONObject layout = new JSONObject();
+        layout.put("name", "官方 · " + name);
+        layout.put("components", new JSONArray());
         return layout;
     }
 
@@ -465,21 +496,18 @@ final class AndroidHudOverlay extends FrameLayout {
         if ("TARGET".equals(context)) {
             return createTargetLayout();
         }
-        if ("LOOK".equals(context) || "OVERMAP".equals(context) ||
-                "OVERMAP_NOTES".equals(context) || context.contains("MAP")) {
+        if (needsDefaultActionPanel(context)) {
             return createActionLayout(contextDisplayName(context), .58f, .55f, .40f, .43f);
         }
-        if (context.contains("INVENTORY") || context.contains("ITEM") ||
-                "PICKUP".equals(context) || "SORT_ARMOR".equals(context)) {
-            return createActionLayout(contextDisplayName(context), .56f, .54f, .42f, .44f);
-        }
-        if (context.contains("CRAFT") || context.contains("CONSTRUCTION")) {
-            return createActionLayout(contextDisplayName(context), .55f, .52f, .43f, .46f);
-        }
-        if (context.contains("STRING") || context.contains("TEXT")) {
-            return createActionLayout(contextDisplayName(context), .52f, .63f, .46f, .35f);
-        }
-        return createActionLayout(contextDisplayName(context), .56f, .58f, .42f, .40f);
+        return createTouchLayout(contextDisplayName(context));
+    }
+
+    private boolean needsDefaultActionPanel(String context) {
+        return "LOOK".equals(context) || "OVERMAP".equals(context) ||
+            "OVERMAP_NOTES".equals(context) || "VEH_SHAPES".equals(context) ||
+            "IUSE_SOFTWARE_KITTEN".equals(context) || "LIGHTSON".equals(context) ||
+            "MINESWEEPER".equals(context) || "SNAKE".equals(context) ||
+            "SOKOBAN".equals(context);
     }
 
     private boolean isDeveloperContext(String context) {

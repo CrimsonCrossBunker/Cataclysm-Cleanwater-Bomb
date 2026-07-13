@@ -903,6 +903,7 @@ void draw_virtual_joystick();
 // remain harmless, but never render, reserve space for, or hit-test it.
 static constexpr bool android_legacy_shortcuts_enabled = false;
 static bool quick_shortcuts_enabled = android_legacy_shortcuts_enabled;
+static bool android_imgui_touch_active = false;
 
 // For previewing the terminal size with a transparent rectangle overlay when user is adjusting it in the settings
 static int preview_terminal_width = -1;
@@ -4680,6 +4681,36 @@ static void finger_slot_clear( SDL_FingerID id )
     }
 }
 
+static void android_process_imgui_touch( const Uint32 event_type, const float raw_x,
+        const float raw_y )
+{
+    if( !imclient || !imclient->any_window_shown() ) {
+        return;
+    }
+    const SDL_Point position = window_to_display_buffer_coords( SDL_Point{
+        static_cast<int>( std::lround( raw_x ) ), static_cast<int>( std::lround( raw_y ) )
+    } );
+    SDL_Event mouse_event{};
+    mouse_event.type = event_type;
+    if( event_type == CATA_MOUSEMOTION ) {
+        mouse_event.motion.windowID = SDL_GetWindowID( ::window.get() );
+        mouse_event.motion.which = SDL_TOUCH_MOUSEID;
+        mouse_event.motion.x = position.x;
+        mouse_event.motion.y = position.y;
+    } else {
+        mouse_event.button.windowID = SDL_GetWindowID( ::window.get() );
+        mouse_event.button.which = SDL_TOUCH_MOUSEID;
+        mouse_event.button.button = SDL_BUTTON_LEFT;
+        mouse_event.button.clicks = 1;
+        mouse_event.button.x = position.x;
+        mouse_event.button.y = position.y;
+    }
+    int buffer_width = 0;
+    int buffer_height = 0;
+    get_display_buffer_dims( &buffer_width, &buffer_height );
+    imclient->process_input( &mouse_event, buffer_width, buffer_height );
+}
+
 // Quick shortcuts container: maps the touch input context category (std::string) to a std::list of input_events.
 using quick_shortcuts_t = std::list<input_event>;
 std::map<std::string, quick_shortcuts_t> quick_shortcuts_map;
@@ -5835,7 +5866,8 @@ static void CheckMessages()
         }
 
         // Handle repeating inputs from touch + holds
-        if( !is_quick_shortcut_touch && !is_two_finger_touch && !is_three_finger_touch &&
+        if( !android_imgui_touch_active && !is_quick_shortcut_touch &&
+            !is_two_finger_touch && !is_three_finger_touch &&
             finger_down_time > 0 &&
             ticks - finger_down_time > static_cast<uint32_t>
             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
@@ -5992,10 +6024,11 @@ static void CheckMessages()
             switch( ev.type ) {
                 case CATA_KEYDOWN: {
 #if defined(__ANDROID__)
-                    // Toggle virtual keyboard with Android back button. For some reason I get double inputs, so ignore everything once it's already down.
+                    // Track Android back once; some devices emit duplicate key-down events.
                     if( GetKeysym( ev ).sym == SDLK_AC_BACK && ac_back_down_time == 0 ) {
                         ac_back_down_time = ticks;
                         quick_shortcuts_toggle_handled = false;
+                        break;
                     }
 #endif
                     is_repeat = ev.key.repeat;
@@ -6063,9 +6096,12 @@ static void CheckMessages()
                 break;
                 case CATA_KEYUP: {
 #if defined(__ANDROID__)
-                    // Toggle virtual keyboard with Android back button
+                    // Toggle the Android keyboard with a short back-button press.
+                    // This remains available even outside a text widget so startup
+                    // errors and other exceptional prompts can still be handled.
                     if( GetKeysym( ev ).sym == SDLK_AC_BACK ) {
-                        if( ticks - ac_back_down_time <= static_cast<uint32_t>
+                        if( ac_back_down_time > 0 &&
+                            ticks - ac_back_down_time <= static_cast<uint32_t>
                             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
                             if( cataimgui::client::want_text_input() ) {
                                 // ImGui owns the keyboard while a text widget is
@@ -6080,6 +6116,7 @@ static void CheckMessages()
                             android_request_repaint();
                         }
                         ac_back_down_time = 0;
+                        break;
                     }
 #endif
                     keyboard_mode mode = keyboard_mode::keychar;
@@ -6265,6 +6302,9 @@ static void CheckMessages()
                         ui_manager::redraw_invalidated();
                         finger_curr_x = GetFingerX( ev, WindowWidth );
                         finger_curr_y = GetFingerY( ev, WindowHeight );
+                        if( android_imgui_touch_active ) {
+                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
+                        }
 
                         if( get_option<bool>( "ANDROID_VIRTUAL_JOYSTICK_FOLLOW" ) && !is_two_finger_touch &&
                             !is_three_finger_touch ) {
@@ -6308,10 +6348,20 @@ static void CheckMessages()
                         if( !is_quick_shortcut_touch ) {
                             update_finger_repeat_delay();
                         }
+                        android_imgui_touch_active = imclient && imclient->any_window_shown();
+                        if( android_imgui_touch_active ) {
+                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
+                            android_process_imgui_touch( CATA_MOUSEBUTTONDOWN, finger_curr_x, finger_curr_y );
+                        }
                         ui_manager::redraw_invalidated();
                         needupdate = true; // ensure virtual joystick and quick shortcuts redraw as we interact
                     } else if( finger_slot_for( GetFingerID( ev ), true ) == 1 ) {
                         if( !is_quick_shortcut_touch ) {
+                            if( android_imgui_touch_active ) {
+                                android_process_imgui_touch( CATA_MOUSEBUTTONUP, finger_curr_x,
+                                                             finger_curr_y );
+                                android_imgui_touch_active = false;
+                            }
                             second_finger_down_x = second_finger_curr_x = GetFingerX( ev, WindowWidth );
                             second_finger_down_y = second_finger_curr_y = GetFingerY( ev, WindowHeight );
                             is_two_finger_touch = true;
@@ -6334,7 +6384,12 @@ static void CheckMessages()
                     if( slot == 0 ) {
                         finger_curr_x = GetFingerX( ev, WindowWidth );
                         finger_curr_y = GetFingerY( ev, WindowHeight );
-                        if( is_quick_shortcut_touch ) {
+                        if( android_imgui_touch_active ) {
+                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
+                            android_process_imgui_touch( CATA_MOUSEBUTTONUP, finger_curr_x, finger_curr_y );
+                            // Wake the owning ImGui loop so it can draw the click result.
+                            last_input.type = input_event_t::timeout;
+                        } else if( is_quick_shortcut_touch ) {
                             input_event *quick_shortcut = get_quick_shortcut_under_finger();
                             if( quick_shortcut ) {
                                 last_input = *quick_shortcut;
@@ -6505,7 +6560,21 @@ static void CheckMessages()
                                     last_input_has_explicit_mouse_pos = true;
                                 } else if( ticks - finger_down_time <= static_cast<uint32_t>(
                                                get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-                                    handle_finger_input( ticks );
+                                    if( !is_default_mode &&
+                                        touch_input_context.is_action_registered( "SELECT" ) &&
+                                        held_distance < hold_deadzone ) {
+                                        last_input = input_event( MouseInput::LeftButtonReleased,
+                                                                  input_event_t::mouse );
+                                        const SDL_Point touch_point = window_to_display_buffer_coords( SDL_Point{
+                                            static_cast<int>( std::lround( finger_curr_x ) ),
+                                            static_cast<int>( std::lround( finger_curr_y ) )
+                                        } );
+                                        last_input.mouse_pos = point( touch_point.x, touch_point.y );
+                                        last_input_has_explicit_mouse_pos = true;
+                                        last_tap_time = 0;
+                                    } else {
+                                        handle_finger_input( ticks );
+                                    }
                                 }
                             }
                         }
@@ -6520,6 +6589,7 @@ static void CheckMessages()
                         pinch_zoom_handled = false;
                         finger_down_time = 0;
                         finger_repeat_time = 0;
+                        android_imgui_touch_active = false;
                         // ensure virtual joystick and quick shortcuts are updated properly
                         android_request_repaint();
                         refresh_display(); // as above, but actually redraw it now as well
