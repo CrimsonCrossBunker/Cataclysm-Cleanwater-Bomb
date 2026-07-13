@@ -50,10 +50,8 @@ static const mtype_id mon_sewer_snake( "mon_sewer_snake" );
 static const mtype_id mon_spider_cellar_giant( "mon_spider_cellar_giant" );
 static const mtype_id mon_spider_widow_giant( "mon_spider_widow_giant" );
 
-static const mtype_id mon_afs_eyebot( "mon_afs_eyebot" );
 static const mtype_id mon_afs_copbot( "mon_afs_copbot" );
 static const mtype_id mon_afs_riotbot( "mon_afs_riotbot" );
-static const mtype_id mon_fcl_eyebot( "mon_fcl_eyebot" );
 static const mtype_id mon_fcl_copbot( "mon_fcl_copbot" );
 static const mtype_id mon_fcl_riotbot( "mon_fcl_riotbot" );
 
