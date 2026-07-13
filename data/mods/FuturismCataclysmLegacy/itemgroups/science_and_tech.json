@@ -21,5 +21,17 @@
         [ "schematics_molebot", 20 ]
       ]
     }
+  },
+  {
+    "type": "item_group",
+    "id": "teleport",
+    "copy-from": "teleport",
+    "extend": {
+      "items": [
+        { "item": "bio_time_freeze", "prob": 1 },
+        { "item": "bio_teleport", "prob": 1 },
+        { "item": "bio_probability_travel", "prob": 1 }
+      ]
+    }
   }
 ]

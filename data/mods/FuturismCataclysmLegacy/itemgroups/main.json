@@ -5,7 +5,9 @@
     "copy-from": "nanofab_recipes",
     "extend": {
       "items": [
-        [ "fcl_atomic_coffeemaker", 10 ]
+        [ "fcl_atomic_coffeemaker", 10 ],
+        [ "fcl_bio_neurosoft_aeronautics", 10 ],
+        [ "fcl_bio_neurosoft_aircraft_mechanic", 10 ]
       ]
     }
   }
