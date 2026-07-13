@@ -3,6 +3,7 @@
     "type": "item_group",
     "id": "map_extra_science_corpse",
     "copy-from": "map_extra_science_corpse",
+    "subtype": "collection",
     "extend": {
       "items": [
         { "group": "mutagenic_field_kit", "prob": 1 },
