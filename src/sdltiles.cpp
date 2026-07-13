@@ -5894,6 +5894,13 @@ static void CheckMessages()
     last_input = input_event();
 #if defined(__ANDROID__)
     last_input_has_explicit_mouse_pos = false;
+    // Native HUD actions arrive on the Android UI thread rather than through
+    // SDL.  Wake input_context immediately so it can consume the queued named
+    // action; otherwise modal menus wait until an unrelated touch event arrives.
+    if( android_hud::has_pending_action() ) {
+        last_input.type = input_event_t::timeout;
+        return;
+    }
 #endif
 
     using cata::options::mouse;

@@ -23,9 +23,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.GridLayout;
 import android.widget.LinearLayout;
-import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TableLayout;
@@ -38,14 +36,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -56,9 +50,11 @@ import java.util.UUID;
 final class AndroidHudOverlay extends FrameLayout {
     private static final String TAG = "AndroidHud";
     private static final String PREFS_NAME = "android_hud";
-    private static final String PREF_LAYOUTS = "layouts_v2";
+    private static final String PREF_LAYOUTS = "layouts_v3";
+    private static final String PREF_LAYOUTS_V2 = "layouts_v2";
     private static final String PREF_LAYOUTS_V1 = "layouts_v1";
-    private static final int SCHEMA_VERSION = 2;
+    private static final int LAYOUT_SCHEMA_VERSION = 3;
+    private static final int SNAPSHOT_SCHEMA_VERSION = 2;
     private static final long SNAPSHOT_INTERVAL_MS = 100L;
     private static final long EDIT_LONG_PRESS_MS = 650L;
 
@@ -73,18 +69,13 @@ final class AndroidHudOverlay extends FrameLayout {
     private static final String TYPE_ACTIONS = "actions";
 
     private static final LinkedHashMap<String, String> COMPONENT_LABELS = createComponentLabels();
-    private static final LinkedHashMap<String, String> ACTION_LABELS = createActionLabels();
-    private static final List<String> DEFAULT_ACTIONS = Collections.unmodifiableList(Arrays.asList(
-        "UP", "LEFT", "CONFIRM", "RIGHT", "DOWN", "QUIT", "inventory", "pickup", "examine",
-        "wait", "look", "action_menu", "fire"
-    ));
+    private static final LinkedHashMap<String, String> CONTEXT_LABELS = createContextLabels();
 
     private final CataclysmDDA activity;
     private final SharedPreferences preferences;
     private final Handler handler = new Handler();
     private final List<HudComponent> components = new ArrayList<>();
     private final Map<String, RenderedComponent> rendered = new HashMap<>();
-    private final Set<String> availableActions = new HashSet<>();
     private final LinkedHashMap<String, ActionInfo> actionInfos = new LinkedHashMap<>();
     private final LinearLayout editorBar;
     private final Runnable snapshotPoller = new Runnable() {
@@ -178,7 +169,6 @@ final class AndroidHudOverlay extends FrameLayout {
             "编辑当前 HUD",
             "选择布局/预设",
             "为当前页面另存布局",
-            "折叠菜单与动画",
             "导入布局文件",
             "导出布局文件",
             "分享当前布局",
@@ -200,18 +190,15 @@ final class AndroidHudOverlay extends FrameLayout {
                             showSaveAsDialog();
                             break;
                         case 3:
-                            showBehaviorSettings();
-                            break;
-                        case 4:
                             activity.importHudLayout();
                             break;
-                        case 5:
+                        case 4:
                             activity.exportHudLayout(exportCurrentLayout());
                             break;
-                        case 6:
+                        case 5:
                             activity.shareHudLayout(exportCurrentLayout());
                             break;
-                        case 7:
+                        case 6:
                             confirmResetDefaults();
                             break;
                         default:
@@ -219,76 +206,6 @@ final class AndroidHudOverlay extends FrameLayout {
                     }
                 }
             })
-            .show();
-    }
-
-    private void showBehaviorSettings() {
-        final String[] choices = { "锚定网格 + 缩放淡入", "底部抽屉 + 滑出", "锚定网格 + 无动画" };
-        JSONObject settings = layoutStore.optJSONObject("settings");
-        String surface = settings == null ? "grid" : settings.optString("groupSurface", "grid");
-        String animation = settings == null ? "scale_fade" : settings.optString("animation", "scale_fade");
-        int selected = "drawer".equals(surface) ? 1 : ("none".equals(animation) ? 2 : 0);
-        new AlertDialog.Builder(activity)
-            .setTitle("折叠菜单与动画")
-            .setSingleChoiceItems(choices, selected, null)
-            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface dialog, int which) {
-                    int checked = ((AlertDialog) dialog).getListView().getCheckedItemPosition();
-                    try {
-                        JSONObject next = layoutStore.optJSONObject("settings");
-                        if (next == null) {
-                            next = new JSONObject();
-                            layoutStore.put("settings", next);
-                        }
-                        next.put("groupSurface", checked == 1 ? "drawer" : "grid");
-                        next.put("animation", checked == 2 ? "none" :
-                            (checked == 1 ? "slide" : "scale_fade"));
-                        next.put("animationMs", 180);
-                        saveLayoutStore();
-                    } catch (JSONException e) {
-                        Log.w(TAG, "Could not save HUD behavior", e);
-                    }
-                }
-            })
-            .setNeutralButton("动画速度", new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface dialog, int which) {
-                    showAnimationSpeedDialog();
-                }
-            })
-            .setNegativeButton("取消", null)
-            .show();
-    }
-
-    private void showAnimationSpeedDialog() {
-        JSONObject settings = layoutStore.optJSONObject("settings");
-        int current = settings == null ? 180 : settings.optInt("animationMs", 180);
-        LinearLayout content = new LinearLayout(activity);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(18), dp(12), dp(18), dp(12));
-        final int[] selected = { current };
-        addSlider(content, "动画时长", 0, 400, current, new SliderCallback() {
-            @Override public void onChanged(int value) { selected[0] = value; }
-        });
-        new AlertDialog.Builder(activity)
-            .setTitle("动画速度（0 为关闭）")
-            .setView(content)
-            .setPositiveButton("保存", new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface dialog, int which) {
-                    try {
-                        JSONObject next = layoutStore.optJSONObject("settings");
-                        if (next == null) {
-                            next = new JSONObject();
-                            layoutStore.put("settings", next);
-                        }
-                        next.put("animationMs", selected[0]);
-                        if (selected[0] == 0) next.put("animation", "none");
-                        saveLayoutStore();
-                    } catch (JSONException e) {
-                        Log.w(TAG, "Could not save animation duration", e);
-                    }
-                }
-            })
-            .setNegativeButton("取消", null)
             .show();
     }
 
@@ -344,7 +261,7 @@ final class AndroidHudOverlay extends FrameLayout {
                 }
             }
             activeLayoutId = selectedImportedLayout;
-            layoutStore.put("schema", SCHEMA_VERSION);
+            layoutStore.put("schema", LAYOUT_SCHEMA_VERSION);
             layoutStore.put("active", activeLayoutId);
             JSONObject overrides = layoutStore.optJSONObject("contextLayouts");
             if (overrides == null) {
@@ -366,22 +283,69 @@ final class AndroidHudOverlay extends FrameLayout {
         if (raw != null) {
             try {
                 JSONObject candidate = new JSONObject(raw);
-                if (candidate.optInt("schema", 0) == SCHEMA_VERSION &&
+                if (candidate.optInt("schema", 0) == LAYOUT_SCHEMA_VERSION &&
                         candidate.optJSONObject("layouts") != null) {
                     layoutStore = candidate;
-                    activeLayoutId = candidate.optString("active", "map");
-                    if (candidate.optJSONObject("layouts").has(activeLayoutId)) {
-                        return;
-                    }
+                    activeLayoutId = layoutForContext(currentContext);
+                    candidate.put("active", activeLayoutId);
+                    saveLayoutStore();
+                    return;
                 }
             } catch (JSONException e) {
                 Log.w(TAG, "Ignoring invalid saved HUD layout", e);
             }
         }
         layoutStore = createDefaultStore();
-        activeLayoutId = "map";
+        migrateV2Layout();
         migrateV1Layout();
+        activeLayoutId = layoutForContext(currentContext);
+        try {
+            layoutStore.put("active", activeLayoutId);
+        } catch (JSONException e) {
+            throw new IllegalStateException("Could not select default HUD layout", e);
+        }
         saveLayoutStore();
+    }
+
+    private void migrateV2Layout() {
+        String old = preferences.getString(PREF_LAYOUTS_V2, null);
+        if (old == null) {
+            return;
+        }
+        try {
+            JSONObject previous = new JSONObject(old);
+            if (previous.optInt("schema", 0) != 2) {
+                return;
+            }
+            JSONObject previousLayouts = previous.optJSONObject("layouts");
+            JSONObject layouts = layoutStore.getJSONObject("layouts");
+            if (previousLayouts == null) {
+                return;
+            }
+            java.util.Iterator<String> keys = previousLayouts.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                JSONObject migrated = sanitizeLayout(previousLayouts.optJSONObject(key));
+                if (migrated != null) {
+                    layouts.put(key, migrated);
+                }
+            }
+
+            JSONObject previousOverrides = previous.optJSONObject("contextLayouts");
+            JSONObject overrides = layoutStore.getJSONObject("contextLayouts");
+            if (previousOverrides != null) {
+                java.util.Iterator<String> contexts = previousOverrides.keys();
+                while (contexts.hasNext()) {
+                    String context = contexts.next();
+                    String layoutId = previousOverrides.optString(context, "");
+                    if (layouts.has(layoutId)) {
+                        overrides.put(context, layoutId);
+                    }
+                }
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "Could not migrate v2 HUD layouts", e);
+        }
     }
 
     private void migrateV1Layout() {
@@ -412,24 +376,10 @@ final class AndroidHudOverlay extends FrameLayout {
     private JSONObject createDefaultStore() {
         JSONObject store = new JSONObject();
         try {
-            JSONObject layouts = new JSONObject();
-            layouts.put("map", createMapLayout());
-            layouts.put("menu", createActionLayout("菜单", .58f, .58f, .40f, .39f));
-            layouts.put("inventory", createActionLayout("物品", .56f, .54f, .42f, .44f));
-            layouts.put("target", createTargetLayout());
-            layouts.put("world", createActionLayout("地图与查看", .58f, .55f, .40f, .43f));
-            layouts.put("crafting", createActionLayout("制作与建造", .55f, .52f, .43f, .46f));
-            layouts.put("text", createActionLayout("文本输入", .52f, .63f, .46f, .35f));
-            layouts.put("generic", createActionLayout("通用页面", .56f, .58f, .42f, .40f));
-            store.put("schema", SCHEMA_VERSION);
-            store.put("active", "map");
-            store.put("layouts", layouts);
+            store.put("schema", LAYOUT_SCHEMA_VERSION);
+            store.put("active", "");
+            store.put("layouts", new JSONObject());
             store.put("contextLayouts", new JSONObject());
-            JSONObject settings = new JSONObject();
-            settings.put("groupSurface", "grid");
-            settings.put("animation", "scale_fade");
-            settings.put("animationMs", 180);
-            store.put("settings", settings);
         } catch (JSONException e) {
             throw new IllegalStateException("Could not create default HUD layouts", e);
         }
@@ -438,21 +388,21 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private JSONObject createMapLayout() throws JSONException {
         JSONObject layout = new JSONObject();
-        layout.put("name", "官方地图 HUD");
+        layout.put("name", "官方 · 游戏地图");
         JSONArray list = new JSONArray();
         list.put(newComponent(TYPE_STATUS, .02f, .03f, .27f, .14f, null).toJson());
         list.put(newComponent(TYPE_BODY, .02f, .19f, .23f, .38f, null).toJson());
         list.put(newComponent(TYPE_EQUIPMENT, .02f, .60f, .31f, .12f, null).toJson());
         list.put(newComponent(TYPE_PIXEL_MINIMAP, .74f, .03f, .24f, .31f, null).toJson());
         list.put(newComponent(TYPE_MESSAGES, .30f, .74f, .38f, .22f, null).toJson());
-        list.put(newComponent(TYPE_ACTIONS, .66f, .56f, .32f, .40f, DEFAULT_ACTIONS).toJson());
+        list.put(newComponent(TYPE_ACTIONS, .66f, .56f, .32f, .40f, null).toJson());
         layout.put("components", list);
         return layout;
     }
 
     private JSONObject createTargetLayout() throws JSONException {
         JSONObject layout = new JSONObject();
-        layout.put("name", "官方瞄准 HUD");
+        layout.put("name", "官方 · 瞄准与投掷");
         JSONArray list = new JSONArray();
         list.put(newComponent(TYPE_DANGER_COMPASS, .02f, .03f, .23f, .31f, null).toJson());
         list.put(newComponent(TYPE_EQUIPMENT, .02f, .37f, .28f, .12f, null).toJson());
@@ -464,36 +414,84 @@ final class AndroidHudOverlay extends FrameLayout {
     private JSONObject createActionLayout(String name, float x, float y, float width, float height)
             throws JSONException {
         JSONObject layout = new JSONObject();
-        layout.put("name", "官方" + name + " HUD");
+        layout.put("name", "官方 · " + name);
         JSONArray list = new JSONArray();
         list.put(newComponent(TYPE_ACTIONS, x, y, width, height, null).toJson());
         layout.put("components", list);
         return layout;
     }
 
-    private String contextFamily(String context) {
-        if ("DEFAULTMODE".equals(context)) return "map";
-        if ("TARGET".equals(context)) return "target";
-        if ("LOOK".equals(context) || "OVERMAP".equals(context) ||
-                context.contains("MAP")) return "world";
-        if (context.contains("INVENTORY") || "INVENTORY".equals(context) ||
-                context.contains("ITEM")) return "inventory";
-        if (context.contains("CRAFT") || context.contains("CONSTRUCTION")) return "crafting";
-        if (context.contains("STRING") || context.contains("TEXT")) return "text";
-        if (context.contains("MENU") || context.contains("DIALOG") ||
-                context.contains("YES") || context.contains("UILIST") ||
-                "MAIN_MENU".equals(context) || "OPTIONS".equals(context)) return "menu";
-        return "generic";
-    }
-
     private String layoutForContext(String context) {
+        if (context == null || context.isEmpty()) {
+            context = "default";
+        }
         JSONObject overrides = layoutStore.optJSONObject("contextLayouts");
         String override = overrides == null ? "" : overrides.optString(context, "");
         JSONObject layouts = layoutStore.optJSONObject("layouts");
         if (!override.isEmpty() && layouts != null && layouts.has(override)) {
             return override;
         }
-        return contextFamily(context);
+        String layoutId = "context:" + context;
+        if (layouts != null && layouts.has(layoutId)) {
+            return layoutId;
+        }
+        try {
+            if (layouts == null) {
+                layouts = new JSONObject();
+                layoutStore.put("layouts", layouts);
+            }
+            if (overrides == null) {
+                overrides = new JSONObject();
+                layoutStore.put("contextLayouts", overrides);
+            }
+            layouts.put(layoutId, createLayoutForContext(context));
+            overrides.put(context, layoutId);
+            return layoutId;
+        } catch (JSONException e) {
+            throw new IllegalStateException("Could not create HUD layout for " + context, e);
+        }
+    }
+
+    private JSONObject createLayoutForContext(String context) throws JSONException {
+        if (isDeveloperContext(context)) {
+            JSONObject layout = new JSONObject();
+            layout.put("name", "开发页面 · " + contextDisplayName(context));
+            layout.put("components", new JSONArray());
+            return layout;
+        }
+        if ("DEFAULTMODE".equals(context)) {
+            return createMapLayout();
+        }
+        if ("TARGET".equals(context)) {
+            return createTargetLayout();
+        }
+        if ("LOOK".equals(context) || "OVERMAP".equals(context) ||
+                "OVERMAP_NOTES".equals(context) || context.contains("MAP")) {
+            return createActionLayout(contextDisplayName(context), .58f, .55f, .40f, .43f);
+        }
+        if (context.contains("INVENTORY") || context.contains("ITEM") ||
+                "PICKUP".equals(context) || "SORT_ARMOR".equals(context)) {
+            return createActionLayout(contextDisplayName(context), .56f, .54f, .42f, .44f);
+        }
+        if (context.contains("CRAFT") || context.contains("CONSTRUCTION")) {
+            return createActionLayout(contextDisplayName(context), .55f, .52f, .43f, .46f);
+        }
+        if (context.contains("STRING") || context.contains("TEXT")) {
+            return createActionLayout(contextDisplayName(context), .52f, .63f, .46f, .35f);
+        }
+        return createActionLayout(contextDisplayName(context), .56f, .58f, .42f, .40f);
+    }
+
+    private boolean isDeveloperContext(String context) {
+        return context.startsWith("DEBUG") || context.startsWith("EDITMAP") ||
+            context.startsWith("EDIT_") || context.startsWith("EGET_") ||
+            context.startsWith("MAPGEN_") || "OVERMAP_EDITOR".equals(context) ||
+            context.startsWith("WISH_");
+    }
+
+    private String contextDisplayName(String context) {
+        String label = CONTEXT_LABELS.get(context);
+        return label == null ? context : label;
     }
 
     private HudComponent newComponent(String type, float x, float y, float width, float height,
@@ -744,7 +742,7 @@ final class AndroidHudOverlay extends FrameLayout {
         }
         try {
             JSONObject snapshot = new JSONObject(raw);
-            if (snapshot.optInt("schema", 0) != SCHEMA_VERSION) {
+            if (snapshot.optInt("schema", 0) != SNAPSHOT_SCHEMA_VERSION) {
                 return;
             }
             long revision = snapshot.optLong("revision", -1);
@@ -755,14 +753,7 @@ final class AndroidHudOverlay extends FrameLayout {
             state = snapshot;
             String nextContext = snapshot.optString("context", "DEFAULTMODE");
             contextRevision = snapshot.optInt("contextRevision", 0);
-            availableActions.clear();
             actionInfos.clear();
-            JSONArray actions = snapshot.optJSONArray("availableActions");
-            if (actions != null) {
-                for (int i = 0; i < actions.length(); i++) {
-                    availableActions.add(actions.optString(i));
-                }
-            }
             JSONArray metadata = snapshot.optJSONArray("actions");
             if (metadata != null) {
                 for (int i = 0; i < metadata.length(); i++) {
@@ -779,6 +770,7 @@ final class AndroidHudOverlay extends FrameLayout {
                     layoutStore.put("active", activeLayoutId);
                 } catch (JSONException ignored) {
                 }
+                saveLayoutStore();
                 loadActiveLayout();
             } else {
                 updateRenderedState();
@@ -881,8 +873,7 @@ final class AndroidHudOverlay extends FrameLayout {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     String type = types.get(which);
-                    HudComponent component = newComponent(type, .38f, .35f, .25f, .18f,
-                        TYPE_ACTIONS.equals(type) ? DEFAULT_ACTIONS : null);
+                    HudComponent component = newComponent(type, .38f, .35f, .25f, .18f, null);
                     components.add(component);
                     addRenderedComponent(component);
                     saveActiveLayout();
@@ -893,9 +884,6 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void showComponentMenu(final HudComponent component) {
         List<String> choices = new ArrayList<>();
-        if (TYPE_ACTIONS.equals(component.type)) {
-            choices.add("编辑直接动作按钮");
-        }
         choices.add("调整尺寸和透明度");
         choices.add("删除组件");
         new AlertDialog.Builder(activity)
@@ -904,49 +892,13 @@ final class AndroidHudOverlay extends FrameLayout {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     String selected = choices.get(which);
-                    if ("编辑直接动作按钮".equals(selected)) {
-                        showActionPicker(component);
-                    } else if ("调整尺寸和透明度".equals(selected)) {
+                    if ("调整尺寸和透明度".equals(selected)) {
                         showStyleEditor(component);
                     } else if ("删除组件".equals(selected)) {
                         removeComponent(component);
                     }
                 }
             })
-            .show();
-    }
-
-    private void showActionPicker(final HudComponent component) {
-        final List<String> ids = new ArrayList<>(actionInfos.keySet());
-        final String[] labels = new String[ids.size()];
-        final boolean[] checked = new boolean[ids.size()];
-        for (int i = 0; i < ids.size(); i++) {
-            ActionInfo info = actionInfos.get(ids.get(i));
-            labels[i] = info == null ? ids.get(i) : info.label;
-            checked[i] = component.actions.contains(ids.get(i));
-        }
-        new AlertDialog.Builder(activity)
-            .setTitle("直接动作按钮")
-            .setMultiChoiceItems(labels, checked, new DialogInterface.OnMultiChoiceClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which, boolean isChecked) {
-                    checked[which] = isChecked;
-                }
-            })
-            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    component.actions.clear();
-                    for (int i = 0; i < ids.size(); i++) {
-                        if (checked[i]) {
-                            component.actions.add(ids.get(i));
-                        }
-                    }
-                    renderLayout();
-                    saveActiveLayout();
-                }
-            })
-            .setNegativeButton("取消", null)
             .show();
     }
 
@@ -1152,7 +1104,7 @@ final class AndroidHudOverlay extends FrameLayout {
         try {
             saveActiveLayout();
             JSONObject exported = new JSONObject();
-            exported.put("schema", SCHEMA_VERSION);
+            exported.put("schema", LAYOUT_SCHEMA_VERSION);
             exported.put("active", activeLayoutId);
             JSONObject layouts = new JSONObject();
             layouts.put(activeLayoutId, new JSONObject(getActiveLayout().toString()));
@@ -1257,70 +1209,88 @@ final class AndroidHudOverlay extends FrameLayout {
         return labels;
     }
 
-    private static LinkedHashMap<String, String> createActionLabels() {
+    private static LinkedHashMap<String, String> createContextLabels() {
         LinkedHashMap<String, String> labels = new LinkedHashMap<>();
-        labels.put("UP", "向北");
-        labels.put("RIGHTUP", "向东北");
-        labels.put("RIGHT", "向东");
-        labels.put("RIGHTDOWN", "向东南");
-        labels.put("DOWN", "向南");
-        labels.put("LEFTDOWN", "向西南");
-        labels.put("LEFT", "向西");
-        labels.put("LEFTUP", "向西北");
-        labels.put("pause", "原地等待");
-        labels.put("LEVEL_DOWN", "下楼");
-        labels.put("LEVEL_UP", "上楼");
-        labels.put("center", "居中视角");
-        labels.put("cycle_move", "切换移动模式");
-        labels.put("toggle_run", "切换奔跑");
-        labels.put("toggle_crouch", "切换蹲伏");
-        labels.put("toggle_prone", "切换卧倒");
-        labels.put("open", "打开");
-        labels.put("close", "关闭");
-        labels.put("smash", "砸碎");
-        labels.put("loot", "搜刮");
-        labels.put("examine", "检查");
-        labels.put("interact", "互动");
-        labels.put("pickup", "拾取");
-        labels.put("pickup_all", "全部拾取");
-        labels.put("grab", "抓取");
-        labels.put("haul", "搬运");
-        labels.put("butcher", "屠宰");
-        labels.put("chat", "交谈");
-        labels.put("look", "观察");
-        labels.put("inventory", "背包");
-        labels.put("apply", "使用物品");
-        labels.put("apply_wielded", "使用手持物品");
-        labels.put("eat", "进食");
-        labels.put("wield", "手持物品");
-        labels.put("reload_weapon", "装填武器");
-        labels.put("reload_wielded", "装填手持物品");
-        labels.put("throw", "投掷");
-        labels.put("throw_wielded", "投掷手持物品");
-        labels.put("fire", "开火");
-        labels.put("select_fire_mode", "射击模式");
-        labels.put("wait", "等待菜单");
-        labels.put("sleep", "睡眠");
-        labels.put("safemode", "安全模式");
-        labels.put("autosafe", "自动安全模式");
-        labels.put("autoattack", "自动攻击");
-        labels.put("ignore_enemy", "忽略敌人");
-        labels.put("action_menu", "动作菜单");
-        labels.put("messages", "消息记录");
-        labels.put("map", "大地图");
-        labels.put("missions", "任务");
-        labels.put("help", "帮助");
-        labels.put("main_menu", "主菜单");
-        labels.put("zoom_in", "放大");
-        labels.put("zoom_out", "缩小");
-        labels.put("CONFIRM", "确认");
-        labels.put("QUIT", "返回");
-        labels.put("PAGE_UP", "上一页");
-        labels.put("PAGE_DOWN", "下一页");
-        labels.put("SCROLL_UP", "上滚");
-        labels.put("SCROLL_DOWN", "下滚");
-        labels.put("HOME", "顶部");
-        labels.put("END", "底部");
+        labels.put("DEFAULTMODE", "游戏地图");
+        labels.put("TARGET", "瞄准与投掷");
+        labels.put("LOOK", "周围查看");
+        labels.put("OVERMAP", "大地图");
+        labels.put("OVERMAP_NOTES", "大地图笔记");
+        labels.put("LIST_SURROUNDINGS", "周边列表");
+        labels.put("MAIN_MENU", "主菜单");
+        labels.put("PICK_WORLD_DIALOG", "世界选择");
+        labels.put("MODMANAGER_DIALOG", "世界模组");
+        labels.put("WORLDGEN_CONFIRM_DIALOG", "世界生成确认");
+        labels.put("LOAD_DELETE_CANCEL", "存档选择");
+        labels.put("NEW_CHAR_DESCRIPTION", "人物描述");
+        labels.put("NEW_CHAR_PROFESSIONS", "职业选择");
+        labels.put("NEW_CHAR_SCENARIOS", "场景选择");
+        labels.put("NEW_CHAR_SKILLS", "技能选择");
+        labels.put("NEW_CHAR_TRAITS", "特质选择");
+        labels.put("CALENDAR_UI", "日期选择");
+        labels.put("MELEE_STYLE_PICKER", "武术流派选择");
+        labels.put("DEFENSE_SETUP", "防守模式设置");
+        labels.put("INVENTORY", "物品栏");
+        labels.put("ADVANCED_INVENTORY", "高级物品管理");
+        labels.put("PICKUP", "拾取物品");
+        labels.put("ITEM_ACTIONS", "物品操作");
+        labels.put("SORT_ARMOR", "护甲排序");
+        labels.put("VENDING_MACHINE", "售货机");
+        labels.put("APP_INTERACT", "设备操作");
+        labels.put("VEH_INTERACT", "载具操作");
+        labels.put("VEHICLE", "载具菜单");
+        labels.put("VEH_SHAPES", "载具形状编辑");
+        labels.put("CRAFTING", "制作");
+        labels.put("CONSTRUCTION", "建造");
+        labels.put("STUDY_ZONE_UI", "学习区域");
+        labels.put("ZONES_MANAGER", "区域管理");
+        labels.put("PLAYER_INFO", "人物信息");
+        labels.put("BIONICS", "生化装置");
+        labels.put("MUTATIONS", "变异");
+        labels.put("SPELL_MENU", "法术");
+        labels.put("MEDICAL", "医疗");
+        labels.put("MORALE", "士气");
+        labels.put("DIARY", "日记");
+        labels.put("PROFICIENCY_WINDOW", "熟练度");
+        labels.put("MA_DETAILS_UI", "武术详情");
+        labels.put("BLOOD_TEST_RESULTS", "血液检测结果");
+        labels.put("DIALOGUE_CHOOSE_RESPONSE", "对话选择");
+        labels.put("FACTIONS", "阵营");
+        labels.put("FACTION_MANAGER", "营地管理");
+        labels.put("CARAVAN", "商队");
+        labels.put("MISSION_UI", "任务");
+        labels.put("DISP_NPCS", "NPC 列表");
+        labels.put("OPTIONS", "游戏选项");
+        labels.put("HELP_KEYBINDINGS", "按键帮助");
+        labels.put("DISPLAY_HELP", "帮助");
+        labels.put("AUTO_PICKUP", "自动拾取规则");
+        labels.put("AUTO_PICKUP_TEST", "自动拾取测试");
+        labels.put("AUTO_NOTES", "自动笔记");
+        labels.put("SAFEMODE", "安全模式规则");
+        labels.put("SAFEMODE_TEST", "安全模式测试");
+        labels.put("COLORS", "颜色设置");
+        labels.put("PANEL_MGMT", "面板管理");
+        labels.put("SCORES_UI", "分数");
+        labels.put("MESSAGE_LOG", "消息日志");
+        labels.put("EXTENDED_DESCRIPTION", "详细说明");
+        labels.put("SCROLLABLE_TEXT", "滚动文本");
+        labels.put("UILIST", "通用列表");
+        labels.put("YESNO", "确认选择");
+        labels.put("YESNOQUIT", "确认或取消");
+        labels.put("YES_NO_ALWAYS_NEVER", "确认选项");
+        labels.put("YES_QUERY", "确认询问");
+        labels.put("POPUP_WAIT", "提示信息");
+        labels.put("WAIT_FOR_ANY_KEY", "等待输入");
+        labels.put("CANCEL_ACTIVITY_OR_IGNORE_QUERY", "活动中断询问");
+        labels.put("FRIENDS_ME_CANCEL", "友军操作确认");
+        labels.put("STRING_INPUT", "文本输入");
+        labels.put("STRING_EDITOR", "文本编辑");
+        labels.put("INSERT_TABLE", "表格输入");
+        labels.put("IUSE_SOFTWARE_KITTEN", "电子宠物");
+        labels.put("LIGHTSON", "点灯游戏");
+        labels.put("MINESWEEPER", "扫雷");
+        labels.put("SNAKE", "贪吃蛇");
+        labels.put("SOKOBAN", "推箱子");
         return labels;
     }
 
@@ -1524,45 +1494,31 @@ final class AndroidHudOverlay extends FrameLayout {
         }
     }
 
-    private final class ActionPadView extends TableLayout {
-        private final List<String> pinnedActions = new ArrayList<>();
+    private final class ActionPadView extends ScrollView {
+        private final TableLayout buttonTable;
         private int renderedContextRevision = -1;
-        private PopupWindow openGroup;
 
         ActionPadView(Context context, List<String> actions) {
             super(context);
-            setStretchAllColumns(true);
-            pinnedActions.addAll(actions);
+            setFillViewport(true);
+            setVerticalScrollBarEnabled(true);
+            buttonTable = new TableLayout(context);
+            buttonTable.setStretchAllColumns(true);
+            addView(buttonTable, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
 
         void setActionMetadata(LinkedHashMap<String, ActionInfo> actions, String context,
                 int revision) {
             if (revision == renderedContextRevision) return;
             renderedContextRevision = revision;
-            removeAllViews();
-            final List<ActionInfo> direct = new ArrayList<>();
-            final LinkedHashMap<String, List<ActionInfo>> grouped = new LinkedHashMap<>();
-            Set<String> used = new HashSet<>();
-            for (String id : pinnedActions) {
-                ActionInfo info = actions.get(id);
-                if (info != null && used.add(id)) direct.add(info);
-            }
-            for (ActionInfo info : actions.values()) {
-                if (used.contains(info.id)) continue;
-                if ("primary".equals(info.group) || "navigation".equals(info.group)) {
-                    direct.add(info);
-                    used.add(info.id);
-                } else {
-                    if (!grouped.containsKey(info.group)) grouped.put(info.group, new ArrayList<ActionInfo>());
-                    grouped.get(info.group).add(info);
-                }
-            }
+            buttonTable.removeAllViews();
             List<View> views = new ArrayList<>();
-            for (ActionInfo info : direct) views.add(createActionButton(info, null));
-            for (Map.Entry<String, List<ActionInfo>> entry : grouped.entrySet()) {
-                views.add(createGroupButton(entry.getKey(), entry.getValue()));
+            for (ActionInfo info : actions.values()) {
+                views.add(createActionButton(info));
             }
             addButtonGrid(views);
+            scrollTo(0, 0);
         }
 
         private void addButtonGrid(List<View> views) {
@@ -1570,78 +1526,50 @@ final class AndroidHudOverlay extends FrameLayout {
             for (int i = 0; i < views.size(); i++) {
                 if (i % 3 == 0) {
                     row = new TableRow(activity);
-                    addView(row, new TableLayout.LayoutParams(
+                    buttonTable.addView(row, new TableLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 }
                 row.addView(views.get(i), new TableRow.LayoutParams(0, dp(42), 1f));
             }
         }
 
-        private Button createGroupButton(final String group, final List<ActionInfo> actions) {
-            Button button = makeButton(groupLabel(group) + " (" + actions.size() + ")");
-            button.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View anchor) { showActionGroup(anchor, group, actions); }
-            });
-            button.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override public boolean onLongClick(View view) {
-                    showGroupSurfacePicker(group);
-                    return true;
-                }
-            });
-            return button;
-        }
-
-        private void showGroupSurfacePicker(final String group) {
-            final String[] choices = { "跟随全局设置", "锚定网格", "底部抽屉" };
-            new AlertDialog.Builder(activity)
-                .setTitle(groupLabel(group) + "菜单样式")
-                .setItems(choices, new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface dialog, int which) {
-                        try {
-                            JSONObject settings = layoutStore.optJSONObject("settings");
-                            if (settings == null) {
-                                settings = new JSONObject();
-                                layoutStore.put("settings", settings);
-                            }
-                            JSONObject overrides = settings.optJSONObject("groupSurfaces");
-                            if (overrides == null) {
-                                overrides = new JSONObject();
-                                settings.put("groupSurfaces", overrides);
-                            }
-                            if (which == 0) overrides.remove(group);
-                            else overrides.put(group, which == 2 ? "drawer" : "grid");
-                            saveLayoutStore();
-                        } catch (JSONException e) {
-                            Log.w(TAG, "Could not save group menu style", e);
-                        }
-                    }
-                }).show();
-        }
-
         @SuppressLint("ClickableViewAccessibility")
-        private Button createActionButton(final ActionInfo info, final PopupWindow owner) {
+        private Button createActionButton(final ActionInfo info) {
             final Button button = makeButton(info.label);
             if (info.dangerous) button.setTextColor(0xFFFF6B6B);
-            button.setOnTouchListener(new View.OnTouchListener() {
-                final Runnable repeater = new Runnable() {
-                    @Override public void run() {
-                        if (dispatch(info)) handler.postDelayed(this, 90L);
+            if (!info.repeatable) {
+                button.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View view) {
+                        dispatch(info);
                     }
-                };
+                });
+                return button;
+            }
+            final boolean[] repeated = { false };
+            final Runnable repeater = new Runnable() {
+                @Override public void run() {
+                    repeated[0] = true;
+                    if (dispatch(info)) handler.postDelayed(this, 90L);
+                }
+            };
+            button.setOnTouchListener(new View.OnTouchListener() {
                 @Override public boolean onTouch(View view, MotionEvent event) {
                     if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                        dispatch(info);
-                        if (info.repeatable) handler.postDelayed(repeater, 350L);
-                        if (owner != null && !info.repeatable) owner.dismiss();
-                        return true;
+                        repeated[0] = false;
+                        handler.postDelayed(repeater, 350L);
+                        return false;
                     }
                     if (event.getActionMasked() == MotionEvent.ACTION_UP ||
                             event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
                         handler.removeCallbacks(repeater);
-                        if (owner != null) owner.dismiss();
-                        return true;
+                        return false;
                     }
-                    return true;
+                    return false;
+                }
+            });
+            button.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View view) {
+                    if (!repeated[0]) dispatch(info);
                 }
             });
             return button;
@@ -1663,62 +1591,6 @@ final class AndroidHudOverlay extends FrameLayout {
             }
             return true;
         }
-
-        private void showActionGroup(View anchor, String group, List<ActionInfo> actions) {
-            if (openGroup != null) openGroup.dismiss();
-            ScrollView scroll = new ScrollView(activity);
-            GridLayout grid = new GridLayout(activity);
-            grid.setColumnCount(3);
-            grid.setPadding(dp(6), dp(6), dp(6), dp(6));
-            scroll.addView(grid);
-            JSONObject settings = layoutStore.optJSONObject("settings");
-            String surface = settings == null ? "grid" : settings.optString("groupSurface", "grid");
-            JSONObject groupSurfaces = settings == null ? null : settings.optJSONObject("groupSurfaces");
-            if (groupSurfaces != null) surface = groupSurfaces.optString(group, surface);
-            boolean drawer = "drawer".equals(surface);
-            final PopupWindow popup = new PopupWindow(scroll,
-                drawer ? Math.max(dp(320), getWidth()) : dp(330),
-                drawer ? dp(260) : ViewGroup.LayoutParams.WRAP_CONTENT, true);
-            popup.setBackgroundDrawable(makePanelBackground(false));
-            popup.setOutsideTouchable(true);
-            for (ActionInfo info : actions) {
-                Button button = createActionButton(info, popup);
-                GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-                params.width = drawer ? 0 : dp(105);
-                params.height = dp(46);
-                if (drawer) params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-                grid.addView(button, params);
-            }
-            openGroup = popup;
-            if (drawer) popup.showAtLocation(AndroidHudOverlay.this, Gravity.BOTTOM, 0, 0);
-            else popup.showAsDropDown(anchor, 0, -anchor.getHeight());
-            animatePopup(scroll, settings);
-        }
-
-        private void animatePopup(View view, JSONObject settings) {
-            String animation = settings == null ? "scale_fade" : settings.optString("animation", "scale_fade");
-            int duration = settings == null ? 180 : settings.optInt("animationMs", 180);
-            if ("none".equals(animation)) return;
-            view.setAlpha(0f);
-            if ("slide".equals(animation)) {
-                view.setTranslationY(dp(32));
-                view.animate().alpha(1f).translationY(0f).setDuration(duration).start();
-            } else {
-                view.setScaleX(.86f);
-                view.setScaleY(.86f);
-                view.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(duration).start();
-            }
-        }
-    }
-
-    private String groupLabel(String group) {
-        if ("combat".equals(group)) return "战斗";
-        if ("items".equals(group)) return "物品";
-        if ("world".equals(group)) return "地图";
-        if ("character".equals(group)) return "角色";
-        if ("system".equals(group)) return "系统";
-        if ("text".equals(group)) return "输入/筛选";
-        return "当前页面";
     }
 
     private final class PixelMinimapView extends View {

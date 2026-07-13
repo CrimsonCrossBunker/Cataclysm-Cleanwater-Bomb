@@ -30,6 +30,7 @@ struct minimap_rect {
 };
 
 bool enqueue_action( const std::string &action, int context_revision = -1 );
+bool has_pending_action();
 bool consume_action_for_context( const std::vector<std::string> &registered_actions,
                                  std::string &action );
 void set_active_context( const std::string &category,

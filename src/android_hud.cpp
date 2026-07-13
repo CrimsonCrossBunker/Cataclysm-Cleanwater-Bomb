@@ -268,6 +268,12 @@ bool enqueue_action( const std::string &action, const int context_revision )
     return true;
 }
 
+bool has_pending_action()
+{
+    std::lock_guard<std::mutex> lock( hud_mutex );
+    return !pending_actions.empty();
+}
+
 bool consume_action_for_context( const std::vector<std::string> &registered_actions,
                                  std::string &action )
 {
@@ -487,6 +493,11 @@ std::string snapshot_json()
 #else
 
 bool enqueue_action( const std::string &, int )
+{
+    return false;
+}
+
+bool has_pending_action()
 {
     return false;
 }
