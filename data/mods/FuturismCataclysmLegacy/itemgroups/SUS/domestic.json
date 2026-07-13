@@ -1,0 +1,15 @@
+[
+  {
+    "id": "SUS_coffee_cupboard",
+    "type": "item_group",
+    "//": "SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.",
+    "//2": "This group is for a cupboard where coffee and tea supplies are kept.",
+    "subtype": "collection",
+    "copy-from": "SUS_coffee_cupboard",
+    "extend": {
+      "items": [
+        [ "atomic_coffeepot", 10 ]
+      ]
+    }
+  }
+]
