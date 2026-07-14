@@ -375,10 +375,16 @@ void timed_event::per_turn()
                 if( mod_load_type > 0 ) {
                     const mtype_id &robot_type = one_in( 2 ) ? ( mod_load_type == 1 ? mon_afs_copbot : mon_fcl_copbot ) : ( mod_load_type == 1 ? mon_afs_riotbot : mon_fcl_riotbot );
 
+                    const tripoint_bub_ms u_pos_bub = player_character.pos_bub();
+
                     get_event_bus().send<event_type::becomes_wanted>( player_character.getID() );
-                    point rob( u_pos.x() > map_point.x() ? 0 - SEEX * 2 : SEEX * 4,
-                               u_pos.y() > map_point.y() ? 0 - SEEY * 2 : SEEY * 4 );
-                    tripoint_bub_ms rob_final( tripoint( rob, u_pos.z() ) );
+                    point rob(
+                        u_pos.x() > map_point.x() ? 0 - SEEX * 2 : SEEX * 4,
+                        u_pos.y() > map_point.y() ? 0 - SEEY * 2 : SEEY * 4
+                    );
+
+                    tripoint_bub_ms rob_final = tripoint_bub_ms( u_pos_bub.raw() + tripoint(rob, 0) );
+
                     g->place_critter_at( robot_type, rob_final );
                 }
             }
