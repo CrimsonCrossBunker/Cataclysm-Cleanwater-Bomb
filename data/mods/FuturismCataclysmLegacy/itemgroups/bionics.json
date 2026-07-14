@@ -5,8 +5,8 @@
     "copy-from": "bionics",
     "extend": { 
       "items": [
-        { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10},
-        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10}
+        { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
+        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 }
       ]
     }
   },
@@ -16,8 +16,8 @@
     "copy-from": "bionics_mil",
     "extend": { 
       "items": [
-        { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10},
-        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10}
+        { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
+        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 }
       ]
     }
   },
