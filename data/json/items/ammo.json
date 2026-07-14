@@ -706,8 +706,10 @@
     "description": "A feather from a bird.  Useful for fletching arrows.",
     "material": [ "cotton" ],
     "flags": [ "NO_SALVAGE" ],
-    "volume": "1 ml",
-    "weight": "10 mg"
+    "volume": "4 ml",
+    "weight": "100 mg",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -718,11 +720,13 @@
     "name": { "str": "down feather" },
     "symbol": "=",
     "color": "brown",
-    "description": "A fluffy down feather from a bird.  Useful for making cozy bedclothes.",
+    "description": "A clump of fluffy down feathers from a bird.  Useful for making cosy bedclothes.",
     "material": [ "down_feathers" ],
     "flags": [ "NO_SALVAGE" ],
-    "volume": "1 ml",
-    "weight": "1 mg"
+    "volume": "20 ml",
+    "weight": "50 mg",
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",

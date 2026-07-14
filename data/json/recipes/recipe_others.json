@@ -27,7 +27,7 @@
     "reversible": true,
     "autolearn": true,
     "using": [ [ "sewing_standard", 12 ] ],
-    "components": [ [ [ "cotton_patchwork", 6 ] ], [ [ "down_feather", 40 ] ] ]
+    "components": [ [ [ "cotton_patchwork", 6 ] ], [ [ "down_feather", 4000 ] ] ]
   },
   {
     "type": "recipe",
@@ -41,7 +41,7 @@
     "reversible": true,
     "autolearn": true,
     "using": [ [ "sewing_standard", 12 ] ],
-    "components": [ [ [ "cotton_patchwork", 60 ] ], [ [ "down_feather", 1160 ] ] ]
+    "components": [ [ [ "cotton_patchwork", 60 ] ], [ [ "down_feather", 11600 ] ] ]
   },
   {
     "type": "recipe",
