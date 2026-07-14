@@ -723,8 +723,8 @@
     "description": "A clump of fluffy down feathers from a bird.  Useful for making cosy bedclothes.",
     "material": [ "down_feathers" ],
     "flags": [ "NO_SALVAGE" ],
-    "volume": "20 ml",
-    "weight": "50 mg",
+    "volume": "40 ml",
+    "weight": "100 mg",
     "display_type": "BY_WEIGHT",
     "stackable": true
   },
