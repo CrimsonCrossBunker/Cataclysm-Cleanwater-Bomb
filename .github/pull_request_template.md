@@ -21,9 +21,9 @@ PR 提交准则：
 2. Bugfixes "修复长矛无法锁定不同楼层敌人的问题"
 3. Interface "在制作界面显示制作失败几率"
 分类含义详见：
-https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/doc/CHANGELOG_GUIDELINES.md
+https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/doc/CHANGELOG_GUIDELINES.md
 合并后，你的概述会被加入项目更新日志：
-https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/data/changelog.txt -->
+https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/data/changelog.txt -->
 
 #### 改动目的 (Purpose of change)
 

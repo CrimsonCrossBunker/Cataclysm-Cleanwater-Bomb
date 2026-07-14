@@ -1,4 +1,4 @@
-package com.lyhglytx.cataclysmcb;
+package com.crimsoncrossbunker.cataclysmcb;
 
 import android.annotation.TargetApi;
 import android.content.Context;

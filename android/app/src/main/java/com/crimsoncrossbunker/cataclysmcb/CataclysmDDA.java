@@ -1,4 +1,4 @@
-package com.lyhglytx.cataclysmcb;
+package com.crimsoncrossbunker.cataclysmcb;
 
 import org.libsdl.app.SDLActivity;
 

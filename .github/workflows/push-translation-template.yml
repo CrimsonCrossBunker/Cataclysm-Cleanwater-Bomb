@@ -19,7 +19,7 @@ jobs:
       ${{ github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.conclusion == 'success' &&
       ( github.event.workflow_run.status == 'success' || github.event.workflow_run.status == 'completed' ) &&
-      github.repository == 'LYHGLYTX/Cataclysm-Cleanwater-Bomb' }}
+      github.repository == 'CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb' }}
     steps:
       - name: "Install gettext tools"
         run: sudo apt install gettext

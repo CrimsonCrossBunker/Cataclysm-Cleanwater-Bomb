@@ -282,7 +282,7 @@ preBuild.dependsOn createWindowsJunctionLinks
 createWindowsJunctionLinks.dependsOn makeLocalization
 
 android {
-    namespace "com.lyhglytx.cataclysmcb"
+    namespace "com.crimsoncrossbunker.cataclysmcb"
     compileSdkVersion override_compileSdkVersion
     ndkVersion override_ndkVersion
 
@@ -300,7 +300,7 @@ android {
         versionCode Integer.valueOf(override_versionCode)
         versionName new File("$version_header_path").text.split('\"')[1]
         if (buildAsApplication) {
-            applicationId "com.lyhglytx.cataclysmcb"
+            applicationId "com.crimsoncrossbunker.cataclysmcb"
         }
         resValue "string", "app_name", "Cataclysm: Cleanwater Bomb"
 

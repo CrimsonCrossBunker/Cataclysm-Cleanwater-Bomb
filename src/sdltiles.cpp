@@ -981,7 +981,7 @@ extern "C" {
         visible_frame_inbox.publish( left, top, right, bottom, visible == JNI_TRUE );
     }
 
-    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_onNativeImeInsetsChanged(
+    JNIEXPORT void JNICALL Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_onNativeImeInsetsChanged(
         JNIEnv *env, jclass jcls, jint left, jint top, jint right, jint bottom, jboolean visible )
     {
         ( void )env;
@@ -997,7 +997,7 @@ extern "C" {
         on_native_ime_insets_changed( left, top, right, bottom, visible );
     }
 
-    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeButtonClick(
+    JNIEXPORT void JNICALL Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeButtonClick(
         JNIEnv *env, jclass jcls, jstring text )
     {
         ( void )jcls;

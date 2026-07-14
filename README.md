@@ -8,7 +8,7 @@
 
 ## 下载
 
-**发布** 你可以在这里下载目前的测试版本：[Release](https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/releases)
+**发布** 你可以在这里下载目前的测试版本：[Release](https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/releases)
 
 ## 贡献方式
 
@@ -57,7 +57,7 @@ In this game, you will face a complex, procedurally generated environment filled
 Based on the `cdda/master` branch of [CleverRaven/Cataclysm-DDA](https://github.com/CleverRaven/Cataclysm-DDA), commit: **221c786e7d**
 
 ## Downloads
-**Releases** You can download the current test version here: [Releases](https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/releases)
+**Releases** You can download the current test version here: [Releases](https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/releases)
 
 ## How to Contribute
 Any developer interested in contributing to this branch is welcome to submit pull requests to this repository to support its development.

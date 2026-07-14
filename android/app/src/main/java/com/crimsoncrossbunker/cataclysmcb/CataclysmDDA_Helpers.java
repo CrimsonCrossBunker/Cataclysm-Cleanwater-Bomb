@@ -1,4 +1,4 @@
-package com.lyhglytx.cataclysmcb;
+package com.crimsoncrossbunker.cataclysmcb;
 
 import java.util.HashSet;
 import java.util.List;
