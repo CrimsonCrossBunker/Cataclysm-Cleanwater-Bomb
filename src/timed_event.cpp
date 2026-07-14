@@ -129,6 +129,39 @@ void timed_event::actualize()
             debugmsg( "Currently disabled while NPC and monster factions are being rewritten." );
             break;
 
+        case timed_event_type::ROBOT_ATTACK: {
+            const tripoint_abs_sm u_pos = player_character.pos_abs_sm();
+            if( rl_dist( u_pos, map_point ) <= 4 ) {
+                mod_id afs_mod = mod_id("aftershock_exoplanet");
+                mod_id fcl_mod = mod_id("catalegacy_future");
+                int mod_load_type = 0;
+                for( const mod_id &mod : world_generator->active_world->active_mod_order ) {
+                    if( mod == afs_mod && mod_load_type == 0 ) {
+                        mod_load_type = 1;
+                    }
+                    if( mod == fcl_mod ) {
+                        mod_load_type = 2;
+                    }
+                }
+                if( mod_load_type > 0 ) {
+                    const mtype_id &robot_type = one_in( 2 ) ? ( mod_load_type == 1 ? mon_afs_copbot : mon_fcl_copbot ) : ( mod_load_type == 1 ? mon_afs_riotbot : mon_fcl_riotbot );
+
+                    const tripoint_bub_ms u_pos_bub = player_character.pos_bub();
+
+                    get_event_bus().send<event_type::becomes_wanted>( player_character.getID() );
+                    point rob(
+                        u_pos.x() > map_point.x() ? 0 - SEEX * 2 : SEEX * 4,
+                        u_pos.y() > map_point.y() ? 0 - SEEY * 2 : SEEY * 4
+                    );
+
+                    tripoint_bub_ms rob_final = tripoint_bub_ms( u_pos_bub.raw() + tripoint(rob, 0) );
+
+                    g->place_critter_at( robot_type, rob_final );
+                }
+            }
+        }
+        break;
+
         case timed_event_type::SPAWN_WYRMS: {
             if( here.get_abs_sub().z() >= 0 ) {
                 return;
@@ -357,39 +390,6 @@ void timed_event::per_turn()
     Character &player_character = get_player_character();
     map &here = get_map();
     switch( type ) {
-
-        case timed_event_type::ROBOT_ATTACK: {
-            const tripoint_abs_sm u_pos = player_character.pos_abs_sm();
-            if( rl_dist( u_pos, map_point ) <= 4 ) {
-                mod_id afs_mod = mod_id("aftershock_exoplanet");
-                mod_id fcl_mod = mod_id("catalegacy_future");
-                int mod_load_type = 0;
-                for( const mod_id &mod : world_generator->active_world->active_mod_order ) {
-                    if( mod == afs_mod && mod_load_type == 0 ) {
-                        mod_load_type = 1;
-                    }
-                    if( mod == fcl_mod ) {
-                        mod_load_type = 2;
-                    }
-                }
-                if( mod_load_type > 0 ) {
-                    const mtype_id &robot_type = one_in( 2 ) ? ( mod_load_type == 1 ? mon_afs_copbot : mon_fcl_copbot ) : ( mod_load_type == 1 ? mon_afs_riotbot : mon_fcl_riotbot );
-
-                    const tripoint_bub_ms u_pos_bub = player_character.pos_bub();
-
-                    get_event_bus().send<event_type::becomes_wanted>( player_character.getID() );
-                    point rob(
-                        u_pos.x() > map_point.x() ? 0 - SEEX * 2 : SEEX * 4,
-                        u_pos.y() > map_point.y() ? 0 - SEEY * 2 : SEEY * 4
-                    );
-
-                    tripoint_bub_ms rob_final = tripoint_bub_ms( u_pos_bub.raw() + tripoint(rob, 0) );
-
-                    g->place_critter_at( robot_type, rob_final );
-                }
-            }
-        }
-        break;
 
         case timed_event_type::SPAWN_WYRMS:
             if( here.get_abs_sub().z() >= 0 ) {
