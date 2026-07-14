@@ -6,5 +6,14 @@
       { "monster": "mon_fcl_copbot", "weight": 0, "cost_multiplier": 0 },
       { "monster": "mon_fcl_molebot", "weight": 40, "cost_multiplier": 0 }
     ]
+  },
+  {
+    "type": "monstergroup",
+    "id": "FCL_GROUP_ROBOT_CIVIL_SECURITY",
+    "default": "mon_fcl_copbot",
+    "monsters": [
+      { "monster": "mon_fcl_copbot", "weight": 100, "cost_multiplier": 40 },
+      { "monster": "mon_fcl_riotbot", "weight": 100, "cost_multiplier": 100 }
+    ]
   }
 ]

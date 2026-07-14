@@ -1,0 +1,13 @@
+[
+  {
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "fcl_vending_medicine",
+    "entries": [
+      { "group": "drugs_pharmacy", "count": [ 5, 20 ] },
+      { "group": "drugs_soldier", "prob": 40, "count": [ 5, 25 ] },
+      { "group": "drugs_soldier", "prob": 40, "count": [ 5, 25 ] },
+      { "group": "hospital_medical_items", "prob": 50, "count": [ 5, 10 ] }
+    ]
+  }
+]
