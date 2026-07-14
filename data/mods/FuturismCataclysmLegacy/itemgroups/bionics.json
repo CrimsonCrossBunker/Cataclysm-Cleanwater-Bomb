@@ -5,8 +5,8 @@
     "copy-from": "bionics",
     "extend": { 
       "items": [
-        { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10},
-        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10}
+        { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
+        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 }
       ]
     }
   },
@@ -16,9 +16,45 @@
     "copy-from": "bionics_mil",
     "extend": { 
       "items": [
-        { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10},
-        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10}
+        { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
+        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 }
       ]
     }
+  },
+  {
+    "type": "item_group",
+    "id": "bionics_retail",
+    "subtype": "distribution",
+    "items": [
+      [ "bio_power_storage", 20 ],
+      [ "bio_tools", 10 ],
+      [ "bio_multimeter", 10 ],
+      [ "bio_electrokit", 10 ],
+      [ "bio_flashlight", 10 ],
+      [ "bio_tattoo_led", 10 ],
+      [ "bio_lighter", 10 ],
+      [ "bio_magnet", 10 ],
+      [ "bio_alarm", 10 ],
+      [ "bio_meteorologist", 10 ],
+      [ "bio_batteries", 10 ],
+      [ "bio_armor_eyes", 8 ],
+      [ "bio_metabolics", 8 ],
+      [ "bio_watch", 10 ],
+      [ "bio_radio", 5 ],
+      [ "bio_torsionratchet", 10 ],
+      [ "bio_cable", 10 ],
+      [ "bio_ears", 2 ],
+      [ "bio_fitnessband", 10 ],
+      [ "bio_taser", 5 ]
+    ]
+  },
+  {
+    "id": "fcl_bionics_power",
+    "type": "item_group",
+    "items": [
+      [ "bio_power_storage_mkII", 1 ],
+      [ "bio_power_storage", 14 ],
+      [ "bio_betavoltaic", 5 ]
+    ]
   }
 ]

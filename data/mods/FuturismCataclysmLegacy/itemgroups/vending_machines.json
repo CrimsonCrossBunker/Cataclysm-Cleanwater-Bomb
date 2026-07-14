@@ -1,0 +1,26 @@
+[
+  {
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "fcl_vending_medicine",
+    "entries": [
+      { "group": "drugs_pharmacy", "count": [ 5, 20 ] },
+      { "group": "drugs_soldier", "prob": 40, "count": [ 5, 25 ] },
+      { "group": "drugs_soldier", "prob": 40, "count": [ 5, 25 ] },
+      { "group": "drugs_morphine", "prob": 10, "count": [ 5, 10 ] },
+      { "group": "hospital_medical_items", "prob": 50, "count": [ 5, 10 ] }
+    ]
+  },
+  {
+    "id": "drugs_morphine",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "morphine", "count": [ 1, 12 ], "container-item": "null", "prob": 10 },
+      { "item": "heroin", "entry-wrapper": "bag_zipper", "container-item": "null", "count": [ 20, 30 ], "prob": 10 },
+      { "group": "oxycodone_ad_group", "prob": 40 },
+      { "group": "codeine_ad_group", "prob": 60 },
+      { "group": "tramadol_ad_group", "prob": 60 }
+    ]
+  }
+]
