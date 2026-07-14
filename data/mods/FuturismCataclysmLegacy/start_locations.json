@@ -1,0 +1,13 @@
+[
+  {
+    "type": "start_location",
+    "id": "sloc_house",
+    "name": "House",
+    "copy-from": "sloc_house",
+    "extend": {
+      "terrains": [
+        "house_09b"
+      ]
+    }
+  }
+]
