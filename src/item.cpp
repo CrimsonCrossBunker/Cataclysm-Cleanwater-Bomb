@@ -3982,7 +3982,12 @@ bool item::use_charges( const itype_id &what, int &qty, std::list<item> &used,
             return VisitResponse::NEXT;
         }
 
-        if( e->is_tool() || e->is_gun() ) {
+        // 纯计数型工具（subtypes:["TOOL"] 且 stackable:true，如 cotton_patchwork、
+        // glass_shard、nylon 等裁缝/碎片组件）应作为"按数量消耗的材料"走下文
+        // count_by_charges 的 split 路径，否则会落入 ammo_consume 就地扣减 charges
+        // 的 TOOL 路径，导致 used 记录剩余量而非消耗量、0-charge 残栈与回退多扣。
+        // 真·工具 / 枪（count_by_charges()==false）仍走 TOOL 路径，行为不变。
+        if( ( e->is_tool() || e->is_gun() ) && !e->count_by_charges() ) {
             if( e->typeId() == what || ( in_tools && e->ammo_current() == what ) ) {
                 int n = 0;
                 if( e->uses_firing_requirements() ) {
