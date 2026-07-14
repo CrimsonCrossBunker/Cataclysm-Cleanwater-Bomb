@@ -16,6 +16,18 @@
     ]
   },
   {
+    "id": "drugs_morphine",
+    "type": "item_group",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "morphine", "count": [ 1, 12 ], "container-item": "null", "prob": 10 },
+      { "item": "heroin", "entry-wrapper": "bag_zipper", "container-item": "null", "count": [ 20, 30 ], "prob": 10 },
+      { "group": "oxycodone_ad_group", "prob": 40 },
+      { "group": "codeine_ad_group", "prob": 60 },
+      { "group": "tramadol_ad_group", "prob": 60 }
+    ]
+  },
+  {
     "id": "drugs_heal_simple",
     "type": "item_group",
     "//": "Common healing items found almost everywhere",
