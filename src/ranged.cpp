@@ -133,7 +133,7 @@ static const ammotype ammo_m235( "m235" );
 static const ammotype ammo_metal_rail( "metal_rail" );
 static const ammotype ammo_strange_arrow( "strange_arrow" );
 
-static const bionic_id bio_railgun( "bio_railgun" );
+static const bionic_id fcl_bio_railgun( "fcl_bio_railgun" );
 
 static const character_modifier_id
 character_modifier_melee_thrown_move_balance_mod( "melee_thrown_move_balance_mod" );
@@ -142,6 +142,7 @@ character_modifier_melee_thrown_move_lift_mod( "melee_thrown_move_lift_mod" );
 static const character_modifier_id
 character_modifier_ranged_dispersion_manip_mod( "ranged_dispersion_manip_mod" );
 static const character_modifier_id character_modifier_thrown_dex_mod( "thrown_dex_mod" );
+static const character_modifier_id character_modifier_limb_str_mod( "limb_str_mod" );
 
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
@@ -1574,26 +1575,51 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
 
     // Base 1.0; high skill and dexterity let the thrower get more damage out of
     // light items without changing the low-stat balance.
-    const float velocity_factor = 1.0f
+    float velocity_factor = 1.0f
                                   + 0.5f * ( skill / static_cast<float>( MAX_SKILL ) )
                                   + 0.03f * std::max( 0, dex - 8 );
 
+    // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
+    bool do_railgun = thrower.has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric );
+    if( do_railgun && thrower.is_mounted() ) {
+        auto *mons = thrower.mounted_creature.get();
+        if( mons->mech_str_addition() != 0 ) {
+            do_railgun = false;
+        }
+    }
+    if( do_railgun ) {
+        velocity_factor += std::max( ( thrower.get_int() / 10.0 ), 1.0 );
+    }
+
     const double scaled_weight_dmg = weight_dmg * velocity_factor;
     const double cap = thrower.thrown_item_adjusted_damage( thrown );
-    return std::min( scaled_weight_dmg, cap );
+    double thrown_dmg = std::min( scaled_weight_dmg, cap );
+
+    // RANGED_DAMAGE enchantment can used at railgun throwing
+    if( do_railgun ) {
+        int ench_range_dmg = thrower.enchantment_cache->get_value_add( enchant_vals::mod::RANGED_DAMAGE );
+        double ench_range_dmg_mult = 1.0 + thrower.enchantment_cache->get_value_multiply( enchant_vals::mod::RANGED_DAMAGE );
+        thrown_dmg += ench_range_dmg;
+        thrown_dmg *= ench_range_dmg_mult;
+        thrown_dmg += 8;
+    }
+
+    return thrown_dmg;
 }
 
 int Character::thrown_item_adjusted_damage( const item &thrown ) const
 {
     const std::optional<int> throw_assist = character_throw_assist( *this );
-    const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
+    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
                             !throw_assist;
 
     // The damage dealt due to item's weight, player's strength, and skill level
     // Up to str/2 or weight/100g (lower), so 10 str is 5 damage before multipliers
-    // Railgun doubles the effective strength
+    // Railgun uses intelligence and base kinetic energy boosts as a form of power 
+    // to simulate a character's ability to operate and calculate with high-tech equipment.
     ///\ARM_STR increases throwing damage
-    double stats_mod = do_railgun ? get_str() : ( get_arm_str() / 2.0 );
+    double modifier = std::max( 0.85f , get_modifier( character_modifier_limb_str_mod ) );
+    double stats_mod = do_railgun ? ( 10 + ( get_int() * modifier ) / 2.0 ) : ( get_arm_str() / 2.0 );
     stats_mod = throw_assist ? *throw_assist / 2.0 : stats_mod;
     // modify strength impact based on skill level, clamped to [0.15 - 1]
     // mod = mod * [ ( ( skill / max_skill ) * 0.85 ) + 0.15 ]
@@ -1673,7 +1699,7 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
         proj.critical_multiplier += 0.06f * std::min( dex, per );
     }
 
-    const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
+    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
                             !throw_assist;
 
     impact.add_damage( damage_bash, thrown_item_weight_damage( *this, thrown ) );
@@ -1717,7 +1743,7 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     if( do_railgun ) {
         proj_effects.insert( ammo_effect_LIGHTNING );
 
-        const units::energy trigger_cost = bio_railgun->power_trigger;
+        const units::energy trigger_cost = fcl_bio_railgun->power_trigger;
         mod_power_level( -trigger_cost );
     }
 
