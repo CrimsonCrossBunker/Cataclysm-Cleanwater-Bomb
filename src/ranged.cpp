@@ -142,6 +142,7 @@ character_modifier_melee_thrown_move_lift_mod( "melee_thrown_move_lift_mod" );
 static const character_modifier_id
 character_modifier_ranged_dispersion_manip_mod( "ranged_dispersion_manip_mod" );
 static const character_modifier_id character_modifier_thrown_dex_mod( "thrown_dex_mod" );
+static const character_modifier_id character_modifier_limb_str_mod( "limb_str_mod" );
 
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
@@ -1591,9 +1592,11 @@ int Character::thrown_item_adjusted_damage( const item &thrown ) const
 
     // The damage dealt due to item's weight, player's strength, and skill level
     // Up to str/2 or weight/100g (lower), so 10 str is 5 damage before multipliers
-    // Railgun doubles the effective strength
+    // Railgun uses intelligence and base kinetic energy boosts as a form of power 
+    // to simulate a character's ability to operate and calculate with high-tech equipment.
     ///\ARM_STR increases throwing damage
-    double stats_mod = do_railgun ? get_str() : ( get_arm_str() / 2.0 );
+    double modifier = std::max( 0.85f , get_modifier( character_modifier_limb_str_mod ) );
+    double stats_mod = do_railgun ? ( 10 + ( get_int() * modifier ) / 2.0 ) : ( get_arm_str() / 2.0 );
     stats_mod = throw_assist ? *throw_assist / 2.0 : stats_mod;
     // modify strength impact based on skill level, clamped to [0.15 - 1]
     // mod = mod * [ ( ( skill / max_skill ) * 0.85 ) + 0.15 ]
