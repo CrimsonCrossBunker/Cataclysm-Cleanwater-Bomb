@@ -1579,8 +1579,28 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
                                   + 0.5f * ( skill / static_cast<float>( MAX_SKILL ) )
                                   + 0.03f * std::max( 0, dex - 8 );
 
-    const double scaled_weight_dmg = weight_dmg * velocity_factor;
-    const double cap = thrower.thrown_item_adjusted_damage( thrown );
+    double scaled_weight_dmg = weight_dmg * velocity_factor;
+    double cap = thrower.thrown_item_adjusted_damage( thrown );
+
+    // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
+    bool do_railgun = thrower.has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric );
+    if( do_railgun && thrower.is_mounted() ) {
+        auto *mons = thrower.mounted_creature.get();
+        if( mons->mech_str_addition() != 0 ) {
+            do_railgun = false;
+        }
+    }
+    // RANGED_DAMAGE enchantment can used at railgun throwing
+    if( do_railgun ) {
+        int ench_range = thrower.enchantment_cache->get_value_add( enchant_vals::mod::RANGED_DAMAGE );
+        int ench_range_mult = thrower.enchantment_cache->get_value_multiply( enchant_vals::mod::RANGED_DAMAGE );
+        scaled_weight_dmg *= std::max( ( thrower.get_int() / 10.0 ), 1.0 );
+        scaled_weight_dmg += ench_range;
+        scaled_weight_dmg *= ench_range_mult;
+        cap += ench_range;
+        cap *= ench_range_mult;
+    }
+
     return std::min( scaled_weight_dmg, cap );
 }
 
