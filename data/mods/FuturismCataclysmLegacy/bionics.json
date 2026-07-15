@@ -8,11 +8,23 @@
     "learned_proficiencies": [ "prof_helicopter_pilot" ]
   },
   {
-  "id": "fcl_bio_neurosoft_aircraft_mechanic",
-  "type": "bionic",
-  "name": { "str": "Neurosoft: Airframe and Powerplant Mechanic" },
-  "description": "A brain implant that grants instinctual knowledge about the repair of flying machines.",
-  "occupied_bodyparts": [ [ "head", 2 ] ],
-  "learned_proficiencies": [ "prof_aircraft_mechanic" ]
+    "id": "fcl_bio_neurosoft_aircraft_mechanic",
+    "type": "bionic",
+    "name": { "str": "Neurosoft: Airframe and Powerplant Mechanic" },
+    "description": "A brain implant that grants instinctual knowledge about the repair of flying machines.",
+    "occupied_bodyparts": [ [ "head", 2 ] ],
+    "learned_proficiencies": [ "prof_aircraft_mechanic" ]
+  },
+  {
+    "id": "fcl_bio_railgun",
+    "type": "bionic",
+    "name": { "str": "Railgun" },
+    "description": "EM field generators in the user's arms allow them to launch metallic objects in an unconventional way. This mechanism requires the projectile to hover briefly in the air in front of an outstretched arm, usually after being thrown up slightly. Then, at the precise moment, a massive magnetic pulse is released, causing the object to be launched by electrical currents emitted alongside the user's arms, requiring no actual throwing motion. It consumes a tremendous amount of energy and relies far more on the user's intelligence to control than on physical strength. In theory, it can even hit with the force of a sniper rifle using nothing more than a coin.",
+    "occupied_bodyparts": [ [ "head", 1 ], [ "torso", 2 ], [ "arm_r", 10 ], [ "hand_r", 2 ] ],
+    "flags": [ "BIONIC_TOGGLED" ],
+    "act_cost": "1 kJ",
+    "react_cost": "100 J",
+    "trigger_cost": "200 kJ",
+    "time": "1 s"
   }
 ]

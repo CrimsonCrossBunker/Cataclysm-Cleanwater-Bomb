@@ -6,7 +6,8 @@
     "extend": { 
       "items": [
         { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
-        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 }
+        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 },
+        { "item": "fcl_bio_railgun", "prob": 10 }
       ]
     }
   },
@@ -17,7 +18,8 @@
     "extend": { 
       "items": [
         { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
-        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 }
+        { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 },
+        { "item": "fcl_bio_railgun", "prob": 10 }
       ]
     }
   },
