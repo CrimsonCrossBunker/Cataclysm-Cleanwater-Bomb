@@ -1,17 +1,47 @@
-#include "mp_server.h"
-#include "mp_queue.h"
-
-#include <atomic>
-#include <iostream>
-#include <algorithm>
-#include <string_view>
-
-#include <zstd/zstd.h>
-#include "catacharset.h"   // base64_encode — only pulls std headers, asio-safe
-
 // Standalone Asio — no Boost dependency
 #define ASIO_STANDALONE
-#include <asio.hpp>
+
+#include "mp_server.h"
+
+#include <asio.hpp> // IWYU pragma: keep
+#include <asio/associated_cancellation_slot.hpp>
+#include <asio/async_result.hpp>
+#include <asio/buffer.hpp>
+#include <asio/detail/bind_handler.hpp>
+#include <asio/detail/handler_cont_helpers.hpp>
+#include <asio/detail/handler_invoke_helpers.hpp>
+#include <asio/detail/impl/reactive_socket_service_base.ipp>
+#include <asio/detail/impl/scheduler.ipp>
+#include <asio/detail/impl/service_registry.hpp>
+#include <asio/execution/context_as.hpp>
+#include <asio/execution/prefer_only.hpp>
+#include <asio/impl/any_io_executor.ipp>
+#include <asio/impl/execution_context.hpp>
+#include <asio/impl/handler_alloc_hook.ipp>
+#include <asio/impl/io_context.hpp>
+#include <asio/impl/io_context.ipp>
+#include <asio/impl/read_until.hpp>
+#include <asio/impl/write.hpp>
+#include <asio/io_context.hpp>
+#include <asio/ip/detail/impl/endpoint.ipp>
+#include <asio/ip/tcp.hpp>
+#include <asio/post.hpp>
+#include <asio/streambuf.hpp>
+#include <zstd/zstd.h>
+#include <algorithm>
+#include <atomic>
+#include <cstddef>
+#include <deque>
+#include <functional>
+#include <initializer_list>
+#include <iostream>
+#include <new>
+#include <string_view>
+#include <system_error>
+
+#include "catacharset.h"   // base64_encode — only pulls std headers, asio-safe
+#include "mp_queue.h"
+
 #include <utility>
 
 using asio::ip::tcp;

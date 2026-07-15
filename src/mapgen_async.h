@@ -1,9 +1,10 @@
 #pragma once
 
 #include "coordinates.h"
-#include "string_id.h"
+#include "point.h"
 
 class map_extra;
+template <typename T> class string_id;
 
 using tripoint_abs_omt =
     coords::coord_point<tripoint, coords::origin::abs, coords::scale::overmap_terrain>;

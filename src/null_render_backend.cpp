@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "render_backend.h"
 
 #if !defined(TILES)

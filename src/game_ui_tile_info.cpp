@@ -1,5 +1,3 @@
-#include "game.h"
-
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
@@ -15,6 +13,7 @@
 
 #include "avatar.h"
 #include "calendar.h"
+#include "cata_utility.h"
 #include "catacharset.h"
 #include "color.h"
 #include "construction.h"
@@ -29,6 +28,7 @@
 #include "field.h"
 #include "field_type.h"
 #include "flag.h"
+#include "game.h"
 #include "iexamine.h"
 #include "item.h"
 #include "iteminfo_query.h"
@@ -51,6 +51,7 @@
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
+#include "value_ptr.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 

@@ -1,11 +1,15 @@
+#include <functional>
+#include <memory>
+#include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "character.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "event.h"
@@ -19,14 +23,19 @@
 #include "magic_ter_furn_transform.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapdata.h"
+#include "math_parser_diag_value.h"
 #include "options.h"
 #include "player_helpers.h"
+#include "pocket_type.h"
 #include "point.h"
-#include "skill.h"
+#include "ret_val.h"
 #include "type_id.h"
-#include "veh_type.h"
+#include "units.h"
+#include "value_ptr.h"
 #include "vehicle.h"
 #include "vpart_position.h"
+#include "vpart_range.h"
 
 static const furn_str_id furn_f_planter_seed( "f_planter_seed" );
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );

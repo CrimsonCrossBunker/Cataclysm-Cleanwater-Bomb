@@ -2,18 +2,11 @@
 #ifndef CATA_SRC_MP_SERVER_H
 #define CATA_SRC_MP_SERVER_H
 
+#include <stdint.h>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
-#include <memory>
-#include <thread>
-#include <mutex>
-#include <functional>
-
-// Forward declarations to avoid pulling asio into every translation unit
-namespace asio
-{
-class io_context;
-} // namespace asio
 
 namespace cata_mp
 {
@@ -55,6 +48,7 @@ class server
         std::string version_;
 
         struct impl;
+
         std::unique_ptr<impl> impl_;
 
         std::vector<std::shared_ptr<client_session>> clients_;

@@ -2,14 +2,20 @@
 #ifndef CATA_SRC_MP_GAMESTATE_H
 #define CATA_SRC_MP_GAMESTATE_H
 
-#include "activity_type.h"
+#include <stdint.h>
+#include <climits>
+#include <list>
+#include <string>
+#include <vector>
+
 #include "character_id.h"
 #include "coordinates.h"
-#include "enums.h" // object_type — used by mp_client_dispatch_grab_if_changed
-#include <string>
+#include "type_id.h"
 
-class npc;
 class Character;
+class item;
+class npc;
+enum class object_type : int;
 struct WORLD;
 
 namespace cata_mp

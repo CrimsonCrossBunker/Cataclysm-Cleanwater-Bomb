@@ -1,9 +1,8 @@
-#include "cata_catch.h"
-#include "map.h"
-
 #if defined(TILES)
 
+#include "cata_catch.h"
 #include "cata_tiles.h"
+#include "map.h"
 
 TEST_CASE( "sprite_screen_bounds_first_expand_sets_valid", "[tint_overlay]" )
 {

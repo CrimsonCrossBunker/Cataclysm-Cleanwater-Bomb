@@ -9,7 +9,6 @@
 #include "mp_gamestate.h"
 #include "translations.h"
 #include "type_id.h"
-#include "worldfactory.h"
 
 namespace cata_mp
 {

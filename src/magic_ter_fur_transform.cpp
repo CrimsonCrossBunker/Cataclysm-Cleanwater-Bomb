@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -25,6 +27,7 @@
 #include "translation.h"
 #include "trap.h"
 #include "type_id.h"
+#include "value_ptr.h"
 
 template<typename T> struct weighted_int_list;
 

@@ -1,22 +1,17 @@
-#include "player_activity.h"
-#include "animation.h"
-
-
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <list>
 #include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
 
+#include "animation.h"
 #include "avatar.h"
 #include "cached_options.h"
 #include "character.h"
@@ -24,23 +19,19 @@
 #include "creature.h"
 #include "creature_tracker.h"
 #include "cursesdef.h"
-#include "debug.h"
 #include "explosion.h"
-#include "explosion_light.h"
 #include "game.h"
 #include "game_constants.h"
 #include "input.h"
-#include "line.h"
 #include "map.h"
 #include "memory_fast.h"
 #include "monster.h"
 #include "mtype.h"
 #include "options.h"
 #include "output.h"
+#include "player_activity.h"
 #include "point.h"
 #include "popup.h"
-#include "screen_shake.h"
-#include "shockwave.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"

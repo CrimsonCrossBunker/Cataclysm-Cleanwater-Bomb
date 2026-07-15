@@ -1,6 +1,7 @@
 #include "submap_prefetch.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
 #include <utility>
 #include <vector>

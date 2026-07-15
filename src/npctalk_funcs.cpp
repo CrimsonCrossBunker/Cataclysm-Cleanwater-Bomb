@@ -4,14 +4,15 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <list>
 #include <limits>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>
 #include <ostream>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "activity_actor_definitions.h"
@@ -22,6 +23,7 @@
 #include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_utility.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -41,10 +43,12 @@
 #include "game_inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "itype.h"
 #include "json.h"
 #include "magic.h"
 #include "map.h"
 #include "martialarts.h"
+#include "math_parser_diag_value.h"
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
@@ -60,15 +64,18 @@
 #include "point.h"
 #include "proficiency.h"
 #include "rng.h"
-#include "skill.h"
 #include "simple_pathfinding.h"
+#include "skill.h"
 #include "translation.h"
 #include "translations.h"
 #include "uilist.h"
-#include "viewer.h"
+#include "units.h"
+#include "value_ptr.h"
 #include "veh_interact.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "viewer.h"
+#include "vpart_position.h"
 #include "vpart_range.h"
 
 static const efftype_id effect_allow_sleep( "allow_sleep" );
@@ -123,8 +130,6 @@ static const std::string vehicle_part_repair_mount_y = "vehicle_part_repair_moun
 static const std::string vehicle_part_repair_damage = "vehicle_part_repair_damage";
 static const std::string vehicle_part_repair_degradation = "vehicle_part_repair_degradation";
 static const std::string vehicle_part_repair_faults = "vehicle_part_repair_faults";
-
-struct itype;
 
 static void spawn_animal( npc &p, const mtype_id &mon );
 

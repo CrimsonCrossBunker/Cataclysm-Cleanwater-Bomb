@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <functional>
+#include <string>
 #include <thread>
 
 #include "crash.h"

@@ -1,7 +1,8 @@
 #include "do_turn.h"
-#include "mp_queue.h"
-#include "mp_gamestate.h"
+
 #include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#include "translation.h"
 
 #if defined(EMSCRIPTEN)
     #include <emscripten.h>
@@ -9,13 +10,13 @@
 
 #include <algorithm>
 #include <chrono>
-#include <thread>
 #include <map>
 #include <memory>
 #include <optional>
 #include <ostream>
 #include <ratio>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -80,8 +81,8 @@
 #include "timed_event.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "vehicle.h"
 #include "vpart_position.h"

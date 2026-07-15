@@ -1,6 +1,7 @@
 #include "creature_tracker.h"
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <ostream>
 #include <string>
@@ -12,6 +13,7 @@
 #include "debug.h"
 #include "flood_fill.h"
 #include "game.h"
+#include "level_cache.h"
 #include "map.h"
 #include "mapdata.h"
 #include "maptile_fwd.h"

@@ -1,5 +1,4 @@
 #include "debug_menu.h"
-#include "debug_actions_table.h"
 
 #include <algorithm>
 #include <array>
@@ -37,6 +36,7 @@
 #include "calendar.h"
 #include "calendar_ui.h"
 #include "cata_path.h"
+#include "debug_actions_table.h"
 #if defined(TILES) && defined(USE_SDL3)
     #include "cata_shader.h"
 #endif
@@ -66,7 +66,6 @@
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
-#include "explosion.h"
 #include "explosion_light.h"
 #include "faction.h"
 #include "filesystem.h"
@@ -133,8 +132,8 @@
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "uistate.h"
 #include "units.h"
 #include "units_utility.h"

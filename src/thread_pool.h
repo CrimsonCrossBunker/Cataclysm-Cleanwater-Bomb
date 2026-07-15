@@ -1,7 +1,7 @@
 #pragma once
 
+#include <stddef.h>
 #include <algorithm>
-#include <atomic>
 #include <condition_variable>
 #include <deque>
 #include <exception>

@@ -1,5 +1,6 @@
 #include "game.h" // IWYU pragma: associated
 
+#include <stdlib.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -79,6 +80,7 @@
 #include "overmap_ui.h"
 #include "panels.h"
 #include "pathfinding.h"
+#include "player_activity.h"
 #include "point.h"
 #include "popup.h"
 #include "ranged.h"
@@ -105,13 +107,12 @@
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
+
 #define MP_ENABLED
+#include "line.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "npc.h"
-#include "line.h"
-
-enum class direction : unsigned int;
 
 #if defined(TILES)
     #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner

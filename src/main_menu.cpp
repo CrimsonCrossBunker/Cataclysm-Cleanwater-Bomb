@@ -45,7 +45,6 @@
 #include "mapsharing.h"
 #include "messages.h"
 #ifdef MP_ENABLED
-    #include "mp_client_conn.h"
     #include "mp_gamestate.h"
 #endif
 #include "music.h"
@@ -64,9 +63,9 @@
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
 #include "ui_style_picker.h"
+#include "uilist.h"
 #include "wcwidth.h"
 #include "worldfactory.h"
 
@@ -515,8 +514,6 @@ void main_menu::init_strings()
     vMenuItems.emplace_back( pgettext( "Main Menu", "Se<t|T>tings" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "H<e|E|?>lp" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "<C|c>redits" ) );
-#ifdef MP_ENABLED
-#endif
 #if !defined(EMSCRIPTEN)
     vMenuItems.emplace_back( pgettext( "Main Menu", "<Q|q>uit" ) );
 #endif

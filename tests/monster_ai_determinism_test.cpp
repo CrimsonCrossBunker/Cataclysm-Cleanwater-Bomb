@@ -1,18 +1,16 @@
+#include <stddef.h>
 #include <string>
 #include <vector>
 
-#include "cata_catch.h"
 #include "calendar.h"
+#include "cata_catch.h"
 #include "coordinates.h"
-#include "creature.h"
-#include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "monster.h"
 #include "monster_helpers.h"
 #include "point.h"
 #include "rng.h"
-#include "type_id.h"
 
 // Determinism guard for the monster-AI turn loop.
 //

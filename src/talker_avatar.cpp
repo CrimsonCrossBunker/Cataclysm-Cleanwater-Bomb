@@ -4,11 +4,9 @@
 
 #include "avatar.h"
 #include "calendar.h"
-#include "character.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
-#include "flag.h"
 #include "game.h"
 #include "messages.h"
 #include "monster.h"

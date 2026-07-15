@@ -1,9 +1,10 @@
 #include "vfx_emit.h"
 
 #include <algorithm>
-#include <cmath>
 #include <map>
+#include <optional>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "color.h"

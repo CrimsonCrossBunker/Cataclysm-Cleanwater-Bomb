@@ -1,7 +1,5 @@
 #include "vitamin.h"
 
-#include <map>
-
 #include "calendar.h"
 #include "debug.h"
 #include "enum_conversions.h"
