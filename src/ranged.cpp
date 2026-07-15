@@ -1575,13 +1575,9 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
 
     // Base 1.0; high skill and dexterity let the thrower get more damage out of
     // light items without changing the low-stat balance.
-    const float velocity_factor = 1.0f
+    float velocity_factor = 1.0f
                                   + 0.5f * ( skill / static_cast<float>( MAX_SKILL ) )
                                   + 0.03f * std::max( 0, dex - 8 );
-
-    const double scaled_weight_dmg = weight_dmg * velocity_factor;
-    const double cap = thrower.thrown_item_adjusted_damage( thrown );
-    double thrown_dmg = std::min( scaled_weight_dmg, cap );
 
     // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
     bool do_railgun = thrower.has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric );
@@ -1591,12 +1587,21 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
             do_railgun = false;
         }
     }
+    if( do_railgun ) {
+        velocity_factor += std::max( ( thrower.get_int() / 10.0 ), 1.0 );
+    }
+
+    const double scaled_weight_dmg = weight_dmg * velocity_factor;
+    const double cap = thrower.thrown_item_adjusted_damage( thrown );
+    double thrown_dmg = std::min( scaled_weight_dmg, cap );
+
     // RANGED_DAMAGE enchantment can used at railgun throwing
     if( do_railgun ) {
         int ench_range_dmg = thrower.enchantment_cache->get_value_add( enchant_vals::mod::RANGED_DAMAGE );
         int ench_range_dmg_mult = thrower.enchantment_cache->get_value_multiply( enchant_vals::mod::RANGED_DAMAGE );
         thrown_dmg += ench_range_dmg;
         thrown_dmg *= ench_range_dmg_mult;
+        thrown_dmg += 8;
     }
 
     return thrown_dmg;
