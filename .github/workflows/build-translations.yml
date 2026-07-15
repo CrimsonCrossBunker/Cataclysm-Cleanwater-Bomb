@@ -53,8 +53,10 @@ jobs:
             exit 1
           fi
           echo "::notice::TX_TOKEN unavailable; using translations from trusted master run $run_id"
+          artifact_dir="$RUNNER_TEMP/master-translations"
           gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
-            --name translations --dir .
+            --name translations --dir "$artifact_dir"
+          cp -a "$artifact_dir/." .
 
       - name: Validate and discard invalid translations
         if: ${{ env.TX_TOKEN != '' }}
