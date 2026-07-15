@@ -88,5 +88,15 @@
     "id": [ "broken_riotbot" ],
     "type": "MIGRATION",
     "replace": "broken_fcl_riotbot"
+  },
+  {
+    "id": "plasma_gun",
+    "type": "MIGRATION",
+    "replace": "fcl_plasma_gun"
+  },
+  {
+    "id": "plasma_rifle",
+    "type": "MIGRATION",
+    "replace": "fcl_plasma_rifle"
   }
 ]
