@@ -135,6 +135,14 @@ static const ammotype ammo_battery( "battery" );
 
 static const furn_str_id furn_f_rope_up( "f_rope_up" );
 
+static void erase_cached_vehicle_ladders( std::map<tripoint_bub_ms, std::pair<vehicle *, int> > &cache,
+        const vehicle *veh )
+{
+    erase_if( cache, [veh]( const std::pair<const tripoint_bub_ms, std::pair<vehicle *, int>> &entry ) {
+        return entry.second.first == veh;
+    } );
+}
+
 static const bionic_id bio_shock_absorber( "bio_shock_absorber" );
 
 static const damage_type_id damage_bash( "bash" );
@@ -282,14 +290,6 @@ static const ter_str_id ter_t_window_no_curtains( "t_window_no_curtains" );
 
 static const trap_str_id tr_portal( "tr_portal" );
 static const trap_str_id tr_unfinished_construction( "tr_unfinished_construction" );
-
-static void erase_cached_vehicle_ladders( std::map<tripoint_bub_ms, std::pair<vehicle *, int> > &cache,
-        const vehicle *veh )
-{
-    erase_if( cache, [veh]( const std::pair<const tripoint_bub_ms, std::pair<vehicle *, int>> &entry ) {
-        return entry.second.first == veh;
-    } );
-}
 
 #define dbg(x) DebugLog((x),D_MAP) << __FILE__ << ":" << __LINE__ << ": "
 
