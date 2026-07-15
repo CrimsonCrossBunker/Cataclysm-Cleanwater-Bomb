@@ -189,7 +189,12 @@
   {
     "id": "afs_bionics_power",
     "type": "item_group",
-    "items": [ [ "bio_power_storage_mkII", 1 ], [ "bio_power_storage", 14 ], [ "bio_microgen", 5 ] ]
+    "items": [
+      [ "bio_power_storage_mkII", 2 ],
+      [ "bio_power_storage", 24 ],
+      [ "bio_betavoltaic", 5 ],
+      [ "bio_microgen", 5 ]
+    ]
   },
   {
     "id": "afs_bionic_toolkit",
