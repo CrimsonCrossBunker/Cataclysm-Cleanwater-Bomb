@@ -3525,6 +3525,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
                 here.board_vehicle( bub, remote );
                 remote->in_vehicle = true;
                 const bool engine_was_off = !veh.engine_on;
+                int started = 0;
                 if( engine_was_off ) {
                     // start_engines() with an NPC driver assigns a cranking activity whose
                     // finish() uses get_player_character() to re-find the vehicle — it
@@ -3537,7 +3538,6 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
                             vpart.enabled = true;
                         }
                     }
-                    int started = 0;
                     for( const int p : veh.engines ) {
                         vehicle_part &vpart = veh.part( p );
                         if( veh.is_engine_on( vpart ) && veh.start_engine( here, vpart ) ) {
