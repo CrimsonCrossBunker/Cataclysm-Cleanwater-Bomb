@@ -292,16 +292,23 @@ static const limb_score_id limb_score_night_vis( "night_vis" );
 static const limb_score_id limb_score_reaction( "reaction" );
 static const limb_score_id limb_score_vision( "vision" );
 
-static const material_id material_budget_steel( "budget_steel" );
-static const material_id material_ch_steel( "ch_steel" );
 static const material_id material_flesh( "flesh" );
-static const material_id material_hc_steel( "hc_steel" );
 static const material_id material_hflesh( "hflesh" );
 static const material_id material_iron( "iron" );
-static const material_id material_lc_steel( "lc_steel" );
-static const material_id material_mc_steel( "mc_steel" );
-static const material_id material_qt_steel( "qt_steel" );
 static const material_id material_steel( "steel" );
+static const material_id material_low_steel( "lc_steel" );
+static const material_id material_med_steel( "mc_steel" );
+static const material_id material_high_steel( "hc_steel" );
+static const material_id material_hardened_steel( "ch_steel" );
+static const material_id material_tempered_steel( "qt_steel" );
+static const material_id material_budget_steel( "budget_steel" );
+static const material_id material_low_steel_chain( "lc_steel_chain" );
+static const material_id material_med_steel_chain( "mc_steel_chain" );
+static const material_id material_high_steel_chain( "hc_steel_chain" );
+static const material_id material_hardened_steel_chain( "ch_steel_chain" );
+static const material_id material_tempered_steel_chain( "qt_steel_chain" );
+static const material_id material_budget_steel_chain( "budget_steel_chain" );
+static const material_id material_cupronickel( "copper_nickel" );
 
 static const move_mode_id move_mode_run( "run" );
 static const move_mode_id move_mode_walk( "walk" );
@@ -379,7 +386,7 @@ static const trait_id trait_SUNLIGHT_DEPENDENT( "SUNLIGHT_DEPENDENT" );
 static const trait_id trait_THORNS( "THORNS" );
 static const trait_id trait_VISCOUS( "VISCOUS" );
 
-static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_ch_steel, material_hc_steel, material_lc_steel, material_mc_steel, material_qt_steel };
+static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_hardened_steel, material_high_steel, material_low_steel, material_med_steel, material_tempered_steel, material_budget_steel_chain, material_hardened_steel_chain, material_high_steel_chain, material_low_steel_chain, material_med_steel_chain, material_tempered_steel_chain, material_cupronickel };
 
 static const std::string player_base_stamina_burn_rate( "PLAYER_BASE_STAMINA_BURN_RATE" );
 static const std::string type_hair_color( "hair_color" );
