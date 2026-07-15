@@ -10,6 +10,7 @@
 #include "coordinates.h"
 #include "enums.h"
 #include "game.h"
+#include "level_cache.h"
 #include "lru_cache.h"
 #include "map.h"
 #include "map_helpers.h"
