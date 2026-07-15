@@ -3757,7 +3757,7 @@ int Character::throw_range( const item &it ) const
     // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
     if( do_railgun && !throw_assist ) {
         int ench_range = enchantment_cache->get_value_add( enchant_vals::mod::RANGE );
-        int ench_range_mult = enchantment_cache->get_value_multiply( enchant_vals::mod::RANGE );
+        float ench_range_mult = 1.0f + enchantment_cache->get_value_multiply( enchant_vals::mod::RANGE );
         const int railgun_range_cap_max = round( ( attr_int * 3 + get_skill_level( skill_throw ) + ench_range ) * ench_range_mult + 10 );
         if( tmp.weight() >= 150_gram ) {
             ret = ( ( attr_int * 20 ) / ( tmp.weight() / 113_gram ) + ench_range ) * ench_range_mult + 5;

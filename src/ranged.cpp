@@ -1598,7 +1598,7 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
     // RANGED_DAMAGE enchantment can used at railgun throwing
     if( do_railgun ) {
         int ench_range_dmg = thrower.enchantment_cache->get_value_add( enchant_vals::mod::RANGED_DAMAGE );
-        int ench_range_dmg_mult = thrower.enchantment_cache->get_value_multiply( enchant_vals::mod::RANGED_DAMAGE );
+        float ench_range_dmg_mult = 1.0f + thrower.enchantment_cache->get_value_multiply( enchant_vals::mod::RANGED_DAMAGE );
         thrown_dmg += ench_range_dmg;
         thrown_dmg *= ench_range_dmg_mult;
         thrown_dmg += 8;
