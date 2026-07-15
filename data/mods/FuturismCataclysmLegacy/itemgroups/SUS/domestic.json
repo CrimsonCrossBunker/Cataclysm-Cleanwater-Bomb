@@ -6,10 +6,6 @@
     "//2": "This group is for a cupboard where coffee and tea supplies are kept.",
     "subtype": "collection",
     "copy-from": "SUS_coffee_cupboard",
-    "extend": {
-      "items": [
-        [ "atomic_coffeepot", 10 ]
-      ]
-    }
+    "extend": { "items": [ [ "atomic_coffeepot", 10 ] ] }
   }
 ]

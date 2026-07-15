@@ -3,13 +3,6 @@
     "type": "region_settings_city",
     "id": "default",
     "copy-from": "default",
-    "extend": {
-      "houses": [
-        [ "house_09b", 20 ]
-      ],
-      "shops": [
-        [ "fcl_augmentation_clinic_1", 180 ]
-      ]
-    }
+    "extend": { "houses": [ [ "house_09b", 20 ] ], "shops": [ [ "fcl_augmentation_clinic_1", 180 ] ] }
   }
 ]

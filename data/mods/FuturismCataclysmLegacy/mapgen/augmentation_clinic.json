@@ -107,10 +107,7 @@
         ],
         "?": { "item": "autodoc_supplies", "chance": 100 }
       },
-      "monster": {
-        "ö": { "monster": "mon_skitterbot" },
-        "∑": { "monster": "mon_zombie_static" }
-      },
+      "monster": { "ö": { "monster": "mon_skitterbot" }, "∑": { "monster": "mon_zombie_static" } },
       "vendingmachines": { "V": { "item_group": "fcl_vending_medicine", "reinforced": true } }
     }
   },
@@ -174,14 +171,8 @@
         ],
         "?": { "item": "autodoc_supplies", "chance": 100 }
       },
-      "monster": {
-        "ö": { "monster": "mon_skitterbot" },
-        "∑": [ { "monster": "mon_nursebot" } ]
-      },
-      "vehicles": {
-        "]": { "vehicle": "hospital_bed", "rotation": 180 },
-        "[": { "vehicle": "hospital_bed", "rotation": 90 }
-      },
+      "monster": { "ö": { "monster": "mon_skitterbot" }, "∑": [ { "monster": "mon_nursebot" } ] },
+      "vehicles": { "]": { "vehicle": "hospital_bed", "rotation": 180 }, "[": { "vehicle": "hospital_bed", "rotation": 90 } },
       "vendingmachines": { "V": { "item_group": "fcl_vending_medicine", "reinforced": true } }
     }
   },
@@ -233,10 +224,7 @@
         "o": { "item": "waitingroom", "chance": 60 },
         "e": { "item": "SUS_fridge", "chance": 80 },
         "C": { "item": "dresser", "chance": 75 },
-        "$": [
-          { "item": "bionics", "chance": 70, "repeat": [ 1, 2 ] },
-          { "item": "fcl_bionics_power", "repeat": [ 1, 2 ] }
-        ],
+        "$": [ { "item": "bionics", "chance": 70, "repeat": [ 1, 2 ] }, { "item": "fcl_bionics_power", "repeat": [ 1, 2 ] } ],
         "f": { "item": "SUS_office_filing_cabinet", "chance": 90 },
         "d": { "item": "SUS_office_desk", "chance": 60 },
         "l": [

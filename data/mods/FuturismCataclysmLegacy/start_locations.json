@@ -4,11 +4,7 @@
     "id": "sloc_house",
     "name": "House",
     "copy-from": "sloc_house",
-    "extend": {
-      "terrains": [
-        "house_09b"
-      ]
-    }
+    "extend": { "terrains": [ "house_09b" ] }
   },
   {
     "type": "start_location",

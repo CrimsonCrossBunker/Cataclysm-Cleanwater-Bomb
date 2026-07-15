@@ -3,10 +3,6 @@
     "id": "coffee_prep",
     "type": "item_group",
     "copy-from": "coffee_prep",
-    "extend": {
-      "items": [
-        [ "fcl_atomic_coffeemaker", 1 ]
-      ]
-    }
+    "extend": { "items": [ [ "fcl_atomic_coffeemaker", 1 ] ] }
   }
 ]

@@ -2,8 +2,6 @@
   {
     "type": "monstergroup",
     "id": "GROUP_LAB_MAINTENANCE",
-    "monsters": [
-      { "monster": "mon_fcl_eyebot", "weight": 5 }
-    ]
+    "monsters": [ { "monster": "mon_fcl_eyebot", "weight": 5 } ]
   }
 ]

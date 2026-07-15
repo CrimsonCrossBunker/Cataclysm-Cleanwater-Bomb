@@ -3,7 +3,7 @@
     "id": "bionics",
     "type": "item_group",
     "copy-from": "bionics",
-    "extend": { 
+    "extend": {
       "items": [
         { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
         { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 },
@@ -15,7 +15,7 @@
     "id": "bionics_mil",
     "type": "item_group",
     "copy-from": "bionics_mil",
-    "extend": { 
+    "extend": {
       "items": [
         { "item": "fcl_bio_neurosoft_aeronautics", "prob": 10 },
         { "item": "fcl_bio_neurosoft_aircraft_mechanic", "prob": 10 },
@@ -53,10 +53,6 @@
   {
     "id": "fcl_bionics_power",
     "type": "item_group",
-    "items": [
-      [ "bio_power_storage_mkII", 1 ],
-      [ "bio_power_storage", 14 ],
-      [ "bio_betavoltaic", 5 ]
-    ]
+    "items": [ [ "bio_power_storage_mkII", 1 ], [ "bio_power_storage", 14 ], [ "bio_betavoltaic", 5 ] ]
   }
 ]

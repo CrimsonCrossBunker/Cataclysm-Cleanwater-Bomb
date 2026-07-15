@@ -4,10 +4,6 @@
     "id": "tools_robotics",
     "//": "tools and equipment you might find on robotics laboratories.",
     "copy-from": "tools_robotics",
-    "extend": {
-      "items": [
-        [ "fcl_atomic_lamp", 1 ]
-      ]
-    }
+    "extend": { "items": [ [ "fcl_atomic_lamp", 1 ] ] }
   }
 ]

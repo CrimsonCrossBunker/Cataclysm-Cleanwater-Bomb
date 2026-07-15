@@ -446,7 +446,14 @@
     "//": "This group does not spawn anywhere, it exists only to set Exodii merchant prices",
     "subtype": "collection",
     "entries": [
-      { "distribution": [ { "group": "birth_control", "prob": 50 }, { "group": "estrogen_hrt", "prob": 3 }, { "group": "testosterone_hrt", "prob": 2 } ], "prob": 95 },
+      {
+        "distribution": [
+          { "group": "birth_control", "prob": 50 },
+          { "group": "estrogen_hrt", "prob": 3 },
+          { "group": "testosterone_hrt", "prob": 2 }
+        ],
+        "prob": 95
+      },
       { "item": "comb_lice", "prob": 10 },
       { "item": "eyedrops", "prob": 15, "count": 10 },
       { "item": "steroid_eyedrops", "prob": 5, "count": 5 },

@@ -3,11 +3,6 @@
     "type": "item_group",
     "id": "robofac_basic_trade",
     "copy-from": "robofac_basic_trade",
-    "extend": {
-      "items": [
-        { "group": "bionics_common", "prob": 100 },
-        { "group": "bionics_mil", "prob": 10 }
-      ]
-    }
+    "extend": { "items": [ { "group": "bionics_common", "prob": 100 }, { "group": "bionics_mil", "prob": 10 } ] }
   }
 ]

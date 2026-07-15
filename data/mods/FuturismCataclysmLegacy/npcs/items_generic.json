@@ -3,10 +3,6 @@
     "id": "npc_misc",
     "type": "item_group",
     "copy-from": "npc_misc",
-    "extend": {
-      "items": [
-        [ "fcl_atomic_light_off", 1 ]
-      ]
-    }
+    "extend": { "items": [ [ "fcl_atomic_light_off", 1 ] ] }
   }
 ]

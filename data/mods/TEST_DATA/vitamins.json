@@ -52,14 +52,8 @@
     "copy-from": "test_vit_extend_base",
     "type": "vitamin",
     "name": { "str": "Vitamin Extend Derived" },
-    "extend": {
-      "flags": [ "TEST_FLAG_B" ],
-      "disease": [ [ -59, -40 ] ],
-      "decays_into": [ [ "test_vitx", 2 ] ]
-    },
-    "delete": {
-      "disease": [ [ -79, -60 ] ]
-    }
+    "extend": { "flags": [ "TEST_FLAG_B" ], "disease": [ [ -59, -40 ] ], "decays_into": [ [ "test_vitx", 2 ] ] },
+    "delete": { "disease": [ [ -79, -60 ] ] }
   },
   {
     "id": "test_vit_excess_base",
@@ -93,11 +87,7 @@
     "copy-from": "test_vit_empty_base",
     "type": "vitamin",
     "name": { "str": "Empty Derived" },
-    "extend": {
-      "flags": [ "TEST_FLAG_EMPTY" ],
-      "disease": [ [ -50, -40 ] ],
-      "decays_into": [ [ "test_vitv", 3 ] ]
-    }
+    "extend": { "flags": [ "TEST_FLAG_EMPTY" ], "disease": [ [ -50, -40 ] ], "decays_into": [ [ "test_vitv", 3 ] ] }
   },
   {
     "id": "test_vit_delete_all_base",
@@ -115,10 +105,7 @@
     "copy-from": "test_vit_delete_all_base",
     "type": "vitamin",
     "name": { "str": "Delete All Derived" },
-    "delete": {
-      "flags": [ "TEST_FLAG_A", "TEST_FLAG_B" ],
-      "disease": [ [ -100, -80 ] ]
-    }
+    "delete": { "flags": [ "TEST_FLAG_A", "TEST_FLAG_B" ], "disease": [ [ -100, -80 ] ] }
   },
   {
     "id": "test_vit_override_and_extend",

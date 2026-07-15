@@ -3,52 +3,31 @@
     "id": "hospital_bed",
     "type": "item_group",
     "copy-from": "hospital_bed",
-    "extend": {
-      "items": [
-        [ "fcl_atomic_light", 1 ]
-      ]
-    }
+    "extend": { "items": [ [ "fcl_atomic_light", 1 ] ] }
   },
   {
     "type": "item_group",
     "id": "hospital_medical_items",
     "copy-from": "hospital_medical_items",
-    "extend": {
-      "items": [
-        { "group": "bionics_common", "prob": 4 }
-      ]
-    }
+    "extend": { "items": [ { "group": "bionics_common", "prob": 4 } ] }
   },
   {
     "type": "item_group",
     "id": "hospital_lab",
     "copy-from": "hospital_lab",
-    "extend": {
-      "items": [
-        { "group": "bionics_common", "prob": 2 }
-      ]
-    }
+    "extend": { "items": [ { "group": "bionics_common", "prob": 2 } ] }
   },
   {
     "id": "subway",
     "type": "item_group",
     "copy-from": "subway",
-    "extend": {
-      "items": [
-        [ "fcl_atomic_light", 1 ]
-      ]
-    }
+    "extend": { "items": [ [ "fcl_atomic_light", 1 ] ] }
   },
   {
     "id": "lab_dorm",
     "type": "item_group",
     "copy-from": "lab_dorm",
-    "extend": {
-      "items": [
-        [ "fcl_atomic_lamp", 1 ],
-        [ "fcl_atomic_light", 3 ]
-      ]
-    }
+    "extend": { "items": [ [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 3 ] ] }
   },
   {
     "type": "item_group",

@@ -4,11 +4,6 @@
     "type": "item_group",
     "copy-from": "NC_JUNK_SHOPKEEP_misc",
     "subtype": "collection",
-    "extend": {
-      "items": [
-        [ "fcl_atomic_light", 1 ],
-        [ "fcl_atomic_lamp", 1 ]
-      ]
-    }
+    "extend": { "items": [ [ "fcl_atomic_light", 1 ], [ "fcl_atomic_lamp", 1 ] ] }
   }
 ]
