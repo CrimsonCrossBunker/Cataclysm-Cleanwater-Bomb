@@ -3709,6 +3709,9 @@ int Character::throw_range( const item &it ) const
 
     int ench_bonus = enchantment_cache->get_value_add( enchant_vals::mod::THROW_STR );
     int str = get_arm_str() + ench_bonus;
+    int attr_int = get_int();
+
+    const bool do_railgun = has_active_bionic( bio_railgun ) && tmp.made_of_any( ferric );
 
     /** @ARM_STR determines maximum weight that can be thrown */
     if( ( tmp.weight() / 113_gram ) > str * 15 )  {
@@ -3716,9 +3719,13 @@ int Character::throw_range( const item &it ) const
     }
     // Increases as weight decreases until 150 g, then decreases again
     /** @ARM_STR increases throwing range, vs item weight (high or low) */
+    std::optional<int> throw_assist = std::nullopt;
     if( is_mounted() ) {
         auto *mons = mounted_creature.get();
-        str = mons->mech_str_addition() != 0 ? mons->mech_str_addition() : str;
+        if( mons->mech_str_addition() != 0 ) {
+            throw_assist = mons->mech_str_addition();
+        }
+        str = throw_assist ? *throw_assist : str;
     }
     // Skill and high dexterity reduce the range penalty for very light items.
     float light_item_coeff = 1.0f + 0.1f * get_skill_level( skill_throw );
@@ -3736,9 +3743,6 @@ int Character::throw_range( const item &it ) const
         ret = ( str * 10 ) / light_penalty;
     }
     ret -= tmp.volume() / 1_liter;
-    if( has_active_bionic( bio_railgun ) && tmp.made_of_any( ferric ) ) {
-        ret *= 2;
-    }
 
     if( ret < 1 ) {
         ret = 1;
@@ -3748,6 +3752,26 @@ int Character::throw_range( const item &it ) const
     const int range_cap = round( str * 3 + get_skill_level( skill_throw ) + ench_bonus );
     if( ret > range_cap ) {
         ret = range_cap;
+    }
+
+    // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
+    if( do_railgun && !throw_assist ) {
+        int ench_range = enchantment_cache->get_value_add( enchant_vals::mod::RANGE );
+        int ench_range_mult = enchantment_cache->get_value_multiply( enchant_vals::mod::RANGE );
+        const int railgun_range_cap_max = round( ( attr_int * 3 + get_skill_level( skill_throw ) + ench_range ) * ench_range_mult + 10 );
+        if( tmp.weight() >= 150_gram ) {
+            ret = ( ( attr_int * 20 ) / ( tmp.weight() / 113_gram ) + ench_range ) * ench_range_mult + 5;
+        } else if( tmp.weight() >= 20_gram ) {
+            int light_penalty = 10 - static_cast<int>( tmp.weight() / 15_gram );
+            light_penalty = std::max( 1, static_cast<int>( light_penalty / light_item_coeff ) );
+            ret = ( ( attr_int * 20 ) / light_penalty + ench_range ) * ench_range_mult + 10;
+        } else {
+            ret = railgun_range_cap_max;
+        }
+        ret -= tmp.volume() / 1_liter;
+        if( ret > railgun_range_cap_max ) {
+            ret = railgun_range_cap_max;
+        }
     }
 
     ret = static_cast<int>( std::round( ret * throw_range_multiplier() ) );
