@@ -1,5 +1,6 @@
 #include <bitset>
 #include <cstdio>
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -7,12 +8,14 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "game.h"
 #include "lru_cache.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"
+#include "mdarray.h"
 #include "options_helpers.h"
 #include "player_helpers.h"
 #include "point.h"
@@ -23,6 +26,9 @@ static constexpr tripoint_abs_ms p1{ -SEEX - 2, -SEEY - 3, -1 };
 static constexpr tripoint_abs_ms p2{ 5, 7, -1 };
 static constexpr tripoint_abs_ms p3{ SEEX * 2 + 5, SEEY + 7, -1 };
 static constexpr tripoint_abs_ms p4{ SEEX * 3 + 2, SEEY * 7 + 1, -1 };
+
+static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_wall( "t_wall" );
 
 TEST_CASE( "map_memory_keeps_region", "[map_memory]" )
 {
@@ -142,12 +148,11 @@ TEST_CASE( "map_memory_refreshes_visibility_after_avatar_moves", "[map_memory][v
     const tripoint_bub_ms start( 50, 50, 0 );
     const tripoint_bub_ms destination = start + tripoint::east * 20;
     const tripoint_abs_ms destination_abs = here.get_abs( destination );
-    const ter_str_id floor( "t_floor" );
 
     g->place_player( start );
     you.clear_map_memory();
     you.recalc_sight_limits();
-    REQUIRE( here.ter_set( destination, floor ) );
+    REQUIRE( here.ter_set( destination, ter_t_floor ) );
 
     // Establish a valid visibility cache at the old position.  At midnight,
     // the destination is beyond the avatar's unaided vision.
@@ -162,7 +167,7 @@ TEST_CASE( "map_memory_refreshes_visibility_after_avatar_moves", "[map_memory][v
     you.setpos( here, destination, false );
     here.update_map_memory( you );
 
-    CHECK( you.get_memorized_tile( destination_abs ).get_ter_id() == floor.str() );
+    CHECK( you.get_memorized_tile( destination_abs ).get_ter_id() == ter_t_floor.str() );
 }
 
 TEST_CASE( "map_memory_refreshes_visibility_after_transparency_changes", "[map_memory][vision]" )
@@ -175,8 +180,6 @@ TEST_CASE( "map_memory_refreshes_visibility_after_transparency_changes", "[map_m
     map &here = get_map();
     avatar &you = get_avatar();
     const tripoint_bub_ms requested_start( 50, 50, 0 );
-    const ter_str_id floor( "t_floor" );
-    const ter_str_id wall( "t_wall" );
 
     g->place_player( requested_start );
     const tripoint_bub_ms start = you.pos_bub( here );
@@ -186,8 +189,8 @@ TEST_CASE( "map_memory_refreshes_visibility_after_transparency_changes", "[map_m
     you.clear_map_memory();
     g->reset_light_level();
     you.recalc_sight_limits();
-    REQUIRE( here.ter_set( blocker, wall ) );
-    REQUIRE( here.ter_set( target, floor ) );
+    REQUIRE( here.ter_set( blocker, ter_t_wall ) );
+    REQUIRE( here.ter_set( target, ter_t_floor ) );
 
     here.invalidate_map_cache( start.z() );
     here.build_map_cache( start.z() );
@@ -206,11 +209,11 @@ TEST_CASE( "map_memory_refreshes_visibility_after_transparency_changes", "[map_m
     // Opening a door or curtains changes transparency without moving the
     // avatar.  The derived visibility cache must be refreshed before map
     // memory is recorded at the end of the action.
-    REQUIRE( here.ter_set( blocker, floor ) );
+    REQUIRE( here.ter_set( blocker, ter_t_floor ) );
     here.update_map_memory( you );
 
     CHECK( target_is_clear() );
-    CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == floor.str() );
+    CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
 }
 
 // TODO: map memory save / load
