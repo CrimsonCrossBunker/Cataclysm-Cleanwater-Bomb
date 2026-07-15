@@ -2444,9 +2444,8 @@ void npc::reconcile_schedule()
         }
         clear_committed_goal();
     } else if( !on_shift && !in_sleep_state() && !needs_food() ) {
-        if( get_sleepiness() < static_cast<int>( sleepiness_levels::TIRED ) ) {
-            set_sleepiness( sleepiness_levels::TIRED );
-        }
+        // NO_NPC_FOOD keeps NPCs perpetually rested; do not raise sleepiness to TIRED.
+        set_sleepiness( 0 );
     }
 }
 
@@ -2473,11 +2472,8 @@ void npc::reconcile_schedule_on_load()
                           : ( end_mins - start_mins );
 
     if( on_shift && shift_len > 0 ) {
-        int mins_in = wraps && now_mins < start_mins
-                      ? ( 24 * 60 - start_mins + now_mins )
-                      : ( now_mins - start_mins );
-        int expected = mins_in * static_cast<int>( sleepiness_levels::TIRED ) / shift_len;
-        set_sleepiness( expected );
+        // NO_NPC_FOOD keeps NPCs perpetually rested regardless of shift progress.
+        set_sleepiness( 0 );
     }
 }
 

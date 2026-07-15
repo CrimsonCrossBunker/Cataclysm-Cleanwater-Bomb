@@ -946,7 +946,7 @@ class Character : public Creature, public visitable
         void apply_wound( bodypart_id bp, wound_type_id wd );
         /** Updates the status of wounds character has */
         void update_wounds( time_duration time_passed );
-        /** Returns true if character needs food, false if character is an NPC with NO_NPC_FOOD set */
+        /** Returns true if character needs food/sleep, false if character is an NPC with NO_NPC_FOOD set */
         bool needs_food() const;
         /** Increases hunger, thirst, sleepiness and stimulants wearing off. `rate_multiplier` is for retroactive updates. */
         void update_needs( int rate_multiplier );

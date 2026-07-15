@@ -142,6 +142,7 @@ static const efftype_id effect_melatonin( "melatonin" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_nausea( "nausea" );
+static const efftype_id effect_npc_suspend( "npc_suspend" );
 static const efftype_id effect_pkill1_acetaminophen( "pkill1_acetaminophen" );
 static const efftype_id effect_pkill1_generic( "pkill1_generic" );
 static const efftype_id effect_pkill1_nsaid( "pkill1_nsaid" );
@@ -1008,6 +1009,9 @@ void Character::set_thirst( int nthirst )
 
 void Character::mod_sleepiness( int nsleepiness )
 {
+    if( is_npc() && !needs_food() ) {
+        return;
+    }
     set_sleepiness( sleepiness + nsleepiness );
 }
 
@@ -1454,8 +1458,19 @@ void Character::update_needs( int rate_multiplier )
     needs_rates rates = calc_needs_rates();
 
     const bool wasnt_sleepinessd = get_sleepiness() <= sleepiness_levels::DEAD_TIRED;
-    // Don't increase sleepiness if sleeping or trying to sleep or if we're at the cap.
-    if( get_sleepiness() < 1050 && !asleep && !debug_ls ) {
+    // NO_NPC_FOOD disables hunger, thirst, and sleep/fatigue for NPCs.
+    if( !needs_food() ) {
+        set_sleepiness( 0 );
+        set_sleep_deprivation( 0 );
+        if( asleep ) {
+            sleep.set_duration( 1_turns );
+        }
+        remove_effect( effect_lying_down );
+        remove_effect( effect_npc_suspend );
+        if( activity.id() == ACT_TRY_SLEEP ) {
+            activity.set_to_null();
+        }
+    } else if( get_sleepiness() < 1050 && !asleep && !debug_ls ) {
         if( rates.sleepiness > 0.0f ) {
             int sleepiness_roll = roll_remainder( rates.sleepiness * rate_multiplier );
             mod_sleepiness( sleepiness_roll );
@@ -1468,11 +1483,6 @@ void Character::update_needs( int rate_multiplier )
                 // Note: Since needs are updated in 5-minute increments, we have to multiply the roll again by
                 // 5. If rate_multiplier is > 1, sleepiness_roll will be higher and this will work out.
                 mod_sleep_deprivation( sleepiness_roll * 5 );
-            }
-
-            if( !needs_food() && get_sleepiness() > sleepiness_levels::TIRED ) {
-                set_sleepiness( sleepiness_levels::TIRED );
-                set_sleep_deprivation( 0 );
             }
         }
     } else if( asleep ) {
