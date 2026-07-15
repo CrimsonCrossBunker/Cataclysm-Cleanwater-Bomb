@@ -12,7 +12,7 @@
 // Forward declarations to avoid pulling asio into every translation unit
 namespace asio {
 class io_context;
-}
+} // namespace asio
 
 namespace cata_mp {
 
@@ -43,9 +43,9 @@ class server {
 
     private:
         void do_accept();
-        void on_client_connected( std::shared_ptr<client_session> session );
-        void on_client_disconnected( std::shared_ptr<client_session> session );
-        void on_message( std::shared_ptr<client_session> session, const std::string &msg );
+        void on_client_connected( const std::shared_ptr<client_session>& session );
+        void on_client_disconnected( const std::shared_ptr<client_session>& session );
+        void on_message( const std::shared_ptr<client_session>& session, const std::string &msg );
 
         uint16_t port_;
         std::string password_;

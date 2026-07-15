@@ -12,6 +12,7 @@
 // Standalone Asio — no Boost dependency
 #define ASIO_STANDALONE
 #include <asio.hpp>
+#include <utility>
 
 using asio::ip::tcp;
 
@@ -92,7 +93,7 @@ static std::string mp_compress_frame( const std::string &msg )
         // Compression failed or didn't help — send the original plaintext.
         return msg;
     }
-    return "{\"z\":\"" + base64_encode( std::string_view( comp.data(), n ) ) + "\"}\n";
+    return R"({"z":")" + base64_encode( std::string_view( comp.data(), n ) ) + "\"}\n";
 }
 
 // ---------------------------------------------------------------------------
@@ -199,7 +200,7 @@ struct server::impl {
     asio::io_context io_ctx;
     tcp::acceptor acceptor;
 
-    impl( uint16_t port )
+    explicit impl( uint16_t port )
         : acceptor( io_ctx, tcp::endpoint( tcp::v4(), port ) ) {}
 };
 
@@ -226,7 +227,7 @@ void server::stop() {
 }
 
 void server::broadcast( const std::string &msg ) {
-    std::lock_guard<std::mutex> lock( clients_mutex_ );
+    std::scoped_lock lock( clients_mutex_ );
     for( auto &c : clients_ ) {
         c->send( msg );
     }
@@ -242,11 +243,11 @@ void server::do_accept() {
         if( !ec ) {
             auto session = std::make_shared<client_session>( std::move( socket ) );
 
-            session->on_message = [this]( auto sess, auto msg ) {
-                on_message( sess, msg );
+            session->on_message = [this]( auto sess, const auto& msg ) {
+                on_message( std::move(sess), msg );
             };
             session->on_disconnect = [this]( auto sess ) {
-                on_client_disconnected( sess );
+                on_client_disconnected( std::move(sess) );
             };
 
             on_client_connected( session );
@@ -256,9 +257,9 @@ void server::do_accept() {
     } );
 }
 
-void server::on_client_connected( std::shared_ptr<client_session> session ) {
+void server::on_client_connected( const std::shared_ptr<client_session>& session ) {
     {
-        std::lock_guard<std::mutex> lock( clients_mutex_ );
+        std::scoped_lock lock( clients_mutex_ );
         clients_.push_back( session );
     }
     std::cout << "[cdda-mp] Client connected. Total: " << clients_.size() << std::endl;
@@ -269,9 +270,9 @@ void server::on_client_connected( std::shared_ptr<client_session> session ) {
     }
 }
 
-void server::on_client_disconnected( std::shared_ptr<client_session> session ) {
+void server::on_client_disconnected( const std::shared_ptr<client_session>& session ) {
     {
-        std::lock_guard<std::mutex> lock( clients_mutex_ );
+        std::scoped_lock lock( clients_mutex_ );
         clients_.erase(
             std::remove( clients_.begin(), clients_.end(), session ),
             clients_.end()
@@ -282,7 +283,7 @@ void server::on_client_disconnected( std::shared_ptr<client_session> session ) {
               clients_.size() << std::endl;
 
     if( session->authenticated ) {
-        broadcast( "{\"type\":\"player_left\",\"name\":\"" + name + "\"}\n" );
+        broadcast( R"({"type":"player_left","name":")" + name + "\"}\n" );
         get_mp_queue().push( { cata_mp::mp_event::type::disconnect, name, "" } );
     }
 }
@@ -305,7 +306,7 @@ static std::string json_get_str( const std::string &json, const std::string &key
     return "";
 }
 
-void server::on_message( std::shared_ptr<client_session> session, const std::string &msg ) {
+void server::on_message( const std::shared_ptr<client_session>& session, const std::string &msg ) {
     std::cout << "[cdda-mp] recv: " << msg << std::endl;
 
     const std::string type = json_get_str( msg, "type" );
@@ -325,7 +326,7 @@ void server::on_message( std::shared_ptr<client_session> session, const std::str
             if( mp_version_commit_id( client_ver ) != mp_version_commit_id( version_ ) ) {
                 const std::string errmsg = "Version mismatch. Host: " + version_ +
                                            " Client: " + ( client_ver.empty() ? "(unknown)" : client_ver );
-                session->send( "{\"type\":\"error\",\"message\":\"" + errmsg + "\"}\n" );
+                session->send( R"({"type":"error","message":")" + errmsg + "\"}\n" );
                 mp_log( "[cdda-mp] PROBE REJECTED — version mismatch. " + errmsg +
                         " (host and client are on different builds; both must run the same release)" );
                 session->disconnect();
@@ -375,7 +376,7 @@ void server::on_message( std::shared_ptr<client_session> session, const std::str
             if( mp_version_commit_id( client_ver ) != mp_version_commit_id( version_ ) ) {
                 const std::string errmsg = "Version mismatch. Host: " + version_ +
                                            " Client: " + ( client_ver.empty() ? "(unknown)" : client_ver );
-                session->send( "{\"type\":\"error\",\"message\":\"" + errmsg + "\"}\n" );
+                session->send( R"({"type":"error","message":")" + errmsg + "\"}\n" );
                 mp_log( "[cdda-mp] JOIN REJECTED — version mismatch. " + errmsg +
                         " client_commit=" + mp_version_commit_id( client_ver ) +
                         " host_commit=" + mp_version_commit_id( version_ ) );
@@ -402,16 +403,16 @@ void server::on_message( std::shared_ptr<client_session> session, const std::str
         // generating the host-area overmap — otherwise it renders its own
         // randomly-seeded terrain outside the tile-synced bubble.
         const std::string wname = mp_get_host_world_name();
-        session->send( "{\"type\":\"welcome\",\"player_id\":\"" + name +
-                       "\",\"world\":\"" + wname +
-                       "\",\"host_name\":\"" + mp_json_escape( mp_get_host_player_name() ) +
-                       "\",\"current_turn\":0,\"seed\":" +
+        session->send( R"({"type":"welcome","player_id":")" + name +
+                       R"(","world":")" + wname +
+                       R"(","host_name":")" + mp_json_escape( mp_get_host_player_name() ) +
+                       R"(","current_turn":0,"seed":)" +
                        std::to_string( mp_host_world_seed() ) +
                        mp_host_omt_welcome_field() + "}\n" );
         mp_log( "[cdda-mp] SEED: welcome sent host seed " +
                 std::to_string( mp_host_world_seed() ) + " to '" + name + "'" );
 
-        broadcast( "{\"type\":\"player_joined\",\"name\":\"" + name + "\"}\n" );
+        broadcast( R"({"type":"player_joined","name":")" + name + "\"}\n" );
         mp_log( "[cdda-mp] JOIN accepted — player '" + name + "' authenticated and connected" );
 
         // Notify game loop to spawn this player's character

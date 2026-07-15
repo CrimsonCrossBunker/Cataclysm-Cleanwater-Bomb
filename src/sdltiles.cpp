@@ -876,7 +876,7 @@ static void WinDestroy()
     gamepad::quit();
     geometry.reset();
 #if SDL_MAJOR_VERSION >= 3
-    shared_variant_pass.reset();
+    shared_variant_pass = nullptr;
 #endif
     display_buffer.reset();
     renderer.reset();
@@ -1018,7 +1018,7 @@ extern "C" {
 
         input_event event( UTF8_getch( text_s ), input_event_t::keyboard_char );
         event.text = text_s;
-        std::lock_guard<std::mutex> lock( extra_button_input_mutex );
+        std::scoped_lock lock( extra_button_input_mutex );
         extra_button_inputs.push_back( event );
     }
 
@@ -2581,7 +2581,7 @@ void renderer_recovery_test_support::teardown_software_renderer()
     reset_coordinator();
     geometry.reset();
 #if SDL_MAJOR_VERSION >= 3
-    shared_variant_pass.reset();
+    shared_variant_pass = nullptr;
 #endif
     display_buffer.reset();
     renderer.reset();
@@ -5478,7 +5478,7 @@ static void focus_aware_stop_text_input()
 static bool pop_extra_button_input( input_event &event )
 {
 #if defined(__ANDROID__)
-    std::lock_guard<std::mutex> lock( extra_button_input_mutex );
+    std::scoped_lock lock( extra_button_input_mutex );
     if( extra_button_inputs.empty() ) {
         return false;
     }

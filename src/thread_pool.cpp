@@ -28,7 +28,7 @@ cata_thread_pool::cata_thread_pool( unsigned int num_workers )
 cata_thread_pool::~cata_thread_pool()
 {
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::scoped_lock lock( mutex_ );
         stop_ = true;
     }
     cv_.notify_all();
@@ -75,7 +75,7 @@ void cata_thread_pool::worker_loop()
 void cata_thread_pool::submit( std::function<void()> task )
 {
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::scoped_lock lock( mutex_ );
         queue_.push_back( std::move( task ) );
     }
     cv_.notify_one();

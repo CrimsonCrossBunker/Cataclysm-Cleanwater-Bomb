@@ -2399,7 +2399,7 @@ void outfit::pickup_stash( Character &guy, const item &newit, int &remaining_cha
 }
 
 static std::vector<pocket_data_with_parent> get_child_pocket_with_parent(
-    const item_pocket *pocket, item_location it, const int nested_level,
+    const item_pocket *pocket, const item_location& it, const int nested_level,
     const std::function<bool( const item_pocket * )> &filter = return_true<const item_pocket *> )
 {
     std::vector<pocket_data_with_parent> ret;

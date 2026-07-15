@@ -160,7 +160,7 @@ void mp_log( const std::string &msg )
         // unbounded across dozens of launches.  Only fires at the start of a new
         // launch, never mid-session, so it never pulls live data out from under
         // a debugging run.
-        constexpr std::uintmax_t LOG_CAP_BYTES = 10ull * 1024 * 1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
+        constexpr std::uintmax_t LOG_CAP_BYTES = 10ULL * 1024 * 1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
         std::error_code ec;
         const std::uintmax_t sz =
             std::filesystem::exists( desired_path, ec )
@@ -213,7 +213,7 @@ static void mp_start_apply_watchdog()
                 std::string label;
                 std::chrono::steady_clock::time_point started;
                 {
-                    std::lock_guard<std::mutex> lk( g_apply_step_mtx );
+                    std::scoped_lock lk( g_apply_step_mtx );
                     label = g_apply_step_label;
                     started = g_apply_step_started;
                 }
@@ -252,7 +252,7 @@ struct mp_apply_step {
         : label_( std::move( label ) ), t0_( std::chrono::steady_clock::now() ) {
         mp_start_apply_watchdog();
         {
-            std::lock_guard<std::mutex> lk( g_apply_step_mtx );
+            std::scoped_lock lk( g_apply_step_mtx );
             g_apply_step_label = label_;
             g_apply_step_started = t0_;
         }
@@ -262,7 +262,7 @@ struct mp_apply_step {
         const long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - t0_ ).count();
         {
-            std::lock_guard<std::mutex> lk( g_apply_step_mtx );
+            std::scoped_lock lk( g_apply_step_mtx );
             g_apply_step_label.clear();
         }
         mp_log( "[cdda-mp] STATE-APPLY: " + label_ + " done dur=" + std::to_string( ms ) + "ms" );
@@ -1078,7 +1078,7 @@ struct mp_edge_t {
     // under us (side flip / layout switch / width change). ui_adaptor only
     // re-runs on_screen_resize on its own for terminal/font changes, so without
     // this the stripes stay pinned to their startup columns.
-    void maybe_resize() {
+    void maybe_resize() const {
         panel_manager &pm = panel_manager::get_manager();
         if( pm.get_width_left() != last_left || pm.get_width_right() != last_right
             || TERMX != last_termx ) {
@@ -1221,9 +1221,9 @@ void mp_open_chat()
     }
     const bool host = is_hosting();
     const std::string from = get_avatar().get_name();
-    const std::string js = "{\"type\":\"chat\",\"from\":\"" + json_escape_str( from ) +
-                           "\",\"text\":\"" + json_escape_str( text ) +
-                           "\",\"host\":" + ( host ? "true" : "false" ) + "}";
+    const std::string js = R"({"type":"chat","from":")" + json_escape_str( from ) +
+                           R"(","text":")" + json_escape_str( text ) +
+                           R"(","host":)" + ( host ? "true" : "false" ) + "}";
     if( host ) {
         if( server *srv = get_active_server() ) {
             srv->post_broadcast( js + "\n" );
@@ -1327,13 +1327,13 @@ unsigned int mp_host_world_seed()
 
 void mp_set_host_world_name( const std::string &name )
 {
-    std::lock_guard<std::mutex> lk( g_host_world_name_mtx );
+    std::scoped_lock lk( g_host_world_name_mtx );
     g_host_world_name = name;
 }
 
 std::string mp_get_host_world_name()
 {
-    std::lock_guard<std::mutex> lk( g_host_world_name_mtx );
+    std::scoped_lock lk( g_host_world_name_mtx );
     return g_host_world_name;
 }
 
@@ -1354,13 +1354,13 @@ static std::mutex g_host_player_name_mtx;
 
 void mp_set_host_player_name( const std::string &name )
 {
-    std::lock_guard<std::mutex> lk( g_host_player_name_mtx );
+    std::scoped_lock lk( g_host_player_name_mtx );
     g_host_player_name = name;
 }
 
 std::string mp_get_host_player_name()
 {
-    std::lock_guard<std::mutex> lk( g_host_player_name_mtx );
+    std::scoped_lock lk( g_host_player_name_mtx );
     return g_host_player_name;
 }
 
@@ -1480,7 +1480,7 @@ static mp_tile_state compute_tile_state( const tripoint_abs_ms &abs );
 // compute_tile_state, forward-declared here for the client_tile_changes applier.
 static std::string mp_partial_con_sig( const tripoint_bub_ms &bub );
 static std::string mp_partial_con_obj_json( const tripoint_bub_ms &bub );
-static void mp_apply_partial_con_obj( const tripoint_bub_ms &bub, JsonObject po );
+static void mp_apply_partial_con_obj( const tripoint_bub_ms &bub, const JsonObject& po );
 
 // Client→server tile baselines: track what was last sent so we only send diffs.
 // Fields are host-authoritative — the host generates the dust/blood/etc. that
@@ -2299,7 +2299,7 @@ void host_broadcast_vehicle_step()
         return;
     }
     g_last_vehicle_step_payload = vehicles_json;
-    srv->post_broadcast( "{\"type\":\"vehicle_step\",\"vehicles\":" + vehicles_json + "}\n" );
+    srv->post_broadcast( R"({"type":"vehicle_step","vehicles":)" + vehicles_json + "}\n" );
 }
 
 // A relayed line is shown to the PARTNER, so a mention of the partner by name
@@ -2423,7 +2423,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
 
     // Trade delta from client — client traded with the host's NPC proxy on its
     // side.  Apply item changes to the host's real avatar before anything else.
-    if( msg.find( "\"type\":\"trade_delta\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"trade_delta")" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo2 = jv.get_object();
@@ -2464,22 +2464,22 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
         return;
     }
 
-    if( msg.find( "\"type\":\"note_sync\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"note_sync")" ) != std::string::npos ) {
         mp_handle_note_sync( msg );
         return;
     }
 
-    if( msg.find( "\"type\":\"chat\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"chat")" ) != std::string::npos ) {
         mp_handle_chat_msg( msg );
         return;
     }
 
-    if( msg.find( "\"type\":\"high_five\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"high_five")" ) != std::string::npos ) {
         mp_handle_high_five_recv( msg );
         return;
     }
 
-    if( msg.find( "\"type\":\"shout\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"shout")" ) != std::string::npos ) {
         mp_handle_shout_recv( msg );
         return;
     }
@@ -2542,7 +2542,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // simulation on the host side.  Their sole job is to open and close the
     // lockstep bypass cleanly, so variable-duration activities like ACT_DROP
     // don't race the heartbeat.
-    if( msg.find( "\"action\":\"activity_start\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"activity_start")" ) != std::string::npos ) {
         const std::string id = jo.get_string( "activity_id", "" );
         const std::string prev = g_partner_activity;
         if( !id.empty() ) {
@@ -2553,7 +2553,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
                 + " g_partner_activity prev=" + prev + " now=" + g_partner_activity );
         return;
     }
-    if( msg.find( "\"action\":\"activity_end\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"activity_end")" ) != std::string::npos ) {
         const std::string id = jo.get_string( "activity_id", "" );
         const std::string prev = g_partner_activity;
         g_partner_activity.clear();
@@ -2567,7 +2567,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // Snapshot the host's world before the TCP socket goes down so any
     // shared state the client touched is captured.  Client owns its own
     // .sav, so nothing to do for their character on this side.
-    if( msg.find( "\"action\":\"session_ending\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"session_ending")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] SESSION-END RECV: client is leaving — auto-saving host" );
         add_msg( m_warning, _( "Your partner is leaving.  The game has been saved." ) );
         g->quicksave();
@@ -2577,7 +2577,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // Co-op save handshake: the client saved on their side and asked us to save
     // the shared world too, so the host's authoritative save and the client's
     // local save stay at the same game-time.  Reply save_done for confirmation.
-    if( msg.find( "\"action\":\"save_request\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"save_request")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] SAVE-REQ RECV: partner asked host to save the shared world" );
         g->quicksave();
         add_msg( m_info, _( "Your partner saved — the shared world was saved too." ) );
@@ -2588,15 +2588,15 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Templates wire-sync handlers (symmetric — same shape on host and client).
-    if( msg.find( "\"type\":\"templates_list\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"templates_list")" ) != std::string::npos ) {
         mp_handle_templates_list( msg );
         return;
     }
-    if( msg.find( "\"type\":\"template_request\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"template_request")" ) != std::string::npos ) {
         mp_handle_template_request( msg );
         return;
     }
-    if( msg.find( "\"type\":\"template_data\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"template_data")" ) != std::string::npos ) {
         mp_handle_template_data( msg );
         return;
     }
@@ -2659,7 +2659,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
 
     // Extract action label for HUD "Queued" row on the server panel.
     {
-        const size_t pos = msg.find( "\"action\":\"" );
+        const size_t pos = msg.find( R"("action":")" );
         if( pos != std::string::npos ) {
             const size_t start = pos + 10;
             const size_t end = msg.find( '"', start );
@@ -2667,7 +2667,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
                 std::string act = msg.substr( start, end - start );
                 // Append direction for move actions so it reads e.g. "move:n".
                 if( act == "move" ) {
-                    const size_t dpos = msg.find( "\"dir\":\"" );
+                    const size_t dpos = msg.find( R"("dir":")" );
                     if( dpos != std::string::npos ) {
                         const size_t dstart = dpos + 7;
                         const size_t dend = msg.find( '"', dstart );
@@ -2707,7 +2707,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
 
     // Worn-item sync — client sends this once after joining (and after any
     // wear/take-off) so the remote NPC reflects the client's actual equipment.
-    if( msg.find( "\"action\":\"worn_sync\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"worn_sync")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] worn_sync recv: " + msg.substr( 0, 120 ) );
         try {
             JsonValue jv = json_loader::from_string( msg );
@@ -3182,7 +3182,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
 
     // Partner-menu swap: swap host's avatar with the client's proxy NPC.
     // Triggered when the client picked "Swap positions" from the bump menu.
-    if( msg.find( "\"action\":\"swap_with_partner\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"swap_with_partner")" ) != std::string::npos ) {
         avatar &host_av = get_avatar();
         const tripoint_bub_ms host_pre  = host_av.pos_bub();
         const tripoint_bub_ms proxy_pre = remote->pos_bub();
@@ -3202,7 +3202,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // proxy.  Triggered when the client picked "Push away" from the bump menu.
     // avatar has no move_away_from() (that's npc-only), so compute the step
     // direction manually: sign of (host - proxy) on each axis.
-    if( msg.find( "\"action\":\"push_partner\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"push_partner")" ) != std::string::npos ) {
         avatar &host_av = get_avatar();
         const tripoint_bub_ms host_pos  = host_av.pos_bub();
         const tripoint_bub_ms proxy_pos = remote->pos_bub();
@@ -3233,7 +3233,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // (sleep, crafting, reading) are intentionally not interruptible by tap
     // at this stage. If host isn't waiting, the tap is acknowledged but the
     // activity state is left alone.
-    if( msg.find( "\"action\":\"tap_partner\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"tap_partner")" ) != std::string::npos ) {
         avatar &host_av = get_avatar();
         static const activity_id s_act_wait( "ACT_WAIT" );
         const bool was_waiting = host_av.activity.id() == s_act_wait;
@@ -3251,8 +3251,8 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Wait — drain one turn's worth of AP.
-    const bool is_wait = msg.find( "\"action\":\"wait\"" ) != std::string::npos ||
-                         msg.find( "\"action\": \"wait\"" ) != std::string::npos;
+    const bool is_wait = msg.find( R"("action":"wait")" ) != std::string::npos ||
+                         msg.find( R"("action": "wait")" ) != std::string::npos;
     if( is_wait ) {
         mp_log( "[cdda-mp] wait recv: ctrl_veh=" + std::to_string( remote->controlling_vehicle ) +
                 " g_remote_moves=" + std::to_string( g_remote_moves ) );
@@ -3261,7 +3261,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Pickup — drain AP and remove the taken items from the server's authoritative tile.
-    if( msg.find( "\"action\":\"pickup\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"pickup")" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo = jv.get_object();
@@ -3278,9 +3278,9 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
                         continue;
                     }
                     map_stack stack = here.i_at( bub_pos );
-                    for( auto it = stack.begin(); it != stack.end(); ++it ) {
-                        if( it->typeId() == tid ) {
-                            here.i_rem( bub_pos, &*it );
+                    for(auto & it : stack) {
+                        if( it.typeId() == tid ) {
+                            here.i_rem( bub_pos, &it );
                             mp_log( "[cdda-mp] pickup: removed " + tid.str()
                                     + " from " + std::to_string( bub_pos.x() ) + ","
                                     + std::to_string( bub_pos.y() ) );
@@ -3299,7 +3299,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // Drop — client dropped items locally; add them to the server's authoritative tile.
     // Always drop at the remote NPC's current server-side position to avoid coordinate
     // desync between the client's local bubble and the server's bubble.
-    if( msg.find( "\"action\":\"drop\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"drop")" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo = jv.get_object();
@@ -3347,8 +3347,8 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Door open/close.
-    const bool is_open  = msg.find( "\"action\":\"open\""  ) != std::string::npos;
-    const bool is_close = msg.find( "\"action\":\"close\"" ) != std::string::npos;
+    const bool is_open  = msg.find( R"("action":"open")"  ) != std::string::npos;
+    const bool is_close = msg.find( R"("action":"close")" ) != std::string::npos;
     if( is_open || is_close ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
@@ -3376,7 +3376,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Smash — parse absolute target and bash it using the client's smash ability.
-    if( msg.find( "\"action\":\"smash\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"smash")" ) != std::string::npos ) {
         std::string smash_result_str = "failed";
         tripoint_abs_ms smash_target_abs{ 0, 0, 0 };
         try {
@@ -3441,7 +3441,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
         if( srv ) {
             std::string state = serialize_remote_player_state();
             state = state.substr( 0, state.size() - 1 )
-                    + ",\"smash_result\":\"" + smash_result_str + "\""
+                    + R"(,"smash_result":")" + smash_result_str + "\""
                     + ",\"smash_x\":" + std::to_string( smash_target_abs.x() )
                     + ",\"smash_y\":" + std::to_string( smash_target_abs.y() )
                     + ",\"smash_z\":" + std::to_string( smash_target_abs.z() ) + "}";
@@ -3453,7 +3453,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Position sync — client went up/down stairs; teleport proxy NPC to match.
-    if( msg.find( "\"action\":\"position_sync\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"position_sync")" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo = jv.get_object();
@@ -3476,14 +3476,14 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
 
     // Eat / use item — client is authoritative over its own nutrition; server just
     // drains one turn of AP and re-broadcasts state so the client's HUD stays current.
-    if( msg.find( "\"action\":\"eat\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"eat")" ) != std::string::npos ) {
         srv_emit_ack( "eat" );
         return;
     }
 
     // Control vehicle — toggle the proxy NPC's vehicle control state.
     // Mirrors game::control_vehicle() for the client's proxy.
-    if( msg.find( "\"action\":\"control_vehicle\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"control_vehicle")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] control_vehicle: HANDLER ENTERED controlling=" +
                 std::to_string( remote->controlling_vehicle ) );
         map &here = get_map();
@@ -3511,7 +3511,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
             mp_log( "[cdda-mp] control_vehicle: proxy released controls" );
             // Host log: NPC-form. Client: direct push (correct grammar, first-person).
             add_msg( _( "%s lets go of the controls." ), remote->name );
-            g_action_msgs_pending.push_back( _( "You let go of the controls." ) );
+            g_action_msgs_pending.emplace_back(_( "You let go of the controls." ) );
         } else if( const optional_vpart_position vp = here.veh_at( bub ) ) {
             vehicle &veh = vp->vehicle();
             const int ctrl_idx = veh.avail_part_with_feature( vp->mount_pos(), "CONTROLS" );
@@ -3571,12 +3571,12 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
             } else {
                 mp_log( "[cdda-mp] control_vehicle: no controls at proxy position" );
                 add_msg( m_info, _( "%s can't drive from here — no controls." ), remote->name );
-                g_action_msgs_pending.push_back( _( "You can't drive from here — no controls." ) );
+                g_action_msgs_pending.emplace_back(_( "You can't drive from here — no controls." ) );
             }
         } else {
             mp_log( "[cdda-mp] control_vehicle: no vehicle at proxy position" );
             add_msg( m_info, _( "No vehicle here for %s to control." ), remote->name );
-            g_action_msgs_pending.push_back( _( "No vehicle here to control." ) );
+            g_action_msgs_pending.emplace_back(_( "No vehicle here to control." ) );
         }
         // Don't use flush_action_msgs here — messages are pushed directly above
         // to avoid grammar issues from NPC-name→"You" substitution ("takes"→"take").
@@ -3587,7 +3587,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
 
     // Pldrive — client is at vehicle controls, translate directional input to
     // vehicle::pldrive() exactly as handle_action.cpp does in single-player.
-    if( msg.find( "\"action\":\"pldrive\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"pldrive")" ) != std::string::npos ) {
         int dx = 0;
         int dy = 0;
         try {
@@ -3654,7 +3654,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Cruise speed adjustment — free action (mirrors SP: cruise_thrust costs no AP).
-    if( msg.find( "\"action\":\"cruise\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"cruise")" ) != std::string::npos ) {
         int dy = 0;
         try {
             JsonValue jv = json_loader::from_string( msg );
@@ -3682,7 +3682,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Handbrake — client pressed smash key while in vehicle control mode.
-    if( msg.find( "\"action\":\"handbrake\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"handbrake")" ) != std::string::npos ) {
         map &here = get_map();
         const tripoint_bub_ms bub = remote->pos_bub();
         if( const optional_vpart_position vp = here.veh_at( bub ) ) {
@@ -3690,7 +3690,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
             mp_log( "[cdda-mp] handbrake: veh=" + veh.name
                     + " vel=" + std::to_string( veh.velocity ) );
             add_msg( _( "%s pulls a handbrake." ), remote->name );
-            g_action_msgs_pending.push_back( _( "You pull a handbrake." ) );
+            g_action_msgs_pending.emplace_back(_( "You pull a handbrake." ) );
             veh.cruise_velocity = 0;
             if( veh.last_turn != 0_degrees &&
                 rng( 15, 60 ) * 100 < std::abs( veh.velocity ) ) {
@@ -3715,7 +3715,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Stop engine — client selected "Stop engine" from driving menu.
-    if( msg.find( "\"action\":\"stop_engine\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"stop_engine")" ) != std::string::npos ) {
         map &here = get_map();
         const tripoint_bub_ms bub = remote->pos_bub();
         if( const optional_vpart_position vp = here.veh_at( bub ) ) {
@@ -3740,7 +3740,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     }
 
     // Toggle engine while not driving (at controls but not in control mode).
-    if( msg.find( "\"action\":\"toggle_engine\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"toggle_engine")" ) != std::string::npos ) {
         map &here = get_map();
         const tripoint_bub_ms bub = remote->pos_bub();
         if( const optional_vpart_position vp = here.veh_at( bub ) ) {
@@ -3748,11 +3748,11 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
             if( veh.engine_on ) {
                 veh.stop_engines( here );
                 add_msg( _( "%s turns off the engine." ), remote->name );
-                g_action_msgs_pending.push_back( _( "You turn the engine off." ) );
+                g_action_msgs_pending.emplace_back(_( "You turn the engine off." ) );
             } else {
                 veh.start_engines( here, remote );
                 add_msg( _( "%s starts the engine." ), remote->name );
-                g_action_msgs_pending.push_back( _( "You start the engine." ) );
+                g_action_msgs_pending.emplace_back(_( "You start the engine." ) );
             }
         }
         g_last_forwarded_msg_count = Messages::size();
@@ -3770,7 +3770,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // the client's local vehicle is replaced with the post-construction
     // snapshot — covers install, remove (including appliance), repair,
     // refill, change-shape paths in vehicle_activity_actor.
-    if( msg.find( "\"action\":\"vehicle_construct\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"vehicle_construct")" ) != std::string::npos ) {
         try {
             JsonValue actor_jv = jo.get_member( "actor" );
             std::unique_ptr<activity_actor> actor =
@@ -3794,7 +3794,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
         return;
     }
 
-    if( msg.find( "\"action\":\"honk\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"honk")" ) != std::string::npos ) {
         map &here = get_map();
         const tripoint_bub_ms bub = remote->pos_bub();
         if( const optional_vpart_position vp = here.veh_at( bub ) ) {
@@ -3815,7 +3815,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     //
     //   { "type":"action", "action":"grab", "grab_type":<int>,
     //     "dx":<int>, "dy":<int>, "dz":<int> }
-    if( msg.find( "\"action\":\"grab\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"grab")" ) != std::string::npos ) {
         try {
             const int gt = jo.get_int( "grab_type", 0 );
             const int dx = jo.get_int( "dx", 0 );
@@ -3838,7 +3838,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // tracked on the host side via the NPC's haul_list; the client's local
     // is_hauling state is what affects the client's move dispatch UI.  Sync
     // both sides via remote_player_state.
-    if( msg.find( "\"action\":\"toggle_haul\"" ) != std::string::npos ) {
+    if( msg.find( R"("action":"toggle_haul")" ) != std::string::npos ) {
         remote->toggle_hauling();
         // Diagnostic: confirm whether toggle on the proxy populated haul_list
         // from the proxy's current tile (Character::toggle_hauling does this
@@ -3863,7 +3863,7 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
     // If stamina later runs out during the move, the auto-walk transition below
     // will override this and the state packet will correct the client.
     {
-        const size_t mm = msg.find( "\"move_mode\":\"" );
+        const size_t mm = msg.find( R"("move_mode":")" );
         if( mm != std::string::npos ) {
             const size_t start = mm + 13;
             const size_t end = msg.find( '"', start );
@@ -3877,8 +3877,8 @@ static void handle_remote_action( const std::string &/*name*/, const std::string
 
     // Parse direction — handle both "dir":"n" and "dir": "n" spacing
     const auto dir_match = [&msg]( const std::string & d ) {
-        return msg.find( "\"dir\":\"" + d + "\"" ) != std::string::npos ||
-               msg.find( "\"dir\": \"" + d + "\"" ) != std::string::npos;
+        return msg.find( R"("dir":")" + d + "\"" ) != std::string::npos ||
+               msg.find( R"("dir": ")" + d + "\"" ) != std::string::npos;
     };
     tripoint offset;
     if( dir_match( "n" ) ) {
@@ -4369,13 +4369,13 @@ static std::string build_overmap_sync_z( int z, const tripoint_abs_omt &center )
             }
             cfirst = false;
             cities_json += "{\"x\":" + std::to_string( cp.x() ) + ",\"y\":" +
-                           std::to_string( cp.y() ) + ",\"n\":\"" +
+                           std::to_string( cp.y() ) + R"(,"n":")" +
                            json_escape_str( cr.city->name ) + "\"}";
         }
     }
     cities_json += "]";
 
-    std::string msg = "{\"type\":\"overmap_sync\",\"z\":" + std::to_string( z ) +
+    std::string msg = R"({"type":"overmap_sync","z":)" + std::to_string( z ) +
                       ",\"ox\":" + std::to_string( ox ) + ",\"oy\":" + std::to_string( oy ) +
                       ",\"w\":" + std::to_string( w ) + ",\"h\":" + std::to_string( h ) +
                       ",\"pal\":" + pal_json + ",\"cities\":" + cities_json +
@@ -4533,7 +4533,7 @@ static std::string build_map_sync_z( int az )
         pal += "\"" + palette[i] + "\"";
     }
     pal += "]";
-    std::string msg = "{\"type\":\"map_sync\",\"z\":" + std::to_string( az ) +
+    std::string msg = R"({"type":"map_sync","z":)" + std::to_string( az ) +
                       ",\"pal\":" + pal + ",\"subs\":" + subs + "}";
     const long build_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                               std::chrono::steady_clock::now() - t0 ).count();
@@ -5459,7 +5459,7 @@ void mp_after_quicksave()
     } else if( is_client_mode() ) {
         add_msg( m_info,
                  _( "Saved your character locally.  Asking the host to save the shared world so you stay in sync…" ) );
-        client_send( "{\"type\":\"action\",\"action\":\"save_request\"}" );
+        client_send( R"({"type":"action","action":"save_request"})" );
     }
 }
 
@@ -5473,7 +5473,7 @@ void mp_notify_session_ending()
         }
     } else if( is_client_mode() ) {
         // Wrapped as an action so handle_remote_action()'s dispatcher sees it.
-        client_send( "{\"type\":\"action\",\"action\":\"session_ending\",\"from\":\"client\"}" );
+        client_send( R"({"type":"action","action":"session_ending","from":"client"})" );
         mp_log( "[cdda-mp] SESSION-END: client notified host" );
     } else {
         return;
@@ -5871,8 +5871,7 @@ bool mp_world_coop_block( const std::string &worldname,
             spawn_time = 0.0f;
         }
         if( spawn_time > 0.0f && spawn_time < 10.0f ) {
-            warn_reasons.push_back(
-                _( "Random NPCs are enabled — co-op can't sync them to the other player yet." ) );
+            warn_reasons.emplace_back(_( "Random NPCs are enabled — co-op can't sync them to the other player yet." ) );
         }
     }
     return !block_reasons.empty();
@@ -6298,12 +6297,12 @@ void process_mp_events()
     // TODO(roadmap): real multi-depth queue for lockstep relaxation / input
     // buffering — see ROADMAP.md "Action queue depth"
     auto is_state_sync = []( const std::string & data ) {
-        return data.find( "\"action\":\"worn_sync\"" ) != std::string::npos
-               || data.find( "\"type\":\"trade_delta\"" ) != std::string::npos
-               || data.find( "\"type\":\"note_sync\"" ) != std::string::npos
-               || data.find( "\"type\":\"chat\"" ) != std::string::npos
-               || data.find( "\"type\":\"templates_list\"" ) != std::string::npos
-               || data.find( "\"type\":\"resync_request\"" ) != std::string::npos
+        return data.find( R"("action":"worn_sync")" ) != std::string::npos
+               || data.find( R"("type":"trade_delta")" ) != std::string::npos
+               || data.find( R"("type":"note_sync")" ) != std::string::npos
+               || data.find( R"("type":"chat")" ) != std::string::npos
+               || data.find( R"("type":"templates_list")" ) != std::string::npos
+               || data.find( R"("type":"resync_request")" ) != std::string::npos
                || data.find( "\"client_tile_changes\":" ) != std::string::npos;
     };
     mp_event event;
@@ -6552,8 +6551,8 @@ static bool apply_one_state_message( const std::string &msg )
         mp_log( "[cdda-mp] recv-packet: " + msg.substr( 0, preview_len ) );
     }
     // Server rejected our join — show the error and flag disconnect.
-    if( msg.find( "\"type\":\"error\"" ) != std::string::npos ) {
-        const auto mpos = msg.find( "\"message\":\"" );
+    if( msg.find( R"("type":"error")" ) != std::string::npos ) {
+        const auto mpos = msg.find( R"("message":")" );
         std::string errtxt = "Server rejected connection.";
         if( mpos != std::string::npos ) {
             const size_t start = mpos + 11;
@@ -6572,7 +6571,7 @@ static bool apply_one_state_message( const std::string &msg )
     // coast) matches the host's. Without this the client rolls its own random
     // seed in start_game() and renders a different map outside the tile-synced
     // bubble (the "different map until I got close" report, 2026-06-02).
-    if( msg.find( "\"type\":\"welcome\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"welcome")" ) != std::string::npos ) {
         // Game-loop replay path (first do_turn): the engine seed is already
         // finalized, so adopt the host seed now. The connect-time path stashes
         // the same welcome earlier via mp_store_pending_welcome() so start_game
@@ -6582,7 +6581,7 @@ static bool apply_one_state_message( const std::string &msg )
     }
 
     // Server asks the client to re-send worn/hair after a respawn.
-    if( msg.find( "\"type\":\"resync_request\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"resync_request")" ) != std::string::npos ) {
         client_resync_worn();
         return true;
     }
@@ -6592,7 +6591,7 @@ static bool apply_one_state_message( const std::string &msg )
     // through the same vehicle sync path the full state packet uses, then
     // force a render so the new tile shows immediately instead of waiting
     // for the next user keypress.
-    if( msg.find( "\"type\":\"vehicle_step\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"vehicle_step")" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo = jv.get_object();
@@ -6610,7 +6609,7 @@ static bool apply_one_state_message( const std::string &msg )
     // Overmap region streamed from the host — apply the host's actual omt grid
     // (cities/roads/biomes) over our own non-deterministic regen so the far-map
     // matches. Palette + row-major RLE; see build_overmap_sync().
-    if( msg.find( "\"type\":\"overmap_sync\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"overmap_sync")" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo = jv.get_object();
@@ -6744,7 +6743,7 @@ static bool apply_one_state_message( const std::string &msg )
     // the submap player-adjusted so the synced terrain persists).  The host caps
     // submaps per turn so the bulk join fill is spread over a few turns rather
     // than one freeze; we time the apply below to confirm it stays cheap.
-    if( msg.find( "\"type\":\"map_sync\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"map_sync")" ) != std::string::npos ) {
         const auto t0 = std::chrono::steady_clock::now();
         try {
             JsonValue jv = json_loader::from_string( msg );
@@ -6776,7 +6775,7 @@ static bool apply_one_state_message( const std::string &msg )
             map &m = get_map();
             int applied = 0;
             int skipped = 0;
-            auto decode = [&]( JsonArray arr, std::vector<int> &out ) {
+            auto decode = [&]( const JsonArray& arr, std::vector<int> &out ) {
                 for( JsonValue rv : arr ) {
                     JsonArray run = rv.get_array();
                     const int cnt = run.get_int( 0 );
@@ -6838,7 +6837,7 @@ static bool apply_one_state_message( const std::string &msg )
     }
 
     // Host died gracefully — show once and stop processing further packets.
-    if( msg.find( "\"type\":\"host_died\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"host_died")" ) != std::string::npos ) {
         if( !g_server_died ) {
             g_server_died = true;
             remove_client_host_npc();
@@ -6852,29 +6851,29 @@ static bool apply_one_state_message( const std::string &msg )
     // the current architecture, so this is messaging-only on this side.
     // After this the server socket will close shortly — the existing
     // disconnect handler takes over from there.
-    if( msg.find( "\"type\":\"session_ending\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"session_ending")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] SESSION-END RECV: host is leaving" );
         add_msg( m_warning, _( "Your partner is leaving.  The session will end shortly." ) );
         return true;
     }
 
     // Co-op save handshake: the host saved the shared world at our request.
-    if( msg.find( "\"type\":\"save_done\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"save_done")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] SAVE-DONE RECV: host saved the shared world" );
         add_msg( m_good, _( "The host saved the shared world — your progress is in sync.  (Your inventory isn't fully mirrored to the host yet — known limitation.)" ) );
         return true;
     }
 
     // Templates wire-sync handlers (symmetric — same shape on host and client).
-    if( msg.find( "\"type\":\"templates_list\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"templates_list")" ) != std::string::npos ) {
         mp_handle_templates_list( msg );
         return true;
     }
-    if( msg.find( "\"type\":\"template_request\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"template_request")" ) != std::string::npos ) {
         mp_handle_template_request( msg );
         return true;
     }
-    if( msg.find( "\"type\":\"template_data\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"template_data")" ) != std::string::npos ) {
         mp_handle_template_data( msg );
         return true;
     }
@@ -6885,30 +6884,30 @@ static bool apply_one_state_message( const std::string &msg )
     // client would just see a "Lost connection to server" 20 seconds later
     // when the silent host stops granting turns — confusing UX for what is
     // really "your character died".
-    if( msg.find( "\"type\":\"you_died\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"you_died")" ) != std::string::npos ) {
         add_msg( m_bad, "%s", _( "You died." ) );
         get_avatar().die( &get_map(), nullptr );
         return true;
     }
 
-    if( msg.find( "\"type\":\"note_sync\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"note_sync")" ) != std::string::npos ) {
         mp_handle_note_sync( msg );
         return true;
     }
 
-    if( msg.find( "\"type\":\"chat\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"chat")" ) != std::string::npos ) {
         mp_handle_chat_msg( msg );
         return true;
     }
 
-    if( msg.find( "\"type\":\"high_five\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"high_five")" ) != std::string::npos ) {
         mp_handle_high_five_recv( msg );
         return true;
     }
 
     // Trade delta: the host traded with our proxy — apply item changes to our
     // real avatar so items don't vanish when the next worn_sync overwrites the proxy.
-    if( msg.find( "\"type\":\"trade_delta\"" ) != std::string::npos ) {
+    if( msg.find( R"("type":"trade_delta")" ) != std::string::npos ) {
         try {
             JsonValue jv = json_loader::from_string( msg );
             JsonObject jo = jv.get_object();
@@ -6960,8 +6959,8 @@ static bool apply_one_state_message( const std::string &msg )
         return true;
     }
 
-    const bool is_state = msg.find( "\"type\":\"state\"" ) != std::string::npos ||
-                          msg.find( "\"type\": \"state\"" ) != std::string::npos;
+    const bool is_state = msg.find( R"("type":"state")" ) != std::string::npos ||
+                          msg.find( R"("type": "state")" ) != std::string::npos;
     if( !is_state ) {
         std::cout << "[cdda-mp] " << msg << std::endl;
         return false;
@@ -7529,7 +7528,7 @@ static bool apply_one_state_message( const std::string &msg )
                             + " ended=" + std::to_string( !get_avatar().activity )
                             + " grant_seq=" + std::to_string( grant_seq ) );
                     client_send( client_enrich_action(
-                                     "{\"type\":\"action\",\"action\":\"wait\"}" ) );
+                                     R"({"type":"action","action":"wait"})" ) );
                     g_client_waiting_for_ack = true;
                     g_ack_set_time = std::chrono::steady_clock::now();
                     // Mirror the host's per-turn redraw so the client's HUD
@@ -7902,8 +7901,8 @@ static std::string build_client_tile_changes( int radius = 10 )
                         fields_json += ',';
                     }
                     ffield = false;
-                    fields_json += "{\"t\":\"" + ftype.id().str()
-                                   + "\",\"i\":" + std::to_string( fi ) + "}";
+                    fields_json += R"({"t":")" + ftype.id().str()
+                                   + R"(","i":)" + std::to_string( fi ) + "}";
                 }
                 fields_json += "]";
             }
@@ -7959,7 +7958,7 @@ static std::string build_client_tile_changes( int radius = 10 )
                    + ",\"y\":" + std::to_string( abs.y() )
                    + ",\"z\":" + std::to_string( abs.z() );
             if( terfurn_changed ) {
-                out += ",\"ter\":\"" + ter_str + "\",\"furn\":\"" + furn_str + "\"";
+                out += R"(,"ter":")" + ter_str + R"(","furn":")" + furn_str + "\"";
             }
             if( items_changed ) {
                 out += ",\"items\":" + items_json;
@@ -7968,10 +7967,10 @@ static std::string build_client_tile_changes( int radius = 10 )
                 out += ",\"fields\":" + fields_json;
             }
             if( trap_changed ) {
-                out += ",\"trap\":\"" + ( trap_sig_c.empty() ? std::string( "tr_null" ) : trap_sig_c ) + "\"";
+                out += R"(,"trap":")" + ( trap_sig_c.empty() ? std::string( "tr_null" ) : trap_sig_c ) + "\"";
             }
             if( graffiti_changed ) {
-                out += ",\"graffiti\":\"" + json_escape_str( graffiti_sig_c ) + "\"";
+                out += R"(,"graffiti":")" + json_escape_str( graffiti_sig_c ) + "\"";
             }
             if( pc_changed ) {
                 if( has_pc_c ) {
@@ -8183,8 +8182,8 @@ std::string client_enrich_action( const std::string &json )
                 bleed_json += ',';
             }
             bleed_first = false;
-            bleed_json += "{\"bp\":\"" + bp.id().str() +
-                          "\",\"intensity\":" + std::to_string( intensity ) + "}";
+            bleed_json += R"({"bp":")" + bp.id().str() +
+                          R"(","intensity":)" + std::to_string( intensity ) + "}";
         }
     }
     bleed_json += "]";
@@ -8241,7 +8240,7 @@ std::string client_enrich_action( const std::string &json )
     // (spawned with the "player2" placeholder, since the client connects from
     // the main menu before its character exists). Renames the on-map @ and the
     // sidebar nearby-list; messages already use the real name from packets.
-    char_stats += "\"name\":\"" + av.get_name() + "\",";
+    char_stats += R"("name":")" + av.get_name() + "\",";
     char_stats += "\"str\":" + std::to_string( av.get_str_base() );
     char_stats += ",\"dex\":" + std::to_string( av.get_dex_base() );
     char_stats += ",\"int\":" + std::to_string( av.get_int_base() );
@@ -8298,7 +8297,7 @@ std::string client_enrich_action( const std::string &json )
             g_client_turn_activity = av.activity.id().str();
         }
         const std::string client_act_id = g_client_turn_activity;
-        enriched += ",\"client_activity\":\"" + client_act_id + "\"";
+        enriched += R"(,"client_activity":")" + client_act_id + "\"";
         // Progress percentage of the live activity, for the host's Co-op panel.
         // mp_compute_activity_pct handles crafting (item_counter-based) as
         // well as standard moves_total-based activities.
@@ -8363,7 +8362,7 @@ void mp_client_dispatch_grab_if_changed( object_type pre_type,
         return;
     }
     const std::string json =
-        std::string( "{\"type\":\"action\",\"action\":\"grab\"," ) +
+        std::string( R"({"type":"action","action":"grab",)" ) +
         "\"grab_type\":" + std::to_string( static_cast<int>( av.get_grab_type() ) ) +
         ",\"dx\":" + std::to_string( av.grab_point.x() ) +
         ",\"dy\":" + std::to_string( av.grab_point.y() ) +
@@ -8393,7 +8392,7 @@ void mp_client_dispatch_hauling_if_changed( bool pre_hauling )
     if( av.is_hauling() == pre_hauling ) {
         return;
     }
-    const std::string json = "{\"type\":\"action\",\"action\":\"toggle_haul\"}";
+    const std::string json = R"({"type":"action","action":"toggle_haul"})";
     const bool had_grant = av.get_moves() > 0;
     mp_log( std::string( "[cdda-mp] CLI-HAUL-SEND hauling=" ) +
             std::to_string( av.is_hauling() ) + " path=" +
@@ -8456,16 +8455,16 @@ void client_resync_worn()
         }
         if( !afirst ) { appearance_json += ','; }
         afirst = false;
-        appearance_json += "{\"type\":\"" + first_type
-                         + "\",\"id\":\"" + tv.trait.str() + "\"";
+        appearance_json += R"({"type":")" + first_type
+                         + R"(","id":")" + tv.trait.str() + "\"";
         if( !tv.variant.empty() ) {
-            appearance_json += ",\"var\":\"" + tv.variant + "\"";
+            appearance_json += R"(,"var":")" + tv.variant + "\"";
         }
         appearance_json += '}';
     }
     appearance_json += ']';
 
-    std::string worn_json = "{\"action\":\"worn_sync\",\"worn\":[";
+    std::string worn_json = R"({"action":"worn_sync","worn":[)";
     bool wfirst = true;
     for( const item *it : worn_items ) {
         if( !wfirst ) {
@@ -8511,10 +8510,10 @@ void client_resync_worn()
     const std::string ma_style_str = av.martial_arts_data->selected_style().str();
     worn_json += "],\"male\":" + male_str
                  + ",\"appearance\":" + appearance_json
-                 + ",\"wielded\":\"" + wielded_type + "\""
+                 + R"(,"wielded":")" + wielded_type + "\""
                  + ",\"wielded_obj\":" + wielded_obj_json
                  + ",\"client_inv\":" + inv_json
-                 + ",\"ma_style\":\"" + ma_style_str + "\"}";
+                 + R"(,"ma_style":")" + ma_style_str + "\"}";
     mp_log( "[cdda-mp] worn_sync send: inv_items=" + std::to_string( av.inv->size() )
             + " inv_bytes=" + std::to_string( inv_json.size() ) );
     client_send( worn_json );
@@ -8542,7 +8541,7 @@ void mp_client_post_action( int pre_moves )
         return;
     }
     client_resync_worn();
-    client_send( client_enrich_action( "{\"type\":\"action\",\"action\":\"wait\"}" ) );
+    client_send( client_enrich_action( R"({"type":"action","action":"wait"})" ) );
     get_avatar().set_moves( 0 );
     client_mark_action_sent();
 }
@@ -8607,7 +8606,7 @@ void client_dispatch_wait_for_activity( const activity_id &pre_id, bool force_id
         return;
     }
     mp_log( "[cdda-mp] dispatch_wait: SEND wait for act=" + ( id ? id.str() : "idle" ) );
-    client_send( client_enrich_action( "{\"type\":\"action\",\"action\":\"wait\"}" ) );
+    client_send( client_enrich_action( R"({"type":"action","action":"wait"})" ) );
     client_mark_action_sent();
 }
 
@@ -8687,7 +8686,7 @@ static std::string mp_partial_con_obj_json( const tripoint_bub_ms &bub )
         comp_json += serialize( it );
     }
     comp_json += "]";
-    return "{\"con\":\"" + pc->id.obj().id.str() + "\",\"counter\":" +
+    return R"({"con":")" + pc->id.obj().id.str() + R"(","counter":)" +
            std::to_string( pc->counter ) + ",\"components\":" + comp_json + "}";
 }
 
@@ -8695,7 +8694,7 @@ static std::string mp_partial_con_obj_json( const tripoint_bub_ms &bub )
 // place when a build site already exists here (the common per-turn case — avoids
 // re-deserializing components and the partial_con_set "already has a partial con"
 // debugmsg); otherwise creates a fresh one with its component pile.
-static void mp_apply_partial_con_obj( const tripoint_bub_ms &bub, JsonObject po )
+static void mp_apply_partial_con_obj( const tripoint_bub_ms &bub, const JsonObject& po )
 {
     po.allow_omitted_members();
     const construction_str_id con_sid( po.get_string( "con", "" ) );
@@ -8821,8 +8820,8 @@ static std::string build_tile_changes( const tripoint_abs_ms &center, int radius
                         fields_json += ',';
                     }
                     ffield = false;
-                    fields_json += "{\"t\":\"" + ftype.id().str()
-                                   + "\",\"i\":" + std::to_string( fi ) + "}";
+                    fields_json += R"({"t":")" + ftype.id().str()
+                                   + R"(","i":)" + std::to_string( fi ) + "}";
                 }
                 fields_json += "]";
             }
@@ -8880,12 +8879,12 @@ static std::string build_tile_changes( const tripoint_abs_ms &center, int radius
             out += "{\"x\":" + std::to_string( abs.x() )
                    + ",\"y\":" + std::to_string( abs.y() )
                    + ",\"z\":" + std::to_string( abs.z() )
-                   + ",\"ter\":\"" + ter_str + "\""
-                   + ",\"furn\":\"" + furn_str + "\""
+                   + R"(,"ter":")" + ter_str + "\""
+                   + R"(,"furn":")" + furn_str + "\""
                    + ",\"items\":" + items_json
                    + ",\"fields\":" + fields_json
-                   + ",\"trap\":\"" + ( trap_sig.empty() ? "tr_null" : trap_sig ) + "\""
-                   + ",\"graffiti\":\"" + json_escape_str( graffiti_sig ) + "\"";
+                   + R"(,"trap":")" + ( trap_sig.empty() ? "tr_null" : trap_sig ) + "\""
+                   + R"(,"graffiti":")" + json_escape_str( graffiti_sig ) + "\"";
             if( has_pc ) {
                 out += ",\"partial_con\":" + mp_partial_con_obj_json( bub );
             } else if( had_pc ) {
@@ -8955,7 +8954,7 @@ static std::string build_monster_list( const tripoint_abs_ms &center, int radius
         seen_nids.insert( nid );
         const int mon_facing = ( mon_ptr->facing == FacingDirection::LEFT ) ? 0 : 1;
         std::string rec = "{\"nid\":" + std::to_string( nid )
-               + ",\"id\":\"" + mon_ptr->type->id.str() + "\""
+               + R"(,"id":")" + mon_ptr->type->id.str() + "\""
                + ",\"x\":" + std::to_string( mp.x() )
                + ",\"y\":" + std::to_string( mp.y() )
                + ",\"z\":" + std::to_string( mp.z() )
@@ -9050,7 +9049,8 @@ static void apply_tile_changes( JsonObject &jo )
         }
         const tripoint_bub_ms bub = m.get_bub( abs );
 
-        std::string ter_str, furn_str;
+        std::string ter_str;
+        std::string furn_str;
         to.read( "ter", ter_str );
         to.read( "furn", furn_str );
 
@@ -10061,7 +10061,7 @@ static std::string build_viewport( const tripoint_bub_ms &center )
            ",\"h\":" + std::to_string( H ) +
            ",\"ox\":" + std::to_string( ox ) +
            ",\"oy\":" + std::to_string( oy ) +
-           ",\"tiles\":\"" + tiles + "\"}";
+           R"(,"tiles":")" + tiles + "\"}";
 }
 
 void mp_post_trade( npc &np, const std::list<item> &items_given,
@@ -10244,7 +10244,7 @@ void mp_high_five()
     // The name rides in the packet so the receiver renders the correct
     // attribution itself (avoids the "You"->name substitution path that the
     // yell feature mis-uses).
-    const std::string payload = "{\"type\":\"high_five\",\"name\":\"" +
+    const std::string payload = R"({"type":"high_five","name":")" +
                                 av.get_name() + "\"}";
     if( is_hosting() || is_server_mode() ) {
         if( server *s = get_active_server() ) {
@@ -10270,7 +10270,7 @@ void mp_relay_shout( int vol, bool order )
     if( vol <= 0 || !is_client_mode() ) {
         return;
     }
-    const std::string payload = "{\"type\":\"shout\",\"vol\":" + std::to_string( vol ) +
+    const std::string payload = R"({"type":"shout","vol":)" + std::to_string( vol ) +
                                 ",\"order\":" + ( order ? "true" : "false" ) + "}";
     client_send( payload );
     mp_log( "[cdda-mp] shout relay sent: vol=" + std::to_string( vol ) +
@@ -10364,8 +10364,7 @@ void mp_sync_note_add( const tripoint_abs_omt &pos, const std::string &text )
             escaped += c;
         }
     }
-    std::string payload = "{\"type\":\"note_sync\",\"op\":\"add\","
-                          "\"x\":" + std::to_string( pos.x() ) + ","
+    std::string payload = R"({"type":"note_sync","op":"add","x":)" + std::to_string( pos.x() ) + ","
                           "\"y\":" + std::to_string( pos.y() ) + ","
                           "\"z\":" + std::to_string( pos.z() ) + ","
                           "\"text\":\"" + escaped + "\"}";
@@ -10382,8 +10381,7 @@ void mp_sync_note_delete( const tripoint_abs_omt &pos )
     if( !is_hosting() && !is_client_mode() ) {
         return;
     }
-    std::string payload = "{\"type\":\"note_sync\",\"op\":\"delete\","
-                          "\"x\":" + std::to_string( pos.x() ) + ","
+    std::string payload = R"({"type":"note_sync","op":"delete","x":)" + std::to_string( pos.x() ) + ","
                           "\"y\":" + std::to_string( pos.y() ) + ","
                           "\"z\":" + std::to_string( pos.z() ) + "}";
     mp_send_note_msg( payload );
@@ -10399,8 +10397,7 @@ void mp_sync_note_danger( const tripoint_abs_omt &pos, int radius, bool dangerou
     if( !is_hosting() && !is_client_mode() ) {
         return;
     }
-    std::string payload = "{\"type\":\"note_sync\",\"op\":\"danger\","
-                          "\"x\":" + std::to_string( pos.x() ) + ","
+    std::string payload = R"({"type":"note_sync","op":"danger","x":)" + std::to_string( pos.x() ) + ","
                           "\"y\":" + std::to_string( pos.y() ) + ","
                           "\"z\":" + std::to_string( pos.z() ) + ","
                           "\"radius\":" + std::to_string( radius ) + ","
@@ -10450,12 +10447,12 @@ static void mp_handle_note_sync( const std::string &msg )
 std::string serialize_remote_player_state()
 {
     if( !remote_player_connected ) {
-        return "{\"type\":\"state\",\"connected\":false}";
+        return R"({"type":"state","connected":false})";
     }
 
     npc *remote = g->critter_by_id<npc>( remote_player_npc_id );
     if( !remote ) {
-        return "{\"type\":\"state\",\"connected\":false}";
+        return R"({"type":"state","connected":false})";
     }
 
     tripoint_bub_ms pos_bub = remote->pos_bub();
@@ -10532,8 +10529,8 @@ std::string serialize_remote_player_state()
         bfirst = false;
         const int hp_cur = remote->get_hp( bp );
         const int hp_max = remote->get_hp_max( bp );
-        bparts_json += "{\"id\":\"" + bp.id().str() +
-                       "\",\"hp\":" + std::to_string( hp_cur ) +
+        bparts_json += R"({"id":")" + bp.id().str() +
+                       R"(","hp":)" + std::to_string( hp_cur ) +
                        ",\"hp_max\":" + std::to_string( hp_max ) + "}";
         bp_log += bp.id().str() + "=" + std::to_string( hp_cur ) + "/" + std::to_string( hp_max );
     }
@@ -10566,10 +10563,10 @@ std::string serialize_remote_player_state()
         }
         if( !happ_first ) { host_appearance_json += ','; }
         happ_first = false;
-        host_appearance_json += "{\"type\":\"" + first_type
-                              + "\",\"id\":\"" + tv.trait.str() + "\"";
+        host_appearance_json += R"({"type":")" + first_type
+                              + R"(","id":")" + tv.trait.str() + "\"";
         if( !tv.variant.empty() ) {
-            host_appearance_json += ",\"var\":\"" + tv.variant + "\"";
+            host_appearance_json += R"(,"var":")" + tv.variant + "\"";
         }
         host_appearance_json += '}';
     }
@@ -10814,8 +10811,8 @@ std::string serialize_remote_player_state()
                               + ",\"hp\":" + std::to_string( vp.hp() );
                 // Fuel stores: sync current fuel type and amount.
                 if( vp.is_fuel_store( false ) && !vp.ammo_current().is_null() ) {
-                    parts_json += ",\"fuel_type\":\"" + vp.ammo_current().str()
-                                  + "\",\"fuel_amt\":" + std::to_string( vp.ammo_remaining() );
+                    parts_json += R"(,"fuel_type":")" + vp.ammo_current().str()
+                                  + R"(","fuel_amt":)" + std::to_string( vp.ammo_remaining() );
                 }
                 parts_json += "}";
                 ++pidx;
@@ -10891,7 +10888,7 @@ std::string serialize_remote_player_state()
                              + ",\"turn_dir\":" + std::to_string( turn_dir_deg )
                              + ",\"vel\":" + std::to_string( v->velocity )
                              + ",\"cruise\":" + std::to_string( v->cruise_velocity )
-                             + ",\"name\":\"" + vname_escaped + "\""
+                             + R"(,"name":")" + vname_escaped + "\""
                              + ",\"parts\":" + parts_json
                              + ",\"cargo\":" + cargo_json
                              + snapshot_field + "}";
@@ -10937,9 +10934,9 @@ std::string serialize_remote_player_state()
                 host_effects_json += ',';
             }
             ef_first = false;
-            host_effects_json += "{\"id\":\"" + eff.get_id().str() +
-                                 "\",\"bp\":\"" + eff.get_bp().id().str() +
-                                 "\",\"intensity\":" + std::to_string( eff.get_intensity() ) +
+            host_effects_json += R"({"id":")" + eff.get_id().str() +
+                                 R"(","bp":")" + eff.get_bp().id().str() +
+                                 R"(","intensity":)" + std::to_string( eff.get_intensity() ) +
                                  ",\"dur\":" + std::to_string( to_turns<int>( eff.get_duration() ) ) + "}";
         }
     }
@@ -10956,8 +10953,8 @@ std::string serialize_remote_player_state()
                 host_hp_json += ',';
             }
             hp_first = false;
-            host_hp_json += "{\"id\":\"" + bp.id().str() +
-                            "\",\"hp\":" + std::to_string( host.get_hp( bp ) ) +
+            host_hp_json += R"({"id":")" + bp.id().str() +
+                            R"(","hp":)" + std::to_string( host.get_hp( bp ) ) +
                             ",\"hp_max\":" + std::to_string( host.get_hp_max( bp ) ) + "}";
         }
     }
@@ -11020,7 +11017,7 @@ std::string serialize_remote_player_state()
            "\"bodyparts\":" + bparts_json +
            ",\"moves\":" + std::to_string( g_remote_moves ) +
            ",\"speed\":" + std::to_string( remote->get_speed() ) +
-           ",\"client_move_mode\":\"" + remote->move_mode.str() + "\""
+           R"(,"client_move_mode":")" + remote->move_mode.str() + "\""
            ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
            ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
            ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
@@ -11040,7 +11037,7 @@ std::string serialize_remote_player_state()
                const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
                if( !ovp ) { return ""; }
                const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
-               return ",\"client_veh_pos\":{\"x\":" + std::to_string( vabs.x() )
+               return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
                       + ",\"y\":" + std::to_string( vabs.y() )
                       + ",\"z\":" + std::to_string( vabs.z() ) + "}";
            }() +
@@ -11057,9 +11054,9 @@ std::string serialize_remote_player_state()
                for( const auto &e : g_host_sfx_queue ) {
                    if( !first ) { j += ','; }
                    first = false;
-                   j += "{\"id\":\"" + json_escape_str( e.id )
-                        + "\",\"v\":\"" + json_escape_str( e.variant )
-                        + "\",\"vol\":" + std::to_string( e.vol ) + "}";
+                   j += R"({"id":")" + json_escape_str( e.id )
+                        + R"(","v":")" + json_escape_str( e.variant )
+                        + R"(","vol":)" + std::to_string( e.vol ) + "}";
                }
                g_host_sfx_queue.clear();
                j += "]";

@@ -56,11 +56,11 @@ class string_queue
 {
     public:
         void push( std::string s ) {
-            std::lock_guard<std::mutex> lk( mtx_ );
+            std::scoped_lock lk( mtx_ );
             q_.push( std::move( s ) );
         }
         bool pop( std::string &out ) {
-            std::lock_guard<std::mutex> lk( mtx_ );
+            std::scoped_lock lk( mtx_ );
             if( q_.empty() ) {
                 return false;
             }
@@ -82,7 +82,7 @@ static string_queue g_recv_queue;
 // same build (version handshake), so the format is guaranteed to match.
 static std::string mp_decompress_frame( std::string line )
 {
-    static const std::string prefix = "{\"z\":\"";
+    static const std::string prefix = R"({"z":")";
     if( line.size() <= prefix.size() + 2 ||
         line.compare( 0, prefix.size(), prefix ) != 0 ||
         line.compare( line.size() - 2, 2, "\"}" ) != 0 ) {
@@ -135,7 +135,7 @@ struct client_impl {
                         "(version mismatch / wrong password) or is on a different build — "
                         "check the host's cdda-mp-server.log for a PROBE/JOIN REJECTED line." );
                 // Synthetic disconnect message — game thread will clean up the host NPC.
-                g_recv_queue.push( "{\"type\":\"state\",\"connected\":false}" );
+                g_recv_queue.push( R"({"type":"state","connected":false})" );
                 return;
             }
             std::istream is( &read_buf );
@@ -239,12 +239,12 @@ bool client_connect( const std::string &host, uint16_t port,
     // Send a lightweight version_probe — validates version + password without
     // spawning the proxy NPC on the host.  The real join (which triggers proxy
     // spawn) is deferred until client_send_join() fires after char creation.
-    std::string join_msg = "{\"type\":\"version_probe\"";
+    std::string join_msg = R"({"type":"version_probe")";
     if( !password.empty() ) {
-        join_msg += ",\"password\":\"" + password + "\"";
+        join_msg += R"(,"password":")" + password + "\"";
     }
     if( !version.empty() ) {
-        join_msg += ",\"version\":\"" + version + "\"";
+        join_msg += R"(,"version":")" + version + "\"";
     }
     join_msg += "}\n";
 
@@ -266,10 +266,10 @@ bool client_connect( const std::string &host, uint16_t port,
     while( std::chrono::steady_clock::now() < deadline ) {
         std::string msg;
         if( g_recv_queue.pop( msg ) ) {
-            if( msg.find( "\"type\":\"error\"" ) != std::string::npos ) {
+            if( msg.find( R"("type":"error")" ) != std::string::npos ) {
                 // Extract human-readable error for the caller.
                 g_connect_error = "Server rejected connection.";
-                const auto mpos = msg.find( "\"message\":\"" );
+                const auto mpos = msg.find( R"("message":")" );
                 if( mpos != std::string::npos ) {
                     const size_t start = mpos + 11;
                     const size_t end = msg.find( '"', start );
@@ -283,11 +283,11 @@ bool client_connect( const std::string &host, uint16_t port,
                 g_client.reset();
                 return false;
             }
-            if( msg.find( "\"type\":\"welcome\"" ) != std::string::npos ) {
+            if( msg.find( R"("type":"welcome")" ) != std::string::npos ) {
                 // Probe accepted — version + password OK.  Extract the world
                 // name immediately so the join dialog can show "Joining <World>"
                 // before the game loop gets to process the welcome packet.
-                const auto wpos = msg.find( "\"world\":\"" );
+                const auto wpos = msg.find( R"("world":")" );
                 if( wpos != std::string::npos ) {
                     const size_t ws = wpos + 9;
                     const size_t we = msg.find( '"', ws );
@@ -300,7 +300,7 @@ bool client_connect( const std::string &host, uint16_t port,
                 }
                 // Host's character name — so the join dialog can show whose game
                 // it is ("Joining <World> — <Host>'s game") before char select.
-                const auto hpos = msg.find( "\"host_name\":\"" );
+                const auto hpos = msg.find( R"("host_name":")" );
                 if( hpos != std::string::npos ) {
                     const size_t hs = hpos + 12;
                     const size_t he = msg.find( '"', hs );
@@ -317,12 +317,12 @@ bool client_connect( const std::string &host, uint16_t port,
                 // below still fires on the first do_turn (idempotent).
                 mp_store_pending_welcome( msg );
                 // Store the welcome so the game-loop handler can adopt the seed.
-                g_pending_join = "{\"type\":\"join\",\"name\":\"" + name + "\"";
+                g_pending_join = R"({"type":"join","name":")" + name + "\"";
                 if( !password.empty() ) {
-                    g_pending_join += ",\"password\":\"" + password + "\"";
+                    g_pending_join += R"(,"password":")" + password + "\"";
                 }
                 if( !version.empty() ) {
-                    g_pending_join += ",\"version\":\"" + version + "\"";
+                    g_pending_join += R"(,"version":")" + version + "\"";
                 }
                 g_pending_join += "}\n";
                 g_join_sent = false;

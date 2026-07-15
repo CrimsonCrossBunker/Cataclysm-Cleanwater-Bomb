@@ -86,7 +86,7 @@ class cata_thread_pool
         }
 
         size_t queue_size() const {
-            std::lock_guard<std::mutex> lk( mutex_ );
+            std::scoped_lock lk( mutex_ );
             return queue_.size();
         }
 
@@ -195,7 +195,7 @@ void parallel_for( int begin, int end, F &&f )
                     f( i );
                 }
             } catch( ... ) {
-                std::lock_guard<std::mutex> lock( ex_mutex );
+                std::scoped_lock lock( ex_mutex );
                 if( !first_ex ) {
                     first_ex = std::current_exception();
                 }
@@ -252,7 +252,7 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
                     f( i );
                 }
             } catch( ... ) {
-                std::lock_guard<std::mutex> lock( ex_mutex );
+                std::scoped_lock lock( ex_mutex );
                 if( !first_ex ) {
                     first_ex = std::current_exception();
                 }

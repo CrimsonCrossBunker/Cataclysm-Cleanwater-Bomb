@@ -6,7 +6,7 @@
 #include <ostream>
 #include <string_view>
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "map_scale_constants.h"
 #include "point.h"

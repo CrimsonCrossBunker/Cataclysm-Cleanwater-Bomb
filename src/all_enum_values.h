@@ -5,12 +5,12 @@
 #include "enum_traits.h"
 
 template<typename E>
-constexpr size_t num_enum_values()
+constexpr std::size_t num_enum_values()
 {
-    return static_cast<size_t>( enum_traits<E>::last );
+    return static_cast<std::size_t>( enum_traits<E>::last );
 }
 
-template<typename E, size_t... I>
+template<typename E, std::size_t... I>
 auto all_enum_values_helper( std::index_sequence<I...> ) ->
 const std::array<E, num_enum_values<E>()> &
 {

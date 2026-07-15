@@ -2641,7 +2641,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         int mp_dispatch_pre_moves = 0;
         const auto mp_dispatch = [&]( const std::string & json, bool charge_from_caller = false ) {
             const std::string full_json = json.substr( 0, json.size() - 1 )
-                                           + ",\"move_mode\":\"" + player_character.move_mode.str() + "\""
+                                           + R"(,"move_mode":")" + player_character.move_mode.str() + "\""
                                            + "}";
             const bool had_grant = charge_from_caller
                                     ? mp_dispatch_pre_moves > 0
@@ -2693,7 +2693,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     const std::string full =
                         std::string( "{\"type\":\"action\",\"action\":\"cruise\""
                                       ",\"dy\":" ) + std::to_string( dy )
-                        + ",\"move_mode\":\"" + player_character.move_mode.str() + "\"}";
+                        + R"(,"move_mode":")" + player_character.move_mode.str() + "\"}";
                     cata_mp::client_send( cata_mp::client_enrich_action( full ) );
                     map &pvmap = get_map();
                     const tripoint_abs_ms pvabs = cata_mp::client_ctrl_veh_abs();
@@ -2864,8 +2864,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
             }
             const std::string json = ramp_dz == 0
-                ? "{\"type\":\"action\",\"action\":\"move\",\"dir\":\"" + dir + "\"}"
-                : "{\"type\":\"action\",\"action\":\"move\",\"dir\":\"" + dir + "\",\"dz\":"
+                ? R"({"type":"action","action":"move","dir":")" + dir + "\"}"
+                : R"({"type":"action","action":"move","dir":")" + dir + R"(","dz":)"
                   + std::to_string( ramp_dz ) + "}";
             mp_dispatch( json, /*charge_from_caller=*/true );
             return true;
@@ -2875,18 +2875,18 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 g->cancel_activity_query( _( "Confirm:" ) );
                 return true;
             }
-            mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
+            mp_dispatch( R"({"type":"action","action":"wait"})" );
             return true;
         }
         if( act == ACTION_WAIT ) {
             wait();
             if( player_character.activity ) {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
+                mp_dispatch( R"({"type":"action","action":"wait"})" );
             }
             return true;
         }
         if( act == ACTION_SMASH && cata_mp::client_ctrl_veh() ) {
-            mp_dispatch( "{\"type\":\"action\",\"action\":\"handbrake\"}" );
+            mp_dispatch( R"({"type":"action","action":"handbrake"})" );
             return true;
         }
         if( act == ACTION_SMASH ) {
@@ -2902,8 +2902,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 total_bash += val;
             }
             const std::string json =
-                "{\"type\":\"action\",\"action\":\"smash\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
+                R"({"type":"action","action":"smash","x":)" + std::to_string( abs_target.x() ) +
                 ",\"y\":" + std::to_string( abs_target.y() ) +
                 ",\"z\":" + std::to_string( abs_target.z() ) +
                 ",\"bash\":" + std::to_string( total_bash ) + "}";
@@ -2926,8 +2925,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             get_map().open_door( player_character, *doorpos, true, false );
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
-                "{\"type\":\"action\",\"action\":\"open\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
+                R"({"type":"action","action":"open","x":)" + std::to_string( abs_target.x() ) +
                 ",\"y\":" + std::to_string( abs_target.y() ) +
                 ",\"z\":" + std::to_string( abs_target.z() ) + "}";
             mp_dispatch( json );
@@ -2942,8 +2940,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             doors::close_door( get_map(), player_character, *doorpos );
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
-                "{\"type\":\"action\",\"action\":\"close\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
+                R"({"type":"action","action":"close","x":)" + std::to_string( abs_target.x() ) +
                 ",\"y\":" + std::to_string( abs_target.y() ) +
                 ",\"z\":" + std::to_string( abs_target.z() ) + "}";
             mp_dispatch( json );
@@ -2959,7 +2956,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             const int moves_before = player_character.get_moves();
             g->look_around();
             if( player_character.get_moves() < moves_before ) {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
+                mp_dispatch( R"({"type":"action","action":"wait"})" );
                 return true;
             }
             return false;
@@ -3008,14 +3005,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         items_json += ',';
                     }
                     first = false;
-                    items_json += "{\"t\":\"" + t + "\"}";
+                    items_json += R"({"t":")" + t + "\"}";
                 }
             }
 
             if( !items_json.empty() ) {
                 const std::string json =
-                    "{\"type\":\"action\",\"action\":\"pickup\""
-                    ",\"x\":" + std::to_string( abs_pos.x() ) +
+                    R"({"type":"action","action":"pickup","x":)" + std::to_string( abs_pos.x() ) +
                     ",\"y\":" + std::to_string( abs_pos.y() ) +
                     ",\"z\":" + std::to_string( abs_pos.z() ) +
                     ",\"items\":[" + items_json + "]}";
@@ -3089,14 +3085,14 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 if( loc ) {
                     const std::string itype = loc->typeId().str();
                     avatar_action::eat_or_use( player_character, loc );
-                    mp_dispatch( "{\"type\":\"action\",\"action\":\"eat\",\"item\":\"" + itype + "\"}" );
+                    mp_dispatch( R"({"type":"action","action":"eat","item":")" + itype + "\"}" );
                     if( player_character.activity ) {
                         add_msg( m_info, _( "Now consuming, %s to interrupt." ),
                                  press_x( ACTION_PAUSE ) );
                     }
                 }
             } else {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"eat\",\"item\":\"\"}" );
+                mp_dispatch( R"({"type":"action","action":"eat","item":""})" );
             }
             return true;
         }
@@ -3133,7 +3129,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         return true;
                     }
                 }
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"control_vehicle\"}" );
+                mp_dispatch( R"({"type":"action","action":"control_vehicle"})" );
             }
             return true;
         }
@@ -4566,11 +4562,10 @@ bool game::handle_action()
     if( cata_mp::is_client_mode() && player_character.pos_abs() != pre_action_pos &&
         act != ACTION_TIMEOUT && before_action_moves > 0 ) {
         const std::string json =
-            "{\"type\":\"action\",\"action\":\"teleport\""
-            ",\"x\":" + std::to_string( player_character.pos_abs().x() ) +
+            R"({"type":"action","action":"teleport","x":)" + std::to_string( player_character.pos_abs().x() ) +
             ",\"y\":" + std::to_string( player_character.pos_abs().y() ) +
             ",\"z\":" + std::to_string( player_character.pos_abs().z() ) +
-            ",\"move_mode\":\"" + player_character.move_mode.str() + "\"}";
+            R"(,"move_mode":")" + player_character.move_mode.str() + "\"}";
         cata_mp::client_send( cata_mp::client_enrich_action( json ) );
         cata_mp::client_mark_action_sent();
     }

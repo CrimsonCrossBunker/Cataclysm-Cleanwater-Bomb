@@ -36,7 +36,7 @@ generic_factory<ter_furn_transform> ter_furn_transform_factory( "ter_furn_transf
 // cast), the seed's effective growth time must be brought in line with the new
 // furniture stage.  Otherwise map::grow_plant sees a mature-looking plant whose
 // internal timer still claims it is a seedling and never advances it further.
-static void sync_plant_seed_after_furniture_transform( map &m, const tripoint_bub_ms &location )
+void sync_plant_seed_after_furniture_transform( map &m, const tripoint_bub_ms &location )
 {
     const furn_t &new_furn = m.furn( location ).obj();
     if( !new_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {

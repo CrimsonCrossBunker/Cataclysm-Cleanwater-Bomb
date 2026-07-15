@@ -551,7 +551,7 @@ void cast_zlight(
     cata_thread_pool &pool = get_thread_pool();
     const bool can_parallel = pool.num_workers() > 0;
 
-    auto run_batch = [&pool, can_parallel]( std::vector<std::function<void()>> tasks ) {
+    auto run_batch = [&pool, can_parallel]( const std::vector<std::function<void()>>& tasks ) {
         if( can_parallel ) {
             simple_latch latch( tasks.size() );
             for( const auto &t : tasks ) {

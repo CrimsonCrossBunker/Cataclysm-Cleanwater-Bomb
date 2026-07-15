@@ -5478,7 +5478,7 @@ bool game::npc_menu( npc &who )
             if( mp_partner ) {
                 add_msg( _( "You swap places with %s." ), who.get_name() );
                 cata_mp::client_send( cata_mp::client_enrich_action(
-                    "{\"type\":\"action\",\"action\":\"swap_with_partner\"}" ) );
+                    R"({"type":"action","action":"swap_with_partner"})" ) );
                 cata_mp::client_mark_action_sent();
                 u.mod_moves( -200 );
             } else {
@@ -5511,7 +5511,7 @@ bool game::npc_menu( npc &who )
         if( mp_partner ) {
             add_msg( _( "You push %s." ), who.get_name() );
             cata_mp::client_send( cata_mp::client_enrich_action(
-                "{\"type\":\"action\",\"action\":\"push_partner\"}" ) );
+                R"({"type":"action","action":"push_partner"})" ) );
             cata_mp::client_mark_action_sent();
             u.mod_moves( -20 );
         } else {
@@ -5538,7 +5538,7 @@ bool game::npc_menu( npc &who )
         if( mp_partner ) {
             add_msg( _( "You tap %s on the shoulder." ), who.get_name() );
             cata_mp::client_send( cata_mp::client_enrich_action(
-                                      "{\"type\":\"action\",\"action\":\"tap_partner\"}" ) );
+                                      R"({"type":"action","action":"tap_partner"})" ) );
             cata_mp::client_mark_action_sent();
             u.mod_moves( -10 );
         } else if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {

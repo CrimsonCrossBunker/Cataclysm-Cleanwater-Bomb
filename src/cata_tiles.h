@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "animation.h"
 #include "calendar.h"

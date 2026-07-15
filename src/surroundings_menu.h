@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <stddef.h>
+#include <cstddef>
 
 #include "cata_imgui.h"
 #include "color.h"

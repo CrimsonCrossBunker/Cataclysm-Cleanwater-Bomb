@@ -25,14 +25,14 @@ class event_queue {
     public:
         void push( mp_event e ) {
             {
-                std::lock_guard<std::mutex> lock( mutex_ );
+                std::scoped_lock lock( mutex_ );
                 queue_.push( std::move( e ) );
             }
             cv_.notify_one();
         }
 
         bool pop( mp_event &out ) {
-            std::lock_guard<std::mutex> lock( mutex_ );
+            std::scoped_lock lock( mutex_ );
             if( queue_.empty() ) {
                 return false;
             }
@@ -42,7 +42,7 @@ class event_queue {
         }
 
         bool empty() {
-            std::lock_guard<std::mutex> lock( mutex_ );
+            std::scoped_lock lock( mutex_ );
             return queue_.empty();
         }
 
