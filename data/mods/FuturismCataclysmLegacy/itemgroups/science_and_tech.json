@@ -15,10 +15,10 @@
     "copy-from": "schematics",
     "extend": {
       "items": [
-        [ "schematics_copbot", 50 ],
-        [ "schematics_eyebot", 50 ],
-        [ "schematics_riotbot", 50 ],
-        [ "schematics_molebot", 20 ]
+        [ "fcl_schematics_copbot", 50 ],
+        [ "fcl_schematics_eyebot", 50 ],
+        [ "fcl_schematics_riotbot", 50 ],
+        [ "fcl_schematics_molebot", 20 ]
       ]
     }
   },
