@@ -878,7 +878,8 @@ bool item::mod_damage( int qty, const Character *holder )
         const bool destroy = ( damage_ + qty ) > max_damage();
         force_set_damage( damage_ + qty );
 
-        if( qty > 0 && !destroy && ( get_category_shallow().get_id() != item_category_veh_parts || get_option<bool>( "VEHICLE_DEGRADATION_WHEN_DAMAGE" ) ) ) { // apply automatic degradation
+        if( qty > 0 && !destroy && ( get_category_shallow().get_id() != item_category_veh_parts ||
+                                     get_option<bool>( "VEHICLE_DEGRADATION_WHEN_DAMAGE" ) ) ) { // apply automatic degradation
             set_degradation( degradation_ + get_degrade_amount( *this, damage_, dmg_before ) );
         }
 

@@ -4582,8 +4582,8 @@ void itype::load( const JsonObject &jo, std::string_view src )
     float degrade_mult = 1.0f;
     optional( jo, false, "degradation_multiplier", degrade_mult, 1.0f );
     // TODO: remove condition once degradation is ready to be applied to all items
-    if( (count_by_charges() || category_force != item_category_veh_parts ||
-        !get_option<bool>( "VEHICLE_DEGRADATION_WHEN_DAMAGE" ) ) ) {
+    if( ( count_by_charges() || category_force != item_category_veh_parts ||
+          !get_option<bool>( "VEHICLE_DEGRADATION_WHEN_DAMAGE" ) ) ) {
         degrade_mult = 0.0f;
     }
     if( ( degrade_mult * itype::damage_max_ ) <= 0.5f ) {
