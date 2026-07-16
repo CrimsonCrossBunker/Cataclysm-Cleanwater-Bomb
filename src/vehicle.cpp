@@ -9327,8 +9327,10 @@ item vehicle::part_to_item( map &here, const vehicle_part &vp ) const
 
     // quantize damage and degradation to the middle of each damage_level so that items will stack nicely
     tmp.set_damage( ( tmp.damage_level() - 0.5 ) * itype::damage_scale );
-    tmp.set_degradation( ( static_cast<double>( tmp.degradation() ) / itype::damage_scale - 0.5 ) *
+    if( get_option<bool>( "VEHICLE_DEGRADATION_WHEN_DAMAGE" ) ) {
+        tmp.set_degradation( ( static_cast<double>( tmp.degradation() ) / itype::damage_scale - 0.5 ) *
                          itype::damage_scale );
+    }
     return tmp;
 }
 
