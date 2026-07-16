@@ -5820,7 +5820,7 @@ static void CheckMessages()
             ticks - finger_down_time > static_cast<uint32_t>
             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
             const float held_distance = std::hypot( finger_curr_x - finger_down_x,
-                                        finger_curr_y - finger_down_y );
+                                                    finger_curr_y - finger_down_y );
             const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
                                         std::max( WindowWidth, WindowHeight );
             const bool precision_hold = is_default_mode &&
@@ -6463,13 +6463,13 @@ static void CheckMessages()
 
                             } else {
                                 const float held_distance = std::hypot( finger_curr_x - finger_down_x,
-                                                            finger_curr_y - finger_down_y );
+                                                                        finger_curr_y - finger_down_y );
                                 const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
                                                             std::max( WindowWidth, WindowHeight );
                                 const bool precision_hold = is_default_mode &&
                                                             get_option<bool>( "ANDROID_LONG_PRESS_CONTEXT" ) &&
                                                             ticks - finger_down_time > static_cast<uint32_t>(
-                                                                    get_option<int>( "ANDROID_INITIAL_DELAY" ) ) &&
+                                                                get_option<int>( "ANDROID_INITIAL_DELAY" ) ) &&
                                                             held_distance < hold_deadzone;
                                 if( precision_hold ) {
                                     last_input = input_event( MouseInput::RightButtonReleased,

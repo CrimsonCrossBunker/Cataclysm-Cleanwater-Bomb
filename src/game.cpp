@@ -2892,7 +2892,8 @@ bool game::queue_contextual_actions( const tripoint_bub_ms &target,
         return false;
     }
 
-    const player_activity queued_action( contextual_action_activity_actor( here.get_abs( target ), actions ) );
+    const player_activity queued_action( contextual_action_activity_actor( here.get_abs( target ),
+                                         actions ) );
     if( square_dist( target.xy(), u.pos_bub().xy() ) <= 1 ) {
         u.assign_activity( queued_action );
         return true;
@@ -2908,7 +2909,7 @@ bool game::queue_contextual_actions( const tripoint_bub_ms &target,
 
     u.set_destination( *route, queued_action );
     add_msg( m_info, n_gettext( "Queued %d action at the selected tile.",
-                                 "Queued %d actions at the selected tile.", actions.size() ),
+                                "Queued %d actions at the selected tile.", actions.size() ),
              static_cast<int>( actions.size() ) );
     return true;
 }
