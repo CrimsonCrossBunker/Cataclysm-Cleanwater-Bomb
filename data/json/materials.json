@@ -629,7 +629,6 @@
     "latent_heat": 230,
     "conductive": true,
     "chip_resist": 10,
-    "repaired_with": "scrap_copper_nickel",
     "dmg_adj": [ "marked", { "ctxt": "adjective", "str": "dented" }, "smashed", "shattered" ],
     "bash_dmg_verb": { "ctxt": "verb", "str": "dented" },
     "cut_dmg_verb": "scratched",
