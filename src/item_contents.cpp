@@ -406,12 +406,12 @@ bool pocket_favorite_callback::key( const input_context &ctxt, const input_event
         if( selected >= 0 ) {
             size_t idx = selected;
             const std::vector<std::pair<itype_id, std::string>> *names = nullptr;
-            if( idx <= listed_names.size() ) {
+            if( idx < listed_names.size() ) {
                 names = &listed_names;
             } else {
                 idx -= listed_names.size();
             }
-            if( !names && idx <= nearby_names.size() ) {
+            if( !names && idx < nearby_names.size() ) {
                 names = &nearby_names;
             }
             if( names ) {
