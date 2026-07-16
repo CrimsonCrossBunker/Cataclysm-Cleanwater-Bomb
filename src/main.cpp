@@ -621,11 +621,13 @@ cli_opts parse_commandline( int argc, const char **argv )
                 [&result]( int, const char **params ) -> int {
                     result.client_mode = true;
                     const std::string arg = params[0];
-                    const auto colon = arg.rfind( ':' );
-                    if( colon != std::string::npos ) {
+                    const std::string::size_type colon = arg.rfind( ':' );
+                    if( colon != std::string::npos )
+                    {
                         result.client_host = arg.substr( 0, colon );
                         result.client_port = static_cast<uint16_t>( std::stoi( arg.substr( colon + 1 ) ) );
-                    } else {
+                    } else
+                    {
                         result.client_host = arg;
                     }
                     return 1;
@@ -923,7 +925,7 @@ int main( int argc, const char *argv[] )
             cata_mp::run_server( port, password, ver );
         } );
         host_thread.detach();
-        printf( "[cdda-mp] Hosting on port %d — waiting for player 2...\n", port );
+        printf( "[cdda-mp] Hosting on port %d — waiting for player 2…\n", port );
     }
 #endif
 

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <iterator>
 #include <map>
@@ -133,8 +133,9 @@ static const ammotype ammo_m235( "m235" );
 static const ammotype ammo_metal_rail( "metal_rail" );
 static const ammotype ammo_strange_arrow( "strange_arrow" );
 
-static const bionic_id bio_railgun( "bio_railgun" );
+static const bionic_id fcl_bio_railgun( "fcl_bio_railgun" );
 
+static const character_modifier_id character_modifier_limb_str_mod( "limb_str_mod" );
 static const character_modifier_id
 character_modifier_melee_thrown_move_balance_mod( "melee_thrown_move_balance_mod" );
 static const character_modifier_id
@@ -169,14 +170,21 @@ static const flag_id json_flag_PUMP_ACTION( "PUMP_ACTION" );
 static const flag_id json_flag_SINGLE_ACTION( "SINGLE_ACTION" );
 
 static const material_id material_budget_steel( "budget_steel" );
+static const material_id material_budget_steel_chain( "budget_steel_chain" );
+static const material_id material_ch_steel( "ch_steel" );
+static const material_id material_ch_steel_chain( "ch_steel_chain" );
+static const material_id material_copper_nickel( "copper_nickel" );
 static const material_id material_glass( "glass" );
-static const material_id material_hardened_steel( "hardened_steel" );
-static const material_id material_high_steel( "high_steel" );
+static const material_id material_hc_steel( "hc_steel" );
+static const material_id material_hc_steel_chain( "hc_steel_chain" );
 static const material_id material_iron( "iron" );
-static const material_id material_low_steel( "low_steel" );
-static const material_id material_med_steel( "med_steel" );
+static const material_id material_lc_steel( "lc_steel" );
+static const material_id material_lc_steel_chain( "lc_steel_chain" );
+static const material_id material_mc_steel( "mc_steel" );
+static const material_id material_mc_steel_chain( "mc_steel_chain" );
+static const material_id material_qt_steel( "qt_steel" );
+static const material_id material_qt_steel_chain( "qt_steel_chain" );
 static const material_id material_steel( "steel" );
-static const material_id material_tempered_steel( "tempered_steel" );
 
 static const proficiency_id proficiency_prof_bow_basic( "prof_bow_basic" );
 static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
@@ -198,12 +206,12 @@ static const trap_str_id tr_target_spinner( "tr_target_spinner" );
 
 static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
 
-static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_hardened_steel, material_high_steel, material_low_steel, material_med_steel, material_tempered_steel };
+static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_ch_steel, material_hc_steel, material_lc_steel, material_mc_steel, material_qt_steel, material_budget_steel_chain, material_ch_steel_chain, material_hc_steel_chain, material_lc_steel_chain, material_mc_steel_chain, material_qt_steel_chain, material_copper_nickel };
 
 // Maximum duration of aim-and-fire loop, in turns
 static constexpr int AIF_DURATION_LIMIT = 10;
 
-static projectile make_gun_projectile( const item &gun );
+static projectile make_gun_projectile( const item &gun, Character &guy );
 static int time_to_attack( const Character &p, const itype &firing );
 static int RAS_time( const Character &p, const item_location &loc );
 /**
@@ -1216,7 +1224,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         // get ammo_id in gun for event character_ranged_attacks_monster. If no ammo, use itype_id::NULL_ID()
         itype_id projectile_use_ammo_id = gun.has_ammo_data() ? gun.ammo_data()->get_id() :
                                           itype_id::NULL_ID();
-        projectile proj = make_gun_projectile( gun );
+        projectile proj = make_gun_projectile( gun, *this );
 
         for( damage_unit &elem : proj.impact.damage_units ) {
             elem.amount = enchantment_cache->modify_value( enchant_vals::mod::RANGED_DAMAGE, elem.amount );
@@ -1574,26 +1582,52 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
 
     // Base 1.0; high skill and dexterity let the thrower get more damage out of
     // light items without changing the low-stat balance.
-    const float velocity_factor = 1.0f
-                                  + 0.5f * ( skill / static_cast<float>( MAX_SKILL ) )
-                                  + 0.03f * std::max( 0, dex - 8 );
+    float velocity_factor = 1.0f
+                            + 0.5f * ( skill / static_cast<float>( MAX_SKILL ) )
+                            + 0.03f * std::max( 0, dex - 8 );
+
+    // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
+    bool do_railgun = thrower.has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric );
+    if( do_railgun && thrower.is_mounted() ) {
+        auto *mons = thrower.mounted_creature.get();
+        if( mons->mech_str_addition() != 0 ) {
+            do_railgun = false;
+        }
+    }
+    if( do_railgun ) {
+        velocity_factor += std::max( ( thrower.get_int() / 10.0 ), 1.0 );
+    }
 
     const double scaled_weight_dmg = weight_dmg * velocity_factor;
     const double cap = thrower.thrown_item_adjusted_damage( thrown );
-    return std::min( scaled_weight_dmg, cap );
+    double thrown_dmg = std::min( scaled_weight_dmg, cap );
+
+    // RANGED_DAMAGE enchantment can used at railgun throwing
+    if( do_railgun ) {
+        int ench_range_dmg = thrower.enchantment_cache->get_value_add( enchant_vals::mod::RANGED_DAMAGE );
+        double ench_range_dmg_mult = 1.0 + thrower.enchantment_cache->get_value_multiply(
+                                         enchant_vals::mod::RANGED_DAMAGE );
+        thrown_dmg += ench_range_dmg;
+        thrown_dmg *= ench_range_dmg_mult;
+        thrown_dmg += 12;
+    }
+
+    return thrown_dmg;
 }
 
 int Character::thrown_item_adjusted_damage( const item &thrown ) const
 {
     const std::optional<int> throw_assist = character_throw_assist( *this );
-    const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
+    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
                             !throw_assist;
 
     // The damage dealt due to item's weight, player's strength, and skill level
     // Up to str/2 or weight/100g (lower), so 10 str is 5 damage before multipliers
-    // Railgun doubles the effective strength
+    // Railgun uses intelligence and base kinetic energy boosts as a form of power
+    // to simulate a character's ability to operate and calculate with high-tech equipment.
     ///\ARM_STR increases throwing damage
-    double stats_mod = do_railgun ? get_str() : ( get_arm_str() / 2.0 );
+    double modifier = std::max( 0.85f, get_modifier( character_modifier_limb_str_mod ) );
+    double stats_mod = do_railgun ? ( 10 + ( get_int() * modifier ) / 2.0 ) : ( get_arm_str() / 2.0 );
     stats_mod = throw_assist ? *throw_assist / 2.0 : stats_mod;
     // modify strength impact based on skill level, clamped to [0.15 - 1]
     // mod = mod * [ ( ( skill / max_skill ) * 0.85 ) + 0.15 ]
@@ -1673,7 +1707,7 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
         proj.critical_multiplier += 0.06f * std::min( dex, per );
     }
 
-    const bool do_railgun = has_active_bionic( bio_railgun ) && thrown.made_of_any( ferric ) &&
+    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
                             !throw_assist;
 
     impact.add_damage( damage_bash, thrown_item_weight_damage( *this, thrown ) );
@@ -1717,7 +1751,7 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     if( do_railgun ) {
         proj_effects.insert( ammo_effect_LIGHTNING );
 
-        const units::energy trigger_cost = bio_railgun->power_trigger;
+        const units::energy trigger_cost = fcl_bio_railgun->power_trigger;
         mod_power_level( -trigger_cost );
     }
 
@@ -2440,14 +2474,14 @@ std::vector<aim_type> Character::get_aim_types( const item &gun ) const
     return aim_types;
 }
 
-static projectile make_gun_projectile( const item &gun )
+static projectile make_gun_projectile( const item &gun, Character &guy )
 {
     projectile proj;
     proj.speed  = 1000;
     proj.impact = gun.gun_damage();
     proj.shot_impact = gun.gun_damage( true, true );
 
-    proj.range = gun.gun_range();
+    proj.range = gun.gun_range( &guy );
     proj.proj_effects = gun.ammo_effects();
 
     if( gun.has_ammo_data() && gun.ammo_data()->phase == phase_id::LIQUID ) {

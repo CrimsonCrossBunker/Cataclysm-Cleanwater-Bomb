@@ -36,6 +36,7 @@
 #include "pimpl.h"
 #include "player_activity.h"
 #include "ret_val.h"
+#include "stomach.h"
 #include "string_formatter.h"
 #include "talker.h"
 #include "talker_npc.h"

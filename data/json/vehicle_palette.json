@@ -237,7 +237,8 @@
         "colors": [
           { "color": "Black grey", "weight": 10 },
           { "color": "White aluminium", "weight": 10 },
-          { "color": "Traffic Purple", "weight": 1 }
+          { "color": "Traffic Purple", "weight": 1 },
+          { "color": "Ultramarine Blue", "weight": 1 }
         ]
       }
     ]

@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
+
+set -euo pipefail
 
 if [ ! -d lang/po ]
 then
@@ -13,7 +15,7 @@ fi
 
 
 echo "> Extracting strings from C++ code"
-xgettext --default-domain="cataclysm-dda" \
+if ! xgettext --default-domain="cataclysm-dda" \
          --add-comments="~" \
          --sort-by-file \
          --output="lang/po/base.pot" \
@@ -30,7 +32,7 @@ xgettext --default-domain="cataclysm-dda" \
          --keyword="pl_translation:1c,2,3,3t" \
          --from-code="UTF-8" \
          src/*.cpp src/*.h
-if [ $? -ne 0 ]; then
+then
     echo "Error in extracting strings from C++ code. Aborting."
     exit 1
 fi
@@ -76,8 +78,7 @@ then
 fi
 
 echo "> Unification of translation template"
-msguniq -o lang/po/cataclysm-dda.pot lang/po/base.pot
-if [ ! -f lang/po/cataclysm-dda.pot ]; then
+if ! msguniq -o lang/po/cataclysm-dda.pot lang/po/base.pot; then
     echo "Error in merging translation templates. Aborting."
     exit 1
 fi

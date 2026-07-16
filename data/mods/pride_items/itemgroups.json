@@ -21,13 +21,14 @@
     "id": "accesories_personal_unisex",
     "copy-from": "accesories_personal_unisex",
     "type": "item_group",
+    "subtype": "collection",
     "extend": { "items": [ { "item": "pride_flag", "prob": 1 } ] }
   },
   {
     "id": "costume_cloacks",
     "copy-from": "costume_cloacks",
     "type": "item_group",
-    "extend": { "entries": [ { "item": "pride_flag", "prob": 2 } ] }
+    "extend": { "items": [ [ "pride_flag", 2 ] ] }
   },
   {
     "id": "music_shop",
@@ -57,12 +58,14 @@
     "id": "map_extra_college_camping_corpse",
     "copy-from": "map_extra_college_camping_corpse",
     "type": "item_group",
+    "subtype": "collection",
     "extend": { "entries": [ { "item": "pride_flag", "prob": 5 } ] }
   },
   {
     "id": "map_extra_college_sports_corpse",
     "copy-from": "map_extra_college_sports_corpse",
     "type": "item_group",
+    "subtype": "collection",
     "extend": { "entries": [ { "item": "pride_flag", "prob": 2 } ] }
   },
   {

@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "render_backend.h"
 
 #if !defined(TILES)
@@ -8,8 +10,7 @@ namespace
 class null_render_backend : public render_backend
 {
     public:
-        bool present() override
-        {
+        bool present() override {
             // Headless / server: rendering is a no-op.  The simulation
             // produces view_snapshot but nothing consumes it.
             return true;
@@ -19,8 +20,7 @@ class null_render_backend : public render_backend
 
         void flush() override {}
 
-        const char *name() const override
-        {
+        const char *name() const override {
             return "null";
         }
 };

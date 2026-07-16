@@ -130,6 +130,17 @@
     "multi_activity": true
   },
   {
+    "id": "ACT_VEHICLE_PART_REPAIR_SERVICE",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "repairing a vehicle",
+    "rooted": true,
+    "based_on": "time",
+    "can_resume": false,
+    "interruptable": true,
+    "interruptable_with_kb": true
+  },
+  {
     "id": "ACT_BASH",
     "type": "activity_type",
     "activity_level": "MODERATE_EXERCISE",

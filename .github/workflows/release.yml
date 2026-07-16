@@ -65,6 +65,9 @@ jobs:
     uses: ./.github/workflows/compose-tilesets.yml
   build-translations:
     uses: ./.github/workflows/build-translations.yml
+    permissions:
+      actions: read
+      contents: read
     secrets:
       TX_TOKEN: ${{ secrets.TX_TOKEN }}
 

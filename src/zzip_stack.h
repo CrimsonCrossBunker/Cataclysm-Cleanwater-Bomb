@@ -2,7 +2,7 @@
 #ifndef CATA_SRC_ZZIP_STACK_H
 #define CATA_SRC_ZZIP_STACK_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <cstddef>
 #include <filesystem>

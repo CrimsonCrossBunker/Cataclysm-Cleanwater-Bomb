@@ -5206,9 +5206,9 @@ talk_effect_fun_t::func f_revert_location( const JsonObject &jo, std::string_vie
     };
 }
 
-static const std::string EOC_CABLE_RELOCATION_TURN_VAR( "eoc_cable_relocation_turn" );
+const std::string EOC_CABLE_RELOCATION_TURN_VAR( "eoc_cable_relocation_turn" );
 
-static void translate_linked_items( visitable &items, const tripoint_rel_ms &offset )
+void translate_linked_items( visitable &items, const tripoint_rel_ms &offset )
 {
     items.visit_items( [&]( item * it, item * ) {
         if( it->has_link_data() && !it->has_no_links() &&
@@ -5221,7 +5221,7 @@ static void translate_linked_items( visitable &items, const tripoint_rel_ms &off
     } );
 }
 
-static void translate_vehicle_linked_items( vehicle &veh, const tripoint_rel_ms &offset )
+void translate_vehicle_linked_items( vehicle &veh, const tripoint_rel_ms &offset )
 {
     for( const vpart_reference &vpr : veh.get_all_parts() ) {
         for( item &it : veh.get_items( veh.part( vpr.part_index() ) ) ) {
@@ -5237,7 +5237,7 @@ static void translate_vehicle_linked_items( vehicle &veh, const tripoint_rel_ms 
     }
 }
 
-static void translate_submap_linked_items( submap &sm, const tripoint_rel_ms &offset )
+void translate_submap_linked_items( submap &sm, const tripoint_rel_ms &offset )
 {
     for( int x = 0; x < SEEX; x++ ) {
         for( int y = 0; y < SEEY; y++ ) {
@@ -8790,6 +8790,8 @@ void talk_effect_t::parse_string_effect( const std::string &effect_id, const Jso
             WRAP( do_chop_plank ),
             WRAP( do_vehicle_deconstruct ),
             WRAP( do_vehicle_repair ),
+            WRAP( select_vehicle_part_repair ),
+            WRAP( start_vehicle_part_repair ),
             WRAP( do_chop_trees ),
             WRAP( do_fishing ),
             WRAP( do_construction ),

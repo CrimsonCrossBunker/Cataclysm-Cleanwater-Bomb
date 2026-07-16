@@ -2258,8 +2258,8 @@ static tripoint_abs_omt display()
             create_note( curs );
         } else if( action == "DELETE_NOTE" ) {
             if( overmap_buffer.has_note( curs ) && query_yn( _( "Really delete note?" ) ) ) {
-            overmap_buffer.delete_note( curs );
-            cata_mp::mp_sync_note_delete( curs );
+                overmap_buffer.delete_note( curs );
+                cata_mp::mp_sync_note_delete( curs );
             }
         } else if( action == "MARK_DANGER" ) {
             const int danger_radius = overmap_buffer.note_danger_radius( curs );

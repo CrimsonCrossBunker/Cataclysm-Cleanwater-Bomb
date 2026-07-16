@@ -620,6 +620,23 @@
   },
   {
     "type": "material",
+    "id": "copper_nickel",
+    "name": "Cupronickel",
+    "//": "Setting based on C71500 (Cu70Ni30) data.",
+    "density": 8.95,
+    "specific_heat_liquid": 0.49,
+    "specific_heat_solid": 0.39,
+    "latent_heat": 230,
+    "conductive": true,
+    "chip_resist": 10,
+    "dmg_adj": [ "marked", { "ctxt": "adjective", "str": "dented" }, "smashed", "shattered" ],
+    "bash_dmg_verb": { "ctxt": "verb", "str": "dented" },
+    "cut_dmg_verb": "scratched",
+    "resist": { "bash": 2, "cut": 3, "acid": 0, "heat": 3, "bullet": 2 },
+    "repair_difficulty": 3
+  },
+  {
+    "type": "material",
     "id": "cotton",
     "name": "Cotton Blend",
     "density": 0.5,

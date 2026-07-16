@@ -924,7 +924,7 @@ bool uilist::query_setup()
         jobject activity = ( jobject )GetAndroidActivity();
         jclass clazz( env->GetObjectClass( activity ) );
         jmethodID get_nativeui_method_id = env->GetMethodID( clazz, "getNativeUI",
-                                           "()Lcom/lyhglytx/cataclysmcb/NativeUI;" );
+                                           "()Lcom/crimsoncrossbunker/cataclysmcb/NativeUI;" );
         jobject native_ui_obj = env->CallObjectMethod( activity, get_nativeui_method_id );
         jclass native_ui_cls( env->GetObjectClass( native_ui_obj ) );
         jmethodID list_menu_method_id = env->GetMethodID( native_ui_cls, "singleChoiceList",

@@ -7,12 +7,7 @@
   {
     "type": "effect_on_condition",
     "id": "EOC_TEST_PLANT_GROW",
-    "effect": [
-      {
-        "copy_var": { "context_val": "new_stage" },
-        "target_var": { "global_val": "test_grow_stage" }
-      }
-    ]
+    "effect": [ { "copy_var": { "context_val": "new_stage" }, "target_var": { "global_val": "test_grow_stage" } } ]
   },
   {
     "type": "effect_on_condition",
@@ -27,27 +22,20 @@
   {
     "type": "effect_on_condition",
     "id": "EOC_TEST_PLANT_HARVEST",
-    "effect": [
-      { "math": [ "test_harvest_count = _plant_count" ] }
-    ]
+    "effect": [ { "math": [ "test_harvest_count = _plant_count" ] } ]
   },
   {
     "type": "effect_on_condition",
     "id": "EOC_TEST_PLANT_FERTILIZE",
     "effect": [
-      {
-        "copy_var": { "context_val": "fertilizer_id" },
-        "target_var": { "global_val": "test_fertilizer" }
-      },
+      { "copy_var": { "context_val": "fertilizer_id" }, "target_var": { "global_val": "test_fertilizer" } },
       { "math": [ "test_fertilize_reduction_turns = _reduction_turns" ] }
     ]
   },
   {
     "type": "effect_on_condition",
     "id": "EOC_TEST_PLANT_WATER",
-    "effect": [
-      { "math": [ "test_water_added = _water_added" ] }
-    ]
+    "effect": [ { "math": [ "test_water_added = _water_added" ] } ]
   },
   {
     "type": "effect_on_condition",
@@ -56,10 +44,7 @@
     "required_event": "character_plants_seed",
     "effect": [
       { "math": [ "test_event_plant = 1" ] },
-      {
-        "copy_var": { "context_val": "seed_id" },
-        "target_var": { "global_val": "test_event_plant_seed_id" }
-      }
+      { "copy_var": { "context_val": "seed_id" }, "target_var": { "global_val": "test_event_plant_seed_id" } }
     ]
   },
   {
@@ -69,10 +54,7 @@
     "required_event": "character_harvests_plant",
     "effect": [
       { "math": [ "test_event_harvest = _plant_count" ] },
-      {
-        "copy_var": { "context_val": "seed_id" },
-        "target_var": { "global_val": "test_event_harvest_seed_id" }
-      }
+      { "copy_var": { "context_val": "seed_id" }, "target_var": { "global_val": "test_event_harvest_seed_id" } }
     ]
   },
   {
@@ -80,21 +62,14 @@
     "id": "EOC_TEST_EVENT_FERTILIZE_PLANT",
     "eoc_type": "EVENT",
     "required_event": "character_fertilizes_plant",
-    "effect": [
-      {
-        "copy_var": { "context_val": "fertilizer_id" },
-        "target_var": { "global_val": "test_event_fertilizer_id" }
-      }
-    ]
+    "effect": [ { "copy_var": { "context_val": "fertilizer_id" }, "target_var": { "global_val": "test_event_fertilizer_id" } } ]
   },
   {
     "type": "effect_on_condition",
     "id": "EOC_TEST_EVENT_WATER_PLANT",
     "eoc_type": "EVENT",
     "required_event": "character_waters_plant",
-    "effect": [
-      { "math": [ "test_event_water_added = _water_added" ] }
-    ]
+    "effect": [ { "math": [ "test_event_water_added = _water_added" ] } ]
   },
   {
     "type": "ter_furn_transform",

@@ -1,7 +1,8 @@
-#include "cata_catch.h"
-#include "map.h"
+#if defined(TILES)
 
-// sprite_screen_bounds is defined in map.h, no TILES dependency.
+#include "cata_catch.h"
+#include "cata_tiles.h"
+#include "map.h"
 
 TEST_CASE( "sprite_screen_bounds_first_expand_sets_valid", "[tint_overlay]" )
 {
@@ -74,10 +75,6 @@ TEST_CASE( "sprite_screen_bounds_idempotent", "[tint_overlay]" )
     CHECK( b.w == 20 );
     CHECK( b.h == 30 );
 }
-
-#if defined(TILES)
-
-#include "cata_tiles.h"
 
 // Helper: simulate the opaque-bounds-to-destination transform from draw_sprite_at,
 // including flip handling. Returns the bounds that would be accumulated.

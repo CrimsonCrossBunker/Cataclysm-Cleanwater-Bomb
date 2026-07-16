@@ -95,6 +95,13 @@ class veh_interact
                 const part_selector &sel,
                 const std::string &title = std::string() );
 
+        /**
+         * Prompt for a part by navigating the normal vehicle grid and then choosing from the
+         * parts installed at the current cursor position.
+         */
+        static std::optional<vpart_reference> select_part_at_grid( map &here, vehicle &veh,
+                const part_selector &sel );
+
     private:
         explicit veh_interact( map &here, vehicle &veh, const point_rel_ms &p = point_rel_ms::zero );
         ~veh_interact();
@@ -325,6 +332,11 @@ class veh_interact
         void cache_tool_availability();
         void allocate_windows();
         void do_main_loop( map &here );
+        std::optional<int> do_part_selection_loop( map &here );
+        std::optional<int> select_part_at_cursor( map &here );
+
+        bool part_selection_mode = false;
+        part_selector part_selection_filter;
 
         void cache_tool_availability_update_lifting( const tripoint_bub_ms &world_cursor_pos );
 

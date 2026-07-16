@@ -1,6 +1,7 @@
 #include "creature_tracker.h"
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <ostream>
 #include <string>
@@ -12,6 +13,7 @@
 #include "debug.h"
 #include "flood_fill.h"
 #include "game.h"
+#include "level_cache.h"
 #include "map.h"
 #include "mapdata.h"
 #include "maptile_fwd.h"
@@ -520,7 +522,7 @@ void creature_tracker::precompute_all_zones()
                 }
 
                 auto check_location_passable_down = [loc, &here]( const maptile & mt,
-                        const ter_t & ter ) {
+                const ter_t & ter ) {
                     return ( ( ter.movecost != 0 && mt.get_furn_t().movecost >= 0 ) ||
                              here.is_transparent_wo_fields( loc ) ) &&
                            ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||

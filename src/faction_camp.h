@@ -3,7 +3,7 @@
 #define CATA_SRC_FACTION_CAMP_H
 
 #include <functional>
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>

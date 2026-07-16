@@ -6,7 +6,7 @@
 
 #include "coordinates.h"
 #include "type_id.h"
-#include "point.h" 
+#include "point.h"
 
 // General-purpose entry point for the modern VFX overlay (the light-cover +
 // shockwave system that began as the explosion blast effect). It decouples the

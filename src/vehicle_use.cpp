@@ -23,6 +23,7 @@
 #include "dialogue.h"
 #include "effect_on_condition.h"
 #include "enums.h"
+#include "event.h"
 #include "event_bus.h"
 #include "flat_set.h"
 #include "game.h"
@@ -40,9 +41,9 @@
 #include "map_scale_constants.h"
 #include "mapdata.h"
 #include "messages.h"
-#include "options.h"
 #include "monster.h"
 #include "mtype.h"
+#include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
 #include "player_activity.h"
@@ -1102,10 +1103,10 @@ void vehicle::operate_reaper( map &here )
         const furn_t &furn = here.furn( reaper_pos ).obj();
         if( furn.plant ) {
             iexamine::run_plant_eocs( furn.plant->eoc_on_harvest, get_avatar(), here, reaper_pos, *seed,
-                                       stage, stage, {}, num_ctx );
+                                      stage, stage, {}, num_ctx );
         }
         iexamine::run_plant_eocs( seed_type.seed->eoc_on_harvest, get_avatar(), here, reaper_pos,
-                                   *seed, stage, stage, {}, num_ctx );
+                                  *seed, stage, stage, {}, num_ctx );
 
         here.furn_set( reaper_pos, furn_str_id::NULL_ID() );
         here.i_clear( reaper_pos );
@@ -1179,10 +1180,10 @@ void vehicle::operate_planter( map &here )
                     };
                     if( new_furn.plant ) {
                         iexamine::run_plant_eocs( new_furn.plant->eoc_on_plant, get_avatar(), here, loc,
-                                                   *planted_seed, seed_stage, seed_stage, {}, num_ctx );
+                                                  *planted_seed, seed_stage, seed_stage, {}, num_ctx );
                     }
                     iexamine::run_plant_eocs( planted_seed->type->seed->eoc_on_plant, get_avatar(), here,
-                                               loc, *planted_seed, seed_stage, seed_stage, {}, num_ctx );
+                                              loc, *planted_seed, seed_stage, seed_stage, {}, num_ctx );
                 }
 
                 break;
@@ -1674,10 +1675,12 @@ void vehicle::use_auto_cooker( map &here, int p )
 
     const auto has_cookable_recursive = [&]( const item & it, auto & check ) -> bool {
         if( it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
-            !it.get_comestible()->cook_result.is_empty() ) {
+            !it.get_comestible()->cook_result.is_empty() )
+        {
             return true;
         }
-        for( const item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
+        for( const item *content : it.all_items_top( pocket_type::CONTAINER ) )
+        {
             if( check( *content, check ) ) {
                 return true;
             }
@@ -1707,10 +1710,12 @@ void vehicle::use_auto_cooker( map &here, int p )
     vp.enabled = true;
     const auto reset_cookable_recursive = [&]( item & it, auto & reset ) -> void {
         if( it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
-            !it.get_comestible()->cook_result.is_empty() ) {
+            !it.get_comestible()->cook_result.is_empty() )
+        {
             it.set_var( "cook_energy_done", "0" );
         }
-        for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
+        for( item *content : it.all_items_top( pocket_type::CONTAINER ) )
+        {
             reset( *content, reset );
         }
     };
@@ -2835,8 +2840,8 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         menu.add( vp_auto_cooker->part().enabled
                   ? _( "Deactivate the electric cooker" )
                   : _( "Activate the electric cooker" ) )
-            .hotkey( "TOGGLE_AUTO_COOKER" )
-            .on_submit( [this, ac_idx, here] { use_auto_cooker( *here, ac_idx ); } );
+        .hotkey( "TOGGLE_AUTO_COOKER" )
+        .on_submit( [this, ac_idx, here] { use_auto_cooker( *here, ac_idx ); } );
     }
 
     const std::optional<vpart_reference> vp_nl_boiler = vp.avail_part_with_feature( "NL_BOILER" );

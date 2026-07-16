@@ -3,8 +3,6 @@
 * See savegame.cpp for game component IO
 */
 
-#include "game.h"
-
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -27,14 +25,6 @@
 #include <utility>
 #include <vector>
 
-#include "creature_tracker.h"
-#include "faction.h"
-#include "power_network.h"
-#include "scent_map.h"
-#include "mission.h"
-#include "timed_event.h"
-#include "kill_tracker.h"
-
 #include "achievement.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
@@ -46,9 +36,9 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catacharset.h"
+#include "char_validity_check.h"
 #include "character.h"
 #include "character_id.h"
-#include "char_validity_check.h"
 #include "clzones.h"
 #include "coordinates.h"
 #include "debug.h"
@@ -60,6 +50,7 @@
 #include "event_bus.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
+#include "game.h"
 #include "gamemode.h"
 #include "get_version.h"
 #include "hash_utils.h"

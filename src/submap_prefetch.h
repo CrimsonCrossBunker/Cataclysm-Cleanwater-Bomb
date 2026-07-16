@@ -13,6 +13,7 @@
 #include <thread>
 
 #include "coordinates.h"
+#include "point.h"
 
 // Background submap quad I/O prefetcher.
 //

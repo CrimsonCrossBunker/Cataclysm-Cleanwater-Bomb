@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <climits>
 #include <functional>
-#include <iosfwd>
 #include <iterator>
 #include <sstream>
 #include <string>
@@ -41,15 +40,15 @@
 #include "output.h"
 #include "path_info.h"
 #include "string_formatter.h"
+#include "study_zone_ui.h"
+#include "talker.h"
+#include "talker_zone.h"
 #include "translations.h"
 #include "uilist.h"
 #include "value_ptr.h"
 #include "vehicle.h"
 #include "visitable.h"
 #include "vpart_position.h"
-#include "talker.h"
-#include "talker_zone.h"
-#include "study_zone_ui.h"
 
 static const faction_id faction_your_followers( "your_followers" );
 

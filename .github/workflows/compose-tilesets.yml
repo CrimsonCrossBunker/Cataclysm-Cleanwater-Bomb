@@ -116,7 +116,7 @@ jobs:
             tileset_repo: pixel-32/CDDA-tileset
             tileset_src_checkout: ""
           - name: MSX++UndeadPeopleEdition
-            tileset_repo: LYHGLYTX/CCB_UNDEAD_PEOPLE
+            tileset_repo: CrimsonCrossBunker/CCB_UNDEAD_PEOPLE
             tileset_dir: .
             precomposed: true
             release_download: true

@@ -1,0 +1,122 @@
+[
+  {
+    "type": "MIGRATION",
+    "id": "atomic_coffeepot",
+    "replace": "fcl_atomic_coffeemaker"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "atomic_lamp",
+    "replace": "fcl_atomic_lamp"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "atomic_lamp_off",
+    "replace": "fcl_atomic_lamp_off"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "atomic_light",
+    "replace": "fcl_atomic_light"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "atomic_light_off",
+    "replace": "fcl_atomic_light_off"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "wearable_atomic_light",
+    "replace": "fcl_atomic_headlamp"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "wearable_atomic_light_off",
+    "replace": "fcl_atomic_headlamp_off"
+  },
+  {
+    "id": "light_minus_atomic_battery_cell",
+    "type": "MIGRATION",
+    "replace": "fcl_light_minus_atomic_battery_cell"
+  },
+  {
+    "id": "light_atomic_battery_cell",
+    "type": "MIGRATION",
+    "replace": "fcl_light_atomic_battery_cell"
+  },
+  {
+    "id": "medium_atomic_battery_cell",
+    "type": "MIGRATION",
+    "replace": "fcl_medium_atomic_battery_cell"
+  },
+  {
+    "id": "schematics_eyebot",
+    "type": "MIGRATION",
+    "replace": "fcl_schematics_eyebot"
+  },
+  {
+    "id": "schematics_copbot",
+    "type": "MIGRATION",
+    "replace": "fcl_schematics_copbot"
+  },
+  {
+    "id": "schematics_riotbot",
+    "type": "MIGRATION",
+    "replace": "fcl_schematics_riotbot"
+  },
+  {
+    "id": "schematics_molebot",
+    "type": "MIGRATION",
+    "replace": "fcl_schematics_molebot"
+  },
+  {
+    "id": [ "bot_eyebot" ],
+    "type": "MIGRATION",
+    "replace": "fcl_bot_eyebot"
+  },
+  {
+    "id": [ "broken_eyebot" ],
+    "type": "MIGRATION",
+    "replace": "broken_fcl_eyebot"
+  },
+  {
+    "id": [ "bot_copbot" ],
+    "type": "MIGRATION",
+    "replace": "fcl_bot_copbot"
+  },
+  {
+    "id": [ "broken_copbot" ],
+    "type": "MIGRATION",
+    "replace": "broken_fcl_copbot"
+  },
+  {
+    "id": [ "bot_molebot" ],
+    "type": "MIGRATION",
+    "replace": "fcl_bot_molebot"
+  },
+  {
+    "id": [ "broken_molebot" ],
+    "type": "MIGRATION",
+    "replace": "broken_fcl_molebot"
+  },
+  {
+    "id": [ "bot_riotbot" ],
+    "type": "MIGRATION",
+    "replace": "fcl_bot_riotbot"
+  },
+  {
+    "id": [ "broken_riotbot" ],
+    "type": "MIGRATION",
+    "replace": "broken_fcl_riotbot"
+  },
+  {
+    "id": "plasma_gun",
+    "type": "MIGRATION",
+    "replace": "fcl_plasma_gun"
+  },
+  {
+    "id": "plasma_rifle",
+    "type": "MIGRATION",
+    "replace": "fcl_plasma_rifle"
+  }
+]

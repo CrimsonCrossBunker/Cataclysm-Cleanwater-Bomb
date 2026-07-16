@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "animation.h"
 #include "calendar.h"
@@ -884,7 +884,9 @@ class cata_tiles
         effect_handle init_sct( const tripoint_bub_ms &pos, const std::string &text, nc_color color,
                                 float duration_ms = 800.0f );
         void advance_sct();
-        bool has_sct() const { return !m_sct_effects.empty(); }
+        bool has_sct() const {
+            return !m_sct_effects.empty();
+        }
         void draw_sct_frame( int view_z,
                              std::multimap<point, formatted_text> &overlay_strings );
 
@@ -966,7 +968,7 @@ class cata_tiles
         // on the separate PLAYER_ATTACK_ANIM option.  Returns a handle so the
         // caller can cancel the lunge mid-flight via cancel_effect().
         effect_handle start_creature_attack_anim( const tripoint_abs_ms &pos_abs,
-                                                  const point &dir_tiles, bool is_player );
+                const point &dir_tiles, bool is_player );
         // True while any attack lunge is in flight.
         bool has_creature_attack_anim() const {
             return !m_creature_attack_anims.empty();
@@ -1004,7 +1006,9 @@ class cata_tiles
         effect_handle add_highlight( const tripoint_bub_ms &pos,
                                      float duration_ms = 500.0f );
         void advance_highlights();
-        bool has_highlight() const { return !m_highlights.empty(); }
+        bool has_highlight() const {
+            return !m_highlights.empty();
+        }
         void draw_highlights( int view_z );
 
         // --- Handle system ---
@@ -1386,7 +1390,9 @@ class cata_tiles
         // --- Handle infrastructure ---
         // Entry in the handle index: stores only the effect category so
         // cancel_effect() knows which container to search.
-        struct handle_entry { effect_kind kind; };
+        struct handle_entry {
+            effect_kind kind;
+        };
         // Monotonically-increasing handle counter.  Zero means "no handle".
         effect_handle m_next_handle = 1;
         // Maps each allocated handle to its effect kind so cancel_effect()

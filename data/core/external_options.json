@@ -330,6 +330,13 @@
   },
   {
     "type": "EXTERNAL_OPTION",
+    "name": "VEHICLE_DEGRADATION_WHEN_DAMAGE",
+    "//": "If true, it will disable the reduction in the maximum repairable damage capacity of vehicle parts when they are damaged.",
+    "stype": "bool",
+    "value": true
+  },
+  {
+    "type": "EXTERNAL_OPTION",
     "name": "OUTSIDE_DEFINED_OMAP_OMT",
     "//": "If .omap s are being used this is the overmap terrain used outside of the defined overmaps.",
     "stype": "string_input",

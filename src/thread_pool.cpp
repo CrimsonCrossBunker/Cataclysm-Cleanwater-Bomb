@@ -2,13 +2,14 @@
 
 #include <chrono>
 #include <functional>
+#include <string>
 #include <thread>
 
 #include "crash.h"
 #include "options.h"
 #include "rng.h"
 
-thread_local bool tl_is_worker_thread = false;
+static thread_local bool tl_is_worker_thread = false;
 
 bool is_pool_worker_thread()
 {
@@ -28,7 +29,7 @@ cata_thread_pool::cata_thread_pool( unsigned int num_workers )
 cata_thread_pool::~cata_thread_pool()
 {
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::scoped_lock lock( mutex_ );
         stop_ = true;
     }
     cv_.notify_all();
@@ -75,7 +76,7 @@ void cata_thread_pool::worker_loop()
 void cata_thread_pool::submit( std::function<void()> task )
 {
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::scoped_lock lock( mutex_ );
         queue_.push_back( std::move( task ) );
     }
     cv_.notify_one();
@@ -96,7 +97,7 @@ cata_thread_pool &get_thread_pool()
             return 0u;
         }
         const int workers_opt = has_option( "THREAD_POOL_WORKERS" ) ?
-                                get_option<int>( "THREAD_POOL_WORKERS" ) : 0;
+        get_option<int>( "THREAD_POOL_WORKERS" ) : 0;
         if( workers_opt > 0 )
         {
             return static_cast<unsigned int>( workers_opt );

@@ -132,9 +132,9 @@
         " c|   uku(   u  c-|   [ ",
         "  uk   u|-k  u  u-|=[== ",
         "|||k    |- ukuu  -|kuk||",
-        "          u Tuu   u     ",
-        " kkuu    k kuAc   2     ",
-        "||u|| uk|-uukuk  -|  |||",
+        "          u TuuÂ  u     ",
+        " kkuu    k kuAcÂ  2     ",
+        "||u|| uk|-uukukÂ -|  |||",
         "  kk|  Y|-kk  u  (  u|r ",
         "cc  |    (k uu   ( uk|r ",
         "cc  |||||-  ddd u-|  |r ",
@@ -147,7 +147,7 @@
         "  c c|c   |  |    |cc   "
       ],
       "palettes": [ "microlab" ],
-      "furniture": { "A": "f_compact_ASRG_containment" },
+      "furniture": { "A": "f_compact_ASRG_containment", "Â": [ [ "f_null", 3 ], "f_compact_ASRG_containment" ] },
       "item": { "u": { "item": "corpse" }, "k": { "item": "corpse" }, "T": { "item": "corpse" } },
       "monster": {
         "T": { "monster": "mon_leech_blossom" },

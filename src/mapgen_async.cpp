@@ -1,5 +1,7 @@
 #include "mapgen_async.h"
 
+template <typename T> class string_id;
+
 namespace mapgen_defer
 {
 

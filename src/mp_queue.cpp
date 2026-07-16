@@ -1,6 +1,7 @@
 #include "mp_queue.h"
 
-namespace cata_mp {
+namespace cata_mp
+{
 
 event_queue &get_mp_queue()
 {

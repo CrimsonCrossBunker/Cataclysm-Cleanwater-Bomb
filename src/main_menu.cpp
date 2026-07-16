@@ -45,8 +45,7 @@
 #include "mapsharing.h"
 #include "messages.h"
 #ifdef MP_ENABLED
-#include "mp_client_conn.h"
-#include "mp_gamestate.h"
+    #include "mp_gamestate.h"
 #endif
 #include "music.h"
 #include "options.h"
@@ -64,9 +63,9 @@
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
 #include "ui_style_picker.h"
+#include "uilist.h"
 #include "wcwidth.h"
 #include "worldfactory.h"
 
@@ -515,8 +514,6 @@ void main_menu::init_strings()
     vMenuItems.emplace_back( pgettext( "Main Menu", "Se<t|T>tings" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "H<e|E|?>lp" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "<C|c>redits" ) );
-#ifdef MP_ENABLED
-#endif
 #if !defined(EMSCRIPTEN)
     vMenuItems.emplace_back( pgettext( "Main Menu", "<Q|q>uit" ) );
 #endif
@@ -1016,7 +1013,8 @@ bool main_menu::opening_screen()
                         cpick.entries.emplace_back( RET_RANDOM, true, 'r', _( "Random Character" ) );
                         cpick.entries.emplace_back( RET_CANCEL, true, 'q', _( "Cancel" ) );
                         cpick.query();
-                        switch( cpick.ret ) {
+                        switch( cpick.ret )
+                        {
                             case RET_CUSTOM:
                                 return 0;
                             case RET_PRESET:
@@ -1144,7 +1142,8 @@ bool main_menu::opening_screen()
                             break;
                         }
                         const bool any_worlds_with_saves = [] {
-                            for( const auto &kv : world_generator->get_all_worlds() ) {
+                            for( const auto &kv : world_generator->get_all_worlds() )
+                            {
                                 if( !kv.second->world_saves.empty() ) {
                                     return true;
                                 }
@@ -1155,7 +1154,9 @@ bool main_menu::opening_screen()
                         const std::string host_player = cata_mp::mp_client_host_player_name();
                         if( !host_world.empty() ) {
                             static std::string s_announced_host;
-                            const std::string host_key = host_player + "@" + host_world;
+                            std::string host_key = host_player;
+                            host_key += '@';
+                            host_key += host_world;
                             if( host_key != s_announced_host ) {
                                 s_announced_host = host_key;
                                 if( host_player.empty() ) {
@@ -1613,7 +1614,7 @@ void main_menu::world_tab( const std::string &worldname )
         }
         case 8: { // Paste Personal Zones
             if( clipboard_personal_zones.empty() ) {
-                popup( _( "No personal zones in clipboard. Copy personal zones first." ) );
+                popup( _( "No personal zones in clipboard.  Copy personal zones first." ) );
                 break;
             }
             WORLD *cur_world = world_generator->get_world( worldname );

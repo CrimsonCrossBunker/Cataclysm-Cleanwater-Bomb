@@ -87,7 +87,7 @@ void mapbuffer::clear_outside_reality_bubble()
 
 bool mapbuffer::add_submap( const tripoint_abs_sm &p, std::unique_ptr<submap> &sm )
 {
-    std::lock_guard<std::recursive_mutex> lk( submaps_mutex_ );
+    std::scoped_lock lk( submaps_mutex_ );
     if( submaps.count( p ) ) {
         return false;
     }
@@ -111,7 +111,7 @@ bool mapbuffer::add_submap( const tripoint_abs_sm &p, submap *sm )
 
 void mapbuffer::remove_submap( const tripoint_abs_sm &addr )
 {
-    std::lock_guard<std::recursive_mutex> lk( submaps_mutex_ );
+    std::scoped_lock lk( submaps_mutex_ );
     auto m_target = submaps.find( addr );
     if( m_target == submaps.end() ) {
         debugmsg( "Tried to remove non-existing submap %s", addr.to_string() );

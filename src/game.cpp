@@ -165,8 +165,8 @@
 #include "monstergenerator.h"
 #include "move_mode.h"
 #ifdef MP_ENABLED
-#include "mp_client_conn.h"
-#include "mp_gamestate.h"
+    #include "mp_client_conn.h"
+    #include "mp_gamestate.h"
 #endif
 #include "mtype.h"
 #include "npc.h"
@@ -244,6 +244,7 @@
     #define UNUSED
 #endif
 
+static const activity_id ACT_HELP_PARTNER( "ACT_HELP_PARTNER" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
 
@@ -5478,7 +5479,7 @@ bool game::npc_menu( npc &who )
             if( mp_partner ) {
                 add_msg( _( "You swap places with %s." ), who.get_name() );
                 cata_mp::client_send( cata_mp::client_enrich_action(
-                    "{\"type\":\"action\",\"action\":\"swap_with_partner\"}" ) );
+                                          R"({"type":"action","action":"swap_with_partner"})" ) );
                 cata_mp::client_mark_action_sent();
                 u.mod_moves( -200 );
             } else {
@@ -5511,7 +5512,7 @@ bool game::npc_menu( npc &who )
         if( mp_partner ) {
             add_msg( _( "You push %s." ), who.get_name() );
             cata_mp::client_send( cata_mp::client_enrich_action(
-                "{\"type\":\"action\",\"action\":\"push_partner\"}" ) );
+                                      R"({"type":"action","action":"push_partner"})" ) );
             cata_mp::client_mark_action_sent();
             u.mod_moves( -20 );
         } else {
@@ -5538,7 +5539,7 @@ bool game::npc_menu( npc &who )
         if( mp_partner ) {
             add_msg( _( "You tap %s on the shoulder." ), who.get_name() );
             cata_mp::client_send( cata_mp::client_enrich_action(
-                                      "{\"type\":\"action\",\"action\":\"tap_partner\"}" ) );
+                                      R"({"type":"action","action":"tap_partner"})" ) );
             cata_mp::client_mark_action_sent();
             u.mod_moves( -10 );
         } else if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {
@@ -5549,7 +5550,6 @@ bool game::npc_menu( npc &who )
 #endif
     } else if( choice == help_with_task ) {
 #ifdef MP_ENABLED
-        static const activity_id ACT_HELP_PARTNER( "ACT_HELP_PARTNER" );
         constexpr int help_fallback_moves = 1'000'000;
         const int partner_total = cata_mp::partner_activity_moves_total();
         const int duration = partner_total > 0 ? partner_total : help_fallback_moves;
@@ -5892,6 +5892,10 @@ void game::examine( const tripoint_bub_ms &examp, bool with_pickup )
 bool game::warn_player_maybe_anger_local_faction( bool really_bad_offense,
         bool asking_for_public_goods )
 {
+    if( !get_option<bool>( "FACTION_TERRITORY_CHECKS" ) ) {
+        return true;
+    }
+
     Character &player_character = get_player_character();
     std::optional<basecamp *> bcp = overmap_buffer.find_camp(
                                         player_character.pos_abs_omt().xy() );

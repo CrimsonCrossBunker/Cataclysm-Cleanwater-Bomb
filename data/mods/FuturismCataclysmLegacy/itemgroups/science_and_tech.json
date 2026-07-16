@@ -1,0 +1,33 @@
+[
+  {
+    "type": "item_group",
+    "id": "science",
+    "copy-from": "science",
+    "extend": { "items": [ { "group": "bionics_common", "prob": 1, "count": [ 0, 1 ] } ] }
+  },
+  {
+    "type": "item_group",
+    "id": "schematics",
+    "copy-from": "schematics",
+    "extend": {
+      "items": [
+        [ "fcl_schematics_copbot", 50 ],
+        [ "fcl_schematics_eyebot", 50 ],
+        [ "fcl_schematics_riotbot", 50 ],
+        [ "fcl_schematics_molebot", 20 ]
+      ]
+    }
+  },
+  {
+    "type": "item_group",
+    "id": "teleport",
+    "copy-from": "teleport",
+    "extend": {
+      "items": [
+        { "item": "bio_time_freeze", "prob": 1 },
+        { "item": "bio_teleport", "prob": 1 },
+        { "item": "bio_probability_travel", "prob": 1 }
+      ]
+    }
+  }
+]

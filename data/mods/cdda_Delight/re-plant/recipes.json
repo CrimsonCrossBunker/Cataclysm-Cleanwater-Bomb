@@ -66,14 +66,7 @@
     "difficulty": 0,
     "time": "10 m",
     "autolearn": true,
-    "components": [
-      [
-        [ "earthworm_handful", 1 ],
-        [ "earthworm", 10 ]
-      ],
-      [ [ "material_soil", 10 ] ],
-      [ [ "straw_pile", 20 ] ]
-    ]
+    "components": [ [ [ "earthworm_handful", 1 ], [ "earthworm", 10 ] ], [ [ "material_soil", 10 ] ], [ [ "straw_pile", 20 ] ] ]
   },
   {
     "type": "recipe",

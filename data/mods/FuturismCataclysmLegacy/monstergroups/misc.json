@@ -1,0 +1,17 @@
+[
+  {
+    "type": "monstergroup",
+    "id": "GROUP_YOUR_FEARS",
+    "//": "For monsters, spawned by hallucinator effects.  Must represent the awful monsters the player want never see.  Put here every asshole you want.",
+    "monsters": [ { "monster": "mon_fcl_riotbot" } ]
+  },
+  {
+    "type": "monstergroup",
+    "id": "FCL_GROUP_AUG_CLINIC",
+    "monsters": [
+      { "monster": "mon_broken_cyborg", "weight": 100 },
+      { "monster": "mon_prototype_cyborg", "weight": 100, "cost_multiplier": 2 },
+      { "group": "FCL_GROUP_ROBOT_CIVIL_SECURITY", "weight": 50, "cost_multiplier": 2, "pack_size": [ 1, 2 ] }
+    ]
+  }
+]

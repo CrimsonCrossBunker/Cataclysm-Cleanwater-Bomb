@@ -551,11 +551,14 @@ void cast_zlight(
     cata_thread_pool &pool = get_thread_pool();
     const bool can_parallel = pool.num_workers() > 0;
 
-    auto run_batch = [&pool, can_parallel]( std::vector<std::function<void()>> tasks ) {
+    auto run_batch = [&pool, can_parallel]( const std::vector<std::function<void()>> &tasks ) {
         if( can_parallel ) {
             simple_latch latch( tasks.size() );
             for( const auto &t : tasks ) {
-                pool.submit( [&latch, t ]() { t(); latch.count_down(); } );
+                pool.submit( [&latch, t ]() {
+                    t();
+                    latch.count_down();
+                } );
             }
             latch.wait();
         } else {
@@ -567,14 +570,46 @@ void cast_zlight(
 
     if( dir == vertical_direction::DOWN || dir == vertical_direction::BOTH ) {
         run_batch( {
-            [&]() { cast_horizontal_zlight_segment < 0, 1, 1, 0, -1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 1, 0, 0, 1, -1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 0, -1, 1, 0, -1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < -1, 0, 0, 1, -1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 0, 1, -1, 0, -1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 1, 0, 0, -1, -1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 0, -1, -1, 0, -1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < -1, 0, 0, -1, -1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 0, 1, 1, 0, -1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 1, 0, 0, 1, -1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 0, -1, 1, 0, -1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < -1, 0, 0, 1, -1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 0, 1, -1, 0, -1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 1, 0, 0, -1, -1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 0, -1, -1, 0, -1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < -1, 0, 0, -1, -1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
         } );
 
         cast_vertical_zlight_segment < 1, 1, -1, T, calc, is_transparent, accumulate > (
@@ -589,14 +624,46 @@ void cast_zlight(
 
     if( dir == vertical_direction::UP || dir == vertical_direction::BOTH ) {
         run_batch( {
-            [&]() { cast_horizontal_zlight_segment < 0, 1, 1, 0, 1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 1, 0, 0, 1, 1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 0, -1, 1, 0, 1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < -1, 0, 0, 1, 1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 0, 1, -1, 0, 1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 1, 0, 0, -1, 1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < 0, -1, -1, 0, 1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
-            [&]() { cast_horizontal_zlight_segment < -1, 0, 0, -1, 1, T, calc, is_transparent, accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator ); },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 0, 1, 1, 0, 1, T, calc, is_transparent, accumulate >
+                ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 1, 0, 0, 1, 1, T, calc, is_transparent, accumulate >
+                ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 0, -1, 1, 0, 1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < -1, 0, 0, 1, 1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 0, 1, -1, 0, 1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 1, 0, 0, -1, 1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < 0, -1, -1, 0, 1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
+            [&]()
+            {
+                cast_horizontal_zlight_segment < -1, 0, 0, -1, 1, T, calc, is_transparent,
+                accumulate > ( output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
+            },
         } );
 
         cast_vertical_zlight_segment < 1, 1, 1, T, calc, is_transparent, accumulate > (

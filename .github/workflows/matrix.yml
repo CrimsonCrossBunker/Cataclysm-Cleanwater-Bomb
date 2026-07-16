@@ -91,6 +91,9 @@ jobs:
           echo "max_parallel=$([ "$GITHUB_REF_NAME" = "master" -o "$GITHUB_REPOSITORY_OWNER" != "CleverRaven" ] && echo 20 || echo 1)" >> $GITHUB_OUTPUT
   build-translations:
     uses: ./.github/workflows/build-translations.yml
+    permissions:
+      actions: read
+      contents: read
     secrets:
       TX_TOKEN: ${{ secrets.TX_TOKEN }}
   compile-shaders:

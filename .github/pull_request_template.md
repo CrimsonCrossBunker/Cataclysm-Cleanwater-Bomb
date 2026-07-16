@@ -9,7 +9,8 @@ PR 提交准则：
 - 你可以另开 PR 来拆分一次较大的预期改动；如果不确定怎么拆，尽管问。我们很乐意与你协作，并建议合并你 PR 的最佳方式。
 -->
 
-#### 概述 (Summary)
+#### Summary
+<!-- #### 概述 -->
 分类 "简要描述"
 
 <!-- 这一节应当只有一行，请编辑上面那一行。
@@ -21,11 +22,12 @@ PR 提交准则：
 2. Bugfixes "修复长矛无法锁定不同楼层敌人的问题"
 3. Interface "在制作界面显示制作失败几率"
 分类含义详见：
-https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/doc/CHANGELOG_GUIDELINES.md
+https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/doc/CHANGELOG_GUIDELINES.md
 合并后，你的概述会被加入项目更新日志：
-https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/data/changelog.txt -->
+https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/data/changelog.txt -->
 
-#### 改动目的 (Purpose of change)
+#### Purpose of change
+<!-- #### 变更目的 -->
 
 <!-- 用几句话描述你做这次改动的原因。
 如果它与某个已有 issue 相关，可以用「#」加 GitHub issue 编号来关联，例如 #1234。
@@ -41,19 +43,23 @@ https://github.com/LYHGLYTX/Cataclysm-Cleanwater-Bomb/blob/master/data/changelog
 如果没有相关 issue，请在这里说明你要解决的问题、特性或其他关注点。如果这是一个 bug 修复，请附上复现原始 bug 的步骤，以便你的修复可以被验证。 -->
 
 
-#### 解决方案描述 (Describe the solution)
+#### Describe the solution
+<!-- #### 解决方案描述 -->
 
 <!-- 这个特性是如何工作的，或者这个 bug 是怎么被修复的？方案越易于理解，就越快能被合并。 -->
 
-#### 你考虑过的替代方案 (Describe alternatives you've considered)
+#### Describe alternatives you've considered
+<!-- #### 你考虑过的替代方案 -->
 
 <!-- 说明你为解决同一问题考虑过的其他方案、不同思路或可能性。 -->
 
-#### 测试 (Testing)
+#### Testing
+<!-- #### 测试 -->
 
 <!-- 描述你采取了哪些步骤来测试这个 PR 是否修复了 bug 或添加了特性，以及你做了哪些测试以确保没有引入回归问题。也请为审阅者和维护者提供测试建议。参见 TESTING_YOUR_CHANGES.md -->
 
-#### 补充说明 (Additional context)
+#### Additional context
+<!-- #### 补充说明 -->
 
 <!-- 在此添加关于这个特性或 bug 修复的其他背景信息（例如原型图、概念验证或截图）。 -->
 
