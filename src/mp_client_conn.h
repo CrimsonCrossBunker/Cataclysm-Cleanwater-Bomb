@@ -4,8 +4,10 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
-namespace cata_mp {
+namespace cata_mp
+{
 
 bool is_client_mode();
 void set_client_mode( bool enabled );
@@ -15,7 +17,7 @@ void set_client_mode( bool enabled );
 // closed immediately).  Use this from the main-menu join path so a typo'd
 // IP returns in 2-3 s instead of hanging on macOS's default SYN-retry of
 // 75 s.  Safe to call without an active MP session.
-bool tcp_probe( const std::string &host, uint16_t port, int timeout_ms );
+bool tcp_probe( std::string_view host, uint16_t port, int timeout_ms );
 
 // Connect to server and validate version/password immediately.
 // Returns true on success (welcome received).  On false, call

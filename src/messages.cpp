@@ -360,7 +360,7 @@ class messages_impl
         }
 
         std::vector<std::pair<std::string, std::string>> recent_messages( size_t count,
-                const bool with_formatting = false ) const {
+        const bool with_formatting = false ) const {
             count = std::min( count, messages.size() );
 
             std::vector<std::pair<std::string, std::string>> result;
@@ -445,7 +445,7 @@ std::vector<std::pair<std::string, std::string>> Messages::recent_messages( cons
 }
 
 std::vector<std::pair<std::string, std::string>> Messages::recent_messages_with_formatting(
-    const size_t count )
+            const size_t count )
 {
     return player_messages.recent_messages( count, true );
 }

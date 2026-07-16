@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-set -x
+set -euo pipefail
+shopt -s nullglob
 
 if [ ! -d lang/po ]
 then
@@ -15,28 +16,32 @@ fi
 
 # Check output dir here
 # Backward compatibility
-if [ -z $LOCALE_DIR ]
-then
-    LOCALE_DIR="lang/mo"
-fi
-
-os="$(uname -s)"
+LOCALE_DIR="${LOCALE_DIR:-lang/mo}"
 
 # compile .mo file for each specified language
-if [ $# -gt 0 ] && [ $1 != "all" ]
+if (( $# > 0 )) && [ "$1" != "all" ]
 then
-    for n in $@
+    for n in "$@"
     do
         f="lang/po/${n}.po"
-        mkdir -p $LOCALE_DIR/${n}/LC_MESSAGES
-        msgfmt -f -o $LOCALE_DIR/${n}/LC_MESSAGES/cataclysm-dda.mo ${f}
+        if [ ! -f "$f" ]; then
+            echo "Error: Translation file not found: $f"
+            exit 1
+        fi
+        mkdir -p "$LOCALE_DIR/${n}/LC_MESSAGES"
+        msgfmt -c -f -o "$LOCALE_DIR/${n}/LC_MESSAGES/cataclysm-dda.mo" "$f"
     done
 else
     # if nothing specified, compile .mo file for every .po file in lang/po
-    for f in lang/po/*.po
+    po_files=( lang/po/*.po )
+    if (( ${#po_files[@]} == 0 )); then
+        echo "Error: No translation PO files found."
+        exit 1
+    fi
+    for f in "${po_files[@]}"
     do
-        n=`basename $f .po`
-        mkdir -p $LOCALE_DIR/${n}/LC_MESSAGES
-        msgfmt -f -o $LOCALE_DIR/${n}/LC_MESSAGES/cataclysm-dda.mo ${f}
+        n=$(basename "$f" .po)
+        mkdir -p "$LOCALE_DIR/${n}/LC_MESSAGES"
+        msgfmt -c -f -o "$LOCALE_DIR/${n}/LC_MESSAGES/cataclysm-dda.mo" "$f"
     done
 fi

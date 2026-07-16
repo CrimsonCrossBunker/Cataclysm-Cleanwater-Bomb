@@ -1829,18 +1829,16 @@ void advanced_inventory::action_examine( advanced_inv_listitem *sitem,
 }
 
 bool advanced_inventory::action_unload( advanced_inv_listitem *sitem,
-                                        advanced_inventory_pane &spane, advanced_inventory_pane &dpane )
+                                        advanced_inventory_pane &/*spane*/, advanced_inventory_pane &dpane )
 {
     avatar &u = get_avatar();
-    item_location src = spane.container;
     item_location dest = dpane.container;
 
-    if( !src && sitem ) {
-        src = sitem->items.front();
-    } else {
+    if( !sitem ) {
         add_msg( m_info, _( "Nothing to unload." ) );
         return false;
     }
+    item_location src = sitem->items.front();
 
     do_return_entry();
     // always exit to proc do_return_entry, even when no activity was assigned

@@ -92,7 +92,7 @@
 #include "weighted_list.h"
 #include "wound.h"
 #ifdef MP_ENABLED
-#include "mp_gamestate.h"
+    #include "mp_gamestate.h"
 #endif
 
 static const activity_id ACT_READ( "ACT_READ" );

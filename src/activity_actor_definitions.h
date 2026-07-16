@@ -4148,6 +4148,35 @@ class wait_npc_activity_actor : public wait_activity_actor
         explicit wait_npc_activity_actor() = default;
 };
 
+class vehicle_part_repair_service_activity_actor : public wait_activity_actor
+{
+    public:
+        vehicle_part_repair_service_activity_actor( time_duration initial_wait_time,
+                character_id mechanic_id ) :
+            wait_activity_actor( initial_wait_time ), mechanic_id( mechanic_id ) {}
+
+        void start( player_activity &act, Character &who ) override;
+        void finish( player_activity &act, Character &who ) override;
+        void canceled( player_activity &act, Character &who ) override;
+
+        const activity_id &get_type() const override {
+            static const activity_id ACT_VEHICLE_PART_REPAIR_SERVICE(
+                "ACT_VEHICLE_PART_REPAIR_SERVICE" );
+            return ACT_VEHICLE_PART_REPAIR_SERVICE;
+        }
+
+        std::unique_ptr<activity_actor> clone() const override {
+            return std::make_unique<vehicle_part_repair_service_activity_actor>( *this );
+        }
+
+        void serialize( JsonOut &jsout ) const override;
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+
+    private:
+        character_id mechanic_id;
+        explicit vehicle_part_repair_service_activity_actor() = default;
+};
+
 class wait_weather_activity_actor : public wait_activity_actor
 {
 

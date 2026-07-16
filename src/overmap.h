@@ -2,7 +2,7 @@
 #ifndef CATA_SRC_OVERMAP_H
 #define CATA_SRC_OVERMAP_H
 
-#include <stdint.h>
+#include <cstdint>
 #include <algorithm>
 #include <array>
 #include <bitset>

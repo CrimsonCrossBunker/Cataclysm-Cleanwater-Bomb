@@ -1,34 +1,66 @@
-#include "mp_server.h"
-#include "mp_queue.h"
-
-#include <atomic>
-#include <iostream>
-#include <algorithm>
-#include <string_view>
-
-#include <zstd/zstd.h>
-#include "catacharset.h"   // base64_encode — only pulls std headers, asio-safe
-
 // Standalone Asio — no Boost dependency
 #define ASIO_STANDALONE
-#include <asio.hpp>
+
+#include "mp_server.h"
+
+#include <asio.hpp> // IWYU pragma: keep
+#include <asio/associated_cancellation_slot.hpp>
+#include <asio/async_result.hpp>
+#include <asio/buffer.hpp>
+#include <asio/detail/bind_handler.hpp>
+#include <asio/detail/handler_cont_helpers.hpp>
+#include <asio/detail/handler_invoke_helpers.hpp>
+#include <asio/detail/impl/reactive_socket_service_base.ipp>
+#include <asio/detail/impl/scheduler.ipp>
+#include <asio/detail/impl/service_registry.hpp>
+#include <asio/execution/context_as.hpp>
+#include <asio/execution/prefer_only.hpp>
+#include <asio/impl/any_io_executor.ipp>
+#include <asio/impl/execution_context.hpp>
+#include <asio/impl/handler_alloc_hook.ipp>
+#include <asio/impl/io_context.hpp>
+#include <asio/impl/io_context.ipp>
+#include <asio/impl/read_until.hpp>
+#include <asio/impl/write.hpp>
+#include <asio/io_context.hpp>
+#include <asio/ip/detail/impl/endpoint.ipp>
+#include <asio/ip/tcp.hpp>
+#include <asio/post.hpp>
+#include <asio/streambuf.hpp>
+#include <zstd/zstd.h>
+#include <algorithm>
+#include <atomic>
+#include <cstddef>
+#include <deque>
+#include <functional>
+#include <initializer_list>
+#include <iostream>
+#include <new>
+#include <string_view>
+#include <system_error>
+
+#include "catacharset.h"   // base64_encode — only pulls std headers, asio-safe
+#include "mp_queue.h"
+
+#include <utility>
 
 using asio::ip::tcp;
 
-namespace cata_mp {
+namespace cata_mp
+{
 
 // Forward-declared (not #included) on purpose: pulling mp_gamestate.h into this
 // TU drags in CDDA's enum_traits.h, whose generic operator++ collides with
 // asio's std::atomic<long> increment in scheduler.hpp. We only need these two.
-void mp_log( const std::string &msg );
-unsigned int mp_host_world_seed();
-std::string mp_get_host_world_name();
-std::string mp_get_host_player_name();
-std::string mp_host_omt_welcome_field();
+void mp_log( const std::string &msg ); // NOLINT(cata-static-declarations)
+unsigned int mp_host_world_seed(); // NOLINT(cata-static-declarations)
+std::string mp_get_host_world_name(); // NOLINT(cata-static-declarations)
+std::string mp_get_host_player_name(); // NOLINT(cata-static-declarations)
+std::string mp_host_omt_welcome_field(); // NOLINT(cata-static-declarations)
 
 // Escape a string for embedding in a JSON double-quoted value (host names can
 // contain quotes/backslashes). Minimal — covers the chars that break parsing.
-static std::string mp_json_escape( const std::string &s )
+static std::string mp_json_escape( const std::string_view s )
 {
     std::string out;
     out.reserve( s.size() + 2 );
@@ -92,7 +124,7 @@ static std::string mp_compress_frame( const std::string &msg )
         // Compression failed or didn't help — send the original plaintext.
         return msg;
     }
-    return "{\"z\":\"" + base64_encode( std::string_view( comp.data(), n ) ) + "\"}\n";
+    return R"({"z":")" + base64_encode( std::string_view( comp.data(), n ) ) + "\"}\n";
 }
 
 // ---------------------------------------------------------------------------
@@ -100,76 +132,76 @@ static std::string mp_compress_frame( const std::string &msg )
 // ---------------------------------------------------------------------------
 
 struct client_session : public std::enable_shared_from_this<client_session> {
-    tcp::socket socket;
-    asio::streambuf read_buf;
-    std::string name;
-    bool authenticated = false;
+        tcp::socket socket;
+        asio::streambuf read_buf;
+        std::string name;
+        bool authenticated = false;
 
-    std::function<void( std::shared_ptr<client_session>, const std::string & )> on_message;
-    std::function<void( std::shared_ptr<client_session> )> on_disconnect;
+        std::function<void( std::shared_ptr<client_session>, const std::string & )> on_message;
+        std::function<void( std::shared_ptr<client_session> )> on_disconnect;
 
-    // Outgoing write queue — only one async_write may be in flight at a time.
-    // All send() / do_write() calls happen on the single Asio thread so no mutex needed.
-    std::deque<std::string> write_queue_;
-    bool writing_ = false;
+        // Outgoing write queue — only one async_write may be in flight at a time.
+        // All send() / do_write() calls happen on the single Asio thread so no mutex needed.
+        std::deque<std::string> write_queue_;
+        bool writing_ = false;
 
-    explicit client_session( tcp::socket sock )
-        : socket( std::move( sock ) ) {}
+        explicit client_session( tcp::socket sock )
+            : socket( std::move( sock ) ) {}
 
-    void start() {
-        // Disable Nagle — see client_connect(). The host's grant packets are
-        // tiny and must not be batched on a high-latency link or the lockstep
-        // turn cycle wedges (works on LAN, hangs over the internet).
-        std::error_code nd_ec;
-        socket.set_option( tcp::no_delay( true ), nd_ec );
-        send( "{\"type\":\"hello\",\"protocol\":\"cdda-mp\",\"version\":\"0.1\"}\n" );
-        do_read();
-    }
-
-    void send( const std::string &msg ) {
-        write_queue_.push_back( mp_compress_frame( msg ) );
-        if( !writing_ ) {
-            do_write();
+        void start() {
+            // Disable Nagle — see client_connect(). The host's grant packets are
+            // tiny and must not be batched on a high-latency link or the lockstep
+            // turn cycle wedges (works on LAN, hangs over the internet).
+            std::error_code nd_ec;
+            nd_ec = socket.set_option( tcp::no_delay( true ), nd_ec );
+            send( "{\"type\":\"hello\",\"protocol\":\"cdda-mp\",\"version\":\"0.1\"}\n" );
+            do_read();
         }
-    }
 
-    void do_write() {
-        if( write_queue_.empty() ) {
-            writing_ = false;
-            return;
+        void send( const std::string &msg ) {
+            write_queue_.push_back( mp_compress_frame( msg ) );
+            if( !writing_ ) {
+                do_write();
+            }
         }
-        writing_ = true;
-        auto self = shared_from_this();
-        // Coalesce EVERY queued message into one buffer so N messages enqueued in
-        // a single turn become one write() / one batch of back-to-back segments,
-        // instead of N separate writes (with Nagle off, N tiny packets — the
-        // small-packet storm).  Each queued message already ends in '\n', so the
-        // client's newline-framed reader still splits them apart correctly, and an
-        // older non-coalescing client is unaffected (wire-compatible).  Messages
-        // posted during this async_write land back in write_queue_ and coalesce on
-        // the next pass.
-        auto buf = std::make_shared<std::string>();
-        for( const std::string &m : write_queue_ ) {
-            buf->append( m );
-        }
-        write_queue_.clear();
-        asio::async_write( socket, asio::buffer( *buf ),
-        [self, buf]( std::error_code ec, std::size_t ) {
-            if( ec ) {
-                self->disconnect();
+
+        void do_write() {
+            if( write_queue_.empty() ) {
+                writing_ = false;
                 return;
             }
-            self->do_write();
-        } );
-    }
-
-    void disconnect() {
-        std::error_code ec;
-        socket.close( ec );
-        if( on_disconnect ) {
-            on_disconnect( shared_from_this() );
+            writing_ = true;
+            auto self = shared_from_this();
+            // Coalesce EVERY queued message into one buffer so N messages enqueued in
+            // a single turn become one write() / one batch of back-to-back segments,
+            // instead of N separate writes (with Nagle off, N tiny packets — the
+            // small-packet storm).  Each queued message already ends in '\n', so the
+            // client's newline-framed reader still splits them apart correctly, and an
+            // older non-coalescing client is unaffected (wire-compatible).  Messages
+            // posted during this async_write land back in write_queue_ and coalesce on
+            // the next pass.
+            auto buf = std::make_shared<std::string>();
+            for( const std::string &m : write_queue_ ) {
+                buf->append( m );
+            }
+            write_queue_.clear();
+            asio::async_write( socket, asio::buffer( *buf ),
+            [self, buf]( std::error_code ec, std::size_t ) {
+                if( ec ) {
+                    self->disconnect();
+                    return;
+                }
+                self->do_write();
+            } );
         }
-    }
+
+        void disconnect() {
+            std::error_code ec;
+            ec = socket.close( ec );
+            if( on_disconnect ) {
+                on_disconnect( shared_from_this() );
+            }
+        }
 
     private:
         void do_read() {
@@ -199,7 +231,7 @@ struct server::impl {
     asio::io_context io_ctx;
     tcp::acceptor acceptor;
 
-    impl( uint16_t port )
+    explicit impl( uint16_t port )
         : acceptor( io_ctx, tcp::endpoint( tcp::v4(), port ) ) {}
 };
 
@@ -215,37 +247,44 @@ server::server( uint16_t port, std::string password, std::string version )
 
 server::~server() = default;
 
-void server::run() {
+void server::run()
+{
     std::cout << "[cdda-mp] Server listening on port " << port_ << std::endl;
     do_accept();
     impl_->io_ctx.run();
 }
 
-void server::stop() {
+void server::stop()
+{
     impl_->io_ctx.stop();
 }
 
-void server::broadcast( const std::string &msg ) {
-    std::lock_guard<std::mutex> lock( clients_mutex_ );
+void server::broadcast( const std::string &msg )
+{
+    std::scoped_lock lock( clients_mutex_ );
     for( auto &c : clients_ ) {
         c->send( msg );
     }
 }
 
-void server::post_broadcast( const std::string &msg ) {
-    asio::post( impl_->io_ctx, [this, msg]() { broadcast( msg ); } );
+void server::post_broadcast( const std::string &msg )
+{
+    asio::post( impl_->io_ctx, [this, msg]() {
+        broadcast( msg );
+    } );
 }
 
-void server::do_accept() {
+void server::do_accept()
+{
     impl_->acceptor.async_accept(
     [this]( std::error_code ec, tcp::socket socket ) {
         if( !ec ) {
             auto session = std::make_shared<client_session>( std::move( socket ) );
 
-            session->on_message = [this]( auto sess, auto msg ) {
+            session->on_message = [this]( const auto & sess, const auto & msg ) {
                 on_message( sess, msg );
             };
-            session->on_disconnect = [this]( auto sess ) {
+            session->on_disconnect = [this]( const auto & sess ) {
                 on_client_disconnected( sess );
             };
 
@@ -256,12 +295,13 @@ void server::do_accept() {
     } );
 }
 
-void server::on_client_connected( std::shared_ptr<client_session> session ) {
+void server::on_client_connected( const std::shared_ptr<client_session> &session )
+{
     {
-        std::lock_guard<std::mutex> lock( clients_mutex_ );
+        std::scoped_lock lock( clients_mutex_ );
         clients_.push_back( session );
     }
-    std::cout << "[cdda-mp] Client connected. Total: " << clients_.size() << std::endl;
+    std::cout << "[cdda-mp] Client connected.  Total: " << clients_.size() << std::endl;
 
     if( clients_.size() > 2 ) {
         session->send( "{\"type\":\"error\",\"message\":\"Server is full (max 2 players)\"}\n" );
@@ -269,43 +309,49 @@ void server::on_client_connected( std::shared_ptr<client_session> session ) {
     }
 }
 
-void server::on_client_disconnected( std::shared_ptr<client_session> session ) {
+void server::on_client_disconnected( const std::shared_ptr<client_session> &session )
+{
     {
-        std::lock_guard<std::mutex> lock( clients_mutex_ );
+        std::scoped_lock lock( clients_mutex_ );
         clients_.erase(
             std::remove( clients_.begin(), clients_.end(), session ),
             clients_.end()
         );
     }
     std::string name = session->name.empty() ? "unknown" : session->name;
-    std::cout << "[cdda-mp] Client '" << name << "' disconnected. Total: " <<
+    std::cout << "[cdda-mp] Client '" << name << "' disconnected.  Total: " <<
               clients_.size() << std::endl;
 
     if( session->authenticated ) {
-        broadcast( "{\"type\":\"player_left\",\"name\":\"" + name + "\"}\n" );
+        broadcast( R"({"type":"player_left","name":")" + name + "\"}\n" );
         get_mp_queue().push( { cata_mp::mp_event::type::disconnect, name, "" } );
     }
 }
 
 // Extract a string value from a simple JSON message, tolerating optional spaces
 // around the colon (handles both "key":"val" and "key": "val").
-static std::string json_get_str( const std::string &json, const std::string &key )
+static std::string json_get_str( const std::string_view json, const std::string &key )
 {
-    for( const std::string &sep : { std::string( "\":\"" ), std::string( "\": \"" ) } ) {
-        std::string needle = "\"" + key + sep;
-        auto pos = json.find( needle );
+    for( const std::string &sep : {
+             std::string( "\":\"" ), std::string( "\": \"" )
+         } ) {
+        std::string needle = "\"";
+        needle += key;
+        needle += sep;
+        std::string_view::size_type pos = json.find( needle );
         if( pos != std::string::npos ) {
             pos += needle.size();
-            auto end = json.find( '"', pos );
+            const std::string_view::size_type end = json.find( '"', pos );
             if( end != std::string::npos ) {
-                return json.substr( pos, end - pos );
+                return std::string( json.substr( pos, end - pos ) );
             }
         }
     }
     return "";
 }
 
-void server::on_message( std::shared_ptr<client_session> session, const std::string &msg ) {
+void server::on_message( const std::shared_ptr<client_session> &session, const std::string &msg )
+{
     std::cout << "[cdda-mp] recv: " << msg << std::endl;
 
     const std::string type = json_get_str( msg, "type" );
@@ -323,9 +369,9 @@ void server::on_message( std::shared_ptr<client_session> session, const std::str
         if( !version_.empty() ) {
             const std::string client_ver = json_get_str( msg, "version" );
             if( mp_version_commit_id( client_ver ) != mp_version_commit_id( version_ ) ) {
-                const std::string errmsg = "Version mismatch. Host: " + version_ +
+                const std::string errmsg = "Version mismatch.  Host: " + version_ +
                                            " Client: " + ( client_ver.empty() ? "(unknown)" : client_ver );
-                session->send( "{\"type\":\"error\",\"message\":\"" + errmsg + "\"}\n" );
+                session->send( R"({"type":"error","message":")" + errmsg + "\"}\n" );
                 mp_log( "[cdda-mp] PROBE REJECTED — version mismatch. " + errmsg +
                         " (host and client are on different builds; both must run the same release)" );
                 session->disconnect();
@@ -373,9 +419,9 @@ void server::on_message( std::shared_ptr<client_session> session, const std::str
         if( !version_.empty() ) {
             const std::string client_ver = json_get_str( msg, "version" );
             if( mp_version_commit_id( client_ver ) != mp_version_commit_id( version_ ) ) {
-                const std::string errmsg = "Version mismatch. Host: " + version_ +
+                const std::string errmsg = "Version mismatch.  Host: " + version_ +
                                            " Client: " + ( client_ver.empty() ? "(unknown)" : client_ver );
-                session->send( "{\"type\":\"error\",\"message\":\"" + errmsg + "\"}\n" );
+                session->send( R"({"type":"error","message":")" + errmsg + "\"}\n" );
                 mp_log( "[cdda-mp] JOIN REJECTED — version mismatch. " + errmsg +
                         " client_commit=" + mp_version_commit_id( client_ver ) +
                         " host_commit=" + mp_version_commit_id( version_ ) );
@@ -402,16 +448,16 @@ void server::on_message( std::shared_ptr<client_session> session, const std::str
         // generating the host-area overmap — otherwise it renders its own
         // randomly-seeded terrain outside the tile-synced bubble.
         const std::string wname = mp_get_host_world_name();
-        session->send( "{\"type\":\"welcome\",\"player_id\":\"" + name +
-                       "\",\"world\":\"" + wname +
-                       "\",\"host_name\":\"" + mp_json_escape( mp_get_host_player_name() ) +
-                       "\",\"current_turn\":0,\"seed\":" +
+        session->send( R"({"type":"welcome","player_id":")" + name +
+                       R"(","world":")" + wname +
+                       R"(","host_name":")" + mp_json_escape( mp_get_host_player_name() ) +
+                       R"(","current_turn":0,"seed":)" +
                        std::to_string( mp_host_world_seed() ) +
                        mp_host_omt_welcome_field() + "}\n" );
         mp_log( "[cdda-mp] SEED: welcome sent host seed " +
                 std::to_string( mp_host_world_seed() ) + " to '" + name + "'" );
 
-        broadcast( "{\"type\":\"player_joined\",\"name\":\"" + name + "\"}\n" );
+        broadcast( R"({"type":"player_joined","name":")" + name + "\"}\n" );
         mp_log( "[cdda-mp] JOIN accepted — player '" + name + "' authenticated and connected" );
 
         // Notify game loop to spawn this player's character
@@ -432,7 +478,7 @@ void server::on_message( std::shared_ptr<client_session> session, const std::str
         // dropping the message, then close so the client doesn't hang.
         mp_log( "[cdda-mp] HANDSHAKE: unexpected pre-auth message type='" +
                 ( type.empty() ? std::string( "(none)" ) : type ) +
-                "' — likely a different/old client build. Closing." );
+                "' — likely a different/old client build.  Closing." );
         session->disconnect();
     }
 }
@@ -454,7 +500,8 @@ bool is_server_thread_running()
     return server_thread_running_.load();
 }
 
-void run_server( uint16_t port, const std::string &password, const std::string &version ) {
+void run_server( uint16_t port, const std::string &password, const std::string &version )
+{
     server_thread_running_.store( true );
     try {
         // The server ctor binds the listen socket and THROWS if the port is

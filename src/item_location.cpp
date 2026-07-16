@@ -22,6 +22,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
+#include "inventory.h"
 #include "item.h"
 #include "item_pocket.h"
 #include "item_uid.h"

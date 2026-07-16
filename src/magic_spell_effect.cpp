@@ -34,12 +34,12 @@
 #include "event.h"
 #include "event_bus.h"
 #include "explosion.h"
-#include "game_inventory.h"
-#include "iexamine.h"
 #include "field.h"
 #include "field_type.h"
 #include "fungal_effects.h"
 #include "game.h"
+#include "game_inventory.h"
+#include "iexamine.h"
 #include "item.h"
 #include "item_group.h"
 #include "itype.h"
@@ -75,6 +75,7 @@
 #include "trap.h"
 #include "type_id.h"
 #include "units.h"
+#include "value_ptr.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 
@@ -1495,7 +1496,7 @@ void spell_effect::fertilize_plant( const spell &sp, Creature &caster,
         const float growth_multiplier = furn.plant->growth_multiplier;
         const float crop_growth_speed = ::get_option<float>( "CROP_GROWTH_SPEED" );
         const time_duration current_effective = iexamine::get_plant_effective_growth_time(
-                    *synced_seed, growth_multiplier );
+                *synced_seed, growth_multiplier );
 
         // Spell fertilization advances the plant by a fixed percentage of its
         // total growth duration, independent of the world crop growth speed option.
@@ -1532,10 +1533,10 @@ void spell_effect::fertilize_plant( const spell &sp, Creature &caster,
             };
             if( furn.plant ) {
                 iexamine::run_plant_eocs( furn.plant->eoc_on_fertilize, *planter, here, tile,
-                                           *synced_seed, stage, stage, string_ctx, num_ctx );
+                                          *synced_seed, stage, stage, string_ctx, num_ctx );
             }
             iexamine::run_plant_eocs( synced_seed->type->seed->eoc_on_fertilize, *planter, here,
-                                       tile, *synced_seed, stage, stage, string_ctx, num_ctx );
+                                      tile, *synced_seed, stage, stage, string_ctx, num_ctx );
         }
 
     }

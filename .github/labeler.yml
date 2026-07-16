@@ -3,23 +3,23 @@ version: v1
 labels:
   - label: "<Enhancement / Feature>"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*Features +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*Features +\".+\"\\s*(\n|$)"
 
   - label: "Info / User Interface"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*Interface +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*Interface +\".+\"\\s*(\n|$)"
 
   - label: "Mods"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*Mods +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*Mods +\".+\"\\s*(\n|$)"
 
   - label: "Game: Balance"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*Balance +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*Balance +\".+\"\\s*(\n|$)"
 
   - label: "<Bugfix>"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*Bugfixes +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*Bugfixes +\".+\"\\s*(\n|$)"
 
   - label: "<Bugfix>"
     matcher:
@@ -27,19 +27,19 @@ labels:
 
   - label: "Code: Performance"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*Performance +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*Performance +\".+\"\\s*(\n|$)"
 
   - label: "Code: Infrastructure / Style / Static Analysis"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*Infrastructure +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*Infrastructure +\".+\"\\s*(\n|$)"
 
   - label: "Code: Build"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*Build +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*Build +\".+\"\\s*(\n|$)"
 
   - label: "Translation"
     matcher:
-      body: "(\\s|^)#### 概述 \(Summary\)\\s*I18N +\".+\"\\s*(\n|$)"
+      body: "(\\s|^)#### Summary\\s*I18N +\".+\"\\s*(\n|$)"
 
   - label: "[C++]"
     matcher:
@@ -452,6 +452,21 @@ labels:
     matcher:
       files:
         - data/mods/Isolation-Protocol/**/*
+
+  - label: "Mods: Futurism Cataclysm"
+    matcher:
+      files:
+        - data/mods/FuturismCataclysmLegacy/**/*
+
+  - label: "Mods: Cataclysm Delight"
+    matcher:
+      files:
+        - data/mods/cdda_Delight/**/*
+
+  - label: "Mods: Path of Immortals"
+    matcher:
+      files:
+        - data/mods/immortal_path/**/*
 
   - label: "Mods"
     matcher:

@@ -575,6 +575,7 @@ static std::map<tripoint_bub_ms, int> display_npc_attack_potential()
     return effectiveness_map;
 }
 
+// NOLINTNEXTLINE(readability-function-size)
 void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int width, int height,
                        std::multimap<point, formatted_text> &overlay_strings,
                        color_block_overlay_container &color_blocks )
@@ -759,7 +760,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // origin.z = draw_min_z (bottom z-level of the viewport),
         // observer_z = centre z-level of the viewport (avatar's current z).
         here.draw_points_cache.origin = here.get_abs(
-            tripoint_bub_ms( min_visible.x, min_visible.y, draw_min_z ) );
+                                            tripoint_bub_ms( min_visible.x, min_visible.y, draw_min_z ) );
         here.draw_points_cache.observer_z = center.z();
         here.draw_points_cache.size = point( max_col - min_col, max_row - min_row );
         here.draw_points_cache.observer = you.getID();
@@ -820,7 +821,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             invisible[0] = true;
                         } else {
                             if( would_apply_vision_effects( offscreen_type ) ) {
-                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos }, tile_render_info::tile_render_scratch{},
+                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos },
+                                        tile_render_info::tile_render_scratch{},
                                         tile_render_info::vision_effect{ offscreen_type } );
                             }
                             break;
@@ -1012,7 +1014,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                     || you.sees_with_specials( *critter ) ) ) ) {
                                 invisible[0] = true;
                             } else {
-                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos }, tile_render_info::tile_render_scratch{},
+                                here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos },
+                                        tile_render_info::tile_render_scratch{},
                                         tile_render_info::vision_effect{ vis_type } );
                                 break;
                             }
@@ -1100,7 +1103,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         }
                     }
 
-                    here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos }, tile_render_info::tile_render_scratch{},
+                    here.draw_points_cache.tiles[zlevel][row].emplace_back( tile_render_info::tile_view_data{ pos },
+                            tile_render_info::tile_render_scratch{},
                             sprite_var );
                     // Stop building draw points below when floor reached
                     if( here.dont_draw_lower_floor( pos ) ) {
@@ -1147,7 +1151,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     const field_type_id disp_fld = f.displayed_field_type();
                     if( disp_fld ) {
                         var->set_field_content( disp_fld,
-                                               f.displayed_intensity() );
+                                                f.displayed_intensity() );
                     }
                 }
             }
@@ -1172,7 +1176,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         continue;
                     }
                     if( here.sees_some_items( tri.view.pos,
-                                             get_player_character() ) ) {
+                                              get_player_character() ) ) {
                         const maptile &tile = here.maptile_at( tri.view.pos );
                         const int count =
                             static_cast<int>( tile.get_item_count() );
@@ -1183,17 +1187,17 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                 itm.typeId(),
                                 mon ? mon->id : mtype_id::NULL_ID(),
                                 itm.has_itype_variant()
-                                    ? itm.itype_variant().id : std::string{},
+                                ? itm.itype_variant().id : std::string{},
                                 count, true );
                         } else {
                             var->set_item_content( itype_id::NULL_ID(),
-                                mtype_id::NULL_ID(), std::string{},
-                                count, true );
+                                                   mtype_id::NULL_ID(), std::string{},
+                                                   count, true );
                         }
                     } else {
                         var->set_item_content( itype_id::NULL_ID(),
-                            mtype_id::NULL_ID(), std::string{},
-                            0, false );
+                                               mtype_id::NULL_ID(), std::string{},
+                                               0, false );
                     }
                 }
             }
@@ -1226,9 +1230,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         var->set_vpart_content(
                             std::get<0>( ov->second ),
                             part_mod == 1 ? open_ :
-                                part_mod == 2 ? broken : 0,
+                            part_mod == 2 ? broken : 0,
                             angle_to_dir4( std::get<2>( ov->second )
-                                - 270_degrees ),
+                                           - 270_degrees ),
                             std::string{},
                             std::string{},
                             std::get<3>( ov->second ) != 0,
@@ -1251,12 +1255,12 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                 var->set_vpart_content(
                                     vd.id, subtile,
                                     angle_to_dir4( veh.face.dir()
-                                        - 270_degrees ),
+                                                   - 270_degrees ),
                                     vd.variant.id,
                                     vd.carried_furn,
                                     vd.has_cargo,
                                     get_vpart_tint( veh,
-                                        ovp->mount_pos() ) );
+                                                    ovp->mount_pos() ) );
                                 continue;
                             }
                         }
@@ -1269,7 +1273,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         if( !tid.empty() ) {
                             std::string_view tvar;
                             const size_t sep = tid.find(
-                                vehicles::variant_separator );
+                                                   vehicles::variant_separator );
                             if( sep != std::string::npos ) {
                                 tvar = tid.substr( sep + 1 );
                                 tid = tid.substr( 0, sep );
@@ -2271,7 +2275,7 @@ void cata_tiles::advance_creature_move_anims()
     map &here = get_map();
     for( auto it = m_creature_anims.begin(); it != m_creature_anims.end(); ) {
         it->second.progress += it->second.per_ms * static_cast<float>( dt );
-        bool erase_this = ( it->second.progress >= 1.0f );
+        bool erase_this = it->second.progress >= 1.0f;
         if( !erase_this && !here.inbounds( here.get_bub( it->first ) ) ) {
             erase_this = true;
         }
@@ -2284,7 +2288,7 @@ void cata_tiles::advance_creature_move_anims()
     }
     for( auto it = m_creature_hit_anims.begin(); it != m_creature_hit_anims.end(); ) {
         it->second.progress += it->second.per_ms * static_cast<float>( dt );
-        bool erase_this = ( it->second.progress >= 1.0f );
+        bool erase_this = it->second.progress >= 1.0f;
         if( !erase_this && !here.inbounds( here.get_bub( it->first ) ) ) {
             erase_this = true;
         }
@@ -2297,7 +2301,7 @@ void cata_tiles::advance_creature_move_anims()
     }
     for( auto it = m_creature_attack_anims.begin(); it != m_creature_attack_anims.end(); ) {
         it->second.progress += it->second.per_ms * static_cast<float>( dt );
-        bool erase_this = ( it->second.progress >= 1.0f );
+        bool erase_this = it->second.progress >= 1.0f;
         if( !erase_this && !here.inbounds( here.get_bub( it->first ) ) ) {
             erase_this = true;
         }
@@ -2310,7 +2314,8 @@ void cata_tiles::advance_creature_move_anims()
     }
 }
 
-effect_handle cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs, float damage_fraction,
+effect_handle cata_tiles::start_creature_hit_anim( const tripoint_abs_ms &pos_abs,
+        float damage_fraction,
         const point &dir_tiles, bool is_player )
 {
     if( !get_option<bool>( "CREATURE_HIT_ANIM" ) ) {
@@ -3812,14 +3817,15 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
 {
     map &here = get_map();
     const auto display_override =
-        [this, &here]( const tripoint_bub_ms &q,
-                       const bool allow_vehicle_ladder ) -> std::optional<furn_id> {
-            const auto override = furniture_override.find( q );
-            if( override != furniture_override.end() ) {
-                return override->second;
-            }
-            return allow_vehicle_ladder ? here.vehicle_ladder_furniture_at( q ) : std::nullopt;
-        };
+        [this, &here]( const tripoint_bub_ms & q,
+    const bool allow_vehicle_ladder ) -> std::optional<furn_id> {
+        const auto override = furniture_override.find( q );
+        if( override != furniture_override.end() )
+        {
+            return override->second;
+        }
+        return allow_vehicle_ladder ? here.vehicle_ladder_furniture_at( q ) : std::nullopt;
+    };
     const auto explicit_override = furniture_override.find( p );
     const bool explicitly_overridden = explicit_override != furniture_override.end();
     std::optional<furn_id> override;
@@ -3863,10 +3869,10 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
         if( f2 ) {
             // both the current and neighboring overrides may change the appearance
             // of the tile, so always re-calculate it.
-            const auto furn = [&]( const tripoint_bub_ms &q, const bool invis ) -> furn_id {
+            const auto furn = [&]( const tripoint_bub_ms & q, const bool invis ) -> furn_id {
                 const std::optional<furn_id> override = display_override( q, !invis );
                 return override ? *override :
-                       ( !overridden || !invis ) ? here.furn( q ) : furn_str_id::NULL_ID().id();
+                ( !overridden || !invis ) ? here.furn( q ) : furn_str_id::NULL_ID().id();
             };
             const std::array<int, 4> neighborhood = {
                 static_cast<int>( furn( p + point::south, invisible[1] ) ),
@@ -4325,11 +4331,11 @@ bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height
         int height_3d_temp = height_3d;
         pending_part_tint_ = cap.vpart_tint;
         const bool ret = draw_from_id_string(
-            "vp_" + cap.vpart_content.str(),
-            TILE_CATEGORY::VEHICLE_PART, empty_string, p,
-            cap.vpart_subtile, cap.vpart_rotation, ll,
-            nv_goggles_activated, height_3d_temp, 0,
-            cap.vpart_variant );
+                             "vp_" + cap.vpart_content.str(),
+                             TILE_CATEGORY::VEHICLE_PART, empty_string, p,
+                             cap.vpart_subtile, cap.vpart_rotation, ll,
+                             nv_goggles_activated, height_3d_temp, 0,
+                             cap.vpart_variant );
         pending_part_tint_ = std::nullopt;
         if( ret && cap.vpart_has_cargo ) {
             draw_item_highlight( p, height_3d_temp );
@@ -4339,9 +4345,9 @@ bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height
         }
         if( ret && !cap.vpart_carried_furn.empty() ) {
             draw_from_id_string( cap.vpart_carried_furn,
-                TILE_CATEGORY::FURNITURE, empty_string, p, 0,
-                angle_to_dir4( 0_degrees ), ll,
-                nv_goggles_activated, height_3d );
+                                 TILE_CATEGORY::FURNITURE, empty_string, p, 0,
+                                 angle_to_dir4( 0_degrees ), ll,
+                                 nv_goggles_activated, height_3d );
         }
         return ret;
     } else if( !roof ) {
@@ -4350,11 +4356,11 @@ bool cata_tiles::draw_vpart( const tripoint_bub_ms &p, lit_level ll, int &height
         // affect z-ordering of tiles drawn after it.
         int height_3d_mem = height_3d;
         return draw_from_id_string(
-            cap.vpart_content.str(),
-            TILE_CATEGORY::VEHICLE_PART, empty_string, p,
-            cap.vpart_subtile, cap.vpart_rotation,
-            lit_level::MEMORIZED, nv_goggles_activated,
-            height_3d_mem, 0, cap.vpart_variant );
+                   cap.vpart_content.str(),
+                   TILE_CATEGORY::VEHICLE_PART, empty_string, p,
+                   cap.vpart_subtile, cap.vpart_rotation,
+                   lit_level::MEMORIZED, nv_goggles_activated,
+                   height_3d_mem, 0, cap.vpart_variant );
     }
     return false;
 }
@@ -4436,7 +4442,7 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
     // Mark the selected cell with the "cursor" sprite (the yellow selection box, the same
     // sprite the look-around cursor uses). The cursor part is at the synthetic origin, i.e.
     // the window centre. Drawn after the parts so it sits on top, and still inside the clip.
-    draw_from_id_string( "cursor", tripoint_bub_ms( tripoint( 0, 0, 0 ) ), 0, 0, lit_level::LIT,
+    draw_from_id_string( "cursor", tripoint_bub_ms( tripoint::zero ), 0, 0, lit_level::LIT,
                          false );
 
     // Restore the clip rectangle and the map draw scale.
@@ -4529,30 +4535,28 @@ SDL_Texture *cata_tiles::render_character_preview( const Character &ch, const in
     // Scan for the bounding box of any non-zero (non-transparent) pixel. The canvas was cleared
     // to all-zero bytes, so a pixel is "drawn" iff it is non-zero -- no need to assume which byte
     // is alpha, sidestepping format/endianness concerns.
-    int min_x = work_w;
-    int min_y = work_h;
-    int max_x = -1;
-    int max_y = -1;
+    point min( work_w, work_h );
+    point max = point::north_west;
     for( int y = 0; y < work_h; y++ ) {
         const uint32_t *row = pixels.data() + static_cast<size_t>( y ) * work_w;
         for( int x = 0; x < work_w; x++ ) {
             if( row[x] != 0 ) {
-                min_x = std::min( min_x, x );
-                max_x = std::max( max_x, x );
-                min_y = std::min( min_y, y );
-                max_y = std::max( max_y, y );
+                min.x = std::min( min.x, x );
+                max.x = std::max( max.x, x );
+                min.y = std::min( min.y, y );
+                max.y = std::max( max.y, y );
             }
         }
     }
 
-    if( max_x < min_x || max_y < min_y ) {
+    if( max.x < min.x || max.y < min.y ) {
         // Nothing was drawn (e.g. a tileset with no player sprite); show nothing.
         set_draw_scale( saved_zoom );
         return nullptr;
     }
 
-    const int crop_w = max_x - min_x + 1;
-    const int crop_h = max_y - min_y + 1;
+    const int crop_w = max.x - min.x + 1;
+    const int crop_h = max.y - min.y + 1;
 
     // (Re)allocate the cropped result target at the exact bounding-box size, so ImGui::Image
     // samples it with default 0..1 UVs and no padding shows around the sprite.
@@ -4578,7 +4582,7 @@ SDL_Texture *cata_tiles::render_character_preview( const Character &ch, const in
         if( crop_scope.is_valid() ) {
             SetRenderDrawColor( renderer, 0, 0, 0, 0 );
             RenderClear( renderer );
-            const SDL_Rect src{ min_x, min_y, crop_w, crop_h };
+            const SDL_Rect src{ min.x, min.y, crop_w, crop_h };
             const SDL_Rect dst{ 0, 0, crop_w, crop_h };
             RenderCopy( renderer, char_preview_work_tex, &src, &dst );
             result = char_preview_tex.get();
@@ -4626,7 +4630,7 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
                 const point screen_there = player_to_screen( p.xy() + point_rel_ms( d.x, d.y ) );
                 return screen_there - screen_here;
             };
-            point off( 0, 0 );
+            point off;
             if( has_move ) {
                 const creature_move_anim &anim = move_it->second;
                 // Remaining fraction of the trip back to the old tile.
@@ -5309,7 +5313,7 @@ void cata_tiles::advance_explosion_lights()
     }
     for( auto it = m_explosion_lights.begin(); it != m_explosion_lights.end(); ) {
         it->progress += it->per_ms * static_cast<float>( dt );
-        bool erase_this = ( it->progress >= it->end_progress );
+        bool erase_this = it->progress >= it->end_progress;
         // A centred blast leaves the bubble together with its centre.
         if( !erase_this && !get_map().inbounds( it->center ) ) {
             erase_this = true;
@@ -5646,7 +5650,7 @@ void cata_tiles::advance_sct()
     for( auto it = m_sct_effects.begin(); it != m_sct_effects.end(); ) {
         it->elapsed_ms += static_cast<float>( dt );
         it->screen_y_offset -= it->rise_speed_px_per_s * dt_s;
-        bool erase_this = ( it->elapsed_ms >= it->duration_ms );
+        bool erase_this = it->elapsed_ms >= it->duration_ms;
         if( !erase_this && !here.inbounds( it->pos ) ) {
             erase_this = true;
         }
@@ -5684,7 +5688,7 @@ void cata_tiles::draw_sct_frame( int view_z,
             int cx = 0;
             for( const char ch : eff.text ) {
                 const std::string generic_id = get_ascii_tile_id(
-                    static_cast<uint32_t>( static_cast<unsigned char>( ch ) ), FG, -1 );
+                                                   static_cast<uint32_t>( static_cast<unsigned char>( ch ) ), FG, -1 );
                 if( tileset_ptr->find_tile_type( generic_id ) ) {
                     const point char_p = screen_p + point( cx * tile_width, 0 );
                     if( const std::optional<point> tile_p = tile_to_player( char_p ) ) {
@@ -5720,37 +5724,58 @@ void cata_tiles::cancel_effect( effect_handle h )
     switch( kind ) {
         case effect_kind::explosion_light:
             for( auto e = m_explosion_lights.begin(); e != m_explosion_lights.end(); ++e ) {
-                if( e->handle == h ) { m_explosion_lights.erase( e ); return; }
+                if( e->handle == h ) {
+                    m_explosion_lights.erase( e );
+                    return;
+                }
             }
             break;
         case effect_kind::bullet:
             for( auto e = m_bullet_anims.begin(); e != m_bullet_anims.end(); ++e ) {
-                if( e->handle == h ) { m_bullet_anims.erase( e ); return; }
+                if( e->handle == h ) {
+                    m_bullet_anims.erase( e );
+                    return;
+                }
             }
             break;
         case effect_kind::creature_move:
             for( auto e = m_creature_anims.begin(); e != m_creature_anims.end(); ++e ) {
-                if( e->second.handle == h ) { m_creature_anims.erase( e ); return; }
+                if( e->second.handle == h ) {
+                    m_creature_anims.erase( e );
+                    return;
+                }
             }
             break;
         case effect_kind::creature_hit:
             for( auto e = m_creature_hit_anims.begin(); e != m_creature_hit_anims.end(); ++e ) {
-                if( e->second.handle == h ) { m_creature_hit_anims.erase( e ); return; }
+                if( e->second.handle == h ) {
+                    m_creature_hit_anims.erase( e );
+                    return;
+                }
             }
             break;
         case effect_kind::creature_attack:
             for( auto e = m_creature_attack_anims.begin(); e != m_creature_attack_anims.end(); ++e ) {
-                if( e->second.handle == h ) { m_creature_attack_anims.erase( e ); return; }
+                if( e->second.handle == h ) {
+                    m_creature_attack_anims.erase( e );
+                    return;
+                }
             }
             break;
         case effect_kind::sct:
             for( auto e = m_sct_effects.begin(); e != m_sct_effects.end(); ++e ) {
-                if( e->handle == h ) { m_sct_effects.erase( e ); return; }
+                if( e->handle == h ) {
+                    m_sct_effects.erase( e );
+                    return;
+                }
             }
             break;
         case effect_kind::highlight:
             for( auto e = m_highlights.begin(); e != m_highlights.end(); ++e ) {
-                if( e->handle == h ) { m_highlights.erase( e ); return; }
+                if( e->handle == h ) {
+                    m_highlights.erase( e );
+                    return;
+                }
             }
             break;
     }
@@ -5806,7 +5831,7 @@ void cata_tiles::advance_highlights()
     map &here = get_map();
     for( auto it = m_highlights.begin(); it != m_highlights.end(); ) {
         it->life_ms -= static_cast<float>( dt );
-        bool erase_this = ( it->life_ms <= 0.0f );
+        bool erase_this = it->life_ms <= 0.0f;
         if( !erase_this && !here.inbounds( it->pos ) ) {
             erase_this = true;
         }

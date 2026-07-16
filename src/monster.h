@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MONSTER_H
 #define CATA_SRC_MONSTER_H
 
+#include <stdint.h>
 #include <algorithm>
 #include <bitset>
 #include <climits>

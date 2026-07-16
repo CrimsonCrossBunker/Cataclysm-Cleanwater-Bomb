@@ -1,5 +1,6 @@
 #include "game.h" // IWYU pragma: associated
 
+#include <cstdlib>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -8,6 +9,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "action.h"
@@ -79,6 +81,7 @@
 #include "overmap_ui.h"
 #include "panels.h"
 #include "pathfinding.h"
+#include "player_activity.h"
 #include "point.h"
 #include "popup.h"
 #include "ranged.h"
@@ -105,13 +108,12 @@
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
+
 #define MP_ENABLED
+#include "line.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "npc.h"
-#include "line.h"
-
-enum class direction : unsigned int;
 
 #if defined(TILES)
     #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
@@ -123,6 +125,13 @@ enum class direction : unsigned int;
 
     #include "sdl_wrappers.h"
 #endif
+
+static const activity_id ACT_PICKUP( "ACT_PICKUP" );
+static const activity_id ACT_WAIT( "ACT_WAIT" );
+static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
+static const activity_id ACT_WAIT_STAMINA( "ACT_WAIT_STAMINA" );
+static const activity_id ACT_WAIT_WEATHER( "ACT_WAIT_WEATHER" );
+static const activity_id ACT_WEAR( "ACT_WEAR" );
 
 static const bionic_id bio_remote( "bio_remote" );
 
@@ -1002,7 +1011,7 @@ static void haul()
 
     if( hauling && !autohaul ) {
         if( haul_qty == 0 ) {
-            status_header = ( "You are currently hauling nothing.\nAutohaul is disabled." );
+            status_header = _( "You are currently hauling nothing.\nAutohaul is disabled." );
         } else {
             status_header = string_format( _( "You are currently hauling %d items.\nAutohaul is disabled." ),
                                            haul_qty );
@@ -2026,6 +2035,11 @@ static void fire()
 
     const item_location weapon = you.get_wielded_item();
     // try reach weapon
+    // used_weapon() returns null location if force unarmed is selected
+    if( weapon && !you.used_weapon() && !weapon->is_gun() ) {
+        add_msg( m_info, _( "You can't use reach attacks while forcing yourself to fight unarmed." ) );
+        return;
+    }
     if( weapon && !weapon->is_gun() && weapon->current_reach_range( you ).first > 1 ) {
         reach_attack( you );
         return;
@@ -2591,6 +2605,7 @@ static void manage_android_hud()
 }
 #endif
 
+// NOLINTNEXTLINE(readability-function-size)
 bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
 {
@@ -2668,10 +2683,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             };
             if( menu_allowed_while_locked.count( act ) ) {
                 cata_mp::mp_log( "[cdda-mp] CLI-LOCKED-ALLOW: act=" +
-                                  std::to_string( act ) );
+                                 std::to_string( act ) );
             } else if( blocked_while_locked.count( act ) ) {
                 cata_mp::mp_log( "[cdda-mp] CLI-LOCKED-BLOCK: act=" +
-                                  std::to_string( act ) );
+                                 std::to_string( act ) );
                 return false;
             }
         }
@@ -2687,19 +2702,19 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             { ACTION_MOVE_BACK_LEFT,   "sw" },
         };
         int mp_dispatch_pre_moves = 0;
-        const auto mp_dispatch = [&]( const std::string & json, bool charge_from_caller = false ) {
-            const std::string full_json = json.substr( 0, json.size() - 1 )
-                                           + ",\"move_mode\":\"" + player_character.move_mode.str() + "\""
-                                           + "}";
+        const auto mp_dispatch = [&]( std::string_view json, bool charge_from_caller = false ) {
+            const std::string full_json = std::string( json.substr( 0, json.size() - 1 ) )
+                                          + R"(,"move_mode":")" + player_character.move_mode.str() + "\""
+                                          + "}";
             const bool had_grant = charge_from_caller
-                                    ? mp_dispatch_pre_moves > 0
-                                    : player_character.get_moves() > 0;
+                                   ? mp_dispatch_pre_moves > 0
+                                   : player_character.get_moves() > 0;
             cata_mp::mp_log( std::string( "[cdda-mp] mp_dispatch act=" ) +
-                              action_ident( act ) + " path=" +
-                              ( had_grant && !cata_mp::is_client_waiting_for_ack() ? "SEND" : "DROP" ) +
-                              " moves=" + std::to_string( player_character.get_moves() ) +
-                              " ack=" + std::to_string( cata_mp::is_client_waiting_for_ack() ) +
-                              " json=" + full_json.substr( 0, 60 ) );
+                             action_ident( act ) + " path=" +
+                             ( had_grant && !cata_mp::is_client_waiting_for_ack() ? "SEND" : "DROP" ) +
+                             " moves=" + std::to_string( player_character.get_moves() ) +
+                             " ack=" + std::to_string( cata_mp::is_client_waiting_for_ack() ) +
+                             " json=" + full_json.substr( 0, 60 ) );
             if( had_grant && !cata_mp::is_client_waiting_for_ack() ) {
                 cata_mp::client_send( cata_mp::client_enrich_action( full_json ) );
                 if( !charge_from_caller ) {
@@ -2714,41 +2729,40 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             const std::string &dir = it->second;
 
             static const std::map<std::string, tripoint> dir_to_offset = {
-                { "n",  tripoint(  0, -1, 0 ) }, { "s",  tripoint(  0,  1, 0 ) },
-                { "e",  tripoint(  1,  0, 0 ) }, { "w",  tripoint( -1,  0, 0 ) },
-                { "ne", tripoint(  1, -1, 0 ) }, { "nw", tripoint( -1, -1, 0 ) },
-                { "se", tripoint(  1,  1, 0 ) }, { "sw", tripoint( -1,  1, 0 ) },
+                { "n",  tripoint::north }, { "s",  tripoint::south },
+                { "e",  tripoint::east }, { "w",  tripoint::west },
+                { "ne", tripoint::north_east }, { "nw", tripoint::north_west },
+                { "se", tripoint::south_east }, { "sw", tripoint::south_west },
             };
             map &here = get_map();
             const tripoint_bub_ms cur_pos = player_character.pos_bub();
             const auto offset_it = dir_to_offset.find( dir );
             const tripoint_bub_ms next_pos = offset_it != dir_to_offset.end()
-                                              ? cur_pos + offset_it->second
-                                              : cur_pos;
+                                             ? cur_pos + offset_it->second
+                                             : cur_pos;
 
             // Vehicle control mode: route movement to pldrive instead of walk.
             if( cata_mp::client_ctrl_veh() ) {
                 cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: ctrl_veh path" );
-                const int dx = offset_it != dir_to_offset.end() ? offset_it->second.x : 0;
-                const int dy = offset_it != dir_to_offset.end() ? offset_it->second.y : 0;
+                const point delta = offset_it != dir_to_offset.end() ? offset_it->second.xy() : point::zero;
 
-                if( dx != 0 ) {
+                if( delta.x != 0 ) {
                     const std::string json = "{\"type\":\"action\",\"action\":\"pldrive\""
-                                              ",\"dx\":" + std::to_string( dx ) +
-                                              ",\"dy\":" + std::to_string( dy ) + "}";
+                                             ",\"dx\":" + std::to_string( delta.x ) +
+                                             ",\"dy\":" + std::to_string( delta.y ) + "}";
                     mp_dispatch( json );
-                } else if( dy != 0 ) {
+                } else if( delta.y != 0 ) {
                     const std::string full =
                         std::string( "{\"type\":\"action\",\"action\":\"cruise\""
-                                      ",\"dy\":" ) + std::to_string( dy )
-                        + ",\"move_mode\":\"" + player_character.move_mode.str() + "\"}";
+                                     ",\"dy\":" ) + std::to_string( delta.y )
+                        + R"(,"move_mode":")" + player_character.move_mode.str() + "\"}";
                     cata_mp::client_send( cata_mp::client_enrich_action( full ) );
                     map &pvmap = get_map();
                     const tripoint_abs_ms pvabs = cata_mp::client_ctrl_veh_abs();
                     if( pvmap.inbounds( pvabs ) ) {
                         if( const optional_vpart_position pvp =
                                 pvmap.veh_at( pvmap.get_bub( pvabs ) ) ) {
-                            pvp->vehicle().cruise_thrust( pvmap, -dy * 400 );
+                            pvp->vehicle().cruise_thrust( pvmap, -delta.y * 400 );
                         }
                     }
                 }
@@ -2759,7 +2773,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 if( here.impassable( next_pos ) ) {
                     const tripoint_abs_ms next_abs = here.get_abs( next_pos );
                     const bool has_creature = static_cast<bool>(
-                                                 get_creature_tracker().find( next_abs ) );
+                                                  get_creature_tracker().find( next_abs ) );
                     const bool openable = here.open_door( player_character, next_pos,
                                                           true, true );
                     const object_type cur_grab = player_character.get_grab_type();
@@ -2778,7 +2792,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                                      " next_is_grab_target=" + std::to_string( next_is_grab_target ) );
                     if( !has_creature && !openable && !next_is_grab_target ) {
                         cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: wall bump dir=" + dir +
-                                          " moves=" + std::to_string( player_character.get_moves() ) );
+                                         " moves=" + std::to_string( player_character.get_moves() ) );
                         return false;
                     }
                 }
@@ -2791,10 +2805,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         return true;
                     }
                     cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-OPEN: moves=" +
-                                      std::to_string( player_character.get_moves() ) );
+                                     std::to_string( player_character.get_moves() ) );
                     g->npc_menu( *hnpc );
                     cata_mp::mp_log( "[cdda-mp] CLI-PARTNER-MENU-CLOSE: moves=" +
-                                      std::to_string( player_character.get_moves() ) );
+                                     std::to_string( player_character.get_moves() ) );
                     return true;
                 }
 
@@ -2809,12 +2823,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
             {
                 const player_activity &pact = player_character.activity;
-                static const activity_id act_wait( "ACT_WAIT" );
-                static const activity_id act_wait_stamina( "ACT_WAIT_STAMINA" );
-                static const activity_id act_wait_weather( "ACT_WAIT_WEATHER" );
-                static const activity_id act_wait_npc( "ACT_WAIT_NPC" );
-                if( pact && ( pact.id() == act_wait || pact.id() == act_wait_stamina ||
-                              pact.id() == act_wait_weather || pact.id() == act_wait_npc ) ) {
+                if( pact && ( pact.id() == ACT_WAIT || pact.id() == ACT_WAIT_STAMINA ||
+                              pact.id() == ACT_WAIT_WEATHER || pact.id() == ACT_WAIT_NPC ) ) {
                     cata_mp::mp_log( "[cdda-mp] MOVE-EXIT: blocked by wait-activity " +
                                      pact.id().str() );
                     player_character.set_moves( 0 );
@@ -2867,7 +2877,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( offset_it != dir_to_offset.end() ) {
                 mp_dispatch_pre_moves = player_character.get_moves();
                 const bool will_send = player_character.get_moves() > 0 &&
-                                        !cata_mp::is_client_waiting_for_ack();
+                                       !cata_mp::is_client_waiting_for_ack();
                 if( will_send ) {
                     const bool diag = ( std::abs( offset_it->second.x ) +
                                         std::abs( offset_it->second.y ) ) == 2;
@@ -2912,9 +2922,9 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
             }
             const std::string json = ramp_dz == 0
-                ? "{\"type\":\"action\",\"action\":\"move\",\"dir\":\"" + dir + "\"}"
-                : "{\"type\":\"action\",\"action\":\"move\",\"dir\":\"" + dir + "\",\"dz\":"
-                  + std::to_string( ramp_dz ) + "}";
+                                     ? R"({"type":"action","action":"move","dir":")" + dir + "\"}"
+                                     : R"({"type":"action","action":"move","dir":")" + dir + R"(","dz":)"
+                                     + std::to_string( ramp_dz ) + "}";
             mp_dispatch( json, /*charge_from_caller=*/true );
             return true;
         }
@@ -2923,18 +2933,18 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 g->cancel_activity_query( _( "Confirm:" ) );
                 return true;
             }
-            mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
+            mp_dispatch( R"({"type":"action","action":"wait"})" );
             return true;
         }
         if( act == ACTION_WAIT ) {
             wait();
             if( player_character.activity ) {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
+                mp_dispatch( R"({"type":"action","action":"wait"})" );
             }
             return true;
         }
         if( act == ACTION_SMASH && cata_mp::client_ctrl_veh() ) {
-            mp_dispatch( "{\"type\":\"action\",\"action\":\"handbrake\"}" );
+            mp_dispatch( R"({"type":"action","action":"handbrake"})" );
             return true;
         }
         if( act == ACTION_SMASH ) {
@@ -2950,8 +2960,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 total_bash += val;
             }
             const std::string json =
-                "{\"type\":\"action\",\"action\":\"smash\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
+                R"({"type":"action","action":"smash","x":)" + std::to_string( abs_target.x() ) +
                 ",\"y\":" + std::to_string( abs_target.y() ) +
                 ",\"z\":" + std::to_string( abs_target.z() ) +
                 ",\"bash\":" + std::to_string( total_bash ) + "}";
@@ -2959,8 +2968,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 player_character.burn_energy_arms( 2 * player_character.get_standard_stamina_cost() );
             }
             cata_mp::mp_log( "[cdda-mp] CLI-SMASH-STAM stam=" +
-                              std::to_string( player_character.get_stamina() ) +
-                              " bash=" + std::to_string( total_bash ) );
+                             std::to_string( player_character.get_stamina() ) +
+                             " bash=" + std::to_string( total_bash ) );
             cata_mp::client_set_autosmash_json( json );
             mp_dispatch( json );
             return true;
@@ -2974,8 +2983,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             get_map().open_door( player_character, *doorpos, true, false );
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
-                "{\"type\":\"action\",\"action\":\"open\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
+                R"({"type":"action","action":"open","x":)" + std::to_string( abs_target.x() ) +
                 ",\"y\":" + std::to_string( abs_target.y() ) +
                 ",\"z\":" + std::to_string( abs_target.z() ) + "}";
             mp_dispatch( json );
@@ -2990,8 +2998,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             doors::close_door( get_map(), player_character, *doorpos );
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
-                "{\"type\":\"action\",\"action\":\"close\""
-                ",\"x\":" + std::to_string( abs_target.x() ) +
+                R"({"type":"action","action":"close","x":)" + std::to_string( abs_target.x() ) +
                 ",\"y\":" + std::to_string( abs_target.y() ) +
                 ",\"z\":" + std::to_string( abs_target.z() ) + "}";
             mp_dispatch( json );
@@ -2999,7 +3006,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         }
 
         if( act == ACTION_SLEEP ) {
-            add_msg( m_info, "Sleep is not yet available in multiplayer." );
+            add_msg( m_info, _( "Sleep is not yet available in multiplayer." ) );
             return false;
         }
 
@@ -3007,7 +3014,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             const int moves_before = player_character.get_moves();
             g->look_around();
             if( player_character.get_moves() < moves_before ) {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"wait\"}" );
+                mp_dispatch( R"({"type":"action","action":"wait"})" );
                 return true;
             }
             return false;
@@ -3029,11 +3036,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             }
 
             {
-                static const activity_id ACT_PICKUP_ID( "ACT_PICKUP" );
-                if( player_character.activity.id() == ACT_PICKUP_ID ) {
+                if( player_character.activity.id() == ACT_PICKUP ) {
                     const int saved_moves = player_character.get_moves();
                     player_character.set_moves( 100000 );
-                    while( player_character.activity.id() == ACT_PICKUP_ID ) {
+                    while( player_character.activity.id() == ACT_PICKUP ) {
                         player_character.activity.do_turn( player_character );
                     }
                     player_character.set_moves( saved_moves );
@@ -3056,14 +3062,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         items_json += ',';
                     }
                     first = false;
-                    items_json += "{\"t\":\"" + t + "\"}";
+                    items_json += R"({"t":")" + t + "\"}";
                 }
             }
 
             if( !items_json.empty() ) {
                 const std::string json =
-                    "{\"type\":\"action\",\"action\":\"pickup\""
-                    ",\"x\":" + std::to_string( abs_pos.x() ) +
+                    R"({"type":"action","action":"pickup","x":)" + std::to_string( abs_pos.x() ) +
                     ",\"y\":" + std::to_string( abs_pos.y() ) +
                     ",\"z\":" + std::to_string( abs_pos.z() ) +
                     ",\"items\":[" + items_json + "]}";
@@ -3096,11 +3101,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             wear();
 
             {
-                static const activity_id ACT_WEAR_ID( "ACT_WEAR" );
-                if( player_character.activity.id() == ACT_WEAR_ID ) {
+                if( player_character.activity.id() == ACT_WEAR ) {
                     const int saved_moves = player_character.get_moves();
                     player_character.set_moves( 100000 );
-                    while( player_character.activity.id() == ACT_WEAR_ID ) {
+                    while( player_character.activity.id() == ACT_WEAR ) {
                         player_character.activity.do_turn( player_character );
                     }
                     player_character.set_moves( saved_moves );
@@ -3137,14 +3141,14 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 if( loc ) {
                     const std::string itype = loc->typeId().str();
                     avatar_action::eat_or_use( player_character, loc );
-                    mp_dispatch( "{\"type\":\"action\",\"action\":\"eat\",\"item\":\"" + itype + "\"}" );
+                    mp_dispatch( R"({"type":"action","action":"eat","item":")" + itype + "\"}" );
                     if( player_character.activity ) {
                         add_msg( m_info, _( "Now consuming, %s to interrupt." ),
                                  press_x( ACTION_PAUSE ) );
                     }
                 }
             } else {
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"eat\",\"item\":\"\"}" );
+                mp_dispatch( R"({"type":"action","action":"eat","item":""})" );
             }
             return true;
         }
@@ -3167,8 +3171,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
             } else {
                 cata_mp::mp_log( "[cdda-mp] ^: client ctrl_veh hit, moves=" +
-                                  std::to_string( player_character.get_moves() ) +
-                                  " ack=" + std::to_string( cata_mp::is_client_waiting_for_ack() ) );
+                                 std::to_string( player_character.get_moves() ) +
+                                 " ack=" + std::to_string( cata_mp::is_client_waiting_for_ack() ) );
                 map &cv_map = get_map();
                 const tripoint_bub_ms cv_pos = player_character.pos_bub();
                 if( const optional_vpart_position ovp = cv_map.veh_at( cv_pos ) ) {
@@ -3181,7 +3185,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         return true;
                     }
                 }
-                mp_dispatch( "{\"type\":\"action\",\"action\":\"control_vehicle\"}" );
+                mp_dispatch( R"({"type":"action","action":"control_vehicle"})" );
             }
             return true;
         }
@@ -3443,78 +3447,78 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             }
             break;
         case ACTION_MOVE_DOWN: {
-            if( player_character.is_mounted() ) {
-                auto *mon = player_character.mounted_creature.get();
-                if( !mon->has_flag( mon_flag_RIDEABLE_MECH ) ) {
-                    add_msg( m_info, _( "You can't go down stairs while you're riding." ) );
-                    break;
-                }
-            }
-
-            const tripoint_bub_ms pos = player_character.pos_bub();
-            if( const std::optional<tripoint_bub_ms> ladder_dest =
-                    here.vehicle_ladder_destination( pos, -1 ) ) {
-                if( here.is_open_air( *ladder_dest ) &&
-                    !here.veh_at( *ladder_dest ) &&
-                    !query_yn( _( "The vehicle ladder does not reach a safe landing.  "
-                                   "If you climb down, you will fall from the end of it.  Continue?" ) ) ) {
-                    break;
-                }
-                if( player_character.in_vehicle ) {
-                    here.unboard_vehicle( pos );
-                }
-                vertical_move( ladder_dest->z() - pos.z(), true );
-                break;
-            }
-
-            if( has_vehicle_control( player_character ) ) {
-                const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                if( vp->vehicle().is_rotorcraft( here ) ) {
-                    pldrive( tripoint_rel_ms::below );
-                    break;
-                }
-            }
-
-            if( !player_character.in_vehicle ) {
-                // We're NOT standing on tiles with stairs, ropes, ladders etc
-                if( !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, player_character.pos_bub() ) &&
-                    !u.has_flag( json_flag_PHASE_MOVEMENT ) ) {
-                    std::vector<tripoint_bub_ms> pts;
-
-                    // If levitating, just move straight down if possible.
-                    if( player_character.has_flag( json_flag_LEVITATION ) &&
-                        here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, player_character.pos_bub() ) ) {
-                        pts.push_back( player_character.pos_bub() );
-                    }
-
-                    if( pts.empty() ) {
-                        // Check tiles around player character for open air
-                        for( const tripoint_bub_ms &p : here.points_in_radius( player_character.pos_bub(), 1 ) ) {
-                            if( here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, p ) ) {
-                                pts.push_back( p );
-                            }
-                        }
-                    }
-
-                    // If we found tiles with open air, prompt player with query on direction they want to climb
-                    if( !pts.empty() ) {
-                        const std::optional<tripoint_bub_ms> pnt = point_selection_menu( pts, false );
-                        if( !pnt ) {
-                            break;
-                        }
-
-                        // If player selected direction, climb down there, and exit from the whole ACTION_MOVE_DOWN case
-                        climb_down( *pnt );
+                if( player_character.is_mounted() ) {
+                    auto *mon = player_character.mounted_creature.get();
+                    if( !mon->has_flag( mon_flag_RIDEABLE_MECH ) ) {
+                        add_msg( m_info, _( "You can't go down stairs while you're riding." ) );
                         break;
                     }
                 }
 
-                // If we're here, we might or might not be standing on tiles with stairs, ropes, ladders etc
-                // In any case, attempt a descend
-                vertical_move( -1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
+                const tripoint_bub_ms pos = player_character.pos_bub();
+                if( const std::optional<tripoint_bub_ms> ladder_dest =
+                        here.vehicle_ladder_destination( pos, -1 ) ) {
+                    if( here.is_open_air( *ladder_dest ) &&
+                        !here.veh_at( *ladder_dest ) &&
+                        !query_yn( _( "The vehicle ladder does not reach a safe landing.  "
+                                      "If you climb down, you will fall from the end of it.  Continue?" ) ) ) {
+                        break;
+                    }
+                    if( player_character.in_vehicle ) {
+                        here.unboard_vehicle( pos );
+                    }
+                    vertical_move( ladder_dest->z() - pos.z(), true );
+                    break;
+                }
+
+                if( has_vehicle_control( player_character ) ) {
+                    const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
+                    if( vp->vehicle().is_rotorcraft( here ) ) {
+                        pldrive( tripoint_rel_ms::below );
+                        break;
+                    }
+                }
+
+                if( !player_character.in_vehicle ) {
+                    // We're NOT standing on tiles with stairs, ropes, ladders etc
+                    if( !here.has_flag( ter_furn_flag::TFLAG_GOES_DOWN, player_character.pos_bub() ) &&
+                        !u.has_flag( json_flag_PHASE_MOVEMENT ) ) {
+                        std::vector<tripoint_bub_ms> pts;
+
+                        // If levitating, just move straight down if possible.
+                        if( player_character.has_flag( json_flag_LEVITATION ) &&
+                            here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, player_character.pos_bub() ) ) {
+                            pts.push_back( player_character.pos_bub() );
+                        }
+
+                        if( pts.empty() ) {
+                            // Check tiles around player character for open air
+                            for( const tripoint_bub_ms &p : here.points_in_radius( player_character.pos_bub(), 1 ) ) {
+                                if( here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, p ) ) {
+                                    pts.push_back( p );
+                                }
+                            }
+                        }
+
+                        // If we found tiles with open air, prompt player with query on direction they want to climb
+                        if( !pts.empty() ) {
+                            const std::optional<tripoint_bub_ms> pnt = point_selection_menu( pts, false );
+                            if( !pnt ) {
+                                break;
+                            }
+
+                            // If player selected direction, climb down there, and exit from the whole ACTION_MOVE_DOWN case
+                            climb_down( *pnt );
+                            break;
+                        }
+                    }
+
+                    // If we're here, we might or might not be standing on tiles with stairs, ropes, ladders etc
+                    // In any case, attempt a descend
+                    vertical_move( -1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
+                }
+                break;
             }
-            break;
-        }
 
         case ACTION_MOVE_UP:
             if( player_character.is_mounted() ) {
@@ -3595,37 +3599,37 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_GRAB: {
 #ifdef MP_ENABLED
-            object_type mp_pre_grab_type = player_character.get_grab_type();
-            tripoint_rel_ms mp_pre_grab_point = player_character.grab_point;
+                object_type mp_pre_grab_type = player_character.get_grab_type();
+                tripoint_rel_ms mp_pre_grab_point = player_character.grab_point;
 #endif
-            grab( mouse_target );
+                grab( mouse_target );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_dispatch_grab_if_changed( mp_pre_grab_type, mp_pre_grab_point );
+                cata_mp::mp_client_dispatch_grab_if_changed( mp_pre_grab_type, mp_pre_grab_point );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_HAUL: {
 #ifdef MP_ENABLED
-            const bool mp_pre_hauling = player_character.is_hauling();
+                const bool mp_pre_hauling = player_character.is_hauling();
 #endif
-            haul();
+                haul();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_dispatch_hauling_if_changed( mp_pre_hauling );
+                cata_mp::mp_client_dispatch_hauling_if_changed( mp_pre_hauling );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_HAUL_TOGGLE: {
 #ifdef MP_ENABLED
-            const bool mp_pre_hauling = player_character.is_hauling();
+                const bool mp_pre_hauling = player_character.is_hauling();
 #endif
-            haul_toggle();
+                haul_toggle();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_dispatch_hauling_if_changed( mp_pre_hauling );
+                cata_mp::mp_client_dispatch_hauling_if_changed( mp_pre_hauling );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_BUTCHER:
             butcher( mouse_target );
@@ -3633,14 +3637,14 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_CHAT: {
 #ifdef MP_ENABLED
-            const int pre_chat_moves = player_character.get_moves();
+                const int pre_chat_moves = player_character.get_moves();
 #endif
-            chat( mouse_target );
+                chat( mouse_target );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_chat_moves );
+                cata_mp::mp_client_post_action( pre_chat_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_PEEK:
             if( mouse_target ) {
@@ -3675,28 +3679,28 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_USE: {
-            // Shell-users are presumed to be able to mess with their inventories, etc
-            // while in the shell.  Eating, gear-changing, and item use are OK.
+                // Shell-users are presumed to be able to mess with their inventories, etc
+                // while in the shell.  Eating, gear-changing, and item use are OK.
 #ifdef MP_ENABLED
-            const int pre_use_moves = player_character.get_moves();
+                const int pre_use_moves = player_character.get_moves();
 #endif
-            avatar_action::use_item( player_character );
+                avatar_action::use_item( player_character );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_use_moves );
+                cata_mp::mp_client_post_action( pre_use_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_USE_WIELDED: {
 #ifdef MP_ENABLED
-            const int pre_use_moves = player_character.get_moves();
+                const int pre_use_moves = player_character.get_moves();
 #endif
-            player_character.use_wielded();
+                player_character.use_wielded();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_use_moves );
+                cata_mp::mp_client_post_action( pre_use_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_WEAR:
             wear();
@@ -3724,15 +3728,15 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_WIELD: {
-            item_location loc = game_menus::inv::wield();
-            if( loc ) {
-                player_character.wield( loc );
+                item_location loc = game_menus::inv::wield();
+                if( loc ) {
+                    player_character.wield( loc );
 #ifdef MP_ENABLED
-                cata_mp::mp_client_post_action();
+                    cata_mp::mp_client_post_action();
 #endif
+                }
+                break;
             }
-            break;
-        }
 
 #ifdef MP_ENABLED
         case ACTION_PASS_ITEM:
@@ -3757,129 +3761,129 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_RELOAD_ITEM: {
 #ifdef MP_ENABLED
-            const int pre_reload_moves = player_character.get_moves();
+                const int pre_reload_moves = player_character.get_moves();
 #endif
-            reload_item();
+                reload_item();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_reload_moves );
+                cata_mp::mp_client_post_action( pre_reload_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_RELOAD_WEAPON: {
 #ifdef MP_ENABLED
-            const int pre_reload_moves = player_character.get_moves();
+                const int pre_reload_moves = player_character.get_moves();
 #endif
-            reload_weapon();
+                reload_weapon();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_reload_moves );
+                cata_mp::mp_client_post_action( pre_reload_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_RELOAD_WIELDED: {
 #ifdef MP_ENABLED
-            const int pre_reload_moves = player_character.get_moves();
+                const int pre_reload_moves = player_character.get_moves();
 #endif
-            reload_wielded();
+                reload_wielded();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_reload_moves );
+                cata_mp::mp_client_post_action( pre_reload_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_UNLOAD: {
 #ifdef MP_ENABLED
-            const int pre_unload_moves = player_character.get_moves();
+                const int pre_unload_moves = player_character.get_moves();
 #endif
-            avatar_action::unload( player_character );
+                avatar_action::unload( player_character );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_unload_moves );
+                cata_mp::mp_client_post_action( pre_unload_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_MEND: {
 #ifdef MP_ENABLED
-            const int pre_mend_moves = player_character.get_moves();
+                const int pre_mend_moves = player_character.get_moves();
 #endif
-            avatar_action::mend( player_character, item_location() );
+                avatar_action::mend( player_character, item_location() );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_mend_moves );
+                cata_mp::mp_client_post_action( pre_mend_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_THROW: {
 #ifdef MP_ENABLED
-            const int pre_throw_moves = player_character.get_moves();
+                const int pre_throw_moves = player_character.get_moves();
 #endif
-            item_location loc;
-            avatar_action::plthrow( player_character, loc );
+                item_location loc;
+                avatar_action::plthrow( player_character, loc );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_throw_moves );
+                cata_mp::mp_client_post_action( pre_throw_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_THROW_WIELDED: {
 #ifdef MP_ENABLED
-            const int pre_throw_moves = player_character.get_moves();
+                const int pre_throw_moves = player_character.get_moves();
 #endif
-            avatar_action::plthrow_wielded( player_character );
+                avatar_action::plthrow_wielded( player_character );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_throw_moves );
+                cata_mp::mp_client_post_action( pre_throw_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_FIRE: {
 #ifdef MP_ENABLED
-            const int pre_fire_moves = player_character.get_moves();
+                const int pre_fire_moves = player_character.get_moves();
 #endif
-            fire();
+                fire();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_fire_moves );
+                cata_mp::mp_client_post_action( pre_fire_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_CAST_SPELL: {
 #ifdef MP_ENABLED
-            const int pre_cast_moves = player_character.get_moves();
+                const int pre_cast_moves = player_character.get_moves();
 #endif
-            cast_spell();
+                cast_spell();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_cast_moves );
+                cata_mp::mp_client_post_action( pre_cast_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_RECAST_SPELL: {
 #ifdef MP_ENABLED
-            const int pre_cast_moves = player_character.get_moves();
+                const int pre_cast_moves = player_character.get_moves();
 #endif
-            cast_spell( true );
+                cast_spell( true );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_cast_moves );
+                cata_mp::mp_client_post_action( pre_cast_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_FIRE_BURST: {
 #ifdef MP_ENABLED
-            const int pre_burst_moves = player_character.get_moves();
+                const int pre_burst_moves = player_character.get_moves();
 #endif
-            if( weapon ) {
-                if( weapon->gun_set_mode( gun_mode_BURST ) || weapon->gun_set_mode( gun_mode_AUTO ) ) {
-                    avatar_action::fire_wielded_weapon( player_character );
+                if( weapon ) {
+                    if( weapon->gun_set_mode( gun_mode_BURST ) || weapon->gun_set_mode( gun_mode_AUTO ) ) {
+                        avatar_action::fire_wielded_weapon( player_character );
+                    }
                 }
-            }
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_burst_moves );
+                cata_mp::mp_client_post_action( pre_burst_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_SELECT_FIRE_MODE:
             if( weapon && weapon->is_gun() && !weapon->is_gunmod() ) {
@@ -3915,58 +3919,58 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_INSERT_ITEM: {
 #ifdef MP_ENABLED
-            const int pre_insert_moves = player_character.get_moves();
+                const int pre_insert_moves = player_character.get_moves();
 #endif
-            insert_item();
+                insert_item();
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_insert_moves );
+                cata_mp::mp_client_post_action( pre_insert_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_UNLOAD_CONTAINER: {
-            // You CAN drop things to your own tile while in the shell.
+                // You CAN drop things to your own tile while in the shell.
 #ifdef MP_ENABLED
-            const int pre_unload_moves = player_character.get_moves();
+                const int pre_unload_moves = player_character.get_moves();
 #endif
-            unload_container( mouse_target );
+                unload_container( mouse_target );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_unload_moves );
+                cata_mp::mp_client_post_action( pre_unload_moves );
 #endif
-            break;
-        }
+                break;
+            }
 
         case ACTION_DROP: {
 #ifdef MP_ENABLED
-            const int pre_drop_moves = player_character.get_moves();
+                const int pre_drop_moves = player_character.get_moves();
 #endif
-            drop_in_direction( player_character.pos_bub() );
+                drop_in_direction( player_character.pos_bub() );
 #ifdef MP_ENABLED
-            cata_mp::mp_client_post_action( pre_drop_moves );
+                cata_mp::mp_client_post_action( pre_drop_moves );
 #endif
-            break;
-        }
+                break;
+            }
         case ACTION_DIR_DROP: {
-            std::optional<tripoint_bub_ms> pnt = mouse_target;
-            if( !pnt ) {
-                pnt = choose_adjacent( _( "Drop where?" ) );
-            }
-            if( pnt ) {
-                if( *pnt != player_character.pos_bub() && in_shell ) {
-                    add_msg( m_info, _( "You can't drop things to another tile while you're in your shell." ) );
-    } else {
-        // MP-HOOK: verify - non-animation branch timeout and MP poll hooks
-#ifdef MP_ENABLED
-                    const int pre_drop_moves = player_character.get_moves();
-#endif
-                    drop_in_direction( *pnt );
-#ifdef MP_ENABLED
-                    cata_mp::mp_client_post_action( pre_drop_moves );
-#endif
+                std::optional<tripoint_bub_ms> pnt = mouse_target;
+                if( !pnt ) {
+                    pnt = choose_adjacent( _( "Drop where?" ) );
                 }
+                if( pnt ) {
+                    if( *pnt != player_character.pos_bub() && in_shell ) {
+                        add_msg( m_info, _( "You can't drop things to another tile while you're in your shell." ) );
+                    } else {
+                        // MP-HOOK: verify - non-animation branch timeout and MP poll hooks
+#ifdef MP_ENABLED
+                        const int pre_drop_moves = player_character.get_moves();
+#endif
+                        drop_in_direction( *pnt );
+#ifdef MP_ENABLED
+                        cata_mp::mp_client_post_action( pre_drop_moves );
+#endif
+                    }
+                }
+                break;
             }
-            break;
-        }
         case ACTION_BIONICS:
             player_character.power_bionics();
             break;
@@ -4047,10 +4051,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_TOGGLE_AUTOSAFE: {
-            // Set Auto reactivate safe mode to x
-            set_next_option( "AUTOSAFEMODE" );
-            break;
-        }
+                // Set Auto reactivate safe mode to x
+                set_next_option( "AUTOSAFEMODE" );
+                break;
+            }
 
         case ACTION_IGNORE_ENEMY:
             if( safe_mode == SAFE_MODE_STOP ) {
@@ -4100,7 +4104,8 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_SAVE:
 #ifdef MP_ENABLED
             if( cata_mp::is_client_mode() ) {
-                if( query_yn( _( "Save and disconnect? Your character will be saved locally so you can load it on rejoin." ) ) ) {
+                if( query_yn(
+                        _( "Save and disconnect?  Your character will be saved locally so you can load it on rejoin." ) ) ) {
                     if( save() ) {
                         cata_mp::mp_notify_session_ending();
                         player_character.set_moves( 0 );
@@ -4359,7 +4364,7 @@ bool game::handle_action()
 #ifdef MP_ENABLED
         if( cata_mp::is_client_mode() ) {
             cata_mp::mp_log( std::string( "[cdda-mp] HA-AUTOMOVE: dest=on next=" ) +
-                              action_ident( act ) );
+                             action_ident( act ) );
         }
 #endif
         if( act == ACTION_NULL ) {
@@ -4387,7 +4392,7 @@ bool game::handle_action()
 #ifdef MP_ENABLED
     if( cata_mp::is_client_mode() && action != "TIMEOUT" ) {
         cata_mp::mp_log( "[cdda-mp] HA-ACTION: action=\"" + action +
-                          "\" moves=" + std::to_string( player_character.get_moves() ) );
+                         "\" moves=" + std::to_string( player_character.get_moves() ) );
     }
 #endif
 
@@ -4614,11 +4619,10 @@ bool game::handle_action()
     if( cata_mp::is_client_mode() && player_character.pos_abs() != pre_action_pos &&
         act != ACTION_TIMEOUT && before_action_moves > 0 ) {
         const std::string json =
-            "{\"type\":\"action\",\"action\":\"teleport\""
-            ",\"x\":" + std::to_string( player_character.pos_abs().x() ) +
+            R"({"type":"action","action":"teleport","x":)" + std::to_string( player_character.pos_abs().x() ) +
             ",\"y\":" + std::to_string( player_character.pos_abs().y() ) +
             ",\"z\":" + std::to_string( player_character.pos_abs().z() ) +
-            ",\"move_mode\":\"" + player_character.move_mode.str() + "\"}";
+            R"(,"move_mode":")" + player_character.move_mode.str() + "\"}";
         cata_mp::client_send( cata_mp::client_enrich_action( json ) );
         cata_mp::client_mark_action_sent();
     }

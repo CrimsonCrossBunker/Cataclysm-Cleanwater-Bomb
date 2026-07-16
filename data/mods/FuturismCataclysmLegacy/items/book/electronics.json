@@ -1,0 +1,34 @@
+[
+  {
+    "id": "fcl_schematics_eyebot",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "name": { "str_sp": "eyebot schematics" },
+    "description": "Assembly plans, design specs, and technical drawings for the eyebot.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts.",
+    "copy-from": "schematics_generic"
+  },
+  {
+    "id": "fcl_schematics_copbot",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "name": { "str_sp": "police bot schematics" },
+    "description": "Assembly plans, design specs, and technical drawings for the police bot.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts.",
+    "copy-from": "schematics_generic"
+  },
+  {
+    "id": "fcl_schematics_molebot",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "name": { "str_sp": "miner bot schematics" },
+    "description": "Assembly plans, design specs, and technical drawings for the miner bot.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts.",
+    "copy-from": "schematics_generic"
+  },
+  {
+    "id": "fcl_schematics_riotbot",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "name": { "str_sp": "riot control bot schematics" },
+    "description": "Assembly plans, design specs, and technical drawings for the riot control bot.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts.",
+    "copy-from": "schematics_generic"
+  }
+]

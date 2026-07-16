@@ -165,7 +165,7 @@ static constexpr int VMIPH_PER_TPS = static_cast<int>( vehicles::vmiph_per_tile 
 
 namespace
 {
-static bool air_autodrive_allows( map &here, const tripoint_bub_ms &pt )
+bool air_autodrive_allows( map &here, const tripoint_bub_ms &pt )
 {
     if( here.is_open_air( pt ) ) {
         return true;

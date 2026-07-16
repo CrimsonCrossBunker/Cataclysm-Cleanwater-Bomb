@@ -1315,11 +1315,11 @@ struct islot_seed {
         */
         std::vector<std::pair<flag_id, time_duration>> growth_stages;
         // Cumulative thresholds computed from growth_stages for O(1) lookups.
-        std::vector<time_duration> cumulative_stage_thresholds;
+        std::vector<time_duration> cumulative_stage_thresholds; // NOLINT(cata-serialize)
         // Cached indices of special lifecycle stages; -1 if absent.
-        int mature_stage_idx = -1;
-        int harvest_stage_idx = -1;
-        int overgrown_stage_idx = -1;
+        int mature_stage_idx = -1; // NOLINT(cata-serialize)
+        int harvest_stage_idx = -1; // NOLINT(cata-serialize)
+        int overgrown_stage_idx = -1; // NOLINT(cata-serialize)
         // Temperature needs to be at or above this temp for the plant to be planted/grow.
         units::temperature growth_temp;
 };

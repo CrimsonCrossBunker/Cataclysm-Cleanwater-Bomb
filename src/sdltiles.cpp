@@ -352,10 +352,10 @@ static void refresh_drawable_dims()
 static bool apply_resize_layout( int w, int h );
 
 #if defined(__ANDROID__)
-// The Android window is created before SDL reports its final maximized size.
-// Keep this separate from the saved TERMINAL_X/Y values: automatic sizing must
-// not overwrite the user's manual fallback.
-static point get_android_terminal_size();
+    // The Android window is created before SDL reports its final maximized size.
+    // Keep this separate from the saved TERMINAL_X/Y values: automatic sizing must
+    // not overwrite the user's manual fallback.
+    static point get_android_terminal_size();
 #endif
 
 static bool SetupRenderTarget()
@@ -880,7 +880,7 @@ static void WinDestroy()
     gamepad::quit();
     geometry.reset();
 #if SDL_MAJOR_VERSION >= 3
-    shared_variant_pass.reset();
+    shared_variant_pass = nullptr;
 #endif
     display_buffer.reset();
     renderer.reset();
@@ -988,7 +988,8 @@ extern "C" {
         visible_frame_inbox.publish( left, top, right, bottom, visible == JNI_TRUE );
     }
 
-    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_onNativeImeInsetsChanged(
+    JNIEXPORT void JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_onNativeImeInsetsChanged(
         JNIEnv *env, jclass jcls, jint left, jint top, jint right, jint bottom, jboolean visible )
     {
         ( void )env;
@@ -1004,7 +1005,8 @@ extern "C" {
         on_native_ime_insets_changed( left, top, right, bottom, visible );
     }
 
-    JNIEXPORT jboolean JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeEnqueueHudAction(
+    JNIEXPORT jboolean JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeEnqueueHudAction(
         JNIEnv *env, jclass jcls, jstring action, jint context_revision )
     {
         ( void )jcls;
@@ -1022,7 +1024,8 @@ extern "C" {
         return android_hud::enqueue_action( action_s, context_revision ) ? JNI_TRUE : JNI_FALSE;
     }
 
-    JNIEXPORT jstring JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeGetHudSnapshot(
+    JNIEXPORT jstring JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetHudSnapshot(
         JNIEnv *env, jclass jcls )
     {
         ( void )jcls;
@@ -1030,7 +1033,8 @@ extern "C" {
         return env->NewStringUTF( snapshot.c_str() );
     }
 
-    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeSetHudMinimapRect(
+    JNIEXPORT void JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSetHudMinimapRect(
         JNIEnv *env, jclass jcls, jint x, jint y, jint width, jint height, jboolean visible )
     {
         ( void )env;
@@ -1041,7 +1045,7 @@ extern "C" {
     // Compatibility shim for an old, no-longer-rendered extra-button layout.
     // Its text is treated as an action ID and rejected unless it is part of the
     // explicit HUD action catalogue; it can no longer inject keyboard input.
-    JNIEXPORT void JNICALL Java_com_lyhglytx_cataclysmcb_CataclysmDDA_nativeButtonClick(
+    JNIEXPORT void JNICALL Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeButtonClick(
         JNIEnv *env, jclass jcls, jstring action )
     {
         ( void )jcls;
@@ -1109,7 +1113,7 @@ static int get_android_shortcut_height()
     constexpr float shortcut_authored_density = 3.0f; // 480p xxhdpi
     const float density = std::max( 1.0f, android_get_display_density() );
     return std::max( 1, static_cast<int>( std::floor( density / shortcut_authored_density *
-                              get_option<int>( "ANDROID_SHORTCUT_HEIGHT" ) ) ) );
+                                          get_option<int>( "ANDROID_SHORTCUT_HEIGHT" ) ) ) );
 }
 
 static SDL_Rect get_android_content_bounds()
@@ -1158,7 +1162,7 @@ static point get_android_terminal_size()
 
     const float cell_aspect = static_cast<float>( fontwidth ) / static_cast<float>( fontheight );
     int columns = std::clamp( static_cast<int>( std::lround( static_cast<float>( bounds.w ) /
-                                     static_cast<float>( bounds.h ) * rows / cell_aspect ) ),
+                              static_cast<float>( bounds.h ) * rows / cell_aspect ) ),
                               EVEN_MINIMUM_TERM_WIDTH, maximum_auto_terminal_width );
     columns -= columns % 2;
     return point( columns, rows );
@@ -1174,9 +1178,9 @@ static void draw_gamepad_radial_menu();
 // Vertex positions span the render coordinate space (what a full RenderCopy fills),
 // so the mesh covers the whole frame under HiDPI/scaling; the shockwave geometry
 // and UVs stay in display-buffer pixel space, where the ring centres were computed.
-// (shake_dx, shake_dy) translates every vertex by the current screen-shake offset
+// shake translates every vertex by the current screen-shake offset
 // so the warp and the shake compose in a single blit.
-static bool blit_display_buffer_warped( int shake_dx, int shake_dy )
+static bool blit_display_buffer_warped( const point &shake )
 {
     const std::vector<shockwave_state> &shockwaves = get_shockwaves();
     if( shockwaves.empty() || !display_buffer ) {
@@ -1216,9 +1220,8 @@ static bool blit_display_buffer_warped( int shake_dx, int shake_dy )
     // a single ring and trivial to build each frame.
     constexpr int cols = 32;
     constexpr int rows = 24;
-    constexpr int vx = cols + 1;
-    constexpr int vy = rows + 1;
-    const int num_vertices = vx * vy;
+    constexpr point vertex_dims( cols + 1, rows + 1 );
+    const int num_vertices = vertex_dims.x * vertex_dims.y;
 
     std::vector<float> xy( static_cast<size_t>( num_vertices ) * 2 );
     std::vector<float> uv( static_cast<size_t>( num_vertices ) * 2 );
@@ -1226,9 +1229,9 @@ static bool blit_display_buffer_warped( int shake_dx, int shake_dy )
     const float fbh = static_cast<float>( bh );
     const float frw = static_cast<float>( rw );
     const float frh = static_cast<float>( rh );
-    for( int j = 0; j < vy; j++ ) {
-        for( int i = 0; i < vx; i++ ) {
-            const int v = j * vx + i;
+    for( int j = 0; j < vertex_dims.y; j++ ) {
+        for( int i = 0; i < vertex_dims.x; i++ ) {
+            const int v = j * vertex_dims.x + i;
             const float u = static_cast<float>( i ) / static_cast<float>( cols );
             const float w = static_cast<float>( j ) / static_cast<float>( rows );
             // Buffer-space sample point: where the refraction distance and UV are
@@ -1238,8 +1241,8 @@ static bool blit_display_buffer_warped( int shake_dx, int shake_dy )
             // Vertex position is the fixed render-space grid plus the screen-shake
             // translation; the refraction offsets the UV (where we sample the
             // rendered scene from), not the vertex. Concurrent rings sum.
-            xy[v * 2 + 0] = frw * u + static_cast<float>( shake_dx );
-            xy[v * 2 + 1] = frh * w + static_cast<float>( shake_dy );
+            xy[v * 2 + 0] = frw * u + static_cast<float>( shake.x );
+            xy[v * 2 + 1] = frh * w + static_cast<float>( shake.y );
             float du = 0.0f;
             float dv = 0.0f;
             for( const shockwave_state &sw : shockwaves ) {
@@ -1263,9 +1266,9 @@ static bool blit_display_buffer_warped( int shake_dx, int shake_dy )
         out.reserve( static_cast<size_t>( cols ) * rows * 6 );
         for( int j = 0; j < rows; j++ ) {
             for( int i = 0; i < cols; i++ ) {
-                const int tl = j * vx + i;
+                const int tl = j * ( cols + 1 ) + i;
                 const int tr = tl + 1;
-                const int bl = tl + vx;
+                const int bl = tl + cols + 1;
                 const int br = bl + 1;
                 out.push_back( tl );
                 out.push_back( tr );
@@ -1327,35 +1330,34 @@ void refresh_display()
     ClearScreen();
     // Sound-driven screen shake: translate the whole frame by a few pixels. Read
     // once here and applied both to the warp mesh and the straight copy.
-    int shake_dx = 0;
-    int shake_dy = 0;
-    screen_shake_offset_now( shake_dx, shake_dy );
+    point shake;
+    screen_shake_offset_now( shake.x, shake.y );
 #if defined(__ANDROID__)
     SDL_Rect dstrect = get_android_render_rect( TERMINAL_WIDTH * fontwidth,
                        TERMINAL_HEIGHT * fontheight );
-    dstrect.x += shake_dx;
-    dstrect.y += shake_dy;
+    dstrect.x += shake.x;
+    dstrect.y += shake.y;
     RenderCopy( renderer, display_buffer, NULL, &dstrect );
     const android_hud::minimap_rect hud_minimap = android_hud::get_minimap_rect();
     if( hud_minimap.visible && hud_minimap.width > 0 && hud_minimap.height > 0 &&
         g != nullptr && tilecontext != nullptr ) {
         tilecontext->draw_minimap( point( hud_minimap.x, hud_minimap.y ),
-                                   { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
-                                   hud_minimap.width, hud_minimap.height );
+        { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
+        hud_minimap.width, hud_minimap.height );
     }
 #else
     // When a shockwave is active, blit the frame through a distorted mesh so the
     // rendered scene refracts along the ring (the shake offset rides along on the
     // mesh). Falls back to a straight copy if the warp is unsupported or inactive —
     // no behaviour change in the common case beyond the shake translation.
-    if( !blit_display_buffer_warped( shake_dx, shake_dy ) ) {
+    if( !blit_display_buffer_warped( shake ) ) {
         // Integer-scaled top-left blit; remainder is border. A null full-window
         // blit would fractionally scale and grid the minimap. The shake offset
         // translates the present rect rather than rescaling the scene.
         SDL_Rect dstrect = get_display_buffer_render_rect();
         if( dstrect.w > 0 && dstrect.h > 0 ) {
-            dstrect.x += shake_dx;
-            dstrect.y += shake_dy;
+            dstrect.x += shake.x;
+            dstrect.y += shake.y;
             RenderCopy( renderer, display_buffer, nullptr, &dstrect );
         } else {
             RenderCopy( renderer, display_buffer, nullptr, nullptr );
@@ -2620,7 +2622,7 @@ void renderer_recovery_test_support::teardown_software_renderer()
     reset_coordinator();
     geometry.reset();
 #if SDL_MAJOR_VERSION >= 3
-    shared_variant_pass.reset();
+    shared_variant_pass = nullptr;
 #endif
     display_buffer.reset();
     renderer.reset();
@@ -4607,7 +4609,7 @@ static bool android_map_zoom_context()
 static void android_begin_pinch_zoom()
 {
     pinch_start_distance = std::hypot( finger_down_x - second_finger_down_x,
-                                      finger_down_y - second_finger_down_y );
+                                       finger_down_y - second_finger_down_y );
     pinch_start_zoom = g ? g->get_zoom() : 0;
     pinch_zoom_handled = false;
 }
@@ -4630,7 +4632,7 @@ static void android_update_pinch_zoom()
     const int minimum_zoom = std::min( configured_min, configured_max );
     const int maximum_zoom = std::max( configured_min, configured_max );
     int target_zoom = static_cast<int>( std::lround( pinch_start_zoom * current_distance /
-                      pinch_start_distance ) );
+                                        pinch_start_distance ) );
     // Two-unit steps feel continuous while avoiding a resize for every pixel of motion.
     target_zoom = 2 * static_cast<int>( std::lround( target_zoom / 2.0f ) );
     target_zoom = std::clamp( target_zoom, minimum_zoom, maximum_zoom );
@@ -5872,7 +5874,7 @@ static void CheckMessages()
             ticks - finger_down_time > static_cast<uint32_t>
             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
             const float held_distance = std::hypot( finger_curr_x - finger_down_x,
-                                        finger_curr_y - finger_down_y );
+                                                    finger_curr_y - finger_down_y );
             const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
                                         std::max( WindowWidth, WindowHeight );
             const bool precision_hold = is_default_mode &&
@@ -6541,13 +6543,13 @@ static void CheckMessages()
 
                             } else {
                                 const float held_distance = std::hypot( finger_curr_x - finger_down_x,
-                                                            finger_curr_y - finger_down_y );
+                                                                        finger_curr_y - finger_down_y );
                                 const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
                                                             std::max( WindowWidth, WindowHeight );
                                 const bool precision_hold = is_default_mode &&
                                                             get_option<bool>( "ANDROID_LONG_PRESS_CONTEXT" ) &&
                                                             ticks - finger_down_time > static_cast<uint32_t>(
-                                                                    get_option<int>( "ANDROID_INITIAL_DELAY" ) ) &&
+                                                                get_option<int>( "ANDROID_INITIAL_DELAY" ) ) &&
                                                             held_distance < hold_deadzone;
                                 if( precision_hold ) {
                                     last_input = input_event( MouseInput::RightButtonReleased,

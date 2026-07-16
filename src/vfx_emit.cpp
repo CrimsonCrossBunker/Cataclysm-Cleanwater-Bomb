@@ -1,9 +1,10 @@
 #include "vfx_emit.h"
 
 #include <algorithm>
-#include <cmath>
 #include <map>
+#include <optional>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "color.h"
@@ -67,7 +68,7 @@ std::vector<tripoint_bub_ms> vfx_shape_tiles( const vfx_emit &e )
                 for( int rng = 1; rng <= reach; ++rng ) {
                     tripoint potential;
                     calc_ray_end( a, rng, e.origin.raw(), potential );
-                    out.emplace( tripoint_bub_ms( potential ) );
+                    out.emplace( potential );
                 }
             }
             break;

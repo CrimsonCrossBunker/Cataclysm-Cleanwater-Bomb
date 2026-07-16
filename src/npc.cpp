@@ -53,7 +53,7 @@
 #include "magic.h"
 #include "map.h"
 #ifdef MP_ENABLED
-#include "mp_gamestate.h"
+    #include "mp_gamestate.h"
 #endif
 #include "map_iterator.h"
 #include "mapdata.h"

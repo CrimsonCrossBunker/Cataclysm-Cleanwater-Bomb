@@ -288,9 +288,6 @@
       [ [ "power_supply", 1 ] ],
       [ [ "solder_wire", 50 ] ]
     ],
-    "using": [
-      [ "welding_standard", 200 ],
-      [ "steel_standard", 4 ]
-    ]
+    "using": [ [ "welding_standard", 200 ], [ "steel_standard", 4 ] ]
   }
 ]

@@ -1,8 +1,8 @@
 # Lines longer than 78 characters will be wrapped automatically
 # The following line is for reference
 ##############################################################################
-<color_white>Původní autor:</color>    <color_white>Projektový Manažer:</color>
-<color_yellow> Whales </color> (<color_dark_gray>neaktivní </color>)   <color_yellow>KevinGranade</color>  
+<color_white>Původní autor:</color>    <color_white>Projektový Manažer:</color>    <color_white>Správce projektu CCB:</color>
+<color_yellow> Whales </color> (<color_dark_gray>neaktivní </color>)   <color_yellow>KevinGranade</color>     <color_yellow>g1ytx</color>
 
 <color_white>Aktuální hlavní vývojáři:</color>
 <color_yellow>mlangsdorf</color> - Vehicles, boats, basecamps and modding guides.

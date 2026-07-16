@@ -55,21 +55,18 @@
 // IWYU pragma: no_forward_declare npc // behind unique_ptr
 class Character;
 class Creature;
-class effect_source;
 class JsonArray;
 class JsonObject;
 class JsonOut;
+class effect_source;
 class monster;
 class veh_menu;
 class vehicle;
-class vpart_info;
-class vpart_variant;
 enum class ter_furn_flag : int;
-enum vpart_bitflags : int;
-struct itype;
-struct vehicle_prototype;
 struct RGBColor;
 struct RGBColorPair;
+struct islot_comestible;
+struct itype;
 struct vehicle_part;
 template <typename E> struct enum_traits;
 

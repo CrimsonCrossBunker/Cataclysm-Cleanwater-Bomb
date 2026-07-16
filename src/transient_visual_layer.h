@@ -12,7 +12,8 @@
  *  TODO: migrate alloc_handle / cancel_effect / bubble helpers and
  *        container ownership from cata_tiles into this class.
  */
-class transient_visual_layer {
+class transient_visual_layer
+{
 };
 
 #endif // CATA_SRC_TRANSIENT_VISUAL_LAYER_H

@@ -2,13 +2,13 @@
 #ifndef CATA_SRC_IEXAMINE_H
 #define CATA_SRC_IEXAMINE_H
 
-#include <algorithm>
 #include <list>
 #include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "coords_fwd.h"

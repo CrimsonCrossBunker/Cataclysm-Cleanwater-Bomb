@@ -281,7 +281,7 @@
         "   |MP| **|     #---~~-#",
         "||||M.|***| ||||#--~~~@#",
         "|x....|**.| |EEm#--~~~q#",
-        "|oo..É|.**| |...+-~Á--q#",
+        "|oo..É|.**| |...+-~ÁÂ-q#",
         "|||.;É|.*.| |.;.#-~~--@#",
         "|x...É|..*| |.CC#~~----#",
         "|oo...|.*.|||e||###ff###",
@@ -356,11 +356,13 @@
         "+": "t_door_metal_locked",
         "*": "t_rock_floor",
         "~": "t_lava",
-        "-": "t_metal_floor"
+        "-": "t_metal_floor",
+        "Â": "t_metal_floor"
       },
       "furniture": {
         "@": [ [ "f_generator_broken", 25 ], [ "f_military_generator", 5 ] ],
         "Á": "f_compact_ASRG_containment",
+        "Â": [ [ "f_null", 3 ], "f_compact_ASRG_containment" ],
         "J": "f_console_broken",
         "!": [ "f_machinery_light", "f_machinery_electronic", "f_machinery_heavy" ],
         "g": "f_bed",

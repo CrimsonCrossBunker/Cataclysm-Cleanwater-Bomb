@@ -7,10 +7,9 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
-#include <shared_mutex>
 #include <set>
+#include <shared_mutex>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -39,9 +38,10 @@ class monster;
 class npc;
 class overmap_special;
 class vehicle;
-struct pp_resolved_generator;
 enum class cube_direction : int;
 enum class oter_travel_cost_type : int;
+struct pp_resolved_generator;
+
 namespace om_direction
 {
 enum class type : int;

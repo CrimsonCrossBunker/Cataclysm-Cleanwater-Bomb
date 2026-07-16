@@ -1997,8 +1997,8 @@ std::string game_info::game_report()
            "- Game Version: " << game_version() << " [" << bitness() << "]\n" <<
            "- Graphics Version: " << graphics_version() << "\n" <<
            "- Game Language: " << lang_translated << " [" << lang << "]\n" <<
-            "- Mods loaded: [\n    " << mods_loaded() << "\n]\n" <<
-            "- MP: " << cata_mp::mp_game_report_section() << "\n";
+           "- Mods loaded: [\n    " << mods_loaded() << "\n]\n" <<
+           "- MP: " << cata_mp::mp_game_report_section() << "\n";
 
     return report.str();
 }
