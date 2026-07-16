@@ -4567,7 +4567,7 @@ static bool android_map_zoom_context()
 static void android_begin_pinch_zoom()
 {
     pinch_start_distance = std::hypot( finger_down_x - second_finger_down_x,
-                                      finger_down_y - second_finger_down_y );
+                                       finger_down_y - second_finger_down_y );
     pinch_start_zoom = g ? g->get_zoom() : 0;
     pinch_zoom_handled = false;
 }
@@ -4590,7 +4590,7 @@ static void android_update_pinch_zoom()
     const int minimum_zoom = std::min( configured_min, configured_max );
     const int maximum_zoom = std::max( configured_min, configured_max );
     int target_zoom = static_cast<int>( std::lround( pinch_start_zoom * current_distance /
-                      pinch_start_distance ) );
+                                        pinch_start_distance ) );
     // Two-unit steps feel continuous while avoiding a resize for every pixel of motion.
     target_zoom = 2 * static_cast<int>( std::lround( target_zoom / 2.0f ) );
     target_zoom = std::clamp( target_zoom, minimum_zoom, maximum_zoom );
