@@ -43,6 +43,15 @@
 #include "value_ptr.h"
 #include "weather_type.h"
 
+static const item_group_id Item_spawn_data_test_edevices_compat( "test_edevices_compat" );
+static const item_group_id Item_spawn_data_test_edevices_incompat( "test_edevices_incompat" );
+static const item_group_id Item_spawn_data_test_edevices_power( "test_edevices_power" );
+static const item_group_id Item_spawn_data_test_edevices_recipes( "test_edevices_recipes" );
+static const item_group_id Item_spawn_data_test_edevices_standard( "test_edevices_standard" );
+
+static const skill_id skill_computer( "computer" );
+static const skill_id skill_traps( "traps" );
+
 static const activity_id ACT_AIM( "ACT_AIM" );
 static const activity_id ACT_BOLTCUTTING( "ACT_BOLTCUTTING" );
 static const activity_id ACT_CRACKING( "ACT_CRACKING" );
@@ -72,12 +81,6 @@ static const furn_str_id furn_test_f_oxytorch1( "test_f_oxytorch1" );
 static const furn_str_id furn_test_f_oxytorch2( "test_f_oxytorch2" );
 static const furn_str_id furn_test_f_oxytorch3( "test_f_oxytorch3" );
 static const furn_str_id furn_test_f_prying1( "test_f_prying1" );
-
-static const item_group_id Item_spawn_data_test_edevices_compat( "test_edevices_compat" );
-static const item_group_id Item_spawn_data_test_edevices_incompat( "test_edevices_incompat" );
-static const item_group_id Item_spawn_data_test_edevices_power( "test_edevices_power" );
-static const item_group_id Item_spawn_data_test_edevices_recipes( "test_edevices_recipes" );
-static const item_group_id Item_spawn_data_test_edevices_standard( "test_edevices_standard" );
 
 static const itype_id itype_book_binder( "book_binder" );
 static const itype_id itype_glass_shard( "glass_shard" );
@@ -122,9 +125,6 @@ static const quality_id qual_WELD( "WELD" );
 
 static const recipe_id recipe_water_clean( "water_clean" );
 
-static const skill_id skill_computer( "computer" );
-static const skill_id skill_traps( "traps" );
-
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_wall( "t_wall" );
 static const ter_str_id ter_test_t_boltcut1( "test_t_boltcut1" );
@@ -156,8 +156,8 @@ TEST_CASE( "safecracking", "[activity][safecracking]" )
             REQUIRE( dummy.get_per() == perception );
             REQUIRE( static_cast<int>( dummy.get_skill_level( skill_traps ) ) == skill_level );
             if( has_proficiency )
-            {
-                dummy.add_proficiency( proficiency_prof_safecracking );
+        {
+            dummy.add_proficiency( proficiency_prof_safecracking );
                 REQUIRE( dummy.has_proficiency( proficiency_prof_safecracking ) );
             } else
             {
@@ -1406,8 +1406,8 @@ TEST_CASE( "prying", "[activity][prying]" )
         dummy.wield( it_prying_tool );
         REQUIRE( dummy.has_quality( qual_PRY ) );
         if( need_nails )
-        {
-            REQUIRE( dummy.get_wielded_item()->typeId() == itype_test_halligan );
+    {
+        REQUIRE( dummy.get_wielded_item()->typeId() == itype_test_halligan );
             REQUIRE( dummy.has_quality( qual_PRYING_NAIL ) );
         } else
         {
