@@ -4,14 +4,18 @@
 #include <cstdint>
 #include <ctime>
 #include <filesystem>
+#include <functional>
+#include <iosfwd>
 #include <string>
+#include <system_error>
 #include <vector>
 
+#include "calendar.h"
 #include "cata_path.h"
 #include "cata_utility.h"
-#include "calendar.h"
 #include "debug.h"
 #include "filesystem.h"
+#include "flexbuffer_json.h"
 #include "json.h"
 #include "output.h"
 #include "string_formatter.h"

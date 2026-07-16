@@ -1,5 +1,5 @@
 #include <cmath>
-#include <initializer_list> 
+#include <initializer_list>
 
 #include "cata_catch.h"
 #include "shockwave.h"
@@ -89,7 +89,8 @@ TEST_CASE( "shockwave: peak magnitude bounded by strength", "[shockwave]" )
     CHECK( mag == Approx( s.strength ).margin( 1e-3f ) );
 
     // No sample anywhere should exceed strength.
-    for( float d = 40.0f; d <= 60.0f; d += 1.0f ) {
+    for( int dist = 40; dist <= 60; ++dist ) {
+        const float d = static_cast<float>( dist );
         float ox = 0.0f;
         float oy = 0.0f;
         shockwave_vertex_offset( 100.0f + d, 100.0f, s, ox, oy );
@@ -272,4 +273,3 @@ TEST_CASE( "shockwave cone: ring restricted to the angular sector", "[shockwave]
                              s, ix, iy );
     CHECK( std::sqrt( ix * ix + iy * iy ) > 0.0f );
 }
-

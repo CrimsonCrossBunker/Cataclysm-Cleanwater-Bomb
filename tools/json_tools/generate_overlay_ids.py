@@ -37,6 +37,8 @@ CPP_IDS = (
 )
 ATTITUDES = ('hostile', 'neutral', 'friendly', 'other')
 
+ITEM_WORN_SUBTYPES = {'ARMOR', 'TOOL_ARMOR'}
+
 TILESET_OVERLAY_TYPES = {
     'effect_type': {
         'prefix': 'overlay_effect_'
@@ -86,19 +88,72 @@ TILESET_OVERLAY_TYPES = {
 }
 
 
+def _as_list(value):
+    if value is None:
+        return []
+    return value if isinstance(value, list) else [value]
+
+
+def _refs(datum):
+    result = []
+    if isinstance(datum.get('abstract'), str):
+        result.append(datum['abstract'])
+    result.extend(x for x in _as_list(datum.get('id')) if isinstance(x, str))
+    return result
+
+
+def _resolve_set(datum, field, by_ref, trail=()):
+    parent_ref = datum.get('copy-from')
+    parent = by_ref.get(parent_ref) if isinstance(parent_ref, str) else None
+    if field in datum:
+        result = set(_as_list(datum.get(field)))
+    elif parent is not None and parent_ref not in trail:
+        result = _resolve_set(parent, field, by_ref, trail + (parent_ref,))
+    else:
+        result = set()
+    extend = datum.get('extend')
+    if isinstance(extend, dict):
+        result.update(_as_list(extend.get(field)))
+    delete = datum.get('delete')
+    if isinstance(delete, dict):
+        result.difference_update(_as_list(delete.get(field)))
+    return {x for x in result if isinstance(x, str)}
+
+
+def _overlay_prefixes(datum, by_ref):
+    datum_type = datum.get('type')
+    if datum_type != 'ITEM':
+        overlay_data = TILESET_OVERLAY_TYPES.get(datum_type)
+        return [overlay_data['prefix']] if overlay_data else []
+
+    subtypes = _resolve_set(datum, 'subtypes', by_ref)
+    # Character::get_overlay_ids() can request a wielded overlay for every
+    # real item, regardless of subtype.  Wearable items additionally request
+    # worn overlays.  PET_ARMOR uses monster/bodytype-specific IDs instead.
+    prefixes = ['overlay_wielded_']
+    if subtypes & ITEM_WORN_SUBTYPES:
+        prefixes.append('overlay_worn_')
+    return prefixes
+
+
 if __name__ == '__main__':
     data = import_data()[0]
 
+    by_ref = {}
+    for datum in data:
+        for ref in _refs(datum):
+            by_ref.setdefault(ref, datum)
+
     for datum in data:
         datum_type = datum.get('type')
-        overlay_data = TILESET_OVERLAY_TYPES.get(datum_type, None)
-        if not overlay_data:
+        overlay_prefixes = _overlay_prefixes(datum, by_ref)
+        if not overlay_prefixes:
             continue
 
-        game_id = datum.get('id')
-        flags = datum.get('flags', tuple())
+        game_ids = [x for x in _as_list(datum.get('id')) if isinstance(x, str)]
+        flags = _resolve_set(datum, 'flags', by_ref)
 
-        if not game_id:
+        if not game_ids:
             continue
         if datum.get('abstract'):
             continue
@@ -107,24 +162,21 @@ if __name__ == '__main__':
         if datum.get('copy-from') in ('fake_item', 'software'):
             continue
 
-        variable_prefix = ('',)
-        variable_suffix = ('',)
-        if 'BIONIC_TOGGLED' in flags:
-            variable_prefix = ('', 'active_')
-        if datum_type == 'MONSTER':
-            variable_prefix = ('corpse_', 'overlay_wielded_corpse_')
-        if datum_type == 'vehicle_part':
-            variable_suffix = datum.get('symbols', {}).keys()
-            if variable_suffix:
+        for game_id in game_ids:
+            variable_prefix = ('',)
+            variable_suffix = ('',)
+            if 'BIONIC_TOGGLED' in flags:
+                variable_prefix = ('', 'active_')
+            if datum_type == 'MONSTER':
+                variable_prefix = ('corpse_', 'overlay_wielded_corpse_')
+            if datum_type == 'vehicle_part':
+                symbols = datum.get('symbols', {})
+                variable_suffix = list(symbols.keys()) if isinstance(symbols, dict) else []
                 variable_suffix = ['', ] + [f'_{s}' for s in variable_suffix]
-            else:
-                variable_suffix = ('',)
 
-        for p in product(variable_prefix, (game_id,), variable_suffix):
-            output = [overlay_data['prefix']]
-            output.extend(p)
-            # print(output)
-            print(''.join(output))
+            for overlay_prefix in overlay_prefixes:
+                for parts in product(variable_prefix, (game_id,), variable_suffix):
+                    print(overlay_prefix + ''.join(parts))
 
     for hardcoded_id in CPP_IDS:
         print(hardcoded_id)

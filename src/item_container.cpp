@@ -6,8 +6,6 @@
 * functions, which is intended.
 */
 
-#include "item.h"
-
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -15,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <set>
 #include <string>
 #include <type_traits>
@@ -32,6 +31,7 @@
 #include "flag.h"
 #include "flat_set.h"
 #include "gun_mode.h"
+#include "item.h"
 #include "item_category.h"
 #include "item_contents.h"
 #include "item_location.h"

@@ -1,4 +1,4 @@
-package com.lyhglytx.cataclysmcb;
+package com.crimsoncrossbunker.cataclysmcb;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,7 +36,7 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.lyhglytx.cataclysmcb.CataclysmDDA_Helpers;
+import com.crimsoncrossbunker.cataclysmcb.CataclysmDDA_Helpers;
 
 public class SplashScreen extends Activity {
     private static final String TAG = "Splash";

@@ -1761,7 +1761,7 @@ void talk_function::field_harvest( npc &p, const std::string &place )
                         plant_count, seed_cnt );
 
                     const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective( *bay_map,
-                            bub_plot );
+                                          bub_plot );
                     const std::string stage = stage_idx >= 0 ?
                                               seed_data.get_growth_stages()[stage_idx].first.str() : "";
                     const std::map<std::string, double> num_ctx = {
@@ -1772,10 +1772,10 @@ void talk_function::field_harvest( npc &p, const std::string &place )
                     const furn_t &current_furn = bay.furn( plot ).obj();
                     if( current_furn.plant ) {
                         iexamine::run_plant_eocs( current_furn.plant->eoc_on_harvest, p, *bay_map, bub_plot,
-                                                   *seed, stage, stage, {}, num_ctx );
+                                                  *seed, stage, stage, {}, num_ctx );
                     }
                     iexamine::run_plant_eocs( seed_data.eoc_on_harvest, p, *bay_map, bub_plot, *seed,
-                                               stage, stage, {}, num_ctx );
+                                              stage, stage, {}, num_ctx );
 
                     // Multiply by the plant's and seed's base charges to mimic creating
                     // items similar to iexamine::harvest_plant

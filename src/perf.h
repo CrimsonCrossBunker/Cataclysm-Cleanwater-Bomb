@@ -2,7 +2,7 @@
 #ifndef CATA_SRC_PERF_H
 #define CATA_SRC_PERF_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <chrono>
 #include <functional>

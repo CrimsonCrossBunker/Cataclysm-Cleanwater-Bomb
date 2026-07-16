@@ -75,7 +75,7 @@
 #include "mapgen.h"
 #include "material.h"
 #ifdef MP_ENABLED
-#include "mp_gamestate.h"
+    #include "mp_gamestate.h"
 #endif
 #include "math_defines.h"
 #include "mission.h"
@@ -133,16 +133,6 @@ static const ammo_effect_str_id ammo_effect_PLASMA( "PLASMA" );
 
 static const ammotype ammo_battery( "battery" );
 
-static const furn_str_id furn_f_rope_up( "f_rope_up" );
-
-static void erase_cached_vehicle_ladders( std::map<tripoint_bub_ms, std::pair<vehicle *, int> > &cache,
-        const vehicle *veh )
-{
-    erase_if( cache, [veh]( const std::pair<const tripoint_bub_ms, std::pair<vehicle *, int>> &entry ) {
-        return entry.second.first == veh;
-    } );
-}
-
 static const bionic_id bio_shock_absorber( "bio_shock_absorber" );
 
 static const damage_type_id damage_bash( "bash" );
@@ -176,6 +166,7 @@ static const flag_id json_flag_PROXIMITY( "PROXIMITY" );
 static const flag_id json_flag_UNDODGEABLE( "UNDODGEABLE" );
 
 static const furn_str_id furn_f_clear( "f_clear" );
+static const furn_str_id furn_f_rope_up( "f_rope_up" );
 static const furn_str_id furn_f_rubble( "f_rubble" );
 static const furn_str_id furn_f_rubble_rock( "f_rubble_rock" );
 static const furn_str_id furn_f_wreckage( "f_wreckage" );
@@ -290,6 +281,15 @@ static const ter_str_id ter_t_window_no_curtains( "t_window_no_curtains" );
 
 static const trap_str_id tr_portal( "tr_portal" );
 static const trap_str_id tr_unfinished_construction( "tr_unfinished_construction" );
+
+static void erase_cached_vehicle_ladders( std::map<tripoint_bub_ms, std::pair<vehicle *, int> >
+        &cache,
+        const vehicle *veh )
+{
+    erase_if( cache, [veh]( const std::pair<const tripoint_bub_ms, std::pair<vehicle *, int>> &entry ) {
+        return entry.second.first == veh;
+    } );
+}
 
 #define dbg(x) DebugLog((x),D_MAP) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -625,6 +625,17 @@ void map::update_map_memory( avatar &you )
 {
     ZoneScoped;
     map &here = *this;
+    const int z = you.posz();
+
+    // Map memory must use visibility from the avatar's current position.  The
+    // final step of ordinary movement and activity-driven vehicle movement can
+    // both happen without an intervening render, leaving this cache at the
+    // previous position.  Refresh it here so simulation-side memory never
+    // depends on whether a frame happened to be drawn.
+    here.build_map_cache( z );
+    here.invalidate_visibility_cache();
+    here.update_visibility_cache( z );
+
     const visibility_variables &cache = here.get_visibility_variables_cache();
     const tripoint_bub_ms you_pos = you.pos_bub( here );
     // Limit the update area to the maximum view range, matching the render-path
@@ -632,7 +643,6 @@ void map::update_map_memory( avatar &you )
     const point min_visible( you_pos.x() % SEEX, you_pos.y() % SEEY );
     const point max_visible( ( you_pos.x() % SEEX ) + ( MAPSIZE - 1 ) * SEEX,
                              ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
-    const int z = you.posz();
     const level_cache &ch = here.access_cache( z );
 
     // Ensure the player's map-memory cache covers the window this pass is about
@@ -1325,10 +1335,10 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         if( cata_mp::is_hosting() && !collisions.empty() ) {
             for( const veh_collision &c : collisions ) {
                 cata_mp::mp_log( "[veh-coll] veh=" + veh.name +
-                                  " type=" + std::to_string( static_cast<int>( c.type ) ) +
-                                  " imp=" + std::to_string( c.imp ) +
-                                  " target=" + c.target_name +
-                                  " dp=" + std::to_string( dp1.x() ) + "," + std::to_string( dp1.y() ) );
+                                 " type=" + std::to_string( static_cast<int>( c.type ) ) +
+                                 " imp=" + std::to_string( c.imp ) +
+                                 " target=" + c.target_name +
+                                 " dp=" + std::to_string( dp1.x() ) + "," + std::to_string( dp1.y() ) );
             }
         }
 #endif
@@ -8712,7 +8722,7 @@ bool map::draw_maptile( const catacurses::window &w, const tripoint_bub_ms &p,
         sym = curr_furn->symbol();
         tercol = curr_furn->color();
         if( !vehicle_ladder_furn && !( player_character.get_grab_type() == object_type::FURNITURE
-               && p == player_character.pos_bub() + player_character.grab_point ) ) {
+                                       && p == player_character.pos_bub() + player_character.grab_point ) ) {
             memory_sym = sym;
         }
     }
@@ -10244,7 +10254,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
             effective_growth_time = seed->age() * initial_furn.plant->growth_multiplier *
                                     crop_growth_speed;
             const int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p,
-                    growth_stages );
+                                          growth_stages );
             const time_duration min_effective_for_stage =
                 iexamine::get_plant_stage_threshold( *seed->type->seed, current_stage_idx );
             if( effective_growth_time < min_effective_for_stage ) {
@@ -10269,7 +10279,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
 
                 // Determine starting stage index from current furniture flag.
                 int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p,
-                        growth_stages );
+                                        growth_stages );
 
                 // Cumulative stage thresholds are precomputed during item finalize.
                 const std::vector<time_duration> &stage_thresholds =
@@ -10285,13 +10295,13 @@ void map::grow_plant( const tripoint_bub_ms &p )
                     const float consumption_mult = iexamine::get_plant_water_consumption_multiplier(
                                                        current_furn );
                     const int daily_consumption = std::max( 1,
-                            static_cast<int>( base_daily_consumption * consumption_mult *
-                                              crop_water_consumption ) );
+                                                            static_cast<int>( base_daily_consumption * consumption_mult *
+                                                                    crop_water_consumption ) );
 
                     // Rainwater collection for outdoor irrigable planters.
                     if( !this->is_roofed( p ) ) {
                         const weather_type_id w = current_weather( this->get_abs( p ),
-                                          last_check + day * 1_days );
+                                                  last_check + day * 1_days );
                         const int rain_water = iexamine::rain_water_for_weather( w );
                         if( rain_water > 0 ) {
                             current_water = std::min( max_water, current_water + rain_water );
@@ -10322,7 +10332,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
 
                 iexamine::set_plant_water( *seed, current_water );
                 iexamine::set_plant_last_water_check( *seed,
-                        last_check + elapsed_days * 1_days );
+                                                      last_check + elapsed_days * 1_days );
                 iexamine::set_plant_effective_growth_turns( *seed,
                         to_turns<int>( effective_growth_time ) );
             }
@@ -10349,7 +10359,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
             effective_growth_time = seed->age() * initial_furn.plant->growth_multiplier *
                                     crop_growth_speed;
             const int current_stage_idx = iexamine::get_plant_current_stage_idx( *this, p,
-                    growth_stages );
+                                          growth_stages );
             const time_duration min_effective_for_stage =
                 iexamine::get_plant_stage_threshold( *seed->type->seed, current_stage_idx );
             if( effective_growth_time < min_effective_for_stage ) {
@@ -10387,14 +10397,14 @@ void map::grow_plant( const tripoint_bub_ms &p )
     };
 
     const int start_stage_idx = static_cast<int>( std::distance(
-            growth_stages.begin(),
-            std::find_if( growth_stages.begin(), growth_stages.end(),
-                          check_flag( current_stage.str() ) ) ) );
+                                    growth_stages.begin(),
+                                    std::find_if( growth_stages.begin(), growth_stages.end(),
+                                            check_flag( current_stage.str() ) ) ) );
 
     const int target_stage_idx = static_cast<int>( std::distance(
-            growth_stages.begin(),
-            std::find_if( growth_stages.begin(), growth_stages.end(),
-                          check_flag( target_stage.str() ) ) ) );
+                                     growth_stages.begin(),
+                                     std::find_if( growth_stages.begin(), growth_stages.end(),
+                                             check_flag( target_stage.str() ) ) ) );
 
     const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( *seed->type->seed );
     const int overgrown_stage_idx = iexamine::get_plant_overgrown_stage_idx( *seed->type->seed );
@@ -10465,29 +10475,29 @@ void map::grow_plant( const tripoint_bub_ms &p )
 
         if( new_furn.plant ) {
             iexamine::run_plant_eocs( new_furn.plant->eoc_on_grow, alpha, *this, p, *current_seed,
-                                       old_stage, new_stage );
+                                      old_stage, new_stage );
         }
         iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_grow, alpha, *this, p, *current_seed,
-                                   old_stage, new_stage );
+                                  old_stage, new_stage );
 
         if( mature_stage_idx >= 0 && old_stage_idx < mature_stage_idx &&
             new_stage_idx >= mature_stage_idx ) {
             if( new_furn.plant ) {
                 iexamine::run_plant_eocs( new_furn.plant->eoc_on_mature, alpha, *this, p, *current_seed,
-                                           old_stage, new_stage );
+                                          old_stage, new_stage );
             }
             iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_mature, alpha, *this, p,
-                                       *current_seed, old_stage, new_stage );
+                                      *current_seed, old_stage, new_stage );
         }
 
         if( overgrown_stage_idx >= 0 && old_stage_idx < overgrown_stage_idx &&
             new_stage_idx >= overgrown_stage_idx ) {
             if( new_furn.plant ) {
                 iexamine::run_plant_eocs( new_furn.plant->eoc_on_overgrow, alpha, *this, p, *current_seed,
-                                           old_stage, new_stage );
+                                          old_stage, new_stage );
             }
             iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_overgrow, alpha, *this, p,
-                                       *current_seed, old_stage, new_stage );
+                                      *current_seed, old_stage, new_stage );
         }
     }
 }

@@ -2,17 +2,25 @@
 #ifndef CATA_SRC_MP_GAMESTATE_H
 #define CATA_SRC_MP_GAMESTATE_H
 
-#include "activity_type.h"
+#include <stdint.h>
+#include <climits>
+#include <list>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "character_id.h"
 #include "coordinates.h"
-#include "enums.h" // object_type — used by mp_client_dispatch_grab_if_changed
-#include <string>
+#include "type_id.h"
 
-class npc;
 class Character;
+class item;
+class npc;
+enum class object_type : int;
 struct WORLD;
 
-namespace cata_mp {
+namespace cata_mp
+{
 
 // Called once per game turn from do_turn() — drains the event queue and
 // processes connect/disconnect/action events from remote players.
@@ -488,7 +496,8 @@ void client_resync_worn();
 // game turn after the avatar activity loop has run and consumed moves.
 // Pass the activity ID that was running BEFORE the loop so the dispatch still
 // fires when the activity consumed moves and then called finish() this same turn.
-void client_dispatch_wait_for_activity( const activity_id &pre_id = activity_id(), bool force_idle = false );
+void client_dispatch_wait_for_activity( const activity_id &pre_id = activity_id(),
+                                        bool force_idle = false );
 
 // Client only: emit an explicit activity-lifecycle marker to the host.  These
 // are signal-only — they don't consume client moves and the host doesn't
@@ -578,7 +587,7 @@ void mp_open_chat();
 
 // Overmap note sync — call after add_note / delete_note / mark_note_dangerous
 // so the partner's overmap mirrors the change.
-void mp_sync_note_add( const tripoint_abs_omt &pos, const std::string &text );
+void mp_sync_note_add( const tripoint_abs_omt &pos, std::string_view text );
 void mp_sync_note_delete( const tripoint_abs_omt &pos );
 void mp_sync_note_danger( const tripoint_abs_omt &pos, int radius, bool dangerous );
 

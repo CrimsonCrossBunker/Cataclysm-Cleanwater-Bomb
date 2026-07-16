@@ -1,11 +1,15 @@
+#include <functional>
+#include <memory>
+#include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "character.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "event.h"
@@ -19,22 +23,29 @@
 #include "magic_ter_furn_transform.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapdata.h"
+#include "math_parser_diag_value.h"
 #include "options.h"
 #include "player_helpers.h"
+#include "pocket_type.h"
 #include "point.h"
-#include "skill.h"
+#include "ret_val.h"
 #include "type_id.h"
-#include "veh_type.h"
+#include "units.h"
+#include "value_ptr.h"
 #include "vehicle.h"
 #include "vpart_position.h"
+#include "vpart_range.h"
 
 static const furn_str_id furn_f_planter_seed( "f_planter_seed" );
-static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
-static const furn_str_id furn_f_test_plant_harvest( "test_f_plant_harvest" );
-static const furn_str_id furn_f_test_plant_mature( "test_f_plant_mature" );
-static const furn_str_id furn_f_test_plant_overgrown( "test_f_plant_overgrown" );
-static const furn_str_id furn_f_test_plant_seed( "test_f_plant_seed" );
-static const furn_str_id furn_f_test_plant_seedling( "test_f_plant_seedling" );
+static const furn_str_id furn_test_f_plant_harvest( "test_f_plant_harvest" );
+static const furn_str_id furn_test_f_plant_mature( "test_f_plant_mature" );
+static const furn_str_id furn_test_f_plant_overgrown( "test_f_plant_overgrown" );
+static const furn_str_id furn_test_f_plant_seed( "test_f_plant_seed" );
+static const furn_str_id furn_test_f_plant_seedling( "test_f_plant_seedling" );
+static const furn_str_id
+furn_test_f_planter_high_water_mature( "test_f_planter_high_water_mature" );
+static const furn_str_id furn_test_f_planter_high_water_seed( "test_f_planter_high_water_seed" );
 
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
 static const itype_id itype_fertilizer_commercial( "fertilizer_commercial" );
@@ -46,10 +57,12 @@ static const itype_id itype_test_seed_simple( "test_seed_simple" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const skill_id skill_survival( "survival" );
-static const spell_id spell_test_fertilize_plant( "test_spell_fertilize_plant" );
+static const spell_id spell_test_spell_fertilize_plant( "test_spell_fertilize_plant" );
+static const ter_furn_transform_id
+ter_furn_transform_ter_test_plant_seed_to_harvest( "ter_test_plant_seed_to_harvest" );
+static const ter_furn_transform_id
+ter_furn_transform_ter_test_plant_seedling_to_mature( "ter_test_plant_seedling_to_mature" );
 static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
-static const ter_furn_transform_id ter_test_plant_seedling_to_mature( "ter_test_plant_seedling_to_mature" );
-static const ter_furn_transform_id ter_test_plant_seed_to_harvest( "ter_test_plant_seed_to_harvest" );
 static const vproto_id vehicle_prototype_oldtractor( "oldtractor" );
 
 namespace
@@ -100,52 +113,53 @@ TEST_CASE( "plant_lifecycle_eocs", "[plant][eoc]" )
     SECTION( "on_grow and on_mature fire as plant advances stages" ) {
         // Manually set up a test plant to exercise furniture-level EOC hooks.
         here.add_item( plot, item( itype_test_seed_eoc ) );
-        here.furn_set( plot, furn_f_test_plant_seed );
+        here.furn_set( plot, furn_test_f_plant_seed );
 
         calendar::turn += 1_hours;
         here.grow_plant( plot );
 
-        CHECK( here.furn( plot ) == furn_f_test_plant_seedling );
+        CHECK( here.furn( plot ) == furn_test_f_plant_seedling );
         CHECK( get_globals().get_global_value( "test_grow_stage" ) == "GROWTH_SEEDLING" );
 
         calendar::turn += 1_hours;
         here.grow_plant( plot );
 
-        CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+        CHECK( here.furn( plot ) == furn_test_f_plant_mature );
         CHECK( get_globals().get_global_value( "test_mature" ).to_string() == "1" );
     }
 
     SECTION( "on_harvest fires and reports plant_count" ) {
         here.add_item( plot, item( itype_test_seed_eoc ) );
-        here.furn_set( plot, furn_f_test_plant_harvest );
+        here.furn_set( plot, furn_test_f_plant_harvest );
 
         iexamine::harvest_plant( u, plot, false );
 
-        const std::string harvest_count = get_globals().get_global_value( "test_harvest_count" ).to_string();
+        const std::string harvest_count =
+            get_globals().get_global_value( "test_harvest_count" ).to_string();
         REQUIRE( !harvest_count.empty() );
         CHECK( std::stoi( harvest_count ) > 0 );
     }
 
     SECTION( "on_overgrow fires when plant becomes overgrown" ) {
         here.add_item( plot, item( itype_test_seed_eoc ) );
-        here.furn_set( plot, furn_f_test_plant_seed );
+        here.furn_set( plot, furn_test_f_plant_seed );
 
         calendar::turn += 1_hours;
         here.grow_plant( plot );
-        CHECK( here.furn( plot ) == furn_f_test_plant_seedling );
+        CHECK( here.furn( plot ) == furn_test_f_plant_seedling );
 
         calendar::turn += 1_hours;
         here.grow_plant( plot );
-        CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+        CHECK( here.furn( plot ) == furn_test_f_plant_mature );
 
         calendar::turn += 1_hours;
         here.grow_plant( plot );
-        CHECK( here.furn( plot ) == furn_f_test_plant_harvest );
+        CHECK( here.furn( plot ) == furn_test_f_plant_harvest );
 
         calendar::turn += 1_hours;
         here.grow_plant( plot );
 
-        CHECK( here.furn( plot ) == furn_f_test_plant_overgrown );
+        CHECK( here.furn( plot ) == furn_test_f_plant_overgrown );
         CHECK( get_globals().get_global_value( "test_overgrow" ).to_string() == "1" );
     }
 }
@@ -183,7 +197,7 @@ TEST_CASE( "plant_global_events", "[plant][event]" )
 
     SECTION( "character_harvests_plant" ) {
         here.add_item( plot, item( itype_test_seed_eoc ) );
-        here.furn_set( plot, furn_f_test_plant_harvest );
+        here.furn_set( plot, furn_test_f_plant_harvest );
 
         iexamine::harvest_plant( u, plot, false );
 
@@ -196,7 +210,7 @@ TEST_CASE( "plant_global_events", "[plant][event]" )
     }
 
     SECTION( "special_seed_harvests_send_event" ) {
-        here.furn_set( plot, furn_f_test_plant_harvest );
+        here.furn_set( plot, furn_test_f_plant_harvest );
 
         SECTION( "fungal_seeds" ) {
             here.add_item( plot, item( itype_fungal_seeds ) );
@@ -225,7 +239,7 @@ TEST_CASE( "plant_global_events", "[plant][event]" )
 
     SECTION( "character_fertilizes_plant" ) {
         here.add_item( plot, item( itype_test_seed_eoc ) );
-        here.furn_set( plot, furn_f_test_plant_seedling );
+        here.furn_set( plot, furn_test_f_plant_seedling );
         u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
 
         iexamine::fertilize_plant( u, plot, itype_fertilizer_commercial );
@@ -269,7 +283,7 @@ TEST_CASE( "plant_effective_growth_time_authority", "[plant][growth]" )
     item seed( itype_test_seed_simple );
     seed.set_birthday( calendar::turn );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seed );
+    here.furn_set( plot, furn_test_f_plant_seed );
 
     item *planted_seed = iexamine::get_seed_at( here, plot );
     REQUIRE( planted_seed != nullptr );
@@ -303,7 +317,7 @@ TEST_CASE( "plant_old_save_effective_growth_time_migration", "[plant][growth]" )
     old_seed.set_birthday( calendar::turn - 1_seconds );
     old_seed.erase_var( "seed_effective_growth_turns" );
     here.add_item( plot, old_seed );
-    here.furn_set( plot, furn_f_test_plant_mature );
+    here.furn_set( plot, furn_test_f_plant_mature );
 
     here.grow_plant( plot );
 
@@ -325,7 +339,7 @@ TEST_CASE( "plant_fertilize_reduces_remaining_time", "[plant][fertilize]" )
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
     here.add_item( plot, item( itype_test_seed_eoc ) );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
 
     item *seed = iexamine::get_seed_at( here, plot );
@@ -341,7 +355,8 @@ TEST_CASE( "plant_fertilize_reduces_remaining_time", "[plant][fertilize]" )
 
     CHECK( effective_after > effective_before );
 
-    const std::string reduction = get_globals().get_global_value( "test_fertilize_reduction_turns" ).to_string();
+    const std::string reduction =
+        get_globals().get_global_value( "test_fertilize_reduction_turns" ).to_string();
     REQUIRE( !reduction.empty() );
     CHECK( std::stoi( reduction ) > 0 );
 }
@@ -370,7 +385,7 @@ TEST_CASE( "plant_fertilize_speed_independence", "[plant][fertilize][world_optio
     iexamine::set_plant_effective_growth_turns( seed, to_turns<int>( 1_hours ) );
     iexamine::set_plant_last_water_check( seed, calendar::turn );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
 
     item *planted_seed = iexamine::get_seed_at( here, plot );
     REQUIRE( planted_seed != nullptr );
@@ -401,7 +416,7 @@ TEST_CASE( "plant_cannot_be_fertilized_twice", "[plant][fertilize]" )
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
     here.add_item( plot, item( itype_test_seed_eoc ) );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
 
@@ -427,9 +442,9 @@ TEST_CASE( "plant_fertilizer_quality_affects_reduction", "[plant][fertilize]" )
     const tripoint_bub_ms plot_commercial = u.pos_bub() + tripoint::east;
     const tripoint_bub_ms plot_liquid = u.pos_bub() + tripoint::west;
     here.add_item( plot_commercial, item( itype_test_seed_eoc ) );
-    here.furn_set( plot_commercial, furn_f_test_plant_seedling );
+    here.furn_set( plot_commercial, furn_test_f_plant_seedling );
     here.add_item( plot_liquid, item( itype_test_seed_eoc ) );
-    here.furn_set( plot_liquid, furn_f_test_plant_seedling );
+    here.furn_set( plot_liquid, furn_test_f_plant_seedling );
 
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
     u.i_add( item( itype_fertilizer_liquid, calendar::turn ) );
@@ -512,7 +527,7 @@ TEST_CASE( "plant_vehicle_operations", "[plant][vehicle]" )
         item harvest_seed( itype_test_seed_eoc );
         harvest_seed.set_age( 4_hours );
         here.add_item( *reaper_pos, harvest_seed );
-        here.furn_set( *reaper_pos, furn_f_test_plant_harvest );
+        here.furn_set( *reaper_pos, furn_test_f_plant_harvest );
 
         veh->operate_reaper( here );
 
@@ -522,7 +537,8 @@ TEST_CASE( "plant_vehicle_operations", "[plant][vehicle]" )
         CHECK( e.get<itype_id>( "seed_id" ) == itype_test_seed_eoc );
         CHECK( e.get<int>( "plant_count" ) > 0 );
 
-        const std::string harvest_count = get_globals().get_global_value( "test_harvest_count" ).to_string();
+        const std::string harvest_count =
+            get_globals().get_global_value( "test_harvest_count" ).to_string();
         REQUIRE( !harvest_count.empty() );
         CHECK( std::stoi( harvest_count ) > 0 );
     }
@@ -563,15 +579,15 @@ TEST_CASE( "ter_transform_syncs_plant_seed_effective_growth_time", "[plant][magi
     item seed( itype_test_seed_simple );
     seed.set_birthday( calendar::turn );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
 
-    REQUIRE( here.furn( plot ) == furn_f_test_plant_seedling );
+    REQUIRE( here.furn( plot ) == furn_test_f_plant_seedling );
 
     // Use a ter_furn_transform to jump the furniture straight to mature.
-    REQUIRE( ter_test_plant_seedling_to_mature.is_valid() );
-    ter_test_plant_seedling_to_mature->transform( here, plot );
+    REQUIRE( ter_furn_transform_ter_test_plant_seedling_to_mature.is_valid() );
+    ter_furn_transform_ter_test_plant_seedling_to_mature->transform( here, plot );
 
-    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+    CHECK( here.furn( plot ) == furn_test_f_plant_mature );
 
     // The seed's effective growth time must now match the mature stage,
     // otherwise later grow_plant calls would see a mismatch and stall.
@@ -585,21 +601,21 @@ TEST_CASE( "ter_transform_syncs_plant_seed_effective_growth_time", "[plant][magi
     calendar::turn += 2_seconds;
     here.grow_plant( plot );
 
-    CHECK( here.furn( plot ) == furn_f_test_plant_harvest );
+    CHECK( here.furn( plot ) == furn_test_f_plant_harvest );
     CHECK( iexamine::is_plant_harvestable( here, plot ) );
 
     SECTION( "jump from seed straight to harvest" ) {
         here.i_clear( plot );
-        here.furn_set( plot, furn_f_test_plant_seed );
+        here.furn_set( plot, furn_test_f_plant_seed );
         item seed2( itype_test_seed_simple );
         seed2.set_birthday( calendar::turn );
         iexamine::set_plant_effective_growth_turns( seed2, 0 );
         here.add_item( plot, seed2 );
 
-        REQUIRE( ter_test_plant_seed_to_harvest.is_valid() );
-        ter_test_plant_seed_to_harvest->transform( here, plot );
+        REQUIRE( ter_furn_transform_ter_test_plant_seed_to_harvest.is_valid() );
+        ter_furn_transform_ter_test_plant_seed_to_harvest->transform( here, plot );
 
-        CHECK( here.furn( plot ) == furn_f_test_plant_harvest );
+        CHECK( here.furn( plot ) == furn_test_f_plant_harvest );
 
         item *synced_seed2 = iexamine::get_seed_at( here, plot );
         REQUIRE( synced_seed2 != nullptr );
@@ -633,11 +649,11 @@ TEST_CASE( "crop_growth_speed_world_option", "[plant][world_option]" )
     iexamine::set_plant_effective_growth_turns( seed, 0 );
     iexamine::set_plant_last_water_check( seed, calendar::turn );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seed );
+    here.furn_set( plot, furn_test_f_plant_seed );
 
     item *planted_seed = iexamine::get_seed_at( here, plot );
     REQUIRE( planted_seed != nullptr );
-    CHECK( here.furn( plot ) == furn_f_test_plant_seed );
+    CHECK( here.furn( plot ) == furn_test_f_plant_seed );
 
     // With double growth speed, 1 second of real time equals 2 seconds of effective growth.
     calendar::turn += 1_seconds;
@@ -673,7 +689,7 @@ TEST_CASE( "crop_harvest_multiplier_world_option", "[plant][world_option]" )
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
     here.add_item( plot, item( itype_test_seed_eoc ) );
-    here.furn_set( plot, furn_f_test_plant_harvest );
+    here.furn_set( plot, furn_test_f_plant_harvest );
 
     iexamine::harvest_plant( u, plot, false );
 
@@ -758,7 +774,7 @@ TEST_CASE( "crop_overgrown_enabled_world_option", "[plant][world_option]" )
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
     here.add_item( plot, item( itype_test_seed_eoc ) );
-    here.furn_set( plot, furn_f_test_plant_mature );
+    here.furn_set( plot, furn_test_f_plant_mature );
 
     item *seed = iexamine::get_seed_at( here, plot );
     REQUIRE( seed != nullptr );
@@ -778,13 +794,14 @@ TEST_CASE( "crop_overgrown_enabled_world_option", "[plant][world_option]" )
     REQUIRE( seed != nullptr );
     // Overgrown must still be prevented.
     CHECK( !iexamine::is_plant_overgrown( here, plot ) );
-    CHECK( here.furn( plot ) != furn_f_test_plant_overgrown );
+    CHECK( here.furn( plot ) != furn_test_f_plant_overgrown );
     // But the plant must be allowed to reach harvest, not be stuck at mature.
-    CHECK( here.furn( plot ) == furn_f_test_plant_harvest );
+    CHECK( here.furn( plot ) == furn_test_f_plant_harvest );
     CHECK( iexamine::is_plant_harvestable( here, plot ) );
 }
 
-TEST_CASE( "crop_growth_speed_does_not_boost_ter_transform", "[plant][world_option][magic][ter_transform]" )
+TEST_CASE( "crop_growth_speed_does_not_boost_ter_transform",
+           "[plant][world_option][magic][ter_transform]" )
 {
     map &here = get_map();
     avatar &u = get_avatar();
@@ -809,14 +826,14 @@ TEST_CASE( "crop_growth_speed_does_not_boost_ter_transform", "[plant][world_opti
     item seed( itype_test_seed_simple );
     seed.set_birthday( calendar::turn );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
 
-    REQUIRE( here.furn( plot ) == furn_f_test_plant_seedling );
+    REQUIRE( here.furn( plot ) == furn_test_f_plant_seedling );
 
-    REQUIRE( ter_test_plant_seedling_to_mature.is_valid() );
-    ter_test_plant_seedling_to_mature->transform( here, plot );
+    REQUIRE( ter_furn_transform_ter_test_plant_seedling_to_mature.is_valid() );
+    ter_furn_transform_ter_test_plant_seedling_to_mature->transform( here, plot );
 
-    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+    CHECK( here.furn( plot ) == furn_test_f_plant_mature );
 
     item *synced_seed = iexamine::get_seed_at( here, plot );
     REQUIRE( synced_seed != nullptr );
@@ -833,7 +850,7 @@ TEST_CASE( "crop_growth_speed_does_not_boost_ter_transform", "[plant][world_opti
             *synced_seed, growth_multiplier );
     CHECK( actual_effective == expected_effective );
     CHECK( synced_seed->birthday() == calendar::turn - mature_threshold /
-            ( growth_multiplier * 2.0f ) );
+           ( growth_multiplier * 2.0f ) );
 }
 
 TEST_CASE( "ter_transform_does_not_boost_stage_with_high_crop_speed",
@@ -863,23 +880,23 @@ TEST_CASE( "ter_transform_does_not_boost_stage_with_high_crop_speed",
     iexamine::set_plant_effective_growth_turns( seed, 0 );
     iexamine::set_plant_last_water_check( seed, calendar::turn );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
 
-    REQUIRE( here.furn( plot ) == furn_f_test_plant_seedling );
+    REQUIRE( here.furn( plot ) == furn_test_f_plant_seedling );
 
     // Transform to mature.  With CROP_GROWTH_SPEED = 2.0 the old code would have
     // written effective = mature_threshold * 2, causing grow_plant to overshoot to
     // harvest.  After the fix it must stay at mature even if grow_plant is called
     // immediately.
-    REQUIRE( ter_test_plant_seedling_to_mature.is_valid() );
-    ter_test_plant_seedling_to_mature->transform( here, plot );
+    REQUIRE( ter_furn_transform_ter_test_plant_seedling_to_mature.is_valid() );
+    ter_furn_transform_ter_test_plant_seedling_to_mature->transform( here, plot );
 
-    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+    CHECK( here.furn( plot ) == furn_test_f_plant_mature );
 
     here.grow_plant( plot );
 
     // Should still be mature, not boosted to harvest.
-    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+    CHECK( here.furn( plot ) == furn_test_f_plant_mature );
     CHECK( !iexamine::is_plant_harvestable( here, plot ) );
 }
 
@@ -917,20 +934,20 @@ TEST_CASE( "crop_growth_speed_does_not_boost_spell_fertilize", "[plant][world_op
     REQUIRE( seed != nullptr );
     const float growth_multiplier = here.furn( plot )->plant->growth_multiplier;
     const time_duration before_effective = iexamine::get_plant_effective_growth_time( *seed,
-            growth_multiplier );
+                                           growth_multiplier );
 
-    const spell sp( spell_test_fertilize_plant );
+    const spell sp( spell_test_spell_fertilize_plant );
     spell_effect::fertilize_plant( sp, u, plot );
 
     seed = iexamine::get_seed_at( here, plot );
     REQUIRE( seed != nullptr );
     const time_duration after_effective = iexamine::get_plant_effective_growth_time( *seed,
-            growth_multiplier );
+                                          growth_multiplier );
 
     // The spell should advance the plant by 25% of its total growth duration,
     // regardless of world speed.
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
-        seed->type->seed->get_growth_stages();
+                seed->type->seed->get_growth_stages();
     time_duration total_growth_time = 0_seconds;
     for( const auto &stage : growth_stages ) {
         total_growth_time += stage.second;
@@ -963,7 +980,7 @@ TEST_CASE( "old_save_crop_actualization_scales_with_speed", "[plant][world_optio
     item seed( itype_test_seed_simple );
     seed.set_birthday( calendar::turn - 5_seconds );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
 
     // grow_plant actualizes the old save crop into the new base-time format.
     here.grow_plant( plot );
@@ -1000,7 +1017,7 @@ TEST_CASE( "mapgen_crop_actualization_scales_with_speed", "[plant][world_option]
     item seed( itype_test_seed_simple );
     seed.set_birthday( calendar::start_of_cataclysm );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
 
     // Advance world time before actualization, as if the player is only now
     // entering the reality bubble.
@@ -1048,7 +1065,7 @@ TEST_CASE( "old_save_slow_speed_does_not_regress_stage", "[plant][world_option]"
     item seed( itype_test_seed_simple );
     seed.set_birthday( calendar::turn - 1_seconds );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_mature );
+    here.furn_set( plot, furn_test_f_plant_mature );
 
     here.grow_plant( plot );
 
@@ -1058,7 +1075,7 @@ TEST_CASE( "old_save_slow_speed_does_not_regress_stage", "[plant][world_option]"
 
     // The furniture stage is the authority: the plant must still read as mature.
     CHECK( iexamine::is_plant_mature( here, plot ) );
-    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+    CHECK( here.furn( plot ) == furn_test_f_plant_mature );
 
     const float growth_multiplier = here.furn( plot )->plant->growth_multiplier;
     const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( *synced_seed->type->seed );
@@ -1089,7 +1106,7 @@ TEST_CASE( "plant_helper_follows_effective_time", "[plant][stage]" )
     seed.set_birthday( calendar::turn );
     iexamine::set_plant_effective_growth_turns( seed, to_turns<int>( 10_seconds ) );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seed );
+    here.furn_set( plot, furn_test_f_plant_seed );
 
     CHECK( iexamine::is_plant_harvestable( here, plot ) );
     CHECK( iexamine::is_plant_mature( here, plot ) );
@@ -1114,19 +1131,16 @@ TEST_CASE( "can_fertilize_syncs_furniture_with_effective_time", "[plant][fertili
     // deterministic regardless of CROP_OVERGROWN_ENABLED.
     iexamine::set_plant_effective_growth_turns( seed, to_turns<int>( 150_minutes ) );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
 
     ret_val<void> result = multi_farm_activity_actor::can_fertilize( u, plot );
     CHECK( !result.success() );
     // grow_plant() should also have advanced the furniture to match effective time.
-    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+    CHECK( here.furn( plot ) == furn_test_f_plant_mature );
 }
 
 namespace
 {
-static const furn_str_id furn_f_test_planter_high_water_seed( "test_f_planter_high_water_seed" );
-static const furn_str_id furn_f_test_planter_high_water_mature( "test_f_planter_high_water_mature" );
-
 // Verify that seed->birthday() is consistent with seed_effective_growth_turns for the
 // current world options.  This catches drift between the authoritative variable and
 // the derived birthday cache.
@@ -1169,7 +1183,7 @@ TEST_CASE( "plant_birthday_stays_consistent_after_fertilize", "[plant][fertilize
     iexamine::set_plant_effective_growth_turns( seed, 0 );
     iexamine::set_plant_last_water_check( seed, calendar::turn );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
 
     item *planted_seed = iexamine::get_seed_at( here, plot );
@@ -1204,12 +1218,12 @@ TEST_CASE( "plant_birthday_stays_consistent_after_transform", "[plant][magic][te
     item seed( itype_test_seed_simple );
     seed.set_birthday( calendar::turn );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_plant_seedling );
+    here.furn_set( plot, furn_test_f_plant_seedling );
 
-    REQUIRE( ter_test_plant_seedling_to_mature.is_valid() );
-    ter_test_plant_seedling_to_mature->transform( here, plot );
+    REQUIRE( ter_furn_transform_ter_test_plant_seedling_to_mature.is_valid() );
+    ter_furn_transform_ter_test_plant_seedling_to_mature->transform( here, plot );
 
-    CHECK( here.furn( plot ) == furn_f_test_plant_mature );
+    CHECK( here.furn( plot ) == furn_test_f_plant_mature );
 
     item *synced_seed = iexamine::get_seed_at( here, plot );
     REQUIRE( synced_seed != nullptr );
@@ -1242,7 +1256,7 @@ TEST_CASE( "plant_old_save_irrigated_planter_migration", "[plant][world_option][
     seed.set_birthday( calendar::turn - 1_seconds );
     seed.erase_var( "seed_effective_growth_turns" );
     here.add_item( plot, seed );
-    here.furn_set( plot, furn_f_test_planter_high_water_seed );
+    here.furn_set( plot, furn_test_f_planter_high_water_seed );
 
     here.grow_plant( plot );
 
@@ -1263,7 +1277,7 @@ TEST_CASE( "plant_old_save_irrigated_planter_migration", "[plant][world_option][
     CHECK( actual_effective >= 0_seconds );
 
     // Now test the mature-stage clamp by jumping the furniture forward and migrating again.
-    here.furn_set( plot, furn_f_test_planter_high_water_mature );
+    here.furn_set( plot, furn_test_f_planter_high_water_mature );
     synced_seed->erase_var( "seed_effective_growth_turns" );
     here.grow_plant( plot );
 

@@ -3982,7 +3982,15 @@ bool item::use_charges( const itype_id &what, int &qty, std::list<item> &used,
             return VisitResponse::NEXT;
         }
 
-        if( e->is_tool() || e->is_gun() ) {
+        // Items that are both tools (or guns) and count_by_charges (e.g. stackable
+        // TOOL components such as cotton_patchwork, glass_shard, nylon) are
+        // consumed by quantity as material and must take the count_by_charges
+        // split branch below. Otherwise they fall into the TOOL branch, where
+        // ammo_consume mutates e->charges in place, so the copy in `used` records
+        // the remaining charges instead of the amount consumed, leaves behind
+        // 0-charge stacks, and triggers spurious retry over-consumption. Items
+        // that are not count_by_charges continue to take the TOOL/gun path unchanged.
+        if( ( e->is_tool() || e->is_gun() ) && !e->count_by_charges() ) {
             if( e->typeId() == what || ( in_tools && e->ammo_current() == what ) ) {
                 int n = 0;
                 if( e->uses_firing_requirements() ) {

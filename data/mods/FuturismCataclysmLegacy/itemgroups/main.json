@@ -1,0 +1,16 @@
+[
+  {
+    "type": "item_group",
+    "id": "nanofab_recipes",
+    "copy-from": "nanofab_recipes",
+    "extend": {
+      "items": [
+        [ "fcl_atomic_coffeemaker", 10 ],
+        [ "fcl_plasma_gun", 10 ],
+        [ "fcl_plasma_rifle", 10 ],
+        [ "fcl_bio_neurosoft_aeronautics", 10 ],
+        [ "fcl_bio_neurosoft_aircraft_mechanic", 10 ]
+      ]
+    }
+  }
+]

@@ -406,12 +406,12 @@ bool pocket_favorite_callback::key( const input_context &ctxt, const input_event
         if( selected >= 0 ) {
             size_t idx = selected;
             const std::vector<std::pair<itype_id, std::string>> *names = nullptr;
-            if( idx <= listed_names.size() ) {
+            if( idx < listed_names.size() ) {
                 names = &listed_names;
             } else {
                 idx -= listed_names.size();
             }
-            if( !names && idx <= nearby_names.size() ) {
+            if( !names && idx < nearby_names.size() ) {
                 names = &nearby_names;
             }
             if( names ) {
@@ -736,38 +736,37 @@ void item_contents::combine( const item_contents &read_input, const bool convert
     }
 
     for( const item_pocket &pocket : read_input.contents ) {
-        if( pocket_index <= contents.size() ) {
-            if( convert ) {
-                if( pocket.is_type( pocket_type::MIGRATION ) ||
-                    pocket.is_type( pocket_type::CORPSE ) ||
-                    pocket.is_type( pocket_type::MAGAZINE ) ||
-                    pocket.is_type( pocket_type::MAGAZINE_WELL ) ||
-                    pocket.is_type( pocket_type::E_FILE_STORAGE ) ) {
-                    ++pocket_index;
-                    for( const item *it : pocket.all_items_top() ) {
-                        insert_item( *it, pocket.get_pocket_data()->type, ignore_contents );
-                    }
-                    continue;
-                } else if( pocket.is_type( pocket_type::MOD ) ) {
-                    // skipping mod type pocket because using combine this way requires mods to come first
-                    // and to call update_mod_pockets
-                    ++pocket_index;
-                    continue;
+        if( convert ) {
+            if( pocket.is_type( pocket_type::MIGRATION ) ||
+                pocket.is_type( pocket_type::CORPSE ) ||
+                pocket.is_type( pocket_type::MAGAZINE ) ||
+                pocket.is_type( pocket_type::MAGAZINE_WELL ) ||
+                pocket.is_type( pocket_type::E_FILE_STORAGE ) ) {
+                ++pocket_index;
+                for( const item *it : pocket.all_items_top() ) {
+                    insert_item( *it, pocket.get_pocket_data()->type, ignore_contents );
                 }
-            } else {
-                if( pocket.saved_type() == pocket_type::MOD ) {
-                    // this is already handled in item_contents::read_mods
-                    ++pocket_index;
-                    continue;
-                } else if( pocket.saved_type() == pocket_type::MIGRATION ||
-                           pocket.saved_type() == pocket_type::CORPSE ) {
-                    for( const item *it : pocket.all_items_top() ) {
-                        insert_item( *it, pocket.saved_type(), ignore_contents );
-                    }
-                    ++pocket_index;
-                    continue;
-                }
+                continue;
+            } else if( pocket.is_type( pocket_type::MOD ) ) {
+                // skipping mod type pocket because using combine this way requires mods to come first
+                // and to call update_mod_pockets
+                ++pocket_index;
+                continue;
             }
+        } else if( pocket.saved_type() == pocket_type::MOD ) {
+            // this is already handled in item_contents::read_mods
+            ++pocket_index;
+            continue;
+        } else if( pocket.saved_type() == pocket_type::MIGRATION ||
+                   pocket.saved_type() == pocket_type::CORPSE ) {
+            for( const item *it : pocket.all_items_top() ) {
+                insert_item( *it, pocket.saved_type(), ignore_contents );
+            }
+            ++pocket_index;
+            continue;
+        }
+
+        if( pocket_index < contents.size() ) {
             auto current_pocket_iter = contents.begin();
             std::advance( current_pocket_iter, pocket_index );
 

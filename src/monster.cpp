@@ -34,7 +34,6 @@
 #include "event_bus.h"
 #include "explosion.h"
 #include "faction.h"
-#include "field.h"
 #include "field_type.h"
 #include "flat_set.h"
 #include "game.h"

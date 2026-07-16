@@ -92,7 +92,7 @@
 #include "vpart_position.h"
 #include "weather.h"
 #ifdef MP_ENABLED
-#include "mp_gamestate.h"
+    #include "mp_gamestate.h"
 #endif
 
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );

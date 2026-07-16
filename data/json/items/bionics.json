@@ -1559,7 +1559,7 @@
     "type": "ITEM",
     "subtypes": [ "BIONIC_ITEM" ],
     "name": { "str": "Betavoltaic Invidevice CBM" },
-    "description": "A small implantable betavoltaic device. Utilizing nickel-63 radioisotope decay technology and diamond semiconductors, this CBM achieves a stable conversion of nuclear energy into electrical power. Its power output is very low, at a mere 1W, but it boasts a stable operational lifespan of up to 50 years, requiring neither charging nor maintenance. Under the current state of the world, its decommissioning age is longer than the lifespan of most ordinary people.",
+    "description": "A small implantable betavoltaic device.  Utilizing nickel-63 radioisotope decay technology and diamond semiconductors, this CBM achieves a stable conversion of nuclear energy into electrical power.  Its power output is very low, at a mere 1W, but it boasts a stable operational lifespan of up to 50 years, requiring neither charging nor maintenance.  Under the current state of the world, its decommissioning age is longer than the lifespan of most ordinary people.",
     "weight": "175 g",
     "price": "1 kUSD 200 USD",
     "price_postapoc": "15 USD",

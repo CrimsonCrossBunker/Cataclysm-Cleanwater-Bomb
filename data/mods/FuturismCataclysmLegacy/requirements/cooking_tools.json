@@ -1,0 +1,14 @@
+[
+  {
+    "id": "surface_heat",
+    "type": "requirement",
+    "//copy-from": "surface_heat",
+    "extend": { "tools": [ [ [ "fcl_atomic_coffeemaker", -1 ] ] ] }
+  },
+  {
+    "id": "water_boiling_heat",
+    "type": "requirement",
+    "//copy-from": "water_boiling_heat",
+    "extend": { "tools": [ [ [ "fcl_atomic_coffeemaker", -1 ] ] ] }
+  }
+]

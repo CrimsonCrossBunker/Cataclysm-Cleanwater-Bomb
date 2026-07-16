@@ -1,22 +1,17 @@
-#include "player_activity.h"
-#include "animation.h"
-
-
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <list>
 #include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
 
+#include "animation.h"
 #include "avatar.h"
 #include "cached_options.h"
 #include "character.h"
@@ -24,23 +19,22 @@
 #include "creature.h"
 #include "creature_tracker.h"
 #include "cursesdef.h"
-#include "debug.h"
 #include "explosion.h"
-#include "explosion_light.h"
+#include "explosion_light.h" // IWYU pragma: keep
 #include "game.h"
 #include "game_constants.h"
 #include "input.h"
-#include "line.h"
 #include "map.h"
 #include "memory_fast.h"
 #include "monster.h"
 #include "mtype.h"
 #include "options.h"
 #include "output.h"
+#include "player_activity.h"
 #include "point.h"
 #include "popup.h"
-#include "screen_shake.h"
-#include "shockwave.h"
+#include "screen_shake.h" // IWYU pragma: keep
+#include "shockwave.h" // IWYU pragma: keep
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -776,7 +770,7 @@ int get_bullet_rotation( direction dir )
 // need to have a version where there is no player defined, possibly. That way shrapnel works as intended
 void game::draw_bullet( const tripoint_bub_ms &t, const int /*i*/,
                         const std::vector<tripoint_bub_ms> &/*trajectory*/, const char bullet,
-                        const std::string &custom_sprite )
+                        std::string_view custom_sprite )
 {
     if( test_mode ) {
         // avoid segfault from null tilecontext in tests
@@ -798,8 +792,8 @@ void game::draw_bullet( const tripoint_bub_ms &t, const int /*i*/,
 
     // An ammo/throw-specific sprite (looked up in projectile_attack) takes
     // precedence over the generic per-symbol sprite, mirroring CBN.
-    const std::string &bullet_type =
-        !custom_sprite.empty() ? custom_sprite
+    const std::string bullet_type =
+        !custom_sprite.empty() ? std::string( custom_sprite )
         : bullet == '*' ? bullet_normal
         : bullet == '#' ? bullet_flame
         : bullet == '`' ? bullet_shrapnel
@@ -817,7 +811,7 @@ void game::draw_bullet( const tripoint_bub_ms &t, const int /*i*/,
 #else
 void game::draw_bullet( const tripoint_bub_ms &t, const int i,
                         const std::vector<tripoint_bub_ms> &trajectory,
-                        const char bullet, const std::string &/*custom_sprite*/ )
+                        const char bullet, std::string_view /*custom_sprite*/ )
 {
     draw_bullet_curses( m, t, bullet, &trajectory[i] );
 }
@@ -826,7 +820,7 @@ void game::draw_bullet( const tripoint_bub_ms &t, const int i,
 #if defined(TILES)
 // Draw the entire trajectory at once as a line of rotated tracer sprites (CBN-style gun line).
 void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, const char bullet,
-                             const std::string &custom_sprite )
+                             std::string_view custom_sprite )
 {
     if( test_mode ) {
         // avoid segfault from null tilecontext in tests
@@ -857,7 +851,8 @@ void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, con
     // directional beam streak (animation_bullet_*_0deg), rotated per-tile to point
     // along the trajectory. Rotating a directional streak (not the round dot) is
     // what makes the flight path read as a continuous gun line.
-    const std::string sprite = !custom_sprite.empty() ? custom_sprite : tracer_sprite_id( bullet );
+    const std::string sprite = !custom_sprite.empty() ? std::string( custom_sprite ) :
+                               tracer_sprite_id( bullet );
 
     std::vector<tripoint_bub_ms> points;
     std::vector<std::string> sprites;
@@ -889,7 +884,7 @@ void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, con
 }
 
 void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &trajectory, const char bullet,
-                              const bool as_line, const std::string &custom_sprite )
+                              const bool as_line, std::string_view custom_sprite )
 {
     if( test_mode ) {
         // avoid segfault from null tilecontext in tests
@@ -901,7 +896,8 @@ void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &trajectory, co
 
     // Collect the visible flight path the same way draw_bullet_line does: a
     // directional streak sprite rotated per-tile so the path reads as a gun line.
-    const std::string sprite = !custom_sprite.empty() ? custom_sprite : tracer_sprite_id( bullet );
+    const std::string sprite = !custom_sprite.empty() ? std::string( custom_sprite ) :
+                               tracer_sprite_id( bullet );
     std::vector<tripoint_bub_ms> points;
     std::vector<std::string> sprites;
     std::vector<int> rotations;
@@ -939,7 +935,7 @@ void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &trajectory, co
 }
 #else
 void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, const char /*bullet*/,
-                             const std::string &/*custom_sprite*/ )
+                             std::string_view /*custom_sprite*/ )
 {
     if( trajectory.size() < 2 ) {
         return;
@@ -959,7 +955,7 @@ void game::draw_bullet_line( const std::vector<tripoint_bub_ms> &trajectory, con
 }
 void game::draw_bullet_async( const std::vector<tripoint_bub_ms> &/*trajectory*/,
                               const char /*bullet*/,
-                              const bool /*as_line*/, const std::string &/*custom_sprite*/ )
+                              const bool /*as_line*/, std::string_view /*custom_sprite*/ )
 {
     // Curses has no asynchronous projectile path; callers fall back to the
     // synchronous draw_bullet / draw_bullet_line in this build.

@@ -1,0 +1,27 @@
+[
+  {
+    "type": "item_group",
+    "id": "pawn",
+    "copy-from": "pawn",
+    "extend": { "items": [ [ "fcl_atomic_coffeemaker", 1 ], [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 1 ] ] }
+  },
+  {
+    "id": "elecsto_homapl",
+    "type": "item_group",
+    "//": "For s_electronics shops",
+    "copy-from": "elecsto_homapl",
+    "extend": { "items": [ [ "fcl_atomic_coffeemaker", 2 ] ] }
+  },
+  {
+    "id": "arcade_prizes",
+    "type": "item_group",
+    "copy-from": "arcade_prizes",
+    "extend": { "items": [ [ "fcl_atomic_light", 1 ] ] }
+  },
+  {
+    "id": "elecsto_lights",
+    "type": "item_group",
+    "copy-from": "elecsto_lights",
+    "extend": { "items": [ [ "fcl_atomic_light", 1 ] ] }
+  }
+]

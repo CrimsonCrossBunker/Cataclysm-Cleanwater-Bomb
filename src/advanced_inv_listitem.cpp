@@ -15,7 +15,7 @@ advanced_inv_listitem::advanced_inv_listitem( const item_location &an_item, int 
     , contents_count( an_item->aggregated_contents().count )
     , autopickup( get_auto_pickup().has_rule( & * an_item ) )
     , stacks( count )
-    // stacks is always 1 for count_by_charges items, so count * count() == count()
+      // stacks is always 1 for count_by_charges items, so count * count() == count()
     , amount( an_item->is_stackable() ? an_item->count() : count )
     , volume( an_item->volume() * stacks )
     , weight( an_item->weight() * stacks )
@@ -37,20 +37,22 @@ advanced_inv_listitem::advanced_inv_listitem( const std::vector<item_location> &
     contents_count( list.front()->aggregated_contents().count ),
     autopickup( get_auto_pickup().has_rule( & * list.front() ) ),
     stacks( list.size() ),
-    amount( [&list]() {
-        int n = 0;
-        for( const item_location &loc : list ) {
-            // Only "stackable" resources fold their charges into the amount
-            // column. Ammo / liquids already show their charge count in the name
-            // (see item::display_name), so counting them here would double up.
-            n += loc->is_stackable() ? loc->count() : 1;
-        }
-        return n;
-    }() ),
-    volume( list.front()->volume() * stacks ),
-    weight( list.front()->weight() * stacks ),
-    cat( &list.front()->get_category_of_contents() ),
-    from_vehicle( from_vehicle )
+    amount( [ & list]()
+{
+    int n = 0;
+    for( const item_location &loc : list ) {
+        // Only "stackable" resources fold their charges into the amount
+        // column. Ammo / liquids already show their charge count in the name
+        // (see item::display_name), so counting them here would double up.
+        n += loc->is_stackable() ? loc->count() : 1;
+    }
+    return n;
+}
+() ),
+volume( list.front()->volume() * stacks ),
+weight( list.front()->weight() * stacks ),
+cat( &list.front()->get_category_of_contents() ),
+from_vehicle( from_vehicle )
 {
     cata_assert( stacks >= 1 );
 }

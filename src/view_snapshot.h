@@ -207,9 +207,9 @@ struct tile_render_info {
             sees_items = sees;
         }
         void set_vpart_content( const vpart_id &id, const int subtile,
-                                 const int rotation, const std::string &variant,
-                                 const std::string &carried_furn, const bool has_cargo,
-                                 const std::optional<RGBColor> &tint ) {
+                                const int rotation, const std::string &variant,
+                                const std::string &carried_furn, const bool has_cargo,
+                                const std::optional<RGBColor> &tint ) {
             vpart_content = id;
             vpart_subtile = subtile;
             vpart_rotation = rotation;
@@ -286,10 +286,18 @@ class draw_points_cache_t
                     }
                 }
                 // Range-based for support for per-z-level row iteration.
-                auto begin()       { return rows.begin(); }
-                auto end()         { return rows.end(); }
-                auto begin() const { return rows.begin(); }
-                auto end()   const { return rows.end(); }
+                auto begin()       {
+                    return rows.begin();
+                }
+                auto end()         {
+                    return rows.end();
+                }
+                auto begin() const {
+                    return rows.begin();
+                }
+                auto end()   const {
+                    return rows.end();
+                }
             private:
                 int row_base = 0;
                 bool initialized = false;

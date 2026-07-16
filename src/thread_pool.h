@@ -1,7 +1,7 @@
 #pragma once
 
+#include <stddef.h>
 #include <algorithm>
-#include <atomic>
 #include <condition_variable>
 #include <deque>
 #include <exception>
@@ -10,7 +10,8 @@
 #include <memory>
 
 /** Simple C++17-compatible latch (replaces std::latch from C++20). */
-class simple_latch {
+class simple_latch
+{
     public:
         explicit simple_latch( int count ) : count_( count ) {}
 
@@ -86,7 +87,7 @@ class cata_thread_pool
         }
 
         size_t queue_size() const {
-            std::lock_guard<std::mutex> lk( mutex_ );
+            std::scoped_lock lk( mutex_ );
             return queue_.size();
         }
 
@@ -195,7 +196,7 @@ void parallel_for( int begin, int end, F &&f )
                     f( i );
                 }
             } catch( ... ) {
-                std::lock_guard<std::mutex> lock( ex_mutex );
+                std::scoped_lock lock( ex_mutex );
                 if( !first_ex ) {
                     first_ex = std::current_exception();
                 }
@@ -252,7 +253,7 @@ void parallel_for_chunked( int begin, int end, int chunk_size, F &&f )
                     f( i );
                 }
             } catch( ... ) {
-                std::lock_guard<std::mutex> lock( ex_mutex );
+                std::scoped_lock lock( ex_mutex );
                 if( !first_ex ) {
                     first_ex = std::current_exception();
                 }

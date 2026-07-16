@@ -22,32 +22,32 @@
 
 #if defined( TRACY_ENABLE )
 
-#  include "tracy/Tracy.hpp"
-#  include "tracy/TracyC.h"
+    #include "tracy/Tracy.hpp"
+    #include "tracy/TracyC.h"
 
-// Tracy already defines ZoneScoped, ZoneScopedN, ZoneText, FrameMark, etc.
-// Provide a couple of convenience aliases so call sites read naturally.
-#  define CATA_FRAME_MARK FrameMark
-#  define CATA_ZONE_TEXT( txt ) ZoneText( txt, static_cast<int>( sizeof( txt ) - 1 ) )
+    // Tracy already defines ZoneScoped, ZoneScopedN, ZoneText, FrameMark, etc.
+    // Provide a couple of convenience aliases so call sites read naturally.
+    #define CATA_FRAME_MARK FrameMark
+    #define CATA_ZONE_TEXT( txt ) ZoneText( txt, static_cast<int>( sizeof( txt ) - 1 ) )
 
 #else // !TRACY_ENABLE
 
-// No-op stubs.  These must be empty (not do{}while(0)) because ZoneScoped is
-// typically placed as a bare statement and may also be used inside the
-// prologue of an expression-bearing lambda.
-#  define ZoneScoped
-#  define ZoneScopedN( name )
-#  define ZoneText( txt, size )
-#  define ZoneTextV( txt, size )
-#  define FrameMark
-#  define FrameMarkNamed( name )
-#  define ZoneName( txt, size )
-#  define ZoneTextS( txt, size, depth )
-#  define TracyPlot( name, val )
-#  define TracyPlotConfig( name, type )
+    // No-op stubs.  These must be empty (not do{}while(0)) because ZoneScoped is
+    // typically placed as a bare statement and may also be used inside the
+    // prologue of an expression-bearing lambda.
+    #define ZoneScoped
+    #define ZoneScopedN( name )
+    #define ZoneText( txt, size )
+    #define ZoneTextV( txt, size )
+    #define FrameMark
+    #define FrameMarkNamed( name )
+    #define ZoneName( txt, size )
+    #define ZoneTextS( txt, size, depth )
+    #define TracyPlot( name, val )
+    #define TracyPlotConfig( name, type )
 
-#  define CATA_FRAME_MARK
-#  define CATA_ZONE_TEXT( txt )
+    #define CATA_FRAME_MARK
+    #define CATA_ZONE_TEXT( txt )
 
 #endif // TRACY_ENABLE
 

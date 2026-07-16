@@ -4,11 +4,9 @@
 
 #include "avatar.h"
 #include "calendar.h"
-#include "character.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
-#include "flag.h"
 #include "game.h"
 #include "messages.h"
 #include "monster.h"
@@ -27,9 +25,9 @@ static const efftype_id effect_pet( "pet" );
 static const itype_id itype_foodperson_mask( "foodperson_mask" );
 static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
 
-static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
-
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
+
+static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
 
 std::vector<std::string> talker_avatar_const::get_topics( bool ) const
 {

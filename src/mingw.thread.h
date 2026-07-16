@@ -37,7 +37,7 @@ class thread
                 }
                 friend class thread;
             public:
-                id( DWORD aId = 0 ): mId( aId ) {}
+                explicit id( DWORD aId = 0 ): mId( aId ) {}
                 bool operator==( const id &other ) const {
                     return mId == other.mId;
                 }
@@ -77,7 +77,7 @@ class thread
             return mHandle != _STD_THREAD_INVALID_HANDLE;
         }
         void join() {
-            if( get_id() == GetCurrentThreadId() ) {
+            if( get_id() == id( GetCurrentThreadId() ) ) {
                 throw system_error( EDEADLK, generic_category() );
             }
             if( mHandle == _STD_THREAD_INVALID_HANDLE ) {
@@ -140,8 +140,8 @@ void sleep_until( const std::chrono::time_point<Clock, Duration> &sleep_time )
 {
     sleep_for( sleep_time - Clock::now() );
 }
-}
+} // namespace this_thread
 
-}
-#endif // _GLIBCXX_THREAD
+} // namespace std
+#endif // _GLIBCXX_HAS_GTHREADS
 #endif // WIN32STDTHREAD_H

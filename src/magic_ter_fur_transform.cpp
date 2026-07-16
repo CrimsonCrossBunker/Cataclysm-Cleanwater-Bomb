@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -25,6 +27,7 @@
 #include "translation.h"
 #include "trap.h"
 #include "type_id.h"
+#include "value_ptr.h"
 
 template<typename T> struct weighted_int_list;
 
@@ -36,7 +39,7 @@ generic_factory<ter_furn_transform> ter_furn_transform_factory( "ter_furn_transf
 // cast), the seed's effective growth time must be brought in line with the new
 // furniture stage.  Otherwise map::grow_plant sees a mature-looking plant whose
 // internal timer still claims it is a seedling and never advances it further.
-static void sync_plant_seed_after_furniture_transform( map &m, const tripoint_bub_ms &location )
+void sync_plant_seed_after_furniture_transform( map &m, const tripoint_bub_ms &location )
 {
     const furn_t &new_furn = m.furn( location ).obj();
     if( !new_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
@@ -50,7 +53,7 @@ static void sync_plant_seed_after_furniture_transform( map &m, const tripoint_bu
     }
 
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
-        seed->type->seed->get_growth_stages();
+                seed->type->seed->get_growth_stages();
     const int new_stage_idx = iexamine::get_plant_current_stage_idx( m, location, growth_stages );
     if( new_stage_idx < 0 ) {
         return;
@@ -64,7 +67,7 @@ static void sync_plant_seed_after_furniture_transform( map &m, const tripoint_bu
     const time_duration threshold = iexamine::get_plant_stage_threshold( *seed->type->seed,
                                     new_stage_idx );
     const time_duration current_effective = iexamine::get_plant_effective_growth_time( *seed,
-            growth_multiplier );
+                                            growth_multiplier );
 
     // Effective growth time is stored in base growth units.  CROP_GROWTH_SPEED only
     // affects how fast those units accumulate during natural growth, so the

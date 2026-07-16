@@ -47,7 +47,9 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
+#include "hsv_color.h"
 #include "item.h"
+#include "item_components.h"
 #include "item_group.h"
 #include "itype.h"
 #include "json.h"
@@ -8790,7 +8792,8 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
     pending.reserve( 64 );
 
     const auto gather_pending = [&]( item & it, auto & gather ) -> void {
-        if( is_auto_cookable( it ) ) {
+        if( is_auto_cookable( it ) )
+        {
             const islot_comestible &comest = *it.get_comestible();
             const int target_energy_kj = units::to_kilojoule<int>( comest.cook_cost_energy );
             const int energy_done = std::stoi( it.get_var( "cook_energy_done", "0" ) );
@@ -8799,7 +8802,8 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
                 pending.push_back( { &it, target_energy_kj, energy_done } );
             }
         }
-        for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
+        for( item *content : it.all_items_top( pocket_type::CONTAINER ) )
+        {
             gather( *content, gather );
         }
     };
@@ -8871,42 +8875,42 @@ void vehicle::update_time( map &here, const time_point &update_to )
         for( int idx : funnels ) {
             const vehicle_part &pt = parts[idx];
 
-        // we need an unbroken funnel mounted on the exterior of the vehicle
-        if( pt.is_unavailable() || !is_sm_tile_outside( abs_part_pos( pt ) ) ) {
-            continue;
-        }
-
-        // we need an empty tank (or one already containing water) below the funnel
-        auto tank = std::find_if( parts.begin(), parts.end(), [&]( const vehicle_part & e ) {
-            return pt.mount == e.mount && e.is_tank() &&
-                   ( e.can_reload( water ) || e.can_reload( water_clean ) );
-        } );
-
-        if( tank == parts.end() ) {
-            continue;
-        }
-
-        const double area_in_mm2 = std::pow( pt.info().bonus, 2 ) * M_PI;
-        const int qty = roll_remainder( funnel_charges_per_turn( area_in_mm2, accum_weather.rain_amount ) );
-        int c_qty = qty + ( tank->can_reload( water_clean ) ?  tank->ammo_remaining( ) : 0 );
-
-        if( qty > 0 ) {
-            const std::optional<vpart_reference> vp_purifier = vpart_position( *this, idx )
-                    .part_with_tool( here, itype_water_purifier );
-            const int64_t per_use = itype_water_purifier->charges_to_use();
-            const bool can_purify_all = vp_purifier &&
-                                        fuel_left( here, itype_battery ) >=
-                                        static_cast<int64_t>( c_qty ) * per_use;
-
-            if( can_purify_all ) {
-                run_legacy_charge_tool_uses( here, itype_water_purifier, c_qty );
-                tank->ammo_set( itype_water_clean, c_qty );
-            } else {
-                tank->ammo_set( itype_water, tank->ammo_remaining( ) + qty );
+            // we need an unbroken funnel mounted on the exterior of the vehicle
+            if( pt.is_unavailable() || !is_sm_tile_outside( abs_part_pos( pt ) ) ) {
+                continue;
             }
-            invalidate_mass();
+
+            // we need an empty tank (or one already containing water) below the funnel
+            auto tank = std::find_if( parts.begin(), parts.end(), [&]( const vehicle_part & e ) {
+                return pt.mount == e.mount && e.is_tank() &&
+                       ( e.can_reload( water ) || e.can_reload( water_clean ) );
+            } );
+
+            if( tank == parts.end() ) {
+                continue;
+            }
+
+            const double area_in_mm2 = std::pow( pt.info().bonus, 2 ) * M_PI;
+            const int qty = roll_remainder( funnel_charges_per_turn( area_in_mm2, accum_weather.rain_amount ) );
+            int c_qty = qty + ( tank->can_reload( water_clean ) ?  tank->ammo_remaining( ) : 0 );
+
+            if( qty > 0 ) {
+                const std::optional<vpart_reference> vp_purifier = vpart_position( *this, idx )
+                        .part_with_tool( here, itype_water_purifier );
+                const int64_t per_use = itype_water_purifier->charges_to_use();
+                const bool can_purify_all = vp_purifier &&
+                                            fuel_left( here, itype_battery ) >=
+                                            static_cast<int64_t>( c_qty ) * per_use;
+
+                if( can_purify_all ) {
+                    run_legacy_charge_tool_uses( here, itype_water_purifier, c_qty );
+                    tank->ammo_set( itype_water_clean, c_qty );
+                } else {
+                    tank->ammo_set( itype_water, tank->ammo_remaining( ) + qty );
+                }
+                invalidate_mass();
+            }
         }
-    }
         if( !solar_panels.empty() ) {
             units::power epower = 0_W;
             for( const int p : solar_panels ) {
@@ -9327,8 +9331,10 @@ item vehicle::part_to_item( map &here, const vehicle_part &vp ) const
 
     // quantize damage and degradation to the middle of each damage_level so that items will stack nicely
     tmp.set_damage( ( tmp.damage_level() - 0.5 ) * itype::damage_scale );
-    tmp.set_degradation( ( static_cast<double>( tmp.degradation() ) / itype::damage_scale - 0.5 ) *
-                         itype::damage_scale );
+    if( get_option<bool>( "VEHICLE_DEGRADATION_WHEN_DAMAGE" ) ) {
+        tmp.set_degradation( ( static_cast<double>( tmp.degradation() ) / itype::damage_scale - 0.5 ) *
+                             itype::damage_scale );
+    }
     return tmp;
 }
 

@@ -1,7 +1,8 @@
 #include "do_turn.h"
-#include "mp_queue.h"
-#include "mp_gamestate.h"
+
 #include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#include "translation.h"
 
 #if defined(EMSCRIPTEN)
     #include <emscripten.h>
@@ -9,13 +10,13 @@
 
 #include <algorithm>
 #include <chrono>
-#include <thread>
 #include <map>
 #include <memory>
 #include <optional>
 #include <ostream>
 #include <ratio>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -80,8 +81,8 @@
 #include "timed_event.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -328,7 +329,7 @@ void monmove()
             continue;
         }
         ++mon_count;
-        const auto mon_t0 = std::chrono::steady_clock::now();
+        const std::chrono::steady_clock::time_point mon_t0 = std::chrono::steady_clock::now();
         const tripoint_bub_ms critter_pos = critter.pos_bub( m );
 
         // Critters in impassable tiles get pushed away, unless it's not impassable for them
@@ -403,8 +404,8 @@ void monmove()
 
         if( cata_mp::is_hosting() ) {
             const int mon_ms = static_cast<int>(
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - mon_t0 ).count() );
+                                   std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now() - mon_t0 ).count() );
             if( mon_ms >= 10 ) {
                 mon_slow_log += " " + critter.type->id.str() + "=" + std::to_string( mon_ms ) + "ms";
             }
@@ -430,7 +431,7 @@ void monmove()
             cata_mp::mp_tick_proxy_activity( guy );
             continue;
         }
-        const auto npc_t0 = std::chrono::steady_clock::now();
+        const std::chrono::steady_clock::time_point npc_t0 = std::chrono::steady_clock::now();
         int turns = 0;
         int real_count = 0;
         const int count_limit = std::max( 10, guy.get_moves() / 64 );
@@ -476,8 +477,8 @@ void monmove()
 
         if( cata_mp::is_hosting() ) {
             const int npc_ms = static_cast<int>(
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - npc_t0 ).count() );
+                                   std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now() - npc_t0 ).count() );
             if( npc_ms >= 10 ) {
                 cata_mp::mp_log( "[cdda-mp] monmove slow NPC: " + guy.get_name() +
                                  " activity=" + guy.activity.id().str() +
@@ -584,15 +585,18 @@ void game::handle_progress_ui()
         // FF mode: bypass the calendar gate entirely and use a wall-clock cap
         // (~100ms = ~10 Hz).  This lets thousands of game turns race through
         // per second while the progress popup still updates smoothly.
-        static auto s_last_ff_redraw = std::chrono::steady_clock::time_point {};
+        static std::chrono::steady_clock::time_point s_last_ff_redraw =
+            std::chrono::steady_clock::time_point {};
         const bool ff_active = cata_mp::should_fast_forward();
         const bool ff_redraw_due = [&] {
-            if( !ff_active ) {
+            if( !ff_active )
+            {
                 return false;
             }
-            const auto now = std::chrono::steady_clock::now();
+            const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
             if( first_redraw_since_waiting_started ||
-                std::chrono::duration_cast<std::chrono::milliseconds>( now - s_last_ff_redraw ).count() >= 100 ) {
+                std::chrono::duration_cast<std::chrono::milliseconds>( now - s_last_ff_redraw ).count() >= 100 )
+            {
                 s_last_ff_redraw = now;
                 return true;
             }
@@ -924,7 +928,7 @@ bool game::do_avatar_action_loop()
             const bool moves_consumed = pre_act_moves > 0 && u.get_moves() <= 0;
             if( cata_mp::is_client_mode() && activity_just_ended ) {
                 const std::string ended_id = pre_act_had_activity ? u.activity ?
-                    activity_id::NULL_ID().str() : "" : post_loop_act;
+                                             activity_id::NULL_ID().str() : "" : post_loop_act;
                 cata_mp::set_client_turn_activity( std::string() );
                 if( !ended_id.empty() ) {
                     cata_mp::client_send_activity_end( ended_id );
@@ -1054,8 +1058,11 @@ void game::simulate_turn_suffix()
     // / crafting) — the same condition that triggers handle_progress_ui's
     // wait popup.  During those the player cannot see the world, so per-turn
     // memorisation is pure waste and the source of the stutter.
+    // Autodrive uses the progress UI too, but unlike reading/crafting it moves
+    // the avatar through a visible world and must keep recording map memory.
     const bool in_long_wait = u.has_effect( effect_sleep ) ||
-                              static_cast<bool>( u.activity.get_progress_message( u ) );
+                              ( u.activity.id() != ACT_AUTODRIVE &&
+                                static_cast<bool>( u.activity.get_progress_message( u ) ) );
     if( !in_long_wait ) {
         m.update_map_memory( u );
     }

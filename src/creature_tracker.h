@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CREATURE_TRACKER_H
 #define CATA_SRC_CREATURE_TRACKER_H
 
+#include <array>
 #include <bitset>
 #include <cstddef>
 #include <list>

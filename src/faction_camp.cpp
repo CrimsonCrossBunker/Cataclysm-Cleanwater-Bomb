@@ -3546,68 +3546,68 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                 break;
             case farm_ops::harvest:
                 farm_map.grow_plant( pos );
-            {
-                map *farm_map_ptr = farm_map.cast_to_map();
-                if( iexamine::is_plant_harvestable( *farm_map_ptr,
-                        farm_map_ptr->get_bub( farm_map.get_abs( pos ) ) ) ) {
-                    // Can't use item_stack::only_item() since there might be fertilizer
-                    map_stack items = farm_map.i_at( pos );
-                    const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
-                        return it.is_seed();
-                    } );
-                    if( seed != items.end() && farm_valid_seed( *seed ) ) {
-                        plots_cnt += 1;
-                        if( comp ) {
-                            int skillLevel = round( comp->get_skill_level( skill_survival ) );
-                            ///\EFFECT_SURVIVAL increases number of plants harvested from a seed
-                            int plant_count = rng( skillLevel / 2, skillLevel );
-                            plant_count *= farm_map.furn( pos )->plant->harvest_multiplier *
-                                           ::get_option<float>( "CROP_HARVEST_MULTIPLIER" );
-                            plant_count = std::max( plant_count, 1 );
-                            int seed_cnt = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
+                {
+                    map *farm_map_ptr = farm_map.cast_to_map();
+                    if( iexamine::is_plant_harvestable( *farm_map_ptr,
+                                                        farm_map_ptr->get_bub( farm_map.get_abs( pos ) ) ) ) {
+                        // Can't use item_stack::only_item() since there might be fertilizer
+                        map_stack items = farm_map.i_at( pos );
+                        const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
+                            return it.is_seed();
+                        } );
+                        if( seed != items.end() && farm_valid_seed( *seed ) ) {
+                            plots_cnt += 1;
+                            if( comp ) {
+                                int skillLevel = round( comp->get_skill_level( skill_survival ) );
+                                ///\EFFECT_SURVIVAL increases number of plants harvested from a seed
+                                int plant_count = rng( skillLevel / 2, skillLevel );
+                                plant_count *= farm_map.furn( pos )->plant->harvest_multiplier *
+                                               ::get_option<float>( "CROP_HARVEST_MULTIPLIER" );
+                                plant_count = std::max( plant_count, 1 );
+                                int seed_cnt = std::max( 1, rng( plant_count / 4, plant_count / 2 ) );
 
-                            // Secure the seed type before EOCs or i_clear destroy the item.
-                            const itype &seed_type = *seed->type;
+                                // Secure the seed type before EOCs or i_clear destroy the item.
+                                const itype &seed_type = *seed->type;
 
-                            const tripoint_bub_ms bub_pos = farm_map_ptr->get_bub( farm_map.get_abs( pos ) );
+                                const tripoint_bub_ms bub_pos = farm_map_ptr->get_bub( farm_map.get_abs( pos ) );
 
-                            // Send global event before per-seed/per-furniture hooks.
-                            const furn_str_id furn_id = farm_map.furn( pos ).id();
-                            get_event_bus().send<event_type::character_harvests_plant>(
-                                comp->getID(), farm_map.get_abs( pos ).raw(), seed_type.get_id(), furn_id,
-                                plant_count, seed_cnt );
+                                // Send global event before per-seed/per-furniture hooks.
+                                const furn_str_id furn_id = farm_map.furn( pos ).id();
+                                get_event_bus().send<event_type::character_harvests_plant>(
+                                    comp->getID(), farm_map.get_abs( pos ).raw(), seed_type.get_id(), furn_id,
+                                    plant_count, seed_cnt );
 
-                            const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective(
-                                                      *farm_map_ptr, bub_pos );
-                            const std::string stage = stage_idx >= 0 ?
-                                                      seed_type.seed->get_growth_stages()[stage_idx].first.str() : "";
-                            const std::map<std::string, double> num_ctx = {
-                                { "plant_count", static_cast<double>( plant_count ) },
-                                { "seed_count", static_cast<double>( seed_cnt ) },
-                                { "actor_is_npc", 1.0 }
-                            };
-                            Character &actor = *comp;
-                            const furn_t &current_furn = farm_map.furn( pos ).obj();
-                            if( current_furn.plant ) {
-                                iexamine::run_plant_eocs( current_furn.plant->eoc_on_harvest, actor,
-                                                           *farm_map_ptr, bub_pos, *seed, stage, stage, {}, num_ctx );
+                                const int stage_idx = iexamine::get_plant_current_stage_idx_from_effective(
+                                                          *farm_map_ptr, bub_pos );
+                                const std::string stage = stage_idx >= 0 ?
+                                                          seed_type.seed->get_growth_stages()[stage_idx].first.str() : "";
+                                const std::map<std::string, double> num_ctx = {
+                                    { "plant_count", static_cast<double>( plant_count ) },
+                                    { "seed_count", static_cast<double>( seed_cnt ) },
+                                    { "actor_is_npc", 1.0 }
+                                };
+                                Character &actor = *comp;
+                                const furn_t &current_furn = farm_map.furn( pos ).obj();
+                                if( current_furn.plant ) {
+                                    iexamine::run_plant_eocs( current_furn.plant->eoc_on_harvest, actor,
+                                                              *farm_map_ptr, bub_pos, *seed, stage, stage, {}, num_ctx );
+                                }
+                                iexamine::run_plant_eocs( seed_type.seed->eoc_on_harvest, actor, *farm_map_ptr,
+                                                          bub_pos, *seed, stage, stage, {}, num_ctx );
+
+                                for( item &i : iexamine::get_harvest_items( seed_type, plant_count,
+                                        seed_cnt, true ) ) {
+                                    here.add_item_or_charges( player_character.pos_bub(), i );
+                                }
+                                farm_map.i_clear( pos );
+                                farm_map.furn_set( pos, furn_str_id::NULL_ID() );
+                                farm_map.ter_set( pos, ter_t_dirt );
+                            } else {
+                                plant_names.insert( item::nname( itype_id( seed->type->seed->fruit_id ) ) );
                             }
-                            iexamine::run_plant_eocs( seed_type.seed->eoc_on_harvest, actor, *farm_map_ptr,
-                                                       bub_pos, *seed, stage, stage, {}, num_ctx );
-
-                            for( item &i : iexamine::get_harvest_items( seed_type, plant_count,
-                                    seed_cnt, true ) ) {
-                                here.add_item_or_charges( player_character.pos_bub(), i );
-                            }
-                            farm_map.i_clear( pos );
-                            farm_map.furn_set( pos, furn_str_id::NULL_ID() );
-                            farm_map.ter_set( pos, ter_t_dirt );
-                        } else {
-                            plant_names.insert( item::nname( itype_id( seed->type->seed->fruit_id ) ) );
                         }
                     }
                 }
-            }
                 break;
             default:
                 // let the callers handle no op argument
