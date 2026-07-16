@@ -934,7 +934,7 @@ TEST_CASE( "crop_growth_speed_does_not_boost_spell_fertilize", "[plant][world_op
     REQUIRE( seed != nullptr );
     const float growth_multiplier = here.furn( plot )->plant->growth_multiplier;
     const time_duration before_effective = iexamine::get_plant_effective_growth_time( *seed,
-        growth_multiplier );
+                                           growth_multiplier );
 
     const spell sp( spell_test_spell_fertilize_plant );
     spell_effect::fertilize_plant( sp, u, plot );
@@ -942,12 +942,12 @@ TEST_CASE( "crop_growth_speed_does_not_boost_spell_fertilize", "[plant][world_op
     seed = iexamine::get_seed_at( here, plot );
     REQUIRE( seed != nullptr );
     const time_duration after_effective = iexamine::get_plant_effective_growth_time( *seed,
-        growth_multiplier );
+                                          growth_multiplier );
 
     // The spell should advance the plant by 25% of its total growth duration,
     // regardless of world speed.
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
-        seed->type->seed->get_growth_stages();
+                seed->type->seed->get_growth_stages();
     time_duration total_growth_time = 0_seconds;
     for( const auto &stage : growth_stages ) {
         total_growth_time += stage.second;

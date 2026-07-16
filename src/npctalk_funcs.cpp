@@ -201,7 +201,7 @@ void talk_function::assign_mission( npc &p )
         return;
     } else if( miss->is_assigned() ) {
         DebugLog( D_WARNING, D_MAIN ) << "assign_mission: mission_id: " << miss->mission_id().str() <<
-                                         " is already assigned!";
+                                      " is already assigned!";
         return;
     }
     miss->assign( get_avatar() );
@@ -415,7 +415,7 @@ static int vehicle_part_repair_service_cost( const vehicle_part &part,
     const double damage_ratio = clamp( part.damage_percent(), 0.0, 1.0 );
     const double calculated_cost = std::ceil( pristine_value * damage_ratio * price_multiplier );
     return std::max( 1, static_cast<int>( std::min<double>( calculated_cost,
-            std::numeric_limits<int>::max() ) ) );
+                                          std::numeric_limits<int>::max() ) ) );
 }
 
 static double vehicle_part_repair_multiplier( const npc &mechanic )
@@ -530,7 +530,7 @@ static std::optional<vehicle_part_repair_order> valid_vehicle_part_repair_order(
                        faults && faults->is_str() &&
                        faults->str() == vehicle_part_repair_fault_snapshot( part ) &&
                        vehicle_part_repair_service_cost( part,
-                           vehicle_part_repair_multiplier( mechanic ) ) == cost;
+                               vehicle_part_repair_multiplier( mechanic ) ) == cost;
     if( !valid ) {
         return std::nullopt;
     }
@@ -617,7 +617,7 @@ void talk_function::start_vehicle_part_repair( npc &p )
         return;
     }
     const time_duration repair_time = time_duration::from_turns( static_cast<int>
-        ( time_value->dbl() ) );
+                                      ( time_value->dbl() ) );
     get_player_character().assign_activity( vehicle_part_repair_service_activity_actor(
             repair_time, p.getID() ) );
     p.add_effect( effect_currently_busy, repair_time );
@@ -735,7 +735,7 @@ void talk_function::goto_location( npc &p )
     }
     p.goal = destination;
     p.omt_path = overmap_buffer.get_travel_path( p.pos_abs_omt(), p.goal,
-        overmap_path_params::for_npc() ).points;
+                 overmap_path_params::for_npc() ).points;
     if( destination == tripoint_abs_omt::zero || destination.is_invalid() ||
         p.omt_path.empty() ) {
         p.goal = npc::no_goal_point;
@@ -840,7 +840,7 @@ void talk_function::return_to_camp_duties( npc &p )
         tripoint_abs_omt surface = p.pos_abs_omt();
         surface.z() = 0;
         p.omt_path = overmap_buffer.get_travel_path( surface, *p.assigned_camp,
-            overmap_path_params::for_npc() ).points;
+                     overmap_path_params::for_npc() ).points;
     } else {
         p.goal = npc::no_goal_point;
         p.omt_path.clear();
@@ -1327,7 +1327,7 @@ void talk_function::leave( npc &p )
     p.job.clear_all_priorities();
     // create a new "lone wolf" faction for this one NPC
     faction *new_solo_fac = g->faction_manager_ptr->add_new_faction( p.name,
-        faction_id( new_fac_id ), faction_no_faction );
+                            faction_id( new_fac_id ), faction_no_faction );
     p.set_fac( new_solo_fac ? new_solo_fac->id : faction_no_faction );
     if( new_solo_fac ) {
         new_solo_fac->known_by_u = true;
@@ -1459,7 +1459,7 @@ void talk_function::player_weapon_drop( npc &/*p*/ )
 void talk_function::lead_to_safety( npc &p )
 {
     mission *reach_safety_mission = mission::reserve_new( mission_MISSION_REACH_SAFETY,
-        character_id() );
+                                    character_id() );
     reach_safety_mission->assign( get_avatar() );
     p.goal = reach_safety_mission->get_target();
     p.set_attitude( NPCATT_LEAD );

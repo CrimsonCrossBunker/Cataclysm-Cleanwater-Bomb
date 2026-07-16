@@ -156,8 +156,8 @@ TEST_CASE( "safecracking", "[activity][safecracking]" )
             REQUIRE( dummy.get_per() == perception );
             REQUIRE( static_cast<int>( dummy.get_skill_level( skill_traps ) ) == skill_level );
             if( has_proficiency )
-        {
-            dummy.add_proficiency( proficiency_prof_safecracking );
+            {
+                dummy.add_proficiency( proficiency_prof_safecracking );
                 REQUIRE( dummy.has_proficiency( proficiency_prof_safecracking ) );
             } else
             {
@@ -1406,8 +1406,8 @@ TEST_CASE( "prying", "[activity][prying]" )
         dummy.wield( it_prying_tool );
         REQUIRE( dummy.has_quality( qual_PRY ) );
         if( need_nails )
-    {
-        REQUIRE( dummy.get_wielded_item()->typeId() == itype_test_halligan );
+        {
+            REQUIRE( dummy.get_wielded_item()->typeId() == itype_test_halligan );
             REQUIRE( dummy.has_quality( qual_PRYING_NAIL ) );
         } else
         {
