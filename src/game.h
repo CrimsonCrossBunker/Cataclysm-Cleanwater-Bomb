@@ -1077,6 +1077,11 @@ class game
                 size_t max = 0 ) const;
         bool prompt_dangerous_tile( const tripoint_bub_ms &dest_loc,
                                     std::vector<std::string> *harmful_stuff = nullptr ) const;
+        // Queue contextual actions after safely walking to a selected map tile.
+        bool queue_contextual_actions( const tripoint_bub_ms &target,
+                                       const std::vector<action_id> &actions );
+        // Execute one contextual action after a queued route reaches its target.
+        void execute_contextual_action( action_id action, const tripoint_bub_ms &target );
         // Pick up items from the given point
         void pickup( const tripoint_bub_ms &p );
         void chat( const std::optional<tripoint_bub_ms> &p = std::nullopt ); // Talk to a nearby NPC  'C'
@@ -1133,7 +1138,7 @@ class game
         bool do_regular_action( action_id &act, avatar &player_character,
                                 const std::optional<tripoint_bub_ms> &mouse_target );
         bool handle_action();
-        bool try_get_right_click_action( action_id &act, const tripoint_bub_ms &mouse_target );
+        bool try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_target );
         bool try_get_left_click_action( action_id &act, const tripoint_bub_ms &mouse_target );
         // If loc is empty then use all the items in character inventory including bionics.
         void item_action_menu( item_location loc = item_location() ); // Displays item action menu
