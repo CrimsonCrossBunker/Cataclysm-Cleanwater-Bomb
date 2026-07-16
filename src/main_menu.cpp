@@ -359,7 +359,7 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
 #endif
 
     center_print( w_open, window_height - 1, c_light_cyan, string_format( _( "Tip of the day: %s" ),
-            vdaytip ) );
+                  vdaytip ) );
 
     int iLine = 0;
     const int iOffsetX = ( window_width - FULL_SCREEN_WIDTH ) / 2;
@@ -395,7 +395,7 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
 
     iLine++;
     center_print( w_open, iLine, c_light_blue, string_format( _( "Version: %s" ),
-            getVersionString() ) );
+                  getVersionString() ) );
 
     int menu_length = 0;
     for( size_t i = 0; i < vMenuItems.size(); ++i ) {
@@ -525,7 +525,7 @@ void main_menu::init_strings()
     vNewGameSubItems.emplace_back( pgettext( "Main Menu|New Game", "<R|r>andom Character" ) );
     if( !MAP_SHARING::isSharing() ) { // "Play Now" function doesn't play well together with shared maps
         vNewGameSubItems.emplace_back( pgettext( "Main Menu|New Game",
-                "Play Now!  (<D|d>efault Scenario)" ) );
+                                       "Play Now!  (<D|d>efault Scenario)" ) );
         vNewGameSubItems.emplace_back( pgettext( "Main Menu|New Game", "Play N<o|O>w!" ) );
     }
     vNewGameHints.clear();
@@ -607,10 +607,10 @@ void main_menu::display_text( const std::string &text, const std::string &title,
     const int vert_off = clamp( ( w_open_height - FULL_SCREEN_HEIGHT ) / 2, getbegy( w_open ), TERMY );
 
     catacurses::window w_border = catacurses::newwin( b_height, FULL_SCREEN_WIDTH,
-        point( clamp( ( TERMX - FULL_SCREEN_WIDTH ) / 2, 0, TERMX ), vert_off ) );
+                                  point( clamp( ( TERMX - FULL_SCREEN_WIDTH ) / 2, 0, TERMX ), vert_off ) );
 
     catacurses::window w_text = catacurses::newwin( b_height - 2, FULL_SCREEN_WIDTH - 2,
-        point( 1 + clamp( ( TERMX - FULL_SCREEN_WIDTH ) / 2, 0, TERMX ), 1 + vert_off ) );
+                                point( 1 + clamp( ( TERMX - FULL_SCREEN_WIDTH ) / 2, 0, TERMX ), 1 + vert_off ) );
 
     draw_border( w_border, BORDER_COLOR, title );
 
@@ -1142,9 +1142,9 @@ bool main_menu::opening_screen()
                             break;
                         }
                         const bool any_worlds_with_saves = [] {
-for( const auto &kv : world_generator->get_all_worlds() )
-                        {
-                            if( !kv.second->world_saves.empty() ) {
+                            for( const auto &kv : world_generator->get_all_worlds() )
+                            {
+                                if( !kv.second->world_saves.empty() ) {
                                     return true;
                                 }
                             }
@@ -1204,7 +1204,7 @@ for( const auto &kv : world_generator->get_all_worlds() )
                                     const bool has_coop = cata_mp::mp_world_has_history( name );
                                     const std::string display = name +
                                                                 ( has_coop ? colorize( cata_mp::mp_world_marker_badge( name ),
-                                                                    c_light_green )
+                                                                        c_light_green )
                                                                   : "  " + colorize( "(solo)", c_dark_gray ) );
                                     wpick.entries.emplace_back( idx++, true, MENU_AUTOASSIGN, display );
                                 }
@@ -1603,7 +1603,7 @@ void main_menu::world_tab( const std::string &worldname )
                                    ( saves[char_menu.ret].base_path() + ".zones.json" );
             int zone_count = 0;
             clipboard_personal_zones = zone_manager::copy_personal_zones( zones_file,
-                zone_count );
+                                       zone_count );
             if( zone_count > 0 ) {
                 popup( n_gettext( "Copied %d personal zone.",
                                   "Copied %d personal zones.", zone_count ), zone_count );

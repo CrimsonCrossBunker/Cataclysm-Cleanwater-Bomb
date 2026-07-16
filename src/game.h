@@ -342,7 +342,7 @@ class game
         bool void_async_anim_curses();
     protected:
         std::map<tripoint_bub_ms, std::pair <std::string, nc_color>>
-        async_anim_layer_curses; // NOLINT(cata-serialize)
+                async_anim_layer_curses; // NOLINT(cata-serialize)
 
     public:
         void init_draw_blink_curses( const tripoint_bub_ms &p, const std::string &ncstr,
@@ -353,7 +353,7 @@ class game
         bool blink_active_phase = true; // NOLINT(cata-serialize)
     protected:
         std::map<tripoint_bub_ms, std::pair <std::string, nc_color>>
-        blink_layer_curses; // NOLINT(cata-serialize)
+                blink_layer_curses; // NOLINT(cata-serialize)
 
     public:
         // when force_redraw is true, redraw all panel instead of just animated panels

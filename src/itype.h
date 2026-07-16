@@ -1792,11 +1792,11 @@ struct itype {
 
         int maximum_charges() const {
             if( tool ) {
-            return tool->max_charges;
+                return tool->max_charges;
+            }
+            return 1;
         }
-        return 1;
-    }
-    bool can_have_charges() const;
+        bool can_have_charges() const;
 
         /**
          * Number of (charges of) this type of item that fit into the given volume.

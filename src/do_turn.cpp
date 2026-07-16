@@ -164,7 +164,7 @@ bool cleanup_at_end()
         std::vector<std::string> characters = g->list_active_saves();
         // remove current player from the active characters list, as they are dead
         std::vector<std::string>::iterator curchar = std::find( characters.begin(),
-            characters.end(), u.get_save_id() );
+                characters.end(), u.get_save_id() );
         if( curchar != characters.end() ) {
             characters.erase( curchar );
         }
@@ -517,7 +517,7 @@ void overmap_npc_move()
             }
             if( elem->omt_path.empty() ) {
                 elem->omt_path = overmap_buffer.get_travel_path( elem->pos_abs_omt(), elem->goal,
-                    overmap_path_params::for_npc() ).points;
+                                 overmap_path_params::for_npc() ).points;
                 if( elem->omt_path.empty() ) { // goal is unreachable, or already reached goal, reset it
                     elem->goal = npc::no_goal_point;
                 }
@@ -590,11 +590,11 @@ void game::handle_progress_ui()
         const bool ff_active = cata_mp::should_fast_forward();
         const bool ff_redraw_due = [&] {
             if( !ff_active )
-        {
-            return false;
-        }
-        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-        if( first_redraw_since_waiting_started ||
+            {
+                return false;
+            }
+            const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+            if( first_redraw_since_waiting_started ||
                 std::chrono::duration_cast<std::chrono::milliseconds>( now - s_last_ff_redraw ).count() >= 100 )
             {
                 s_last_ff_redraw = now;

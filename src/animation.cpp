@@ -88,14 +88,14 @@ class basic_animation
             } while( true );
         }
 
-private:
-    int_least64_t delay;
+    private:
+        int_least64_t delay;
 };
 
 class explosion_animation : public basic_animation
 {
-public:
-    explosion_animation() :
+    public:
+        explosion_animation() :
             basic_animation( EXPLOSION_MULTIPLIER ) {
         }
 };
@@ -117,7 +117,7 @@ class bullet_animation : public basic_animation
             // Skip artificial animation delay to greatly reduce the realtime
             // delay between shots during player target practice activity
             if( !skip_bullet_animation_delay() ) {
-            basic_animation::progress();
+                basic_animation::progress();
             }
         }
 };
@@ -358,7 +358,7 @@ static void draw_explosion_light( const std::map<tripoint_bub_ms, nc_color> &all
     // shape from its origin rather than blooming from the middle of the tiles.
     avatar &player_character = get_avatar();
     const tripoint_rel_ms view_center = relative_view_pos( player_character,
-        player_character.pos_bub() );
+                                        player_character.pos_bub() );
 
     std::map<tripoint_bub_ms, float> radial;
     double sx = 0.0;
@@ -530,7 +530,7 @@ void explosion_handler::draw_custom_explosion(
     } else {
         // In tiles mode, the coordinates have to be absolute
         const tripoint_rel_ms view_center = relative_view_pos( player_character,
-            player_character.pos_bub() );
+                                            player_character.pos_bub() );
         for( const auto &pr : all_area ) {
             // Relative point is only used for z level check
             const tripoint_rel_ms relative_point = relative_view_pos( player_character, pr.first );
@@ -1048,17 +1048,17 @@ void game::draw_hit_player( const Character &p, const int dam, const float damag
                             const Creature *source ) const
 {
     if( test_mode || !tilecontext ) {
-    // avoid segfault from null tilecontext in tests
-    return;
-}
-if( !use_tiles ) {
-    draw_hit_player_curses( *this, p, dam );
+        // avoid segfault from null tilecontext in tests
+        return;
+    }
+    if( !use_tiles ) {
+        draw_hit_player_curses( *this, p, dam );
         return;
     }
     // Knockback direction: from the attacker toward the victim (victim - source).
     point dir;
     if( source ) {
-    const tripoint_rel_ms d = p.pos_abs() - source->pos_abs();
+        const tripoint_rel_ms d = p.pos_abs() - source->pos_abs();
         dir = point( std::clamp( d.x(), -1, 1 ), std::clamp( d.y(), -1, 1 ) );
     }
     // Use creature reference to resolve sprite position at draw time
@@ -1240,7 +1240,7 @@ void draw_weather_curses( const catacurses::window &win, const weather_printable
 void game::draw_weather( const weather_printable &w ) const
 {
     if( !use_tiles ) {
-    draw_weather_curses( w_terrain, w );
+        draw_weather_curses( w_terrain, w );
         return;
     }
 
@@ -1259,7 +1259,7 @@ void draw_sct_curses( const game &g )
 {
     avatar &player_character = get_avatar();
     const tripoint_rel_ms off = relative_view_pos( player_character,
-        tripoint_bub_ms::zero );
+                                tripoint_bub_ms::zero );
 
     for( const scrollingcombattext::cSCT &text : SCT.vSCT ) {
         const int dy = off.y() + text.getPosY();
@@ -1284,7 +1284,7 @@ void draw_sct_curses( const game &g )
 void game::draw_sct() const
 {
     if( use_tiles ) {
-    tilecontext->init_draw_sct();
+        tilecontext->init_draw_sct();
     } else {
         draw_sct_curses( *this );
     }
@@ -1319,7 +1319,7 @@ void game::draw_zones( const tripoint_bub_ms &start, const tripoint_bub_ms &end,
                        const tripoint_rel_ms &offset ) const
 {
     if( use_tiles ) {
-    tilecontext->init_draw_zones( start, end, offset );
+        tilecontext->init_draw_zones( start, end, offset );
     } else {
         draw_zones_curses( w_terrain, start, end, offset );
     }
