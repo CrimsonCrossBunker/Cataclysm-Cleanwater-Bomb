@@ -172,17 +172,17 @@ static const flag_id json_flag_SINGLE_ACTION( "SINGLE_ACTION" );
 static const material_id material_glass( "glass" );
 static const material_id material_iron( "iron" );
 static const material_id material_steel( "steel" );
-static const material_id material_low_steel( "lc_steel" );
-static const material_id material_med_steel( "mc_steel" );
-static const material_id material_high_steel( "hc_steel" );
-static const material_id material_hardened_steel( "ch_steel" );
-static const material_id material_tempered_steel( "qt_steel" );
+static const material_id material_lc_steel( "lc_steel" );
+static const material_id material_mc_steel( "mc_steel" );
+static const material_id material_hc_steel( "hc_steel" );
+static const material_id material_ch_steel( "ch_steel" );
+static const material_id material_qt_steel( "qt_steel" );
 static const material_id material_budget_steel( "budget_steel" );
-static const material_id material_low_steel_chain( "lc_steel_chain" );
-static const material_id material_med_steel_chain( "mc_steel_chain" );
-static const material_id material_high_steel_chain( "hc_steel_chain" );
-static const material_id material_hardened_steel_chain( "ch_steel_chain" );
-static const material_id material_tempered_steel_chain( "qt_steel_chain" );
+static const material_id material_lc_steel_chain( "lc_steel_chain" );
+static const material_id material_mc_steel_chain( "mc_steel_chain" );
+static const material_id material_hc_steel_chain( "hc_steel_chain" );
+static const material_id material_ch_steel_chain( "ch_steel_chain" );
+static const material_id material_qt_steel_chain( "qt_steel_chain" );
 static const material_id material_budget_steel_chain( "budget_steel_chain" );
 static const material_id material_cupronickel( "copper_nickel" );
 
@@ -206,7 +206,7 @@ static const trap_str_id tr_target_spinner( "tr_target_spinner" );
 
 static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
 
-static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_hardened_steel, material_high_steel, material_low_steel, material_med_steel, material_tempered_steel, material_budget_steel_chain, material_hardened_steel_chain, material_high_steel_chain, material_low_steel_chain, material_med_steel_chain, material_tempered_steel_chain, material_cupronickel };
+static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_ch_steel, material_hc_steel, material_lc_steel, material_mc_steel, material_qt_steel, material_budget_steel_chain, material_ch_steel_chain, material_hc_steel_chain, material_lc_steel_chain, material_mc_steel_chain, material_qt_steel_chain, material_cupronickel };
 
 // Maximum duration of aim-and-fire loop, in turns
 static constexpr int AIF_DURATION_LIMIT = 10;
