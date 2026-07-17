@@ -29,7 +29,7 @@ static explosion_light make_default_recipe()
     return e;
 }
 
-TEST_CASE( "explosion_light three waves: A then B then clear", "[explosion_light]" )
+TEST_CASE( "explosion_light_three_waves_A_then_B_then_clear", "[explosion_light]" )
 {
     explosion_light e = make_default_recipe();
 
@@ -56,7 +56,7 @@ TEST_CASE( "explosion_light three waves: A then B then clear", "[explosion_light
     CHECK( static_cast<int>( cleared.a ) == 0 );
 }
 
-TEST_CASE( "explosion_light is a translucent light cover, never opaque", "[explosion_light]" )
+TEST_CASE( "explosion_light_is_a_translucent_light_cover_never_opaque", "[explosion_light]" )
 {
     explosion_light e = make_default_recipe();
 
@@ -70,7 +70,7 @@ TEST_CASE( "explosion_light is a translucent light cover, never opaque", "[explo
     }
 }
 
-TEST_CASE( "explosion_light dims from alpha_a to alpha_b while lit", "[explosion_light]" )
+TEST_CASE( "explosion_light_dims_from_alpha_a_to_alpha_b_while_lit", "[explosion_light]" )
 {
     explosion_light e = make_default_recipe();
 
@@ -85,7 +85,7 @@ TEST_CASE( "explosion_light dims from alpha_a to alpha_b while lit", "[explosion
     CHECK( a_late >= 70 - 5 ); // approaches alpha_b
 }
 
-TEST_CASE( "explosion_light waves expand from the centre outward", "[explosion_light]" )
+TEST_CASE( "explosion_light_waves_expand_from_the_centre_outward", "[explosion_light]" )
 {
     explosion_light e = make_default_recipe();
 
@@ -106,7 +106,7 @@ TEST_CASE( "explosion_light waves expand from the centre outward", "[explosion_l
     CHECK( static_cast<int>( rim_lit.a ) > 0 );
 }
 
-TEST_CASE( "explosion_light rim jitter taper scales with blast size", "[explosion_light]" )
+TEST_CASE( "explosion_light_rim_jitter_taper_scales_with_blast_size", "[explosion_light]" )
 {
     // The outermost ring's spread jitter is tapered so a big blast keeps a round
     // silhouette, but that taper must NOT apply to a small blast — otherwise its
@@ -149,7 +149,7 @@ TEST_CASE( "explosion_light rim jitter taper scales with blast size", "[explosio
     CHECK( centre_small == centre_big );
 }
 
-TEST_CASE( "explosion_light flashes fast then dims, until cleared", "[explosion_light]" )
+TEST_CASE( "explosion_light_flashes_fast_then_dims_until_cleared", "[explosion_light]" )
 {
     explosion_light e = make_default_recipe();
 
@@ -164,7 +164,7 @@ TEST_CASE( "explosion_light flashes fast then dims, until cleared", "[explosion_
     CHECK( a_very_early > 40 );
 }
 
-TEST_CASE( "explosion_light clamps inputs", "[explosion_light]" )
+TEST_CASE( "explosion_light_clamps_inputs", "[explosion_light]" )
 {
     explosion_light e = make_default_recipe();
 
@@ -176,7 +176,7 @@ TEST_CASE( "explosion_light clamps inputs", "[explosion_light]" )
     CHECK( static_cast<int>( hi.r ) <= 255 );
 }
 
-TEST_CASE( "explosion_light N-stop ramp sweeps through every colour", "[explosion_light]" )
+TEST_CASE( "explosion_light_N-stop_ramp_sweeps_through_every_colour", "[explosion_light]" )
 {
     // Three explicit stops: white -> blue -> purple, then clear. With wave_gap 0.25
     // the fronts arrive at the centre at 0, 0.25, 0.50 and clear at 0.75.
@@ -210,7 +210,7 @@ TEST_CASE( "explosion_light N-stop ramp sweeps through every colour", "[explosio
     CHECK( static_cast<int>( e.sample( 0.0f, 0.90f, 0, 0 ).a ) == 0 );
 }
 
-TEST_CASE( "explosion_light single stop holds one colour then clears", "[explosion_light]" )
+TEST_CASE( "explosion_light_single_stop_holds_one_colour_then_clears", "[explosion_light]" )
 {
     explosion_light e = make_default_recipe();
     e.stops = { { { { 0, 255, 0 } }, 120 } };
@@ -225,7 +225,7 @@ TEST_CASE( "explosion_light single stop holds one colour then clears", "[explosi
     CHECK( static_cast<int>( e.sample( 0.0f, 0.40f, 0, 0 ).a ) == 0 );
 }
 
-TEST_CASE( "explosion_light easing changes the blend trajectory", "[explosion_light]" )
+TEST_CASE( "explosion_light_easing_changes_the_blend_trajectory", "[explosion_light]" )
 {
     // Two stops, black -> white, sampled mid-blend. ease_in lags (darker) and
     // ease_out leads (lighter) relative to linear at the same instant.
@@ -244,7 +244,7 @@ TEST_CASE( "explosion_light easing changes the blend trajectory", "[explosion_li
     CHECK( out > lin );
 }
 
-TEST_CASE( "explosion_light duration scales with radius per recipe fields", "[explosion_light]" )
+TEST_CASE( "explosion_light_duration_scales_with_radius_per_recipe_fields", "[explosion_light]" )
 {
     explosion_light e = make_default_recipe();
     e.duration_base_ms = 120.0f;
@@ -258,4 +258,3 @@ TEST_CASE( "explosion_light duration scales with radius per recipe fields", "[ex
     CHECK( e.duration_ms( 6.0f ) == Approx( 390.0f ) );   // 120 + 6*45
     CHECK( e.duration_ms( 100.0f ) == Approx( 900.0f ) ); // clamped to ceiling
 }
-

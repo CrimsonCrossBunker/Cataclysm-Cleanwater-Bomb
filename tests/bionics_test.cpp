@@ -537,18 +537,18 @@ TEST_CASE( "fueled_bionics", "[bionics] [item]" )
         dummy.suffer();
         REQUIRE( !dummy.has_power() );
 
-        // Add two splints. Now it turns on and generates power.
+        // Add two charges of splintered wood.  Stackable solid fuel is stored
+        // as charges and the burner consumes one charge per cycle.
         item wood = item( itype_splinter );
-        item wood_2 = item( itype_splinter );
-        REQUIRE_FALSE( wood.count_by_charges() );
+        REQUIRE( wood.count_by_charges() );
+        wood.charges = 2;
         woodshed->put_in( wood, pocket_type::CONTAINER );
-        woodshed->put_in( wood_2, pocket_type::CONTAINER );
-        REQUIRE( woodshed->all_items_ptr().size() == 2 );
+        REQUIRE( woodshed->only_item().charges == 2 );
         CHECK( dummy.activate_bionic( bio ) );
         CHECK_FALSE( dummy.get_bionic_fuels( bio.id ).empty() );
         dummy.suffer();
         CHECK( units::to_joule( dummy.get_power_level() ) == 62500 );
-        CHECK( woodshed->all_items_ptr().size() == 1 );
+        CHECK( woodshed->only_item().charges == 1 );
 
         dummy.suffer();
         CHECK( units::to_joule( dummy.get_power_level() ) == 125000 );

@@ -129,7 +129,7 @@ TEST_CASE( "AIM_unload_nested_container_from_container_view", "[items][advanced_
     u.worn.wear_item( u, item( itype_debug_backpack ), false, false );
 
     item inner_container( itype_bag_plastic );
-    REQUIRE( inner_container.put_in( item( itype_knife_combat ),
+    REQUIRE( inner_container.put_in( item( itype_test_9mm_ammo ),
                                      pocket_type::CONTAINER ).success() );
     item outer_container( itype_backpack );
     REQUIRE( outer_container.put_in( inner_container, pocket_type::CONTAINER ).success() );
@@ -159,7 +159,7 @@ TEST_CASE( "AIM_unload_nested_container_from_container_view", "[items][advanced_
     process_activity( u );
 
     REQUIRE_FALSE( u.activity );
-    REQUIRE( u.has_amount( itype_knife_combat, 1 ) );
+    REQUIRE( u.has_amount( itype_test_9mm_ammo, 1 ) );
     REQUIRE( outer_on_map.all_items_top().front()->empty_container() );
 }
 

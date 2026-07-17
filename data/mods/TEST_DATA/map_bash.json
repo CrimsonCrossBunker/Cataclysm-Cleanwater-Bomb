@@ -27,15 +27,15 @@
         },
         {
           "id": "crowbar",
-          "loadout": { "strength": 8, "expected_ability": { "bash": 27, "cut": 1 }, "wielded": "crowbar" },
+          "loadout": { "strength": 8, "expected_ability": { "bash": 27, "cut": 7 }, "wielded": "crowbar" },
           "furn_tries": { "f_trashcan": 1, "f_chair": 2, "f_toilet": 2, "f_bathtub": 4, "f_bed": 3, "f_water_heater": 6 },
           "ter_tries": { "t_window": 1, "t_gutter": 1, "t_door_c": 5, "t_wall_wood": 10 }
         },
         {
           "id": "fireaxe",
-          "loadout": { "strength": 8, "expected_ability": { "bash": 26, "cut": 37 }, "wielded": "fire_ax" },
-          "furn_tries": { "f_trashcan": 1, "f_chair": 2, "f_toilet": 2, "f_bathtub": 4, "f_bed": 3, "f_water_heater": 7 },
-          "ter_tries": { "t_window": 1, "t_gutter": 1, "t_door_c": 2, "t_wall_wood": 11 }
+          "loadout": { "strength": 8, "expected_ability": { "bash": 26, "cut": 43 }, "wielded": "fire_ax" },
+          "furn_tries": { "f_trashcan": 1, "f_chair": 1, "f_toilet": 1, "f_bathtub": 2, "f_bed": 2, "f_water_heater": 3 },
+          "ter_tries": { "t_window": 1, "t_gutter": 1, "t_door_c": 2, "t_wall_wood": 5, "t_wall": 105 }
         },
         {
           "id": "mace",

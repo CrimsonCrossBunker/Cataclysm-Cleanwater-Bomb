@@ -10,6 +10,7 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "character_attire.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "event.h"
@@ -48,6 +49,7 @@ furn_test_f_planter_high_water_mature( "test_f_planter_high_water_mature" );
 static const furn_str_id furn_test_f_planter_high_water_seed( "test_f_planter_high_water_seed" );
 
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_fertilizer_commercial( "fertilizer_commercial" );
 static const itype_id itype_fertilizer_liquid( "fertilizer_liquid" );
 static const itype_id itype_fungal_seeds( "fungal_seeds" );
@@ -438,6 +440,7 @@ TEST_CASE( "plant_fertilizer_quality_affects_reduction", "[plant][fertilize]" )
     clear_avatar();
     clear_map_without_vision();
     reset_test_globals();
+    u.worn.wear_item( u, item( itype_debug_backpack ), false, false );
 
     const tripoint_bub_ms plot_commercial = u.pos_bub() + tripoint::east;
     const tripoint_bub_ms plot_liquid = u.pos_bub() + tripoint::west;
@@ -447,7 +450,10 @@ TEST_CASE( "plant_fertilizer_quality_affects_reduction", "[plant][fertilize]" )
     here.furn_set( plot_liquid, furn_test_f_plant_seedling );
 
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
-    u.i_add( item( itype_fertilizer_liquid, calendar::turn ) );
+    item liquid_fertilizer = item( itype_fertilizer_liquid,
+                                   calendar::turn ).in_its_container();
+    REQUIRE( u.wield( liquid_fertilizer ) );
+    REQUIRE( u.has_charges( itype_fertilizer_liquid, 1 ) );
 
     iexamine::fertilize_plant( u, plot_commercial, itype_fertilizer_commercial );
     process_activity( u );

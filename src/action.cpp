@@ -1136,7 +1136,7 @@ action_id handle_main_menu()
     REGISTER_ACTION( ACTION_ACTIONMENU );
 #if defined(__ANDROID__)
     entries.emplace_back( ACTION_MANAGE_ANDROID_EXTRA_BUTTONS, true, std::nullopt,
-                          _( "Manage extra buttons" ) );
+                          _( "Customize Android HUD" ) );
 #endif
     REGISTER_ACTION( ACTION_QUICKSAVE );
     REGISTER_ACTION( ACTION_SAVE );

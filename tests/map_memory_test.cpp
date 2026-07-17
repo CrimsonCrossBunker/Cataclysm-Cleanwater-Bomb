@@ -148,9 +148,11 @@ TEST_CASE( "map_memory_refreshes_visibility_after_avatar_moves", "[map_memory][v
     avatar &you = get_avatar();
     const tripoint_bub_ms start( 50, 50, 0 );
     const tripoint_bub_ms destination = start + tripoint::east * 20;
-    const tripoint_abs_ms destination_abs = here.get_abs( destination );
 
     g->place_player( start );
+    // place_player() may shift the reality bubble, so convert the destination
+    // only after the map has settled at the starting position.
+    const tripoint_abs_ms destination_abs = here.get_abs( destination );
     you.clear_map_memory();
     you.recalc_sight_limits();
     REQUIRE( here.ter_set( destination, ter_t_floor ) );

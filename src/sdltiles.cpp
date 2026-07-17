@@ -109,6 +109,7 @@ std::unique_ptr<cataimgui::client> imclient;
     #include <jni.h>
 
     #include "action.h"
+    #include "android_hud.h"
     #include "inventory.h"
     #include "map.h"
     #include "vehicle.h"
@@ -897,7 +898,12 @@ void draw_terminal_size_preview();
 void draw_quick_shortcuts();
 void draw_virtual_joystick();
 
-static bool quick_shortcuts_enabled = true;
+// The legacy SDL shortcut strip is retired in favour of the native Android
+// HUD.  Keep the underlying helpers compiled for now so old options/configs
+// remain harmless, but never render, reserve space for, or hit-test it.
+static constexpr bool android_legacy_shortcuts_enabled = false;
+static bool quick_shortcuts_enabled = android_legacy_shortcuts_enabled;
+static bool android_imgui_touch_active = false;
 
 // For previewing the terminal size with a transparent rectangle overlay when user is adjusting it in the settings
 static int preview_terminal_width = -1;
@@ -973,8 +979,6 @@ static_assert( std::atomic<uint32_t>::is_always_lock_free,
                "visible-frame inbox needs lock-free uint32 atomics on every shipped ABI" );
 
 static android_visible_frame_inbox visible_frame_inbox;
-static std::mutex extra_button_input_mutex;
-static std::deque<input_event> extra_button_inputs;
 
 extern "C" {
 
@@ -1001,29 +1005,60 @@ extern "C" {
         on_native_ime_insets_changed( left, top, right, bottom, visible );
     }
 
-    JNIEXPORT void JNICALL Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeButtonClick(
-        JNIEnv *env, jclass jcls, jstring text )
+    JNIEXPORT jboolean JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeEnqueueHudAction(
+        JNIEnv *env, jclass jcls, jstring action, jint context_revision )
     {
         ( void )jcls;
-        if( text == nullptr ) {
-            return;
+        if( action == nullptr ) {
+            return JNI_FALSE;
         }
 
-        const char *raw_text = env->GetStringUTFChars( text, nullptr );
-        if( raw_text == nullptr ) {
-            return;
+        const char *raw_action = env->GetStringUTFChars( action, nullptr );
+        if( raw_action == nullptr ) {
+            return JNI_FALSE;
         }
 
-        const std::string text_s( raw_text );
-        env->ReleaseStringUTFChars( text, raw_text );
-        if( text_s.empty() ) {
+        const std::string action_s( raw_action );
+        env->ReleaseStringUTFChars( action, raw_action );
+        return android_hud::enqueue_action( action_s, context_revision ) ? JNI_TRUE : JNI_FALSE;
+    }
+
+    JNIEXPORT jstring JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetHudSnapshot(
+        JNIEnv *env, jclass jcls )
+    {
+        ( void )jcls;
+        const std::string snapshot = android_hud::snapshot_json();
+        return env->NewStringUTF( snapshot.c_str() );
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSetHudMinimapRect(
+        JNIEnv *env, jclass jcls, jint x, jint y, jint width, jint height, jboolean visible )
+    {
+        ( void )env;
+        ( void )jcls;
+        android_hud::set_minimap_rect( { x, y, width, height, visible == JNI_TRUE } );
+    }
+
+    // Compatibility shim for an old, no-longer-rendered extra-button layout.
+    // Its text is treated as an action ID and rejected unless it is part of the
+    // explicit HUD action catalogue; it can no longer inject keyboard input.
+    JNIEXPORT void JNICALL Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeButtonClick(
+        JNIEnv *env, jclass jcls, jstring action )
+    {
+        ( void )jcls;
+        if( action == nullptr ) {
             return;
         }
-
-        input_event event( UTF8_getch( text_s ), input_event_t::keyboard_char );
-        event.text = text_s;
-        std::scoped_lock lock( extra_button_input_mutex );
-        extra_button_inputs.push_back( event );
+        const char *raw_action = env->GetStringUTFChars( action, nullptr );
+        if( raw_action == nullptr ) {
+            return;
+        }
+        const std::string action_s( raw_action );
+        env->ReleaseStringUTFChars( action, raw_action );
+        android_hud::enqueue_action( action_s );
     }
 
 } // "C"
@@ -1098,7 +1133,8 @@ static SDL_Rect get_android_content_bounds()
 
     // Reserve the on-screen shortcut strip along the bottom unless it overlaps.
     // Keep at least one row so the aspect math never divides by a zero height.
-    if( !get_option<bool>( "ANDROID_SHORTCUT_OVERLAP" ) && quick_shortcuts_enabled ) {
+    if( android_legacy_shortcuts_enabled && !get_option<bool>( "ANDROID_SHORTCUT_OVERLAP" ) &&
+        quick_shortcuts_enabled ) {
         bounds.h = std::max( 1, bounds.h - get_android_shortcut_height() );
     }
     return bounds;
@@ -1302,6 +1338,13 @@ void refresh_display()
     dstrect.x += shake.x;
     dstrect.y += shake.y;
     RenderCopy( renderer, display_buffer, NULL, &dstrect );
+    const android_hud::minimap_rect hud_minimap = android_hud::get_minimap_rect();
+    if( hud_minimap.visible && hud_minimap.width > 0 && hud_minimap.height > 0 &&
+        g != nullptr && tilecontext != nullptr ) {
+        tilecontext->draw_minimap( point( hud_minimap.x, hud_minimap.y ),
+        { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
+        hud_minimap.width, hud_minimap.height );
+    }
 #else
     // When a shockwave is active, blit the frame through a distorted mesh so the
     // rendered scene refracts along the ring (the shake offset rides along on the
@@ -1331,10 +1374,6 @@ void refresh_display()
 
 #if defined(__ANDROID__)
     draw_terminal_size_preview();
-    if( g ) {
-        draw_quick_shortcuts();
-    }
-    draw_virtual_joystick();
 #endif
     draw_gamepad_radial_menu();
     RenderPresent( renderer );
@@ -4644,6 +4683,36 @@ static void finger_slot_clear( SDL_FingerID id )
     }
 }
 
+static void android_process_imgui_touch( const Uint32 event_type, const float raw_x,
+        const float raw_y )
+{
+    if( !imclient || !imclient->any_window_shown() ) {
+        return;
+    }
+    const SDL_Point position = window_to_display_buffer_coords( SDL_Point{
+        static_cast<int>( std::lround( raw_x ) ), static_cast<int>( std::lround( raw_y ) )
+    } );
+    SDL_Event mouse_event{};
+    mouse_event.type = event_type;
+    if( event_type == CATA_MOUSEMOTION ) {
+        mouse_event.motion.windowID = SDL_GetWindowID( ::window.get() );
+        mouse_event.motion.which = SDL_TOUCH_MOUSEID;
+        mouse_event.motion.x = position.x;
+        mouse_event.motion.y = position.y;
+    } else {
+        mouse_event.button.windowID = SDL_GetWindowID( ::window.get() );
+        mouse_event.button.which = SDL_TOUCH_MOUSEID;
+        mouse_event.button.button = SDL_BUTTON_LEFT;
+        mouse_event.button.clicks = 1;
+        mouse_event.button.x = position.x;
+        mouse_event.button.y = position.y;
+    }
+    int buffer_width = 0;
+    int buffer_height = 0;
+    get_display_buffer_dims( &buffer_width, &buffer_height );
+    imclient->process_input( &mouse_event, buffer_width, buffer_height );
+}
+
 // Quick shortcuts container: maps the touch input context category (std::string) to a std::list of input_events.
 using quick_shortcuts_t = std::list<input_event>;
 std::map<std::string, quick_shortcuts_t> quick_shortcuts_map;
@@ -5529,22 +5598,6 @@ static void focus_aware_stop_text_input()
 #endif
 }
 
-static bool pop_extra_button_input( input_event &event )
-{
-#if defined(__ANDROID__)
-    std::scoped_lock lock( extra_button_input_mutex );
-    if( extra_button_inputs.empty() ) {
-        return false;
-    }
-    event = extra_button_inputs.front();
-    extra_button_inputs.pop_front();
-    return true;
-#else
-    ( void )event;
-    return false;
-#endif
-}
-
 //Check for any window messages (keypress, paint, mousemove, etc)
 static void CheckMessages()
 {
@@ -5815,7 +5868,8 @@ static void CheckMessages()
         }
 
         // Handle repeating inputs from touch + holds
-        if( !is_quick_shortcut_touch && !is_two_finger_touch && !is_three_finger_touch &&
+        if( !android_imgui_touch_active && !is_quick_shortcut_touch &&
+            !is_two_finger_touch && !is_three_finger_touch &&
             finger_down_time > 0 &&
             ticks - finger_down_time > static_cast<uint32_t>
             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
@@ -5874,12 +5928,14 @@ static void CheckMessages()
     last_input = input_event();
 #if defined(__ANDROID__)
     last_input_has_explicit_mouse_pos = false;
-#endif
-
-    if( pop_extra_button_input( last_input ) ) {
-        text_refresh = true;
+    // Native HUD actions arrive on the Android UI thread rather than through
+    // SDL.  Wake input_context immediately so it can consume the queued named
+    // action; otherwise modal menus wait until an unrelated touch event arrives.
+    if( android_hud::has_pending_action() ) {
+        last_input.type = input_event_t::timeout;
         return;
     }
+#endif
 
     using cata::options::mouse;
 
@@ -5970,10 +6026,11 @@ static void CheckMessages()
             switch( ev.type ) {
                 case CATA_KEYDOWN: {
 #if defined(__ANDROID__)
-                    // Toggle virtual keyboard with Android back button. For some reason I get double inputs, so ignore everything once it's already down.
+                    // Track Android back once; some devices emit duplicate key-down events.
                     if( GetKeysym( ev ).sym == SDLK_AC_BACK && ac_back_down_time == 0 ) {
                         ac_back_down_time = ticks;
                         quick_shortcuts_toggle_handled = false;
+                        break;
                     }
 #endif
                     is_repeat = ev.key.repeat;
@@ -6041,9 +6098,12 @@ static void CheckMessages()
                 break;
                 case CATA_KEYUP: {
 #if defined(__ANDROID__)
-                    // Toggle virtual keyboard with Android back button
+                    // Toggle the Android keyboard with a short back-button press.
+                    // This remains available even outside a text widget so startup
+                    // errors and other exceptional prompts can still be handled.
                     if( GetKeysym( ev ).sym == SDLK_AC_BACK ) {
-                        if( ticks - ac_back_down_time <= static_cast<uint32_t>
+                        if( ac_back_down_time > 0 &&
+                            ticks - ac_back_down_time <= static_cast<uint32_t>
                             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
                             if( cataimgui::client::want_text_input() ) {
                                 // ImGui owns the keyboard while a text widget is
@@ -6058,6 +6118,7 @@ static void CheckMessages()
                             android_request_repaint();
                         }
                         ac_back_down_time = 0;
+                        break;
                     }
 #endif
                     keyboard_mode mode = keyboard_mode::keychar;
@@ -6243,6 +6304,9 @@ static void CheckMessages()
                         ui_manager::redraw_invalidated();
                         finger_curr_x = GetFingerX( ev, WindowWidth );
                         finger_curr_y = GetFingerY( ev, WindowHeight );
+                        if( android_imgui_touch_active ) {
+                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
+                        }
 
                         if( get_option<bool>( "ANDROID_VIRTUAL_JOYSTICK_FOLLOW" ) && !is_two_finger_touch &&
                             !is_three_finger_touch ) {
@@ -6281,14 +6345,25 @@ static void CheckMessages()
                         finger_down_y = finger_curr_y = GetFingerY( ev, WindowHeight );
                         finger_down_time = ticks;
                         finger_repeat_time = 0;
-                        is_quick_shortcut_touch = get_quick_shortcut_under_finger() != NULL;
+                        is_quick_shortcut_touch = android_legacy_shortcuts_enabled &&
+                                                  get_quick_shortcut_under_finger() != nullptr;
                         if( !is_quick_shortcut_touch ) {
                             update_finger_repeat_delay();
+                        }
+                        android_imgui_touch_active = imclient && imclient->any_window_shown();
+                        if( android_imgui_touch_active ) {
+                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
+                            android_process_imgui_touch( CATA_MOUSEBUTTONDOWN, finger_curr_x, finger_curr_y );
                         }
                         ui_manager::redraw_invalidated();
                         needupdate = true; // ensure virtual joystick and quick shortcuts redraw as we interact
                     } else if( finger_slot_for( GetFingerID( ev ), true ) == 1 ) {
                         if( !is_quick_shortcut_touch ) {
+                            if( android_imgui_touch_active ) {
+                                android_process_imgui_touch( CATA_MOUSEBUTTONUP, finger_curr_x,
+                                                             finger_curr_y );
+                                android_imgui_touch_active = false;
+                            }
                             second_finger_down_x = second_finger_curr_x = GetFingerX( ev, WindowWidth );
                             second_finger_down_y = second_finger_curr_y = GetFingerY( ev, WindowHeight );
                             is_two_finger_touch = true;
@@ -6311,7 +6386,12 @@ static void CheckMessages()
                     if( slot == 0 ) {
                         finger_curr_x = GetFingerX( ev, WindowWidth );
                         finger_curr_y = GetFingerY( ev, WindowHeight );
-                        if( is_quick_shortcut_touch ) {
+                        if( android_imgui_touch_active ) {
+                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
+                            android_process_imgui_touch( CATA_MOUSEBUTTONUP, finger_curr_x, finger_curr_y );
+                            // Wake the owning ImGui loop so it can draw the click result.
+                            last_input.type = input_event_t::timeout;
+                        } else if( is_quick_shortcut_touch ) {
                             input_event *quick_shortcut = get_quick_shortcut_under_finger();
                             if( quick_shortcut ) {
                                 last_input = *quick_shortcut;
@@ -6482,7 +6562,21 @@ static void CheckMessages()
                                     last_input_has_explicit_mouse_pos = true;
                                 } else if( ticks - finger_down_time <= static_cast<uint32_t>(
                                                get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-                                    handle_finger_input( ticks );
+                                    if( !is_default_mode &&
+                                        touch_input_context.is_action_registered( "SELECT" ) &&
+                                        held_distance < hold_deadzone ) {
+                                        last_input = input_event( MouseInput::LeftButtonReleased,
+                                                                  input_event_t::mouse );
+                                        const SDL_Point touch_point = window_to_display_buffer_coords( SDL_Point{
+                                            static_cast<int>( std::lround( finger_curr_x ) ),
+                                            static_cast<int>( std::lround( finger_curr_y ) )
+                                        } );
+                                        last_input.mouse_pos = point( touch_point.x, touch_point.y );
+                                        last_input_has_explicit_mouse_pos = true;
+                                        last_tap_time = 0;
+                                    } else {
+                                        handle_finger_input( ticks );
+                                    }
                                 }
                             }
                         }
@@ -6497,6 +6591,7 @@ static void CheckMessages()
                         pinch_zoom_handled = false;
                         finger_down_time = 0;
                         finger_repeat_time = 0;
+                        android_imgui_touch_active = false;
                         // ensure virtual joystick and quick shortcuts are updated properly
                         android_request_repaint();
                         refresh_display(); // as above, but actually redraw it now as well

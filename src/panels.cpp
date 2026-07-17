@@ -476,11 +476,19 @@ void panel_manager::init()
 {
     layouts = initialize_default_panel_layouts();
     load();
+#if defined(__ANDROID__)
+    // The Android HUD is rendered by a native View overlay.  Keep panel
+    // layouts available for shared game UI code, but never reserve terminal
+    // columns or draw the desktop sidebar on Android.
+    update_offsets( 0 );
+    return;
+#else
     update_offsets( get_current_layout().panels().begin()->get_width() );
     if( get_current_sidebar() != nullptr ) {
         widget::finalize_inherited_fields_recursive( get_current_sidebar()->getId(),
                 get_current_sidebar()->_separator, get_current_sidebar()->_padding );
     }
+#endif
 }
 
 void panel_manager::update_offsets( int x )

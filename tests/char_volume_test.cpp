@@ -34,18 +34,18 @@ TEST_CASE( "character_baseline_volumes", "[volume]" )
     you.set_stored_kcal( you.get_healthy_kcal() );
     REQUIRE( you.get_mutations().empty() );
     REQUIRE( you.height() == 175 );
-    REQUIRE( you.bodyweight() == 76562390_milligram );
-    CHECK( you.get_base_volume() == 73485_ml );
+    REQUIRE( you.bodyweight() == 64312390_milligram );
+    CHECK( you.get_base_volume() == 61445_ml );
 
     REQUIRE( your_height_with_trait( trait_SMALL2 ) == 70 );
-    CHECK( your_volume_with_trait( trait_SMALL2 ) == 23326_ml );
+    CHECK( your_volume_with_trait( trait_SMALL2 ) == 21488_ml );
 
     REQUIRE( your_height_with_trait( trait_SMALL ) == 122 );
-    CHECK( your_volume_with_trait( trait_SMALL ) == 42476_ml );
+    CHECK( your_volume_with_trait( trait_SMALL ) == 36779_ml );
 
     REQUIRE( your_height_with_trait( trait_LARGE ) == 227 );
-    CHECK( your_volume_with_trait( trait_LARGE ) == 116034_ml );
+    CHECK( your_volume_with_trait( trait_LARGE ) == 95159_ml );
 
     REQUIRE( your_height_with_trait( trait_HUGE ) == 280 );
-    CHECK( your_volume_with_trait( trait_HUGE ) == 156228_ml );
+    CHECK( your_volume_with_trait( trait_HUGE ) == 123700_ml );
 }

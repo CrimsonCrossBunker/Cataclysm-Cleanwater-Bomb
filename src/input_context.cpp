@@ -15,6 +15,9 @@
 #include <utility>
 
 #include "action.h"
+#if defined(__ANDROID__)
+    #include "android_hud.h"
+#endif
 #include "cata_imgui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -481,9 +484,30 @@ const std::string &input_context::handle_input( const int timeout )
     }
     next_action.type = input_event_t::error;
     const std::string *result = &CATA_ERROR;
+#if defined(__ANDROID__)
+    std::vector<android_hud::action_descriptor> android_actions;
+    android_actions.reserve( registered_actions.size() );
+    for( const std::string &action : registered_actions ) {
+        android_actions.push_back( { action, get_action_name( action ) } );
+    }
+    android_hud::set_active_context( category, android_actions );
+    if( android_hud::consume_action_for_context( registered_actions, android_direct_action ) ) {
+        inp_mngr.set_timeout( old_timeout );
+        return android_direct_action;
+    }
+#endif
     while( true ) {
 
         next_action = inp_mngr.get_input_event( preferred_keyboard_mode );
+#if defined(__ANDROID__)
+        // A HUD tap can arrive while SDL is waiting for its short poll timeout.
+        // Prefer it over the timeout/event that woke this loop, without turning
+        // it into a synthetic keyboard event.
+        if( android_hud::consume_action_for_context( registered_actions, android_direct_action ) ) {
+            result = &android_direct_action;
+            break;
+        }
+#endif
         if( next_action.type == input_event_t::timeout ) {
             result = &TIMEOUT;
             break;
