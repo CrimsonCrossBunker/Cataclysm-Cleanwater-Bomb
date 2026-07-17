@@ -74,6 +74,7 @@
 #include "overlay_ordering.h"
 #include "overmap.h"
 #include "pixel_minimap.h"
+#include "profiling.h"
 #include "scent_map.h"
 #include "screen_shake.h"
 #include "sdl_renderer_recovery.h"
@@ -589,6 +590,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     if( display_buffer_scope_is_invalid() || !g ) {
         return;
     }
+    CATA_PROFILE_SCOPE_NAMED( "tiles.draw" );
 
     // Prevent divide-by-zero if no tile width/height specified
     if( tile_width == 0 || tile_height == 0 ) {
@@ -1133,88 +1135,13 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_creature_columns.insert( cpos.xy() );
     }
 
-    // Refresh the per-tile field cache every frame.  Fields can appear
-    // between the dirty-gated rebuild and the layer loop (e.g. an
-    // intermediate draw during handle_action consumes the dirty flag
-    // before a later action creates the field), so a one-shot
-    // rebuild-time capture is insufficient.  The same row / z-level
-    // bounds as the rebuild are used.
+    // Refresh dynamic field, item, and vehicle-part content every frame.
+    // These values can change after the dirty-gated static snapshot was built,
+    // so they still need live queries.  Keep them in one traversal of the draw
+    // point cache: animation frames previously walked the same z/row/tile
+    // structure three times before starting the layer loop.
     {
-        map &here = get_map();
-        for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel-- ) {
-            for( int row = min_row; row < max_row; row++ ) {
-                for( tile_render_info &tri : here.draw_points_cache.tiles[zlevel][row] ) {
-                    tile_render_info::sprite *const var =
-                        std::get_if<tile_render_info::sprite>( &tri.var );
-                    if( !var || var->invisible[0] ) {
-                        continue;
-                    }
-                    const field &f = here.field_at( tri.view.pos );
-                    const field_type_id disp_fld = f.displayed_field_type();
-                    if( disp_fld ) {
-                        var->set_field_content( disp_fld,
-                                                f.displayed_intensity() );
-                    }
-                }
-            }
-        }
-    }
-
-    // Refresh the per-tile item cache every frame, right after the
-    // field refresh.  Items can appear or disappear between the
-    // dirty-gated rebuild and the layer loop for the same reasons as
-    // fields (intermediate draws during handle_action consume the
-    // dirty flag before a later action creates or removes items,
-    // monster drops, etc.), so a one-shot rebuild-time capture is
-    // insufficient.
-    {
-        map &here = get_map();
-        for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel-- ) {
-            for( int row = min_row; row < max_row; row++ ) {
-                for( tile_render_info &tri : here.draw_points_cache.tiles[zlevel][row] ) {
-                    tile_render_info::sprite *const var =
-                        std::get_if<tile_render_info::sprite>( &tri.var );
-                    if( !var || var->invisible[0] ) {
-                        continue;
-                    }
-                    if( here.sees_some_items( tri.view.pos,
-                                              get_player_character() ) ) {
-                        const maptile &tile = here.maptile_at( tri.view.pos );
-                        const int count =
-                            static_cast<int>( tile.get_item_count() );
-                        if( count > 0 ) {
-                            const item &itm = tile.get_uppermost_item();
-                            const mtype *const mon = itm.get_mtype();
-                            var->set_item_content(
-                                itm.typeId(),
-                                mon ? mon->id : mtype_id::NULL_ID(),
-                                itm.has_itype_variant()
-                                ? itm.itype_variant().id : std::string{},
-                                count, true );
-                        } else {
-                            var->set_item_content( itype_id::NULL_ID(),
-                                                   mtype_id::NULL_ID(), std::string{},
-                                                   count, true );
-                        }
-                    } else {
-                        var->set_item_content( itype_id::NULL_ID(),
-                                               mtype_id::NULL_ID(), std::string{},
-                                               0, false );
-                    }
-                }
-            }
-        }
-    }
-
-    // Refresh the per-tile vehicle-part cache every frame.  Vehicle
-    // parts change every turn (movement, open/close, break), so a
-    // one-shot rebuild-time capture is insufficient.  Covers three
-    // cases in priority order:
-    //   1. Override tiles: drawn from vpart_override (construction /
-    //      explosion previews), checked unconditionally.
-    //   2. Visible tiles: drawn from the live vehicle on the map.
-    //   3. Invisible tiles: drawn from memorized vehicle-part data.
-    {
+        CATA_PROFILE_SCOPE_NAMED( "tiles.dynamic_cache_refresh" );
         map &here = get_map();
         auto &vp_ov = vpart_override;
         for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel-- ) {
@@ -1225,7 +1152,42 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     if( !var ) {
                         continue;
                     }
-                    // 1. Override check (unconditional)
+
+                    if( !var->invisible[0] ) {
+                        const field &f = here.field_at( tri.view.pos );
+                        const field_type_id disp_fld = f.displayed_field_type();
+                        if( disp_fld ) {
+                            var->set_field_content( disp_fld,
+                                                    f.displayed_intensity() );
+                        }
+
+                        if( here.sees_some_items( tri.view.pos,
+                                                  get_player_character() ) ) {
+                            const maptile &tile = here.maptile_at( tri.view.pos );
+                            const int count = static_cast<int>( tile.get_item_count() );
+                            if( count > 0 ) {
+                                const item &itm = tile.get_uppermost_item();
+                                const mtype *const mon = itm.get_mtype();
+                                var->set_item_content(
+                                    itm.typeId(),
+                                    mon ? mon->id : mtype_id::NULL_ID(),
+                                    itm.has_itype_variant()
+                                    ? itm.itype_variant().id : std::string{},
+                                    count, true );
+                            } else {
+                                var->set_item_content( itype_id::NULL_ID(),
+                                                       mtype_id::NULL_ID(), std::string{},
+                                                       count, true );
+                            }
+                        } else {
+                            var->set_item_content( itype_id::NULL_ID(),
+                                                   mtype_id::NULL_ID(), std::string{},
+                                                   0, false );
+                        }
+                    }
+
+                    // Vehicle content has three cases in priority order:
+                    // override, a visible live part, or an invisible memorized part.
                     const auto ov = vp_ov.find( tri.view.pos );
                     if( ov != vp_ov.end() && std::get<0>( ov->second ) ) {
                         const char part_mod = std::get<1>( ov->second );
@@ -1242,7 +1204,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         continue;
                     }
                     if( !var->invisible[0] ) {
-                        // 2. Normal: read live vehicle data
+                        // Normal: read live vehicle data.
                         const optional_vpart_position ovp =
                             here.veh_at( tri.view.pos );
                         if( ovp ) {
@@ -1267,7 +1229,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             }
                         }
                     } else {
-                        // 3. Memory: invisible tile
+                        // Memory: invisible tile.
                         const memorized_tile &t =
                             get_vpart_memory_at(
                                 here.get_abs( tri.view.pos ) );
