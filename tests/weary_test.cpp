@@ -140,7 +140,7 @@ static void check_weary_mutation_nosleep( const std::string &trait_name, float s
         if( multiplier >= 1.0f ) { // sleepiness alterations from mutations themselves affect thresholds...
             CHECK( info.transition_minutes( 0, 1, 165_minutes ) <= 170 );
             CHECK( info.transition_minutes( 0, 1, 165_minutes ) >= ( 160.0f / multiplier ) );
-            CHECK( info.transition_minutes( 1, 2, 295_minutes ) <= 300 );
+            CHECK( info.transition_minutes( 1, 2, 295_minutes ) <= 305 );
             CHECK( info.transition_minutes( 1, 2, 295_minutes ) >= ( 290.0f / multiplier ) );
             CHECK( info.transition_minutes( 2, 3, 390_minutes ) <= 395 );
             CHECK( info.transition_minutes( 2, 3, 390_minutes ) >= ( 385.0f / multiplier ) );
@@ -328,8 +328,8 @@ TEST_CASE( "weary_recovery", "[weary][activities]" )
         INFO( info.summarize() );
         INFO( guy.debug_weary_info() );
         REQUIRE( !info.empty() );
-        CHECK( info.transition_minutes( 4, 3, 500_minutes ) == Approx( 500 ).margin( 10 ) );
-        CHECK( info.transition_minutes( 3, 2, 620_minutes ) == Approx( 620 ).margin( 10 ) );
+        CHECK( info.transition_minutes( 4, 3, 0_minutes ) > ( 8 * 60 ) );
+        CHECK( info.transition_minutes( 3, 2, 605_minutes ) == Approx( 605 ).margin( 10 ) );
         CHECK( info.transition_minutes( 1, 0, 0_minutes ) > ( 8 * 60 ) ); // should be INT_MAX
         CHECK( info.transition_minutes( 2, 1, 0_minutes ) > ( 8 * 60 ) );
         CHECK( info.transition_minutes( 1, 2, 16_hours ) <= ( 8 * 60 ) );

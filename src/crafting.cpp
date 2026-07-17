@@ -4364,28 +4364,28 @@ void Character::complete_disassemble( item_location &target, const recipe &dis )
             }
             // Use item type to index recover/destroy tallies
             const itype_id it_type_id = newit.typeId();
-            // Chance of failure based on character skill and recipe difficulty
-            const bool comp_success = dice( skill_dice, skill_sides ) > dice( diff_dice, diff_sides );
-            // If original item was damaged, there is another chance for recovery to fail
-            const bool dmg_success = component_success_chance > rng_float( 0, 1 );
-
-            // If component recovery failed, tally it and continue with the next component
-            if( ( dis.difficulty != 0 && !comp_success ) || !dmg_success ) {
-                // Count destroyed items
-                if( destroy_tally.count( it_type_id ) == 0 ) {
-                    destroy_tally[it_type_id] = newit.count();
-                } else {
-                    destroy_tally[it_type_id] += newit.count();
+            // Charge-counted resources represent many independent components
+            // in one item stack.  Roll recovery for every unit so converting a
+            // resource to charges does not turn partial recovery into all-or-none.
+            int recovered_count = 0;
+            const int component_count = newit.count();
+            for( int unit = 0; unit < component_count; ++unit ) {
+                const bool comp_success = dis.difficulty == 0 ||
+                                          dice( skill_dice, skill_sides ) > dice( diff_dice, diff_sides );
+                const bool dmg_success = component_success_chance > rng_float( 0, 1 );
+                if( comp_success && dmg_success ) {
+                    recovered_count++;
                 }
+            }
+            const int destroyed_count = component_count - recovered_count;
+
+            if( destroyed_count > 0 ) {
+                destroy_tally[it_type_id] += destroyed_count;
+            }
+            if( recovered_count == 0 ) {
                 continue;
             }
-
-            // Component recovered successfully; add to the tally
-            if( recover_tally.count( it_type_id ) == 0 ) {
-                recover_tally[it_type_id] = newit.count();
-            } else {
-                recover_tally[it_type_id] += newit.count();
-            }
+            recover_tally[it_type_id] += recovered_count;
 
             // Use item from components list, or (if not contained)
             // use newit, the default constructed.
@@ -4411,6 +4411,9 @@ void Character::complete_disassemble( item_location &target, const recipe &dis )
             ret_val<item> removed = dis_item.components.remove( newit.typeId() );
             if( removed.success() ) {
                 act_item = removed.value();
+            }
+            if( act_item.count_by_charges() ) {
+                act_item.charges = recovered_count;
             }
 
             if( act_item.made_of( phase_id::LIQUID ) ) {
