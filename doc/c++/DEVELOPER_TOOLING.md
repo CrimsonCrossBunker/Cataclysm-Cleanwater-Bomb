@@ -47,6 +47,10 @@ More details below on how to make these work and other ways to invoke these tool
 
 Automatic formatting of source code is performed by [Artistic Style](http://astyle.sourceforge.net/).
 
+CI uses AStyle 3.1 from Ubuntu 24.04.  AStyle output changes between releases,
+so verify `astyle --version` before formatting; using a newer formatter can
+rewrite otherwise valid files and will not match CI.
+
 If you have both `make` and `astyle` installed then this can be done with:
 
 ```BASH
