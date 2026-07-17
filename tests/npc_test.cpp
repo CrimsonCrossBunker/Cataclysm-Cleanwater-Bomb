@@ -3105,7 +3105,7 @@ TEST_CASE( "npc_shopkeeper_sleep_wake_return", "[npc][needs]" )
         CHECK( guy.get_sleepiness() == 0 );
     }
 
-    SECTION( "NO_NPC_FOOD wakes sleeping NPC and keeps sleepiness at zero" ) {
+    SECTION( "NO_NPC_FOOD removes sleep while preserving NPC suspension" ) {
         override_option no_food( "NO_NPC_FOOD", "true" );
         npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
         clear_character( guy, true );
@@ -3119,7 +3119,7 @@ TEST_CASE( "npc_shopkeeper_sleep_wake_return", "[npc][needs]" )
         guy.update_needs( 1 );
 
         CHECK( guy.get_sleepiness() == 0 );
-        CHECK_FALSE( guy.in_sleep_state() );
+        CHECK_FALSE( guy.has_effect( effect_sleep ) );
         CHECK( guy.has_effect( effect_npc_suspend ) );
     }
 
