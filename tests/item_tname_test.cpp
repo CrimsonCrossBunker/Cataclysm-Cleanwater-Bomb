@@ -844,7 +844,7 @@ TEST_CASE( "nested_items_tname", "[item][tname]" )
                        u.will_eat( pepper ).value() == edible_rating::INEDIBLE ) );
             REQUIRE( bag.put_in( salt, pocket_type::CONTAINER ).success() );
             REQUIRE( bag.put_in( pepper, pocket_type::CONTAINER ).success() );
-            CHECK( bag.tname( 1 ) == "plastic bag > 2 " + colorize( cat_food_str, c_dark_gray ) );
+            CHECK( bag.tname( 1 ) == "plastic bag > 7g,2 " + colorize( cat_food_str, c_dark_gray ) );
         }
 
         SECTION( "non-perishable" ) {

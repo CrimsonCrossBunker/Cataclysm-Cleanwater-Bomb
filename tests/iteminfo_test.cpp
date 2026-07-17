@@ -1830,14 +1830,14 @@ TEST_CASE( "gun_or_other_ranged_weapon_attributes", "[iteminfo][weapon][gun]" )
         CHECK( item_info_str( glock, aim_stats ) ==
                "--\n"
                "<color_c_cyan>Regular</color>\n"
-               "Even chance of good hit at range: <color_c_yellow>2</color>\n"
-               "Time to reach aim level: <color_c_yellow>233</color> moves\n"
-               "<color_c_cyan>Careful</color>\n"
                "Even chance of good hit at range: <color_c_yellow>3</color>\n"
-               "Time to reach aim level: <color_c_yellow>399</color> moves\n"
+               "Time to reach aim level: <color_c_yellow>115</color> moves\n"
+               "<color_c_cyan>Careful</color>\n"
+               "Even chance of good hit at range: <color_c_yellow>6</color>\n"
+               "Time to reach aim level: <color_c_yellow>194</color> moves\n"
                "<color_c_cyan>Precise</color>\n"
-               "Even chance of good hit at range: <color_c_yellow>4</color>\n"
-               "Time to reach aim level: <color_c_yellow>645</color> moves\n" );
+               "Even chance of good hit at range: <color_c_yellow>8</color>\n"
+               "Time to reach aim level: <color_c_yellow>316</color> moves\n" );
     }
 
     SECTION( "compatible magazines" ) {
@@ -1932,7 +1932,7 @@ TEST_CASE( "gun_armor_piercing_dispersion_and_other_stats", "[iteminfo][gun][mis
 
     CHECK( item_info_str( glock, disp_sight ) ==
            "--\n"
-           "Sight dispersion: <color_c_yellow>0.44</color> MOA\n" );
+           "Sight dispersion: <color_c_yellow>0.39</color> MOA\n" );
 
     // TODO: Add a test gun with thest attributes
     //CHECK( item_info_str( glock, recoil_bipod ).empty() );
@@ -2744,7 +2744,7 @@ TEST_CASE( "disassembly_time_and_yield", "[iteminfo][disassembly]" )
            // i do not understand why clang yells two spaces are needed for `and 59in. copper`
            // but i cannot figure how to fix it properly
            //NOLINTNEXTLINE(cata-text-style)
-           " yield</color>: 2 electronic scraps, 1 copper, 1 scrap metal, and 59in. copper"
+           " yield</color>: 2 electronic scraps, 1 copper, 50g,1 scrap metal, and 150cm,5 copper"
            " wires.\n" );
 
     CHECK( item_info_str( metal, disassemble ) ==

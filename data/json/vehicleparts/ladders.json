@@ -4,6 +4,7 @@
     "type": "vehicle_part",
     "location": "under",
     "color": "brown",
+    "categories": [ "utility" ],
     "looks_like": "f_rope_up",
     "variants": [ { "symbols": "<", "symbols_broken": "O" } ],
     "flags": [ "LADDER", "SHOCK_IMMUNE", "BOARDABLE" ],

@@ -142,7 +142,8 @@ static void do_butchery_timing( int expected_turns, butcher_type butchery_type,
 
 TEST_CASE( "butchery_speed", "[harvest]" )
 {
-    do_butchery_timing( 8 * 60 * 60, butcher_type::FULL, 5, mon_deer );
+    // Cleanwater Bomb intentionally uses the restored, faster butchery times.
+    do_butchery_timing( 87 * 60 + 30, butcher_type::FULL, 5, mon_deer );
 }
 
 // Regression test for #85877 / #85136: butchering birds with sub-gram harvest

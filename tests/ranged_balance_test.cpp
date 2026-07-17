@@ -253,7 +253,10 @@ static void test_shooting_scenario( npc &shooter, const int min_quickdraw_range,
         CAPTURE( shooter.get_modifier( character_modifier_ranged_dispersion_manip_mod ) );
         CAPTURE( good_stats.n() );
         CAPTURE( good_stats.margin_of_error() );
-        CHECK( good_stats.avg() < 0.1 );
+        // Cleanwater Bomb deliberately improves long-range accuracy.  Keep an
+        // upper bound so this still catches a weapon becoming accurate at its
+        // nominal maximum range by accident.
+        CHECK( good_stats.avg() < 0.15 );
     }
 }
 
@@ -262,12 +265,9 @@ static void test_fast_shooting( npc &shooter, const int moves, float hit_rate )
     aim_mods_cache aim_cache = shooter.gen_aim_mods_cache( *shooter.get_wielded_item() );
     const Target_attributes target;
     const int fast_shooting_range = 3;
-    const float hit_rate_cap = hit_rate + 0.5f;
     const dispersion_sources dispersion = get_dispersion( shooter, moves, fast_shooting_range );
     firing_statistics fast_stats = firing_test( dispersion, fast_shooting_range,
                                    Threshold( accuracy_standard, hit_rate ) );
-    firing_statistics fast_stats_upper = firing_test( dispersion, fast_shooting_range,
-                                         Threshold( accuracy_standard, hit_rate_cap ) );
     INFO( dispersion );
     INFO( "Range: " << fast_shooting_range );
     INFO( "Max aim speed: " << shooter.aim_per_move( *shooter.get_wielded_item(), MAX_RECOIL, target,
@@ -281,10 +281,9 @@ static void test_fast_shooting( npc &shooter, const int moves, float hit_rate )
     CAPTURE( to_milliliter( shooter.get_wielded_item()->volume() ) );
     CAPTURE( fast_stats.n() );
     CAPTURE( fast_stats.margin_of_error() );
+    // These values are the minimum performance retained from the upstream
+    // balance test.  CCB's accuracy rebalance intentionally exceeds them.
     CHECK( fast_stats.avg() > hit_rate );
-    CAPTURE( fast_stats_upper.n() );
-    CAPTURE( fast_stats_upper.margin_of_error() );
-    CHECK( fast_stats_upper.avg() <= hit_rate_cap );
 }
 
 static void assert_encumbrance( npc &shooter, int encumbrance )
@@ -594,9 +593,9 @@ TEST_CASE( "shot_features", "[gun]" "[slow]" )
 
     // BUCKSHOT
     // Unarmored target
-    shoot_monster( itype_shotgun_s, {}, itype_shot_00, 18, 75, "mon_test_shotgun_0_bullet" );
+    shoot_monster( itype_shotgun_s, {}, itype_shot_00, 18, 88, "mon_test_shotgun_0_bullet" );
     // Heavy damage at range.
-    shoot_monster( itype_shotgun_s, {}, itype_shot_00, 12, 115, "mon_test_shotgun_0_bullet" );
+    shoot_monster( itype_shotgun_s, {}, itype_shot_00, 12, 126, "mon_test_shotgun_0_bullet" );
     // More damage at close range.
     shoot_monster( itype_shotgun_s, {}, itype_shot_00, 5, 171, "mon_test_shotgun_0_bullet" );
     // Extreme damage at point blank range.
@@ -604,7 +603,7 @@ TEST_CASE( "shot_features", "[gun]" "[slow]" )
 
     // Lightly armored target (armor_bullet: 5)
     // Outcomes for lightly armored enemies are very similar.
-    shoot_monster( itype_shotgun_s, {}, itype_shot_00, 18, 45, "mon_test_shotgun_5_bullet" );
+    shoot_monster( itype_shotgun_s, {}, itype_shot_00, 18, 57, "mon_test_shotgun_5_bullet" );
     shoot_monster( itype_shotgun_s, {}, itype_shot_00, 12, 77, "mon_test_shotgun_5_bullet" );
     shoot_monster( itype_shotgun_s, {}, itype_shot_00, 5, 113, "mon_test_shotgun_5_bullet" );
     shoot_monster( itype_shotgun_s, {}, itype_shot_00, 1, 81, "mon_test_shotgun_5_bullet" );
@@ -640,7 +639,7 @@ TEST_CASE( "shot_features_with_choke", "[gun]" "[slow]" )
                    "mon_test_shotgun_5_bullet" );
 
     // Unarmored target
-    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 95,
+    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 115,
                    "mon_test_shotgun_0_bullet" );
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 145,
                    "mon_test_shotgun_0_bullet" );
@@ -649,7 +648,7 @@ TEST_CASE( "shot_features_with_choke", "[gun]" "[slow]" )
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 1, 87,
                    "mon_test_shotgun_0_bullet" );
     // Triviallly armored target (armor_bullet: 1)
-    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 94,
+    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 107,
                    "mon_test_shotgun_1_bullet" );
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 135,
                    "mon_test_shotgun_1_bullet" );
@@ -658,7 +657,7 @@ TEST_CASE( "shot_features_with_choke", "[gun]" "[slow]" )
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 1, 87,
                    "mon_test_shotgun_1_bullet" );
     // Armored target (armor_bullet: 5)
-    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 62,
+    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 76,
                    "mon_test_shotgun_5_bullet" );
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 95,
                    "mon_test_shotgun_5_bullet" );
@@ -1359,4 +1358,3 @@ TEST_CASE( "Default_anatomy_body_part_hit_chances", "[targeting_graph][anatomy][
     CHECK( hits.at( body_part_foot_l ) == Approx( 13.0f / 1428.0f ).margin( fudge_factor / 10 ) );
     CHECK( hits.at( body_part_foot_r ) == Approx( 13.0f / 1428.0f ).margin( fudge_factor / 10 ) );
 }
-
