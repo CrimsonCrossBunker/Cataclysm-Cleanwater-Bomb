@@ -56,20 +56,20 @@ jobs:
           sudo apt install cmake
     - name: checkout IWYU repository
       id: iwyu-checkout
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: include-what-you-use/include-what-you-use
         path: include-what-you-use-src
         ref: clang_19
         persist-credentials: false
     - name: checkout own repository
-      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         path: Cataclysm-DDA
         persist-credentials: false
     - name: cache IWYU build
       id: iwyu-cache
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: iwyu-build
         key: iwyu-clang19-ubuntu2404-${{ steps.iwyu-checkout.outputs.commit }}
@@ -153,7 +153,7 @@ jobs:
         exit 0 # Always 'succeed' this step to reduce job noise.
     - name: Upload pr comment artifacts
       if: ${{ failure() && github.event_name == 'pull_request' && steps.run_iwyu.outputs.has_errors != 0 }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: suggestions
         path: suggestions/

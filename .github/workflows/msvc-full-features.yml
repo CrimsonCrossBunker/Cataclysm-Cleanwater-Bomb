@@ -58,12 +58,12 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
 
     steps:
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         persist-credentials: false
 
     - name: Setup msys2
-      uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2
+      uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2
       with:
         msystem: mingw64
         install: >-
@@ -71,7 +71,7 @@ jobs:
           make
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+      uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
     - name: Use GNU tar to enable zstd for actions/cache
       run: |
@@ -80,7 +80,7 @@ jobs:
       shell: cmd
 
     - name: Install stable CMake
-      uses: lukka/get-cmake@f176ccd3f28bda569c43aae4894f06b2435a3375 # latest
+      uses: lukka/get-cmake@e6906078ebd1ccb8ce51ab4626ac46a1b5a517e3 # latest
       with:
         # 4.0.0 has issues compiling old packages
         cmakeVersion: 3.31.6
@@ -99,13 +99,13 @@ jobs:
         RUNNER_WORKSPACE: ${{ runner.workspace }}
 
     - name: Cache vcpkg installed packages
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: msvc-full-features/vcpkg_installed
         key: vcpkg-installed-sdl3-${{ hashFiles('msvc-full-features/vcpkg.json', '.github/vcpkg_triplets/x64-windows-static.cmake') }}-f6672d8e480ccdecddfad3fd1b838ba369ffe6cd
 
     - name: Download ccache
-      uses: robinraju/release-downloader@368754b9c6f47c345fcfbf42bcb577c2f0f5f395 # v1.9
+      uses: robinraju/release-downloader@28fc21f50d76778e7023361aa1f863e717d3d56f # v1.13
       with:
         repository: 'ccache/ccache'
         tag: 'v4.6.1'
@@ -128,7 +128,7 @@ jobs:
       shell: bash
 
     - name: ccache cache files
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.get-vars.outputs.ccache-path }}
         # double-dash after compiler is not a typo, it is to disambiguate between g++-<date> and g++-11-<date> for restore key prefix matching
