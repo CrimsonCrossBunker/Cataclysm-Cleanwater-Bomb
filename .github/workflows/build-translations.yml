@@ -10,7 +10,9 @@ jobs:
   build-translations:
 
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    # Leave enough time for a full pull followed by targeted retries. This is
+    # a safety cap only; the higher worker count keeps normal runs much shorter.
+    timeout-minutes: 120
     permissions:
       actions: read
       contents: read
