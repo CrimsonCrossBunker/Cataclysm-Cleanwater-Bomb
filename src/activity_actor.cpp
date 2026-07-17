@@ -14723,8 +14723,7 @@ std::optional<item_location> zone_sort_activity_actor::pick_up_item( Character &
 
 bool zone_sort_activity_actor::rebuild_dropoff_coords( Character &you,
         const std::unordered_set<tripoint_abs_ms> &dest_set,
-        const zone_type_id &zt_id, const tripoint_abs_ms &abspos,
-        const tripoint_bub_ms &src_bub )
+        const zone_type_id &zt_id, const tripoint_abs_ms &abspos )
 {
     map &here = get_map();
 
@@ -15008,7 +15007,7 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
         // For first item: build dropoff_coords with route probing before pickup.
         // Always rebuild - previous item may have failed pickup and left stale coords.
         if( picked_up_stuff.empty() ) {
-            if( !rebuild_dropoff_coords( you, dest_set, zt_id, abspos, src_bub ) ) {
+            if( !rebuild_dropoff_coords( you, dest_set, zt_id, abspos ) ) {
                 add_msg_debug( debugmode::DF_ACTIVITY,
                                "zone_sort DO: item '%s' has no routable dests (%zu checked), skip",
                                thisitem.tname(), dest_set.size() );
@@ -15025,7 +15024,7 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
 
         if( dropoff_coords.empty() ) {
             // Defensive fallback - 4a normally handles this. Probe fresh.
-            rebuild_dropoff_coords( you, dest_set, zt_id, abspos, src_bub );
+            rebuild_dropoff_coords( you, dest_set, zt_id, abspos );
         }
 
         if( dropoff_coords.empty() ) {

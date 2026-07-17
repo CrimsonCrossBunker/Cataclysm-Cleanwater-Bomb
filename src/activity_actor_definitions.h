@@ -4268,8 +4268,7 @@ class zone_sort_activity_actor : public zone_activity_actor
         // Rebuild dropoff_coords from dest_set; returns true if any reachable dest exists.
         bool rebuild_dropoff_coords( Character &you,
                                      const std::unordered_set<tripoint_abs_ms> &dest_set,
-                                     const zone_type_id &zt_id, const tripoint_abs_ms &abspos,
-                                     const tripoint_bub_ms &src_bub );
+                                     const zone_type_id &zt_id, const tripoint_abs_ms &abspos );
         // Find a destination that can hold the picked_up batch; returns true on success.
         bool find_dropoff_destination( Character &you, const tripoint_bub_ms &src_bub,
                                        tripoint_abs_ms &destination );
