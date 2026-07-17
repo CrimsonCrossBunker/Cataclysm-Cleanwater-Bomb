@@ -5,8 +5,8 @@
     "copy-from": "guns_energy",
     "extend": {
       "items": [
-        { "item": "plasma_gun", "prob": 10, "charges": [ 0, 25 ] },
-        { "item": "plasma_rifle", "prob": 1, "charges": [ 0, 25 ] }
+        { "item": "fcl_plasma_gun", "prob": 10, "charges": [ 0, 25 ] },
+        { "item": "fcl_plasma_rifle", "prob": 1, "charges": [ 0, 25 ] }
       ]
     }
   }
