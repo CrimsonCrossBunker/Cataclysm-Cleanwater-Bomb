@@ -15,6 +15,7 @@
 #include <cstring>
 #include <ctime>
 #include <exception>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -795,6 +796,35 @@ int main( int argc, const char *argv[] )
     MAP_SHARING::setDefaults();
 
     cli_opts cli = parse_commandline( argc, const_cast<const char **>( argv ) );
+
+#if defined(__ANDROID__)
+    // When public Documents storage is selected for the first time, preserve the old user data.
+    // The old copy is intentionally retained so users can recover it if migration is interrupted.
+    if( !dir_exist( PATH_INFO::user_dir() ) && assure_dir_exist( PATH_INFO::user_dir() ) ) {
+        const std::filesystem::path old_user_dir = std::filesystem::u8path( external_storage_path );
+        const std::filesystem::path new_user_dir = std::filesystem::u8path( PATH_INFO::user_dir() );
+        constexpr std::array<const char *, 10> user_directories = {{
+                "config", "font", "gfx", "save", "sound", "templates", "mods", "memorial",
+                "achievements", "graveyard"
+            }
+        };
+
+        for( const char *directory : user_directories ) {
+            const std::filesystem::path source = old_user_dir / directory;
+            if( !std::filesystem::is_directory( source ) ) {
+                continue;
+            }
+            std::error_code error;
+            std::filesystem::copy( source, new_user_dir / directory,
+                                   std::filesystem::copy_options::recursive |
+                                   std::filesystem::copy_options::skip_existing, error );
+            if( error ) {
+                std::fprintf( stderr, "Unable to migrate Android user directory %s: %s\n",
+                              directory, error.message().c_str() );
+            }
+        }
+    }
+#endif
 
     if( !dir_exist( PATH_INFO::datadir() ) ) {
         printf( "Fatal: Can't find data directory \"%s\"\nPlease ensure the current working directory is correct or specify data directory with --datadir.  Perhaps you meant to start \"cataclysm-launcher\"?\n",

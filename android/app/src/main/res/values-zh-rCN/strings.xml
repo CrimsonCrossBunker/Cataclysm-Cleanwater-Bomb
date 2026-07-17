@@ -17,6 +17,8 @@
 （返回按键不会退出游戏）</string>
     <string name="nativeAndroidUI">启用原生安卓界面菜单
 （替换游戏部分选项为此类型弹窗效果）</string>
+    <string name="useLegacyStorage">使用旧版应用存储
+（不将用户数据放入公共 Documents 目录）</string>
     <string name="settings">预设
 （首次游戏建议进入 设置-图形 调整终端宽高比）
 （该设置仅在[首次启动]与[覆盖更新]时可调整！）</string>

@@ -3022,6 +3022,16 @@ void options_manager::add_options_performance()
                          "after changing." ),
          0, 64, 0
        );
+
+#if defined(__ANDROID__)
+    add( "LOAD_FROM_EXTERNAL", "performance",
+         to_translation( "Use legacy Android save directory" ),
+         to_translation( "Store save files in the app-specific Android/data directory instead of "
+                         "the public Documents directory.  This may improve save and load performance.  "
+                         "Requires restart." ),
+         false
+       );
+#endif
 }
 
 void options_manager::add_options_world_default()
