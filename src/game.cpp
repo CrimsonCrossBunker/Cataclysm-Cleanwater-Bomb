@@ -6651,8 +6651,9 @@ void game::reset_zoom()
 void game::set_zoom( const int level )
 {
 #if defined(TILES)
-    if( uistate.tileset_zoom != level ) {
-        uistate.tileset_zoom = level;
+    const int safe_level = level > 0 ? level : DEFAULT_TILESET_ZOOM;
+    if( uistate.tileset_zoom != safe_level ) {
+        uistate.tileset_zoom = safe_level;
         rescale_tileset( uistate.tileset_zoom );
     }
 #else
@@ -6663,8 +6664,9 @@ void game::set_zoom( const int level )
 void game::set_overmap_zoom( const int level )
 {
 #if defined(TILES)
-    if( uistate.overmap_tileset_zoom != level ) {
-        uistate.overmap_tileset_zoom = level;
+    const int safe_level = level > 0 ? level : DEFAULT_TILESET_ZOOM;
+    if( uistate.overmap_tileset_zoom != safe_level ) {
+        uistate.overmap_tileset_zoom = safe_level;
         overmap_tilecontext->set_draw_scale( uistate.overmap_tileset_zoom );
     }
 #else

@@ -506,6 +506,12 @@ void uistatedata::deserialize( const JsonObject &jo )
     jo.read( "overmap_fast_scroll", overmap_fast_scroll );
     jo.read( "tileset_zoom", tileset_zoom );
     jo.read( "overmap_tileset_zoom", overmap_tileset_zoom );
+    if( tileset_zoom <= 0 ) {
+        tileset_zoom = DEFAULT_TILESET_ZOOM;
+    }
+    if( overmap_tileset_zoom <= 0 ) {
+        overmap_tileset_zoom = DEFAULT_TILESET_ZOOM;
+    }
     jo.read( "overmap_sidebar_uistate", overmap_sidebar_state );
     jo.read( "editmap_uistate", editmap_state );
     jo.read( "distraction_noise", distraction_noise );
