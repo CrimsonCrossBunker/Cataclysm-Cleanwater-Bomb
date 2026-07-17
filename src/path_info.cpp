@@ -15,6 +15,10 @@
 #if defined(_WIN32)
     #include <windows.h>
 #endif
+#if defined(__ANDROID__)
+    #include <jni.h>
+    #include "sdl_wrappers.h" // for GetAndroidJNIEnv(), GetAndroidActivity()
+#endif
 
 /**
  * Return a locale specific path, or if there is no path for the current
@@ -46,6 +50,9 @@ static std::string options_value;
 static std::string memorialdir_value;
 static std::string achievementdir_value;
 static std::string langdir_value;
+#if defined(__ANDROID__)
+    static std::string legacy_android_savedir_value;
+#endif
 
 static cata_path autonote_path_value;
 static cata_path autopickup_path_value;
@@ -63,6 +70,7 @@ static cata_path savedir_path_value;
 static cata_path user_dir_path_value;
 
 // Get the given env var, or abort the program if it is not set
+#if !defined(__ANDROID__)
 static const char *getenv_or_abort( const char *name )
 {
     const char *result = getenv( name );
@@ -71,15 +79,35 @@ static const char *getenv_or_abort( const char *name )
     }
     return result;
 }
+#endif
 
 void PATH_INFO::init_base_path( const std::string &path )
 {
     base_path_value = as_norm_dir( path );
     base_path_path_value = cata_path{ cata_path::root_path::base, std::filesystem::path{} };
+#if defined(__ANDROID__)
+    legacy_android_savedir_value = base_path_value + "save/";
+#endif
 }
 
 void PATH_INFO::init_user_dir( std::string dir )
 {
+#if defined(__ANDROID__)
+    if( !android_get_default_setting( "Use Legacy Storage", false ) ) {
+        JNIEnv *env = static_cast<JNIEnv *>( GetAndroidJNIEnv() );
+        jobject activity = static_cast<jobject>( GetAndroidActivity() );
+        jclass clazz = env->GetObjectClass( activity );
+        jmethodID method_id = env->GetMethodID( clazz, "getDocumentsDirectory",
+                                                "()Ljava/lang/String;" );
+        jstring jpath = static_cast<jstring>( env->CallObjectMethod( activity, method_id ) );
+        const char *chars = env->GetStringUTFChars( jpath, nullptr );
+        dir = std::string( chars ) + "/cataclysm-ccb/";
+        env->ReleaseStringUTFChars( jpath, chars );
+        env->DeleteLocalRef( jpath );
+        env->DeleteLocalRef( clazz );
+        env->DeleteLocalRef( activity );
+    }
+#else
     if( dir.empty() ) {
         const char *user_dir;
 #if defined(_WIN32)
@@ -101,6 +129,7 @@ void PATH_INFO::init_user_dir( std::string dir )
         dir = std::string( user_dir ) + "/.cataclysm-dda/";
 #endif
     }
+#endif
 
     user_dir_value = as_norm_dir( dir );
     user_dir_path_value = cata_path{ cata_path::root_path::user, std::filesystem::path{} };
@@ -367,6 +396,12 @@ cata_path PATH_INFO::safemode()
 }
 std::string PATH_INFO::savedir()
 {
+#if defined(__ANDROID__)
+    if( get_options().has_option( "LOAD_FROM_EXTERNAL" ) &&
+        get_option<bool>( "LOAD_FROM_EXTERNAL" ) ) {
+        return legacy_android_savedir_value;
+    }
+#endif
     return savedir_value;
 }
 cata_path PATH_INFO::savedir_path()
@@ -608,6 +643,12 @@ std::filesystem::path cata_path::get_logical_root_path() const
             case cata_path::root_path::memorial:
                 return memorialdir_value;
             case cata_path::root_path::save:
+#if defined(__ANDROID__)
+                if( get_options().has_option( "LOAD_FROM_EXTERNAL" ) &&
+                    get_option<bool>( "LOAD_FROM_EXTERNAL" ) ) {
+                    return legacy_android_savedir_value;
+                }
+#endif
                 return savedir_value;
             case cata_path::root_path::user:
                 return user_dir_value;

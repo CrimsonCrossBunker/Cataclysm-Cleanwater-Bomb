@@ -13,6 +13,7 @@ import android.graphics.Insets;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
@@ -44,6 +45,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -94,6 +96,13 @@ public class CataclysmDDA extends SDLActivity {
     private View buttonManageLayout;
     private FrameLayout buttonEditorContainer;
     private boolean deleteButtonMode = false;
+
+    public String getDocumentsDirectory() {
+        File documentsDirectory = Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_DOCUMENTS
+        );
+        return documentsDirectory.getAbsolutePath();
+    }
 
     // libmain.so must load first so cata_allocator binds before SDL's malloc.
     // SDL3 dlsym's SDL_main from getMainSharedObject(), which we point at libmain.so.
