@@ -11,7 +11,7 @@ static bool has_tile( const std::vector<tripoint_bub_ms> &v, const tripoint_bub_
     return std::find( v.begin(), v.end(), p ) != v.end();
 }
 
-TEST_CASE( "vfx point shape is a single tile at the origin", "[vfx_emit]" )
+TEST_CASE( "vfx_point_shape_is_a_single_tile_at_the_origin", "[vfx_emit]" )
 {
     vfx_emit e;
     e.shape = vfx_shape::point;
@@ -21,7 +21,7 @@ TEST_CASE( "vfx point shape is a single tile at the origin", "[vfx_emit]" )
     CHECK( tiles.front() == e.origin );
 }
 
-TEST_CASE( "vfx disc is a filled circle around the origin", "[vfx_emit]" )
+TEST_CASE( "vfx_disc_is_a_filled_circle_around_the_origin", "[vfx_emit]" )
 {
     vfx_emit e;
     e.shape = vfx_shape::disc;
@@ -36,7 +36,7 @@ TEST_CASE( "vfx disc is a filled circle around the origin", "[vfx_emit]" )
     CHECK_FALSE( has_tile( tiles, tripoint_bub_ms( 2, 2, 0 ) ) );
 }
 
-TEST_CASE( "vfx line runs from origin toward the target", "[vfx_emit]" )
+TEST_CASE( "vfx_line_runs_from_origin_toward_the_target", "[vfx_emit]" )
 {
     vfx_emit e;
     e.shape = vfx_shape::line;
@@ -49,7 +49,7 @@ TEST_CASE( "vfx line runs from origin toward the target", "[vfx_emit]" )
     CHECK( has_tile( tiles, tripoint_bub_ms( 2, 0, 0 ) ) );
 }
 
-TEST_CASE( "vfx cone widens with arc and reaches its range", "[vfx_emit]" )
+TEST_CASE( "vfx_cone_widens_with_arc_and_reaches_its_range", "[vfx_emit]" )
 {
     vfx_emit narrow;
     narrow.shape = vfx_shape::cone;

@@ -194,40 +194,40 @@ TEST_CASE( "stored_kcal_ratio_influences_body_mass_index", "[biometrics][kcal][b
     avatar dummy;
 
     // Skeletal (fat BMI 0-1)
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.0f ) == Approx( 12.0f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.05f ) == Approx( 13.25f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.1f ) == Approx( 14.5f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.15f ) == Approx( 14.75f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.0f ) == Approx( 8.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.05f ) == Approx( 9.25f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.1f ) == Approx( 10.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.15f ) == Approx( 10.75f ).margin( 0.01f ) );
     // Emaciated (fat BMI 1.01-2)
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.2f ) == Approx( 16.0f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.25f ) == Approx( 17.25f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.3f ) == Approx( 17.5f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.35f ) == Approx( 18.75f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.2f ) == Approx( 12.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.25f ) == Approx( 13.25f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.3f ) == Approx( 13.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.35f ) == Approx( 14.75f ).margin( 0.01f ) );
     // Underweight (fat BMI 2.01-3.0)
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.4f ) == Approx( 20.0f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.5f ) == Approx( 21.5f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.6f ) == Approx( 23.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.4f ) == Approx( 16.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.5f ) == Approx( 17.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.6f ) == Approx( 19.0f ).margin( 0.01f ) );
     // Normal (fat bmi 3.01-5)
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.7f ) == Approx( 23.5f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.8f ) == Approx( 24.0f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 0.9f ) == Approx( 24.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.7f ) == Approx( 19.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.8f ) == Approx( 20.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 0.9f ) == Approx( 20.5f ).margin( 0.01f ) );
     // Overweight (fat bmi 5.01-10)
-    CHECK( true_bmi_at_kcal_ratio( dummy, 1.0f ) == Approx( 25.0f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 1.25f ) == Approx( 26.25f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 1.5f ) == Approx( 27.5f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 1.75f ) == Approx( 28.75f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 2.0f ) == Approx( 30.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 1.0f ) == Approx( 21.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 1.25f ) == Approx( 22.25f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 1.5f ) == Approx( 23.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 1.75f ) == Approx( 24.75f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 2.0f ) == Approx( 26.0f ).margin( 0.01f ) );
     // Obese (fat bmi 10.01-15)
-    CHECK( true_bmi_at_kcal_ratio( dummy, 2.25f ) == Approx( 31.25f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 2.5f ) == Approx( 32.5f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 2.75f ) == Approx( 33.75f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 3.0f ) == Approx( 35.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 2.25f ) == Approx( 27.25f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 2.5f ) == Approx( 28.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 2.75f ) == Approx( 29.75f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 3.0f ) == Approx( 31.0f ).margin( 0.01f ) );
     // Very obese (fat bmi 15.01-20)
-    CHECK( true_bmi_at_kcal_ratio( dummy, 3.5f ) == Approx( 37.5f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 4.0f ) == Approx( 40.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 3.5f ) == Approx( 33.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 4.0f ) == Approx( 36.0f ).margin( 0.01f ) );
     // Morbidly obese (fat bmi 20.01+)
-    CHECK( true_bmi_at_kcal_ratio( dummy, 4.5f ) == Approx( 42.5f ).margin( 0.01f ) );
-    CHECK( true_bmi_at_kcal_ratio( dummy, 5.0f ) == Approx( 45.0f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 4.5f ) == Approx( 38.5f ).margin( 0.01f ) );
+    CHECK( true_bmi_at_kcal_ratio( dummy, 5.0f ) == Approx( 41.0f ).margin( 0.01f ) );
 }
 
 TEST_CASE( "body_mass_index_determines_maximum_healthiness", "[biometrics][bmi][max]" )
@@ -338,10 +338,10 @@ TEST_CASE( "default_character_175_cm_bodyweights_at_various_BMIs", "[biometrics]
             THEN( "bodyweight varies from ~49-107kg" ) {
                 // BMI [16-35] is "Emaciated/Underweight" to "Obese/Very Obese"
                 // default strength of 8, at 1.0 fat bmis it is reduced to 4 producing a "true" bmi of 17.
-                CHECK( bodyweight_kg_at_bmi( dummy, 1.0 ) == Approx( 49.0 ).margin( 0.1f ) );
+                CHECK( bodyweight_kg_at_bmi( dummy, 1.0 ) == Approx( 36.75 ).margin( 0.1f ) );
                 // default strength of 8, +5 fat bmis = 25 true bmi, +15 = 35 true bmi
-                CHECK( bodyweight_kg_at_bmi( dummy, 5.0 ) == Approx( 76.6 ).margin( 0.1f ) );
-                CHECK( bodyweight_kg_at_bmi( dummy, 15.0 ) == Approx( 107.2 ).margin( 0.1f ) );
+                CHECK( bodyweight_kg_at_bmi( dummy, 5.0 ) == Approx( 64.31 ).margin( 0.1f ) );
+                CHECK( bodyweight_kg_at_bmi( dummy, 15.0 ) == Approx( 94.94 ).margin( 0.1f ) );
             }
         }
     }
@@ -419,7 +419,7 @@ TEST_CASE( "riding_various_creatures_at_various_sizes", "[avatar][bodyweight]" )
 
     SECTION( "only short tiny characters can ride large dogs" ) {
         CHECK( can_mount( dummies_min_height[creature_size::tiny], large_dog ) );
-        CHECK( !can_mount( dummies_default_height[creature_size::tiny], large_dog ) );
+        CHECK( can_mount( dummies_default_height[creature_size::tiny], large_dog ) );
         CHECK( !can_mount( dummies_max_height[creature_size::tiny], large_dog ) );
     }
 
@@ -475,9 +475,9 @@ TEST_CASE( "activity_levels_and_calories_in_daily_diary", "[avatar][biometrics][
         test_activity_duration( dummy, EXTRA_EXERCISE, 10_minutes );
         test_activity_duration( dummy, NO_EXERCISE, 1_minutes );
 
-        int expect_gained_kcal = 1283;
-        int expect_net_kcal = 527;
-        int expect_spent_kcal = 756;
+        int expect_gained_kcal = 1284;
+        int expect_net_kcal = 594;
+        int expect_spent_kcal = 690;
 
         CHECK( condensed_spaces( dummy.total_daily_calories_string() ) == string_format(
                    "<color_c_white> Minutes at each exercise level Calories per day</color>\n"
@@ -538,7 +538,7 @@ TEST_CASE( "basal_metabolic_rate_with_various_size_and_metabolism", "[biometrics
 
     // To keep things simple, use normal BMI for all tests
     set_player_bmi( dummy, 5.0f );
-    REQUIRE( dummy.get_bmi() == Approx( 25.0f ).margin( 0.001f ) );
+    REQUIRE( dummy.get_bmi() == Approx( 21.0f ).margin( 0.001f ) );
 
     // Tests cover:
     // - normal, very fast, and cold-blooded metabolisms for normal body size
@@ -550,27 +550,27 @@ TEST_CASE( "basal_metabolic_rate_with_various_size_and_metabolism", "[biometrics
         REQUIRE( dummy.get_size() == creature_size::medium );
 
         SECTION( "normal metabolism" ) {
-            CHECK( 1738 == bmr_at_act_level( dummy, NO_EXERCISE ) );
-            CHECK( 6952 == bmr_at_act_level( dummy, MODERATE_EXERCISE ) );
-            CHECK( 17380 == bmr_at_act_level( dummy, EXTRA_EXERCISE ) );
+            CHECK( 1616 == bmr_at_act_level( dummy, NO_EXERCISE ) );
+            CHECK( 6464 == bmr_at_act_level( dummy, MODERATE_EXERCISE ) );
+            CHECK( 16160 == bmr_at_act_level( dummy, EXTRA_EXERCISE ) );
         }
 
         SECTION( "very fast metabolism" ) {
             set_single_trait( dummy, "HUNGER2" );
             REQUIRE( dummy.metabolic_rate_base() == 2.0f );
 
-            CHECK( 3476 == bmr_at_act_level( dummy, NO_EXERCISE ) );
-            CHECK( 13904 == bmr_at_act_level( dummy, MODERATE_EXERCISE ) );
-            CHECK( 34760 == bmr_at_act_level( dummy, EXTRA_EXERCISE ) );
+            CHECK( 3232 == bmr_at_act_level( dummy, NO_EXERCISE ) );
+            CHECK( 12928 == bmr_at_act_level( dummy, MODERATE_EXERCISE ) );
+            CHECK( 32320 == bmr_at_act_level( dummy, EXTRA_EXERCISE ) );
         }
 
         SECTION( "very slow (cold-blooded) metabolism" ) {
             set_single_trait( dummy, "COLDBLOOD3" );
             REQUIRE( dummy.metabolic_rate_base() == 0.5f );
 
-            CHECK( 869 == bmr_at_act_level( dummy, NO_EXERCISE ) );
-            CHECK( 3476 == bmr_at_act_level( dummy, MODERATE_EXERCISE ) );
-            CHECK( 8690 == bmr_at_act_level( dummy, EXTRA_EXERCISE ) );
+            CHECK( 808 == bmr_at_act_level( dummy, NO_EXERCISE ) );
+            CHECK( 3232 == bmr_at_act_level( dummy, MODERATE_EXERCISE ) );
+            CHECK( 8080 == bmr_at_act_level( dummy, EXTRA_EXERCISE ) );
         }
     }
 

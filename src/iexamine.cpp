@@ -2910,8 +2910,10 @@ ret_val<void> iexamine::can_fertilize( Character &you, const tripoint_bub_ms &ti
     if( !fertilize_check.success() ) {
         return fertilize_check;
     }
-    if( ( fertilizer->count_by_charges() && !you.has_charges( fertilizer, 1 ) ) ||
-        !you.has_amount( fertilizer, 1 ) ) {
+    const bool has_fertilizer = fertilizer->count_by_charges() ?
+                                you.has_charges( fertilizer, 1 ) :
+                                you.has_amount( fertilizer, 1 );
+    if( !has_fertilizer ) {
         return ret_val<void>::make_failure(
                    _( "Tried to fertilize with %s, but player doesn't have any." ),
                    fertilizer.c_str() );

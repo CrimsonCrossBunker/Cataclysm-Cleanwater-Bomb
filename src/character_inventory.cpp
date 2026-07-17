@@ -3178,9 +3178,9 @@ void Character::store( item &container, item &put, bool penalties, int base_cost
     };
 
     if( check_best_pkt && pk_type == pocket_type::CONTAINER &&
-        target_container->get_container_pockets().size() > 1 && put.count_by_charges() ) {
+        target_container->get_container_pockets().size() > 1 ) {
         // Bypass pocket settings (assuming the item is manually stored)
-        const int charges = put.charges;
+        const int charges = put.count_by_charges() ? put.charges : 1;
         const int charges_stored = target_container->fill_with( put, charges, false, false, true, false,
                                    true, this );
         if( charges_stored <= 0 ) {
@@ -3188,7 +3188,7 @@ void Character::store( item &container, item &put, bool penalties, int base_cost
             return;
         }
         mod_moves( -item_store_cost( put, container, penalties, base_cost ) );
-        if( charges_stored >= put.charges ) {
+        if( !put.count_by_charges() || charges_stored >= put.charges ) {
             i_rem( &put );
         } else {
             put.charges -= charges_stored;

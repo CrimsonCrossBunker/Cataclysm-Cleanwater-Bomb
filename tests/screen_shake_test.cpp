@@ -18,7 +18,7 @@ static screen_shake_state make_shake()
     return s;
 }
 
-TEST_CASE( "screen shake: bounded by magnitude at all times", "[screen_shake]" )
+TEST_CASE( "screen_shake_bounded_by_magnitude_at_all_times", "[screen_shake]" )
 {
     screen_shake_state s = make_shake();
     for( float t = 0.0f; t < s.duration_ms; t += 5.0f ) {
@@ -32,7 +32,7 @@ TEST_CASE( "screen shake: bounded by magnitude at all times", "[screen_shake]" )
     }
 }
 
-TEST_CASE( "screen shake: zero at and past the end", "[screen_shake]" )
+TEST_CASE( "screen_shake_zero_at_and_past_the_end", "[screen_shake]" )
 {
     screen_shake_state s = make_shake();
     int dx = 1;
@@ -49,7 +49,7 @@ TEST_CASE( "screen shake: zero at and past the end", "[screen_shake]" )
     CHECK( dy == 0 );
 }
 
-TEST_CASE( "screen shake: envelope decays - late amplitude <= early", "[screen_shake]" )
+TEST_CASE( "screen_shake_envelope_decays-late_amplitude_le_early", "[screen_shake]" )
 {
     // The peak reachable amplitude shrinks as the shake ages. Sample the max |offset|
     // over a small window early vs. late; late must not exceed early.
@@ -76,7 +76,7 @@ TEST_CASE( "screen shake: envelope decays - late amplitude <= early", "[screen_s
     CHECK( late <= early );
 }
 
-TEST_CASE( "screen shake: degenerate states yield no offset", "[screen_shake]" )
+TEST_CASE( "screen_shake_degenerate_states_yield_no_offset", "[screen_shake]" )
 {
     int dx = 5;
     int dy = 5;
@@ -94,7 +94,7 @@ TEST_CASE( "screen shake: degenerate states yield no offset", "[screen_shake]" )
     CHECK( dy == 0 );
 }
 
-TEST_CASE( "screen shake: trigger/advance/clear lifecycle", "[screen_shake]" )
+TEST_CASE( "screen_shake_trigger/advance/clear_lifecycle", "[screen_shake]" )
 {
     clear_screen_shake();
     CHECK_FALSE( screen_shake_active() );
@@ -115,7 +115,7 @@ TEST_CASE( "screen shake: trigger/advance/clear lifecycle", "[screen_shake]" )
     CHECK_FALSE( screen_shake_active() );
 }
 
-TEST_CASE( "screen shake: stronger impulse refreshes, weaker is ignored", "[screen_shake]" )
+TEST_CASE( "screen_shake_stronger_impulse_refreshes_weaker_is_ignored", "[screen_shake]" )
 {
     clear_screen_shake();
     trigger_screen_shake( 4.0f, 300.0f, 1 );
