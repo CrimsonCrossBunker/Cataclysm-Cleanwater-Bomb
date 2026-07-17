@@ -1410,14 +1410,14 @@ TEST_CASE( "craft_stamp_passive_entry_batch_scales_fail_at",
         item_location loc( map_cursor( here.get_abs( origin ) ), &on_map );
         craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
 
-        // Cure: time 10m -> ready; max_time 20m + grace 5m -> fail 35m.
+        // Cure: time 10m -> ready; max_time 20m + grace 5m -> fail 25m.
         CHECK( on_map.get_ready_at() == calendar::turn + 10_minutes );
-        CHECK( on_map.get_fail_at() == calendar::turn + 35_minutes );
+        CHECK( on_map.get_fail_at() == calendar::turn + 25_minutes );
     }
 
     // Batch of eight (no batch_time_factors -> none -> x8):
     //   ready_at = entry + 10m*8 = 80m
-    //   fail_at  = ready_at + (20m + 5m)*8 = 280m
+    //   fail_at  = entry + (20m + 5m)*8 = 200m
     SECTION( "batch of eight scales both deadlines, fail stays after ready" ) {
         const int batch = 8;
         item ingredient( itype_2x4, calendar::turn );
@@ -1433,7 +1433,7 @@ TEST_CASE( "craft_stamp_passive_entry_batch_scales_fail_at",
         craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
 
         CHECK( on_map.get_ready_at() == calendar::turn + 80_minutes );
-        CHECK( on_map.get_fail_at() == calendar::turn + 280_minutes );
+        CHECK( on_map.get_fail_at() == calendar::turn + 200_minutes );
         // Ruin deadline must stay strictly after completion.
         CHECK( on_map.get_fail_at() > on_map.get_ready_at() );
     }
@@ -1703,7 +1703,7 @@ TEST_CASE( "craft_env_unpause_alarm_clears_when_already_due",
     CHECK( on_map.get_pause_started_at() == calendar::before_time_starts );
 }
 
-TEST_CASE( "craft_stamp_anchors_fail_at_to_ready_at_not_entry",
+TEST_CASE( "craft_stamp_keeps_max_time_as_entry_deadline",
            "[craft][attention][overdue][fail]" )
 {
     clear_avatar();
@@ -1725,11 +1725,10 @@ TEST_CASE( "craft_stamp_anchors_fail_at_to_ready_at_not_entry",
     item_location loc( map_cursor( here.get_abs( origin ) ), &on_map );
     craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
 
-    // fail_at must be anchored to completion (ready_at + max_time + grace),
-    // NOT to entry_time.  Anchoring to entry made large batches hit a fixed
-    // deadline before ready_at could scale past it (boiling 4+ water vanished).
+    // max_time is a hard deadline measured from entry.  Batch scaling and the
+    // ready_at clamp prevent a large batch from expiring before completion.
     REQUIRE( on_map.get_passive_started_at() == calendar::turn );
-    CHECK( on_map.get_fail_at() == on_map.get_ready_at() + 20_minutes + 5_minutes );
+    CHECK( on_map.get_fail_at() == calendar::turn + 20_minutes + 5_minutes );
     CHECK( on_map.get_fail_at() > on_map.get_ready_at() );
 }
 

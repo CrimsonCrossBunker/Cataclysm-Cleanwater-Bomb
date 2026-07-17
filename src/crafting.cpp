@@ -1787,7 +1787,7 @@ void craft_stamp_passive_entry( item &craft, const Character &crafter, time_poin
                                        static_cast<double>( to_moves<int64_t>( raw_fail ) ), batch ) );
         const int64_t max_moves = static_cast<int64_t>( cur_step.batch_info.apply(
                                       static_cast<double>( to_moves<int64_t>( raw_max ) ), batch ) );
-        time_point fail_pt = craft.get_ready_at() + time_duration::from_moves( fail_moves );
+        time_point fail_pt = entry_time + time_duration::from_moves( fail_moves );
         // Keep ruin strictly after completion; grace window is the marginal
         // scaled difference, or a floor when there is no grace_period.
         const int64_t grace_moves = fail_moves - max_moves;
