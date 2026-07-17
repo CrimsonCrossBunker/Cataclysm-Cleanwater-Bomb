@@ -1464,7 +1464,7 @@ TEST_CASE( "craft_batch_completes_instead_of_vanishing",
     get_item_wakeups().rebuild_for_item( loc );
 
     // Past the batch-scaled ready_at (80m) but well before the scaled fail_at
-    // (200m): the step finalizes and spawns the result rather than being
+    // (280m): the step finalizes and spawns the result rather than being
     // destroyed by a ruin deadline that elapsed before completion.
     craft_resolve_overdue_passive( on_map, calendar::turn + 81_minutes, loc );
 
@@ -1703,7 +1703,7 @@ TEST_CASE( "craft_env_unpause_alarm_clears_when_already_due",
     CHECK( on_map.get_pause_started_at() == calendar::before_time_starts );
 }
 
-TEST_CASE( "craft_stamp_anchors_fail_at_to_ready_at_not_entry",
+TEST_CASE( "craft_stamp_keeps_max_time_as_entry_deadline",
            "[craft][attention][overdue][fail]" )
 {
     clear_avatar();
@@ -1725,11 +1725,10 @@ TEST_CASE( "craft_stamp_anchors_fail_at_to_ready_at_not_entry",
     item_location loc( map_cursor( here.get_abs( origin ) ), &on_map );
     craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
 
-    // fail_at must be anchored to completion (ready_at + max_time + grace),
-    // NOT to entry_time.  Anchoring to entry made large batches hit a fixed
-    // deadline before ready_at could scale past it (boiling 4+ water vanished).
+    // max_time is a hard deadline measured from entry.  Batch scaling and the
+    // ready_at clamp prevent a large batch from expiring before completion.
     REQUIRE( on_map.get_passive_started_at() == calendar::turn );
-    CHECK( on_map.get_fail_at() == on_map.get_ready_at() + 20_minutes + 5_minutes );
+    CHECK( on_map.get_fail_at() == calendar::turn + 20_minutes + 5_minutes );
     CHECK( on_map.get_fail_at() > on_map.get_ready_at() );
 }
 

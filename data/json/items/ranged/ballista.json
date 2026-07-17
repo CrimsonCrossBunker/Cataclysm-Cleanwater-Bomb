@@ -44,7 +44,6 @@
     "weight": "20 kg",
     "volume": "10 L",
     "melee_damage": { "bash": 25 },
-    "to_hit": -2,
     "ranged_damage": { "damage_type": "stab", "amount": 80 },
     "looks_like": "huge_crossbow",
     "range": 45,
@@ -76,7 +75,6 @@
     "damage": { "damage_type": "stab", "amount": 10, "armor_penetration": 5, "armor_multiplier": 2 },
     "range": 10,
     "dispersion": 300,
-    "to_hit": -2,
     "recovery_chance": 90,
     "effects": [ "NEVER_MISFIRES", "NON_FOULING" ]
   },
@@ -115,7 +113,6 @@
     "range": 14,
     "dispersion": 10,
     "loudness": 0,
-    "to_hit": -1,
     "recovery_chance": 99,
     "effects": [ "NEVER_MISFIRES", "NON_FOULING" ]
   },

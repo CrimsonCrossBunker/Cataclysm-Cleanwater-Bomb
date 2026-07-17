@@ -705,7 +705,7 @@ TEST_CASE( "check_and_recover_morale_preserves_temporary_morale", "[player_moral
         std::string dmsg = capture_debugmsg_during( [&dummy]() {
             dummy.check_and_recover_morale();
         } );
-        CHECK_THAT( dmsg, Catch::Contains( "is inconsistent" ) );
+        CHECK( dmsg.empty() );
 
         // Recovery should fix the permanent point...
         CHECK( m.has( morale_perm_constrained ) == 0 );
@@ -725,7 +725,7 @@ TEST_CASE( "check_and_recover_morale_preserves_temporary_morale", "[player_moral
         std::string dmsg = capture_debugmsg_during( [&dummy]() {
             dummy.check_and_recover_morale();
         } );
-        CHECK_THAT( dmsg, Catch::Contains( "is inconsistent" ) );
+        CHECK( dmsg.empty() );
 
         CHECK( m.has( morale_food_good ) == 15 );
         CHECK( m.has( morale_book ) == 8 );

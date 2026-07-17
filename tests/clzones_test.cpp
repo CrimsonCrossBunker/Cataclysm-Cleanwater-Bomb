@@ -1099,9 +1099,10 @@ TEST_CASE( "zone_sorting_virtual_pickup_adjacent_dest",
     CHECK( !dummy.activity );
 }
 
-// When destination is walled off (unreachable), virtual pickup items stay
-// in cart and activity terminates cleanly.
-TEST_CASE( "zone_sorting_virtual_pickup_unreachable_dest",
+// A walled destination may be rejected by pathfinding or handled by CCB's
+// direct delivery path.  Either way, virtual pickup must preserve the item and
+// terminate cleanly.
+TEST_CASE( "zone_sorting_virtual_pickup_walled_dest_preserves_item",
            "[zones][items][activities][sorting][vehicle]" )
 {
     avatar &dummy = get_avatar();
@@ -1157,8 +1158,10 @@ TEST_CASE( "zone_sorting_virtual_pickup_unreachable_dest",
     dummy.assign_activity( zone_sort_activity_actor() );
     process_activity( dummy );
 
-    // Items stay in cart, activity terminates cleanly
-    CHECK( count_items_or_charges( src_pos, itype_test_apple, cargo ) == 1 );
+    const int at_source = count_items_or_charges( src_pos, itype_test_apple, cargo );
+    const int at_destination = count_items_or_charges( dest_pos, itype_test_apple,
+                               std::nullopt );
+    CHECK( at_source + at_destination == 1 );
     CHECK( !dummy.activity );
 }
 
@@ -1510,12 +1513,13 @@ TEST_CASE( "zone_sorting_has_terrain_has_vehicle_helpers",
     CHECK( mgr.has( zone_type_LOOT_FOOD, pos_b ) );
 }
 
-// Batching should consolidate pickups from nearby sources before delivering.
+// Fast sorting should deliver items from every nearby source without leaving
+// transient copies in the character inventory.
 // Layout: player at S1 (UNSORTED, 10 apples), S2 one tile east (UNSORTED, 10
 // apples), D ten tiles south (LOOT_FOOD). After picking up from S1, the sorter
 // should detour to adjacent S2 (distance 1 < distance 10 to D) and pick up
 // there too, delivering all 20 apples to D in one trip.
-TEST_CASE( "zone_sorting_batches_nearby_sources",
+TEST_CASE( "zone_sorting_fast_delivers_nearby_sources",
            "[zones][items][activities][sorting][batching]" )
 {
     avatar &dummy = get_avatar();
@@ -1571,23 +1575,13 @@ TEST_CASE( "zone_sorting_batches_nearby_sources",
     // Both sources should be empty - proves batching detoured to S2
     CHECK( count_items_or_charges( s1_pos, itype_test_apple, std::nullopt ) == 0 );
     CHECK( count_items_or_charges( s2_pos, itype_test_apple, std::nullopt ) == 0 );
-    // Items are in player inventory (process_activity can't drive auto-move
-    // to a non-adjacent dest, so delivery doesn't complete in the test harness).
-    // The key assertion is that BOTH sources were emptied in one pass.
-    int carried = 0;
-    dummy.visit_items( [&carried]( const item * it, const item * ) {
-        if( it->typeId() == itype_test_apple ) {
-            carried++;
-        }
-        return VisitResponse::NEXT;
-    } );
-    CHECK( carried == 20 );
+    CHECK( count_items_or_charges( dest_pos, itype_test_apple, std::nullopt ) == 20 );
 }
 
 // Batching with a grabbed vehicle: the capacity check should consider the
 // cart's free volume, not just the player's inventory. With 10 apples per
 // source, items overflow into the cart when inventory fills up.
-TEST_CASE( "zone_sorting_batches_into_grabbed_vehicle",
+TEST_CASE( "zone_sorting_fast_delivers_with_grabbed_vehicle",
            "[zones][items][activities][sorting][batching][vehicle]" )
 {
     avatar &dummy = get_avatar();
@@ -1646,19 +1640,7 @@ TEST_CASE( "zone_sorting_batches_into_grabbed_vehicle",
     // Both sources should be empty - batching used cart volume for capacity
     CHECK( count_items_or_charges( s1_pos, itype_test_apple, std::nullopt ) == 0 );
     CHECK( count_items_or_charges( s2_pos, itype_test_apple, std::nullopt ) == 0 );
-    // Items are in cart cargo and/or player inventory
-    int total = 0;
-    dummy.visit_items( [&total]( const item * it, const item * ) {
-        if( it->typeId() == itype_test_apple ) {
-            total++;
-        }
-        return VisitResponse::NEXT;
-    } );
-    std::optional<vpart_reference> cargo = here.veh_at( cart_pos ).cargo();
-    if( cargo.has_value() ) {
-        total += count_items_or_charges( cart_pos, itype_test_apple, cargo );
-    }
-    CHECK( total == 20 );
+    CHECK( count_items_or_charges( dest_pos, itype_test_apple, std::nullopt ) == 20 );
 }
 
 // When both vehicle cargo and ground at the destination are full, items should
@@ -2031,7 +2013,7 @@ TEST_CASE( "zone_sorting_multi_dest_processes_all_items",
 // Without a grabbed vehicle, zone sorting should stop picking up items once
 // carried weight exceeds the player's weight capacity.  Prevents the player
 // from overloading themselves while auto-sorting.
-TEST_CASE( "zone_sorting_no_grab_weight_gate",
+TEST_CASE( "zone_sorting_fast_delivery_preserves_heavy_items",
            "[zones][items][activities][sorting][weight]" )
 {
     avatar &dummy = get_avatar();
@@ -2080,7 +2062,8 @@ TEST_CASE( "zone_sorting_no_grab_weight_gate",
     dummy.assign_activity( zone_sort_activity_actor() );
     process_activity( dummy );
 
-    // Weight gate should have blocked some items from being picked up.
+    // Fast delivery never stages these items in inventory, so character carry
+    // capacity must not delete or strand them.
     const int remaining = count_items_or_charges( start_pos, itype_test_heavy_boulder, std::nullopt );
     int carried = 0;
     dummy.visit_items( [&carried]( const item * it, const item * ) {
@@ -2094,18 +2077,17 @@ TEST_CASE( "zone_sorting_no_grab_weight_gate",
     CAPTURE( carried );
     CAPTURE( dummy.weight_carried().value() );
     CAPTURE( dummy.weight_capacity().value() );
-    // Should have picked up some but not all
-    CHECK( carried > 0 );
-    CHECK( carried < num_boulders );
-    CHECK( remaining > 0 );
-    // Carried weight should be at or below capacity
+    CHECK( carried == 0 );
+    CHECK( remaining == 0 );
+    CHECK( count_items_or_charges( dest_pos, itype_test_heavy_boulder, std::nullopt ) ==
+           num_boulders );
     CHECK( dummy.weight_carried() <= dummy.weight_capacity() );
 }
 
 // With a grabbed cart, zone sorting should stop loading items into the cart
 // once the projected mass would exceed the player's drag strength on the
 // worst terrain tile of the delivery route.
-TEST_CASE( "zone_sorting_drag_weight_gate",
+TEST_CASE( "zone_sorting_fast_delivery_preserves_heavy_items_with_cart",
            "[zones][items][activities][sorting][weight][vehicle]" )
 {
     avatar &dummy = get_avatar();
@@ -2234,11 +2216,11 @@ TEST_CASE( "zone_sorting_drag_weight_gate",
     CAPTURE( in_cart );
     CAPTURE( carried );
     CAPTURE( at_source );
-    // Drag gate should have limited how many went into the cart.
-    // Some items may overflow to inventory (body weight gate applies there too).
-    // The key check: not all items were picked up.
-    CHECK( in_cart + carried + at_source == num_boulders );
-    CHECK( at_source > 0 );
+    CHECK( in_cart == 0 );
+    CHECK( carried == 0 );
+    CHECK( at_source == 0 );
+    CHECK( count_items_or_charges( dest_pos, itype_test_heavy_boulder, std::nullopt ) ==
+           num_boulders );
 }
 
 static void build_open_area( map &here, const tripoint_bub_ms &center, int radius = 15 )

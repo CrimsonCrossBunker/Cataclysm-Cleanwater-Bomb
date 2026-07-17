@@ -1662,7 +1662,7 @@ TEST_CASE( "prying", "[activity][prying]" )
                 int count_shards = 0;
                 for( const item &it : items ) {
                     if( it.typeId() == test_shards ) {
-                        count_shards += 1;
+                        count_shards += it.count();
                     }
                 }
 
@@ -1937,12 +1937,13 @@ TEST_CASE( "edevice", "[activity][edevice]" )
 
 TEST_CASE( "ebooksave_activity_stops_if_ereader_is_lost", "[activity][ebooksave]" )
 {
-    avatar dummy;
+    clear_avatar();
+    avatar &dummy = get_avatar();
     item_location ereader = dummy.i_add( item( itype_test_eink_tablet_pc ) );
     ebooksave_activity_actor actor( {}, ereader );
     player_activity act( actor );
 
-    dummy.remove_item( *ereader );
+    ereader.remove_item();
     REQUIRE_FALSE( ereader );
 
     act.do_turn( dummy );

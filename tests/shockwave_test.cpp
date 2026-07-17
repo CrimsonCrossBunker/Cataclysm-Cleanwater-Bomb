@@ -19,7 +19,7 @@ static shockwave_state make_ring()
     return s;
 }
 
-TEST_CASE( "shockwave: no displacement outside the refracted band", "[shockwave]" )
+TEST_CASE( "shockwave_no_displacement_outside_the_refracted_band", "[shockwave]" )
 {
     const shockwave_state s = make_ring();
 
@@ -39,7 +39,7 @@ TEST_CASE( "shockwave: no displacement outside the refracted band", "[shockwave]
     CHECK( dy == Approx( 0.0f ) );
 }
 
-TEST_CASE( "shockwave: displacement is radial", "[shockwave]" )
+TEST_CASE( "shockwave_displacement_is_radial", "[shockwave]" )
 {
     const shockwave_state s = make_ring();
 
@@ -59,7 +59,7 @@ TEST_CASE( "shockwave: displacement is radial", "[shockwave]" )
     CHECK( std::abs( dy ) > 0.0f );
 }
 
-TEST_CASE( "shockwave: front carries opposite-signed push on each side", "[shockwave]" )
+TEST_CASE( "shockwave_front_carries_opposite-signed_push_on_each_side", "[shockwave]" )
 {
     const shockwave_state s = make_ring();
 
@@ -76,7 +76,7 @@ TEST_CASE( "shockwave: front carries opposite-signed push on each side", "[shock
     CHECK( ( in_dx < 0.0f ) != ( out_dx < 0.0f ) );
 }
 
-TEST_CASE( "shockwave: peak magnitude bounded by strength", "[shockwave]" )
+TEST_CASE( "shockwave_peak_magnitude_bounded_by_strength", "[shockwave]" )
 {
     const shockwave_state s = make_ring();
 
@@ -98,7 +98,7 @@ TEST_CASE( "shockwave: peak magnitude bounded by strength", "[shockwave]" )
     }
 }
 
-TEST_CASE( "shockwave: inactive or degenerate state yields no offset", "[shockwave]" )
+TEST_CASE( "shockwave_inactive_or_degenerate_state_yields_no_offset", "[shockwave]" )
 {
     shockwave_state s = make_ring();
     s.active = false;
@@ -122,7 +122,7 @@ TEST_CASE( "shockwave: inactive or degenerate state yields no offset", "[shockwa
     CHECK( dy == Approx( 0.0f ) );
 }
 
-TEST_CASE( "shockwave: concurrent rings sum their offsets", "[shockwave]" )
+TEST_CASE( "shockwave_concurrent_rings_sum_their_offsets", "[shockwave]" )
 {
     // Two identical rings centred at the same point: the present-time blit sums the
     // per-ring offsets, so a vertex inside both bands gets twice one ring's push.
@@ -164,7 +164,7 @@ TEST_CASE( "shockwave: concurrent rings sum their offsets", "[shockwave]" )
     CHECK( sy == Approx( 0.0f ) );
 }
 
-TEST_CASE( "shockwave line: flat front sweeps along the axis", "[shockwave]" )
+TEST_CASE( "shockwave_line_flat_front_sweeps_along_the_axis", "[shockwave]" )
 {
     // A beam from the origin along +x: the front is at projection == radius, and
     // the push is along the axis. Off-axis points at the same projection are still
@@ -199,7 +199,7 @@ TEST_CASE( "shockwave line: flat front sweeps along the axis", "[shockwave]" )
     CHECK( by == Approx( 0.0f ) );
 }
 
-TEST_CASE( "shockwave line: half_width confines the beam to a tube", "[shockwave]" )
+TEST_CASE( "shockwave_line_half_width_confines_the_beam_to_a_tube", "[shockwave]" )
 {
     // With half_width set, a line front is bounded across its axis instead of
     // spanning the whole screen. center (100,100), axis +x, front at proj==radius.
@@ -239,7 +239,7 @@ TEST_CASE( "shockwave line: half_width confines the beam to a tube", "[shockwave
     CHECK( gx == Approx( 0.0f ).margin( 1e-4f ) );
 }
 
-TEST_CASE( "shockwave cone: ring restricted to the angular sector", "[shockwave]" )
+TEST_CASE( "shockwave_cone_ring_restricted_to_the_angular_sector", "[shockwave]" )
 {
     // A cone opening along +x with a 30-degree half-angle. A point on-axis in the
     // band is refracted; a point on the ring at 90 degrees off-axis is not.
