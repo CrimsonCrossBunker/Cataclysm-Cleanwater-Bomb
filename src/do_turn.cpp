@@ -655,19 +655,12 @@ bool game::do_turn()
 
     simulate_turn_prefix();
 
-    // Process multiplayer events from network thread.
-    cata_mp::process_mp_events();
-    // Apply server state updates received since the last turn (client mode).
-    cata_mp::client_process_incoming();
-    // Resolve any blocking UI deferred out of the recv path.
-    cata_mp::client_resolve_pending_ui();
-    // Lockstep: grant the client their turn at the start of each game turn.
-    if( cata_mp::is_hosting() ) {
-        cata_mp::grant_client_turn();
-    }
-    // Keep the MP debug HUD alive whenever multiplayer is active.
-    if( cata_mp::is_client_mode() || cata_mp::is_host_mode() ) {
-        cata_mp::ensure_mp_hud();
+    // Keep multiplayer entirely outside the single-player turn path.  The
+    // false branch is stable for the lifetime of a solo session, so it is
+    // cheap for the CPU to predict and no MP queue, cleanup, logging or UI
+    // synchronization function is entered.
+    if( cata_mp::is_session_active() ) {
+        cata_mp::process_session_turn();
     }
 
     if( do_avatar_action_loop() ) {

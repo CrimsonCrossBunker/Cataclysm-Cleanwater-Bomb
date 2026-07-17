@@ -65,6 +65,7 @@
 #include "memorial_logger.h"
 #include "messages.h"
 #include "mod_manager.h"
+#include "mp_gamestate.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -424,6 +425,7 @@ bool game::load( const save_t &name )
                         uistate.deserialize( jsin.get_object() );
                     } );
                     reload_npcs();
+                    cata_mp::mp_cleanup_stale_npcs_after_load();
                     validate_npc_followers();
                     validate_mounted_npcs();
                     validate_camps();
