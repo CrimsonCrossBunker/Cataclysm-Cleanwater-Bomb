@@ -1,0 +1,29 @@
+name: GitHub configuration validation
+
+on:
+  pull_request:
+    paths:
+      - '.github/**/*.yml'
+      - '.github/**/*.yaml'
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/**/*.yml'
+      - '.github/**/*.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  yaml-syntax:
+    name: YAML syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Parse GitHub YAML files
+        run: |
+          find .github -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 \
+            | xargs -0 ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "OK #{path}" }'
