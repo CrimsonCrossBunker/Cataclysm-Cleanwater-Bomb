@@ -10,6 +10,9 @@ jobs:
   build-translations:
 
     runs-on: ubuntu-22.04
+    # Leave enough time for a full pull followed by targeted retries. This is
+    # a safety cap only; the higher worker count keeps normal runs much shorter.
+    timeout-minutes: 120
     permissions:
       actions: read
       contents: read
@@ -38,7 +41,47 @@ jobs:
 
       - name: Pull translations
         if: ${{ env.TX_TOKEN != '' }}
-        run: tx pull -a --force -w 2
+        shell: bash
+        run: |
+          log="$RUNNER_TEMP/tx-pull.log"
+          attempted="$RUNNER_TEMP/tx-attempted-languages"
+          completed="$RUNNER_TEMP/tx-completed-languages"
+          failed="$RUNNER_TEMP/tx-failed-languages"
+
+          # The Transifex HTTP/2 connection may be closed after roughly one
+          # hour. Use the CLI's default concurrency to finish sooner, let it
+          # continue past individual failures, then retry only the languages
+          # that started but did not finish using a fresh connection.
+          pull_status=0
+          tx pull -a --force --skip -w 5 2>&1 | tee "$log" || pull_status=$?
+
+          sed -nE 's/.*\[([^][]+)\] - .*/\1/p' "$log" |
+            sort -u > "$attempted"
+          sed -nE 's/.*\[([^][]+)\] - Done[[:space:]]*$/\1/p' "$log" |
+            sort -u > "$completed"
+          comm -23 "$attempted" "$completed" > "$failed"
+
+          if [ ! -s "$failed" ]; then
+            exit "$pull_status"
+          fi
+
+          retry_failed=0
+          while IFS= read -r language; do
+            recovered=false
+            for attempt in 1 2 3; do
+              echo "::warning::Retrying Transifex language $language (attempt $attempt/3)"
+              if timeout 5m tx pull -l "$language" --force -w 1; then
+                recovered=true
+                break
+              fi
+              sleep $((attempt * 10))
+            done
+            if [ "$recovered" != true ]; then
+              echo "::error::Failed to pull Transifex language $language after 3 retries"
+              retry_failed=1
+            fi
+          done < "$failed"
+          exit "$retry_failed"
 
       - name: Reuse translations from latest successful master build
         if: ${{ env.TX_TOKEN == '' }}

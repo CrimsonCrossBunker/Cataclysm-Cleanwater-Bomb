@@ -5,6 +5,7 @@ on:
     branches:
       - master
     paths:
+      - '.github/workflows/build-translations.yml'
       - '.github/workflows/release.yml'
       - 'android/**'
       - 'build-data/**'
