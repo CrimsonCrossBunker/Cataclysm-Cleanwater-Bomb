@@ -1962,8 +1962,12 @@ void npc::move()
     if( action == npc_undecided && attitude == NPCATT_ACTIVITY && !has_flag( json_flag_CANNOT_MOVE ) ) {
         if( has_stashed_activity() ) {
             if( !check_outbounds_activity( get_stashed_activity(), true ) ) {
+                add_msg_debug( debugmode::DF_NPC, "npc %s restored stashed activity, moves=%d",
+                               get_name(), get_moves() );
                 assign_stashed_activity();
             } else {
+                add_msg_debug( debugmode::DF_NPC, "npc %s stashed activity still out of bounds",
+                               get_name() );
                 // wait a turn, because next turn, the object of our activity
                 // may have been loaded in.
                 set_moves( 0 );
@@ -4789,6 +4793,9 @@ bool npc::can_do_pulp()
 bool npc::do_player_activity()
 {
     int old_moves = moves;
+    add_msg_debug( debugmode::DF_NPC, "do_player_activity: %s id=%s moves=%d multi=%s",
+                   get_name(), activity ? activity.id().c_str() : "null", moves,
+                   activity && activity.is_multi_type() ? "yes" : "no" );
     // the multi-activity types can sometimes cancel the activity, and return without using up any moves.
     // ( when they are setting a destination etc. )
     // normally this isn't a problem, but in the main game loop, if the NPC has a huge backlog of moves;
