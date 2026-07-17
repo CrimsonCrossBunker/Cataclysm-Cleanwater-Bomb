@@ -317,7 +317,7 @@ namespace
 {
 void monmove()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     g->cleanup_dead();
     map &m = get_map();
     avatar &u = get_avatar();
@@ -636,7 +636,7 @@ void game::handle_progress_ui()
 
 bool game::do_turn()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     // If a replay's input log has drained, save and request quit before doing
     // any more simulation. Checked at the top of every turn so it fires no matter
     // which input path drained the log (avatar action loop, a modal menu, a
@@ -681,7 +681,7 @@ bool game::do_turn()
 
 void game::simulate_turn_prefix()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     weather_manager &weather = get_weather();
 
     // Increment game turn
@@ -830,7 +830,7 @@ void game::simulate_turn_prefix()
 
 bool game::do_avatar_action_loop()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     avatar &u = get_avatar();
     map &m = get_map();
 
@@ -985,7 +985,7 @@ bool game::do_avatar_action_loop()
 
 void game::simulate_turn_suffix()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     avatar &u = get_avatar();
     map &m = get_map();
 
@@ -1105,7 +1105,7 @@ void game::simulate_turn_suffix()
 
 void game::present_turn()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     avatar &u = get_avatar();
 
     if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
@@ -1130,7 +1130,7 @@ void game::present_turn()
 #endif
 
     debug_menu::debug_capture::tick_if_active();
-    FrameMark;
+    CATA_PROFILE_FRAME();
 }
 
 void game::render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_pos )

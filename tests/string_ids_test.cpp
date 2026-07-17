@@ -158,7 +158,7 @@ TEST_CASE( "string_id_sorting_test", "[string_id]" )
     }
 }
 
-TEST_CASE( "string_id_creation_benchmark", "[.][string_id][benchmark]" )
+BENCHMARK_TEST_CASE( "string_id_creation_benchmark", "[string_id]" )
 {
     static constexpr int num_test_strings = 30;
     std::vector<std::string> test_strings;

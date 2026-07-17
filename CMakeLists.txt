@@ -36,7 +36,7 @@ option(CATA_CLANG_TIDY_PLUGIN "Build Cata's custom clang-tidy checks as a plugin
 option(CATA_CLANG_TIDY_EXECUTABLE "Build Cata's custom clang-tidy checks as an executable" "OFF")
 option(WARN_STALE_DATA "Warn if file integrity check fails" "OFF")
 option(TESTS "Compile Cata's tests" "ON")
-option(TRACY "Enable Tracy profiler instrumentation (requires tracy library installed). Off by default; when ON, source files using profiling.h emit Tracy zones. See .claude/skills/build-tracy." OFF)
+option(TRACY "Enable Tracy profiler instrumentation (requires tracy library installed). Off by default; when ON, source files using profiling.h emit Tracy zones. See doc/c++/PERFORMANCE.md." OFF)
 option(LTO "Enable link-time optimization (interprocedural optimization) for Release/RelWithDebInfo builds." OFF)
 set(CATA_CLANG_TIDY_INCLUDE_DIR "" CACHE STRING
         "Path to internal clang-tidy headers required for plugin (e.g. ClangTidy.h)")
