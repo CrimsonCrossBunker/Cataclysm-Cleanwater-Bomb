@@ -4,7 +4,7 @@
     "id": "vehicle_degradation",
     "name": "Disable vehicle degradation",
     "authors": [ "LunaGlaze" ],
-    "description": "This mod disables the vehicle degradation mechanism, preventing vehicle parts from losing maximum durability when damaged, thus allowing for full repair. This mod may affect balance and will not affect vehicle parts that have already experienced durability loss.",
+    "description": "This mod disables the vehicle degradation mechanism, preventing vehicle parts from losing maximum durability when damaged, thus allowing for full repair.  This mod may affect balance and will not affect vehicle parts that have already experienced durability loss.",
     "category": "rebalance",
     "dependencies": [ "dda" ]
   },
