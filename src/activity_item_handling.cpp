@@ -1253,13 +1253,6 @@ std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
     bool move_and_reset = false;
     bool moved_something = false;
 
-    // teleport an item from container to ground
-    // TODO: less egregious than teleporting over a distance, but still not good
-    auto unload_teleport_item = [&you, &src_bub, &vpr_src, &it]( item * contained ) {
-        move_item( you, *contained, contained->count(), src_bub, src_bub, vpr_src );
-        it->remove_item( *contained );
-    };
-
     if( mgr.has_near( zone_type_UNLOAD_ALL, abspos, 1, fac_id ) ||
         ( mgr.has_near( zone_type_STRIP_CORPSES, abspos, 1, fac_id ) && it->is_corpse() ) ) {
         if( dest_set.empty() || zone_unload_options.unload_always ) {
@@ -1280,6 +1273,12 @@ std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
                     }
                 }
 
+                // Collect all items to unload in batch instead of moving them one
+                // by one.  Each individual move_item() call costs moves via
+                // Pickup::cost_to_move_item (~50+ moves per item, even when src==dest
+                // on the same tile).  Batching pays that cost once for the whole pile.
+                std::vector<item *> items_to_collect;
+
                 //unload all containers
                 //if the item count is below the sparse threshold set above, don't unload
                 for( item *contained : it->all_items_top( pocket_type::CONTAINER ) ) {
@@ -1288,47 +1287,71 @@ std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
                             item_counts[contained->typeId()] > zone_unload_options.unload_sparse_threshold ) {
                             continue;
                         }
-                        unload_teleport_item( contained );
+                        items_to_collect.push_back( contained );
                         moved_something = true;
-                    }
-                    if( you.get_moves() <= 0 ) {
-                        return std::nullopt;
                     }
                 }
 
                 //unload all magazines
                 for( item *contained : it->all_items_top( pocket_type::MAGAZINE ) ) {
                     if( zone_sorting::can_unload( contained ) ) {
-                        if( it->is_ammo_belt() ) {
-                            if( it->type->magazine->linkage ) {
-                                item link( *it->type->magazine->linkage, calendar::turn, contained->count() );
-                                zone_sorting::add_item( vpr_src, src_bub, link );
-                            }
+                        // Ammo belt linkage: create one link item per magazine,
+                        // keeping the same individual-dispersion behavior as before.
+                        if( it->is_ammo_belt() && it->type->magazine->linkage ) {
+                            item link( *it->type->magazine->linkage, calendar::turn, contained->count() );
+                            zone_sorting::add_item( vpr_src, src_bub, link );
                         }
-                        unload_teleport_item( contained );
+                        items_to_collect.push_back( contained );
                         moved_something = true;
-                    }
-
-                    // destroy fully unloaded magazines
-                    if( it->has_flag( flag_MAG_DESTROY ) && it->ammo_remaining() == 0 ) {
-                        zone_sorting::remove_item( vpr_src, src_bub, it );
-                        num_processed = std::max( num_processed - 1, 0 );
-                        return std::nullopt;
-                    }
-
-                    if( you.get_moves() <= 0 ) {
-                        return std::nullopt;
                     }
                 }
 
                 //unload all magazine wells
                 for( item *contained : it->all_items_top( pocket_type::MAGAZINE_WELL ) ) {
                     if( zone_sorting::can_unload( contained ) ) {
-                        unload_teleport_item( contained );
+                        items_to_collect.push_back( contained );
                         moved_something = true;
                     }
                 }
 
+                // Batch-remove from container and drop on ground
+                if( !items_to_collect.empty() ) {
+                    // Copy items out before removing originals from the container.
+                    std::list<item> items_to_drop;
+                    int total_weight_gram = 0;
+                    for( item *cp : items_to_collect ) {
+                        items_to_drop.push_back( *cp );
+                        total_weight_gram += units::to_gram( cp->weight() );
+                    }
+
+                    // Calculate combined move cost once based on total weight.
+                    // Mirrors Pickup::cost_to_move_item() but uses the batch total.
+                    int pickup_cost = 50;
+                    if( you.is_armed() ) {
+                        pickup_cost += 20;
+                    }
+                    int delta = total_weight_gram - units::to_gram( you.weight_capacity() );
+                    pickup_cost += std::max( 0, delta / 100 );
+                    pickup_cost = std::min( 400, pickup_cost );
+                    // move_cost = pickup + drop (+ move, but src==dest so move=0)
+                    you.mod_moves( -std::min( 2 * pickup_cost, 500 ) );
+
+                    // Remove originals from the container
+                    for( item *cp : items_to_collect ) {
+                        it->remove_item( *cp );
+                    }
+
+                    // Place all items on ground/vehicle at source tile at once
+                    put_into_vehicle_or_drop( you, item_drop_reason::deliberate,
+                                              items_to_drop, &here, src_bub );
+                }
+
+                // destroy fully unloaded magazines (e.g. disposable ammo belts)
+                if( it->has_flag( flag_MAG_DESTROY ) && it->ammo_remaining() == 0 ) {
+                    zone_sorting::remove_item( vpr_src, src_bub, it );
+                    num_processed = std::max( num_processed - 1, 0 );
+                    return std::nullopt;
+                }
             }
 
             // if unloading mods
