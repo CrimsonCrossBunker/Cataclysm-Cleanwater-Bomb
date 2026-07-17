@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "cata_catch.h"
+#include "map_helpers.h"
 #include "monster.h"
 #include "mtype.h"
 #include "player_helpers.h"
@@ -20,6 +21,10 @@ speed_description_ID_THAT_DOES_NOT_EXIST( "ID_THAT_DOES_NOT_EXIST" );
 
 TEST_CASE( "monster_speed_description", "[monster][speed_description]" )
 {
+    // speed_description compares against the avatar's terrain-dependent move
+    // cost, so do not inherit map state from a previously executed test.
+    clear_map_without_vision();
+
     /*
      * A default character has a speed of 100 and a base move cost of 116
      * That means their tiles per turn is 100 / 116 == 0.86206896551
@@ -42,6 +47,7 @@ TEST_CASE( "monster_speed_description", "[monster][speed_description]" )
     auto make_test = [&get_speed_string]( const mtype_id & mon_id,
     const std::vector<std::string> &descriptions ) {
         std::string speed_string = get_speed_string( mon_id );
+        CAPTURE( mon_id, speed_string );
         THEN( "returned string is the one expected" ) {
             const bool is_returned_string_is_inside_vector = std::find(
                         descriptions.begin(), descriptions.end(),

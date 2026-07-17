@@ -2718,7 +2718,7 @@ TEST_CASE( "tools_with_charges_as_components", "[crafting]" )
             THEN( "craft uses the free thread instead of tool ammo as component" ) {
                 CHECK( !res.is_null() );
                 CHECK( res.is_craft() );
-                CHECK( res.components[itype_sheet_cotton].size() == cotton_sheets_in_recipe );
+                CHECK( res.components[itype_sheet_cotton].front().count() == cotton_sheets_in_recipe );
                 // when threads aren't count by charges anymore, see line above
                 CHECK( res.components[itype_thread].front().count() == threads_in_recipe );
                 int cotton_sheets = 0;
@@ -2755,7 +2755,7 @@ TEST_CASE( "tools_with_charges_as_components", "[crafting]" )
             THEN( "craft uses the free thread instead of tool ammo as component" ) {
                 CHECK( !res.is_null() );
                 CHECK( res.is_craft() );
-                CHECK( res.components[itype_sheet_cotton].size() == cotton_sheets_in_recipe );
+                CHECK( res.components[itype_sheet_cotton].front().count() == cotton_sheets_in_recipe );
                 // when threads aren't count by charges anymore, see line above
                 CHECK( res.components[itype_thread].front().count() == threads_in_recipe );
                 int cotton_sheets = 0;

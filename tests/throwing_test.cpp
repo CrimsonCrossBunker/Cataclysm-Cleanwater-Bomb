@@ -131,7 +131,12 @@ static void test_throwing_player_versus(
                 // commenting this out is a super easy way to force all the
                 // test to fail if you want to reset the baseline after
                 // making balance changes or if many of the tests are failing
-                dmg_thresh_met = data.dmg.test_threshold( dmg_thresh );
+                // CCB deliberately raises throwing damage.  Retain the
+                // upstream lower bound, while allowing the rebalanced damage
+                // to reach 2.5 times the former upper bound.
+                const double lower = dmg_thresh.midpoint - dmg_thresh.epsilon;
+                const double upper = ( dmg_thresh.midpoint + dmg_thresh.epsilon ) * 2.5;
+                dmg_thresh_met = data.dmg.lower() >= lower && data.dmg.upper() <= upper;
             }
         }
         g->remove_zombie( mon );

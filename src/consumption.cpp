@@ -719,11 +719,16 @@ int Character::vitamin_mod( const vitamin_id &vit, int qty )
         }
 
     } else if( qty < 0 ) {
+        const int old_qty = it->second;
         it->second = std::max( it->second + qty, v.min() );
         update_vitamins( vit );
-        for( const std::pair<vitamin_id, int> &dcy : v.decays_into() ) {
-            if( it->second != 0 ) {
-                vitamin_mod( dcy.first, dcy.second * std::abs( qty ) );
+        // Only material that actually existed can decay into another vitamin.
+        // Deficiency values below zero are bookkeeping, not stored substance,
+        // and the last unit at zero must still produce its decay products.
+        const int decayed_qty = std::max( old_qty, 0 ) - std::max( it->second, 0 );
+        if( decayed_qty > 0 ) {
+            for( const std::pair<vitamin_id, int> &dcy : v.decays_into() ) {
+                vitamin_mod( dcy.first, dcy.second * decayed_qty );
             }
         }
     }

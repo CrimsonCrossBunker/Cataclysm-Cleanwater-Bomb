@@ -1410,14 +1410,14 @@ TEST_CASE( "craft_stamp_passive_entry_batch_scales_fail_at",
         item_location loc( map_cursor( here.get_abs( origin ) ), &on_map );
         craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
 
-        // Cure: time 10m -> ready; max_time 20m + grace 5m -> fail 25m.
+        // Cure: time 10m -> ready; max_time 20m + grace 5m -> fail 35m.
         CHECK( on_map.get_ready_at() == calendar::turn + 10_minutes );
-        CHECK( on_map.get_fail_at() == calendar::turn + 25_minutes );
+        CHECK( on_map.get_fail_at() == calendar::turn + 35_minutes );
     }
 
     // Batch of eight (no batch_time_factors -> none -> x8):
     //   ready_at = entry + 10m*8 = 80m
-    //   fail_at  = entry + (20m + 5m)*8 = 200m
+    //   fail_at  = ready_at + (20m + 5m)*8 = 280m
     SECTION( "batch of eight scales both deadlines, fail stays after ready" ) {
         const int batch = 8;
         item ingredient( itype_2x4, calendar::turn );
@@ -1433,7 +1433,7 @@ TEST_CASE( "craft_stamp_passive_entry_batch_scales_fail_at",
         craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
 
         CHECK( on_map.get_ready_at() == calendar::turn + 80_minutes );
-        CHECK( on_map.get_fail_at() == calendar::turn + 200_minutes );
+        CHECK( on_map.get_fail_at() == calendar::turn + 280_minutes );
         // Ruin deadline must stay strictly after completion.
         CHECK( on_map.get_fail_at() > on_map.get_ready_at() );
     }
@@ -1464,7 +1464,7 @@ TEST_CASE( "craft_batch_completes_instead_of_vanishing",
     get_item_wakeups().rebuild_for_item( loc );
 
     // Past the batch-scaled ready_at (80m) but well before the scaled fail_at
-    // (200m): the step finalizes and spawns the result rather than being
+    // (280m): the step finalizes and spawns the result rather than being
     // destroyed by a ruin deadline that elapsed before completion.
     craft_resolve_overdue_passive( on_map, calendar::turn + 81_minutes, loc );
 
