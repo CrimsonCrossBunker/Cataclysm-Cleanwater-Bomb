@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
@@ -355,7 +354,7 @@ TEST_CASE( "squares_closer_to_test", "[line]" )
 static constexpr int RANDOM_TEST_NUM = 1000;
 static constexpr int COORDINATE_RANGE = 99;
 
-static void line_to_comparison( const int iterations )
+static void check_line_to_against_canonical()
 {
     REQUIRE( trig_dist( point::zero, point::zero ) == 0 );
     REQUIRE( trig_dist( point::zero, point::east ) == 1 );
@@ -372,44 +371,6 @@ static void line_to_comparison( const int iterations )
                  t2 ) );
     }
 
-    {
-        const point p12( rng( -COORDINATE_RANGE, COORDINATE_RANGE ), rng( -COORDINATE_RANGE,
-                         COORDINATE_RANGE ) );
-        const point p22( rng( -COORDINATE_RANGE, COORDINATE_RANGE ), rng( -COORDINATE_RANGE,
-                         COORDINATE_RANGE ) );
-        const int t1 = 0;
-        const int t2 = 0;
-        int count1 = 0;
-        const std::chrono::high_resolution_clock::time_point start1 =
-            std::chrono::high_resolution_clock::now();
-        while( count1 < iterations ) {
-            line_to( p12, p22, t1 );
-            count1++;
-        }
-        const std::chrono::high_resolution_clock::time_point end1 =
-            std::chrono::high_resolution_clock::now();
-        int count2 = 0;
-        const std::chrono::high_resolution_clock::time_point start2 =
-            std::chrono::high_resolution_clock::now();
-        while( count2 < iterations ) {
-            canonical_line_to( p12, p22, t2 );
-            count2++;
-        }
-        const std::chrono::high_resolution_clock::time_point end2 =
-            std::chrono::high_resolution_clock::now();
-
-        if( iterations > 1 ) {
-            const long long diff1 =
-                std::chrono::duration_cast<std::chrono::microseconds>( end1 - start1 ).count();
-            const long long diff2 =
-                std::chrono::duration_cast<std::chrono::microseconds>( end2 - start2 ).count();
-
-            printf( "line_to() executed %d times in %lld microseconds.\n",
-                    iterations, diff1 );
-            printf( "canonical_line_to() executed %d times in %lld microseconds.\n",
-                    iterations, diff2 );
-        }
-    }
 }
 
 // Check the boundaries of inputs we can give line_to without breaking it.
@@ -438,12 +399,22 @@ TEST_CASE( "line_to_boundaries", "[line]" )
 
 TEST_CASE( "line_to_regression", "[line]" )
 {
-    line_to_comparison( 1 );
+    check_line_to_against_canonical();
 }
 
-TEST_CASE( "line_to_performance", "[.]" )
+BENCHMARK_TEST_CASE( "line_to_benchmark", "[line]" )
 {
-    line_to_comparison( 10000 );
+    const point from( rng( -COORDINATE_RANGE, COORDINATE_RANGE ),
+                      rng( -COORDINATE_RANGE, COORDINATE_RANGE ) );
+    const point to( rng( -COORDINATE_RANGE, COORDINATE_RANGE ),
+                    rng( -COORDINATE_RANGE, COORDINATE_RANGE ) );
+
+    BENCHMARK( "line_to" ) {
+        return line_to( from, to, 0 );
+    };
+    BENCHMARK( "canonical_line_to" ) {
+        return canonical_line_to( from, to, 0 );
+    };
 }
 
 TEST_CASE( "coord_point_line_to_consistency", "[point][coords][line]" )

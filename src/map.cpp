@@ -623,7 +623,7 @@ void memorize_vpart_at( map &here, avatar &you, const tripoint_bub_ms &p,
 
 void map::update_map_memory( avatar &you )
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     map &here = *this;
     const int z = you.posz();
 
@@ -1141,7 +1141,7 @@ void map::resolve_appliance_grid_power()
 
 void map::vehmove()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     // give vehicles movement points
     VehicleList vehicle_list;
     int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
@@ -4111,7 +4111,7 @@ void map::support_dirty( const tripoint_bub_ms &p )
 
 void map::process_falling()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     if( !zlevels ) {
         support_cache_dirty.clear();
         return;
@@ -7218,7 +7218,7 @@ static void process_vehicle_items( vehicle &cur_veh, int part )
 
 void map::process_items()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
     const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
     for( int gz = minz; gz <= maxz; ++gz ) {
@@ -8391,7 +8391,7 @@ void map::update_submaps_with_active_items()
 
 void map::update_visibility_cache( const int zlev )
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     Character &player_character = get_player_character();
     const tripoint_bub_ms pos = player_character.pos_bub( *this );
 
@@ -11642,7 +11642,7 @@ bool map::build_floor_cache( const int zlev )
 
 void map::build_floor_caches()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
     const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
     for( int z = minz; z <= maxz; z++ ) {
@@ -11718,7 +11718,7 @@ void map::do_vehicle_caching( int z )
 
 void map::build_map_cache( const int zlev, bool skip_lightmap )
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     const int minz = zlevels ? -OVERMAP_DEPTH : zlev;
     const int maxz = zlevels ? OVERMAP_HEIGHT : zlev;
     bool seen_cache_dirty = false;
