@@ -4,8 +4,10 @@
 #include <array>
 #include <cmath>
 #include <deque>
+#include <functional>
 #include <iterator>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <type_traits>
 #include <unordered_set>
@@ -13,6 +15,7 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "catacharset.h"
+#include "cata_utility.h"
 #include "character.h"
 #include "color.h"
 #include "cursesdef.h"
@@ -535,6 +538,7 @@ class dialog
         void input();
         void do_filter( const std::string &filter_str );
         static std::vector<std::string> filter_help_text( int width );
+        void export_filtered_log() const;
 
         const nc_color border_color;
         const nc_color filter_color;
@@ -623,6 +627,7 @@ void Messages::dialog::init( ui_adaptor &ui )
         ctxt.register_action( "PAGE_DOWN" );
         ctxt.register_action( "FILTER" );
         ctxt.register_action( "RESET_FILTER" );
+        ctxt.register_action( "EXPORT", to_translation( "Export filtered log" ) );
         ctxt.register_action( "QUIT" );
         ctxt.register_action( "HELP_KEYBINDINGS" );
         ctxt.register_action( "SCROLL_UP" );
@@ -767,8 +772,9 @@ void Messages::dialog::show()
     } else {
         if( filter_str.empty() ) {
             mvwprintz( w, point( border_width, w_height - 1 ), border_color,
-                       _( "< Press %s to filter, %s to reset >" ),
-                       ctxt.get_desc( "FILTER" ), ctxt.get_desc( "RESET_FILTER" ) );
+                       _( "< Press %s to filter, %s to export, %s to reset >" ),
+                       ctxt.get_desc( "FILTER" ), ctxt.get_desc( "EXPORT" ),
+                       ctxt.get_desc( "RESET_FILTER" ) );
         } else {
             mvwprintz( w, point( border_width, w_height - 1 ), border_color, "< %s >", filter_str );
             mvwprintz( w, point( border_width + 2, w_height - 1 ), filter_color, "%s", filter_str );
@@ -812,6 +818,40 @@ void Messages::dialog::do_filter( const std::string &filter_str )
         offset = 0;
     } else {
         offset = folded_filtered.size() - max_lines;
+    }
+}
+
+void Messages::dialog::export_filtered_log() const
+{
+    if( folded_filtered.empty() ) {
+        popup( _( "No messages to export." ) );
+        return;
+    }
+
+    std::unordered_set<size_t> seen;
+    for( size_t folded_ind : folded_filtered ) {
+        seen.insert( folded_all[folded_ind].first );
+    }
+    const size_t exported_count = seen.size();
+
+    const bool success = write_to_file( "message_log_export.txt", [this]( std::ostream & fout ) {
+        std::unordered_set<size_t> written;
+        for( size_t folded_ind : folded_filtered ) {
+            const size_t msg_ind = folded_all[folded_ind].first;
+            if( !written.insert( msg_ind ).second ) {
+                continue;
+            }
+            const game_message &msg = player_messages.history( msg_ind );
+            const std::string time_str = to_string_clipped( calendar::turn - msg.timestamp_in_turns,
+                                          clipped_align::right );
+            fout << "[" << time_str << "] " << remove_color_tags( msg.get_with_count() ) << "\n";
+        }
+    }, "message_log_export" );
+
+    if( success ) {
+        popup( _( "Exported %zu messages to message_log_export.txt." ), exported_count );
+    } else {
+        popup( _( "Failed to export message log." ) );
     }
 }
 
@@ -860,6 +900,8 @@ void Messages::dialog::input()
             filter_str.clear();
             filter.text( filter_str );
             do_filter( filter_str );
+        } else if( action == "EXPORT" ) {
+            export_filtered_log();
         } else if( action == "QUIT" ) {
             canceled = true;
         }

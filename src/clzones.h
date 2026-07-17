@@ -605,6 +605,8 @@ class zone_manager
 
         // a count of the number of personal zones the character has
         int num_personal_zones = 0; // NOLINT(cata-serialize)
+        // when true, personal zones' cached_shift is not updated by cache_data/cache_avatar_location
+        bool personal_shift_frozen = false; // NOLINT(cata-serialize)
 
         // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map<std::string, std::unordered_set<tripoint_abs_ms>> area_cache;
@@ -665,6 +667,8 @@ class zone_manager
         void cache_data( bool update_avatar = true );
         void reset_disabled();
         void cache_avatar_location();
+        void freeze_personal_shift();
+        void unfreeze_personal_shift();
         void cache_vzones( map *pmap = nullptr );
         bool has( const zone_type_id &type, const tripoint_abs_ms &where,
                   const faction_id &fac = your_fac ) const;

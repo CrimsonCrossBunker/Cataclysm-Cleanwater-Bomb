@@ -19,6 +19,10 @@ Run `tests/cata_test --help` to see the available command-line options and/or
 consult the [Catch2 tutorial](https://github.com/catchorg/Catch2/blob/master/docs/tutorial.md)
 for a more thorough introduction.
 
+Repeatable performance measurements use the same test binary but are hidden
+from the default correctness suite.  See [Performance measurement](PERFORMANCE.md)
+for the unified benchmark and runtime-profiling entry points.
+
 ## Guidelines
 
 When creating tests, ensure that all objects used (directly or indirectly) are

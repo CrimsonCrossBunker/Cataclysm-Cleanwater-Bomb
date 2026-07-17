@@ -1,6 +1,7 @@
 #if defined(TILES)
 #include "cata_tiles.h"
 #include "tileset_loader.h"
+#include "uistate.h"
 
 #include <algorithm>
 #include <array>
@@ -539,6 +540,10 @@ void cata_tiles::reinit()
 void cata_tiles::set_draw_scale( int scale )
 {
     cata_assert( tileset_ptr );
+    if( scale <= 0 ) {
+        debugmsg( "Invalid tileset draw scale %d, using default %d", scale, DEFAULT_TILESET_ZOOM );
+        scale = DEFAULT_TILESET_ZOOM;
+    }
     const int mult = tileset_ptr->get_tile_pixelscale() * scale;
     const int div = 16;
     tile_width = tileset_ptr->get_tile_width() * mult / div;
@@ -585,13 +590,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         return;
     }
 
-#if defined(__ANDROID__)
-    // Attempted bugfix for Google Play crash - prevent divide-by-zero if no tile
-    // width/height specified
+    // Prevent divide-by-zero if no tile width/height specified
     if( tile_width == 0 || tile_height == 0 ) {
         return;
     }
-#endif
 
     has_animated_tiles_ = false;
 
@@ -2420,6 +2422,11 @@ point_bub_ms cata_tiles::screen_to_player(
     const point &win_size, const point_bub_ms &center,
     const bool iso )
 {
+    if( tile_size.x == 0 || tile_size.y == 0 ) {
+        debugmsg( "tile_size is 0 in screen_to_player" );
+        return center;
+    }
+
     // `scr_pos` is the offset from the window origin
     const point base_tile = get_window_base_tile_counts( win_size, tile_size, iso );
     if( iso ) {

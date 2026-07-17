@@ -114,7 +114,7 @@
   {
     "type": "EXTERNAL_OPTION",
     "name": "NO_NPC_FOOD",
-    "//": "Disables tracking food, thirst and ( partially ) fatigue for NPCs.  If true, NPCs won't need to eat or drink and will only get tired enough to sleep, not to get penalties.",
+    "//": "Disables tracking food, thirst and fatigue/sleep for NPCs.  If true, NPCs won't need to eat, drink, or sleep and will stay perpetually rested.",
     "stype": "bool",
     "value": false
   },

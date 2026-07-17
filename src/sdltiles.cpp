@@ -7073,7 +7073,12 @@ static int map_font_width()
     if( use_tiles && tilecontext ) {
         return tilecontext->get_tile_width();
     }
-    return ( map_font ? map_font.get() : font.get() )->width;
+    const Font *f = map_font ? map_font.get() : font.get();
+    if( !f ) {
+        debugmsg( "map_font and font are both null in map_font_width" );
+        return 1;
+    }
+    return f->width;
 }
 
 static int map_font_height()
@@ -7081,7 +7086,12 @@ static int map_font_height()
     if( use_tiles && tilecontext ) {
         return tilecontext->get_tile_height();
     }
-    return ( map_font ? map_font.get() : font.get() )->height;
+    const Font *f = map_font ? map_font.get() : font.get();
+    if( !f ) {
+        debugmsg( "map_font and font are both null in map_font_height" );
+        return 1;
+    }
+    return f->height;
 }
 
 static int overmap_font_width()
@@ -7089,7 +7099,12 @@ static int overmap_font_width()
     if( use_tiles && overmap_tilecontext && use_tiles_overmap ) {
         return overmap_tilecontext->get_tile_width();
     }
-    return ( overmap_font ? overmap_font.get() : font.get() )->width;
+    const Font *f = overmap_font ? overmap_font.get() : font.get();
+    if( !f ) {
+        debugmsg( "overmap_font and font are both null in overmap_font_width" );
+        return 1;
+    }
+    return f->width;
 }
 
 static int overmap_font_height()
@@ -7097,17 +7112,32 @@ static int overmap_font_height()
     if( use_tiles && overmap_tilecontext && use_tiles_overmap ) {
         return overmap_tilecontext->get_tile_height();
     }
-    return ( overmap_font ? overmap_font.get() : font.get() )->height;
+    const Font *f = overmap_font ? overmap_font.get() : font.get();
+    if( !f ) {
+        debugmsg( "overmap_font and font are both null in overmap_font_height" );
+        return 1;
+    }
+    return f->height;
 }
 
 void to_map_font_dim_width( int &w )
 {
-    w = ( w * fontwidth ) / map_font_width();
+    const int divisor = map_font_width();
+    if( divisor == 0 ) {
+        debugmsg( "map_font_width is 0 in to_map_font_dim_width" );
+        return;
+    }
+    w = ( w * fontwidth ) / divisor;
 }
 
 void to_map_font_dim_height( int &h )
 {
-    h = ( h * fontheight ) / map_font_height();
+    const int divisor = map_font_height();
+    if( divisor == 0 ) {
+        debugmsg( "map_font_height is 0 in to_map_font_dim_height" );
+        return;
+    }
+    h = ( h * fontheight ) / divisor;
 }
 
 void to_map_font_dimension( int &w, int &h )
@@ -7118,14 +7148,32 @@ void to_map_font_dimension( int &w, int &h )
 
 void from_map_font_dimension( int &w, int &h )
 {
+    if( fontwidth == 0 ) {
+        debugmsg( "fontwidth is 0 in from_map_font_dimension" );
+        return;
+    }
+    if( fontheight == 0 ) {
+        debugmsg( "fontheight is 0 in from_map_font_dimension" );
+        return;
+    }
     w = ( w * map_font_width() + fontwidth - 1 ) / fontwidth;
     h = ( h * map_font_height() + fontheight - 1 ) / fontheight;
 }
 
 void to_overmap_font_dimension( int &w, int &h )
 {
-    w = ( w * fontwidth ) / overmap_font_width();
-    h = ( h * fontheight ) / overmap_font_height();
+    const int divisor_w = overmap_font_width();
+    if( divisor_w == 0 ) {
+        debugmsg( "overmap_font_width is 0 in to_overmap_font_dimension" );
+        return;
+    }
+    const int divisor_h = overmap_font_height();
+    if( divisor_h == 0 ) {
+        debugmsg( "overmap_font_height is 0 in to_overmap_font_dimension" );
+        return;
+    }
+    w = ( w * fontwidth ) / divisor_w;
+    h = ( h * fontheight ) / divisor_h;
 }
 
 bool is_draw_tiles_mode()

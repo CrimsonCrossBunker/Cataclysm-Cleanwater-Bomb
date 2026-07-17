@@ -59,7 +59,7 @@ TEST_CASE( "string_ends_with", "[utility][nogame]" )
     CHECK_FALSE( test_string_ends_with( "a", "ba" ) );
 }
 
-TEST_CASE( "string_ends_with_benchmark", "[.][utility][benchmark][nogame]" )
+BENCHMARK_TEST_CASE( "string_ends_with_benchmark", "[utility][nogame]" )
 {
     const std::string s1 = "long_string_with_suffix";
 

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "activity_handlers.h"
+#include "activity_item_handling.h"
 #include "activity_type.h"
 #include "butchery.h"
 #include "calendar.h"
@@ -4213,6 +4214,9 @@ class zone_sort_activity_actor : public zone_activity_actor
         std::vector<item_location> picked_up_stuff;
         // Place(s) that the current stuff can be dropped off at.
         std::vector<tripoint_abs_ms> dropoff_coords;
+        // Zone type for the current dropoff batch. Used by the batching volume
+        // check to decide whether ground space counts at a destination.
+        zone_type_id current_dropoff_zt_id;
         bool pickup_failure_reported = false;
         bool spillable_skip_reported = false; // NOLINT(cata-serialize)
         // Tracks whether current batch used virtual pickup (items left on cart).
@@ -4238,6 +4242,40 @@ class zone_sort_activity_actor : public zone_activity_actor
         // Computed once when dropoff_coords is first populated in stage_do,
         // persists across do_turn re-entries within the same source.
         std::optional<tripoint_bub_ms> drag_worst_tile; // NOLINT(cata-serialize)
+
+        // Batching discount: last item type that handling was charged for.
+        // Consecutive same-type items are charged at a reduced rate.
+        // Serialized so the discount stays continuous when a batch spans turns.
+        itype_id last_batch_itype;
+
+        // Destination tiles for which the delivery distance fee has already been
+        // charged for the current batch. Cleared when the batch resets; not
+        // serialized - after save/load the fee may be charged once more.
+        std::unordered_set<tripoint_abs_ms> distance_fee_charged; // NOLINT(cata-serialize)
+
+        // Delivery: drop off items already in picked_up_stuff.
+        void deliver_picked_items( Character &you, const tripoint_bub_ms &src_bub );
+        // Adjacent quick delivery for a single item; returns true if delivered.
+        bool try_adjacent_delivery( Character &you, item &thisitem,
+                                    const zone_type_id &zt_id,
+                                    const std::unordered_set<tripoint_abs_ms> &dest_set,
+                                    const tripoint_bub_ms &src_bub,
+                                    zone_sorting::zone_items::iterator it );
+        // Pick up thisitem into inventory/cart; returns the item_location on success.
+        std::optional<item_location> pick_up_item( Character &you, item &thisitem,
+                zone_sorting::zone_items::iterator it, const tripoint_bub_ms &src_bub,
+                bool &cart_or_carry_blocked, bool &drag_gate_fired, bool &knockdown_gate_fired );
+        // Rebuild dropoff_coords from dest_set; returns true if any reachable dest exists.
+        bool rebuild_dropoff_coords( Character &you,
+                                     const std::unordered_set<tripoint_abs_ms> &dest_set,
+                                     const zone_type_id &zt_id, const tripoint_abs_ms &abspos );
+        // Find a destination that can hold the picked_up batch; returns true on success.
+        bool find_dropoff_destination( Character &you, const tripoint_bub_ms &src_bub,
+                                       tripoint_abs_ms &destination );
+
+        // Handling cost for one item in a sort batch: bulk semantics, with a
+        // discount for consecutive same-type items (updates last_batch_itype).
+        int batch_handling_cost( Character &you, const item &it );
 
         // Returns all picked up items to the source tile and clears sorting state.
         // Used when routing to a destination fails.

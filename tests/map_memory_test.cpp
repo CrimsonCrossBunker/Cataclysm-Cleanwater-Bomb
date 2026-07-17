@@ -1,5 +1,4 @@
 #include <bitset>
-#include <cstdio>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -221,37 +220,22 @@ TEST_CASE( "map_memory_refreshes_visibility_after_transparency_changes", "[map_m
 
 // TODO: map memory save / load
 
-#include <chrono>
-
-TEST_CASE( "lru_cache_perf", "[.]" )
+BENCHMARK_TEST_CASE( "lru_cache_benchmark", "[map_memory]" )
 {
     constexpr int max_size = 1000000;
+
+    BENCHMARK_ADVANCED( "insert new keys" )( Catch::Benchmark::Chronometer meter ) {
+        lru_cache<tripoint, int> symbol_cache;
+        meter.measure( [&]( int i ) {
+            symbol_cache.insert( max_size, { i, i % 121 - 60, 0 }, 1 );
+        } );
+    };
+
     lru_cache<tripoint, int> symbol_cache;
-    const std::chrono::high_resolution_clock::time_point start1 =
-        std::chrono::high_resolution_clock::now();
-    for( int i = 0; i < 1000000; ++i ) {
-        for( int j = -60; j <= 60; ++j ) {
-            symbol_cache.insert( max_size, { i, j, 0 }, 1 );
-        }
-    }
-    const std::chrono::high_resolution_clock::time_point end1 =
-        std::chrono::high_resolution_clock::now();
-    const long long diff1 = std::chrono::duration_cast<std::chrono::microseconds>
-                            ( end1 - start1 ).count();
-    printf( "completed %d insertions in %lld microseconds.\n", max_size, diff1 );
-    /*
-     * Original tripoint hash    completed 1000000 insertions in 96136925 microseconds.
-     * Table based interleave v1 completed 1000000 insertions in 41435604 microseconds.
-     * Table based interleave v2 completed 1000000 insertions in 40856530 microseconds.
-     * Jbtw hash                 completed 1000000 insertions in 19049163 microseconds.
-     *                                                     rerun 21152804
-     * With 1024 batch           completed 1000000 insertions in 39902325 microseconds.
-     * backed out batching       completed 1000000 insertions in 20332498 microseconds.
-     * rerun                     completed 1000000 insertions in 21659107 microseconds.
-     * simple batching, disabled completed 1000000 insertions in 18541486 microseconds.
-     * simple batching, 1024     completed 1000000 insertions in 23102395 microseconds.
-     * rerun                     completed 1000000 insertions in 31337290 microseconds.
-     */
+    symbol_cache.insert( max_size, tripoint::zero, 1 );
+    BENCHMARK( "update existing key" ) {
+        symbol_cache.insert( max_size, tripoint::zero, 2 );
+    };
 }
 
 // There are 4 quadrants we want to check,

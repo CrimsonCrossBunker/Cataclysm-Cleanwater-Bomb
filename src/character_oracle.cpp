@@ -225,6 +225,10 @@ status_t character_oracle_t::can_obtain_warmth( std::string_view ) const
 
 status_t character_oracle_t::needs_sleep_badly( std::string_view ) const
 {
+    // NO_NPC_FOOD disables sleep for NPCs.
+    if( !subject->needs_food() ) {
+        return status_t::success;
+    }
     // TIRED (191): low enough that off-shift NPCs go to bed early.
     // On-shift duty (0.45) easily beats sleep urgency at this level (0.191).
     if( subject->get_sleepiness() >= static_cast<int>( sleepiness_levels::TIRED ) ) {
@@ -277,6 +281,10 @@ float character_oracle_t::warmth_urgency( std::string_view ) const
 
 status_t character_oracle_t::can_sleep( std::string_view ) const
 {
+    // NO_NPC_FOOD disables sleep for NPCs.
+    if( !subject->needs_food() ) {
+        return status_t::failure;
+    }
     // Meth is the only hard blocker in Character::can_sleep().
     // Stim, comfort, insomnia, and rng are soft score modifiers whose
     // net effect depends on location and luck -- the oracle can't
@@ -292,6 +300,10 @@ status_t character_oracle_t::can_sleep( std::string_view ) const
 
 float character_oracle_t::sleepiness_urgency( std::string_view ) const
 {
+    // NO_NPC_FOOD disables sleep for NPCs.
+    if( !subject->needs_food() ) {
+        return 0.0f;
+    }
     // 0 = rested, 1 = forced unconsciousness (MASSIVE_SLEEPINESS = 1000).
     static constexpr float cap = 1000.0f;
     return std::clamp( subject->get_sleepiness() / cap, 0.0f, 1.0f );

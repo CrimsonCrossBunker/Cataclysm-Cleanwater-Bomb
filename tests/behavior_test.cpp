@@ -252,7 +252,7 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         food.remove_item();
         CHECK( npc_needs.tick( &oracle ) == "idle" );
     }
-    SECTION( "NO_NPC_FOOD suppresses hunger and thirst" ) {
+    SECTION( "NO_NPC_FOOD suppresses hunger, thirst and sleep" ) {
         override_option no_food( "NO_NPC_FOOD", "true" );
         REQUIRE_FALSE( test_npc.needs_food() );
 
@@ -260,10 +260,14 @@ TEST_CASE( "check_npc_behavior_tree", "[npc][behavior]" )
         test_npc.set_hunger( 500 );
         test_npc.set_stored_kcal( 1000 );
         test_npc.set_thirst( 700 );
+        test_npc.set_sleepiness( sleepiness_levels::EXHAUSTED );
         CHECK( oracle.needs_food_badly( "" ) == behavior::status_t::success );
         CHECK( oracle.needs_water_badly( "" ) == behavior::status_t::success );
+        CHECK( oracle.needs_sleep_badly( "" ) == behavior::status_t::success );
+        CHECK( oracle.can_sleep( "" ) == behavior::status_t::failure );
         CHECK( oracle.hunger_urgency( "" ) == 0.0f );
         CHECK( oracle.thirst_urgency( "" ) == 0.0f );
+        CHECK( oracle.sleepiness_urgency( "" ) == 0.0f );
 
         // Even with food and water in inventory, BT returns idle.
         test_npc.i_add( item( itype_sandwich_cheese_grilled ) );

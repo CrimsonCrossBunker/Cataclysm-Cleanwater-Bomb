@@ -317,7 +317,7 @@ namespace
 {
 void monmove()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     g->cleanup_dead();
     map &m = get_map();
     avatar &u = get_avatar();
@@ -636,7 +636,7 @@ void game::handle_progress_ui()
 
 bool game::do_turn()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     // If a replay's input log has drained, save and request quit before doing
     // any more simulation. Checked at the top of every turn so it fires no matter
     // which input path drained the log (avatar action loop, a modal menu, a
@@ -655,19 +655,12 @@ bool game::do_turn()
 
     simulate_turn_prefix();
 
-    // Process multiplayer events from network thread.
-    cata_mp::process_mp_events();
-    // Apply server state updates received since the last turn (client mode).
-    cata_mp::client_process_incoming();
-    // Resolve any blocking UI deferred out of the recv path.
-    cata_mp::client_resolve_pending_ui();
-    // Lockstep: grant the client their turn at the start of each game turn.
-    if( cata_mp::is_hosting() ) {
-        cata_mp::grant_client_turn();
-    }
-    // Keep the MP debug HUD alive whenever multiplayer is active.
-    if( cata_mp::is_client_mode() || cata_mp::is_host_mode() ) {
-        cata_mp::ensure_mp_hud();
+    // Keep multiplayer entirely outside the single-player turn path.  The
+    // false branch is stable for the lifetime of a solo session, so it is
+    // cheap for the CPU to predict and no MP queue, cleanup, logging or UI
+    // synchronization function is entered.
+    if( cata_mp::is_session_active() ) {
+        cata_mp::process_session_turn();
     }
 
     if( do_avatar_action_loop() ) {
@@ -681,7 +674,7 @@ bool game::do_turn()
 
 void game::simulate_turn_prefix()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     weather_manager &weather = get_weather();
 
     // Increment game turn
@@ -830,7 +823,7 @@ void game::simulate_turn_prefix()
 
 bool game::do_avatar_action_loop()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     avatar &u = get_avatar();
     map &m = get_map();
 
@@ -985,7 +978,7 @@ bool game::do_avatar_action_loop()
 
 void game::simulate_turn_suffix()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     avatar &u = get_avatar();
     map &m = get_map();
 
@@ -1105,7 +1098,7 @@ void game::simulate_turn_suffix()
 
 void game::present_turn()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     avatar &u = get_avatar();
 
     if( u.get_moves() < 0 && get_option<bool>( "FORCE_REDRAW" ) ) {
@@ -1130,7 +1123,7 @@ void game::present_turn()
 #endif
 
     debug_menu::debug_capture::tick_if_active();
-    FrameMark;
+    CATA_PROFILE_FRAME();
 }
 
 void game::render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_pos )
