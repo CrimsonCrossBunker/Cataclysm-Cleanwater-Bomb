@@ -11,7 +11,7 @@
   {
     "type": "EXTERNAL_OPTION",
     "name": "VEHICLE_DEGRADATION_WHEN_DAMAGE",
-    "//": "If true, it will disable the reduction in the maximum repairable damage capacity of vehicle parts when they are damaged.",
+    "//": "If false, it will disable the reduction in the maximum repairable damage capacity of vehicle parts when they are damaged.",
     "stype": "bool",
     "value": false
   }
