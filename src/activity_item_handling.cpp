@@ -1352,6 +1352,9 @@ std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
                     num_processed = std::max( num_processed - 1, 0 );
                     return std::nullopt;
                 }
+                if( you.get_moves() <= 0 ) {
+                    return std::nullopt;
+                }
             }
 
             // if unloading mods
