@@ -14121,6 +14121,11 @@ void zone_sort_activity_actor::update_other_activity_items()
 
 void zone_sort_activity_actor::do_turn( player_activity &act, Character &you )
 {
+    // A deserialized avatar activity resumes past INIT, so re-establish the
+    // process-local personal-zone freeze before doing any work.
+    if( you.is_avatar() && stage != UNINIT ) {
+        zone_manager::get_manager().freeze_personal_shift();
+    }
     update_other_activity_items();
     // Save viewport state before base call. For NPCs, revert_after_activity()
     // replaces the activity and destroys this actor before returning.
@@ -14134,8 +14139,9 @@ void zone_sort_activity_actor::do_turn( player_activity &act, Character &you )
     avatar *const av = you.as_avatar();
     const bool vp_active = av != nullptr && av->zone_sort_viewport.active;
     if( act.is_null() && !you.has_destination() ) {
-        zone_manager &mgr = zone_manager::get_manager();
-        mgr.unfreeze_personal_shift();
+        if( you.is_avatar() ) {
+            zone_manager::get_manager().unfreeze_personal_shift();
+        }
         if( ( had_viewport || vp_active ) && !test_mode ) {
             const int restore_zoom = vp_active ?
                                      av->zone_sort_viewport.saved_zoom : saved_zoom;
@@ -14151,8 +14157,9 @@ void zone_sort_activity_actor::do_turn( player_activity &act, Character &you )
 void zone_sort_activity_actor::canceled( player_activity &, Character &you )
 {
     restore_viewport( you );
-    zone_manager &mgr = zone_manager::get_manager();
-    mgr.unfreeze_personal_shift();
+    if( you.is_avatar() ) {
+        zone_manager::get_manager().unfreeze_personal_shift();
+    }
 }
 
 void zone_sort_activity_actor::restore_viewport( Character &you )
@@ -14172,7 +14179,9 @@ void zone_sort_activity_actor::stage_init( player_activity &, Character &you )
 {
     zone_manager &mgr = zone_manager::get_manager();
     mgr.cache_avatar_location();
-    mgr.freeze_personal_shift();
+    if( you.is_avatar() ) {
+        mgr.freeze_personal_shift();
+    }
     coord_set.clear();
     unreachable_sources.clear();
     const faction_id fac = you.get_faction_id();
@@ -15198,8 +15207,6 @@ std::unique_ptr<activity_actor> zone_sort_activity_actor::deserialize( JsonValue
     if( data.has_member( "last_batch_itype" ) ) {
         data.read( "last_batch_itype", actor.last_batch_itype );
     }
-    zone_manager &mgr = zone_manager::get_manager();
-    mgr.freeze_personal_shift();
     return actor.clone();
 }
 
