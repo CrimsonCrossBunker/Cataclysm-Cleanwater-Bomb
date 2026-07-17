@@ -1004,29 +1004,65 @@ unload_sort_options set_unload_options( Character &you, const tripoint_abs_ms &s
         }
 
         if( use_zone_type ) {
-            zone_sort_options.ignore_favorite |= zone->get_type() == zone_type_LOOT_IGNORE_FAVORITES;
+            // These zone types are independent of UNLOAD_ALL; check them directly.
             zone_sort_options.unload_all |= zone->get_type() == zone_type_UNLOAD_ALL;
-            zone_sort_options.unload_corpses |= zone->get_type() == zone_type_STRIP_CORPSES;
         }
     }
+
+    if( use_zone_type ) {
+        const faction_id fac = _fac_id( you );
+        zone_sort_options.ignore_favorite = mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac );
+        zone_sort_options.unload_corpses = mgr.has( zone_type_STRIP_CORPSES, src, fac );
+    }
+
     return zone_sort_options;
+}
+
+std::vector<vpart_reference> cargo_parts_at( const tripoint_bub_ms &pos )
+{
+    map &here = get_map();
+    std::vector<vpart_reference> res;
+    if( const std::optional<vpart_position> vp = here.veh_at( pos ) ) {
+        const point_rel_ms mount = vp->mount_pos();
+        for( const vpart_reference &vpr : vp->vehicle().get_any_parts( VPFLAG_CARGO ) ) {
+            if( vpr.mount_pos() == mount ) {
+                res.emplace_back( vpr );
+            }
+        }
+    }
+    return res;
+}
+
+std::optional<vpart_reference> cargo_part_from_index( const tripoint_bub_ms &pos,
+        int part_index )
+{
+    map &here = get_map();
+    const optional_vpart_position ovp = here.veh_at( pos );
+    if( !ovp ) {
+        return std::nullopt;
+    }
+    vehicle &veh = ovp->vehicle();
+    if( part_index < 0 || static_cast<size_t>( part_index ) >= static_cast<size_t>( veh.part_count() ) ) {
+        return std::nullopt;
+    }
+    return vpart_reference( veh, static_cast<size_t>( part_index ) );
 }
 
 zone_items populate_items( const tripoint_bub_ms &src_bub )
 {
     map &here = get_map();
-    const std::optional<vpart_reference> vp = here.veh_at( src_bub ).cargo();
 
     zone_items items;
-    // Collect items from both vehicle cargo and ground at this tile.
-    // The bool in each pair tracks whether the item is from vehicle cargo.
-    if( vp ) {
-        for( item &it : vp->items() ) {
-            items.emplace_back( &it, true );
+    // Collect items from all vehicle cargo parts and ground at this tile.
+    // The optional part index tracks which vehicle cargo part an item is in.
+    for( const vpart_reference &vpr : cargo_parts_at( src_bub ) ) {
+        const int part_index = static_cast<int>( vpr.part_index() );
+        for( item &it : vpr.items() ) {
+            items.emplace_back( &it, part_index );
         }
     }
     for( item &it : here.i_at( src_bub ) ) {
-        items.emplace_back( &it, false );
+        items.emplace_back( &it, std::nullopt );
     }
     return items;
 }
@@ -1072,8 +1108,8 @@ bool dest_has_capacity( const tripoint_abs_ms &dest, const zone_type_id &ztype,
     const bool has_veh_zone = mgr.has_vehicle( ztype, dest, fac );
     const bool has_ter_zone = mgr.has_terrain( ztype, dest, fac );
     if( has_veh_zone ) {
-        if( const std::optional<vpart_reference> vp_dest = here.veh_at( dest_bub ).cargo() ) {
-            if( vp_dest->items().amount_can_fit( sample ) > 0 ) {
+        for( const vpart_reference &vp_dest : cargo_parts_at( dest_bub ) ) {
+            if( vp_dest.items().amount_can_fit( sample ) > 0 ) {
                 return true;
             }
         }
@@ -1131,7 +1167,7 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
     // the cart's cargo sorted.
     const bool skip_cart_cargo = virtual_pickup_available && !src_has_vehicle_unsorted;
 
-    for( std::pair<item *, bool> it_pair : items ) {
+    for( std::pair<item *, std::optional<int>> it_pair : items ) {
         if( !src_has_unsorted ) {
             continue;
         }
@@ -1359,10 +1395,8 @@ std::optional<bool> unload_item( Character &you, const tripoint_abs_ms &src,
             // after dumping items go back to start of activity loop
             // so that can re-assess the items in the tile
             // perhaps move the last item first however
-            if( zone_unload_options.unload_always && moved_something ) {
+            if( moved_something ) {
                 move_and_reset = true;
-            } else if( moved_something ) {
-                return std::nullopt;
             }
         }
     }

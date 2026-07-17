@@ -1093,22 +1093,22 @@ void item_location::deserialize( const JsonObject &obj )
                     break;
                 }
             }
-            if( !found ) {
-                debugmsg( "item_location UID not found in container contents" );
-                ptr = std::make_shared<impl::nowhere>();
-                return;
-            }
-        } else if( idx > -1 && idx < static_cast<int>( parent_contents.size() ) ) {
-            // Legacy save: no UID, use index
+        }
+        if( !found && idx > -1 && idx < static_cast<int>( parent_contents.size() ) ) {
+            // UID not found (e.g., item was copied/moved and got a new UID),
+            // fall back to legacy index lookup.
             auto iter = parent_contents.begin();
             std::advance( iter, idx );
             found = *iter;
+            if( uid > 0 ) {
+                debugmsg( "item_location UID not found in container contents, falling back to index" );
+            }
         }
 
         if( found ) {
             ptr = std::make_shared<impl::item_in_container>( parent, found );
         } else {
-            debugmsg( "contents index greater than contents size" );
+            debugmsg( "item_location not found in container contents" );
             ptr = std::make_shared<impl::nowhere>();
         }
     }
