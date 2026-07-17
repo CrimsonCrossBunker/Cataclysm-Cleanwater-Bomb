@@ -4,8 +4,10 @@
 #include <array>
 #include <cmath>
 #include <deque>
+#include <functional>
 #include <iterator>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <type_traits>
 #include <unordered_set>
