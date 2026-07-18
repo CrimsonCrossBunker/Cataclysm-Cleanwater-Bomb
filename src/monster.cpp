@@ -247,6 +247,26 @@ static int compute_kill_xp( const mtype_id &mon_type )
     return mon_type->get_total_difficulty() + mon_type->get_difficulty_adjustment();
 }
 
+static bool lays_eggs( const mtype &type )
+{
+    return !type.baby_type.baby_egg.is_null() || !type.baby_type.baby_egg_group.is_null();
+}
+
+static float reproduction_speed( const mtype &type )
+{
+    return get_option<float>( lays_eggs( type ) ? "EGG_LAYING_SPEED" : "LIVE_BIRTH_SPEED" );
+}
+
+static time_duration reproduction_interval( const mtype &type )
+{
+    const time_duration base_interval = *type.baby_timer;
+    const float speed = reproduction_speed( type );
+    if( speed <= 0.0f ) {
+        return base_interval;
+    }
+    return std::max( 1_turns, base_interval / speed );
+}
+
 monster::monster()
 {
     unset_dest();
@@ -276,7 +296,7 @@ monster::monster( const mtype_id &id ) : monster()
     upgrades = type->upgrades && ( type->half_life || type->age_grow );
     reproduces = type->reproduces && type->baby_timer && !monster::has_flag( mon_flag_NO_BREED );
     if( reproduces && type->baby_timer ) {
-        baby_timer.emplace( calendar::turn + *type->baby_timer );
+        baby_timer.emplace( calendar::turn + reproduction_interval( *type ) );
     }
     biosignatures = type->biosignatures;
     if( monster::has_flag( mon_flag_AQUATIC ) ) {
@@ -559,6 +579,11 @@ void monster::set_baby_timer( const time_point &time )
     baby_timer.emplace( time );
 }
 
+const std::optional<time_point> &monster::get_baby_timer() const
+{
+    return baby_timer;
+}
+
 void monster::try_reproduce()
 {
     if( !reproduces ) {
@@ -566,6 +591,10 @@ void monster::try_reproduce()
     }
     // This can happen if the monster type has changed (from reproducing to non-reproducing monster)
     if( !type->baby_timer ) {
+        return;
+    }
+    if( reproduction_speed( *type ) <= 0.0f ) {
+        baby_timer.emplace( calendar::turn + *type->baby_timer );
         return;
     }
 
@@ -624,7 +653,7 @@ void monster::try_reproduce()
                 here.spawn_items( pos_bub(), item_group::items_from( type->baby_type.baby_egg_group ) );
             }
         }
-        *baby_timer += *type->baby_timer;
+        *baby_timer += reproduction_interval( *type );
     }
 }
 

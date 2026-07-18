@@ -3110,6 +3110,16 @@ void options_manager::add_options_world_default()
              to_translation( "Determines how much damage monsters can take.  A higher value makes monsters more resilient and a lower makes them more flimsy.  Requires world reset." ),
              1, 1000, 100, COPT_NO_HIDE, "%i%%"
            );
+
+        add( "EGG_LAYING_SPEED", page_id, to_translation( "Egg-laying speed" ),
+             to_translation( "Multiplier for the rate at which creatures lay eggs.  0.5 is half as fast as default, 2.0 is twice as fast, and 0.0 disables egg laying.  This does not affect creatures that give birth to live young." ),
+             0.0f, 100.0f, 1.0f, 0.1f
+           );
+
+        add( "LIVE_BIRTH_SPEED", page_id, to_translation( "Live-birth speed" ),
+             to_translation( "Multiplier for the rate at which creatures give birth to live young.  0.5 is half as fast as default, 2.0 is twice as fast, and 0.0 disables live births.  This does not affect creatures that lay eggs." ),
+             0.0f, 100.0f, 1.0f, 0.1f
+           );
     } );
 
     add_empty_line();
