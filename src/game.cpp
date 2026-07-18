@@ -678,7 +678,7 @@ void game::reenter_fullscreen()
 /*
  * Initialize more stuff after mapbuffer is loaded.
  */
-void game::setup()
+bool game::setup()
 {
     new_game = true;
     {
@@ -696,7 +696,9 @@ void game::setup()
     // must be called before load_world_modfiles() #81904
     calendar::set_season_length( ::get_option<int>( "SEASON_LENGTH" ) );
 
-    world_generator->get_mod_manager().check_mods_list( world_generator->active_world );
+    if( !world_generator->get_mod_manager().check_mods_list( world_generator->active_world ) ) {
+        return false;
+    }
     load_world_modfiles();
     // Panel manager needs JSON data to be loaded before init
     panel_manager::get_manager().init();
@@ -705,6 +707,7 @@ void game::setup()
 
     reset_game_state();
     // back to menu for save loading, new game etc
+    return true;
 }
 
 // Reset all per-game runtime state to a clean slate, so a fresh load can

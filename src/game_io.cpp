@@ -309,7 +309,9 @@ bool game::load( const std::string &world )
 
     try {
         world_generator->set_active_world( wptr );
-        g->setup();
+        if( !g->setup() ) {
+            return false;
+        }
         g->load( wptr->world_saves.front() );
     } catch( const std::exception &err ) {
         debugmsg( "cannot load world '%s': %s", world, err.what() );

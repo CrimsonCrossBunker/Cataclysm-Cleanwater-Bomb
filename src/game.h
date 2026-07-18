@@ -262,7 +262,11 @@ class game
         /** Loads dynamic data from the folder if it is part of a subdirectory that is named after a currently loaded mod_id.  May throw. */
         void load_mod_interaction_data_from_dir( const cata_path &path, const std::string &src );
     public:
-        void setup();
+        /**
+         * Load the active world's core and mod data.
+         * @return false if the player cancels while resolving missing mods.
+         */
+        bool setup();
         /**
          * Reset all per-game runtime state (ID counters, weather, trackers,
          * EOC queues, global variables, etc.) to a clean slate. Called by

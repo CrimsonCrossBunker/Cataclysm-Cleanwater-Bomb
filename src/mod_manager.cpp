@@ -459,10 +459,10 @@ void mod_manager::load_mods_list( WORLD *world ) const
     } );
 }
 
-void mod_manager::check_mods_list( WORLD *world ) const
+bool mod_manager::check_mods_list( WORLD *world ) const
 {
     if( world == nullptr ) {
-        return;
+        return true;
     }
     std::vector<mod_id> &amo = world->active_mod_order;
     bool changed = false;
@@ -489,7 +489,7 @@ void mod_manager::check_mods_list( WORLD *world ) const
                 }
                 switch( res ) {
                     case query_ynq_result::quit:
-                        throw std::runtime_error( _( "Player aborted load." ) );
+                        return false;
                     case query_ynq_result::no:
                         break;
                     case query_ynq_result::yes:
@@ -504,6 +504,7 @@ void mod_manager::check_mods_list( WORLD *world ) const
     if( changed ) {
         save_mods_list( world );
     }
+    return true;
 }
 
 const mod_manager::t_mod_list &mod_manager::get_default_mods() const
