@@ -28,7 +28,7 @@
     "subtypes": [ "BIONIC_ITEM" ],
     "name": { "str": "Railgun CBM" },
     "looks_like": "bio_int_enhancer",
-    "description": "EM field generators in the user's arms allow them to launch metallic objects in an unconventional way. This mechanism requires the projectile to hover briefly in the air in front of an outstretched arm, usually after being thrown up slightly. Then, at the precise moment, a massive magnetic pulse is released, causing the object to be launched by electrical currents emitted alongside the user's arms, requiring no actual throwing motion. It consumes a tremendous amount of energy and relies far more on the user's intelligence to control than on physical strength. In theory, it can even hit with the force of a sniper rifle using nothing more than a coin.",
+    "description": "EM field generators in the user's arms allow them to launch metallic objects in an unconventional way.  This mechanism requires the projectile to hover briefly in the air in front of an outstretched arm, usually after being thrown up slightly.  Then, at the precise moment, a massive magnetic pulse is released, causing the object to be launched by electrical currents emitted alongside the user's arms, requiring no actual throwing motion.  It consumes a tremendous amount of energy and relies far more on the user's intelligence to control than on physical strength.  In theory, it can even hit with the force of a sniper rifle using nothing more than a coin.",
     "price": "2200 USD",
     "price_postapoc": "950 USD",
     "weight": "1000 g",

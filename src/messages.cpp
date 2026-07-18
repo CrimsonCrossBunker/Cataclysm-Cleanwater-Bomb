@@ -843,7 +843,7 @@ void Messages::dialog::export_filtered_log() const
             }
             const game_message &msg = player_messages.history( msg_ind );
             const std::string time_str = to_string_clipped( calendar::turn - msg.timestamp_in_turns,
-                                          clipped_align::right );
+                                         clipped_align::right );
             fout << "[" << time_str << "] " << remove_color_tags( msg.get_with_count() ) << "\n";
         }
     }, "message_log_export" );

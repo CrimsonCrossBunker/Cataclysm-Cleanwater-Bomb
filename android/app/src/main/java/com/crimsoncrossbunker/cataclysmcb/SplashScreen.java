@@ -42,7 +42,6 @@ import com.crimsoncrossbunker.cataclysmcb.CataclysmDDA_Helpers;
 public class SplashScreen extends Activity {
     private static final String TAG = "Splash";
     private static final int INSTALL_DIALOG_ID = 0;
-    private static final String PREF_USE_LEGACY_STORAGE = "Use Legacy Storage";
     private ProgressDialog installDialog;
 
     private AlertDialog accessibilityServicesAlert;
@@ -62,18 +61,11 @@ public class SplashScreen extends Activity {
     }
 
     private boolean useLegacyStorage() {
-        return PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
-            .getBoolean(PREF_USE_LEGACY_STORAGE, false);
+        return StoragePaths.useLegacyStorage(getApplicationContext());
     }
 
     private String getGameUserDirectory() {
-        if (useLegacyStorage()) {
-            return getExternalFilesDir(null).getPath();
-        }
-        return new File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-            "cataclysm-ccb"
-        ).getPath();
+        return StoragePaths.getUserDirectory(getApplicationContext()).getPath();
     }
 
     private void showCrashAlert() {
@@ -309,7 +301,7 @@ public class SplashScreen extends Activity {
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit().putString(CataclysmDDA.PREF_SYSTEM_UI_MODE, getSelectedSystemUiMode()).commit();
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit().putBoolean("Trap Back button", SplashScreen.this.mSettingsValues[1]).commit();
                         PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit().putBoolean("Native Android UI", SplashScreen.this.mSettingsValues[2]).commit();
-                        PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit().putBoolean(PREF_USE_LEGACY_STORAGE, SplashScreen.this.mSettingsValues[3]).commit();
+                        PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit().putBoolean(StoragePaths.PREF_USE_LEGACY_STORAGE, SplashScreen.this.mSettingsValues[3]).commit();
                         SplashScreen.this.startGameActivity(false);
                         return;
                     }
@@ -327,7 +319,7 @@ public class SplashScreen extends Activity {
             SplashScreen.this.mSettingsValues[0] = preferences.getBoolean("Software rendering", false);
             SplashScreen.this.mSettingsValues[1] = preferences.getBoolean("Trap Back button", true);
             SplashScreen.this.mSettingsValues[2] = preferences.getBoolean("Native Android UI", true);
-            SplashScreen.this.mSettingsValues[3] = preferences.getBoolean(PREF_USE_LEGACY_STORAGE, false);
+            SplashScreen.this.mSettingsValues[3] = preferences.getBoolean(StoragePaths.PREF_USE_LEGACY_STORAGE, false);
 
             String mode;
             if (preferences.contains(CataclysmDDA.PREF_SYSTEM_UI_MODE)) {

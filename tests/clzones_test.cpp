@@ -37,7 +37,6 @@
 #include "units.h"
 #include "veh_type.h"
 #include "vehicle.h"
-#include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -3496,8 +3495,6 @@ TEST_CASE( "avatar_zone_sorting_multi_tile_personal_zones",
     dummy.setpos( here, player_pos );
     dummy.clear_destination();
     here.ter_set( player_pos, ter_t_floor );
-
-    const tripoint_abs_ms player_abs = here.get_abs( player_pos );
 
     // Personal LOOT_UNSORTED zone: four adjacent tiles around the player.
     const tripoint_rel_ms unsorted_start( -1, -1, 0 );
