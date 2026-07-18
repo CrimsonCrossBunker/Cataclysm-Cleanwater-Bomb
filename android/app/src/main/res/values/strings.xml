@@ -16,6 +16,7 @@
     <string name="trapBackButton">Trap Back button</string>
     <string name="nativeAndroidUI">Native Android UI menus</string>
     <string name="useLegacyStorage">Use legacy app storage (no shared Documents folder)</string>
+    <string name="storagePermissionRequired">Storage permission is required to use the public Documents folder.</string>
     <string name="settings">Settings</string>
     <string name="startGame">Start game</string>
     <string name="showHelp">Show help</string>

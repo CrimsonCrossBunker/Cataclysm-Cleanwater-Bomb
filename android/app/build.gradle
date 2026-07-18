@@ -238,6 +238,12 @@ task generateVersionHeader() {
     }
 }
 
+task cleanGeneratedAssetCaches(type: Delete) {
+    // data/ is linked directly into the APK assets tree.  Host runs create
+    // ignored FlexBuffer caches here, which must never be shipped to Android.
+    delete file("$projectRoot/data/cache")
+}
+
 task createWindowsJunctionLinks() {
     onlyIf {
         OperatingSystem.current() == OperatingSystem.WINDOWS
@@ -279,6 +285,7 @@ preBuild.dependsOn fetchSdl3Aars
 preBuild.dependsOn makeLocalization
 preBuild.dependsOn generateVersionHeader
 preBuild.dependsOn createWindowsJunctionLinks
+preBuild.dependsOn cleanGeneratedAssetCaches
 createWindowsJunctionLinks.dependsOn makeLocalization
 
 android {

@@ -1,17 +1,22 @@
 package com.crimsoncrossbunker.cataclysmcb;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeSet;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -23,6 +28,7 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnShowListener;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.*;
@@ -36,24 +42,27 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.crimsoncrossbunker.cataclysmcb.CataclysmDDA_Helpers;
 
 public class SplashScreen extends Activity {
     private static final String TAG = "Splash";
     private static final int INSTALL_DIALOG_ID = 0;
+    private static final int STORAGE_PERMISSION_REQUEST = 1;
     private ProgressDialog installDialog;
+    private boolean waitingForManageStorage = false;
 
     private AlertDialog accessibilityServicesAlert;
 
     public boolean[] mSettingsValues = { false, true, true, false };
     private int mSystemUiModeIndex = 0;
 
-    private String getVersionName() {
+    private String getInstallationStamp() {
         try {
             Context context = getApplicationContext();
             PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-            return pInfo.versionName;
+            return pInfo.versionName + ":" + pInfo.lastUpdateTime;
         } catch (Exception e) {
             e.printStackTrace();
             return "error";
@@ -129,6 +138,17 @@ public class SplashScreen extends Activity {
         Log.e(TAG, "onResume()");
         super.onResume();
 
+        if (waitingForManageStorage) {
+            waitingForManageStorage = false;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                !Environment.isExternalStorageManager()) {
+                Toast.makeText(this, getString(R.string.storagePermissionRequired),
+                    Toast.LENGTH_LONG).show();
+                finish();
+                return;
+            }
+        }
+
         Context context = getApplicationContext();
         String service_names = CataclysmDDA_Helpers.getEnabledAccessibilityServiceNames(context);
         accessibilityServicesAlert.setMessage( String.format( getString(R.string.accessibilityServicesMessage), service_names ) );
@@ -143,7 +163,7 @@ public class SplashScreen extends Activity {
         Log.e(TAG, "onCreate()");
         accessibilityServicesAlert.dismiss();
         // Start the game if already installed, otherwise start installing...
-        if (getVersionName().equals(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("installed", ""))) {
+        if (getInstallationStamp().equals(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("installed", ""))) {
             // Show an alert box if the game crashed last time
             String userDirectory = getGameUserDirectory();
             File crashAlertPrompt = new File(userDirectory + "/config/crash.log.prompt");
@@ -225,14 +245,24 @@ public class SplashScreen extends Activity {
     private final class StartGameRunnable implements Runnable {
         @Override
         public void run() {
+            if (!useLegacyStorage() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.R &&
+                checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+                PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[] {
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                }, STORAGE_PERMISSION_REQUEST);
+                return;
+            }
             if (!useLegacyStorage() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
                 !Environment.isExternalStorageManager()) {
                 Intent permissionIntent = new Intent(
                     Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
                     Uri.parse("package:" + getPackageName())
                 );
+                waitingForManageStorage = true;
                 startActivity(permissionIntent);
-                finish();
                 return;
             }
 
@@ -244,10 +274,32 @@ public class SplashScreen extends Activity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != STORAGE_PERMISSION_REQUEST) {
+            return;
+        }
+        boolean granted = grantResults.length > 0;
+        for (int result : grantResults) {
+            granted &= result == PackageManager.PERMISSION_GRANTED;
+        }
+        if (granted) {
+            startGameActivity(false);
+        } else {
+            Toast.makeText(this, getString(R.string.storagePermissionRequired),
+                Toast.LENGTH_LONG).show();
+            finish();
+        }
+    }
+
     private class InstallProgramTask extends AsyncTask<Void, Integer, Boolean> {
+        private static final String ASSET_MANIFEST = ".installed-assets.txt";
         private final List<String> PRESERVE_SUBFOLDERS = Arrays.asList("sound", "mods", "gfx"); // don't delete custom subfolders under these folders
         private final List<String> PRESERVE_FOLDERS = Arrays.asList("font"); // don't delete this folder
         private final List<String> PRESERVE_FILES = Arrays.asList("user-default-mods.json"); // don't delete this file
+        private final Set<String> installedAssetPaths = new TreeSet<>();
 
         private int totalFiles = 0;
         private int installedFiles = 0;
@@ -429,26 +481,125 @@ public class SplashScreen extends Activity {
             String externalFilesDir = getExternalFilesDir(null).getPath();
 
             try {
-                // Clear out the old data if it exists (but preserve custom folders + files)
-                deleteRecursive(assetManager, externalFilesDir, new File(externalFilesDir + "/data"));
-                deleteRecursive(assetManager, externalFilesDir, new File(externalFilesDir + "/gfx"));
-                deleteRecursive(assetManager, externalFilesDir, new File(externalFilesDir + "/lang"));
+                // Remove files recorded from the previous APK while leaving untracked custom files alone.
+                // Existing installations without a manifest use the legacy preservation rules once.
+                if (!deletePreviouslyInstalledAssets(externalFilesDir)) {
+                    deleteRecursive(assetManager, externalFilesDir, new File(externalFilesDir + "/data"));
+                    deleteRecursive(assetManager, externalFilesDir, new File(externalFilesDir + "/gfx"));
+                    deleteRecursive(assetManager, externalFilesDir, new File(externalFilesDir + "/lang"));
+                }
+                deleteGeneratedCaches(externalFilesDir);
 
                 // Install the new data over the top
                 copyAssetFolder(assetManager, "data", externalFilesDir + "/data");
                 copyAssetFolder(assetManager, "gfx", externalFilesDir + "/gfx");
                 copyAssetFolder(assetManager, "lang", externalFilesDir + "/lang");
+                writeAssetManifest(externalFilesDir);
             } catch(Exception e) {
                 installationAlert.setMessage(e.getMessage());
                 return false;
             }
 
             // Remember which version the installed data is
-            PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit().putString("installed", getVersionName()).commit();
+            PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).edit().putString("installed", getInstallationStamp()).commit();
 
             publishProgress(++installedFiles);
             Log.d(TAG, "Total number of files copied: " + installedFiles);
             return true;
+        }
+
+        private boolean isManagedAssetPath(String path) {
+            return path.startsWith("data/") || path.startsWith("gfx/") ||
+                path.startsWith("lang/");
+        }
+
+        private boolean deletePreviouslyInstalledAssets(String externalFilesDir) throws IOException {
+            File manifest = new File(externalFilesDir, ASSET_MANIFEST);
+            if (!manifest.isFile()) {
+                return false;
+            }
+
+            String rootPath = new File(externalFilesDir).getCanonicalPath() + File.separator;
+            try (BufferedReader reader = new BufferedReader(new FileReader(manifest))) {
+                String assetPath;
+                while ((assetPath = reader.readLine()) != null) {
+                    if (assetPath.isEmpty()) {
+                        continue;
+                    }
+                    if (!isManagedAssetPath(assetPath)) {
+                        throw new IOException("Invalid installed asset path: " + assetPath);
+                    }
+                    File installedAsset = new File(externalFilesDir, assetPath);
+                    if (!installedAsset.getCanonicalPath().startsWith(rootPath)) {
+                        throw new IOException("Installed asset escaped storage root: " + assetPath);
+                    }
+                    if (installedAsset.isFile() && !installedAsset.delete()) {
+                        throw new IOException("Unable to remove old installed asset: " + assetPath);
+                    }
+                }
+            }
+
+            deleteEmptyDirectories(new File(externalFilesDir, "data"), false);
+            deleteEmptyDirectories(new File(externalFilesDir, "gfx"), false);
+            deleteEmptyDirectories(new File(externalFilesDir, "lang"), false);
+            return true;
+        }
+
+        private void deleteEmptyDirectories(File directory, boolean deleteRoot) {
+            File[] children = directory.listFiles();
+            if (children == null) {
+                return;
+            }
+            for (File child : children) {
+                if (child.isDirectory()) {
+                    deleteEmptyDirectories(child, true);
+                }
+            }
+            children = directory.listFiles();
+            if (deleteRoot && children != null && children.length == 0) {
+                directory.delete();
+            }
+        }
+
+        private void deleteGeneratedDirectory(File directory) {
+            File[] children = directory.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    if (child.isDirectory()) {
+                        deleteGeneratedDirectory(child);
+                    } else {
+                        child.delete();
+                    }
+                }
+            }
+            directory.delete();
+        }
+
+        private void deleteGeneratedCaches(String externalFilesDir) {
+            deleteGeneratedDirectory(new File(externalFilesDir, "data/cache"));
+            deleteGeneratedDirectory(new File(externalFilesDir, "cache"));
+
+            File userDirectory = new File(getGameUserDirectory());
+            deleteGeneratedDirectory(new File(userDirectory, "cache"));
+            deleteGeneratedDirectory(new File(userDirectory, "config/cache"));
+            deleteGeneratedDirectory(new File(userDirectory, "memorial/cache"));
+        }
+
+        private void writeAssetManifest(String externalFilesDir) throws IOException {
+            File manifest = new File(externalFilesDir, ASSET_MANIFEST);
+            File temporaryManifest = new File(externalFilesDir, ASSET_MANIFEST + ".new");
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(temporaryManifest))) {
+                for (String assetPath : installedAssetPaths) {
+                    writer.write(assetPath);
+                    writer.newLine();
+                }
+            }
+            if (manifest.exists() && !manifest.delete()) {
+                throw new IOException("Unable to replace installed asset manifest");
+            }
+            if (!temporaryManifest.renameTo(manifest)) {
+                throw new IOException("Unable to save installed asset manifest");
+            }
         }
 
         void deleteRecursive(AssetManager assetManager, String externalFilesDir, File fileOrDirectory) {
@@ -463,8 +614,11 @@ public class SplashScreen extends Activity {
                 if (PRESERVE_SUBFOLDERS.contains(parentFolder) && !assetExists(assetManager, fileOrDirectory.getPath().substring(externalFilesDir.length()+1)))
                     return;
 
-                for (File child : fileOrDirectory.listFiles())
-                    deleteRecursive(assetManager, externalFilesDir, child);
+                File[] children = fileOrDirectory.listFiles();
+                if (children != null) {
+                    for (File child : children)
+                        deleteRecursive(assetManager, externalFilesDir, child);
+                }
             }
             else {
                 // Don't delete the file if it's in the preserve files list
@@ -552,6 +706,7 @@ public class SplashScreen extends Activity {
               out.flush();
               out.close();
               out = null;
+              installedAssetPaths.add(fromAssetPath);
               return true;
             } catch(Exception e) {
                 e.printStackTrace();

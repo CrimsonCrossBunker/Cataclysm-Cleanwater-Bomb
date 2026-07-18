@@ -49,6 +49,27 @@ file(GLOB CATA_SOURCES ${CATA_REPO_ROOT}/src/*.cpp
 
 add_library(main SHARED ${CATA_SOURCES})
 
+# Android always uses SDL3's Vulkan GPU backend when available, so every APK
+# needs SPIR-V shader artifacts.  Release CI downloads a prebuilt, freshly
+# touched build-spv.stamp before Gradle runs.  Local builds generate the same
+# files here when the stamp is absent or older than the GLSL sources.
+set(CATA_SHADERS_DIR ${CATA_REPO_ROOT}/data/shaders)
+set(CATA_ANDROID_SHADER_STAMP ${CATA_SHADERS_DIR}/build-spv.stamp)
+file(GLOB CATA_SHADER_SOURCES ${CATA_SHADERS_DIR}/*.frag
+     ${CATA_SHADERS_DIR}/*.vert)
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_custom_command(
+  OUTPUT ${CATA_ANDROID_SHADER_STAMP}
+  COMMAND
+    ${Python3_EXECUTABLE} ${CATA_REPO_ROOT}/tools/build_shaders.py --shader-dir
+    ${CATA_SHADERS_DIR} --formats spv --stamp ${CATA_ANDROID_SHADER_STAMP}
+  WORKING_DIRECTORY ${CATA_REPO_ROOT}
+  DEPENDS ${CATA_SHADER_SOURCES} ${CATA_REPO_ROOT}/tools/build_shaders.py
+  COMMENT "Compiling Android SPIR-V shader artifacts")
+add_custom_target(compile_android_shaders ALL
+                  DEPENDS ${CATA_ANDROID_SHADER_STAMP})
+add_dependencies(main compile_android_shaders)
+
 target_include_directories(
   main PRIVATE ${CATA_REPO_ROOT}/src ${CATA_REPO_ROOT}/src/third-party
                ${_sdl3_subdir_inc})
