@@ -113,6 +113,7 @@ class monster : public Creature
         void allow_upgrade();
         void try_upgrade( bool pin_time );
         void set_baby_timer( const time_point &time );
+        const std::optional<time_point> &get_baby_timer() const;
         void try_reproduce();
         void try_biosignature();
         void refill_udders();

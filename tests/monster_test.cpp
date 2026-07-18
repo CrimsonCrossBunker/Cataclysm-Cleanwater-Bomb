@@ -685,6 +685,66 @@ TEST_CASE( "monsters_spawn_eggs", "[monster][reproduction]" )
     CHECK( test_monster_spawns_eggs );
 }
 
+TEST_CASE( "egg_laying_speed_scales_reproduction_timers", "[monster][reproduction]" )
+{
+    clear_map_without_vision();
+    g->place_player( { 66, 66, 0 } );
+    const tripoint_bub_ms egg_loc = get_avatar().pos_bub() + tripoint::east;
+    const tripoint_bub_ms live_birth_loc = egg_loc + tripoint::east;
+    override_option egg_laying_speed( "EGG_LAYING_SPEED", "2.0" );
+    override_option live_birth_speed( "LIVE_BIRTH_SPEED", "4.0" );
+
+    monster &egg_layer = spawn_test_monster( "mon_dummy_reproducer_eggs", egg_loc );
+    monster &live_birth = spawn_test_monster( "mon_dummy_reproducer_mon", live_birth_loc );
+
+    REQUIRE( egg_layer.get_baby_timer().has_value() );
+    REQUIRE( live_birth.get_baby_timer().has_value() );
+    CHECK( *egg_layer.get_baby_timer() == calendar::turn + 12_hours );
+    CHECK( *live_birth.get_baby_timer() == calendar::turn + 6_hours );
+}
+
+TEST_CASE( "zero_egg_laying_speed_disables_egg_production", "[monster][reproduction]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    g->place_player( { 66, 66, 0 } );
+    const tripoint_bub_ms loc = get_avatar().pos_bub() + tripoint::east;
+    override_option egg_laying_speed( "EGG_LAYING_SPEED", "0.0" );
+    monster &egg_layer = spawn_test_monster( "mon_dummy_reproducer_eggs", loc );
+
+    egg_layer.set_baby_timer( calendar::turn - 2_days );
+    for( int i = 0; i < 100; ++i ) {
+        egg_layer.try_reproduce();
+    }
+
+    CHECK_FALSE( here.has_items( loc ) );
+    REQUIRE( egg_layer.get_baby_timer().has_value() );
+    CHECK( *egg_layer.get_baby_timer() == calendar::turn + 1_days );
+}
+
+TEST_CASE( "zero_live_birth_speed_disables_live_births", "[monster][reproduction]" )
+{
+    clear_map_without_vision();
+    creature_tracker &creatures = get_creature_tracker();
+    g->place_player( { 66, 66, 0 } );
+    const tripoint_bub_ms loc = get_avatar().pos_bub() + tripoint::east;
+    override_option live_birth_speed( "LIVE_BIRTH_SPEED", "0.0" );
+    monster &parent = spawn_test_monster( "mon_dummy_reproducer_mon", loc );
+
+    get_map().spawn_monsters( true );
+    const std::size_t creature_count_before_birth = creatures.get_monsters_list().size();
+
+    parent.set_baby_timer( calendar::turn - 2_days );
+    for( int i = 0; i < 100; ++i ) {
+        parent.try_reproduce();
+    }
+    get_map().spawn_monsters( true );
+
+    CHECK( creatures.get_monsters_list().size() == creature_count_before_birth );
+    REQUIRE( parent.get_baby_timer().has_value() );
+    CHECK( *parent.get_baby_timer() == calendar::turn + 1_days );
+}
+
 TEST_CASE( "monsters_spawn_egg_itemgroups", "[monster][reproduction]" )
 {
     clear_map_without_vision();

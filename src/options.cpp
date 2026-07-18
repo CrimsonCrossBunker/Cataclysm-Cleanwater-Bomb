@@ -3075,6 +3075,18 @@ void options_manager::add_options_world_default()
     } );
     add_empty_line();
 
+    add_option_group( "world_default", Group( "character_progression_opts",
+                      to_translation( "Character progression options" ),
+                      to_translation( "Options regarding character skill progression." ) ),
+    [&]( const std::string & page_id ) {
+        add( "SKILL_TRAINING_SPEED", page_id, to_translation( "Skill training speed" ),
+             to_translation( "Scales experience gained from practicing skills and reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training." ),
+             0.0, 100.0, 1.0, 0.1
+           );
+    } );
+
+    add_empty_line();
+
     add_option_group( "world_default", Group( "monster_props_opts",
                       to_translation( "Monster properties options" ),
                       to_translation( "Options regarding monster properties." ) ),
@@ -3087,6 +3099,16 @@ void options_manager::add_options_world_default()
         add( "MONSTER_RESILIENCE", page_id, to_translation( "Monster resilience" ),
              to_translation( "Determines how much damage monsters can take.  A higher value makes monsters more resilient and a lower makes them more flimsy.  Requires world reset." ),
              1, 1000, 100, COPT_NO_HIDE, "%i%%"
+           );
+
+        add( "EGG_LAYING_SPEED", page_id, to_translation( "Egg-laying speed" ),
+             to_translation( "Multiplier for the rate at which creatures lay eggs.  0.5 is half as fast as default, 2.0 is twice as fast, and 0.0 disables egg laying.  This does not affect creatures that give birth to live young." ),
+             0.0f, 100.0f, 1.0f, 0.1f
+           );
+
+        add( "LIVE_BIRTH_SPEED", page_id, to_translation( "Live-birth speed" ),
+             to_translation( "Multiplier for the rate at which creatures give birth to live young.  0.5 is half as fast as default, 2.0 is twice as fast, and 0.0 disables live births.  This does not affect creatures that lay eggs." ),
+             0.0f, 100.0f, 1.0f, 0.1f
            );
     } );
 
@@ -4412,7 +4434,7 @@ void options_manager::deserialize( const JsonArray &ja )
         // yay hardcoded list! remove after 0.J
         std::vector<std::string> removed_options = { "DISTANCE_INITIAL_VISIBILITY", "FOV_3D_Z_RANGE", "SAFEMODE",
                                                      "INITIAL_STAT_POINTS", "INITIAL_TRAIT_POINTS", "INITIAL_SKILL_POINTS", "MAX_TRAIT_POINTS",
-                                                     "SKILL_TRAINING_SPEED", "PROFICIENCY_TRAINING_SPEED"
+                                                     "PROFICIENCY_TRAINING_SPEED"
                                                    };
 
         const std::string name = migrateOptionName( joOptions.get_string( "name" ) );
