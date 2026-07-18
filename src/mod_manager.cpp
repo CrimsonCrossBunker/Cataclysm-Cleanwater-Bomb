@@ -7,7 +7,6 @@
 #include <memory>
 #include <ostream>
 #include <queue>
-#include <stdexcept>
 
 #include "cata_utility.h"
 #include "debug.h"
