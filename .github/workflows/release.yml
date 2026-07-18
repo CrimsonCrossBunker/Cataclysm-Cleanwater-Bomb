@@ -523,6 +523,11 @@ jobs:
       - name: install macports (mac, SDL2)
         if: runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 != 1
         uses: melusina-org/setup-macports@c7eb59386def259a274627092566a7f7b8d219b1 # v1
+        with:
+          # The action only caches /opt/local, not the macports system user
+          # created by the installer.  Restoring that incomplete cache on a
+          # fresh runner breaks package installation and archive validation.
+          cache: disable
       - name: install macports packages (mac, SDL2)
         if: runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 != 1
         run: |
@@ -530,6 +535,9 @@ jobs:
       - name: install macports (mac, SDL3)
         if: runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1
         uses: melusina-org/setup-macports@c7eb59386def259a274627092566a7f7b8d219b1 # v1
+        with:
+          # See the SDL2 setup above: /opt/local is not a self-contained cache.
+          cache: disable
       - name: install macports packages (mac, SDL3)
         if: runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1
         run: |
