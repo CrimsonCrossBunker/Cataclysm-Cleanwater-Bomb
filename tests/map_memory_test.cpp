@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include <bitset>
 #include <memory>
 #include <sstream>
