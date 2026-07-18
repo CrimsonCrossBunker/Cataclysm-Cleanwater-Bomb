@@ -430,6 +430,7 @@
     "type": "EXTERNAL_OPTION",
     "name": "RAD_MUTATION",
     "//": "If true, radiation causes the player to mutate.",
+    "stub": true,
     "stype": "bool",
     "value": false
   },
