@@ -95,7 +95,7 @@
     "id": "fcl_smart_omnicamera",
     "copy-from": "omnicam",
     "categories": [ "operations" ],
-    "description": "A smart security camera you could connect to a display.  Not only is the field of vision great, but AI technology is also used for image prediction, which greatly improves the clarity of the image. But its power consumption has also doubled.",
+    "description": "A smart security camera you could connect to a display.  Not only is the field of vision great, but AI technology is also used for image prediction, which greatly improves the clarity of the image.  But its power consumption has also doubled.",
     "durability": 200,
     "bonus": 64,
     "item": "fcl_smart_omnicamera",
