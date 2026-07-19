@@ -6,7 +6,7 @@
     "description": "A miniaturized fusion reactor.  It has modest output, but will run continuously for over two hundred years thanks to its internal nuclear fuel reservoir.",
     "occupied_bodyparts": [ [ "torso", 6 ] ],
     "dupes_allowed": true,
-    "enchantments": [ { "values": [ { "value": "POWER_TRICKLE", "add": 800 } ] } ],
+    "enchantments": [ { "values": [ { "value": "POWER_TRICKLE", "add": 8000 } ] } ],
     "flags": [ "BIONIC_POWER_SOURCE", "BIONIC_NPC_USABLE", "BIONIC_SHOCKPROOF" ]
   },
   {

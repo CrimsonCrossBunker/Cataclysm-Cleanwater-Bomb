@@ -1668,7 +1668,7 @@
     "description": "A small implantable betavoltaic device.  Utilizing nickel-63 radioisotope decay technology and diamond semiconductors, this CBM achieves a stable conversion of nuclear energy into electrical power.  Its power output is very low, at a mere 1W, but it boasts a stable operational lifespan of up to 50 years, requiring neither charging nor maintenance.  Under the current state of the world, its decommissioning age is longer than the lifespan of most ordinary people.",
     "occupied_bodyparts": [ [ "torso", 2 ] ],
     "dupes_allowed": true,
-    "enchantments": [ { "values": [ { "value": "POWER_TRICKLE", "add": 100 } ] } ],
+    "enchantments": [ { "values": [ { "value": "POWER_TRICKLE", "add": 1000 } ] } ],
     "flags": [ "BIONIC_POWER_SOURCE", "BIONIC_NPC_USABLE", "BIONIC_SHOCKPROOF" ]
   },
   {
