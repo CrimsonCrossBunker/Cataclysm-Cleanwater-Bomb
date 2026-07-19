@@ -265,13 +265,13 @@ jobs:
       with:
         persist-credentials: false
     - name: download prebuilt shader artifacts
-      if: ${{ env.SKIP == 'false' && matrix.tiles == 1 && matrix.sdl3 == 1 }}
+      if: ${{ env.SKIP == 'false' && ((matrix.tiles == 1 && matrix.sdl3 == 1) || matrix.android != '') }}
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: cdda-shaders
         path: data/shaders
     - name: mark shader artifacts fresh
-      if: ${{ env.SKIP == 'false' && matrix.tiles == 1 && matrix.sdl3 == 1 }}
+      if: ${{ env.SKIP == 'false' && ((matrix.tiles == 1 && matrix.sdl3 == 1) || matrix.android != '') }}
       run: |
           touch data/shaders/build-*.stamp data/shaders/*.spv data/shaders/*.dxil data/shaders/*.msl
     - name: install dependencies (ubuntu)

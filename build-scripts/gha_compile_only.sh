@@ -12,13 +12,13 @@ then
     chmod +x gradlew
     if [ ${ANDROID} = "arm64" ]
     then
-        ./gradlew -Pj=$((`nproc`+0)) -Pabi_arm_32=false assembleExperimentalRelease
+        ./gradlew -Pj=$((`nproc`+0)) -Pabi_arm_32=false -Pprebuilt_shaders=true assembleExperimentalRelease
     elif [ ${ANDROID} = "arm32" ]
     then
-        ./gradlew -Pj=$((`nproc`+0)) -Pabi_arm_64=false assembleExperimentalRelease
+        ./gradlew -Pj=$((`nproc`+0)) -Pabi_arm_64=false -Pprebuilt_shaders=true assembleExperimentalRelease
     elif [ ${ANDROID} = "bundle" ]
     then
-        ./gradlew -Pj=$((`nproc`+0)) bundleExperimentalRelease
+        ./gradlew -Pj=$((`nproc`+0)) -Pprebuilt_shaders=true bundleExperimentalRelease
     else
         echo "Unexpected value of ANDROID env var - '${ANDROID}'"
         exit 1
