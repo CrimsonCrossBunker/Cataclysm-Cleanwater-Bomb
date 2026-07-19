@@ -1,10 +1,13 @@
 #include <string>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
+#include "debug.h"
 #include "item.h"
 #include "map.h"
+#include "map_helpers.h"
 #include "type_id.h"
 
 static const itype_id itype_arrow_field_point_fletched( "arrow_field_point_fletched" );
@@ -13,6 +16,7 @@ static const itype_id itype_cheese_hard( "cheese_hard" );
 static const itype_id itype_grenade_act( "grenade_act" );
 static const itype_id itype_migo_plate( "migo_plate" );
 static const itype_id itype_migo_plate_undergrown( "migo_plate_undergrown" );
+static const itype_id itype_tear_gas_payload_act( "tear_gas_payload_act" );
 static const itype_id itype_test_rock_cheese( "test_rock_cheese" );
 
 TEST_CASE( "countdown_action_triggering", "[item]" )
@@ -37,6 +41,23 @@ TEST_CASE( "countdown_action_triggering", "[item]" )
         // Grenade explodes and is to be removed
         CHECK( grenade.process( get_map(), nullptr, tripoint_bub_ms::zero ) == true );
     }
+}
+
+TEST_CASE( "countdown_explosion_fields_without_character_source", "[item][explosion]" )
+{
+    clear_map();
+    map &here = get_map();
+    const tripoint_bub_ms origin = get_avatar().pos_bub( here );
+    item tear_gas_payload( itype_tear_gas_payload_act );
+    tear_gas_payload.active = true;
+    tear_gas_payload.countdown_point = calendar::turn;
+
+    const std::string dmsg = capture_debugmsg_during( [&]() {
+        CHECK( tear_gas_payload.process( here, nullptr, origin ) );
+    } );
+
+    CHECK( dmsg.empty() );
+    CHECK( here.has_field_at( origin, fd_tear_gas ) );
 }
 
 TEST_CASE( "countdown_action_revert_to", "[item]" )
