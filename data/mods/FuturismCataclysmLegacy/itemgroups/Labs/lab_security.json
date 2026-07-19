@@ -25,5 +25,37 @@
       { "distribution": [ { "item": "fcl_needlegun", "prob": 50, "charges": [ 0, 100 ] }, { "item": "fcl_needlepistol", "prob": 50, "charges": [ 0, 50 ] } ] },
       { "distribution": [ { "item": "fcl_5x50_50_mag", "prob": 80 }, { "item": "fcl_5x50_100_mag", "prob": 20 } ] }
     ]
+  },
+  {
+    "id": "SUS_rivtech_40mm_rm",
+    "type": "item_group",
+    "copy-from": "SUS_rivtech_40mm_rm",
+    "extend": {
+      "items": [
+        { "item": "fcl_rm802", "prob": 80, "charges": [ 0, 4 ] }
+      ]
+    }
+  },
+  {
+    "id": "SUS_rivtech_8x40_mag",
+    "type": "item_group",
+    "copy-from": "SUS_rivtech_8x40_mag",
+    "extend": {
+      "items": [
+        { "item": "fcl_8x40_250_mag", "prob": 10 },
+        { "item": "fcl_8x40_500_mag", "prob": 10 }
+      ]
+    }
+  },
+  {
+    "id": "SUS_rivtech_8x40_rm",
+    "type": "item_group",
+    "copy-from": "SUS_rivtech_8x40_rm",
+    "extend": {
+      "items": [
+        { "item": "fcl_rm298", "prob": 30 },
+        { "item": "fcl_rm614_lmg", "prob": 50 }
+      ]
+    }
   }
 ]

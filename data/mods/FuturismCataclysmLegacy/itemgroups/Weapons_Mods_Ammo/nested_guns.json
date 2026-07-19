@@ -16,11 +16,38 @@
     "type": "item_group",
     "//": "This is a distribution for the gun, backup magazines, and ammo to repack.",
     "subtype": "collection",
+    "ammo": 100,
     "entries": [
       { "item": "fcl_needlegun", "charges": [ 0, 50 ] },
       { "item": "fcl_5x50_50_mag" },
       { "item": "fcl_5x50_50_mag", "prob": 50 },
       { "group": "fcl_on_hand_5x50" }
+    ]
+  },
+  {
+    "id": "fcl_nested_rm298",
+    "type": "item_group",
+    "//": "this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack",
+    "subtype": "collection",
+    "ammo": 100,
+    "entries": [
+      { "item": "fcl_rm298", "charges": [ 0, 100 ] },
+      { "item": "fcl_8x40_250_mag" },
+      { "item": "fcl_8x40_250_mag", "prob": 50 },
+      { "group": "on_hand_8x40" }
+    ]
+  },
+  {
+    "id": "fcl_nested_rm614_lmg",
+    "type": "item_group",
+    "//": "this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack",
+    "subtype": "collection",
+    "ammo": 100,
+    "entries": [
+      { "item": "fcl_rm614_lmg", "charges": [ 0, 100 ] },
+      { "item": "fcl_8x40_250_mag" },
+      { "item": "fcl_8x40_250_mag", "prob": 50 },
+      { "group": "on_hand_8x40" }
     ]
   }
 ]
