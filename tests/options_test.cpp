@@ -11,7 +11,7 @@
 
 static const option_slider_id option_slider_test_world_difficulty( "test_world_difficulty" );
 
-TEST_CASE( "core data preserves the radiation mutation world default", "[option]" )
+TEST_CASE( "core_data_preserves_the_radiation_mutation_world_default", "[option]" )
 {
     CHECK( get_option<bool>( "RAD_MUTATION" ) );
 }

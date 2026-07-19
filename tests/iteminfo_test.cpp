@@ -2730,6 +2730,8 @@ TEST_CASE( "repairable_and_with_what_tools", "[iteminfo][repair]" )
 TEST_CASE( "disassembly_time_and_yield", "[iteminfo][disassembly]" )
 {
     clear_avatar();
+    override_option metric_weight( "USE_METRIC_WEIGHTS", "kg" );
+    override_option metric_distance( "DISTANCE_UNITS", "metric" );
 
     std::vector<iteminfo_parts> disassemble = { iteminfo_parts::DESCRIPTION_COMPONENTS_DISASSEMBLE };
 
