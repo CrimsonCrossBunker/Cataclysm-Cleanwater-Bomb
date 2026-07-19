@@ -124,9 +124,7 @@
     "id": "SUS_rivtech_40mm_rm",
     "type": "item_group",
     "subtype": "distribution",
-    "entries": [
-      { "item": "rm451_flamethrower", "prob": 20, "charges": [ 100, 1000 ] }
-    ]
+    "entries": [ { "item": "rm451_flamethrower", "prob": 20, "charges": [ 100, 1000 ] } ]
   },
   {
     "id": "SUS_rivtech_misc",
