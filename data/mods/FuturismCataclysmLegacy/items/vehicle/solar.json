@@ -12,7 +12,7 @@
     "type": "ITEM",
     "id": "solar_panel_v3",
     "name": "quantum solar panel",
-    "description": "This solar panel is obviously cutting-edge technology and given where you found it, it should probably provide a LOT of power.  It's covered in strange-looking material, and its fragile exotic photovoltaic layer makes reinforcement and modification unusually difficult.",
+    "description": "This solar panel is obviously cutting-edge technology and given where you found it, it should probably provide a LOT of power.  It's covered in strange-looking material, and the covering looks rather fragile; reinforcing or modifying it would require unusually careful, advanced work.",
     "to_hit": -5,
     "material": [ "glass", "steel" ],
     "volume": "4500 ml",

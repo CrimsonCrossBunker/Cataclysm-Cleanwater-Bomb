@@ -55,6 +55,7 @@
     "copy-from": "ap_ground_solar_panel_v3",
     "item": "reinforced_ground_solar_panel_v3",
     "proportional": { "epower": 0.9 },
+    "durability": 300,
     "requirements": {
       "install": {  },
       "removal": { "time": "3 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },

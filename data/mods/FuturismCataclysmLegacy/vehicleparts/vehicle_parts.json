@@ -18,7 +18,7 @@
     "proportional": { "epower": 6.0 },
     "item": "solar_panel_v3",
     "durability": 40,
-    "description": "An extremely high-performance solar panel.  Will recharge the vehicle's electrical power when exposed to the sun.  Clouds will slow the recharge speed.  Extremely fragile and cannot be armored.",
+    "description": "An extremely high-performance solar panel.  Will recharge the vehicle's electrical power when exposed to the sun.  Clouds will slow the recharge speed.  Extremely fragile, and reinforcing or modifying it requires unusually careful, advanced work.",
     "requirements": {
       "install": { "skills": [ [ "mechanics", 8 ] ], "time": "60 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 6 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] }
