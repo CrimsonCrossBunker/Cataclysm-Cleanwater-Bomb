@@ -14,7 +14,7 @@
     "price": "29200 USD",
     "price_postapoc": "80 USD",
     "to_hit": -1,
-    "melee_damage": { "bash":8 },
+    "melee_damage": { "bash": 8 },
     "material": [ "superalloy", "ceramic" ],
     "ammo": [ "40x46mm" ],
     "dispersion": 140,

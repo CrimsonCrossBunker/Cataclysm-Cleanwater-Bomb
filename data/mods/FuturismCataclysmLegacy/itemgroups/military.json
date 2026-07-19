@@ -3,21 +3,13 @@
     "type": "item_group",
     "id": "military_standard_assault_rifles",
     "copy-from": "military_standard_assault_rifles",
-    "extend": {
-      "items": [
-        { "item": "fcl_needlegun", "prob": 2, "charges": [ 0, 100 ] }
-      ]
-    }
+    "extend": { "items": [ { "item": "fcl_needlegun", "prob": 2, "charges": [ 0, 100 ] } ] }
   },
   {
     "type": "item_group",
     "id": "military_standard_pistols",
     "copy-from": "military_standard_pistols",
-    "extend": {
-      "items": [
-        { "item": "fcl_needlepistol", "prob": 2, "charges": [ 0, 50 ] }
-      ]
-    }
+    "extend": { "items": [ { "item": "fcl_needlepistol", "prob": 2, "charges": [ 0, 50 ] } ] }
   },
   {
     "type": "item_group",
