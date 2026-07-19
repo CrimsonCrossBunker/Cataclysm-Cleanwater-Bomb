@@ -1,0 +1,52 @@
+[
+  {
+    "type": "ITEM",
+    "id": "solar_cell_v3",
+    "name": { "str": "quantum solar cell" },
+    "description": "A small electronic device that can convert solar radiation into electric power.  This one uses exotic photovoltaic materials to reach extremely high efficiency.",
+    "price": "500 USD",
+    "price_postapoc": "10 USD",
+    "copy-from": "solar_cell_v2"
+  },
+  {
+    "type": "ITEM",
+    "id": "solar_panel_v3",
+    "name": "quantum solar panel",
+    "description": "This solar panel is obviously cutting-edge technology and given where you found it, it should probably provide a LOT of power.  It's covered in strange-looking material, and the covering looks rather fragile; reinforcing or modifying it would require unusually careful, advanced work.",
+    "to_hit": -5,
+    "material": [ "glass", "steel" ],
+    "volume": "4500 ml",
+    "price": "9 kUSD",
+    "copy-from": "solar_panel"
+  },
+  {
+    "type": "ITEM",
+    "id": "reinforced_solar_panel_v3",
+    "name": { "str": "vehicle reinforced quantum solar panel" },
+    "description": "A quantum solar panel covered with a pane of reinforced glass to protect the delicate exotic photovoltaic layer.  The glass causes this panel to produce slightly less power than a normal quantum panel.",
+    "weight": "24153 g",
+    "color": "light_blue",
+    "material": [ "glass", "lc_steel" ],
+    "volume": "6500 ml",
+    "price": "10 kUSD 200 USD",
+    "copy-from": "solar_panel"
+  },
+  {
+    "//": "Four quantum solar panels stuck together for 1 m x 1 m area",
+    "type": "ITEM",
+    "id": "ground_solar_panel_v3",
+    "name": { "str": "quantum solar panel array" },
+    "description": "A collection of four quantum solar panels, ready to convert solar radiation into electric power with exotic photovoltaic materials.",
+    "copy-from": "solar_panel_v3",
+    "proportional": { "price": 4, "weight": 4, "volume": 4, "longest_side": 2 }
+  },
+  {
+    "//": "Four reinforced quantum solar panels stuck together for 1 m x 1 m area",
+    "type": "ITEM",
+    "id": "reinforced_ground_solar_panel_v3",
+    "name": { "str": "reinforced quantum solar panel array" },
+    "description": "A collection of four reinforced quantum solar panels, ready to provide static-grid power while better protected from impact damage.",
+    "copy-from": "reinforced_solar_panel_v3",
+    "proportional": { "price": 4, "weight": 4, "volume": 4, "longest_side": 2 }
+  }
+]

@@ -23,5 +23,23 @@
     "type": "item_group",
     "copy-from": "elecsto_lights",
     "extend": { "items": [ [ "fcl_atomic_light", 1 ] ] }
+  },
+  {
+    "id": "oa_ig_cd_lockers",
+    "type": "item_group",
+    "copy-from": "oa_ig_cd_lockers",
+    "extend": { "items": [ [ "solar_cell_v2", 5 ], [ "solar_cell_v3", 2 ] ] }
+  },
+  {
+    "id": "oa_ig_ts_lockers",
+    "type": "item_group",
+    "copy-from": "oa_ig_ts_lockers",
+    "extend": { "items": [ [ "solar_cell_v2", 5 ], [ "solar_cell_v3", 2 ] ] }
+  },
+  {
+    "id": "oa_ig_ts_crates",
+    "type": "item_group",
+    "copy-from": "oa_ig_ts_crates",
+    "extend": { "items": [ [ "solar_cell_v2", 5 ], [ "solar_cell_v3", 2 ] ] }
   }
 ]

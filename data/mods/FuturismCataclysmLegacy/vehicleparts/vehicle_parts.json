@@ -10,6 +10,60 @@
   },
   {
     "type": "vehicle_part",
+    "id": "solar_panel_v3",
+    "categories": [ "energy" ],
+    "copy-from": "solar_panel",
+    "name": "quantum solar panel",
+    "looks_like": "solar_panel_v2",
+    "proportional": { "epower": 6.0 },
+    "item": "solar_panel_v3",
+    "durability": 40,
+    "description": "An extremely high-performance solar panel.  Will recharge the vehicle's electrical power when exposed to the sun.  Clouds will slow the recharge speed.  Extremely fragile, and reinforcing or modifying it requires unusually careful, advanced work.",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 8 ] ], "time": "60 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 6 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] }
+    },
+    "extend": { "flags": [ "NO_REPAIR" ] },
+    "breaks_into": [
+      { "item": "lc_steel_lump", "count": [ 4, 4 ] },
+      { "item": "lc_steel_chunk", "count": [ 4, 4 ] },
+      { "item": "scrap", "count": [ 4, 4 ] },
+      { "item": "solar_cell_v3", "count": [ 2, 8 ] }
+    ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "reinforced_solar_panel_v3",
+    "categories": [ "energy" ],
+    "copy-from": "solar_panel",
+    "name": { "str": "reinforced quantum solar panel" },
+    "looks_like": "reinforced_solar_panel_v2",
+    "description": "A quantum solar panel that has been covered with a pane of reinforced glass.  The glass causes this panel to produce slightly less power than a normal quantum panel.",
+    "color": "light_blue",
+    "broken_color": "light_gray",
+    "proportional": { "epower": 5.4 },
+    "damage_modifier": 80,
+    "durability": 300,
+    "item": "reinforced_solar_panel_v3",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 8 ] ], "time": "60 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 6 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": {
+        "skills": [ [ "electronics", 8 ] ],
+        "time": "75 m",
+        "using": [ [ "vehicle_screw", 1 ], [ "solar_panel_v3", 1 ], [ "soldering_standard", 16 ], [ "repair_welding_standard", 1 ] ]
+      }
+    },
+    "breaks_into": [
+      { "item": "lc_steel_lump", "count": [ 4, 7 ] },
+      { "item": "lc_steel_chunk", "count": [ 4, 7 ] },
+      { "item": "scrap", "count": [ 4, 7 ] },
+      { "item": "solar_cell_v3", "count": [ 2, 8 ] }
+    ],
+    "damage_reduction": { "all": 10 }
+  },
+  {
+    "type": "vehicle_part",
     "id": "minireactor",
     "name": { "str": "minireactor" },
     "categories": [ "energy" ],

@@ -1,6 +1,18 @@
 [
   {
     "type": "item_group",
+    "id": "electronics",
+    "copy-from": "electronics",
+    "extend": { "items": [ [ "solar_cell_v2", 2 ], [ "solar_cell_v3", 1 ] ] }
+  },
+  {
+    "type": "item_group",
+    "id": "consumer_electronics",
+    "copy-from": "consumer_electronics",
+    "extend": { "items": [ [ "solar_cell_v2", 2 ], [ "solar_cell_v3", 1 ] ] }
+  },
+  {
+    "type": "item_group",
     "id": "box_of_batteries_random",
     "copy-from": "box_of_batteries_random",
     "extend": {

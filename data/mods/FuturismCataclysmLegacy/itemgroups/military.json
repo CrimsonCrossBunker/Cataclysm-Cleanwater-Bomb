@@ -21,7 +21,9 @@
         { "item": "fcl_needlepistol", "prob": 1, "charges": [ 0, 50 ] },
         { "item": "fcl_5x50dart", "prob": 2 },
         { "item": "fcl_5x50heavy", "prob": 1 },
-        { "item": "fcl_rm298", "prob": 1, "charges": [ 0, 250 ] }
+        { "item": "fcl_rm298", "prob": 1, "charges": [ 0, 250 ] },
+        [ "solar_cell_v2", 1 ],
+        [ "solar_cell_v3", 1 ]
       ]
     }
   }

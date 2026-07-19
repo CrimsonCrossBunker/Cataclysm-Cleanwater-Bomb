@@ -1,0 +1,20 @@
+[
+  {
+    "id": "supplies_electronics",
+    "type": "item_group",
+    "copy-from": "supplies_electronics",
+    "extend": { "items": [ [ "solar_cell_v2", 5 ], [ "solar_cell_v3", 2 ] ] }
+  },
+  {
+    "id": "supplies_hardware",
+    "type": "item_group",
+    "copy-from": "supplies_hardware",
+    "extend": { "items": [ [ "solar_cell_v2", 2 ], [ "solar_cell_v3", 1 ] ] }
+  },
+  {
+    "id": "supplies_mechanics",
+    "type": "item_group",
+    "copy-from": "supplies_mechanics",
+    "extend": { "items": [ [ "solar_cell_v2", 2 ], [ "solar_cell_v3", 1 ] ] }
+  }
+]

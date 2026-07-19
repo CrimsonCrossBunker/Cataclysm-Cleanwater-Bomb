@@ -1,0 +1,82 @@
+[
+  {
+    "type": "vehicle_part",
+    "id": "ap_solar_panel_v3",
+    "name": { "str": "small quantum solar panel" },
+    "flags": [ "SOLAR_PANEL", "OBSTACLE", "APPLIANCE" ],
+    "description": "A small quantum solar panel, mounted on a frame and ready to power other appliances.",
+    "copy-from": "solar_panel_v3",
+    "proportional": { "epower": 1.2 },
+    "requirements": { "removal": { "time": "3 m", "using": [ [ "vehicle_wrench_2", 1 ] ] } },
+    "variants": [ { "symbols": "#", "symbols_broken": "x" } ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "ap_reinforced_solar_panel_v3",
+    "color": "yellow",
+    "flags": [ "SOLAR_PANEL", "OBSTACLE", "APPLIANCE" ],
+    "description": "A reinforced quantum solar panel, mounted on a frame and ready to power other appliances.",
+    "copy-from": "reinforced_solar_panel_v3",
+    "proportional": { "epower": 1.2 },
+    "requirements": { "removal": { "time": "3 m", "using": [ [ "vehicle_wrench_2", 1 ] ] } },
+    "variants": [ { "symbols": "#", "symbols_broken": "x" } ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "ap_ground_solar_panel_v3",
+    "copy-from": "solar_panel_v3",
+    "flags": [ "SOLAR_PANEL", "OBSTACLE", "APPLIANCE" ],
+    "item": "ground_solar_panel_v3",
+    "//": "4 times from 4 more panels, 1.2 times as is done for other standing solar appliances",
+    "proportional": { "epower": 4.8 },
+    "requirements": {
+      "install": {  },
+      "removal": { "time": "3 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": {
+        "skills": [ [ "electronics", 8 ] ],
+        "time": "150 m",
+        "using": [ [ "vehicle_screw", 1 ], [ "solar_panel_v3", 4 ], [ "soldering_standard", 64 ] ]
+      }
+    },
+    "breaks_into": [
+      { "item": "mc_steel_lump", "count": [ 8, 16 ] },
+      { "item": "mc_steel_chunk", "count": [ 8, 16 ] },
+      { "item": "scrap", "count": [ 8, 16 ] },
+      { "item": "solar_cell_v3", "count": [ 8, 32 ] }
+    ],
+    "variants": [ { "symbols": "#", "symbols_broken": "x" } ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "ap_reinforced_ground_solar_panel_v3",
+    "color": "yellow",
+    "flags": [ "SOLAR_PANEL", "OBSTACLE", "APPLIANCE" ],
+    "description": "A reinforced quantum solar panel array, mounted on a frame and ready to power other appliances.",
+    "copy-from": "ap_ground_solar_panel_v3",
+    "item": "reinforced_ground_solar_panel_v3",
+    "proportional": { "epower": 0.9 },
+    "durability": 300,
+    "requirements": {
+      "install": {  },
+      "removal": { "time": "3 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": {
+        "skills": [ [ "electronics", 8 ] ],
+        "time": "150 m",
+        "using": [
+          [ "vehicle_screw", 1 ],
+          [ "solar_panel_v3", 4 ],
+          [ "soldering_standard", 64 ],
+          [ "repair_welding_standard", 4 ]
+        ]
+      }
+    },
+    "breaks_into": [
+      { "item": "mc_steel_lump", "count": [ 16, 28 ] },
+      { "item": "mc_steel_chunk", "count": [ 16, 28 ] },
+      { "item": "scrap", "count": [ 16, 28 ] },
+      { "item": "solar_cell_v3", "count": [ 8, 32 ] }
+    ],
+    "damage_reduction": { "all": 10 },
+    "variants": [ { "symbols": "#", "symbols_broken": "x" } ]
+  }
+]
