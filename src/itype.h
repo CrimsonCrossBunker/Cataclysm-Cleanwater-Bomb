@@ -1835,6 +1835,9 @@ struct itype {
         // returns true if it is one of the outcomes of cutting
         bool is_basic_component() const;
 
+        /** Multiplier applied to thrown weight (lever arm) for this item type */
+        float throw_weight_multiplier = 1.0f;
+
         // used for generic_factory for copy-from
         bool was_loaded = false;
         void load( const JsonObject &jo, std::string_view src );

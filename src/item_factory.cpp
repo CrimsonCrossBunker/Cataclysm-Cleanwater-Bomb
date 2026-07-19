@@ -4735,6 +4735,8 @@ void itype::load( const JsonObject &jo, std::string_view src )
     JsonObject replace_val = jo.get_object( "replace_materials" );
     replace_val.allow_omitted_members();
     replace_materials( replace_val, *this );
+
+    optional( jo, was_loaded, "throw_weight_multiplier", throw_weight_multiplier, 1.0f );
 }
 
 void Item_factory::add_migration( const migration &m )

@@ -3741,7 +3741,9 @@ int Character::throw_range( const item &it ) const
     const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && tmp.made_of_any( ferric );
 
     /** @ARM_STR determines maximum weight that can be thrown */
-    if( ( tmp.weight() / 113_gram ) > str * 15 )  {
+    const float weight_mult = throw_weight_multiplier();
+    const units::mass effective_weight = tmp.weight() * weight_mult;
+    if( ( effective_weight / 113_gram ) > str * 15 )  {
         return 0;
     }
     // Increases as weight decreases until 150 g, then decreases again
@@ -3762,10 +3764,10 @@ int Character::throw_range( const item &it ) const
     }
 
     int ret;
-    if( tmp.weight() >= 150_gram ) {
-        ret = ( str * 10 ) / ( tmp.weight() / 113_gram );
+    if( effective_weight >= 150_gram ) {
+        ret = ( str * 10 ) / ( effective_weight / 113_gram );
     } else {
-        int light_penalty = 10 - static_cast<int>( tmp.weight() / 15_gram );
+        int light_penalty = 10 - static_cast<int>( effective_weight / 15_gram );
         light_penalty = std::max( 1, static_cast<int>( light_penalty / light_item_coeff ) );
         ret = ( str * 10 ) / light_penalty;
     }
@@ -3787,11 +3789,11 @@ int Character::throw_range( const item &it ) const
         double ench_range_mult = 1.0 + enchantment_cache->get_value_multiply( enchant_vals::mod::RANGE );
         const int railgun_range_cap_max = round( ( attr_int * 3 + get_skill_level(
                                               skill_throw ) + ench_range ) * ench_range_mult + 10 );
-        if( tmp.weight() >= 150_gram ) {
+        if( effective_weight >= 150_gram ) {
             ret = ( static_cast<double>( attr_int * 20 ) /
-                    static_cast<double>( tmp.weight() / 113_gram ) + ench_range ) * ench_range_mult + 5;
-        } else if( tmp.weight() >= 20_gram ) {
-            int light_penalty = 10 - static_cast<int>( tmp.weight() / 15_gram );
+                    static_cast<double>( effective_weight / 113_gram ) + ench_range ) * ench_range_mult + 5;
+        } else if( effective_weight >= 20_gram ) {
+            int light_penalty = 10 - static_cast<int>( effective_weight / 15_gram );
             light_penalty = std::max( 1, static_cast<int>( light_penalty / light_item_coeff ) );
             ret = ( static_cast<double>( attr_int * 20 ) /
                     static_cast<double>( light_penalty ) + ench_range ) * ench_range_mult + 10;
@@ -3841,6 +3843,12 @@ float Character::throw_speed_multiplier() const
 {
     const item_location wielded = get_wielded_item();
     return wielded ? wielded->type->throw_speed_multiplier : 1.0f;
+}
+
+float Character::throw_weight_multiplier() const
+{
+    const item_location wielded = get_wielded_item();
+    return wielded ? wielded->type->throw_weight_multiplier : 1.0f;
 }
 
 const std::vector<material_id> Character::fleshy = { material_flesh, material_hflesh };

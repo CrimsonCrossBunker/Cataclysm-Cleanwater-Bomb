@@ -1487,22 +1487,24 @@ int throw_cost( const Character &c, const item &to_throw )
     // Dex is more (2x) important for throwing speed
     // At 10 skill, the cost is down to 0.75%, not 0.66%
     const int base_move_cost = to_throw.attack_time( c ) / 2;
+    // Throw leverage multiplier: scale the weight-based portion of attack_time
+    const float weight_mult = c.throw_weight_multiplier();
+    const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
+                             60_gram / to_throw.count() / 2 );
+    const int effective_base_cost = base_move_cost + weight_adjust;
     const float throw_skill = std::min( static_cast<float>( MAX_SKILL ),
                                         c.get_skill_level( skill_throw ) );
     ///\EFFECT_THROW increases throwing speed
-    const int skill_cost = static_cast<int>( ( base_move_cost * ( 20 - throw_skill ) / 20 ) );
-    ///\EFFECT_DEX increases throwing speed
-    const int dexbonus = c.get_dex();
+    const int skill_cost = static_cast<int>( ( effective_base_cost * ( 20 - throw_skill ) / 20 ) );
     const float stamina_ratio = static_cast<float>( c.get_stamina() ) / c.get_stamina_max();
     const float stamina_penalty = 1.0 + std::max( ( 0.25f - stamina_ratio ) * 4.0f, 0.0f );
 
-    int move_cost = base_move_cost;
+    int move_cost = effective_base_cost;
     move_cost *= c.get_modifier( character_modifier_melee_thrown_move_lift_mod );
     move_cost *= c.get_modifier( character_modifier_melee_thrown_move_balance_mod );
     // Stamina penalty only affects base/2 and encumbrance parts of the cost
     move_cost *= stamina_penalty;
     move_cost += skill_cost;
-    move_cost -= dexbonus;
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost * c.throw_speed_multiplier() ) );
 
@@ -1578,7 +1580,7 @@ int Character::throw_dispersion_per_dodge( bool /* add_encumbrance */ ) const
 int Character::throwing_dispersion( const item &to_throw, Creature *critter,
                                     bool is_blind_throw ) const
 {
-    units::mass weight = to_throw.weight();
+    units::mass weight = to_throw.weight() * throw_weight_multiplier();
     units::volume volume = to_throw.volume();
     if( to_throw.count_by_charges() && to_throw.charges > 1 ) {
         weight /= to_throw.charges;
@@ -1650,7 +1652,7 @@ static float throwing_skill_adjusted( const Character &guy )
 // light items can approach the strength-based cap when the thrower is skilled.
 static double thrown_item_weight_damage( const Character &thrower, const item &thrown )
 {
-    const float weight_dmg = thrown.weight() / 100.0_gram;
+    const float weight_dmg = thrown.weight() * thrower.throw_weight_multiplier() / 100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
 
@@ -1778,7 +1780,7 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     const int dex = get_dex();
     const int per = get_per();
     if( dex > 8 && per > 8 ) {
-        proj.critical_multiplier += 0.06f * std::min( dex, per );
+        proj.critical_multiplier += 0.06f * ( std::min( dex, per ) - 8 );
     }
 
     const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
