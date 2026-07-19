@@ -35,8 +35,6 @@
     "copy-from": "guns_rifle_milspec",
     "//": "Military specification rifles only ever found at military sites.",
     "//2": "Making the assumption any loaded gun will have additional ammo and mags with it.",
-    "extend": {
-      "items": [ { "group": "fcl_nested_rm298", "prob": 10 }, { "group": "fcl_nested_rm614_lmg", "prob": 10 } ]
-    }
+    "extend": { "items": [ { "group": "fcl_nested_rm298", "prob": 10 }, { "group": "fcl_nested_rm614_lmg", "prob": 10 } ] }
   }
 ]

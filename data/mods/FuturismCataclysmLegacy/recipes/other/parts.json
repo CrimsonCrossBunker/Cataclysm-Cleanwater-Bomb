@@ -14,7 +14,12 @@
     "using": [ [ "soldering_standard", 50 ], [ "plastic_molding", 3 ] ],
     "proficiencies": [ { "proficiency": "prof_elec_circuits" }, { "proficiency": "prof_elec_soldering" } ],
     "qualities": [ { "id": "SCREW", "level": 1 }, { "id": "SAW_M", "level": 1 } ],
-    "components": [ [ [ "omnicamera", 1 ] ], [ [ "fcl_bot_eyebot", 1 ], [ "broken_fcl_eyebot", 2 ] ], [ [ "power_supply", 1 ] ], [ [ "cable", 2 ] ] ]
+    "components": [
+      [ [ "omnicamera", 1 ] ],
+      [ [ "fcl_bot_eyebot", 1 ], [ "broken_fcl_eyebot", 2 ] ],
+      [ [ "power_supply", 1 ] ],
+      [ [ "cable", 2 ] ]
+    ]
   },
   {
     "type": "recipe",
