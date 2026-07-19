@@ -1116,6 +1116,10 @@ void avatar_action::plthrow( avatar &you, item_location loc,
                 return;
             }
         }
+    } else if( keep_wielded ) {
+        // Throwing aids let us keep the aid wielded, but we still pay the cost to retrieve
+        // the projectile from inventory/container/ground.
+        you.mod_moves( -loc.obtain_cost( you ) );
     }
 
     // Shift our position to our "peeking" position, so that the UI
