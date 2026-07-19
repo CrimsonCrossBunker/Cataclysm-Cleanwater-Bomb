@@ -1397,12 +1397,6 @@ void Character::burn_fuel( bionic &bio )
     float efficiency;
     if( !bio.powered ) {
         // Modifiers for passive bionic
-        units::energy trickle = enchantment_cache->modify_value( enchant_vals::mod::POWER_TRICKLE,
-                                0_J );
-        if( trickle != 0_J ) {
-            mod_power_level( trickle );
-        }
-
         efficiency = get_effective_efficiency( bio, bio.info().passive_fuel_efficiency );
         if( efficiency == 0.f ) {
             return;
