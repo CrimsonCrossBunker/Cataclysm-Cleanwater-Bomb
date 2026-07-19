@@ -10,8 +10,20 @@ permissions:
   write-all
 
 jobs:
+  compile-shaders:
+    name: Compile shaders
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Build SDL3 shader artifacts
+        uses: ./.github/actions/build-sdl3-shaders
+
   release:
     name: Build and release Android bundle
+    needs: compile-shaders
     runs-on: ubuntu-latest
     steps:
       - name: Generate build variables
@@ -26,6 +38,11 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+      - name: Download prebuilt shader artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: cdda-shaders
+          path: data/shaders
       - name: Set up JDK
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
@@ -46,7 +63,7 @@ jobs:
           gpg -d --passphrase "${{ secrets.KEYSTORE_PASSWORD }}" --batch keystore.properties.asc > keystore.properties
           export UPSTREAM_BUILD_NUMBER="$((11581 + ${{ github.run_number }}))"
           chmod +x gradlew
-          ./gradlew -Pj=$((`nproc`+0)) bundleExperimentalRelease
+          ./gradlew -Pj=$((`nproc`+0)) -Pprebuilt_shaders=true bundleExperimentalRelease
           mv ./app/build/outputs/bundle/experimentalRelease/*.aab ../ccb-android-bundle-${STEPS_VARS_OUTPUTS_TIMESTAMP}-${{ github.sha }}.aab
         env:
           STEPS_VARS_OUTPUTS_TIMESTAMP: ${{ steps.vars.outputs.timestamp }}
