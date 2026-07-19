@@ -4,5 +4,11 @@
     "id": "fcl_5x50",
     "name": "5x50mm flechette",
     "default": "fcl_5x50dart"
+  },
+  {
+    "type": "ammunition_type",
+    "id": "metal_rail",
+    "name": "ferrous rail projectile",
+    "default": "rebar_rail"
   }
 ]
