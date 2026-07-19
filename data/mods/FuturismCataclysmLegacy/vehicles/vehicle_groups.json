@@ -50,13 +50,7 @@
   {
     "id": "highway",
     "type": "vehicle_group",
-    "vehicles": [
-      [ "car_atomic", 1500 ],
-      [ "suv_atomic", 1500 ],
-      [ "compact_atomic", 300 ],
-      [ "rara_x", 800 ],
-      [ "rara_x_v3", 200 ]
-    ]
+    "vehicles": [ [ "car_atomic", 1500 ], [ "suv_atomic", 1500 ], [ "compact_atomic", 300 ], [ "rara_x", 800 ], [ "rara_x_v3", 200 ] ]
   },
   {
     "type": "vehicle_group",

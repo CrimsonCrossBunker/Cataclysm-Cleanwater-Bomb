@@ -56,7 +56,16 @@
     "energy_drain": "100 kJ",
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "metal_rail": 10 } } ],
     "reload": 500,
-    "valid_mod_locations": [ [ "accessories", 4 ], [ "emitter", 1 ], [ "grip", 1 ], [ "rail", 1 ], [ "sling", 1 ], [ "stock", 1 ], [ "sights", 1 ], [ "underbarrel", 1 ] ],
+    "valid_mod_locations": [
+      [ "accessories", 4 ],
+      [ "emitter", 1 ],
+      [ "grip", 1 ],
+      [ "rail", 1 ],
+      [ "sling", 1 ],
+      [ "stock", 1 ],
+      [ "sights", 1 ],
+      [ "underbarrel", 1 ]
+    ],
     "ammo_effects": [ "INCENDIARY", "TRAIL" ],
     "flags": [ "USE_UPS", "RELOAD_ONE" ],
     "melee_damage": { "bash": 12 }

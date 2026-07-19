@@ -23,7 +23,10 @@
       { "proficiency": "prof_electromagnetics" },
       { "proficiency": "prof_gunsmithing_improv" }
     ],
-    "tools": [ [ [ "oxy_torch", 60 ], [ "welder", 300 ], [ "welder_crude", 450 ], [ "integrated_welder", 450 ] ], [ [ "laptop", -1 ] ] ],
+    "tools": [
+      [ [ "oxy_torch", 60 ], [ "welder", 300 ], [ "welder_crude", 450 ], [ "integrated_welder", 450 ] ],
+      [ [ "laptop", -1 ] ]
+    ],
     "components": [
       [ [ "cable", 80 ] ],
       [ [ "2x4", 1 ] ],
@@ -64,7 +67,12 @@
       { "proficiency": "prof_electromagnetics" },
       { "proficiency": "prof_gunsmithing_improv" }
     ],
-    "tools": [ [ [ "crucible", -1 ], [ "crucible_clay", -1 ] ], [ [ "swage", -1 ] ], [ [ "mold_plastic", -1 ] ], [ [ "laptop", -1 ] ] ],
+    "tools": [
+      [ [ "crucible", -1 ], [ "crucible_clay", -1 ] ],
+      [ [ "swage", -1 ] ],
+      [ [ "mold_plastic", -1 ] ],
+      [ [ "laptop", -1 ] ]
+    ],
     "components": [
       [ [ "plastic_chunk", 20 ] ],
       [ [ "sheet_metal", 1 ] ],

@@ -62,12 +62,7 @@
       "repair": {
         "skills": [ [ "electronics", 8 ] ],
         "time": "150 m",
-        "using": [
-          [ "vehicle_screw", 1 ],
-          [ "solar_panel_v3", 4 ],
-          [ "soldering_standard", 64 ],
-          [ "repair_welding_standard", 4 ]
-        ]
+        "using": [ [ "vehicle_screw", 1 ], [ "solar_panel_v3", 4 ], [ "soldering_standard", 64 ], [ "repair_welding_standard", 4 ] ]
       }
     },
     "breaks_into": [
