@@ -444,7 +444,7 @@ void overmap_sidebar::draw_mission_info()
         const std::string dir_arrow = direction_arrow( direction_from( cursor_pos.xy(), target.xy() ) );
         //~Parenthesis is a real-world value for distance. Example string: "223 tiles (5.35km) ⇗"
         const std::string distance_str = string_format( _( "%1$d tiles (%2$s) %3$s" ),
-            distance, length_to_string_approx( actual_distance ), dir_arrow );
+                                         distance, length_to_string_approx( actual_distance ), dir_arrow );
         draw_sidebar_text( string_format( _( "Distance: %s" ), distance_str ), c_white );
         if( !msg.empty() ) {
             draw_sidebar_text( msg, c_white );
@@ -625,7 +625,7 @@ weather_type_id get_weather_at_point( const tripoint_abs_omt &pos )
         const tripoint_abs_ms abs_ms_pos = project_to<coords::ms>( pos );
         const weather_generator_id &wgen = overmap_buffer.get_settings( pos ).weather;
         const weather_type_id weather = wgen->get_weather_conditions( abs_ms_pos, calendar::turn,
-            g->get_seed() );
+                                        g->get_seed() );
         iter = weather_cache.insert( std::make_pair( pos, weather ) ).first;
     }
     return iter->second;
@@ -889,7 +889,7 @@ static point_abs_omt draw_notes( const tripoint_abs_omt &origin )
             const bool is_dangerous =
                 overmap_buffer.is_marked_dangerous( tripoint_abs_omt( p, origin.z() ) );
             const int note_danger_radius = overmap_buffer.note_danger_radius( tripoint_abs_omt( p,
-                origin.z() ) );
+                                           origin.z() ) );
             nc_color bracket_color = note_danger_radius >= 0 ? c_red : c_light_gray;
             std::string danger_desc_text = note_danger_radius >= 0 ? string_format(
                                                _( "DANGEROUS AREA!  (R=%d)" ),
@@ -1018,7 +1018,7 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
             const oter_id oter = s_ter.terrain->get_rotated( uistate.omedit_rotation );
 
             special_cache.insert( std::make_pair( rp, std::make_pair( oter->get_symbol( om_vision_level::full ),
-                    oter->get_color( om_vision_level::full ) ) ) );
+                                                  oter->get_color( om_vision_level::full ) ) ) );
 
             s_begin.x() = std::min( s_begin.x(), rp.x() );
             s_begin.y() = std::min( s_begin.y(), rp.y() );
@@ -1125,7 +1125,7 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
             if( blink && uistate.overmap_debug_mongroup ) {
                 // TODO Check if this tile is a target of the currently highlighted horde.
                 std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                        omp );
+                            omp );
                 if( !hordes.empty() ) {
                     ter_sym = "+";
                 } else {
@@ -1242,7 +1242,7 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
         const std::string &note_text = overmap_buffer.note( cursor_pos );
         if( !note_text.empty() ) {
             const std::tuple<char, nc_color, size_t> note_info = get_note_display_info(
-                    note_text );
+                        note_text );
             const size_t pos = std::get<2>( note_info );
             if( pos != std::string::npos ) {
                 corner_text.emplace_back( std::get<1>( note_info ), note_text.substr( pos ) );
@@ -1346,10 +1346,10 @@ static bool create_note( const tripoint_abs_omt &curs, std::optional<std::string
         }
     }
     std::string color_notes = string_format( "%s\n%s\n\n",
-        *context,
-        _( "For a custom GLYPH or COLOR follow the examples below.  "
-           "Default GLYPH and COLOR looks like this: "
-           "<color_yellow>N</color>" ) );
+                              *context,
+                              _( "For a custom GLYPH or COLOR follow the examples below.  "
+                                 "Default GLYPH and COLOR looks like this: "
+                                 "<color_yellow>N</color>" ) );
 
     color_notes += _( "Color codes: " );
     for( const std::pair<const std::string, note_color> &color_pair : get_note_color_names() ) {
@@ -1360,10 +1360,10 @@ static bool create_note( const tripoint_abs_omt &curs, std::optional<std::string
     }
 
     std::string helper_text = string_format( ".\n\n%s\n%s\n%s\n\n",
-        _( "Type GLYPH<color_yellow>:</color>TEXT to set a custom glyph." ),
-        _( "Type COLOR<color_yellow>;</color>TEXT to set a custom color." ),
-        // NOLINTNEXTLINE(cata-text-style): literal exclamation mark
-        _( "Examples: B:Base | g;Loot | !:R;Minefield" ) );
+                              _( "Type GLYPH<color_yellow>:</color>TEXT to set a custom glyph." ),
+                              _( "Type COLOR<color_yellow>;</color>TEXT to set a custom color." ),
+                              // NOLINTNEXTLINE(cata-text-style): literal exclamation mark
+                              _( "Examples: B:Base | g;Loot | !:R;Minefield" ) );
     color_notes = color_notes.replace( color_notes.end() - 2, color_notes.end(),
                                        helper_text );
     std::string title = _( "Note:" );
@@ -1505,8 +1505,8 @@ static bool search( const ui_adaptor &om_ui, tripoint_abs_omt &curs,
     std::string term = string_input_popup()
                        .title( _( "Search term:" ) )
                        .description( string_format( "%s\n%s",
-                           _( "Multiple entries separated with comma (,). Excludes starting with hyphen (-)." ),
-                           colorize( enumerate_as_string( act_descs, enumeration_conjunction::none ), c_green ) ) )
+                                     _( "Multiple entries separated with comma (,). Excludes starting with hyphen (-)." ),
+                                     colorize( enumerate_as_string( act_descs, enumeration_conjunction::none ), c_green ) ) )
                        .desc_color( c_white )
                        .identifier( "overmap_search" )
                        .query_string();
@@ -1769,7 +1769,7 @@ static void place_ter_or_special( const ui_adaptor &om_ui, tripoint_abs_omt &cur
                 curs.z()++;
             } else if( action == "SELECT" ) {
                 if( std::optional<tripoint_rel_omt> mouse_pos = ctxt.get_coordinates_rel_omt( g->w_overmap,
-                    point::zero, true ); mouse_pos ) {
+                        point::zero, true ); mouse_pos ) {
                     curs = curs + mouse_pos->xy();
                 }
             } else if( action == "zoom_out" ) {
@@ -1851,7 +1851,7 @@ static void modify_horde_func( tripoint_abs_omt &curs )
 {
     overmap &map_at_cursor = overmap_buffer.get( project_to<coords::om>( curs ).xy() );
     std::vector<std::reference_wrapper<mongroup>> hordes =
-        map_at_cursor.debug_unsafe_get_groups_at( curs );
+                map_at_cursor.debug_unsafe_get_groups_at( curs );
     if( hordes.empty() ) {
         if( !query_yn( _( "No hordes there.  Would you like to make a new horde?" ) ) ) {
             return;
@@ -1868,7 +1868,7 @@ static void modify_horde_func( tripoint_abs_omt &curs )
         // emulates horde behavior
         int displayed_monster_num = mg.monsters.empty() ? mg.population : mg.monsters.size();
         std::string horde_description = string_format( _( "group(type: %s) with %d monsters" ),
-            mg.type.c_str(), displayed_monster_num );
+                                        mg.type.c_str(), displayed_monster_num );
         horde_list.addentry( entry_num, true, -1, horde_description );
     }
     horde_list.query();
@@ -1898,7 +1898,7 @@ static void modify_horde_func( tripoint_abs_omt &curs )
             break;
         case 1:
             horde_destination = ui::omap::choose_point( _( "Select a target destination for the horde." ),
-                true );
+                                true );
             if( horde_destination.is_invalid() || horde_destination == tripoint_abs_omt::zero ) {
                 break;
             }
@@ -1966,7 +1966,7 @@ static std::vector<tripoint_abs_omt> get_overmap_path_to( const tripoint_abs_omt
             params = overmap_path_params::for_watercraft();
         } else if( can_drive ) {
             const float offroad_coeff = player_veh->k_traction( here, player_veh->wheel_area() *
-                player_veh->average_offroad_rating() );
+                                        player_veh->average_offroad_rating() );
             const bool tiny = player_veh->get_points().size() <= 3;
             params = overmap_path_params::for_land_vehicle( offroad_coeff, tiny, can_float );
         } else {
@@ -2552,10 +2552,10 @@ std::pair<std::string, nc_color> oter_symbol_and_color( const tripoint_abs_omt &
     const bool debug_horde = uistate.overmap_debug_mongroup ||
                              player_character.has_trait( trait_DEBUG_CLAIRVOYANCE );
     const bool can_see_horde = overmap_ui::get_and_assign_los( args.los, player_character, omp,
-        opts.sight_points ) || debug_horde ;
+                               opts.sight_points ) || debug_horde ;
     const bool show_hordes = blink && opts.showhordes && can_see_horde;
     const int horde_size = show_hordes ? overmap_buffer.get_horde_size( omp,
-        horde_map_flavors::active | horde_map_flavors::idle ) : 0;
+                           horde_map_flavors::active | horde_map_flavors::idle ) : 0;
 
     if( blink && opts.show_pc && !opts.hilite_pc && omp == get_avatar().pos_abs_omt() ) {
         // Display player pos, should always be visible

@@ -541,7 +541,7 @@ void iexamine::genemill( Character &you, const tripoint_bub_ms & )
         return p1.second < p2.second;
     } );
     const mutation_category_trait &highest_mct = mutation_category_trait::get_category(
-            highest_id->first );
+                highest_id->first );
 
     //Since chimera grants access to most post thresh traits with little inconvenience, we prevent the player from getting it through genemill.
     if( highest_id->first != mutation_category_CHIMERA &&
@@ -1014,7 +1014,7 @@ void iexamine::vending( Character &you, const tripoint_bub_ms &examp )
     ui_adaptor ui;
     ui.on_screen_resize( [&]( ui_adaptor & ui ) {
         const point padding( std::max( 0, TERMX - FULL_SCREEN_WIDTH ) / 4, std::max( 0,
-                TERMY - FULL_SCREEN_HEIGHT ) / 6 );
+                             TERMY - FULL_SCREEN_HEIGHT ) / 6 );
         const int window_h   = FULL_SCREEN_HEIGHT + std::max( 0, TERMY - FULL_SCREEN_HEIGHT ) * 2 / 3;
         const int window_w   = FULL_SCREEN_WIDTH + std::max( 0, TERMX - FULL_SCREEN_WIDTH ) / 2;
         w_items_w  = window_w / 2;
@@ -1330,8 +1330,8 @@ void iexamine::elevator( Character &you, const tripoint_bub_ms &examp )
 
     for( vehicle *v : vehs.v ) {
         tripoint_bub_ms const p = _rotate_point_sm( { v->pos_bub( here ).xy(), movez},
-            erot,
-            sm_orig );
+                                  erot,
+                                  sm_orig );
         here.displace_vehicle( *v, p - v->pos_bub( here ) );
         v->turn( erot * 90_degrees );
         v->face = tileray( v->turn_dir );
@@ -1889,7 +1889,7 @@ void iexamine::locked_object( Character &you, const tripoint_bub_ms &examp )
     // Check if the locked thing is a lockable door part.
     if( veh ) {
         std::vector<vehicle_part *> parts_at_target = veh->vehicle().get_parts_at(
-                &here, examp, "LOCKABLE_DOOR", part_status_flag::available );
+                    &here, examp, "LOCKABLE_DOOR", part_status_flag::available );
         if( !parts_at_target.empty() ) {
             locked_part = veh->vehicle().next_part_to_unlock(
                               veh->vehicle().index_of_part( parts_at_target.front() ) );
@@ -1958,7 +1958,7 @@ void iexamine::locked_object_pickable( Character &you, const tripoint_bub_ms &ex
 
     if( veh ) {
         const std::vector<vehicle_part *> parts_at_target = veh->vehicle().get_parts_at(
-                &here, examp, "LOCKABLE_DOOR", part_status_flag::available );
+                    &here, examp, "LOCKABLE_DOOR", part_status_flag::available );
         if( !parts_at_target.empty() ) {
             locked_part = veh->vehicle().next_part_to_unlock(
                               veh->vehicle().index_of_part( parts_at_target.front() ) );
@@ -2378,7 +2378,7 @@ void iexamine::flower_poppy( Character &you, const tripoint_bub_ms &examp )
     }
 
     weather_sum recentWeather = sum_conditions( calendar::turn - 10_minutes, calendar::turn,
-        you.pos_abs() );
+                                you.pos_abs() );
 
     // If it has been raining recently, then this event is twice less likely.
     if( ( ( recentWeather.rain_amount > 1 ) ? one_in( 6 ) : one_in( 3 ) ) && resist < 5 ) {
@@ -2833,8 +2833,8 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
             add_msg( m_info,
                      _( "We have altered this unit's configuration to extract and provide local nutriment.  The Mycus provides." ) );
         } else if( you.has_trait( trait_M_DEFENDER ) || ( ( you.has_trait( trait_M_SPORES ) ||
-                you.has_trait( trait_M_FERTILE ) ) &&
-                one_in( 2 ) ) ) {
+                   you.has_trait( trait_M_FERTILE ) ) &&
+                   one_in( 2 ) ) ) {
             g->place_critter_at( mon_fungal_blossom, examp );
             add_msg( m_info, _( "The seed blooms forth!  We have brought true beauty to this world." ) );
         } else if( you.has_trait( trait_THRESH_MYCUS ) || one_in( 4 ) ) {
@@ -3244,7 +3244,7 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
         const float crop_water_consumption = ::get_option<float>( "CROP_WATER_CONSUMPTION" );
         const int consumption = std::max( 1,
                                           static_cast<int>( base_consumption * consumption_mult *
-                                              crop_water_consumption ) );
+                                                  crop_water_consumption ) );
         std::string desc = string_format(
                                _( "Water: <color_cyan>%d</color>/<color_cyan>%d</color>\n"
                                   "Daily consumption: <color_cyan>%d</color>\n"
@@ -3357,7 +3357,7 @@ int iexamine::get_plant_current_stage_idx_from_effective( map &here, const tripo
         return -1;
     }
     const time_duration effective_time = get_plant_effective_growth_time( *seed,
-        furn.plant->growth_multiplier );
+                                         furn.plant->growth_multiplier );
     return get_plant_stage_idx_from_effective_time( *seed->type->seed, effective_time );
 }
 
@@ -3405,7 +3405,7 @@ bool iexamine::is_plant_overgrown( map &here, const tripoint_bub_ms &p )
         return false;
     }
     const std::vector<std::pair<flag_id, time_duration>> &growth_stages =
-        seed->type->seed->get_growth_stages();
+                seed->type->seed->get_growth_stages();
     const int overgrown_stage_idx = get_plant_overgrown_stage_idx( *seed->type->seed );
     if( overgrown_stage_idx < 0 ) {
         return false;
@@ -3566,7 +3566,7 @@ bool iexamine::kiln_prep( Character &, const tripoint_bub_ms &examp )
             fuel_present = true;
         } else {
             add_msg( m_bad, _( "This kiln contains %s, which can't be made into charcoal!" ), i.tname( 1,
-                    false ) );
+                     false ) );
             return false;
         }
     }
@@ -3854,7 +3854,7 @@ void iexamine::stook_empty( Character &, const tripoint_bub_ms &examp )
             grain_present = true;
         } else {
             add_msg( m_bad, _( "This pile contains %s, which can't be dried here!" ), i.tname( 1,
-                    false ) );
+                     false ) );
             return;
         }
     }
@@ -4965,7 +4965,7 @@ void iexamine::tree_hickory( Character &you, const tripoint_bub_ms &examp )
         digging_up = true;
         /** @EFFECT_SURVIVAL increases hickory root number per tree */
         here.spawn_item( you.pos_bub(), itype_hickory_root, rng( 1,
-                round( 3 + you.get_skill_level( skill_survival ) ) ),
+                         round( 3 + you.get_skill_level( skill_survival ) ) ),
                          0,
                          calendar::turn );
         here.ter_set( examp, ter_t_tree_hickory_dead );
@@ -5347,9 +5347,9 @@ void iexamine::finite_water_source( Character &, const tripoint_bub_ms &examp )
 const itype *furn_t::crafting_pseudo_item_type() const
 {
     if( crafting_pseudo_item.is_empty() ) {
-    return nullptr;
-}
-return item::find_type( crafting_pseudo_item );
+        return nullptr;
+    }
+    return item::find_type( crafting_pseudo_item );
 }
 
 std::vector<const itype *> furn_t::crafting_ammo_item_types() const
@@ -5518,7 +5518,7 @@ static void reload_furniture( Character &you, const tripoint_bub_ms &examp, bool
     }
 
     const int amount_in_furn_after_placing = count_charges_in_list( opt_type,
-        here.i_at( examp ) );
+            here.i_at( examp ) );
     //~ %1$s - furniture, %2$d - number, %3$s items.
     add_msg( _( "The %1$s contains %2$d %3$s." ), f.name(), amount_in_furn_after_placing,
              opt_type->nname( amount_in_furn_after_placing ) );
@@ -5537,8 +5537,8 @@ void iexamine::curtains( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
     const bool closed_window_with_curtains = here.has_flag(
-            ter_furn_flag::TFLAG_BARRICADABLE_WINDOW_CURTAINS,
-            examp );
+                ter_furn_flag::TFLAG_BARRICADABLE_WINDOW_CURTAINS,
+                examp );
     if( here.is_outside( you.pos_bub() ) && ( here.has_flag( ter_furn_flag::TFLAG_WALL, examp ) ||
             closed_window_with_curtains ) ) {
         locked_object( you, examp );
@@ -5905,18 +5905,18 @@ void iexamine::pay_gas( Character &you, const tripoint_bub_ms &examp )
     amenu.addentry( 0, false, -1, str_to_illiterate_str( _( "What would you like to do?" ) ) );
 
     amenu.addentry( buy_gas, true, 'b', str_to_illiterate_str( string_format( _( "Buy %s." ),
-            fuelTypeStr ) ) );
+                    fuelTypeStr ) ) );
     amenu.addentry( refund, true, 'r', str_to_illiterate_str( _( "Refund cash." ) ) );
 
     std::string gaspumpselected = str_to_illiterate_str( string_format( _( "Current %s pump: " ),
-        fuelTypeStr ) + std::to_string( uistate.ags_pay_gas_selected_pump + 1 ) );
+                                  fuelTypeStr ) + std::to_string( uistate.ags_pay_gas_selected_pump + 1 ) );
     amenu.addentry( 0, false, -1, gaspumpselected );
     amenu.addentry( choose_pump, true, 'p',
                     str_to_illiterate_str( string_format( _( "Choose a %s pump." ), fuelTypeStr ) ) );
 
     amenu.addentry( 0, false, -1, str_to_illiterate_str( _( "Your discount: " ) ) + discountName );
     amenu.addentry( 0, false, -1, string_format( str_to_illiterate_str(
-                _( "Your price per %s unit: " ) ), fuelTypeStr )
+                        _( "Your price per %s unit: " ) ), fuelTypeStr )
                     +
                     format_money( pricePerUnit ) );
 
@@ -5975,7 +5975,7 @@ void iexamine::pay_gas( Character &you, const tripoint_bub_ms &examp )
         clamp( liters, 0, maximum_liters );
 
         const std::optional<tripoint_bub_ms> pGasPump = getGasPumpByNumber( examp,
-            uistate.ags_pay_gas_selected_pump );
+                uistate.ags_pay_gas_selected_pump );
         if( !pGasPump || !toPumpFuel( pTank, *pGasPump, liters * 1000 ) ) {
             return;
         }
@@ -5998,14 +5998,14 @@ void iexamine::pay_gas( Character &you, const tripoint_bub_ms &examp )
 
     if( refund == choice ) {
         std::vector<item_location> cash_cards = you.cache_get_items_with( "is_cash_card",
-            &item::is_cash_card );
+                                                &item::is_cash_card );
         if( cash_cards.empty() ) {
             popup( _( "You do not have a cash card to refund money!" ) );
             return;
         }
 
         const std::optional<tripoint_bub_ms> pGasPump = getGasPumpByNumber( examp,
-            uistate.ags_pay_gas_selected_pump );
+                uistate.ags_pay_gas_selected_pump );
         int amount_fuel = pGasPump ? fromPumpFuel( pTank, *pGasPump ) : -1;
         if( amount_fuel < 0 ) {
             popup( _( "Unable to refund, no fuel in pump." ) );
@@ -6399,9 +6399,9 @@ void iexamine::autodoc( Character &you, const tripoint_bub_ms &examp )
     std::string autodoc_header = _( "Autodoc Mk. XI.  Status: Online.  Please choose operation." );
     if( unsafe_usage ) {
         const std::string &warning_sign = colorize( " /", c_yellow ) + colorize( "!",
-            c_red ) + colorize( "\\", c_yellow );
+                                          c_red ) + colorize( "\\", c_yellow );
         const std::string &warning = warning_sign + colorize( _( " WARNING: Operator missing" ),
-            c_red ) + warning_sign;
+                                     c_red ) + warning_sign;
         autodoc_header = warning +
                          _( "\n Using the Autodoc without an operator can lead to <color_light_cyan>serious injuries</color> or <color_light_cyan>death</color>.\n By continuing with the operation you accept the risks and acknowledge that you will not take any legal actions against this facility in case of an accident. " );
     }
@@ -6472,7 +6472,7 @@ void iexamine::autodoc( Character &you, const tripoint_bub_ms &examp )
             bool has_install_program = false;
 
             std::vector<const item *> install_programs = you.crafting_inventory().items_with( [itemtype](
-                    const item & it ) -> bool { return it.typeId() == itemtype->bionic->installation_data; } );
+                        const item & it ) -> bool { return it.typeId() == itemtype->bionic->installation_data; } );
 
             if( !install_programs.empty() ) {
                 has_install_program = true;
@@ -6957,7 +6957,7 @@ bool iexamine::smoker_prep( Character &you, const tripoint_bub_ms &examp )
         }
         if( it.typeId() != itype_charcoal && !it.is_smokable() ) {
             add_msg( m_bad, _( "This rack contains %s, which can't be smoked!" ), it.tname( 1,
-                    false ) );
+                     false ) );
             add_msg( _( "You remove %s from the rack." ), it.tname() );
             here.add_item_or_charges( you.pos_bub(), it );
             you.mod_moves( -you.item_handling_cost( it ) );
@@ -7388,7 +7388,7 @@ static void mill_load_food( Character &you, const tripoint_bub_ms &examp,
     } );
 
     comp_selection<item_comp> selected = you.select_item_component( comps, 1, inv, true,
-        is_non_rotten_crafting_component );
+                                         is_non_rotten_crafting_component );
     std::list<item> moved = you.consume_items( selected, 1, is_non_rotten_crafting_component );
     for( const item &m : moved ) {
         here.add_item( examp, m );
@@ -8159,7 +8159,7 @@ void iexamine::practice_survival_while_foraging( Character &who )
     const int max_forage_skill = who.get_int() / 3 + 1;
     ///\EFFECT_SURVIVAL decreases survival skill gain from foraging (NEGATIVE)
     const int max_exp = 2 * ( max_forage_skill - static_cast<int>( who.get_skill_level(
-            skill_survival ) ) );
+                                  skill_survival ) ) );
     // Award experience for foraging attempt regardless of success
     who.practice( skill_survival, rng( 1, max_exp ), max_forage_skill );
 }

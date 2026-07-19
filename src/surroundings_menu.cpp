@@ -151,7 +151,7 @@ static void move_selection( T &data, const int amount )
     if( amount > 0 && it == data.filtered_list.end() - 1 ) {
         data.selected_entry = *data.filtered_list.begin();
     } else if( ( amount < 0 && it == data.filtered_list.begin() ) || ( amount > 0 &&
-            amount > std::distance( it, data.filtered_list.end() - 1 ) ) ) {
+               amount > std::distance( it, data.filtered_list.end() - 1 ) ) ) {
         data.selected_entry = *data.filtered_list.rbegin();
     } else if( amount < 0 && amount < std::distance( it, data.filtered_list.begin() ) ) {
         data.selected_entry = *data.filtered_list.begin();
@@ -331,7 +331,7 @@ void item_tab_data::apply_filter()
     // then apply priorities
     priority_plus_end = list_filter_high_priority( filtered_list, uistate.list_item_priority );
     priority_minus_start = list_filter_low_priority( filtered_list, priority_plus_end + 1,
-        uistate.list_item_downvote );
+                           uistate.list_item_downvote );
 }
 
 int item_tab_data::get_max_entity_width()
@@ -536,26 +536,26 @@ void monster_tab_data::set_filter_active( bool active ) const
 bool monster_tab_data::can_fire_at_selected( avatar &you, int max_gun_range ) const
 {
     if( !selected_entry ) {
-    return false;
-}
-const Creature *critter = selected_entry->get_selected_entity();
+        return false;
+    }
+    const Creature *critter = selected_entry->get_selected_entity();
 
-return critter && rl_dist( you.pos_bub(), critter->pos_bub() ) <= max_gun_range;
+    return critter && rl_dist( you.pos_bub(), critter->pos_bub() ) <= max_gun_range;
 }
 
 bool monster_tab_data::fire_at_selected( avatar &you, int max_gun_range,
         const tripoint_rel_ms &stored_view_offset ) const
 {
     if( !can_fire_at_selected( you, max_gun_range ) ) {
-    return false;
-}
+        return false;
+    }
 
-you.last_target = g->shared_from( *selected_entry->get_selected_entity() );
-you.recoil = MAX_RECOIL;
-you.view_offset = stored_view_offset;
-avatar_action::fire_wielded_weapon( you );
+    you.last_target = g->shared_from( *selected_entry->get_selected_entity() );
+    you.recoil = MAX_RECOIL;
+    you.view_offset = stored_view_offset;
+    avatar_action::fire_wielded_weapon( you );
 
-return true;
+    return true;
 }
 
 terfurn_tab_data::terfurn_tab_data( const std::string &title ) :
@@ -746,8 +746,8 @@ cataimgui::bounds surroundings_menu::get_bounds()
 {
     // todo: calculate correct creature text width
     int wanted_width = dist_width + std::max( { item_data.get_max_entity_width(),
-        monster_data.get_max_entity_width(),
-        terfurn_data.get_max_entity_width() } );
+                       monster_data.get_max_entity_width(),
+                       terfurn_data.get_max_entity_width() } );
     width = clamp( wanted_width, min_width, TERMX / 3 );
     // hide info panel on small displays
     info_height = TERMY > 30 ? std::min( 25, TERMY / 2 ) : 0;
@@ -904,7 +904,7 @@ void surroundings_menu::draw_item_tab()
                     // FIXME: these width calculations somehow work for variable-width but not for fixed-width fonts
                     ImFont *font = ImGui::GetFont();
                     float newness_str_width = font->CalcTextSizeA( ImGui::GetFontSize(), FLT_MAX, 0.f,
-                        newness_str.c_str() ).x + ImGui::GetStyle().ItemSpacing.x;
+                                              newness_str.c_str() ).x + ImGui::GetStyle().ItemSpacing.x;
                     float wrap_width_subtrahend = ImGui::GetStyle().ItemSpacing.x;
                     if( highlight_new && !newness_str.empty() ) {
                         wrap_width_subtrahend += newness_str_width;
@@ -974,7 +974,7 @@ void surroundings_menu::draw_monster_tab()
                             get_hotkey_buttons_height( &monster_data ) - total_menu_padding( info_height > 0 );
         const int num_cols = 5;
         if( ImGui::BeginTable( "monsters", num_cols, ImGuiTableFlags_ScrollY, ImVec2( 0.0f,
-                list_height ) ) ) {
+                               list_height ) ) ) {
             float sees_col_width = str_width_to_pixels( 1 );
             float health_col_width = str_width_to_pixels( 5 );
             float att_col_width = str_width_to_pixels( 12 );
@@ -1106,7 +1106,7 @@ void surroundings_menu::draw_terfurn_tab()
                             get_hotkey_buttons_height( &terfurn_data ) - total_menu_padding( info_height > 0 );
         const int num_cols = 2;
         if( ImGui::BeginTable( "terfurn", num_cols, ImGuiTableFlags_ScrollY, ImVec2( 0.0f,
-                list_height ) ) ) {
+                               list_height ) ) ) {
             float dir_col_width = str_width_to_pixels( dist_width );
             float name_col_width = ImGui::GetContentRegionAvail().x - dir_col_width -
                                    total_cell_padding( num_cols );
@@ -1450,7 +1450,7 @@ void surroundings_menu::change_selected_tab_sorting()
 
 // todo: better solution for this
 std::vector<std::unordered_set<std::string>> surroundings_menu::get_shown_hotkeys(
-    const tab_data *tab )
+            const tab_data *tab )
 {
     std::vector<std::unordered_set<std::string>> ret;
     for( const std::unordered_set<std::string> &group : tab->hotkey_groups ) {

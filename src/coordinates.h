@@ -195,11 +195,11 @@ class coord_point_ob_not_3d {};
 template<typename Point, origin Origin, scale Scale>
 class coord_point_ob : public
     coord_point_mut<Point, coord_point_ob<point, Origin, Scale>>,
-    public std::
-    conditional_t<Origin == origin::relative, coord_point_ob_rel<Point, Origin, Scale>, coord_point_ob_not_rel>,
-    public std::
-    conditional_t < Origin == origin::relative &&Point::dimension == 3,
-    coord_point_ob_3d<Point, Origin, Scale>, coord_point_ob_not_3d >
+            public std::
+            conditional_t<Origin == origin::relative, coord_point_ob_rel<Point, Origin, Scale>, coord_point_ob_not_rel>,
+            public std::
+            conditional_t < Origin == origin::relative &&Point::dimension == 3,
+            coord_point_ob_3d<Point, Origin, Scale>, coord_point_ob_not_3d >
 {
         using base = coord_point_mut<Point, coord_point_ob<point, Origin, Scale>>;
 
@@ -970,9 +970,9 @@ direction direction_from( const coords::coord_point_ob<Point, Origin, Scale> &lo
 // line from loc1 to loc2, including loc2 but not loc1
 template<typename Point, coords::origin Origin, coords::scale Scale, std::enable_if_t<std::is_same_v<Point, point>, int> = 0>
 std::vector < coords::coord_point < Point, Origin, Scale >>
-line_to( const coords::coord_point_ob<Point, Origin, Scale> &loc1,
-         const coords::coord_point_ob<Point, Origin, Scale> &loc2,
-         const int t = 0 )
+        line_to( const coords::coord_point_ob<Point, Origin, Scale> &loc1,
+                 const coords::coord_point_ob<Point, Origin, Scale> &loc2,
+                 const int t = 0 )
 {
     std::vector<Point> raw_result = line_to( loc1.raw(), loc2.raw(), t );
     std::vector < coords::coord_point < Point, Origin, Scale >> result;
@@ -986,9 +986,9 @@ line_to( const coords::coord_point_ob<Point, Origin, Scale> &loc1,
 // line from loc1 to loc2, including loc2 but not loc1
 template<typename Point, coords::origin Origin, coords::scale Scale, std::enable_if_t<std::is_same_v<Point, point>, int> = 0>
 std::vector < coords::coord_point_ib < Point, Origin, Scale >>
-line_to( const coords::coord_point_ib<Point, Origin, Scale> &loc1,
-         const coords::coord_point_ib<Point, Origin, Scale> &loc2,
-         const int t = 0 )
+        line_to( const coords::coord_point_ib<Point, Origin, Scale> &loc1,
+                 const coords::coord_point_ib<Point, Origin, Scale> &loc2,
+                 const int t = 0 )
 {
     std::vector<Point> raw_result = line_to( loc1.raw(), loc2.raw(), t );
     std::vector < coords::coord_point_ib < Point, Origin, Scale >> result;
@@ -1003,9 +1003,9 @@ line_to( const coords::coord_point_ib<Point, Origin, Scale> &loc1,
 template<typename Tripoint, coords::origin Origin, coords::scale Scale,
          std::enable_if_t<std::is_same_v<Tripoint, tripoint>, int> = 0>
 std::vector < coords::coord_point < Tripoint, Origin, Scale >>
-line_to( const coords::coord_point_ob<Tripoint, Origin, Scale> &loc1,
-         const coords::coord_point_ob<Tripoint, Origin, Scale> &loc2,
-         const int t = 0, const int t2 = 0 )
+        line_to( const coords::coord_point_ob<Tripoint, Origin, Scale> &loc1,
+                 const coords::coord_point_ob<Tripoint, Origin, Scale> &loc2,
+                 const int t = 0, const int t2 = 0 )
 {
     std::vector<Tripoint> raw_result = line_to( loc1.raw(), loc2.raw(), t, t2 );
     std::vector < coords::coord_point < Tripoint, Origin, Scale>> result;
@@ -1020,9 +1020,9 @@ line_to( const coords::coord_point_ob<Tripoint, Origin, Scale> &loc1,
 template<typename Tripoint, coords::origin Origin, coords::scale Scale,
          std::enable_if_t<std::is_same_v<Tripoint, tripoint>, int> = 0>
 std::vector < coords::coord_point_ib < Tripoint, Origin, Scale>>
-line_to( const coords::coord_point_ib<Tripoint, Origin, Scale> &loc1,
-         const coords::coord_point_ib<Tripoint, Origin, Scale> &loc2,
-         const int t = 0, const int t2 = 0 )
+        line_to( const coords::coord_point_ib<Tripoint, Origin, Scale> &loc1,
+                 const coords::coord_point_ib<Tripoint, Origin, Scale> &loc2,
+                 const int t = 0, const int t2 = 0 )
 {
     std::vector<Tripoint> raw_result = line_to( loc1.raw(), loc2.raw(), t, t2 );
     std::vector < coords::coord_point_ib < Tripoint, Origin, Scale >> result;
@@ -1038,8 +1038,8 @@ line_to( const coords::coord_point_ib<Tripoint, Origin, Scale> &loc1,
 template<typename Tripoint, coords::origin Origin, coords::scale Scale,
          std::enable_if_t<std::is_same_v<Tripoint, tripoint>, int> = 0>
 std::vector < coords::coord_point < Tripoint, Origin, Scale >>
-squares_closer_to( const coords::coord_point_ob<Tripoint, Origin, Scale> &loc1,
-                   const coords::coord_point_ob<Tripoint, Origin, Scale> &loc2 )
+        squares_closer_to( const coords::coord_point_ob<Tripoint, Origin, Scale> &loc1,
+                           const coords::coord_point_ob<Tripoint, Origin, Scale> &loc2 )
 {
     std::vector<Tripoint> raw_result = squares_closer_to( loc1.raw(), loc2.raw() );
     std::vector < coords::coord_point < Tripoint, Origin, Scale>> result;
@@ -1055,8 +1055,8 @@ squares_closer_to( const coords::coord_point_ob<Tripoint, Origin, Scale> &loc1,
 template<typename Tripoint, coords::origin Origin, coords::scale Scale,
          std::enable_if_t<std::is_same_v<Tripoint, tripoint>, int> = 0>
 std::vector < coords::coord_point_ib < Tripoint, Origin, Scale>>
-squares_closer_to( const coords::coord_point_ib<Tripoint, Origin, Scale> &loc1,
-                   const coords::coord_point_ib<Tripoint, Origin, Scale> &loc2 )
+        squares_closer_to( const coords::coord_point_ib<Tripoint, Origin, Scale> &loc1,
+                           const coords::coord_point_ib<Tripoint, Origin, Scale> &loc2 )
 {
     std::vector<Tripoint> raw_result = squares_closer_to( loc1.raw(), loc2.raw() );
     std::vector < coords::coord_point_ib < Tripoint, Origin, Scale >> result;
@@ -1130,8 +1130,8 @@ midpoint_round_to_nearest( std::vector<coords::coord_point_ob<Point, Origin, Sca
 
 template<typename Point, coords::origin Origin, coords::scale Scale>
 std::vector<coords::coord_point_ob<Point, Origin, Scale>>
-closest_points_first( const coords::coord_point_ob<Point, Origin, Scale> &loc,
-                      int min_dist, int max_dist )
+        closest_points_first( const coords::coord_point_ob<Point, Origin, Scale> &loc,
+                              int min_dist, int max_dist )
 {
     std::vector<Point> raw_result = closest_points_first( loc.raw(), min_dist, max_dist );
     std::vector<coords::coord_point_ob<Point, Origin, Scale>> result;
@@ -1144,16 +1144,16 @@ closest_points_first( const coords::coord_point_ob<Point, Origin, Scale> &loc,
 }
 template<typename Point, coords::origin Origin, coords::scale Scale>
 std::vector<coords::coord_point_ob<Point, Origin, Scale>>
-closest_points_first( const coords::coord_point_ob<Point, Origin, Scale> &loc,
-                      int max_dist )
+        closest_points_first( const coords::coord_point_ob<Point, Origin, Scale> &loc,
+                              int max_dist )
 {
     return closest_points_first( loc, 0, max_dist );
 }
 
 template<typename Point, coords::origin Origin, coords::scale Scale>
 std::vector<coords::coord_point_ib<Point, Origin, Scale>>
-closest_points_first( const coords::coord_point_ib<Point, Origin, Scale> &loc,
-                      int max_dist )
+        closest_points_first( const coords::coord_point_ib<Point, Origin, Scale> &loc,
+                              int max_dist )
 {
     return closest_points_first( loc, 0, max_dist );
 }
@@ -1252,7 +1252,7 @@ struct real_coords {
     }
     point begin_om_pos() const {
         return point( ( abs_om.x * subs_in_om * tiles_in_sub ) + ( om_pos.x * 2 * tiles_in_sub ),
-        ( abs_om.y * subs_in_om * tiles_in_sub ) + ( om_pos.y * 2 * tiles_in_sub ) );
+                      ( abs_om.y * subs_in_om * tiles_in_sub ) + ( om_pos.y * 2 * tiles_in_sub ) );
     }
     point begin_om() const {
         return point( abs_om.x * subs_in_om * tiles_in_sub, abs_om.y * subs_in_om * tiles_in_sub );
