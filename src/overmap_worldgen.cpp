@@ -33,7 +33,6 @@ void overmapbuffer::init_region_layout()
         region_layout->get_generator()->init();
     }
 }
-
 void region_voronoi_point::deserialize( const JsonObject &jo )
 {
     jo.read( "point", region_point );
@@ -237,4 +236,3 @@ void overmapbuffer::print_region_layout()
     ImGui::SetClipboardText( total_output.c_str() );
     popup( _( "Copied world region map to clipboard!" ) );
 }
-

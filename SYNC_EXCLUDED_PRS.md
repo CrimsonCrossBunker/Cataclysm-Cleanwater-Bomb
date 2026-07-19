@@ -32,10 +32,13 @@
 | #87897 | 2026-07-05 | put bleach in bottles properly | 部分同步（仅 display/container，未取 group spawn 改） |
 | #87899 | 2026-07-06 | sack-o-pocalypsis (sand/soil de-charge + remove container) | 剔除（de-charge 系列，与 CCB charges+container 模型冲突） |
 | #87900 | 2026-07-06 | Display detergent by weight | 未同步（与 CCB BY_WEIGHT+stackable 模型冲突） |
+| #88031 | 2026-07-18 | Fix potassium hydroxide powder spawning in units of 1 | 未同步（de-charge 后续修复；fork 现有 charges 生成逻辑已正确） |
 
 de-charge 系列此前的回退工作多数已作废（分支回到 master），故标"在库待回退"。
 
 **#87668 剔除说明**：上游某 de-charge 改动（#87668 描述称引入自 "#87543"，但该 PR 号在上游 git 历史/GitHub 均查无对应合并，号可能有误）把 detergent 改为 count 物品；#87668 是修该回归——把 C++ 洗涤逻辑从 `charges_of/has_charges` 改成 `amount_of/has_amount`。但 fork 未同步那个 detergent de-charge，detergent 仍是 `stackable:true`（`count_by_charges()=true`，配方产 charges:6、itemgroup spawn charges:[2,129]，实测于 fork master）。套用 #87668 会把"多 charges 的一份洗衣粉"按 1 个实例计（`amount_of` 每实例计 1，不看 charges），导致洗涤 cleanser 需求误判不足→搞坏 fork 洗涤。fork 现有 `charges_of` 代码对 charges-detergent 本就正确，无需改动。注：vehicle_use.cpp:1455 那处 `count_by_charges()?has_charges:has_amount` 三元两模型都兼容，但其余 5 处无条件改 amount 对 fork 有害，故整体剔除。结论基于代码实测，不依赖 "#87543" 是否存在。
+
+**#88031 剔除说明**：上游把氢氧化钾改成非 charges 计数物品后，原生成表会产生多个只含 1 单位化学品的容器；#88031 通过移除默认容器并改用 `count` 物品组修复该回归。fork 中 `chem_potassium_hydroxide` 仍为 `stackable:true`，保留默认小塑料瓶，生成表也已经使用 `charges:[100,-1]`，不存在上游问题。同步该 PR 反而会破坏 fork 的 charges + container 模型，故整体剔除。
 
 ### 已入库、保留不回退
 
@@ -105,3 +108,20 @@ de-charge 系列此前的回退工作多数已作废（分支回到 master），
 **同步 PR（新）：** #87869, #87884, #87893, #87896, #87898, #87902, #87903, #87904, #87905, #87907
 
 **剔除 PR：** #87899 (sack-o-pocalypsis，沙/土 de-charge，与 fork charges+container 模型冲突)
+
+
+### sync-cdda-20260719-selected (2026-07-19)
+
+同步范围：从上次 `sync-cdda-20260714-all` 的上游终点 #84822，到 upstream/master #88040，共 63 commits / 38 PRs；同步 37 个 PR，剔除 1 个 PR。
+
+**冲突处理：**
+
+| PR | 文件 | 处理方式 |
+|---|---|---|
+| #87987 | `data/changelog.txt` | 保留 CCB 现有周报内容，并加入上游新增条目 |
+| #88029 | `aftershock_exoplanet/modinfo.json` | 同时保留 CCB 的 `catalegacy_future` 与上游新增的 `xedra_evolved` 冲突项 |
+| #88030 | bleach 物品、生成表和配方 | 采用 1 ml 精细计量、净水配方及相应配方数量；保留 CCB 默认容器和 `charges` 生成模型 |
+
+**同步的 PR 编号：** #87992, #87989, #87990, #87983, #87975, #87994, #87987, #87950, #87997, #87996, #88003, #87934, #87951, #87948, #88001, #87999, #88007, #88015, #88019, #88018, #87985, #88013, #88022, #88010, #88026, #88025, #88012, #88029, #88037, #88035, #88028, #87930, #88030, #88042, #88043, #88041, #88040
+
+**剔除 PR：** #88031（氢氧化钾 de-charge 后续修复，与 fork charges + container 模型冲突）

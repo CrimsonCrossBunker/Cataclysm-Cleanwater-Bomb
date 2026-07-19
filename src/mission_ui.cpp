@@ -315,7 +315,7 @@ void mission_ui_impl::draw_mission_names( std::vector<mission *> missions, int &
     const int num_missions = missions.size();
 
     if( ImGui::BeginListBox( "##LISTBOX", ImVec2( table_column_width * 0.75,
-                             ImGui::GetContentRegionAvail().y ) ) ) {
+            ImGui::GetContentRegionAvail().y ) ) ) {
         for( int i = 0; i < num_missions; i++ ) {
             const bool is_selected = selected_mission == i;
             ImGui::PushID( i );
@@ -344,7 +344,7 @@ void mission_ui_impl::draw_point_of_interest_names( std::vector<point_of_interes
     const int num_missions = points_of_interest.size();
 
     if( ImGui::BeginListBox( "##LISTBOX", ImVec2( table_column_width * 0.75,
-                             ImGui::GetContentRegionAvail().y ) ) ) {
+            ImGui::GetContentRegionAvail().y ) ) ) {
         for( int i = 0; i < num_missions; i++ ) {
             const bool is_selected = selected_mission == i;
             ImGui::PushID( i );
@@ -410,7 +410,7 @@ void mission_ui_impl::draw_selected_description( std::vector<mission *> missions
         for( const auto &reward : rewards ) {
             std::string token = "<reward_count:" + itype_id( reward.second.evaluate( d ) ).str() + ">";
             parsed_description = string_replace( parsed_description, token, string_format( "%g",
-                                                 reward.first.evaluate( d ) ) );
+                reward.first.evaluate( d ) ) );
         }
         const Character &other_talker = mission_giver ? *mission_giver : get_player_character();
         // parse_tags() modifies the argument string directly, no return value.
@@ -443,11 +443,11 @@ void mission_ui_impl::draw_selected_description( std::vector<mission *> missions
                 if( selected_tab == mission_ui_tab_enum::COMPLETED ) {
                     //~The replaced string is a calendar date, such as "Year 1, May 12, 08:04:32"
                     cataimgui::draw_colored_text( string_format( _( "Completed: %s" ),
-                                                  to_string( deadline ) ), c_green );
+                            to_string( deadline ) ), c_green );
                 } else if( selected_tab == mission_ui_tab_enum::FAILED ) {
                     //~The replaced string is a calendar date, such as "Year 1, May 12, 08:04:32"
                     cataimgui::draw_colored_text( string_format( _( "Failed at: %s" ),
-                                                  to_string( deadline ).c_str() ), c_red );
+                            to_string( deadline ).c_str() ), c_red );
                 }
                 //~The replaced string is a time duration, such as "12 hours", or "5 minutes"
                 cataimgui::draw_colored_text( string_format( _( "%s ago" ), time_in_past_string ), c_unset );
@@ -490,7 +490,7 @@ void mission_ui_impl::draw_location( const std::string &label,
         const std::string dir_arrow = direction_arrow( direction_from( pos.xy(), loc.xy() ) );
         //~Parenthesis is a real-world value for distance. Example string: "223 tiles (5.35km) ⇗"
         const std::string distance_str = string_format( _( "%1$d tiles (%2$s) %3$s" ),
-                                         omt_distance, length_to_string_approx( actual_distance ), dir_arrow );
+            omt_distance, length_to_string_approx( actual_distance ), dir_arrow );
         draw_label_with_value( _( "Distance:" ), distance_str );
     }
 }

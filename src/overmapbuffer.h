@@ -275,7 +275,7 @@ class overmapbuffer
         bool has_vehicle( const tripoint_abs_omt &p );
         bool has_horde( const tripoint_abs_omt &p );
         int get_horde_size( const tripoint_abs_omt &p, int filter = horde_map_flavors::active |
-                            horde_map_flavors::idle | horde_map_flavors::dormant | horde_map_flavors::immobile );
+            horde_map_flavors::idle | horde_map_flavors::dormant | horde_map_flavors::immobile );
         std::vector<om_vehicle> get_vehicle( const tripoint_abs_omt &p );
         std::string get_vehicle_ter_sym( const tripoint_abs_omt &omt );
         std::string get_vehicle_tile_id( const tripoint_abs_omt &omt );
@@ -590,7 +590,7 @@ class overmapbuffer
         horde_entity *entity_at( const tripoint_abs_ms &p );
         std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes_at(
             const tripoint_abs_omt &p, int filter = horde_map_flavors::active | horde_map_flavors::idle |
-                    horde_map_flavors::dormant | horde_map_flavors::immobile );
+                horde_map_flavors::dormant | horde_map_flavors::immobile );
         /**
          * Find radio station with given frequency, search an unspecified area around
          * the current player location.
@@ -636,8 +636,8 @@ class overmapbuffer
          * @returns If the special was placed, a vector of the points used, else nullopt.
          */
         std::optional<std::vector<tripoint_abs_omt>> place_special(
-                    const overmap_special &special, const tripoint_abs_omt &origin,
-                    om_direction::type dir, bool must_be_unexplored, bool force );
+            const overmap_special &special, const tripoint_abs_omt &origin,
+            om_direction::type dir, bool must_be_unexplored, bool force );
         /**
          * Place the specified overmap special using the overmap's placement algorithm. Intended to be used
          * when you have a special that you want placed but it should be placed similarly to as if it were

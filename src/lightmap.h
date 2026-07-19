@@ -53,7 +53,7 @@ constexpr inline int LIGHT_RANGE( float b )
         return 0;
     }
     return static_cast<int>( -std::log( LIGHT_AMBIENT_LOW / b ) * ( 1.0 /
-                             LIGHT_TRANSPARENCY_OPEN_AIR ) );
+            LIGHT_TRANSPARENCY_OPEN_AIR ) );
 }
 
 // Per-tile accumulated light color energy (float RGB).

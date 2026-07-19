@@ -11,7 +11,7 @@ Dimensions are defined in `json\region_settings\region_settings\dimensions\dimen
 Currently they only specify a [region_layout](REGION_LAYOUT.MD).
 
 Dimensions are stored within a save folder, they are mostly disconnected from the "main" dimension, aka the dimension stored above `/dimensions` folder.
-When travelling between them, you aren't travelling as much as you are "switching" which dimension data folder is loaded right now. There's almost no distinction between creating a dimension and loading into it. 
+When travelling between them, you aren't travelling as much as you are "switching" which dimension data folder is loaded right now. There's almost no distinction between creating a dimension and loading into it.
 
 By design, you aren't allowed to alter world data of unloaded dimensions. Meaning you can't place down structures in unloaded dimensions, place down NPCs, assign missions requiring a location inside the dimension, you can't even view the unloaded dimensions on an in-game map.
 

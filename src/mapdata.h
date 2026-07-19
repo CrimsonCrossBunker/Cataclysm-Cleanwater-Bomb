@@ -686,8 +686,8 @@ struct map_data_common_t {
 
         bool is_flammable() const {
             return has_flag( ter_furn_flag::TFLAG_FLAMMABLE ) ||
-                   has_flag( ter_furn_flag::TFLAG_FLAMMABLE_ASH ) ||
-                   has_flag( ter_furn_flag::TFLAG_FLAMMABLE_HARD );
+            has_flag( ter_furn_flag::TFLAG_FLAMMABLE_ASH ) ||
+            has_flag( ter_furn_flag::TFLAG_FLAMMABLE_HARD );
         }
 
         virtual bool is_terrain() const;

@@ -542,7 +542,7 @@ int overmapbuffer::get_horde_size( const tripoint_abs_omt &p, int filter )
 {
     int horde_size = 0;
     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                p, filter );
+            p, filter );
     for( std::unordered_map<tripoint_abs_ms, horde_entity> *horde_group : hordes ) {
         horde_size += horde_group->size();
     }
@@ -1148,7 +1148,7 @@ pf::simple_path<tripoint_abs_omt> overmapbuffer::get_travel_path(
 
     constexpr int radius = 4 * OMAPX; // radius of search in OMTs = 4 overmaps
     const pf::simple_path<tripoint_abs_omt> &path = pf::find_overmap_path( src, dest, radius, estimate,
-            game::display_om_pathfinding_progress, std::nullopt, params.allow_diagonal );
+        game::display_om_pathfinding_progress, std::nullopt, params.allow_diagonal );
     return path;
 }
 
@@ -1345,7 +1345,7 @@ tripoint_abs_omt overmapbuffer::find_closest(
     const std::optional<overmap_special_id> &om_special )
 {
     const omt_find_params params = assign_params( type, radius, must_be_seen, match_type,
-                                   existing_overmaps_only, om_special );
+        existing_overmaps_only, om_special );
     return find_closest( origin, params );
 }
 
@@ -1541,7 +1541,7 @@ std::vector<tripoint_abs_omt> overmapbuffer::find_all(
     const std::optional<overmap_special_id> &om_special )
 {
     const omt_find_params params = assign_params( type, dist, must_be_seen, match_type,
-                                   existing_overmaps_only, om_special );
+        existing_overmaps_only, om_special );
     return find_all( origin, params );
 }
 
@@ -1557,7 +1557,7 @@ tripoint_abs_omt overmapbuffer::find_random(
     const std::optional<overmap_special_id> &om_special )
 {
     const omt_find_params params = assign_params( type, dist, must_be_seen, match_type,
-                                   existing_overmaps_only, om_special );
+        existing_overmaps_only, om_special );
     return find_random( origin, params );
 }
 
@@ -1575,8 +1575,8 @@ void overmapbuffer::populate_followers_vec( std::vector<npc *> &followers,
         bool only_following, bool ignore_hallu ) const
 {
     followers.clear();
-    for( const character_id &elem : g->get_follower_list() ) {
-        shared_ptr_fast<npc> npc_to_get = overmap_buffer.find_npc( elem );
+for( const character_id &elem : g->get_follower_list() ) {
+    shared_ptr_fast<npc> npc_to_get = overmap_buffer.find_npc( elem );
         if( !npc_to_get ||
             ( only_following && !npc_to_get->is_following() ) ||
             ( ignore_hallu && npc_to_get->is_hallucination() ) ) {
@@ -1698,7 +1698,7 @@ std::vector<shared_ptr_fast<npc>> overmapbuffer::get_companion_mission_npcs( int
 }
 
 std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near( const tripoint_abs_sm &p,
-                               int radius )
+        int radius )
 {
     std::vector<shared_ptr_fast<npc>> result;
     for( overmap *&it : get_overmaps_near( p.xy(), radius ) ) {
@@ -1713,7 +1713,7 @@ std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near( const tripoint_a
 }
 
 std::vector<shared_ptr_fast<npc>> overmapbuffer::get_npcs_near_omt( const tripoint_abs_omt &p,
-                               int radius )
+        int radius )
 {
     std::vector<shared_ptr_fast<npc>> result;
     for( overmap *&it : get_overmaps_near( project_to<coords::sm>( p.xy() ), radius ) ) {
@@ -2153,7 +2153,7 @@ void overmapbuffer::display_description_at( const tripoint_abs_sm &where, bool d
     }
 
     cataimgui::TextColoredParagraph( ter_color, string_format( format_string, ter_name, dir_name,
-                                     closest_city_name ) );
+            closest_city_name ) );
     draw_origin_line();
 }
 
@@ -2337,8 +2337,8 @@ bool overmapbuffer::is_in_city( const tripoint_abs_omt &p )
 }
 
 std::optional<std::vector<tripoint_abs_omt>> overmapbuffer::place_special(
-            const overmap_special &special, const tripoint_abs_omt &origin, om_direction::type dir,
-            const bool must_be_unexplored, const bool force )
+    const overmap_special &special, const tripoint_abs_omt &origin, om_direction::type dir,
+    const bool must_be_unexplored, const bool force )
 {
     const overmap_with_local_coords om_loc = get_om_global( origin );
 

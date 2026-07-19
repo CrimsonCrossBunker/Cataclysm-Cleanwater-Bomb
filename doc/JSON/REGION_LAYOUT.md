@@ -15,7 +15,7 @@ Region layouts have a secondary type: "generation_mode", which defines how the l
 
 There are two broad types of region layouts: STATIC and DYNAMIC.
 - DYNAMIC layouts are determined upon generating an overmap.
-- STATIC layouts have predetermined bounds and are generated along with the first overmap, 
+- STATIC layouts have predetermined bounds and are generated along with the first overmap,
 using a DYNAMIC layout to generate out-of-bounds overmaps.
 
 Listed below is documentation for each region layout mode's fields:

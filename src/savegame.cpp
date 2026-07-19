@@ -256,7 +256,7 @@ void game::unserialize_impl( const JsonObject &data )
     data.read( "debug_mode", debug_mode );
     data.read( "calendar_start", tmpcalstart );
     calendar::initial_season = static_cast<season_type>( data.get_int( "initial_season",
-                               static_cast<int>( SPRING ) ) );
+        static_cast<int>( SPRING ) ) );
 
     dimension_id loaded_dimension_prefix;
     if( data.read( "dimension_prefix", loaded_dimension_prefix ) ) {
@@ -682,7 +682,7 @@ void overmap::unserialize( const JsonObject &jsobj )
                 point_abs_om omp;
                 tripoint_om_sm monster_submap;
                 std::tie( omp, monster_submap ) = project_remain<coords::om>( project_to<coords::sm>
-                                                  ( monster_location ) );
+                    ( monster_location ) );
                 if( monster_map_json.test_string() ) {
                     mtype_id monster_id( monster_map_json.next_string() );
                     result = hordes.spawn_entity( monster_location, monster_id );
@@ -1286,14 +1286,14 @@ namespace
 struct mongroup_bin_eq {
     bool operator()( const mongroup &a, const mongroup &b ) const {
         return a.monsters.empty() &&
-               b.monsters.empty() &&
-               a.type == b.type &&
-               a.population == b.population &&
-               a.target == b.target &&
-               a.interest == b.interest &&
-               a.dying == b.dying &&
-               a.horde == b.horde &&
-               a.behaviour == b.behaviour;
+        b.monsters.empty() &&
+        a.type == b.type &&
+        a.population == b.population &&
+        a.target == b.target &&
+        a.interest == b.interest &&
+        a.dying == b.dying &&
+        a.horde == b.horde &&
+        a.behaviour == b.behaviour;
     }
 };
 
@@ -1320,15 +1320,15 @@ void overmap::save_monster_groups( JsonOut &jout ) const
     std::unordered_map<mongroup, std::list<tripoint_om_sm>, mongroup_hash, mongroup_bin_eq>
     binned_groups;
     binned_groups.reserve( zg.size() );
-    for( const auto &pos_group : zg ) {
-        // Each group in bin adds only position
-        // so that 100 identical groups are 1 group data and 100 tripoints
-        std::list<tripoint_om_sm> &positions = binned_groups[pos_group.second];
+for( const auto &pos_group : zg ) {
+    // Each group in bin adds only position
+    // so that 100 identical groups are 1 group data and 100 tripoints
+    std::list<tripoint_om_sm> &positions = binned_groups[pos_group.second];
         positions.emplace_back( pos_group.first );
     }
 
-    for( auto &group_bin : binned_groups ) {
-        jout.start_array();
+for( auto &group_bin : binned_groups ) {
+    jout.start_array();
         // Zero the bin position so that it isn't serialized
         // The position is stored separately, in the list
         // TODO: Do it without the copy
@@ -1600,7 +1600,7 @@ void overmap::serialize( std::ostream &fout ) const
     fout << std::endl;
 
     std::vector<std::pair<om_pos_dir, std::string>> flattened_joins_used(
-                joins_used.begin(), joins_used.end() );
+        joins_used.begin(), joins_used.end() );
     json.member( "joins_used", flattened_joins_used );
     fout << std::endl;
 
@@ -2075,8 +2075,8 @@ void creature_tracker::deserialize( const JsonArray &ja )
 void creature_tracker::serialize( JsonOut &jsout ) const
 {
     jsout.start_array();
-    for( const auto &monster_ptr : monsters_list ) {
-        jsout.write( *monster_ptr );
+for( const auto &monster_ptr : monsters_list ) {
+    jsout.write( *monster_ptr );
     }
     jsout.end_array();
 }
