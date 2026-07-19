@@ -28,7 +28,8 @@
         { "item": "fcl_needlegun", "prob": 1, "charges": [ 0, 100 ] },
         { "item": "fcl_needlepistol", "prob": 1, "charges": [ 0, 50 ] },
         { "item": "fcl_5x50dart", "prob": 2 },
-        { "item": "fcl_5x50heavy", "prob": 1 }
+        { "item": "fcl_5x50heavy", "prob": 1 },
+        { "item": "fcl_rm298", "prob": 1, "charges": [ 0, 250 ] }
       ]
     }
   }

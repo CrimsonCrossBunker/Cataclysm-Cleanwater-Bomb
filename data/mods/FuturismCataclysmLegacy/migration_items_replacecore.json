@@ -158,5 +158,30 @@
     "id": "needlepistol",
     "type": "MIGRATION",
     "replace": "fcl_needlepistol"
+  },
+  {
+    "id": "rm802",
+    "type": "MIGRATION",
+    "replace": "fcl_rm802"
+  },
+  {
+    "id": "rm298",
+    "type": "MIGRATION",
+    "replace": "fcl_rm298"
+  },
+  {
+    "id": "rm614_lmg",
+    "type": "MIGRATION",
+    "replace": "fcl_rm614_lmg"
+  },
+  {
+    "id": "8x40_250_mag",
+    "type": "MIGRATION",
+    "replace": "fcl_8x40_250_mag"
+  },
+  {
+    "id": "8x40_500_mag",
+    "type": "MIGRATION",
+    "replace": "fcl_8x40_500_mag"
   }
 ]

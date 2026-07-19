@@ -12,5 +12,15 @@
         [ "fcl_bio_neurosoft_aircraft_mechanic", 10 ]
       ]
     }
+  },
+  {
+    "type": "item_group",
+    "id": "launchers",
+    "copy-from": "launchers",
+    "extend": {
+      "items": [
+        { "item": "fcl_rm802", "prob": 40 }
+      ]
+    }
   }
 ]

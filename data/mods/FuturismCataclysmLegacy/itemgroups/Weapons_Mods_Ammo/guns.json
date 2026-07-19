@@ -21,5 +21,22 @@
     "id": "guns_smg_milspec",
     "copy-from": "guns_smg_milspec",
     "extend": { "items": [ { "group": "fcl_nested_needlegun", "prob": 30 } ] }
+  },
+  {
+    "type": "item_group",
+    "id": "guns_launcher_grenade",
+    "copy-from": "guns_launcher_grenade",
+    "//": "Factory manufactured grenade launchers (excludes improvised weapons)",
+    "extend": { "items": [ { "item": "fcl_rm802", "prob": 15, "charges": [ 0, 4 ] } ] }
+  },
+  {
+    "type": "item_group",
+    "id": "guns_rifle_milspec",
+    "copy-from": "guns_rifle_milspec",
+    "//": "Military specification rifles only ever found at military sites.",
+    "//2": "Making the assumption any loaded gun will have additional ammo and mags with it.",
+    "extend": {
+      "items": [ { "group": "fcl_nested_rm298", "prob": 10 }, { "group": "fcl_nested_rm614_lmg", "prob": 10 } ]
+    }
   }
 ]
