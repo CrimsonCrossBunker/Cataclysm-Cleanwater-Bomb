@@ -78,7 +78,7 @@
         "distribution": [ { "item": "8mm_caseless", "prob": 40, "count": [ 1, 3 ] }, { "item": "8mm_jhp", "prob": 30, "count": [ 1, 3 ] } ]
       },
       { "group": "SUS_rivtech_8x40_mag" },
-      { "group": "SUS_rivtech_40mm_rm" }
+      { "group": "SUS_rivtech_8x40_rm" }
     ]
   },
   {
@@ -109,7 +109,7 @@
     "//": "This group is for rare spawns of rivetech matched sets.",
     "subtype": "collection",
     "entries": [
-      { "group": "SUS_rivtech_40mm_rm_1" },
+      { "group": "SUS_rivtech_40mm_rm" },
       {
         "distribution": [
           { "item": "40x46mm_m1006", "prob": 50, "count": [ 1, 3 ] },
