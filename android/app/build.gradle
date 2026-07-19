@@ -44,6 +44,11 @@ if (localProperties.getProperty('localize') != null) {
     localize = localProperties.getProperty("localize").toBoolean()
 }
 
+def prebuilt_shaders = getProperty("prebuilt_shaders").toBoolean()
+if (localProperties.getProperty('prebuilt_shaders') != null) {
+    prebuilt_shaders = localProperties.getProperty("prebuilt_shaders").toBoolean()
+}
+
 def abi_arm_32 = getProperty("abi_arm_32").toBoolean()
 if (localProperties.getProperty('abi_arm_32') != null) {
     abi_arm_32 = localProperties.getProperty("abi_arm_32").toBoolean()
@@ -103,6 +108,7 @@ if (localProperties.getProperty('override_versionCode') != null) {
 
 println("Using [              njobs]: $njobs")
 println("Using [           localize]: $localize")
+println("Using [   prebuilt_shaders]: $prebuilt_shaders")
 println("Using [   override_version]: $override_version")
 println("Using [version_header_path]: $version_header_path")
 println("Using [  compileSdkVersion]: $override_compileSdkVersion")
@@ -341,6 +347,7 @@ android {
                 abiFilters(*enabledAbis as String[])
                 def cmakeArgs = ["-DANDROID_STL=c++_shared",
                                  "-DANDROID_ARM_NEON=TRUE",
+                                 "-DCATA_ANDROID_PREBUILT_SHADERS=${prebuilt_shaders ? 'ON' : 'OFF'}",
                                  "-DCMAKE_JOB_POOLS=compile=$njobs;link=2",
                                  "-DCMAKE_JOB_POOL_COMPILE=compile",
                                  "-DCMAKE_JOB_POOL_LINK=link"]
