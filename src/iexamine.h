@@ -13,6 +13,7 @@
 
 #include "coords_fwd.h"
 #include "ret_val.h"
+#include "translation.h"
 #include "type_id.h"
 
 class Character;
@@ -32,6 +33,7 @@ using seed_tuple = std::tuple<itype_id, std::string, int>;
 
 struct iexamine_actor {
     const std::string type;
+    translation name;
 
     explicit iexamine_actor( const std::string &type ) : type( type ) {}
 
@@ -42,6 +44,10 @@ struct iexamine_actor {
     virtual std::unique_ptr<iexamine_actor> clone() const = 0;
 
     virtual ~iexamine_actor() = default;
+
+    std::string get_name() const {
+        return name.translated();
+    }
 };
 
 enum fuel_station_fuel_type {
@@ -257,6 +263,11 @@ using iexamine_can_examine_function = bool ( * )( const tripoint_bub_ms & );
 struct iexamine_functions {
     iexamine_can_examine_function can_examine = nullptr;
     iexamine_examine_function examine = nullptr;
+    translation examine_name;
+
+    std::string get_name() const {
+        return examine_name.translated();
+    };
 };
 
 iexamine_functions iexamine_functions_from_string( const std::string &function_name );
