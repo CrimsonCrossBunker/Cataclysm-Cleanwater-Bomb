@@ -1709,9 +1709,9 @@ void Character::suffer()
     for( bionic &bio : *my_bionics ) {
         process_bionic( bio );
     }
-    
+
     units::energy trickle = enchantment_cache->modify_value( enchant_vals::mod::POWER_TRICKLE,
-                                0_J );
+                            0_J );
     if( trickle != 0_J ) {
         mod_power_level( trickle );
     }
