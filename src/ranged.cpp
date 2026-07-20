@@ -4778,7 +4778,9 @@ bool gunmode_checks_weapon( avatar &you, const map &m, std::vector<std::string> 
         result = false;
     }
 
-    if( gmode->get_gun_energy_drain() > 0_kJ ) {
+    if( gmode->get_gun_energy_drain() > 0_kJ &&
+        ( !gmode->uses_firing_requirements() ||
+          gmode->has_flag( flag_FIRING_EXT_POWER ) ) ) {
         const units::energy energy_drain = gmode->get_gun_energy_drain();
         bool is_mech_weapon = false;
         if( you.is_mounted() ) {
@@ -4788,7 +4790,18 @@ bool gunmode_checks_weapon( avatar &you, const map &m, std::vector<std::string> 
             }
         }
 
-        if( gmode->energy_remaining( &you ) < energy_drain ) {
+        units::energy available_energy = gmode->energy_remaining( &you );
+        if( gmode->uses_firing_requirements() ) {
+            available_energy = 0_kJ;
+            if( gmode->has_flag( flag_USE_UPS ) ) {
+                available_energy += you.available_ups();
+            }
+            if( gmode->has_flag( flag_USES_BIONIC_POWER ) ) {
+                available_energy += you.get_power_level();
+            }
+        }
+
+        if( available_energy < energy_drain ) {
             result = false;
             if( is_mech_weapon ) {
                 messages.push_back( string_format( _( "Your mech has an empty battery, its %s will not fire." ),
