@@ -11,7 +11,7 @@
     "subtype": "collection",
     "entries": [
       { "item": "fcl_heavy_rail_rifle" },
-      { "group": "UPS_power" }
+      { "group": "UPS_power", "charges": 1000 }
     ]
   },
   {
