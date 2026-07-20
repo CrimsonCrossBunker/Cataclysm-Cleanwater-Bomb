@@ -8,6 +8,7 @@
         [ "fcl_atomic_coffeemaker", 10 ],
         [ "fcl_plasma_gun", 10 ],
         [ "fcl_plasma_rifle", 10 ],
+        [ "fcl_heavy_rail_rifle", 10 ],
         [ "fcl_bio_neurosoft_aeronautics", 10 ],
         [ "fcl_bio_neurosoft_aircraft_mechanic", 10 ]
       ]
