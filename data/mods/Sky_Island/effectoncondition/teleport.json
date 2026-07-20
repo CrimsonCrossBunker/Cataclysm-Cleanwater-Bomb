@@ -236,14 +236,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_SKY_dimension_clear",
-    "eoc_type": "EVENT",
-    "required_event": "game_save",
-    "condition": { "and": [ { "current_dimension": "" }, { "not": { "u_has_any_effect": [ "warpsickness" ] } } ] },
-    "effect": [ { "clear_dimension": "dimension_sky_island_mission" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_award_material_tokens",
     "//": "If you got home via an exit portal, award material tokens based on raid length.",
     "condition": { "math": [ "gettokens == 1" ] },
