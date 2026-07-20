@@ -862,6 +862,24 @@ int Character::effective_dispersion( int dispersion, bool zoom ) const
     return get_character_parallax( zoom ) + dispersion;
 }
 
+double Character::dispersion_variance() const
+{
+    double ability = static_cast<double>( get_per() ) *
+                     ( ( get_limb_score( limb_score_manip ) +
+                         get_limb_score( limb_score_vision ) ) / 2.0 );
+    ability = std::clamp( ability, 0.01, 20.0 );
+    double low;
+    if( ability <= 10.0 ) {
+        low = -20.0 + ability;
+    } else {
+        low = -10.0 + ( ability - 10.0 ) * 0.5;
+    }
+    const double high = 5.0 + ability * 0.5;
+    const double variance = rng_float( low, high );
+    add_msg_debug( debugmode::DF_RANGED, "Semi-random variance adds %1f dispersion.", variance );
+    return variance;
+}
+
 int Character::get_character_parallax( bool zoom ) const
 {
     /** @EFFECT_PER penalizes sight dispersion when low. */

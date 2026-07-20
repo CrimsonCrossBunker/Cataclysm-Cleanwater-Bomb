@@ -196,7 +196,6 @@ inline int square_dist( const point &loc1, const point &loc2 )
     return std::max( d.x, d.y );
 }
 
-// Choose between the above two according to the "circular distances" option
 inline int rl_dist( const tripoint &loc1, const tripoint &loc2 )
 {
     if( trigdist ) {
@@ -206,7 +205,7 @@ inline int rl_dist( const tripoint &loc1, const tripoint &loc2 )
 }
 inline int rl_dist( const point &a, const point &b )
 {
-    return rl_dist( tripoint( a, 0 ), tripoint( b, 0 ) );
+    return trig_dist( tripoint( a, 0 ), tripoint( b, 0 ) );
 }
 
 template< class Point >
