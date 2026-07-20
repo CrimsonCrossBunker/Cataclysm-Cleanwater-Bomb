@@ -22,6 +22,7 @@
 
 #include "avatar.h"
 #include "ammo.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "character.h"
@@ -90,6 +91,8 @@ static constexpr int EOC_CABLE_RELOCATION_TURNS = 100;
 static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_bolt( "bolt" );
 static const ammotype ammo_plutonium( "plutonium" );
+
+static const bionic_id bio_ups( "bio_ups" );
 
 static const damage_type_id damage_bash( "bash" );
 
@@ -240,6 +243,119 @@ static int feasible_uses( const item &host,
         n = std::max( n, n_after );
     }
     return std::min( { requested, n_max, n } );
+}
+
+static bool uses_firing_requirement_external_power( const item &host )
+{
+    return host.uses_firing_requirements() &&
+           host.has_flag( flag_FIRING_EXT_POWER ) &&
+           host.get_gun_energy_drain() > 0_kJ;
+}
+
+static units::energy firing_requirement_external_power_available( const item &host,
+        const Character *carrier )
+{
+    if( carrier == nullptr || !uses_firing_requirement_external_power( host ) ) {
+        return 0_kJ;
+    }
+    units::energy available = 0_kJ;
+    if( host.has_flag( flag_USE_UPS ) ) {
+        available += carrier->available_ups();
+    }
+    if( host.has_flag( flag_USES_BIONIC_POWER ) && !( host.has_flag( flag_USE_UPS ) && carrier->has_active_bionic( bio_ups ) ) ) {
+        available += carrier->get_power_level();
+    }
+    return available;
+}
+
+static int ceil_kilojoules( const units::energy energy )
+{
+    const int64_t joules = units::to_joule( energy );
+    if( joules <= 0 ) {
+        return 0;
+    }
+    return static_cast<int>( ( joules + 999 ) / 1000 );
+}
+
+struct external_power_reservation {
+    int ups_kj = 0;
+    int bionic_kj = 0;
+};
+
+static external_power_reservation reserve_firing_requirement_external_power(
+    const item &host, const Character *carrier, int uses )
+{
+    external_power_reservation reservation;
+    if( carrier == nullptr || uses <= 0 || !uses_firing_requirement_external_power( host ) ) {
+        return reservation;
+    }
+    int remaining = ceil_kilojoules( host.get_gun_energy_drain() * uses );
+    if( host.has_flag( flag_USE_UPS ) ) {
+        reservation.ups_kj = static_cast<int>( std::min<int64_t>(
+                                remaining, units::to_kilojoule( carrier->available_ups() ) ) );
+        remaining -= reservation.ups_kj;
+    }
+    if( host.has_flag( flag_USES_BIONIC_POWER ) ) {
+        reservation.bionic_kj = static_cast<int>( std::min<int64_t>(
+                                     remaining, units::to_kilojoule( carrier->get_power_level() ) ) );
+    }
+    return reservation;
+}
+
+static bool consume_firing_requirement_external_power( item &host, Character *carrier, int uses )
+{
+    if( uses <= 0 || !uses_firing_requirement_external_power( host ) ) {
+        return true;
+    }
+    if( carrier == nullptr ) {
+        return false;
+    }
+    units::energy qty = host.get_gun_energy_drain() * uses;
+    if( host.has_flag( flag_USE_UPS ) ) {
+        qty -= carrier->consume_ups( qty );
+    }
+    if( host.has_flag( flag_USES_BIONIC_POWER ) ) {
+        const units::energy bio_used = std::min( carrier->get_power_level(), qty );
+        carrier->mod_power_level( -bio_used );
+        qty -= bio_used;
+    }
+    return qty == 0_kJ;
+}
+
+static int feasible_uses_with_external_power(
+    const item &host, const std::vector<pocket_consumption_entry> &entries,
+    int requested, map &here, const Character *carrier )
+{
+    const int cable = host.available_cable_charges( here );
+    const int ups = host.available_ups_charges( carrier );
+    const int bionic = host.available_bionic_charges( carrier );
+    if( !uses_firing_requirement_external_power( host ) ) {
+        return feasible_uses( host, entries, requested, cable + ups + bionic );
+    }
+    if( carrier == nullptr ) {
+        return 0;
+    }
+    const units::energy drain = host.get_gun_energy_drain();
+    if( drain <= 0_kJ ) {
+        return feasible_uses( host, entries, requested, cable + ups + bionic );
+    }
+    const int energy_limited = static_cast<int>(
+                                   firing_requirement_external_power_available( host, carrier ) / drain );
+    int low = 0;
+    int high = std::min( requested, energy_limited );
+    while( low < high ) {
+        const int mid = low + ( high - low + 1 ) / 2;
+        const external_power_reservation reservation =
+            reserve_firing_requirement_external_power( host, carrier, mid );
+        const int pool = cable + std::max( 0, ups - reservation.ups_kj ) +
+                         std::max( 0, bionic - reservation.bionic_kj );
+        if( feasible_uses( host, entries, mid, pool ) >= mid ) {
+            low = mid;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return low;
 }
 
 units::energy item::mod_energy( const units::energy &qty )
@@ -1418,10 +1534,7 @@ int item::shots_remaining( const map &here, const Character *carrier ) const
             return 0;
         }
         map &mut_here = const_cast<map &>( here );
-        const int pool = available_cable_charges( mut_here )
-                         + available_ups_charges( carrier )
-                         + available_bionic_charges( carrier );
-        return feasible_uses( *this, *entries, INT_MAX, pool );
+        return feasible_uses_with_external_power( *this, *entries, INT_MAX, mut_here, carrier );
     }
     int ret = 1000; // Arbitrary large number for things that do not require ammo.
     if( ammo_required() ) {
@@ -2794,16 +2907,17 @@ int multimag_drain( item &host, const std::vector<pocket_consumption_entry> &ent
     const int cable_initial = host.available_cable_charges( here );
     const int ups_initial = host.available_ups_charges( carrier );
     const int bionic_initial = host.available_bionic_charges( carrier );
-    const int pool = cable_initial + ups_initial + bionic_initial;
 
-    const int allowed = feasible_uses( host, entries, requested, pool );
+    const int allowed = feasible_uses_with_external_power( host, entries, requested, here, carrier );
     if( allowed <= 0 ) {
         return 0;
     }
+    const external_power_reservation reservation =
+        reserve_firing_requirement_external_power( host, carrier, allowed );
 
     int cable_left = cable_initial;
-    int ups_left = ups_initial;
-    int bionic_left = bionic_initial;
+    int ups_left = std::max( 0, ups_initial - reservation.ups_kj );
+    int bionic_left = std::max( 0, bionic_initial - reservation.bionic_kj );
 
     for( const pocket_consumption_entry &e : entries ) {
         int qty = host.effective_qty( e ) * allowed;
@@ -2836,8 +2950,8 @@ int multimag_drain( item &host, const std::vector<pocket_consumption_entry> &ent
     }
 
     const int cable_used = cable_initial - cable_left;
-    const int ups_used = ups_initial - ups_left;
-    const int bionic_used = bionic_initial - bionic_left;
+    const int ups_used = ups_initial - reservation.ups_kj - ups_left;
+    const int bionic_used = bionic_initial - reservation.bionic_kj - bionic_left;
     if( cable_used > 0 && host.has_link_data() ) {
         if( host.link().t_veh && host.link().efficiency >= MIN_LINK_EFFICIENCY ) {
             host.link().t_veh->discharge_battery( here, cable_used, true );
@@ -2853,6 +2967,10 @@ int multimag_drain( item &host, const std::vector<pocket_consumption_entry> &ent
             carrier->mod_power_level(
                 -units::from_kilojoule( static_cast<int64_t>( bionic_used ) ) );
         }
+    }
+    if( !consume_firing_requirement_external_power( host, carrier, allowed ) ) {
+        debugmsg( "consume_shots: shortfall on external energy after feasibility check (%s)",
+                  host.tname() );
     }
     return allowed;
 }

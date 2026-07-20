@@ -132,6 +132,7 @@ const flag_id flag_FIELD_DRESS_FAILED( "FIELD_DRESS_FAILED" );
 const flag_id flag_FILTHY( "FILTHY" );
 const flag_id flag_FIN( "FIN" );
 const flag_id flag_FIRE( "FIRE" );
+const flag_id flag_FIRING_EXT_POWER( "FIRING_EXT_POWER" );
 const flag_id flag_FIRESTARTER( "FIRESTARTER" );
 const flag_id flag_FIREWOOD( "FIREWOOD" );
 const flag_id flag_FIRE_100( "FIRE_100" );

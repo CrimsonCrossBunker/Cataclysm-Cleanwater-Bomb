@@ -1560,6 +1560,7 @@ Techniques may be used by tools, armors, weapons and anything else that can be w
 - ```RECHARGE``` Gain charges when placed in a cargo area with a recharge station.
 - ```SAFECRACK``` This item can be used to unlock safes.
 - ```USES_BIONIC_POWER``` Allows item to use energy from player bionic power to satisfy its `energy_drain`.  Tools can also consume bionic power instead of battery ammo.
+- ```FIRING_EXT_POWER``` Allows a gun with `firing_requirements` to use `energy_drain` as an additional per-shot external energy cost.  Requires `USE_UPS` or `USES_BIONIC_POWER` to define the external source; it does not consume local battery pockets, which must still be listed in `firing_requirements`.
 - ```USE_PLAYER_ENERGY``` Item with `use_action` that `cast_spell` consumes the specified `base_energy_cost`.
 - ```USE_UPS``` Allows item to use energy from UPS to satisfy its `energy_drain`.  Tools can also consume UPS instead of battery ammo.
 - ```WATER_EXTINGUISH``` Is extinguishable in water or under precipitation.  Converts items (requires `reverts_to` or `use_action` `transform` to be set).
