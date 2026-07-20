@@ -3112,6 +3112,11 @@
     "info": "This item allows you to wear Hub 01 LENS accessories."
   },
   {
+    "id": "CANNOT_GAIN_WEARINESS",
+    "type": "json_flag",
+    "info": "You have a seemingly inexhaustible supply of energy."
+  },
+  {
     "id": "GENDER_FLUIDITY",
     "type": "json_flag",
     "//": "Allows characters to change their gender by bypassing the PLAYER_ARBITRARY_CHANGE_GENDER option."
