@@ -418,7 +418,7 @@ else
   # (e.g. std::reference_wrapper<vehicle>) is link-compatible across TUs.
   GCC_MAJOR := $(shell $(CROSS)$(OS_COMPILER) -dumpversion 2>/dev/null | cut -d. -f1)
   ifeq ($(shell expr $(GCC_MAJOR) \>= 16 2>/dev/null), 1)
-    CXX_WARNINGS += -Wno-error=sfinae-incomplete
+    CXX_WARNINGS += -Wno-error=sfinae-incomplete -Wno-error=maybe-uninitialized
   endif
 endif
 
@@ -1095,7 +1095,7 @@ ifeq ($(MSYS2),1)
 endif
 
 CFLAGS += $(C_STD) $(WARNINGS) -fvisibility=hidden
-CXXFLAGS += $(CXX_STD) $(CXX_WARNINGS) -fvisibility=hidden
+CXXFLAGS += $(CXX_STD) $(CXX_WARNINGS) -fvisibility=hidden -I$(SRC_DIR)/lua
 
 # Enumerations of all the source files and headers.
 ifeq ($(HEADERPOPULARITY), 1)
@@ -1105,6 +1105,7 @@ else
   SOURCES := $(wildcard $(SRC_DIR)/*.cpp)
 endif
 C_SOURCES := $(SRC_DIR)/cata_allocator_c.c
+LUA_C_SOURCES := $(wildcard $(SRC_DIR)/lua/*.c)
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
 HEADERS := $(wildcard $(SRC_DIR)/*.h)
@@ -1134,7 +1135,7 @@ ASTYLE_SOURCES := $(sort \
 
 # Third party sources should not be astyle'd
 SOURCES += $(THIRD_PARTY_SOURCES)
-C_SOURCES += $(THIRD_PARTY_C_SOURCES)
+C_SOURCES += $(THIRD_PARTY_C_SOURCES) $(LUA_C_SOURCES)
 
 IMGUI_SOURCES = $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_stdlib.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 ifeq ($(SDL), 1)
@@ -1324,6 +1325,9 @@ $(ODIR)/third-party/%.o: $(SRC_DIR)/third-party/%.cc
 	$(COMPILE.cc) $(OUTPUT_OPTION) -w -MMD -MP $<
 
 $(ODIR)/third-party/%.o: $(SRC_DIR)/third-party/%.c
+	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) -w -MMD -MP $<
+
+$(ODIR)/lua/%.o: $(SRC_DIR)/lua/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) -x c $(CFLAGS) -w -MMD -MP $<
 
 $(ODIR)/%.o: $(SRC_DIR)/%.cpp $(PCH_P)

@@ -1,4 +1,6 @@
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third-party)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lua)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sol)
 
 # Tracy profiler interface.  When TRACY=ON (root CMakeLists.txt), this carries
 # the tracy include path and libTracyClient link to every -common object lib.
@@ -71,7 +73,7 @@ if (TILES)
             ${CATACLYSM_DDA_HEADERS})
     target_include_directories(cataclysm-tiles-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
-    target_link_libraries(cataclysm-tiles-common PUBLIC third-party)
+    target_link_libraries(cataclysm-tiles-common PUBLIC third-party libsol)
 
     if (TARGET cata_tracy)
         target_link_libraries(cataclysm-tiles-common PUBLIC cata_tracy)
@@ -291,7 +293,7 @@ if (CURSES)
             ${CATACLYSM_DDA_SOURCES}
             ${CATACLYSM_DDA_HEADERS})
     target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(cataclysm-common PUBLIC third-party)
+    target_link_libraries(cataclysm-common PUBLIC third-party libsol)
 
     if (TARGET cata_tracy)
         target_link_libraries(cataclysm-common PUBLIC cata_tracy)
@@ -380,7 +382,7 @@ if (HEADLESS)
             ${CATACLYSM_DDA_SOURCES}
             ${CATACLYSM_DDA_HEADERS})
     target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(cataclysm-common PUBLIC third-party)
+    target_link_libraries(cataclysm-common PUBLIC third-party libsol)
     target_compile_definitions(cataclysm-common PUBLIC HEADLESS)
 
     if (TARGET cata_tracy)

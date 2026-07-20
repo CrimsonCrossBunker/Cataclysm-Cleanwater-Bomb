@@ -42,6 +42,7 @@
 #endif
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -306,6 +307,7 @@ std::string enum_to_string<debug_menu::debug_menu_index>( debug_menu::debug_menu
 		case debug_menu::debug_menu_index::WRITE_CITY_LIST: return "WRITE_CITY_LIST";
         case debug_menu::debug_menu_index::TALK_TOPIC: return "TALK_TOPIC";
         case debug_menu::debug_menu_index::IMGUI_DEMO: return "IMGUI_DEMO";
+        case debug_menu::debug_menu_index::LUA_UI: return "LUA_UI";
         case debug_menu::debug_menu_index::VEHICLE_EFFECTS: return "VEHICLE_EFFECTS";
         case debug_menu::debug_menu_index::WISHPROFICIENCY: return "WISHPROFICIENCY";
         case debug_menu::debug_menu_index::RELOAD_GPU_SHADERS: return "RELOAD_GPU_SHADERS";
@@ -1011,6 +1013,7 @@ static int info_uilist()
         { uilist_entry( debug_menu_index::GENERATE_EFFECT_LIST, true, 'L', _( "Generate effect list" ) ) },
         { uilist_entry( debug_menu_index::WRITE_CITY_LIST, true, 'C', _( "Write city list to cities.output" ) ) },
         { uilist_entry( debug_menu_index::IMGUI_DEMO, true, 'u', _( "Open ImGui demo screen" ) ) },
+        { uilist_entry( debug_menu_index::LUA_UI, true, 'L', _( "Open Lua UI pages" ) ) },
 #if defined(TILES) && defined(USE_SDL3)
         { uilist_entry( debug_menu_index::RELOAD_GPU_SHADERS, true, 'P', _( "Reload GPU shaders" ) ) },
 #endif
@@ -4970,6 +4973,12 @@ const std::vector<debug_action_entry> &all_actions()
             debug_menu_index::IMGUI_DEMO, translate_marker( "ImGui demo" ), "imgui demo", "Game", []()
             {
                 run_imgui_demo();
+            }
+        },
+        {
+            debug_menu_index::LUA_UI, translate_marker( "Lua UI pages" ), "lua script ui", "Game", []()
+            {
+                cata::lua_ui::show();
             }
         },
         {
