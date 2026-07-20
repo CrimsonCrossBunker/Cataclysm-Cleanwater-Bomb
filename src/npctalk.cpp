@@ -7023,16 +7023,20 @@ talk_effect_fun_t::func f_run_npc_eocs( const JsonObject &jo,
     } else {
         return [eocs, unique_ids]( dialogue const & d ) {
             for( const str_or_var &target : unique_ids ) {
-                if( g->unique_npc_exists( target.evaluate( d ) ) ) {
-                    for( const effect_on_condition_id &eoc : eocs ) {
-                        npc *npc = g->find_npc_by_unique_id( target.evaluate( d ) );
-                        if( npc ) {
-                            dialogue newDialog( get_talker_for( npc ), nullptr, d.get_conditionals(), d.get_context() );
-                            eoc->activate( newDialog );
-                        } else {
-                            debugmsg( "Tried to use invalid npc: %s. %s", target.evaluate( d ), d.get_callstack() );
-                        }
-                    }
+                const std::string target_id = target.evaluate( d );
+                if( !g->unique_npc_exists( target_id ) ) {
+                    continue;
+                }
+                // The unique NPC registry also prevents mapgen from respawning an NPC, so an
+                // entry can legitimately outlive an NPC that was killed or otherwise removed.
+                npc *target_npc = g->find_npc_by_unique_id( target_id );
+                if( target_npc == nullptr ) {
+                    continue;
+                }
+                for( const effect_on_condition_id &eoc : eocs ) {
+                    dialogue newDialog( get_talker_for( target_npc ), nullptr, d.get_conditionals(),
+                                        d.get_context() );
+                    eoc->activate( newDialog );
                 }
             }
         };
@@ -9682,4 +9686,3 @@ std::vector<std::string> get_all_talk_topic_ids()
     }
     return dialogue_ids;
 }
-
