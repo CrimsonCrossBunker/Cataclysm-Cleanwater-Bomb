@@ -22,6 +22,7 @@
 
 #include "avatar.h"
 #include "ammo.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "character.h"
@@ -90,6 +91,8 @@ static constexpr int EOC_CABLE_RELOCATION_TURNS = 100;
 static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_bolt( "bolt" );
 static const ammotype ammo_plutonium( "plutonium" );
+
+static const bionic_id bio_ups( "bio_ups" );
 
 static const damage_type_id damage_bash( "bash" );
 
@@ -259,7 +262,7 @@ static units::energy firing_requirement_external_power_available( const item &ho
     if( host.has_flag( flag_USE_UPS ) ) {
         available += carrier->available_ups();
     }
-    if( host.has_flag( flag_USES_BIONIC_POWER ) ) {
+    if( host.has_flag( flag_USES_BIONIC_POWER ) && !( host.has_flag( flag_USE_UPS ) && carrier->has_active_bionic( bio_ups ) ) ) {
         available += carrier->get_power_level();
     }
     return available;
