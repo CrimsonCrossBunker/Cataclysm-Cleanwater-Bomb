@@ -26,7 +26,11 @@
     "reload": 1200,
     "valid_mod_locations": [ [ "grip", 1 ], [ "sling", 1 ], [ "stock", 1 ], [ "sights", 1 ], [ "rail mount", 1 ], [ "underbarrel mount", 1 ] ],
     "ammo_effects": [ "INCENDIARY", "TRAIL" ],
-    "flags": [ "USE_UPS" ],
+    "flags": [ "USE_UPS", "OVERHEATS" ],
+    "overheat_threshold": 60,
+    "cooling_value": 2,
+    "heat_per_shot": 6,
+    "faults": [ { "fault": "fault_overheat_melting" }, { "fault": "fault_overheat_safety" } ],
     "melee_damage": { "bash": 10 }
   },
   {
@@ -42,7 +46,7 @@
     "longest_side": "1505 mm",
     "price": "9 kUSD",
     "price_postapoc": "900 USD",
-    "to_hit": -3,
+    "to_hit": -4,
     "material": [ "steel", "plastic" ],
     "symbol": "(",
     "color": "dark_gray",
@@ -53,9 +57,10 @@
     "durability": 7,
     "ammo": [ "metal_rail" ],
     "clip_size": 10,
+    "min_strength": 14,
     "energy_drain": "100 kJ",
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "metal_rail": 10 } } ],
-    "reload": 500,
+    "reload": 200,
     "valid_mod_locations": [
       [ "accessories", 4 ],
       [ "emitter", 1 ],
@@ -67,7 +72,7 @@
       [ "underbarrel", 1 ]
     ],
     "ammo_effects": [ "INCENDIARY", "TRAIL" ],
-    "flags": [ "USE_UPS", "RELOAD_ONE" ],
+    "flags": [ "USE_UPS", "NEVER_JAMS", "NON_FOULING", "NEEDS_NO_LUBE", "RELOAD_ONE" ],
     "melee_damage": { "bash": 12 }
   }
 ]
