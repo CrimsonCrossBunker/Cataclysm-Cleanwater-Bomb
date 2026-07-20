@@ -94,7 +94,6 @@
     "range": 58,
     "ranged_damage": { "damage_type": "fcl_plasma", "amount": 40, "armor_penetration": 60 },
     "material": [ "steel", "plastic" ],
-    "energy_drain": "5 kJ",
     "skill": "rifle",
     "dispersion": 30,
     "durability": 9,
@@ -116,7 +115,7 @@
       }
     ],
     "firing_requirements": { "DEFAULT": [ { "pocket": "ammo", "qty": 1 }, { "pocket": "fusion pellet", "qty": 1 } ] },
-    "flags": [ "NEVER_JAMS", "NON_FOULING", "USE_UPS" ],
+    "flags": [ "NEVER_JAMS", "NON_FOULING" ],
     "valid_mod_locations": [
       [ "accessories", 4 ],
       [ "grip", 1 ],
