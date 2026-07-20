@@ -88,6 +88,8 @@ static const itype_id itype_test_multimag_consume_gunmod( "test_multimag_consume
 static const itype_id
 itype_test_multimag_consume_gunmod_mult( "test_multimag_consume_gunmod_mult" );
 static const itype_id itype_test_multimag_consume_toolmod( "test_multimag_consume_toolmod" );
+static const itype_id itype_test_multimag_external_bionic_gun( "test_multimag_external_bionic_gun" );
+static const itype_id itype_test_multimag_external_ups_gun( "test_multimag_external_ups_gun" );
 static const itype_id itype_test_multimag_gun( "test_multimag_gun" );
 static const itype_id itype_test_multimag_gun_consume( "test_multimag_gun_consume" );
 static const itype_id itype_test_multimag_gun_integral_ammo( "test_multimag_gun_integral_ammo" );
@@ -1276,6 +1278,14 @@ static item make_multimag_consume_gun( int bb_count = 15, int batt = 100 )
     return gun;
 }
 
+static item make_multimag_external_power_gun( const itype_id &id, int ammo_count = 15 )
+{
+    item gun( id );
+    REQUIRE( gun.put_in( item( itype_9mm, calendar::turn, ammo_count ),
+                         pocket_type::MAGAZINE ).success() );
+    return gun;
+}
+
 static item make_multimag_consume_tool( int well_a_charges = 12, int well_b_charges = 30 )
 {
     item tool( itype_test_multimag_tool_consume );
@@ -1430,6 +1440,49 @@ TEST_CASE( "consume_shots_and_consume_tool_uses_drain_per_pocket",
         CHECK( welder.ammo_remaining_in_pocket( "oxygen" ) == 18 );
         CHECK( welder.ammo_remaining_in_pocket( "rod" ) == 4 );
     }
+}
+
+TEST_CASE( "multimag_gun_external_energy_drain_uses_declared_sources",
+           "[multimag][consume][energy]" )
+{
+    clear_avatar();
+    clear_map();
+    Character &chr = get_avatar();
+    chr.worn.wear_item( chr, item( itype_backpack ), false, false );
+    map &here = get_map();
+    const tripoint_bub_ms pos = tripoint_bub_ms::zero;
+
+    auto add_ups = [&chr]( int charges ) {
+        item ups( itype_UPS_ON );
+        item ups_mag( ups.magazine_default() );
+        ups_mag.ammo_set( ups_mag.ammo_default(), charges );
+        REQUIRE( ups.put_in( ups_mag, pocket_type::MAGAZINE_WELL ).success() );
+        chr.i_add( ups );
+    };
+
+    SECTION( "USE_UPS drains UPS without a battery firing_requirements pocket" ) {
+        item gun = make_multimag_external_power_gun( itype_test_multimag_external_ups_gun );
+        add_ups( 12 );
+        REQUIRE( units::to_kilojoule( chr.available_ups() ) == 12 );
+
+        CHECK( gun.shots_remaining( here, &chr ) == 2 );
+        CHECK( gun.consume_shots( gun_mode_DEFAULT, 2, here, pos, &chr ) == 2 );
+        CHECK( gun.ammo_remaining_in_pocket( "ammo" ) == 13 );
+        CHECK( units::to_kilojoule( chr.available_ups() ) == 2 );
+        CHECK( gun.consume_shots( gun_mode_DEFAULT, 1, here, pos, &chr ) == 0 );
+    }
+
+    SECTION( "USES_BIONIC_POWER drains bionic power without a battery firing_requirements pocket" ) {
+        item gun = make_multimag_external_power_gun( itype_test_multimag_external_bionic_gun );
+        chr.set_max_power_level( 100_kJ );
+        chr.set_power_level( 12_kJ );
+
+        CHECK( gun.shots_remaining( here, &chr ) == 2 );
+        CHECK( gun.consume_shots( gun_mode_DEFAULT, 2, here, pos, &chr ) == 2 );
+        CHECK( gun.ammo_remaining_in_pocket( "ammo" ) == 13 );
+        CHECK( chr.get_power_level() == 2_kJ );
+    }
+
 }
 
 TEST_CASE( "gunmod_supplies_per_mode_firing_requirements", "[multimag][consume][mod]" )
