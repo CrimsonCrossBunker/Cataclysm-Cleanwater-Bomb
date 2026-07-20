@@ -1,5 +1,15 @@
 [
   {
+    "type": "item_group",
+    "id": "energy_weapon_armory",
+    "copy-from": "energy_weapon_armory",
+    "extend": {
+      "items": [
+        { "group": "fcl_fusion_pellet", "prob": 2 }
+      ]
+    }
+  },
+  {
     "id": "hospital_bed",
     "type": "item_group",
     "copy-from": "hospital_bed",
@@ -55,7 +65,8 @@
       "items": [
         { "item": "bio_time_freeze", "prob": 4 },
         { "item": "bio_teleport", "prob": 4 },
-        { "item": "bio_probability_travel", "prob": 4 }
+        { "item": "bio_probability_travel", "prob": 4 },
+        { "item": "fcl_ftk93", "prob": 1 }
       ]
     }
   }

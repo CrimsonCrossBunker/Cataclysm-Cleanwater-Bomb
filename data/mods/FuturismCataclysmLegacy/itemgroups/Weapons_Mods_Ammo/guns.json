@@ -6,9 +6,27 @@
     "extend": {
       "items": [
         { "item": "fcl_plasma_gun", "prob": 10, "charges": [ 0, 25 ] },
-        { "item": "fcl_plasma_rifle", "prob": 1, "charges": [ 0, 25 ] }
+        { "item": "fcl_plasma_rifle", "prob": 5, "charges": [ 0, 25 ] },
+        { "item": "fcl_ftk93", "prob": 2, "charges": [ 0, 25 ], "contents-group": "fcl_fusion_pack" }
       ]
     }
+  },
+  {
+    "id": "fcl_fusion_pellet",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "item": "fcl_fusion_pellet", "charges": [ 0, 25 ] },
+      { "group": "fcl_fusion_pack" }
+    ]
+  },
+  {
+    "id": "fcl_fusion_pack",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "item": "fcl_fusion_pack", "charges": [ 0, 3 ] }
+    ]
   },
   {
     "type": "item_group",
