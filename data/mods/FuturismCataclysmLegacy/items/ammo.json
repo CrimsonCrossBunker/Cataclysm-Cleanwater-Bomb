@@ -17,16 +17,16 @@
     "symbol": "=",
     "color": "light_green",
     "description": "A millimeter-scale fusion target pellet. The core contains compressed, frozen fusion material, encased in a stabilizing shell of energetic nanocompound. When subjected to high-voltage discharge, the nanocompound lattice implodes, producing an effect analogous to intense electromagnetic compression and laser ignition, it undergoes micro-inertial confinement fusion.",
-    "material": [ "plastic", "plut_cell" ],
+    "material": [ "steel", "plastic" ],
     "weight": "5 g",
     "volume": "5 ml",
     "price": "8 kUSD",
     "price_postapoc": "50 USD",
     "ammo_type": "fcl_fusion_pellet",
     "range": 0,
-    "count": 20,
+    "count": 50,
     "effects": [ "NEVER_MISFIRES" ],
-    "flags": [ "UNRECOVERABLE" ]
+    "flags": [ "LEAK_DAM", "RADIOACTIVE", "UNRECOVERABLE" ]
   },
   {
     "id": "fcl_fusion_pack",
