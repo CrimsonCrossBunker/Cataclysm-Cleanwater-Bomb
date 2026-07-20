@@ -81,22 +81,24 @@
     "type": "ITEM",
     "subtypes": [ "GUN" ],
     "reload_noise_volume": 10,
+    "looks_like": "hk_g80",
     "symbol": "(",
     "color": "magenta",
     "name": "FTK-93 magnetized target fusion rifle",
     "description": "An experimental rifle utilizing Magnetized Liner Inertial Fusion. It requires two components to fire: a micro-fusion pellet for ignition, and a solid hydrogen canister as reaction mass. The fusion energy instantly vaporizes and magnetically accelerates the hydrogen into a devastating plasma jet. Heavy, complex, but unmatched in anti-armor capability.",
     "weight": "6500 g",
-    "volume": "20 L",
+    "volume": "6 L",
     "longest_side": "1100 mm",
     "price": "150 kUSD 500 USD",
     "price_postapoc": "175 USD",
-    "range": 30,
-    "ranged_damage": { "damage_type": "fcl_laser", "amount": 40, "armor_penetration": 6 },
+    "range": 58,
+    "ranged_damage": { "damage_type": "fcl_plasma", "amount": 40, "armor_penetration": 60 },
     "material": [ "steel", "plastic" ],
+    "energy_drain": "5 kJ",
     "skill": "rifle",
-    "dispersion": 30, 
+    "dispersion": 30,
     "durability": 9,
-    "ammo_effects": [ "PLASMA", "EXPLOSIVE", "FLAME" ],
+    "ammo_effects": [ "PLASMA", "EXPLOSIVE", "FLAME", "IGNITE" ],
     "ammo": [ "plasma" ],
     "to_hit": -1,
     "clip_size": 2,
@@ -109,12 +111,20 @@
         "max_contains_volume": "20 L",
         "max_contains_weight": "20 kg",
         "magazine_well": "75 ml",
-        "item_restriction": [ "fcl_fusion_pack" ]
+        "item_restriction": [ "fcl_fusion_pack" ],
+        "default_magazine": "fcl_fusion_pack"
       }
     ],
     "firing_requirements": { "DEFAULT": [ { "pocket": "ammo", "qty": 1 }, { "pocket": "fusion pellet", "qty": 1 } ] },
-    "flags": [ "NEVER_JAMS" ],
-    "valid_mod_locations": [ [ "accessories", 4 ], [ "grip", 1 ], [ "rail", 1 ], [ "sights", 1 ], [ "stock", 1 ], [ "underbarrel", 1 ] ],
+    "flags": [ "NEVER_JAMS", "NON_FOULING", "USE_UPS" ],
+    "valid_mod_locations": [
+      [ "accessories", 4 ],
+      [ "grip", 1 ],
+      [ "rail", 1 ],
+      [ "sights", 1 ],
+      [ "stock", 1 ],
+      [ "underbarrel", 1 ]
+    ],
     "melee_damage": { "bash": 18 }
   }
 ]
