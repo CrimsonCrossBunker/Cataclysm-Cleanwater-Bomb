@@ -10,5 +10,11 @@
     "id": "metal_rail",
     "name": "ferrous rail projectile",
     "default": "rebar_rail"
+  },
+  {
+    "type": "ammunition_type",
+    "id": "fcl_fusion_pellet",
+    "name": "fusion pellet",
+    "default": "fcl_fusion_pellet"
   }
 ]
