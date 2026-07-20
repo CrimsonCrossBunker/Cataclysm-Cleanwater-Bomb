@@ -2127,6 +2127,10 @@
     "type": "json_flag"
   },
   {
+    "id": "FIRING_EXT_POWER",
+    "type": "json_flag"
+  },
+  {
     "id": "USES_NEARBY_AMMO",
     "type": "json_flag"
   },

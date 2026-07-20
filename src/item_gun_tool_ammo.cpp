@@ -288,13 +288,13 @@ static external_power_reservation reserve_firing_requirement_external_power(
     }
     int remaining = ceil_kilojoules( host.get_gun_energy_drain() * uses );
     if( host.has_flag( flag_USE_UPS ) ) {
-        reservation.ups_kj = std::min( remaining,
-                                       units::to_kilojoule( carrier->available_ups() ) );
+        reservation.ups_kj = static_cast<int>( std::min<int64_t>(
+                                remaining, units::to_kilojoule( carrier->available_ups() ) ) );
         remaining -= reservation.ups_kj;
     }
     if( host.has_flag( flag_USES_BIONIC_POWER ) ) {
-        reservation.bionic_kj = std::min( remaining,
-                                          units::to_kilojoule( carrier->get_power_level() ) );
+        reservation.bionic_kj = static_cast<int>( std::min<int64_t>(
+                                     remaining, units::to_kilojoule( carrier->get_power_level() ) ) );
     }
     return reservation;
 }
