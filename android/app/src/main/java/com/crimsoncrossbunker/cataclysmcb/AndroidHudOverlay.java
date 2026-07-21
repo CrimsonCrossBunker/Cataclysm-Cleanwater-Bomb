@@ -168,6 +168,7 @@ final class AndroidHudOverlay extends FrameLayout {
     void openSettings() {
         final String[] choices = {
             "编辑当前 HUD",
+            "管理 Lua HUD",
             "选择布局/预设",
             "为当前页面另存布局",
             "导入布局文件",
@@ -185,21 +186,24 @@ final class AndroidHudOverlay extends FrameLayout {
                             enterEditMode();
                             break;
                         case 1:
-                            showLayoutPicker();
+                            activity.showLuaHudManager();
                             break;
                         case 2:
-                            showSaveAsDialog();
+                            showLayoutPicker();
                             break;
                         case 3:
-                            activity.importHudLayout();
+                            showSaveAsDialog();
                             break;
                         case 4:
-                            activity.exportHudLayout(exportCurrentLayout());
+                            activity.importHudLayout();
                             break;
                         case 5:
-                            activity.shareHudLayout(exportCurrentLayout());
+                            activity.exportHudLayout(exportCurrentLayout());
                             break;
                         case 6:
+                            activity.shareHudLayout(exportCurrentLayout());
+                            break;
+                        case 7:
                             confirmResetDefaults();
                             break;
                         default:
@@ -856,6 +860,7 @@ final class AndroidHudOverlay extends FrameLayout {
             return;
         }
         editing = true;
+        activity.setLuaHudEditing(true);
         setClickable(true);
         editorBar.setVisibility(VISIBLE);
         for (RenderedComponent component : rendered.values()) {
@@ -871,6 +876,7 @@ final class AndroidHudOverlay extends FrameLayout {
         }
         saveActiveLayout();
         editing = false;
+        activity.setLuaHudEditing(false);
         setClickable(false);
         editorBar.setVisibility(GONE);
         for (RenderedComponent component : rendered.values()) {

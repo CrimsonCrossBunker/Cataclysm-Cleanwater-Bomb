@@ -26,6 +26,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui_actions.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -4351,6 +4352,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
 bool game::handle_action()
 {
+    if( const std::optional<bool> lua_action = cata::lua_ui::process_next_action() ) {
+        return *lua_action;
+    }
+
     map &here = get_map();
 
     std::string action;

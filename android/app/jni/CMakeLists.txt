@@ -43,6 +43,8 @@ endforeach()
 list(REMOVE_DUPLICATES _sdl3_subdir_inc)
 
 add_subdirectory(${CATA_REPO_ROOT}/src/third-party third-party)
+add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
+add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
 
 file(GLOB CATA_SOURCES ${CATA_REPO_ROOT}/src/*.cpp
      ${CATA_REPO_ROOT}/src/cata_allocator_c.c)
@@ -68,6 +70,7 @@ target_compile_options(main PRIVATE -fsigned-char -Wall -Wextra)
 target_link_libraries(
   main
   PRIVATE third-party
+          libsol
           SDL3::SDL3
           SDL3_image::SDL3_image
           SDL3_ttf::SDL3_ttf

@@ -114,6 +114,7 @@ enum class debug_menu_index : int {
     WRITE_CITY_LIST,
     TALK_TOPIC,
     IMGUI_DEMO,
+    LUA_UI,
     VEHICLE_EFFECTS,
     WISHPROFICIENCY,
     RELOAD_GPU_SHADERS,
