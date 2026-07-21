@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <exception>
 #include <iterator>
 #include <list>
@@ -16,6 +18,7 @@
 
 #include "action.h"
 #if defined(__ANDROID__)
+    #include "android_native_ui.h"
     #include "android_hud.h"
 #endif
 #include "cata_imgui.h"
@@ -46,6 +49,22 @@ enum class kb_menu_status {
     remove, reset, add, add_global, execute, show, filter
 };
 
+#if defined(__ANDROID__)
+enum class android_keybindings_action_type : int {
+    search,
+    clear_search,
+    remove,
+    add_local,
+    add_global,
+    reset,
+    close,
+};
+
+struct android_keybindings_action {
+    android_keybindings_action_type type;
+};
+#endif
+
 class keybindings_ui : public cataimgui::window
 {
         // colors of the keybindings
@@ -69,13 +88,27 @@ class keybindings_ui : public cataimgui::window
         std::string hotkeys;
         int highlight_row_index = -1;
         int scroll_offset = 0;
+#if defined(__ANDROID__)
+        int android_selected_row = 0;
+        bool android_dragging = false;
+        ImVec2 android_drag_start;
+        ImVec2 android_drag_last;
+        std::deque<android_keybindings_action> android_actions;
+#endif
         //std::string filter_text;
         keybindings_ui( bool permit_execute_action, input_context *parent );
         void init();
+#if defined(__ANDROID__)
+        std::optional<android_keybindings_action> take_android_action();
+#endif
 
     protected:
         cataimgui::bounds get_bounds() override;
         void draw_controls() override;
+#if defined(__ANDROID__)
+        void draw_controls_android();
+        bool handle_android_drag();
+#endif
         void on_resized() override {
             init();
         };
@@ -690,7 +723,15 @@ static const std::map<fallback_action, int> fallback_keys = {
 };
 
 keybindings_ui::keybindings_ui( bool permit_execute_action,
-                                input_context *parent ) : cataimgui::window( _( "KEYBINDINGS" ), ImGuiWindowFlags_NoNav )
+                                input_context *parent ) : cataimgui::window( _( "KEYBINDINGS" ),
+#if defined(__ANDROID__)
+                                            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                                            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav
+#else
+                                            ImGuiWindowFlags_NoNav
+#endif
+                                                                               )
 {
     this->ctxt = parent;
 
@@ -732,13 +773,33 @@ keybindings_ui::keybindings_ui( bool permit_execute_action,
         } } );
 }
 
+#if defined(__ANDROID__)
+std::optional<android_keybindings_action> keybindings_ui::take_android_action()
+{
+    if( android_actions.empty() ) {
+        return std::nullopt;
+    }
+    android_keybindings_action result = android_actions.front();
+    android_actions.pop_front();
+    return result;
+}
+#endif
+
 cataimgui::bounds keybindings_ui::get_bounds()
 {
+#if defined(__ANDROID__)
+    return { 0.0F, 0.0F, 1.0F, 1.0F };
+#else
     return { -1.f, -1.f, float( str_width_to_pixels( width ) ), float( str_height_to_pixels( TERMY ) ) };
+#endif
 }
 
 void keybindings_ui::draw_controls()
 {
+#if defined(__ANDROID__)
+    draw_controls_android();
+    return;
+#endif
     scroll_offset = INT_MAX;
     size_t legend_idx = 0;
     for( ; legend_idx < 4; legend_idx++ ) {
@@ -858,6 +919,162 @@ void keybindings_ui::draw_controls()
     }
     last_status = status;
 }
+
+#if defined(__ANDROID__)
+bool keybindings_ui::handle_android_drag()
+{
+    ImGuiIO &io = ImGui::GetIO();
+    if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+        ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+        android_dragging = true;
+        android_drag_start = io.MousePos;
+        android_drag_last = io.MousePos;
+    }
+    if( !android_dragging ) {
+        return false;
+    }
+    const ImVec2 distance( io.MousePos.x - android_drag_start.x,
+                           io.MousePos.y - android_drag_start.y );
+    const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+    if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
+        std::abs( distance.y ) > std::abs( distance.x ) ) {
+        const float delta_y = io.MousePos.y - android_drag_last.y;
+        ImGui::SetScrollY( ImGui::GetScrollY() - delta_y );
+    }
+    android_drag_last = io.MousePos;
+    if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+        android_dragging = false;
+    }
+    return moved;
+}
+
+void keybindings_ui::draw_controls_android()
+{
+    const ImVec2 window_pos = ImGui::GetWindowPos();
+    const ImVec2 window_size = ImGui::GetWindowSize();
+    const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 30.0F );
+    constexpr float footer_height = 72.0F;
+    ImGui::GetWindowDrawList()->AddRectFilled(
+        window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+        IM_COL32( 6, 9, 12, 255 ) );
+    cataimgui::PushGuiFont1_5x();
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 7.0F, 7.0F ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.28F, 0.31F, 1.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
+
+    ImGui::TextUnformatted( _( "Keybindings" ) );
+    ImGui::SameLine();
+    ImGui::TextDisabled( "%s", legend.front().c_str() );
+    ImGui::SameLine();
+    const std::string filter_text = get_filter();
+    const std::string search_label = filter_text.empty() ? _( "Search" ) :
+                                     string_format( _( "Search: %s" ), filter_text );
+    if( ImGui::Button( search_label.c_str(), ImVec2( 620.0F, 48.0F ) ) ) {
+        android_actions.push_back( { android_keybindings_action_type::search } );
+    }
+    ImGui::SameLine();
+    if( filter_text.empty() ) {
+        ImGui::BeginDisabled();
+    }
+    if( ImGui::Button( _( "Clear" ), ImVec2( 180.0F, 48.0F ) ) ) {
+        android_actions.push_back( { android_keybindings_action_type::clear_search } );
+    }
+    if( filter_text.empty() ) {
+        ImGui::EndDisabled();
+    }
+    ImGui::Separator();
+
+    scroll_offset = 0;
+    if( filtered_registered_actions.empty() ) {
+        android_selected_row = 0;
+    } else {
+        android_selected_row = std::clamp( android_selected_row, 0,
+                                           static_cast<int>( filtered_registered_actions.size() ) - 1 );
+    }
+    if( ImGui::BeginChild( "##android_keybinding_rows", ImVec2( 0.0F, -footer_height ),
+                           ImGuiChildFlags_Borders,
+                           ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+        const bool suppress_click = handle_android_drag();
+        if( ImGui::BeginTable( "##android_keybinding_table", 3,
+                               ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
+                               ImGuiTableFlags_SizingStretchProp ) ) {
+            ImGui::TableSetupColumn( "*", ImGuiTableColumnFlags_WidthFixed, 56.0F );
+            ImGui::TableSetupColumn( _( "Action Name" ), ImGuiTableColumnFlags_WidthStretch, 0.56F );
+            ImGui::TableSetupColumn( _( "Assigned Key(s)" ), ImGuiTableColumnFlags_WidthStretch, 0.44F );
+            ImGui::TableHeadersRow();
+            cataimgui::set_scroll( keybinds_scroll );
+            for( size_t index = 0; index < filtered_registered_actions.size(); ++index ) {
+                const std::string &action_id = filtered_registered_actions[index];
+                bool overwrite_default = false;
+                const action_attributes &attributes = inp_mngr.get_action_attributes(
+                        action_id, ctxt->category, &overwrite_default );
+                bool basic_overwrite_default = false;
+                const action_attributes &basic_attributes = inp_mngr.get_action_attributes(
+                            action_id, ctxt->category, &basic_overwrite_default, true );
+                const bool customized = overwrite_default != basic_overwrite_default ||
+                                        attributes.input_events != basic_attributes.input_events;
+                const bool selected = static_cast<int>( index ) == android_selected_row;
+                ImGui::PushID( action_id.c_str() );
+                ImGui::TableNextRow( ImGuiTableRowFlags_None, 56.0F );
+                ImGui::TableSetColumnIndex( 0 );
+                ImGui::TextUnformatted( customized ? "*" : "" );
+                ImGui::TableSetColumnIndex( 1 );
+                if( ImGui::Selectable( ctxt->get_action_name( action_id ).c_str(), selected,
+                                       ImGuiSelectableFlags_None, ImVec2( 0.0F, 48.0F ) ) &&
+                    !suppress_click ) {
+                    android_selected_row = static_cast<int>( index );
+                }
+                ImGui::TableSetColumnIndex( 2 );
+                ImGui::TextWrapped( "%s", ctxt->get_desc( action_id ).c_str() );
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+    }
+    ImGui::EndChild();
+    ImGui::Separator();
+
+    const std::array<std::pair<android_keybindings_action_type, const char *>, 5> edit_buttons = {{
+            { android_keybindings_action_type::remove, _( "Remove" ) },
+            { android_keybindings_action_type::add_local, _( "Add local" ) },
+            { android_keybindings_action_type::add_global, _( "Add global" ) },
+            { android_keybindings_action_type::reset, _( "Reset" ) },
+            { android_keybindings_action_type::close, _( "Back" ) },
+        }
+    };
+    const float width_available = ImGui::GetContentRegionAvail().x;
+    const float button_width = ( width_available - 7.0F * edit_buttons.size() ) /
+                               edit_buttons.size();
+    const bool empty = filtered_registered_actions.empty();
+    for( size_t index = 0; index < edit_buttons.size(); ++index ) {
+        if( index > 0 ) {
+            ImGui::SameLine();
+        }
+        const bool disabled = empty &&
+                              edit_buttons[index].first != android_keybindings_action_type::close;
+        if( disabled ) {
+            ImGui::BeginDisabled();
+        }
+        if( ImGui::Button( edit_buttons[index].second, ImVec2( button_width, 50.0F ) ) ) {
+            android_actions.push_back( { edit_buttons[index].first } );
+        }
+        if( disabled ) {
+            ImGui::EndDisabled();
+        }
+    }
+    ImGui::PopStyleColor( 6 );
+    ImGui::PopStyleVar( 4 );
+    cataimgui::PopGuiFont1_5x();
+    last_status = status;
+}
+#endif
 
 void keybindings_ui::init()
 {
@@ -1082,6 +1299,53 @@ action_id input_context::display_menu( bool permit_execute_action )
     while( true ) {
         kb_menu.highlight_row_index = -1;
         ui_manager::redraw();
+#if defined(__ANDROID__)
+        const std::optional<android_keybindings_action> android_action = kb_menu.take_android_action();
+        if( android_action ) {
+            raw_input_char = 0;
+            switch( android_action->type ) {
+                case android_keybindings_action_type::search: {
+                    const std::optional<std::string> value = android_native_ui::text_input(
+                                _( "Search keybindings" ), kb_menu.get_filter(), 120 );
+                    if( value ) {
+                        kb_menu.set_filter( *value );
+                        kb_menu.filtered_registered_actions = filter_strings_by_phrase(
+                                org_registered_actions, *value );
+                        kb_menu.android_selected_row = 0;
+                    }
+                    continue;
+                }
+                case android_keybindings_action_type::clear_search:
+                    kb_menu.set_filter( "" );
+                    kb_menu.filtered_registered_actions = org_registered_actions;
+                    kb_menu.android_selected_row = 0;
+                    continue;
+                case android_keybindings_action_type::remove:
+                    kb_menu.status = kb_menu_status::remove;
+                    action = "SELECT";
+                    break;
+                case android_keybindings_action_type::add_local:
+                    kb_menu.status = kb_menu_status::add;
+                    action = "SELECT";
+                    break;
+                case android_keybindings_action_type::add_global:
+                    kb_menu.status = kb_menu_status::add_global;
+                    action = "SELECT";
+                    break;
+                case android_keybindings_action_type::reset:
+                    kb_menu.status = kb_menu_status::reset;
+                    action = "SELECT";
+                    break;
+                case android_keybindings_action_type::close:
+                    action = "QUIT";
+                    break;
+            }
+            kb_menu.highlight_row_index = kb_menu.android_selected_row;
+        } else {
+            action = ctxt.handle_input();
+            raw_input_char = ctxt.get_raw_input().get_first_input();
+        }
+#else
         if( kb_menu.has_button_action() ) {
             action = kb_menu.get_button_action();
             raw_input_char = 0;
@@ -1089,6 +1353,7 @@ action_id input_context::display_menu( bool permit_execute_action )
             action = ctxt.handle_input();
             raw_input_char = ctxt.get_raw_input().get_first_input();
         }
+#endif
         for( const std::pair<const fallback_action, int> &v : fallback_keys ) {
             if( v.second == raw_input_char ) {
                 action.clear();
