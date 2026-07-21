@@ -268,7 +268,7 @@ tripoint_rel_ms direction_delta( const std::string &direction )
 
 bool dispatch_action( const action_request &request )
 {
-    if( cata_mp::is_session_active() ) {
+    if( cata_mp::is_mp_mode() ) {
         throw std::runtime_error( "Lua game actions are not available in multiplayer sessions" );
     }
     avatar &player = get_avatar();
