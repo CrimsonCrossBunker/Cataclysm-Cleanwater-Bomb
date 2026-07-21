@@ -1070,9 +1070,7 @@ bool main_menu::start_tutorial()
     world->active_mod_order.emplace_back( MOD_INFORMATION_dda_tutorial );
     world_generator->set_active_world( world );
     try {
-        if( !g->setup() ) {
-            return false;
-        }
+        g->setup();
     } catch( const std::exception &err ) {
         debugmsg( "Error: %s", err.what() );
         return false;
