@@ -23,6 +23,7 @@
 #endif
 
 #if defined(__ANDROID__)
+    #include "android_imgui_dialog.h"
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
 #endif
@@ -1799,6 +1800,19 @@ bool main_menu::new_character_tab()
             return false;
         }
         while( true ) {
+#if defined(__ANDROID__)
+            std::vector<android_imgui_dialog::entry> template_entries;
+            template_entries.reserve( templates.size() );
+            for( const std::string &tmpl : templates ) {
+                template_entries.push_back( { tmpl, _( "Saved character template" ), true, false } );
+            }
+            const std::optional<int> template_choice = android_imgui_dialog::select(
+                        _( "Choose a preset character template" ), template_entries );
+            if( !template_choice ) {
+                return false;
+            }
+            int opt_val = *template_choice;
+#else
             uilist mmenu( _( "Choose a preset character template" ), {} );
             mmenu.border_color = c_white;
             int opt_val = 0;
@@ -1808,17 +1822,43 @@ bool main_menu::new_character_tab()
             mmenu.entries.emplace_back( opt_val, true, 'q', _( "<- Back to Main Menu" ), c_yellow, c_yellow );
             mmenu.query();
             opt_val = mmenu.ret;
+#endif
             if( opt_val < 0 || static_cast<size_t>( opt_val ) >= templates.size() ) {
                 return false;
             }
 
+#if defined(__ANDROID__)
+            const std::vector<android_imgui_dialog::entry> template_actions = {
+                { _( "Load" ), _( "Create a character from this template." ), true, false },
+                { _( "Delete" ), _( "Permanently delete this template." ), true, true },
+                { _( "Cancel" ), _( "Return to the template list." ), true, false }
+            };
+            const std::optional<int> template_action = android_imgui_dialog::select(
+                        _( "Character template" ), template_actions,
+                        string_format( _( "What to do with template \"%s\"?" ), templates[opt_val] ) );
+            const std::string res = !template_action || *template_action == 2 ? "CANCEL" :
+                                    ( *template_action == 0 ? "LOAD" : "DELETE" );
+#else
             std::string res = query_popup()
                               .context( "LOAD_DELETE_CANCEL" ).default_color( c_white )
                               .message( _( "What to do with template \"%s\"?" ), templates[opt_val] )
                               .option( "LOAD" ).option( "DELETE" ).option( "CANCEL" ).cursor( 0 )
                               .query().action;
-            if( res == "DELETE" &&
-                query_yn( _( "Are you sure you want to delete %s?" ), templates[opt_val] ) ) {
+#endif
+            bool delete_confirmed = false;
+            if( res == "DELETE" ) {
+#if defined(__ANDROID__)
+                delete_confirmed = android_imgui_dialog::confirm(
+                                       _( "Delete template" ),
+                                       string_format( _( "Are you sure you want to delete %s?" ),
+                                                      templates[opt_val] ),
+                                       _( "Delete" ), _( "Cancel" ), true );
+#else
+                delete_confirmed = query_yn( _( "Are you sure you want to delete %s?" ),
+                                             templates[opt_val] );
+#endif
+            }
+            if( res == "DELETE" && delete_confirmed ) {
                 const auto path = PATH_INFO::templatedir() + templates[opt_val] + ".template";
                 if( !remove_file( path ) ) {
                     popup( _( "Sorry, something went wrong." ) );
