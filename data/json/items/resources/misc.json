@@ -55,19 +55,20 @@
   {
     "type": "ITEM",
     "id": "fighter_sting",
-    "name": { "str": "fungal fighter stinger" },
-    "description": "A short dart from a fungal fighter.  Makes a poor melee weapon.",
+    "name": { "str": "triffid stinger" },
+    "description": "A short wooden dart grown from a mutated plant.",
     "weight": "270 g",
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "point", "balance": "neutral" },
+    "to_hit": { "grip": "solid", "length": "hand", "surface": "point", "balance": "neutral" },
     "color": "green",
     "symbol": ",",
-    "material": [ "veggy" ],
+    "material": [ "wood" ],
     "volume": "250 ml",
-    "flags": [ "SHEATH_KNIFE", "ALLOWS_BODY_BLOCK" ],
+    "flags": [ "NPC_THROWN" ],
     "weapon_category": [ "SHIVS" ],
-    "price": "5 USD",
+    "price": "0 USD",
     "price_postapoc": "0 cent",
-    "melee_damage": { "stab": 8 }
+    "thrown_damage": [ { "damage_type": "stab", "amount": 6 } ],
+    "melee_damage": { "stab": 7 }
   },
   {
     "id": "incendiary",
