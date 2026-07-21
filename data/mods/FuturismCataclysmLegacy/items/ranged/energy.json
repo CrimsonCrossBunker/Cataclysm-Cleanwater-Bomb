@@ -234,7 +234,7 @@
     ],
     "firing_requirements": {
       "DEFAULT": [ { "pocket": "power", "qty": 20 }, { "pocket": "fusion pellet", "qty": 1 } ],
-      "AUTO": [ { "pocket": "power", "qty": 80 }, { "pocket": "fusion pellet", "qty": 4 } ]
+      "AUTO": [ { "pocket": "power", "qty": 20 }, { "pocket": "fusion pellet", "qty": 1 } ]
     },
     "valid_mod_locations": [
       [ "accessories", 2 ],
