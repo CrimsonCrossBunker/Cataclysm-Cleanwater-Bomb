@@ -68,6 +68,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
+#include "catalua_ui.h"
 #include "catacharset.h"
 #include "character.h"
 #include "character_attire.h"
@@ -502,6 +503,7 @@ game::game() :
 
 game::~game()
 {
+    cata::lua_ui::shutdown();
     // event_bus_ptr about to die; let debug_capture drop its sticky
     // subscribe flag and release the JSONL file. Without this, a later
     // `game` instance would never resubscribe.
@@ -1137,6 +1139,7 @@ bool game::start_game()
         }
     }
 
+    cata::lua_ui::on_world_ready();
     get_event_bus().send<event_type::game_start>( getVersionString() );
     get_event_bus().send<event_type::game_avatar_new>( /*is_new_game=*/true, /*is_debug=*/false,
             u.getID(), u.name, u.custom_profession );
@@ -3605,6 +3608,7 @@ void game::draw( ui_adaptor &ui )
     // Android owns its HUD in a native View overlay.  Do not render or reserve
     // the terminal sidebar underneath it.
     android_hud::publish_snapshot( u, static_cast<int>( safe_mode ) );
+    cata::lua_ui::publish_android_snapshot();
 #else
     draw_panels( true );
 #endif
