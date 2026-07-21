@@ -2035,10 +2035,15 @@ bool main_menu::load_character_tab( const std::string &worldname )
         return false;
     }
 
+    int opt_val = 0;
+#if defined(__ANDROID__)
+    std::vector<android_imgui_dialog::entry> save_entries;
+    save_entries.reserve( savegames.size() );
+#else
     uilist mmenu;
     mmenu.title = string_format( _( "Load character from \"%s\"" ), worldname );
     mmenu.border_color = c_white;
-    int opt_val = 0;
+#endif
     for( const save_t &s : savegames ) {
         std::optional<std::chrono::seconds> playtime = get_playtime_from_save( cur_world, s );
         std::string save_str = s.decoded_name();
@@ -2051,12 +2056,25 @@ bool main_menu::load_character_tab( const std::string &worldname )
             playtime_str = string_format( "<color_c_light_blue>[%02d:%02d:%02d]</color>",
                                           pt_hrs, pt_min, static_cast<int>( pt_sec ) );
         }
+#if defined(__ANDROID__)
+        save_entries.push_back( { save_str, remove_color_tags( playtime_str ), true, false } );
+#else
         // TODO: Replace this API to allow adding context without an empty description.
         mmenu.entries.emplace_back( opt_val++, true, MENU_AUTOASSIGN, save_str, "", playtime_str );
+#endif
     }
+#if defined(__ANDROID__)
+    const std::optional<int> selected_save = android_imgui_dialog::select(
+                string_format( _( "Load character from \"%s\"" ), worldname ), save_entries );
+    if( !selected_save ) {
+        return false;
+    }
+    opt_val = *selected_save;
+#else
     mmenu.entries.emplace_back( opt_val, true, 'q', _( "<- Back to Main Menu" ), c_yellow, c_yellow );
     mmenu.query();
     opt_val = mmenu.ret;
+#endif
     if( opt_val < 0 || static_cast<size_t>( opt_val ) >= savegames.size() ) {
         return false;
     }
