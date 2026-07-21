@@ -2094,9 +2094,26 @@ void main_menu::world_tab( const std::string &worldname )
         return;
     }
 
+    int opt_val = 0;
+#if defined(__ANDROID__)
+    std::vector<android_imgui_dialog::entry> world_actions;
+    world_actions.reserve( vWorldSubItems.size() );
+    for( size_t index = 0; index < vWorldSubItems.size(); ++index ) {
+        const bool danger = index == 5 || index == 6;
+        world_actions.push_back( {
+            remove_color_tags( shortcut_text( c_white, vWorldSubItems[index] ) ),
+            std::string(), true, danger
+        } );
+    }
+    const std::optional<int> world_action = android_imgui_dialog::select(
+                string_format( _( "Manage world \"%s\"" ), worldname ), world_actions );
+    if( !world_action ) {
+        return;
+    }
+    opt_val = *world_action;
+#else
     uilist mmenu( string_format( _( "Manage world \"%s\"" ), worldname ), {} );
     mmenu.border_color = c_white;
-    int opt_val = 0;
     std::array<char, 9> hotkeys = { 'm', 's', 't', 'c', 'n', 'd', 'r', 'y', 'e' };
     for( const std::string &it : vWorldSubItems ) {
         mmenu.entries.emplace_back( opt_val, true, hotkeys[opt_val],
@@ -2106,9 +2123,22 @@ void main_menu::world_tab( const std::string &worldname )
     mmenu.entries.emplace_back( opt_val, true, 'q', _( "<- Back to Main Menu" ), c_yellow, c_yellow );
     mmenu.query();
     opt_val = mmenu.ret;
+#endif
     if( opt_val < 0 || static_cast<size_t>( opt_val ) >= vWorldSubItems.size() ) {
         return;
     }
+
+    const auto confirm_world_action = []( const std::string &title, const std::string &message,
+    const std::string &confirm_label, const bool danger ) {
+#if defined(__ANDROID__)
+        return android_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ), danger );
+#else
+        ( void )title;
+        ( void )confirm_label;
+        ( void )danger;
+        return query_yn( message );
+#endif
+    };
 
     auto clear_world = [this, &worldname]( bool do_delete ) {
         // NOLINTNEXTLINE(cata-use-localized-sorting)
@@ -2146,11 +2176,13 @@ void main_menu::world_tab( const std::string &worldname )
             break;
         case 3: // Toggle save compression
             if( world_generator->get_world( worldname )->has_compression_enabled() ) {
-                if( query_yn( _( "Disable save compression?" ) ) ) {
+                if( confirm_world_action( _( "Save compression" ), _( "Disable save compression?" ),
+                                          _( "Disable" ), false ) ) {
                     world_generator->get_world( worldname )->set_compression_enabled( false );
                 }
             } else {
-                if( query_yn( _( "Enable save compression?" ) ) ) {
+                if( confirm_world_action( _( "Save compression" ), _( "Enable save compression?" ),
+                                          _( "Enable" ), false ) ) {
                     world_generator->get_world( worldname )->set_compression_enabled( true );
                 }
             }
@@ -2159,12 +2191,16 @@ void main_menu::world_tab( const std::string &worldname )
             snapshots_tab( worldname );
             break;
         case 5: // Delete World
-            if( query_yn( _( "Delete the world and all saves within?" ) ) ) {
+            if( confirm_world_action( _( "Delete world" ),
+                                      _( "Delete the world and all saves within?" ),
+                                      _( "Delete" ), true ) ) {
                 clear_world( true );
             }
             break;
         case 6: // Reset World
-            if( query_yn( _( "Remove all saves and regenerate world?" ) ) ) {
+            if( confirm_world_action( _( "Reset world" ),
+                                      _( "Remove all saves and regenerate world?" ),
+                                      _( "Reset" ), true ) ) {
                 clear_world( false );
             }
             break;
@@ -2175,10 +2211,23 @@ void main_menu::world_tab( const std::string &worldname )
                 popup( _( "No characters in this world!" ) );
                 break;
             }
+            int char_opt = 0;
+#if defined(__ANDROID__)
+            std::vector<android_imgui_dialog::entry> character_entries;
+            character_entries.reserve( saves.size() );
+            for( const save_t &s : saves ) {
+                character_entries.push_back( { s.decoded_name(), std::string(), true, false } );
+            }
+            const std::optional<int> selected_character = android_imgui_dialog::select(
+                        _( "Copy personal zones from which character?" ), character_entries );
+            if( !selected_character ) {
+                break;
+            }
+            char_opt = *selected_character;
+#else
             uilist char_menu;
             char_menu.title = _( "Copy personal zones from which character?" );
             char_menu.border_color = c_white;
-            int char_opt = 0;
             for( const save_t &s : saves ) {
                 char_menu.entries.emplace_back( char_opt++, true, MENU_AUTOASSIGN,
                                                 s.decoded_name() );
@@ -2186,12 +2235,13 @@ void main_menu::world_tab( const std::string &worldname )
             char_menu.entries.emplace_back( char_opt, true, 'q', _( "<- Back" ),
                                             c_yellow, c_yellow );
             char_menu.query();
-            if( char_menu.ret < 0 ||
-                static_cast<size_t>( char_menu.ret ) >= saves.size() ) {
+            char_opt = char_menu.ret;
+#endif
+            if( char_opt < 0 || static_cast<size_t>( char_opt ) >= saves.size() ) {
                 break;
             }
             cata_path zones_file = cur_world->folder_path() /
-                                   ( saves[char_menu.ret].base_path() + ".zones.json" );
+                                   ( saves[char_opt].base_path() + ".zones.json" );
             int zone_count = 0;
             clipboard_personal_zones = zone_manager::copy_personal_zones( zones_file,
                                        zone_count );
@@ -2214,10 +2264,23 @@ void main_menu::world_tab( const std::string &worldname )
                 popup( _( "No characters in this world!" ) );
                 break;
             }
+            int char_opt = 0;
+#if defined(__ANDROID__)
+            std::vector<android_imgui_dialog::entry> character_entries;
+            character_entries.reserve( saves.size() );
+            for( const save_t &s : saves ) {
+                character_entries.push_back( { s.decoded_name(), std::string(), true, false } );
+            }
+            const std::optional<int> selected_character = android_imgui_dialog::select(
+                        _( "Paste personal zones to which character?" ), character_entries );
+            if( !selected_character ) {
+                break;
+            }
+            char_opt = *selected_character;
+#else
             uilist char_menu;
             char_menu.title = _( "Paste personal zones to which character?" );
             char_menu.border_color = c_white;
-            int char_opt = 0;
             for( const save_t &s : saves ) {
                 char_menu.entries.emplace_back( char_opt++, true, MENU_AUTOASSIGN,
                                                 s.decoded_name() );
@@ -2225,12 +2288,13 @@ void main_menu::world_tab( const std::string &worldname )
             char_menu.entries.emplace_back( char_opt, true, 'q', _( "<- Back" ),
                                             c_yellow, c_yellow );
             char_menu.query();
-            if( char_menu.ret < 0 ||
-                static_cast<size_t>( char_menu.ret ) >= saves.size() ) {
+            char_opt = char_menu.ret;
+#endif
+            if( char_opt < 0 || static_cast<size_t>( char_opt ) >= saves.size() ) {
                 break;
             }
             cata_path zones_file = cur_world->folder_path() /
-                                   ( saves[char_menu.ret].base_path() + ".zones.json" );
+                                   ( saves[char_opt].base_path() + ".zones.json" );
             if( zone_manager::paste_personal_zones( zones_file,
                                                     clipboard_personal_zones ) ) {
                 popup( _( "Personal zones pasted successfully." ) );
