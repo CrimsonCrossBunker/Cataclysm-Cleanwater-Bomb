@@ -205,7 +205,7 @@
     "color": "yellow",
     "skill": "rifle",
     "range": 30,
-    "ranged_damage": { "damage_type": "fcl_laser", "amount": 50, "armor_penetration": 8 },
+    "ranged_damage": { "damage_type": "fcl_laser", "amount": 50, "armor_penetration": 16 },
     "dispersion": 10,
     "durability": 8,
     "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
