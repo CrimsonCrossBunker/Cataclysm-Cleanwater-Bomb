@@ -3,13 +3,21 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cmath>
 #include <ctime>
+#include <deque>
 #include <exception>
 #include <iterator>
 #include <memory>
 #include <set>
 #include <unordered_map>
 #include <utility>
+
+#if defined(__ANDROID__)
+    #include "android_imgui_dialog.h"
+    #include "cata_imgui.h"
+    #include "imgui/imgui.h"
+#endif
 
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -497,6 +505,27 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
         return get_world( world_names[0] );
     }
 
+#if defined(__ANDROID__)
+    std::vector<android_imgui_dialog::entry> entries;
+    entries.reserve( world_names.size() );
+    for( const std::string &name : world_names ) {
+        const size_t save_count = get_world( name )->world_saves.size();
+        entries.push_back( {
+            string_format( "%s (%zu)", name, save_count ),
+            save_count == 0 ? _( "Empty world" ) :
+            string_format( n_gettext( "%zu saved character", "%zu saved characters", save_count ),
+                           save_count ),
+            true,
+            false
+        } );
+    }
+    const std::optional<int> selected = android_imgui_dialog::select(
+            _( "World selection" ), entries, _( "Pick a world to enter game" ) );
+    if( selected && *selected >= 0 && static_cast<size_t>( *selected ) < world_names.size() ) {
+        return get_world( world_names[*selected] );
+    }
+    return nullptr;
+#else
     const int iTooltipHeight = 3;
     int iContentHeight = 0;
     int iMinScreenWidth = 0;
@@ -702,6 +731,7 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
     }
 
     return nullptr;
+#endif
 }
 
 void worldfactory::remove_world( const std::string &worldname )
