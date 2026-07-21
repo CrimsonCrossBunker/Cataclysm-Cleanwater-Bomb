@@ -100,7 +100,7 @@
     "ammo_effects": [ "PLASMA", "EXPLOSIVE", "FLAME", "IGNITE" ],
     "ammo": [ "plasma" ],
     "to_hit": -1,
-    "clip_size": 2,
+    "clip_size": 25,
     "reload": 200,
     "pocket_data": [
       { "id": "ammo", "pocket_type": "MAGAZINE", "ammo_restriction": { "plasma": 25 } },
@@ -126,5 +126,130 @@
       [ "underbarrel", 1 ]
     ],
     "melee_damage": { "bash": 18 }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "id": "fcl_ftk29",
+    "looks_like": "glock_17",
+    "reload_noise_volume": 10,
+    "name": { "str": "FTK-29 microfusion laser pistol" },
+    "description": "An experimental energy laser-type microfusion firearm. Its design incorporates some ideas from the V29 and the MagLIF technology used in the prototype, but abandons the highly destructive and unstable propellant reaction jet route, instead miniaturizing it to create a composite energy weapon that fires a small amount of plasma along with a laser beam. Because it converts fusion energy release into its primary attack energy source, this model has reduced the number of internal energy interfaces and cannot natively support UPS, but it features a simple battery compartment compatible with medium batteries.",
+    "weight": "1020 g",
+    "volume": "1500 ml",
+    "longest_side": "233 mm",
+    "price": "87 kUSD 250 USD",
+    "price_postapoc": "95 USD",
+    "material": [ "steel", "superalloy", "plastic" ],
+    "symbol": "(",
+    "color": "magenta",
+    "skill": "pistol",
+    "range": 30,
+    "ranged_damage": { "damage_type": "fcl_laser", "amount": 25, "armor_penetration": 8 },
+    "dispersion": 180,
+    "durability": 8,
+    "loudness": 7,
+    "reload": 200,
+    "overheat_threshold": 60,
+    "cooling_value": 2,
+    "heat_per_shot": 6,
+    "ammo_effects": [ "PLASMA", "LASER", "INCENDIARY" ],
+    "ammo": [ "fcl_fusion_pellet", "battery" ],
+    "valid_mod_locations": [
+      [ "accessories", 2 ],
+      [ "emitter", 1 ],
+      [ "grip", 1 ],
+      [ "lens", 1 ],
+      [ "rail", 1 ],
+      [ "sights", 1 ],
+      [ "stock", 1 ],
+      [ "underbarrel", 1 ]
+    ],
+    "pocket_data": [
+      {
+        "id": "power",
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "flag_restriction": [ "BATTERY_MEDIUM" ],
+        "default_magazine": "medium_battery_cell"
+      },
+      {
+        "id": "fusion pellet",
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
+        "default_magazine": "fcl_fusion_pack"
+      }
+    ],
+    "firing_requirements": { "DEFAULT": [ { "pocket": "power", "qty": 5 }, { "pocket": "fusion pellet", "qty": 1 } ] },
+    "flags": [ "NEVER_JAMS", "NON_FOULING", "NEEDS_NO_LUBE", "OVERHEATS" ],
+    "faults": [ { "fault": "fault_overheat_melting" }, { "fault": "fault_overheat_safety" } ],
+    "melee_damage": { "bash": 5 }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "GUN" ],
+    "id": "fcl_ftk07",
+    "looks_like": "modular_ar15",
+    "reload_noise_volume": 10,
+    "name": { "str": "FTK-07 microfusion laser rifle" },
+    "description": "An experimental energy laser-type microfusion firearm. Its design incorporates some ideas from the A7 and the MagLIF technology used in the prototype, but abandons the highly destructive and unstable propellant reaction jet route, instead miniaturizing it to create a composite energy weapon that fires a small amount of plasma along with a laser beam. Because it converts fusion energy release into its primary attack energy source, this model has reduced the number of internal energy interfaces and cannot natively support UPS, but it features a simple battery compartment compatible with tool batteries.",
+    "weight": "4425 g",
+    "volume": "4500 ml",
+    "longest_side": "900 mm",
+    "price": "102 kUSD",
+    "price_postapoc": "125 USD",
+    "to_hit": -1,
+    "material": [ "steel", "superalloy", "plastic" ],
+    "symbol": "(",
+    "color": "yellow",
+    "skill": "rifle",
+    "range": 30,
+    "ranged_damage": { "damage_type": "fcl_laser", "amount": 50, "armor_penetration": 8 },
+    "dispersion": 10,
+    "durability": 8,
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "overheat_threshold": 100,
+    "cooling_value": 2,
+    "heat_per_shot": 5,
+    "loudness": 12,
+    "reload": 200,
+    "ammo_effects": [ "PLASMA", "LASER", "IGNITE" ],
+    "ammo": [ "fcl_fusion_pellet", "battery" ],
+    "pocket_data": [
+      {
+        "id": "power",
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "flag_restriction": [ "BATTERY_HEAVY" ],
+        "default_magazine": "heavy_battery_cell"
+      },
+      {
+        "id": "fusion pellet",
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
+        "default_magazine": "fcl_fusion_pack"
+      }
+    ],
+    "firing_requirements": {
+      "DEFAULT": [ { "pocket": "power", "qty": 20 }, { "pocket": "fusion pellet", "qty": 1 } ],
+      "AUTO": [ { "pocket": "power", "qty": 80 }, { "pocket": "fusion pellet", "qty": 4 } ]
+    },
+    "valid_mod_locations": [
+      [ "accessories", 2 ],
+      [ "emitter", 1 ],
+      [ "grip", 1 ],
+      [ "lens", 1 ],
+      [ "rail", 1 ],
+      [ "sights", 1 ],
+      [ "sling", 1 ],
+      [ "stock", 1 ],
+      [ "stock accessory", 1 ],
+      [ "underbarrel", 1 ]
+    ],
+    "flags": [ "NEVER_JAMS", "NON_FOULING", "NEEDS_NO_LUBE", "OVERHEATS" ],
+    "faults": [ { "fault": "fault_overheat_melting" }, { "fault": "fault_overheat_safety" } ],
+    "melee_damage": { "bash": 12 }
   }
 ]

@@ -47,5 +47,39 @@
     "capacity": 3,
     "reload_time": 600,
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "fcl_fusion_pellet": 3 } } ]
+  },
+  {
+    "id": "fcl_fusion_10_mag",
+    "looks_like": "stanag30",
+    "type": "ITEM",
+    "subtypes": [ "MAGAZINE" ],
+    "name": { "str": "fusion 10-round extended magazine" },
+    "description": "A modified high-density magazine designed to hold and align micro-fusion target pellets. Its original capacitive contacts and magnetic shielding have been weakened and expanded using nanomaterials, making it unstable and unsafe for use in propellant-reaction microfusion firearms. However, it's perfect for energy laser-type microfusion firearms.",
+    "copy-from": "fcl_fusion_pack",
+    "weight": "168 g",
+    "volume": "250 ml",
+    "price": "500 USD",
+    "price_postapoc": "10 USD",
+    "flags": [ "MAG_COMPACT" ],
+    "capacity": 10,
+    "reload_time": 600,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "fcl_fusion_pellet": 10 } } ]
+  },
+  {
+    "id": "fcl_fusion_20_mag",
+    "looks_like": "stanag30",
+    "type": "ITEM",
+    "subtypes": [ "MAGAZINE" ],
+    "name": { "str": "fusion 20-round extended magazine" },
+    "description": "A modified high-density magazine designed to hold and align micro-fusion target pellets. Its original capacitive contacts and magnetic shielding have been weakened and expanded using nanomaterials, making it unstable and unsafe for use in propellant-reaction microfusion firearms. However, it's perfect for energy laser-type microfusion firearms.",
+    "copy-from": "fcl_fusion_pack",
+    "weight": "198 g",
+    "volume": "300 ml",
+    "price": "500 USD",
+    "price_postapoc": "10 USD",
+    "flags": [ "MAG_COMPACT" ],
+    "capacity": 20,
+    "reload_time": 600,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "fcl_fusion_pellet": 20 } } ]
   }
 ]
