@@ -1,5 +1,6 @@
 #include "options.h"
 
+#include <array>
 #include <cfloat>
 #include <climits>
 #include <clocale>
@@ -84,9 +85,12 @@ struct android_option_row_snapshot {
 };
 
 struct android_options_snapshot {
+    std::string title;
     std::vector<std::string> tabs;
     std::vector<android_option_row_snapshot> rows;
     int selected_tab = 0;
+    bool world_options_only = false;
+    bool with_tabs = false;
 };
 
 enum class android_options_action_type : int {
@@ -94,6 +98,8 @@ enum class android_options_action_type : int {
     activate_row,
     previous_value,
     next_value,
+    previous_tab,
+    next_tab,
     close,
 };
 
@@ -151,11 +157,13 @@ class android_options_imgui : public cataimgui::window
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
 
-            ImGui::TextUnformatted( _( "Options" ) );
+            ImGui::TextUnformatted( snapshot.title.c_str() );
             ImGui::Separator();
 
-            draw_tabs();
-            ImGui::Separator();
+            if( !snapshot.world_options_only ) {
+                draw_tabs();
+                ImGui::Separator();
+            }
 
             const float detail_width = std::clamp( window_size.x * 0.31F, 300.0F, 540.0F );
             const float list_width = std::max( 320.0F, ImGui::GetContentRegionAvail().x -
@@ -186,12 +194,7 @@ class android_options_imgui : public cataimgui::window
             ImGui::EndChild();
 
             ImGui::Separator();
-            const float close_width = std::clamp( window_size.x * 0.20F, 220.0F, 360.0F );
-            ImGui::SetCursorPosX( std::max( edge_padding,
-                                            window_size.x - edge_padding - close_width ) );
-            if( ImGui::Button( _( "Back" ), ImVec2( close_width, 50.0F ) ) ) {
-                actions.push_back( { android_options_action_type::close, 0 } );
-            }
+            draw_footer( window_size.x, edge_padding );
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 4 );
@@ -204,6 +207,41 @@ class android_options_imgui : public cataimgui::window
         bool content_dragging = false;
         ImVec2 content_drag_start;
         int content_drag_tab = 0;
+
+        void draw_footer( const float window_width, const float edge_padding ) {
+            if( snapshot.world_options_only && snapshot.with_tabs ) {
+                constexpr float gap = 8.0F;
+                const float width = ( ImGui::GetContentRegionAvail().x - gap * 2.0F ) / 3.0F;
+                const std::array<std::pair<android_options_action_type, const char *>, 3> buttons = {{
+                        { android_options_action_type::close, _( "Cancel" ) },
+                        { android_options_action_type::previous_tab, _( "Previous" ) },
+                        { android_options_action_type::next_tab, _( "Next" ) },
+                    }
+                };
+                for( size_t index = 0; index < buttons.size(); ++index ) {
+                    if( index > 0 ) {
+                        ImGui::SameLine( 0.0F, gap );
+                    }
+                    if( buttons[index].first == android_options_action_type::close ) {
+                        ImGui::PushStyleColor( ImGuiCol_Button,
+                                               ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
+                    }
+                    if( ImGui::Button( buttons[index].second, ImVec2( width, 50.0F ) ) ) {
+                        actions.push_back( { buttons[index].first, 0 } );
+                    }
+                    if( buttons[index].first == android_options_action_type::close ) {
+                        ImGui::PopStyleColor();
+                    }
+                }
+                return;
+            }
+            const float close_width = std::clamp( window_width * 0.20F, 220.0F, 360.0F );
+            ImGui::SetCursorPosX( std::max( edge_padding,
+                                            window_width - edge_padding - close_width ) );
+            if( ImGui::Button( _( "Back" ), ImVec2( close_width, 50.0F ) ) ) {
+                actions.push_back( { android_options_action_type::close, 0 } );
+            }
+        }
 
         void draw_tabs() {
             if( ImGui::BeginChild( "##android_options_tabs", ImVec2( 0.0F, 62.0F ),
@@ -4357,19 +4395,22 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
     } );
 
 #if defined(__ANDROID__)
-    std::unique_ptr<android_options_imgui> android_options_ui;
-    if( !world_options_only ) {
-        android_options_ui = std::make_unique<android_options_imgui>();
-    }
+    std::unique_ptr<android_options_imgui> android_options_ui =
+        std::make_unique<android_options_imgui>();
     const auto make_android_snapshot = [&]() {
         android_options_snapshot snapshot;
+        snapshot.title = world_options_only ? _( "World options" ) : _( "Options" );
+        snapshot.world_options_only = world_options_only;
+        snapshot.with_tabs = with_tabs;
         snapshot.selected_tab = iCurrentPage;
-        snapshot.tabs.reserve( pages_.size() );
-        for( size_t index = 0; index < pages_.size(); ++index ) {
-            if( ingame && static_cast<int>( index ) == iWorldOptPage ) {
-                snapshot.tabs.emplace_back( _( "Current world" ) );
-            } else {
-                snapshot.tabs.push_back( pages_[index].name_.translated() );
+        if( !world_options_only ) {
+            snapshot.tabs.reserve( pages_.size() );
+            for( size_t index = 0; index < pages_.size(); ++index ) {
+                if( ingame && static_cast<int>( index ) == iWorldOptPage ) {
+                    snapshot.tabs.emplace_back( _( "Current world" ) );
+                } else {
+                    snapshot.tabs.push_back( pages_[index].name_.translated() );
+                }
             }
         }
 
@@ -4443,6 +4484,12 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                     case android_options_action_type::next_value:
                         android_row_target = ui_action->index;
                         action = "RIGHT";
+                        break;
+                    case android_options_action_type::previous_tab:
+                        action = "PREV_TAB";
+                        break;
+                    case android_options_action_type::next_tab:
+                        action = "NEXT_TAB";
                         break;
                     case android_options_action_type::close:
                         action = "QUIT";
