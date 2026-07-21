@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cmath>
 #include <functional>
 #include <iterator>
 #include <numeric>
@@ -10,6 +11,11 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#if defined(__ANDROID__)
+    #include "cata_imgui.h"
+    #include "imgui/imgui.h"
+#endif
 
 #include "action.h"
 #include "cata_path.h"
@@ -29,6 +35,158 @@
 #include "translations.h"
 #include "ui_helpers.h"
 #include "ui_manager.h"
+
+#if defined(__ANDROID__)
+namespace
+{
+struct android_help_topic {
+    std::string title;
+    std::string body;
+};
+
+struct android_vertical_drag_state {
+    bool active = false;
+    ImVec2 start;
+};
+
+class android_help_viewer : public cataimgui::window
+{
+    public:
+        explicit android_help_viewer( std::vector<android_help_topic> topics ) :
+            cataimgui::window( "Android help viewer",
+                               ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                               ImGuiWindowFlags_NoSavedSettings ),
+            topics( std::move( topics ) ) {}
+
+        bool take_close_request() {
+            const bool result = close_requested;
+            close_requested = false;
+            return result;
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            return { 0.0F, 0.0F, 1.0F, 1.0F };
+        }
+
+        void draw_controls() override {
+            const ImVec2 window_pos = ImGui::GetWindowPos();
+            const ImVec2 window_size = ImGui::GetWindowSize();
+            const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 30.0F );
+            constexpr float footer_height = 66.0F;
+
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+                IM_COL32( 6, 9, 12, 255 ) );
+            cataimgui::PushGuiFont1_5x();
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 8.0F, 7.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.28F, 0.31F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
+
+            ImGui::TextUnformatted( _( "Help" ) );
+            ImGui::Separator();
+            const float topic_width = std::clamp( window_size.x * 0.32F, 300.0F, 520.0F );
+            if( ImGui::BeginChild( "##android_help_topics", ImVec2( topic_width, -footer_height ),
+                                   ImGuiChildFlags_Borders,
+                                   ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                const bool suppress_click = handle_vertical_drag( topic_drag );
+                for( size_t index = 0; index < topics.size(); ++index ) {
+                    const bool selected = static_cast<int>( index ) == selected_topic;
+                    if( selected ) {
+                        ImGui::PushStyleColor( ImGuiCol_Button,
+                                               ImVec4( 0.08F, 0.30F, 0.34F, 1.0F ) );
+                        ImGui::PushStyleColor( ImGuiCol_Border,
+                                               ImVec4( 0.32F, 0.72F, 0.75F, 1.0F ) );
+                        ImGui::PushStyleColor( ImGuiCol_Text,
+                                               ImVec4( 0.90F, 1.0F, 1.0F, 1.0F ) );
+                    }
+                    const std::string label = topics[index].title + "###android_help_topic_" +
+                                              std::to_string( index );
+                    if( ImGui::Button( label.c_str(), ImVec2( -1.0F, 48.0F ) ) &&
+                        !suppress_click ) {
+                        selected_topic = static_cast<int>( index );
+                        reset_body_scroll = true;
+                    }
+                    if( selected ) {
+                        ImGui::PopStyleColor( 3 );
+                    }
+                }
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+            if( ImGui::BeginChild( "##android_help_body", ImVec2( 0.0F, -footer_height ),
+                                   ImGuiChildFlags_Borders,
+                                   ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                handle_vertical_drag( body_drag );
+                if( reset_body_scroll ) {
+                    ImGui::SetScrollY( 0.0F );
+                    reset_body_scroll = false;
+                }
+                if( selected_topic >= 0 && selected_topic < static_cast<int>( topics.size() ) ) {
+                    ImGui::TextUnformatted( topics[selected_topic].title.c_str() );
+                    ImGui::Separator();
+                    const float wrap_width = std::max( 1.0F,
+                                                       ImGui::GetContentRegionAvail().x - 10.0F );
+                    cataimgui::draw_colored_text( topics[selected_topic].body, c_light_gray,
+                                                  wrap_width );
+                }
+            }
+            ImGui::EndChild();
+
+            ImGui::Separator();
+            const float button_width = std::clamp( window_size.x * 0.20F, 220.0F, 360.0F );
+            ImGui::SetCursorPosX( std::max( edge_padding,
+                                            window_size.x - edge_padding - button_width ) );
+            if( ImGui::Button( _( "Back" ), ImVec2( button_width, 50.0F ) ) ) {
+                close_requested = true;
+            }
+
+            ImGui::PopStyleColor( 6 );
+            ImGui::PopStyleVar( 4 );
+            cataimgui::PopGuiFont1_5x();
+        }
+
+    private:
+        std::vector<android_help_topic> topics;
+        int selected_topic = 0;
+        bool close_requested = false;
+        bool reset_body_scroll = false;
+        android_vertical_drag_state topic_drag;
+        android_vertical_drag_state body_drag;
+
+        static bool handle_vertical_drag( android_vertical_drag_state &state ) {
+            ImGuiIO &io = ImGui::GetIO();
+            if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+                state.active = true;
+                state.start = io.MousePos;
+            }
+            if( !state.active ) {
+                return false;
+            }
+            const ImVec2 distance( io.MousePos.x - state.start.x, io.MousePos.y - state.start.y );
+            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
+                std::abs( distance.y ) > std::abs( distance.x ) ) {
+                ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
+            }
+            if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+                state.active = false;
+            }
+            return moved;
+        }
+};
+} // namespace
+#endif
 
 help &get_help()
 {
@@ -161,8 +319,71 @@ std::string help::get_note_colors()
     return text;
 }
 
+std::string help::format_help_topic( const std::vector<translation> &messages ) const
+{
+    std::vector<std::string> translated_messages;
+    translated_messages.reserve( messages.size() );
+    std::transform( messages.begin(), messages.end(),
+    std::back_inserter( translated_messages ), [&]( const translation & line ) {
+        std::string line_proc = line.translated();
+        if( line_proc == "<DRAW_NOTE_COLORS>" ) {
+            line_proc = get_note_colors();
+        } else if( line_proc == "<HELP_DRAW_DIRECTIONS>" ) {
+            line_proc = get_dir_grid();
+        }
+        size_t pos = line_proc.find( "<press_", 0, 7 );
+        while( pos != std::string::npos ) {
+            const size_t pos2 = line_proc.find( ">", pos, 1 );
+            if( pos2 == std::string::npos ) {
+                break;
+            }
+            const std::string action = line_proc.substr( pos + 7, pos2 - pos - 7 );
+            const std::string replacement = "<color_light_blue>" +
+                                            press_x( look_up_action( action ), "", "" ) + "</color>";
+            if( replacement.empty() ) {
+                debugmsg( "Help json: Unknown action: %s", action );
+            } else {
+                line_proc = string_replace( line_proc, "<press_" + action + ">", replacement );
+            }
+            pos = line_proc.find( "<press_", pos2, 7 );
+        }
+        return line_proc;
+    } );
+
+    if( translated_messages.empty() ) {
+        return {};
+    }
+    return std::accumulate( translated_messages.begin() + 1, translated_messages.end(),
+                            translated_messages.front(),
+    []( std::string lhs, const std::string & rhs ) {
+        return std::move( lhs ) + "\n\n" + rhs;
+    } );
+}
+
 void help::display_help() const
 {
+#if defined(__ANDROID__)
+    std::vector<android_help_topic> topics;
+    topics.reserve( help_texts.size() );
+    for( const auto &entry : help_texts ) {
+        topics.push_back( { entry.second.first.translated(),
+                            format_help_topic( entry.second.second ) } );
+    }
+    android_help_viewer viewer( std::move( topics ) );
+    input_context ctxt( "DISPLAY_HELP", keyboard_mode::keychar );
+    ctxt.register_action( "QUIT" );
+    ctxt.register_action( "SELECT" );
+    ctxt.register_action( "MOUSE_MOVE" );
+    while( true ) {
+        ui_manager::redraw();
+        if( viewer.take_close_request() ) {
+            return;
+        }
+        if( ctxt.handle_input() == "QUIT" ) {
+            return;
+        }
+    }
+#else
     catacurses::window w_help_border;
     catacurses::window w_help;
 
@@ -232,37 +453,8 @@ void help::display_help() const
                 continue;
             }
             if( input == hotkey_entry.second ) {
-                std::vector<std::string> i18n_help_texts;
-                i18n_help_texts.reserve( help_text_it->second.second.size() );
-                std::transform( help_text_it->second.second.begin(), help_text_it->second.second.end(),
-                std::back_inserter( i18n_help_texts ), [&]( const translation & line ) {
-                    std::string line_proc = line.translated();
-                    if( line_proc == "<DRAW_NOTE_COLORS>" ) {
-                        line_proc = get_note_colors();
-                    } else if( line_proc == "<HELP_DRAW_DIRECTIONS>" ) {
-                        line_proc = get_dir_grid();
-                    }
-                    size_t pos = line_proc.find( "<press_", 0, 7 );
-                    while( pos != std::string::npos ) {
-                        size_t pos2 = line_proc.find( ">", pos, 1 );
-
-                        std::string action = line_proc.substr( pos + 7, pos2 - pos - 7 );
-                        std::string replace = "<color_light_blue>" +
-                                              press_x( look_up_action( action ), "", "" ) + "</color>";
-
-                        if( replace.empty() ) {
-                            debugmsg( "Help json: Unknown action: %s", action );
-                        } else {
-                            line_proc = string_replace(
-                                            line_proc, "<press_" + std::move( action ) + ">", replace );
-                        }
-
-                        pos = line_proc.find( "<press_", pos2, 7 );
-                    }
-                    return line_proc;
-                } );
-
-                if( !i18n_help_texts.empty() ) {
+                const std::string topic_text = format_help_topic( help_text_it->second.second );
+                if( !topic_text.empty() ) {
                     ui.on_screen_resize( nullptr );
 
                     const auto get_w_help_border = [&]() {
@@ -270,12 +462,7 @@ void help::display_help() const
                         return w_help_border;
                     };
 
-                    scrollable_text( get_w_help_border, _( "Help" ),
-                                     std::accumulate( i18n_help_texts.begin() + 1, i18n_help_texts.end(),
-                                                      i18n_help_texts.front(),
-                    []( std::string lhs, const std::string & rhs ) {
-                        return std::move( lhs ) + "\n\n" + rhs;
-                    } ) );
+                    scrollable_text( get_w_help_border, _( "Help" ), topic_text );
 
                     ui.on_screen_resize( init_windows );
                 }
@@ -285,6 +472,7 @@ void help::display_help() const
             }
         }
     } while( action != "QUIT" );
+#endif
 }
 
 std::string get_hint()
