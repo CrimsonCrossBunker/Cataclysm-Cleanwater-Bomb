@@ -12,6 +12,9 @@
 #include "catacharset.h"
 #include "cached_options.h"
 #include "color.h"
+#if defined(TILES)
+    #include "cursesport.h"
+#endif
 #include "input.h"
 #include "output.h"
 #include "path_info.h"
@@ -592,7 +595,12 @@ void cataimgui::client::new_frame( int display_buffer_w, int display_buffer_h )
     }
 #endif
     if( clear_screen && clear_sdl_window() ) {
-        // Keep the request armed if the clear was deferred by a queued recovery.
+        // The SDL buffer and the curses window cache are separate.  Clearing only
+        // the former would make unchanged curses content disappear, so force every
+        // curses window to emit all of its cells again during this frame.
+#if defined(TILES)
+        cata_cursesport::bump_curses_render_epoch();
+#endif
         clear_screen = false;
     }
 #if SDL_MAJOR_VERSION >= 3
@@ -661,6 +669,11 @@ void cataimgui::client::abort_frame()
 bool cataimgui::clear_pending()
 {
     return clear_screen;
+}
+
+void cataimgui::request_clear()
+{
+    clear_screen = true;
 }
 
 void cataimgui::client::process_input( void *input, int display_buffer_w, int display_buffer_h )
@@ -1014,6 +1027,13 @@ void cataimgui::window::hide_if_hidden() const
     }
 }
 
+void cataimgui::window::set_redraw_underlay( const bool value )
+{
+    if( p_impl ) {
+        p_impl->window_adaptor->redraw_uis_below = value;
+    }
+}
+
 bool cataimgui::window::is_bounds_changed()
 {
     return p_impl->is_resized;
@@ -1200,6 +1220,15 @@ std::string cataimgui::window::get_filter()
     } else {
         return std::string();
     }
+}
+
+void cataimgui::window::set_filter( const std::string &text )
+{
+    if( !filter_impl ) {
+        filter_impl = std::make_unique<cataimgui::filter_box_impl>();
+        filter_impl->id = 0;
+    }
+    filter_impl->text = text;
 }
 
 void cataimgui::window::clear_filter()

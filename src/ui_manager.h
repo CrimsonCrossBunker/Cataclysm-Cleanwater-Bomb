@@ -77,6 +77,10 @@ class ui_adaptor
 {
     public:
         bool is_imgui;
+        // A transparent ImGui adaptor can opt into rebuilding the persistent SDL
+        // buffer beneath it before every frame, preventing moved controls from
+        // leaving stale pixels behind.
+        bool redraw_uis_below;
         bool is_on_top;
         using redraw_callback_t = std::function<void( ui_adaptor & )>;
         using screen_resize_callback_t = std::function<void( ui_adaptor & )>;
