@@ -7,7 +7,9 @@
       "items": [
         { "item": "fcl_plasma_gun", "prob": 10, "charges": [ 0, 25 ] },
         { "item": "fcl_plasma_rifle", "prob": 5, "charges": [ 0, 25 ] },
-        { "item": "fcl_ftk93", "prob": 2, "charges": [ 0, 25 ], "contents-group": "fcl_fusion_pack" }
+        { "item": "fcl_ftk93", "prob": 2, "charges": [ 0, 25 ], "contents-group": "fcl_fusion_pack" },
+        { "item": "fcl_ftk29", "prob": 4, "contents-group": "fcl_fusion_ftk29_mag" },
+        { "item": "fcl_ftk07", "prob": 3, "contents-group": "fcl_fusion_ftk07_mag" }
       ]
     }
   },
@@ -26,6 +28,24 @@
     "subtype": "collection",
     "items": [
       { "item": "fcl_fusion_pack", "charges": [ 0, 3 ] }
+    ]
+  },
+  {
+    "id": "fcl_fusion_ftk29_mag",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "item": "fcl_fusion_10_mag", "charges": [ 0, 10 ] },
+      { "item": "medium_battery_cell", "charges": [ 0, 56 ] }
+    ]
+  },
+  {
+    "id": "fcl_fusion_ftk07_mag",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [
+      { "item": "fcl_fusion_20_mag", "charges": [ 0, 20 ] },
+      { "item": "heavy_battery_cell", "charges": [ 0, 259 ] }
     ]
   },
   {

@@ -12,6 +12,8 @@
         [ "fcl_ftk93", 10 ],
         [ "fcl_fusion_pack", 10 ],
         [ "fcl_fusion_pellet", 10 ],
+        [ "fcl_ftk29", 10 ],
+        [ "fcl_ftk07", 10 ],
         [ "fcl_bio_neurosoft_aeronautics", 10 ],
         [ "fcl_bio_neurosoft_aircraft_mechanic", 10 ]
       ]
