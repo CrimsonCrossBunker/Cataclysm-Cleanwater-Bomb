@@ -105,6 +105,7 @@ public class CataclysmDDA extends SDLActivity {
     private FrameLayout buttonEditorContainer;
     private boolean deleteButtonMode = false;
     private AndroidHudOverlay hudOverlay;
+    private LuaUiOverlay luaUiOverlay;
     private String pendingHudExportJson;
 
     // libmain.so must load first so cata_allocator binds before SDL's malloc.
@@ -134,6 +135,7 @@ public class CataclysmDDA extends SDLActivity {
         setImeInsetListener();
         applySystemUiMode();
         installHudOverlay();
+        installLuaUiOverlay();
     }
 
     @Override
@@ -143,12 +145,18 @@ public class CataclysmDDA extends SDLActivity {
         if (hudOverlay != null) {
             hudOverlay.start();
         }
+        if (luaUiOverlay != null) {
+            luaUiOverlay.start();
+        }
     }
 
     @Override
     protected void onPause() {
         if (hudOverlay != null) {
             hudOverlay.stop();
+        }
+        if (luaUiOverlay != null) {
+            luaUiOverlay.stop();
         }
         super.onPause();
     }
@@ -290,6 +298,9 @@ public class CataclysmDDA extends SDLActivity {
     private static native String nativeGetHudSnapshot();
     private static native void nativeSetHudMinimapRect(int x, int y, int width, int height,
         boolean visible);
+    private static native String nativeGetLuaUiSnapshot();
+    private static native boolean nativeSubmitLuaUiInteraction(String widgetId, String value);
+    private static native boolean nativeSelectLuaUiPage(String pageId);
 
     private void installHudOverlay() {
         if (mLayout == null || hudOverlay != null) {
@@ -298,6 +309,53 @@ public class CataclysmDDA extends SDLActivity {
         hudOverlay = new AndroidHudOverlay(this);
         mLayout.addView(hudOverlay, new ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    private void installLuaUiOverlay() {
+        if (mLayout == null || luaUiOverlay != null) {
+            return;
+        }
+        luaUiOverlay = new LuaUiOverlay(this);
+        mLayout.addView(luaUiOverlay, new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    String getLuaUiSnapshot() {
+        try {
+            return nativeGetLuaUiSnapshot();
+        } catch (UnsatisfiedLinkError e) {
+            return "";
+        }
+    }
+
+    boolean submitLuaUiInteraction(String widgetId, String value) {
+        try {
+            return nativeSubmitLuaUiInteraction(widgetId, value);
+        } catch (UnsatisfiedLinkError e) {
+            return false;
+        }
+    }
+
+    boolean selectLuaUiPage(String pageId) {
+        try {
+            return nativeSelectLuaUiPage(pageId);
+        } catch (UnsatisfiedLinkError e) {
+            return false;
+        }
+    }
+
+    void setLuaHudEditing(boolean editing) {
+        installLuaUiOverlay();
+        if (luaUiOverlay != null) {
+            luaUiOverlay.setHudEditing(editing);
+        }
+    }
+
+    void showLuaHudManager() {
+        installLuaUiOverlay();
+        if (luaUiOverlay != null) {
+            luaUiOverlay.showHudManager();
+        }
     }
 
     boolean enqueueHudAction(String actionId, int contextRevision) {
@@ -481,8 +539,12 @@ public class CataclysmDDA extends SDLActivity {
                         mLayout.setVisibility(View.VISIBLE);
                     }
                     installHudOverlay();
+                    installLuaUiOverlay();
                     if (hudOverlay != null) {
                         hudOverlay.start();
+                    }
+                    if (luaUiOverlay != null) {
+                        luaUiOverlay.start();
                     }
                 }
             });
@@ -514,7 +576,8 @@ public class CataclysmDDA extends SDLActivity {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
-        if (hudOverlay != null) {
+        if (hudOverlay != null && (luaUiOverlay == null ||
+                !luaUiOverlay.containsTouch(event.getRawX(), event.getRawY()))) {
             hudOverlay.observeGlobalTouchEvent(event);
         }
         return super.dispatchTouchEvent(event);
