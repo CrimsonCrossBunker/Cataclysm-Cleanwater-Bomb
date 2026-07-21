@@ -832,11 +832,50 @@ static std::optional<std::string> prompt_world_name( const std::string &title,
         return true;
     } );
     std::string message = popup.query();
+    if( popup.cancelled() ) {
+        return std::nullopt;
+    }
     return message;
 }
 
 int worldfactory::show_worldgen_advanced( WORLD *world )
 {
+#if defined(__ANDROID__)
+    const int width = std::max( FULL_SCREEN_WIDTH, TERMX / 2 );
+    const int offset_x = TERMX > FULL_SCREEN_WIDTH ? ( TERMX - width ) / 2 : 0;
+    const catacurses::window bridge = catacurses::newwin( TERMY, width, point( offset_x, 0 ) );
+    int current_page = 0;
+    while( current_page >= 0 ) {
+        if( current_page == 0 ) {
+            current_page += show_worldgen_tab_modselection( bridge, world, true );
+            continue;
+        }
+        if( current_page == 1 ) {
+            current_page += show_worldgen_tab_options( bridge, world, true );
+            continue;
+        }
+        const std::optional<std::string> result = prompt_world_name(
+                    _( "Choose a new name for this world." ), world->world_name );
+        if( !result ) {
+            current_page = 1;
+            continue;
+        }
+        if( result->empty() ) {
+            if( !android_imgui_dialog::confirm(
+                    _( "World name" ),
+                    _( "World name is empty. Randomize the name?" ),
+                    _( "Randomize" ), _( "Back" ) ) ) {
+                current_page = 1;
+                continue;
+            }
+            world->world_name = pick_random_name();
+        } else {
+            world->world_name = *result;
+        }
+        return current_page;
+    }
+    return current_page;
+#else
     // set up window
     catacurses::window wf_win;
     ui_adaptor ui;
@@ -885,6 +924,7 @@ int worldfactory::show_worldgen_advanced( WORLD *world )
         }
     }
     return curtab;
+#endif
 }
 
 WORLD *worldfactory::make_new_world( special_game_type special_type )
