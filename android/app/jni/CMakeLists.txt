@@ -46,7 +46,7 @@ add_subdirectory(${CATA_REPO_ROOT}/src/third-party third-party)
 add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
 add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
 
-file(GLOB CATA_SOURCES ${CATA_REPO_ROOT}/src/*.cpp
+file(GLOB CATA_SOURCES CONFIGURE_DEPENDS ${CATA_REPO_ROOT}/src/*.cpp
      ${CATA_REPO_ROOT}/src/cata_allocator_c.c)
 
 add_library(main SHARED ${CATA_SOURCES})
