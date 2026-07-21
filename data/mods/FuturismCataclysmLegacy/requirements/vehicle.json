@@ -1,0 +1,7 @@
+[
+  {
+    "id": "solar_panel_v3",
+    "type": "requirement",
+    "components": [ [ [ "solar_cell_v3", 3 ] ], [ [ "cable", 2 ] ] ]
+  }
+]
