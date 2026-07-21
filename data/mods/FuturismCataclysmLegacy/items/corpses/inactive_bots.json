@@ -2,6 +2,7 @@
   {
     "type": "ITEM",
     "id": "broken_fcl_eyebot",
+    "looks_like": "broken_eyebot",
     "symbol": ",",
     "color": "green",
     "name": { "str": "broken eyebot" },
@@ -18,7 +19,7 @@
   },
   {
     "id": "fcl_bot_eyebot",
-    "looks_like": "broken_fcl_eyebot",
+    "looks_like": "broken_eyebot",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
     "name": { "str": "inactive eyebot" },
@@ -47,6 +48,7 @@
   {
     "type": "ITEM",
     "id": "broken_fcl_copbot",
+    "looks_like": "broken_copbot",
     "symbol": ",",
     "color": "green",
     "name": { "str": "broken police bot" },
@@ -63,7 +65,7 @@
   },
   {
     "id": "fcl_bot_copbot",
-    "looks_like": "broken_fcl_copbot",
+    "looks_like": "broken_copbot",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
     "name": { "str": "inactive police bot" },
@@ -92,6 +94,7 @@
   {
     "type": "ITEM",
     "id": "broken_fcl_molebot",
+    "looks_like": "broken_molebot",
     "symbol": ",",
     "color": "green",
     "name": { "str": "broken miner bot" },
@@ -108,7 +111,7 @@
   },
   {
     "id": "fcl_bot_molebot",
-    "looks_like": "broken_fcl_molebot",
+    "looks_like": "broken_molebot",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
     "name": { "str": "inactive miner bot" },
@@ -137,6 +140,7 @@
   {
     "type": "ITEM",
     "id": "broken_fcl_riotbot",
+    "looks_like": "broken_riotbot",
     "symbol": ",",
     "color": "green",
     "name": { "str": "broken riot control bot" },
@@ -153,7 +157,7 @@
   },
   {
     "id": "fcl_bot_riotbot",
-    "looks_like": "broken_fcl_riotbot",
+    "looks_like": "broken_riotbot",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
     "name": { "str": "inactive riot control bot" },
