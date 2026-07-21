@@ -47,7 +47,7 @@
     "price": "9 kUSD",
     "price_postapoc": "900 USD",
     "to_hit": -4,
-    "material": [ "steel", "plastic" ],
+    "material": [ "steel", "superalloy", "plastic" ],
     "symbol": "(",
     "color": "dark_gray",
     "skill": "rifle",
