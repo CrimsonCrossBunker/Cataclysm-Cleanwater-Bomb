@@ -178,7 +178,7 @@
         "pocket_type": "MAGAZINE_WELL",
         "rigid": true,
         "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
-        "default_magazine": "fcl_fusion_pack"
+        "default_magazine": "fcl_fusion_10_mag"
       }
     ],
     "firing_requirements": { "DEFAULT": [ { "pocket": "power", "qty": 5 }, { "pocket": "fusion pellet", "qty": 1 } ] },
@@ -229,7 +229,7 @@
         "pocket_type": "MAGAZINE_WELL",
         "rigid": true,
         "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
-        "default_magazine": "fcl_fusion_pack"
+        "default_magazine": "fcl_fusion_20_mag"
       }
     ],
     "firing_requirements": {
