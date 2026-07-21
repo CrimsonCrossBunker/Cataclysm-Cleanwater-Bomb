@@ -110,6 +110,7 @@ std::unique_ptr<cataimgui::client> imclient;
 
     #include "action.h"
     #include "android_hud.h"
+    #include "catalua_ui.h"
     #include "inventory.h"
     #include "map.h"
     #include "vehicle.h"
@@ -1040,6 +1041,57 @@ extern "C" {
         ( void )env;
         ( void )jcls;
         android_hud::set_minimap_rect( { x, y, width, height, visible == JNI_TRUE } );
+    }
+
+    JNIEXPORT jstring JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetLuaUiSnapshot(
+        JNIEnv *env, jclass jcls )
+    {
+        ( void )jcls;
+        const std::string snapshot = cata::lua_ui::android_snapshot_json();
+        return env->NewStringUTF( snapshot.c_str() );
+    }
+
+    JNIEXPORT jboolean JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSubmitLuaUiInteraction(
+        JNIEnv *env, jclass jcls, jstring widget_id, jstring value )
+    {
+        ( void )jcls;
+        if( widget_id == nullptr || value == nullptr ) {
+            return JNI_FALSE;
+        }
+        const char *raw_id = env->GetStringUTFChars( widget_id, nullptr );
+        const char *raw_value = env->GetStringUTFChars( value, nullptr );
+        if( raw_id == nullptr || raw_value == nullptr ) {
+            if( raw_id != nullptr ) {
+                env->ReleaseStringUTFChars( widget_id, raw_id );
+            }
+            if( raw_value != nullptr ) {
+                env->ReleaseStringUTFChars( value, raw_value );
+            }
+            return JNI_FALSE;
+        }
+        const bool accepted = cata::lua_ui::submit_android_interaction( raw_id, raw_value );
+        env->ReleaseStringUTFChars( widget_id, raw_id );
+        env->ReleaseStringUTFChars( value, raw_value );
+        return accepted ? JNI_TRUE : JNI_FALSE;
+    }
+
+    JNIEXPORT jboolean JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSelectLuaUiPage(
+        JNIEnv *env, jclass jcls, jstring page_id )
+    {
+        ( void )jcls;
+        if( page_id == nullptr ) {
+            return JNI_FALSE;
+        }
+        const char *raw_id = env->GetStringUTFChars( page_id, nullptr );
+        if( raw_id == nullptr ) {
+            return JNI_FALSE;
+        }
+        const bool accepted = cata::lua_ui::select_android_page( raw_id );
+        env->ReleaseStringUTFChars( page_id, raw_id );
+        return accepted ? JNI_TRUE : JNI_FALSE;
     }
 
     // Compatibility shim for an old, no-longer-rendered extra-button layout.
