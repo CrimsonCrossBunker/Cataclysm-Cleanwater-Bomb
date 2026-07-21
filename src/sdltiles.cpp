@@ -4649,6 +4649,10 @@ uint32_t finger_repeat_delay = 500;
 static bool needs_sdl_surface_visibility_refresh = true;
 
 input_context touch_input_context;
+// The copied context contains transient fields (timeout, coordinates, next action)
+// that change while handling a single gesture.  Track the owning stack object
+// separately so those mutations are not mistaken for opening a different screen.
+static const input_context *touch_input_context_owner = nullptr;
 static bool android_has_active_world();
 static void android_request_repaint();
 
@@ -5692,10 +5696,13 @@ static void CheckMessages()
 
     // Copy the current input context
     input_context *new_input_context = input_context::input_context_stack.back();
-    if( new_input_context && *new_input_context != touch_input_context ) {
+    if( new_input_context ) {
+        const bool owner_changed = new_input_context != touch_input_context_owner;
+        const bool category_changed = new_input_context->get_category() !=
+                                      touch_input_context.get_category();
 
         // If we were in an allow_text_entry input context, and text input is still active, and we're auto-managing keyboard, hide it.
-        if( touch_input_context.allow_text_entry &&
+        if( ( owner_changed || category_changed ) && touch_input_context.allow_text_entry &&
             !android_wants_text_input( *new_input_context ) &&
             IsTextInputActive( ::window.get() ) &&
             get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
@@ -5703,8 +5710,14 @@ static void CheckMessages()
         }
 
         touch_input_context = *new_input_context;
-        needupdate = true;
-        ui_manager::redraw_invalidated();
+        touch_input_context_owner = new_input_context;
+        if( owner_changed || category_changed ) {
+            // A tap that opened a new screen must not become the first half of a
+            // double-tap gesture inside that new input context.
+            last_tap_time = 0;
+            needupdate = true;
+            ui_manager::redraw_invalidated();
+        }
     }
 
     bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE" &&
@@ -5960,12 +5973,18 @@ static void CheckMessages()
             last_tap_time > 0 &&
             ticks - last_tap_time >= static_cast<uint32_t>
             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-            // Single tap
-            last_tap_time = ticks;
-            last_input = input_event( is_default_mode ? get_key_event_from_string(
-                                          get_option<std::string>( "ANDROID_TAP_KEY" ) ) : '\n', input_event_t::keyboard_char );
+            // Gameplay keeps its configurable tap key.  Menus use the pointer
+            // coordinates emitted on finger-up and must not receive a second,
+            // delayed Enter/confirm for the same physical tap.
+            if( is_default_mode ) {
+                last_input = input_event( get_key_event_from_string(
+                                              get_option<std::string>( "ANDROID_TAP_KEY" ) ),
+                                          input_event_t::keyboard_char );
+            }
             last_tap_time = 0;
-            return;
+            if( is_default_mode ) {
+                return;
+            }
         }
 
         // ensure hint text pops up even if player doesn't move finger to trigger a FINGERMOTION event
@@ -6441,8 +6460,20 @@ static void CheckMessages()
                         if( android_imgui_touch_active ) {
                             android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
                             android_process_imgui_touch( CATA_MOUSEBUTTONUP, finger_curr_x, finger_curr_y );
-                            // Wake the owning ImGui loop so it can draw the click result.
-                            last_input.type = input_event_t::timeout;
+                            if( last_tap_time > 0 &&
+                                ticks - last_tap_time < static_cast<uint32_t>(
+                                    get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
+                                // ImGui windows consume touch as synthetic mouse events and
+                                // bypass the regular menu gesture branch below.  Preserve the
+                                // same double-tap Back gesture for dialogs such as keybindings.
+                                last_input = input_event( KEY_ESCAPE,
+                                                          input_event_t::keyboard_char );
+                                last_tap_time = 0;
+                            } else {
+                                // Wake the owning ImGui loop so it can draw the click result.
+                                last_input.type = input_event_t::timeout;
+                                last_tap_time = ticks;
+                            }
                         } else if( is_quick_shortcut_touch ) {
                             input_event *quick_shortcut = get_quick_shortcut_under_finger();
                             if( quick_shortcut ) {
@@ -6617,15 +6648,25 @@ static void CheckMessages()
                                     if( !is_default_mode &&
                                         touch_input_context.is_action_registered( "SELECT" ) &&
                                         held_distance < hold_deadzone ) {
-                                        last_input = input_event( MouseInput::LeftButtonReleased,
-                                                                  input_event_t::mouse );
-                                        const SDL_Point touch_point = window_to_display_buffer_coords( SDL_Point{
-                                            static_cast<int>( std::lround( finger_curr_x ) ),
-                                            static_cast<int>( std::lround( finger_curr_y ) )
-                                        } );
-                                        last_input.mouse_pos = point( touch_point.x, touch_point.y );
-                                        last_input_has_explicit_mouse_pos = true;
-                                        last_tap_time = 0;
+                                        if( last_tap_time > 0 &&
+                                            ticks - last_tap_time < static_cast<uint32_t>(
+                                                get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
+                                            // Preserve double-tap Back without adding a delayed
+                                            // single-tap confirmation on top of pointer selection.
+                                            last_input = input_event( KEY_ESCAPE,
+                                                                      input_event_t::keyboard_char );
+                                            last_tap_time = 0;
+                                        } else {
+                                            last_input = input_event( MouseInput::LeftButtonReleased,
+                                                                      input_event_t::mouse );
+                                            const SDL_Point touch_point = window_to_display_buffer_coords( SDL_Point{
+                                                static_cast<int>( std::lround( finger_curr_x ) ),
+                                                static_cast<int>( std::lround( finger_curr_y ) )
+                                            } );
+                                            last_input.mouse_pos = point( touch_point.x, touch_point.y );
+                                            last_input_has_explicit_mouse_pos = true;
+                                            last_tap_time = ticks;
+                                        }
                                     } else {
                                         handle_finger_input( ticks );
                                     }
