@@ -167,18 +167,18 @@
     ],
     "pocket_data": [
       {
-        "id": "power",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
-      },
-      {
         "id": "fusion pellet",
         "pocket_type": "MAGAZINE_WELL",
         "rigid": true,
         "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
         "default_magazine": "fcl_fusion_10_mag"
+      },
+      {
+        "id": "power",
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "flag_restriction": [ "BATTERY_MEDIUM" ],
+        "default_magazine": "medium_battery_cell"
       }
     ],
     "firing_requirements": { "DEFAULT": [ { "pocket": "power", "qty": 5 }, { "pocket": "fusion pellet", "qty": 1 } ] },
@@ -218,18 +218,18 @@
     "ammo": [ "fcl_fusion_pellet", "battery" ],
     "pocket_data": [
       {
-        "id": "power",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_HEAVY" ],
-        "default_magazine": "heavy_battery_cell"
-      },
-      {
         "id": "fusion pellet",
         "pocket_type": "MAGAZINE_WELL",
         "rigid": true,
         "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
         "default_magazine": "fcl_fusion_20_mag"
+      },
+      {
+        "id": "power",
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "flag_restriction": [ "BATTERY_HEAVY" ],
+        "default_magazine": "heavy_battery_cell"
       }
     ],
     "firing_requirements": {
