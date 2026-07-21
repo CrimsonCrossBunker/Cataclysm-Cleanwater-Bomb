@@ -1486,7 +1486,7 @@ int throw_cost( const Character &c, const item &to_throw )
     // Differences:
     // Dex is more (2x) important for throwing speed
     // At 10 skill, the cost is down to 0.75%, not 0.66%
-    const int base_move_cost = to_throw.attack_time( c ) / 2;
+    const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
     // Throw leverage multiplier: scale the weight-based portion of attack_time
     const float weight_mult = c.throw_weight_multiplier();
     const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
