@@ -11,7 +11,7 @@ jobs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
     - id: skip_check
-      uses: fkirc/skip-duplicate-actions@04a1aebece824b56e6ad6a401d015479cd1c50b3 # master
+      uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578 # master
       with:
         cancel_others: 'true'
         paths: '["**.json", ".github/workflows/json.yml"]'
@@ -28,7 +28,7 @@ jobs:
     if: ${{ needs.skip-duplicates.outputs.should_skip != 'true' }}
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
     - name: JSON style check

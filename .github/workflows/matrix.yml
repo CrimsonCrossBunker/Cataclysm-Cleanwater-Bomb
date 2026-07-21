@@ -58,7 +58,7 @@ jobs:
       should_skip_code: ${{ steps.skip_check.outputs.should_skip }}
     steps:
       - id: skip_check
-        uses: fkirc/skip-duplicate-actions@04a1aebece824b56e6ad6a401d015479cd1c50b3 # master
+        uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578 # master
         with:
           skip_after_successful_duplicate: 'false'
           paths_ignore: '["android/**", "build-data/osx/**", "doc/**", "doxygen_doc/**", "lgtm/**", "msvc-**", "tools/**", "utilities/**", "data/**", "lang/**"]'
@@ -70,7 +70,7 @@ jobs:
       should_skip_data: ${{ steps.skip_check.outputs.should_skip }}
     steps:
       - id: skip_check
-        uses: fkirc/skip-duplicate-actions@04a1aebece824b56e6ad6a401d015479cd1c50b3 # master
+        uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578 # master
         with:
           skip_after_successful_duplicate: 'false'
           paths_ignore: '["android/**", "build-data/osx/**", "doc/**", "doxygen_doc/**", "lgtm/**", "msvc-**", "tools/**", "utilities/**"]'
@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: checkout repository
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
     - name: build SDL3 shader artifacts
@@ -261,7 +261,7 @@ jobs:
         sudo rm -rf $ANDROID_HOME
     - name: checkout repository
       if: ${{ env.SKIP == 'false' }}
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
     - name: download prebuilt shader artifacts
