@@ -167,21 +167,21 @@
     ],
     "pocket_data": [
       {
-        "id": "fusion pellet",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
-        "default_magazine": "fcl_fusion_10_mag"
-      },
-      {
         "id": "power",
         "pocket_type": "MAGAZINE_WELL",
         "rigid": true,
         "flag_restriction": [ "BATTERY_MEDIUM" ],
         "default_magazine": "medium_battery_cell"
+      },
+      {
+        "id": "ammo",
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
+        "default_magazine": "fcl_fusion_10_mag"
       }
     ],
-    "firing_requirements": { "DEFAULT": [ { "pocket": "power", "qty": 5 }, { "pocket": "fusion pellet", "qty": 1 } ] },
+    "firing_requirements": { "DEFAULT": [ { "pocket": "ammo", "qty": 1 }, { "pocket": "power", "qty": 5 } ] },
     "flags": [ "NEVER_JAMS", "NON_FOULING", "NEEDS_NO_LUBE", "OVERHEATS" ],
     "faults": [ { "fault": "fault_overheat_melting" }, { "fault": "fault_overheat_safety" } ],
     "melee_damage": { "bash": 5 }
@@ -218,23 +218,23 @@
     "ammo": [ "fcl_fusion_pellet", "battery" ],
     "pocket_data": [
       {
-        "id": "fusion pellet",
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
-        "default_magazine": "fcl_fusion_20_mag"
-      },
-      {
         "id": "power",
         "pocket_type": "MAGAZINE_WELL",
         "rigid": true,
         "flag_restriction": [ "BATTERY_HEAVY" ],
         "default_magazine": "heavy_battery_cell"
+      },
+      {
+        "id": "ammo",
+        "pocket_type": "MAGAZINE_WELL",
+        "rigid": true,
+        "item_restriction": [ "fcl_fusion_pack", "fcl_fusion_10_mag", "fcl_fusion_20_mag" ],
+        "default_magazine": "fcl_fusion_20_mag"
       }
     ],
     "firing_requirements": {
-      "DEFAULT": [ { "pocket": "power", "qty": 20 }, { "pocket": "fusion pellet", "qty": 1 } ],
-      "AUTO": [ { "pocket": "power", "qty": 20 }, { "pocket": "fusion pellet", "qty": 1 } ]
+      "DEFAULT": [ { "pocket": "ammo", "qty": 1 }, { "pocket": "power", "qty": 20 } ],
+      "AUTO": [ { "pocket": "ammo", "qty": 1 }, { "pocket": "power", "qty": 20 } ]
     },
     "valid_mod_locations": [
       [ "accessories", 2 ],
