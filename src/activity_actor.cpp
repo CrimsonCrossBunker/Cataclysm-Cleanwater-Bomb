@@ -3023,7 +3023,7 @@ void move_items_activity_actor::do_turn( player_activity &act, Character &who )
         // This is for hauling across zlevels, remove when going up and down stairs
         // is no longer teleportation
         const tripoint_bub_ms src = target.pos_bub( here );
-        const int distance = src.z() == dest.z() ? std::max( rl_dist( src, dest ), 1 ) : 1;
+        const int distance = src.z() == dest.z() ? std::max( static_cast<int>( trig_dist( src, dest ) ), 1 ) : 1;
         // Yuck, I'm sticking weariness scaling based on activity level here
         const float weary_mult = who.exertion_adjusted_move_multiplier( exertion_level() );
         who.mod_moves( -Pickup::cost_to_move_item( who, newit ) * distance / weary_mult );

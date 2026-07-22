@@ -1233,6 +1233,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         }
 
         dispersion_sources dispersion = total_gun_dispersion( gun, recoil_total(), proj.shot_spread );
+        dispersion.add_range( dispersion_variance() );
 
         dealt_projectile_attack shot;
         projectile_attack( shot, proj, &here, pos_bub( here ), aim, dispersion, this, in_veh, wp_attack );
@@ -2768,7 +2769,7 @@ static double dispersion_from_skill( double skill, double weapon_dispersion )
         return 0.0;
     }
     double skill_shortfall = static_cast<double>( MAX_SKILL ) - skill;
-    double dispersion_penalty = 6 * skill_shortfall;
+    double dispersion_penalty = skill_shortfall;
     double skill_threshold = 5;
     if( skill >= skill_threshold ) {
         double post_threshold_skill_shortfall = static_cast<double>( MAX_SKILL ) - skill;
@@ -2779,7 +2780,7 @@ static double dispersion_from_skill( double skill, double weapon_dispersion )
     // Unskilled shooters suffer greater penalties, still scaling with weapon penalties.
     double pre_threshold_skill_shortfall = skill_threshold - skill;
     dispersion_penalty += weapon_dispersion *
-                          ( 1.25 + pre_threshold_skill_shortfall * 6.0 / skill_threshold );
+                          ( 1.25 + pre_threshold_skill_shortfall / skill_threshold );
 
     return dispersion_penalty;
 }
@@ -4096,7 +4097,7 @@ bool target_ui::action_aim()
     for( int i = 0; i < 10; ++i ) {
         do_aim( *you, *relevant, target, min_recoil );
     }
-    add_msg_debug( debugmode::debug_filter::DF_BALLISTIC,
+    add_msg_debug( debugmode::debug_filter::DF_RANGED,
                    "you reduced recoil from %f to %f in 10 moves",
                    hold_recoil, you->recoil );
     // We've changed pc.recoil, update penalty

@@ -775,6 +775,7 @@ class Character : public Creature, public visitable
 
         /* Adjusts provided sight dispersion to account for player stats */
         int effective_dispersion( int dispersion, bool zoom = false ) const;
+        double dispersion_variance() const;
 
         dispersion_sources total_gun_dispersion( const item &gun, double recoil, int spread ) const;
 
