@@ -11,7 +11,7 @@
     "name": "GUN_DISPERSION_DIVIDER",
     "//": "Value that divides total weapon dispersion.  15 means that weapons became 15 times more accurate than default.",
     "stype": "float",
-    "value": 26
+    "value": 24
   },
   {
     "type": "EXTERNAL_OPTION",
