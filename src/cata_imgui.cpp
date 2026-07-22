@@ -694,6 +694,41 @@ void cataimgui::client::process_input( void *input, int display_buffer_w, int di
         ( void )display_buffer_h;
 #if SDL_MAJOR_VERSION >= 3
         ImGui_ImplSDL3_ProcessEvent( evt );
+#if defined(__ANDROID__)
+        // Android keyboards may report editing controls with SDLK_UNKNOWN while
+        // preserving the physical scancode.  The stock SDL3 ImGui backend maps
+        // most controls from keycode only, so normalize the controls needed by
+        // text widgets here.  AddKeyEvent filters duplicates when both paths
+        // resolve the same key.
+        if( evt->type == CATA_KEYDOWN || evt->type == CATA_KEYUP ) {
+            ImGuiKey key = ImGuiKey_None;
+            switch( evt->key.scancode ) {
+                case SDL_SCANCODE_BACKSPACE:
+                    key = ImGuiKey_Backspace;
+                    break;
+                case SDL_SCANCODE_DELETE:
+                    key = ImGuiKey_Delete;
+                    break;
+                case SDL_SCANCODE_LEFT:
+                    key = ImGuiKey_LeftArrow;
+                    break;
+                case SDL_SCANCODE_RIGHT:
+                    key = ImGuiKey_RightArrow;
+                    break;
+                case SDL_SCANCODE_HOME:
+                    key = ImGuiKey_Home;
+                    break;
+                case SDL_SCANCODE_END:
+                    key = ImGuiKey_End;
+                    break;
+                default:
+                    break;
+            }
+            if( key != ImGuiKey_None ) {
+                ImGui::GetIO().AddKeyEvent( key, evt->type == CATA_KEYDOWN );
+            }
+        }
+#endif
 #else
         // Coordinates already converted to display_buffer space by
         // convert_event_to_display_buffer_coords in the event pump.

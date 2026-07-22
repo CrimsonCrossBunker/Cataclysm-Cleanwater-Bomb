@@ -80,6 +80,7 @@
 #include "trait_group.h"
 #include "translation.h"
 #include "translations.h"
+#include "try_parse_integer.h"
 #include "type_id.h"
 #include "uilist.h"
 #include "ui_manager.h"
@@ -166,7 +167,8 @@ static void set_detail_scroll()
 
 #if defined(TILES)
 static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int &out_h );
-static void draw_character_preview_cell( const avatar &u );
+static void draw_character_preview_cell( const avatar &u,
+        const ImVec2 &available = ImVec2() );
 
 // The preview occupies its own table column only when tiles + the option are on and the active
 // tileset can actually produce a preview. Isometric tilesets are unsupported by
@@ -1156,7 +1158,8 @@ void draw_action_button( const std::string &button_text, const std::string &butt
 }
 
 // @param draw_effective_stats - if true, draws effective (current) stat; base stat is always drawn
-void draw_character_stats( const Character &who, bool draw_effective_stats )
+void draw_character_stats( const Character &who, bool draw_effective_stats,
+                           const std::function<void()> &draw_description )
 {
 
     auto display_stat_value = [&draw_effective_stats]( int effective_stat, int base_stat ) {
@@ -1193,9 +1196,13 @@ void draw_character_stats( const Character &who, bool draw_effective_stats )
         ImGui::EndTable();
     }
 
-    char_creation::draw_age( who );
-    char_creation::draw_height( who );
-    char_creation::draw_blood( who );
+    if( draw_description ) {
+        draw_description();
+    } else {
+        char_creation::draw_age( who );
+        char_creation::draw_height( who );
+        char_creation::draw_blood( who );
+    }
 }
 
 void draw_character_skills( const Character &who )
@@ -3022,7 +3029,7 @@ static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int 
 // whose column header already reads "Preview"). Unlike the earlier foreground-draw approach this
 // is ordinary cell content, so it participates in layout and scrolls with the detail column
 // instead of floating above everything.
-static void draw_character_preview_cell( const avatar &u )
+static void draw_character_preview_cell( const avatar &u, const ImVec2 &available )
 {
     int tex_w = 0;
     int tex_h = 0;
@@ -3030,8 +3037,17 @@ static void draw_character_preview_cell( const avatar &u )
     if( !tex || tex_w <= 0 || tex_h <= 0 ) {
         return;
     }
-    ImGui::Image( reinterpret_cast<ImTextureID>( tex ),
-                  ImVec2( static_cast<float>( tex_w ), static_cast<float>( tex_h ) ) );
+    ImVec2 draw_size( static_cast<float>( tex_w ), static_cast<float>( tex_h ) );
+    if( available.x > 0.0F && available.y > 0.0F ) {
+        const float scale = std::min( { 1.0F, available.x / draw_size.x,
+                                        available.y / draw_size.y } );
+        draw_size.x *= scale;
+        draw_size.y *= scale;
+        const ImVec2 cursor = ImGui::GetCursorPos();
+        ImGui::SetCursorPos( ImVec2( cursor.x + std::max( 0.0F, ( available.x - draw_size.x ) * 0.5F ),
+                                     cursor.y + std::max( 0.0F, ( available.y - draw_size.y ) * 0.5F ) ) );
+    }
+    ImGui::Image( reinterpret_cast<ImTextureID>( tex ), draw_size );
 }
 #endif // TILES
 
@@ -3095,7 +3111,17 @@ void character_creator_ui_impl::draw_top_bar( const avatar &u ) const
 namespace
 {
 
-void draw_android_character_creator_details( const character_creator_tab tab )
+void draw_android_character_preview( const ImVec2 &available )
+{
+#if defined(TILES)
+    draw_character_preview_cell( get_avatar(), available );
+#else
+    static_cast<void>( available );
+#endif
+}
+
+void draw_android_character_creator_details( const character_creator_tab tab,
+        const std::function<void()> &draw_description )
 {
     avatar &you = get_avatar();
     switch( tab ) {
@@ -3148,7 +3174,7 @@ void draw_android_character_creator_details( const character_creator_tab tab )
                 ImGui::TableSetupColumn( _( "Start" ), ImGuiTableColumnFlags_WidthStretch, 0.34F );
                 ImGui::TableHeadersRow();
                 ImGui::TableNextColumn();
-                char_creation::draw_character_stats( who, false );
+                char_creation::draw_character_stats( who, false, draw_description );
                 draw_spacer();
                 char_creation::draw_character_skills( who );
                 ImGui::TableNextColumn();
@@ -3180,11 +3206,14 @@ android_character_creator_snapshot make_android_character_creator_snapshot(
     android_character_creator_snapshot result;
     result.tab = cc_uistate.selected_tab;
     const avatar &you = get_avatar();
-    result.name = you.name.empty() ? _( "Random name" ) : you.name;
+    result.name = you.name;
     result.gender = remove_color_tags( char_creation::get_gender_string( you.male ) );
-    result.age = you.age_string( get_scenario()->start_of_game() );
-    result.height = you.height_string();
+    result.age = you.base_age();
+    result.height = you.base_height();
     result.blood = io::enum_to_string( you.my_blood_type ) + ( you.blood_rh_factor ? "+" : "-" );
+#if defined(TILES)
+    result.preview_available = character_preview_active();
+#endif
 
     const std::shared_ptr<uilist> menu = ui.get_current_tab_uilist();
     if( menu ) {
@@ -3255,7 +3284,7 @@ bool character_creator_ui::display()
     // load historical achievements and trigger a nested redraw; registering before that point
     // would expose partially built selection vectors to the view.
     auto ccui = std::make_unique<android_character_creator_ui>(
-                    draw_android_character_creator_details );
+                    draw_android_character_creator_details, draw_android_character_preview );
 #endif
 
     ui_manager::invalidate_all_ui_adaptors();
@@ -3283,6 +3312,25 @@ bool character_creator_ui::display()
                 upon_switching_tab();
             } else if( mobile_action->type == android_character_creator_action_type::command ) {
                 handle_action( mobile_action->command );
+            } else if( mobile_action->type == android_character_creator_action_type::set_name ) {
+                get_avatar().name = utf8_truncate( mobile_action->value, NAME_CHARACTER_LIMIT );
+            } else if( mobile_action->type == android_character_creator_action_type::set_age ) {
+                const ret_val<int> age = try_parse_integer<int>( mobile_action->value, true );
+                if( age.success() ) {
+                    get_avatar().set_base_age( clamp( age.value(), CHARACTER_AGE_MIN,
+                                                      CHARACTER_AGE_MAX ) );
+                }
+            } else if( mobile_action->type == android_character_creator_action_type::set_height ) {
+                const ret_val<int> height = try_parse_integer<int>( mobile_action->value, true );
+                if( height.success() ) {
+                    get_avatar().set_base_height( clamp( height.value(), Character::min_height(),
+                                                         Character::max_height() ) );
+                }
+            } else if( mobile_action->type == android_character_creator_action_type::save_template ) {
+                if( !mobile_action->value.empty() &&
+                    mobile_action->value.find( '/' ) == std::string::npos ) {
+                    get_avatar().save_template( mobile_action->value, pool_type::FREEFORM );
+                }
             } else {
                 std::shared_ptr<uilist> menu = get_current_tab_uilist();
                 if( menu && mobile_action->index >= 0 &&

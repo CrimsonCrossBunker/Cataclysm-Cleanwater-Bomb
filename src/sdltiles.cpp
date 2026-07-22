@@ -1426,6 +1426,7 @@ void refresh_display()
 
 #if defined(__ANDROID__)
     draw_terminal_size_preview();
+    draw_virtual_joystick();
 #endif
     draw_gamepad_radial_menu();
     RenderPresent( renderer );
@@ -6028,9 +6029,31 @@ static void CheckMessages()
         convert_event_to_display_buffer_coords( &ev_display );
         imclient->process_input( &ev_display, imgui_buf_w, imgui_buf_h );
 
+        bool imgui_owns_text_event = cataimgui::client::want_text_input() &&
+                                     ( ev.type == CATA_KEYDOWN || ev.type == CATA_KEYUP ||
+                                       ev.type == CATA_TEXTINPUT || ev.type == CATA_TEXTEDITING );
+#if defined(__ANDROID__)
+        // Android's system Back key dismisses the focused text widget below;
+        // it is not text editing input and must keep following that path.
+        if( imgui_owns_text_event &&
+            ( ev.type == CATA_KEYDOWN || ev.type == CATA_KEYUP ) &&
+            GetKeysym( ev ).sym == SDLK_AC_BACK ) {
+            imgui_owns_text_event = false;
+        }
+#endif
+
         // Window events: SDL3 flattens the SDL_WINDOWEVENT+subtype to top-level events.
         // IsWindowEvent/GetWindowEventID normalize across versions.
-        if( IsWindowEvent( ev ) ) {
+        if( imgui_owns_text_event ) {
+            // ImGui has already received this event.  Wake the current input
+            // context so the widget redraws, but do not also resolve the same
+            // keystroke through gameplay/menu bindings (for example, typing
+            // 'a' in a name field must not invoke CHANGE_AGE).
+            last_input = input_event();
+            last_input.type = input_event_t::timeout;
+            text_refresh = true;
+            ui_manager::redraw_invalidated();
+        } else if( IsWindowEvent( ev ) ) {
             switch( GetWindowEventID( ev ) ) {
 #if defined(__ANDROID__)
                 // SDL will send a focus lost event whenever the app loses focus (eg. lock screen, switch app focus etc.)

@@ -28,9 +28,10 @@ struct android_character_creator_snapshot {
     std::vector<android_character_creator_row_snapshot> rows;
     std::string name;
     std::string gender;
-    std::string age;
-    std::string height;
+    int age = 0;
+    int height = 0;
     std::string blood;
+    bool preview_available = false;
 };
 
 enum class android_character_creator_action_type : int {
@@ -38,20 +39,29 @@ enum class android_character_creator_action_type : int {
     select_row,
     activate_row,
     command,
+    set_name,
+    set_age,
+    set_height,
+    save_template,
 };
 
 struct android_character_creator_action {
     android_character_creator_action_type type;
     int index = 0;
     std::string command;
+    std::string value;
 };
 
 class android_character_creator_ui : public cataimgui::window
 {
     public:
-        using detail_renderer = std::function<void( character_creator_tab )>;
+        using inline_renderer = std::function<void()>;
+        using detail_renderer = std::function<void( character_creator_tab,
+                                const inline_renderer & )>;
+        using preview_renderer = std::function<void( const ImVec2 & )>;
 
-        explicit android_character_creator_ui( detail_renderer render_details );
+        android_character_creator_ui( detail_renderer render_details,
+                                      preview_renderer render_preview );
 
         void set_snapshot( android_character_creator_snapshot next );
         void show_loading();
@@ -64,17 +74,38 @@ class android_character_creator_ui : public cataimgui::window
     private:
         android_character_creator_snapshot snapshot_;
         detail_renderer render_details_;
+        preview_renderer render_preview_;
         std::deque<android_character_creator_action> actions_;
         std::string filter_;
-        bool dragging_ = false;
-        ImVec2 drag_start_;
+        std::string name_input_;
+        std::string age_input_;
+        std::string height_input_;
+        std::string template_name_input_;
+        bool editing_name_ = false;
+        bool editing_age_ = false;
+        bool editing_height_ = false;
+
+        struct drag_state {
+            bool active = false;
+            ImVec2 start;
+        };
+
+        drag_state list_drag_;
+        drag_state detail_drag_;
+        drag_state summary_drag_;
 
         void queue_command( const std::string &command );
+        void queue_value( android_character_creator_action_type type, const std::string &value );
         void draw_loading_page();
         void draw_identity_bar();
+        void draw_age_input( const char *id, float width );
+        void draw_height_input( const char *id, float width );
+        void draw_summary_description_inputs();
+        bool draw_template_save_controls();
         void draw_tabs();
-        bool handle_vertical_drag();
+        bool handle_vertical_drag( drag_state &state );
         void draw_selection_page( float footer_height );
+        void draw_preview_panel( float height );
         const android_character_creator_row_snapshot *selected_row() const;
         void draw_current_details();
         void draw_summary_page( float footer_height );
