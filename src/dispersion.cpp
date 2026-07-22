@@ -17,7 +17,7 @@ double dispersion_sources::roll() const
         this_roll *= source;
     }
 
-    return std::min( this_roll, 3600.0 );
+    return std::clamp( this_roll, 0.0, 3600.0 );
 }
 
 double dispersion_sources::max() const
