@@ -205,7 +205,7 @@ inline int rl_dist( const tripoint &loc1, const tripoint &loc2 )
 }
 inline int rl_dist( const point &a, const point &b )
 {
-    return trig_dist( tripoint( a, 0 ), tripoint( b, 0 ) );
+    return rl_dist( tripoint( a, 0 ), tripoint( b, 0 ) );
 }
 
 template< class Point >

@@ -329,13 +329,15 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
     creature_tracker &creatures = get_creature_tracker();
     Creature *target_critter = creatures.creature_at( target_arg );
     double target_size;
+    bool hard_to_hit_bypass = false;
 
     if( target_critter != nullptr ) {
         const monster *mon = target_critter->as_monster();
         if( ( mon && mon->has_flag( mon_flag_HARDTOSHOOT ) ) || ( !mon &&
                 target_critter->as_character()->has_flag( json_flag_HARDTOHIT ) ) ) {
-            if( proj_arg.proj_effects.count( ammo_effect_WIDE ) ||
-                x_in_y( proj_arg.count + proj_arg.shot_spread * 2, 1000 ) ) {
+            hard_to_hit_bypass = proj_arg.proj_effects.count( ammo_effect_WIDE ) ||
+                                 x_in_y( proj_arg.count + proj_arg.shot_spread * 2, 1000 );
+            if( hard_to_hit_bypass ) {
                 /* Ammo with ammo_effect_WIDE ignores mon_flag_HARDTOSHOOT.
                 Multishots have a chance to do this as well. At the time
                 of this writing, birshot is 350 pellets and 350 dispersion,
@@ -360,6 +362,15 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
     }
 
     projectile_attack_aim aim = projectile_attack_roll( dispersion, range, target_size );
+
+    if( target_critter && target_critter->as_character() &&
+        target_critter->as_character()->has_flag( json_flag_HARDTOHIT ) && !hard_to_hit_bypass ) {
+        projectile_attack_aim lucky_aim = projectile_attack_roll( dispersion, range, target_size );
+        // If the target is lucky, choose the result that misses by more.
+        if( lucky_aim.missed_by > aim.missed_by ) {
+            aim = lucky_aim;
+        }
+    }
 
     attack.proj = proj_arg;
     attack.last_hit_critter = nullptr;
