@@ -10533,6 +10533,10 @@ ret_val<void> multi_farm_activity_actor::can_fertilize( Character &,
         const tripoint_bub_ms &tile )
 {
     map &here = get_map();
+    // Synchronize terrain growth before deciding whether an existing terrain
+    // growth state means the tile is still waiting on fertilizer.
+    here.grow_terrain_plant( tile );
+
     const ter_t &terrain = here.ter( tile ).obj();
     if( terrain.terrain_growth ) {
         if( here.get_terrain_growth( tile ) != nullptr ) {

@@ -1300,6 +1300,42 @@ TEST_CASE( "terrain_growth_fertilize_checks_season_and_existing_state",
     CHECK( already_fertilized.str().find( "already been fertilized" ) != std::string::npos );
 }
 
+TEST_CASE( "terrain_growth_can_fertilize_syncs_expired_growth",
+           "[terrain_growth][plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    const time_point old_turn = calendar::turn;
+    on_out_of_scope restore_turn( [&]() {
+        calendar::turn = old_turn;
+    } );
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "1.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope restore_options( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    calendar::turn = calendar::turn_zero + 12_hours;
+    here.ter_set( plot, ter_test_t_terrain_growth_seed );
+
+    terrain_growth_state state;
+    state.fertilized_at = calendar::turn - 2_days;
+    here.set_terrain_growth( plot, state );
+    REQUIRE( here.get_terrain_growth( plot ) != nullptr );
+
+    ret_val<void> result = multi_farm_activity_actor::can_fertilize( u, plot );
+
+    CHECK( here.ter( plot ).obj().id == ter_test_t_terrain_growth_middle );
+    CHECK( here.get_terrain_growth( plot ) == nullptr );
+    CHECK( result.success() );
+}
+
 TEST_CASE( "terrain_growth_fertilize_ignores_loose_seed_items",
            "[terrain_growth][plant][fertilize]" )
 {
