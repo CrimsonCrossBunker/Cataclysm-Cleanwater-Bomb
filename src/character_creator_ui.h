@@ -1,13 +1,19 @@
+#include <array>
 #include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_imgui.h"
 #include "input_context.h"
+#include "player_difficulty.h"
 #include "uilist.h"
 #include "scenario.h"
 
-const int CHARACTER_CREATOR_TAB_COUNT = 7;
+const int CHARACTER_CREATOR_TAB_COUNT = 8;
 const int CHARACTER_CREATOR_SUMMARY_LINES = 5;
+const int CHARACTER_CREATOR_LEGACY_STAT_MAX = 14;
 const ImGuiTableFlags_ CHARACTER_CREATOR_TABLE_FLAGS = ImGuiTableFlags_ScrollY;
 const translation CHARACTER_CREATOR_UILIST_ALL = to_translation( "ALL" );
 const translation CHARACTER_CREATOR_TRAITS_COSMETIC = to_translation( "COSMETIC" );
@@ -16,6 +22,7 @@ const translation CHARACTER_CREATOR_TRAITS_NEGATIVE = to_translation( "NEGATIVE"
 const translation CHARACTER_CREATOR_TRAITS_NEUTRAL = to_translation( "NEUTRAL" );
 
 enum character_creator_tab : int {
+    CHARCREATOR_POINTS,
     CHARCREATOR_SCENARIO,
     CHARCREATOR_PROFESSION,
     CHARCREATOR_BACKGROUND,
@@ -30,9 +37,42 @@ class character_creator_ui;
 
 template<>
 struct enum_traits<character_creator_tab> {
-    static constexpr character_creator_tab first = character_creator_tab::CHARCREATOR_SCENARIO;
+    static constexpr character_creator_tab first = character_creator_tab::CHARCREATOR_POINTS;
     static constexpr character_creator_tab last = character_creator_tab::character_creator_tab_LAST;
 };
+
+enum class point_pool_error : int {
+    NONE,
+    TOTAL,
+    TRAIT,
+    STAT
+};
+
+struct point_pool_status {
+    int pure_stat_points;
+    int pure_trait_points;
+    int pure_skill_points;
+    int stat_points_left;
+    int trait_points_left;
+    int skill_points_left;
+
+    explicit point_pool_status( const Character &u );
+
+    int one_pool_points_left() const;
+    int spendable_points( pool_type pool ) const;
+    bool has_unspent_points() const;
+    point_pool_error get_error( pool_type pool ) const;
+    bool is_valid( pool_type pool ) const;
+};
+
+std::vector<pool_type> allowed_point_pools( const std::string &world_option );
+int character_creation_stat_cost( int stat );
+int character_creation_skill_cost( int level );
+int character_creation_stat_max( pool_type pool );
+int character_creation_adjust_skill( pool_type pool, int level, int change );
+int character_creation_normalize_skill( pool_type pool, int level );
+bool character_creation_trait_limit_allows( int selected_points, int added_points,
+        int maximum );
 
 // only for handling additional inputs, draws nothing
 class character_creator_callback : public uilist_callback
@@ -52,6 +92,8 @@ class character_creator_callback : public uilist_callback
 // never serialized, just to keep state in one place
 struct character_creator_uistate {
 
+    std::vector<pool_type> allowed_pools;
+    std::vector<pool_type> sorted_pools;
     std::vector<const scenario *> sorted_scenarios;
     std::vector<profession_id> sorted_professions;
     //TODO: this inventory only exists as an example;
@@ -69,6 +111,7 @@ struct character_creator_uistate {
     character_type generation_type = character_type::CUSTOM;
 
     int selected_profession_index = 0;
+    int selected_pool_index = 0;
     int selected_scenario_index = 0;
     int selected_hobby_index = 0;
     int selected_stat_index = 0;
@@ -76,12 +119,15 @@ struct character_creator_uistate {
     int selected_skill_index = 0;
 
     // the currently selected tab
-    character_creator_tab selected_tab = CHARCREATOR_SCENARIO;
+    character_creator_tab selected_tab = CHARCREATOR_POINTS;
     // for circumventing ImGui inputs; set when you need to switch the tab by key
     character_creator_tab switched_tab = character_creator_tab_LAST;
     character_creator_tab previous_tab = character_creator_tab_LAST;
 
     std::array<int, 4> stats = { 8, 8, 8, 8 };
+
+    pool_type pool = pool_type::FREEFORM;
+    std::optional<pool_type> compatibility_pool;
 
     bool recalc_rating = true;
     bool recalc_scenarios = true;
@@ -102,6 +148,7 @@ struct character_creator_uistate {
 
     const scenario *get_selected_scenario();
     profession_id get_selected_profession();
+    pool_type get_selected_pool() const;
     profession_id get_selected_hobby();
     trait_id get_selected_trait();
     skill_id get_selected_skill();
@@ -130,7 +177,7 @@ class character_creator_ui
     public:
         character_creator_ui();
         // returns true if character creation completed successfully
-        bool display();
+        bool display( pool_type &pool );
         // setup new uilist if necessary, assumes current tab has been set
         void setup_new_uilist();
         // setup the avatar for switching to a different tab
@@ -158,6 +205,7 @@ class character_creator_ui_impl : public cataimgui::window
         explicit character_creator_ui_impl( character_creator_ui *parent );
 
         void draw_top_bar( const avatar &u ) const;
+        void draw_points() const;
         void draw_scenarios() const;
         void draw_professions() const;
         void draw_backgrounds();
