@@ -4137,6 +4137,12 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
         // Special font for the terrain window
         update = draw_window( overmap_font, w, force_full );
     } else if( g && w == g->w_pixel_minimap && pixel_minimap_option ) {
+#if defined(__ANDROID__)
+        // Android's HUD publishes an explicit screen-space rectangle and draws
+        // its minimap during refresh_display().  The curses window remains the
+        // 1x1 placeholder created by game::init_ui(); rendering it here leaves a
+        // tiny duplicate minimap at the upper-left corner of the game surface.
+#else
         // ensure the space the minimap covers is "dirtied".
         // this is necessary when it's the only part of the sidebar being drawn
         // TODO: Figure out how to properly make the minimap code do whatever it is this does
@@ -4149,6 +4155,7 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
         { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
         win->width * font->width, win->height * font->height );
         update = true;
+#endif
 
     } else {
         // Either not using tiles (tilecontext) or not the w_terrain window.
