@@ -700,7 +700,13 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
     center_print( w_open, window_height - 1, c_light_cyan, string_format( _( "Tip of the day: %s" ),
                   vdaytip ) );
 
+#if defined(__ANDROID__)
+    // Leave a little breathing room above the title on phone displays.  The
+    // version follows the artwork so their spacing remains unchanged.
+    int iLine = 2;
+#else
     int iLine = 0;
+#endif
     const int iOffsetX = ( window_width - FULL_SCREEN_WIDTH ) / 2;
 
     if( get_option<bool>( "SEASONAL_TITLE" ) ) {
