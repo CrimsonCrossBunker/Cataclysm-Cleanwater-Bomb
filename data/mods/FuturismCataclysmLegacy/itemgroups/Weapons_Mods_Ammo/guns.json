@@ -35,8 +35,8 @@
     "type": "item_group",
     "subtype": "collection",
     "items": [
-      { "item": "fcl_fusion_10_mag", "charges": [ 0, 10 ] },
-      { "item": "medium_battery_cell", "charges": [ 0, 56 ] }
+      { "item": "medium_battery_cell", "charges": [ 0, 56 ] },
+      { "item": "fcl_fusion_10_mag", "charges": [ 0, 10 ] }
     ]
   },
   {
@@ -44,8 +44,8 @@
     "type": "item_group",
     "subtype": "collection",
     "items": [
-      { "item": "fcl_fusion_20_mag", "charges": [ 0, 20 ] },
-      { "item": "heavy_battery_cell", "charges": [ 0, 259 ] }
+      { "item": "heavy_battery_cell", "charges": [ 0, 259 ] },
+      { "item": "fcl_fusion_20_mag", "charges": [ 0, 20 ] }
     ]
   },
   {
