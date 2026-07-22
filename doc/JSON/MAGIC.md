@@ -1014,6 +1014,7 @@ Character status value  | Description
 `CLIMATE_CONTROL_CHILL` | Moves body temperature down towards comfortable by number of warmth units up to value.
 `CRAFTING_SPEED_MULTIPLIER` | Changes your crafting speed. Since it's a percent, using `multiply` is recommended.  Positive values decrease crafting time, negative values increase it.
 `DEXTERITY`             | Affects the dexterity stat.
+`DIGESTION_RATE_MULTIPLIER` | Changes how fast your stomach and guts digest food. Since it's a percent with default value of 1, using `multiply` is recommended. `multiply: 0.5` makes digestion 50% faster, `multiply: -0.5` makes it 50% slower.
 `DISINFECTANT_BONUS`    | Affects the `disinfectant_power` you have when applying medicine.
 `DODGE_CHANCE`          | Modifies the probability to dodge an attack. Default is 0, so better to use `add`
 `EFFECTIVE_HEALTH_MOD`  | If this is anything other than zero (which it defaults to) you will use it instead of your actual health mod.

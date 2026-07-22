@@ -137,6 +137,7 @@ namespace io
             case enchant_vals::mod::WEAKNESS_TO_WATER: return "WEAKNESS_TO_WATER";
             case enchant_vals::mod::MENDING_MODIFIER: return "MENDING_MODIFIER";
             case enchant_vals::mod::STOMACH_SIZE_MULTIPLIER: return "STOMACH_SIZE_MULTIPLIER";
+            case enchant_vals::mod::DIGESTION_RATE_MULTIPLIER: return "DIGESTION_RATE_MULTIPLIER";
             case enchant_vals::mod::LEARNING_FOCUS: return "LEARNING_FOCUS";
             case enchant_vals::mod::RECOIL_MODIFIER: return "RECOIL_MODIFIER";
             case enchant_vals::mod::ARMOR_ALL: return "ARMOR_ALL";
