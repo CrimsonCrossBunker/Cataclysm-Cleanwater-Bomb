@@ -104,6 +104,7 @@ static const ammo_effect_str_id ammo_effect_IGNITE( "IGNITE" );
 static const ammo_effect_str_id ammo_effect_LASER( "LASER" );
 static const ammo_effect_str_id ammo_effect_LIGHTNING( "LIGHTNING" );
 static const ammo_effect_str_id ammo_effect_LIQUID( "LIQUID" );
+static const ammo_effect_str_id ammo_effect_MAGIC( "MAGIC" );
 static const ammo_effect_str_id ammo_effect_MATCHHEAD( "MATCHHEAD" );
 static const ammo_effect_str_id ammo_effect_NON_FOULING( "NON_FOULING" );
 static const ammo_effect_str_id ammo_effect_NO_EMBED( "NO_EMBED" );
@@ -168,6 +169,74 @@ static const flag_id json_flag_FILTHY( "FILTHY" );
 static const flag_id json_flag_LEVER_ACTION( "LEVER_ACTION" );
 static const flag_id json_flag_PUMP_ACTION( "PUMP_ACTION" );
 static const flag_id json_flag_SINGLE_ACTION( "SINGLE_ACTION" );
+
+// Returns whether the target is currently ignoring the attacker.
+static bool target_ignores_projectile_attacker( const Creature &target, const Creature &attacker )
+{
+    if( const monster *mon = target.as_monster() ) {
+        if( const Character *character_attacker = attacker.as_character() ) {
+            switch( mon->attitude( character_attacker ) ) {
+                case MATT_FRIEND:
+                case MATT_FPASSIVE:
+                case MATT_IGNORE:
+                    return true;
+                case MATT_FLEE:
+                case MATT_FOLLOW:
+                case MATT_ATTACK:
+                    return false;
+                case MATT_NULL:
+                case NUM_MONSTER_ATTITUDES:
+                    return true;
+            }
+        }
+    }
+
+    if( const npc *target_npc = target.as_npc() ) {
+        if( attacker.is_avatar() ) {
+            switch( target_npc->get_attitude() ) {
+                case NPCATT_KILL:
+                case NPCATT_FLEE:
+                case NPCATT_FLEE_TEMP:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+    }
+
+    return target.attitude_to( attacker ) != Creature::Attitude::HOSTILE;
+}
+
+double projectile_target_mobility_weight( const Creature &target, const map &here,
+        const Creature *attacker )
+{
+    if( target.has_flag( mon_flag_IMMOBILE ) || target.has_flag( json_flag_CANNOT_MOVE ) ||
+        target.has_effect_with_flag( json_flag_CANNOT_MOVE ) ) {
+        return 1.0;
+    }
+
+    double target_weight = 0.0;
+    target_weight += 0.1;
+
+    if( attacker != nullptr && target.sees( here, *attacker ) ) {
+        double awareness_weight = 0.25;
+        if( target_ignores_projectile_attacker( target, *attacker ) ) {
+            awareness_weight *= 0.5;
+        }
+        target_weight += awareness_weight;
+    }
+
+    const double target_speed = std::max( 1.0, static_cast<double>( target.get_speed() ) );
+    const double attacker_speed = attacker != nullptr ?
+                                  std::max( 1.0, static_cast<double>( attacker->get_speed() ) ) : 100.0;
+    // Attacker speed improves the ability to respond to a moving target, but
+    // with sharply diminishing returns.  Equal speeds produce 1.0; a 2x
+    // attacker advantage produces 0.75, and a 5x advantage produces 0.6.
+    const double speed_factor = 0.5 + 0.5 * target_speed / attacker_speed;
+    target_weight *= speed_factor;
+
+    return std::clamp( 1.0 + target_weight, 1.0, 2.5 );
+}
 
 static const material_id material_budget_steel( "budget_steel" );
 static const material_id material_budget_steel_chain( "budget_steel_chain" );
@@ -2124,6 +2193,15 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
     const double start_recoil = mode == target_ui::TargetMode::Fire ?
                                 ui.get_predicted_recoil() : you.recoil;
 
+    double target_mobility_multiplier = 1.0;
+    if( mode == target_ui::TargetMode::Fire ) {
+        const Creature *target_critter = get_creature_tracker().creature_at( pos, true );
+        if( target_critter != nullptr && !weapon.ammo_effects().count( ammo_effect_MAGIC ) ) {
+            target_mobility_multiplier = projectile_target_mobility_weight( *target_critter,
+                                        get_map(), &you );
+        }
+    }
+
     // predict how long it'll take to reach from current recoil
     // to the ui's selected default aim mode threshold.
     const recoil_prediction aim_to_selected = predict_recoil( you, weapon, target,
@@ -2171,6 +2249,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
 
         // make a copy of the given dispersion, apply the aiming and calculate hit confidence
         dispersion_sources current_dispersion = dispersion;
+        current_dispersion.add_multiplier( target_mobility_multiplier );
         current_dispersion.add_range( aim_type.has_threshold ? aim_type.threshold :
                                       aim_to_selected.recoil );
 
