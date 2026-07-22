@@ -129,13 +129,20 @@ class android_worldgen_imgui : public cataimgui::window
             }
             const ImVec2 window_pos = ImGui::GetWindowPos();
             const ImVec2 window_size = ImGui::GetWindowSize();
-            const float edge_padding = std::clamp( window_size.x * 0.02F, 16.0F, 34.0F );
+            const float edge_padding = std::clamp( window_size.x * 0.015F, 14.0F, 24.0F );
             constexpr float footer_height = 128.0F;
+            const float panel_width = std::min( window_size.x - 24.0F,
+                                                std::clamp( window_size.x * 0.84F,
+                                                        760.0F, 1320.0F ) );
+            const float panel_height = std::min( window_size.y - 24.0F,
+                                                 std::clamp( window_size.y * 0.90F,
+                                                         540.0F, 940.0F ) );
 
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
             cataimgui::PushGuiFont1_5x();
+            ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 12.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
@@ -148,26 +155,33 @@ class android_worldgen_imgui : public cataimgui::window
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
 
-            ImGui::TextUnformatted( _( "Create World" ) );
-            if( snapshot_.custom_options ) {
-                ImGui::SameLine();
-                ImGui::TextColored( ImVec4( 0.95F, 0.72F, 0.24F, 1.0F ), "%s", _( "Custom options" ) );
-            }
-            ImGui::Separator();
-            draw_name_row();
-            ImGui::Separator();
-            if( ImGui::BeginChild( "##android_worldgen_sliders", ImVec2( 0.0F, -footer_height ),
-                                   ImGuiChildFlags_Borders,
-                                   ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
-                const bool suppress_click = handle_vertical_drag();
-                draw_sliders( suppress_click );
+            ImGui::SetCursorPos( ImVec2( ( window_size.x - panel_width ) * 0.5F,
+                                         ( window_size.y - panel_height ) * 0.5F ) );
+            if( ImGui::BeginChild( "##android_worldgen_panel", ImVec2( panel_width, panel_height ),
+                                   ImGuiChildFlags_Borders ) ) {
+                ImGui::TextUnformatted( _( "Create World" ) );
+                if( snapshot_.custom_options ) {
+                    ImGui::SameLine();
+                    ImGui::TextColored( ImVec4( 0.95F, 0.72F, 0.24F, 1.0F ), "%s",
+                                        _( "Custom options" ) );
+                }
+                ImGui::Separator();
+                draw_name_row();
+                ImGui::Separator();
+                if( ImGui::BeginChild( "##android_worldgen_sliders", ImVec2( 0.0F, -footer_height ),
+                                       ImGuiChildFlags_Borders,
+                                       ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                    const bool suppress_click = handle_vertical_drag();
+                    draw_sliders( suppress_click );
+                }
+                ImGui::EndChild();
+                ImGui::Separator();
+                draw_toolbar();
             }
             ImGui::EndChild();
-            ImGui::Separator();
-            draw_toolbar();
 
             ImGui::PopStyleColor( 6 );
-            ImGui::PopStyleVar( 5 );
+            ImGui::PopStyleVar( 6 );
             cataimgui::PopGuiFont1_5x();
         }
 
@@ -178,12 +192,18 @@ class android_worldgen_imgui : public cataimgui::window
         ImVec2 drag_start_;
 
         void draw_name_row() {
+            constexpr float label_width = 160.0F;
+            constexpr float random_width = 220.0F;
+            const float content_width = ImGui::GetContentRegionAvail().x;
+            const float name_width = std::clamp( content_width - label_width - random_width - 16.0F,
+                                                 280.0F, 680.0F );
+            const float row_width = label_width + name_width + random_width + 16.0F;
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                  std::max( 0.0F, ( content_width - row_width ) * 0.5F ) );
+            ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted( _( "World name:" ) );
-            ImGui::SameLine();
-            const float random_width = std::clamp( ImGui::GetContentRegionAvail().x * 0.22F,
-                                                   190.0F, 320.0F );
-            const float name_width = std::max( 240.0F, ImGui::GetContentRegionAvail().x -
-                                               random_width - 8.0F );
+            ImGui::SameLine( 0.0F, std::max( 8.0F, label_width -
+                                            ImGui::CalcTextSize( _( "World name:" ) ).x ) );
             const std::string name_label = snapshot_.world_name + "###android_worldgen_name";
             if( ImGui::Button( name_label.c_str(), ImVec2( name_width, 50.0F ) ) ) {
                 actions_.push_back( { android_worldgen_action_type::rename, 0 } );
@@ -218,38 +238,50 @@ class android_worldgen_imgui : public cataimgui::window
         }
 
         void draw_sliders( const bool suppress_click ) {
-            for( size_t index = 0; index < snapshot_.sliders.size(); ++index ) {
-                const android_worldgen_slider &slider = snapshot_.sliders[index];
-                ImGui::PushID( static_cast<int>( index ) );
-                ImGui::TextUnformatted( slider.name.c_str() );
-                const float available = ImGui::GetContentRegionAvail().x;
-                constexpr float arrow_width = 72.0F;
-                const float value_width = std::max( 180.0F, available - arrow_width * 2.0F - 16.0F );
-                if( !slider.adjustable ) {
-                    ImGui::BeginDisabled();
+            if( ImGui::BeginTable( "##android_worldgen_slider_table", 2,
+                                   ImGuiTableFlags_SizingStretchProp |
+                                   ImGuiTableFlags_BordersInnerV ) ) {
+                ImGui::TableSetupColumn( "##worldgen_slider_info", ImGuiTableColumnFlags_WidthStretch,
+                                         0.43F );
+                ImGui::TableSetupColumn( "##worldgen_slider_control", ImGuiTableColumnFlags_WidthStretch,
+                                         0.57F );
+                for( size_t index = 0; index < snapshot_.sliders.size(); ++index ) {
+                    const android_worldgen_slider &slider = snapshot_.sliders[index];
+                    ImGui::PushID( static_cast<int>( index ) );
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex( 0 );
+                    ImGui::TextUnformatted( slider.name.c_str() );
+                    if( !slider.description.empty() ) {
+                        ImGui::TextWrapped( "%s", slider.description.c_str() );
+                    }
+                    ImGui::TableSetColumnIndex( 1 );
+                    const float available = ImGui::GetContentRegionAvail().x;
+                    constexpr float arrow_width = 66.0F;
+                    const float value_width = std::max( 170.0F,
+                                              available - arrow_width * 2.0F - 16.0F );
+                    if( !slider.adjustable ) {
+                        ImGui::BeginDisabled();
+                    }
+                    if( ImGui::Button( "‹", ImVec2( arrow_width, 48.0F ) ) && !suppress_click ) {
+                        actions_.push_back( { android_worldgen_action_type::previous_value,
+                                              static_cast<int>( index ) } );
+                    }
+                    ImGui::SameLine();
+                    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.06F, 0.17F, 0.17F, 1.0F ) );
+                    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.76F, 0.96F, 0.88F, 1.0F ) );
+                    ImGui::Button( slider.value.c_str(), ImVec2( value_width, 48.0F ) );
+                    ImGui::PopStyleColor( 2 );
+                    ImGui::SameLine();
+                    if( ImGui::Button( "›", ImVec2( arrow_width, 48.0F ) ) && !suppress_click ) {
+                        actions_.push_back( { android_worldgen_action_type::next_value,
+                                              static_cast<int>( index ) } );
+                    }
+                    if( !slider.adjustable ) {
+                        ImGui::EndDisabled();
+                    }
+                    ImGui::PopID();
                 }
-                if( ImGui::Button( "‹", ImVec2( arrow_width, 48.0F ) ) && !suppress_click ) {
-                    actions_.push_back( { android_worldgen_action_type::previous_value,
-                                          static_cast<int>( index ) } );
-                }
-                ImGui::SameLine();
-                ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.06F, 0.17F, 0.17F, 1.0F ) );
-                ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.76F, 0.96F, 0.88F, 1.0F ) );
-                ImGui::Button( slider.value.c_str(), ImVec2( value_width, 48.0F ) );
-                ImGui::PopStyleColor( 2 );
-                ImGui::SameLine();
-                if( ImGui::Button( "›", ImVec2( arrow_width, 48.0F ) ) && !suppress_click ) {
-                    actions_.push_back( { android_worldgen_action_type::next_value,
-                                          static_cast<int>( index ) } );
-                }
-                if( !slider.adjustable ) {
-                    ImGui::EndDisabled();
-                }
-                if( !slider.description.empty() ) {
-                    ImGui::TextWrapped( "%s", slider.description.c_str() );
-                }
-                ImGui::Separator();
-                ImGui::PopID();
+                ImGui::EndTable();
             }
         }
 
@@ -264,8 +296,14 @@ class android_worldgen_imgui : public cataimgui::window
                 }
             };
             constexpr float gap = 8.0F;
-            const float width = ( ImGui::GetContentRegionAvail().x - gap * 2.0F ) / 3.0F;
+            const float available = ImGui::GetContentRegionAvail().x;
+            const float width = std::min( 260.0F, ( available - gap * 2.0F ) / 3.0F );
+            const float row_width = width * 3.0F + gap * 2.0F;
             for( size_t index = 0; index < buttons.size(); ++index ) {
+                if( index % 3 == 0 ) {
+                    ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                          std::max( 0.0F, ( available - row_width ) * 0.5F ) );
+                }
                 if( index % 3 != 0 ) {
                     ImGui::SameLine( 0.0F, gap );
                 }
@@ -356,19 +394,25 @@ class android_mod_imgui : public cataimgui::window
         void draw_controls() override {
             const ImVec2 window_pos = ImGui::GetWindowPos();
             const ImVec2 window_size = ImGui::GetWindowSize();
-            const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 28.0F );
-            const float footer_height = snapshot_.read_only ? 68.0F : 128.0F;
-            constexpr float description_height = 132.0F;
+            const float edge_padding = std::clamp( window_size.x * 0.012F, 12.0F, 22.0F );
+            const float footer_height = snapshot_.read_only || !snapshot_.with_tabs ? 64.0F : 112.0F;
+            const float panel_width = std::min( window_size.x - 20.0F,
+                                                std::clamp( window_size.x * 0.94F,
+                                                        900.0F, 1900.0F ) );
+            const float panel_height = std::min( window_size.y - 20.0F,
+                                                 std::clamp( window_size.y * 0.92F,
+                                                         560.0F, 980.0F ) );
 
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
             cataimgui::PushGuiFont1_5x();
+            ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 10.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 8.0F, 7.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 7.0F, 6.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 10.0F ) );
             ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
             ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
@@ -376,34 +420,32 @@ class android_mod_imgui : public cataimgui::window
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
 
-            ImGui::TextUnformatted( snapshot_.title.c_str() );
-            ImGui::Separator();
-            if( !snapshot_.read_only ) {
-                draw_categories();
-                draw_filter();
-                ImGui::Separator();
-            }
-
-            const float body_height = std::max( 180.0F, ImGui::GetContentRegionAvail().y -
-                                                description_height - footer_height - 16.0F );
-            draw_lists( body_height );
-            ImGui::Separator();
-            if( ImGui::BeginChild( "##android_mod_description", ImVec2( 0.0F, description_height ),
+            ImGui::SetCursorPos( ImVec2( ( window_size.x - panel_width ) * 0.5F,
+                                         ( window_size.y - panel_height ) * 0.5F ) );
+            if( ImGui::BeginChild( "##android_mod_panel", ImVec2( panel_width, panel_height ),
                                    ImGuiChildFlags_Borders ) ) {
-                ImGui::TextUnformatted( _( "Description" ) );
-                ImGui::Separator();
-                if( snapshot_.description.empty() ) {
-                    ImGui::TextWrapped( "%s", _( "Select a mod to view its details." ) );
-                } else {
-                    ImGui::TextWrapped( "%s", snapshot_.description.c_str() );
+                ImGui::TextUnformatted( snapshot_.title.c_str() );
+                if( !snapshot_.read_only ) {
+                    ImGui::SameLine();
+                    draw_filter();
                 }
+                ImGui::Separator();
+                if( !snapshot_.read_only ) {
+                    draw_categories();
+                    ImGui::Separator();
+                }
+
+                const float body_height = std::max( 220.0F,
+                                                    ImGui::GetContentRegionAvail().y -
+                                                    footer_height - 8.0F );
+                draw_lists( body_height );
+                ImGui::Separator();
+                draw_footer();
             }
             ImGui::EndChild();
-            ImGui::Separator();
-            draw_footer();
 
             ImGui::PopStyleColor( 6 );
-            ImGui::PopStyleVar( 5 );
+            ImGui::PopStyleVar( 6 );
             cataimgui::PopGuiFont1_5x();
         }
 
@@ -415,7 +457,7 @@ class android_mod_imgui : public cataimgui::window
         ImVec2 drag_start_;
 
         void draw_categories() {
-            if( ImGui::BeginChild( "##android_mod_categories", ImVec2( 0.0F, 60.0F ),
+            if( ImGui::BeginChild( "##android_mod_categories", ImVec2( 0.0F, 54.0F ),
                                    ImGuiChildFlags_None,
                                    ImGuiWindowFlags_HorizontalScrollbar |
                                    ImGuiWindowFlags_NoScrollWithMouse ) ) {
@@ -431,7 +473,7 @@ class android_mod_imgui : public cataimgui::window
                     const std::string label = snapshot_.categories[index] +
                                               "###android_mod_category_" + std::to_string( index );
                     const float width = ImGui::CalcTextSize( snapshot_.categories[index].c_str() ).x + 34.0F;
-                    if( ImGui::Button( label.c_str(), ImVec2( width, 48.0F ) ) && !selected ) {
+                    if( ImGui::Button( label.c_str(), ImVec2( width, 44.0F ) ) && !selected ) {
                         actions_.push_back( { android_mod_action_type::select_category,
                                               static_cast<int>( index ) } );
                     }
@@ -448,22 +490,24 @@ class android_mod_imgui : public cataimgui::window
         }
 
         void draw_filter() {
-            constexpr float filter_button_width = 190.0F;
-            if( ImGui::Button( _( "Filter" ), ImVec2( filter_button_width, 48.0F ) ) ) {
+            constexpr float filter_button_width = 150.0F;
+            if( ImGui::Button( _( "Filter" ), ImVec2( filter_button_width, 42.0F ) ) ) {
                 actions_.push_back( { android_mod_action_type::filter, 0 } );
             }
             ImGui::SameLine();
             const std::string value = snapshot_.filter.empty() ? _( "All mods" ) : snapshot_.filter;
             ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.06F, 0.17F, 0.17F, 1.0F ) );
-            ImGui::Button( value.c_str(), ImVec2( -1.0F, 48.0F ) );
+            ImGui::Button( value.c_str(), ImVec2( 260.0F, 42.0F ) );
             ImGui::PopStyleColor();
         }
 
         void draw_lists( const float height ) {
             const float gap = 10.0F;
-            const float width = snapshot_.read_only ? ImGui::GetContentRegionAvail().x :
-                                ( ImGui::GetContentRegionAvail().x - gap ) * 0.5F;
-            if( ImGui::BeginChild( "##android_mod_available", ImVec2( width, height ),
+            const float available_width = ImGui::GetContentRegionAvail().x;
+            const float details_width = std::clamp( available_width * 0.27F, 280.0F, 470.0F );
+            const float lists_width = available_width - details_width - gap;
+            const float first_list_width = snapshot_.read_only ? lists_width : lists_width * 0.56F;
+            if( ImGui::BeginChild( "##android_mod_available", ImVec2( first_list_width, height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 ImGui::TextUnformatted( snapshot_.read_only ? _( "Load order" ) : _( "Available mods" ) );
@@ -476,17 +520,50 @@ class android_mod_imgui : public cataimgui::window
                 }
             }
             ImGui::EndChild();
-            if( snapshot_.read_only ) {
-                return;
+            if( !snapshot_.read_only ) {
+                ImGui::SameLine( 0.0F, gap );
+                if( ImGui::BeginChild( "##android_mod_active",
+                                       ImVec2( lists_width - first_list_width - gap, height ),
+                                       ImGuiChildFlags_Borders,
+                                       ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                    ImGui::TextUnformatted( _( "Mod load order" ) );
+                    ImGui::Separator();
+                    const bool suppress_click = handle_vertical_drag( 1 );
+                    draw_entries( snapshot_.active, snapshot_.selected_active, true, suppress_click );
+                }
+                ImGui::EndChild();
             }
             ImGui::SameLine( 0.0F, gap );
-            if( ImGui::BeginChild( "##android_mod_active", ImVec2( 0.0F, height ),
+            draw_description( details_width, height );
+        }
+
+        void draw_description( const float width, const float height ) {
+            if( ImGui::BeginChild( "##android_mod_description", ImVec2( width, height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
-                ImGui::TextUnformatted( _( "Mod load order" ) );
+                ImGui::TextUnformatted( _( "Details" ) );
                 ImGui::Separator();
-                const bool suppress_click = handle_vertical_drag( 1 );
-                draw_entries( snapshot_.active, snapshot_.selected_active, true, suppress_click );
+                const android_mod_entry_snapshot *selected = nullptr;
+                if( snapshot_.active_pane && snapshot_.selected_active >= 0 ) {
+                    selected = &snapshot_.active[snapshot_.selected_active];
+                } else if( !snapshot_.read_only && snapshot_.selected_available >= 0 ) {
+                    selected = &snapshot_.available[snapshot_.selected_available];
+                } else if( snapshot_.read_only && snapshot_.selected_active >= 0 ) {
+                    selected = &snapshot_.active[snapshot_.selected_active];
+                }
+                if( selected ) {
+                    ImGui::TextWrapped( "%s", selected->name.c_str() );
+                    if( !selected->category.empty() ) {
+                        ImGui::TextColored( ImVec4( 0.50F, 0.78F, 0.80F, 1.0F ), "%s",
+                                            selected->category.c_str() );
+                    }
+                    ImGui::Separator();
+                }
+                if( snapshot_.description.empty() ) {
+                    ImGui::TextWrapped( "%s", _( "Select a mod to view its details." ) );
+                } else {
+                    ImGui::TextWrapped( "%s", snapshot_.description.c_str() );
+                }
             }
             ImGui::EndChild();
         }
@@ -541,11 +618,8 @@ class android_mod_imgui : public cataimgui::window
                     label += "⚠ ";
                 }
                 label += entry.name;
-                if( !entry.category.empty() ) {
-                    label += "\n" + entry.category;
-                }
                 label += "###android_mod_entry";
-                if( ImGui::Button( label.c_str(), ImVec2( -1.0F, 64.0F ) ) && !suppress_click ) {
+                if( ImGui::Button( label.c_str(), ImVec2( -1.0F, 48.0F ) ) && !suppress_click ) {
                     actions_.push_back( { active_list ? android_mod_action_type::select_active :
                                           android_mod_action_type::select_available,
                                           static_cast<int>( index ) } );
@@ -563,16 +637,24 @@ class android_mod_imgui : public cataimgui::window
                 return;
             }
             const float gap = 8.0F;
-            const float width = ( ImGui::GetContentRegionAvail().x - gap * 4.0F ) / 5.0F;
-            const std::array<std::pair<android_mod_action_type, const char *>, 5> edit_buttons = {{
+            const float available = ImGui::GetContentRegionAvail().x;
+            const std::array<std::pair<android_mod_action_type, const char *>, 6> edit_buttons = {{
                     { android_mod_action_type::add, _( "Add" ) },
                     { android_mod_action_type::remove, _( "Remove" ) },
                     { android_mod_action_type::move_up, _( "Move up" ) },
                     { android_mod_action_type::move_down, _( "Move down" ) },
                     { android_mod_action_type::save_default, _( "Save default" ) },
+                    { android_mod_action_type::close, _( "Back" ) },
                 }
             };
-            for( size_t index = 0; index < edit_buttons.size(); ++index ) {
+            const size_t edit_count = snapshot_.with_tabs ? edit_buttons.size() - 1 :
+                                      edit_buttons.size();
+            const float width = std::min( 230.0F,
+                                          ( available - gap * ( edit_count - 1 ) ) / edit_count );
+            const float row_width = width * edit_count + gap * ( edit_count - 1 );
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                  std::max( 0.0F, ( available - row_width ) * 0.5F ) );
+            for( size_t index = 0; index < edit_count; ++index ) {
                 if( index > 0 ) {
                     ImGui::SameLine( 0.0F, gap );
                 }
@@ -595,27 +677,35 @@ class android_mod_imgui : public cataimgui::window
                     default:
                         break;
                 }
+                if( edit_buttons[index].first == android_mod_action_type::close ) {
+                    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
+                }
                 if( !enabled ) {
                     ImGui::BeginDisabled();
                 }
-                if( ImGui::Button( edit_buttons[index].second, ImVec2( width, 48.0F ) ) && enabled ) {
+                if( ImGui::Button( edit_buttons[index].second, ImVec2( width, 46.0F ) ) && enabled ) {
                     actions_.push_back( { edit_buttons[index].first, 0 } );
                 }
                 if( !enabled ) {
                     ImGui::EndDisabled();
                 }
+                if( edit_buttons[index].first == android_mod_action_type::close ) {
+                    ImGui::PopStyleColor();
+                }
             }
             if( !snapshot_.with_tabs ) {
-                draw_single_back_button();
                 return;
             }
-            const float nav_width = ( ImGui::GetContentRegionAvail().x - gap * 2.0F ) / 3.0F;
+            const float nav_width = std::min( 280.0F, ( available - gap * 2.0F ) / 3.0F );
+            const float nav_row_width = nav_width * 3.0F + gap * 2.0F;
             const std::array<std::pair<android_mod_action_type, const char *>, 3> nav_buttons = {{
                     { android_mod_action_type::close, _( "Cancel" ) },
                     { android_mod_action_type::previous_tab, _( "Previous" ) },
                     { android_mod_action_type::next_tab, _( "Next" ) },
                 }
             };
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                  std::max( 0.0F, ( available - nav_row_width ) * 0.5F ) );
             for( size_t index = 0; index < nav_buttons.size(); ++index ) {
                 if( index > 0 ) {
                     ImGui::SameLine( 0.0F, gap );
@@ -623,7 +713,7 @@ class android_mod_imgui : public cataimgui::window
                 if( nav_buttons[index].first == android_mod_action_type::close ) {
                     ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
                 }
-                if( ImGui::Button( nav_buttons[index].second, ImVec2( nav_width, 48.0F ) ) ) {
+                if( ImGui::Button( nav_buttons[index].second, ImVec2( nav_width, 46.0F ) ) ) {
                     actions_.push_back( { nav_buttons[index].first, 0 } );
                 }
                 if( nav_buttons[index].first == android_mod_action_type::close ) {
@@ -633,10 +723,11 @@ class android_mod_imgui : public cataimgui::window
         }
 
         void draw_single_back_button() {
-            const float width = std::clamp( ImGui::GetContentRegionAvail().x * 0.22F, 220.0F, 380.0F );
-            ImGui::SetCursorPosX( std::max( 0.0F, ImGui::GetWindowWidth() -
-                                            ImGui::GetStyle().WindowPadding.x - width ) );
-            if( ImGui::Button( _( "Back" ), ImVec2( width, 50.0F ) ) ) {
+            const float available = ImGui::GetContentRegionAvail().x;
+            const float width = std::min( 300.0F, available );
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                  std::max( 0.0F, ( available - width ) * 0.5F ) );
+            if( ImGui::Button( _( "Back" ), ImVec2( width, 48.0F ) ) ) {
                 actions_.push_back( { android_mod_action_type::close, 0 } );
             }
         }
