@@ -2357,6 +2357,9 @@ void Item_factory::check_definitions() const
         }
 
         for( const auto_process_rule &rule : type->auto_process ) {
+            if( rule.results.empty() ) {
+                msg += "auto_process rule has empty results\n";
+            }
             for( const itype_id &result : rule.results ) {
                 if( !has_template( result ) ) {
                     msg += string_format( "invalid auto_process result %s\n", result.c_str() );
@@ -4615,14 +4618,18 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "drop_action", drop_action, use_function_reader_single{ ammo_scale, src } );
 
     // Automatic processing rules (auto-craft stations)
-    for( const JsonObject &jobj : jo.get_array( "auto_process" ) ) {
-        auto_process_rule rule;
-        mandatory( jobj, was_loaded, "action", rule.action );
-        optional( jobj, was_loaded, "energy", rule.energy_cost,
-                  units_bound_reader<units::energy> {0_kJ}, 0_J );
-        mandatory( jobj, was_loaded, "results", rule.results );
-        optional( jobj, was_loaded, "completion_eoc", rule.completion_eoc );
-        auto_process.push_back( rule );
+    if( jo.has_array( "auto_process" ) ) {
+        // Replace inherited rules rather than appending to copy-from parents
+        auto_process.clear();
+        for( const JsonObject &jobj : jo.get_array( "auto_process" ) ) {
+            auto_process_rule rule;
+            mandatory( jobj, was_loaded, "action", rule.action );
+            optional( jobj, was_loaded, "energy", rule.energy_cost,
+                      units_bound_reader<units::energy> {0_kJ}, 0_J );
+            mandatory( jobj, was_loaded, "results", rule.results );
+            optional( jobj, was_loaded, "completion_eoc", rule.completion_eoc );
+            auto_process.push_back( rule );
+        }
     }
 
     optional( jo, was_loaded, "symbol", sym );

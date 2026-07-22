@@ -8663,7 +8663,7 @@ static bool is_sm_tile_outside( const tripoint_abs_ms &real_global_pos )
               sm->get_furn( p ).obj().has_flag( ter_furn_flag::TFLAG_INDOORS ) );
 }
 
-const auto_process_rule *vehicle::find_auto_process_item( item &it,
+std::pair<item *, const auto_process_rule *> vehicle::find_auto_process_item( item &it,
         const auto_process_station &station )
 {
     for( const auto_process_rule &rule : it.type->auto_process ) {
@@ -8673,41 +8673,27 @@ const auto_process_rule *vehicle::find_auto_process_item( item &it,
         const int target_kj = units::to_kilojoule<int>( rule.energy_cost * station.energy_mult );
         const int done_kj = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
         if( done_kj < target_kj ) {
-            return &rule;
+            return { &it, &rule };
         }
     }
 
     for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
-        const auto_process_rule *found = find_auto_process_item( *content, station );
-        if( found != nullptr ) {
+        std::pair<item *, const auto_process_rule *> found =
+            find_auto_process_item( *content, station );
+        if( found.first != nullptr ) {
             return found;
         }
     }
-    return nullptr;
+    return { nullptr, nullptr };
 }
 
-item *vehicle::auto_process_current_item( vehicle_part &vp )
+std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_process_rule &rule,
+        const auto_process_station &station )
 {
-    if( !vp.info().auto_process ) {
-        return nullptr;
-    }
-    const auto_process_station &station = *vp.info().auto_process;
-    vehicle_stack items = get_items( vp );
-    for( item &it : items ) {
-        if( find_auto_process_item( it, station ) != nullptr ) {
-            return &it;
-        }
-    }
-    return nullptr;
-}
-void vehicle::finish_auto_process_item( item &it, const auto_process_rule &rule,
-                                        const auto_process_station &station )
-{
-    // Create results, replacing the input item with the first result
-    // and adding any extra results to the same container/tile
+    std::vector<item> extras;
     if( rule.results.empty() ) {
         it = item();
-        return;
+        return extras;
     }
 
     item first_result( rule.results.front(), calendar::turn );
@@ -8733,11 +8719,14 @@ void vehicle::finish_auto_process_item( item &it, const auto_process_rule &rule,
 
     it = first_result;
 
-    // EOC hooks
-// TODO: EOC hooks on completion
-// TODO: EOC hooks on completion
+    // Extra results are returned to the caller to place in the same cargo
+    for( size_t ri = 1; ri < rule.results.size(); ri++ ) {
+        extras.emplace_back( rule.results[ri], calendar::turn );
+    }
+    return extras;
 }
-bool vehicle::advance_auto_process_item( item &it, const auto_process_rule &rule,
+
+std::vector<item> vehicle::advance_auto_process_item( item &it, const auto_process_rule &rule,
         int energy_per_turn_kj, const auto_process_station &station )
 {
     const int target_kj = units::to_kilojoule<int>( rule.energy_cost * station.energy_mult );
@@ -8751,16 +8740,14 @@ bool vehicle::advance_auto_process_item( item &it, const auto_process_rule &rule
 
     it.set_var( var_name, std::to_string( energy_done ) );
 
-    const bool finished = energy_done >= target_kj;
-    if( finished ) {
-        finish_auto_process_item( it, rule, station );
+    if( energy_done >= target_kj ) {
+        return finish_auto_process_item( it, rule, station );
     }
-    return finished;
+    return {};
 }
 
 void vehicle::process_auto_cooker_part( map &here, int p )
 {
-    static_cast<void>( here );
     vehicle_part &vp = parts[p];
     if( !vp.info().auto_process ) {
         return;
@@ -8770,9 +8757,10 @@ void vehicle::process_auto_cooker_part( map &here, int p )
     item *current = nullptr;
     const auto_process_rule *rule = nullptr;
     for( item &it : items ) {
-        rule = find_auto_process_item( it, station );
-        if( rule != nullptr ) {
-            current = &it;
+        std::pair<item *, const auto_process_rule *> found = find_auto_process_item( it, station );
+        if( found.first != nullptr ) {
+            current = found.first;
+            rule = found.second;
             break;
         }
     }
@@ -8785,7 +8773,13 @@ void vehicle::process_auto_cooker_part( map &here, int p )
 
     const units::power cook_power = -vp.info().epower;
     const int energy_per_turn_kj = std::max( 1, power_to_energy_bat( cook_power, 1_turns ) );
-    advance_auto_process_item( *current, *rule, energy_per_turn_kj, station );
+    std::vector<item> extras = advance_auto_process_item( *current, *rule, energy_per_turn_kj,
+                               station );
+    for( item &extra : extras ) {
+        if( !add_item( here, vp, extra ) ) {
+            here.add_item_or_charges( bub_part_pos( here, p ), extra );
+        }
+    }
 }
 
 void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elapsed )
@@ -8834,7 +8828,7 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
             const int done = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
             if( done < target_kj ) {
                 pending.push_back( { &it, &rule, target_kj, done } );
-                return; // one pending entry per item per gather pass
+                break; // one pending entry per item
             }
         }
         for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
@@ -8865,7 +8859,12 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
 
         pi.it->set_var( "auto_process_" + pi.rule->action, std::to_string( pi.energy_done ) );
         if( pi.energy_done >= pi.target_kj ) {
-            finish_auto_process_item( *pi.it, *pi.rule, station );
+            std::vector<item> extras = finish_auto_process_item( *pi.it, *pi.rule, station );
+            for( item &extra : extras ) {
+                if( !add_item( here, vp, extra ) ) {
+                    here.add_item_or_charges( bub_part_pos( here, p ), extra );
+                }
+            }
         }
         if( energy_remaining <= 0 ) {
             break;
