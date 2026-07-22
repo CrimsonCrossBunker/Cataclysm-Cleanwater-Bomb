@@ -313,6 +313,119 @@ std::optional<vpart_reference> veh_interact::select_part_at_grid( map &here, veh
     return vpart_reference( veh, *selected_part_index );
 }
 
+std::optional<veh_interact::service_selection>
+veh_interact::select_service_action_at_grid( map &here, vehicle &veh,
+        const std::set<itype_id> &available_base_items, const part_selector &repair_selector )
+{
+    veh_interact vehint( here, veh );
+    vehint.vehicle_service_mode = true;
+    vehint.service_install_items = &available_base_items;
+    vehint.service_repair_filter = repair_selector;
+    vehint.move_cursor( here, point_rel_ms::zero );
+    return vehint.do_vehicle_service_loop( here );
+}
+
+std::optional<std::string> veh_interact::service_installation_denial( const vehicle &veh,
+        const point_rel_ms &mount, const vpart_info &vpart )
+{
+    const std::vector<int> parts_here = veh.parts_at_relative( mount, true );
+    if( std::any_of( parts_here.begin(), parts_here.end(), [&]( const int index ) {
+    return veh.part( index ).has_flag( vp_flag::carried_flag );
+    } ) ) {
+        return _( "Unracking is required before installing any parts here." );
+    }
+    if( const std::optional<std::string> conflict = veh.has_engine_conflict( vpart ) ) {
+        return string_format( _( "Only one %s powered engine can be installed." ), *conflict );
+    }
+    if( veh.has_part( "NO_MODIFY_VEHICLE" ) && !vpart.has_flag( "SIMPLE_PART" ) ) {
+        return _( "This vehicle cannot be modified in this way." );
+    }
+    if( vpart.has_flag( "NO_INSTALL_PLAYER" ) ) {
+        return _( "This part cannot be installed." );
+    }
+    if( vpart.has_flag( "FUNNEL" ) &&
+        std::none_of( parts_here.begin(), parts_here.end(), [&]( const int index ) {
+    return veh.part( index ).is_tank();
+    } ) ) {
+        return _( "Funnels need to be installed over a tank." );
+    }
+    if( vpart.has_flag( "TURRET" ) &&
+        std::any_of( parts_here.begin(), parts_here.end(), [&]( const int index ) {
+    return veh.part( index ).is_turret();
+    } ) ) {
+        return _( "Can't install turret on another turret." );
+    }
+    if( vpart.has_flag( "ENGINE" ) && vpart.has_flag( "E_HIGHER_SKILL" ) ) {
+        int complex_engines = 0;
+        for( const vpart_reference &part : veh.get_avail_parts( "ENGINE" ) ) {
+            complex_engines += part.has_feature( "E_HIGHER_SKILL" );
+        }
+        if( complex_engines >= 2 ) {
+            return _( "No more complex engines can be installed on this vehicle." );
+        }
+    }
+    const ret_val<void> can_mount = veh.can_mount( mount, vpart );
+    if( !can_mount.success() ) {
+        return can_mount.str();
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> veh_interact::service_removal_denial( const vehicle &veh,
+        const int part_index )
+{
+    if( part_index < 0 || part_index >= veh.part_count() ) {
+        return _( "That vehicle part no longer exists." );
+    }
+    const vehicle_part &part = veh.part( part_index );
+    const vpart_info &info = part.info();
+    if( part.removed || part.is_fake ) {
+        return _( "That is not a real installed vehicle part." );
+    }
+    const bool smash_remove = info.has_flag( "SMASH_REMOVE" );
+    if( veh.has_part( "NO_MODIFY_VEHICLE" ) && !info.has_flag( "SIMPLE_PART" ) &&
+        !smash_remove ) {
+        return _( "This vehicle cannot be modified in this way." );
+    }
+    if( info.has_flag( "NO_UNINSTALL" ) ) {
+        return _( "This part cannot be uninstalled." );
+    }
+    if( part.has_flag( vp_flag::passenger_flag ) ) {
+        return _( "The passenger must leave this part before it can be removed." );
+    }
+    if( part.has_flag( vp_flag::animal_flag ) ) {
+        return _( "Remove the carried animal before removing this part." );
+    }
+    if( part.has_flag( vp_flag::carrying_flag ) || part.has_flag( vp_flag::carried_flag ) ) {
+        return _( "Unrack the carried vehicle before removing this part." );
+    }
+    if( part.has_flag( vp_flag::linked_flag ) ) {
+        return _( "Disconnect the item linked to this part before removing it." );
+    }
+    if( info.has_flag( VPFLAG_POWER_TRANSFER ) || info.has_flag( "TOW_CABLE" ) ) {
+        return _( "Disconnect this part from the other vehicle before removing it." );
+    }
+    for( const int attached_index : veh.parts_at_relative( part.mount, false ) ) {
+        const vehicle_part &attached_part = veh.part( attached_index );
+        const vpart_info &attached_info = attached_part.info();
+        if( attached_part.has_flag( vp_flag::linked_flag ) ) {
+            return _( "Disconnect the item linked at this position before removing the part." );
+        }
+        if( attached_info.has_flag( VPFLAG_POWER_TRANSFER ) ||
+            attached_info.has_flag( "TOW_CABLE" ) ) {
+            return _( "Disconnect the cable attached at this position before removing the part." );
+        }
+    }
+    if( info.has_flag( VPFLAG_APPLIANCE ) && veh.part_count_real() > 1 ) {
+        return _( "Disconnect this appliance from its power grid before removing it." );
+    }
+    const ret_val<void> can_unmount = veh.can_unmount( part );
+    if( !can_unmount.success() ) {
+        return can_unmount.str();
+    }
+    return std::nullopt;
+}
+
 /**
  * Creates a blank veh_interact window.
  */
@@ -650,6 +763,77 @@ void veh_interact::do_main_loop( map &here )
     }
 }
 
+std::optional<veh_interact::service_selection> veh_interact::do_vehicle_service_loop(
+    map &here )
+{
+    shared_ptr_fast<ui_adaptor> current_ui = create_or_get_ui_adaptor( here );
+    while( true ) {
+        calc_overview( here );
+        ui_manager::redraw();
+        const int description_scroll_lines = catacurses::getmaxy( w_parts ) - 4;
+        const std::string action = main_context.handle_input();
+        msg.reset();
+        if( const std::optional<tripoint_rel_ms> vec = main_context.get_direction_rel_ms( action ) ) {
+            move_cursor( here, vec->xy() );
+        } else if( action == "INSTALL" ) {
+            if( service_install_items == nullptr || service_install_items->empty() ) {
+                msg = _( "Neither side has a tradable vehicle part available for installation." );
+                continue;
+            }
+            do_install( here );
+            if( sel_cmd == VEHICLE_INSTALL && sel_vpart_info != nullptr ) {
+                service_selection result;
+                result.action = service_action::install;
+                result.mount = -cursor_vp_mount;
+                result.part_id = sel_vpart_info->id;
+                return result;
+            }
+        } else if( action == "REPAIR" ) {
+            part_selection_filter = service_repair_filter;
+            if( const std::optional<int> selected = select_part_at_cursor( here ) ) {
+                service_selection result;
+                result.action = service_action::repair;
+                result.part_index = *selected;
+                result.mount = veh->part( *selected ).mount;
+                result.part_id = veh->part( *selected ).info().id;
+                return result;
+            }
+        } else if( action == "REMOVE" ) {
+            part_selection_filter = [this]( const map &, const vehicle_part &part ) {
+                return !service_removal_denial( *veh, veh->index_of_part( &part ) );
+            };
+            if( const std::optional<int> selected = select_part_at_cursor( here ) ) {
+                service_selection result;
+                result.action = service_action::remove;
+                result.part_index = *selected;
+                result.mount = veh->part( *selected ).mount;
+                result.part_id = veh->part( *selected ).info().id;
+                return result;
+            }
+            for( const int index : parts_here ) {
+                if( const std::optional<std::string> denial = service_removal_denial( *veh, index ) ) {
+                    msg = *denial;
+                    break;
+                }
+            }
+        } else if( action == "QUIT" ) {
+            return std::nullopt;
+        } else if( action == "OVERVIEW_DOWN" ) {
+            move_overview_line( 1 );
+        } else if( action == "OVERVIEW_UP" ) {
+            move_overview_line( -1 );
+        } else if( action == "DESC_LIST_DOWN" ) {
+            move_cursor( here, point_rel_ms::zero, 1 );
+        } else if( action == "DESC_LIST_UP" ) {
+            move_cursor( here, point_rel_ms::zero, -1 );
+        } else if( action == "PAGE_DOWN" ) {
+            move_cursor( here, point_rel_ms::zero, description_scroll_lines );
+        } else if( action == "PAGE_UP" ) {
+            move_cursor( here, point_rel_ms::zero, -description_scroll_lines );
+        }
+    }
+}
+
 std::optional<int> veh_interact::do_part_selection_loop( map &here )
 {
     shared_ptr_fast<ui_adaptor> current_ui = create_or_get_ui_adaptor( here );
@@ -903,6 +1087,19 @@ bool veh_interact::update_part_requirements( map &here )
         return false;
     }
 
+    if( vehicle_service_mode ) {
+        std::string nmsg = _( "The dealership supplies all skills, tools, lifting, and installation materials.\n" );
+        const std::optional<std::string> denial = service_installation_denial(
+                    *veh, -cursor_vp_mount, *sel_vpart_info );
+        if( denial ) {
+            nmsg += _( "<color_white>Cannot install due to:</color>\n> " );
+            nmsg += colorize( *denial, c_red ) + "\n";
+        }
+        sel_vpart_info->format_description( nmsg, c_light_gray, getmaxx( w_msg ) - 4 );
+        msg = colorize( nmsg, c_light_gray );
+        return !denial;
+    }
+
     if( std::any_of( parts_here.begin(), parts_here.end(), [&]( const int e ) {
     return veh->part( e ).has_flag( vp_flag::carried_flag );
     } ) ) {
@@ -1047,7 +1244,9 @@ void veh_interact::move_fuel_cursor( map &here, int delta )
 
 void veh_interact::do_install( map &here )
 {
-    task_reason reason = cant_do( here, VEHICLE_INSTALL );
+    const task_reason reason = vehicle_service_mode ?
+                               ( can_mount.empty() ? task_reason::INVALID_TARGET : task_reason::CAN_DO ) :
+                               cant_do( here, VEHICLE_INSTALL );
 
     if( reason == task_reason::INVALID_TARGET ) {
         msg = _( "Cannot install any part here." );
@@ -1137,7 +1336,8 @@ void veh_interact::do_install( map &here )
             // Modifying a vehicle with rotors will make in not flightworthy
             // (until we've got a better model)
             // It can only be the player doing this - an npc won't work well with query_yn
-            if( veh->would_install_prevent_flyable( *sel_vpart_info, player_character ) ) {
+            if( !vehicle_service_mode &&
+                veh->would_install_prevent_flyable( *sel_vpart_info, player_character ) ) {
                 if( query_yn(
                         _( "Installing this part will mean that this vehicle is no longer "
                            "flightworthy.  Continue?" ) ) ) {
@@ -2261,6 +2461,11 @@ int veh_interact::part_at( const point_rel_ms &d )
  */
 bool veh_interact::can_potentially_install( const vpart_info &vpart )
 {
+    if( vehicle_service_mode ) {
+        return service_install_items != nullptr &&
+               service_install_items->count( vpart.base_item ) > 0 &&
+               !vpart.has_flag( VPFLAG_APPLIANCE );
+    }
     bool engine_reqs_met = true;
     bool can_make = vpart.install_requirements().can_make_with_inventory( *crafting_inv,
                     is_crafting_component, 1, craft_flags::none, false );
@@ -2317,9 +2522,14 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
                 vpi.has_flag( VPFLAG_APPLIANCE ) ) {
                 continue; // hide parts with incompatible flags
             }
+            if( vehicle_service_mode &&
+                ( service_install_items == nullptr ||
+                  service_install_items->count( vpi.base_item ) == 0 ) ) {
+                continue;
+            }
             if( can_potentially_install( vpi ) ) {
                 can_mount.push_back( &vpi );
-            } else {
+            } else if( !vehicle_service_mode ) {
                 req_missing.push_back( &vpi );
             }
         }
@@ -2781,23 +2991,32 @@ void veh_interact::display_mode( const map &here )
         nc_color title_col = c_light_gray;
         // NOLINTNEXTLINE(cata-use-named-point-constants)
         print_colored_text( w_mode, point( 1, 0 ), title_col, title_col, title.value() );
-    } else if( part_selection_mode ) {
-        constexpr size_t action_cnt = 2;
-        const std::array<std::string, action_cnt> actions = { {
-                veh_act_desc( main_context, "CONFIRM",
+    } else if( part_selection_mode || vehicle_service_mode ) {
+        constexpr size_t maximum_action_count = 4;
+        const size_t action_cnt = vehicle_service_mode ? maximum_action_count : 2;
+        const std::array<std::string, maximum_action_count> actions = { {
+                veh_act_desc( main_context, vehicle_service_mode ? "INSTALL" : "CONFIRM",
+                              vehicle_service_mode ? pgettext( "veh_interact", "install" ) :
                               pgettext( "veh_interact", "select part" ),
                               task_reason::CAN_DO ),
+                vehicle_service_mode ? veh_act_desc( main_context, "REPAIR",
+                                       pgettext( "veh_interact", "repair" ), task_reason::CAN_DO ) :
+                veh_act_desc( main_context, "QUIT", pgettext( "veh_interact", "back" ),
+                              task_reason::CAN_DO ),
+                vehicle_service_mode ? veh_act_desc( main_context, "REMOVE",
+                                       pgettext( "veh_interact", "remove" ), task_reason::CAN_DO ) :
+                std::string(),
                 veh_act_desc( main_context, "QUIT",
                               pgettext( "veh_interact", "back" ),
                               task_reason::CAN_DO ),
             }
         };
-        std::array < int, action_cnt + 1 > pos;
+        std::array<int, maximum_action_count + 1> pos;
         pos[0] = 0;
         for( size_t i = 0; i < action_cnt; ++i ) {
             pos[i + 1] = pos[i] + utf8_width( actions[i], true );
         }
-        const int space = std::max<int>( getmaxx( w_mode ) - pos.back(), action_cnt + 1 );
+        const int space = std::max<int>( getmaxx( w_mode ) - pos[action_cnt], action_cnt + 1 );
         for( size_t i = 0; i < action_cnt; ++i ) {
             nc_color dummy = c_white;
             print_colored_text( w_mode, point( pos[i] + space * ( i + 1 ) / ( action_cnt + 1 ), 0 ),

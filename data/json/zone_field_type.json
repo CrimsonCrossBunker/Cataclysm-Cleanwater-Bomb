@@ -441,6 +441,13 @@
     "display_field": true
   },
   {
+    "id": "fd_vehicle_service_output_zone",
+    "type": "field_type",
+    "intensity_levels": [ { "name": "vehicle service output zone", "sym": "V", "dangerous": false } ],
+    "priority": 1,
+    "display_field": true
+  },
+  {
     "id": "fd_weapons_loot_zone",
     "type": "field_type",
     "intensity_levels": [ { "name": "weapons loot zone", "sym": "w", "dangerous": false } ],

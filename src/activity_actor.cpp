@@ -76,6 +76,7 @@
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
+#include "item_factory.h"
 #include "item_group.h"
 #include "item_location.h"
 #include "item_pocket.h"
@@ -259,6 +260,8 @@ static const activity_id ACT_UNLOAD_LOOT( "ACT_UNLOAD_LOOT" );
 static const activity_id ACT_VEHICLE( "ACT_VEHICLE" );
 static const activity_id ACT_VEHICLE_DECONSTRUCTION( "ACT_VEHICLE_DECONSTRUCTION" );
 static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
+static const activity_id ACT_VEHICLE_PART_INSTALL_SERVICE( "ACT_VEHICLE_PART_INSTALL_SERVICE" );
+static const activity_id ACT_VEHICLE_PART_REMOVE_SERVICE( "ACT_VEHICLE_PART_REMOVE_SERVICE" );
 static const activity_id ACT_VEHICLE_PART_REPAIR_SERVICE( "ACT_VEHICLE_PART_REPAIR_SERVICE" );
 static const activity_id ACT_VEHICLE_REPAIR( "ACT_VEHICLE_REPAIR" );
 static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
@@ -287,6 +290,7 @@ static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_blind( "blind" );
 static const efftype_id effect_controlled( "controlled" );
+static const efftype_id effect_currently_busy( "currently_busy" );
 static const efftype_id effect_docile( "docile" );
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_gliding( "gliding" );
@@ -316,6 +320,7 @@ static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 
 static const furn_str_id furn_f_gunsafe_mj( "f_gunsafe_mj" );
 static const furn_str_id furn_f_gunsafe_ml( "f_gunsafe_ml" );
+static const furn_str_id furn_f_counter( "f_counter" );
 static const furn_str_id furn_f_kiln_empty( "f_kiln_empty" );
 static const furn_str_id furn_f_kiln_metal_empty( "f_kiln_metal_empty" );
 static const furn_str_id furn_f_kiln_portable_empty( "f_kiln_portable_empty" );
@@ -448,6 +453,7 @@ static const zone_type_id zone_type_LOOT_IGNORE_FAVORITES( "LOOT_IGNORE_FAVORITE
 static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
 static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
 static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
+static const zone_type_id zone_type_VEHICLE_SERVICE_OUTPUT( "VEHICLE_SERVICE_OUTPUT" );
 
 static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
 
@@ -13994,14 +14000,76 @@ void vehicle_part_repair_service_activity_actor::start( player_activity &act, Ch
     act.index = mechanic_id.get_value();
 }
 
+static bool vehicle_service_part_needs_repair( const vehicle_part &part )
+{
+    return !part.removed && !part.is_fake && part.max_damage() > 0 &&
+           ( part.damage() > 0 || part.degradation() > 0 || !part.faults().empty() );
+}
+
+static void restore_vehicle_service_part( vehicle_part &part )
+{
+    item restored_base( part.get_base() );
+    restored_base.faults.clear();
+    restored_base.set_degradation( 0 );
+    restored_base.force_set_damage( 0 );
+    part.set_base( std::move( restored_base ) );
+}
+
+void vehicle_part_repair_service_activity_actor::settle_failed_part_order( Character &,
+        const std::string &status )
+{
+    if( npc *mechanic = g->find_npc( mechanic_id ) ) {
+        if( paid_cost > 0 ) {
+            mechanic->op_of_u.owed += paid_cost;
+        }
+        mechanic->set_value( "vehicle_part_service_status", status );
+        mechanic->remove_effect( effect_currently_busy );
+    }
+}
+
 void vehicle_part_repair_service_activity_actor::finish( player_activity &act, Character &who )
 {
     npc *mechanic = g->find_npc( mechanic_id );
-    if( mechanic != nullptr ) {
-        talk_function::finish_vehicle_part_repair( *mechanic );
-    } else {
+    if( full_vehicle && mechanic != nullptr ) {
+        talk_function::finish_vehicle_full_repair( *mechanic );
+    } else if( full_vehicle ) {
         who.add_msg_if_player( m_bad,
                                _( "The mechanic is no longer available, so the vehicle part was not repaired." ) );
+    } else {
+        map &here = get_map();
+        const optional_vpart_position ovp = here.veh_at( vehicle_pos );
+        vehicle *target = ovp ? &ovp->vehicle() : nullptr;
+        const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) :
+                                   nullptr;
+        const bool valid_target = target != nullptr && target->pos_abs() == vehicle_pos &&
+                                  marker != nullptr && marker->is_str() && marker->str() == "yes" &&
+                                  target->is_owned_by( get_avatar() ) &&
+                                  !target->player_in_control( here, get_avatar() ) &&
+                                  talk_function::vehicle_service_state_snapshot( *target ) == vehicle_snapshot;
+        const bool valid_part = valid_target && part_index >= 0 && part_index < target->part_count() &&
+                                vehicle_service_part_needs_repair( target->part( part_index ) );
+        if( !valid_part ) {
+            settle_failed_part_order( who, "invalidated" );
+            who.add_msg_if_player( m_bad,
+                                   _( "The selected vehicle part changed while repairs were underway.  "
+                                      "The order was canceled and fully credited." ) );
+            act.set_to_null();
+            return;
+        }
+
+        const std::string part_name = target->part( part_index ).name();
+        const std::string vehicle_name = target->name;
+        restore_vehicle_service_part( target->part( part_index ) );
+        target->refresh();
+        if( mechanic != nullptr ) {
+            mechanic->set_value( "vehicle_part_service_status", "complete" );
+            mechanic->remove_effect( effect_currently_busy );
+            who.add_msg_if_player( m_good, _( "%1$s completely repairs the %2$s's %3$s." ),
+                                   mechanic->get_name(), vehicle_name, part_name );
+        } else {
+            who.add_msg_if_player( m_good, _( "The %1$s's %2$s is completely repaired." ),
+                                   vehicle_name, part_name );
+        }
     }
     act.set_to_null();
 }
@@ -14009,11 +14077,15 @@ void vehicle_part_repair_service_activity_actor::finish( player_activity &act, C
 void vehicle_part_repair_service_activity_actor::canceled( player_activity &, Character &who )
 {
     npc *mechanic = g->find_npc( mechanic_id );
-    if( mechanic != nullptr ) {
-        talk_function::cancel_vehicle_part_repair( *mechanic );
-    } else {
+    if( full_vehicle && mechanic != nullptr ) {
+        talk_function::cancel_vehicle_full_repair( *mechanic );
+    } else if( full_vehicle ) {
         who.add_msg_if_player( m_bad,
                                _( "The mechanic is no longer available, so the repair service could not be settled." ) );
+    } else {
+        settle_failed_part_order( who, "cancelled" );
+        who.add_msg_if_player( m_info,
+                               _( "The vehicle repair is canceled and the order is fully credited." ) );
     }
 }
 
@@ -14022,6 +14094,11 @@ void vehicle_part_repair_service_activity_actor::serialize( JsonOut &jsout ) con
     jsout.start_object();
     jsout.member( "mechanic_id", mechanic_id );
     jsout.member( "repair_time", initial_wait_time );
+    jsout.member( "full_vehicle", full_vehicle );
+    jsout.member( "vehicle_pos", vehicle_pos );
+    jsout.member( "vehicle_snapshot", vehicle_snapshot );
+    jsout.member( "part_index", part_index );
+    jsout.member( "paid_cost", paid_cost );
     jsout.end_object();
 }
 
@@ -14032,6 +14109,377 @@ std::unique_ptr<activity_actor> vehicle_part_repair_service_activity_actor::dese
     JsonObject data = jsin.get_object();
     data.read( "mechanic_id", actor.mechanic_id );
     data.read( "repair_time", actor.initial_wait_time );
+    data.read( "full_vehicle", actor.full_vehicle );
+    data.read( "vehicle_pos", actor.vehicle_pos );
+    data.read( "vehicle_snapshot", actor.vehicle_snapshot );
+    data.read( "part_index", actor.part_index );
+    data.read( "paid_cost", actor.paid_cost );
+    return actor.clone();
+}
+
+void vehicle_part_install_service_activity_actor::start( player_activity &act, Character &who )
+{
+    wait_activity_actor::start( act, who );
+    act.index = mechanic_id.get_value();
+}
+
+void vehicle_part_install_service_activity_actor::settle_failed_order( Character &who,
+        const std::string &status )
+{
+    npc *mechanic = g->find_npc( mechanic_id );
+    if( mechanic != nullptr ) {
+        if( paid_cost > 0 ) {
+            mechanic->op_of_u.owed += paid_cost;
+        }
+        if( !reserved_part.is_null() ) {
+            if( supplied_by_mechanic ) {
+                reserved_part.set_owner( *mechanic );
+                bool returned_to_shop = false;
+                if( mechanic->is_shopkeeper() ) {
+                    zone_manager &zones = zone_manager::get_manager();
+                    const std::unordered_set<tripoint_bub_ms> shop_tiles =
+                        zones.get_point_set_loot( mechanic->pos_abs(), PICKUP_RANGE,
+                                                  mechanic->get_fac_id() );
+                    if( !shop_tiles.empty() ) {
+                        get_map().add_item_or_charges( *shop_tiles.begin(), reserved_part );
+                        returned_to_shop = true;
+                    }
+                }
+                if( !returned_to_shop ) {
+                    mechanic->i_add( reserved_part );
+                }
+            } else {
+                who.i_add_or_drop( reserved_part );
+            }
+        }
+        mechanic->set_value( "vehicle_part_service_status", status );
+        mechanic->remove_effect( effect_currently_busy );
+    } else if( !reserved_part.is_null() ) {
+        who.i_add_or_drop( reserved_part );
+    }
+    reserved_part = item();
+}
+
+void vehicle_part_install_service_activity_actor::finish( player_activity &act, Character &who )
+{
+    map &here = get_map();
+    const optional_vpart_position ovp = here.veh_at( vehicle_pos );
+    vehicle *target = ovp ? &ovp->vehicle() : nullptr;
+    const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) : nullptr;
+    const bool valid_target = target != nullptr && target->pos_abs() == vehicle_pos &&
+                              marker != nullptr && marker->is_str() && marker->str() == "yes" &&
+                              target->is_owned_by( get_avatar() ) &&
+                              !target->player_in_control( here, get_avatar() ) &&
+                              talk_function::vehicle_service_state_snapshot( *target ) == vehicle_snapshot;
+    const bool valid_part = part_id.is_valid() && !reserved_part.is_null() &&
+                            reserved_part.typeId() == part_id->base_item;
+    const std::optional<std::string> denial = valid_target && valid_part ?
+            veh_interact::service_installation_denial( *target, mount, part_id.obj() ) :
+            std::optional<std::string>( _( "The installation order is no longer valid." ) );
+
+    if( !valid_target || !valid_part || denial ) {
+        settle_failed_order( who, "invalidated" );
+        who.add_msg_if_player( m_bad,
+                               _( "The vehicle changed while the installation was underway.  "
+                                  "The order was canceled and fully credited." ) );
+        act.set_to_null();
+        return;
+    }
+
+    vehicle_part installed( part_id, item( reserved_part ) );
+    if( part_id->variants.count( variant ) > 0 ) {
+        installed.variant = variant;
+    }
+    installed.direction = units::from_degrees( direction_degrees );
+    const int installed_index = target->install_part( here, mount, std::move( installed ) );
+    if( installed_index < 0 ) {
+        settle_failed_order( who, "invalidated" );
+        who.add_msg_if_player( m_bad,
+                               _( "The vehicle part could not be installed.  The order was fully credited." ) );
+        act.set_to_null();
+        return;
+    }
+
+    reserved_part = item();
+    if( disable_flyable ) {
+        target->set_flyable( false );
+    }
+    here.add_vehicle_to_cache( target );
+    if( npc *mechanic = g->find_npc( mechanic_id ) ) {
+        mechanic->set_value( "vehicle_part_service_status", "complete" );
+        mechanic->remove_effect( effect_currently_busy );
+        who.add_msg_if_player( m_good, _( "%1$s installs the %2$s into the %3$s." ),
+                               mechanic->get_name(), target->part( installed_index ).name(), target->name );
+    } else {
+        who.add_msg_if_player( m_good, _( "The %1$s is installed into the %2$s." ),
+                               target->part( installed_index ).name(), target->name );
+    }
+    act.set_to_null();
+}
+
+void vehicle_part_install_service_activity_actor::canceled( player_activity &, Character &who )
+{
+    settle_failed_order( who, "cancelled" );
+    who.add_msg_if_player( m_info,
+                           _( "The vehicle installation is canceled and the order is fully credited." ) );
+}
+
+void vehicle_part_install_service_activity_actor::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+    jsout.member( "mechanic_id", mechanic_id );
+    jsout.member( "install_time", initial_wait_time );
+    jsout.member( "vehicle_pos", vehicle_pos );
+    jsout.member( "vehicle_snapshot", vehicle_snapshot );
+    jsout.member( "mount", mount );
+    jsout.member( "part_id", part_id );
+    jsout.member( "reserved_part", reserved_part );
+    jsout.member( "supplied_by_mechanic", supplied_by_mechanic );
+    jsout.member( "paid_cost", paid_cost );
+    jsout.member( "variant", variant );
+    jsout.member( "direction_degrees", direction_degrees );
+    jsout.member( "disable_flyable", disable_flyable );
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> vehicle_part_install_service_activity_actor::deserialize(
+    JsonValue &jsin )
+{
+    vehicle_part_install_service_activity_actor actor;
+    JsonObject data = jsin.get_object();
+    data.read( "mechanic_id", actor.mechanic_id );
+    data.read( "install_time", actor.initial_wait_time );
+    data.read( "vehicle_pos", actor.vehicle_pos );
+    data.read( "vehicle_snapshot", actor.vehicle_snapshot );
+    data.read( "mount", actor.mount );
+    data.read( "part_id", actor.part_id );
+    data.read( "reserved_part", actor.reserved_part );
+    data.read( "supplied_by_mechanic", actor.supplied_by_mechanic );
+    data.read( "paid_cost", actor.paid_cost );
+    data.read( "variant", actor.variant );
+    data.read( "direction_degrees", actor.direction_degrees );
+    data.read( "disable_flyable", actor.disable_flyable );
+    return actor.clone();
+}
+
+namespace
+{
+class vehicle_service_remove_handler : public DefaultRemovePartHandler
+{
+    public:
+        void add_item_or_charges( map *, const tripoint_bub_ms &, item, bool ) override {
+            // Outputs are captured before removal and placed on the service counter afterwards.
+        }
+};
+
+void collect_vehicle_service_removal_side_outputs( map &here, vehicle &veh, const int part_index,
+        const bool include_base, std::vector<item> &outputs, std::set<int> &affected_parts )
+{
+    if( part_index < 0 || part_index >= veh.part_count() ||
+        !affected_parts.insert( part_index ).second ) {
+        return;
+    }
+    vehicle_part &part = veh.part( part_index );
+    if( part.removed || part.is_fake ) {
+        return;
+    }
+    if( include_base ) {
+        outputs.push_back( veh.part_to_item( here, part ) );
+    }
+    const std::vector<item> &tools = veh.get_tools( part );
+    outputs.insert( outputs.end(), tools.begin(), tools.end() );
+    vehicle_stack contents = veh.get_items( part );
+    outputs.insert( outputs.end(), contents.begin(), contents.end() );
+
+    const auto collect_dependent = [&]( const std::string &parent_flag,
+    const std::string &child_flag ) {
+        if( !part.info().has_flag( parent_flag ) ) {
+            return;
+        }
+        const int dependent = veh.part_with_feature( part.mount, child_flag, false );
+        if( dependent >= 0 ) {
+            collect_vehicle_service_removal_side_outputs( here, veh, dependent, true,
+                    outputs, affected_parts );
+        }
+    };
+    collect_dependent( "WINDOW", "CURTAIN" );
+    collect_dependent( "SEAT", "SEATBELT" );
+    collect_dependent( "BATTERY_MOUNT", "NEEDS_BATTERY_MOUNT" );
+    collect_dependent( "HANDHELD_BATTERY_MOUNT", "NEEDS_HANDHELD_BATTERY_MOUNT" );
+}
+} // namespace
+
+void vehicle_part_remove_service_activity_actor::start( player_activity &act, Character &who )
+{
+    wait_activity_actor::start( act, who );
+    act.index = mechanic_id.get_value();
+}
+
+void vehicle_part_remove_service_activity_actor::settle_failed_order( Character &,
+        const std::string &status )
+{
+    if( npc *mechanic = g->find_npc( mechanic_id ) ) {
+        if( paid_cost > 0 ) {
+            mechanic->op_of_u.owed += paid_cost;
+        }
+        mechanic->set_value( "vehicle_part_service_status", status );
+        mechanic->remove_effect( effect_currently_busy );
+    }
+}
+
+void vehicle_part_remove_service_activity_actor::finish( player_activity &act, Character &who )
+{
+    map &here = get_map();
+    npc *mechanic = g->find_npc( mechanic_id );
+    const optional_vpart_position ovp = here.veh_at( vehicle_pos );
+    vehicle *target = ovp ? &ovp->vehicle() : nullptr;
+    const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) : nullptr;
+    const bool valid_target = target != nullptr && target->pos_abs() == vehicle_pos &&
+                              marker != nullptr && marker->is_str() && marker->str() == "yes" &&
+                              target->is_owned_by( get_avatar() ) &&
+                              !target->player_in_control( here, get_avatar() ) &&
+                              talk_function::vehicle_service_state_snapshot( *target ) == vehicle_snapshot;
+    const bool valid_part = valid_target && part_index >= 0 && part_index < target->part_count() &&
+                            !veh_interact::service_removal_denial( *target, part_index );
+    const faction_id mechanic_faction = mechanic != nullptr ? mechanic->get_fac_id() : faction_id();
+    const tripoint_bub_ms output_bub = here.get_bub( output_pos );
+    const bool valid_output = mechanic != nullptr && here.inbounds( output_bub ) &&
+                              here.furn( output_bub ) == furn_f_counter &&
+                              zone_manager::get_manager().has( zone_type_VEHICLE_SERVICE_OUTPUT,
+                                      output_pos, mechanic_faction );
+    if( !valid_part || !valid_output ) {
+        settle_failed_order( who, "invalidated" );
+        who.add_msg_if_player( m_bad,
+                               _( "The vehicle or service counter changed while removal was underway.  "
+                                  "The order was canceled and fully credited." ) );
+        act.set_to_null();
+        return;
+    }
+
+    vehicle_part &part = target->part( part_index );
+    const vpart_info &info = part.info();
+    const bool broken = part.is_broken();
+    const bool smash_remove = info.has_flag( "SMASH_REMOVE" );
+    std::vector<item> outputs;
+    std::set<int> affected_parts;
+    collect_vehicle_service_removal_side_outputs( here, *target, part_index, false,
+            outputs, affected_parts );
+    if( broken || smash_remove ) {
+        item_group::ItemList pieces = part.pieces_for_broken_part();
+        outputs.insert( outputs.end(), pieces.begin(), pieces.end() );
+    } else {
+        outputs.push_back( target->removed_part( here, part ) );
+        const double component_success_chance = std::pow( 0.8, part.damage_level() );
+        const double charges_min = std::clamp( component_success_chance, 0.0, 1.0 );
+        const double charges_max = std::clamp( component_success_chance + 0.1, 0.0, 1.0 );
+        for( item salvage : part.get_salvageable() ) {
+            if( salvage.count_by_charges() ) {
+                salvage.charges *= rng_float( charges_min, charges_max );
+                if( salvage.charges > 0 ) {
+                    outputs.push_back( std::move( salvage ) );
+                }
+            } else if( component_success_chance > rng_float( 0.0, 1.0 ) ) {
+                outputs.push_back( std::move( salvage ) );
+            }
+        }
+    }
+
+    const map_stack counter_items = here.i_at( output_bub );
+    units::volume output_volume = 0_ml;
+    for( const item &output : outputs ) {
+        output_volume += output.volume();
+    }
+    const bool counter_has_room = here.can_put_items( output_bub ) &&
+                                  counter_items.size() + outputs.size() <=
+                                  static_cast<size_t>( counter_items.count_limit() ) &&
+                                  output_volume <= counter_items.free_volume() &&
+                                  std::none_of( outputs.begin(), outputs.end(), []( const item &output ) {
+        return item_is_blacklisted( output.typeId() );
+    } );
+    if( !counter_has_room ) {
+        settle_failed_order( who, "invalidated" );
+        who.add_msg_if_player( m_bad,
+                               _( "The service counter no longer has room for the complete removal order.  "
+                                  "The vehicle was left unchanged and the order was fully credited." ) );
+        act.set_to_null();
+        return;
+    }
+    for( item &output : outputs ) {
+        output.set_owner( get_avatar() );
+    }
+
+    const std::string part_name = part.name();
+    const std::string vehicle_name = target->name;
+    const point_rel_ms part_mount = part.mount;
+    bool removes_entire_vehicle = true;
+    for( int index = 0; index < target->part_count(); ++index ) {
+        const vehicle_part &candidate = target->part( index );
+        if( !candidate.removed && !candidate.is_fake && affected_parts.count( index ) == 0 ) {
+            removes_entire_vehicle = false;
+            break;
+        }
+    }
+    if( removes_entire_vehicle ) {
+        here.destroy_vehicle( target );
+    } else {
+        target->unlink_cables( here, part_mount, get_avatar(), false,
+                               info.location == vpart_location_structure,
+                               info.has_flag( VPFLAG_CABLE_PORTS ) || info.has_flag( VPFLAG_BATTERY ) );
+        vehicle_service_remove_handler handler;
+        target->remove_part( part, handler );
+        target->part_removal_cleanup( here );
+        if( disable_flyable ) {
+            target->set_flyable( false );
+        }
+    }
+
+    for( item &output : outputs ) {
+        here.add_item( output_bub, std::move( output ) );
+    }
+    if( mechanic != nullptr ) {
+        mechanic->set_value( "vehicle_part_service_status", "complete" );
+        mechanic->remove_effect( effect_currently_busy );
+        who.add_msg_if_player( m_good,
+                               _( "%1$s removes the %2$s from the %3$s and places the results on the counter." ),
+                               mechanic->get_name(), part_name, vehicle_name );
+    }
+    act.set_to_null();
+}
+
+void vehicle_part_remove_service_activity_actor::canceled( player_activity &, Character &who )
+{
+    settle_failed_order( who, "cancelled" );
+    who.add_msg_if_player( m_info,
+                           _( "The vehicle part removal is canceled and the order is fully credited." ) );
+}
+
+void vehicle_part_remove_service_activity_actor::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+    jsout.member( "mechanic_id", mechanic_id );
+    jsout.member( "removal_time", initial_wait_time );
+    jsout.member( "vehicle_pos", vehicle_pos );
+    jsout.member( "vehicle_snapshot", vehicle_snapshot );
+    jsout.member( "part_index", part_index );
+    jsout.member( "paid_cost", paid_cost );
+    jsout.member( "output_pos", output_pos );
+    jsout.member( "disable_flyable", disable_flyable );
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> vehicle_part_remove_service_activity_actor::deserialize(
+    JsonValue &jsin )
+{
+    vehicle_part_remove_service_activity_actor actor;
+    JsonObject data = jsin.get_object();
+    data.read( "mechanic_id", actor.mechanic_id );
+    data.read( "removal_time", actor.initial_wait_time );
+    data.read( "vehicle_pos", actor.vehicle_pos );
+    data.read( "vehicle_snapshot", actor.vehicle_snapshot );
+    data.read( "part_index", actor.part_index );
+    data.read( "paid_cost", actor.paid_cost );
+    data.read( "output_pos", actor.output_pos );
+    data.read( "disable_flyable", actor.disable_flyable );
     return actor.clone();
 }
 
@@ -15326,6 +15774,14 @@ deserialize_functions = {
     { ACT_VEHICLE, &vehicle_activity_actor::deserialize },
     { ACT_VEHICLE_DECONSTRUCTION, &multi_vehicle_deconstruct_activity_actor::deserialize },
     { ACT_VEHICLE_FOLD, &vehicle_folding_activity_actor::deserialize },
+    {
+        ACT_VEHICLE_PART_INSTALL_SERVICE,
+        &vehicle_part_install_service_activity_actor::deserialize
+    },
+    {
+        ACT_VEHICLE_PART_REMOVE_SERVICE,
+        &vehicle_part_remove_service_activity_actor::deserialize
+    },
     {
         ACT_VEHICLE_PART_REPAIR_SERVICE,
         &vehicle_part_repair_service_activity_actor::deserialize

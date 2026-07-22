@@ -4122,8 +4122,16 @@ class vehicle_part_repair_service_activity_actor : public wait_activity_actor
 {
     public:
         vehicle_part_repair_service_activity_actor( time_duration initial_wait_time,
-                character_id mechanic_id ) :
-            wait_activity_actor( initial_wait_time ), mechanic_id( mechanic_id ) {}
+                character_id mechanic_id, const tripoint_abs_ms &vehicle_pos,
+                std::string vehicle_snapshot, int part_index, int paid_cost ) :
+            wait_activity_actor( initial_wait_time ), mechanic_id( mechanic_id ),
+            vehicle_pos( vehicle_pos ), vehicle_snapshot( std::move( vehicle_snapshot ) ),
+            part_index( part_index ), paid_cost( paid_cost ) {}
+
+        vehicle_part_repair_service_activity_actor( time_duration initial_wait_time,
+                character_id mechanic_id, bool full_vehicle = false ) :
+            wait_activity_actor( initial_wait_time ), mechanic_id( mechanic_id ),
+            full_vehicle( full_vehicle ) {}
 
         void start( player_activity &act, Character &who ) override;
         void finish( player_activity &act, Character &who ) override;
@@ -4144,7 +4152,105 @@ class vehicle_part_repair_service_activity_actor : public wait_activity_actor
 
     private:
         character_id mechanic_id;
+        bool full_vehicle = false;
+        tripoint_abs_ms vehicle_pos;
+        std::string vehicle_snapshot;
+        int part_index = -1;
+        int paid_cost = 0;
+
+        void settle_failed_part_order( Character &who, const std::string &status );
         explicit vehicle_part_repair_service_activity_actor() = default;
+};
+
+class vehicle_part_install_service_activity_actor : public wait_activity_actor
+{
+    public:
+        vehicle_part_install_service_activity_actor( time_duration initial_wait_time,
+                character_id mechanic_id, const tripoint_abs_ms &vehicle_pos,
+                std::string vehicle_snapshot, const point_rel_ms &mount, const vpart_id &part_id,
+                item &&reserved_part, bool supplied_by_mechanic, int paid_cost,
+                std::string variant, int direction_degrees, bool disable_flyable ) :
+            wait_activity_actor( initial_wait_time ), mechanic_id( mechanic_id ),
+            vehicle_pos( vehicle_pos ), vehicle_snapshot( std::move( vehicle_snapshot ) ),
+            mount( mount ), part_id( part_id ), reserved_part( std::move( reserved_part ) ),
+            supplied_by_mechanic( supplied_by_mechanic ), paid_cost( paid_cost ),
+            variant( std::move( variant ) ), direction_degrees( direction_degrees ),
+            disable_flyable( disable_flyable ) {}
+
+        void start( player_activity &act, Character &who ) override;
+        void finish( player_activity &act, Character &who ) override;
+        void canceled( player_activity &act, Character &who ) override;
+
+        const activity_id &get_type() const override {
+            static const activity_id ACT_VEHICLE_PART_INSTALL_SERVICE(
+                "ACT_VEHICLE_PART_INSTALL_SERVICE" );
+            return ACT_VEHICLE_PART_INSTALL_SERVICE;
+        }
+
+        std::unique_ptr<activity_actor> clone() const override {
+            return std::make_unique<vehicle_part_install_service_activity_actor>( *this );
+        }
+
+        void serialize( JsonOut &jsout ) const override;
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+
+    private:
+        character_id mechanic_id;
+        tripoint_abs_ms vehicle_pos;
+        std::string vehicle_snapshot;
+        point_rel_ms mount = point_rel_ms::zero;
+        vpart_id part_id;
+        item reserved_part;
+        bool supplied_by_mechanic = false;
+        int paid_cost = 0;
+        std::string variant;
+        int direction_degrees = 0;
+        bool disable_flyable = false;
+
+        void settle_failed_order( Character &who, const std::string &status );
+        explicit vehicle_part_install_service_activity_actor() = default;
+};
+
+class vehicle_part_remove_service_activity_actor : public wait_activity_actor
+{
+    public:
+        vehicle_part_remove_service_activity_actor( time_duration initial_wait_time,
+                character_id mechanic_id, const tripoint_abs_ms &vehicle_pos,
+                std::string vehicle_snapshot, int part_index, int paid_cost,
+                const tripoint_abs_ms &output_pos, bool disable_flyable ) :
+            wait_activity_actor( initial_wait_time ), mechanic_id( mechanic_id ),
+            vehicle_pos( vehicle_pos ), vehicle_snapshot( std::move( vehicle_snapshot ) ),
+            part_index( part_index ), paid_cost( paid_cost ), output_pos( output_pos ),
+            disable_flyable( disable_flyable ) {}
+
+        void start( player_activity &act, Character &who ) override;
+        void finish( player_activity &act, Character &who ) override;
+        void canceled( player_activity &act, Character &who ) override;
+
+        const activity_id &get_type() const override {
+            static const activity_id ACT_VEHICLE_PART_REMOVE_SERVICE(
+                "ACT_VEHICLE_PART_REMOVE_SERVICE" );
+            return ACT_VEHICLE_PART_REMOVE_SERVICE;
+        }
+
+        std::unique_ptr<activity_actor> clone() const override {
+            return std::make_unique<vehicle_part_remove_service_activity_actor>( *this );
+        }
+
+        void serialize( JsonOut &jsout ) const override;
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+
+    private:
+        character_id mechanic_id;
+        tripoint_abs_ms vehicle_pos;
+        std::string vehicle_snapshot;
+        int part_index = -1;
+        int paid_cost = 0;
+        tripoint_abs_ms output_pos;
+        bool disable_flyable = false;
+
+        void settle_failed_order( Character &who, const std::string &status );
+        explicit vehicle_part_remove_service_activity_actor() = default;
 };
 
 class wait_weather_activity_actor : public wait_activity_actor
