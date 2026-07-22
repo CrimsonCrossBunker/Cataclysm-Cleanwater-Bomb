@@ -344,7 +344,8 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                 so it's basically guaranteed unless there's a choke or
                 something, and buckshot comes out to around 61%.
                 */
-                target_size = occupied_tile_fraction( target_critter->get_size() );
+                target_size = target_critter->as_character() ? target_critter->ranged_target_size() :
+                              occupied_tile_fraction( target_critter->get_size() );
                 add_msg_debug( debugmode::DF_RANGED,
                                "Shot spread or WIDE ammo effect negates HARDTOSHOOT/HARDTOHIT.  Target size %.2f", target_size );
             } else {
