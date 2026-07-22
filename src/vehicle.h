@@ -2345,9 +2345,9 @@ class vehicle
         void use_mws( map &here, int p );
         void use_auto_cooker( map &here, int p );
         // Process one turn of an enabled AUTO_COOKER part.
-        void process_auto_cooker_part( map &here, int p );
+        void process_auto_process_part( map &here, int p );
         // Catch up auto-cooker progress after the vehicle was outside the reality bubble.
-        void catch_up_auto_cooker( map &here, int p, const time_duration &elapsed );
+        void catch_up_auto_process( map &here, int p, const time_duration &elapsed );
         void use_nl_boiler( map &here, int p );
         void use_monster_capture( int part, map *here, const tripoint_bub_ms &pos );
         void use_tiedown_furniture( int part, map *here, const tripoint_bub_ms & );
@@ -2659,13 +2659,13 @@ class vehicle
         std::vector<std::tuple<point_rel_ms, int, std::string>> get_debug_overlay_data() const;
 
         // Auto-craft helpers.  Defined in vehicle.cpp so they can be reused by
-        // the off-map time catch-up logic.
+        // the off-map time catch-up logic.  Progress vars store joules.
         static std::pair<item *, const auto_process_rule *> find_auto_process_item(
             item &it, const auto_process_station &station );
-        static std::vector<item> finish_auto_process_item( item &it, const auto_process_rule &rule,
-                const auto_process_station &station );
-        static std::vector<item> advance_auto_process_item( item &it, const auto_process_rule &rule,
-                int energy_per_turn_kj, const auto_process_station &station );
+        std::vector<item> finish_auto_process_item( item &it, const auto_process_rule &rule,
+                const auto_process_station &station, int part );
+        std::vector<item> advance_auto_process_item( item &it, const auto_process_rule &rule,
+                int energy_per_turn_j, const auto_process_station &station, int part );
 };
 
 // For reference what each function is supposed to do, see their implementation in

@@ -49,6 +49,9 @@
 #include "game_constants.h"
 #include "hsv_color.h"
 #include "item.h"
+#include "dialogue.h"
+#include "effect_on_condition.h"
+#include "item_location.h"
 #include "item_components.h"
 #include "item_group.h"
 #include "itype.h"
@@ -8666,13 +8669,16 @@ static bool is_sm_tile_outside( const tripoint_abs_ms &real_global_pos )
 std::pair<item *, const auto_process_rule *> vehicle::find_auto_process_item( item &it,
         const auto_process_station &station )
 {
+    // Only matches rules whose action is in station.actions.
+    // Progress variables for unrelated actions are ignored (they accumulate no-op
+    // data if the item is moved between stations with different action sets).
     for( const auto_process_rule &rule : it.type->auto_process ) {
         if( station.actions.count( rule.action ) == 0 ) {
             continue;
         }
-        const int target_kj = units::to_kilojoule<int>( rule.energy_cost * station.energy_mult );
-        const int done_kj = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
-        if( done_kj < target_kj ) {
+        const int target_j = units::to_joule<int>( rule.energy_cost * station.energy_mult );
+        const int done_j = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
+        if( done_j < target_j ) {
             return { &it, &rule };
         }
     }
@@ -8688,7 +8694,7 @@ std::pair<item *, const auto_process_rule *> vehicle::find_auto_process_item( it
 }
 
 std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_process_rule &rule,
-        const auto_process_station &station )
+        const auto_process_station &station, int part )
 {
     std::vector<item> extras;
     if( rule.results.empty() ) {
@@ -8723,30 +8729,47 @@ std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_proces
     for( size_t ri = 1; ri < rule.results.size(); ri++ ) {
         extras.emplace_back( rule.results[ri], calendar::turn );
     }
+
+    // EOC hooks on completion
+    if( rule.completion_eoc.is_valid() ) {
+        item_location loc( vehicle_cursor( *this, part ), &it );
+        dialogue d( get_talker_for( loc ), nullptr );
+        rule.completion_eoc->activate( d );
+    }
+    if( station.completion_eoc.is_valid() ) {
+        dialogue d( get_talker_for( *this ), nullptr );
+        station.completion_eoc->activate( d );
+    }
     return extras;
 }
 
 std::vector<item> vehicle::advance_auto_process_item( item &it, const auto_process_rule &rule,
-        int energy_per_turn_kj, const auto_process_station &station )
+        int energy_per_turn_j, const auto_process_station &station, int part )
 {
-    const int target_kj = units::to_kilojoule<int>( rule.energy_cost * station.energy_mult );
+    const int target_j = units::to_joule<int>( rule.energy_cost * station.energy_mult );
     const std::string var_name = "auto_process_" + rule.action;
 
     int energy_done = std::stoi( it.get_var( var_name, "0" ) );
-    const int energy_remaining = target_kj - energy_done;
+    const int energy_remaining = target_j - energy_done;
     if( energy_remaining > 0 ) {
-        energy_done += std::min( energy_per_turn_kj, energy_remaining );
+        energy_done += std::min( energy_per_turn_j, energy_remaining );
     }
 
     it.set_var( var_name, std::to_string( energy_done ) );
 
-    if( energy_done >= target_kj ) {
-        return finish_auto_process_item( it, rule, station );
+    // Station-level advance EOC: fired each turn while processing is in progress
+    if( energy_done < target_j && station.advance_eoc.is_valid() ) {
+        dialogue d( get_talker_for( *this ), nullptr );
+        station.advance_eoc->activate( d );
+    }
+
+    if( energy_done >= target_j ) {
+        return finish_auto_process_item( it, rule, station, part );
     }
     return {};
 }
 
-void vehicle::process_auto_cooker_part( map &here, int p )
+void vehicle::process_auto_process_part( map &here, int p )
 {
     vehicle_part &vp = parts[p];
     if( !vp.info().auto_process ) {
@@ -8767,14 +8790,19 @@ void vehicle::process_auto_cooker_part( map &here, int p )
 
     if( current == nullptr ) {
         vp.enabled = false;
-        add_msg( m_info, _( "The auto-craft station has finished and turns off." ) );
+        add_msg( m_info, _( "The auto-process station has finished and turns off." ) );
         return;
     }
 
     const units::power cook_power = -vp.info().epower;
-    const int energy_per_turn_kj = std::max( 1, power_to_energy_bat( cook_power, 1_turns ) );
-    std::vector<item> extras = advance_auto_process_item( *current, *rule, energy_per_turn_kj,
-                               station );
+    if( cook_power <= 0_W ) {
+        vp.enabled = false;
+        return;
+    }
+    const int energy_per_turn_j = roll_remainder( units::to_millijoule( cook_power * 1_turns ) /
+                                  1000.0 );
+    std::vector<item> extras = advance_auto_process_item( *current, *rule, energy_per_turn_j,
+                               station, p );
     for( item &extra : extras ) {
         if( !add_item( here, vp, extra ) ) {
             here.add_item_or_charges( bub_part_pos( here, p ), extra );
@@ -8782,7 +8810,7 @@ void vehicle::process_auto_cooker_part( map &here, int p )
     }
 }
 
-void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elapsed )
+void vehicle::catch_up_auto_process( map &here, int p, const time_duration &elapsed )
 {
     vehicle_part &vp = parts[p];
     if( !vp.enabled || !vp.info().auto_process ) {
@@ -8793,27 +8821,16 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
         return;
     }
 
-    const units::power standby_power = total_accessory_epower();
-    if( standby_power < 0_W ) {
-        const int standby_energy = std::abs( power_to_energy_bat( standby_power, elapsed ) );
-        const int standby_deficit = discharge_battery( here, standby_energy );
-        if( standby_deficit > 0 ) {
-            for( const vpart_reference &drain_vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
-                vehicle_part &pt = drain_vp.part();
-                if( pt.info().epower < 0_W ) {
-                    pt.enabled = false;
-                    pt.power_disabled = true;
-                }
-            }
-            return;
-        }
+    const units::power cook_power = -vp.info().epower;
+    if( cook_power <= 0_W ) {
+        return;
     }
 
     const auto_process_station &station = *vp.info().auto_process;
     struct pending_item {
         item *it;
         const auto_process_rule *rule;
-        int target_kj;
+        int target_j;
         int energy_done;
     };
     std::vector<pending_item> pending;
@@ -8824,10 +8841,10 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
             if( st.actions.count( rule.action ) == 0 ) {
                 continue;
             }
-            const int target_kj = units::to_kilojoule<int>( rule.energy_cost * st.energy_mult );
+            const int target_j = units::to_joule<int>( rule.energy_cost * st.energy_mult );
             const int done = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
-            if( done < target_kj ) {
-                pending.push_back( { &it, &rule, target_kj, done } );
+            if( done < target_j ) {
+                pending.push_back( { &it, &rule, target_j, done } );
                 break; // one pending entry per item
             }
         }
@@ -8848,18 +8865,17 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
         return;
     }
 
-    const units::power cook_power = -vp.info().epower;
-    int energy_remaining = power_to_energy_bat( cook_power, elapsed );
+    int energy_remaining = roll_remainder( units::to_millijoule( cook_power * elapsed ) / 1000.0 );
 
     for( pending_item &pi : pending ) {
-        const int needed = pi.target_kj - pi.energy_done;
+        const int needed = pi.target_j - pi.energy_done;
         const int applied = std::min( needed, energy_remaining );
         pi.energy_done += applied;
         energy_remaining -= applied;
 
         pi.it->set_var( "auto_process_" + pi.rule->action, std::to_string( pi.energy_done ) );
-        if( pi.energy_done >= pi.target_kj ) {
-            std::vector<item> extras = finish_auto_process_item( *pi.it, *pi.rule, station );
+        if( pi.energy_done >= pi.target_j ) {
+            std::vector<item> extras = finish_auto_process_item( *pi.it, *pi.rule, station, p );
             for( item &extra : extras ) {
                 if( !add_item( here, vp, extra ) ) {
                     here.add_item_or_charges( bub_part_pos( here, p ), extra );
@@ -8980,10 +8996,34 @@ void vehicle::update_time( map &here, const time_point &update_to )
         }
     }
 
-    // Catch up auto cookers that were running while the vehicle was off-map.
+    // Catch up auto-process stations that were running while the vehicle was off-map.
+    // Discharge battery for auto-process parts only (not all accessories like fridges).
+    bool can_auto_process = true;
+    units::power standby_power = 0_W;
     for( const vpart_reference &vp : get_all_parts() ) {
         if( vp.info().auto_process.has_value() && vp.part().enabled ) {
-            catch_up_auto_cooker( here, vp.part_index(), elapsed );
+            standby_power += vp.info().epower;
+        }
+    }
+    if( standby_power < 0_W ) {
+        const int standby_energy = std::abs( power_to_energy_bat( standby_power, elapsed ) );
+        const int standby_deficit = discharge_battery( here, standby_energy );
+        if( standby_deficit > 0 ) {
+            for( const vpart_reference &drain_vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
+                vehicle_part &pt = drain_vp.part();
+                if( pt.info().epower < 0_W ) {
+                    pt.enabled = false;
+                    pt.power_disabled = true;
+                }
+            }
+            can_auto_process = false;
+        }
+    }
+    if( can_auto_process ) {
+        for( const vpart_reference &vp : get_all_parts() ) {
+            if( vp.info().auto_process.has_value() && vp.part().enabled ) {
+                catch_up_auto_process( here, vp.part_index(), elapsed );
+            }
         }
     }
 }

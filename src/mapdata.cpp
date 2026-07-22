@@ -1690,6 +1690,7 @@ void furn_t::load( const JsonObject &jo, const std::string &src )
         optional( ap, false, "energy_mult", station.energy_mult, 1.0 );
         optional( ap, false, "power", station.power, 0_W );
         optional( ap, false, "completion_eoc", station.completion_eoc );
+        optional( ap, false, "advance_eoc", station.advance_eoc );
         auto_process = station;
     }
 

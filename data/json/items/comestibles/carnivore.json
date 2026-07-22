@@ -91,6 +91,7 @@
   },
   {
     "id": "fish_scrap_cooked",
+    "auto_process": [  ],
     "copy-from": "fish_scrap",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
@@ -304,6 +305,7 @@
   },
   {
     "id": "human_cooked",
+    "auto_process": [  ],
     "copy-from": "human_flesh",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
@@ -620,6 +622,7 @@
   },
   {
     "id": "mutant_human_cooked",
+    "auto_process": [  ],
     "copy-from": "mutant_human_flesh",
     "calories": 402,
     "type": "ITEM",
@@ -668,6 +671,7 @@
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "meat_mutant_tainted_cooked",
+    "auto_process": [  ],
     "copy-from": "meat_mutant_tainted",
     "name": { "str_sp": "cooked tainted mutant meat" },
     "snippet_category": "cooked_tainted_mutant_meat_desc",
@@ -714,6 +718,7 @@
   },
   {
     "id": "meat_cooked",
+    "auto_process": [  ],
     "copy-from": "flesh",
     "weight": "296 g",
     "volume": "250 ml",
@@ -790,6 +795,7 @@
   },
   {
     "id": "meat_scrap_cooked",
+    "auto_process": [  ],
     "copy-from": "meat_scrap",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
@@ -813,6 +819,7 @@
   },
   {
     "id": "mutant_meat_cooked",
+    "auto_process": [  ],
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "copy-from": "mutant_meat",
@@ -841,6 +848,7 @@
   },
   {
     "id": "mutant_meat_scrap_cooked",
+    "auto_process": [  ],
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "copy-from": "mutant_meat_scrap",
@@ -976,6 +984,7 @@
   },
   {
     "id": "mutant_bug_organs_cooked",
+    "auto_process": [  ],
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "copy-from": "mutant_bug_organs",
@@ -2384,6 +2393,7 @@
   },
   {
     "id": "demihuman_cooked",
+    "auto_process": [  ],
     "copy-from": "demihuman_flesh",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],

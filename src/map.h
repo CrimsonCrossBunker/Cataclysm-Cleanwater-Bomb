@@ -2216,6 +2216,8 @@ class map
         /** Processing for auto-process furniture (auto-craft stations). */
         std::set<tripoint_bub_ms> auto_process_tiles;
         void process_auto_process_furniture();
+        void catch_up_auto_process_furniture( const tripoint_bub_ms &p,
+                                              const time_duration &elapsed );
         // All active items connected to the power_grid with their connection points.
         std::vector<item_reference> item_network_connections( vehicle *power_grid );
     private:

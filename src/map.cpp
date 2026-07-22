@@ -36,6 +36,7 @@
 #include "creature.h"
 #include "creature_tracker.h"
 #include "dialogue.h"
+#include "effect_on_condition.h"
 #include "cuboid_rectangle.h"
 #include "cursesdef.h"
 #include "current_map.h"
@@ -6950,9 +6951,9 @@ static bool process_map_items( map &here, item_stack &items, safe_reference<item
     return false;
 }
 
-static void process_auto_cooker( vehicle &cur_veh, int part, map &here )
+static void process_auto_process_veh_part( vehicle &cur_veh, int part, map &here )
 {
-    cur_veh.process_auto_cooker_part( here, part );
+    cur_veh.process_auto_process_part( here, part );
 }
 
 static void process_vehicle_items( vehicle &cur_veh, int part )
@@ -6964,7 +6965,7 @@ static void process_vehicle_items( vehicle &cur_veh, int part )
 
     const bool auto_cooker_here = vpi.auto_process.has_value() && vp.enabled;
     if( auto_cooker_here ) {
-        process_auto_cooker( cur_veh, part, here );
+        process_auto_process_veh_part( cur_veh, part, here );
     }
 
     const bool washer_here = vp.enabled &&
@@ -10834,6 +10835,8 @@ void map::actualize( const tripoint_rel_sm &grid )
     process_items_in_vehicles( *tmpsub );
     process_items_in_submap( *tmpsub, grid );
     explosion_handler::process_explosions();
+    std::vector<tripoint_bub_ms> auto_process_catchup;
+
     for( int x = 0; x < SEEX; x++ ) {
         for( int y = 0; y < SEEY; y++ ) {
             const tripoint_bub_ms pnt =  rebase_bub( coords::project_to<coords::ms>( grid ) + point( x, y ) );
@@ -10845,6 +10848,7 @@ void map::actualize( const tripoint_rel_sm &grid )
             }
             if( furn.auto_process.has_value() ) {
                 auto_process_tiles.insert( pnt );
+                auto_process_catchup.push_back( pnt );
             }
             if( !terr.emissions.empty() ) {
                 field_ter_locs.push_back( pnt );
@@ -10876,6 +10880,11 @@ void map::actualize( const tripoint_rel_sm &grid )
 
             decay_cosmetic_fields( pnt, time_since_last_actualize );
         }
+    }
+
+    // Catch up auto-process furniture for this submap's off-map time
+    for( const tripoint_bub_ms &pnt : auto_process_catchup ) {
+        catch_up_auto_process_furniture( pnt, time_since_last_actualize );
     }
 
     // the last time we touched the submap, is right now.
@@ -13014,38 +13023,154 @@ const furn_str_id &drawsq_params::furniture_override() const
 {
     return furn_override;
 }
+void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
+        const time_duration &elapsed )
+{
+    const furn_t &f = this->furn( p ).obj();
+    if( !f.auto_process.has_value() ) {
+        return;
+    }
+    const auto_process_station &station = *f.auto_process;
+    if( station.power <= 0_W ) {
+        return;
+    }
+    if( to_turns<int>( elapsed ) <= 0 ) {
+        return;
+    }
+
+    struct pending_item {
+        item *it;
+        const auto_process_rule *rule;
+        int target_j;
+        int energy_done;
+    };
+    std::vector<pending_item> pending;
+    pending.reserve( 64 );
+
+    const auto gather_pending = [&]( item & it, auto & gather, const auto_process_station & st ) -> void {
+        for( const auto_process_rule &rule : it.type->auto_process ) {
+            if( st.actions.count( rule.action ) == 0 ) {
+                continue;
+            }
+            const int target_j = units::to_joule<int>( rule.energy_cost * st.energy_mult );
+            const int done = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
+            if( done < target_j ) {
+                pending.push_back( { &it, &rule, target_j, done } );
+                break;
+            }
+        }
+        for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
+            gather( *content, gather, st );
+        }
+    };
+
+    {
+        map_stack items = i_at( p );
+        for( item &it : items ) {
+            gather_pending( it, gather_pending, station );
+        }
+    }
+
+    if( pending.empty() ) {
+        return;
+    }
+
+    int energy_remaining = roll_remainder( units::to_millijoule( station.power * elapsed ) / 1000.0 );
+
+    for( pending_item &pi : pending ) {
+        const int needed = pi.target_j - pi.energy_done;
+        const int applied = std::min( needed, energy_remaining );
+        pi.energy_done += applied;
+        energy_remaining -= applied;
+
+        pi.it->set_var( "auto_process_" + pi.rule->action, std::to_string( pi.energy_done ) );
+        if( pi.energy_done >= pi.target_j ) {
+            if( pi.rule->results.empty() ) {
+                *pi.it = item();
+            } else {
+                item first( pi.rule->results.front(), calendar::turn );
+                const bool single = pi.rule->results.size() == 1;
+                if( single && pi.it->count_by_charges() ) {
+                    first.charges = pi.it->charges;
+                }
+                first.set_relative_rot( pi.it->get_relative_rot() );
+                recipe rec;
+                first.inherit_flags( *pi.it, rec );
+                if( pi.rule->action == "COOK" && pi.it->is_comestible() ) {
+                    const islot_comestible &comest = *pi.it->get_comestible();
+                    if( !first.has_flag( flag_NUTRIENT_OVERRIDE ) && !comest.cooks_like.is_empty() ) {
+                        item component( comest.cooks_like, pi.it->birthday(), 1 );
+                        first.components.add( component );
+                        first.recipe_charges = pi.it->count();
+                    }
+                    first.set_flag_recursive( flag_COOKED );
+                }
+                *pi.it = first;
+                for( size_t ri = 1; ri < pi.rule->results.size(); ri++ ) {
+                    add_item_or_charges( p, item( pi.rule->results[ri], calendar::turn ) );
+                }
+                // EOC hooks on completion
+                if( pi.rule->completion_eoc.is_valid() ) {
+                    item_location loc( map_cursor( get_abs( p ) ), pi.it );
+                    dialogue d( get_talker_for( loc ), nullptr );
+                    pi.rule->completion_eoc->activate( d );
+                }
+                if( station.completion_eoc.is_valid() ) {
+                    dialogue d( nullptr, nullptr );
+                    station.completion_eoc->activate( d );
+                }
+            }
+        }
+        if( energy_remaining <= 0 ) {
+            break;
+        }
+    }
+}
+
 void map::process_auto_process_furniture()
 {
-    for( auto it = auto_process_tiles.begin(); it != auto_process_tiles.end(); ) {
-        const tripoint_bub_ms &p = *it;
+    for( auto tile_it = auto_process_tiles.begin(); tile_it != auto_process_tiles.end(); ) {
+        const tripoint_bub_ms &p = *tile_it;
         const furn_id &furn = this->furn( p );
         if( furn == furn_str_id::NULL_ID() ) {
-            it = auto_process_tiles.erase( it );
+            tile_it = auto_process_tiles.erase( tile_it );
             continue;
         }
         const furn_t &f = furn.obj();
         if( !f.auto_process.has_value() ) {
-            it = auto_process_tiles.erase( it );
+            tile_it = auto_process_tiles.erase( tile_it );
             continue;
         }
         const auto_process_station &station = *f.auto_process;
-        const int energy_per_turn_kj = std::max( 1, units::to_kilojoule<int>( station.power * 1_turns ) );
+        if( station.power <= 0_W ) {
+            ++tile_it;
+            continue;
+        }
+        const int energy_per_turn_j = roll_remainder( units::to_millijoule( station.power *
+                                      1_turns ) / 1000.0 );
 
-        map_stack items = i_at( p );
-        for( item &it : items ) {
+        // Recursive lambda to process items including those inside containers.
+        // Only rules whose action is in station.actions are considered.
+        std::function<void( item & )> process_item = [&]( item & it ) {
             for( const auto_process_rule &rule : it.type->auto_process ) {
                 if( station.actions.count( rule.action ) == 0 ) {
                     continue;
                 }
-                const int target_kj = units::to_kilojoule<int>( rule.energy_cost * station.energy_mult );
+                const int target_j = units::to_joule<int>( rule.energy_cost * station.energy_mult );
                 const std::string var_name = "auto_process_" + rule.action;
                 int energy_done = std::stoi( it.get_var( var_name, "0" ) );
-                if( energy_done >= target_kj ) {
+                if( energy_done >= target_j ) {
                     continue;
                 }
-                energy_done += std::min( energy_per_turn_kj, target_kj - energy_done );
+                energy_done += std::min( energy_per_turn_j, target_j - energy_done );
                 it.set_var( var_name, std::to_string( energy_done ) );
-                if( energy_done >= target_kj ) {
+                // Station-level advance EOC: fired each turn while processing is in progress.
+                // No talker available for furniture — nullptr is intentional.
+                if( energy_done < target_j && station.advance_eoc.is_valid() ) {
+                    dialogue d( nullptr, nullptr );
+                    station.advance_eoc->activate( d );
+                }
+                if( energy_done >= target_j ) {
                     if( rule.results.empty() ) {
                         it = item();
                     } else {
@@ -13057,20 +13182,46 @@ void map::process_auto_process_furniture()
                         first.set_relative_rot( it.get_relative_rot() );
                         recipe rec;
                         first.inherit_flags( it, rec );
+                        // COOK-specific backward compat: cooks_like + flag_COOKED
                         if( rule.action == "COOK" && it.is_comestible() ) {
+                            const islot_comestible &comest = *it.get_comestible();
+                            if( !first.has_flag( flag_NUTRIENT_OVERRIDE ) && !comest.cooks_like.is_empty() ) {
+                                item component( comest.cooks_like, it.birthday(), 1 );
+                                first.components.add( component );
+                                first.recipe_charges = it.count();
+                            }
                             first.set_flag_recursive( flag_COOKED );
                         }
                         it = first;
                         for( size_t ri = 1; ri < rule.results.size(); ri++ ) {
                             add_item_or_charges( p, item( rule.results[ri], calendar::turn ) );
                         }
+                        // EOC hooks on completion
+                        if( rule.completion_eoc.is_valid() ) {
+                            item_location loc( map_cursor( get_abs( p ) ), &it );
+                            dialogue d( get_talker_for( loc ), nullptr );
+                            rule.completion_eoc->activate( d );
+                        }
+                        if( station.completion_eoc.is_valid() ) {
+                            // No talker available for furniture — nullptr is intentional.
+                            // EOC authors must not reference alpha/beta in station-level EOCs.
+                            dialogue d( nullptr, nullptr );
+                            station.completion_eoc->activate( d );
+                        }
                     }
-// TODO: EOC hooks on completion
-// TODO: EOC hooks on completion
                 }
-                break;
+                break; // One rule processed per item per turn
             }
+            // Recurse into containers (e.g. items inside backpacks on the tile)
+            for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
+                process_item( *content );
+            }
+        };
+
+        map_stack items = i_at( p );
+        for( item &it : items ) {
+            process_item( it );
         }
-        ++it;
+        ++tile_it;
     }
 }

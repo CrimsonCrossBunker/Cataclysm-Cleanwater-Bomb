@@ -39,6 +39,8 @@ struct auto_process_station {
     units::power power = 0_W;
     /** Optional EOC activated when this station completes a transformation. */
     effect_on_condition_id completion_eoc;
+    /** Optional EOC activated each turn while this station is processing an item. */
+    effect_on_condition_id advance_eoc;
 };
 
 #endif // CATA_SRC_AUTO_PROCESS_H

@@ -2802,6 +2802,16 @@ Vehicle components when installed on a vehicle.
                               // ENABLED_DRAINS_EPOWER flag and for the item to be turned on.
                               // Solar panel power gneration is modified by sun angle.
                               // When sun is at 90 degrees the panel produces the full epower.
+"auto_process": {             // (Optional) Makes this part an auto-process station: while enabled,
+                              // it injects its epower as processing energy into matching items in
+                              // its cargo (see "auto_process" in ITEM.md).
+                              // Each turn processes at most ONE item (put items in different parts
+                              // to process multiple simultaneously).
+  "actions": [ "COOK" ],      // Action types this station can perform (matched against item rules)
+  "energy_mult": 1.0,         // (Optional, default 1.0) Multiplier applied to item energy costs
+  "completion_eoc": "eoc_id", // (Optional) EOC activated on the vehicle when a transformation completes
+  "advance_eoc": "eoc_id"     // (Optional) EOC activated on the vehicle each turn while processing
+},
 "item": "wheel",              // The item used to install this part, and the item obtained when
                               // removing this part.
 "remove_as": "solar_panel",   // Overrides "item", item returned when removing this part.
@@ -3457,6 +3467,26 @@ Strength required to move the furniture around. Negative values indicate an unmo
 #### `crafting_pseudo_item`
 
 (Optional) Id of an item (tool) that will be available for crafting when this furniture is range (the furniture acts as an item of that type).
+
+#### `auto_process`
+
+(Optional) Makes this furniture an auto-process station.  Every turn it injects its
+`power` as processing energy into matching items lying on its tile (see
+`"auto_process"` in ITEM.md).  **Each item on the tile independently receives the
+full `power`** each turn, so placing N items does NOT split the energy.  Items inside
+containers (e.g. backpacks) on the tile are also processed recursively.  Furniture
+stations are always on and do not draw from any power grid; `power` abstracts fuel or
+manual processes.
+
+```json
+"auto_process": {
+  "actions": [ "SMOKE" ],     // Action types this station can perform (matched against item rules)
+  "energy_mult": 1.0,         // (Optional, default 1.0) Multiplier applied to item energy costs
+  "power": "10 W",            // (Optional, default 0 W) Energy injected into items each turn
+  "completion_eoc": "eoc_id", // (Optional) EOC activated when this station completes a transformation
+  "advance_eoc": "eoc_id"     // (Optional) EOC activated each turn while the station is processing
+}
+```
 
 #### `workbench`
 

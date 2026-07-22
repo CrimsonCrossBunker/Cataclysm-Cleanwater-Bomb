@@ -718,7 +718,16 @@ CBMs can be defined like this:
 }
 "smoking_result": "dry_meat",     // Food that results from drying this food in a smoker
 "petfood": [ "FUNGALFRUIT", "MIGOFOOD" ] // (Optional) Pet food categories this item is in.
+"auto_process": [                 // (Optional) Automatic processing rules for auto-craft stations (vehicle parts or furniture with a matching "auto_process" station definition).  Array of objects:
+  {
+    "action": "COOK",             // Action type this rule responds to (open string; the station must list it in its "actions")
+    "energy": "300 kJ",           // (Optional, default 0 J) Energy the station must accumulate on the item before it transforms
+    "results": [ "meat_cooked" ], // Item types produced on completion.  With a single result, charges/rot/flags are inherited from the input
+    "completion_eoc": "eoc_id"    // (Optional) Effect-on-condition activated on the result item when the transformation completes
+  }
+]
 ```
+Defining `"auto_process": []` explicitly clears rules inherited via `copy-from`.
 
 
 ### Containers
