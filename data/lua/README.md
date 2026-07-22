@@ -111,7 +111,9 @@ ctx:supports("text_input")
 Capability names are `colored_text`, `inline_layout`, `item_width`,
 `progress_bar`, `buttons`, `selection`, `numeric_input`, `text_input`,
 `child_regions`, `tables`, `tabs`, `trees`, `modals`, `tooltips`, and
-`virtualization`.
+`virtualization`, and `radial_selection`. The latter reports support for a
+center button with surrounding choices; renderers without a radial layout may
+use a native popup/list fallback.
 Widget calls remain safe when a capability is unavailable; the adapter may
 provide a simplified or read-only fallback.
 
@@ -156,6 +158,16 @@ if ctx:button_id("apply_changes", "Apply") then end
 enabled = ctx:checkbox_id("feature_enabled", "Enabled", enabled)
 count = ctx:slider_int_id("item_count", "Count", count, 0, 100)
 name = ctx:input_text_id("player_name", "Name", name)
+```
+
+A radial selector takes 1..8 stable options and returns the selected id, or an
+empty string when no choice was made:
+
+```lua
+local selected = ctx:radial_select_id("movement", "行走", {
+    { id = "walk", label = "行走\n0.00 秒", enabled = true, selected = true },
+    { id = "run", label = "奔跑\n0.50 秒", enabled = true, selected = false }
+})
 ```
 
 Every interactive method has a matching `_id` form whose first argument is
@@ -247,10 +259,14 @@ pixel-identical layouts.
 - `game.player_snapshot()` returns copied character status: name, moves, stamina,
   stamina_max, pain, focus, speed, hunger, thirst, sleepiness, morale, stored_kcal,
   healthy_kcal, kcal_percent, radiation, bionic_power_kj,
-  bionic_power_max_kj, and absolute x/y/z. `game.player_stats()` remains as a
-  compatibility alias with the same result.
+  bionic_power_max_kj, current and desired movement-mode ids/names, whether a
+  mode switch is pending, and absolute x/y/z. `game.player_stats()` remains as
+  a compatibility alias with the same result.
 - `game.time_snapshot()` returns turn, displayed year, stable `season_id`,
   translated `season_name`, one-based day of season, hour, minute, and display.
+- `game.movement_modes_snapshot()` returns every movement mode with stable id,
+  translated name, availability, current/desired flags, and the same switch
+  move cost and seconds shown by the original movement-mode menu.
 - `game.weather_snapshot()` returns stable id, translated name, Celsius and
   option-formatted temperatures, dangerous/raining flags, sight penalty, wind
   speed, and wind direction.
@@ -338,6 +354,8 @@ local used = game.actions.enqueue("use_item", { uid = item.uid })
 local toggled = game.actions.enqueue("toggle_mutation", { id = mutation.id })
 local bionic = game.actions.enqueue("toggle_bionic", { uid = installed.uid })
 local canceled_activity = game.actions.enqueue("cancel_activity")
+local cycled_movement = game.actions.enqueue("cycle_move_mode")
+local selected_movement = game.actions.enqueue("set_move_mode", { id = "crouch" })
 
 game.actions.cancel(request_id) -- only while still queued
 local queue = game.actions.status(32)

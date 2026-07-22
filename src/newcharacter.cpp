@@ -19,6 +19,10 @@
 #include <vector>
 
 #include "achievement.h"
+#if defined(__ANDROID__)
+    #include "android_character_creator.h"
+    #include "android_imgui_dialog.h"
+#endif
 #include "addiction.h"
 #include "bionics.h"
 #include "calendar_ui.h"
@@ -76,6 +80,7 @@
 #include "trait_group.h"
 #include "translation.h"
 #include "translations.h"
+#include "try_parse_integer.h"
 #include "type_id.h"
 #include "uilist.h"
 #include "ui_manager.h"
@@ -162,7 +167,8 @@ static void set_detail_scroll()
 
 #if defined(TILES)
 static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int &out_h );
-static void draw_character_preview_cell( const avatar &u );
+static void draw_character_preview_cell( const avatar &u,
+        const ImVec2 &available = ImVec2() );
 
 // The preview occupies its own table column only when tiles + the option are on and the active
 // tileset can actually produce a preview. Isometric tilesets are unsupported by
@@ -1152,7 +1158,8 @@ void draw_action_button( const std::string &button_text, const std::string &butt
 }
 
 // @param draw_effective_stats - if true, draws effective (current) stat; base stat is always drawn
-void draw_character_stats( const Character &who, bool draw_effective_stats )
+void draw_character_stats( const Character &who, bool draw_effective_stats,
+                           const std::function<void()> &draw_description )
 {
 
     auto display_stat_value = [&draw_effective_stats]( int effective_stat, int base_stat ) {
@@ -1189,9 +1196,13 @@ void draw_character_stats( const Character &who, bool draw_effective_stats )
         ImGui::EndTable();
     }
 
-    char_creation::draw_age( who );
-    char_creation::draw_height( who );
-    char_creation::draw_blood( who );
+    if( draw_description ) {
+        draw_description();
+    } else {
+        char_creation::draw_age( who );
+        char_creation::draw_height( who );
+        char_creation::draw_blood( who );
+    }
 }
 
 void draw_character_skills( const Character &who )
@@ -1491,6 +1502,7 @@ std::string get_character_stat_header( int selected_stat_index )
 
 const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait )
 {
+#if !defined(__ANDROID__)
     // Because the keys will change on each loop if I clear the entries, and
     // if I don't clear the entries, the menu bugs out
     static std::array<int, 60> keys = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -1500,6 +1512,7 @@ const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait 
                                         'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
                                       };
     uilist menu;
+#endif
     const mutation_variant *ret = nullptr;
     avatar &pc = get_avatar();
     std::vector<const mutation_variant *> variants;
@@ -1510,6 +1523,28 @@ const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait 
         }
         variants.emplace_back( &pr.second );
     }
+
+#if defined(__ANDROID__)
+    std::vector<android_imgui_dialog::entry> entries;
+    entries.reserve( variants.size() + 1 );
+    entries.push_back( { ret != nullptr ? _( "Unselect" ) : _( "Unselected" ),
+                         _( "Remove this trait." ), true, false } );
+    int initial_selection = 0;
+    for( size_t index = 0; index < variants.size(); ++index ) {
+        const mutation_variant *variant = variants[index];
+        entries.push_back( { variant->alt_name.translated(),
+                             variant->alt_description.translated(), true, false } );
+        if( ret == variant ) {
+            initial_selection = static_cast<int>( index ) + 1;
+        }
+    }
+    const std::optional<int> selected = android_imgui_dialog::select(
+                                            _( "Which trait?" ), entries, cur_trait->name(), initial_selection );
+    if( !selected ) {
+        return ret;
+    }
+    return *selected == 0 ? nullptr : variants[*selected - 1];
+#else
 
     menu.title = _( "Which trait?" );
     menu.desc_enabled = true;
@@ -1538,6 +1573,7 @@ const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait 
         }
     } while( menu.ret != idx );
     return ret;
+#endif
 }
 
 void draw_profession_header( const avatar &u )
@@ -1928,6 +1964,9 @@ void draw_skill_details( const avatar &u,
 void draw_scenario_details( const avatar &u )
 {
     const scenario *current_scenario = cc_uistate.get_selected_scenario();
+    if( current_scenario == nullptr ) {
+        return;
+    }
     std::string assembled;
 
     draw_colored_text_wrap( get_origin( current_scenario->src ), COL_NOTE_MINOR );
@@ -2990,7 +3029,7 @@ static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int 
 // whose column header already reads "Preview"). Unlike the earlier foreground-draw approach this
 // is ordinary cell content, so it participates in layout and scrolls with the detail column
 // instead of floating above everything.
-static void draw_character_preview_cell( const avatar &u )
+static void draw_character_preview_cell( const avatar &u, const ImVec2 &available )
 {
     int tex_w = 0;
     int tex_h = 0;
@@ -2998,8 +3037,17 @@ static void draw_character_preview_cell( const avatar &u )
     if( !tex || tex_w <= 0 || tex_h <= 0 ) {
         return;
     }
-    ImGui::Image( reinterpret_cast<ImTextureID>( tex ),
-                  ImVec2( static_cast<float>( tex_w ), static_cast<float>( tex_h ) ) );
+    ImVec2 draw_size( static_cast<float>( tex_w ), static_cast<float>( tex_h ) );
+    if( available.x > 0.0F && available.y > 0.0F ) {
+        const float scale = std::min( { 1.0F, available.x / draw_size.x,
+                                        available.y / draw_size.y } );
+        draw_size.x *= scale;
+        draw_size.y *= scale;
+        const ImVec2 cursor = ImGui::GetCursorPos();
+        ImGui::SetCursorPos( ImVec2( cursor.x + std::max( 0.0F, ( available.x - draw_size.x ) * 0.5F ),
+                                     cursor.y + std::max( 0.0F, ( available.y - draw_size.y ) * 0.5F ) ) );
+    }
+    ImGui::Image( reinterpret_cast<ImTextureID>( tex ), draw_size );
 }
 #endif // TILES
 
@@ -3059,10 +3107,161 @@ void character_creator_ui_impl::draw_top_bar( const avatar &u ) const
                                       ui_parent->get_current_tab_input().get_desc( "HELP_KEYBINDINGS" ) ) );
 }
 
+#if defined(__ANDROID__)
+namespace
+{
+
+void draw_android_character_preview( const ImVec2 &available )
+{
+#if defined(TILES)
+    draw_character_preview_cell( get_avatar(), available );
+#else
+    static_cast<void>( available );
+#endif
+}
+
+void draw_android_character_creator_details( const character_creator_tab tab,
+        const std::function<void()> &draw_description )
+{
+    avatar &you = get_avatar();
+    switch( tab ) {
+        case CHARCREATOR_SCENARIO:
+            char_creation::draw_scenario_details( you );
+            break;
+        case CHARCREATOR_PROFESSION:
+            char_creation::draw_profession_header( you );
+            draw_spacer();
+            char_creation::draw_profession_details();
+            draw_spacer();
+            char_creation::draw_profession_inventory( you );
+            break;
+        case CHARCREATOR_BACKGROUND:
+            char_creation::draw_hobby_header( you );
+            draw_spacer();
+            char_creation::draw_hobby_details();
+            draw_spacer();
+            char_creation::draw_hobby_selected( you );
+            break;
+        case CHARCREATOR_STATS:
+            char_creation::draw_stat_details( you );
+            break;
+        case CHARCREATOR_TRAITS: {
+            const trait_id selected_trait = cc_uistate.get_selected_trait();
+            if( !selected_trait.is_null() ) {
+                draw_colored_text_wrap( selected_trait->desc(), c_white );
+            }
+            break;
+        }
+        case CHARCREATOR_SKILLS: {
+            const skill_id selected_skill = cc_uistate.get_selected_skill();
+            if( !selected_skill.is_null() ) {
+                draw_colored_text_wrap( selected_skill->description(), c_white );
+                draw_spacer();
+                std::map<skill_id, int> profession_skills;
+                std::copy( you.prof->skills().begin(), you.prof->skills().end(),
+                           std::inserter( profession_skills, profession_skills.begin() ) );
+                char_creation::draw_skill_details( you, profession_skills, selected_skill );
+            }
+            break;
+        }
+        case CHARCREATOR_SUMMARY: {
+            const Character &who = get_player_character();
+            if( ImGui::BeginTable( "##android_character_summary_columns", 3,
+                                   ImGuiTableFlags_BordersInnerV |
+                                   ImGuiTableFlags_SizingStretchProp ) ) {
+                ImGui::TableSetupColumn( _( "Character" ), ImGuiTableColumnFlags_WidthStretch, 0.31F );
+                ImGui::TableSetupColumn( _( "Abilities" ), ImGuiTableColumnFlags_WidthStretch, 0.35F );
+                ImGui::TableSetupColumn( _( "Start" ), ImGuiTableColumnFlags_WidthStretch, 0.34F );
+                ImGui::TableHeadersRow();
+                ImGui::TableNextColumn();
+                char_creation::draw_character_stats( who, false, draw_description );
+                draw_spacer();
+                char_creation::draw_character_skills( who );
+                ImGui::TableNextColumn();
+                char_creation::draw_character_traits( who );
+                draw_spacer();
+                char_creation::draw_character_proficiencies( who );
+                draw_spacer();
+                char_creation::draw_hobby_selected( you );
+                ImGui::TableNextColumn();
+                char_creation::draw_location( you );
+                draw_spacer();
+                if( get_option<bool>( "SELECT_STARTING_CITY" ) ) {
+                    char_creation::draw_starting_city( you );
+                    draw_spacer();
+                }
+                char_creation::draw_starting_vehicle( who );
+                ImGui::EndTable();
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+android_character_creator_snapshot make_android_character_creator_snapshot(
+    character_creator_ui &ui )
+{
+    android_character_creator_snapshot result;
+    result.tab = cc_uistate.selected_tab;
+    const avatar &you = get_avatar();
+    result.name = you.name;
+    result.gender = remove_color_tags( char_creation::get_gender_string( you.male ) );
+    result.age = you.base_age();
+    result.height = you.base_height();
+    result.blood = io::enum_to_string( you.my_blood_type ) + ( you.blood_rh_factor ? "+" : "-" );
+#if defined(TILES)
+    result.preview_available = character_preview_active();
+#endif
+
+    const std::shared_ptr<uilist> menu = ui.get_current_tab_uilist();
+    if( menu ) {
+        result.rows.reserve( menu->entries.size() );
+        for( size_t index = 0; index < menu->entries.size(); ++index ) {
+            const uilist_entry &entry = menu->entries[index];
+            bool active = false;
+            switch( result.tab ) {
+                case CHARCREATOR_SCENARIO:
+                    active = static_cast<int>( index ) == cc_uistate.selected_scenario_index &&
+                             cc_uistate.get_selected_scenario() == get_scenario();
+                    break;
+                case CHARCREATOR_PROFESSION:
+                    active = static_cast<int>( index ) == cc_uistate.selected_profession_index &&
+                             cc_uistate.get_selected_profession() == you.prof->ident();
+                    break;
+                case CHARCREATOR_BACKGROUND:
+                    active = index < cc_uistate.sorted_hobbies.size() &&
+                             you.hobbies.count( &*cc_uistate.sorted_hobbies[index] ) != 0;
+                    break;
+                case CHARCREATOR_TRAITS:
+                    active = index < cc_uistate.sorted_traits.size() &&
+                             you.has_trait( cc_uistate.sorted_traits[index] );
+                    break;
+                case CHARCREATOR_SKILLS:
+                    active = index < cc_uistate.sorted_skills.size() &&
+                             you.get_skill_level( cc_uistate.sorted_skills[index]->ident() ) > 0;
+                    break;
+                default:
+                    break;
+            }
+            result.rows.push_back( { static_cast<int>( index ), remove_color_tags( entry.txt ),
+                                     entry.enabled, static_cast<int>( index ) == menu->selected, active } );
+        }
+    }
+    result.ready = true;
+    return result;
+}
+
+} // namespace
+#endif // __ANDROID__
+
 bool character_creator_ui::display()
 {
     cc_uistate.reset();
+#if !defined(__ANDROID__)
     character_creator_ui_impl ccui( this );
+#endif
 
     // setup all uilists/inputs
     character_creator_tab preserve_first_tab = cc_uistate.selected_tab;
@@ -3080,6 +3279,14 @@ bool character_creator_ui::display()
     // set first tab
     upon_switching_tab();
 
+#if defined(__ANDROID__)
+    // Register the Android window only after character data is initialized.  Scenario sorting can
+    // load historical achievements and trigger a nested redraw; registering before that point
+    // would expose partially built selection vectors to the view.
+    auto ccui = std::make_unique<android_character_creator_ui>(
+                    draw_android_character_creator_details, draw_android_character_preview );
+#endif
+
     ui_manager::invalidate_all_ui_adaptors();
     cc_uistate.quit_to_main_menu = false;
     cc_uistate.finished_character_creator = false;
@@ -3089,7 +3296,60 @@ bool character_creator_ui::display()
         input_context &current_tab_input = get_current_tab_input();
         input_context::scoped_activation active_tab_context( current_tab_input );
 
+#if defined(__ANDROID__)
+        ccui->set_snapshot( make_android_character_creator_snapshot( *this ) );
+#endif
         ui_manager::redraw();
+#if defined(__ANDROID__)
+        while( const std::optional<android_character_creator_action> mobile_action =
+                   ccui->take_action() ) {
+            // Model actions may synchronously open another UI or load persistent data.  Publish a
+            // busy snapshot first so a nested redraw never observes a half-applied character state.
+            ccui->show_loading();
+            if( mobile_action->type == android_character_creator_action_type::select_tab ) {
+                cc_uistate.selected_tab = static_cast<character_creator_tab>( mobile_action->index );
+                cc_uistate.switched_tab = cc_uistate.selected_tab;
+                upon_switching_tab();
+            } else if( mobile_action->type == android_character_creator_action_type::command ) {
+                handle_action( mobile_action->command );
+            } else if( mobile_action->type == android_character_creator_action_type::set_name ) {
+                get_avatar().name = utf8_truncate( mobile_action->value, NAME_CHARACTER_LIMIT );
+            } else if( mobile_action->type == android_character_creator_action_type::set_age ) {
+                const ret_val<int> age = try_parse_integer<int>( mobile_action->value, true );
+                if( age.success() ) {
+                    get_avatar().set_base_age( clamp( age.value(), CHARACTER_AGE_MIN,
+                                                      CHARACTER_AGE_MAX ) );
+                }
+            } else if( mobile_action->type == android_character_creator_action_type::set_height ) {
+                const ret_val<int> height = try_parse_integer<int>( mobile_action->value, true );
+                if( height.success() ) {
+                    get_avatar().set_base_height( clamp( height.value(), Character::min_height(),
+                                                         Character::max_height() ) );
+                }
+            } else if( mobile_action->type == android_character_creator_action_type::save_template ) {
+                if( !mobile_action->value.empty() &&
+                    mobile_action->value.find( '/' ) == std::string::npos ) {
+                    get_avatar().save_template( mobile_action->value, pool_type::FREEFORM );
+                }
+            } else {
+                std::shared_ptr<uilist> menu = get_current_tab_uilist();
+                if( menu && mobile_action->index >= 0 &&
+                    mobile_action->index < static_cast<int>( menu->entries.size() ) ) {
+                    menu->selected = mobile_action->index;
+                    cc_callback.select( menu.get() );
+                    if( mobile_action->type == android_character_creator_action_type::activate_row ) {
+                        menu->ret = mobile_action->index;
+                        cc_callback.confirm( menu.get() );
+                    }
+                }
+            }
+        }
+        const std::string input_action = current_tab_input.handle_input( 33 );
+        if( !input_action.empty() ) {
+            ccui->show_loading();
+            handle_action( input_action );
+        }
+#else
         std::shared_ptr<uilist> current_tab_uilist = get_current_tab_uilist();
         if( current_tab_uilist ) {
             cc_uilist_current = current_tab_uilist->create_or_get_ui();
@@ -3100,7 +3360,11 @@ bool character_creator_ui::display()
             cc_uilist_current.reset();
             handle_action( current_tab_input.handle_input( 33 ) );
         }
+#endif
         if( !cc_uistate.top_bar_button_action.empty() ) {
+#if defined(__ANDROID__)
+            ccui->show_loading();
+#endif
             handle_action( cc_uistate.top_bar_button_action );
             cc_uistate.top_bar_button_action.clear();
         }
@@ -3475,7 +3739,8 @@ void character_creator_uistate::set_initial_tab( character_creator_tab first_tab
 
 const scenario *character_creator_uistate::get_selected_scenario()
 {
-    if( selected_scenario_index < 0 ) {
+    if( selected_scenario_index < 0 ||
+        selected_scenario_index >= static_cast<int>( sorted_scenarios.size() ) ) {
         return nullptr;
     }
     return sorted_scenarios[selected_scenario_index];
@@ -3483,7 +3748,8 @@ const scenario *character_creator_uistate::get_selected_scenario()
 
 profession_id character_creator_uistate::get_selected_profession()
 {
-    if( selected_profession_index < 0 ) {
+    if( selected_profession_index < 0 ||
+        selected_profession_index >= static_cast<int>( sorted_professions.size() ) ) {
         return profession_id::NULL_ID();
     }
     return sorted_professions[selected_profession_index];
@@ -3491,7 +3757,8 @@ profession_id character_creator_uistate::get_selected_profession()
 
 profession_id character_creator_uistate::get_selected_hobby()
 {
-    if( selected_hobby_index < 0 ) {
+    if( selected_hobby_index < 0 ||
+        selected_hobby_index >= static_cast<int>( sorted_hobbies.size() ) ) {
         return profession_id::NULL_ID();
     }
     return sorted_hobbies[selected_hobby_index];
@@ -3499,7 +3766,8 @@ profession_id character_creator_uistate::get_selected_hobby()
 
 trait_id character_creator_uistate::get_selected_trait()
 {
-    if( selected_trait_index < 0 ) {
+    if( selected_trait_index < 0 ||
+        selected_trait_index >= static_cast<int>( sorted_traits.size() ) ) {
         return trait_id::NULL_ID();
     }
     return sorted_traits[selected_trait_index];
@@ -3507,7 +3775,8 @@ trait_id character_creator_uistate::get_selected_trait()
 
 skill_id character_creator_uistate::get_selected_skill()
 {
-    if( selected_skill_index < 0 ) {
+    if( selected_skill_index < 0 ||
+        selected_skill_index >= static_cast<int>( sorted_skills.size() ) ) {
         return skill_id::NULL_ID();
     }
     return sorted_skills[selected_skill_index]->ident();
@@ -3550,6 +3819,7 @@ void character_creator_uistate::reset()
     finished_character_creator = false;
 }
 
+#if !defined(__ANDROID__)
 static int choose_location( const avatar &you )
 {
     uilist select_location;
@@ -3589,6 +3859,7 @@ static int choose_location( const avatar &you )
     select_location.query();
     return select_location.ret;
 }
+#endif
 
 bool character_creator_callback::key( const input_context &ctxt, const input_event &event,
                                       int, uilist * )
@@ -3603,6 +3874,18 @@ bool character_creator_callback::key( const input_context &ctxt, const input_eve
 bool character_creator_ui::handle_action( const std::string &action )
 {
     avatar &you = get_avatar();
+
+    const auto confirm_character_action = []( const std::string & title,
+    const std::string & message, const std::string & confirm_label, const bool danger ) {
+#if defined(__ANDROID__)
+        return android_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ), danger );
+#else
+        ( void )title;
+        ( void )confirm_label;
+        ( void )danger;
+        return query_yn( message );
+#endif
+    };
 
     auto mod_stat_base = [&you]( int mod_value ) {
         character_stat selected_stat = static_cast<character_stat>( cc_uistate.selected_stat_index );
@@ -3621,11 +3904,13 @@ bool character_creator_ui::handle_action( const std::string &action )
         you.mod_knowledge_level( selected_skill, mod_value );
     };
 
-    if( action == "QUIT" && query_yn( _( "Return to main menu?" ) ) ) {
+    if( action == "QUIT" && confirm_character_action( _( "Create Character" ),
+            _( "Return to main menu?" ), _( "Return" ), true ) ) {
         cc_uistate.quit_to_main_menu = true;
     } else if( action == "PREV_TAB" ) {
         if( cc_uistate.selected_tab == CHARCREATOR_SCENARIO ) {
-            if( query_yn( _( "Return to main menu?" ) ) ) {
+            if( confirm_character_action( _( "Create Character" ), _( "Return to main menu?" ),
+                                          _( "Return" ), true ) ) {
                 cc_uistate.quit_to_main_menu = true;
             }
         } else {
@@ -3636,12 +3921,16 @@ bool character_creator_ui::handle_action( const std::string &action )
     } else if( action == "NEXT_TAB" ) {
         if( cc_uistate.selected_tab == CHARCREATOR_SUMMARY ) {
             if( you.name.empty() ) {
-                if( query_yn( _( "Are you SURE you're finished?  Your name will be randomly generated." ) ) ) {
+                if( confirm_character_action( _( "Finish Character" ),
+                                              _( "Are you SURE you're finished?  Your name will be randomly generated." ),
+                                              _( "Finish" ), false ) ) {
                     you.pick_name();
                     cc_uistate.finished_character_creator = true;
                 }
             } else {
-                if( query_yn( _( "Are you SURE you're finished?" ) ) ) {
+                if( confirm_character_action( _( "Finish Character" ),
+                                              _( "Are you SURE you're finished?" ),
+                                              _( "Finish" ), false ) ) {
                     cc_uistate.finished_character_creator = true;
                 }
             }
@@ -3709,6 +3998,33 @@ bool character_creator_ui::handle_action( const std::string &action )
             return std::tie( a.population, a.name ) > std::tie( b.population, b.name );
         };
         std::sort( cities.begin(), cities.end(), cities_cmp_population );
+#if defined(__ANDROID__)
+        std::vector<android_imgui_dialog::entry> city_entries;
+        city_entries.reserve( cities.size() + 1 );
+        city_entries.push_back( { _( "Random" ), _( "Let the game choose a starting city." ),
+                                  true, false } );
+        int initial_selection = 0;
+        for( size_t index = 0; index < cities.size(); ++index ) {
+            const city &candidate = cities[index];
+            city_entries.push_back( { candidate.name,
+                                      string_format( _( "Population: %d" ), candidate.population ),
+                                      true, false } );
+            if( you.starting_city && you.starting_city->name == candidate.name &&
+                you.starting_city->pos_om == candidate.pos_om ) {
+                initial_selection = static_cast<int>( index ) + 1;
+            }
+        }
+        const std::optional<int> selected = android_imgui_dialog::select(
+                                                _( "Starting City" ), city_entries, std::string(), initial_selection );
+        if( selected && *selected == 0 ) {
+            you.starting_city.reset();
+            you.world_origin.reset();
+        } else if( selected ) {
+            const city &chosen = cities[*selected - 1];
+            you.starting_city = chosen;
+            you.world_origin = chosen.pos_om;
+        }
+#else
         uilist cities_menu;
         ui::omap::setup_cities_menu( cities_menu, cities );
         std::optional<city> c = ui::omap::select_city( cities_menu, cities, false );
@@ -3716,8 +4032,37 @@ bool character_creator_ui::handle_action( const std::string &action )
             you.starting_city = c;
             you.world_origin = c->pos_om;
         }
+#endif
     } else if( action == "CHOOSE_LOCATION" ) {
+#if defined(__ANDROID__)
+        std::vector<android_imgui_dialog::entry> location_entries;
+        std::vector<int> location_ids;
+        location_entries.push_back( { _( "Random location" ),
+                                      string_format( n_gettext( "%d variant", "%d variants",
+                                              get_scenario()->start_location_targets_count() ),
+                                              get_scenario()->start_location_targets_count() ),
+                                      true, false } );
+        location_ids.push_back( RANDOM_START_LOC_ENTRY );
+        int initial_selection = 0;
+        for( const start_location &loc : start_locations::get_all() ) {
+            if( !get_scenario()->allowed_start( loc.id ) ) {
+                continue;
+            }
+            location_entries.push_back( { loc.name(),
+                                          string_format( n_gettext( "%d variant", "%d variants",
+                                                  loc.targets_count() ), loc.targets_count() ),
+                                          true, false } );
+            location_ids.push_back( loc.id.id().to_i() );
+            if( !you.random_start_location && loc.id == you.start_location ) {
+                initial_selection = static_cast<int>( location_ids.size() ) - 1;
+            }
+        }
+        const std::optional<int> location_choice = android_imgui_dialog::select(
+                    _( "Starting Location" ), location_entries, std::string(), initial_selection );
+        const int selected_location_index = location_choice ? location_ids[*location_choice] : -1;
+#else
         const int selected_location_index = choose_location( you );
+#endif
         if( selected_location_index == RANDOM_START_LOC_ENTRY ) {
             you.random_start_location = true;
         } else if( selected_location_index >= 0 ) {

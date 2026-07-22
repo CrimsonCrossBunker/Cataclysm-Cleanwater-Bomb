@@ -12,6 +12,9 @@
 #include "catacharset.h"
 #include "cached_options.h"
 #include "color.h"
+#if defined(TILES)
+    #include "cursesport.h"
+#endif
 #include "input.h"
 #include "output.h"
 #include "path_info.h"
@@ -592,7 +595,12 @@ void cataimgui::client::new_frame( int display_buffer_w, int display_buffer_h )
     }
 #endif
     if( clear_screen && clear_sdl_window() ) {
-        // Keep the request armed if the clear was deferred by a queued recovery.
+        // The SDL buffer and the curses window cache are separate.  Clearing only
+        // the former would make unchanged curses content disappear, so force every
+        // curses window to emit all of its cells again during this frame.
+#if defined(TILES)
+        cata_cursesport::bump_curses_render_epoch();
+#endif
         clear_screen = false;
     }
 #if SDL_MAJOR_VERSION >= 3
@@ -663,6 +671,11 @@ bool cataimgui::clear_pending()
     return clear_screen;
 }
 
+void cataimgui::request_clear()
+{
+    clear_screen = true;
+}
+
 void cataimgui::client::process_input( void *input, int display_buffer_w, int display_buffer_h )
 {
     if( any_window_shown() ) {
@@ -681,6 +694,41 @@ void cataimgui::client::process_input( void *input, int display_buffer_w, int di
         ( void )display_buffer_h;
 #if SDL_MAJOR_VERSION >= 3
         ImGui_ImplSDL3_ProcessEvent( evt );
+#if defined(__ANDROID__)
+        // Android keyboards may report editing controls with SDLK_UNKNOWN while
+        // preserving the physical scancode.  The stock SDL3 ImGui backend maps
+        // most controls from keycode only, so normalize the controls needed by
+        // text widgets here.  AddKeyEvent filters duplicates when both paths
+        // resolve the same key.
+        if( evt->type == CATA_KEYDOWN || evt->type == CATA_KEYUP ) {
+            ImGuiKey key = ImGuiKey_None;
+            switch( evt->key.scancode ) {
+                case SDL_SCANCODE_BACKSPACE:
+                    key = ImGuiKey_Backspace;
+                    break;
+                case SDL_SCANCODE_DELETE:
+                    key = ImGuiKey_Delete;
+                    break;
+                case SDL_SCANCODE_LEFT:
+                    key = ImGuiKey_LeftArrow;
+                    break;
+                case SDL_SCANCODE_RIGHT:
+                    key = ImGuiKey_RightArrow;
+                    break;
+                case SDL_SCANCODE_HOME:
+                    key = ImGuiKey_Home;
+                    break;
+                case SDL_SCANCODE_END:
+                    key = ImGuiKey_End;
+                    break;
+                default:
+                    break;
+            }
+            if( key != ImGuiKey_None ) {
+                ImGui::GetIO().AddKeyEvent( key, evt->type == CATA_KEYDOWN );
+            }
+        }
+#endif
 #else
         // Coordinates already converted to display_buffer space by
         // convert_event_to_display_buffer_coords in the event pump.
@@ -1014,6 +1062,13 @@ void cataimgui::window::hide_if_hidden() const
     }
 }
 
+void cataimgui::window::set_redraw_underlay( const bool value )
+{
+    if( p_impl ) {
+        p_impl->window_adaptor->redraw_uis_below = value;
+    }
+}
+
 bool cataimgui::window::is_bounds_changed()
 {
     return p_impl->is_resized;
@@ -1200,6 +1255,15 @@ std::string cataimgui::window::get_filter()
     } else {
         return std::string();
     }
+}
+
+void cataimgui::window::set_filter( const std::string &text )
+{
+    if( !filter_impl ) {
+        filter_impl = std::make_unique<cataimgui::filter_box_impl>();
+        filter_impl->id = 0;
+    }
+    filter_impl->text = text;
 }
 
 void cataimgui::window::clear_filter()

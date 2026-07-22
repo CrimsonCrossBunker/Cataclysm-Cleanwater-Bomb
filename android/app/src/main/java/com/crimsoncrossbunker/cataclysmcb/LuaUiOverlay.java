@@ -58,6 +58,8 @@ final class LuaUiOverlay extends FrameLayout {
     private final Map<String, HudLayout> hudLayouts = new HashMap<>();
     private final LinkedHashMap<String, HudInfo> hudInfos = new LinkedHashMap<>();
     private final Button pageChooser;
+    private final LinearLayout hudEditorBar;
+    private FrameLayout radialMenuLayer;
     private final Runnable poller = new Runnable() {
         @Override
         public void run() {
@@ -100,6 +102,42 @@ final class LuaUiOverlay extends FrameLayout {
             Gravity.TOP | Gravity.RIGHT);
         chooserParams.setMargins(dp(8), dp(8), dp(8), dp(8));
         addView(pageChooser, chooserParams);
+
+        hudEditorBar = new LinearLayout(activity);
+        hudEditorBar.setOrientation(LinearLayout.HORIZONTAL);
+        hudEditorBar.setPadding(dp(4), dp(2), dp(4), dp(2));
+        hudEditorBar.setBackground(panelBackground(true));
+        hudEditorBar.setVisibility(GONE);
+
+        Button resetHudLayout = new Button(activity);
+        resetHudLayout.setText("恢复默认");
+        resetHudLayout.setMinWidth(0);
+        resetHudLayout.setMinHeight(0);
+        resetHudLayout.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                resetCurrentOrientationLayouts();
+            }
+        });
+        hudEditorBar.addView(resetHudLayout);
+
+        Button finishHudEditing = new Button(activity);
+        finishHudEditing.setText("完成");
+        finishHudEditing.setMinWidth(0);
+        finishHudEditing.setMinHeight(0);
+        finishHudEditing.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                setHudEditing(false);
+            }
+        });
+        hudEditorBar.addView(finishHudEditing);
+
+        FrameLayout.LayoutParams editorParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        editorParams.setMargins(dp(8), dp(8), dp(8), dp(8));
+        addView(hudEditorBar, editorParams);
     }
 
     void start() {
@@ -111,15 +149,19 @@ final class LuaUiOverlay extends FrameLayout {
     void stop() {
         started = false;
         handler.removeCallbacks(poller);
+        dismissRadialMenu();
     }
 
     void setHudEditing(boolean value) {
         if (editing == value) return;
+        if (value) dismissRadialMenu();
         editing = value;
         for (SurfaceHolder holder : surfaces.values()) {
             configureHudEditor(holder);
         }
+        hudEditorBar.setVisibility(editing ? VISIBLE : GONE);
         pageChooser.setVisibility(editing || pages.isEmpty() ? GONE : VISIBLE);
+        if (editing) hudEditorBar.bringToFront();
         forceRefresh();
     }
 
@@ -151,25 +193,34 @@ final class LuaUiOverlay extends FrameLayout {
             .setPositiveButton("保存", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    for (int i = 0; i < toggleable.size(); i++) {
-                        HudLayout layout = getOrCreateLayout(toggleable.get(i));
-                        layout.visible = visible[i];
-                    }
-                    saveHudLayouts();
-                    forceRefresh();
+                    applyHudVisibility(toggleable, visible);
                 }
             })
-            .setNeutralButton("恢复当前方向默认", new DialogInterface.OnClickListener() {
+            .setNeutralButton("编辑布局", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    resetCurrentOrientationLayouts();
+                    applyHudVisibility(toggleable, visible);
+                    setHudEditing(true);
+                    Toast.makeText(activity,
+                        "拖动 HUD 调整位置，拖动右下角调整大小，长按打开详细设置",
+                        Toast.LENGTH_LONG).show();
                 }
             })
-            .setNegativeButton("取消", null)
+            .setNegativeButton("关闭", null)
             .show();
     }
 
+    private void applyHudVisibility(List<HudInfo> infos, boolean[] visible) {
+        for (int i = 0; i < infos.size(); i++) {
+            HudLayout layout = getOrCreateLayout(infos.get(i));
+            layout.visible = visible[i];
+        }
+        saveHudLayouts();
+        forceRefresh();
+    }
+
     boolean containsTouch(float rawX, float rawY) {
+        if (radialMenuLayer != null) return true;
         int[] location = new int[2];
         if (pageChooser.getVisibility() == VISIBLE) {
             pageChooser.getLocationOnScreen(location);
@@ -257,6 +308,8 @@ final class LuaUiOverlay extends FrameLayout {
         }
         pageChooser.setVisibility(editing || pages.isEmpty() ? GONE : VISIBLE);
         pageChooser.bringToFront();
+        hudEditorBar.setVisibility(editing ? VISIBLE : GONE);
+        if (editing) hudEditorBar.bringToFront();
     }
 
     private SurfaceHolder obtainSurface(final String id, String kind) {
@@ -300,7 +353,7 @@ final class LuaUiOverlay extends FrameLayout {
         panel.addView(scroll, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        SurfaceHolder created = new SurfaceHolder(id, kind, panel, title, content);
+        SurfaceHolder created = new SurfaceHolder(id, kind, panel, titleRow, title, content);
         surfaces.put(id, created);
         addView(panel);
         return created;
@@ -337,7 +390,10 @@ final class LuaUiOverlay extends FrameLayout {
             return;
         }
         int width = Math.max(dp(120), Math.round(clamp(layout.width, .10f, .90f) * getWidth()));
-        int height = Math.max(dp(72), Math.round(clamp(layout.height, .08f, .90f) * getHeight()));
+        // Native radial controls are 80dp tall.  Include the panel's vertical
+        // padding in the minimum so a compact one-control HUD never becomes a
+        // clipped ScrollView that has to be dragged to reveal the other half.
+        int height = Math.max(dp(96), Math.round(clamp(layout.height, .08f, .90f) * getHeight()));
         int left = Math.round(clamp(layout.x, 0f, 1f) * getWidth());
         int top = Math.round(clamp(layout.y, 0f, 1f) * getHeight());
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(width, height,
@@ -389,7 +445,10 @@ final class LuaUiOverlay extends FrameLayout {
         if (!"hud".equals(holder.kind)) return;
         boolean editable = editing && holder.info != null;
         holder.root.setEditing(editable);
-        holder.root.setBackground(panelBackground(editable));
+        boolean showBackground = editable || holder.info == null || holder.info.background;
+        holder.root.setBackground(showBackground ? panelBackground(editable) : null);
+        boolean showTitle = holder.info == null || editable || holder.info.titleBar;
+        holder.titleRow.setVisibility(showTitle ? VISIBLE : GONE);
         holder.root.setClickable(editable || (holder.info != null && holder.info.interactive));
         if (editable && holder.editorTouch == null) {
             holder.editorTouch = new HudEditorTouchListener(holder);
@@ -510,6 +569,11 @@ final class LuaUiOverlay extends FrameLayout {
             line.setBackgroundColor("separator".equals(type) ? 0x667A8B99 : Color.TRANSPARENT);
             return line;
         }
+        if ("radial_select".equals(type)) {
+            RadialSelectView radial = obtain(key, RadialSelectView.class);
+            radial.configure(node, key);
+            return radial;
+        }
         if ("button".equals(type) || "small_button".equals(type) ||
                 "radio".equals(type) || "selectable".equals(type)) {
             Button button = obtain(key, Button.class);
@@ -620,7 +684,11 @@ final class LuaUiOverlay extends FrameLayout {
         String value = node.optString("text", node.optString("label", ""));
         if ("bullet".equals(type)) value = "• " + value;
         text.setText(value);
-        text.setTextColor("disabled_text".equals(type) ? 0xFF9E9E9E : Color.WHITE);
+        if ("color_text".equals(type)) {
+            text.setTextColor(parseColor(node.optString("stringValue", ""), Color.WHITE));
+        } else {
+            text.setTextColor("disabled_text".equals(type) ? 0xFF9E9E9E : Color.WHITE);
+        }
         text.setTextSize("heading".equals(type) ? 17f : 14f);
         text.setTypeface(Typeface.DEFAULT,
             "heading".equals(type) ? Typeface.BOLD : Typeface.NORMAL);
@@ -633,7 +701,8 @@ final class LuaUiOverlay extends FrameLayout {
         if (existing != null && type.isInstance(existing)) return (T)existing;
         if (existing != null) detach(existing);
         View created;
-        if (type == Button.class) created = new Button(activity);
+        if (type == RadialSelectView.class) created = new RadialSelectView(activity);
+        else if (type == Button.class) created = new Button(activity);
         else if (type == CheckBox.class) created = new CheckBox(activity);
         else if (type == EditText.class) created = new EditText(activity);
         else if (type == LinearLayout.class) created = new LinearLayout(activity);
@@ -660,8 +729,98 @@ final class LuaUiOverlay extends FrameLayout {
             ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
         if ("spacing".equals(type) || "new_line".equals(type)) return new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(8));
+        if ("radial_select".equals(type)) return new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(80));
         return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+
+    private void showRadialMenu(final RadialSelectView source, final JSONObject node,
+            final String fallbackId) {
+        dismissRadialMenu();
+        final JSONArray options = node.optJSONArray("children");
+        if (options == null || options.length() == 0) return;
+
+        final FrameLayout layer = new FrameLayout(activity);
+        layer.setClickable(true);
+        layer.setBackgroundColor(Color.TRANSPARENT);
+        layer.setOnClickListener(view -> dismissRadialMenu());
+        radialMenuLayer = layer;
+        addView(layer, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        layer.bringToFront();
+
+        layer.post(new Runnable() {
+            @Override
+            public void run() {
+                if (radialMenuLayer != layer) return;
+                int[] overlayLocation = new int[2];
+                int[] sourceLocation = new int[2];
+                LuaUiOverlay.this.getLocationOnScreen(overlayLocation);
+                source.getLocationOnScreen(sourceLocation);
+                float centerX = sourceLocation[0] - overlayLocation[0] + source.getWidth() / 2f;
+                float centerY = sourceLocation[1] - overlayLocation[1] + source.getHeight() / 2f;
+                int optionSize = dp(82);
+                float radius = dp(112);
+                int margin = dp(8);
+                String widgetId = node.optString("id", fallbackId);
+
+                for (int i = 0; i < options.length(); i++) {
+                    final JSONObject option = options.optJSONObject(i);
+                    if (option == null) continue;
+                    final String optionId = option.optString("id", "");
+                    if (optionId.isEmpty()) continue;
+                    boolean enabled = option.optBoolean("enabled", true);
+                    boolean selected = option.optBoolean("selected", false);
+                    Button button = new Button(activity);
+                    button.setAllCaps(false);
+                    button.setText(option.optString("label", optionId));
+                    button.setTextSize(12f);
+                    button.setTextColor(enabled ? Color.WHITE : 0xFF8A949C);
+                    button.setGravity(Gravity.CENTER);
+                    button.setMinWidth(0);
+                    button.setMinHeight(0);
+                    button.setPadding(dp(4), dp(2), dp(4), dp(2));
+                    button.setEnabled(enabled);
+                    button.setBackground(radialButtonBackground(selected, enabled));
+                    if (enabled) {
+                        button.setOnClickListener(view -> {
+                            if (activity.submitLuaUiInteraction(widgetId,
+                                    "select:" + optionId)) {
+                                dismissRadialMenu();
+                            } else {
+                                Toast.makeText(activity, "移动模式切换未被游戏接受",
+                                    Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+
+                    double angle = -Math.PI / 2.0 + 2.0 * Math.PI * i / options.length();
+                    int left = Math.round(centerX + radius * (float)Math.cos(angle) - optionSize / 2f);
+                    int top = Math.round(centerY + radius * (float)Math.sin(angle) - optionSize / 2f);
+                    left = Math.max(margin, Math.min(left, layer.getWidth() - optionSize - margin));
+                    top = Math.max(margin, Math.min(top, layer.getHeight() - optionSize - margin));
+                    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(optionSize, optionSize);
+                    params.leftMargin = left;
+                    params.topMargin = top;
+                    layer.addView(button, params);
+                }
+            }
+        });
+    }
+
+    private void dismissRadialMenu() {
+        if (radialMenuLayer == null) return;
+        removeView(radialMenuLayer);
+        radialMenuLayer = null;
+    }
+
+    private GradientDrawable radialButtonBackground(boolean selected, boolean enabled) {
+        GradientDrawable background = new GradientDrawable();
+        background.setShape(GradientDrawable.OVAL);
+        background.setColor(!enabled ? 0xCC263038 : selected ? 0xEE235D86 : 0xE62B3944);
+        background.setStroke(dp(2), selected ? 0xFF7FC8FF : 0xB3C6D3DC);
+        return background;
     }
 
     private TextView textView(String value) {
@@ -670,6 +829,20 @@ final class LuaUiOverlay extends FrameLayout {
         text.setTextColor(Color.WHITE);
         text.setTextSize(14f);
         return text;
+    }
+
+    private int parseColor(String encoded, int fallback) {
+        String[] components = encoded.split(",");
+        if (components.length != 4) return fallback;
+        try {
+            int red = Math.round(255f * clamp(Float.parseFloat(components[0]), 0f, 1f));
+            int green = Math.round(255f * clamp(Float.parseFloat(components[1]), 0f, 1f));
+            int blue = Math.round(255f * clamp(Float.parseFloat(components[2]), 0f, 1f));
+            int alpha = Math.round(255f * clamp(Float.parseFloat(components[3]), 0f, 1f));
+            return Color.argb(alpha, red, green, blue);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     private GradientDrawable panelBackground(boolean editor) {
@@ -839,17 +1012,45 @@ final class LuaUiOverlay extends FrameLayout {
         final String id;
         final String kind;
         final SurfacePanel root;
+        final LinearLayout titleRow;
         final TextView title;
         final LinearLayout content;
         HudInfo info;
         HudEditorTouchListener editorTouch;
-        SurfaceHolder(String id, String kind, SurfacePanel root, TextView title,
-                LinearLayout content) {
+        SurfaceHolder(String id, String kind, SurfacePanel root, LinearLayout titleRow,
+                TextView title, LinearLayout content) {
             this.id = id;
             this.kind = kind;
             this.root = root;
+            this.titleRow = titleRow;
             this.title = title;
             this.content = content;
+        }
+    }
+
+    private final class RadialSelectView extends FrameLayout {
+        private final Button centerButton;
+
+        RadialSelectView(Context context) {
+            super(context);
+            setClipChildren(false);
+            setClipToPadding(false);
+            centerButton = new Button(context);
+            centerButton.setAllCaps(false);
+            centerButton.setTextColor(Color.WHITE);
+            centerButton.setTextSize(14f);
+            centerButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            centerButton.setGravity(Gravity.CENTER);
+            centerButton.setMinWidth(0);
+            centerButton.setMinHeight(0);
+            centerButton.setPadding(dp(4), dp(2), dp(4), dp(2));
+            addView(centerButton, new FrameLayout.LayoutParams(dp(72), dp(72), Gravity.CENTER));
+        }
+
+        void configure(final JSONObject node, final String fallbackId) {
+            centerButton.setText(node.optString("label", "?"));
+            centerButton.setBackground(radialButtonBackground(true, true));
+            centerButton.setOnClickListener(view -> showRadialMenu(this, node, fallbackId));
         }
     }
 
@@ -863,6 +1064,8 @@ final class LuaUiOverlay extends FrameLayout {
         float defaultWidth;
         float defaultHeight;
         boolean interactive;
+        boolean background;
+        boolean titleBar;
         boolean movable;
         boolean scalable;
         boolean userToggleable;
@@ -878,6 +1081,8 @@ final class LuaUiOverlay extends FrameLayout {
             info.defaultWidth = clamp((float)json.optDouble("defaultWidth", .28), .10f, .90f);
             info.defaultHeight = clamp((float)json.optDouble("defaultHeight", .18), .08f, .90f);
             info.interactive = json.optBoolean("interactive", false);
+            info.background = json.optBoolean("background", true);
+            info.titleBar = json.optBoolean("titleBar", false);
             info.movable = json.optBoolean("movable", true);
             info.scalable = json.optBoolean("scalable", true);
             info.userToggleable = json.optBoolean("userToggleable", true);

@@ -2956,16 +2956,23 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
             item tmp;
             if( string_starts_with( found_id, "corpse_" ) ) {
                 tmp = item( itype_corpse, calendar::turn_zero );
-            } else {
+            } else if( item::type_is_defined( itype_id( found_id ) ) ) {
                 tmp = item( itype_id( found_id ), calendar::turn_zero );
-            }
-            if( !variant.empty() ) {
-                tmp.set_itype_variant( variant );
             } else {
-                tmp.clear_itype_variant();
+                // Custom contextual sprite IDs are not necessarily item IDs.  A
+                // missing sprite should use the generic unknown tile below without
+                // asking Item_factory to construct an undefined item.
+                tmp = item();
             }
-            sym = static_cast<uint8_t>( tmp.symbol().empty() ? ' ' : tmp.symbol().front() );
-            col = tmp.color();
+            if( !tmp.is_null() ) {
+                if( !variant.empty() ) {
+                    tmp.set_itype_variant( variant );
+                } else {
+                    tmp.clear_itype_variant();
+                }
+                sym = static_cast<uint8_t>( tmp.symbol().empty() ? ' ' : tmp.symbol().front() );
+                col = tmp.color();
+            }
         } else if( category == TILE_CATEGORY::OVERMAP_WEATHER ) {
             const weather_type_id weather_def( id );
             if( weather_def.is_valid() ) {
@@ -4101,7 +4108,6 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
     };
 
     auto draw_layer_item = [&]( const std::string & terfurn_key, const maptile & tile,
-                                std::string & variant,
     bool & drawtop ) {
         // go through all the layer variants
         auto itt = tileset_ptr->item_layer_data.find( terfurn_key );
@@ -4126,15 +4132,24 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
                             }
                         }
 
-                        if( i.has_itype_variant() ) {
-                            variant = i.itype_variant().id;
-                        }
+                        std::string layer_variant = i.has_itype_variant() ?
+                                                    i.itype_variant().id : std::string{};
                         if( !layer_var.append_suffix.empty() ) {
-                            variant += layer_var.append_suffix;
+                            layer_variant += layer_var.append_suffix;
+                        }
+
+                        // Contextual sprite IDs name tiles, not item definitions.  If a
+                        // tileset's layering data references a missing sprite, leave the
+                        // uppermost item for the normal item draw path below instead of
+                        // trying to construct an item from the sprite ID.
+                        if( !find_tile_looks_like( sprite_to_draw, TILE_CATEGORY::ITEM,
+                                                   layer_variant ) ) {
+                            continue;
                         }
                         // if we have found info on the item go through and draw its stuff
                         draw_from_id_string( sprite_to_draw, TILE_CATEGORY::ITEM, layer_it_category, p, 0,
-                                             0, layer_lit, layer_nv, height_3d, 0, variant, layer_var.offset );
+                                             0, layer_lit, layer_nv, height_3d, 0, layer_variant,
+                                             layer_var.offset );
 
                         // if the top item is already being layered don't draw it later
                         if( i.typeId() == tile.get_uppermost_item().typeId() ) {
@@ -4245,18 +4260,18 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
         const maptile &tile = here.maptile_at( p );
 
         if( !invisible[0] ) {
-            bool has_drawn_item = draw_layer_item( tile.get_furn_t().id.str(), tile, variant, drawtop );
+            bool has_drawn_item = draw_layer_item( tile.get_furn_t().id.str(), tile, drawtop );
             // start by drawing the layering data if available
             // attempt furniture ids, then flags, then terrain ids, then flags
             if( !has_drawn_item ) {
                 for( const std::string &f : tile.get_furn_t().get_flags() ) {
-                    has_drawn_item |= draw_layer_item( f, tile, variant, drawtop );
+                    has_drawn_item |= draw_layer_item( f, tile, drawtop );
                 }
                 if( !has_drawn_item ) {
-                    has_drawn_item = draw_layer_item( tile.get_ter_t().id.str(), tile, variant, drawtop );
+                    has_drawn_item = draw_layer_item( tile.get_ter_t().id.str(), tile, drawtop );
                     if( !has_drawn_item ) {
                         for( const std::string &f : tile.get_ter_t().get_flags() ) {
-                            draw_layer_item( f, tile, variant, drawtop );
+                            draw_layer_item( f, tile, drawtop );
                         }
                     }
                 }

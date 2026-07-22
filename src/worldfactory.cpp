@@ -3,13 +3,21 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cmath>
 #include <ctime>
+#include <deque>
 #include <exception>
 #include <iterator>
 #include <memory>
 #include <set>
 #include <unordered_map>
 #include <utility>
+
+#if defined(__ANDROID__)
+    #include "android_imgui_dialog.h"
+    #include "cata_imgui.h"
+    #include "imgui/imgui.h"
+#endif
 
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -47,6 +55,686 @@ std::unique_ptr<worldfactory> world_generator;
   * 0 index is inclusive.
   */
 static const int max_worldname_len = 32;
+
+#if defined(__ANDROID__)
+namespace
+{
+
+struct android_worldgen_slider {
+    std::string name;
+    std::string value;
+    std::string description;
+    bool adjustable = true;
+};
+
+struct android_worldgen_snapshot {
+    std::string world_name;
+    std::vector<android_worldgen_slider> sliders;
+    bool custom_options = false;
+};
+
+enum class android_worldgen_action_type : int {
+    rename,
+    random_name,
+    previous_value,
+    next_value,
+    mods,
+    advanced,
+    reset,
+    randomize,
+    finish,
+    close,
+};
+
+struct android_worldgen_action {
+    android_worldgen_action_type type;
+    int index = 0;
+};
+
+class android_worldgen_imgui : public cataimgui::window
+{
+    public:
+        android_worldgen_imgui() : cataimgui::window(
+                "Android world generation",
+                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoSavedSettings ) {}
+
+        void set_snapshot( android_worldgen_snapshot next ) {
+            snapshot_ = std::move( next );
+        }
+
+        std::optional<android_worldgen_action> take_action() {
+            if( actions_.empty() ) {
+                return std::nullopt;
+            }
+            android_worldgen_action result = actions_.front();
+            actions_.pop_front();
+            return result;
+        }
+
+        void set_visible( const bool value ) {
+            hide_ui = !value;
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            return { 0.0F, 0.0F, 1.0F, 1.0F };
+        }
+
+        void draw_controls() override {
+            hide_if_hidden();
+            if( hide_ui ) {
+                return;
+            }
+            const ImVec2 window_pos = ImGui::GetWindowPos();
+            const ImVec2 window_size = ImGui::GetWindowSize();
+            const float edge_padding = std::clamp( window_size.x * 0.015F, 14.0F, 24.0F );
+            constexpr float footer_height = 128.0F;
+            const float panel_width = std::min( window_size.x - 24.0F,
+                                                std::clamp( window_size.x * 0.84F,
+                                                        760.0F, 1320.0F ) );
+            const float panel_height = std::min( window_size.y - 24.0F,
+                                                 std::clamp( window_size.y * 0.90F,
+                                                         540.0F, 940.0F ) );
+
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+                IM_COL32( 6, 9, 12, 255 ) );
+            cataimgui::PushGuiFont1_5x();
+            ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 12.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 8.0F, 7.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.28F, 0.31F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
+
+            ImGui::SetCursorPos( ImVec2( ( window_size.x - panel_width ) * 0.5F,
+                                         ( window_size.y - panel_height ) * 0.5F ) );
+            if( ImGui::BeginChild( "##android_worldgen_panel", ImVec2( panel_width, panel_height ),
+                                   ImGuiChildFlags_Borders ) ) {
+                ImGui::TextUnformatted( _( "Create World" ) );
+                if( snapshot_.custom_options ) {
+                    ImGui::SameLine();
+                    ImGui::TextColored( ImVec4( 0.95F, 0.72F, 0.24F, 1.0F ), "%s",
+                                        _( "Custom options" ) );
+                }
+                ImGui::Separator();
+                draw_name_row();
+                ImGui::Separator();
+                if( ImGui::BeginChild( "##android_worldgen_sliders", ImVec2( 0.0F, -footer_height ),
+                                       ImGuiChildFlags_Borders,
+                                       ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                    const bool suppress_click = handle_vertical_drag();
+                    draw_sliders( suppress_click );
+                }
+                ImGui::EndChild();
+                ImGui::Separator();
+                draw_toolbar();
+            }
+            ImGui::EndChild();
+
+            ImGui::PopStyleColor( 6 );
+            ImGui::PopStyleVar( 6 );
+            cataimgui::PopGuiFont1_5x();
+        }
+
+    private:
+        android_worldgen_snapshot snapshot_;
+        std::deque<android_worldgen_action> actions_;
+        bool dragging_ = false;
+        ImVec2 drag_start_;
+
+        void draw_name_row() {
+            constexpr float label_width = 160.0F;
+            constexpr float random_width = 220.0F;
+            const float content_width = ImGui::GetContentRegionAvail().x;
+            const float name_width = std::clamp( content_width - label_width - random_width - 16.0F,
+                                                 280.0F, 680.0F );
+            const float row_width = label_width + name_width + random_width + 16.0F;
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                  std::max( 0.0F, ( content_width - row_width ) * 0.5F ) );
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted( _( "World name:" ) );
+            ImGui::SameLine( 0.0F, std::max( 8.0F, label_width -
+                                            ImGui::CalcTextSize( _( "World name:" ) ).x ) );
+            const std::string name_label = snapshot_.world_name + "###android_worldgen_name";
+            if( ImGui::Button( name_label.c_str(), ImVec2( name_width, 50.0F ) ) ) {
+                actions_.push_back( { android_worldgen_action_type::rename, 0 } );
+            }
+            ImGui::SameLine();
+            if( ImGui::Button( _( "Random name" ), ImVec2( random_width, 50.0F ) ) ) {
+                actions_.push_back( { android_worldgen_action_type::random_name, 0 } );
+            }
+        }
+
+        bool handle_vertical_drag() {
+            ImGuiIO &io = ImGui::GetIO();
+            if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+                dragging_ = true;
+                drag_start_ = io.MousePos;
+            }
+            if( !dragging_ ) {
+                return false;
+            }
+            const ImVec2 distance( io.MousePos.x - drag_start_.x,
+                                   io.MousePos.y - drag_start_.y );
+            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
+                std::abs( distance.y ) > std::abs( distance.x ) ) {
+                ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
+            }
+            if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+                dragging_ = false;
+            }
+            return moved;
+        }
+
+        void draw_sliders( const bool suppress_click ) {
+            if( ImGui::BeginTable( "##android_worldgen_slider_table", 2,
+                                   ImGuiTableFlags_SizingStretchProp |
+                                   ImGuiTableFlags_BordersInnerV ) ) {
+                ImGui::TableSetupColumn( "##worldgen_slider_info", ImGuiTableColumnFlags_WidthStretch,
+                                         0.43F );
+                ImGui::TableSetupColumn( "##worldgen_slider_control", ImGuiTableColumnFlags_WidthStretch,
+                                         0.57F );
+                for( size_t index = 0; index < snapshot_.sliders.size(); ++index ) {
+                    const android_worldgen_slider &slider = snapshot_.sliders[index];
+                    ImGui::PushID( static_cast<int>( index ) );
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex( 0 );
+                    ImGui::TextUnformatted( slider.name.c_str() );
+                    if( !slider.description.empty() ) {
+                        ImGui::TextWrapped( "%s", slider.description.c_str() );
+                    }
+                    ImGui::TableSetColumnIndex( 1 );
+                    const float available = ImGui::GetContentRegionAvail().x;
+                    constexpr float arrow_width = 66.0F;
+                    const float value_width = std::max( 170.0F,
+                                              available - arrow_width * 2.0F - 16.0F );
+                    if( !slider.adjustable ) {
+                        ImGui::BeginDisabled();
+                    }
+                    if( ImGui::Button( "‹", ImVec2( arrow_width, 48.0F ) ) && !suppress_click ) {
+                        actions_.push_back( { android_worldgen_action_type::previous_value,
+                                              static_cast<int>( index ) } );
+                    }
+                    ImGui::SameLine();
+                    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.06F, 0.17F, 0.17F, 1.0F ) );
+                    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.76F, 0.96F, 0.88F, 1.0F ) );
+                    ImGui::Button( slider.value.c_str(), ImVec2( value_width, 48.0F ) );
+                    ImGui::PopStyleColor( 2 );
+                    ImGui::SameLine();
+                    if( ImGui::Button( "›", ImVec2( arrow_width, 48.0F ) ) && !suppress_click ) {
+                        actions_.push_back( { android_worldgen_action_type::next_value,
+                                              static_cast<int>( index ) } );
+                    }
+                    if( !slider.adjustable ) {
+                        ImGui::EndDisabled();
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
+            }
+        }
+
+        void draw_toolbar() {
+            const std::array<std::pair<android_worldgen_action_type, const char *>, 6> buttons = {{
+                    { android_worldgen_action_type::mods, _( "Mods" ) },
+                    { android_worldgen_action_type::advanced, _( "Advanced" ) },
+                    { android_worldgen_action_type::reset, _( "Reset" ) },
+                    { android_worldgen_action_type::randomize, _( "Randomize" ) },
+                    { android_worldgen_action_type::finish, _( "Finish" ) },
+                    { android_worldgen_action_type::close, _( "Back" ) },
+                }
+            };
+            constexpr float gap = 8.0F;
+            const float available = ImGui::GetContentRegionAvail().x;
+            const float width = std::min( 260.0F, ( available - gap * 2.0F ) / 3.0F );
+            const float row_width = width * 3.0F + gap * 2.0F;
+            for( size_t index = 0; index < buttons.size(); ++index ) {
+                if( index % 3 == 0 ) {
+                    ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                          std::max( 0.0F, ( available - row_width ) * 0.5F ) );
+                }
+                if( index % 3 != 0 ) {
+                    ImGui::SameLine( 0.0F, gap );
+                }
+                if( buttons[index].first == android_worldgen_action_type::close ) {
+                    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
+                }
+                if( ImGui::Button( buttons[index].second, ImVec2( width, 48.0F ) ) ) {
+                    actions_.push_back( { buttons[index].first, 0 } );
+                }
+                if( buttons[index].first == android_worldgen_action_type::close ) {
+                    ImGui::PopStyleColor();
+                }
+            }
+        }
+};
+
+struct android_mod_entry_snapshot {
+    std::string name;
+    std::string category;
+    bool active = false;
+    bool warning = false;
+    bool can_move_up = false;
+    bool can_move_down = false;
+};
+
+struct android_mod_snapshot {
+    std::string title;
+    std::vector<std::string> categories;
+    std::vector<android_mod_entry_snapshot> available;
+    std::vector<android_mod_entry_snapshot> active;
+    std::string filter;
+    std::string description;
+    int selected_category = 0;
+    int selected_available = -1;
+    int selected_active = -1;
+    bool active_pane = false;
+    bool read_only = false;
+    bool with_tabs = false;
+};
+
+enum class android_mod_action_type : int {
+    select_category,
+    select_available,
+    select_active,
+    add,
+    remove,
+    move_up,
+    move_down,
+    filter,
+    save_default,
+    previous_tab,
+    next_tab,
+    close,
+};
+
+struct android_mod_action {
+    android_mod_action_type type;
+    int index = 0;
+};
+
+class android_mod_imgui : public cataimgui::window
+{
+    public:
+        android_mod_imgui() : cataimgui::window(
+                "Android world mods",
+                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoSavedSettings ) {}
+
+        void set_snapshot( android_mod_snapshot next ) {
+            snapshot_ = std::move( next );
+        }
+
+        std::optional<android_mod_action> take_action() {
+            if( actions_.empty() ) {
+                return std::nullopt;
+            }
+            android_mod_action result = actions_.front();
+            actions_.pop_front();
+            return result;
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            return { 0.0F, 0.0F, 1.0F, 1.0F };
+        }
+
+        void draw_controls() override {
+            const ImVec2 window_pos = ImGui::GetWindowPos();
+            const ImVec2 window_size = ImGui::GetWindowSize();
+            const float edge_padding = std::clamp( window_size.x * 0.012F, 12.0F, 22.0F );
+            const float footer_height = snapshot_.read_only || !snapshot_.with_tabs ? 64.0F : 112.0F;
+            const float panel_width = std::min( window_size.x - 20.0F,
+                                                std::clamp( window_size.x * 0.94F,
+                                                        900.0F, 1900.0F ) );
+            const float panel_height = std::min( window_size.y - 20.0F,
+                                                 std::clamp( window_size.y * 0.92F,
+                                                         560.0F, 980.0F ) );
+
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+                IM_COL32( 6, 9, 12, 255 ) );
+            cataimgui::PushGuiFont1_5x();
+            ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 10.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 7.0F, 6.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 10.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.28F, 0.31F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
+
+            ImGui::SetCursorPos( ImVec2( ( window_size.x - panel_width ) * 0.5F,
+                                         ( window_size.y - panel_height ) * 0.5F ) );
+            if( ImGui::BeginChild( "##android_mod_panel", ImVec2( panel_width, panel_height ),
+                                   ImGuiChildFlags_Borders ) ) {
+                ImGui::TextUnformatted( snapshot_.title.c_str() );
+                if( !snapshot_.read_only ) {
+                    ImGui::SameLine();
+                    draw_filter();
+                }
+                ImGui::Separator();
+                if( !snapshot_.read_only ) {
+                    draw_categories();
+                    ImGui::Separator();
+                }
+
+                const float body_height = std::max( 220.0F,
+                                                    ImGui::GetContentRegionAvail().y -
+                                                    footer_height - 8.0F );
+                draw_lists( body_height );
+                ImGui::Separator();
+                draw_footer();
+            }
+            ImGui::EndChild();
+
+            ImGui::PopStyleColor( 6 );
+            ImGui::PopStyleVar( 6 );
+            cataimgui::PopGuiFont1_5x();
+        }
+
+    private:
+        android_mod_snapshot snapshot_;
+        std::deque<android_mod_action> actions_;
+        bool dragging_ = false;
+        int dragging_pane_ = -1;
+        ImVec2 drag_start_;
+
+        void draw_categories() {
+            if( ImGui::BeginChild( "##android_mod_categories", ImVec2( 0.0F, 54.0F ),
+                                   ImGuiChildFlags_None,
+                                   ImGuiWindowFlags_HorizontalScrollbar |
+                                   ImGuiWindowFlags_NoScrollWithMouse ) ) {
+                for( size_t index = 0; index < snapshot_.categories.size(); ++index ) {
+                    if( index > 0 ) {
+                        ImGui::SameLine();
+                    }
+                    const bool selected = static_cast<int>( index ) == snapshot_.selected_category;
+                    if( selected ) {
+                        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.08F, 0.30F, 0.34F, 1.0F ) );
+                        ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.32F, 0.72F, 0.75F, 1.0F ) );
+                    }
+                    const std::string label = snapshot_.categories[index] +
+                                              "###android_mod_category_" + std::to_string( index );
+                    const float width = ImGui::CalcTextSize( snapshot_.categories[index].c_str() ).x + 34.0F;
+                    if( ImGui::Button( label.c_str(), ImVec2( width, 44.0F ) ) && !selected ) {
+                        actions_.push_back( { android_mod_action_type::select_category,
+                                              static_cast<int>( index ) } );
+                    }
+                    if( selected ) {
+                        ImGui::PopStyleColor( 2 );
+                    }
+                }
+                if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                    ImGui::IsMouseDragging( ImGuiMouseButton_Left ) ) {
+                    ImGui::SetScrollX( ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x );
+                }
+            }
+            ImGui::EndChild();
+        }
+
+        void draw_filter() {
+            constexpr float filter_button_width = 150.0F;
+            if( ImGui::Button( _( "Filter" ), ImVec2( filter_button_width, 42.0F ) ) ) {
+                actions_.push_back( { android_mod_action_type::filter, 0 } );
+            }
+            ImGui::SameLine();
+            const std::string value = snapshot_.filter.empty() ? _( "All mods" ) : snapshot_.filter;
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.06F, 0.17F, 0.17F, 1.0F ) );
+            ImGui::Button( value.c_str(), ImVec2( 260.0F, 42.0F ) );
+            ImGui::PopStyleColor();
+        }
+
+        void draw_lists( const float height ) {
+            const float gap = 10.0F;
+            const float available_width = ImGui::GetContentRegionAvail().x;
+            const float details_width = std::clamp( available_width * 0.27F, 280.0F, 470.0F );
+            const float lists_width = available_width - details_width - gap;
+            const float first_list_width = snapshot_.read_only ? lists_width : lists_width * 0.56F;
+            if( ImGui::BeginChild( "##android_mod_available", ImVec2( first_list_width, height ),
+                                   ImGuiChildFlags_Borders,
+                                   ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                ImGui::TextUnformatted( snapshot_.read_only ? _( "Load order" ) : _( "Available mods" ) );
+                ImGui::Separator();
+                const bool suppress_click = handle_vertical_drag( 0 );
+                if( snapshot_.read_only ) {
+                    draw_entries( snapshot_.active, snapshot_.selected_active, true, suppress_click );
+                } else {
+                    draw_entries( snapshot_.available, snapshot_.selected_available, false, suppress_click );
+                }
+            }
+            ImGui::EndChild();
+            if( !snapshot_.read_only ) {
+                ImGui::SameLine( 0.0F, gap );
+                if( ImGui::BeginChild( "##android_mod_active",
+                                       ImVec2( lists_width - first_list_width - gap, height ),
+                                       ImGuiChildFlags_Borders,
+                                       ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                    ImGui::TextUnformatted( _( "Mod load order" ) );
+                    ImGui::Separator();
+                    const bool suppress_click = handle_vertical_drag( 1 );
+                    draw_entries( snapshot_.active, snapshot_.selected_active, true, suppress_click );
+                }
+                ImGui::EndChild();
+            }
+            ImGui::SameLine( 0.0F, gap );
+            draw_description( details_width, height );
+        }
+
+        void draw_description( const float width, const float height ) {
+            if( ImGui::BeginChild( "##android_mod_description", ImVec2( width, height ),
+                                   ImGuiChildFlags_Borders,
+                                   ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                ImGui::TextUnformatted( _( "Details" ) );
+                ImGui::Separator();
+                const android_mod_entry_snapshot *selected = nullptr;
+                if( snapshot_.active_pane && snapshot_.selected_active >= 0 ) {
+                    selected = &snapshot_.active[snapshot_.selected_active];
+                } else if( !snapshot_.read_only && snapshot_.selected_available >= 0 ) {
+                    selected = &snapshot_.available[snapshot_.selected_available];
+                } else if( snapshot_.read_only && snapshot_.selected_active >= 0 ) {
+                    selected = &snapshot_.active[snapshot_.selected_active];
+                }
+                if( selected ) {
+                    ImGui::TextWrapped( "%s", selected->name.c_str() );
+                    if( !selected->category.empty() ) {
+                        ImGui::TextColored( ImVec4( 0.50F, 0.78F, 0.80F, 1.0F ), "%s",
+                                            selected->category.c_str() );
+                    }
+                    ImGui::Separator();
+                }
+                if( snapshot_.description.empty() ) {
+                    ImGui::TextWrapped( "%s", _( "Select a mod to view its details." ) );
+                } else {
+                    ImGui::TextWrapped( "%s", snapshot_.description.c_str() );
+                }
+            }
+            ImGui::EndChild();
+        }
+
+        bool handle_vertical_drag( const int pane ) {
+            ImGuiIO &io = ImGui::GetIO();
+            if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+                dragging_ = true;
+                dragging_pane_ = pane;
+                drag_start_ = io.MousePos;
+            }
+            if( !dragging_ || dragging_pane_ != pane ) {
+                return false;
+            }
+            const ImVec2 distance( io.MousePos.x - drag_start_.x, io.MousePos.y - drag_start_.y );
+            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
+                std::abs( distance.y ) > std::abs( distance.x ) ) {
+                ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
+            }
+            if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+                dragging_ = false;
+                dragging_pane_ = -1;
+            }
+            return moved;
+        }
+
+        void draw_entries( const std::vector<android_mod_entry_snapshot> &entries,
+                           const int selected_index, const bool active_list,
+                           const bool suppress_click ) {
+            if( entries.empty() ) {
+                ImGui::TextWrapped( "%s", active_list ? _( "No active mods." ) : _( "No matching mods." ) );
+                return;
+            }
+            for( size_t index = 0; index < entries.size(); ++index ) {
+                const android_mod_entry_snapshot &entry = entries[index];
+                ImGui::PushID( static_cast<int>( index ) );
+                const bool selected = selected_index == static_cast<int>( index );
+                if( selected ) {
+                    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.08F, 0.30F, 0.34F, 1.0F ) );
+                    ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.32F, 0.72F, 0.75F, 1.0F ) );
+                } else if( entry.warning ) {
+                    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.26F, 0.09F, 0.07F, 1.0F ) );
+                    ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.62F, 0.25F, 0.17F, 0.9F ) );
+                }
+                std::string label;
+                if( entry.active && !active_list ) {
+                    label += "✓ ";
+                }
+                if( entry.warning ) {
+                    label += "⚠ ";
+                }
+                label += entry.name;
+                label += "###android_mod_entry";
+                if( ImGui::Button( label.c_str(), ImVec2( -1.0F, 48.0F ) ) && !suppress_click ) {
+                    actions_.push_back( { active_list ? android_mod_action_type::select_active :
+                                          android_mod_action_type::select_available,
+                                          static_cast<int>( index ) } );
+                }
+                if( selected || entry.warning ) {
+                    ImGui::PopStyleColor( 2 );
+                }
+                ImGui::PopID();
+            }
+        }
+
+        void draw_footer() {
+            if( snapshot_.read_only ) {
+                draw_single_back_button();
+                return;
+            }
+            const float gap = 8.0F;
+            const float available = ImGui::GetContentRegionAvail().x;
+            const std::array<std::pair<android_mod_action_type, const char *>, 6> edit_buttons = {{
+                    { android_mod_action_type::add, _( "Add" ) },
+                    { android_mod_action_type::remove, _( "Remove" ) },
+                    { android_mod_action_type::move_up, _( "Move up" ) },
+                    { android_mod_action_type::move_down, _( "Move down" ) },
+                    { android_mod_action_type::save_default, _( "Save default" ) },
+                    { android_mod_action_type::close, _( "Back" ) },
+                }
+            };
+            const size_t edit_count = snapshot_.with_tabs ? edit_buttons.size() - 1 :
+                                      edit_buttons.size();
+            const float width = std::min( 230.0F,
+                                          ( available - gap * ( edit_count - 1 ) ) / edit_count );
+            const float row_width = width * edit_count + gap * ( edit_count - 1 );
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                  std::max( 0.0F, ( available - row_width ) * 0.5F ) );
+            for( size_t index = 0; index < edit_count; ++index ) {
+                if( index > 0 ) {
+                    ImGui::SameLine( 0.0F, gap );
+                }
+                bool enabled = true;
+                switch( edit_buttons[index].first ) {
+                    case android_mod_action_type::add:
+                        enabled = snapshot_.selected_available >= 0;
+                        break;
+                    case android_mod_action_type::remove:
+                        enabled = snapshot_.selected_active >= 0;
+                        break;
+                    case android_mod_action_type::move_up:
+                        enabled = snapshot_.selected_active >= 0 &&
+                                  snapshot_.active[snapshot_.selected_active].can_move_up;
+                        break;
+                    case android_mod_action_type::move_down:
+                        enabled = snapshot_.selected_active >= 0 &&
+                                  snapshot_.active[snapshot_.selected_active].can_move_down;
+                        break;
+                    default:
+                        break;
+                }
+                if( edit_buttons[index].first == android_mod_action_type::close ) {
+                    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
+                }
+                if( !enabled ) {
+                    ImGui::BeginDisabled();
+                }
+                if( ImGui::Button( edit_buttons[index].second, ImVec2( width, 46.0F ) ) && enabled ) {
+                    actions_.push_back( { edit_buttons[index].first, 0 } );
+                }
+                if( !enabled ) {
+                    ImGui::EndDisabled();
+                }
+                if( edit_buttons[index].first == android_mod_action_type::close ) {
+                    ImGui::PopStyleColor();
+                }
+            }
+            if( !snapshot_.with_tabs ) {
+                return;
+            }
+            const float nav_width = std::min( 280.0F, ( available - gap * 2.0F ) / 3.0F );
+            const float nav_row_width = nav_width * 3.0F + gap * 2.0F;
+            const std::array<std::pair<android_mod_action_type, const char *>, 3> nav_buttons = {{
+                    { android_mod_action_type::close, _( "Cancel" ) },
+                    { android_mod_action_type::previous_tab, _( "Previous" ) },
+                    { android_mod_action_type::next_tab, _( "Next" ) },
+                }
+            };
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                  std::max( 0.0F, ( available - nav_row_width ) * 0.5F ) );
+            for( size_t index = 0; index < nav_buttons.size(); ++index ) {
+                if( index > 0 ) {
+                    ImGui::SameLine( 0.0F, gap );
+                }
+                if( nav_buttons[index].first == android_mod_action_type::close ) {
+                    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
+                }
+                if( ImGui::Button( nav_buttons[index].second, ImVec2( nav_width, 46.0F ) ) ) {
+                    actions_.push_back( { nav_buttons[index].first, 0 } );
+                }
+                if( nav_buttons[index].first == android_mod_action_type::close ) {
+                    ImGui::PopStyleColor();
+                }
+            }
+        }
+
+        void draw_single_back_button() {
+            const float available = ImGui::GetContentRegionAvail().x;
+            const float width = std::min( 300.0F, available );
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() +
+                                  std::max( 0.0F, ( available - width ) * 0.5F ) );
+            if( ImGui::Button( _( "Back" ), ImVec2( width, 48.0F ) ) ) {
+                actions_.push_back( { android_mod_action_type::close, 0 } );
+            }
+        }
+};
+
+} // namespace
+#endif
 
 save_t::save_t( const std::string &name ): name( name ) {}
 
@@ -235,11 +923,50 @@ static std::optional<std::string> prompt_world_name( const std::string &title,
         return true;
     } );
     std::string message = popup.query();
+    if( popup.cancelled() ) {
+        return std::nullopt;
+    }
     return message;
 }
 
 int worldfactory::show_worldgen_advanced( WORLD *world )
 {
+#if defined(__ANDROID__)
+    const int width = std::max( FULL_SCREEN_WIDTH, TERMX / 2 );
+    const int offset_x = TERMX > FULL_SCREEN_WIDTH ? ( TERMX - width ) / 2 : 0;
+    const catacurses::window bridge = catacurses::newwin( TERMY, width, point( offset_x, 0 ) );
+    int current_page = 0;
+    while( current_page >= 0 ) {
+        if( current_page == 0 ) {
+            current_page += show_worldgen_tab_modselection( bridge, world, true );
+            continue;
+        }
+        if( current_page == 1 ) {
+            current_page += show_worldgen_tab_options( bridge, world, true );
+            continue;
+        }
+        const std::optional<std::string> result = prompt_world_name(
+                    _( "Choose a new name for this world." ), world->world_name );
+        if( !result ) {
+            current_page = 1;
+            continue;
+        }
+        if( result->empty() ) {
+            if( !android_imgui_dialog::confirm(
+                    _( "World name" ),
+                    _( "World name is empty. Randomize the name?" ),
+                    _( "Randomize" ), _( "Back" ) ) ) {
+                current_page = 1;
+                continue;
+            }
+            world->world_name = pick_random_name();
+        } else {
+            world->world_name = *result;
+        }
+        return current_page;
+    }
+    return current_page;
+#else
     // set up window
     catacurses::window wf_win;
     ui_adaptor ui;
@@ -288,6 +1015,7 @@ int worldfactory::show_worldgen_advanced( WORLD *world )
         }
     }
     return curtab;
+#endif
 }
 
 WORLD *worldfactory::make_new_world( special_game_type special_type )
@@ -497,6 +1225,27 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
         return get_world( world_names[0] );
     }
 
+#if defined(__ANDROID__)
+    std::vector<android_imgui_dialog::entry> entries;
+    entries.reserve( world_names.size() );
+    for( const std::string &name : world_names ) {
+        const size_t save_count = get_world( name )->world_saves.size();
+        entries.push_back( {
+            string_format( "%s (%zu)", name, save_count ),
+            save_count == 0 ? _( "Empty world" ) :
+            string_format( n_gettext( "%zu saved character", "%zu saved characters", save_count ),
+                           save_count ),
+            true,
+            false
+        } );
+    }
+    const std::optional<int> selected = android_imgui_dialog::select(
+            _( "World selection" ), entries, _( "Pick a world to enter game" ) );
+    if( selected && *selected >= 0 && static_cast<size_t>( *selected ) < world_names.size() ) {
+        return get_world( world_names[*selected] );
+    }
+    return nullptr;
+#else
     const int iTooltipHeight = 3;
     int iContentHeight = 0;
     int iMinScreenWidth = 0;
@@ -702,6 +1451,7 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
     }
 
     return nullptr;
+#endif
 }
 
 void worldfactory::remove_world( const std::string &worldname )
@@ -923,6 +1673,47 @@ std::map<int, inclusive_rectangle<point>> worldfactory::draw_mod_list( const cat
 
 void worldfactory::show_active_world_mods( const std::vector<mod_id> &world_mods )
 {
+#if defined(__ANDROID__)
+    android_mod_imgui viewer;
+    input_context android_ctxt( "DEFAULT" );
+    android_ctxt.register_action( "QUIT" );
+    int selected = world_mods.empty() ? -1 : 0;
+    while( true ) {
+        if( world_mods.empty() ) {
+            selected = -1;
+        } else {
+            selected = clamp( selected, 0, static_cast<int>( world_mods.size() ) - 1 );
+        }
+        android_mod_snapshot snapshot;
+        snapshot.title = _( "Active world mods" );
+        snapshot.read_only = true;
+        snapshot.selected_active = selected;
+        for( const mod_id &mod : world_mods ) {
+            android_mod_entry_snapshot entry;
+            entry.name = mod.is_valid() ? mod->name() : mod.c_str();
+            entry.category = mod.is_valid() ? mod->category.second.translated() : _( "Missing mod" );
+            entry.warning = !mod.is_valid();
+            snapshot.active.push_back( std::move( entry ) );
+        }
+        if( selected >= 0 && world_mods[selected].is_valid() ) {
+            snapshot.description = remove_color_tags(
+                                       mman_ui->get_information( &world_mods[selected].obj() ) );
+        }
+        viewer.set_snapshot( std::move( snapshot ) );
+        ui_manager::redraw();
+        const std::optional<android_mod_action> action = viewer.take_action();
+        if( action ) {
+            if( action->type == android_mod_action_type::select_active ) {
+                selected = action->index;
+            } else if( action->type == android_mod_action_type::close ) {
+                return;
+            }
+        } else if( android_ctxt.handle_input() == "QUIT" ) {
+            return;
+        }
+    }
+#endif
+
     ui_adaptor ui;
     catacurses::window w_border;
     catacurses::window w_mods;
@@ -1007,6 +1798,219 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
             mman_ui->try_add( elem, active_mod_order );
         }
     }
+
+#if defined(__ANDROID__)
+    struct android_mod_tab_data {
+        std::string id;
+        std::vector<mod_id> mods;
+    };
+    std::vector<android_mod_tab_data> android_tabs;
+    for( const std::pair<std::string, translation> &tab : get_mod_list_tabs() ) {
+        android_tabs.push_back( { tab.first, {} } );
+    }
+    const std::map<std::string, std::string> &category_tabs = get_mod_list_cat_tab();
+    for( const mod_id &mod : mman->get_usable_mods() ) {
+        const int category_index = mod->category.first;
+        if( category_index < 0 ||
+            static_cast<size_t>( category_index ) >= get_mod_list_categories().size() ) {
+            continue;
+        }
+        const std::string &category_id = get_mod_list_categories()[category_index].first;
+        std::string destination = "tab_default";
+        const auto destination_it = category_tabs.find( category_id );
+        if( destination_it != category_tabs.end() ) {
+            destination = destination_it->second;
+        }
+        const auto tab_it = std::find_if( android_tabs.begin(), android_tabs.end(),
+        [&]( const android_mod_tab_data & tab ) {
+            return tab.id == destination;
+        } );
+        if( tab_it != android_tabs.end() ) {
+            tab_it->mods.push_back( mod );
+        }
+    }
+
+    int selected_category = 0;
+    int selected_available = -1;
+    int selected_active = active_mod_order.empty() ? -1 : 0;
+    bool active_pane = false;
+    std::string filter;
+    android_mod_imgui viewer;
+    input_context android_ctxt( "MODMANAGER_DIALOG" );
+    android_ctxt.register_action( "QUIT" );
+
+    const auto available_mods = [&]() {
+        std::vector<mod_id> result;
+        if( android_tabs.empty() ) {
+            return result;
+        }
+        selected_category = clamp( selected_category, 0,
+                                   static_cast<int>( android_tabs.size() ) - 1 );
+        for( const mod_id &mod : android_tabs[selected_category].mods ) {
+            if( filter.empty() || lcmatch( mod->name(), filter ) ) {
+                result.push_back( mod );
+            }
+        }
+        return result;
+    };
+
+    const auto show_message = []( const std::string & title, const std::string & message ) {
+        const std::vector<android_imgui_dialog::entry> entries = {
+            { _( "OK" ), std::string(), true, false }
+        };
+        android_imgui_dialog::select( title, entries, message );
+    };
+
+    while( true ) {
+        const std::vector<mod_id> visible_mods = available_mods();
+        if( visible_mods.empty() ) {
+            selected_available = -1;
+        } else {
+            selected_available = clamp( selected_available, 0,
+                                        static_cast<int>( visible_mods.size() ) - 1 );
+        }
+        if( active_mod_order.empty() ) {
+            selected_active = -1;
+        } else {
+            selected_active = clamp( selected_active, 0,
+                                     static_cast<int>( active_mod_order.size() ) - 1 );
+        }
+
+        android_mod_snapshot snapshot;
+        snapshot.title = _( "World mods" );
+        snapshot.filter = filter;
+        snapshot.selected_category = selected_category;
+        snapshot.selected_available = selected_available;
+        snapshot.selected_active = selected_active;
+        snapshot.active_pane = active_pane;
+        snapshot.with_tabs = with_tabs;
+        for( const std::pair<std::string, translation> &tab : get_mod_list_tabs() ) {
+            snapshot.categories.push_back( tab.second.translated() );
+        }
+        for( const mod_id &mod : visible_mods ) {
+            android_mod_entry_snapshot entry;
+            entry.name = mod->name();
+            entry.category = mod->category.second.translated();
+            entry.active = std::find( active_mod_order.begin(), active_mod_order.end(), mod ) !=
+                           active_mod_order.end();
+            entry.warning = mman_ui->find_mod_conflict( mod, active_mod_order ).has_value();
+            snapshot.available.push_back( std::move( entry ) );
+        }
+        for( size_t index = 0; index < active_mod_order.size(); ++index ) {
+            const mod_id &mod = active_mod_order[index];
+            android_mod_entry_snapshot entry;
+            entry.name = mod.is_valid() ? mod->name() : mod.c_str();
+            entry.category = mod.is_valid() ? mod->category.second.translated() : _( "Missing mod" );
+            entry.warning = !mod.is_valid();
+            entry.can_move_up = mman_ui->can_shift_up( index, active_mod_order );
+            entry.can_move_down = mman_ui->can_shift_down( index, active_mod_order );
+            snapshot.active.push_back( std::move( entry ) );
+        }
+        const MOD_INFORMATION *selected_mod = nullptr;
+        if( active_pane && selected_active >= 0 ) {
+            const mod_id &mod = active_mod_order[selected_active];
+            if( mod.is_valid() ) {
+                selected_mod = &mod.obj();
+            }
+        } else if( selected_available >= 0 ) {
+            selected_mod = &visible_mods[selected_available].obj();
+        }
+        if( selected_mod ) {
+            snapshot.description = remove_color_tags( mman_ui->get_information( selected_mod ) );
+        }
+        viewer.set_snapshot( std::move( snapshot ) );
+        ui_manager::redraw();
+
+        std::optional<android_mod_action> ui_action = viewer.take_action();
+        if( !ui_action ) {
+            if( android_ctxt.handle_input() == "QUIT" ) {
+                return -999;
+            }
+            continue;
+        }
+        switch( ui_action->type ) {
+            case android_mod_action_type::select_category:
+                selected_category = ui_action->index;
+                selected_available = -1;
+                active_pane = false;
+                break;
+            case android_mod_action_type::select_available:
+                selected_available = ui_action->index;
+                active_pane = false;
+                break;
+            case android_mod_action_type::select_active:
+                selected_active = ui_action->index;
+                active_pane = true;
+                break;
+            case android_mod_action_type::add:
+                if( selected_available >= 0 &&
+                    static_cast<size_t>( selected_available ) < visible_mods.size() ) {
+                    const mod_id selected = visible_mods[selected_available];
+                    const std::optional<mod_id> conflict =
+                        mman_ui->find_mod_conflict( selected, active_mod_order );
+                    if( conflict ) {
+                        show_message( _( "Mod conflict" ),
+                                      string_format( _( "Unable to add %s. It conflicts with %s." ),
+                                                     selected->name(), ( *conflict )->name() ) );
+                        break;
+                    }
+                    const size_t previous_size = active_mod_order.size();
+                    mman_ui->try_add( selected, active_mod_order );
+                    const auto active_it = std::find( active_mod_order.begin(), active_mod_order.end(), selected );
+                    if( active_it != active_mod_order.end() ) {
+                        selected_active = static_cast<int>( std::distance( active_mod_order.begin(), active_it ) );
+                        active_pane = true;
+                    } else if( active_mod_order.size() == previous_size ) {
+                        show_message( _( "Unable to add mod" ),
+                                      _( "This mod or one of its dependencies is unavailable. See the description for details." ) );
+                    }
+                }
+                break;
+            case android_mod_action_type::remove:
+                if( selected_active >= 0 ) {
+                    mman_ui->try_rem( static_cast<size_t>( selected_active ), active_mod_order );
+                    if( active_mod_order.empty() ) {
+                        selected_active = -1;
+                        active_pane = false;
+                    } else {
+                        selected_active = std::min( selected_active,
+                                                    static_cast<int>( active_mod_order.size() ) - 1 );
+                    }
+                }
+                break;
+            case android_mod_action_type::move_up:
+            case android_mod_action_type::move_down:
+                if( selected_active >= 0 ) {
+                    size_t selection = static_cast<size_t>( selected_active );
+                    mman_ui->try_shift( ui_action->type == android_mod_action_type::move_up ? '-' : '+',
+                                        selection, active_mod_order );
+                    selected_active = static_cast<int>( selection );
+                    active_pane = true;
+                }
+                break;
+            case android_mod_action_type::filter: {
+                string_input_popup_imgui popup( 60, filter );
+                popup.set_label( _( "Filter mods" ) );
+                popup.set_max_input_length( 256 );
+                filter = popup.query();
+                selected_available = -1;
+                active_pane = false;
+                break;
+            }
+            case android_mod_action_type::save_default:
+                if( mman->set_default_mods( active_mod_order ) ) {
+                    show_message( _( "Default mods" ), _( "Saved list of active mods as default." ) );
+                }
+                break;
+            case android_mod_action_type::previous_tab:
+                return -1;
+            case android_mod_action_type::next_tab:
+                return 1;
+            case android_mod_action_type::close:
+                return with_tabs ? -999 : 0;
+        }
+    }
+#endif
 
     input_context ctxt( "MODMANAGER_DIALOG" );
     ctxt.register_navigate_ui_list();
@@ -1515,6 +2519,179 @@ static std::string get_opt_slider( int width, int current, int max, bool no_colo
 
 int worldfactory::show_worldgen_basic( WORLD *world )
 {
+#if defined(__ANDROID__)
+    {
+        std::vector<option_slider_id> android_sliders;
+        std::vector<int> android_levels;
+        for( const option_slider &slider : option_slider::get_all() ) {
+            if( slider.context() == "WORLDGEN" ) {
+                android_sliders.emplace_back( slider.id );
+                android_levels.emplace_back( slider.default_level() );
+            }
+        }
+        const std::vector<int> default_levels = android_levels;
+        std::string worldname = world->world_name;
+        bool custom_options = false;
+        android_worldgen_imgui viewer;
+        input_context android_ctxt( "WORLDGEN_CONFIRM_DIALOG" );
+        android_ctxt.register_action( "QUIT" );
+        android_ctxt.register_action( "WORLDGEN_CONFIRM.QUIT" );
+        android_ctxt.register_action( "SELECT" );
+        android_ctxt.register_action( "MOUSE_MOVE" );
+
+        const auto make_snapshot = [&]() {
+            android_worldgen_snapshot snapshot;
+            snapshot.world_name = worldname;
+            snapshot.custom_options = custom_options;
+            snapshot.sliders.reserve( android_sliders.size() );
+            for( size_t index = 0; index < android_sliders.size(); ++index ) {
+                const option_slider &slider = *android_sliders[index];
+                snapshot.sliders.push_back( {
+                    slider.name().translated(),
+                    custom_options ? _( "Custom" ) : slider.level_name( android_levels[index] ).translated(),
+                    custom_options ?
+                    _( "Advanced settings are active. Reset them before changing this slider." ) :
+                    slider.level_desc( android_levels[index] ).translated(),
+                    !custom_options
+                } );
+            }
+            return snapshot;
+        };
+
+        const auto confirm = []( const std::string &title, const std::string &message,
+        const std::string &label, const bool danger = false ) {
+            return android_imgui_dialog::confirm( title, message, label, _( "Cancel" ), danger );
+        };
+
+        const auto make_bridge_window = []() {
+            const int width = std::max( FULL_SCREEN_WIDTH, TERMX / 2 );
+            const int offset_x = TERMX > FULL_SCREEN_WIDTH ? ( TERMX - width ) / 2 : 0;
+            return catacurses::newwin( TERMY, width, point( offset_x, 0 ) );
+        };
+
+        while( true ) {
+            viewer.set_snapshot( make_snapshot() );
+            ui_manager::redraw();
+            std::optional<android_worldgen_action> ui_action = viewer.take_action();
+            if( !ui_action ) {
+                const std::string action = android_ctxt.handle_input();
+                if( action == "QUIT" || action == "WORLDGEN_CONFIRM.QUIT" ) {
+                    ui_action = android_worldgen_action { android_worldgen_action_type::close, 0 };
+                } else {
+                    continue;
+                }
+            }
+
+            switch( ui_action->type ) {
+                case android_worldgen_action_type::rename: {
+                    const std::optional<std::string> result = prompt_world_name( _( "World name:" ),
+                                                              worldname );
+                    if( result && !result->empty() ) {
+                        world->world_name = worldname = *result;
+                    }
+                    break;
+                }
+                case android_worldgen_action_type::random_name:
+                    world->world_name = worldname = pick_random_name();
+                    break;
+                case android_worldgen_action_type::previous_value:
+                case android_worldgen_action_type::next_value: {
+                    const int index = ui_action->index;
+                    if( index < 0 || static_cast<size_t>( index ) >= android_sliders.size() ) {
+                        break;
+                    }
+                    if( custom_options ) {
+                        if( confirm( _( "Reset advanced options" ),
+                                     _( "Currently using customized advanced options. Reset world options to defaults?" ),
+                                     _( "Reset" ), true ) ) {
+                            world->WORLD_OPTIONS = get_options().get_world_defaults();
+                            android_levels = default_levels;
+                            custom_options = false;
+                        }
+                        break;
+                    }
+                    const option_slider &slider = *android_sliders[index];
+                    const int delta = ui_action->type == android_worldgen_action_type::previous_value ?
+                                      -1 : 1;
+                    android_levels[index] = clamp( android_levels[index] + delta, 0,
+                                                   slider.count() - 1 );
+                    slider.apply_opts( android_levels[index], world->WORLD_OPTIONS );
+                    break;
+                }
+                case android_worldgen_action_type::mods: {
+                    viewer.set_visible( false );
+                    catacurses::window bridge = make_bridge_window();
+                    show_worldgen_tab_modselection( bridge, world, false );
+                    viewer.set_visible( true );
+                    break;
+                }
+                case android_worldgen_action_type::advanced: {
+                    const options_manager::options_container previous_options = world->WORLD_OPTIONS;
+                    viewer.set_visible( false );
+                    catacurses::window bridge = make_bridge_window();
+                    show_worldgen_tab_options( bridge, world, false );
+                    viewer.set_visible( true );
+                    for( const auto &option : previous_options ) {
+                        if( option.second != world->WORLD_OPTIONS[option.first] ) {
+                            custom_options = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case android_worldgen_action_type::reset:
+                    if( confirm( _( "Reset world" ), _( "Are you sure you want to reset this world?" ),
+                                 _( "Reset" ), true ) ) {
+                        world->WORLD_OPTIONS = get_options().get_world_defaults();
+                        world->world_saves.clear();
+                        world->active_mod_order = world_generator->get_mod_manager().get_default_mods();
+                        android_levels = default_levels;
+                        custom_options = false;
+                    }
+                    break;
+                case android_worldgen_action_type::randomize:
+                    if( custom_options && !confirm( _( "Reset advanced options" ),
+                                                    _( "Randomizing will replace customized advanced options." ),
+                                                    _( "Randomize" ), true ) ) {
+                        break;
+                    }
+                    world->WORLD_OPTIONS = get_options().get_world_defaults();
+                    custom_options = false;
+                    for( size_t index = 0; index < android_sliders.size(); ++index ) {
+                        android_levels[index] = android_sliders[index]->random_level();
+                        android_sliders[index]->apply_opts( android_levels[index], world->WORLD_OPTIONS );
+                    }
+                    break;
+                case android_worldgen_action_type::finish:
+                    if( worldname.empty() ) {
+                        if( !confirm( _( "Finish world" ),
+                                     _( "World name is empty. A random name will be generated." ),
+                                     _( "Finish" ) ) ) {
+                            break;
+                        }
+                        world->world_name = worldname = pick_random_name();
+                    } else if( !confirm( _( "Finish world" ), _( "Are you SURE you're finished?" ),
+                                         _( "Finish" ) ) ) {
+                        break;
+                    }
+                    if( valid_worldname( worldname ) ) {
+                        world->world_name = worldname;
+                        return 1;
+                    }
+                    break;
+                case android_worldgen_action_type::close:
+                    if( confirm( _( "Abort world generation" ),
+                                 _( "Do you want to abort World Generation?" ),
+                                 _( "Abort" ), true ) ) {
+                        world->world_name = worldname;
+                        return -999;
+                    }
+                    break;
+            }
+        }
+    }
+#endif
+
     catacurses::window w_confirmation;
 
     ui_adaptor ui;

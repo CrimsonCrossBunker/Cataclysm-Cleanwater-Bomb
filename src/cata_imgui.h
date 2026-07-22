@@ -155,6 +155,10 @@ void draw_colored_text( const std::string &original_text, const nc_color &color,
                         float wrap_width = 0.0F, bool *is_selected = nullptr,
                         bool *is_focused = nullptr, bool *is_hovered = nullptr );
 #ifndef TUI
+    // Clear the persistent SDL display buffer at the start of the next ImGui frame.
+    // Use when a transparent ImGui overlay moves or shrinks and would otherwise
+    // leave pixels from its previous frame behind.
+    void request_clear();
     bool clear_pending();
 #endif
 void draw_colored_text( const std::string &original_text, nc_color &color,
@@ -192,6 +196,7 @@ class window
         size_t str_width_to_pixels( size_t len );
         size_t str_height_to_pixels( size_t len );
         std::string get_filter();
+        void set_filter( const std::string &text );
         void clear_filter();
         void defocus_filter();
         void mark_resized();
@@ -207,6 +212,7 @@ class window
         virtual void draw_controls() = 0;
         void draw_filter( const input_context &ctxt, bool filtering_active );
         void hide_if_hidden() const;
+        void set_redraw_underlay( bool value );
 };
 
 #ifdef TUI

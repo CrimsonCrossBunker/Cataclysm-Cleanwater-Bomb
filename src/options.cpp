@@ -1,8 +1,11 @@
 #include "options.h"
 
+#include <array>
 #include <cfloat>
 #include <climits>
 #include <clocale>
+#include <cmath>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <stdexcept>
@@ -42,6 +45,9 @@
 
 #if defined(__ANDROID__)
     #include <jni.h>
+    #include "android_native_ui.h"
+    #include "cata_imgui.h"
+    #include "imgui/imgui.h"
     #include "sdl_wrappers.h" // for GetAndroidJNIEnv(), GetAndroidActivity()
 #endif
 
@@ -66,6 +72,312 @@ namespace
 {
 
 generic_factory<option_slider> option_slider_factory( "option slider" );
+
+#if defined(__ANDROID__)
+struct android_option_row_snapshot {
+    int source_index = 0;
+    bool group = false;
+    bool expanded = false;
+    bool enabled = true;
+    std::string name;
+    std::string value;
+    std::string tooltip;
+};
+
+struct android_options_snapshot {
+    std::string title;
+    std::vector<std::string> tabs;
+    std::vector<android_option_row_snapshot> rows;
+    int selected_tab = 0;
+    bool world_options_only = false;
+    bool with_tabs = false;
+};
+
+enum class android_options_action_type : int {
+    select_tab,
+    activate_row,
+    previous_value,
+    next_value,
+    previous_tab,
+    next_tab,
+    close,
+};
+
+struct android_options_action {
+    android_options_action_type type;
+    int index;
+};
+
+class android_options_imgui : public cataimgui::window
+{
+    public:
+        android_options_imgui() : cataimgui::window(
+                "Android options",
+                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoSavedSettings ) {}
+
+        void set_snapshot( android_options_snapshot next ) {
+            snapshot = std::move( next );
+        }
+
+        std::optional<android_options_action> take_action() {
+            if( actions.empty() ) {
+                return std::nullopt;
+            }
+            android_options_action result = actions.front();
+            actions.pop_front();
+            return result;
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            return { 0.0F, 0.0F, 1.0F, 1.0F };
+        }
+
+        void draw_controls() override {
+            const ImVec2 window_pos = ImGui::GetWindowPos();
+            const ImVec2 window_size = ImGui::GetWindowSize();
+            const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 28.0F );
+            const float footer_height = 66.0F;
+
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+                IM_COL32( 6, 9, 12, 255 ) );
+
+            cataimgui::PushGuiFont1_5x();
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 8.0F, 7.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 0.98F ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.28F, 0.31F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
+
+            ImGui::TextUnformatted( snapshot.title.c_str() );
+            ImGui::Separator();
+
+            if( !snapshot.world_options_only ) {
+                draw_tabs();
+                ImGui::Separator();
+            }
+
+            const float detail_width = std::clamp( window_size.x * 0.31F, 300.0F, 540.0F );
+            const float list_width = std::max( 320.0F, ImGui::GetContentRegionAvail().x -
+                                               detail_width - 12.0F );
+            std::string focused_tooltip;
+
+            const std::string child_id = "##android_option_rows_" +
+                                         std::to_string( snapshot.selected_tab );
+            if( ImGui::BeginChild( child_id.c_str(), ImVec2( list_width, -footer_height ),
+                                   ImGuiChildFlags_Borders, ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                const bool suppress_click = handle_content_gesture();
+                draw_rows( focused_tooltip, suppress_click );
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+            if( ImGui::BeginChild( "##android_option_details", ImVec2( 0.0F, -footer_height ),
+                                   ImGuiChildFlags_Borders ) ) {
+                ImGui::TextUnformatted( _( "Description" ) );
+                ImGui::Separator();
+                if( focused_tooltip.empty() ) {
+                    ImGui::TextWrapped( "%s",
+                                        _( "Tap an option to change it.  Use the arrows to choose the previous or next value." ) );
+                } else {
+                    ImGui::TextWrapped( "%s", focused_tooltip.c_str() );
+                }
+            }
+            ImGui::EndChild();
+
+            ImGui::Separator();
+            draw_footer( window_size.x, edge_padding );
+
+            ImGui::PopStyleColor( 6 );
+            ImGui::PopStyleVar( 4 );
+            cataimgui::PopGuiFont1_5x();
+        }
+
+    private:
+        android_options_snapshot snapshot;
+        std::deque<android_options_action> actions;
+        bool content_dragging = false;
+        ImVec2 content_drag_start;
+        int content_drag_tab = 0;
+
+        void draw_footer( const float window_width, const float edge_padding ) {
+            if( snapshot.world_options_only && snapshot.with_tabs ) {
+                constexpr float gap = 8.0F;
+                const float width = ( ImGui::GetContentRegionAvail().x - gap * 2.0F ) / 3.0F;
+                const std::array<std::pair<android_options_action_type, const char *>, 3> buttons = {{
+                        { android_options_action_type::close, _( "Cancel" ) },
+                        { android_options_action_type::previous_tab, _( "Previous" ) },
+                        { android_options_action_type::next_tab, _( "Next" ) },
+                    }
+                };
+                for( size_t index = 0; index < buttons.size(); ++index ) {
+                    if( index > 0 ) {
+                        ImGui::SameLine( 0.0F, gap );
+                    }
+                    if( buttons[index].first == android_options_action_type::close ) {
+                        ImGui::PushStyleColor( ImGuiCol_Button,
+                                               ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
+                    }
+                    if( ImGui::Button( buttons[index].second, ImVec2( width, 50.0F ) ) ) {
+                        actions.push_back( { buttons[index].first, 0 } );
+                    }
+                    if( buttons[index].first == android_options_action_type::close ) {
+                        ImGui::PopStyleColor();
+                    }
+                }
+                return;
+            }
+            const float close_width = std::clamp( window_width * 0.20F, 220.0F, 360.0F );
+            ImGui::SetCursorPosX( std::max( edge_padding,
+                                            window_width - edge_padding - close_width ) );
+            if( ImGui::Button( _( "Back" ), ImVec2( close_width, 50.0F ) ) ) {
+                actions.push_back( { android_options_action_type::close, 0 } );
+            }
+        }
+
+        void draw_tabs() {
+            if( ImGui::BeginChild( "##android_options_tabs", ImVec2( 0.0F, 62.0F ),
+                                   ImGuiChildFlags_None,
+                                   ImGuiWindowFlags_HorizontalScrollbar |
+                                   ImGuiWindowFlags_NoScrollWithMouse ) ) {
+                for( size_t index = 0; index < snapshot.tabs.size(); ++index ) {
+                    if( index > 0 ) {
+                        ImGui::SameLine();
+                    }
+                    const bool selected = static_cast<int>( index ) == snapshot.selected_tab;
+                    if( selected ) {
+                        ImGui::PushStyleColor( ImGuiCol_Button,
+                                               ImVec4( 0.08F, 0.30F, 0.34F, 1.0F ) );
+                        ImGui::PushStyleColor( ImGuiCol_Border,
+                                               ImVec4( 0.32F, 0.72F, 0.75F, 1.0F ) );
+                        ImGui::PushStyleColor( ImGuiCol_Text,
+                                               ImVec4( 0.90F, 1.0F, 1.0F, 1.0F ) );
+                    }
+                    const float width = ImGui::CalcTextSize( snapshot.tabs[index].c_str() ).x + 34.0F;
+                    const std::string label = snapshot.tabs[index] + "###android_options_tab_" +
+                                              std::to_string( index );
+                    if( ImGui::Button( label.c_str(), ImVec2( width, 48.0F ) ) && !selected ) {
+                        actions.push_back( { android_options_action_type::select_tab,
+                                             static_cast<int>( index ) } );
+                    }
+                    if( selected ) {
+                        ImGui::PopStyleColor( 3 );
+                    }
+                }
+                if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                    ImGui::IsMouseDragging( ImGuiMouseButton_Left ) ) {
+                    ImGui::SetScrollX( ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x );
+                }
+            }
+            ImGui::EndChild();
+        }
+
+        bool handle_content_gesture() {
+            ImGuiIO &io = ImGui::GetIO();
+            if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+                content_dragging = true;
+                content_drag_start = io.MousePos;
+                content_drag_tab = snapshot.selected_tab;
+            }
+            if( !content_dragging ) {
+                return false;
+            }
+
+            const ImVec2 distance( io.MousePos.x - content_drag_start.x,
+                                   io.MousePos.y - content_drag_start.y );
+            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
+                std::abs( distance.y ) > std::abs( distance.x ) ) {
+                ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
+            }
+            if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+                if( std::abs( distance.x ) > 120.0F &&
+                    std::abs( distance.x ) > std::abs( distance.y ) * 1.25F ) {
+                    const int next_tab = content_drag_tab + ( distance.x < 0.0F ? 1 : -1 );
+                    if( next_tab >= 0 && next_tab < static_cast<int>( snapshot.tabs.size() ) ) {
+                        actions.push_back( { android_options_action_type::select_tab, next_tab } );
+                    }
+                }
+                content_dragging = false;
+            }
+            return moved;
+        }
+
+        void draw_rows( std::string &focused_tooltip, const bool suppress_click ) {
+            const float row_height = std::max( 48.0F, ImGui::GetTextLineHeight() + 22.0F );
+            for( const android_option_row_snapshot &row : snapshot.rows ) {
+                ImGui::PushID( row.source_index );
+                if( row.group ) {
+                    const std::string label = std::string( row.expanded ? "− " : "+ " ) + row.name;
+                    if( ImGui::Button( label.c_str(), ImVec2( -1.0F, row_height ) ) &&
+                        !suppress_click ) {
+                        actions.push_back( { android_options_action_type::activate_row,
+                                             row.source_index } );
+                    }
+                    if( ImGui::IsItemHovered() ) {
+                        focused_tooltip = row.tooltip;
+                    }
+                    ImGui::PopID();
+                    continue;
+                }
+
+                if( !row.enabled ) {
+                    ImGui::BeginDisabled();
+                }
+                const float available = ImGui::GetContentRegionAvail().x;
+                const float arrow_width = 58.0F;
+                const float value_width = std::clamp( available * 0.28F, 150.0F, 300.0F );
+                const float name_width = std::max( 120.0F, available - value_width -
+                                                   arrow_width * 2.0F - 24.0F );
+
+                if( ImGui::Button( row.name.c_str(), ImVec2( name_width, row_height ) ) &&
+                    !suppress_click ) {
+                    actions.push_back( { android_options_action_type::activate_row,
+                                         row.source_index } );
+                }
+                bool hovered = ImGui::IsItemHovered();
+                ImGui::SameLine();
+                if( ImGui::Button( "‹", ImVec2( arrow_width, row_height ) ) && !suppress_click ) {
+                    actions.push_back( { android_options_action_type::previous_value,
+                                         row.source_index } );
+                }
+                hovered |= ImGui::IsItemHovered();
+                ImGui::SameLine();
+                ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.06F, 0.17F, 0.17F, 1.0F ) );
+                ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.76F, 0.96F, 0.88F, 1.0F ) );
+                if( ImGui::Button( row.value.c_str(), ImVec2( value_width, row_height ) ) &&
+                    !suppress_click ) {
+                    actions.push_back( { android_options_action_type::activate_row,
+                                         row.source_index } );
+                }
+                hovered |= ImGui::IsItemHovered();
+                ImGui::PopStyleColor( 2 );
+                ImGui::SameLine();
+                if( ImGui::Button( "›", ImVec2( arrow_width, row_height ) ) && !suppress_click ) {
+                    actions.push_back( { android_options_action_type::next_value,
+                                         row.source_index } );
+                }
+                hovered |= ImGui::IsItemHovered();
+                if( hovered ) {
+                    focused_tooltip = row.tooltip;
+                }
+                if( !row.enabled ) {
+                    ImGui::EndDisabled();
+                }
+                ImGui::PopID();
+            }
+        }
+};
+#endif
 
 } // namespace
 
@@ -4082,18 +4394,127 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         wnoutrefresh( w_options );
     } );
 
+#if defined(__ANDROID__)
+    std::unique_ptr<android_options_imgui> android_options_ui =
+        std::make_unique<android_options_imgui>();
+    const auto make_android_snapshot = [&]() {
+        android_options_snapshot snapshot;
+        snapshot.title = world_options_only ? _( "World options" ) : _( "Options" );
+        snapshot.world_options_only = world_options_only;
+        snapshot.with_tabs = with_tabs;
+        snapshot.selected_tab = iCurrentPage;
+        if( !world_options_only ) {
+            snapshot.tabs.reserve( pages_.size() );
+            for( size_t index = 0; index < pages_.size(); ++index ) {
+                if( ingame && static_cast<int>( index ) == iWorldOptPage ) {
+                    snapshot.tabs.emplace_back( _( "Current world" ) );
+                } else {
+                    snapshot.tabs.push_back( pages_[index].name_.translated() );
+                }
+            }
+        }
+
+        options_container &current_options = ( ingame || world_options_only ) &&
+                                             iCurrentPage == iWorldOptPage ? ACTIVE_WORLD_OPTIONS : OPTIONS;
+        const std::vector<PageItem> &items = pages_[iCurrentPage].items_;
+        snapshot.rows.reserve( items.size() );
+        for( size_t index = 0; index < items.size(); ++index ) {
+            const PageItem &item = items[index];
+            if( item.type == ItemType::BlankLine ) {
+                continue;
+            }
+            android_option_row_snapshot row;
+            row.source_index = static_cast<int>( index );
+            row.tooltip = item.fmt_tooltip( item.group, current_options );
+            if( item.type == ItemType::GroupHeader ) {
+                row.group = true;
+                row.expanded = groups_state[item.data];
+                row.name = find_group( item.group ).name_.translated();
+                snapshot.rows.push_back( std::move( row ) );
+                continue;
+            }
+            if( !groups_state[item.group] ) {
+                continue;
+            }
+            const cOpt &option = current_options.find( item.data )->second;
+            if( option.is_hidden() ) {
+                continue;
+            }
+            row.name = option.getMenuText();
+            row.value = option.getValueName();
+            row.enabled = !option.hasPrerequisite() || option.checkPrerequisite();
+            snapshot.rows.push_back( std::move( row ) );
+        }
+        return snapshot;
+    };
+#endif
+
     while( true ) {
+#if defined(__ANDROID__)
+        if( android_options_ui ) {
+            android_options_ui->set_snapshot( make_android_snapshot() );
+        }
+#endif
         ui_manager::redraw();
 
         recalc_startpos = false;
+        std::string action;
+        std::optional<int> android_row_target;
+#if defined(__ANDROID__)
+        if( android_options_ui ) {
+            const std::optional<android_options_action> ui_action = android_options_ui->take_action();
+            if( ui_action ) {
+                switch( ui_action->type ) {
+                    case android_options_action_type::select_tab:
+                        iCurrentPage = clamp( ui_action->index, 0,
+                                              static_cast<int>( pages_.size() ) - 1 );
+                        iCurrentLine = 0;
+                        iStartPos = 0;
+                        recalc_startpos = true;
+                        sfx::play_variant_sound( "menu_move", "default", 100 );
+                        continue;
+                    case android_options_action_type::activate_row:
+                        android_row_target = ui_action->index;
+                        action = "CONFIRM";
+                        break;
+                    case android_options_action_type::previous_value:
+                        android_row_target = ui_action->index;
+                        action = "LEFT";
+                        break;
+                    case android_options_action_type::next_value:
+                        android_row_target = ui_action->index;
+                        action = "RIGHT";
+                        break;
+                    case android_options_action_type::previous_tab:
+                        action = "PREV_TAB";
+                        break;
+                    case android_options_action_type::next_tab:
+                        action = "NEXT_TAB";
+                        break;
+                    case android_options_action_type::close:
+                        action = "QUIT";
+                        break;
+                }
+            } else {
+                action = ctxt.handle_input();
+            }
+        } else {
+            action = ctxt.handle_input();
+        }
+#else
+        action = ctxt.handle_input();
+#endif
+
         Page &page = pages_[iCurrentPage];
         auto &page_items = page.items_;
+        if( android_row_target ) {
+            iCurrentLine = clamp( *android_row_target, 0,
+                                  static_cast<int>( page_items.size() ) - 1 );
+        }
 
         options_manager::options_container &cOPTIONS = ( ingame || world_options_only ) &&
                 iCurrentPage == iWorldOptPage ?
                 ACTIVE_WORLD_OPTIONS : OPTIONS;
-
-        std::string action = ctxt.handle_input();
 
         if( world_options_only && ( action == "NEXT_TAB" || action == "PREV_TAB" || action == "QUIT" ) ) {
             return action;
@@ -4119,6 +4540,18 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                        get_options().get_option( current_opt.getPrerequisite() ).getMenuText() );
                 return;
             }
+
+#if defined(__ANDROID__)
+            if( android_options_ui && current_opt.getType() == "string_input" ) {
+                const std::optional<std::string> value = android_native_ui::text_input(
+                            current_opt.getMenuText(), current_opt.getValue(),
+                            current_opt.getMaxLength() );
+                if( value ) {
+                    current_opt.setValue( *value );
+                }
+                return;
+            }
+#endif
 
             if( action == "LEFT" ) {
                 current_opt.setPrev();

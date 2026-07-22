@@ -1,11 +1,16 @@
 #include "color.h"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstddef>
+#include <deque>
 #include <filesystem>
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -833,8 +838,259 @@ static void draw_header( const catacurses::window &w )
     wnoutrefresh( w );
 }
 
+#if defined(__ANDROID__)
+namespace
+{
+struct android_color_row {
+    int index = 0;
+    std::string name;
+    std::string normal_label;
+    std::string invert_label;
+    ImVec4 normal_color;
+    ImVec4 invert_color;
+};
+
+struct android_color_choice {
+    std::string label;
+    ImVec4 color;
+    bool has_color = false;
+};
+
+struct android_color_snapshot {
+    std::vector<android_color_row> rows;
+    std::vector<android_color_choice> choices;
+    std::string picker_title;
+    int selected_row = 0;
+    int selected_choice = -1;
+    bool picker_open = false;
+};
+
+enum class android_color_action_type : int {
+    select_row,
+    edit_normal,
+    edit_invert,
+    remove_normal,
+    remove_invert,
+    load_template,
+    load_theme,
+    choose,
+    cancel_picker,
+    close,
+};
+
+struct android_color_action {
+    android_color_action_type type;
+    int index = 0;
+};
+
+class android_color_ui : public cataimgui::window
+{
+    public:
+        android_color_ui() : cataimgui::window(
+                "Android color manager",
+                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoSavedSettings ) {}
+
+        void set_snapshot( android_color_snapshot next ) {
+            snapshot = std::move( next );
+        }
+
+        std::optional<android_color_action> take_action() {
+            if( actions.empty() ) {
+                return std::nullopt;
+            }
+            android_color_action result = actions.front();
+            actions.pop_front();
+            return result;
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            return { 0.0F, 0.0F, 1.0F, 1.0F };
+        }
+
+        void draw_controls() override {
+            const ImVec2 window_pos = ImGui::GetWindowPos();
+            const ImVec2 window_size = ImGui::GetWindowSize();
+            const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 30.0F );
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+                IM_COL32( 6, 9, 12, 255 ) );
+            cataimgui::PushGuiFont1_5x();
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 7.0F, 7.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.28F, 0.31F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
+
+            if( snapshot.picker_open ) {
+                draw_picker();
+            } else {
+                draw_manager();
+            }
+
+            ImGui::PopStyleColor( 6 );
+            ImGui::PopStyleVar( 4 );
+            cataimgui::PopGuiFont1_5x();
+        }
+
+    private:
+        android_color_snapshot snapshot;
+        std::deque<android_color_action> actions;
+        bool dragging = false;
+        ImVec2 drag_start;
+
+        bool handle_drag() {
+            ImGuiIO &io = ImGui::GetIO();
+            if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+                dragging = true;
+                drag_start = io.MousePos;
+            }
+            if( !dragging ) {
+                return false;
+            }
+            const ImVec2 distance( io.MousePos.x - drag_start.x, io.MousePos.y - drag_start.y );
+            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
+                std::abs( distance.y ) > std::abs( distance.x ) ) {
+                ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
+            }
+            if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+                dragging = false;
+            }
+            return moved;
+        }
+
+        bool color_field( const char *id, const std::string &label, const ImVec4 &color,
+                          android_color_action_type action, int row, bool suppress_click ) {
+            bool clicked = ImGui::ColorButton( id, color,
+                                               ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop,
+                                               ImVec2( 42.0F, 42.0F ) );
+            ImGui::SameLine();
+            clicked = ImGui::Button( label.c_str(), ImVec2( -1.0F, 44.0F ) ) || clicked;
+            if( clicked && !suppress_click ) {
+                actions.push_back( { action, row } );
+                return true;
+            }
+            return false;
+        }
+
+        void draw_manager() {
+            constexpr float footer_height = 72.0F;
+            ImGui::TextUnformatted( _( "Color manager" ) );
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%s", _( "Some color changes may require a restart." ) );
+            ImGui::Separator();
+            if( ImGui::BeginChild( "##android_color_rows", ImVec2( 0.0F, -footer_height ),
+                                   ImGuiChildFlags_Borders,
+                                   ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                const bool suppress_click = handle_drag();
+                if( ImGui::BeginTable( "##android_color_table", 3,
+                                       ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
+                                       ImGuiTableFlags_SizingStretchProp ) ) {
+                    ImGui::TableSetupColumn( _( "Colorname" ), ImGuiTableColumnFlags_WidthStretch, 0.28F );
+                    ImGui::TableSetupColumn( _( "Normal" ), ImGuiTableColumnFlags_WidthStretch, 0.36F );
+                    ImGui::TableSetupColumn( _( "Invert" ), ImGuiTableColumnFlags_WidthStretch, 0.36F );
+                    ImGui::TableHeadersRow();
+                    for( const android_color_row &row : snapshot.rows ) {
+                        ImGui::PushID( row.index );
+                        ImGui::TableNextRow( ImGuiTableRowFlags_None, 56.0F );
+                        ImGui::TableSetColumnIndex( 0 );
+                        if( ImGui::Selectable( row.name.c_str(), row.index == snapshot.selected_row,
+                                               ImGuiSelectableFlags_None, ImVec2( 0.0F, 48.0F ) ) &&
+                            !suppress_click ) {
+                            actions.push_back( { android_color_action_type::select_row, row.index } );
+                        }
+                        ImGui::TableSetColumnIndex( 1 );
+                        color_field( "##normal_preview", row.normal_label, row.normal_color,
+                                     android_color_action_type::edit_normal, row.index, suppress_click );
+                        ImGui::TableSetColumnIndex( 2 );
+                        color_field( "##invert_preview", row.invert_label, row.invert_color,
+                                     android_color_action_type::edit_invert, row.index, suppress_click );
+                        ImGui::PopID();
+                    }
+                    ImGui::EndTable();
+                }
+            }
+            ImGui::EndChild();
+            ImGui::Separator();
+
+            const std::array<std::pair<android_color_action_type, const char *>, 7> buttons = {{
+                    { android_color_action_type::edit_normal, _( "Set normal" ) },
+                    { android_color_action_type::edit_invert, _( "Set invert" ) },
+                    { android_color_action_type::remove_normal, _( "Clear normal" ) },
+                    { android_color_action_type::remove_invert, _( "Clear invert" ) },
+                    { android_color_action_type::load_template, _( "Template" ) },
+                    { android_color_action_type::load_theme, _( "Theme" ) },
+                    { android_color_action_type::close, _( "Back" ) },
+                }
+            };
+            const float width = ( ImGui::GetContentRegionAvail().x -
+                                  ImGui::GetStyle().ItemSpacing.x * ( buttons.size() - 1 ) ) / buttons.size();
+            for( size_t index = 0; index < buttons.size(); ++index ) {
+                if( index > 0 ) {
+                    ImGui::SameLine();
+                }
+                if( ImGui::Button( buttons[index].second, ImVec2( width, 50.0F ) ) ) {
+                    actions.push_back( { buttons[index].first, snapshot.selected_row } );
+                }
+            }
+        }
+
+        void draw_picker() {
+            ImGui::TextUnformatted( snapshot.picker_title.c_str() );
+            ImGui::SameLine();
+            if( ImGui::Button( _( "Back" ), ImVec2( 180.0F, 48.0F ) ) ) {
+                actions.push_back( { android_color_action_type::cancel_picker, 0 } );
+            }
+            ImGui::Separator();
+            if( ImGui::BeginChild( "##android_color_choices", ImVec2( 0.0F, 0.0F ),
+                                   ImGuiChildFlags_Borders,
+                                   ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                const bool suppress_click = handle_drag();
+                constexpr int columns = 4;
+                const float button_width = ( ImGui::GetContentRegionAvail().x -
+                                             ImGui::GetStyle().ItemSpacing.x * ( columns - 1 ) ) / columns;
+                for( size_t index = 0; index < snapshot.choices.size(); ++index ) {
+                    if( index % columns != 0 ) {
+                        ImGui::SameLine();
+                    }
+                    const android_color_choice &choice = snapshot.choices[index];
+                    ImGui::PushID( static_cast<int>( index ) );
+                    if( choice.has_color ) {
+                        ImGui::ColorButton( "##choice_preview", choice.color,
+                                            ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop,
+                                            ImVec2( 38.0F, 44.0F ) );
+                        ImGui::SameLine();
+                    }
+                    const float label_width = choice.has_color ? button_width - 46.0F : button_width;
+                    if( ImGui::Button( choice.label.c_str(), ImVec2( label_width, 48.0F ) ) &&
+                        !suppress_click ) {
+                        actions.push_back( { android_color_action_type::choose,
+                                             static_cast<int>( index ) } );
+                    }
+                    ImGui::PopID();
+                }
+            }
+            ImGui::EndChild();
+        }
+};
+} // namespace
+#endif
+
 void color_manager::show_gui()
 {
+#if defined(__ANDROID__)
+    show_gui_android();
+    return;
+#endif
     const int iHeaderHeight = 4;
     int iContentHeight = 0;
 
@@ -1089,6 +1345,211 @@ void color_manager::show_gui()
         load_custom( {} );
     }
 }
+
+#if defined(__ANDROID__)
+void color_manager::show_gui_android()
+{
+    enum class picker_kind : int {
+        none,
+        normal,
+        invert,
+        color_template,
+        base_theme,
+    };
+
+    const auto original_color_array = color_array;
+    const auto original_name_map = name_map;
+    const auto original_inverted_map = inverted_map;
+    std::map<std::string, color_struct> colors_by_name;
+    const auto rebuild_color_map = [&]() {
+        colors_by_name.clear();
+        for( const auto &entry : name_map ) {
+            colors_by_name[entry.first] = color_array[entry.second];
+        }
+    };
+    rebuild_color_map();
+
+    std::vector<cata_path> picker_files;
+    picker_kind picker = picker_kind::none;
+    int selected_row = 0;
+    bool changed = false;
+    bool done = false;
+    android_color_ui viewer;
+    input_context ctxt( "COLORS" );
+    ctxt.register_action( "QUIT" );
+    ctxt.register_action( "SELECT" );
+    ctxt.register_action( "MOUSE_MOVE" );
+
+    while( !done ) {
+        if( colors_by_name.empty() ) {
+            selected_row = 0;
+        } else {
+            selected_row = std::clamp( selected_row, 0,
+                                       static_cast<int>( colors_by_name.size() ) - 1 );
+        }
+
+        android_color_snapshot snapshot;
+        snapshot.selected_row = selected_row;
+        int row_index = 0;
+        for( const auto &named_color : colors_by_name ) {
+            const color_struct &entry = named_color.second;
+            ImVec4 normal_color = entry.color;
+            if( !entry.name_custom.empty() ) {
+                const auto custom = colors_by_name.find( entry.name_custom );
+                if( custom != colors_by_name.end() ) {
+                    normal_color = custom->second.color;
+                }
+            }
+            ImVec4 invert_color = entry.invert;
+            if( !entry.name_invert_custom.empty() ) {
+                const auto custom = colors_by_name.find( entry.name_invert_custom );
+                if( custom != colors_by_name.end() ) {
+                    invert_color = custom->second.color;
+                }
+            }
+            snapshot.rows.push_back( {
+                row_index++, named_color.first,
+                entry.name_custom.empty() ? _( "default" ) : entry.name_custom,
+                entry.name_invert_custom.empty() ? _( "default" ) : entry.name_invert_custom,
+                normal_color, invert_color
+            } );
+        }
+
+        snapshot.picker_open = picker != picker_kind::none;
+        if( picker == picker_kind::normal || picker == picker_kind::invert ) {
+            snapshot.picker_title = picker == picker_kind::normal ?
+                                    _( "Choose custom normal color" ) : _( "Choose custom invert color" );
+            for( const auto &choice : colors_by_name ) {
+                snapshot.choices.push_back( { choice.first, choice.second.color, true } );
+            }
+        } else if( picker == picker_kind::color_template || picker == picker_kind::base_theme ) {
+            snapshot.picker_title = picker == picker_kind::color_template ?
+                                    _( "Color templates" ) : _( "Color themes" );
+            for( const cata_path &file : picker_files ) {
+                snapshot.choices.push_back( {
+                    file.get_relative_path().filename().generic_u8string(), ImVec4(), false
+                } );
+            }
+        }
+
+        viewer.set_snapshot( std::move( snapshot ) );
+        ui_manager::redraw();
+        const std::optional<android_color_action> ui_action = viewer.take_action();
+        if( !ui_action ) {
+            if( ctxt.handle_input() == "QUIT" ) {
+                if( picker != picker_kind::none ) {
+                    picker = picker_kind::none;
+                    picker_files.clear();
+                } else {
+                    done = true;
+                }
+            }
+            continue;
+        }
+
+        if( ui_action->type == android_color_action_type::cancel_picker ) {
+            picker = picker_kind::none;
+            picker_files.clear();
+            continue;
+        }
+        if( ui_action->type == android_color_action_type::choose ) {
+            if( picker == picker_kind::normal || picker == picker_kind::invert ) {
+                if( ui_action->index >= 0 &&
+                    ui_action->index < static_cast<int>( colors_by_name.size() ) &&
+                    !colors_by_name.empty() ) {
+                    auto selected = std::next( colors_by_name.begin(), selected_row );
+                    auto chosen = std::next( colors_by_name.begin(), ui_action->index );
+                    std::string &custom_name = picker == picker_kind::normal ?
+                                               selected->second.name_custom :
+                                               selected->second.name_invert_custom;
+                    if( custom_name != chosen->first ) {
+                        custom_name = chosen->first;
+                        changed = true;
+                    }
+                }
+            } else if( ui_action->index >= 0 &&
+                       ui_action->index < static_cast<int>( picker_files.size() ) ) {
+                if( picker == picker_kind::color_template ) {
+                    clear();
+                    load_default();
+                    load_custom( picker_files[ui_action->index] );
+                    rebuild_color_map();
+                    changed = true;
+                } else if( picker == picker_kind::base_theme ) {
+                    copy_file( picker_files[ui_action->index], PATH_INFO::base_colors() );
+                }
+            }
+            picker = picker_kind::none;
+            picker_files.clear();
+            continue;
+        }
+
+        switch( ui_action->type ) {
+            case android_color_action_type::select_row:
+                selected_row = ui_action->index;
+                break;
+            case android_color_action_type::edit_normal:
+            case android_color_action_type::edit_invert:
+                selected_row = ui_action->index;
+                picker = ui_action->type == android_color_action_type::edit_normal ?
+                         picker_kind::normal : picker_kind::invert;
+                break;
+            case android_color_action_type::remove_normal:
+            case android_color_action_type::remove_invert:
+                if( !colors_by_name.empty() ) {
+                    auto selected = std::next( colors_by_name.begin(), selected_row );
+                    std::string &custom_name =
+                        ui_action->type == android_color_action_type::remove_normal ?
+                        selected->second.name_custom : selected->second.name_invert_custom;
+                    if( !custom_name.empty() ) {
+                        custom_name.clear();
+                        changed = true;
+                    }
+                }
+                break;
+            case android_color_action_type::load_template:
+                picker_files = get_files_from_path( ".json", PATH_INFO::color_templates(), false, true );
+                if( !picker_files.empty() ) {
+                    picker = picker_kind::color_template;
+                }
+                break;
+            case android_color_action_type::load_theme:
+                picker_files = get_files_from_path( ".json", PATH_INFO::color_themes(), false, true );
+                if( !picker_files.empty() ) {
+                    picker = picker_kind::base_theme;
+                }
+                break;
+            case android_color_action_type::close:
+                done = true;
+                break;
+            case android_color_action_type::choose:
+            case android_color_action_type::cancel_picker:
+                break;
+        }
+    }
+
+    if( !changed ) {
+        return;
+    }
+    if( query_yn( _( "Save changes?" ) ) ) {
+        for( const auto &entry : colors_by_name ) {
+            const color_id id = name_to_id( entry.first );
+            color_array[id].name_custom = entry.second.name_custom;
+            color_array[id].name_invert_custom = entry.second.name_invert_custom;
+        }
+        finalize();
+        save_custom();
+        clear();
+        load_default();
+        load_custom( {} );
+    } else {
+        color_array = original_color_array;
+        name_map = original_name_map;
+        inverted_map = original_inverted_map;
+        finalize();
+    }
+}
+#endif
 
 bool color_manager::save_custom() const
 {

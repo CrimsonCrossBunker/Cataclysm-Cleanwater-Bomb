@@ -1,6 +1,7 @@
 package com.crimsoncrossbunker.cataclysmcb;
 
 import org.libsdl.app.SDLActivity;
+import org.libsdl.app.CleanwaterDummyEdit;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -104,6 +105,8 @@ public class CataclysmDDA extends SDLActivity {
     private View buttonManageLayout;
     private FrameLayout buttonEditorContainer;
     private boolean deleteButtonMode = false;
+    // Kept only for compatibility with the dormant legacy HUD import/touch paths.
+    // Normal startup no longer constructs this overlay.
     private AndroidHudOverlay hudOverlay;
     private LuaUiOverlay luaUiOverlay;
     private String pendingHudExportJson;
@@ -130,11 +133,12 @@ public class CataclysmDDA extends SDLActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (mLayout != null) {
+            mTextEdit = new CleanwaterDummyEdit(this);
+            mLayout.addView(mTextEdit, new RelativeLayout.LayoutParams(0, 0));
             mLayout.setVisibility(View.INVISIBLE);
         }
         setImeInsetListener();
         applySystemUiMode();
-        installHudOverlay();
         installLuaUiOverlay();
     }
 
@@ -142,9 +146,6 @@ public class CataclysmDDA extends SDLActivity {
     protected void onResume() {
         super.onResume();
         applySystemUiMode();
-        if (hudOverlay != null) {
-            hudOverlay.start();
-        }
         if (luaUiOverlay != null) {
             luaUiOverlay.start();
         }
@@ -152,9 +153,6 @@ public class CataclysmDDA extends SDLActivity {
 
     @Override
     protected void onPause() {
-        if (hudOverlay != null) {
-            hudOverlay.stop();
-        }
         if (luaUiOverlay != null) {
             luaUiOverlay.stop();
         }
@@ -302,15 +300,6 @@ public class CataclysmDDA extends SDLActivity {
     private static native boolean nativeSubmitLuaUiInteraction(String widgetId, String value);
     private static native boolean nativeSelectLuaUiPage(String pageId);
 
-    private void installHudOverlay() {
-        if (mLayout == null || hudOverlay != null) {
-            return;
-        }
-        hudOverlay = new AndroidHudOverlay(this);
-        mLayout.addView(hudOverlay, new ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-    }
-
     private void installLuaUiOverlay() {
         if (mLayout == null || luaUiOverlay != null) {
             return;
@@ -386,10 +375,7 @@ public class CataclysmDDA extends SDLActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                installHudOverlay();
-                if (hudOverlay != null) {
-                    hudOverlay.openSettings();
-                }
+                showLuaHudManager();
             }
         });
     }
@@ -538,11 +524,7 @@ public class CataclysmDDA extends SDLActivity {
                     if (mLayout != null) {
                         mLayout.setVisibility(View.VISIBLE);
                     }
-                    installHudOverlay();
                     installLuaUiOverlay();
-                    if (hudOverlay != null) {
-                        hudOverlay.start();
-                    }
                     if (luaUiOverlay != null) {
                         luaUiOverlay.start();
                     }

@@ -30,7 +30,8 @@ constexpr std::uint32_t capability_mask =
     static_cast<std::uint32_t>( script_ui_capability::trees ) |
     static_cast<std::uint32_t>( script_ui_capability::modals ) |
     static_cast<std::uint32_t>( script_ui_capability::tooltips ) |
-    static_cast<std::uint32_t>( script_ui_capability::virtualization );
+    static_cast<std::uint32_t>( script_ui_capability::virtualization ) |
+    static_cast<std::uint32_t>( script_ui_capability::radial_selection );
 
 constexpr std::string_view platform_name()
 {
@@ -164,6 +165,32 @@ class imgui_script_ui_renderer final : public script_ui_renderer
                                 const std::string &value ) override {
             std::string result = value;
             ImGui::InputText( widget_label( id, label ).c_str(), &result );
+            return result;
+        }
+
+        std::string radial_select(
+            const std::string &id, const std::string &center_label,
+            const std::vector<script_ui_radial_option> &options ) override {
+            const std::string popup_id = widget_label( id + "/popup", "radial" );
+            if( ImGui::Button( widget_label( id, center_label ).c_str() ) ) {
+                ImGui::OpenPopup( popup_id.c_str() );
+            }
+            std::string result;
+            if( ImGui::BeginPopup( popup_id.c_str() ) ) {
+                for( const script_ui_radial_option &option : options ) {
+                    if( option.enabled ) {
+                        if( ImGui::Selectable(
+                                widget_label( id + "/" + option.id, option.label ).c_str(),
+                                option.selected ) ) {
+                            result = option.id;
+                            ImGui::CloseCurrentPopup();
+                        }
+                    } else {
+                        ImGui::TextDisabled( "%s", option.label.c_str() );
+                    }
+                }
+                ImGui::EndPopup();
+            }
             return result;
         }
 
