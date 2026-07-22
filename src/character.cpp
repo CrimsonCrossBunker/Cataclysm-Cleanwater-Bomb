@@ -874,7 +874,7 @@ double Character::dispersion_variance() const
     } else {
         low = -10.0 + ( ability - 10.0 ) * 0.5;
     }
-    const double high = 5.0 + ability * 0.5;
+    const double high = 5.0 + 5 * std::log( 1.0 + 0.1 * ability );
     const double variance = rng_float( low, high );
     add_msg_debug( debugmode::DF_RANGED, "Semi-random variance adds %1f dispersion.", variance );
     return variance;
