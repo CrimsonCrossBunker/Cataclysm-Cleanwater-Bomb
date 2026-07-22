@@ -10327,54 +10327,56 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
 
     map &here = get_map();
 
+    const ter_t &terrain = here.ter( plant_position ).obj();
+    if( terrain.terrain_growth ) {
+        const ret_val<void> can_fert = multi_farm_activity_actor::can_fertilize( who,
+                                        plant_position );
+        if( !can_fert.success() ) {
+            add_msg( m_info, can_fert.str() );
+            act.set_to_null();
+            return;
+        }
+        const float crop_growth_speed = ::get_option<float>( "CROP_GROWTH_SPEED" );
+        const double survival_level = who.get_skill_level( skill_survival );
+        const double fertilizer_quality = fertilizer->fertilizer_quality;
+        const double reduction_pct = std::min(
+                                         ( fertilizer_base_reduction + fertilizer_survival_bonus * survival_level ) *
+                                         fertilizer_quality,
+                                         fertilizer_max_reduction );
+        const time_duration effective_reduction = terrain.terrain_growth->growth_time * reduction_pct;
+        const time_duration real_reduction = terrain.terrain_growth->growth_multiplier > 0.0f &&
+                                              crop_growth_speed > 0.0f ?
+                                              effective_reduction /
+                                              ( terrain.terrain_growth->growth_multiplier * crop_growth_speed ) :
+                                              0_seconds;
+
+        std::list<item> planted;
+        if( fertilizer->count_by_charges() ) {
+            planted = who.use_charges( fertilizer, 1 );
+        } else {
+            planted = who.use_amount( fertilizer, 1 );
+        }
+        if( planted.empty() ) {
+            debugmsg( "Failed to consume fertilizer %s", fertilizer.c_str() );
+            act.set_to_null();
+            return;
+        }
+
+        terrain_growth_state growth_state;
+        growth_state.fertilized_at = calendar::turn - real_reduction;
+        here.set_terrain_growth( plant_position, growth_state );
+        add_msg( m_info, _( "You fertilize the %s with the %s." ), terrain.name(),
+                 planted.front().tname() );
+        act.set_to_null();
+        return;
+    }
+
     // Can't use item_stack::only_item() since there might be fertilizer
     map_stack items = here.i_at( plant_position );
     const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
         return it.is_seed();
     } );
     if( seed == items.end() ) {
-        const ter_t &terrain = here.ter( plant_position ).obj();
-        if( terrain.terrain_growth ) {
-            const ret_val<void> can_fert = multi_farm_activity_actor::can_fertilize( who,
-                                            plant_position );
-            if( !can_fert.success() ) {
-                add_msg( m_info, can_fert.str() );
-                act.set_to_null();
-                return;
-            }
-            const float crop_growth_speed = ::get_option<float>( "CROP_GROWTH_SPEED" );
-            const double survival_level = who.get_skill_level( skill_survival );
-            const double fertilizer_quality = fertilizer->fertilizer_quality;
-            const double reduction_pct = std::min(
-                                             ( fertilizer_base_reduction + fertilizer_survival_bonus * survival_level ) *
-                                             fertilizer_quality,
-                                             fertilizer_max_reduction );
-            const time_duration effective_reduction = terrain.terrain_growth->growth_time * reduction_pct;
-            const time_duration real_reduction = terrain.terrain_growth->growth_multiplier > 0.0f &&
-                                                  crop_growth_speed > 0.0f ?
-                                                  effective_reduction /
-                                                  ( terrain.terrain_growth->growth_multiplier * crop_growth_speed ) :
-                                                  0_seconds;
-
-            std::list<item> planted;
-            if( fertilizer->count_by_charges() ) {
-                planted = who.use_charges( fertilizer, 1 );
-            } else {
-                planted = who.use_amount( fertilizer, 1 );
-            }
-            if( planted.empty() ) {
-                debugmsg( "Failed to consume fertilizer %s", fertilizer.c_str() );
-                act.set_to_null();
-                return;
-            }
-
-            terrain_growth_state growth_state;
-            growth_state.fertilized_at = calendar::turn - real_reduction;
-            here.set_terrain_growth( plant_position, growth_state );
-            add_msg( m_info, _( "You fertilize the %s with the %s." ), terrain.name(), planted.front().tname() );
-            act.set_to_null();
-            return;
-        }
         debugmsg( "Missing seed for plant at %s", plant_position.to_string() );
         here.i_clear( plant_position );
         here.furn_set( plant_position, furn_str_id::NULL_ID() );

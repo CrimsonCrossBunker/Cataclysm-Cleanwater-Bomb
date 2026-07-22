@@ -1300,6 +1300,33 @@ TEST_CASE( "terrain_growth_fertilize_checks_season_and_existing_state",
     CHECK( already_fertilized.str().find( "already been fertilized" ) != std::string::npos );
 }
 
+TEST_CASE( "terrain_growth_fertilize_ignores_loose_seed_items",
+           "[terrain_growth][plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    const time_point old_turn = calendar::turn;
+    on_out_of_scope restore_turn( [&]() {
+        calendar::turn = old_turn;
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    calendar::turn = calendar::turn_zero + 12_hours;
+    here.ter_set( plot, ter_test_t_terrain_growth_seed );
+    here.add_item( plot, item( itype_test_seed_simple ) );
+    u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
+
+    iexamine::fertilize_plant( u, plot, itype_fertilizer_commercial );
+    process_activity( u );
+
+    CHECK( here.ter( plot ).obj().id == ter_test_t_terrain_growth_seed );
+    CHECK( here.get_terrain_growth( plot ) != nullptr );
+    CHECK( !here.i_at( plot ).empty() );
+}
+
 namespace
 {
 // Verify that seed->birthday() is consistent with seed_effective_growth_turns for the
