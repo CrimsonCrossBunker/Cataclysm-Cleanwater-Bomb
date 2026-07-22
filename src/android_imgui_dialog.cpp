@@ -169,6 +169,124 @@ class choice_window : public cataimgui::window
         }
 };
 
+class compact_dialog_window : public cataimgui::window
+{
+    public:
+        compact_dialog_window( std::string title, std::string message,
+                               std::vector<entry> entries ) :
+            cataimgui::window( "Android ImGui compact dialog",
+                               ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                               ImGuiWindowFlags_NoSavedSettings ),
+            title_( std::move( title ) ), message_( std::move( message ) ),
+            entries_( std::move( entries ) ) {}
+
+        std::optional<int> take_choice() {
+            if( choices_.empty() ) {
+                return std::nullopt;
+            }
+            const int result = choices_.front();
+            choices_.pop_front();
+            return result;
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            return { 0.0F, 0.0F, 1.0F, 1.0F };
+        }
+
+        void draw_controls() override {
+            const ImVec2 window_pos = ImGui::GetWindowPos();
+            const ImVec2 window_size = ImGui::GetWindowSize();
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+                IM_COL32( 2, 4, 6, 210 ) );
+
+            cataimgui::PushGuiFont1_5x();
+            const float panel_width = std::clamp( window_size.x * 0.68F, 560.0F, 980.0F );
+            const float text_height = ImGui::CalcTextSize( message_.c_str(), nullptr, false,
+                                      panel_width - 64.0F ).y;
+            const float panel_height = std::clamp( text_height + 150.0F, 250.0F,
+                                                   window_size.y * 0.72F );
+            const ImVec2 panel_pos( ( window_size.x - panel_width ) * 0.5F,
+                                    ( window_size.y - panel_height ) * 0.5F );
+            ImGui::SetCursorPos( panel_pos );
+
+            ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 12.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 9.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 14.0F, 10.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 12.0F, 10.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 24.0F, 20.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.28F, 0.52F, 0.56F, 0.92F ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.07F, 0.11F, 0.14F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.32F, 0.35F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.14F, 0.43F, 0.46F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.92F, 0.95F, 0.96F, 1.0F ) );
+            if( ImGui::BeginChild( "##android_compact_dialog_panel",
+                                   ImVec2( panel_width, panel_height ),
+                                   ImGuiChildFlags_Borders ) ) {
+                ImGui::TextUnformatted( title_.c_str() );
+                ImGui::Separator();
+                ImGui::TextWrapped( "%s", message_.c_str() );
+
+                const float button_height = 54.0F;
+                const float gap = 14.0F;
+                const float max_button_width = entries_.size() == 1 ? 320.0F : 360.0F;
+                const float button_width = std::min( max_button_width,
+                                          ( panel_width - 48.0F - gap *
+                                            ( entries_.size() - 1 ) ) / entries_.size() );
+                const float row_width = button_width * entries_.size() +
+                                        gap * ( entries_.size() - 1 );
+                ImGui::SetCursorPosY( panel_height - button_height - 20.0F );
+                ImGui::SetCursorPosX( ( panel_width - row_width ) * 0.5F );
+                for( size_t index = 0; index < entries_.size(); ++index ) {
+                    if( index > 0 ) {
+                        ImGui::SameLine( 0.0F, gap );
+                    }
+                    if( entries_[index].danger ) {
+                        ImGui::PushStyleColor( ImGuiCol_Button,
+                                               ImVec4( 0.34F, 0.08F, 0.07F, 1.0F ) );
+                    }
+                    if( ImGui::Button( entries_[index].label.c_str(),
+                                       ImVec2( button_width, button_height ) ) ) {
+                        choices_.push_back( static_cast<int>( index ) );
+                    }
+                    if( entries_[index].danger ) {
+                        ImGui::PopStyleColor();
+                    }
+                }
+            }
+            ImGui::EndChild();
+            ImGui::PopStyleColor( 6 );
+            ImGui::PopStyleVar( 5 );
+            cataimgui::PopGuiFont1_5x();
+        }
+
+    private:
+        std::string title_;
+        std::string message_;
+        std::vector<entry> entries_;
+        std::deque<int> choices_;
+};
+
+std::optional<int> run_compact_dialog( const std::string &title, const std::string &message,
+                                       const std::vector<entry> &entries )
+{
+    compact_dialog_window viewer( title, message, entries );
+    input_context ctxt( "ANDROID_IMGUI_CHOICE" );
+    ctxt.register_action( "QUIT" );
+    while( true ) {
+        ui_manager::redraw();
+        if( const std::optional<int> choice = viewer.take_choice() ) {
+            return choice;
+        }
+        if( ctxt.handle_input() == "QUIT" ) {
+            return std::nullopt;
+        }
+    }
+}
+
 } // namespace
 
 std::optional<int> select( const std::string &title, const std::vector<entry> &entries,
@@ -203,8 +321,17 @@ bool confirm( const std::string &title, const std::string &message,
         { confirm_label, std::string(), true, danger },
         { cancel_label, std::string(), true, false }
     };
-    const std::optional<int> result = select( title, entries, message, 1 );
+    const std::optional<int> result = run_compact_dialog( title, message, entries );
     return result && *result == 0;
+}
+
+void message( const std::string &title, const std::string &message,
+              const std::string &button_label )
+{
+    const std::vector<entry> entries = {
+        { button_label.empty() ? _( "OK" ) : button_label, std::string(), true, false }
+    };
+    run_compact_dialog( title, message, entries );
 }
 
 } // namespace android_imgui_dialog

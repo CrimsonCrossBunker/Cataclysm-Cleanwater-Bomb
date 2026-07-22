@@ -1802,7 +1802,12 @@ bool main_menu::new_character_tab()
     if( sel2 == 1 ) {
         if( templates.empty() ) {
             on_error();
+#if defined(__ANDROID__)
+            android_imgui_dialog::message( _( "Preset Character" ),
+                                           _( "No templates found!" ) );
+#else
             popup( _( "No templates found!" ) );
+#endif
             return false;
         }
         while( true ) {
@@ -1872,6 +1877,21 @@ bool main_menu::new_character_tab()
                     templates.erase( templates.begin() + opt_val );
                 }
             } else if( res == "LOAD" ) {
+                const cata_path template_path = PATH_INFO::templatedir_path() /
+                                                ( templates[opt_val] + ".template" );
+                if( !file_exist( template_path ) ) {
+#if defined(__ANDROID__)
+                    android_imgui_dialog::message(
+                        _( "Preset Character" ), _( "No templates found!" ) );
+#else
+                    popup( _( "No templates found!" ) );
+#endif
+                    load_char_templates();
+                    if( templates.empty() ) {
+                        return false;
+                    }
+                    continue;
+                }
                 on_out_of_scope cleanup( [&pc]() {
                     pc = avatar();
                     world_generator->set_active_world( nullptr );

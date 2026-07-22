@@ -29,6 +29,10 @@ bool confirm( const std::string &title,
               const std::string &cancel_label,
               bool danger = false );
 
+void message( const std::string &title,
+              const std::string &message,
+              const std::string &button_label = std::string() );
+
 } // namespace android_imgui_dialog
 
 #endif // __ANDROID__
