@@ -2217,8 +2217,14 @@
     "move_cost": 2,
     "flags": [ "TRANSPARENT", "DIGGABLE", "FLAT", "PLOWABLE", "GRAZABLE" ],
     "transforms_into": "t_bamboo_harvested",
-    "examine_action": "harvest_ter",
+    "examine_action": [ "harvest_ter", "fertilize_terrain" ],
     "harvest_by_season": [ { "seasons": [ "spring" ], "id": "bamboo_harv" } ],
+    "terrain_growth": {
+      "transform": "t_bamboo_long",
+      "growth_time": "7 days",
+      "growth_multiplier": 1.0,
+      "fertilize_seasons": [ "spring" ]
+    },
     "bash": {
       "str_min": 2,
       "str_max": 6,
@@ -2250,7 +2256,25 @@
     "color": "green",
     "move_cost": 5,
     "flags": [ "TRANSPARENT", "DIGGABLE", "FLAT", "PLOWABLE", "SMALL_HIDE" ],
-    "bash": { "sound": "thump", "ter_set": "t_null", "str_min": 40, "str_max": 100, "str_min_supported": 100, "bash_below": true }
+    "examine_action": "fertilize_terrain",
+    "bash": {
+      "sound": "thump",
+      "ter_set": "t_dirt",
+      "str_min": 40,
+      "str_max": 100,
+      "str_min_supported": 100,
+      "bash_below": true,
+      "items": [
+        { "item": "raw_bamboo", "prob": 15, "count": [ 1, 1 ] },
+        { "item": "bamboo_stalk", "prob": 5, "count": [ 1, 1 ] }
+      ]
+    },
+    "terrain_growth": {
+      "transform": "t_bamboo_tall",
+      "growth_time": "14 days",
+      "growth_multiplier": 1.0,
+      "fertilize_seasons": [ "spring", "summer" ]
+    }
   },
   {
     "type": "terrain",
@@ -2262,8 +2286,21 @@
     "color": "green",
     "move_cost": 10,
     "coverage": 50,
-    "flags": [ "TRANSPARENT", "DIGGABLE", "PLOWABLE", "SMALL_HIDE", "SMALL_HIDE" ],
-    "bash": { "sound": "thump", "ter_set": "t_null", "str_min": 40, "str_max": 100, "str_min_supported": 100, "bash_below": true }
+    "flags": [ "TRANSPARENT", "DIGGABLE", "PLOWABLE", "SMALL_HIDE", "TREE" ],
+    "bash": {
+      "sound": "thump",
+      "ter_set": "t_dirt",
+      "str_min": 40,
+      "str_max": 100,
+      "str_min_supported": 100,
+      "bash_below": true,
+      "items": [
+        { "item": "bamboo_stalk", "count": [ 1, 3 ] },
+        { "item": "leaves", "count": [ 0, 50 ] },
+        { "item": "splinter", "count": [ 0, 4 ] },
+        { "item": "seed_raw_bamboo", "prob": 15, "count": [ 1, 1 ] }
+      ]
+    }
   },
   {
     "type": "terrain",
@@ -2275,7 +2312,17 @@
     "color": "brown",
     "move_cost": 10,
     "flags": [ "TRANSPARENT", "DIGGABLE", "FLAT", "PLOWABLE", "SMALL_HIDE" ],
-    "bash": { "ter_set": "t_null", "str_min": 50, "str_max": 400, "str_min_supported": 100, "bash_below": true }
+    "bash": {
+      "ter_set": "t_dirt",
+      "str_min": 50,
+      "str_max": 400,
+      "str_min_supported": 100,
+      "bash_below": true,
+      "items": [
+        { "item": "splinter", "count": [ 0, 3 ] },
+        { "item": "withered", "count": [ 0, 2 ] }
+      ]
+    }
   },
   {
     "type": "terrain",

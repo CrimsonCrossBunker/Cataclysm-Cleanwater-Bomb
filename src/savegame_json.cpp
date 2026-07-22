@@ -5361,6 +5361,17 @@ void submap::store( JsonOut &jsout ) const
     }
     jsout.end_array();
 
+    jsout.member( "terrain_growth" );
+    jsout.start_array();
+    for( const auto &entry : terrain_growth ) {
+        jsout.start_array();
+        jsout.write( entry.first.x() );
+        jsout.write( entry.first.y() );
+        jsout.write( entry.second.fertilized_at );
+        jsout.end_array();
+    }
+    jsout.end_array();
+
     // Write out the radiation array in a simple RLE scheme.
     // written in intensity, count pairs
     jsout.member( "radiation" );
@@ -5648,6 +5659,15 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                     rad_cell++;
                 }
             }
+        }
+    } else if( member_name == "terrain_growth" ) {
+        JsonArray growth_json = jv;
+        while( growth_json.has_more() ) {
+            JsonArray entry = growth_json.next_array();
+            const point_sm_ms p( entry.next_int(), entry.next_int() );
+            terrain_growth_state state;
+            state.fertilized_at = time_point( entry.next_int() );
+            terrain_growth[p] = state;
         }
     } else if( member_name == "furniture" ) {
         int_id<ter_t> iid_ter;

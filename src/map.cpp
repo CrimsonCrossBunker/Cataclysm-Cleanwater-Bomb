@@ -2559,6 +2559,40 @@ void map::set_map_damage( const tripoint_bub_ms &p, int dmg )
     current_submap->set_map_damage( l, dmg );
 }
 
+const terrain_growth_state *map::get_terrain_growth( const tripoint_bub_ms &p ) const
+{
+    if( !inbounds( p ) ) {
+        return nullptr;
+    }
+    point_sm_ms l;
+    const submap *const current_submap = unsafe_get_submap_at( p, l );
+    return current_submap == nullptr ? nullptr : current_submap->get_terrain_growth( l );
+}
+
+void map::set_terrain_growth( const tripoint_bub_ms &p, const terrain_growth_state &state )
+{
+    if( !inbounds( p ) ) {
+        return;
+    }
+    point_sm_ms l;
+    submap *const current_submap = unsafe_get_submap_at( p, l );
+    if( current_submap != nullptr ) {
+        current_submap->set_terrain_growth( l, state );
+    }
+}
+
+void map::clear_terrain_growth( const tripoint_bub_ms &p )
+{
+    if( !inbounds( p ) ) {
+        return;
+    }
+    point_sm_ms l;
+    submap *const current_submap = unsafe_get_submap_at( p, l );
+    if( current_submap != nullptr ) {
+        current_submap->clear_terrain_growth( l );
+    }
+}
+
 uint8_t map::get_known_connections( const tripoint_bub_ms &p,
                                     const std::bitset<NUM_TERCONN> &connect_group,
                                     const std::map<tripoint_bub_ms, ter_id> &override ) const
@@ -3174,6 +3208,7 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
         current_submap->player_adjusted_map = true;
     }
     current_submap->set_ter( l, new_terrain );
+    current_submap->clear_terrain_growth( l );
     current_submap->set_map_damage( point_sm_ms( l ), 0 );
     // Clear any recorded original terrain when terrain is explicitly set here.
     clear_original_terrain_at( p );
@@ -10191,6 +10226,23 @@ void map::fill_funnels( const tripoint_bub_ms &p, const time_point &since )
     }
 }
 
+void map::grow_terrain_plant( const tripoint_bub_ms &p )
+{
+    const ter_t &terrain = ter( p ).obj();
+    const terrain_growth_state *const state = get_terrain_growth( p );
+    if( !terrain.terrain_growth || state == nullptr ) {
+        return;
+    }
+
+    const float crop_growth_speed = ::get_option<float>( "CROP_GROWTH_SPEED" );
+    const time_duration elapsed = calendar::turn - state->fertilized_at;
+    const time_duration effective_elapsed = elapsed * terrain.terrain_growth->growth_multiplier *
+                                            crop_growth_speed;
+    if( effective_elapsed >= terrain.terrain_growth->growth_time ) {
+        ter_set( p, terrain.terrain_growth->transform );
+    }
+}
+
 void map::grow_plant( const tripoint_bub_ms &p )
 {
     const furn_t &initial_furn = this->furn( p ).obj();
@@ -10623,6 +10675,13 @@ void map::cut_down_tree( tripoint_bub_ms p, point_rel_ms dir )
         return;
     }
 
+    // Some tree-like terrain defines its own bash result instead of producing
+    // the standard trunk/stump terrain.
+    if( ter( p ).obj().bash && ter( p ).obj().bash->ter_set != ter_str_id( "t_stump" ) ) {
+        batter( p, 79, 1 );
+        return;
+    }
+
     tripoint_bub_ms to = p + 3 * dir + point( rng( -1, 1 ), rng( -1, 1 ) );
 
     // TODO: make line_to type aware.
@@ -10782,6 +10841,7 @@ void map::actualize( const tripoint_rel_sm &grid )
             if( furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
                 grow_plant( pnt );
             }
+            grow_terrain_plant( pnt );
 
             restock_fruits( pnt, time_since_last_actualize );
 
