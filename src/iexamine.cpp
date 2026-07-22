@@ -2539,6 +2539,24 @@ void iexamine::harvest_ter( Character &you, const tripoint_bub_ms &examp )
     you.assign_activity( harvest_activity_actor( examp, auto_forage ) );
 }
 
+void iexamine::fertilize_terrain( Character &you, const tripoint_bub_ms &examp )
+{
+    map &here = get_map();
+    const ter_t &terrain = here.ter( examp ).obj();
+    if( !terrain.terrain_growth ) {
+        return;
+    }
+    const ret_val<void> can_fert = multi_farm_activity_actor::can_fertilize( you, examp );
+    if( !can_fert.success() ) {
+        add_msg( m_info, can_fert.str() );
+        return;
+    }
+    itype_id fertilizer = choose_fertilizer( you, terrain.name(), true );
+    if( !fertilizer.is_empty() ) {
+        fertilize_plant( you, examp, fertilizer );
+    }
+}
+
 /**
  * Only harvest a plant once per season.  Display message and call iexamine::none.
  */
@@ -8087,6 +8105,7 @@ iexamine_functions iexamine_functions_from_string( const std::string &function_n
             { "harvest_furn", { to_translation( "Harvest" ), &iexamine::harvest_furn } },
             { "harvest_ter_nectar", { to_translation( "Harvest nectar" ), &iexamine::harvest_ter_nectar } },
             { "harvest_ter", { to_translation( "Harvest" ), &iexamine::harvest_ter } },
+            { "fertilize_terrain", { to_translation( "Fertilize" ), &iexamine::fertilize_terrain } },
             { "clear_overgrown", { to_translation( "Clear overgrown plants" ), &iexamine::clear_overgrown } },
             { "harvest_plant_ex", { to_translation( "Harvest" ), &iexamine::harvest_plant_ex } },
             { "harvested_plant", { to_translation( "Harvest" ), &iexamine::harvested_plant } },

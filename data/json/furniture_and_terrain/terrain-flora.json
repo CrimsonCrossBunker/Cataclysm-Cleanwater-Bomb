@@ -2217,8 +2217,14 @@
     "move_cost": 2,
     "flags": [ "TRANSPARENT", "DIGGABLE", "FLAT", "PLOWABLE", "GRAZABLE" ],
     "transforms_into": "t_bamboo_harvested",
-    "examine_action": "harvest_ter",
+    "examine_action": [ "harvest_ter", "fertilize_terrain" ],
     "harvest_by_season": [ { "seasons": [ "spring" ], "id": "bamboo_harv" } ],
+    "terrain_growth": {
+      "transform": "t_bamboo_long",
+      "growth_time": "7 days",
+      "growth_multiplier": 1.0,
+      "fertilize_seasons": [ "spring" ]
+    },
     "bash": {
       "str_min": 2,
       "str_max": 6,
@@ -2250,6 +2256,7 @@
     "color": "green",
     "move_cost": 5,
     "flags": [ "TRANSPARENT", "DIGGABLE", "FLAT", "PLOWABLE", "SMALL_HIDE" ],
+    "examine_action": "fertilize_terrain",
     "bash": {
       "sound": "thump",
       "ter_set": "t_dirt",
@@ -2261,6 +2268,12 @@
         { "item": "raw_bamboo", "prob": 15, "count": [ 1, 1 ] },
         { "item": "bamboo_stalk", "prob": 5, "count": [ 1, 1 ] }
       ]
+    },
+    "terrain_growth": {
+      "transform": "t_bamboo_tall",
+      "growth_time": "14 days",
+      "growth_multiplier": 1.0,
+      "fertilize_seasons": [ "spring", "summer" ]
     }
   },
   {

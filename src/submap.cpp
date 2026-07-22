@@ -276,6 +276,12 @@ void submap::rotate( int turns )
         rot_comp.emplace( rotate_point( elem.first ), elem.second );
     }
     computers = rot_comp;
+
+    std::map<point_sm_ms, terrain_growth_state> rot_growth;
+    for( const auto &elem : terrain_growth ) {
+        rot_growth.emplace( rotate_point( elem.first ), elem.second );
+    }
+    terrain_growth = rot_growth;
 }
 
 void submap::mirror( bool horizontally )
@@ -302,6 +308,12 @@ void submap::mirror( bool horizontally )
             mirror_comp.emplace( point( -elem.first.x(), elem.first.y() ) + point( SEEX - 1, 0 ), elem.second );
         }
         computers = mirror_comp;
+
+        std::map<point_sm_ms, terrain_growth_state> mirror_growth;
+        for( const auto &elem : terrain_growth ) {
+            mirror_growth.emplace( point( -elem.first.x(), elem.first.y() ) + point( SEEX - 1, 0 ), elem.second );
+        }
+        terrain_growth = mirror_growth;
     } else {
         for( int k = 0, ke = SEEY / 2; k < ke; k++ ) {
             for( int i = 0; i < SEEX; i++ ) {
@@ -319,6 +331,12 @@ void submap::mirror( bool horizontally )
             mirror_comp.emplace( point( elem.first.x(), -elem.first.y() ) + point( 0, SEEY - 1 ), elem.second );
         }
         computers = mirror_comp;
+
+        std::map<point_sm_ms, terrain_growth_state> mirror_growth;
+        for( const auto &elem : terrain_growth ) {
+            mirror_growth.emplace( point( elem.first.x(), -elem.first.y() ) + point( 0, SEEY - 1 ), elem.second );
+        }
+        terrain_growth = mirror_growth;
     }
 }
 
@@ -327,6 +345,7 @@ void submap::revert_submap( submap &sr )
     reverted = true;
     if( sr.is_uniform() ) {
         m.reset();
+        terrain_growth.clear();
         set_all_ter( sr.get_ter( point_sm_ms::zero ), true );
         return;
     }
@@ -347,6 +366,7 @@ void submap::revert_submap( submap &sr )
             }
         }
     }
+    terrain_growth = sr.terrain_growth;
     // copy cosmetics to new submap
     // since their positions are stored in point_sm_ms, cosmetics do not require location updates.
     cosmetics = sr.cosmetics;
@@ -356,6 +376,7 @@ submap submap::get_revert_submap() const
 {
     submap ret;
     ret.uniform_ter = uniform_ter;
+    ret.terrain_growth = terrain_growth;
     if( !is_uniform() ) {
         ret.m = std::make_unique<maptile_soa>( *m );
         ret.cosmetics = cosmetics;
@@ -486,6 +507,12 @@ void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
         if( this->m->frn[comp.first.x()][comp.first.y()] == furn_f_console &&
             !this->get_computer( comp.first ) ) {
             this->set_computer( comp.first, comp.second );
+        }
+    }
+
+    for( const auto &growth : copy_from->terrain_growth ) {
+        if( copy_from_is_overlay || terrain_growth.find( growth.first ) == terrain_growth.end() ) {
+            terrain_growth[growth.first] = growth.second;
         }
     }
 

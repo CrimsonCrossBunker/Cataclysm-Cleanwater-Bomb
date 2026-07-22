@@ -99,6 +99,7 @@ void harvest_furn_nectar( Character &you, const tripoint_bub_ms &examp );
 void harvest_furn( Character &you, const tripoint_bub_ms &examp );
 void harvest_ter_nectar( Character &you, const tripoint_bub_ms &examp );
 void harvest_ter( Character &you, const tripoint_bub_ms &examp );
+void fertilize_terrain( Character &you, const tripoint_bub_ms &examp );
 void harvested_plant( Character &you, const tripoint_bub_ms &examp );
 void locked_object( Character &you, const tripoint_bub_ms &examp );
 void locked_object_pickable( Character &you, const tripoint_bub_ms &examp );

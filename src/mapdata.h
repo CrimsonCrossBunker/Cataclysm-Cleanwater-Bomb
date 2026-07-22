@@ -188,6 +188,17 @@ struct plant_data {
     bool load( const JsonObject &jsobj, std::string_view member, std::string_view src );
 };
 
+struct terrain_growth_data {
+    ter_str_id transform;
+    time_duration growth_time = 0_seconds;
+    float growth_multiplier = 1.0f;
+    std::set<season_type> fertilize_seasons;
+
+    terrain_growth_data();
+    bool load( const JsonObject &jsobj, std::string_view member );
+    void check( const std::string &context ) const;
+};
+
 /*
  * List of known flags, used in both terrain.json and furniture.json.
  * TRANSPARENT - Players and monsters can see through/past it. Also sets ter_t.transparent
@@ -730,6 +741,7 @@ struct ter_t : map_data_common_t {
     cata::value_ptr<activity_data_ter> prying;  // Prying action data
 
     cata::value_ptr<plant_data> plant;
+    cata::value_ptr<terrain_growth_data> terrain_growth;
 
     std::string trap_id_str;     // String storing the id string of the trap.
     ter_str_id transforms_into; // Transform into what terrain?

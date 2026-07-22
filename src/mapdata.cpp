@@ -607,6 +607,38 @@ bool plant_data::load( const JsonObject &jsobj, std::string_view member,
     return true;
 }
 
+terrain_growth_data::terrain_growth_data() : transform( ter_str_id::NULL_ID() ) {}
+
+bool terrain_growth_data::load( const JsonObject &jsobj, std::string_view member )
+{
+    JsonObject j = jsobj.get_object( member );
+    optional( j, false, "transform", transform, ter_str_id::NULL_ID() );
+    mandatory( j, false, "growth_time", growth_time );
+    optional( j, false, "growth_multiplier", growth_multiplier, 1.0f );
+
+    fertilize_seasons.clear();
+    if( j.has_member( "fertilize_seasons" ) ) {
+        const std::set<std::string> season_strings = j.get_tags( "fertilize_seasons" );
+        std::transform( season_strings.begin(), season_strings.end(),
+                        std::inserter( fertilize_seasons, fertilize_seasons.begin() ),
+                        io::string_to_enum<season_type> );
+    }
+    return true;
+}
+
+void terrain_growth_data::check( const std::string &context ) const
+{
+    if( !transform.is_valid() ) {
+        debugmsg( "%s has invalid terrain_growth transform %s", context, transform.c_str() );
+    }
+    if( growth_time <= 0_seconds ) {
+        debugmsg( "%s has non-positive terrain_growth growth_time", context );
+    }
+    if( growth_multiplier <= 0.0f ) {
+        debugmsg( "%s has non-positive terrain_growth growth_multiplier", context );
+    }
+}
+
 furn_t null_furniture_t()
 {
     furn_t new_furniture;
@@ -1453,6 +1485,11 @@ void ter_t::load( const JsonObject &jo, const std::string &src )
         plant->load( jo, "plant_data", src );
     }
 
+    if( jo.has_object( "terrain_growth" ) ) {
+        terrain_growth = cata::make_value<terrain_growth_data>();
+        terrain_growth->load( jo, "terrain_growth" );
+    }
+
     if( jo.has_object( "bash" ) ) {
         bool bash_loaded = !!bash;
         if( !bash_loaded ) {
@@ -1543,6 +1580,9 @@ void ter_t::check() const
     map_data_common_t::check();
     if( bash ) {
         bash->check( id.c_str() );
+    }
+    if( terrain_growth ) {
+        terrain_growth->check( id.c_str() );
     }
     if( deconstruct ) {
         deconstruct->check( id.c_str() );
