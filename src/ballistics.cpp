@@ -346,19 +346,19 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                 */
                 target_size = occupied_tile_fraction( target_critter->get_size() );
                 add_msg_debug( debugmode::DF_RANGED,
-                               "Shot spread or WIDE ammo effect negates HARDTOSHOOT/HARDTOHIT.  Target size %s", target_size );
+                               "Shot spread or WIDE ammo effect negates HARDTOSHOOT/HARDTOHIT.  Target size %.2f", target_size );
             } else {
                 target_size = target_critter->ranged_target_size();
                 add_msg_debug( debugmode::DF_RANGED,
-                               "HARDTOSHOOT/HARDTOHIT targets are harder to hit.  Target size: %s", target_size );
+                               "HARDTOSHOOT/HARDTOHIT targets are harder to hit.  Target size: %.2f", target_size );
             }
         } else {
             target_size = target_critter->ranged_target_size();
-            add_msg_debug( debugmode::DF_RANGED, "Target creature size: %s", target_size );
+            add_msg_debug( debugmode::DF_RANGED, "Target creature size: %.2f", target_size );
         }
     } else {
         target_size = here->ranged_target_size( target_arg );
-        add_msg_debug( debugmode::DF_RANGED, "Target size for tile: %s", target_size );
+        add_msg_debug( debugmode::DF_RANGED, "Target size for tile: %.2f", target_size );
     }
 
     projectile_attack_aim aim = projectile_attack_roll( dispersion, range, target_size );
@@ -568,7 +568,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         }
         // Range can be 0
         size_t traj_len = t_copy.size();
-        while( traj_len > 0 && trig_dist( source, t_copy[traj_len - 1] ) > proj_arg.range ) {
+        while( traj_len > 0 && rl_dist( source, t_copy[traj_len - 1] ) > proj_arg.range ) {
             --traj_len;
         }
 
