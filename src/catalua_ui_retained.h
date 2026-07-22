@@ -27,6 +27,7 @@ struct retained_ui_node {
     int count = 0;
     int columns = 0;
     bool bool_value = false;
+    bool enabled = true;
     bool selected = false;
     bool truncated = false;
     std::vector<retained_ui_node> children;
@@ -47,6 +48,8 @@ struct retained_ui_surface {
     double default_width = 0.28;
     double default_height = 0.18;
     bool interactive = true;
+    bool background = true;
+    bool title_bar = false;
     bool movable = true;
     bool scalable = true;
     bool user_toggleable = true;

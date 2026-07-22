@@ -34,7 +34,8 @@ constexpr std::uint32_t retained_capability_mask =
     static_cast<std::uint32_t>( script_ui_capability::trees ) |
     static_cast<std::uint32_t>( script_ui_capability::modals ) |
     static_cast<std::uint32_t>( script_ui_capability::tooltips ) |
-    static_cast<std::uint32_t>( script_ui_capability::virtualization );
+    static_cast<std::uint32_t>( script_ui_capability::virtualization ) |
+    static_cast<std::uint32_t>( script_ui_capability::radial_selection );
 
 bool encoded_bool( const std::optional<std::string> &value, bool fallback )
 {
@@ -98,6 +99,10 @@ void write_node( JsonOut &json, const retained_ui_node &node )
     if( node.type == "checkbox" || node.type == "radio" || node.type == "selectable" ||
         node.type == "tree" || node.type == "modal" ) {
         json.member( "boolValue", node.bool_value );
+    }
+    if( node.type == "radial_option" ) {
+        json.member( "enabled", node.enabled );
+        json.member( "selected", node.selected );
     }
     if( node.minimum != 0.0 || node.maximum != 0.0 ) {
         json.member( "minimum", node.minimum );
@@ -242,6 +247,34 @@ class retained_script_ui_renderer final : public script_ui_renderer
             const std::string result = encoded_text( consume( id ), value );
             retained_ui_node &node = add( "input_text", id, label );
             node.string_value = result;
+            return result;
+        }
+
+        std::string radial_select(
+            const std::string &id, const std::string &center_label,
+            const std::vector<script_ui_radial_option> &options ) override {
+            std::string result;
+            const std::optional<std::string> interaction = consume( id );
+            if( interaction && interaction->rfind( "select:", 0 ) == 0 ) {
+                const std::string candidate = interaction->substr( 7 );
+                const auto found = std::find_if( options.begin(), options.end(),
+                [&candidate]( const script_ui_radial_option & option ) {
+                    return option.id == candidate && option.enabled;
+                } );
+                if( found != options.end() ) {
+                    result = found->id;
+                }
+            }
+            retained_ui_node &node = add( "radial_select", id, center_label );
+            for( const script_ui_radial_option &option : options ) {
+                retained_ui_node child;
+                child.type = "radial_option";
+                child.id = option.id;
+                child.label = option.label;
+                child.enabled = option.enabled;
+                child.selected = option.selected;
+                node.children.push_back( std::move( child ) );
+            }
             return result;
         }
 
@@ -418,6 +451,8 @@ std::string retained_surfaces_json( const std::vector<retained_ui_surface> &surf
         json.member( "defaultWidth", surface.default_width );
         json.member( "defaultHeight", surface.default_height );
         json.member( "interactive", surface.interactive );
+        json.member( "background", surface.background );
+        json.member( "titleBar", surface.title_bar );
         json.member( "movable", surface.movable );
         json.member( "scalable", surface.scalable );
         json.member( "userToggleable", surface.user_toggleable );

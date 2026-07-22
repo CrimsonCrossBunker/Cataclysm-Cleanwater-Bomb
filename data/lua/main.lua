@@ -1,123 +1,157 @@
--- Bundled API v2 smoke test.  Edit this file while the game is running, then
--- press "Reload Lua" in the page; recompiling the game is not required.
+-- Built-in gameplay HUD.  The script only reads immutable snapshots; layout
+-- overrides belong to the renderer and survive Lua hot reloads.
 
-local enabled = game.state_get("example.enabled", true)
-local show_hud = game.state_get("example.show_hud", true)
--- math.floor also migrates values saved by the API v1 prototype, which stored
--- every Lua number as a floating-point value.
-local amount = math.floor(game.state_get("example.amount", 50))
-local opacity = game.state_get("example.opacity", 0.75)
-local label = game.state_get("example.label", "这条消息来自热加载后的 Lua")
-local move_count = game.state_get("example.move_count", 0)
-
-ui.page("lua_ui_example", "Lua UI example", function(ctx)
-    local player = game.player_snapshot()
-    local clock = game.time_snapshot()
-    local weather = game.weather_snapshot()
-    local inventory = game.inventory_snapshot(8)
-    local effects = game.effects_snapshot(8)
-    local skills = game.skills_snapshot(6)
-    local equipment = game.equipment_snapshot(16)
-    local tile = game.current_tile_snapshot(8)
-    local mutations = game.mutations_snapshot(8)
-    local bionics = game.bionics_snapshot(8)
-    local missions = game.missions_snapshot(8)
-    local activity = game.activity_snapshot(8)
-    local creatures = game.nearby_creatures_snapshot(12, 8)
-
-    ctx:heading("Lua API v2")
-    ctx:text_colored("Lua 热加载成功！", 0.3, 1.0, 0.45, 1.0)
-    ctx:text("当前角色：" .. player.name)
-    ctx:text("脚本：data/lua/main.lua / API " .. game.api_version)
-    ctx:text("修改 Lua 后无需重新编译游戏。")
-    ctx:text("时间：" .. clock.display)
-    ctx:text("天气：" .. weather.name .. " / " .. weather.temperature_display)
-    ctx:text("当前位置：" .. tile.terrain_name ..
-             (tile.furniture_name ~= "" and " / " .. tile.furniture_name or ""))
-    ctx:text("状态效果：" .. effects.total .. "  装备：" .. equipment.total)
-    ctx:text("突变：" .. mutations.total .. "  仿生：" .. bionics.total ..
-             "  任务：" .. missions.total)
-    ctx:text("当前活动：" .. (activity.active and activity.current.verb or "无") ..
-             "  可见生物：" .. creatures.total)
-    ctx:text("随身物品：" .. inventory.total .. " 项（本页最多展示 " .. inventory.limit .. " 项）")
-    for _, entry in ipairs(inventory.items) do
-        ctx:bullet_text(entry.name .. " / " .. entry.category_name)
+local function percentage(value, maximum)
+    if maximum == nil or maximum <= 0 then
+        return 0
     end
-    for _, entry in ipairs(effects.items) do
-        ctx:bullet_text("效果：" .. entry.name .. " ×" .. entry.intensity)
+    return math.max(0, math.min(100, math.floor(value * 100 / maximum + 0.5)))
+end
+
+local function append_alert(alerts, active, label, value)
+    if active then
+        table.insert(alerts, label .. " " .. value)
     end
-    for _, entry in ipairs(skills.items) do
-        ctx:bullet_text("技能：" .. entry.name .. " " .. entry.level)
-    end
-    ctx:separator()
+end
 
-    enabled = ctx:checkbox("启用功能", enabled)
-    show_hud = ctx:checkbox("显示 Lua HUD", show_hud)
-    amount = ctx:slider_int("测试数值", amount, 0, 100)
-    opacity = ctx:slider_float("界面透明度原型", opacity, 0.0, 1.0)
-    label = ctx:input_text("游戏消息", label)
-    ctx:progress_bar(amount / 100.0, "测试数值 " .. amount .. "%")
-    ctx:bullet_text("本次进程记录的移动事件：" .. move_count)
+local movement_mode_labels = {
+    walk = "行走",
+    run = "奔跑",
+    crouch = "蹲伏",
+    prone = "俯卧"
+}
 
-    if ctx:button("发送游戏消息") then
-        game.add_msg("[Lua] " .. label .. " / 数值=" .. amount ..
-                     " / 透明度=" .. opacity .. (enabled and " / 已启用" or " / 已关闭"))
-    end
+local movement_mode_order = {
+    walk = 1,
+    run = 2,
+    prone = 3,
+    crouch = 4
+}
 
-    ctx:same_line()
-    if ctx:button_id("queue_wait", "排队等待一回合") then
-        game.actions.enqueue("wait")
-    end
-
-    if activity.active and activity.current.interruptible and
-       ctx:button_id("cancel_activity", "取消当前活动") then
-        game.actions.enqueue("cancel_activity")
-    end
-
-    ctx:same_line()
-    if ctx:button("数值 +10") then
-        amount = math.min(100, amount + 10)
-    end
-
-    game.state_set("example.enabled", enabled)
-    game.state_set("example.show_hud", show_hud)
-    game.state_set("example.amount", amount)
-    game.state_set("example.opacity", opacity)
-    game.state_set("example.label", label)
-end)
-
-ui.hud("lua_status", {
-    title = "Lua hot reload status",
+ui.hud("ccb_player_status", {
+    title = "角色状态",
     default_anchor = "top_left",
-    default_x = 24,
-    default_y = 24,
-    default_width = 0.30,
-    default_height = 0.24,
-    alpha = 0.86,
+    default_x = 16,
+    default_y = 16,
+    default_width = 0.27,
+    default_height = 0.27,
+    alpha = 0.84,
     interactive = false,
+    background = false,
     title_bar = false,
     movable = true,
     scalable = true,
     user_toggleable = true
 }, function(ctx)
-    if not show_hud then
-        return
+    local player = game.player_snapshot()
+    local equipment = game.equipment_snapshot(1)
+    local stamina_percent = percentage(player.stamina, player.stamina_max)
+
+    ctx:text(player.name)
+    ctx:progress_bar(stamina_percent / 100.0, "耐力 " .. stamina_percent .. "%")
+
+    local core_status = "疼痛 " .. player.pain ..
+                        "  专注 " .. player.focus ..
+                        "  速度 " .. player.speed
+    if player.pain > 0 then
+        ctx:text_colored(core_status, 1.0, 0.45, 0.38, 1.0)
+    else
+        ctx:disabled_text(core_status)
     end
-    local stats = game.player_snapshot()
-    local clock = game.time_snapshot()
-    local weather = game.weather_snapshot()
-    ctx:text_colored("Lua HUD 热更新已生效！", 0.25, 1.0, 0.4, 1.0)
-    ctx:text("角色：" .. stats.name)
-    ctx:text(clock.season_name .. " 第 " .. clock.day .. " 天 " ..
-             string.format("%02d:%02d", clock.hour, clock.minute))
-    ctx:text("天气：" .. weather.name .. " / " .. weather.temperature_display)
-    ctx:text("耐力 " .. stats.stamina .. "/" .. stats.stamina_max)
-    ctx:progress_bar(stats.stamina / math.max(1, stats.stamina_max), "耐力")
-    ctx:text("疼痛 " .. stats.pain .. "  专注 " .. stats.focus .. "  速度 " .. stats.speed)
-    ctx:disabled_text("移动事件 " .. move_count .. " | API " .. game.api_version)
+
+    local alerts = {}
+    append_alert(alerts, player.hunger >= 100, "饥饿", player.hunger)
+    append_alert(alerts, player.thirst >= 80, "口渴", player.thirst)
+    append_alert(alerts, player.sleepiness >= 192, "疲劳", player.sleepiness)
+    append_alert(alerts, player.radiation > 0, "辐射", player.radiation)
+    if #alerts > 0 then
+        ctx:text_colored(table.concat(alerts, "  "), 1.0, 0.72, 0.25, 1.0)
+    end
+
+    if equipment.has_weapon and equipment.weapon ~= nil then
+        ctx:text("武器：" .. equipment.weapon.name)
+    else
+        ctx:disabled_text("武器：空手")
+    end
 end)
 
-events.on("avatar_moves", function(event)
-    move_count = move_count + 1
-    game.state_set("example.move_count", move_count)
+ui.hud("ccb_movement_mode", {
+    title = "移动模式",
+    default_anchor = "bottom_right",
+    default_x = 148,
+    default_y = 148,
+    default_width = 0.10,
+    default_height = 0.09,
+    alpha = 0.92,
+    interactive = true,
+    background = false,
+    title_bar = false,
+    movable = true,
+    scalable = false,
+    user_toggleable = true
+}, function(ctx)
+    local player = game.player_snapshot()
+    local modes = game.movement_modes_snapshot()
+    local current_id = player.movement_mode_id
+    local center_label = movement_mode_labels[current_id] or player.movement_mode_name or current_id
+    local options = {}
+    for _, mode in ipairs(modes.items) do
+        local name = movement_mode_labels[mode.id] or mode.name or mode.id
+        table.insert(options, {
+            id = mode.id,
+            label = name .. "\n" .. string.format("%.2f 秒", mode.switch_seconds),
+            enabled = mode.available,
+            selected = mode.desired
+        })
+    end
+    table.sort(options, function(left, right)
+        return (movement_mode_order[left.id] or 100) <
+               (movement_mode_order[right.id] or 100)
+    end)
+    local selected = ctx:radial_select_id("movement_mode_selector", center_label, options)
+    if selected ~= "" and selected ~= player.desired_movement_mode_id then
+        game.actions.enqueue("set_move_mode", { id = selected })
+    end
+end)
+
+ui.hud("ccb_world_status", {
+    title = "环境信息",
+    default_anchor = "top_right",
+    default_x = 88,
+    default_y = 16,
+    default_width = 0.30,
+    default_height = 0.18,
+    alpha = 0.80,
+    interactive = false,
+    background = false,
+    title_bar = false,
+    movable = true,
+    scalable = true,
+    user_toggleable = true
+}, function(ctx)
+    local clock = game.time_snapshot()
+    local weather = game.weather_snapshot()
+    local tile = game.current_tile_snapshot(8)
+
+    ctx:text(clock.season_name .. " 第 " .. clock.day .. " 天  " ..
+             string.format("%02d:%02d", clock.hour, clock.minute))
+
+    local weather_text = weather.name .. "  " .. weather.temperature_display
+    if weather.dangerous then
+        ctx:text_colored(weather_text, 1.0, 0.48, 0.35, 1.0)
+    else
+        ctx:text(weather_text)
+    end
+
+    local location = tile.terrain_name
+    if tile.furniture_name ~= "" then
+        location = location .. " / " .. tile.furniture_name
+    end
+    ctx:text(location)
+
+    if tile.dangerous_field or tile.trap_dangerous then
+        ctx:text_colored("当前位置存在危险", 1.0, 0.35, 0.30, 1.0)
+    elseif tile.item_count > 0 then
+        ctx:disabled_text("地面物品 " .. tile.item_count)
+    end
 end)

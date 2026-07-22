@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -18,6 +19,7 @@
 #include "item_location.h"
 #include "map.h"
 #include "messages.h"
+#include "move_mode.h"
 #include "mp_gamestate.h"
 #include "mutation.h"
 #include "point.h"
@@ -99,6 +101,14 @@ std::int64_t required_integer( const sol::optional<sol::table> &options, const s
     return static_cast<std::int64_t>( value.as<lua_Integer>() );
 }
 
+bool valid_move_mode_id( const std::string &id )
+{
+    return !id.empty() && id.size() <= 64 &&
+           std::all_of( id.begin(), id.end(), []( const unsigned char ch ) {
+        return std::isalnum( ch ) != 0 || ch == '_' || ch == '-';
+    } );
+}
+
 std::uint64_t enqueue_action( const std::function<void()> &authorize_access,
                               const std::function<bool()> &can_mutate, const std::string &type,
                               const sol::optional<sol::table> &options )
@@ -129,12 +139,15 @@ std::uint64_t enqueue_action( const std::function<void()> &authorize_access,
         if( request.integer_argument <= 0 ) {
             throw std::invalid_argument( "game.actions.enqueue '" + type + "' uid must be positive" );
         }
-    } else if( type == "toggle_mutation" ) {
+    } else if( type == "toggle_mutation" || type == "set_move_mode" ) {
         request.text_argument = required_string( options, "id", type );
         if( request.text_argument.empty() ) {
-            throw std::invalid_argument( "game.actions.enqueue toggle_mutation id cannot be empty" );
+            throw std::invalid_argument( "game.actions.enqueue '" + type + "' id cannot be empty" );
         }
-    } else if( type != "wait" && type != "cancel_activity" ) {
+        if( type == "set_move_mode" && !valid_move_mode_id( request.text_argument ) ) {
+            throw std::invalid_argument( "game.actions.enqueue set_move_mode id is invalid" );
+        }
+    } else if( type != "wait" && type != "cancel_activity" && type != "cycle_move_mode" ) {
         throw std::invalid_argument( "game.actions.enqueue action type is not allowed: " + type );
     }
 
@@ -297,6 +310,23 @@ bool dispatch_action( const action_request &request )
             throw std::runtime_error( "the current activity is not interruptible" );
         }
         player.cancel_activity();
+        return false;
+    }
+    if( request.type == "cycle_move_mode" ) {
+        player.cycle_desired_move_mode();
+        return false;
+    }
+    if( request.type == "set_move_mode" ) {
+        const move_mode_id mode( request.text_argument );
+        if( !mode.is_valid() ) {
+            throw std::runtime_error( "movement mode id was not found" );
+        }
+        if( !player.can_switch_to( mode ) ) {
+            throw std::runtime_error( "movement mode is not currently available" );
+        }
+        if( player.get_desired_move_mode() != mode ) {
+            player.set_desired_movement_mode( mode );
+        }
         return false;
     }
     if( request.type == "use_item" ) {

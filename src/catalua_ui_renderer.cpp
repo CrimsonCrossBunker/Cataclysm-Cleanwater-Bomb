@@ -1,6 +1,7 @@
 #include "catalua_ui_renderer.h"
 
 #include <stdexcept>
+#include <unordered_set>
 
 namespace cata::lua_ui
 {
@@ -40,6 +41,8 @@ script_ui_capability capability_from_name( std::string_view name )
         return script_ui_capability::tooltips;
     } else if( name == "virtualization" ) {
         return script_ui_capability::virtualization;
+    } else if( name == "radial_selection" ) {
+        return script_ui_capability::radial_selection;
     }
     return static_cast<script_ui_capability>( 0 );
 }
@@ -243,6 +246,25 @@ std::string script_ui_context::input_text_id( const std::string &id, const std::
         const std::string &value ) const
 {
     return renderer_.input_text( id, label, value );
+}
+
+std::string script_ui_context::radial_select_id(
+    const std::string &id, const std::string &center_label,
+    const std::vector<script_ui_radial_option> &options ) const
+{
+    if( id.empty() || center_label.empty() || options.empty() || options.size() > 8 ) {
+        throw std::invalid_argument(
+            "ctx:radial_select_id requires an id, center label, and 1..8 options" );
+    }
+    std::unordered_set<std::string> option_ids;
+    for( const script_ui_radial_option &option : options ) {
+        if( option.id.empty() || option.label.empty() || option.id.size() > 64 ||
+            !option_ids.insert( option.id ).second ) {
+            throw std::invalid_argument(
+                "ctx:radial_select_id option ids must be unique, non-empty, and at most 64 bytes" );
+        }
+    }
+    return renderer_.radial_select( id, center_label, options );
 }
 
 void script_ui_context::child( const std::string &id, double height,

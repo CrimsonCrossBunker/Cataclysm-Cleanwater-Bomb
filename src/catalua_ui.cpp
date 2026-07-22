@@ -479,6 +479,36 @@ sol::table lua_runtime_status( sol::this_state lua )
     return result;
 }
 
+std::string lua_radial_select( script_ui_context &context, const std::string &id,
+                               const std::string &center_label, const sol::table &lua_options )
+{
+    const std::size_t count = lua_options.size();
+    if( count == 0 || count > 8 ) {
+        throw std::invalid_argument( "ctx:radial_select_id requires 1..8 options" );
+    }
+    std::vector<script_ui_radial_option> options;
+    options.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object raw_option = lua_options[index];
+        if( !raw_option.valid() || raw_option.get_type() != sol::type::table ) {
+            throw std::invalid_argument( "ctx:radial_select_id options must be an array of tables" );
+        }
+        const sol::table option = raw_option.as<sol::table>();
+        const sol::object raw_id = option["id"];
+        const sol::object raw_label = option["label"];
+        if( !raw_id.valid() || raw_id.get_type() != sol::type::string ||
+            !raw_label.valid() || raw_label.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "ctx:radial_select_id options require string id and label fields" );
+        }
+        options.push_back( script_ui_radial_option{
+            raw_id.as<std::string>(), raw_label.as<std::string>(),
+            option.get_or( "enabled", true ), option.get_or( "selected", false )
+        } );
+    }
+    return context.radial_select_id( id, center_label, options );
+}
+
 void initialize_state( runtime_state &state, const std::vector<fs::path> &module_roots )
 {
     state.module_roots = module_roots;
@@ -529,6 +559,7 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
         "input_float_id", &script_ui_context::input_float_id,
         "input_text", &script_ui_context::input_text,
         "input_text_id", &script_ui_context::input_text_id,
+        "radial_select_id", &lua_radial_select,
         "child", &script_ui_context::child,
         "table", &script_ui_context::table,
         "table_next_row", &script_ui_context::table_next_row,
@@ -1090,7 +1121,8 @@ bool submit_android_interaction( const std::string &widget_id,
     const bool valid_value = encoded_value == "click" || encoded_value.rfind( "bool:", 0 ) == 0 ||
                              encoded_value.rfind( "int:", 0 ) == 0 ||
                              encoded_value.rfind( "number:", 0 ) == 0 ||
-                             encoded_value.rfind( "text:", 0 ) == 0;
+                             encoded_value.rfind( "text:", 0 ) == 0 ||
+                             encoded_value.rfind( "select:", 0 ) == 0;
     if( !valid_value ) {
         return false;
     }
@@ -1168,6 +1200,8 @@ void publish_android_snapshot()
         surface.default_width = hud.default_width;
         surface.default_height = hud.default_height;
         surface.interactive = hud.interactive;
+        surface.background = hud.background;
+        surface.title_bar = hud.title_bar;
         surface.movable = hud.movable;
         surface.scalable = hud.scalable;
         surface.user_toggleable = hud.user_toggleable;

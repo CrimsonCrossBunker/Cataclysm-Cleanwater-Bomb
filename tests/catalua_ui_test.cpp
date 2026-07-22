@@ -12,6 +12,7 @@
 #include "path_info.h"
 #include "weather.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -45,7 +46,8 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
                 static_cast<std::uint32_t>( capability::trees ) |
                 static_cast<std::uint32_t>( capability::modals ) |
                 static_cast<std::uint32_t>( capability::tooltips ) |
-                static_cast<std::uint32_t>( capability::virtualization ),
+                static_cast<std::uint32_t>( capability::virtualization ) |
+                static_cast<std::uint32_t>( capability::radial_selection ),
                 false, true
             };
         }
@@ -127,6 +129,16 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
                                 const std::string &value ) override {
             last_widget_id = id;
             return value + "-edited";
+        }
+        std::string radial_select(
+            const std::string &id, const std::string &,
+            const std::vector<cata::lua_ui::script_ui_radial_option> &options ) override {
+            last_widget_id = id;
+            const auto found = std::find_if( options.begin(), options.end(),
+            []( const cata::lua_ui::script_ui_radial_option & option ) {
+                return option.enabled && !option.selected;
+            } );
+            return found == options.end() ? std::string() : found->id;
         }
         void child( const std::string &id, double,
                     const std::function<void()> &draw ) override {
@@ -321,6 +333,7 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( context.supports( "buttons" ) );
     CHECK( context.supports( "tables" ) );
     CHECK( context.supports( "virtualization" ) );
+    CHECK( context.supports( "radial_selection" ) );
     CHECK_FALSE( context.supports( "text_input" ) );
     CHECK_FALSE( context.supports( "unknown" ) );
 
@@ -346,6 +359,12 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( context.input_int( "count", 5 ) == 6 );
     CHECK( context.input_float( "ratio", 0.5 ) == 1.0 );
     CHECK( context.input_text( "name", "value" ) == "value-edited" );
+    const std::vector<cata::lua_ui::script_ui_radial_option> radial_options = {
+        { "walk", "Walk", true, true },
+        { "run", "Run", true, false }
+    };
+    CHECK( context.radial_select_id( "movement", "Walk", radial_options ) == "run" );
+    CHECK( renderer.last_widget_id == "movement" );
 
     CHECK( context.button_id( "apply_action", "Apply translated" ) );
     CHECK( renderer.calls.back() == "button:apply_action:Apply translated" );
@@ -397,7 +416,8 @@ TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
         { "surface/apply", "click" },
         { "surface/enabled", "bool:0" },
         { "surface/count", "int:7" },
-        { "surface/name", "text:原生控件" }
+        { "surface/name", "text:原生控件" },
+        { "surface/movement", "select:run" }
     };
     const retained_interaction_reader reader = [&interactions]( const std::string & id )
     -> std::optional<std::string> {
@@ -422,13 +442,18 @@ TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
     CHECK_FALSE( context.checkbox_id( "enabled", "Enabled", true ) );
     CHECK( context.slider_int_id( "count", "Count", 2, 0, 10 ) == 7 );
     CHECK( context.input_text_id( "name", "Name", "old" ) == "原生控件" );
+    const std::vector<script_ui_radial_option> radial_options = {
+        { "walk", "行走\\n0.00 秒", true, true },
+        { "run", "奔跑\\n0.50 秒", true, false }
+    };
+    CHECK( context.radial_select_id( "movement", "行走", radial_options ) == "run" );
 
     int rendered_items = 0;
     context.virtual_list( 1000, 24.0, [&rendered_items]( int first, int last ) {
         rendered_items += last - first;
     } );
     CHECK( rendered_items == 200 );
-    REQUIRE( document.nodes.size() == 5 );
+    REQUIRE( document.nodes.size() == 6 );
     CHECK( document.nodes.back().type == "virtual_list" );
     CHECK( document.nodes.back().count == 1000 );
     CHECK( document.nodes.back().truncated );
@@ -436,6 +461,9 @@ TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
     const std::string json = retained_document_json( document );
     CHECK( json.find( "surface/apply" ) != std::string::npos );
     CHECK( json.find( "原生控件" ) != std::string::npos );
+    CHECK( json.find( "radial_select" ) != std::string::npos );
+    CHECK( json.find( "奔跑" ) != std::string::npos );
+    CHECK( json.find( "\"selected\":true" ) != std::string::npos );
     CHECK( json.find( "\"truncated\":true" ) != std::string::npos );
 
     retained_ui_surface surface;
@@ -445,12 +473,16 @@ TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
     surface.anchor = "bottom_right";
     surface.default_width = 0.31;
     surface.default_height = 0.22;
+    surface.background = false;
+    surface.title_bar = true;
     surface.movable = false;
     surface.scalable = false;
     surface.user_toggleable = false;
     const std::string surfaces_json = retained_surfaces_json( { surface }, 7, {} );
     CHECK( surfaces_json.find( "\"defaultWidth\":0.31" ) != std::string::npos );
     CHECK( surfaces_json.find( "\"defaultHeight\":0.22" ) != std::string::npos );
+    CHECK( surfaces_json.find( "\"background\":false" ) != std::string::npos );
+    CHECK( surfaces_json.find( "\"titleBar\":true" ) != std::string::npos );
     CHECK( surfaces_json.find( "\"movable\":false" ) != std::string::npos );
     CHECK( surfaces_json.find( "\"scalable\":false" ) != std::string::npos );
     CHECK( surfaces_json.find( "\"userToggleable\":false" ) != std::string::npos );
@@ -600,9 +632,9 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v2", "[lua][ui][integration]" )
     const cata::lua_ui::runtime_status status = cata::lua_ui::status();
     CHECK( status.loaded );
     CHECK( status.generation > 0 );
-    CHECK( status.page_count >= 1 );
-    CHECK( status.hud_count >= 1 );
-    CHECK( status.event_handler_count >= 1 );
+    CHECK( status.page_count == 0 );
+    CHECK( status.hud_count == 3 );
+    CHECK( status.event_handler_count == 0 );
     CHECK( status.memory_used > 0 );
     CHECK( status.memory_used <= status.memory_limit );
 
@@ -685,6 +717,13 @@ ui.page("retained_test", "Retained test", function(ctx)
     if ctx:button_id("apply", "Apply") then
         game.state_set("test.retained_clicked", true)
     end
+    local movement = ctx:radial_select_id("movement", "Walk", {
+        { id = "walk", label = "Walk", enabled = true, selected = true },
+        { id = "run", label = "Run", enabled = true, selected = false }
+    })
+    if movement ~= "" then
+        game.state_set("test.retained_movement", movement)
+    end
 end)
 ui.hud("editable_hud", {
     title = "Editable HUD",
@@ -693,6 +732,8 @@ ui.hud("editable_hud", {
     default_y = 20,
     default_width = 0.31,
     default_height = 0.22,
+    background = false,
+    title_bar = true,
     movable = false,
     scalable = false,
     user_toggleable = false
@@ -710,6 +751,8 @@ end)
     CHECK( snapshot.find( "hud:editable_hud" ) != std::string::npos );
     CHECK( snapshot.find( "\"defaultWidth\":0.31" ) != std::string::npos );
     CHECK( snapshot.find( "\"defaultHeight\":0.22" ) != std::string::npos );
+    CHECK( snapshot.find( "\"background\":false" ) != std::string::npos );
+    CHECK( snapshot.find( "\"titleBar\":true" ) != std::string::npos );
     CHECK( snapshot.find( "\"movable\":false" ) != std::string::npos );
     CHECK( snapshot.find( "\"scalable\":false" ) != std::string::npos );
     CHECK( snapshot.find( "\"userToggleable\":false" ) != std::string::npos );
@@ -717,12 +760,16 @@ end)
     CHECK( snapshot.find( "\"type\":\"table\"" ) != std::string::npos );
     CHECK( snapshot.find( "\"type\":\"tabs\"" ) != std::string::npos );
     CHECK( snapshot.find( "\"type\":\"virtual_list\"" ) != std::string::npos );
+    CHECK( snapshot.find( "page:retained_test/movement" ) != std::string::npos );
 
     REQUIRE( cata::lua_ui::submit_android_interaction(
                  "page:retained_test/apply", "click" ) );
+    REQUIRE( cata::lua_ui::submit_android_interaction(
+                 "page:retained_test/movement", "select:run" ) );
     cata::lua_ui::publish_android_snapshot();
     script.write( R"lua(
 assert(game.state_get("test.retained_clicked", false) == true)
+assert(game.state_get("test.retained_movement", "") == "run")
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( cata::lua_ui::status().callback_count == 0 );
@@ -766,9 +813,31 @@ assert(math.type(player.stamina) == "integer")
 assert(math.type(player.stamina_max) == "integer")
 assert(type(player.kcal_percent) == "number")
 assert(type(player.bionic_power_kj) == "number")
+assert(type(player.movement_mode_id) == "string")
+assert(type(player.movement_mode_name) == "string")
+assert(type(player.desired_movement_mode_id) == "string")
+assert(type(player.desired_movement_mode_name) == "string")
+assert(type(player.movement_mode_pending) == "boolean")
 assert(math.type(player.x) == "integer")
 assert(game.player_stats().name == player.name)
 assert_plain_snapshot(player)
+
+local movement = game.movement_modes_snapshot()
+assert(type(movement.items) == "table")
+assert(math.type(movement.count) == "integer")
+assert(movement.count == #movement.items)
+assert(type(movement.current_id) == "string")
+assert(type(movement.desired_id) == "string")
+for _, mode in ipairs(movement.items) do
+    assert(type(mode.id) == "string")
+    assert(type(mode.name) == "string")
+    assert(type(mode.available) == "boolean")
+    assert(type(mode.current) == "boolean")
+    assert(type(mode.desired) == "boolean")
+    assert(math.type(mode.switch_moves) == "integer")
+    assert(type(mode.switch_seconds) == "number")
+end
+assert_plain_snapshot(movement)
 
 local clock = game.time_snapshot()
 assert(type(clock) == "table")
@@ -1040,6 +1109,10 @@ events.on("game_begin", function(event)
 
     local cancel_id = game.actions.enqueue("cancel_activity")
     assert(math.type(cancel_id) == "integer")
+    local set_mode_id = game.actions.enqueue("set_move_mode", { id = "walk" })
+    assert(math.type(set_mode_id) == "integer")
+    local cycle_id = game.actions.enqueue("cycle_move_mode")
+    assert(math.type(cycle_id) == "integer")
 
     assert(pcall(function()
         game.actions.enqueue("move", { direction = "sideways" })
@@ -1048,32 +1121,50 @@ events.on("game_begin", function(event)
         game.actions.enqueue("use_item", { uid = 0 })
     end) == false)
     assert(pcall(function()
+        game.actions.enqueue("set_move_mode", { id = "../run" })
+    end) == false)
+    assert(pcall(function()
         game.actions.enqueue("unknown")
     end) == false)
 
     local queued = game.actions.status(0)
-    assert(queued.pending_count == 1)
-    assert(#queued.pending == 1)
+    assert(queued.pending_count == 3)
+    assert(#queued.pending == 3)
     assert(queued.pending[1].type == "cancel_activity")
     assert(queued.pending[1].status == "queued")
+    assert(queued.pending[2].type == "set_move_mode")
+    assert(queued.pending[2].status == "queued")
+    assert(queued.pending[3].type == "cycle_move_mode")
+    assert(queued.pending[3].status == "queued")
     assert(queued.result_count == 1)
     assert(#queued.results == 0)
 end)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 
+    avatar &player = get_avatar();
+    const move_mode_id original_desired_mode = player.get_desired_move_mode();
+    player.set_desired_movement_mode( move_mode_id( "walk" ) );
+    const move_mode_id desired_mode_before = player.get_desired_move_mode();
     get_event_bus().send<event_type::game_begin>( "lua-action-test" );
     const std::optional<bool> handled = cata::lua_ui::process_next_action();
     REQUIRE( handled );
     CHECK_FALSE( *handled );
+    const std::optional<bool> set_mode = cata::lua_ui::process_next_action();
+    REQUIRE( set_mode );
+    CHECK_FALSE( *set_mode );
+    const std::optional<bool> cycled = cata::lua_ui::process_next_action();
+    REQUIRE( cycled );
+    CHECK_FALSE( *cycled );
+    CHECK( player.get_desired_move_mode() != desired_mode_before );
     CHECK_FALSE( cata::lua_ui::process_next_action() );
 
     script.write( R"lua(
 local status = game.actions.status(1000000)
 assert(status.pending_count == 0)
-assert(status.result_count == 2)
+assert(status.result_count == 4)
 assert(status.result_limit == 128)
-assert(#status.results == 2)
+assert(#status.results == 4)
 assert(status.results[1].type == "wait")
 assert(status.results[1].status == "canceled")
 assert(status.results[1].action_taken == false)
@@ -1081,9 +1172,16 @@ assert(status.results[2].type == "cancel_activity")
 assert(status.results[2].status == "failed")
 assert(status.results[2].action_taken == false)
 assert(string.find(status.results[2].error, "no activity", 1, true) ~= nil)
+assert(status.results[3].type == "set_move_mode")
+assert(status.results[3].status == "succeeded")
+assert(status.results[3].action_taken == false)
+assert(status.results[4].type == "cycle_move_mode")
+assert(status.results[4].status == "succeeded")
+assert(status.results[4].action_taken == false)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 
+    player.set_desired_movement_mode( original_desired_mode );
     cata::lua_ui::shutdown();
     CHECK_FALSE( cata::lua_ui::process_next_action() );
 }
