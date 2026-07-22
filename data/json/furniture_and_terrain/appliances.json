@@ -1330,7 +1330,8 @@
     "durability": 40,
     "damage_modifier": 10,
     "damage_reduction": { "all": 5 },
-    "flags": [ "APPLIANCE", "CARGO", "COVERED", "OBSTACLE", "AUTO_COOKER", "ENABLED_DRAINS_EPOWER" ],
+    "flags": [ "APPLIANCE", "CARGO", "COVERED", "OBSTACLE", "ENABLED_DRAINS_EPOWER" ],
+    "auto_process": { "actions": [ "COOK" ], "energy_mult": 1.0 },
     "size": "20 L",
     "epower": "-750 W",
     "requirements": {

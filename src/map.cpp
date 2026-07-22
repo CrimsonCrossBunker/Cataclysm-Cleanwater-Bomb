@@ -35,6 +35,7 @@
 #include "coords_fwd.h"
 #include "creature.h"
 #include "creature_tracker.h"
+#include "dialogue.h"
 #include "cuboid_rectangle.h"
 #include "cursesdef.h"
 #include "current_map.h"
@@ -2404,6 +2405,14 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
     tripoint_bub_ms above( p.xy(), p.z() + 1 );
     // Make sure that if we supported something and no longer do so, it falls down
     support_dirty( above );
+
+    // Auto-process furniture tile tracking
+    if( old_f.auto_process.has_value() ) {
+        auto_process_tiles.erase( p );
+    }
+    if( new_f.auto_process.has_value() ) {
+        auto_process_tiles.insert( p );
+    }
 
     return result;
 }
@@ -6953,7 +6962,7 @@ static void process_vehicle_items( vehicle &cur_veh, int part )
     vehicle_part &vp = cur_veh.part( part );
     const vpart_info &vpi = vp.info();
 
-    const bool auto_cooker_here = vpi.has_flag( VPFLAG_AUTO_COOKER ) && vp.enabled;
+    const bool auto_cooker_here = vpi.auto_process.has_value() && vp.enabled;
     if( auto_cooker_here ) {
         process_auto_cooker( cur_veh, part, here );
     }
@@ -10834,6 +10843,9 @@ void map::actualize( const tripoint_rel_sm &grid )
             if( !furn.emissions.empty() ) {
                 field_furn_locs.push_back( pnt );
             }
+            if( furn.auto_process.has_value() ) {
+                auto_process_tiles.insert( pnt );
+            }
             if( !terr.emissions.empty() ) {
                 field_ter_locs.push_back( pnt );
             }
@@ -13001,4 +13013,64 @@ const ter_str_id &drawsq_params::terrain_override() const
 const furn_str_id &drawsq_params::furniture_override() const
 {
     return furn_override;
+}
+void map::process_auto_process_furniture()
+{
+    for( auto it = auto_process_tiles.begin(); it != auto_process_tiles.end(); ) {
+        const tripoint_bub_ms &p = *it;
+        const furn_id &furn = this->furn( p );
+        if( furn == furn_str_id::NULL_ID() ) {
+            it = auto_process_tiles.erase( it );
+            continue;
+        }
+        const furn_t &f = furn.obj();
+        if( !f.auto_process.has_value() ) {
+            it = auto_process_tiles.erase( it );
+            continue;
+        }
+        const auto_process_station &station = *f.auto_process;
+        const int energy_per_turn_kj = std::max( 1, units::to_kilojoule<int>( station.power * 1_turns ) );
+
+        map_stack items = i_at( p );
+        for( item &it : items ) {
+            for( const auto_process_rule &rule : it.type->auto_process ) {
+                if( station.actions.count( rule.action ) == 0 ) {
+                    continue;
+                }
+                const int target_kj = units::to_kilojoule<int>( rule.energy_cost * station.energy_mult );
+                const std::string var_name = "auto_process_" + rule.action;
+                int energy_done = std::stoi( it.get_var( var_name, "0" ) );
+                if( energy_done >= target_kj ) {
+                    continue;
+                }
+                energy_done += std::min( energy_per_turn_kj, target_kj - energy_done );
+                it.set_var( var_name, std::to_string( energy_done ) );
+                if( energy_done >= target_kj ) {
+                    if( rule.results.empty() ) {
+                        it = item();
+                    } else {
+                        item first( rule.results.front(), calendar::turn );
+                        const bool single = rule.results.size() == 1;
+                        if( single && it.count_by_charges() ) {
+                            first.charges = it.charges;
+                        }
+                        first.set_relative_rot( it.get_relative_rot() );
+                        recipe rec;
+                        first.inherit_flags( it, rec );
+                        if( rule.action == "COOK" && it.is_comestible() ) {
+                            first.set_flag_recursive( flag_COOKED );
+                        }
+                        it = first;
+                        for( size_t ri = 1; ri < rule.results.size(); ri++ ) {
+                            add_item_or_charges( p, item( rule.results[ri], calendar::turn ) );
+                        }
+                    }
+// TODO: EOC hooks on completion
+// TODO: EOC hooks on completion
+                }
+                break;
+            }
+        }
+        ++it;
+    }
 }

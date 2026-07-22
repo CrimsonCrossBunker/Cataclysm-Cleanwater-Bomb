@@ -8663,26 +8663,22 @@ static bool is_sm_tile_outside( const tripoint_abs_ms &real_global_pos )
               sm->get_furn( p ).obj().has_flag( ter_furn_flag::TFLAG_INDOORS ) );
 }
 
-bool vehicle::is_auto_cookable( const item &it )
+const auto_process_rule *vehicle::find_auto_process_item( item &it,
+        const auto_process_station &station )
 {
-    return it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
-           !it.get_comestible()->cook_result.is_empty();
-}
-
-static item *find_unfinished_cookable( item &it )
-{
-    if( vehicle::is_auto_cookable( it ) ) {
-        const islot_comestible &comest = *it.get_comestible();
-        const int target_energy_kj = units::to_kilojoule<int>( comest.cook_cost_energy );
-        const int energy_done = std::stoi( it.get_var( "cook_energy_done", "0" ) );
-
-        if( energy_done < target_energy_kj ) {
-            return &it;
+    for( const auto_process_rule &rule : it.type->auto_process ) {
+        if( station.actions.count( rule.action ) == 0 ) {
+            continue;
+        }
+        const int target_kj = units::to_kilojoule<int>( rule.energy_cost * station.energy_mult );
+        const int done_kj = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
+        if( done_kj < target_kj ) {
+            return &rule;
         }
     }
 
     for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
-        item *found = find_unfinished_cookable( *content );
+        const auto_process_rule *found = find_auto_process_item( *content, station );
         if( found != nullptr ) {
             return found;
         }
@@ -8690,55 +8686,74 @@ static item *find_unfinished_cookable( item &it )
     return nullptr;
 }
 
-item *vehicle::auto_cooker_current_item( vehicle_part &vp )
+item *vehicle::auto_process_current_item( vehicle_part &vp )
 {
+    if( !vp.info().auto_process ) {
+        return nullptr;
+    }
+    const auto_process_station &station = *vp.info().auto_process;
     vehicle_stack items = get_items( vp );
     for( item &it : items ) {
-        item *found = find_unfinished_cookable( it );
-        if( found != nullptr ) {
-            return found;
+        if( find_auto_process_item( it, station ) != nullptr ) {
+            return &it;
         }
     }
     return nullptr;
 }
-
-void vehicle::finish_auto_cooked_item( item &it, const islot_comestible &comest )
+void vehicle::finish_auto_process_item( item &it, const auto_process_rule &rule,
+                                        const auto_process_station &station )
 {
-    item result( comest.cook_result, calendar::turn );
-    if( it.count_by_charges() ) {
-        result.charges = it.charges;
+    // Create results, replacing the input item with the first result
+    // and adding any extra results to the same container/tile
+    if( rule.results.empty() ) {
+        it = item();
+        return;
     }
 
-    result.set_relative_rot( it.get_relative_rot() );
+    item first_result( rule.results.front(), calendar::turn );
+    const bool single_result = rule.results.size() == 1;
+    if( single_result && it.count_by_charges() ) {
+        first_result.charges = it.charges;
+    }
+    first_result.set_relative_rot( it.get_relative_rot() );
 
     recipe rec;
-    result.inherit_flags( it, rec );
-    if( !result.has_flag( flag_NUTRIENT_OVERRIDE ) && !comest.cooks_like.is_empty() ) {
-        item component( comest.cooks_like, it.birthday(), 1 );
-        result.components.add( component );
-        result.recipe_charges = it.count();
+    first_result.inherit_flags( it, rec );
+
+    // COOK-specific backward compat: cooks_like + flag_COOKED
+    if( rule.action == "COOK" && it.is_comestible() ) {
+        const islot_comestible &comest = *it.get_comestible();
+        if( !first_result.has_flag( flag_NUTRIENT_OVERRIDE ) && !comest.cooks_like.is_empty() ) {
+            item component( comest.cooks_like, it.birthday(), 1 );
+            first_result.components.add( component );
+            first_result.recipe_charges = it.count();
+        }
+        first_result.set_flag_recursive( flag_COOKED );
     }
-    result.set_flag_recursive( flag_COOKED );
 
-    it = result;
+    it = first_result;
+
+    // EOC hooks
+// TODO: EOC hooks on completion
+// TODO: EOC hooks on completion
 }
-
-bool vehicle::advance_auto_cooker_item_once( item &it, int energy_per_turn_kj )
+bool vehicle::advance_auto_process_item( item &it, const auto_process_rule &rule,
+        int energy_per_turn_kj, const auto_process_station &station )
 {
-    const islot_comestible &comest = *it.get_comestible();
-    const int target_energy_kj = units::to_kilojoule<int>( comest.cook_cost_energy );
+    const int target_kj = units::to_kilojoule<int>( rule.energy_cost * station.energy_mult );
+    const std::string var_name = "auto_process_" + rule.action;
 
-    int energy_done = std::stoi( it.get_var( "cook_energy_done", "0" ) );
-    const int energy_remaining = target_energy_kj - energy_done;
+    int energy_done = std::stoi( it.get_var( var_name, "0" ) );
+    const int energy_remaining = target_kj - energy_done;
     if( energy_remaining > 0 ) {
         energy_done += std::min( energy_per_turn_kj, energy_remaining );
     }
 
-    it.set_var( "cook_energy_done", std::to_string( energy_done ) );
+    it.set_var( var_name, std::to_string( energy_done ) );
 
-    const bool finished = energy_done >= target_energy_kj;
+    const bool finished = energy_done >= target_kj;
     if( finished ) {
-        finish_auto_cooked_item( it, comest );
+        finish_auto_process_item( it, rule, station );
     }
     return finished;
 }
@@ -8747,24 +8762,36 @@ void vehicle::process_auto_cooker_part( map &here, int p )
 {
     static_cast<void>( here );
     vehicle_part &vp = parts[p];
-    item *current = auto_cooker_current_item( vp );
+    if( !vp.info().auto_process ) {
+        return;
+    }
+    const auto_process_station &station = *vp.info().auto_process;
+    vehicle_stack items = get_items( vp );
+    item *current = nullptr;
+    const auto_process_rule *rule = nullptr;
+    for( item &it : items ) {
+        rule = find_auto_process_item( it, station );
+        if( rule != nullptr ) {
+            current = &it;
+            break;
+        }
+    }
 
     if( current == nullptr ) {
         vp.enabled = false;
-        add_msg( m_info, _( "The electric cooker has finished and turns off." ) );
+        add_msg( m_info, _( "The auto-craft station has finished and turns off." ) );
         return;
     }
 
-    // The part's epower is drained by power_parts(); here we just advance cooking progress.
     const units::power cook_power = -vp.info().epower;
     const int energy_per_turn_kj = std::max( 1, power_to_energy_bat( cook_power, 1_turns ) );
-    advance_auto_cooker_item_once( *current, energy_per_turn_kj );
+    advance_auto_process_item( *current, *rule, energy_per_turn_kj, station );
 }
 
 void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elapsed )
 {
     vehicle_part &vp = parts[p];
-    if( !vp.enabled || !vp.info().has_flag( VPFLAG_AUTO_COOKER ) ) {
+    if( !vp.enabled || !vp.info().auto_process ) {
         return;
     }
 
@@ -8772,15 +8799,11 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
         return;
     }
 
-    // Pay the standby/accessory cost for all enabled drains over the elapsed period.
-    // The auto-cooker's epower is included here, so its cooking energy is already paid.
     const units::power standby_power = total_accessory_epower();
     if( standby_power < 0_W ) {
         const int standby_energy = std::abs( power_to_energy_bat( standby_power, elapsed ) );
         const int standby_deficit = discharge_battery( here, standby_energy );
         if( standby_deficit > 0 ) {
-            // Battery couldn't even cover standby drain. Shut everything down,
-            // matching power_parts() behavior when the battery dies.
             for( const vpart_reference &drain_vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
                 vehicle_part &pt = drain_vp.part();
                 if( pt.info().epower < 0_W ) {
@@ -8792,36 +8815,37 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
         }
     }
 
-    // Gather all unfinished cookable items in one scan (including items inside containers).
+    const auto_process_station &station = *vp.info().auto_process;
     struct pending_item {
         item *it;
-        int target_energy_kj;
+        const auto_process_rule *rule;
+        int target_kj;
         int energy_done;
     };
     std::vector<pending_item> pending;
     pending.reserve( 64 );
 
-    const auto gather_pending = [&]( item & it, auto & gather ) -> void {
-        if( is_auto_cookable( it ) )
-        {
-            const islot_comestible &comest = *it.get_comestible();
-            const int target_energy_kj = units::to_kilojoule<int>( comest.cook_cost_energy );
-            const int energy_done = std::stoi( it.get_var( "cook_energy_done", "0" ) );
-
-            if( energy_done < target_energy_kj ) {
-                pending.push_back( { &it, target_energy_kj, energy_done } );
+    const auto gather_pending = [&]( item & it, auto & gather, const auto_process_station & st ) -> void {
+        for( const auto_process_rule &rule : it.type->auto_process ) {
+            if( st.actions.count( rule.action ) == 0 ) {
+                continue;
+            }
+            const int target_kj = units::to_kilojoule<int>( rule.energy_cost * st.energy_mult );
+            const int done = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
+            if( done < target_kj ) {
+                pending.push_back( { &it, &rule, target_kj, done } );
+                return; // one pending entry per item per gather pass
             }
         }
-        for( item *content : it.all_items_top( pocket_type::CONTAINER ) )
-        {
-            gather( *content, gather );
+        for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
+            gather( *content, gather, st );
         }
     };
 
     {
         vehicle_stack items = get_items( vp );
         for( item &it : items ) {
-            gather_pending( it, gather_pending );
+            gather_pending( it, gather_pending, station );
         }
     }
 
@@ -8830,20 +8854,18 @@ void vehicle::catch_up_auto_cooker( map &here, int p, const time_duration &elaps
         return;
     }
 
-    // Cooking energy available over the elapsed time (already paid via the standby drain above).
     const units::power cook_power = -vp.info().epower;
     int energy_remaining = power_to_energy_bat( cook_power, elapsed );
 
-    // Apply energy to items in order until exhausted.
     for( pending_item &pi : pending ) {
-        const int needed = pi.target_energy_kj - pi.energy_done;
+        const int needed = pi.target_kj - pi.energy_done;
         const int applied = std::min( needed, energy_remaining );
         pi.energy_done += applied;
         energy_remaining -= applied;
 
-        pi.it->set_var( "cook_energy_done", std::to_string( pi.energy_done ) );
-        if( pi.energy_done >= pi.target_energy_kj ) {
-            finish_auto_cooked_item( *pi.it, *pi.it->get_comestible() );
+        pi.it->set_var( "auto_process_" + pi.rule->action, std::to_string( pi.energy_done ) );
+        if( pi.energy_done >= pi.target_kj ) {
+            finish_auto_process_item( *pi.it, *pi.rule, station );
         }
         if( energy_remaining <= 0 ) {
             break;
@@ -8961,7 +8983,7 @@ void vehicle::update_time( map &here, const time_point &update_to )
 
     // Catch up auto cookers that were running while the vehicle was off-map.
     for( const vpart_reference &vp : get_all_parts() ) {
-        if( vp.info().has_flag( VPFLAG_AUTO_COOKER ) && vp.part().enabled ) {
+        if( vp.info().auto_process.has_value() && vp.part().enabled ) {
             catch_up_auto_cooker( here, vp.part_index(), elapsed );
         }
     }

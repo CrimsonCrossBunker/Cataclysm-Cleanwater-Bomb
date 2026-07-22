@@ -301,10 +301,6 @@
     "type": "json_flag"
   },
   {
-    "id": "AUTO_COOKER",
-    "type": "json_flag"
-  },
-  {
     "id": "AUTOPILOT",
     "type": "json_flag"
   },

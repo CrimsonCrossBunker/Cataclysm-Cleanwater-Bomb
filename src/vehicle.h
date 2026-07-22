@@ -2658,12 +2658,15 @@ class vehicle
         // relative to vehicle pos, color and text}.
         std::vector<std::tuple<point_rel_ms, int, std::string>> get_debug_overlay_data() const;
 
-        // Auto-cooker helpers.  Defined in vehicle.cpp so they can be reused by
+        // Auto-craft helpers.  Defined in vehicle.cpp so they can be reused by
         // the off-map time catch-up logic.
-        static bool is_auto_cookable( const item &it );
-        item *auto_cooker_current_item( vehicle_part &vp );
-        static void finish_auto_cooked_item( item &it, const islot_comestible &comest );
-        static bool advance_auto_cooker_item_once( item &it, int energy_per_turn_kj );
+        static const auto_process_rule *find_auto_process_item( item &it,
+                const auto_process_station &station );
+        item *auto_process_current_item( vehicle_part &vp );
+        static void finish_auto_process_item( item &it, const auto_process_rule &rule,
+                                              const auto_process_station &station );
+        static bool advance_auto_process_item( item &it, const auto_process_rule &rule,
+                                               int energy_per_turn_kj, const auto_process_station &station );
 };
 
 // For reference what each function is supposed to do, see their implementation in

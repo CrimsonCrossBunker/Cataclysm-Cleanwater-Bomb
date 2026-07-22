@@ -1013,6 +1013,7 @@ void game::simulate_turn_suffix()
     m.vehmove();
     m.process_fields();
     m.process_items();
+    m.process_auto_process_furniture();
     explosion_handler::process_explosions();
     m.creature_in_field( u );
 

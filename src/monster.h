@@ -117,6 +117,8 @@ class monster : public Creature
         void try_reproduce();
         void try_biosignature();
         void refill_udders();
+        time_point get_udder_timer() const;
+        void set_udder_timer( const time_point &t );
         void spawn( const tripoint_bub_ms &p );
         void spawn( const tripoint_abs_ms &loc );
         std::vector<material_id> get_absorb_material() const;

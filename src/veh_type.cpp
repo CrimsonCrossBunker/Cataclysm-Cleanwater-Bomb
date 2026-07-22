@@ -148,7 +148,6 @@ static const std::unordered_map<std::string, vpart_bitflags> vpart_bitflag_map =
     { "AUTOCLAVE", VPFLAG_AUTOCLAVE },
     { "WASHING_MACHINE", VPFLAG_WASHING_MACHINE },
     { "DISHWASHER", VPFLAG_DISHWASHER },
-    { "AUTO_COOKER", VPFLAG_AUTO_COOKER },
     { "FLUIDTANK", VPFLAG_FLUIDTANK },
     { "REACTOR", VPFLAG_REACTOR },
     { "RAIL", VPFLAG_RAIL },
@@ -288,6 +287,16 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
     optional( jo, was_loaded, "floor_bedding_warmth", floor_bedding_warmth, 0_C_delta );
     optional( jo, was_loaded, "bonus_fire_warmth_feet", bonus_fire_warmth_feet, 0.6_C_delta );
     optional( jo, was_loaded, "activatable_eoc", activatable_eoc );
+
+    if( jo.has_object( "auto_process" ) ) {
+        const JsonObject &ap = jo.get_object( "auto_process" );
+        auto_process_station station;
+        mandatory( ap, false, "actions", station.actions, string_reader{} );
+        optional( ap, false, "energy_mult", station.energy_mult, 1.0 );
+        optional( ap, false, "power", station.power, 0_W );
+        optional( ap, false, "completion_eoc", station.completion_eoc );
+        auto_process = station;
+    }
 
     int enchant_num = 0;
     for( JsonValue jv : jo.get_array( "enchantments" ) ) {

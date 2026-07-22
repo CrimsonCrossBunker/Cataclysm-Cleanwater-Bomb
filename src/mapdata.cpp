@@ -1682,6 +1682,17 @@ void furn_t::load( const JsonObject &jo, const std::string &src )
     optional( jo, was_loaded, "max_volume", max_volume, volume_reader(), DEFAULT_TILE_VOLUME );
     optional( jo, was_loaded, "crafting_pseudo_item", crafting_pseudo_item, itype_id() );
     optional( jo, was_loaded, "deployed_item", deployed_item );
+
+    if( jo.has_object( "auto_process" ) ) {
+        const JsonObject &ap = jo.get_object( "auto_process" );
+        auto_process_station station;
+        mandatory( ap, false, "actions", station.actions, string_reader{} );
+        optional( ap, false, "energy_mult", station.energy_mult, 1.0 );
+        optional( ap, false, "power", station.power, 0_W );
+        optional( ap, false, "completion_eoc", station.completion_eoc );
+        auto_process = station;
+    }
+
     load_symbol_color( jo, "furniture " + id.str() );
 
     optional( jo, was_loaded, "open", open, string_id_reader<furn_t> {}, furn_str_id::NULL_ID() );
