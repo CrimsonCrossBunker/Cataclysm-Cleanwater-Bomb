@@ -58,6 +58,7 @@ static const ammo_effect_str_id ammo_effect_HEAVY_HIT( "HEAVY_HIT" );
 static const ammo_effect_str_id ammo_effect_JET( "JET" );
 static const ammo_effect_str_id ammo_effect_LASER( "LASER" );
 static const ammo_effect_str_id ammo_effect_LIGHTNING( "LIGHTNING" );
+static const ammo_effect_str_id ammo_effect_MAGIC( "MAGIC" );
 static const ammo_effect_str_id ammo_effect_PLASMA( "PLASMA" );
 static const ammo_effect_str_id ammo_effect_MUZZLE_SMOKE( "MUZZLE_SMOKE" );
 static const ammo_effect_str_id ammo_effect_NO_EMBED( "NO_EMBED" );
@@ -79,7 +80,6 @@ static const damage_type_id damage_stab( "stab" );
 static const itype_id itype_glass_shard( "glass_shard" );
 
 static const json_character_flag json_flag_HARDTOHIT( "HARDTOHIT" );
-
 static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &attack,
                                       projectile &proj_arg )
 {
@@ -362,11 +362,20 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         add_msg_debug( debugmode::DF_RANGED, "Target size for tile: %.2f", target_size );
     }
 
-    projectile_attack_aim aim = projectile_attack_roll( dispersion, range, target_size );
+    dispersion_sources shot_dispersion = dispersion;
+    if( target_critter != nullptr && !wp_attack.is_thrown &&
+        !proj_arg.proj_effects.count( ammo_effect_MAGIC ) ) {
+        const double target_weight = projectile_target_mobility_weight( *target_critter, *here, origin );
+        shot_dispersion.add_multiplier( target_weight );
+        add_msg_debug( debugmode::DF_RANGED, "Target mobility/awareness dispersion multiplier: %.3f",
+                       target_weight );
+    }
+
+    projectile_attack_aim aim = projectile_attack_roll( shot_dispersion, range, target_size );
 
     if( target_critter && target_critter->as_character() &&
         target_critter->as_character()->has_flag( json_flag_HARDTOHIT ) && !hard_to_hit_bypass ) {
-        projectile_attack_aim lucky_aim = projectile_attack_roll( dispersion, range, target_size );
+        projectile_attack_aim lucky_aim = projectile_attack_roll( shot_dispersion, range, target_size );
         // If the target is lucky, choose the result that misses by more.
         if( lucky_aim.missed_by > aim.missed_by ) {
             aim = lucky_aim;

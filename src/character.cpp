@@ -1117,7 +1117,7 @@ double Character::aim_per_move( const item &gun, double recoil,
     aim_speed = std::min( aim_speed, base_aim_speed_cap * aim_cache.aim_factor_from_length );
 
     // Just a raw scaling factor.
-    aim_speed *= 3.0;
+    aim_speed *= 2.75;
 
     // Minimum improvement is 0.01MoA.  This is just to prevent data anomalies
     aim_speed = std::max( aim_speed, MIN_RECOIL_IMPROVEMENT );

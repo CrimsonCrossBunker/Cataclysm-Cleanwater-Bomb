@@ -104,6 +104,7 @@ static const ammo_effect_str_id ammo_effect_IGNITE( "IGNITE" );
 static const ammo_effect_str_id ammo_effect_LASER( "LASER" );
 static const ammo_effect_str_id ammo_effect_LIGHTNING( "LIGHTNING" );
 static const ammo_effect_str_id ammo_effect_LIQUID( "LIQUID" );
+static const ammo_effect_str_id ammo_effect_MAGIC( "MAGIC" );
 static const ammo_effect_str_id ammo_effect_MATCHHEAD( "MATCHHEAD" );
 static const ammo_effect_str_id ammo_effect_NON_FOULING( "NON_FOULING" );
 static const ammo_effect_str_id ammo_effect_NO_EMBED( "NO_EMBED" );
@@ -168,6 +169,74 @@ static const flag_id json_flag_FILTHY( "FILTHY" );
 static const flag_id json_flag_LEVER_ACTION( "LEVER_ACTION" );
 static const flag_id json_flag_PUMP_ACTION( "PUMP_ACTION" );
 static const flag_id json_flag_SINGLE_ACTION( "SINGLE_ACTION" );
+
+// Returns whether the target is currently ignoring the attacker.
+static bool target_ignores_projectile_attacker( const Creature &target, const Creature &attacker )
+{
+    if( const monster *mon = target.as_monster() ) {
+        if( const Character *character_attacker = attacker.as_character() ) {
+            switch( mon->attitude( character_attacker ) ) {
+                case MATT_FRIEND:
+                case MATT_FPASSIVE:
+                case MATT_IGNORE:
+                    return true;
+                case MATT_FLEE:
+                case MATT_FOLLOW:
+                case MATT_ATTACK:
+                    return false;
+                case MATT_NULL:
+                case NUM_MONSTER_ATTITUDES:
+                    return true;
+            }
+        }
+    }
+
+    if( const npc *target_npc = target.as_npc() ) {
+        if( attacker.is_avatar() ) {
+            switch( target_npc->get_attitude() ) {
+                case NPCATT_KILL:
+                case NPCATT_FLEE:
+                case NPCATT_FLEE_TEMP:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+    }
+
+    return target.attitude_to( attacker ) != Creature::Attitude::HOSTILE;
+}
+
+double projectile_target_mobility_weight( const Creature &target, const map &here,
+        const Creature *attacker )
+{
+    if( target.has_flag( mon_flag_IMMOBILE ) || target.has_flag( json_flag_CANNOT_MOVE ) ||
+        target.has_effect_with_flag( json_flag_CANNOT_MOVE ) ) {
+        return 1.0;
+    }
+
+    double target_weight = 0.0;
+    target_weight += 0.1;
+
+    if( attacker != nullptr && target.sees( here, *attacker ) ) {
+        double awareness_weight = 0.25;
+        if( target_ignores_projectile_attacker( target, *attacker ) ) {
+            awareness_weight *= 0.5;
+        }
+        target_weight += awareness_weight;
+    }
+
+    const double target_speed = std::max( 1.0, static_cast<double>( target.get_speed() ) );
+    const double attacker_speed = attacker != nullptr ?
+                                  std::max( 1.0, static_cast<double>( attacker->get_speed() ) ) : 100.0;
+    // Attacker speed improves the ability to respond to a moving target, but
+    // with sharply diminishing returns.  Equal speeds produce 1.0; a 2x
+    // attacker advantage produces 0.75, and a 5x advantage produces 0.6.
+    const double speed_factor = 0.5 + 0.5 * target_speed / attacker_speed;
+    target_weight *= speed_factor;
+
+    return std::clamp( 1.0 + target_weight, 1.0, 2.5 );
+}
 
 static const material_id material_budget_steel( "budget_steel" );
 static const material_id material_budget_steel_chain( "budget_steel_chain" );
@@ -289,6 +358,8 @@ class target_ui
 
         int get_sight_dispersion() const;
 
+        double get_predicted_recoil() const;
+
     private:
         enum class Status : int {
             Good, // All UI elements are enabled
@@ -333,6 +404,8 @@ class target_ui
         // but increases the further away the new aim point will be
         // relative to the current one.
         double predicted_recoil = 0;
+        // Position where the player last confirmed their aim.
+        std::optional<tripoint_bub_ms> last_aim_pos;
 
         // For AOE spells, list of tiles affected by the spell
         // relevant for TargetMode::Spell
@@ -2117,10 +2190,22 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
         aim_types = you.get_aim_types( weapon );
     }
 
+    const double start_recoil = mode == target_ui::TargetMode::Fire ?
+                                ui.get_predicted_recoil() : you.recoil;
+
+    double target_mobility_multiplier = 1.0;
+    if( mode == target_ui::TargetMode::Fire ) {
+        const Creature *target_critter = get_creature_tracker().creature_at( pos, true );
+        if( target_critter != nullptr && !weapon.ammo_effects().count( ammo_effect_MAGIC ) ) {
+            target_mobility_multiplier = projectile_target_mobility_weight( *target_critter,
+                                        get_map(), &you );
+        }
+    }
+
     // predict how long it'll take to reach from current recoil
     // to the ui's selected default aim mode threshold.
     const recoil_prediction aim_to_selected = predict_recoil( you, weapon, target,
-            ui.get_sight_dispersion(), ui.get_selected_aim_type(), you.recoil );
+            ui.get_sight_dispersion(), ui.get_selected_aim_type(), start_recoil );
 
     const double selected_steadiness = calc_steadiness( you, weapon, pos, aim_to_selected.recoil );
 
@@ -2139,7 +2224,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
             prediction.moves = throw_moves;
         } else {
             prediction.moves = predict_recoil( you, weapon, target, ui.get_sight_dispersion(), aim_type,
-                                               you.recoil ).moves + time_to_attack( you, *weapon.type )
+                                               start_recoil ).moves + time_to_attack( you, *weapon.type )
                                + RAS_time( you, load_loc );
         }
 
@@ -2157,12 +2242,14 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
             // predict how long it'll take to reach from current recoil
             // to the current aim mode's threshold.
             const recoil_prediction aim_to_type = ( aim_type == ui.get_selected_aim_type() ) ? aim_to_selected :
-                                                  predict_recoil( you, weapon, target, ui.get_sight_dispersion(), aim_type, you.recoil );
+                                                  predict_recoil( you, weapon, target, ui.get_sight_dispersion(), aim_type,
+                                                                  start_recoil );
             prediction.steadiness = calc_steadiness( you, weapon, pos, aim_to_type.recoil );
         }
 
         // make a copy of the given dispersion, apply the aiming and calculate hit confidence
         dispersion_sources current_dispersion = dispersion;
+        current_dispersion.add_multiplier( target_mobility_multiplier );
         current_dispersion.add_range( aim_type.has_threshold ? aim_type.threshold :
                                       aim_to_selected.recoil );
 
@@ -3027,6 +3114,9 @@ target_handler::trajectory target_ui::run()
 
     // Initialize cursor position
     src = you->pos_bub();
+    if( mode == TargetMode::Fire ) {
+        last_aim_pos = you->last_target_pos ? here.get_bub( *you->last_target_pos ) : src;
+    }
     update_target_list();
 
     if( mode == TargetMode::Reach && targets.empty() ) {
@@ -3890,16 +3980,8 @@ void target_ui::recalc_aim_turning_penalty()
         return;
     }
 
-    double curr_recoil = you->recoil;
-    tripoint_bub_ms curr_recoil_pos;
-    const Creature *lt_ptr = you->last_target.lock().get();
-    if( lt_ptr ) {
-        curr_recoil_pos = lt_ptr->pos_bub();
-    } else if( you->last_target_pos ) {
-        curr_recoil_pos = get_map().get_bub( *you->last_target_pos );
-    } else {
-        curr_recoil_pos = src;
-    }
+    const double curr_recoil = you->recoil;
+    const tripoint_bub_ms curr_recoil_pos = last_aim_pos.value_or( src );
 
     if( curr_recoil_pos == dst ) {
         // We're aiming at that point right now, no penalty
@@ -3918,8 +4000,24 @@ void target_ui::recalc_aim_turning_penalty()
         const units::angle angle_desired = coord_to_angle( src, dst );
         const units::angle phi = normalize( angle_curr - angle_desired );
         const units::angle angle = std::min( phi, 360.0_degrees - phi );
-        predicted_recoil =
-            std::min( MAX_RECOIL, curr_recoil + to_degrees( angle ) * recoil_per_degree );
+        const double angle_ratio = clamp( to_degrees( angle ) / 180.0, 0.0, 1.0 );
+        const double angle_penalty = to_degrees( angle ) * recoil_per_degree;
+
+        // A target moving along the same line may cause little or no angular
+        // change, but the previous aim point is still stale.  Keep this as a
+        // smaller contribution than the angle penalty and normalize it by
+        // range so that the same displacement is less significant at range.
+        const double displacement = last_aim_pos ? rl_dist_exact( *last_aim_pos, dst ) : 0.0;
+        const double target_range = std::max( 1.0, static_cast<double>( dist_fn( dst ) ) );
+        const double displacement_ratio = clamp( displacement / target_range, 0.0, 1.0 );
+        const double displacement_penalty =
+            displacement_ratio * ( MAX_RECOIL - curr_recoil ) * 0.25;
+
+        const double raw_predicted_recoil = curr_recoil + angle_penalty + displacement_penalty;
+        const double reset_factor = 0.5 + 0.4 * angle_ratio;
+        const double recoil_cap = curr_recoil + ( MAX_RECOIL - curr_recoil ) * reset_factor;
+        predicted_recoil = std::min( MAX_RECOIL,
+                                     std::min( raw_predicted_recoil, recoil_cap ) );
     }
 }
 
@@ -4089,7 +4187,6 @@ bool target_ui::action_switch_ammo()
 
 bool target_ui::action_aim()
 {
-    set_last_target();
     apply_aim_turning_penalty();
     const Target_attributes target( src, dst );
     const double min_recoil = calculate_aim_cap( *you, dst );
@@ -4100,6 +4197,8 @@ bool target_ui::action_aim()
     add_msg_debug( debugmode::debug_filter::DF_RANGED,
                    "you reduced recoil from %f to %f in 10 moves",
                    hold_recoil, you->recoil );
+    set_last_target();
+    last_aim_pos = dst;
     // We've changed pc.recoil, update penalty
     recalc_aim_turning_penalty();
 
@@ -4129,8 +4228,9 @@ bool target_ui::action_aim_and_shoot( const std::string &action )
         aim_mode = aim_types.begin();
     }
     int aim_threshold = it->threshold;
-    set_last_target();
     apply_aim_turning_penalty();
+    set_last_target();
+    last_aim_pos = dst;
     const Target_attributes target( src, dst );
     const double min_recoil = calculate_aim_cap( *you, dst );
     do {
@@ -4283,6 +4383,11 @@ aim_type target_ui::get_selected_aim_type() const
 int target_ui::get_sight_dispersion() const
 {
     return sight_dispersion;
+}
+
+double target_ui::get_predicted_recoil() const
+{
+    return predicted_recoil;
 }
 
 std::string target_ui::uitext_title() const
