@@ -58,6 +58,7 @@ static const ammo_effect_str_id ammo_effect_HEAVY_HIT( "HEAVY_HIT" );
 static const ammo_effect_str_id ammo_effect_JET( "JET" );
 static const ammo_effect_str_id ammo_effect_LASER( "LASER" );
 static const ammo_effect_str_id ammo_effect_LIGHTNING( "LIGHTNING" );
+static const ammo_effect_str_id ammo_effect_MAGIC( "MAGIC" );
 static const ammo_effect_str_id ammo_effect_PLASMA( "PLASMA" );
 static const ammo_effect_str_id ammo_effect_MUZZLE_SMOKE( "MUZZLE_SMOKE" );
 static const ammo_effect_str_id ammo_effect_NO_EMBED( "NO_EMBED" );
@@ -79,6 +80,77 @@ static const damage_type_id damage_stab( "stab" );
 static const itype_id itype_glass_shard( "glass_shard" );
 
 static const json_character_flag json_flag_HARDTOHIT( "HARDTOHIT" );
+static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
+
+// Returns whether the target is currently ignoring the attacker.
+// the ranged system only needs to know whether the target is likely to
+// react to the attacker it can see.
+static bool target_ignores_projectile_attacker( const Creature &target, const Creature &attacker )
+{
+    if( const monster *mon = target.as_monster() ) {
+        if( const Character *character_attacker = attacker.as_character() ) {
+            switch( mon->attitude( character_attacker ) ) {
+                case MATT_FRIEND:
+                case MATT_FPASSIVE:
+                case MATT_IGNORE:
+                    return true;
+                case MATT_FLEE:
+                case MATT_FOLLOW:
+                case MATT_ATTACK:
+                    return false;
+                case MATT_NULL:
+                case NUM_MONSTER_ATTITUDES:
+                    return true;
+            }
+        }
+    }
+
+    if( const npc *target_npc = target.as_npc() ) {
+        if( attacker.is_avatar() ) {
+            switch( target_npc->get_attitude() ) {
+                case NPCATT_KILL:
+                case NPCATT_FLEE:
+                case NPCATT_FLEE_TEMP:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+    }
+
+    return target.attitude_to( attacker ) != Creature::Attitude::HOSTILE;
+}
+
+static double projectile_target_mobility_weight( const Creature &target, const map &here,
+        const Creature *attacker )
+{
+    if( target.has_flag( mon_flag_IMMOBILE ) || target.has_flag( json_flag_CANNOT_MOVE ) ||
+        target.has_effect_with_flag( json_flag_CANNOT_MOVE ) ) {
+        return 1.0;
+    }
+
+    double target_weight = 0.0;
+    target_weight += 0.1;
+
+    if( attacker != nullptr && target.sees( here, *attacker ) ) {
+        double awareness_weight = 0.25;
+        if( target_ignores_projectile_attacker( target, *attacker ) ) {
+            awareness_weight *= 0.5;
+        }
+        target_weight += awareness_weight;
+    }
+
+    const double target_speed = std::max( 1.0, static_cast<double>( target.get_speed() ) );
+    const double attacker_speed = attacker != nullptr ?
+                                  std::max( 1.0, static_cast<double>( attacker->get_speed() ) ) : 100.0;
+    // Attacker speed improves the ability to respond to a moving target, but
+    // with sharply diminishing returns.  Equal speeds produce 1.0; a 2x
+    // attacker advantage produces 0.75, and a 5x advantage produces 0.6.
+    const double speed_factor = 0.5 + 0.5 * target_speed / attacker_speed;
+    target_weight *= speed_factor;
+
+    return std::clamp( 1.0 + target_weight, 1.0, 2.5 );
+}
 
 static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &attack,
                                       projectile &proj_arg )
@@ -362,11 +434,20 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         add_msg_debug( debugmode::DF_RANGED, "Target size for tile: %.2f", target_size );
     }
 
-    projectile_attack_aim aim = projectile_attack_roll( dispersion, range, target_size );
+    dispersion_sources shot_dispersion = dispersion;
+    if( target_critter != nullptr && !wp_attack.is_thrown &&
+        !proj_arg.proj_effects.count( ammo_effect_MAGIC ) ) {
+        const double target_weight = projectile_target_mobility_weight( *target_critter, *here, origin );
+        shot_dispersion.add_multiplier( target_weight );
+        add_msg_debug( debugmode::DF_RANGED, "Target mobility/awareness dispersion multiplier: %.3f",
+                       target_weight );
+    }
+
+    projectile_attack_aim aim = projectile_attack_roll( shot_dispersion, range, target_size );
 
     if( target_critter && target_critter->as_character() &&
         target_critter->as_character()->has_flag( json_flag_HARDTOHIT ) && !hard_to_hit_bypass ) {
-        projectile_attack_aim lucky_aim = projectile_attack_roll( dispersion, range, target_size );
+        projectile_attack_aim lucky_aim = projectile_attack_roll( shot_dispersion, range, target_size );
         // If the target is lucky, choose the result that misses by more.
         if( lucky_aim.missed_by > aim.missed_by ) {
             aim = lucky_aim;
