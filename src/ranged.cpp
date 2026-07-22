@@ -3036,9 +3036,7 @@ target_handler::trajectory target_ui::run()
     // Initialize cursor position
     src = you->pos_bub();
     if( mode == TargetMode::Fire ) {
-        last_aim_pos = you->last_target_pos ?
-                       std::optional<tripoint_bub_ms>( here.get_bub( *you->last_target_pos ) ) :
-                       std::optional<tripoint_bub_ms>( src );
+        last_aim_pos = you->last_target_pos ? here.get_bub( *you->last_target_pos ) : src;
     }
     update_target_list();
 
@@ -3903,7 +3901,7 @@ void target_ui::recalc_aim_turning_penalty()
         return;
     }
 
-    double curr_recoil = you->recoil;
+    const double curr_recoil = you->recoil;
     const tripoint_bub_ms curr_recoil_pos = last_aim_pos.value_or( src );
 
     if( curr_recoil_pos == dst ) {
