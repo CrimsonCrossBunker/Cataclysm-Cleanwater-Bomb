@@ -108,6 +108,30 @@ TEST_CASE( "destroy_grabbed_furniture" )
     }
 }
 
+TEST_CASE( "cut_down_standard_tree_creates_stump" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms tree_pos( 60, 60, 0 );
+    here.ter_set( tree_pos, ter_id( "t_tree" ) );
+
+    here.cut_down_tree( tree_pos, point_rel_ms::east );
+
+    CHECK( here.ter( tree_pos ) == ter_id( "t_stump" ) );
+}
+
+TEST_CASE( "cut_down_no_stump_tree_uses_bash_result" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms tree_pos( 60, 60, 0 );
+    here.ter_set( tree_pos, ter_id( "t_bamboo_tall" ) );
+
+    here.cut_down_tree( tree_pos, point_rel_ms::east );
+
+    CHECK( here.ter( tree_pos ) == ter_id( "t_dirt" ) );
+}
+
 TEST_CASE( "map_bounds_checking" )
 {
     // FIXME: There are issues with vehicle caching between maps, because

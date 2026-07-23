@@ -2286,7 +2286,7 @@
     "color": "green",
     "move_cost": 10,
     "coverage": 50,
-    "flags": [ "TRANSPARENT", "DIGGABLE", "PLOWABLE", "SMALL_HIDE", "TREE" ],
+    "flags": [ "TRANSPARENT", "DIGGABLE", "PLOWABLE", "SMALL_HIDE", "TREE", "NO_STUMP" ],
     "bash": {
       "sound": "thump",
       "ter_set": "t_dirt",
