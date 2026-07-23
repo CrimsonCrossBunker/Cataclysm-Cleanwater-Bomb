@@ -17,8 +17,8 @@
   {
     "type": "overmap_terrain",
     "id": [ "fcl_urban_aquaponics_n1", "fcl_urban_aquaponics_n2", "fcl_urban_aquaponics_n3" ],
-    "name": "aquacultural farm",
-    "spawns": { "group": "FCL_GROUP_AUG_CLINIC", "population": [ 4, 10 ], "chance": 80 },
+    "name": "mealgrub protein farm",
+    "spawns": { "group": "FCL_GROUP_MEALGRUB_FARM", "population": [ 4, 10 ], "chance": 80 },
     "sym": "Q",
     "color": "cyan",
     "flags": [ "SIDEWALK", "SOURCE_FOOD" ],

@@ -113,6 +113,6 @@
     "description": "A handful of edible, heavily genemodded grubs, each only slightly thinner than your thumb.  Advertisements call them sustainable mealworm protein, but they look uncomfortably like pale maggots, with soft bodies and no sign they were ever meant to become beetles.\n\nRemoved from their growth solution they quickly die and desiccate, as these already have.  They could be safely eaten with no further processing; if you can get past the sight of them, they make a nutritious meal with little odor and a bland.",
     "fun": 0,
     "freezing_point": -9999,
-    "vitamins": [ [ "calcium", 2 ], [ "iron", 12 ], [ "bad_food", 1 ], [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 2 ], [ "iron", 12 ], [ "vitC", 1 ], [ "bad_food", 1 ], [ "meat_allergen", 1 ] ]
   }
 ]
