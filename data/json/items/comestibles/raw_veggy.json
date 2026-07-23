@@ -1003,7 +1003,8 @@
     "flags": [ "EDIBLE_FROZEN", "RAW", "IRREPLACEABLE_CONSUMABLE" ],
     "//": "Tea is sold by weight not by volume. 1 kg of tea has a volume of 3,4 liters. We use smaller packs of at least 100 mg. Such a tea has a volume of 340 ml minus package makes it around 320 ml. 3 g per serving makes 33 charges.",
     "fun": -1,
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1030,7 +1031,8 @@
     "volume": "50 ml",
     "flags": [ "EDIBLE_FROZEN", "RAW" ],
     "fun": -10,
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1207,7 +1209,8 @@
     "fun": -10,
     "use_action": [ "POISON" ],
     "//": "Fiddleheads that haven't been boiled can make you sick.  As they are poisonous here, they will get no CATTLE or RABBIT flag as the poison should not get nullified.",
-    "vitamins": [ [ "vitC", 6 ], [ "calcium", 4 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 6 ], [ "calcium", 4 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1227,7 +1230,8 @@
     "material": [ "veggy" ],
     "volume": "45 ml",
     "fun": -2,
-    "vitamins": [ [ "vitC", 1 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 1 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1241,7 +1245,8 @@
     "volume": "250 ml",
     "fun": -8,
     "calories": 6,
-    "vitamins": [ [ "vitC", "7 mg" ], [ "iron", "300 μg" ], [ "calcium", "29 mg" ] ]
+    "vitamins": [ [ "vitC", "7 mg" ], [ "iron", "300 μg" ], [ "calcium", "29 mg" ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1262,7 +1267,8 @@
     "material": [ "veggy" ],
     "volume": "62 ml",
     "longest_side": "20 cm",
-    "vitamins": [ [ "vitC", 6 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 6 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1319,7 +1325,8 @@
     "flags": [ "EDIBLE_FROZEN", "RAW", "NO_AUTO_CONSUME" ],
     "use_action": [ "BLECH" ],
     "vitamins": [ [ "iron", "500 μg" ], [ "calcium", "5 mg" ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",

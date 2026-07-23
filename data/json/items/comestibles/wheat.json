@@ -39,7 +39,8 @@
     "volume": "62 ml",
     "flags": [ "EDIBLE_FROZEN", "RAW" ],
     "vitamins": [ [ "calcium", 1 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ],
-    "fun": -8
+    "fun": -8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -60,7 +61,8 @@
     "volume": "130 ml",
     "flags": [ "EDIBLE_FROZEN", "RAW" ],
     "vitamins": [ [ "calcium", 1 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ],
-    "fun": -8
+    "fun": -8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -197,7 +199,8 @@
     "cooks_like": "oatmeal_cooked",
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE", "RAW" ],
     "vitamins": [ [ "calcium", 1 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ],
-    "fun": -8
+    "fun": -8,
+    "stackable": true
   },
   {
     "type": "ITEM",

@@ -564,7 +564,9 @@
     "material": [ "powder" ],
     "volume": "33 ml",
     "category": "chems",
-    "fun": -15
+    "fun": -15,
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",

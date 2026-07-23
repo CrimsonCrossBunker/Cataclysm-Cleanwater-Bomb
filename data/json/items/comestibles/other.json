@@ -319,7 +319,8 @@
     "material": [ "yeast" ],
     "volume": "10 ml",
     "flags": [ "EDIBLE_FROZEN" ],
-    "fun": -10
+    "fun": -10,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -340,7 +341,8 @@
     "material": [ "powder" ],
     "volume": "62 ml",
     "flags": [ "EDIBLE_FROZEN" ],
-    "fun": -10
+    "fun": -10,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -362,7 +364,8 @@
     "material": [ "powder" ],
     "volume": "10 ml",
     "flags": [ "EDIBLE_FROZEN" ],
-    "fun": -10
+    "fun": -10,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -384,7 +387,8 @@
     "volume": "10 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": -10,
-    "vitamins": [ [ "iron", "100 μg" ], [ "calcium", "6 mg" ], [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "iron", "100 μg" ], [ "calcium", "6 mg" ], [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -429,7 +433,8 @@
     "material": [ "powder" ],
     "volume": "112 ml",
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE" ],
-    "fun": -10
+    "fun": -10,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -517,7 +522,8 @@
       { "GROWTH_MATURE": "23 days" },
       { "GROWTH_HARVEST": "22 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
-    ]
+    ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -674,7 +680,8 @@
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "into": "flour_wheat_free",
-    "recipe": "flour_wheat_free_mill_1_1"
+    "recipe": "flour_wheat_free_mill_1_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -697,7 +704,8 @@
     "vitamins": [ [ "iron", 26 ], [ "vitC", 16 ], [ "calcium", 6 ], [ "veggy_allergen", 1 ] ],
     "petfood": [ "CATTLEFOOD" ],
     "flags": [ "NUTRIENT_OVERRIDE", "RAW", "INEDIBLE", "CATTLE" ],
-    "smoking_result": "edamame_roasted"
+    "smoking_result": "edamame_roasted",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -717,7 +725,8 @@
     "material": [ "veggy", "blood" ],
     "volume": "83 ml",
     "flags": [ "EATEN_HOT" ],
-    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -798,7 +807,8 @@
     "flags": [ "EDIBLE_FROZEN", "RAW", "IRREPLACEABLE_CONSUMABLE", "NUTRIENT_OVERRIDE" ],
     "calories": 2,
     "fun": -5,
-    "freezing_point": -274
+    "freezing_point": -274,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1264,7 +1274,8 @@
     "price_postapoc": "2 USD",
     "freezing_point": -274,
     "description": "A small packet of commercial instant coffee powder.  No creamer or sweetener added.",
-    "display_type": "BY_WEIGHT"
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "cocoa_powder",
@@ -1286,7 +1297,8 @@
     "price": "30 cent",
     "price_postapoc": "1 USD",
     "description": "A сocoa powder.  No milk or sweetener added.  Bitter, used on baking.",
-    "display_type": "BY_WEIGHT"
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "id": "cocoa_powder_milk",
@@ -1308,7 +1320,8 @@
     "price": "40 cent",
     "price_postapoc": "1 USD",
     "description": "A сocoa powder, with some milk powder and sugar added.  Sweet with a bitter aftertaste, water or milk will made it very tasty.",
-    "display_type": "BY_WEIGHT"
+    "display_type": "BY_WEIGHT",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1595,7 +1608,8 @@
     "material": [ "powder" ],
     "volume": "5 ml",
     "vitamins": [ [ "meat_allergen", 1 ] ],
-    "fun": -10
+    "fun": -10,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1617,7 +1631,8 @@
     "material": [ "powder" ],
     "volume": "5 ml",
     "vitamins": [ [ "veggy_allergen", 1 ] ],
-    "fun": -10
+    "fun": -10,
+    "stackable": true
   },
   {
     "type": "ITEM",
