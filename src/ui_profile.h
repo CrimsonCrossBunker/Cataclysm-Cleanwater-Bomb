@@ -37,6 +37,9 @@ struct profile {
     bool allow_hover = true;
     bool allow_swipe = false;
     bool native_text_input = false;
+    // The touch main menu is an overlay on the legacy title renderer.  Desktop
+    // keeps the original keyboard/mouse menu instead of drawing both shells.
+    bool use_touch_main_menu = false;
 
     bool is_touch() const;
     bool is_terminal() const;

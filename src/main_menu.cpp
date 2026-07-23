@@ -1239,7 +1239,9 @@ bool main_menu::opening_screen()
     ui.mark_resize();
 
 #if defined(TILES)
+    const bool use_touch_main_menu = cata::ui::current_profile().use_touch_main_menu;
     main_menu_imgui imgui_menu;
+    imgui_menu.set_visible( use_touch_main_menu );
 #endif
 
     if( !queued_world_to_load.empty() ) {
@@ -1426,8 +1428,8 @@ bool main_menu::opening_screen()
 #if !defined(EMSCRIPTEN)
 #if defined(TILES)
             imgui_menu.set_visible( false );
-            on_out_of_scope restore_imgui_menu( [&imgui_menu]() {
-                imgui_menu.set_visible( true );
+            on_out_of_scope restore_imgui_menu( [&imgui_menu, use_touch_main_menu]() {
+                imgui_menu.set_visible( use_touch_main_menu );
             } );
             ui_manager::redraw_invalidated();
 #endif
@@ -1490,8 +1492,8 @@ bool main_menu::opening_screen()
         } else if( action == "CONFIRM" ) {
 #if defined(TILES)
             imgui_menu.set_visible( false );
-            on_out_of_scope restore_imgui_menu( [&imgui_menu]() {
-                imgui_menu.set_visible( true );
+            on_out_of_scope restore_imgui_menu( [&imgui_menu, use_touch_main_menu]() {
+                imgui_menu.set_visible( use_touch_main_menu );
             } );
             ui_manager::redraw_invalidated();
 #endif

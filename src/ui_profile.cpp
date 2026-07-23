@@ -32,6 +32,7 @@ profile make_profile( const input_mode input )
             result.allow_hover = false;
             result.allow_swipe = true;
             result.native_text_input = true;
+            result.use_touch_main_menu = true;
             break;
         case input_mode::mouse_keyboard:
             result.density = density_mode::comfortable;
@@ -47,6 +48,7 @@ profile make_profile( const input_mode input )
             result.allow_hover = true;
             result.allow_swipe = false;
             result.native_text_input = false;
+            result.use_touch_main_menu = false;
             break;
         case input_mode::terminal:
             result.density = density_mode::compact;
@@ -62,6 +64,7 @@ profile make_profile( const input_mode input )
             result.allow_hover = false;
             result.allow_swipe = false;
             result.native_text_input = false;
+            result.use_touch_main_menu = false;
             break;
     }
     return result;
