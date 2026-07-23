@@ -23,5 +23,27 @@
       [ [ "betavoltaic", 2 ] ],
       [ [ "RTG_coffee", 1 ] ]
     ]
+  },
+  {
+    "result": "fcl_atompot",
+    "type": "uncraft",
+    "activity_level": "LIGHT_EXERCISE",
+    "skill_used": "electronics",
+    "difficulty": 6,
+    "time": "30 m",
+    "qualities": [ { "id": "SCREW", "level": 1 } ],
+    "components": [
+      [ [ "stock_pot", 1 ] ],
+      [ [ "chunk_rubber", 2 ] ],
+      [ [ "thermometer", 1 ] ],
+      [ [ "power_supply", 1 ] ],
+      [ [ "cable", 4 ] ],
+      [ [ "element", 1 ] ],
+      [ [ "plut_cell", 1 ] ],
+      [ [ "betavoltaic", 1 ] ],
+      [ [ "RTG_coffee", 1 ] ],
+      [ [ "scrap_aluminum", 2 ] ],
+      [ [ "plastic_chunk", 2 ] ]
+    ]
   }
 ]

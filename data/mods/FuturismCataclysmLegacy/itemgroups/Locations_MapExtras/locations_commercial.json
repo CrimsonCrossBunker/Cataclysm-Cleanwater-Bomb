@@ -10,7 +10,7 @@
     "type": "item_group",
     "//": "For s_electronics shops",
     "copy-from": "elecsto_homapl",
-    "extend": { "items": [ [ "fcl_atomic_coffeemaker", 2 ] ] }
+    "extend": { "items": [ [ "fcl_atomic_coffeemaker", 2 ], [ "fcl_atompot", 1 ] ] }
   },
   {
     "id": "arcade_prizes",
