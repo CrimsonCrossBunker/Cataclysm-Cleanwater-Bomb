@@ -16,7 +16,7 @@
     "id": "livingroom",
     "type": "item_group",
     "copy-from": "livingroom",
-    "extend": { "items": [ [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 1 ] ] }
+    "extend": { "items": [ [ "fcl_atomic_smartphone", 1 ], [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 1 ] ] }
   },
   {
     "id": "kitchen",
@@ -28,6 +28,6 @@
     "id": "bedroom",
     "type": "item_group",
     "copy-from": "bedroom",
-    "extend": { "items": [ [ "fcl_atomic_lamp", 2 ], [ "fcl_atomic_light", 2 ] ] }
+    "extend": { "items": [ [ "fcl_atomic_smartphone", 1 ], [ "fcl_atomic_lamp", 2 ], [ "fcl_atomic_light", 2 ] ] }
   }
 ]

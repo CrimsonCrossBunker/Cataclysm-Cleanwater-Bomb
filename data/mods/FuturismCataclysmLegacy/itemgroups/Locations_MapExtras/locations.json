@@ -31,13 +31,13 @@
     "id": "subway",
     "type": "item_group",
     "copy-from": "subway",
-    "extend": { "items": [ [ "fcl_atomic_light", 1 ] ] }
+    "extend": { "items": [ [ "fcl_atomic_smartphone", 1 ], [ "fcl_atomic_light", 1 ] ] }
   },
   {
     "id": "lab_dorm",
     "type": "item_group",
     "copy-from": "lab_dorm",
-    "extend": { "items": [ [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 3 ] ] }
+    "extend": { "items": [ [ "fcl_atomic_smartphone", 5 ], [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 3 ] ] }
   },
   {
     "type": "item_group",
