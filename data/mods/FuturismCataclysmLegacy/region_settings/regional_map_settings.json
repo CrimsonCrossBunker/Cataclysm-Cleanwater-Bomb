@@ -5,7 +5,7 @@
     "copy-from": "default",
     "extend": {
       "houses": [ [ "house_09b", 20 ] ],
-      "shops": [ [ "fcl_augmentation_clinic_1", 180 ], [ "fcl_urban_aquaponics", 90 ] ]
+      "shops": [ [ "fcl_augmentation_clinic_1", 180 ], [ "fcl_mealgrub_protein_farm", 90 ] ]
     }
   }
 ]

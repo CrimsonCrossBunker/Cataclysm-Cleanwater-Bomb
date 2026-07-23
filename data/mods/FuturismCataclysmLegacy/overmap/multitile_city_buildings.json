@@ -22,11 +22,11 @@
   },
   {
     "type": "city_building",
-    "id": "fcl_urban_aquaponics",
+    "id": "fcl_mealgrub_protein_farm",
     "overmaps": [
-      { "point": [ 0, 0, 0 ], "overmap": "fcl_urban_aquaponics_n1_north" },
-      { "point": [ 0, 0, 1 ], "overmap": "fcl_urban_aquaponics_n2_north" },
-      { "point": [ 0, 0, 2 ], "overmap": "fcl_urban_aquaponics_n3_north" }
+      { "point": [ 0, 0, 0 ], "overmap": "fcl_mealgrub_protein_farm_n1_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "fcl_mealgrub_protein_farm_n2_north" },
+      { "point": [ 0, 0, 2 ], "overmap": "fcl_mealgrub_protein_farm_n3_north" }
     ],
     "locations": [ "land" ]
   }

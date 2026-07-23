@@ -1,7 +1,7 @@
 [
   {
     "type": "palette",
-    "id": "fcl_aquacultural_farm",
+    "id": "fcl_mealgrub_protein_farm",
     "terrain": {
       " ": "t_region_groundcover_urban",
       "-": "t_wall_metal",
@@ -29,7 +29,7 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "fcl_urban_aquaponics_n1" ],
+    "om_terrain": [ "fcl_mealgrub_protein_farm_n1" ],
     "object": {
       "fill_ter": "t_strconc_floor",
       "rows": [
@@ -58,7 +58,7 @@
         "    ------------------  ",
         "                        "
       ],
-      "palettes": [ "fcl_aquacultural_farm" ],
+      "palettes": [ "fcl_mealgrub_protein_farm" ],
       "terrain": {
         ".": "t_strconc_floor",
         ",": "t_sidewalk"
@@ -82,7 +82,7 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": [ "fcl_urban_aquaponics_n2" ],
+    "om_terrain": [ "fcl_mealgrub_protein_farm_n2" ],
     "object": {
       "fill_ter": "t_strconc_floor",
       "rows": [
@@ -111,7 +111,7 @@
         "    ----------,,,,,,,,  ",
         "                        "
       ],
-      "palettes": [ "fcl_aquacultural_farm" ],
+      "palettes": [ "fcl_mealgrub_protein_farm" ],
       "terrain": { " ": "t_open_air", ",": "t_flat_roof", "1": "t_metal_floor_no_roof", "E": "t_metal_floor_no_roof" },
       "furniture": {
         "U": "f_air_conditioner",
@@ -138,7 +138,7 @@
   },
   {
     "type": "mapgen",
-    "om_terrain": "fcl_urban_aquaponics_n3",
+    "om_terrain": "fcl_mealgrub_protein_farm_n3",
     "object": {
       "fill_ter": "t_flat_roof",
       "rows": [

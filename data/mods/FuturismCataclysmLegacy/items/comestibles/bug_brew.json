@@ -50,7 +50,7 @@
     "subtypes": [ "BREWABLE", "COMESTIBLE" ],
     "id": "brew_fcl_mealgrub_broth",
     "name": { "str_sp": "mealgrub broth" },
-    "description": "Growth medium seeded with mealgrub eggs.  Once placed in a growing vat, they should be ready for harvesting in around 76 hours.  The immature grubs' metabolism can produce toxic by-products, so caution is advisable.",
+    "description": "Growth medium seeded with mealgrub eggs.  Once placed in a growing vat, they should be ready for harvesting in around 76 hours.  The immature grub's metabolism can produce toxic by-products so caution is advisable.",
     "emits": [ "emit_toxic_cloud" ],
     "use_action": [ "BLECH" ],
     "weight": "33 g",
