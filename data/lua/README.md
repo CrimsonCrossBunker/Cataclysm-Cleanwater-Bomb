@@ -2,9 +2,10 @@
 
 This directory contains the built-in Lua entry point and modules for the
 experimental, versioned UI runtime. The Lua drawing context targets the
-platform-neutral `script_ui_renderer` contract: desktop Tiles renders through
-ImGui, curses renders through ImTui, and Android renders retained widget trees
-as native Views. Scripts do not import or depend on any of those backends.
+platform-neutral `script_ui_renderer` contract. Complete pages use the shared
+ImGui page host on Android and desktop Tiles; terminal builds use the ImTui
+fallback. Android retained native Views are reserved for in-game HUD surfaces.
+Scripts do not import or depend on any of those backends.
 
 The current platform policy is Android on SDL3, with Linux and Windows still
 using SDL2 while their SDL3 migration proceeds separately. This does not alter
@@ -25,8 +26,11 @@ active mods in reverse load order, and the built-in root. Module names may only
 contain letters, digits, `_`, `-`, and `.` and cannot contain empty segments.
 
 The runtime loads automatically after a new game or save has initialized.
-Open **Debug menu → Info… → Open Lua UI pages** to select a page. Press
-**Reload Lua** after editing a script; recompiling the game is not required.
+Open a page from **Main menu → Other → Extensions**, the in-game
+**Extensions** entry, **Options → Mods**, or
+**Debug menu → Info… → Open Lua UI pages**, depending on the slots registered
+by that page. Press **Reload Lua** after editing a script; recompiling the game
+is not required.
 Every entry script is loaded into a new Lua state first. If any script fails,
 the candidate state is discarded and the currently running state stays active.
 
@@ -62,6 +66,15 @@ ui.page("inventory_tools", "Inventory tools", function(ctx)
     ctx:text("Hello, " .. game.player_name())
 end)
 
+ui.page("my_mod_settings", {
+    title = "My mod",
+    category = "settings",
+    order = 50,
+    slots = { "settings.mods", "main.extensions", "ingame.extensions" }
+}, function(ctx)
+    ctx:heading("My mod settings")
+end)
+
 ui.hud("stamina", {
     title = "Stamina",
     default_anchor = "top_right", -- top_left/top_right/bottom_left/bottom_right
@@ -90,6 +103,21 @@ Registering the same page or HUD id again replaces the earlier definition.
 Event registrations are additive. An event payload contains `type`, `turn`,
 `data`, and `data_types`. Boolean and integer fields keep their Lua types;
 other game-specific ids and coordinates are exposed as strings.
+
+The string-title form of `ui.page` remains compatible and registers in
+`main.extensions` and `ingame.extensions`. The descriptor form accepts:
+
+- `title`: visible page name (defaults to the stable page id).
+- `category`: navigation group (defaults to `general`).
+- `order`: signed sort order, clamped to -10000..10000 (defaults to 100).
+- `slots`: one or more logical destinations: `main.extensions`,
+  `ingame.extensions`, `settings.mods`, or `debug.tools`.
+
+Slots are navigation contracts, not pixel coordinates. A mod therefore
+registers one page implementation and lets the page host place it correctly
+for touch, mouse/keyboard, or terminal input. Pages in `settings.mods` appear
+under the Mods entry in the shared Tiles options page. Re-registering a page
+during hot reload keeps the selected page when its stable id still exists.
 
 ## Drawing context
 
@@ -217,18 +245,19 @@ logical items, but the Android retained renderer emits at most 200 items in a
 snapshot. The callback receives a zero-based, half-open `[first, last)` range;
 render only that range (add one when indexing a normal Lua sequence).
 
-## Android native renderer
+## Android HUD renderer
 
 On Android, Lua callbacks and game snapshots run only on the game thread. C++
-publishes an immutable JSON widget tree, and the UI thread polls it every
-100 ms, reuses native Views by stable widget id, and returns bounded one-shot
-interactions to the next game-thread render. The Android UI thread never calls
-Lua or accesses live game objects.
+publishes immutable retained widget trees only for HUD surfaces. The UI thread
+polls them every 100 ms, reuses native Views by stable widget id, and returns
+bounded one-shot interactions to the next game-thread render. The Android UI
+thread never calls Lua or accesses live game objects. Complete Lua pages are
+drawn by the same ImGui host used by SDL2 desktop Tiles and do not create
+Android page Views or a separate native page chooser.
 
-Pages are selected with the **Lua** button in the top-right corner and can be
-closed from their title bar. HUD surfaces honor `anchor`, `x`, `y`, and
-`alpha`, and are repositioned after rotation or split-screen resizing. Touches
-inside Lua UI surfaces are kept out of the Android HUD long-press editor.
+HUD surfaces honor `anchor`, `x`, `y`, and `alpha`, and are repositioned after
+rotation or split-screen resizing. Touches inside Lua HUD surfaces are kept
+out of the Android HUD long-press editor.
 
 Lua HUDs also participate in the Android HUD editor. Long-press an empty part
 of the game view to enter editing, then drag a Lua HUD to move it, drag its
@@ -245,11 +274,11 @@ Android overlay fractions clamped to safe bounds. `movable`, `scalable`, and
 HUD must keep that part of its script-defined layout. User overrides stay on
 the Android device and never mutate the Lua script or character save.
 
-The native adapter maps text, buttons, checkboxes, sliders, inputs, progress
-bars, and structured containers to Android Views. Immediate-mode-only details
-such as exact same-line or table-column placement may use a simplified native
-layout, so capability-aware scripts should prioritize semantic structure over
-pixel-identical layouts.
+The native HUD adapter maps text, buttons, checkboxes, sliders, inputs,
+progress bars, and structured containers to Android Views. Immediate-mode-only
+details such as exact same-line or table-column placement may use a simplified
+native layout, so capability-aware HUD scripts should prioritize semantic
+structure over pixel-identical layouts.
 
 ## Game API and reload state
 

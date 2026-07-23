@@ -1,6 +1,6 @@
-#include "android_imgui_dialog.h"
+#include "adaptive_imgui_dialog.h"
 
-#if defined(__ANDROID__)
+#if defined(TILES)
 
 #include <algorithm>
 #include <cmath>
@@ -11,9 +11,10 @@
 #include "imgui/imgui.h"
 #include "input_context.h"
 #include "translations.h"
+#include "ui_profile.h"
 #include "ui_manager.h"
 
-namespace android_imgui_dialog
+namespace adaptive_imgui_dialog
 {
 namespace
 {
@@ -23,7 +24,7 @@ class choice_window : public cataimgui::window
     public:
         choice_window( std::string title, std::string message,
                        std::vector<entry> entries, int initial_selection ) :
-            cataimgui::window( "Android ImGui choice dialog",
+            cataimgui::window( "Adaptive ImGui choice dialog",
                                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                ImGuiWindowFlags_NoSavedSettings ),
@@ -47,7 +48,9 @@ class choice_window : public cataimgui::window
 
     protected:
         cataimgui::bounds get_bounds() override {
-            return { 0.0F, 0.0F, 1.0F, 1.0F };
+            const cata::ui::profile profile = cata::ui::current_profile();
+            return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+                   cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
         }
 
         void draw_controls() override {
@@ -59,7 +62,10 @@ class choice_window : public cataimgui::window
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            cataimgui::PushGuiFont1_5x();
+            const bool large_font = cata::ui::current_profile().is_touch();
+            if( large_font ) {
+                cataimgui::PushGuiFont1_5x();
+            }
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 14.0F, 10.0F ) );
@@ -79,7 +85,7 @@ class choice_window : public cataimgui::window
             }
             ImGui::Separator();
 
-            if( ImGui::BeginChild( "##android_choice_entries", ImVec2( 0.0F, -footer_height ),
+            if( ImGui::BeginChild( "##adaptive_choice_entries", ImVec2( 0.0F, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 const bool suppress_click = handle_vertical_drag();
@@ -99,7 +105,9 @@ class choice_window : public cataimgui::window
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 5 );
-            cataimgui::PopGuiFont1_5x();
+            if( large_font ) {
+                cataimgui::PopGuiFont1_5x();
+            }
         }
 
     private:
@@ -148,7 +156,7 @@ class choice_window : public cataimgui::window
                 ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.30F, 0.08F, 0.08F, 1.0F ) );
                 ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.64F, 0.22F, 0.18F, 0.9F ) );
             }
-            const std::string label = item.label + "###android_choice_entry";
+            const std::string label = item.label + "###adaptive_choice_entry";
             if( ImGui::Button( label.c_str(), ImVec2( -1.0F, 52.0F ) ) && !suppress_click ) {
                 selected_ = index;
                 choices_.push_back( index );
@@ -174,7 +182,7 @@ class compact_dialog_window : public cataimgui::window
     public:
         compact_dialog_window( std::string title, std::string message,
                                std::vector<entry> entries ) :
-            cataimgui::window( "Android ImGui compact dialog",
+            cataimgui::window( "Adaptive ImGui compact dialog",
                                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                ImGuiWindowFlags_NoSavedSettings ),
@@ -192,7 +200,9 @@ class compact_dialog_window : public cataimgui::window
 
     protected:
         cataimgui::bounds get_bounds() override {
-            return { 0.0F, 0.0F, 1.0F, 1.0F };
+            const cata::ui::profile profile = cata::ui::current_profile();
+            return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+                   cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
         }
 
         void draw_controls() override {
@@ -202,7 +212,10 @@ class compact_dialog_window : public cataimgui::window
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 2, 4, 6, 210 ) );
 
-            cataimgui::PushGuiFont1_5x();
+            const bool large_font = cata::ui::current_profile().is_touch();
+            if( large_font ) {
+                cataimgui::PushGuiFont1_5x();
+            }
             const float panel_width = std::clamp( window_size.x * 0.68F, 560.0F, 980.0F );
             const float text_height = ImGui::CalcTextSize( message_.c_str(), nullptr, false,
                                       panel_width - 64.0F ).y;
@@ -223,7 +236,7 @@ class compact_dialog_window : public cataimgui::window
             ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.32F, 0.35F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.14F, 0.43F, 0.46F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.92F, 0.95F, 0.96F, 1.0F ) );
-            if( ImGui::BeginChild( "##android_compact_dialog_panel",
+            if( ImGui::BeginChild( "##adaptive_compact_dialog_panel",
                                    ImVec2( panel_width, panel_height ),
                                    ImGuiChildFlags_Borders ) ) {
                 ImGui::TextUnformatted( title_.c_str() );
@@ -234,8 +247,8 @@ class compact_dialog_window : public cataimgui::window
                 const float gap = 14.0F;
                 const float max_button_width = entries_.size() == 1 ? 320.0F : 360.0F;
                 const float button_width = std::min( max_button_width,
-                                          ( panel_width - 48.0F - gap *
-                                            ( entries_.size() - 1 ) ) / entries_.size() );
+                                                     ( panel_width - 48.0F - gap *
+                                                       ( entries_.size() - 1 ) ) / entries_.size() );
                 const float row_width = button_width * entries_.size() +
                                         gap * ( entries_.size() - 1 );
                 ImGui::SetCursorPosY( panel_height - button_height - 20.0F );
@@ -260,7 +273,9 @@ class compact_dialog_window : public cataimgui::window
             ImGui::EndChild();
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 5 );
-            cataimgui::PopGuiFont1_5x();
+            if( large_font ) {
+                cataimgui::PopGuiFont1_5x();
+            }
         }
 
     private:
@@ -334,6 +349,6 @@ void message( const std::string &title, const std::string &message,
     run_compact_dialog( title, message, entries );
 }
 
-} // namespace android_imgui_dialog
+} // namespace adaptive_imgui_dialog
 
-#endif // __ANDROID__
+#endif // TILES

@@ -1,6 +1,6 @@
-#include "android_character_creator.h"
+#include "adaptive_character_creator.h"
 
-#if defined(__ANDROID__)
+#if defined(TILES)
 
 #include <algorithm>
 #include <array>
@@ -12,10 +12,11 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_stdlib.h"
 #include "translations.h"
+#include "ui_profile.h"
 
-android_character_creator_ui::android_character_creator_ui( detail_renderer render_details,
+adaptive_character_creator_ui::adaptive_character_creator_ui( detail_renderer render_details,
         preview_renderer render_preview ) :
-    cataimgui::window( "Android character creator",
+    cataimgui::window( "Adaptive character creator",
                        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
                        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                        ImGuiWindowFlags_NoSavedSettings ),
@@ -24,7 +25,7 @@ android_character_creator_ui::android_character_creator_ui( detail_renderer rend
 {
 }
 
-void android_character_creator_ui::set_snapshot( android_character_creator_snapshot next )
+void adaptive_character_creator_ui::set_snapshot( adaptive_character_creator_snapshot next )
 {
     if( !editing_name_ ) {
         name_input_ = next.name;
@@ -38,28 +39,30 @@ void android_character_creator_ui::set_snapshot( android_character_creator_snaps
     snapshot_ = std::move( next );
 }
 
-void android_character_creator_ui::show_loading()
+void adaptive_character_creator_ui::show_loading()
 {
     snapshot_.ready = false;
     snapshot_.rows.clear();
 }
 
-std::optional<android_character_creator_action> android_character_creator_ui::take_action()
+std::optional<adaptive_character_creator_action> adaptive_character_creator_ui::take_action()
 {
     if( actions_.empty() ) {
         return std::nullopt;
     }
-    android_character_creator_action result = std::move( actions_.front() );
+    adaptive_character_creator_action result = std::move( actions_.front() );
     actions_.pop_front();
     return result;
 }
 
-cataimgui::bounds android_character_creator_ui::get_bounds()
+cataimgui::bounds adaptive_character_creator_ui::get_bounds()
 {
-    return { 0.0F, 0.0F, 1.0F, 1.0F };
+    const cata::ui::profile profile = cata::ui::current_profile();
+    return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+           cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
 }
 
-void android_character_creator_ui::draw_controls()
+void adaptive_character_creator_ui::draw_controls()
 {
     const ImVec2 window_pos = ImGui::GetWindowPos();
     const ImVec2 window_size = ImGui::GetWindowSize();
@@ -69,13 +72,16 @@ void android_character_creator_ui::draw_controls()
     ImGui::GetWindowDrawList()->AddRectFilled(
         window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
         IM_COL32( 6, 9, 12, 255 ) );
-    ImFont *gui_font = ImGui::GetIO().Fonts->Fonts[0];
-    float font_size = gui_font->LegacySize * 1.32F;
-    if( ImGui::GetIO().Fonts->Fonts.Size > 2 ) {
-        gui_font = ImGui::GetIO().Fonts->Fonts[2];
-        font_size = gui_font->LegacySize * 0.90F;
+    const bool large_font = cata::ui::current_profile().is_touch();
+    if( large_font ) {
+        ImFont *gui_font = ImGui::GetIO().Fonts->Fonts[0];
+        float font_size = gui_font->LegacySize * 1.32F;
+        if( ImGui::GetIO().Fonts->Fonts.Size > 2 ) {
+            gui_font = ImGui::GetIO().Fonts->Fonts[2];
+            font_size = gui_font->LegacySize * 0.90F;
+        }
+        ImGui::PushFont( gui_font, font_size );
     }
-    ImGui::PushFont( gui_font, font_size );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 7.0F );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 10.0F, 6.0F ) );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 7.0F, 5.0F ) );
@@ -104,21 +110,23 @@ void android_character_creator_ui::draw_controls()
 
     ImGui::PopStyleColor( 6 );
     ImGui::PopStyleVar( 4 );
-    ImGui::PopFont();
+    if( large_font ) {
+        ImGui::PopFont();
+    }
 }
 
-void android_character_creator_ui::queue_command( const std::string &command )
+void adaptive_character_creator_ui::queue_command( const std::string &command )
 {
-    actions_.push_back( { android_character_creator_action_type::command, 0, command, {} } );
+    actions_.push_back( { adaptive_character_creator_action_type::command, 0, command, {} } );
 }
 
-void android_character_creator_ui::queue_value(
-    const android_character_creator_action_type type, const std::string &value )
+void adaptive_character_creator_ui::queue_value(
+    const adaptive_character_creator_action_type type, const std::string &value )
 {
     actions_.push_back( { type, 0, {}, value } );
 }
 
-void android_character_creator_ui::draw_loading_page()
+void adaptive_character_creator_ui::draw_loading_page()
 {
     const ImVec2 available = ImGui::GetContentRegionAvail();
     const char *message = _( "Preparing character creator…" );
@@ -128,7 +136,7 @@ void android_character_creator_ui::draw_loading_page()
     ImGui::TextUnformatted( message );
 }
 
-void android_character_creator_ui::draw_age_input( const char *id, const float width )
+void adaptive_character_creator_ui::draw_age_input( const char *id, const float width )
 {
     ImGui::SetNextItemWidth( width );
     const bool submitted = ImGui::InputText( id, &age_input_,
@@ -137,11 +145,11 @@ void android_character_creator_ui::draw_age_input( const char *id, const float w
     const bool deactivated = ImGui::IsItemDeactivatedAfterEdit();
     editing_age_ = ImGui::IsItemActive();
     if( ( submitted || deactivated ) && age_input_ != std::to_string( snapshot_.age ) ) {
-        queue_value( android_character_creator_action_type::set_age, age_input_ );
+        queue_value( adaptive_character_creator_action_type::set_age, age_input_ );
     }
 }
 
-void android_character_creator_ui::draw_height_input( const char *id, const float width )
+void adaptive_character_creator_ui::draw_height_input( const char *id, const float width )
 {
     ImGui::SetNextItemWidth( width );
     const bool submitted = ImGui::InputText( id, &height_input_,
@@ -150,18 +158,18 @@ void android_character_creator_ui::draw_height_input( const char *id, const floa
     const bool deactivated = ImGui::IsItemDeactivatedAfterEdit();
     editing_height_ = ImGui::IsItemActive();
     if( ( submitted || deactivated ) && height_input_ != std::to_string( snapshot_.height ) ) {
-        queue_value( android_character_creator_action_type::set_height, height_input_ );
+        queue_value( adaptive_character_creator_action_type::set_height, height_input_ );
     }
 }
 
-bool android_character_creator_ui::draw_template_save_controls()
+bool adaptive_character_creator_ui::draw_template_save_controls()
 {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted( _( "Name of template:" ) );
     ImGui::SameLine();
     ImGui::SetNextItemWidth( 250.0F );
     const bool submitted = ImGui::InputTextWithHint(
-                               "##android_character_template_name", _( "Name" ),
+                               "##adaptive_character_template_name", _( "Name" ),
                                &template_name_input_, ImGuiInputTextFlags_EnterReturnsTrue );
     const bool valid_name = !template_name_input_.empty() &&
                             template_name_input_.find( '/' ) == std::string::npos;
@@ -174,23 +182,23 @@ bool android_character_creator_ui::draw_template_save_controls()
         ImGui::EndDisabled();
     }
     if( valid_name && ( submitted || save_clicked ) ) {
-        queue_value( android_character_creator_action_type::save_template,
+        queue_value( adaptive_character_creator_action_type::save_template,
                      template_name_input_ );
     }
     return true;
 }
 
-void android_character_creator_ui::draw_summary_description_inputs()
+void adaptive_character_creator_ui::draw_summary_description_inputs()
 {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted( _( "Age:" ) );
     ImGui::SameLine();
-    draw_age_input( "##android_character_summary_age", 85.0F );
+    draw_age_input( "##adaptive_character_summary_age", 85.0F );
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted( _( "Height:" ) );
     ImGui::SameLine();
-    draw_height_input( "##android_character_summary_height", 95.0F );
+    draw_height_input( "##adaptive_character_summary_height", 95.0F );
     ImGui::SameLine();
     ImGui::TextUnformatted( _( "cm" ) );
 
@@ -202,10 +210,10 @@ void android_character_creator_ui::draw_summary_description_inputs()
     ImGui::TextUnformatted( snapshot_.blood.c_str() );
 }
 
-void android_character_creator_ui::draw_identity_bar()
+void adaptive_character_creator_ui::draw_identity_bar()
 {
     constexpr float row_height = 43.0F;
-    if( ImGui::BeginChild( "##android_character_identity", ImVec2( 0.0F, row_height ),
+    if( ImGui::BeginChild( "##adaptive_character_identity", ImVec2( 0.0F, row_height ),
                            ImGuiChildFlags_None,
                            ImGuiWindowFlags_HorizontalScrollbar |
                            ImGuiWindowFlags_NoScrollWithMouse ) ) {
@@ -214,12 +222,12 @@ void android_character_creator_ui::draw_identity_bar()
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 285.0F );
         const bool submit_name = ImGui::InputTextWithHint(
-                                     "##android_character_name", _( "Name" ), &name_input_,
+                                     "##adaptive_character_name", _( "Name" ), &name_input_,
                                      ImGuiInputTextFlags_EnterReturnsTrue );
         const bool name_deactivated = ImGui::IsItemDeactivatedAfterEdit();
         editing_name_ = ImGui::IsItemActive();
         if( ( submit_name || name_deactivated ) && name_input_ != snapshot_.name ) {
-            queue_value( android_character_creator_action_type::set_name, name_input_ );
+            queue_value( adaptive_character_creator_action_type::set_name, name_input_ );
         }
         ImGui::SameLine();
         if( ImGui::Button( _( "Random" ), ImVec2( 150.0F, 40.0F ) ) ) {
@@ -236,7 +244,7 @@ void android_character_creator_ui::draw_identity_bar()
     }
     ImGui::EndChild();
 
-    if( ImGui::BeginChild( "##android_character_quick_info", ImVec2( 0.0F, row_height ),
+    if( ImGui::BeginChild( "##adaptive_character_quick_info", ImVec2( 0.0F, row_height ),
                            ImGuiChildFlags_None,
                            ImGuiWindowFlags_HorizontalScrollbar |
                            ImGuiWindowFlags_NoScrollWithMouse ) ) {
@@ -247,13 +255,13 @@ void android_character_creator_ui::draw_identity_bar()
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted( _( "Age:" ) );
             ImGui::SameLine();
-            draw_age_input( "##android_character_age", 85.0F );
+            draw_age_input( "##adaptive_character_age", 85.0F );
 
             ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted( _( "Height:" ) );
             ImGui::SameLine();
-            draw_height_input( "##android_character_height", 95.0F );
+            draw_height_input( "##adaptive_character_height", 95.0F );
             ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted( _( "cm" ) );
@@ -271,7 +279,7 @@ void android_character_creator_ui::draw_identity_bar()
             if( has_previous_item ) {
                 ImGui::SameLine();
             }
-            const std::string label = buttons[i].first + "###android_character_quick_" +
+            const std::string label = buttons[i].first + "###adaptive_character_quick_" +
                                       std::to_string( i );
             if( ImGui::Button( label.c_str(), ImVec2( widths[i], 40.0F ) ) ) {
                 queue_command( buttons[i].second );
@@ -286,13 +294,13 @@ void android_character_creator_ui::draw_identity_bar()
     ImGui::EndChild();
 }
 
-void android_character_creator_ui::draw_tabs()
+void adaptive_character_creator_ui::draw_tabs()
 {
     static const std::array<const char *, 7> labels = {{
             "Scenario", "Profession", "Background", "Stats", "Traits", "Skills", "Summary"
         }
     };
-    if( ImGui::BeginChild( "##android_character_tabs", ImVec2( 0.0F, 49.0F ),
+    if( ImGui::BeginChild( "##adaptive_character_tabs", ImVec2( 0.0F, 49.0F ),
                            ImGuiChildFlags_None,
                            ImGuiWindowFlags_HorizontalScrollbar |
                            ImGuiWindowFlags_NoScrollWithMouse ) ) {
@@ -307,9 +315,9 @@ void android_character_creator_ui::draw_tabs()
             }
             const std::string translated = _( labels[i] );
             const float width = std::max( 125.0F, ImGui::CalcTextSize( translated.c_str() ).x + 30.0F );
-            const std::string label = translated + "###android_character_tab_" + std::to_string( i );
+            const std::string label = translated + "###adaptive_character_tab_" + std::to_string( i );
             if( ImGui::Button( label.c_str(), ImVec2( width, 41.0F ) ) && !selected ) {
-                actions_.push_back( { android_character_creator_action_type::select_tab, i, {}, {} } );
+                actions_.push_back( { adaptive_character_creator_action_type::select_tab, i, {}, {} } );
                 filter_.clear();
             }
             if( selected ) {
@@ -324,8 +332,11 @@ void android_character_creator_ui::draw_tabs()
     ImGui::EndChild();
 }
 
-bool android_character_creator_ui::handle_vertical_drag( drag_state &state )
+bool adaptive_character_creator_ui::handle_vertical_drag( drag_state &state )
 {
+    if( !cata::ui::current_profile().allow_swipe ) {
+        return false;
+    }
     ImGuiIO &io = ImGui::GetIO();
     if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
         ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
@@ -347,7 +358,7 @@ bool android_character_creator_ui::handle_vertical_drag( drag_state &state )
     return moved;
 }
 
-void android_character_creator_ui::draw_selection_page( const float footer_height )
+void adaptive_character_creator_ui::draw_selection_page( const float footer_height )
 {
     const float content_width = ImGui::GetContentRegionAvail().x;
     const bool show_preview = snapshot_.preview_available && render_preview_;
@@ -356,18 +367,18 @@ void android_character_creator_ui::draw_selection_page( const float footer_heigh
     const float preview_width = show_preview ?
                                 std::clamp( content_width * 0.18F, 170.0F, 260.0F ) : 0.0F;
     const float column_gap = ImGui::GetStyle().ItemSpacing.x;
-    if( ImGui::BeginChild( "##android_character_list", ImVec2( list_width, -footer_height ),
+    if( ImGui::BeginChild( "##adaptive_character_list", ImVec2( list_width, -footer_height ),
                            ImGuiChildFlags_Borders ) ) {
         ImGui::TextUnformatted( _( "Search:" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -1.0F );
-        ImGui::InputText( "##android_character_filter", &filter_ );
+        ImGui::InputText( "##adaptive_character_filter", &filter_ );
         ImGui::Separator();
-        if( ImGui::BeginChild( "##android_character_rows", ImVec2( 0.0F, 0.0F ),
+        if( ImGui::BeginChild( "##adaptive_character_rows", ImVec2( 0.0F, 0.0F ),
                                ImGuiChildFlags_None,
                                ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
             const bool suppress_click = handle_vertical_drag( list_drag_ );
-            for( const android_character_creator_row_snapshot &row : snapshot_.rows ) {
+            for( const adaptive_character_creator_row_snapshot &row : snapshot_.rows ) {
                 if( !filter_.empty() && !lcmatch( row.label, filter_ ) ) {
                     continue;
                 }
@@ -382,7 +393,7 @@ void android_character_creator_ui::draw_selection_page( const float footer_heigh
                 const std::string prefix = row.active ? "✓  " : "";
                 if( ImGui::Button( ( prefix + row.label + "###row" ).c_str(),
                                    ImVec2( -1.0F, 44.0F ) ) && !suppress_click ) {
-                    actions_.push_back( { android_character_creator_action_type::select_row,
+                    actions_.push_back( { adaptive_character_creator_action_type::select_row,
                                           row.index, {}, {} } );
                 }
                 if( row.selected ) {
@@ -400,7 +411,7 @@ void android_character_creator_ui::draw_selection_page( const float footer_heigh
 
     ImGui::SameLine();
     const float detail_width = show_preview ? -preview_width - column_gap : 0.0F;
-    if( ImGui::BeginChild( "##android_character_detail", ImVec2( detail_width, -footer_height ),
+    if( ImGui::BeginChild( "##adaptive_character_detail", ImVec2( detail_width, -footer_height ),
                            ImGuiChildFlags_Borders,
                            ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
         handle_vertical_drag( detail_drag_ );
@@ -414,9 +425,9 @@ void android_character_creator_ui::draw_selection_page( const float footer_heigh
     }
 }
 
-void android_character_creator_ui::draw_preview_panel( const float height )
+void adaptive_character_creator_ui::draw_preview_panel( const float height )
 {
-    if( ImGui::BeginChild( "##android_character_preview", ImVec2( 0.0F, height ),
+    if( ImGui::BeginChild( "##adaptive_character_preview", ImVec2( 0.0F, height ),
                            ImGuiChildFlags_Borders,
                            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) ) {
         ImGui::TextUnformatted( _( "Preview" ) );
@@ -426,18 +437,18 @@ void android_character_creator_ui::draw_preview_panel( const float height )
     ImGui::EndChild();
 }
 
-const android_character_creator_row_snapshot *android_character_creator_ui::selected_row() const
+const adaptive_character_creator_row_snapshot *adaptive_character_creator_ui::selected_row() const
 {
     const auto found = std::find_if( snapshot_.rows.begin(), snapshot_.rows.end(),
-    []( const android_character_creator_row_snapshot & row ) {
+    []( const adaptive_character_creator_row_snapshot & row ) {
         return row.selected;
     } );
     return found == snapshot_.rows.end() ? nullptr : &*found;
 }
 
-void android_character_creator_ui::draw_current_details()
+void adaptive_character_creator_ui::draw_current_details()
 {
-    const android_character_creator_row_snapshot *row = selected_row();
+    const adaptive_character_creator_row_snapshot *row = selected_row();
     if( row == nullptr ) {
         ImGui::TextWrapped( "%s", _( "Select an entry to view its details." ) );
         return;
@@ -467,7 +478,7 @@ void android_character_creator_ui::draw_current_details()
         ImGui::BeginDisabled();
     }
     if( ImGui::Button( label.c_str(), ImVec2( 210.0F, 44.0F ) ) ) {
-        actions_.push_back( { android_character_creator_action_type::activate_row,
+        actions_.push_back( { adaptive_character_creator_action_type::activate_row,
                               row->index, {}, {} } );
     }
     if( !row->enabled ) {
@@ -475,7 +486,7 @@ void android_character_creator_ui::draw_current_details()
     }
 }
 
-void android_character_creator_ui::draw_summary_page( const float footer_height )
+void adaptive_character_creator_ui::draw_summary_page( const float footer_height )
 {
     const bool show_preview = snapshot_.preview_available && render_preview_;
     const float content_width = ImGui::GetContentRegionAvail().x;
@@ -483,7 +494,7 @@ void android_character_creator_ui::draw_summary_page( const float footer_height 
                                 std::clamp( content_width * 0.20F, 190.0F, 300.0F ) : 0.0F;
     const float column_gap = ImGui::GetStyle().ItemSpacing.x;
     const float summary_width = show_preview ? -preview_width - column_gap : 0.0F;
-    if( ImGui::BeginChild( "##android_character_summary", ImVec2( summary_width, -footer_height ),
+    if( ImGui::BeginChild( "##adaptive_character_summary", ImVec2( summary_width, -footer_height ),
                            ImGuiChildFlags_Borders,
                            ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
         handle_vertical_drag( summary_drag_ );
@@ -500,7 +511,7 @@ void android_character_creator_ui::draw_summary_page( const float footer_height 
     }
 }
 
-void android_character_creator_ui::draw_footer()
+void adaptive_character_creator_ui::draw_footer()
 {
     constexpr float gap = 10.0F;
     const float width = ( ImGui::GetContentRegionAvail().x - gap * 2.0F ) / 3.0F;
@@ -524,4 +535,4 @@ void android_character_creator_ui::draw_footer()
     }
 }
 
-#endif // __ANDROID__
+#endif // TILES

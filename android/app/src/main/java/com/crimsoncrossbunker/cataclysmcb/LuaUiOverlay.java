@@ -57,7 +57,6 @@ final class LuaUiOverlay extends FrameLayout {
     private final Map<String, View> widgets = new HashMap<>();
     private final Map<String, HudLayout> hudLayouts = new HashMap<>();
     private final LinkedHashMap<String, HudInfo> hudInfos = new LinkedHashMap<>();
-    private final Button pageChooser;
     private final LinearLayout hudEditorBar;
     private FrameLayout radialMenuLayer;
     private final Runnable poller = new Runnable() {
@@ -73,7 +72,6 @@ final class LuaUiOverlay extends FrameLayout {
     private boolean started;
     private boolean editing;
     private String lastSnapshot = "";
-    private final List<PageInfo> pages = new ArrayList<>();
 
     LuaUiOverlay(CataclysmDDA activity) {
         super(activity);
@@ -83,25 +81,6 @@ final class LuaUiOverlay extends FrameLayout {
         setClipChildren(false);
         setClipToPadding(false);
         setClickable(false);
-
-        pageChooser = new Button(activity);
-        pageChooser.setText("Lua");
-        pageChooser.setTextSize(12f);
-        pageChooser.setMinWidth(0);
-        pageChooser.setMinHeight(0);
-        pageChooser.setPadding(dp(10), dp(4), dp(10), dp(4));
-        pageChooser.setVisibility(GONE);
-        pageChooser.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showPageChooser();
-            }
-        });
-        FrameLayout.LayoutParams chooserParams = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.TOP | Gravity.RIGHT);
-        chooserParams.setMargins(dp(8), dp(8), dp(8), dp(8));
-        addView(pageChooser, chooserParams);
 
         hudEditorBar = new LinearLayout(activity);
         hudEditorBar.setOrientation(LinearLayout.HORIZONTAL);
@@ -160,7 +139,6 @@ final class LuaUiOverlay extends FrameLayout {
             configureHudEditor(holder);
         }
         hudEditorBar.setVisibility(editing ? VISIBLE : GONE);
-        pageChooser.setVisibility(editing || pages.isEmpty() ? GONE : VISIBLE);
         if (editing) hudEditorBar.bringToFront();
         forceRefresh();
     }
@@ -222,11 +200,6 @@ final class LuaUiOverlay extends FrameLayout {
     boolean containsTouch(float rawX, float rawY) {
         if (radialMenuLayer != null) return true;
         int[] location = new int[2];
-        if (pageChooser.getVisibility() == VISIBLE) {
-            pageChooser.getLocationOnScreen(location);
-            if (rawX >= location[0] && rawX <= location[0] + pageChooser.getWidth() &&
-                    rawY >= location[1] && rawY <= location[1] + pageChooser.getHeight()) return true;
-        }
         for (SurfaceHolder holder : surfaces.values()) {
             holder.root.getLocationOnScreen(location);
             if (rawX >= location[0] && rawX <= location[0] + holder.root.getWidth() &&
@@ -262,10 +235,8 @@ final class LuaUiOverlay extends FrameLayout {
     private void applySnapshot(JSONObject snapshot) throws JSONException {
         JSONArray entries = snapshot.optJSONArray("surfaces");
         if (entries == null) entries = new JSONArray();
-        String selectedPage = snapshot.optString("selectedPage", "");
         Set<String> seenSurfaces = new HashSet<>();
         Set<String> seenWidgets = new HashSet<>();
-        pages.clear();
         hudInfos.clear();
 
         for (int i = 0; i < entries.length(); i++) {
@@ -274,19 +245,14 @@ final class LuaUiOverlay extends FrameLayout {
             String id = entry.optString("id", "");
             String kind = entry.optString("kind", "");
             if (id.isEmpty()) continue;
-            if ("page".equals(kind)) {
-                pages.add(new PageInfo(id.substring("page:".length()),
-                    entry.optString("title", id)));
-                if (editing || !id.equals("page:" + selectedPage)) continue;
-            } else if ("hud".equals(kind)) {
-                HudInfo info = HudInfo.fromJson(entry);
-                hudInfos.put(id, info);
-                HudLayout layout = hudLayouts.get(layoutKey(id));
-                if (info.userToggleable && layout != null && !layout.visible) continue;
-            }
+            if (!"hud".equals(kind)) continue;
+            HudInfo info = HudInfo.fromJson(entry);
+            hudInfos.put(id, info);
+            HudLayout layout = hudLayouts.get(layoutKey(id));
+            if (info.userToggleable && layout != null && !layout.visible) continue;
             seenSurfaces.add(id);
             SurfaceHolder holder = obtainSurface(id, kind);
-            if ("hud".equals(kind)) holder.info = hudInfos.get(id);
+            holder.info = info;
             holder.title.setText(entry.optString("title", id));
             holder.content.removeAllViews();
             JSONArray nodes = entry.optJSONArray("nodes");
@@ -306,8 +272,6 @@ final class LuaUiOverlay extends FrameLayout {
         for (String id : new ArrayList<>(widgets.keySet())) {
             if (!seenWidgets.contains(id)) widgets.remove(id);
         }
-        pageChooser.setVisibility(editing || pages.isEmpty() ? GONE : VISIBLE);
-        pageChooser.bringToFront();
         hudEditorBar.setVisibility(editing ? VISIBLE : GONE);
         if (editing) hudEditorBar.bringToFront();
     }
@@ -329,19 +293,6 @@ final class LuaUiOverlay extends FrameLayout {
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         titleRow.addView(title, new LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        if ("page".equals(kind)) {
-            Button close = new Button(activity);
-            close.setText("×");
-            close.setMinWidth(0);
-            close.setMinHeight(0);
-            close.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    activity.selectLuaUiPage("");
-                }
-            });
-            titleRow.addView(close, new LinearLayout.LayoutParams(dp(44), dp(40)));
-        }
         panel.addView(titleRow);
 
         LinearLayout content = new LinearLayout(activity);
@@ -360,16 +311,6 @@ final class LuaUiOverlay extends FrameLayout {
     }
 
     private void positionSurface(SurfaceHolder holder, JSONObject entry, String kind) {
-        if ("page".equals(kind)) {
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                Math.max(dp(280), Math.round(getWidth() * .88f)),
-                Math.max(dp(240), Math.round(getHeight() * .82f)), Gravity.CENTER);
-            holder.root.setLayoutParams(params);
-            holder.root.setAlpha(1f);
-            holder.root.bringToFront();
-            pageChooser.bringToFront();
-            return;
-        }
         HudLayout saved = hudLayouts.get(layoutKey(holder.id));
         if (saved != null) {
             positionHudLayout(holder, saved);
@@ -710,18 +651,6 @@ final class LuaUiOverlay extends FrameLayout {
         else created = new View(activity);
         widgets.put(key, created);
         return (T)created;
-    }
-
-    private void showPageChooser() {
-        if (pages.isEmpty()) return;
-        final String[] titles = new String[pages.size() + 1];
-        titles[0] = "关闭页面";
-        for (int i = 0; i < pages.size(); i++) titles[i + 1] = pages.get(i).title;
-        new AlertDialog.Builder(activity)
-            .setTitle("Lua UI pages")
-            .setItems(titles, (dialog, which) ->
-                activity.selectLuaUiPage(which == 0 ? "" : pages.get(which - 1).id))
-            .show();
     }
 
     private LinearLayout.LayoutParams defaultParams(String type) {
@@ -1126,12 +1055,4 @@ final class LuaUiOverlay extends FrameLayout {
         void onChanged(int value);
     }
 
-    private static final class PageInfo {
-        final String id;
-        final String title;
-        PageInfo(String id, String title) {
-            this.id = id;
-            this.title = title;
-        }
-    }
 }

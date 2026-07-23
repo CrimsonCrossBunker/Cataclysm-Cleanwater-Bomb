@@ -43,6 +43,7 @@
 #include "path_info.h"
 #include "point.h"
 #include "translations.h"
+#include "ui_profile.h"
 #include "ui_manager.h"
 #include "uilist.h"
 #include "worldfactory.h"
@@ -117,6 +118,9 @@ class instruction_guard
 struct page_definition {
     std::string id;
     std::string title;
+    std::string category = "general";
+    std::vector<std::string> slots = { "main.extensions", "ingame.extensions" };
+    int order = 100;
     sol::protected_function draw;
     bool enabled = true;
     std::string error;
@@ -191,8 +195,6 @@ std::string last_runtime_error;
 std::size_t generation_counter = 0;
 std::mutex android_state_mutex;
 std::unordered_map<std::string, std::string> android_interactions;
-std::string android_selected_page;
-std::string android_last_published_page;
 std::chrono::steady_clock::time_point android_last_publish;
 std::string android_published_snapshot =
     R"({"schema":1,"generation":0,"selectedPage":"","surfaces":[]})";
@@ -326,7 +328,15 @@ auto find_definition( std::vector<Definition> &definitions, const std::string &i
     } );
 }
 
-void register_page( runtime_state &state, const std::string &id, const std::string &title,
+bool valid_page_slot( const std::string &slot )
+{
+    static const std::array<std::string_view, 4> slots = {
+        "main.extensions", "ingame.extensions", "settings.mods", "debug.tools"
+    };
+    return std::find( slots.begin(), slots.end(), slot ) != slots.end();
+}
+
+void register_page( runtime_state &state, const std::string &id, const sol::object &descriptor,
                     sol::protected_function draw )
 {
     require_capability( state, "ui.pages" );
@@ -337,8 +347,53 @@ void register_page( runtime_state &state, const std::string &id, const std::stri
         throw std::runtime_error( "ui.page requires a draw function" );
     }
 
-    page_definition replacement{ id, title.empty() ? id : title, std::move( draw ), true, {},
-                                 *state.current_source };
+    page_definition replacement;
+    replacement.id = id;
+    replacement.title = id;
+    replacement.draw = std::move( draw );
+    replacement.source_index = *state.current_source;
+    if( descriptor.get_type() == sol::type::string ) {
+        replacement.title = descriptor.as<std::string>();
+    } else if( descriptor.get_type() == sol::type::table ) {
+        const sol::table options = descriptor.as<sol::table>();
+        replacement.title = options.get_or( "title", id );
+        replacement.category = options.get_or( "category", std::string( "general" ) );
+        replacement.order = options.get_or( "order", 100 );
+        replacement.order = std::clamp( replacement.order, -10000, 10000 );
+        const sol::object raw_slots = options["slots"];
+        if( raw_slots.valid() && raw_slots.get_type() != sol::type::nil ) {
+            if( raw_slots.get_type() != sol::type::table ) {
+                throw std::runtime_error( "ui.page slots must be an array of strings" );
+            }
+            replacement.slots.clear();
+            const sol::table slots = raw_slots.as<sol::table>();
+            for( std::size_t index = 1; index <= slots.size(); ++index ) {
+                const sol::object raw_slot = slots[index];
+                if( !raw_slot.valid() || raw_slot.get_type() != sol::type::string ) {
+                    throw std::runtime_error( "ui.page slots must be an array of strings" );
+                }
+                const std::string slot = raw_slot.as<std::string>();
+                if( !valid_page_slot( slot ) ) {
+                    throw std::runtime_error( "ui.page has an unknown navigation slot: " + slot );
+                }
+                if( std::find( replacement.slots.begin(), replacement.slots.end(), slot ) ==
+                    replacement.slots.end() ) {
+                    replacement.slots.push_back( slot );
+                }
+            }
+            if( replacement.slots.empty() ) {
+                throw std::runtime_error( "ui.page requires at least one navigation slot" );
+            }
+        }
+    } else {
+        throw std::runtime_error( "ui.page second argument must be a title or descriptor table" );
+    }
+    if( replacement.title.empty() ) {
+        replacement.title = id;
+    }
+    if( replacement.category.empty() || replacement.category.size() > 128 ) {
+        throw std::runtime_error( "ui.page category must contain 1 to 128 bytes" );
+    }
     const auto existing = find_definition( state.pages, id );
     if( existing == state.pages.end() ) {
         state.pages.emplace_back( std::move( replacement ) );
@@ -572,9 +627,9 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
         "virtual_list", &script_ui_context::virtual_list );
 
     sol::table ui = state.lua.create_named_table( "ui" );
-    ui.set_function( "page", [&state]( const std::string & id, const std::string & title,
+    ui.set_function( "page", [&state]( const std::string & id, const sol::object & descriptor,
     sol::protected_function draw ) {
-        register_page( state, id, title, std::move( draw ) );
+        register_page( state, id, descriptor, std::move( draw ) );
     } );
     ui.set_function( "hud", [&state]( const std::string & id, const sol::table & options,
     sol::protected_function draw ) {
@@ -890,6 +945,31 @@ void runtime_state::notify( const cata::event &event )
     }
 }
 
+void draw_registered_page( const std::string &page_id )
+{
+    page_definition *page = find_page( page_id );
+    if( page == nullptr ) {
+        ImGui::TextWrapped( "%s", _( "This page is no longer registered." ) );
+        return;
+    }
+    if( !page->enabled ) {
+        ImGui::TextColored( ImVec4( 1.0F, 0.35F, 0.35F, 1.0F ), "%s", page->error.c_str() );
+        return;
+    }
+
+    std::unique_ptr<script_ui_renderer> renderer = make_imgui_script_ui_renderer();
+    script_ui_context context( *renderer );
+    source_scope source( *active_state, page->source_index );
+    instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
+    const auto started = std::chrono::steady_clock::now();
+    const sol::protected_function_result result = page->draw( &context );
+    record_callback_timing( *active_state, "page '" + page->id + "'", started );
+    if( !result.valid() ) {
+        disable_callback( page->enabled, page->error, "Lua page '" + page->id + "'", result );
+        ImGui::TextColored( ImVec4( 1.0F, 0.35F, 0.35F, 1.0F ), "%s", page->error.c_str() );
+    }
+}
+
 class lua_page_window : public cataimgui::window
 {
     public:
@@ -913,7 +993,8 @@ class lua_page_window : public cataimgui::window
 
     protected:
         cataimgui::bounds get_bounds() override {
-            return { -1.0F, -1.0F, 0.85F, 0.85F };
+            const cata::ui::profile profile = cata::ui::current_profile();
+            return { -1.0F, -1.0F, profile.page_width, profile.page_height };
         }
 
         void draw_controls() override {
@@ -933,33 +1014,155 @@ class lua_page_window : public cataimgui::window
                                  static_cast<double>( snapshot.memory_limit ) / ( 1024.0 * 1024.0 ) );
             ImGui::Separator();
 
-            page_definition *page = find_page( page_id_ );
-            if( page == nullptr ) {
-                ImGui::TextWrapped( "%s", _( "This page is no longer registered." ) );
-                return;
-            }
-            if( !page->enabled ) {
-                ImGui::TextColored( ImVec4( 1.0F, 0.35F, 0.35F, 1.0F ), "%s",
-                                    page->error.c_str() );
-                return;
-            }
-
-            std::unique_ptr<script_ui_renderer> renderer = make_imgui_script_ui_renderer();
-            script_ui_context context( *renderer );
-            source_scope source( *active_state, page->source_index );
-            instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
-            const auto started = std::chrono::steady_clock::now();
-            const sol::protected_function_result result = page->draw( &context );
-            record_callback_timing( *active_state, "page '" + page->id + "'", started );
-            if( !result.valid() ) {
-                disable_callback( page->enabled, page->error, "Lua page '" + page->id + "'", result );
-                ImGui::TextColored( ImVec4( 1.0F, 0.35F, 0.35F, 1.0F ), "%s",
-                                    page->error.c_str() );
-            }
+            draw_registered_page( page_id_ );
         }
 
     private:
         std::string page_id_;
+};
+
+class lua_page_hub_window : public cataimgui::window
+{
+    public:
+        lua_page_hub_window( std::string slot, std::vector<page_info> pages ) :
+            cataimgui::window( "Lua extension pages",
+                               ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings ),
+            slot_( std::move( slot ) ), pages_( std::move( pages ) ) {}
+
+        void run() {
+            input_context context( "HELP_KEYBINDINGS" );
+            context.register_action( "QUIT" );
+            context.register_action( "ANY_INPUT" );
+            context.register_action( "HELP_KEYBINDINGS" );
+            ui_manager::redraw();
+            while( get_is_open() ) {
+                ui_manager::redraw();
+                if( context.handle_input( 5 ) == "QUIT" ) {
+                    break;
+                }
+            }
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            return { -1.0F, -1.0F, profile.page_width, profile.page_height };
+        }
+
+        void draw_controls() override {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding,
+                                 ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing,
+                                 ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+
+            ImGui::TextUnformatted( _( "Extensions" ) );
+            ImGui::SameLine();
+            if( ImGui::Button( _( "Reload Lua" ), ImVec2( 0.0F, profile.minimum_target ) ) ) {
+                const std::string previous_id = selected_id();
+                std::string error;
+                if( reload_scripts( error ) ) {
+                    pages_ = registered_pages( slot_ );
+                    select_id( previous_id );
+                    ::add_msg( _( "Lua UI scripts reloaded." ) );
+                } else {
+                    ::add_msg( m_bad, _( "Lua reload failed: %s" ), error );
+                }
+            }
+            ImGui::Separator();
+
+            if( pages_.empty() ) {
+                ImGui::TextWrapped( "%s", _( "No extension pages are registered here." ) );
+                ImGui::PopStyleVar( 3 );
+                return;
+            }
+            selected_ = std::clamp( selected_, 0, static_cast<int>( pages_.size() ) - 1 );
+            const ImVec2 available = ImGui::GetContentRegionAvail();
+            const bool single_column = available.x < 760.0F;
+            if( single_column ) {
+                draw_horizontal_navigation( profile.minimum_target );
+                ImGui::Separator();
+                if( ImGui::BeginChild( "##lua_extension_content", ImVec2( 0.0F, 0.0F ),
+                                       ImGuiChildFlags_None,
+                                       ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                    draw_registered_page( pages_[selected_].id );
+                }
+                ImGui::EndChild();
+            } else {
+                const float navigation_width = std::clamp( available.x * 0.27F, 220.0F, 360.0F );
+                if( ImGui::BeginChild( "##lua_extension_navigation",
+                                       ImVec2( navigation_width, 0.0F ),
+                                       ImGuiChildFlags_Borders ) ) {
+                    draw_vertical_navigation( profile.minimum_target );
+                }
+                ImGui::EndChild();
+                ImGui::SameLine();
+                if( ImGui::BeginChild( "##lua_extension_content", ImVec2( 0.0F, 0.0F ),
+                                       ImGuiChildFlags_Borders,
+                                       ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                    ImGui::TextUnformatted( pages_[selected_].title.c_str() );
+                    ImGui::Separator();
+                    draw_registered_page( pages_[selected_].id );
+                }
+                ImGui::EndChild();
+            }
+
+            ImGui::PopStyleVar( 3 );
+        }
+
+    private:
+        std::string slot_;
+        std::vector<page_info> pages_;
+        int selected_ = 0;
+
+        std::string selected_id() const {
+            if( selected_ < 0 || static_cast<std::size_t>( selected_ ) >= pages_.size() ) {
+                return {};
+            }
+            return pages_[selected_].id;
+        }
+
+        void select_id( const std::string &id ) {
+            const auto found = std::find_if( pages_.begin(), pages_.end(), [&id]( const page_info & page ) {
+                return page.id == id;
+            } );
+            selected_ = found == pages_.end() ? 0 :
+                        static_cast<int>( std::distance( pages_.begin(), found ) );
+        }
+
+        void draw_vertical_navigation( const float target_height ) {
+            std::string category;
+            for( std::size_t index = 0; index < pages_.size(); ++index ) {
+                const page_info &page = pages_[index];
+                if( page.category != category ) {
+                    category = page.category;
+                    ImGui::SeparatorText( category.c_str() );
+                }
+                if( ImGui::Selectable( ( page.title + "###lua_page_" + page.id ).c_str(),
+                                       selected_ == static_cast<int>( index ), 0,
+                                       ImVec2( 0.0F, target_height ) ) ) {
+                    selected_ = static_cast<int>( index );
+                }
+            }
+        }
+
+        void draw_horizontal_navigation( const float target_height ) {
+            if( ImGui::BeginChild( "##lua_extension_tabs", ImVec2( 0.0F, target_height + 8.0F ),
+                                   ImGuiChildFlags_None,
+                                   ImGuiWindowFlags_HorizontalScrollbar ) ) {
+                for( std::size_t index = 0; index < pages_.size(); ++index ) {
+                    if( index > 0 ) {
+                        ImGui::SameLine();
+                    }
+                    if( ImGui::Button( ( pages_[index].title + "###lua_page_" +
+                                         pages_[index].id ).c_str(), ImVec2( 0.0F, target_height ) ) ) {
+                        selected_ = static_cast<int>( index );
+                    }
+                }
+            }
+            ImGui::EndChild();
+        }
 };
 
 bool reload_scripts_with_state( const script_persistent_state *initial_state, std::string &error )
@@ -987,7 +1190,6 @@ bool reload_scripts_with_state( const script_persistent_state *initial_state, st
         {
             std::lock_guard<std::mutex> lock( android_state_mutex );
             android_interactions.clear();
-            android_last_published_page.clear();
             android_last_publish = {};
         }
         last_runtime_error.clear();
@@ -1134,16 +1336,6 @@ bool submit_android_interaction( const std::string &widget_id,
     return true;
 }
 
-bool select_android_page( const std::string &page_id )
-{
-    if( page_id.size() > 256 ) {
-        return false;
-    }
-    std::lock_guard<std::mutex> lock( android_state_mutex );
-    android_selected_page = page_id;
-    return true;
-}
-
 std::string android_snapshot_json()
 {
     std::lock_guard<std::mutex> lock( android_state_mutex );
@@ -1152,16 +1344,13 @@ std::string android_snapshot_json()
 
 void publish_android_snapshot()
 {
-    std::string selected_page;
     bool has_interactions = false;
     {
         std::lock_guard<std::mutex> lock( android_state_mutex );
-        selected_page = android_selected_page;
         has_interactions = !android_interactions.empty();
     }
     const auto now = std::chrono::steady_clock::now();
-    if( !has_interactions && selected_page == android_last_published_page &&
-        android_last_publish.time_since_epoch().count() != 0 &&
+    if( !has_interactions && android_last_publish.time_since_epoch().count() != 0 &&
         std::chrono::duration_cast<std::chrono::milliseconds>( now - android_last_publish ).count() <
         50 ) {
         return;
@@ -1187,7 +1376,7 @@ void publish_android_snapshot()
     };
 
     std::vector<retained_ui_surface> surfaces;
-    surfaces.reserve( active_state->huds.size() + active_state->pages.size() );
+    surfaces.reserve( active_state->huds.size() );
     for( hud_definition &hud : active_state->huds ) {
         retained_ui_surface surface;
         surface.id = "hud:" + hud.id;
@@ -1221,43 +1410,10 @@ void publish_android_snapshot()
         surfaces.push_back( std::move( surface ) );
     }
 
-    bool selected_found = selected_page.empty();
-    for( page_definition &page : active_state->pages ) {
-        retained_ui_surface surface;
-        surface.id = "page:" + page.id;
-        surface.title = page.title;
-        surface.kind = "page";
-        surface.anchor = "center";
-        surface.interactive = true;
-        if( page.id == selected_page ) {
-            selected_found = true;
-            if( page.enabled ) {
-                std::unique_ptr<script_ui_renderer> renderer = make_retained_script_ui_renderer(
-                            surface.document, surface.id + "/", interactions );
-                script_ui_context context( *renderer );
-                source_scope source( *active_state, page.source_index );
-                instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
-                const auto started = std::chrono::steady_clock::now();
-                const sol::protected_function_result result = page.draw( &context );
-                record_callback_timing( *active_state, "Android page '" + page.id + "'", started );
-                if( !result.valid() ) {
-                    disable_callback( page.enabled, page.error, "Lua page '" + page.id + "'", result );
-                }
-            }
-        }
-        surfaces.push_back( std::move( surface ) );
-    }
-    if( !selected_found ) {
-        selected_page.clear();
-        std::lock_guard<std::mutex> lock( android_state_mutex );
-        android_selected_page.clear();
-    }
-
     const std::string snapshot = retained_surfaces_json( surfaces, active_state->generation,
-                                 selected_page );
+                                 {} );
     std::lock_guard<std::mutex> lock( android_state_mutex );
     android_published_snapshot = snapshot;
-    android_last_published_page = selected_page;
     android_last_publish = now;
 }
 
@@ -1269,8 +1425,6 @@ void shutdown()
     {
         std::lock_guard<std::mutex> lock( android_state_mutex );
         android_interactions.clear();
-        android_selected_page.clear();
-        android_last_published_page.clear();
         android_last_publish = {};
         android_published_snapshot =
             R"({"schema":1,"generation":0,"selectedPage":"","surfaces":[]})";
@@ -1278,7 +1432,65 @@ void shutdown()
     last_runtime_error.clear();
 }
 
-void show()
+std::vector<page_info> registered_pages( const std::string_view slot )
+{
+    std::vector<page_info> result;
+    if( !active_state ) {
+        return result;
+    }
+    for( const page_definition &page : active_state->pages ) {
+        if( !slot.empty() && std::find( page.slots.begin(), page.slots.end(), slot ) ==
+            page.slots.end() ) {
+            continue;
+        }
+        result.push_back( { page.id, page.title, page.category, page.slots, page.order } );
+    }
+    std::stable_sort( result.begin(), result.end(), []( const page_info & left,
+    const page_info & right ) {
+        if( left.category != right.category ) {
+            return left.category < right.category;
+        }
+        if( left.order != right.order ) {
+            return left.order < right.order;
+        }
+        if( left.title != right.title ) {
+            return left.title < right.title;
+        }
+        return left.id < right.id;
+    } );
+    return result;
+}
+
+bool has_registered_pages( const std::string_view slot )
+{
+    if( !active_state ) {
+        return false;
+    }
+    return std::any_of( active_state->pages.begin(), active_state->pages.end(),
+    [slot]( const page_definition & page ) {
+        return slot.empty() || std::find( page.slots.begin(), page.slots.end(), slot ) !=
+               page.slots.end();
+    } );
+}
+
+bool show_page( const std::string &page_id )
+{
+    std::string error;
+    if( !active_state && !reload_scripts( error ) ) {
+        popup( _( "Unable to load Lua UI scripts:\n%s" ), error );
+        return false;
+    }
+    ensure_hud_adaptor();
+    page_definition *page = find_page( page_id );
+    if( page == nullptr ) {
+        return false;
+    }
+    lua_page_window window( page->id, page->title );
+    window.run();
+    return true;
+}
+
+void show_slot( const std::string_view slot )
 {
     std::string error;
     if( !reload_scripts( error ) ) {
@@ -1286,25 +1498,18 @@ void show()
         return;
     }
     ensure_hud_adaptor();
-    if( active_state->pages.empty() ) {
-        popup( _( "Lua loaded successfully, but no UI pages were registered." ) );
+    std::vector<page_info> pages = registered_pages( slot );
+    if( pages.empty() ) {
+        popup( _( "Lua loaded successfully, but no UI pages were registered here." ) );
         return;
     }
-
-    uilist menu;
-    menu.text = _( "Lua UI pages" );
-    for( std::size_t index = 0; index < active_state->pages.size(); ++index ) {
-        menu.addentry( static_cast<int>( index ), true, MENU_AUTOASSIGN,
-                       active_state->pages[index].title );
-    }
-    menu.query();
-    if( menu.ret < 0 || static_cast<std::size_t>( menu.ret ) >= active_state->pages.size() ) {
-        return;
-    }
-
-    const page_definition &page = active_state->pages[menu.ret];
-    lua_page_window window( page.id, page.title );
+    lua_page_hub_window window( std::string( slot ), std::move( pages ) );
     window.run();
+}
+
+void show()
+{
+    show_slot( {} );
 }
 
 } // namespace cata::lua_ui

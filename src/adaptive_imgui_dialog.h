@@ -1,14 +1,14 @@
 #pragma once
-#ifndef CATA_SRC_ANDROID_IMGUI_DIALOG_H
-#define CATA_SRC_ANDROID_IMGUI_DIALOG_H
+#ifndef CATA_SRC_ADAPTIVE_IMGUI_DIALOG_H
+#define CATA_SRC_ADAPTIVE_IMGUI_DIALOG_H
 
-#if defined(__ANDROID__)
+#if defined(TILES)
 
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace android_imgui_dialog
+namespace adaptive_imgui_dialog
 {
 
 struct entry {
@@ -33,8 +33,8 @@ void message( const std::string &title,
               const std::string &message,
               const std::string &button_label = std::string() );
 
-} // namespace android_imgui_dialog
+} // namespace adaptive_imgui_dialog
 
-#endif // __ANDROID__
+#endif // TILES
 
-#endif // CATA_SRC_ANDROID_IMGUI_DIALOG_H
+#endif // CATA_SRC_ADAPTIVE_IMGUI_DIALOG_H

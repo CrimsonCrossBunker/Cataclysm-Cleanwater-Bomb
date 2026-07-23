@@ -19,9 +19,9 @@
 #include <vector>
 
 #include "achievement.h"
-#if defined(__ANDROID__)
-    #include "android_character_creator.h"
-    #include "android_imgui_dialog.h"
+#if defined(TILES)
+    #include "adaptive_character_creator.h"
+    #include "adaptive_imgui_dialog.h"
 #endif
 #include "addiction.h"
 #include "bionics.h"
@@ -1502,7 +1502,7 @@ std::string get_character_stat_header( int selected_stat_index )
 
 const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait )
 {
-#if !defined(__ANDROID__)
+#if !defined(TILES)
     // Because the keys will change on each loop if I clear the entries, and
     // if I don't clear the entries, the menu bugs out
     static std::array<int, 60> keys = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -1524,8 +1524,8 @@ const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait 
         variants.emplace_back( &pr.second );
     }
 
-#if defined(__ANDROID__)
-    std::vector<android_imgui_dialog::entry> entries;
+#if defined(TILES)
+    std::vector<adaptive_imgui_dialog::entry> entries;
     entries.reserve( variants.size() + 1 );
     entries.push_back( { ret != nullptr ? _( "Unselect" ) : _( "Unselected" ),
                          _( "Remove this trait." ), true, false } );
@@ -1538,7 +1538,7 @@ const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait 
             initial_selection = static_cast<int>( index ) + 1;
         }
     }
-    const std::optional<int> selected = android_imgui_dialog::select(
+    const std::optional<int> selected = adaptive_imgui_dialog::select(
                                             _( "Which trait?" ), entries, cur_trait->name(), initial_selection );
     if( !selected ) {
         return ret;
@@ -3107,11 +3107,11 @@ void character_creator_ui_impl::draw_top_bar( const avatar &u ) const
                                       ui_parent->get_current_tab_input().get_desc( "HELP_KEYBINDINGS" ) ) );
 }
 
-#if defined(__ANDROID__)
+#if defined(TILES)
 namespace
 {
 
-void draw_android_character_preview( const ImVec2 &available )
+void draw_adaptive_character_preview( const ImVec2 &available )
 {
 #if defined(TILES)
     draw_character_preview_cell( get_avatar(), available );
@@ -3120,7 +3120,7 @@ void draw_android_character_preview( const ImVec2 &available )
 #endif
 }
 
-void draw_android_character_creator_details( const character_creator_tab tab,
+void draw_adaptive_character_creator_details( const character_creator_tab tab,
         const std::function<void()> &draw_description )
 {
     avatar &you = get_avatar();
@@ -3166,7 +3166,7 @@ void draw_android_character_creator_details( const character_creator_tab tab,
         }
         case CHARCREATOR_SUMMARY: {
             const Character &who = get_player_character();
-            if( ImGui::BeginTable( "##android_character_summary_columns", 3,
+            if( ImGui::BeginTable( "##adaptive_character_summary_columns", 3,
                                    ImGuiTableFlags_BordersInnerV |
                                    ImGuiTableFlags_SizingStretchProp ) ) {
                 ImGui::TableSetupColumn( _( "Character" ), ImGuiTableColumnFlags_WidthStretch, 0.31F );
@@ -3200,10 +3200,10 @@ void draw_android_character_creator_details( const character_creator_tab tab,
     }
 }
 
-android_character_creator_snapshot make_android_character_creator_snapshot(
+adaptive_character_creator_snapshot make_adaptive_character_creator_snapshot(
     character_creator_ui &ui )
 {
-    android_character_creator_snapshot result;
+    adaptive_character_creator_snapshot result;
     result.tab = cc_uistate.selected_tab;
     const avatar &you = get_avatar();
     result.name = you.name;
@@ -3254,12 +3254,12 @@ android_character_creator_snapshot make_android_character_creator_snapshot(
 }
 
 } // namespace
-#endif // __ANDROID__
+#endif // TILES
 
 bool character_creator_ui::display()
 {
     cc_uistate.reset();
-#if !defined(__ANDROID__)
+#if !defined(TILES)
     character_creator_ui_impl ccui( this );
 #endif
 
@@ -3279,12 +3279,12 @@ bool character_creator_ui::display()
     // set first tab
     upon_switching_tab();
 
-#if defined(__ANDROID__)
-    // Register the Android window only after character data is initialized.  Scenario sorting can
+#if defined(TILES)
+    // Register the adaptive Tiles window only after character data is initialized. Scenario sorting can
     // load historical achievements and trigger a nested redraw; registering before that point
     // would expose partially built selection vectors to the view.
-    auto ccui = std::make_unique<android_character_creator_ui>(
-                    draw_android_character_creator_details, draw_android_character_preview );
+    auto ccui = std::make_unique<adaptive_character_creator_ui>(
+                    draw_adaptive_character_creator_details, draw_adaptive_character_preview );
 #endif
 
     ui_manager::invalidate_all_ui_adaptors();
@@ -3296,37 +3296,37 @@ bool character_creator_ui::display()
         input_context &current_tab_input = get_current_tab_input();
         input_context::scoped_activation active_tab_context( current_tab_input );
 
-#if defined(__ANDROID__)
-        ccui->set_snapshot( make_android_character_creator_snapshot( *this ) );
+#if defined(TILES)
+        ccui->set_snapshot( make_adaptive_character_creator_snapshot( *this ) );
 #endif
         ui_manager::redraw();
-#if defined(__ANDROID__)
-        while( const std::optional<android_character_creator_action> mobile_action =
+#if defined(TILES)
+        while( const std::optional<adaptive_character_creator_action> mobile_action =
                    ccui->take_action() ) {
             // Model actions may synchronously open another UI or load persistent data.  Publish a
             // busy snapshot first so a nested redraw never observes a half-applied character state.
             ccui->show_loading();
-            if( mobile_action->type == android_character_creator_action_type::select_tab ) {
+            if( mobile_action->type == adaptive_character_creator_action_type::select_tab ) {
                 cc_uistate.selected_tab = static_cast<character_creator_tab>( mobile_action->index );
                 cc_uistate.switched_tab = cc_uistate.selected_tab;
                 upon_switching_tab();
-            } else if( mobile_action->type == android_character_creator_action_type::command ) {
+            } else if( mobile_action->type == adaptive_character_creator_action_type::command ) {
                 handle_action( mobile_action->command );
-            } else if( mobile_action->type == android_character_creator_action_type::set_name ) {
+            } else if( mobile_action->type == adaptive_character_creator_action_type::set_name ) {
                 get_avatar().name = utf8_truncate( mobile_action->value, NAME_CHARACTER_LIMIT );
-            } else if( mobile_action->type == android_character_creator_action_type::set_age ) {
+            } else if( mobile_action->type == adaptive_character_creator_action_type::set_age ) {
                 const ret_val<int> age = try_parse_integer<int>( mobile_action->value, true );
                 if( age.success() ) {
                     get_avatar().set_base_age( clamp( age.value(), CHARACTER_AGE_MIN,
                                                       CHARACTER_AGE_MAX ) );
                 }
-            } else if( mobile_action->type == android_character_creator_action_type::set_height ) {
+            } else if( mobile_action->type == adaptive_character_creator_action_type::set_height ) {
                 const ret_val<int> height = try_parse_integer<int>( mobile_action->value, true );
                 if( height.success() ) {
                     get_avatar().set_base_height( clamp( height.value(), Character::min_height(),
                                                          Character::max_height() ) );
                 }
-            } else if( mobile_action->type == android_character_creator_action_type::save_template ) {
+            } else if( mobile_action->type == adaptive_character_creator_action_type::save_template ) {
                 if( !mobile_action->value.empty() &&
                     mobile_action->value.find( '/' ) == std::string::npos ) {
                     get_avatar().save_template( mobile_action->value, pool_type::FREEFORM );
@@ -3337,7 +3337,7 @@ bool character_creator_ui::display()
                     mobile_action->index < static_cast<int>( menu->entries.size() ) ) {
                     menu->selected = mobile_action->index;
                     cc_callback.select( menu.get() );
-                    if( mobile_action->type == android_character_creator_action_type::activate_row ) {
+                    if( mobile_action->type == adaptive_character_creator_action_type::activate_row ) {
                         menu->ret = mobile_action->index;
                         cc_callback.confirm( menu.get() );
                     }
@@ -3362,7 +3362,7 @@ bool character_creator_ui::display()
         }
 #endif
         if( !cc_uistate.top_bar_button_action.empty() ) {
-#if defined(__ANDROID__)
+#if defined(TILES)
             ccui->show_loading();
 #endif
             handle_action( cc_uistate.top_bar_button_action );
@@ -3819,7 +3819,7 @@ void character_creator_uistate::reset()
     finished_character_creator = false;
 }
 
-#if !defined(__ANDROID__)
+#if !defined(TILES)
 static int choose_location( const avatar &you )
 {
     uilist select_location;
@@ -3877,8 +3877,8 @@ bool character_creator_ui::handle_action( const std::string &action )
 
     const auto confirm_character_action = []( const std::string & title,
     const std::string & message, const std::string & confirm_label, const bool danger ) {
-#if defined(__ANDROID__)
-        return android_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ), danger );
+#if defined(TILES)
+        return adaptive_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ), danger );
 #else
         ( void )title;
         ( void )confirm_label;
@@ -3998,8 +3998,8 @@ bool character_creator_ui::handle_action( const std::string &action )
             return std::tie( a.population, a.name ) > std::tie( b.population, b.name );
         };
         std::sort( cities.begin(), cities.end(), cities_cmp_population );
-#if defined(__ANDROID__)
-        std::vector<android_imgui_dialog::entry> city_entries;
+#if defined(TILES)
+        std::vector<adaptive_imgui_dialog::entry> city_entries;
         city_entries.reserve( cities.size() + 1 );
         city_entries.push_back( { _( "Random" ), _( "Let the game choose a starting city." ),
                                   true, false } );
@@ -4014,7 +4014,7 @@ bool character_creator_ui::handle_action( const std::string &action )
                 initial_selection = static_cast<int>( index ) + 1;
             }
         }
-        const std::optional<int> selected = android_imgui_dialog::select(
+        const std::optional<int> selected = adaptive_imgui_dialog::select(
                                                 _( "Starting City" ), city_entries, std::string(), initial_selection );
         if( selected && *selected == 0 ) {
             you.starting_city.reset();
@@ -4034,8 +4034,8 @@ bool character_creator_ui::handle_action( const std::string &action )
         }
 #endif
     } else if( action == "CHOOSE_LOCATION" ) {
-#if defined(__ANDROID__)
-        std::vector<android_imgui_dialog::entry> location_entries;
+#if defined(TILES)
+        std::vector<adaptive_imgui_dialog::entry> location_entries;
         std::vector<int> location_ids;
         location_entries.push_back( { _( "Random location" ),
                                       string_format( n_gettext( "%d variant", "%d variants",
@@ -4057,7 +4057,7 @@ bool character_creator_ui::handle_action( const std::string &action )
                 initial_selection = static_cast<int>( location_ids.size() ) - 1;
             }
         }
-        const std::optional<int> location_choice = android_imgui_dialog::select(
+        const std::optional<int> location_choice = adaptive_imgui_dialog::select(
                     _( "Starting Location" ), location_entries, std::string(), initial_selection );
         const int selected_location_index = location_choice ? location_ids[*location_choice] : -1;
 #else

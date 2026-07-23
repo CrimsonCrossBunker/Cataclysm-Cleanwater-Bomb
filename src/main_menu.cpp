@@ -22,8 +22,8 @@
     #include <emscripten.h>
 #endif
 
-#if defined(__ANDROID__)
-    #include "android_imgui_dialog.h"
+#if defined(TILES)
+    #include "adaptive_imgui_dialog.h"
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
 #endif
@@ -35,6 +35,7 @@
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "catacharset.h"
 #include "character_id.h"
 #include "clzones.h"
@@ -73,6 +74,7 @@
 #include "ui_manager.h"
 #include "ui_style_picker.h"
 #include "uilist.h"
+#include "ui_profile.h"
 #include "wcwidth.h"
 #include "worldfactory.h"
 
@@ -92,30 +94,30 @@ enum class main_menu_opts : int {
     NUM_MENU_OPTS,
 };
 
-#if defined(__ANDROID__)
-struct android_main_menu_snapshot {
+#if defined(TILES)
+struct main_menu_snapshot {
     std::vector<std::string> primary_items;
     std::vector<std::string> secondary_items;
     int selected_primary = 0;
     int selected_secondary = 0;
 };
 
-enum class android_main_menu_action_type : int {
+enum class main_menu_action_type : int {
     select_primary,
     activate_primary,
     activate_secondary,
 };
 
-struct android_main_menu_action {
-    android_main_menu_action_type type;
+struct main_menu_action {
+    main_menu_action_type type;
     int index;
 };
 
-class android_document_viewer : public cataimgui::window
+class document_viewer : public cataimgui::window
 {
     public:
-        android_document_viewer( std::string title, std::string body ) :
-            cataimgui::window( "Android document viewer",
+        document_viewer( std::string title, std::string body ) :
+            cataimgui::window( "Document viewer",
                                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                ImGuiWindowFlags_NoSavedSettings ),
@@ -129,7 +131,9 @@ class android_document_viewer : public cataimgui::window
 
     protected:
         cataimgui::bounds get_bounds() override {
-            return { 0.0F, 0.0F, 1.0F, 1.0F };
+            const cata::ui::profile profile = cata::ui::current_profile();
+            return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+                   cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
         }
 
         void draw_controls() override {
@@ -141,7 +145,10 @@ class android_document_viewer : public cataimgui::window
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            cataimgui::PushGuiFont1_5x();
+            const bool large_font = cata::ui::current_profile().is_touch();
+            if( large_font ) {
+                cataimgui::PushGuiFont1_5x();
+            }
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 14.0F, 9.0F ) );
             ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 14.0F ) );
@@ -154,7 +161,7 @@ class android_document_viewer : public cataimgui::window
 
             ImGui::TextUnformatted( title.c_str() );
             ImGui::Separator();
-            if( ImGui::BeginChild( "##android_document_body", ImVec2( 0.0F, -footer_height ),
+            if( ImGui::BeginChild( "##adaptive_document_body", ImVec2( 0.0F, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 handle_vertical_drag();
@@ -172,7 +179,9 @@ class android_document_viewer : public cataimgui::window
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 3 );
-            cataimgui::PopGuiFont1_5x();
+            if( large_font ) {
+                cataimgui::PopGuiFont1_5x();
+            }
         }
 
     private:
@@ -183,6 +192,9 @@ class android_document_viewer : public cataimgui::window
         ImVec2 drag_start;
 
         void handle_vertical_drag() {
+            if( !cata::ui::current_profile().allow_swipe ) {
+                return;
+            }
             ImGuiIO &io = ImGui::GetIO();
             if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
                 ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
@@ -201,26 +213,26 @@ class android_document_viewer : public cataimgui::window
         }
 };
 
-class android_main_menu_imgui : public cataimgui::window
+class main_menu_imgui : public cataimgui::window
 {
     public:
-        android_main_menu_imgui() : cataimgui::window(
-                "Android main menu",
+        main_menu_imgui() : cataimgui::window(
+                "Main menu",
                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground |
                 ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
                 ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing ) {
             set_redraw_underlay( true );
         }
 
-        void set_snapshot( android_main_menu_snapshot next ) {
+        void set_snapshot( main_menu_snapshot next ) {
             snapshot = std::move( next );
         }
 
-        std::optional<android_main_menu_action> take_action() {
+        std::optional<main_menu_action> take_action() {
             if( actions.empty() ) {
                 return std::nullopt;
             }
-            android_main_menu_action action = actions.front();
+            main_menu_action action = actions.front();
             actions.pop_front();
             return action;
         }
@@ -251,7 +263,10 @@ class android_main_menu_imgui : public cataimgui::window
             const float bottom_hint_space = std::max( 36.0F,
                                             ImGui::GetTextLineHeightWithSpacing() * 2.2F );
 
-            cataimgui::PushGuiFont1_5x();
+            const bool large_font = cata::ui::current_profile().is_touch();
+            if( large_font ) {
+                cataimgui::PushGuiFont1_5x();
+            }
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 9.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 8.0F ) );
@@ -285,17 +300,17 @@ class android_main_menu_imgui : public cataimgui::window
                 const bool is_quit = static_cast<int>( index ) ==
                                      static_cast<int>( main_menu_opts::QUIT );
                 push_button_colors( selected, is_quit );
-                const std::string id = snapshot.primary_items[index] + "###android_main_primary_" +
+                const std::string id = snapshot.primary_items[index] + "###main_primary_" +
                                        std::to_string( index );
                 if( ImGui::Button( id.c_str(), ImVec2( primary_width, primary_height ) ) ) {
                     const int clicked_index = static_cast<int>( index );
                     if( is_quit ) {
                         close_submenu();
-                        actions.push_back( { android_main_menu_action_type::activate_primary,
+                        actions.push_back( { main_menu_action_type::activate_primary,
                                              clicked_index } );
                     } else {
                         toggle_submenu( clicked_index );
-                        actions.push_back( { android_main_menu_action_type::select_primary,
+                        actions.push_back( { main_menu_action_type::select_primary,
                                              clicked_index } );
                     }
                 }
@@ -315,12 +330,14 @@ class android_main_menu_imgui : public cataimgui::window
             }
 
             ImGui::PopStyleVar( 4 );
-            cataimgui::PopGuiFont1_5x();
+            if( large_font ) {
+                cataimgui::PopGuiFont1_5x();
+            }
         }
 
     private:
-        android_main_menu_snapshot snapshot;
-        std::deque<android_main_menu_action> actions;
+        main_menu_snapshot snapshot;
+        std::deque<main_menu_action> actions;
         int expanded_primary = -1;
 
         void close_submenu() {
@@ -381,11 +398,11 @@ class android_main_menu_imgui : public cataimgui::window
                 const bool selected = static_cast<int>( index ) == snapshot.selected_secondary;
                 push_button_colors( selected, false );
                 const std::string id = snapshot.secondary_items[index] +
-                                       "###android_main_secondary_" + std::to_string( index );
+                                       "###main_secondary_" + std::to_string( index );
                 if( ImGui::Button( id.c_str(),
                                    ImVec2( panel_width - panel_padding * 2.0F, item_height ) ) ) {
                     close_submenu();
-                    actions.push_back( { android_main_menu_action_type::activate_secondary,
+                    actions.push_back( { main_menu_action_type::activate_secondary,
                                          static_cast<int>( index ) } );
                 }
                 ImGui::PopStyleColor( 5 );
@@ -950,6 +967,7 @@ void main_menu::init_strings()
     vOtherSubItems.emplace_back( pgettext( "Main Menu", "<M|m>OTD" ) );
     vOtherSubItems.emplace_back( pgettext( "Main Menu", "H<e|E|?>lp" ) );
     vOtherSubItems.emplace_back( pgettext( "Main Menu", "<C|c>redits" ) );
+    vOtherSubItems.emplace_back( pgettext( "Main Menu", "E<x|X>tensions" ) );
     vOtherHotkeys.clear();
     for( const std::string &item : vOtherSubItems ) {
         vOtherHotkeys.push_back( get_hotkeys( item ) );
@@ -992,8 +1010,8 @@ void main_menu::display_text( const std::string &text, const std::string &title,
 
 void main_menu::show_text( const std::string &text, const std::string &title )
 {
-#if defined(__ANDROID__)
-    android_document_viewer viewer( title, text );
+#if defined(TILES)
+    document_viewer viewer( title, text );
     input_context text_ctxt( "MAIN_MENU_TEXT", keyboard_mode::keychar );
     text_ctxt.register_action( "QUIT" );
     text_ctxt.register_action( "CONFIRM" );
@@ -1155,12 +1173,12 @@ bool main_menu::opening_screen()
         sel2 = last_world_pos;
     }
 
-#if defined(__ANDROID__)
+#if defined(TILES)
     const auto plain_menu_text = []( const std::string & text ) {
         return remove_color_tags( shortcut_text( c_white, text ) );
     };
-    const auto make_android_snapshot = [&]() {
-        android_main_menu_snapshot snapshot;
+    const auto make_main_menu_snapshot = [&]() {
+        main_menu_snapshot snapshot;
         snapshot.selected_primary = sel1;
         snapshot.selected_secondary = sel2;
         snapshot.primary_items.reserve( vMenuItems.size() );
@@ -1220,8 +1238,8 @@ bool main_menu::opening_screen()
     } );
     ui.mark_resize();
 
-#if defined(__ANDROID__)
-    android_main_menu_imgui android_menu;
+#if defined(TILES)
+    main_menu_imgui imgui_menu;
 #endif
 
     if( !queued_world_to_load.empty() ) {
@@ -1258,17 +1276,17 @@ bool main_menu::opening_screen()
 #endif
 
     while( !start ) {
-#if defined(__ANDROID__)
-        android_menu.set_snapshot( make_android_snapshot() );
+#if defined(TILES)
+        imgui_menu.set_snapshot( make_main_menu_snapshot() );
 #endif
         ui_manager::redraw();
         std::string action;
         input_event sInput;
-#if defined(__ANDROID__)
-        const std::optional<android_main_menu_action> imgui_action = android_menu.take_action();
+#if defined(TILES)
+        const std::optional<main_menu_action> imgui_action = imgui_menu.take_action();
         if( imgui_action ) {
             switch( imgui_action->type ) {
-                case android_main_menu_action_type::select_primary:
+                case main_menu_action_type::select_primary:
                     if( sel1 != imgui_action->index ) {
                         sel1 = imgui_action->index;
                         sel2 = sel1 == getopt( main_menu_opts::LOADCHAR ) ? last_world_pos : 0;
@@ -1276,13 +1294,13 @@ bool main_menu::opening_screen()
                         on_move();
                     }
                     break;
-                case android_main_menu_action_type::activate_primary:
+                case main_menu_action_type::activate_primary:
                     sel1 = imgui_action->index;
                     sel2 = 0;
                     sel_line = 0;
                     action = "CONFIRM";
                     break;
-                case android_main_menu_action_type::activate_secondary:
+                case main_menu_action_type::activate_secondary:
                     sel2 = imgui_action->index;
                     sel_line = 0;
                     action = "CONFIRM";
@@ -1406,10 +1424,10 @@ bool main_menu::opening_screen()
         // also check special keys
         if( action == "QUIT" ) {
 #if !defined(EMSCRIPTEN)
-#if defined(__ANDROID__)
-            android_menu.set_visible( false );
-            on_out_of_scope restore_android_menu( [&android_menu]() {
-                android_menu.set_visible( true );
+#if defined(TILES)
+            imgui_menu.set_visible( false );
+            on_out_of_scope restore_imgui_menu( [&imgui_menu]() {
+                imgui_menu.set_visible( true );
             } );
             ui_manager::redraw_invalidated();
 #endif
@@ -1470,10 +1488,10 @@ bool main_menu::opening_screen()
                 on_move();
             }
         } else if( action == "CONFIRM" ) {
-#if defined(__ANDROID__)
-            android_menu.set_visible( false );
-            on_out_of_scope restore_android_menu( [&android_menu]() {
-                android_menu.set_visible( true );
+#if defined(TILES)
+            imgui_menu.set_visible( false );
+            on_out_of_scope restore_imgui_menu( [&imgui_menu]() {
+                imgui_menu.set_visible( true );
             } );
             ui_manager::redraw_invalidated();
 #endif
@@ -1487,6 +1505,8 @@ bool main_menu::opening_screen()
                         get_help().display_help();
                     } else if( sel2 == 2 ) {
                         show_text( mmenu_credits, _( "Credits" ) );
+                    } else if( sel2 == 3 ) {
+                        cata::lua_ui::show_slot( "main.extensions" );
                     }
                     break;
                 case main_menu_opts::SETTINGS:
@@ -1802,22 +1822,22 @@ bool main_menu::new_character_tab()
     if( sel2 == 1 ) {
         if( templates.empty() ) {
             on_error();
-#if defined(__ANDROID__)
-            android_imgui_dialog::message( _( "Preset Character" ),
-                                           _( "No templates found!" ) );
+#if defined(TILES)
+            adaptive_imgui_dialog::message( _( "Preset Character" ),
+                                            _( "No templates found!" ) );
 #else
             popup( _( "No templates found!" ) );
 #endif
             return false;
         }
         while( true ) {
-#if defined(__ANDROID__)
-            std::vector<android_imgui_dialog::entry> template_entries;
+#if defined(TILES)
+            std::vector<adaptive_imgui_dialog::entry> template_entries;
             template_entries.reserve( templates.size() );
             for( const std::string &tmpl : templates ) {
                 template_entries.push_back( { tmpl, _( "Saved character template" ), true, false } );
             }
-            const std::optional<int> template_choice = android_imgui_dialog::select(
+            const std::optional<int> template_choice = adaptive_imgui_dialog::select(
                         _( "Choose a preset character template" ), template_entries );
             if( !template_choice ) {
                 return false;
@@ -1838,13 +1858,13 @@ bool main_menu::new_character_tab()
                 return false;
             }
 
-#if defined(__ANDROID__)
-            const std::vector<android_imgui_dialog::entry> template_actions = {
+#if defined(TILES)
+            const std::vector<adaptive_imgui_dialog::entry> template_actions = {
                 { _( "Load" ), _( "Create a character from this template." ), true, false },
                 { _( "Delete" ), _( "Permanently delete this template." ), true, true },
                 { _( "Cancel" ), _( "Return to the template list." ), true, false }
             };
-            const std::optional<int> template_action = android_imgui_dialog::select(
+            const std::optional<int> template_action = adaptive_imgui_dialog::select(
                         _( "Character template" ), template_actions,
                         string_format( _( "What to do with template \"%s\"?" ), templates[opt_val] ) );
             const std::string res = !template_action || *template_action == 2 ? "CANCEL" :
@@ -1858,8 +1878,8 @@ bool main_menu::new_character_tab()
 #endif
             bool delete_confirmed = false;
             if( res == "DELETE" ) {
-#if defined(__ANDROID__)
-                delete_confirmed = android_imgui_dialog::confirm(
+#if defined(TILES)
+                delete_confirmed = adaptive_imgui_dialog::confirm(
                                        _( "Delete template" ),
                                        string_format( _( "Are you sure you want to delete %s?" ),
                                                       templates[opt_val] ),
@@ -1880,8 +1900,8 @@ bool main_menu::new_character_tab()
                 const cata_path template_path = PATH_INFO::templatedir_path() /
                                                 ( templates[opt_val] + ".template" );
                 if( !file_exist( template_path ) ) {
-#if defined(__ANDROID__)
-                    android_imgui_dialog::message(
+#if defined(TILES)
+                    adaptive_imgui_dialog::message(
                         _( "Preset Character" ), _( "No templates found!" ) );
 #else
                     popup( _( "No templates found!" ) );
@@ -2062,8 +2082,8 @@ bool main_menu::load_character_tab( const std::string &worldname )
     }
 
     int opt_val = 0;
-#if defined(__ANDROID__)
-    std::vector<android_imgui_dialog::entry> save_entries;
+#if defined(TILES)
+    std::vector<adaptive_imgui_dialog::entry> save_entries;
     save_entries.reserve( savegames.size() );
 #else
     uilist mmenu;
@@ -2082,15 +2102,15 @@ bool main_menu::load_character_tab( const std::string &worldname )
             playtime_str = string_format( "<color_c_light_blue>[%02d:%02d:%02d]</color>",
                                           pt_hrs, pt_min, static_cast<int>( pt_sec ) );
         }
-#if defined(__ANDROID__)
+#if defined(TILES)
         save_entries.push_back( { save_str, remove_color_tags( playtime_str ), true, false } );
 #else
         // TODO: Replace this API to allow adding context without an empty description.
         mmenu.entries.emplace_back( opt_val++, true, MENU_AUTOASSIGN, save_str, "", playtime_str );
 #endif
     }
-#if defined(__ANDROID__)
-    const std::optional<int> selected_save = android_imgui_dialog::select(
+#if defined(TILES)
+    const std::optional<int> selected_save = adaptive_imgui_dialog::select(
                 string_format( _( "Load character from \"%s\"" ), worldname ), save_entries );
     if( !selected_save ) {
         return false;
@@ -2121,8 +2141,8 @@ void main_menu::world_tab( const std::string &worldname )
     }
 
     int opt_val = 0;
-#if defined(__ANDROID__)
-    std::vector<android_imgui_dialog::entry> world_actions;
+#if defined(TILES)
+    std::vector<adaptive_imgui_dialog::entry> world_actions;
     world_actions.reserve( vWorldSubItems.size() );
     for( size_t index = 0; index < vWorldSubItems.size(); ++index ) {
         const bool danger = index == 5 || index == 6;
@@ -2131,8 +2151,8 @@ void main_menu::world_tab( const std::string &worldname )
             std::string(), true, danger
         } );
     }
-    const std::optional<int> world_action = android_imgui_dialog::select(
-                string_format( _( "Manage world \"%s\"" ), worldname ), world_actions );
+    const std::optional<int> world_action = adaptive_imgui_dialog::select(
+            string_format( _( "Manage world \"%s\"" ), worldname ), world_actions );
     if( !world_action ) {
         return;
     }
@@ -2154,10 +2174,10 @@ void main_menu::world_tab( const std::string &worldname )
         return;
     }
 
-    const auto confirm_world_action = []( const std::string &title, const std::string &message,
-    const std::string &confirm_label, const bool danger ) {
-#if defined(__ANDROID__)
-        return android_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ), danger );
+    const auto confirm_world_action = []( const std::string & title, const std::string & message,
+    const std::string & confirm_label, const bool danger ) {
+#if defined(TILES)
+        return adaptive_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ), danger );
 #else
         ( void )title;
         ( void )confirm_label;
@@ -2238,13 +2258,13 @@ void main_menu::world_tab( const std::string &worldname )
                 break;
             }
             int char_opt = 0;
-#if defined(__ANDROID__)
-            std::vector<android_imgui_dialog::entry> character_entries;
+#if defined(TILES)
+            std::vector<adaptive_imgui_dialog::entry> character_entries;
             character_entries.reserve( saves.size() );
             for( const save_t &s : saves ) {
                 character_entries.push_back( { s.decoded_name(), std::string(), true, false } );
             }
-            const std::optional<int> selected_character = android_imgui_dialog::select(
+            const std::optional<int> selected_character = adaptive_imgui_dialog::select(
                         _( "Copy personal zones from which character?" ), character_entries );
             if( !selected_character ) {
                 break;
@@ -2291,13 +2311,13 @@ void main_menu::world_tab( const std::string &worldname )
                 break;
             }
             int char_opt = 0;
-#if defined(__ANDROID__)
-            std::vector<android_imgui_dialog::entry> character_entries;
+#if defined(TILES)
+            std::vector<adaptive_imgui_dialog::entry> character_entries;
             character_entries.reserve( saves.size() );
             for( const save_t &s : saves ) {
                 character_entries.push_back( { s.decoded_name(), std::string(), true, false } );
             }
-            const std::optional<int> selected_character = android_imgui_dialog::select(
+            const std::optional<int> selected_character = adaptive_imgui_dialog::select(
                         _( "Paste personal zones to which character?" ), character_entries );
             if( !selected_character ) {
                 break;

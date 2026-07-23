@@ -687,12 +687,33 @@ end)
            std::string::npos );
 }
 
-TEST_CASE( "lua_pages_render_as_android_retained_trees_and_consume_interactions",
+TEST_CASE( "lua_pages_use_the_registry_while_android_retains_only_huds",
            "[lua][ui][renderer][retained][integration]" )
 {
     scoped_lua_user_script script;
     script.write( R"lua(
-ui.page("retained_test", "Retained test", function(ctx)
+ui.page("retained_test", {
+    title = "Retained test",
+    category = "tools",
+    order = 42,
+    slots = { "settings.mods", "ingame.extensions" }
+}, function(ctx)
+    ctx:text("shared ImGui page")
+end)
+ui.hud("editable_hud", {
+    title = "Editable HUD",
+    default_anchor = "bottom_right",
+    default_x = 18,
+    default_y = 20,
+    default_width = 0.31,
+    default_height = 0.22,
+    interactive = true,
+    background = false,
+    title_bar = true,
+    movable = false,
+    scalable = false,
+    user_toggleable = false
+}, function(ctx)
     ctx:child("details", 120, function()
         ctx:text("child body")
     end)
@@ -725,29 +746,23 @@ ui.page("retained_test", "Retained test", function(ctx)
         game.state_set("test.retained_movement", movement)
     end
 end)
-ui.hud("editable_hud", {
-    title = "Editable HUD",
-    default_anchor = "bottom_right",
-    default_x = 18,
-    default_y = 20,
-    default_width = 0.31,
-    default_height = 0.22,
-    background = false,
-    title_bar = true,
-    movable = false,
-    scalable = false,
-    user_toggleable = false
-}, function(ctx)
-    ctx:text("editable metadata")
-end)
 )lua" );
 
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
-    REQUIRE( cata::lua_ui::select_android_page( "retained_test" ) );
+    const std::vector<cata::lua_ui::page_info> settings_pages =
+        cata::lua_ui::registered_pages( "settings.mods" );
+    REQUIRE( settings_pages.size() == 1 );
+    CHECK( settings_pages.front().id == "retained_test" );
+    CHECK( settings_pages.front().title == "Retained test" );
+    CHECK( settings_pages.front().category == "tools" );
+    CHECK( settings_pages.front().order == 42 );
+    CHECK_FALSE( cata::lua_ui::has_registered_pages( "main.extensions" ) );
+    CHECK( cata::lua_ui::has_registered_pages( "ingame.extensions" ) );
+
     cata::lua_ui::publish_android_snapshot();
     const std::string snapshot = cata::lua_ui::android_snapshot_json();
-    CHECK( snapshot.find( "page:retained_test" ) != std::string::npos );
+    CHECK( snapshot.find( "page:retained_test" ) == std::string::npos );
     CHECK( snapshot.find( "hud:editable_hud" ) != std::string::npos );
     CHECK( snapshot.find( "\"defaultWidth\":0.31" ) != std::string::npos );
     CHECK( snapshot.find( "\"defaultHeight\":0.22" ) != std::string::npos );
@@ -760,12 +775,12 @@ end)
     CHECK( snapshot.find( "\"type\":\"table\"" ) != std::string::npos );
     CHECK( snapshot.find( "\"type\":\"tabs\"" ) != std::string::npos );
     CHECK( snapshot.find( "\"type\":\"virtual_list\"" ) != std::string::npos );
-    CHECK( snapshot.find( "page:retained_test/movement" ) != std::string::npos );
+    CHECK( snapshot.find( "hud:editable_hud/movement" ) != std::string::npos );
 
     REQUIRE( cata::lua_ui::submit_android_interaction(
-                 "page:retained_test/apply", "click" ) );
+                 "hud:editable_hud/apply", "click" ) );
     REQUIRE( cata::lua_ui::submit_android_interaction(
-                 "page:retained_test/movement", "select:run" ) );
+                 "hud:editable_hud/movement", "select:run" ) );
     cata::lua_ui::publish_android_snapshot();
     script.write( R"lua(
 assert(game.state_get("test.retained_clicked", false) == true)

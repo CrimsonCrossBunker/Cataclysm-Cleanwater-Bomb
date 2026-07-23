@@ -17,6 +17,8 @@
 
 #if defined(__ANDROID__)
     #include "android_native_ui.h"
+#endif
+#if defined(TILES)
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
 #endif
@@ -49,6 +51,7 @@
 #include "string_formatter.h"
 #include "translations.h"
 #include "type_id.h"
+#include "ui_profile.h"
 #include "ui_helpers.h"
 #include "ui_manager.h"
 #include "uilist.h"
@@ -57,27 +60,27 @@
 
 using namespace auto_pickup;
 
-#if defined(__ANDROID__)
+#if defined(TILES)
 namespace
 {
-struct android_auto_pickup_row {
+struct adaptive_auto_pickup_row {
     int index = 0;
     std::string rule;
     bool active = true;
     bool exclude = false;
 };
 
-struct android_auto_pickup_snapshot {
+struct adaptive_auto_pickup_snapshot {
     std::string title;
     std::vector<std::string> tabs;
-    std::vector<android_auto_pickup_row> rows;
+    std::vector<adaptive_auto_pickup_row> rows;
     int selected_tab = 0;
     int selected_row = 0;
     bool enabled = false;
     bool can_swap = false;
 };
 
-enum class android_auto_pickup_action_type : int {
+enum class adaptive_auto_pickup_action_type : int {
     select_tab,
     select_row,
     toggle_enabled,
@@ -93,36 +96,38 @@ enum class android_auto_pickup_action_type : int {
     close,
 };
 
-struct android_auto_pickup_action {
-    android_auto_pickup_action_type type;
+struct adaptive_auto_pickup_action {
+    adaptive_auto_pickup_action_type type;
     int index = 0;
 };
 
-class android_auto_pickup_ui : public cataimgui::window
+class adaptive_auto_pickup_ui : public cataimgui::window
 {
     public:
-        android_auto_pickup_ui() : cataimgui::window(
-                "Android auto pickup",
+        adaptive_auto_pickup_ui() : cataimgui::window(
+                "Adaptive auto pickup",
                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                 ImGuiWindowFlags_NoSavedSettings ) {}
 
-        void set_snapshot( android_auto_pickup_snapshot next ) {
+        void set_snapshot( adaptive_auto_pickup_snapshot next ) {
             snapshot = std::move( next );
         }
 
-        std::optional<android_auto_pickup_action> take_action() {
+        std::optional<adaptive_auto_pickup_action> take_action() {
             if( actions.empty() ) {
                 return std::nullopt;
             }
-            android_auto_pickup_action result = actions.front();
+            adaptive_auto_pickup_action result = actions.front();
             actions.pop_front();
             return result;
         }
 
     protected:
         cataimgui::bounds get_bounds() override {
-            return { 0.0F, 0.0F, 1.0F, 1.0F };
+            const cata::ui::profile profile = cata::ui::current_profile();
+            return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+                   cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
         }
 
         void draw_controls() override {
@@ -133,7 +138,10 @@ class android_auto_pickup_ui : public cataimgui::window
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            cataimgui::PushGuiFont1_5x();
+            const bool large_font = cata::ui::current_profile().is_touch();
+            if( large_font ) {
+                cataimgui::PushGuiFont1_5x();
+            }
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 7.0F, 7.0F ) );
@@ -149,7 +157,7 @@ class android_auto_pickup_ui : public cataimgui::window
             ImGui::SameLine();
             const char *enabled_text = snapshot.enabled ? _( "Enabled" ) : _( "Disabled" );
             if( ImGui::Button( enabled_text, ImVec2( 190.0F, 48.0F ) ) ) {
-                actions.push_back( { android_auto_pickup_action_type::toggle_enabled, 0 } );
+                actions.push_back( { adaptive_auto_pickup_action_type::toggle_enabled, 0 } );
             }
             draw_tabs();
             ImGui::Separator();
@@ -159,12 +167,14 @@ class android_auto_pickup_ui : public cataimgui::window
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 4 );
-            cataimgui::PopGuiFont1_5x();
+            if( large_font ) {
+                cataimgui::PopGuiFont1_5x();
+            }
         }
 
     private:
-        android_auto_pickup_snapshot snapshot;
-        std::deque<android_auto_pickup_action> actions;
+        adaptive_auto_pickup_snapshot snapshot;
+        std::deque<adaptive_auto_pickup_action> actions;
         bool dragging = false;
         ImVec2 drag_start;
 
@@ -179,9 +189,9 @@ class android_auto_pickup_ui : public cataimgui::window
                     ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.32F, 0.72F, 0.75F, 1.0F ) );
                 }
                 const std::string label = remove_color_tags( snapshot.tabs[index] ) +
-                                          "###android_auto_tab_" + std::to_string( index );
+                                          "###adaptive_auto_tab_" + std::to_string( index );
                 if( ImGui::Button( label.c_str(), ImVec2( 260.0F, 48.0F ) ) && !selected ) {
-                    actions.push_back( { android_auto_pickup_action_type::select_tab,
+                    actions.push_back( { adaptive_auto_pickup_action_type::select_tab,
                                          static_cast<int>( index ) } );
                 }
                 if( selected ) {
@@ -191,6 +201,9 @@ class android_auto_pickup_ui : public cataimgui::window
         }
 
         bool handle_drag() {
+            if( !cata::ui::current_profile().allow_swipe ) {
+                return false;
+            }
             ImGuiIO &io = ImGui::GetIO();
             if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
                 ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
@@ -213,11 +226,11 @@ class android_auto_pickup_ui : public cataimgui::window
         }
 
         void draw_rows( float footer_height ) {
-            if( ImGui::BeginChild( "##android_auto_rows", ImVec2( 0.0F, -footer_height ),
+            if( ImGui::BeginChild( "##adaptive_auto_rows", ImVec2( 0.0F, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 const bool suppress_click = handle_drag();
-                if( ImGui::BeginTable( "##android_auto_table", 4,
+                if( ImGui::BeginTable( "##adaptive_auto_table", 4,
                                        ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
                                        ImGuiTableFlags_SizingStretchProp ) ) {
                     ImGui::TableSetupColumn( "#", ImGuiTableColumnFlags_WidthFixed, 60.0F );
@@ -225,7 +238,7 @@ class android_auto_pickup_ui : public cataimgui::window
                     ImGui::TableSetupColumn( _( "Active" ), ImGuiTableColumnFlags_WidthStretch, 0.18F );
                     ImGui::TableSetupColumn( _( "Inc/Exc" ), ImGuiTableColumnFlags_WidthStretch, 0.20F );
                     ImGui::TableHeadersRow();
-                    for( const android_auto_pickup_row &row : snapshot.rows ) {
+                    for( const adaptive_auto_pickup_row &row : snapshot.rows ) {
                         ImGui::PushID( row.index );
                         ImGui::TableNextRow( ImGuiTableRowFlags_None, 54.0F );
                         ImGui::TableSetColumnIndex( 0 );
@@ -233,21 +246,21 @@ class android_auto_pickup_ui : public cataimgui::window
                         ImGui::TableSetColumnIndex( 1 );
                         const bool selected = row.index == snapshot.selected_row;
                         const std::string rule_label = ( row.rule.empty() ? _( "<empty rule>" ) : row.rule ) +
-                                                       "###android_auto_rule";
+                                                       "###adaptive_auto_rule";
                         if( ImGui::Selectable( rule_label.c_str(), selected,
                                                ImGuiSelectableFlags_None,
                                                ImVec2( 0.0F, 46.0F ) ) && !suppress_click ) {
-                            actions.push_back( { android_auto_pickup_action_type::select_row, row.index } );
+                            actions.push_back( { adaptive_auto_pickup_action_type::select_row, row.index } );
                         }
                         ImGui::TableSetColumnIndex( 2 );
                         if( ImGui::Button( row.active ? _( "Enabled" ) : _( "Disabled" ),
                                            ImVec2( -1.0F, 44.0F ) ) && !suppress_click ) {
-                            actions.push_back( { android_auto_pickup_action_type::toggle_active, row.index } );
+                            actions.push_back( { adaptive_auto_pickup_action_type::toggle_active, row.index } );
                         }
                         ImGui::TableSetColumnIndex( 3 );
                         if( ImGui::Button( row.exclude ? _( "Exclude" ) : _( "Include" ),
                                            ImVec2( -1.0F, 44.0F ) ) && !suppress_click ) {
-                            actions.push_back( { android_auto_pickup_action_type::toggle_exclude, row.index } );
+                            actions.push_back( { adaptive_auto_pickup_action_type::toggle_exclude, row.index } );
                         }
                         ImGui::PopID();
                     }
@@ -258,15 +271,15 @@ class android_auto_pickup_ui : public cataimgui::window
         }
 
         void draw_toolbar() {
-            const std::array<std::pair<android_auto_pickup_action_type, const char *>, 8> buttons = {{
-                    { android_auto_pickup_action_type::add, _( "Add" ) },
-                    { android_auto_pickup_action_type::edit, _( "Edit" ) },
-                    { android_auto_pickup_action_type::remove, _( "Remove" ) },
-                    { android_auto_pickup_action_type::copy, _( "Copy" ) },
-                    { android_auto_pickup_action_type::move_up, _( "Up" ) },
-                    { android_auto_pickup_action_type::move_down, _( "Down" ) },
-                    { android_auto_pickup_action_type::swap_tab, _( "Move" ) },
-                    { android_auto_pickup_action_type::close, _( "Back" ) },
+            const std::array<std::pair<adaptive_auto_pickup_action_type, const char *>, 8> buttons = {{
+                    { adaptive_auto_pickup_action_type::add, _( "Add" ) },
+                    { adaptive_auto_pickup_action_type::edit, _( "Edit" ) },
+                    { adaptive_auto_pickup_action_type::remove, _( "Remove" ) },
+                    { adaptive_auto_pickup_action_type::copy, _( "Copy" ) },
+                    { adaptive_auto_pickup_action_type::move_up, _( "Up" ) },
+                    { adaptive_auto_pickup_action_type::move_down, _( "Down" ) },
+                    { adaptive_auto_pickup_action_type::swap_tab, _( "Move" ) },
+                    { adaptive_auto_pickup_action_type::close, _( "Back" ) },
                 }
             };
             const float width = ( ImGui::GetContentRegionAvail().x - 7.0F * 7.0F ) / buttons.size();
@@ -275,16 +288,16 @@ class android_auto_pickup_ui : public cataimgui::window
                     ImGui::SameLine();
                 }
                 const bool disabled = snapshot.rows.empty() &&
-                                      buttons[index].first != android_auto_pickup_action_type::add &&
-                                      buttons[index].first != android_auto_pickup_action_type::close;
-                if( disabled || ( buttons[index].first == android_auto_pickup_action_type::swap_tab &&
+                                      buttons[index].first != adaptive_auto_pickup_action_type::add &&
+                                      buttons[index].first != adaptive_auto_pickup_action_type::close;
+                if( disabled || ( buttons[index].first == adaptive_auto_pickup_action_type::swap_tab &&
                                   !snapshot.can_swap ) ) {
                     ImGui::BeginDisabled();
                 }
                 if( ImGui::Button( buttons[index].second, ImVec2( width, 50.0F ) ) ) {
                     actions.push_back( { buttons[index].first, snapshot.selected_row } );
                 }
-                if( disabled || ( buttons[index].first == android_auto_pickup_action_type::swap_tab &&
+                if( disabled || ( buttons[index].first == adaptive_auto_pickup_action_type::swap_tab &&
                                   !snapshot.can_swap ) ) {
                     ImGui::EndDisabled();
                 }
@@ -560,8 +573,8 @@ void user_interface::show()
         return;
     }
 
-#if defined(__ANDROID__)
-    show_android();
+#if defined(TILES)
+    show_imgui();
     return;
 #endif
 
@@ -821,21 +834,30 @@ void user_interface::show()
     }
 }
 
-#if defined(__ANDROID__)
-void user_interface::show_android()
+#if defined(TILES)
+void user_interface::show_imgui()
 {
     size_t selected_tab = 0;
     int selected_row = 0;
     bStuffChanged = false;
-    android_auto_pickup_ui viewer;
+    adaptive_auto_pickup_ui viewer;
     input_context ctxt( "AUTO_PICKUP" );
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "SELECT" );
     ctxt.register_action( "MOUSE_MOVE" );
 
     const auto edit_rule = [&]( rule & target ) {
+#if defined(__ANDROID__)
         const std::optional<std::string> value = android_native_ui::text_input(
                     _( "Pickup Rule:" ), target.sRule, 120 );
+#else
+        string_input_popup_imgui popup( 60, target.sRule );
+        popup.set_label( _( "Pickup Rule:" ) );
+        popup.set_max_input_length( 120 );
+        const std::string edited = popup.query();
+        const std::optional<std::string> value = popup.cancelled() ? std::nullopt :
+                std::optional<std::string>( edited );
+#endif
         if( value && !value->empty() ) {
             target.sRule = wildcard_trim_rule( *value );
             bStuffChanged = true;
@@ -850,7 +872,7 @@ void user_interface::show_android()
             selected_row = std::clamp( selected_row, 0, static_cast<int>( rules.size() ) - 1 );
         }
 
-        android_auto_pickup_snapshot snapshot;
+        adaptive_auto_pickup_snapshot snapshot;
         snapshot.title = title;
         snapshot.selected_tab = static_cast<int>( selected_tab );
         snapshot.selected_row = selected_row;
@@ -866,7 +888,7 @@ void user_interface::show_android()
         viewer.set_snapshot( std::move( snapshot ) );
         ui_manager::redraw();
 
-        const std::optional<android_auto_pickup_action> ui_action = viewer.take_action();
+        const std::optional<adaptive_auto_pickup_action> ui_action = viewer.take_action();
         if( !ui_action ) {
             if( ctxt.handle_input() == "QUIT" ) {
                 break;
@@ -875,31 +897,31 @@ void user_interface::show_android()
         }
 
         switch( ui_action->type ) {
-            case android_auto_pickup_action_type::select_tab:
+            case adaptive_auto_pickup_action_type::select_tab:
                 selected_tab = std::clamp( ui_action->index, 0,
                                            static_cast<int>( tabs.size() ) - 1 );
                 selected_row = 0;
                 break;
-            case android_auto_pickup_action_type::select_row:
+            case adaptive_auto_pickup_action_type::select_row:
                 selected_row = ui_action->index;
                 break;
-            case android_auto_pickup_action_type::toggle_enabled:
+            case adaptive_auto_pickup_action_type::toggle_enabled:
                 get_options().get_option( "AUTO_PICKUP" ).setNext();
                 get_options().save();
                 break;
-            case android_auto_pickup_action_type::toggle_active:
+            case adaptive_auto_pickup_action_type::toggle_active:
                 if( ui_action->index >= 0 && ui_action->index < static_cast<int>( rules.size() ) ) {
                     rules[ui_action->index].bActive = !rules[ui_action->index].bActive;
                     bStuffChanged = true;
                 }
                 break;
-            case android_auto_pickup_action_type::toggle_exclude:
+            case adaptive_auto_pickup_action_type::toggle_exclude:
                 if( ui_action->index >= 0 && ui_action->index < static_cast<int>( rules.size() ) ) {
                     rules[ui_action->index].bExclude = !rules[ui_action->index].bExclude;
                     bStuffChanged = true;
                 }
                 break;
-            case android_auto_pickup_action_type::add: {
+            case adaptive_auto_pickup_action_type::add: {
                 rule new_rule( "", true, false );
                 edit_rule( new_rule );
                 if( !new_rule.sRule.empty() ) {
@@ -908,40 +930,40 @@ void user_interface::show_android()
                 }
                 break;
             }
-            case android_auto_pickup_action_type::edit:
+            case adaptive_auto_pickup_action_type::edit:
                 if( !rules.empty() ) {
                     edit_rule( rules[selected_row] );
                 }
                 break;
-            case android_auto_pickup_action_type::remove:
+            case adaptive_auto_pickup_action_type::remove:
                 if( !rules.empty() ) {
                     rules.erase( rules.begin() + selected_row );
                     selected_row = std::max( 0, selected_row - 1 );
                     bStuffChanged = true;
                 }
                 break;
-            case android_auto_pickup_action_type::copy:
+            case adaptive_auto_pickup_action_type::copy:
                 if( !rules.empty() ) {
                     rules.push_back( rules[selected_row] );
                     selected_row = static_cast<int>( rules.size() ) - 1;
                     bStuffChanged = true;
                 }
                 break;
-            case android_auto_pickup_action_type::move_up:
+            case adaptive_auto_pickup_action_type::move_up:
                 if( selected_row > 0 ) {
                     std::swap( rules[selected_row], rules[selected_row - 1] );
                     --selected_row;
                     bStuffChanged = true;
                 }
                 break;
-            case android_auto_pickup_action_type::move_down:
+            case adaptive_auto_pickup_action_type::move_down:
                 if( selected_row + 1 < static_cast<int>( rules.size() ) ) {
                     std::swap( rules[selected_row], rules[selected_row + 1] );
                     ++selected_row;
                     bStuffChanged = true;
                 }
                 break;
-            case android_auto_pickup_action_type::swap_tab:
+            case adaptive_auto_pickup_action_type::swap_tab:
                 if( tabs.size() == 2 && !rules.empty() ) {
                     const size_t destination = ( selected_tab + 1 ) % 2;
                     tabs[destination].new_rules.push_back( rules[selected_row] );
@@ -951,7 +973,7 @@ void user_interface::show_android()
                     bStuffChanged = true;
                 }
                 break;
-            case android_auto_pickup_action_type::close:
+            case adaptive_auto_pickup_action_type::close:
                 goto finish;
         }
     }

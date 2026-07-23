@@ -104,7 +104,7 @@ std::int64_t required_integer( const sol::optional<sol::table> &options, const s
 bool valid_move_mode_id( const std::string &id )
 {
     return !id.empty() && id.size() <= 64 &&
-           std::all_of( id.begin(), id.end(), []( const unsigned char ch ) {
+    std::all_of( id.begin(), id.end(), []( const unsigned char ch ) {
         return std::isalnum( ch ) != 0 || ch == '_' || ch == '-';
     } );
 }

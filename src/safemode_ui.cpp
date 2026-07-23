@@ -15,6 +15,8 @@
 
 #if defined(__ANDROID__)
     #include "android_native_ui.h"
+#endif
+#if defined(TILES)
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
 #endif
@@ -43,13 +45,14 @@
 #include "translation.h"
 #include "translations.h"
 #include "uilist.h"
+#include "ui_profile.h"
 #include "ui_manager.h"
 #include "worldfactory.h"
 
-#if defined(__ANDROID__)
+#if defined(TILES)
 namespace
 {
-struct android_safemode_row {
+struct adaptive_safemode_row {
     int index = 0;
     std::string rule;
     std::string attitude;
@@ -60,17 +63,17 @@ struct android_safemode_row {
     bool active = true;
 };
 
-struct android_safemode_snapshot {
+struct adaptive_safemode_snapshot {
     std::string title;
     std::array<std::string, 2> tabs;
-    std::vector<android_safemode_row> rows;
+    std::vector<adaptive_safemode_row> rows;
     int selected_tab = 0;
     int selected_row = 0;
     bool character_available = false;
     bool can_swap = false;
 };
 
-enum class android_safemode_action_type : int {
+enum class adaptive_safemode_action_type : int {
     select_tab,
     select_row,
     edit_rule,
@@ -90,36 +93,38 @@ enum class android_safemode_action_type : int {
     close,
 };
 
-struct android_safemode_action {
-    android_safemode_action_type type;
+struct adaptive_safemode_action {
+    adaptive_safemode_action_type type;
     int index = 0;
 };
 
-class android_safemode_ui : public cataimgui::window
+class adaptive_safemode_ui : public cataimgui::window
 {
     public:
-        android_safemode_ui() : cataimgui::window(
-                "Android safe mode",
+        adaptive_safemode_ui() : cataimgui::window(
+                "Adaptive safe mode",
                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                 ImGuiWindowFlags_NoSavedSettings ) {}
 
-        void set_snapshot( android_safemode_snapshot next ) {
+        void set_snapshot( adaptive_safemode_snapshot next ) {
             snapshot = std::move( next );
         }
 
-        std::optional<android_safemode_action> take_action() {
+        std::optional<adaptive_safemode_action> take_action() {
             if( actions.empty() ) {
                 return std::nullopt;
             }
-            android_safemode_action result = actions.front();
+            adaptive_safemode_action result = actions.front();
             actions.pop_front();
             return result;
         }
 
     protected:
         cataimgui::bounds get_bounds() override {
-            return { 0.0F, 0.0F, 1.0F, 1.0F };
+            const cata::ui::profile profile = cata::ui::current_profile();
+            return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+                   cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
         }
 
         void draw_controls() override {
@@ -130,7 +135,10 @@ class android_safemode_ui : public cataimgui::window
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            cataimgui::PushGuiFont1_5x();
+            const bool large_font = cata::ui::current_profile().is_touch();
+            if( large_font ) {
+                cataimgui::PushGuiFont1_5x();
+            }
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 7.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 10.0F, 8.0F ) );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 6.0F, 6.0F ) );
@@ -152,12 +160,14 @@ class android_safemode_ui : public cataimgui::window
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 4 );
-            cataimgui::PopGuiFont1_5x();
+            if( large_font ) {
+                cataimgui::PopGuiFont1_5x();
+            }
         }
 
     private:
-        android_safemode_snapshot snapshot;
-        std::deque<android_safemode_action> actions;
+        adaptive_safemode_snapshot snapshot;
+        std::deque<adaptive_safemode_action> actions;
         bool dragging = false;
         ImVec2 drag_start;
 
@@ -174,9 +184,9 @@ class android_safemode_ui : public cataimgui::window
                     ImGui::BeginDisabled();
                 }
                 const std::string label = remove_color_tags( snapshot.tabs[index] ) +
-                                          "###android_safe_tab_" + std::to_string( index );
+                                          "###adaptive_safe_tab_" + std::to_string( index );
                 if( ImGui::Button( label.c_str(), ImVec2( 260.0F, 46.0F ) ) && !selected ) {
-                    actions.push_back( { android_safemode_action_type::select_tab, index } );
+                    actions.push_back( { adaptive_safemode_action_type::select_tab, index } );
                 }
                 if( index == 1 && !snapshot.character_available ) {
                     ImGui::EndDisabled();
@@ -188,6 +198,9 @@ class android_safemode_ui : public cataimgui::window
         }
 
         bool handle_drag() {
+            if( !cata::ui::current_profile().allow_swipe ) {
+                return false;
+            }
             ImGuiIO &io = ImGui::GetIO();
             if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
                 ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
@@ -209,7 +222,7 @@ class android_safemode_ui : public cataimgui::window
             return moved;
         }
 
-        bool field_button( const char *label, android_safemode_action_type type,
+        bool field_button( const char *label, adaptive_safemode_action_type type,
                            int row, bool suppress_click ) {
             ImGui::PushID( static_cast<int>( type ) );
             const bool clicked = ImGui::Button( label, ImVec2( -1.0F, 44.0F ) );
@@ -222,11 +235,11 @@ class android_safemode_ui : public cataimgui::window
         }
 
         void draw_rows( float footer_height ) {
-            if( ImGui::BeginChild( "##android_safe_rows", ImVec2( 0.0F, -footer_height ),
+            if( ImGui::BeginChild( "##adaptive_safe_rows", ImVec2( 0.0F, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 const bool suppress_click = handle_drag();
-                if( ImGui::BeginTable( "##android_safe_table", 8,
+                if( ImGui::BeginTable( "##adaptive_safe_table", 8,
                                        ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
                                        ImGuiTableFlags_SizingStretchProp ) ) {
                     ImGui::TableSetupColumn( "#", ImGuiTableColumnFlags_WidthFixed, 54.0F );
@@ -238,7 +251,7 @@ class android_safemode_ui : public cataimgui::window
                     ImGui::TableSetupColumn( _( "Mode" ), ImGuiTableColumnFlags_WidthStretch, 0.12F );
                     ImGui::TableSetupColumn( _( "Active" ), ImGuiTableColumnFlags_WidthStretch, 0.13F );
                     ImGui::TableHeadersRow();
-                    for( const android_safemode_row &row : snapshot.rows ) {
+                    for( const adaptive_safemode_row &row : snapshot.rows ) {
                         ImGui::PushID( row.index );
                         ImGui::TableNextRow( ImGuiTableRowFlags_None, 54.0F );
                         ImGui::TableSetColumnIndex( 0 );
@@ -246,30 +259,30 @@ class android_safemode_ui : public cataimgui::window
                         ImGui::TableSetColumnIndex( 1 );
                         const bool selected = row.index == snapshot.selected_row;
                         const std::string rule_label = ( row.rule.empty() ? _( "<empty rule>" ) : row.rule ) +
-                                                       "###android_safe_rule";
+                                                       "###adaptive_safe_rule";
                         if( ImGui::Selectable( rule_label.c_str(), selected,
                                                ImGuiSelectableFlags_None,
                                                ImVec2( 0.0F, 44.0F ) ) && !suppress_click ) {
-                            actions.push_back( { android_safemode_action_type::select_row, row.index } );
+                            actions.push_back( { adaptive_safemode_action_type::select_row, row.index } );
                         }
                         ImGui::TableSetColumnIndex( 2 );
-                        field_button( row.attitude.c_str(), android_safemode_action_type::toggle_attitude,
+                        field_button( row.attitude.c_str(), adaptive_safemode_action_type::toggle_attitude,
                                       row.index, suppress_click );
                         ImGui::TableSetColumnIndex( 3 );
-                        field_button( row.proximity.c_str(), android_safemode_action_type::edit_proximity,
+                        field_button( row.proximity.c_str(), adaptive_safemode_action_type::edit_proximity,
                                       row.index, suppress_click );
                         ImGui::TableSetColumnIndex( 4 );
-                        field_button( row.list.c_str(), android_safemode_action_type::toggle_list,
+                        field_button( row.list.c_str(), adaptive_safemode_action_type::toggle_list,
                                       row.index, suppress_click );
                         ImGui::TableSetColumnIndex( 5 );
-                        field_button( row.category.c_str(), android_safemode_action_type::toggle_category,
+                        field_button( row.category.c_str(), adaptive_safemode_action_type::toggle_category,
                                       row.index, suppress_click );
                         ImGui::TableSetColumnIndex( 6 );
-                        field_button( row.movement.c_str(), android_safemode_action_type::toggle_movement,
+                        field_button( row.movement.c_str(), adaptive_safemode_action_type::toggle_movement,
                                       row.index, suppress_click );
                         ImGui::TableSetColumnIndex( 7 );
                         field_button( row.active ? _( "Enabled" ) : _( "Disabled" ),
-                                      android_safemode_action_type::toggle_active,
+                                      adaptive_safemode_action_type::toggle_active,
                                       row.index, suppress_click );
                         ImGui::PopID();
                     }
@@ -280,16 +293,16 @@ class android_safemode_ui : public cataimgui::window
         }
 
         void draw_toolbar() {
-            const std::array<std::pair<android_safemode_action_type, const char *>, 9> buttons = {{
-                    { android_safemode_action_type::add_default, _( "Defaults" ) },
-                    { android_safemode_action_type::add, _( "Add" ) },
-                    { android_safemode_action_type::edit_rule, _( "Edit" ) },
-                    { android_safemode_action_type::remove, _( "Remove" ) },
-                    { android_safemode_action_type::copy, _( "Copy" ) },
-                    { android_safemode_action_type::move_up, _( "Up" ) },
-                    { android_safemode_action_type::move_down, _( "Down" ) },
-                    { android_safemode_action_type::swap_tab, _( "Move" ) },
-                    { android_safemode_action_type::close, _( "Back" ) },
+            const std::array<std::pair<adaptive_safemode_action_type, const char *>, 9> buttons = {{
+                    { adaptive_safemode_action_type::add_default, _( "Defaults" ) },
+                    { adaptive_safemode_action_type::add, _( "Add" ) },
+                    { adaptive_safemode_action_type::edit_rule, _( "Edit" ) },
+                    { adaptive_safemode_action_type::remove, _( "Remove" ) },
+                    { adaptive_safemode_action_type::copy, _( "Copy" ) },
+                    { adaptive_safemode_action_type::move_up, _( "Up" ) },
+                    { adaptive_safemode_action_type::move_down, _( "Down" ) },
+                    { adaptive_safemode_action_type::swap_tab, _( "Move" ) },
+                    { adaptive_safemode_action_type::close, _( "Back" ) },
                 }
             };
             const float width = ( ImGui::GetContentRegionAvail().x - 6.0F * 8.0F ) / buttons.size();
@@ -297,11 +310,11 @@ class android_safemode_ui : public cataimgui::window
                 if( index > 0 ) {
                     ImGui::SameLine();
                 }
-                const bool needs_row = buttons[index].first != android_safemode_action_type::add_default &&
-                                       buttons[index].first != android_safemode_action_type::add &&
-                                       buttons[index].first != android_safemode_action_type::close;
+                const bool needs_row = buttons[index].first != adaptive_safemode_action_type::add_default &&
+                                       buttons[index].first != adaptive_safemode_action_type::add &&
+                                       buttons[index].first != adaptive_safemode_action_type::close;
                 const bool disabled = ( needs_row && snapshot.rows.empty() ) ||
-                                      ( buttons[index].first == android_safemode_action_type::swap_tab &&
+                                      ( buttons[index].first == adaptive_safemode_action_type::swap_tab &&
                                         !snapshot.can_swap );
                 if( disabled ) {
                     ImGui::BeginDisabled();
@@ -337,8 +350,8 @@ std::string safemode::npc_type_name()
 
 void safemode::show( const std::string &custom_name_in, bool is_safemode_in )
 {
-#if defined(__ANDROID__)
-    show_android( custom_name_in, is_safemode_in );
+#if defined(TILES)
+    show_imgui( custom_name_in, is_safemode_in );
     return;
 #endif
     auto global_rules_old = global_rules;
@@ -778,8 +791,8 @@ void safemode::show( const std::string &custom_name_in, bool is_safemode_in )
     }
 }
 
-#if defined(__ANDROID__)
-void safemode::show_android( const std::string &custom_name, bool is_safemode )
+#if defined(TILES)
+void safemode::show_imgui( const std::string &custom_name, bool is_safemode )
 {
     const auto global_rules_old = global_rules;
     const auto character_rules_old = character_rules;
@@ -790,15 +803,23 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
     bool changes_made = false;
     bool done = false;
 
-    android_safemode_ui viewer;
+    adaptive_safemode_ui viewer;
     input_context ctxt( "SAFEMODE" );
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "SELECT" );
     ctxt.register_action( "MOUSE_MOVE" );
 
     const auto edit_rule = [&]( rules_class & target ) {
+#if defined(__ANDROID__)
         const std::optional<std::string> value = android_native_ui::text_input(
                     _( "Safe Mode Rule:" ), target.rule, 120 );
+#else
+        string_input_popup popup;
+        popup.title( _( "Safe Mode Rule:" ) ).text( target.rule ).max_length( 120 );
+        const std::string edited = popup.query_string();
+        const std::optional<std::string> value = popup.canceled() ? std::nullopt :
+                std::optional<std::string>( edited );
+#endif
         if( value ) {
             const std::string new_rule = wildcard_trim_rule( *value );
             if( new_rule != target.rule ) {
@@ -818,7 +839,7 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
                                        static_cast<int>( current_rules.size() ) - 1 );
         }
 
-        android_safemode_snapshot snapshot;
+        adaptive_safemode_snapshot snapshot;
         snapshot.title = custom_name;
         snapshot.tabs = { _( "Global" ), _( "Character" ) };
         snapshot.selected_tab = selected_tab;
@@ -845,7 +866,7 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
         viewer.set_snapshot( std::move( snapshot ) );
         ui_manager::redraw();
 
-        const std::optional<android_safemode_action> ui_action = viewer.take_action();
+        const std::optional<adaptive_safemode_action> ui_action = viewer.take_action();
         if( !ui_action ) {
             if( ctxt.handle_input() == "QUIT" ) {
                 done = true;
@@ -854,17 +875,17 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
         }
 
         switch( ui_action->type ) {
-            case android_safemode_action_type::select_tab:
+            case adaptive_safemode_action_type::select_tab:
                 if( ui_action->index == GLOBAL_TAB || character_available ) {
                     selected_tab = std::clamp( ui_action->index, static_cast<int>( GLOBAL_TAB ),
                                                static_cast<int>( CHARACTER_TAB ) );
                     selected_row = 0;
                 }
                 break;
-            case android_safemode_action_type::select_row:
+            case adaptive_safemode_action_type::select_row:
                 selected_row = ui_action->index;
                 break;
-            case android_safemode_action_type::add_default:
+            case adaptive_safemode_action_type::add_default:
                 current_rules.emplace_back( "*", true, false, Creature::Attitude::HOSTILE,
                                             get_option<int>( "SAFEMODEPROXIMITY" ),
                                             Categories::HOSTILE_SPOTTED, MovementModes::BOTH );
@@ -873,7 +894,7 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
                 selected_row = static_cast<int>( current_rules.size() ) - 1;
                 changes_made = true;
                 break;
-            case android_safemode_action_type::add: {
+            case adaptive_safemode_action_type::add: {
                 rules_class new_rule( "", true, false, Creature::Attitude::HOSTILE,
                                       get_option<int>( "SAFEMODEPROXIMITY" ),
                                       Categories::HOSTILE_SPOTTED, MovementModes::BOTH );
@@ -884,40 +905,40 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
                 }
                 break;
             }
-            case android_safemode_action_type::edit_rule:
+            case adaptive_safemode_action_type::edit_rule:
                 if( !current_rules.empty() ) {
                     edit_rule( current_rules[selected_row] );
                 }
                 break;
-            case android_safemode_action_type::remove:
+            case adaptive_safemode_action_type::remove:
                 if( !current_rules.empty() ) {
                     current_rules.erase( current_rules.begin() + selected_row );
                     selected_row = std::max( 0, selected_row - 1 );
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::copy:
+            case adaptive_safemode_action_type::copy:
                 if( !current_rules.empty() ) {
                     current_rules.push_back( current_rules[selected_row] );
                     selected_row = static_cast<int>( current_rules.size() ) - 1;
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::move_up:
+            case adaptive_safemode_action_type::move_up:
                 if( selected_row > 0 ) {
                     std::swap( current_rules[selected_row], current_rules[selected_row - 1] );
                     --selected_row;
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::move_down:
+            case adaptive_safemode_action_type::move_down:
                 if( selected_row + 1 < static_cast<int>( current_rules.size() ) ) {
                     std::swap( current_rules[selected_row], current_rules[selected_row + 1] );
                     ++selected_row;
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::swap_tab:
+            case adaptive_safemode_action_type::swap_tab:
                 if( can_swap && !current_rules.empty() ) {
                     const int destination = selected_tab == GLOBAL_TAB ? CHARACTER_TAB : GLOBAL_TAB;
                     auto &destination_rules = destination == GLOBAL_TAB ? global_rules : character_rules;
@@ -928,19 +949,19 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::toggle_active:
+            case adaptive_safemode_action_type::toggle_active:
                 if( !current_rules.empty() ) {
                     current_rules[selected_row].active = !current_rules[selected_row].active;
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::toggle_list:
+            case adaptive_safemode_action_type::toggle_list:
                 if( !current_rules.empty() ) {
                     current_rules[selected_row].whitelist = !current_rules[selected_row].whitelist;
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::toggle_category:
+            case adaptive_safemode_action_type::toggle_category:
                 if( !current_rules.empty() ) {
                     rules_class &entry = current_rules[selected_row];
                     entry.category = entry.category == Categories::HOSTILE_SPOTTED ?
@@ -948,7 +969,7 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::toggle_attitude:
+            case adaptive_safemode_action_type::toggle_attitude:
                 if( !current_rules.empty() &&
                     current_rules[selected_row].category == Categories::HOSTILE_SPOTTED ) {
                     Creature::Attitude &attitude = current_rules[selected_row].attitude;
@@ -969,13 +990,22 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::edit_proximity:
+            case adaptive_safemode_action_type::edit_proximity:
                 if( !current_rules.empty() ) {
                     rules_class &entry = current_rules[selected_row];
                     if( entry.category == Categories::SOUND || !entry.whitelist ) {
+#if defined(__ANDROID__)
                         const std::optional<std::string> value = android_native_ui::text_input(
                                     _( "Proximity Distance (0=max view distance)" ),
                                     std::to_string( entry.proximity ), 3 );
+#else
+                        string_input_popup popup;
+                        popup.title( _( "Proximity Distance (0=max view distance)" ) )
+                        .text( std::to_string( entry.proximity ) ).max_length( 3 ).only_digits( true );
+                        const std::string edited = popup.query_string();
+                        const std::optional<std::string> value = popup.canceled() ? std::nullopt :
+                                std::optional<std::string>( edited );
+#endif
                         if( value ) {
                             options_manager::cOpt option = get_options().get_option( "SAFEMODEPROXIMITY" );
                             option.setValue( value->empty() ?
@@ -989,7 +1019,7 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
                     }
                 }
                 break;
-            case android_safemode_action_type::toggle_movement:
+            case adaptive_safemode_action_type::toggle_movement:
                 if( !current_rules.empty() ) {
                     MovementModes &mode = current_rules[selected_row].movement_mode;
                     mode = mode == MovementModes::WALKING ? MovementModes::DRIVING :
@@ -997,7 +1027,7 @@ void safemode::show_android( const std::string &custom_name, bool is_safemode )
                     changes_made = true;
                 }
                 break;
-            case android_safemode_action_type::close:
+            case adaptive_safemode_action_type::close:
                 done = true;
                 break;
         }

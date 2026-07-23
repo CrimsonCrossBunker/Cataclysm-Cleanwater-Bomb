@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
-#if defined(__ANDROID__)
+#if defined(TILES)
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
 #endif
@@ -34,26 +34,27 @@
 #include "text_snippets.h"
 #include "translations.h"
 #include "ui_helpers.h"
+#include "ui_profile.h"
 #include "ui_manager.h"
 
-#if defined(__ANDROID__)
+#if defined(TILES)
 namespace
 {
-struct android_help_topic {
+struct adaptive_help_topic {
     std::string title;
     std::string body;
 };
 
-struct android_vertical_drag_state {
+struct adaptive_vertical_drag_state {
     bool active = false;
     ImVec2 start;
 };
 
-class android_help_viewer : public cataimgui::window
+class adaptive_help_viewer : public cataimgui::window
 {
     public:
-        explicit android_help_viewer( std::vector<android_help_topic> topics ) :
-            cataimgui::window( "Android help viewer",
+        explicit adaptive_help_viewer( std::vector<adaptive_help_topic> topics ) :
+            cataimgui::window( "Adaptive help viewer",
                                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                ImGuiWindowFlags_NoSavedSettings ),
@@ -67,7 +68,9 @@ class android_help_viewer : public cataimgui::window
 
     protected:
         cataimgui::bounds get_bounds() override {
-            return { 0.0F, 0.0F, 1.0F, 1.0F };
+            const cata::ui::profile profile = cata::ui::current_profile();
+            return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+                   cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
         }
 
         void draw_controls() override {
@@ -79,7 +82,10 @@ class android_help_viewer : public cataimgui::window
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            cataimgui::PushGuiFont1_5x();
+            const bool large_font = cata::ui::current_profile().is_touch();
+            if( large_font ) {
+                cataimgui::PushGuiFont1_5x();
+            }
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 8.0F, 7.0F ) );
@@ -94,7 +100,7 @@ class android_help_viewer : public cataimgui::window
             ImGui::TextUnformatted( _( "Help" ) );
             ImGui::Separator();
             const float topic_width = std::clamp( window_size.x * 0.32F, 300.0F, 520.0F );
-            if( ImGui::BeginChild( "##android_help_topics", ImVec2( topic_width, -footer_height ),
+            if( ImGui::BeginChild( "##adaptive_help_topics", ImVec2( topic_width, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 const bool suppress_click = handle_vertical_drag( topic_drag );
@@ -108,7 +114,7 @@ class android_help_viewer : public cataimgui::window
                         ImGui::PushStyleColor( ImGuiCol_Text,
                                                ImVec4( 0.90F, 1.0F, 1.0F, 1.0F ) );
                     }
-                    const std::string label = topics[index].title + "###android_help_topic_" +
+                    const std::string label = topics[index].title + "###adaptive_help_topic_" +
                                               std::to_string( index );
                     if( ImGui::Button( label.c_str(), ImVec2( -1.0F, 48.0F ) ) &&
                         !suppress_click ) {
@@ -123,7 +129,7 @@ class android_help_viewer : public cataimgui::window
             ImGui::EndChild();
 
             ImGui::SameLine();
-            if( ImGui::BeginChild( "##android_help_body", ImVec2( 0.0F, -footer_height ),
+            if( ImGui::BeginChild( "##adaptive_help_body", ImVec2( 0.0F, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 handle_vertical_drag( body_drag );
@@ -152,18 +158,23 @@ class android_help_viewer : public cataimgui::window
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 4 );
-            cataimgui::PopGuiFont1_5x();
+            if( large_font ) {
+                cataimgui::PopGuiFont1_5x();
+            }
         }
 
     private:
-        std::vector<android_help_topic> topics;
+        std::vector<adaptive_help_topic> topics;
         int selected_topic = 0;
         bool close_requested = false;
         bool reset_body_scroll = false;
-        android_vertical_drag_state topic_drag;
-        android_vertical_drag_state body_drag;
+        adaptive_vertical_drag_state topic_drag;
+        adaptive_vertical_drag_state body_drag;
 
-        static bool handle_vertical_drag( android_vertical_drag_state &state ) {
+        static bool handle_vertical_drag( adaptive_vertical_drag_state &state ) {
+            if( !cata::ui::current_profile().allow_swipe ) {
+                return false;
+            }
             ImGuiIO &io = ImGui::GetIO();
             if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
                 ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
@@ -362,14 +373,14 @@ std::string help::format_help_topic( const std::vector<translation> &messages ) 
 
 void help::display_help() const
 {
-#if defined(__ANDROID__)
-    std::vector<android_help_topic> topics;
+#if defined(TILES)
+    std::vector<adaptive_help_topic> topics;
     topics.reserve( help_texts.size() );
     for( const auto &entry : help_texts ) {
         topics.push_back( { entry.second.first.translated(),
                             format_help_topic( entry.second.second ) } );
     }
-    android_help_viewer viewer( std::move( topics ) );
+    adaptive_help_viewer viewer( std::move( topics ) );
     input_context ctxt( "DISPLAY_HELP", keyboard_mode::keychar );
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "SELECT" );

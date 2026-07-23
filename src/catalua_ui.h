@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace cata::lua_ui
 {
@@ -27,6 +28,14 @@ struct runtime_status {
     std::uint64_t slow_callback_count = 0;
     std::string last_slow_callback;
     std::string last_error;
+};
+
+struct page_info {
+    std::string id;
+    std::string title;
+    std::string category;
+    std::vector<std::string> slots;
+    int order = 100;
 };
 
 // Lua module names are converted from dotted names to paths below data/lua or
@@ -60,7 +69,14 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
 void publish_android_snapshot();
 std::string android_snapshot_json();
 bool submit_android_interaction( const std::string &widget_id, const std::string &encoded_value );
-bool select_android_page( const std::string &page_id );
+
+// Platform-neutral page registry.  Slots are logical navigation locations,
+// never pixel coordinates.  Complete pages use the shared ImGui/ImTui host;
+// Android native Views are reserved for HUD surfaces.
+std::vector<page_info> registered_pages( std::string_view slot = {} );
+bool has_registered_pages( std::string_view slot = {} );
+bool show_page( const std::string &page_id );
+void show_slot( std::string_view slot );
 
 // Reload scripts, let the user choose a registered page, and run it as a
 // regular cataimgui window.  The runtime is initialized lazily on first use.

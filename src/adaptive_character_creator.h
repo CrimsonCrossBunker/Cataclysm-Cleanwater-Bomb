@@ -1,8 +1,8 @@
 #pragma once
-#ifndef CATA_SRC_ANDROID_CHARACTER_CREATOR_H
-#define CATA_SRC_ANDROID_CHARACTER_CREATOR_H
+#ifndef CATA_SRC_ADAPTIVE_CHARACTER_CREATOR_H
+#define CATA_SRC_ADAPTIVE_CHARACTER_CREATOR_H
 
-#if defined(__ANDROID__)
+#if defined(TILES)
 
 #include <deque>
 #include <functional>
@@ -14,7 +14,7 @@
 
 enum character_creator_tab : int;
 
-struct android_character_creator_row_snapshot {
+struct adaptive_character_creator_row_snapshot {
     int index = 0;
     std::string label;
     bool enabled = true;
@@ -22,10 +22,10 @@ struct android_character_creator_row_snapshot {
     bool active = false;
 };
 
-struct android_character_creator_snapshot {
+struct adaptive_character_creator_snapshot {
     bool ready = false;
     character_creator_tab tab{};
-    std::vector<android_character_creator_row_snapshot> rows;
+    std::vector<adaptive_character_creator_row_snapshot> rows;
     std::string name;
     std::string gender;
     int age = 0;
@@ -34,7 +34,7 @@ struct android_character_creator_snapshot {
     bool preview_available = false;
 };
 
-enum class android_character_creator_action_type : int {
+enum class adaptive_character_creator_action_type : int {
     select_tab,
     select_row,
     activate_row,
@@ -45,14 +45,14 @@ enum class android_character_creator_action_type : int {
     save_template,
 };
 
-struct android_character_creator_action {
-    android_character_creator_action_type type;
+struct adaptive_character_creator_action {
+    adaptive_character_creator_action_type type;
     int index = 0;
     std::string command;
     std::string value;
 };
 
-class android_character_creator_ui : public cataimgui::window
+class adaptive_character_creator_ui : public cataimgui::window
 {
     public:
         using inline_renderer = std::function<void()>;
@@ -60,22 +60,22 @@ class android_character_creator_ui : public cataimgui::window
                                 const inline_renderer & )>;
         using preview_renderer = std::function<void( const ImVec2 & )>;
 
-        android_character_creator_ui( detail_renderer render_details,
-                                      preview_renderer render_preview );
+        adaptive_character_creator_ui( detail_renderer render_details,
+                                       preview_renderer render_preview );
 
-        void set_snapshot( android_character_creator_snapshot next );
+        void set_snapshot( adaptive_character_creator_snapshot next );
         void show_loading();
-        std::optional<android_character_creator_action> take_action();
+        std::optional<adaptive_character_creator_action> take_action();
 
     protected:
         cataimgui::bounds get_bounds() override;
         void draw_controls() override;
 
     private:
-        android_character_creator_snapshot snapshot_;
+        adaptive_character_creator_snapshot snapshot_;
         detail_renderer render_details_;
         preview_renderer render_preview_;
-        std::deque<android_character_creator_action> actions_;
+        std::deque<adaptive_character_creator_action> actions_;
         std::string filter_;
         std::string name_input_;
         std::string age_input_;
@@ -95,7 +95,7 @@ class android_character_creator_ui : public cataimgui::window
         drag_state summary_drag_;
 
         void queue_command( const std::string &command );
-        void queue_value( android_character_creator_action_type type, const std::string &value );
+        void queue_value( adaptive_character_creator_action_type type, const std::string &value );
         void draw_loading_page();
         void draw_identity_bar();
         void draw_age_input( const char *id, float width );
@@ -106,12 +106,12 @@ class android_character_creator_ui : public cataimgui::window
         bool handle_vertical_drag( drag_state &state );
         void draw_selection_page( float footer_height );
         void draw_preview_panel( float height );
-        const android_character_creator_row_snapshot *selected_row() const;
+        const adaptive_character_creator_row_snapshot *selected_row() const;
         void draw_current_details();
         void draw_summary_page( float footer_height );
         void draw_footer();
 };
 
-#endif // __ANDROID__
+#endif // TILES
 
-#endif // CATA_SRC_ANDROID_CHARACTER_CREATOR_H
+#endif // CATA_SRC_ADAPTIVE_CHARACTER_CREATOR_H

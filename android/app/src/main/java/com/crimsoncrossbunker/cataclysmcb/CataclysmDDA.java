@@ -298,7 +298,6 @@ public class CataclysmDDA extends SDLActivity {
         boolean visible);
     private static native String nativeGetLuaUiSnapshot();
     private static native boolean nativeSubmitLuaUiInteraction(String widgetId, String value);
-    private static native boolean nativeSelectLuaUiPage(String pageId);
 
     private void installLuaUiOverlay() {
         if (mLayout == null || luaUiOverlay != null) {
@@ -320,14 +319,6 @@ public class CataclysmDDA extends SDLActivity {
     boolean submitLuaUiInteraction(String widgetId, String value) {
         try {
             return nativeSubmitLuaUiInteraction(widgetId, value);
-        } catch (UnsatisfiedLinkError e) {
-            return false;
-        }
-    }
-
-    boolean selectLuaUiPage(String pageId) {
-        try {
-            return nativeSelectLuaUiPage(pageId);
         } catch (UnsatisfiedLinkError e) {
             return false;
         }

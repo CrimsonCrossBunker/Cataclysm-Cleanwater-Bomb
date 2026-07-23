@@ -1077,23 +1077,6 @@ extern "C" {
         return accepted ? JNI_TRUE : JNI_FALSE;
     }
 
-    JNIEXPORT jboolean JNICALL
-    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSelectLuaUiPage(
-        JNIEnv *env, jclass jcls, jstring page_id )
-    {
-        ( void )jcls;
-        if( page_id == nullptr ) {
-            return JNI_FALSE;
-        }
-        const char *raw_id = env->GetStringUTFChars( page_id, nullptr );
-        if( raw_id == nullptr ) {
-            return JNI_FALSE;
-        }
-        const bool accepted = cata::lua_ui::select_android_page( raw_id );
-        env->ReleaseStringUTFChars( page_id, raw_id );
-        return accepted ? JNI_TRUE : JNI_FALSE;
-    }
-
     // Compatibility shim for an old, no-longer-rendered extra-button layout.
     // Its text is treated as an action ID and rejected unless it is part of the
     // explicit HUD action catalogue; it can no longer inject keyboard input.

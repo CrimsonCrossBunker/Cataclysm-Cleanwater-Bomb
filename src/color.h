@@ -456,8 +456,8 @@ class color_manager
         std::unordered_map<std::string, color_id> name_map; // NOLINT(cata-serialize)
 
         bool save_custom() const;
-#if defined(__ANDROID__)
-        void show_gui_android();
+#if defined(TILES)
+        void show_gui_imgui();
 #endif
 
     public:
