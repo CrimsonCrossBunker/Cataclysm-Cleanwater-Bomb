@@ -1,11 +1,5 @@
 [
   {
-    "id": "drugdealer",
-    "type": "item_group",
-    "copy-from": "drugdealer",
-    "extend": { "items": [ [ "fcl_atomic_smartphone", 3 ] ] }
-  },
-  {
     "type": "item_group",
     "id": "electronics",
     "copy-from": "electronics",
@@ -15,7 +9,7 @@
     "type": "item_group",
     "id": "consumer_electronics",
     "copy-from": "consumer_electronics",
-    "extend": { "items": [ [ "solar_cell_v2", 2 ], [ "solar_cell_v3", 1 ], [ "fcl_atomic_smartphone", 2 ] ] }
+    "extend": { "items": [ [ "solar_cell_v2", 2 ], [ "solar_cell_v3", 1 ], [ "fcl_atomic_smartphone", 1 ] ] }
   },
   {
     "type": "item_group",

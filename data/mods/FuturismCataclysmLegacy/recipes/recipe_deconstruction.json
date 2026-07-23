@@ -1,19 +1,5 @@
 [
   {
-    "result": "fcl_atomic_smartphone",
-    "type": "uncraft",
-    "activity_level": "NO_EXERCISE",
-    "time": "5 s",
-    "qualities": [ { "id": "SCREW", "level": 1 } ],
-    "components": [
-      [ [ "plastic_chunk", 1 ] ],
-      [ [ "small_lcd_screen", 1 ] ],
-      [ [ "RAM", 1 ] ],
-      [ [ "processor", 1 ] ],
-      [ [ "plut_cell", 1 ] ]
-    ]
-  },
-  {
     "result": "broken_fcl_eyebot",
     "type": "uncraft",
     "activity_level": "LIGHT_EXERCISE",
