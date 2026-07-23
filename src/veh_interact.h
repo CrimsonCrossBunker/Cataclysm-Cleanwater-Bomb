@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -88,6 +89,19 @@ class veh_interact
         using part_selector = std::function<bool( const map &here, const vehicle_part &pt )>;
 
     public:
+        enum class service_action : int {
+            install,
+            repair,
+            remove
+        };
+
+        struct service_selection {
+            service_action action = service_action::repair;
+            point_rel_ms mount = point_rel_ms::zero;
+            vpart_id part_id;
+            int part_index = -1;
+        };
+
         static void run( map &here,  vehicle &veh, const point_rel_ms &p );
 
         /** Prompt for a part matching the selector function */
@@ -101,6 +115,19 @@ class veh_interact
          */
         static std::optional<vpart_reference> select_part_at_grid( map &here, vehicle &veh,
                 const part_selector &sel );
+
+        /** Select a dealership install, repair, or removal from one shared vehicle grid. */
+        static std::optional<service_selection> select_service_action_at_grid(
+            map &here, vehicle &veh, const std::set<itype_id> &available_base_items,
+            const part_selector &repair_selector );
+
+        /** Structural/content denial for a dealership installation; skills and resources are ignored. */
+        static std::optional<std::string> service_installation_denial( const vehicle &veh,
+                const point_rel_ms &mount, const vpart_info &vpart );
+
+        /** Structural/content denial for a dealership removal; skills and resources are ignored. */
+        static std::optional<std::string> service_removal_denial( const vehicle &veh,
+                int part_index );
 
     private:
         explicit veh_interact( map &here, vehicle &veh, const point_rel_ms &p = point_rel_ms::zero );
@@ -156,6 +183,10 @@ class veh_interact
         std::optional<std::string> msg;
 
         bool ui_hidden = false;
+
+        bool vehicle_service_mode = false;
+        const std::set<itype_id> *service_install_items = nullptr;
+        part_selector service_repair_filter;
 
         int highlight_part = -1;
 
@@ -332,6 +363,7 @@ class veh_interact
         void cache_tool_availability();
         void allocate_windows();
         void do_main_loop( map &here );
+        std::optional<service_selection> do_vehicle_service_loop( map &here );
         std::optional<int> do_part_selection_loop( map &here );
         std::optional<int> select_part_at_cursor( map &here );
 

@@ -5359,6 +5359,28 @@ trade_selector::select_t trade_selector::to_trade() const
     return to_use;
 }
 
+std::vector<item_location> trade_selector::get_item_locations() const
+{
+    std::vector<item_location> result;
+    std::unordered_set<const item *> seen;
+    for( const inventory_column *column : get_all_columns() ) {
+        for( const inventory_entry *entry : column->get_entries( []( const inventory_entry &candidate ) {
+        return candidate.is_item();
+        }, true ) ) {
+            entry->cache_denial( preset );
+            if( !entry->is_selectable() ) {
+                continue;
+            }
+            for( const item_location &loc : entry->locations ) {
+                if( loc && seen.insert( &*loc ).second ) {
+                    result.push_back( loc );
+                }
+            }
+        }
+    }
+    return result;
+}
+
 void trade_selector::execute()
 {
     debug_print_timer( tp_start );

@@ -15,6 +15,7 @@ class JsonValue;
 class json_talk_topic;
 class npc;
 class time_duration;
+class vehicle;
 
 namespace talk_function
 {
@@ -72,10 +73,12 @@ void do_study( npc & );
 void do_chop_plank( npc & );
 void do_vehicle_deconstruct( npc & );
 void do_vehicle_repair( npc & );
-void select_vehicle_part_repair( npc & );
-void start_vehicle_part_repair( npc & );
-void finish_vehicle_part_repair( npc & );
-void cancel_vehicle_part_repair( npc & );
+void select_vehicle_part_service( npc & );
+void quote_vehicle_full_repair( npc & );
+void start_vehicle_full_repair( npc & );
+void finish_vehicle_full_repair( npc & );
+void cancel_vehicle_full_repair( npc & );
+std::string vehicle_service_state_snapshot( const vehicle & );
 void do_chop_trees( npc & );
 void do_fishing( npc & );
 void do_farming( npc & );
