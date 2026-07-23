@@ -6,7 +6,7 @@
     "description": "A table rig with a faucet for water tank access, fume hood, drawers and fixtures for storing tools, low power electric connectors and valves for fuel tank connections.",
     "item": "veh_tools_kitchen",
     "looks_like": "kitchen_unit",
-    "extend": { "allowed_tools": [ "fcl_atomic_coffeemaker" ] }
+    "extend": { "allowed_tools": [ "fcl_atomic_coffeemaker", "fcl_atompot" ] }
   },
   {
     "type": "vehicle_part",
