@@ -13,5 +13,19 @@
     "color": "yellow",
     "flags": [ "SIDEWALK" ],
     "see_cost": "high"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": [
+      "fcl_mealgrub_protein_farm_n1",
+      "fcl_mealgrub_protein_farm_n2",
+      "fcl_mealgrub_protein_farm_n3"
+    ],
+    "name": "mealgrub protein farm",
+    "spawns": { "group": "FCL_GROUP_MEALGRUB_FARM", "population": [ 4, 10 ], "chance": 80 },
+    "sym": "Q",
+    "color": "cyan",
+    "flags": [ "SIDEWALK", "SOURCE_FOOD" ],
+    "see_cost": "high"
   }
 ]

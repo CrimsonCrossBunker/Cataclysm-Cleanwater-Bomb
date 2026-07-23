@@ -73,5 +73,15 @@
     ],
     "damage_reduction": { "all": 10 },
     "variants": [ { "symbols": "#", "symbols_broken": "x" } ]
+  },
+  {
+    "type": "furniture",
+    "id": "f_solar_unit_v3",
+    "copy-from": "f_solar_unit_v2",
+    "name": "quantum solar panel array",
+    "description": "A collection of four quantum solar panels, ready to convert solar radiation into electric power with exotic photovoltaic materials.",
+    "color": "cyan",
+    "examine_action": { "type": "appliance_convert", "furn_set": "f_null", "item": "ground_solar_panel_v3" },
+    "item": "ground_solar_panel_v3"
   }
 ]

@@ -1,0 +1,174 @@
+[
+  {
+    "type": "palette",
+    "id": "fcl_mealgrub_protein_farm",
+    "terrain": {
+      " ": "t_region_groundcover_urban",
+      "-": "t_wall_metal",
+      "|": "t_concrete_wall",
+      ":": "t_reinforced_door_glass_c",
+      "=": "t_wall_glass",
+      "(": "t_reinforced_glass",
+      "3": "t_door_metal_c",
+      "4": "t_door_metal_pickable",
+      "ó": "t_metal_ventilation_shutter",
+      "Y": "t_thconc_floor_olight",
+      "R": "t_railing",
+      ">": "t_stairs_down",
+      "<": "t_stairs_up"
+    },
+    "furniture": {
+      "b": "f_bench",
+      "d": "f_desk",
+      "h": "f_chair",
+      "l": "f_locker",
+      "t": "f_metal_table",
+      "G": "f_utility_shelf",
+      "^": "f_indoor_plant"
+    }
+  },
+  {
+    "type": "mapgen",
+    "om_terrain": [ "fcl_mealgrub_protein_farm_n1" ],
+    "object": {
+      "fill_ter": "t_strconc_floor",
+      "rows": [
+        "                 ,,     ",
+        "                 ,,     ",
+        "  -ó----------  -..---- ",
+        "  -.-0..ht..0-  -44-..- ",
+        "  -.-0...t..0-  -..(dh- ",
+        "  -.-0.YhtY.0-  -..(d.- ",
+        "  -.--0..t..--óó-::--4- ",
+        "  -.öó0.ht..ó...-.....- ",
+        "  -.--0..t..--E.-.....- ",
+        "  -.-0..ht..0-Eö--4-<<- ",
+        "  ó.-0......0-..-b.---- ",
+        "  -----(:(----ó--b..l-  ",
+        "    -G:...-<<-..-b..l-  ",
+        "    -G:Y.Y...4..4...l-  ",
+        "    -G:......-..-bb.l-  ",
+        "    ---(:(----::------  ",
+        "    -0....0.0-.......-  ",
+        "    -0..th0.0-.htWth.-  ",
+        "    -0..t...0-.ht.th.-  ",
+        "    -0.YthY.0-.ht.th.-  ",
+        "    -0..t.0.0-.ht.th.-  ",
+        "    -0..th0.0-.htWth.-  ",
+        "    ------------------  ",
+        "                        "
+      ],
+      "palettes": [ "fcl_mealgrub_protein_farm" ],
+      "terrain": {
+        ".": "t_strconc_floor",
+        ",": "t_sidewalk"
+      },
+      "furniture": {
+        "0": "f_fvat_empty",
+        "E": "f_machinery_electronic"
+      },
+      "items": {
+        "G": { "item": "fcl_mealgrub_precursor", "chance": 80, "repeat": [ 1, 3 ] },
+        "d": { "item": "SUS_office_desk", "chance": 60 },
+        "W": { "item": "oa_ig_sb_water" },
+        "t": [
+          { "item": "SUS_office_desk", "chance": 60 },
+          { "item": "tools_science", "chance": 20, "repeat": [ 1, 2 ] },
+          { "item": "fcl_mealgrub_procesing", "chance": 60, "repeat": [ 1, 3 ] }
+        ]
+      },
+      "monster": { "ö": { "monster": "mon_skitterbot" } }
+    }
+  },
+  {
+    "type": "mapgen",
+    "om_terrain": [ "fcl_mealgrub_protein_farm_n2" ],
+    "object": {
+      "fill_ter": "t_strconc_floor",
+      "rows": [
+        "                        ",
+        "                        ",
+        "  -ó----------  ------- ",
+        "  -.-E      E-  -h...^- ",
+        "  -.-E      E-  -Ódh.f- ",
+        "  -ó-E      E-  -.....- ",
+        "  RRRR(((((((----:====- ",
+        "  R..=..........-.....- ",
+        "  R..=..........:YY...- ",
+        "  R..:..........-..->>- ",
+        "  RRRR(((((((----::---- ",
+        "    -G.th.:..4..4..dh-  ",
+        "    -G.th.(>>-bl-..d.-  ",
+        "    -G.th.(((----...n-  ",
+        "    -G..YY...-^hd..d.-  ",
+        "    --(((((((-..d..dh-  ",
+        "    -E  1   E-f......-  ",
+        "    -E  1111E-n.d..d.-  ",
+        "    -E  1   E-.hd..dh-  ",
+        "    -E111   E--=====--  ",
+        "    -E      E-%,,,,,U,  ",
+        "    -E      E-U,,,,,,,  ",
+        "    ----------,,,,,,,,  ",
+        "                        "
+      ],
+      "palettes": [ "fcl_mealgrub_protein_farm" ],
+      "terrain": { " ": "t_open_air", ",": "t_flat_roof", "1": "t_metal_floor_no_roof", "E": "t_metal_floor_no_roof" },
+      "furniture": {
+        "U": "f_air_conditioner",
+        "E": "f_water_purifier",
+        "1": "f_vent_pipe",
+        "%": "f_machinery_electronic",
+        "f": "f_filing_cabinet",
+        "n": "f_trashcan",
+        "Ó": "f_console"
+      },
+      "items": {
+        "G": { "item": "fcl_mealgrub_precursor", "chance": 80, "repeat": [ 1, 3 ] },
+        "d": { "item": "SUS_office_desk", "chance": 60 },
+        "f": { "item": "SUS_office_filing_cabinet", "chance": 90 },
+        "l": { "item": "fcl_mealgrub_farm_locker", "chance": 100, "repeat": [ 1, 3 ] },
+        "t": [
+          { "item": "SUS_office_desk", "chance": 60 },
+          { "item": "tools_science", "chance": 20, "repeat": [ 1, 2 ] },
+          { "item": "fcl_mealgrub_procesing", "chance": 60, "repeat": [ 1, 3 ] }
+        ]
+      },
+      "item": { "d": { "item": "fcl_bugbrew_book" } }
+    }
+  },
+  {
+    "type": "mapgen",
+    "om_terrain": "fcl_mealgrub_protein_farm_n3",
+    "object": {
+      "fill_ter": "t_flat_roof",
+      "rows": [
+        "                        ",
+        "                        ",
+        "  ------------  ------- ",
+        "  -..........-  -.....- ",
+        "  -.....&&...-  -.ooo.- ",
+        "  -..===&&...-  -.....- ",
+        "  -..=.......----.....- ",
+        "  -..=................- ",
+        "  -..=ooooooo.........- ",
+        "  -..=................- ",
+        "  ---=...............-- ",
+        "    -=...............-  ",
+        "    -===&&...........-  ",
+        "    -...&&...........-  ",
+        "    -....=....SS.....-  ",
+        "    -....=....SS.....-  ",
+        "    -....=...........-  ",
+        "    -....=...........-  ",
+        "    -....=...........-  ",
+        "    -...&&...---------  ",
+        "    -...&&...-          ",
+        "    -........-          ",
+        "    ----------          ",
+        "                        "
+      ],
+      "palettes": [ "roof_palette" ],
+      "furniture": { "S": "f_solar_unit_v3" }
+    }
+  }
+]

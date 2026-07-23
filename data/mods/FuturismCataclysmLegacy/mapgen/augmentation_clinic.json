@@ -10,7 +10,7 @@
       "+": "t_door_c",
       "0": "t_vat",
       "9": "t_window_domestic",
-      ":": "t_door_glass_c",
+      ":": "t_reinforced_door_glass_c",
       ";": "t_door_locked",
       "=": "t_wall_glass",
       "(": "t_reinforced_glass",
@@ -342,8 +342,8 @@
         "        ----------      ",
         "   ------........-      ",
         "   -..........:..-      ",
-        "   -.X...........-      ",
-        "   -.............-      ",
+        "   -.X....SS.....-      ",
+        "   -......SS.....-      ",
         "  --.............-      ",
         "  -........oooo..-      ",
         "  ------5........-      ",
@@ -354,7 +354,8 @@
         "                        ",
         "                        "
       ],
-      "palettes": [ "roof_palette" ]
+      "palettes": [ "roof_palette" ],
+      "furniture": { "S": "f_solar_unit_v3" }
     }
   }
 ]
