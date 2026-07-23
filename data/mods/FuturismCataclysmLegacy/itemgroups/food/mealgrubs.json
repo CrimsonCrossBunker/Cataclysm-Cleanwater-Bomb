@@ -1,0 +1,30 @@
+[
+  {
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "fcl_mealgrub_procesing",
+    "entries": [
+      { "item": "fcl_mealgrub_jelly", "count": [ 5, 20 ] },
+      { "prob": 15, "count": [ 5, 25 ], "group": "fcl_mealgrubs_foil_bag_5" },
+      { "prob": 5, "count": [ 5, 25 ], "group": "fcl_mealgrubs_foil_bag_5" },
+      { "item": "water", "prob": 10, "charges": [ 20, 40 ], "container-item": "jerrycan" }
+    ]
+  },
+  {
+    "type": "item_group",
+    "subtype": "collection",
+    "id": "fcl_mealgrub_precursor",
+    "entries": [
+      { "item": "fcl_mealgrub_spores", "count": [ 1, 6 ] },
+      { "item": "fcl_mealgrub_medium", "prob": 80, "count": [ 2, 6 ] },
+      { "item": "fcl_mealgrub_medium", "prob": 33, "count": [ 2, 6 ] }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "fcl_mealgrubs_foil_bag_5",
+    "subtype": "collection",
+    "container-item": "foil_bag",
+    "entries": [ { "item": "fcl_mealgrubs", "container-item": "null", "count": 5 } ]
+  }
+]

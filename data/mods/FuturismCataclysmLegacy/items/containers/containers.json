@@ -1,0 +1,20 @@
+[
+  {
+    "id": "foil_bag",
+    "copy-from": "plastic_bag_vac",
+    "type": "ITEM",
+    "name": { "str": "foil bag" },
+    "description": "A plastic and aluminum foil bag for long term food storage.",
+    "material": [ "plastic", "aluminum" ],
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "open_container": true,
+        "watertight": true,
+        "max_contains_volume": "1500 ml",
+        "max_contains_weight": "3 kg",
+        "sealed_data": { "spoil_multiplier": 0.0 }
+      }
+    ]
+  }
+]
