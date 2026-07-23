@@ -9,9 +9,13 @@
 #include <string>
 #include <utility>
 
+#if defined(TILES)
+    #include "adaptive_imgui_dialog.h"
+#endif
 #include "avatar.h"
 #include "cached_options.h" // IWYU pragma: keep
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -757,6 +761,9 @@ bool can_interact_at( action_id action, map &here, const tripoint_bub_ms &p )
     }
 }
 
+static int query_action_menu_entries( const std::string &title,
+                                      const std::vector<uilist_entry> &entries );
+
 action_id handle_interact( map &here, const tripoint_bub_ms &pos )
 {
     const input_context ctxt = get_default_mode_input_context();
@@ -787,19 +794,47 @@ action_id handle_interact( map &here, const tripoint_bub_ms &pos )
         return valid_actions.front();
     }
 
-    uilist tmenu;
-    tmenu.settext( _( "Actions for this tile" ) );
+    std::vector<uilist_entry> entries;
     for( action_id act : valid_actions ) {
-        tmenu.addentry( act, true, hotkey_for_action( act, 1 ),
-                        ctxt.get_action_name( action_ident( act ) ) );
+        entries.emplace_back( act, true, hotkey_for_action( act, 1 ),
+                              ctxt.get_action_name( action_ident( act ) ) );
     }
 
-    tmenu.query();
-    if( tmenu.ret < 0 ) {
+    const int selected = query_action_menu_entries( _( "Actions for this tile" ), entries );
+    if( selected < 0 ) {
         return ACTION_NULL;
     }
 
-    return static_cast<action_id>( tmenu.ret );
+    return static_cast<action_id>( selected );
+}
+
+#if defined(TILES)
+static bool dangerous_menu_action( const int action )
+{
+    return action == ACTION_QUICKLOAD || action == ACTION_QUIT_TO_SNAPSHOT ||
+           action == ACTION_SUICIDE;
+}
+#endif
+
+static int query_action_menu_entries( const std::string &title,
+                                      const std::vector<uilist_entry> &entries )
+{
+#if defined(TILES)
+    std::vector<adaptive_imgui_dialog::entry> imgui_entries;
+    imgui_entries.reserve( entries.size() );
+    for( const uilist_entry &entry : entries ) {
+        imgui_entries.push_back( { entry.txt, entry.desc, entry.enabled,
+                                   dangerous_menu_action( entry.retval ) } );
+    }
+    const std::optional<int> selected = adaptive_imgui_dialog::select( title, imgui_entries );
+    return selected ? entries[*selected].retval : -1;
+#else
+    uilist menu;
+    menu.settext( title );
+    menu.entries = entries;
+    menu.query();
+    return menu.ret;
+#endif
 }
 
 action_id handle_action_menu( map &here )
@@ -1080,11 +1115,7 @@ action_id handle_action_menu( map &here )
             title += ": " + catgname;
         }
 
-        uilist smenu;
-        smenu.settext( title );
-        smenu.entries = entries;
-        smenu.query();
-        const int selection = smenu.ret;
+        const int selection = query_action_menu_entries( title, entries );
 
         if( selection < 0 || selection == NUM_ACTIONS ) {
             return ACTION_NULL;
@@ -1107,6 +1138,7 @@ action_id handle_action_menu( map &here )
 
 action_id handle_main_menu()
 {
+    constexpr int lua_extensions_entry = NUM_ACTIONS + 1;
     const input_context ctxt = get_default_mode_input_context();
     std::vector<uilist_entry> entries;
 
@@ -1134,6 +1166,7 @@ action_id handle_main_menu()
     REGISTER_ACTION( ACTION_COLOR );
     REGISTER_ACTION( ACTION_WORLD_MODS );
     REGISTER_ACTION( ACTION_ACTIONMENU );
+    entries.emplace_back( lua_extensions_entry, true, std::nullopt, _( "Extensions" ) );
 #if defined(__ANDROID__)
     entries.emplace_back( ACTION_MANAGE_ANDROID_EXTRA_BUTTONS, true, std::nullopt,
                           _( "Customize Android HUD" ) );
@@ -1151,12 +1184,12 @@ action_id handle_main_menu()
     entries.emplace_back( ACTION_EXPORT_BUG_REPORT_ARCHIVE, true, 'd',
                           _( "Export save archive for github bug report" ) );
 
-    uilist smenu;
-    smenu.settext( _( "MAIN MENU" ) );
-    smenu.entries = entries;
-    smenu.query();
-    int selection = smenu.ret;
+    const int selection = query_action_menu_entries( _( "MAIN MENU" ), entries );
 
+    if( selection == lua_extensions_entry ) {
+        cata::lua_ui::show_slot( "ingame.extensions" );
+        return ACTION_NULL;
+    }
     if( selection < 0 || selection >= NUM_ACTIONS ) {
         return ACTION_NULL;
     } else {

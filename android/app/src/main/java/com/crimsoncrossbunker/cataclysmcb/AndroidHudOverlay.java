@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.Handler;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -55,7 +56,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private static final String PREF_LAYOUTS_V1 = "layouts_v1";
     private static final int LAYOUT_SCHEMA_VERSION = 3;
     private static final int SNAPSHOT_SCHEMA_VERSION = 2;
-    private static final int DEFAULT_LAYOUTS_VERSION = 2;
+    private static final int DEFAULT_LAYOUTS_VERSION = 3;
     private static final long SNAPSHOT_INTERVAL_MS = 100L;
     private static final long EDIT_LONG_PRESS_MS = 650L;
 
@@ -418,12 +419,12 @@ final class AndroidHudOverlay extends FrameLayout {
         JSONObject layout = new JSONObject();
         layout.put("name", "官方 · 游戏地图");
         JSONArray list = new JSONArray();
-        list.put(newComponent(TYPE_STATUS, .02f, .03f, .27f, .14f, null).toJson());
-        list.put(newComponent(TYPE_BODY, .02f, .19f, .23f, .38f, null).toJson());
-        list.put(newComponent(TYPE_EQUIPMENT, .02f, .60f, .31f, .12f, null).toJson());
-        list.put(newComponent(TYPE_PIXEL_MINIMAP, .74f, .03f, .24f, .31f, null).toJson());
-        list.put(newComponent(TYPE_MESSAGES, .30f, .74f, .38f, .22f, null).toJson());
-        list.put(newComponent(TYPE_ACTIONS, .66f, .56f, .32f, .40f, null).toJson());
+        // Status, environment and movement-mode widgets are supplied by the
+        // built-in Lua HUD.  Keep the native layer focused on low-latency game
+        // actions that must route through the active input_context.
+        list.put(newComponent(TYPE_ACTIONS, .68f, .50f, .30f, .46f,
+            actionList("examine", "pickup", "inventory", "apply", "wait",
+                "action_menu", "player_data", "main_menu")).toJson());
         layout.put("components", list);
         return layout;
     }
@@ -434,7 +435,9 @@ final class AndroidHudOverlay extends FrameLayout {
         JSONArray list = new JSONArray();
         list.put(newComponent(TYPE_DANGER_COMPASS, .02f, .03f, .23f, .31f, null).toJson());
         list.put(newComponent(TYPE_EQUIPMENT, .02f, .37f, .28f, .12f, null).toJson());
-        list.put(newComponent(TYPE_ACTIONS, .60f, .48f, .38f, .50f, null).toJson());
+        list.put(newComponent(TYPE_ACTIONS, .62f, .50f, .36f, .46f,
+            actionList("PREV_TARGET", "NEXT_TARGET", "AIM", "FIRE", "SELECT", "QUIT"))
+            .toJson());
         layout.put("components", list);
         return layout;
     }
@@ -541,6 +544,14 @@ final class AndroidHudOverlay extends FrameLayout {
             component.actions.addAll(actions);
         }
         return component;
+    }
+
+    private List<String> actionList(String... ids) {
+        List<String> result = new ArrayList<>();
+        for (String id : ids) {
+            result.add(id);
+        }
+        return result;
     }
 
     private void loadActiveLayout() {
@@ -918,6 +929,9 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void showComponentMenu(final HudComponent component) {
         List<String> choices = new ArrayList<>();
+        if (TYPE_ACTIONS.equals(component.type)) {
+            choices.add("配置按键");
+        }
         choices.add("调整尺寸和透明度");
         choices.add("删除组件");
         new AlertDialog.Builder(activity)
@@ -926,13 +940,59 @@ final class AndroidHudOverlay extends FrameLayout {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     String selected = choices.get(which);
-                    if ("调整尺寸和透明度".equals(selected)) {
+                    if ("配置按键".equals(selected)) {
+                        showActionPicker(component);
+                    } else if ("调整尺寸和透明度".equals(selected)) {
                         showStyleEditor(component);
                     } else if ("删除组件".equals(selected)) {
                         removeComponent(component);
                     }
                 }
             })
+            .show();
+    }
+
+    private void showActionPicker(final HudComponent component) {
+        if (actionInfos.isEmpty()) {
+            Toast.makeText(activity, "当前页面没有可配置的动作", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final List<ActionInfo> available = new ArrayList<>(actionInfos.values());
+        final String[] labels = new String[available.size()];
+        final boolean[] checked = new boolean[available.size()];
+        for (int i = 0; i < available.size(); i++) {
+            ActionInfo info = available.get(i);
+            labels[i] = "【" + actionGroupLabel(info.group) + "】" + info.label;
+            checked[i] = component.actions.contains(info.id);
+        }
+        new AlertDialog.Builder(activity)
+            .setTitle("配置直接动作（最多 12 个）")
+            .setMultiChoiceItems(labels, checked, new DialogInterface.OnMultiChoiceClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                    checked[which] = isChecked;
+                }
+            })
+            .setPositiveButton("保存", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    List<String> selected = new ArrayList<>();
+                    for (int i = 0; i < available.size() && selected.size() < 12; i++) {
+                        if (checked[i]) {
+                            selected.add(available.get(i).id);
+                        }
+                    }
+                    if (selected.isEmpty()) {
+                        Toast.makeText(activity, "至少选择一个动作", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    component.actions.clear();
+                    component.actions.addAll(selected);
+                    renderLayout();
+                    saveActiveLayout();
+                }
+            })
+            .setNegativeButton("取消", null)
             .show();
     }
 
@@ -1195,7 +1255,8 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private GradientDrawable backgroundFor(HudComponent component) {
-        if (TYPE_PIXEL_MINIMAP.equals(component.type) && !editing) {
+        if ((TYPE_PIXEL_MINIMAP.equals(component.type) || TYPE_ACTIONS.equals(component.type)) &&
+                !editing) {
             GradientDrawable transparent = new GradientDrawable();
             transparent.setColor(Color.TRANSPARENT);
             return transparent;
@@ -1217,6 +1278,18 @@ final class AndroidHudOverlay extends FrameLayout {
             case 2: return "警戒停止";
             default: return "关闭";
         }
+    }
+
+    private static String actionGroupLabel(String group) {
+        if ("navigation".equals(group)) return "导航";
+        if ("primary".equals(group)) return "主要";
+        if ("text".equals(group)) return "输入";
+        if ("system".equals(group)) return "系统";
+        if ("combat".equals(group)) return "战斗";
+        if ("items".equals(group)) return "物品";
+        if ("world".equals(group)) return "世界";
+        if ("character".equals(group)) return "人物";
+        return "当前页面";
     }
 
     private static String bodyPartName(String id) {
@@ -1530,12 +1603,14 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private final class ActionPadView extends ScrollView {
         private final TableLayout buttonTable;
+        private final List<String> configuredActionIds;
         private int renderedContextRevision = -1;
 
         ActionPadView(Context context, List<String> actions) {
             super(context);
             setFillViewport(true);
             setVerticalScrollBarEnabled(true);
+            configuredActionIds = new ArrayList<>(actions);
             buttonTable = new TableLayout(context);
             buttonTable.setStretchAllColumns(true);
             addView(buttonTable, new ScrollView.LayoutParams(
@@ -1548,29 +1623,49 @@ final class AndroidHudOverlay extends FrameLayout {
             renderedContextRevision = revision;
             buttonTable.removeAllViews();
             List<View> views = new ArrayList<>();
-            for (ActionInfo info : actions.values()) {
-                views.add(createActionButton(info));
+            if (configuredActionIds.isEmpty()) {
+                for (ActionInfo info : actions.values()) {
+                    views.add(createActionButton(info));
+                }
+            } else {
+                for (String actionId : configuredActionIds) {
+                    ActionInfo info = actions.get(actionId);
+                    if (info != null) {
+                        views.add(createActionButton(info));
+                    }
+                }
             }
-            addButtonGrid(views);
+            if (views.isEmpty()) {
+                TextView empty = new TextView(activity);
+                empty.setText("当前页面没有可用动作");
+                empty.setTextColor(0xFFB0BEC5);
+                empty.setGravity(Gravity.CENTER);
+                buttonTable.addView(empty, new TableLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
+            } else {
+                addButtonGrid(views);
+            }
             scrollTo(0, 0);
         }
 
         private void addButtonGrid(List<View> views) {
             TableRow row = null;
             for (int i = 0; i < views.size(); i++) {
-                if (i % 3 == 0) {
+                if (i % 2 == 0) {
                     row = new TableRow(activity);
                     buttonTable.addView(row, new TableLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 }
-                row.addView(views.get(i), new TableRow.LayoutParams(0, dp(42), 1f));
+                TableRow.LayoutParams params = new TableRow.LayoutParams(0, dp(50), 1f);
+                int margin = dp(3);
+                params.setMargins(margin, margin, margin, margin);
+                row.addView(views.get(i), params);
             }
         }
 
         @SuppressLint("ClickableViewAccessibility")
         private Button createActionButton(final ActionInfo info) {
-            final Button button = makeButton(info.label);
-            if (info.dangerous) button.setTextColor(0xFFFF6B6B);
+            final Button button = makeButton(info);
             if (!info.repeatable) {
                 button.setOnClickListener(new View.OnClickListener() {
                     @Override public void onClick(View view) {
@@ -1609,13 +1704,37 @@ final class AndroidHudOverlay extends FrameLayout {
             return button;
         }
 
-        private Button makeButton(String label) {
+        private Button makeButton(ActionInfo info) {
             Button button = new Button(activity);
             button.setAllCaps(false);
-            button.setText(label);
-            button.setTextSize(10f);
-            button.setPadding(0, 0, 0, 0);
+            button.setText(info.label);
+            button.setTextColor(info.dangerous ? 0xFFFF8A80 : Color.WHITE);
+            button.setTextSize(12f);
+            button.setGravity(Gravity.CENTER);
+            button.setPadding(dp(4), 0, dp(4), 0);
+            button.setMinHeight(0);
+            button.setMinimumHeight(0);
+            button.setBackground(actionButtonBackground(info.dangerous));
             return button;
+        }
+
+        private StateListDrawable actionButtonBackground(boolean dangerous) {
+            StateListDrawable states = new StateListDrawable();
+            int normalFill = dangerous ? 0xD03A181C : 0xD0202A33;
+            int pressedFill = dangerous ? 0xEE6C2528 : 0xEE31566A;
+            int stroke = dangerous ? 0xFFFF6B6B : 0xAA78909C;
+            states.addState(new int[] { android.R.attr.state_pressed },
+                actionButtonShape(pressedFill, stroke));
+            states.addState(new int[] {}, actionButtonShape(normalFill, stroke));
+            return states;
+        }
+
+        private GradientDrawable actionButtonShape(int fill, int stroke) {
+            GradientDrawable shape = new GradientDrawable();
+            shape.setColor(fill);
+            shape.setCornerRadius(dp(10));
+            shape.setStroke(dp(1), stroke);
+            return shape;
         }
 
         private boolean dispatch(ActionInfo info) {
