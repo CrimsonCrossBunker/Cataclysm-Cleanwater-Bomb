@@ -4,7 +4,7 @@
     "subtypes": [ "COMESTIBLE" ],
     "id": "fcl_mealgrub_medium",
     "name": { "str_sp": "mealgrub growth medium" },
-    "description": "All sorts of organic substances rendered into a nutritious goop that can be used as a growth medium in grub aquaculture.  Public material presents it as a closed-loop food recycling product; less flattering rumors say the formula began as industrial waste-stream bioremediation research at Helix Harvest Biotechnologies, an insect-protein startup funded by Trans-Coast Logistics.  Whatever its origin, mealgrubs thrive within it.",
+    "description": "All sorts of organic substances rendered into a nutritious goop that can be used as a growth medium in grub aquaculture.  Public material presents it as a closed-loop food recycling product; less flattering rumors say the formula began as industrial waste-stream bioremediation research at Helixwirl Biotechnologies, a food-industry startup funded by Trans-Coast Logistics.  Whatever its origin, mealgrubs thrive within it.",
     "weight": "100 g",
     "container": "jug_plastic",
     "comestible_type": "DRINK",

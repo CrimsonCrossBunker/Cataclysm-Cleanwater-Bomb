@@ -5,7 +5,7 @@
     "subtypes": [ "BOOK" ],
     "category": "manuals",
     "name": { "str": "mealworm farm logbook" },
-    "description": "A binder containing detailed production logs from an industrial mealgrub farm.  Most pages are dry records of feed ratios, vat temperatures, sterilization cycles, and failed harvests.  A procurement appendix identifies the equipment vendor as Helix Harvest Biotechnologies, a now-bankrupt insect-protein firm funded by Trans-Coast Logistics.  You could use its recordings to start your own farming operations.",
+    "description": "A binder containing detailed production logs from an industrial mealgrub farm.  Most pages are dry records of feed ratios, vat temperatures, sterilization cycles, and failed harvests.  A procurement appendix identifies the equipment vendor as Helixwirl Biotechnologies, a now-bankrupt food-industry firm funded by Trans-Coast Logistics.  You could use its recordings to start your own farming operations.",
     "weight": "700 g",
     "volume": "750 ml",
     "price": "50 USD",
