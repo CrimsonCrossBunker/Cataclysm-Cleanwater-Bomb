@@ -22,7 +22,7 @@
     "id": "kitchen",
     "type": "item_group",
     "copy-from": "kitchen",
-    "extend": { "items": [ [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 1 ] ] }
+    "extend": { "items": [ [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 1 ], [ "fcl_atompot", 1 ] ] }
   },
   {
     "id": "bedroom",
