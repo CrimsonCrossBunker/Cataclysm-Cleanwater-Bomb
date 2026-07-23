@@ -250,6 +250,7 @@ struct terrain_growth_data {
  * FLOWER - This furniture is a flower
  * SHRUB - This terrain is a shrub
  * TREE - This terrain is a tree
+ * NO_STUMP - This tree is cut down using its bash result instead of creating a stump
  * HARVESTED - This terrain has been harvested so it won't bear any fruit
  * YOUNG - This terrain is a young tree
  * FUNGUS - Fungal covered
@@ -336,6 +337,7 @@ enum class ter_furn_flag : int {
     TFLAG_GRAZER_INEDIBLE,
     TFLAG_BROWSABLE,
     TFLAG_TREE,
+    TFLAG_NO_STUMP,
     TFLAG_PLOWABLE,
     TFLAG_ORGANIC,
     TFLAG_CONSOLE,

@@ -10675,10 +10675,13 @@ void map::cut_down_tree( tripoint_bub_ms p, point_rel_ms dir )
         return;
     }
 
-    // Some tree-like terrain defines its own bash result instead of producing
-    // the standard trunk/stump terrain.
-    if( ter( p ).obj().bash && ter( p ).obj().bash->ter_set != ter_str_id( "t_stump" ) ) {
-        batter( p, 79, 1 );
+    if( ter( p ).obj().has_flag( ter_furn_flag::TFLAG_NO_STUMP ) ) {
+        bash( p, 999, false, false, true );
+        // Bashable fields are handled before terrain and prevent the terrain
+        // from being bashed.  Retry if the tree survived the first bash.
+        if( ter( p ).obj().has_flag( ter_furn_flag::TFLAG_TREE ) ) {
+            bash( p, 999, false, false, true );
+        }
         return;
     }
 
