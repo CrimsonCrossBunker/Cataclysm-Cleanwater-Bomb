@@ -56,7 +56,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private static final String PREF_LAYOUTS_V1 = "layouts_v1";
     private static final int LAYOUT_SCHEMA_VERSION = 3;
     private static final int SNAPSHOT_SCHEMA_VERSION = 2;
-    private static final int DEFAULT_LAYOUTS_VERSION = 3;
+    private static final int DEFAULT_LAYOUTS_VERSION = 4;
     private static final long SNAPSHOT_INTERVAL_MS = 100L;
     private static final long EDIT_LONG_PRESS_MS = 650L;
 
@@ -418,14 +418,10 @@ final class AndroidHudOverlay extends FrameLayout {
     private JSONObject createMapLayout() throws JSONException {
         JSONObject layout = new JSONObject();
         layout.put("name", "官方 · 游戏地图");
-        JSONArray list = new JSONArray();
-        // Status, environment and movement-mode widgets are supplied by the
-        // built-in Lua HUD.  Keep the native layer focused on low-latency game
-        // actions that must route through the active input_context.
-        list.put(newComponent(TYPE_ACTIONS, .68f, .50f, .30f, .46f,
-            actionList("examine", "pickup", "inventory", "apply", "wait",
-                "action_menu", "player_data", "main_menu")).toJson());
-        layout.put("components", list);
+        // DEFAULTMODE actions are supplied by Lua action_slot HUDs.  Keep this
+        // native layout empty so there is one configurable action source and
+        // no duplicate movement/action buttons.
+        layout.put("components", new JSONArray());
         return layout;
     }
 
@@ -562,6 +558,13 @@ final class AndroidHudOverlay extends FrameLayout {
             for (int i = 0; i < list.length(); i++) {
                 HudComponent component = HudComponent.fromJson(list.optJSONObject(i));
                 if (component != null && COMPONENT_LABELS.containsKey(component.type)) {
+                    // Old saved layouts may still contain the pre-Lua action
+                    // pad.  It remains supported for modal contexts, but the
+                    // game map has a single Lua-owned action HUD.
+                    if ("DEFAULTMODE".equals(currentContext) &&
+                            TYPE_ACTIONS.equals(component.type)) {
+                        continue;
+                    }
                     components.add(component);
                 }
             }
@@ -908,6 +911,9 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void showAddComponentDialog() {
         final List<String> types = new ArrayList<>(COMPONENT_LABELS.keySet());
+        if ("DEFAULTMODE".equals(currentContext)) {
+            types.remove(TYPE_ACTIONS);
+        }
         String[] labels = new String[types.size()];
         for (int i = 0; i < types.size(); i++) {
             labels[i] = COMPONENT_LABELS.get(types.get(i));

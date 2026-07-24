@@ -31,7 +31,8 @@ enum class script_ui_capability : std::uint32_t {
     modals = 1U << 12,
     tooltips = 1U << 13,
     virtualization = 1U << 14,
-    radial_selection = 1U << 15
+    radial_selection = 1U << 15,
+    action_slots = 1U << 16
 };
 
 struct script_ui_radial_option {
@@ -39,6 +40,12 @@ struct script_ui_radial_option {
     std::string label;
     bool enabled = true;
     bool selected = false;
+};
+
+struct script_ui_action_option {
+    std::string id;
+    std::string label;
+    bool enabled = true;
 };
 
 struct script_ui_renderer_info {
@@ -99,6 +106,9 @@ class script_ui_renderer
         virtual std::string radial_select( const std::string &id,
                                            const std::string &center_label,
                                            const std::vector<script_ui_radial_option> &options ) = 0;
+        virtual std::string action_slot(
+            const std::string &id, const std::string &selected_action,
+            int context_revision, const std::vector<script_ui_action_option> &options ) = 0;
 
         // Structured containers execute their body while the adapter owns the
         // matching Begin/End or Push/Pop pair.  This prevents Lua exceptions
@@ -173,6 +183,9 @@ class script_ui_context
                                    const std::string &value ) const;
         std::string radial_select_id( const std::string &id, const std::string &center_label,
                                       const std::vector<script_ui_radial_option> &options ) const;
+        std::string action_slot_id(
+            const std::string &id, const std::string &selected_action,
+            int context_revision, const std::vector<script_ui_action_option> &options ) const;
         void child( const std::string &id, double height,
                     const std::function<void()> &draw ) const;
         void table( const std::string &id, int columns,

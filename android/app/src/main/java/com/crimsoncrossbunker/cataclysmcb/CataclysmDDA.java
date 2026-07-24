@@ -387,7 +387,7 @@ public class CataclysmDDA extends SDLActivity {
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("application/json");
-        intent.putExtra(Intent.EXTRA_TITLE, "cataclysm-android-hud.json");
+        intent.putExtra(Intent.EXTRA_TITLE, "cataclysm-lua-hud-layouts.json");
         startActivityForResult(intent, REQUEST_EXPORT_HUD_LAYOUT);
     }
 
@@ -411,7 +411,14 @@ public class CataclysmDDA extends SDLActivity {
         Uri uri = data.getData();
         if (requestCode == REQUEST_IMPORT_HUD_LAYOUT) {
             try {
-                if (hudOverlay != null) {
+                installLuaUiOverlay();
+                if (luaUiOverlay != null) {
+                    if (luaUiOverlay.importLayoutPackage(readTextFromUri(uri))) {
+                        toast("Lua HUD 布局包已导入");
+                    } else {
+                        toast("无法导入：布局版本、大小或内容不受支持");
+                    }
+                } else if (hudOverlay != null) {
                     hudOverlay.importLayoutJson(readTextFromUri(uri));
                 }
             } catch (IOException e) {

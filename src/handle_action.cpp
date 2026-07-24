@@ -122,9 +122,7 @@
     #include "sdltiles.h"
 #endif
 #if defined(__ANDROID__)
-    #include <jni.h>
-
-    #include "sdl_wrappers.h"
+    #include "android_native_ui.h"
 #endif
 
 static const activity_id ACT_PICKUP( "ACT_PICKUP" );
@@ -2581,31 +2579,6 @@ static const std::set<action_id> host_ui_actions = {
 };
 #endif
 
-#if defined(__ANDROID__)
-static void manage_android_hud()
-{
-    JNIEnv *env = ( JNIEnv * )GetAndroidJNIEnv();
-    jobject activity = ( jobject )GetAndroidActivity();
-    if( env == nullptr || activity == nullptr ) {
-        return;
-    }
-    jclass clazz( env->GetObjectClass( activity ) );
-    if( clazz == nullptr ) {
-        env->DeleteLocalRef( activity );
-        return;
-    }
-    jmethodID method_id = env->GetMethodID( clazz, "showAndroidHudManager", "()V" );
-    if( env->ExceptionCheck() ) {
-        env->ExceptionClear();
-    }
-    if( method_id != nullptr ) {
-        env->CallVoidMethod( activity, method_id );
-    }
-    env->DeleteLocalRef( activity );
-    env->DeleteLocalRef( clazz );
-}
-#endif
-
 // NOLINTNEXTLINE(readability-function-size)
 bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
@@ -2615,7 +2588,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
     // touching map/terrain or movement-mode state; the main-menu path can be
     // entered while those world objects are not ready for a regular action.
     if( act == ACTION_MANAGE_ANDROID_EXTRA_BUTTONS ) {
-        manage_android_hud();
+        android_native_ui::show_lua_hud_editor();
         return false;
     }
 #endif

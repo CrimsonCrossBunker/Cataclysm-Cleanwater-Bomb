@@ -17,6 +17,7 @@
 #include "calendar.h"
 #include "item.h"
 #include "item_location.h"
+#include "input_context_actions.h"
 #include "map.h"
 #include "messages.h"
 #include "move_mode.h"
@@ -221,6 +222,32 @@ sol::table actions_status( sol::this_state lua, sol::optional<int> requested_res
     return snapshot;
 }
 
+sol::table input_context_snapshot( sol::this_state lua )
+{
+    sol::state_view state( lua );
+    const cata::input_context_actions::context_snapshot context =
+        cata::input_context_actions::snapshot();
+    sol::table actions = state.create_table();
+    sol::table available = state.create_table();
+    for( std::size_t index = 0; index < context.actions.size(); ++index ) {
+        const cata::input_context_actions::action_descriptor &action = context.actions[index];
+        sol::table entry = state.create_table();
+        entry["id"] = action.id;
+        entry["label"] = action.label;
+        entry["group"] = action.group;
+        entry["repeatable"] = action.repeatable;
+        entry["dangerous"] = action.dangerous;
+        actions[index + 1] = std::move( entry );
+        available[action.id] = !action.dangerous;
+    }
+    sol::table result = state.create_table();
+    result["category"] = context.category;
+    result["revision"] = context.revision;
+    result["actions"] = std::move( actions );
+    result["available"] = std::move( available );
+    return result;
+}
+
 item_location find_item_location_by_uid( item_location root, std::int64_t uid,
         std::size_t &visited, int depth )
 {
@@ -395,6 +422,10 @@ void install_action_api( sol::table &game, std::function<void()> authorize_acces
     sol::optional<int> requested_result_limit ) {
         authorize_access();
         return actions_status( lua, requested_result_limit );
+    } );
+    actions.set_function( "context_snapshot", [authorize_access]( sol::this_state lua ) {
+        authorize_access();
+        return input_context_snapshot( lua );
     } );
     game["actions"] = std::move( actions );
 }

@@ -14,19 +14,148 @@ local function append_alert(alerts, active, label, value)
     end
 end
 
-local movement_mode_labels = {
-    walk = "行走",
-    run = "奔跑",
-    crouch = "蹲伏",
-    prone = "俯卧"
+local action_groups = {
+    {
+        id = "movement",
+        default = "reset_move",
+        actions = {
+            { id = "toggle_prone", label = "俯卧" },
+            { id = "toggle_crouch", label = "蹲伏" },
+            { id = "reset_move", label = "行走" },
+            { id = "toggle_run", label = "奔跑" }
+        }
+    },
+    {
+        id = "observe",
+        default = "look",
+        actions = {
+            { id = "look", label = "观察" },
+            { id = "peek", label = "窥视" }
+        }
+    },
+    {
+        id = "combat",
+        default = "autoattack",
+        actions = {
+            { id = "autoattack", label = "攻击" },
+            { id = "fire", label = "射击" }
+        }
+    },
+    {
+        id = "character",
+        default = "player_data",
+        actions = {
+            { id = "player_data", label = "个人信息" },
+            { id = "bodystatus", label = "身体信息" },
+            { id = "medical", label = "医疗" }
+        }
+    },
+    {
+        id = "safe_mode",
+        default = "safemode",
+        actions = {
+            { id = "safemode", label = "安全模式" }
+        }
+    },
+    {
+        id = "hauling",
+        default = "haul",
+        actions = {
+            { id = "haul", label = "搬运" },
+            { id = "grab", label = "抓住" }
+        }
+    },
+    {
+        id = "interaction",
+        default = "interact",
+        actions = {
+            { id = "interact", label = "互动" },
+            { id = "open", label = "开门" },
+            { id = "close", label = "关门" }
+        }
+    },
+    {
+        id = "work",
+        default = "craft",
+        actions = {
+            { id = "craft", label = "制作" },
+            { id = "construct", label = "建造" },
+            { id = "disassemble", label = "拆解" }
+        }
+    },
+    {
+        id = "inventory",
+        default = "inventory",
+        actions = {
+            { id = "inventory", label = "物品栏" },
+            { id = "insert", label = "放入" },
+            { id = "unload", label = "清空" },
+            { id = "compare", label = "比较" },
+            { id = "advinv", label = "高级物品管理" }
+        }
+    },
+    {
+        id = "ground_items",
+        default = "pickup",
+        actions = {
+            { id = "pickup", label = "拾取" },
+            { id = "drop_adj", label = "丢旁边" },
+            { id = "drop", label = "丢脚下" }
+        }
+    },
+    {
+        id = "held_item",
+        default = "wield",
+        actions = {
+            { id = "wield", label = "手持" },
+            { id = "throw", label = "投掷" }
+        }
+    },
+    {
+        id = "clothing",
+        default = "wear",
+        actions = {
+            { id = "wear", label = "穿上" },
+            { id = "take_off", label = "脱下" }
+        }
+    },
+    {
+        id = "other",
+        default = "map",
+        actions = {
+            { id = "factions", label = "阵营" },
+            { id = "sleep", label = "睡觉" },
+            { id = "item_action_menu", label = "物品使用菜单" },
+            { id = "bionics", label = "生化插件" },
+            { id = "missions", label = "任务" },
+            { id = "morale", label = "士气" },
+            { id = "messages", label = "日志" },
+            { id = "chat", label = "叫喊" },
+            { id = "diary", label = "日记" },
+            { id = "map", label = "地图" }
+        }
+    }
 }
 
-local movement_mode_order = {
-    walk = 1,
-    run = 2,
-    prone = 3,
-    crouch = 4
-}
+local function draw_action_groups(ctx, first, last)
+    local input = game.actions.context_snapshot()
+    for index = first, last do
+        local group = action_groups[index]
+        local options = {}
+        for _, action in ipairs(group.actions) do
+            if input.available[action.id] then
+                table.insert(options, action)
+            end
+        end
+        local state_key = "hud.action_slot." .. group.id
+        local selected = game.state_get(state_key, group.default)
+        local current = ctx:action_slot_id(
+            group.id, selected, input.revision, options)
+        if current ~= "" and current ~= selected then
+            game.state_set(state_key, current)
+        end
+    end
+end
 
 ui.hud("ccb_player_status", {
     title = "角色状态",
@@ -75,43 +204,42 @@ ui.hud("ccb_player_status", {
     end
 end)
 
-ui.hud("ccb_movement_mode", {
-    title = "移动模式",
-    default_anchor = "bottom_right",
-    default_x = 148,
-    default_y = 148,
-    default_width = 0.10,
-    default_height = 0.09,
+ui.hud("ccb_quick_actions", {
+    title = "常用动作",
+    contexts = { "DEFAULTMODE" },
+    default_anchor = "top_right",
+    default_x = 16,
+    default_y = 16,
+    default_width = 0.18,
+    default_height = 0.78,
     alpha = 0.92,
     interactive = true,
     background = false,
     title_bar = false,
     movable = true,
-    scalable = false,
+    scalable = true,
     user_toggleable = true
 }, function(ctx)
-    local player = game.player_snapshot()
-    local modes = game.movement_modes_snapshot()
-    local current_id = player.movement_mode_id
-    local center_label = movement_mode_labels[current_id] or player.movement_mode_name or current_id
-    local options = {}
-    for _, mode in ipairs(modes.items) do
-        local name = movement_mode_labels[mode.id] or mode.name or mode.id
-        table.insert(options, {
-            id = mode.id,
-            label = name .. "\n" .. string.format("%.2f 秒", mode.switch_seconds),
-            enabled = mode.available,
-            selected = mode.desired
-        })
-    end
-    table.sort(options, function(left, right)
-        return (movement_mode_order[left.id] or 100) <
-               (movement_mode_order[right.id] or 100)
-    end)
-    local selected = ctx:radial_select_id("movement_mode_selector", center_label, options)
-    if selected ~= "" and selected ~= player.desired_movement_mode_id then
-        game.actions.enqueue("set_move_mode", { id = selected })
-    end
+    draw_action_groups(ctx, 1, 7)
+end)
+
+ui.hud("ccb_more_actions", {
+    title = "更多动作",
+    contexts = { "DEFAULTMODE" },
+    default_anchor = "top_right",
+    default_x = 190,
+    default_y = 16,
+    default_width = 0.18,
+    default_height = 0.70,
+    alpha = 0.92,
+    interactive = true,
+    background = false,
+    title_bar = false,
+    movable = true,
+    scalable = true,
+    user_toggleable = true
+}, function(ctx)
+    draw_action_groups(ctx, 8, #action_groups)
 end)
 
 ui.hud("ccb_world_status", {

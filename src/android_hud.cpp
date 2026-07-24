@@ -3,9 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
-#include <deque>
 #include <mutex>
-#include <set>
 #include <sstream>
 #include <stack>
 #include <string>
@@ -18,6 +16,7 @@
     #include "coordinates.h"
     #include "creature.h"
     #include "imgui/imgui.h"
+    #include "input_context_actions.h"
     #include "item_location.h"
     #include "json.h"
     #include "omdata.h"
@@ -75,11 +74,6 @@ struct hud_message {
     std::vector<hud_text_run> runs;
 };
 
-struct queued_action {
-    std::string id;
-    int context_revision = 0;
-};
-
 struct hud_snapshot {
     bool ready = false;
     int revision = 0;
@@ -98,101 +92,9 @@ struct hud_snapshot {
 };
 
 std::mutex hud_mutex;
-std::deque<queued_action> pending_actions;
 hud_snapshot latest_snapshot;
 minimap_rect latest_minimap_rect;
 std::chrono::steady_clock::time_point last_snapshot_refresh;
-
-const std::set<std::string> &internal_actions()
-{
-    static const std::set<std::string> actions = {
-        "ANY_INPUT", "MOUSE_MOVE", "COORDINATE", "CLICK_AND_DRAG", "SEC_SELECT", "TIMEOUT"
-    };
-    return actions;
-}
-
-bool has_fragment( const std::string &id, const std::string &fragment )
-{
-    return id.find( fragment ) != std::string::npos;
-}
-
-bool is_repeatable( const std::string &id )
-{
-    static const std::set<std::string> exact = {
-        "UP", "RIGHTUP", "RIGHT", "RIGHTDOWN", "DOWN", "LEFTDOWN", "LEFT", "LEFTUP",
-        "PAGE_UP", "PAGE_DOWN", "SCROLL_UP", "SCROLL_DOWN", "HOME", "END",
-        "LEVEL_UP", "LEVEL_DOWN", "NEXT", "PREV", "NEXT_TAB", "PREV_TAB",
-        "NEXT_COLUMN", "PREV_COLUMN", "NEXT_TARGET", "PREV_TARGET",
-        "INCREASE_COUNT", "DECREASE_COUNT", "INCREASE_VALUE", "DECREASE_VALUE"
-    };
-    return exact.count( id ) > 0 || has_fragment( id, "SCROLL_" ) ||
-           has_fragment( id, "BATCH_SIZE_" );
-}
-
-bool is_dangerous( const std::string &id )
-{
-    static const std::set<std::string> dangerous = {
-        "SUICIDE", "quit_to_snapshot", "DELETE_TEMPLATE", "DELETE_WORLD", "RESET",
-        "debug", "debug_mode", "QUICKLOAD", "quickload"
-    };
-    return dangerous.count( id ) > 0 || has_fragment( id, "DELETE_" ) ||
-           has_fragment( id, "DEBUG_" );
-}
-
-std::string action_group( const std::string &id )
-{
-    static const std::set<std::string> navigation = {
-        "UP", "RIGHTUP", "RIGHT", "RIGHTDOWN", "DOWN", "LEFTDOWN", "LEFT", "LEFTUP",
-        "CENTER", "center", "HOME", "END", "LEVEL_UP", "LEVEL_DOWN"
-    };
-    static const std::set<std::string> primary = {
-        "CONFIRM", "SELECT", "QUIT", "YES", "NO", "FIRE", "pause"
-    };
-    if( navigation.count( id ) > 0 ) {
-        return "navigation";
-    }
-    if( primary.count( id ) > 0 ) {
-        return "primary";
-    }
-    if( has_fragment( id, "PAGE_" ) || has_fragment( id, "SCROLL_" ) ||
-        has_fragment( id, "TAB" ) || has_fragment( id, "COLUMN" ) ||
-        has_fragment( id, "TARGET" ) ) {
-        return "navigation";
-    }
-    if( id.rfind( "TEXT.", 0 ) == 0 || has_fragment( id, "FILTER" ) ||
-        has_fragment( id, "SEARCH" ) ) {
-        return "text";
-    }
-    if( is_dangerous( id ) || id == "main_menu" || id == "open_options" ||
-        id == "help" || id == "HELP_KEYBINDINGS" || id == "save" || id == "quicksave" ) {
-        return "system";
-    }
-    if( has_fragment( id, "AIM" ) || has_fragment( id, "FIRE" ) ||
-        has_fragment( id, "AMMO" ) || id == "throw" || id == "reload_weapon" ) {
-        return "combat";
-    }
-    if( has_fragment( id, "ITEM" ) || has_fragment( id, "INVENTORY" ) ||
-        id == "pickup" || id == "wear" || id == "wield" || id == "eat" || id == "apply" ) {
-        return "items";
-    }
-    if( id == "map" || id == "look" || id == "MISSIONS" || id == "missions" ||
-        has_fragment( id, "NOTE" ) || has_fragment( id, "TRAVEL" ) || has_fragment( id, "MAP" ) ) {
-        return "world";
-    }
-    if( id == "player_data" || id == "bionics" || id == "mutations" ||
-        id == "medical" || id == "morale" || has_fragment( id, "TRAIT" ) ||
-        has_fragment( id, "SKILL" ) ) {
-        return "character";
-    }
-    return "context";
-}
-
-bool is_registered( const std::vector<std::string> &registered_actions,
-                    const std::string &action )
-{
-    return std::find( registered_actions.begin(), registered_actions.end(), action ) !=
-           registered_actions.end();
-}
 
 std::string safe_weapon_name( const avatar &player )
 {
@@ -247,75 +149,6 @@ hud_message parse_formatted_message( const std::string &formatted )
 
 } // namespace
 
-bool enqueue_action( const std::string &action, const int context_revision )
-{
-    std::lock_guard<std::mutex> lock( hud_mutex );
-    const bool active = std::any_of( latest_snapshot.active_actions.begin(),
-    latest_snapshot.active_actions.end(), [&]( const hud_action & candidate ) {
-        return candidate.id == action;
-    } );
-    if( !active || ( context_revision >= 0 &&
-                     context_revision != latest_snapshot.context_revision ) ) {
-        return false;
-    }
-    // A held Android button must not create an unbounded sequence of stale
-    // commands while a modal game UI is open.
-    constexpr size_t max_pending_actions = 8;
-    if( pending_actions.size() >= max_pending_actions ) {
-        pending_actions.pop_front();
-    }
-    pending_actions.push_back( { action, latest_snapshot.context_revision } );
-    return true;
-}
-
-bool has_pending_action()
-{
-    std::lock_guard<std::mutex> lock( hud_mutex );
-    return !pending_actions.empty();
-}
-
-bool consume_action_for_context( const std::vector<std::string> &registered_actions,
-                                 std::string &action )
-{
-    std::lock_guard<std::mutex> lock( hud_mutex );
-    if( pending_actions.empty() ) {
-        return false;
-    }
-
-    // Commands are one-shot.  Dropping a command that belongs to a previous
-    // screen is safer than replaying it after the player exits that screen.
-    queued_action candidate = std::move( pending_actions.front() );
-    pending_actions.pop_front();
-    if( candidate.context_revision != latest_snapshot.context_revision ||
-        !is_registered( registered_actions, candidate.id ) ) {
-        return false;
-    }
-    action = std::move( candidate.id );
-    return true;
-}
-
-void set_active_context( const std::string &category,
-                         const std::vector<action_descriptor> &registered_actions )
-{
-    std::vector<hud_action> filtered;
-    filtered.reserve( registered_actions.size() );
-    for( const action_descriptor &action : registered_actions ) {
-        if( internal_actions().count( action.id ) == 0 ) {
-            filtered.push_back( { action.id, action.label, action_group( action.id ),
-                                  is_repeatable( action.id ), is_dangerous( action.id ) } );
-        }
-    }
-
-    std::lock_guard<std::mutex> lock( hud_mutex );
-    if( latest_snapshot.context != category || latest_snapshot.active_actions != filtered ) {
-        latest_snapshot.context = category;
-        latest_snapshot.active_actions = std::move( filtered );
-        ++latest_snapshot.context_revision;
-        ++latest_snapshot.revision;
-        pending_actions.clear();
-    }
-}
-
 void set_minimap_rect( const minimap_rect &rect )
 {
     std::lock_guard<std::mutex> lock( hud_mutex );
@@ -345,6 +178,16 @@ void publish_snapshot( const avatar &player, const int safe_mode )
     next.pain = player.get_pain();
     next.safe_mode = safe_mode;
     next.weapon = safe_weapon_name( player );
+    const cata::input_context_actions::context_snapshot context =
+        cata::input_context_actions::snapshot();
+    next.context_revision = context.revision;
+    next.context = context.category;
+    next.active_actions.reserve( context.actions.size() );
+    for( const cata::input_context_actions::action_descriptor &action : context.actions ) {
+        next.active_actions.push_back( {
+            action.id, action.label, action.group, action.repeatable, action.dangerous
+        } );
+    }
 
     for( const bodypart_id &part : player.get_all_body_parts() ) {
         next.body_parts.push_back( { part.id().str(), player.get_part_hp_cur( part ),
@@ -389,9 +232,6 @@ void publish_snapshot( const avatar &player, const int safe_mode )
 
     std::lock_guard<std::mutex> lock( hud_mutex );
     next.revision = latest_snapshot.revision + 1;
-    next.context_revision = latest_snapshot.context_revision;
-    next.context = latest_snapshot.context;
-    next.active_actions = latest_snapshot.active_actions;
     latest_snapshot = std::move( next );
 }
 
@@ -491,25 +331,6 @@ std::string snapshot_json()
 }
 
 #else
-
-bool enqueue_action( const std::string &, int )
-{
-    return false;
-}
-
-bool has_pending_action()
-{
-    return false;
-}
-
-bool consume_action_for_context( const std::vector<std::string> &, std::string & )
-{
-    return false;
-}
-
-void set_active_context( const std::string &, const std::vector<action_descriptor> & )
-{
-}
 
 void set_minimap_rect( const minimap_rect & )
 {

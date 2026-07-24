@@ -8,6 +8,7 @@
 #include "catalua_ui_retained.h"
 #include "catalua_ui_state.h"
 #include "event_bus.h"
+#include "input_context_actions.h"
 #include "json_loader.h"
 #include "path_info.h"
 #include "weather.h"
@@ -47,7 +48,8 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
                 static_cast<std::uint32_t>( capability::modals ) |
                 static_cast<std::uint32_t>( capability::tooltips ) |
                 static_cast<std::uint32_t>( capability::virtualization ) |
-                static_cast<std::uint32_t>( capability::radial_selection ),
+                static_cast<std::uint32_t>( capability::radial_selection ) |
+                static_cast<std::uint32_t>( capability::action_slots ),
                 false, true
             };
         }
@@ -139,6 +141,16 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
                 return option.enabled && !option.selected;
             } );
             return found == options.end() ? std::string() : found->id;
+        }
+        std::string action_slot(
+            const std::string &id, const std::string &selected_action, int,
+            const std::vector<cata::lua_ui::script_ui_action_option> &options ) override {
+            last_widget_id = id;
+            const auto found = std::find_if( options.begin(), options.end(),
+            [&]( const cata::lua_ui::script_ui_action_option & option ) {
+                return option.enabled && option.id != selected_action;
+            } );
+            return found == options.end() ? selected_action : found->id;
         }
         void child( const std::string &id, double,
                     const std::function<void()> &draw ) override {
@@ -334,6 +346,7 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( context.supports( "tables" ) );
     CHECK( context.supports( "virtualization" ) );
     CHECK( context.supports( "radial_selection" ) );
+    CHECK( context.supports( "action_slots" ) );
     CHECK_FALSE( context.supports( "text_input" ) );
     CHECK_FALSE( context.supports( "unknown" ) );
 
@@ -365,6 +378,12 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     };
     CHECK( context.radial_select_id( "movement", "Walk", radial_options ) == "run" );
     CHECK( renderer.last_widget_id == "movement" );
+    const std::vector<cata::lua_ui::script_ui_action_option> action_options = {
+        { "pickup", "Pickup", true },
+        { "drop", "Drop", true }
+    };
+    CHECK( context.action_slot_id( "ground", "pickup", 4, action_options ) == "drop" );
+    CHECK( renderer.last_widget_id == "ground" );
 
     CHECK( context.button_id( "apply_action", "Apply translated" ) );
     CHECK( renderer.calls.back() == "button:apply_action:Apply translated" );
@@ -417,7 +436,8 @@ TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
         { "surface/enabled", "bool:0" },
         { "surface/count", "int:7" },
         { "surface/name", "text:原生控件" },
-        { "surface/movement", "select:run" }
+        { "surface/movement", "select:run" },
+        { "surface/ground", "select:drop" }
     };
     const retained_interaction_reader reader = [&interactions]( const std::string & id )
     -> std::optional<std::string> {
@@ -447,13 +467,18 @@ TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
         { "run", "奔跑\\n0.50 秒", true, false }
     };
     CHECK( context.radial_select_id( "movement", "行走", radial_options ) == "run" );
+    const std::vector<script_ui_action_option> action_options = {
+        { "pickup", "拾取", true },
+        { "drop", "丢脚下", true }
+    };
+    CHECK( context.action_slot_id( "ground", "pickup", 7, action_options ) == "drop" );
 
     int rendered_items = 0;
     context.virtual_list( 1000, 24.0, [&rendered_items]( int first, int last ) {
         rendered_items += last - first;
     } );
     CHECK( rendered_items == 200 );
-    REQUIRE( document.nodes.size() == 6 );
+    REQUIRE( document.nodes.size() == 7 );
     CHECK( document.nodes.back().type == "virtual_list" );
     CHECK( document.nodes.back().count == 1000 );
     CHECK( document.nodes.back().truncated );
@@ -462,6 +487,9 @@ TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
     CHECK( json.find( "surface/apply" ) != std::string::npos );
     CHECK( json.find( "原生控件" ) != std::string::npos );
     CHECK( json.find( "radial_select" ) != std::string::npos );
+    CHECK( json.find( "\"type\":\"action_slot\"" ) != std::string::npos );
+    CHECK( json.find( "\"contextRevision\":7" ) != std::string::npos );
+    CHECK( json.find( "\"selectedAction\":\"drop\"" ) != std::string::npos );
     CHECK( json.find( "奔跑" ) != std::string::npos );
     CHECK( json.find( "\"selected\":true" ) != std::string::npos );
     CHECK( json.find( "\"truncated\":true" ) != std::string::npos );
@@ -486,6 +514,79 @@ TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
     CHECK( surfaces_json.find( "\"movable\":false" ) != std::string::npos );
     CHECK( surfaces_json.find( "\"scalable\":false" ) != std::string::npos );
     CHECK( surfaces_json.find( "\"userToggleable\":false" ) != std::string::npos );
+}
+
+TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive",
+           "[lua][ui][actions][input_context]" )
+{
+    using namespace cata::input_context_actions;
+    cata::input_context_actions::clear();
+    publish( "DEFAULTMODE", {
+        { "pickup", "Pickup", {}, false, false },
+        { "DELETE_WORLD", "Delete world", {}, false, false },
+        { "delete_character", "Delete character", {}, false, false },
+        { "ANY_INPUT", "Any input", {}, false, false },
+        { "any_input", "Any input lower case", {}, false, false }
+    } );
+    const context_snapshot first = snapshot();
+    CHECK( first.category == "DEFAULTMODE" );
+    CHECK( first.revision > 0 );
+    REQUIRE( first.actions.size() == 3 );
+    CHECK_FALSE( first.actions[0].dangerous );
+    CHECK( first.actions[1].dangerous );
+    CHECK( first.actions[2].dangerous );
+    CHECK_FALSE( needs_publish(
+                     "DEFAULTMODE",
+    { "pickup", "DELETE_WORLD", "delete_character", "ANY_INPUT", "any_input" },
+    0,
+    0 ) );
+    CHECK( needs_publish(
+               "DEFAULTMODE",
+    { "pickup", "DELETE_WORLD", "delete_character", "ANY_INPUT", "any_input" },
+    0,
+    1 ) );
+    CHECK_FALSE( enqueue( "delete_character", first.revision ) );
+
+    publish( "DEFAULTMODE", {
+        { "pickup", "Pickup", {}, false, false },
+        { "DELETE_WORLD", "Delete world", {}, false, false },
+        { "delete_character", "Delete character", {}, false, false },
+        { "ANY_INPUT", "Any input", {}, false, false },
+        { "any_input", "Any input lower case", {}, false, false }
+    } );
+    CHECK( snapshot().revision == first.revision );
+    CHECK_FALSE( enqueue( "pickup", first.revision + 1 ) );
+    CHECK_FALSE( enqueue( "DELETE_WORLD", first.revision ) );
+    CHECK( validate_candidates(
+               first.revision, { "pickup", "DELETE_WORLD", "missing" } ) ==
+           std::vector<bool> { true, false, false } );
+    CHECK( validate_candidates(
+               first.revision + 1, { "pickup" } ) ==
+           std::vector<bool> { false } );
+    REQUIRE( enqueue( "pickup", first.revision ) );
+
+    std::string action;
+    CHECK_FALSE( consume( { "inventory" }, action ) );
+    REQUIRE( enqueue( "pickup", first.revision ) );
+    REQUIRE( consume( { "pickup", "inventory" }, action ) );
+    CHECK( action == "pickup" );
+
+    for( int index = 0; index < 16; ++index ) {
+        REQUIRE( enqueue( "pickup", first.revision ) );
+    }
+    CHECK_FALSE( enqueue( "pickup", first.revision ) );
+    for( int index = 0; index < 16; ++index ) {
+        REQUIRE( consume( { "pickup" }, action ) );
+    }
+    CHECK_FALSE( has_pending() );
+
+    REQUIRE( enqueue( "pickup", first.revision ) );
+    publish( "DEFAULTMODE", {
+        { "pickup", "Pick up", {}, false, false }
+    } );
+    CHECK( snapshot().revision != first.revision );
+    CHECK_FALSE( has_pending() );
+    cata::input_context_actions::clear();
 }
 
 TEST_CASE( "lua_module_names_stay_inside_script_roots", "[lua][ui][sandbox]" )
@@ -633,7 +734,7 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v2", "[lua][ui][integration]" )
     CHECK( status.loaded );
     CHECK( status.generation > 0 );
     CHECK( status.page_count == 0 );
-    CHECK( status.hud_count == 3 );
+    CHECK( status.hud_count == 4 );
     CHECK( status.event_handler_count == 0 );
     CHECK( status.memory_used > 0 );
     CHECK( status.memory_used <= status.memory_limit );

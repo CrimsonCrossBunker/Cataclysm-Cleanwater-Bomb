@@ -26,6 +26,7 @@ struct retained_ui_node {
     int integer_value = 0;
     int count = 0;
     int columns = 0;
+    int context_revision = -1;
     bool bool_value = false;
     bool enabled = true;
     bool selected = false;

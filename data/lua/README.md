@@ -88,7 +88,8 @@ ui.hud("stamina", {
     title_bar = false,
     movable = true,
     scalable = true,
-    user_toggleable = true
+    user_toggleable = true,
+    contexts = { "DEFAULTMODE" } -- optional active input_context allow-list
 }, function(ctx)
     local p = game.player_snapshot()
     ctx:progress_bar(p.stamina / math.max(1, p.stamina_max), "Stamina")
@@ -139,9 +140,10 @@ ctx:supports("text_input")
 Capability names are `colored_text`, `inline_layout`, `item_width`,
 `progress_bar`, `buttons`, `selection`, `numeric_input`, `text_input`,
 `child_regions`, `tables`, `tabs`, `trees`, `modals`, `tooltips`, and
-`virtualization`, and `radial_selection`. The latter reports support for a
-center button with surrounding choices; renderers without a radial layout may
-use a native popup/list fallback.
+`virtualization`, `radial_selection`, and `action_slots`. Radial selection
+reports support for a center button with surrounding choices; renderers without
+a radial layout may use a native popup/list fallback. Action slots are semantic
+named-action controls backed by the active `input_context`, not synthetic keys.
 Widget calls remain safe when a capability is unavailable; the adapter may
 provide a simplified or read-only fallback.
 
@@ -197,6 +199,28 @@ local selected = ctx:radial_select_id("movement", "行走", {
     { id = "run", label = "奔跑\n0.50 秒", enabled = true, selected = false }
 })
 ```
+
+An action slot is a retained HUD control whose selected action is validated
+against the exact input-context revision that produced it:
+
+```lua
+local input = game.actions.context_snapshot()
+local selected = game.state_get("hud.ground_action", "pickup")
+selected = ctx:action_slot_id("ground_action", selected, input.revision, {
+    { id = "pickup", label = "拾取" },
+    { id = "drop", label = "丢脚下" },
+    { id = "drop_adj", label = "丢旁边" }
+})
+game.state_set("hud.ground_action", selected)
+```
+
+Pass only candidates present in `input.available`. With no available candidate
+the native control is disabled, with one candidate the whole control is a
+single trigger, and with multiple candidates it becomes a large trigger plus a
+small selector. Selecting a candidate returns its id; pressing the trigger
+queues that named action directly in the renderer and does not return a
+synthetic click or key. Stable widget ids and character state preserve the
+choice across redraws, hot reload, and native View recreation.
 
 Every interactive method has a matching `_id` form whose first argument is
 the stable id and second argument is the visible label. Buttons report a
@@ -259,26 +283,63 @@ HUD surfaces honor `anchor`, `x`, `y`, and `alpha`, and are repositioned after
 rotation or split-screen resizing. Touches inside Lua HUD surfaces are kept
 out of the Android HUD long-press editor.
 
-Lua HUDs also participate in the Android HUD editor. Long-press an empty part
-of the game view to enter editing, then drag a Lua HUD to move it, drag its
-bottom-right corner to resize it, or long-press it to edit size, opacity, and
-visibility. Layout overrides are stored by stable HUD id and separately for
-portrait and landscape; they survive Lua hot reload and Android View
-recreation. **Android HUD → Manage Lua HUD** can restore a hidden HUD or reset
-the current orientation to script defaults.
+Lua HUD configuration uses a versioned scene hierarchy:
+
+1. A fixed `input_context` category, such as `DEFAULTMODE`.
+2. An official or user layout for the current portrait/landscape orientation.
+3. Stable Lua surfaces, Lua `action_slot` overrides, and user action buttons.
+
+Open **Options → HUD layout** on Android (or the existing in-game Android HUD
+management action) to choose a scene and layout. The official layout is
+read-only; editing it first creates a user copy. In canvas edit mode, drag an
+element to move it, drag its bottom-right corner to resize it, or long-press it
+to edit size, opacity, and visibility. The edit bar can add a new action button
+or change the candidate actions of an existing Lua action slot. A single
+candidate uses the whole button as its trigger. Multiple candidates add a much
+smaller selector region.
+
+The schema 2 store keeps all scenes and layouts in one internal JSON package.
+It is still separated by portrait/landscape orientation and stable HUD/widget
+ids, so it survives Lua hot reload and native View recreation. Existing schema
+1 position/visibility data is migrated into a user layout named `旧版布局`.
+Import, export, and share operate on the complete package for backup,
+cross-device transfer, and mod layout sharing; normal edits stay in app-private
+storage and do not create files.
+
+Imported action ids are configuration only. The renderer intersects them with
+the current immutable action catalogue, removes dangerous entries, and the
+trigger still carries the current context revision into the bounded native
+action queue. A layout package therefore cannot grant an action that the
+current game scene did not register.
 
 `default_anchor`, `default_x`, and `default_y` are aliases for the portable
 `anchor`, `x`, and `y` defaults. `default_width` and `default_height` are
 Android overlay fractions clamped to safe bounds. `movable`, `scalable`, and
 `user_toggleable` default to `true`; set one to `false` when a built-in or mod
 HUD must keep that part of its script-defined layout. User overrides stay on
-the Android device and never mutate the Lua script or character save.
+the Android device and never mutate the Lua script or character save. A mod can
+freely change implementation details during hot reload as long as its HUD and
+widget ids remain stable; renamed ids intentionally appear as new elements.
+`contexts` optionally limits a HUD to one or more exact `input_context`
+categories. A mismatched HUD callback is not run and Android does not allocate
+or retain a surface for it.
 
 The native HUD adapter maps text, buttons, checkboxes, sliders, inputs,
 progress bars, and structured containers to Android Views. Immediate-mode-only
 details such as exact same-line or table-column placement may use a simplified
 native layout, so capability-aware HUD scripts should prioritize semantic
 structure over pixel-identical layouts.
+
+`action_slot` uses a retained `ActionSlotView` on Android and the same semantic
+widget through ImGui/ImTui elsewhere. Android reparses or restyles a slot only
+when its stable id, context revision, candidates, or selection changes. Lua
+never draws it per pixel and the Android UI thread never calls Lua.
+
+The official Android `DEFAULTMODE` layout does not create the older native
+action pad, including when loading a saved layout that still contains one.
+This keeps the Lua HUD as the single owner of game-map actions and prevents
+duplicate buttons. Native action pads remain a compatibility fallback for
+modal contexts that have not yet received a Lua layout.
 
 ## Game API and reload state
 
@@ -398,6 +459,40 @@ whether the request consumed a normal action. Invalid ids/options are rejected
 before enqueue. Requests can only be submitted from an active page, HUD, or
 event callback—not while candidate entry scripts are loading—and are disabled
 in multiplayer sessions.
+
+`game.actions.context_snapshot()` is the separate, low-latency input action
+catalogue used by HUD controls. It returns:
+
+```lua
+{
+    category = "DEFAULTMODE",
+    revision = 17,
+    actions = {
+        {
+            id = "pickup",
+            label = "拾取",
+            group = "items",
+            repeatable = false,
+            dangerous = false
+        }
+    },
+    available = { pickup = true }
+}
+```
+
+The active `input_context` republishes this immutable catalogue only when its
+category, ids, or labels change. A UI trigger carries both action id and the
+rendered revision into a 16-entry platform-neutral queue. Consumption checks
+the revision again and confirms that the receiving context still registered
+the id. Context changes clear pending actions; debug, deletion, reset,
+quickload, and suicide actions are marked dangerous and cannot enter this HUD
+queue. This action-id path is intentionally separate from the turn-level
+`game.actions.enqueue(...)` mutation queue above.
+
+Repeated input in the same context takes an id/catalog-token/language-generation
+fast path, so normal movement does not rebuild or retranslate the complete
+action list. Lua candidate validation is batched under one lock per action slot;
+the final trigger is still revision-checked again when it enters the queue.
 
 ## Isolation and limits
 

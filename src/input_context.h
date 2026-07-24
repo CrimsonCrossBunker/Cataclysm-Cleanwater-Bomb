@@ -147,8 +147,8 @@ class input_context
             // Don't touch the handle
 #if defined(__ANDROID__)
             registered_manual_keys = std::forward<Rhs>( other ).registered_manual_keys;
-            android_direct_action = std::forward<Rhs>( other ).android_direct_action;
 #endif
+            context_direct_action = std::forward<Rhs>( other ).context_direct_action;
             registered_actions = std::forward<Rhs>( other ).registered_actions;
             edittext = std::forward<Rhs>( other ).edittext;
             category = std::forward<Rhs>( other ).category;
@@ -207,7 +207,7 @@ class input_context
             return category == other.category &&
                    registered_actions == other.registered_actions &&
                    registered_manual_keys == other.registered_manual_keys &&
-                   android_direct_action == other.android_direct_action &&
+                   context_direct_action == other.context_direct_action &&
                    allow_text_entry == other.allow_text_entry &&
                    registered_any_input == other.registered_any_input &&
                    coordinate == other.coordinate &&
@@ -493,11 +493,11 @@ class input_context
     private:
 #if defined(__ANDROID__)
         std::vector<manual_key> registered_manual_keys;
-        // Storage for a direct action received from the Android HUD.  Returning
-        // this string from handle_input keeps it on the same action-dispatch
-        // path as keyboard input without manufacturing an input_event.
-        std::string android_direct_action;
 #endif
+        // Storage for a named action received from a platform UI.  Returning it
+        // from handle_input uses the normal action-dispatch path without
+        // manufacturing a keyboard event.
+        std::string context_direct_action;
         std::vector<std::string> registered_actions;
         std::string edittext;
     public:

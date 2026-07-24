@@ -9,6 +9,8 @@
 
 namespace android_native_ui
 {
+void show_lua_hud_editor();
+
 std::optional<std::string> text_input( const std::string &title,
                                        const std::string &initial_value,
                                        int max_length = 0 );

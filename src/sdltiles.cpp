@@ -111,6 +111,7 @@ std::unique_ptr<cataimgui::client> imclient;
     #include "action.h"
     #include "android_hud.h"
     #include "catalua_ui.h"
+    #include "input_context_actions.h"
     #include "inventory.h"
     #include "map.h"
     #include "vehicle.h"
@@ -1022,7 +1023,8 @@ extern "C" {
 
         const std::string action_s( raw_action );
         env->ReleaseStringUTFChars( action, raw_action );
-        return android_hud::enqueue_action( action_s, context_revision ) ? JNI_TRUE : JNI_FALSE;
+        return cata::input_context_actions::enqueue( action_s,
+                context_revision ) ? JNI_TRUE : JNI_FALSE;
     }
 
     JNIEXPORT jstring JNICALL
@@ -1093,7 +1095,7 @@ extern "C" {
         }
         const std::string action_s( raw_action );
         env->ReleaseStringUTFChars( action, raw_action );
-        android_hud::enqueue_action( action_s );
+        cata::input_context_actions::enqueue( action_s, -1 );
     }
 
 } // "C"
@@ -5993,7 +5995,7 @@ static void CheckMessages()
     // Native HUD actions arrive on the Android UI thread rather than through
     // SDL.  Wake input_context immediately so it can consume the queued named
     // action; otherwise modal menus wait until an unrelated touch event arrives.
-    if( android_hud::has_pending_action() ) {
+    if( cata::input_context_actions::has_pending() ) {
         last_input.type = input_event_t::timeout;
         return;
     }

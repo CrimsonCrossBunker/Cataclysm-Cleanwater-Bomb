@@ -6,6 +6,32 @@
 
 #include "sdl_wrappers.h"
 
+void android_native_ui::show_lua_hud_editor()
+{
+    JNIEnv *env = static_cast<JNIEnv *>( GetAndroidJNIEnv() );
+    jobject activity = static_cast<jobject>( GetAndroidActivity() );
+    if( env == nullptr || activity == nullptr ) {
+        return;
+    }
+    jclass activity_class = env->GetObjectClass( activity );
+    if( activity_class == nullptr ) {
+        env->DeleteLocalRef( activity );
+        return;
+    }
+    jmethodID method = env->GetMethodID( activity_class, "showAndroidHudManager", "()V" );
+    if( env->ExceptionCheck() ) {
+        env->ExceptionClear();
+    }
+    if( method != nullptr ) {
+        env->CallVoidMethod( activity, method );
+        if( env->ExceptionCheck() ) {
+            env->ExceptionClear();
+        }
+    }
+    env->DeleteLocalRef( activity_class );
+    env->DeleteLocalRef( activity );
+}
+
 std::optional<std::string> android_native_ui::text_input( const std::string &title,
         const std::string &initial_value, int max_length )
 {

@@ -36,6 +36,7 @@
 #include "filesystem.h"
 #include "imgui/imgui.h"
 #include "input_context.h"
+#include "input_context_actions.h"
 #include "json_loader.h"
 #include "messages.h"
 #include "mod_manager.h"
@@ -142,6 +143,7 @@ struct hud_definition {
     bool movable = true;
     bool scalable = true;
     bool user_toggleable = true;
+    std::vector<std::string> contexts;
     sol::protected_function draw;
     bool enabled = true;
     std::string error;
@@ -439,6 +441,30 @@ void register_hud( runtime_state &state, const std::string &id, const sol::table
     replacement.movable = options.get_or( "movable", true );
     replacement.scalable = options.get_or( "scalable", true );
     replacement.user_toggleable = options.get_or( "user_toggleable", true );
+    const sol::object raw_contexts = options["contexts"];
+    if( raw_contexts.valid() && raw_contexts.get_type() != sol::type::nil ) {
+        if( raw_contexts.get_type() != sol::type::table ) {
+            throw std::runtime_error( "ui.hud contexts must be an array of strings" );
+        }
+        const sol::table contexts = raw_contexts.as<sol::table>();
+        if( contexts.size() > 32 ) {
+            throw std::runtime_error( "ui.hud accepts at most 32 input contexts" );
+        }
+        for( std::size_t index = 1; index <= contexts.size(); ++index ) {
+            const sol::object raw_context = contexts[index];
+            if( !raw_context.valid() || raw_context.get_type() != sol::type::string ) {
+                throw std::runtime_error( "ui.hud contexts must be an array of strings" );
+            }
+            const std::string context = raw_context.as<std::string>();
+            if( context.empty() || context.size() > 128 ) {
+                throw std::runtime_error( "ui.hud context ids must contain 1 to 128 bytes" );
+            }
+            if( std::find( replacement.contexts.begin(), replacement.contexts.end(), context ) ==
+                replacement.contexts.end() ) {
+                replacement.contexts.push_back( context );
+            }
+        }
+    }
     replacement.draw = std::move( draw );
     replacement.source_index = *state.current_source;
     if( !valid_anchor( replacement.anchor ) ) {
@@ -564,6 +590,50 @@ std::string lua_radial_select( script_ui_context &context, const std::string &id
     return context.radial_select_id( id, center_label, options );
 }
 
+std::string lua_action_slot( runtime_state &state, script_ui_context &context,
+                             const std::string &id, const std::string &selected_action,
+                             const int context_revision, const sol::table &lua_options )
+{
+    require_capability( state, "game.actions" );
+    const std::size_t count = lua_options.size();
+    if( count > 16 ) {
+        throw std::invalid_argument( "ctx:action_slot_id accepts at most 16 options" );
+    }
+
+    std::vector<script_ui_action_option> options;
+    options.reserve( count );
+    std::vector<std::string> action_ids;
+    action_ids.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object raw_option = lua_options[index];
+        if( !raw_option.valid() || raw_option.get_type() != sol::type::table ) {
+            throw std::invalid_argument(
+                "ctx:action_slot_id options must be an array of tables" );
+        }
+        const sol::table option = raw_option.as<sol::table>();
+        const sol::object raw_id = option["id"];
+        const sol::object raw_label = option["label"];
+        if( !raw_id.valid() || raw_id.get_type() != sol::type::string ||
+            !raw_label.valid() || raw_label.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "ctx:action_slot_id options require string id and label fields" );
+        }
+        const std::string action_id = raw_id.as<std::string>();
+        options.push_back( {
+            action_id,
+            raw_label.as<std::string>(),
+            option.get_or( "enabled", true )
+        } );
+        action_ids.push_back( action_id );
+    }
+    const std::vector<bool> allowed =
+        cata::input_context_actions::validate_candidates( context_revision, action_ids );
+    for( std::size_t index = 0; index < options.size(); ++index ) {
+        options[index].enabled = options[index].enabled && allowed[index];
+    }
+    return context.action_slot_id( id, selected_action, context_revision, options );
+}
+
 void initialize_state( runtime_state &state, const std::vector<fs::path> &module_roots )
 {
     state.module_roots = module_roots;
@@ -615,16 +685,22 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
         "input_text", &script_ui_context::input_text,
         "input_text_id", &script_ui_context::input_text_id,
         "radial_select_id", &lua_radial_select,
-        "child", &script_ui_context::child,
-        "table", &script_ui_context::table,
-        "table_next_row", &script_ui_context::table_next_row,
-        "table_next_column", &script_ui_context::table_next_column,
-        "tabs", &script_ui_context::tabs,
-        "tab", &script_ui_context::tab,
-        "tree", &script_ui_context::tree,
-        "modal", &script_ui_context::modal,
-        "tooltip", &script_ui_context::tooltip,
-        "virtual_list", &script_ui_context::virtual_list );
+        "action_slot_id", [&state]( script_ui_context & context, const std::string & id,
+                                    const std::string & selected_action,
+    int context_revision, const sol::table & options ) {
+        return lua_action_slot(
+                   state, context, id, selected_action, context_revision, options );
+    },
+    "child", &script_ui_context::child,
+    "table", &script_ui_context::table,
+    "table_next_row", &script_ui_context::table_next_row,
+    "table_next_column", &script_ui_context::table_next_column,
+    "tabs", &script_ui_context::tabs,
+    "tab", &script_ui_context::tab,
+    "tree", &script_ui_context::tree,
+    "modal", &script_ui_context::modal,
+    "tooltip", &script_ui_context::tooltip,
+    "virtual_list", &script_ui_context::virtual_list );
 
     sol::table ui = state.lua.create_named_table( "ui" );
     ui.set_function( "page", [&state]( const std::string & id, const sol::object & descriptor,
@@ -838,8 +914,13 @@ void draw_huds()
     std::unique_ptr<script_ui_renderer> renderer = make_imgui_script_ui_renderer();
     script_ui_context context( *renderer );
     const ImGuiViewport *viewport = ImGui::GetMainViewport();
+    const std::string active_context =
+        cata::input_context_actions::snapshot().category;
     for( hud_definition &hud : active_state->huds ) {
-        if( !hud.enabled ) {
+        if( !hud.enabled ||
+            ( !hud.contexts.empty() &&
+              std::find( hud.contexts.begin(), hud.contexts.end(), active_context ) ==
+              hud.contexts.end() ) ) {
             continue;
         }
 
@@ -1377,7 +1458,14 @@ void publish_android_snapshot()
 
     std::vector<retained_ui_surface> surfaces;
     surfaces.reserve( active_state->huds.size() );
+    const std::string active_context =
+        cata::input_context_actions::snapshot().category;
     for( hud_definition &hud : active_state->huds ) {
+        if( !hud.contexts.empty() &&
+            std::find( hud.contexts.begin(), hud.contexts.end(), active_context ) ==
+            hud.contexts.end() ) {
+            continue;
+        }
         retained_ui_surface surface;
         surface.id = "hud:" + hud.id;
         surface.title = hud.title;

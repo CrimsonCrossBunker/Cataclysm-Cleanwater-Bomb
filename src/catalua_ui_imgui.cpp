@@ -8,6 +8,7 @@
 #include "catalua_ui_renderer.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_stdlib.h"
+#include "input_context_actions.h"
 
 namespace cata::lua_ui
 {
@@ -31,7 +32,8 @@ constexpr std::uint32_t capability_mask =
     static_cast<std::uint32_t>( script_ui_capability::modals ) |
     static_cast<std::uint32_t>( script_ui_capability::tooltips ) |
     static_cast<std::uint32_t>( script_ui_capability::virtualization ) |
-    static_cast<std::uint32_t>( script_ui_capability::radial_selection );
+    static_cast<std::uint32_t>( script_ui_capability::radial_selection ) |
+    static_cast<std::uint32_t>( script_ui_capability::action_slots );
 
 constexpr std::string_view platform_name()
 {
@@ -190,6 +192,66 @@ class imgui_script_ui_renderer final : public script_ui_renderer
                     }
                 }
                 ImGui::EndPopup();
+            }
+            return result;
+        }
+
+        std::string action_slot(
+            const std::string &id, const std::string &selected_action,
+            const int context_revision,
+            const std::vector<script_ui_action_option> &options ) override {
+            std::vector<const script_ui_action_option *> available;
+            available.reserve( options.size() );
+            for( const script_ui_action_option &option : options ) {
+                if( option.enabled ) {
+                    available.push_back( &option );
+                }
+            }
+            if( available.empty() ) {
+                ImGui::BeginDisabled();
+                ImGui::Button( widget_label( id, "—" ).c_str(), ImVec2( -1.0F, 0.0F ) );
+                ImGui::EndDisabled();
+                return {};
+            }
+
+            auto selected = std::find_if( available.begin(), available.end(),
+            [&]( const script_ui_action_option * option ) {
+                return option->id == selected_action;
+            } );
+            const script_ui_action_option *current =
+                selected == available.end() ? available.front() : *selected;
+            const std::string popup_id = widget_label( id + "/popup", "actions" );
+            const bool has_selector = available.size() > 1;
+            ImVec2 trigger_size( -1.0F, 0.0F );
+            if( has_selector ) {
+                const float selector_width = ImGui::GetFrameHeight();
+                trigger_size.x = std::max(
+                                     1.0F, ImGui::GetContentRegionAvail().x - selector_width -
+                                     ImGui::GetStyle().ItemSpacing.x );
+            }
+            if( ImGui::Button( widget_label( id + "/trigger", current->label ).c_str(),
+                               trigger_size ) ) {
+                cata::input_context_actions::enqueue( current->id, context_revision );
+            }
+
+            std::string result = current->id;
+            if( has_selector ) {
+                ImGui::SameLine();
+                if( ImGui::Button( widget_label( id + "/selector", "▾" ).c_str(),
+                                   ImVec2( ImGui::GetFrameHeight(), 0.0F ) ) ) {
+                    ImGui::OpenPopup( popup_id.c_str() );
+                }
+                if( ImGui::BeginPopup( popup_id.c_str() ) ) {
+                    for( const script_ui_action_option *option : available ) {
+                        if( ImGui::Selectable(
+                                widget_label( id + "/" + option->id, option->label ).c_str(),
+                                option == current ) ) {
+                            result = option->id;
+                            ImGui::CloseCurrentPopup();
+                        }
+                    }
+                    ImGui::EndPopup();
+                }
             }
             return result;
         }

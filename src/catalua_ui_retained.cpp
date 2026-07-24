@@ -35,7 +35,8 @@ constexpr std::uint32_t retained_capability_mask =
     static_cast<std::uint32_t>( script_ui_capability::modals ) |
     static_cast<std::uint32_t>( script_ui_capability::tooltips ) |
     static_cast<std::uint32_t>( script_ui_capability::virtualization ) |
-    static_cast<std::uint32_t>( script_ui_capability::radial_selection );
+    static_cast<std::uint32_t>( script_ui_capability::radial_selection ) |
+    static_cast<std::uint32_t>( script_ui_capability::action_slots );
 
 bool encoded_bool( const std::optional<std::string> &value, bool fallback )
 {
@@ -89,6 +90,10 @@ void write_node( JsonOut &json, const retained_ui_node &node )
     if( !node.string_value.empty() || node.type == "input_text" ) {
         json.member( "stringValue", node.string_value );
     }
+    if( node.type == "action_slot" ) {
+        json.member( "selectedAction", node.string_value );
+        json.member( "contextRevision", node.context_revision );
+    }
     if( node.type == "progress" || node.type == "slider_float" || node.type == "input_float" ||
         node.type == "color_text" ) {
         json.member( "numberValue", node.number_value );
@@ -100,7 +105,7 @@ void write_node( JsonOut &json, const retained_ui_node &node )
         node.type == "tree" || node.type == "modal" ) {
         json.member( "boolValue", node.bool_value );
     }
-    if( node.type == "radial_option" ) {
+    if( node.type == "radial_option" || node.type == "action_option" ) {
         json.member( "enabled", node.enabled );
         json.member( "selected", node.selected );
     }
@@ -273,6 +278,50 @@ class retained_script_ui_renderer final : public script_ui_renderer
                 child.label = option.label;
                 child.enabled = option.enabled;
                 child.selected = option.selected;
+                node.children.push_back( std::move( child ) );
+            }
+            return result;
+        }
+
+        std::string action_slot(
+            const std::string &id, const std::string &selected_action,
+            const int context_revision,
+            const std::vector<script_ui_action_option> &options ) override {
+            std::string result = selected_action;
+            const std::optional<std::string> interaction = consume( id );
+            if( interaction && interaction->rfind( "select:", 0 ) == 0 ) {
+                const std::string candidate = interaction->substr( 7 );
+                const auto found = std::find_if( options.begin(), options.end(),
+                [&candidate]( const script_ui_action_option & option ) {
+                    return option.id == candidate && option.enabled;
+                } );
+                if( found != options.end() ) {
+                    result = found->id;
+                }
+            }
+            auto selected = std::find_if( options.begin(), options.end(),
+            [&result]( const script_ui_action_option & option ) {
+                return option.id == result && option.enabled;
+            } );
+            if( selected == options.end() ) {
+                selected = std::find_if( options.begin(), options.end(),
+                []( const script_ui_action_option & option ) {
+                    return option.enabled;
+                } );
+                result = selected == options.end() ? std::string() : selected->id;
+            }
+
+            retained_ui_node &node = add(
+                                         "action_slot", id, selected == options.end() ? std::string() : selected->label );
+            node.string_value = result;
+            node.context_revision = context_revision;
+            for( const script_ui_action_option &option : options ) {
+                retained_ui_node child;
+                child.type = "action_option";
+                child.id = option.id;
+                child.label = option.label;
+                child.enabled = option.enabled;
+                child.selected = option.id == result;
                 node.children.push_back( std::move( child ) );
             }
             return result;

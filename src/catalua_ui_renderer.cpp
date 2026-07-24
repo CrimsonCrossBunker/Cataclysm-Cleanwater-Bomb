@@ -43,6 +43,8 @@ script_ui_capability capability_from_name( std::string_view name )
         return script_ui_capability::virtualization;
     } else if( name == "radial_selection" ) {
         return script_ui_capability::radial_selection;
+    } else if( name == "action_slots" ) {
+        return script_ui_capability::action_slots;
     }
     return static_cast<script_ui_capability>( 0 );
 }
@@ -265,6 +267,26 @@ std::string script_ui_context::radial_select_id(
         }
     }
     return renderer_.radial_select( id, center_label, options );
+}
+
+std::string script_ui_context::action_slot_id(
+    const std::string &id, const std::string &selected_action,
+    const int context_revision, const std::vector<script_ui_action_option> &options ) const
+{
+    if( id.empty() || id.size() > 128 || context_revision < 0 || options.size() > 16 ) {
+        throw std::invalid_argument(
+            "ctx:action_slot_id requires a 1..128 byte id, a non-negative context revision, "
+            "and at most 16 options" );
+    }
+    std::unordered_set<std::string> option_ids;
+    for( const script_ui_action_option &option : options ) {
+        if( option.id.empty() || option.label.empty() || option.id.size() > 64 ||
+            !option_ids.insert( option.id ).second ) {
+            throw std::invalid_argument(
+                "ctx:action_slot_id option ids must be unique, non-empty, and at most 64 bytes" );
+        }
+    }
+    return renderer_.action_slot( id, selected_action, context_revision, options );
 }
 
 void script_ui_context::child( const std::string &id, double height,

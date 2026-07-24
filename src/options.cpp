@@ -93,6 +93,7 @@ struct options_snapshot {
     bool world_options_only = false;
     bool with_tabs = false;
     bool has_mod_pages = false;
+    bool has_hud_editor = false;
 };
 
 enum class options_action_type : int {
@@ -103,6 +104,7 @@ enum class options_action_type : int {
     previous_tab,
     next_tab,
     open_mod_pages,
+    open_hud_editor,
     close,
 };
 
@@ -294,6 +296,14 @@ class options_imgui_page : public cataimgui::window
                     }
                     if( ImGui::Button( _( "Mods" ), ImVec2( 180.0F, 48.0F ) ) ) {
                         actions.push_back( { options_action_type::open_mod_pages, 0 } );
+                    }
+                }
+                if( snapshot.has_hud_editor ) {
+                    if( !snapshot.tabs.empty() || snapshot.has_mod_pages ) {
+                        ImGui::SameLine();
+                    }
+                    if( ImGui::Button( _( "HUD layout" ), ImVec2( 210.0F, 48.0F ) ) ) {
+                        actions.push_back( { options_action_type::open_hud_editor, 0 } );
                     }
                 }
                 if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
@@ -4435,6 +4445,9 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         snapshot.selected_tab = iCurrentPage;
         snapshot.has_mod_pages = !world_options_only &&
                                  cata::lua_ui::has_registered_pages( "settings.mods" );
+#if defined(__ANDROID__)
+        snapshot.has_hud_editor = !world_options_only;
+#endif
         if( !world_options_only ) {
             snapshot.tabs.reserve( pages_.size() );
             for( size_t index = 0; index < pages_.size(); ++index ) {
@@ -4525,6 +4538,11 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                         break;
                     case options_action_type::open_mod_pages:
                         cata::lua_ui::show_slot( "settings.mods" );
+                        continue;
+                    case options_action_type::open_hud_editor:
+#if defined(__ANDROID__)
+                        android_native_ui::show_lua_hud_editor();
+#endif
                         continue;
                     case options_action_type::close:
                         action = "QUIT";

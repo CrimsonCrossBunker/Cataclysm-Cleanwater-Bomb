@@ -19,7 +19,6 @@
 #include "action.h"
 #if defined(__ANDROID__)
     #include "android_native_ui.h"
-    #include "android_hud.h"
 #endif
 #include "cata_imgui.h"
 #include "cata_utility.h"
@@ -32,6 +31,7 @@
 #include "help.h"
 #include "imgui/imgui.h"
 #include "input.h"
+#include "input_context_actions.h"
 #include "map.h"
 #include "options.h"
 #include "output.h"
@@ -518,30 +518,48 @@ const std::string &input_context::handle_input( const int timeout )
     }
     next_action.type = input_event_t::error;
     const std::string *result = &CATA_ERROR;
-#if defined(__ANDROID__)
-    std::vector<android_hud::action_descriptor> android_actions;
-    android_actions.reserve( registered_actions.size() );
-    for( const std::string &action : registered_actions ) {
-        android_actions.push_back( { action, get_action_name( action ) } );
+    const int label_revision = detail::get_current_language_version();
+    // Most contexts override only a handful of names.  Fingerprinting those
+    // translated labels is much cheaper than rebuilding every action
+    // descriptor, and keeps the cache independent of input_context's ABI.
+    std::uint64_t catalog_token = 1469598103934665603ULL;
+    const auto append_catalog_token = [&catalog_token]( const std::string & value ) {
+        for( const unsigned char byte : value ) {
+            catalog_token ^= byte;
+            catalog_token *= 1099511628211ULL;
+        }
+        catalog_token ^= 0xFFU;
+        catalog_token *= 1099511628211ULL;
+    };
+    for( const auto &entry : action_name_overrides ) {
+        append_catalog_token( entry.first );
+        append_catalog_token( entry.second.translated() );
     }
-    android_hud::set_active_context( category, android_actions );
-    if( android_hud::consume_action_for_context( registered_actions, android_direct_action ) ) {
+    if( cata::input_context_actions::needs_publish(
+            category, registered_actions, catalog_token, label_revision ) ) {
+        std::vector<cata::input_context_actions::action_descriptor> context_actions;
+        context_actions.reserve( registered_actions.size() );
+        for( const std::string &action : registered_actions ) {
+            context_actions.push_back( { action, get_action_name( action ), {}, false, false } );
+        }
+        cata::input_context_actions::publish(
+            category, context_actions, catalog_token, label_revision );
+    }
+    if( cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
         inp_mngr.set_timeout( old_timeout );
-        return android_direct_action;
+        return context_direct_action;
     }
-#endif
     while( true ) {
 
         next_action = inp_mngr.get_input_event( preferred_keyboard_mode );
-#if defined(__ANDROID__)
-        // A HUD tap can arrive while SDL is waiting for its short poll timeout.
-        // Prefer it over the timeout/event that woke this loop, without turning
-        // it into a synthetic keyboard event.
-        if( android_hud::consume_action_for_context( registered_actions, android_direct_action ) ) {
-            result = &android_direct_action;
+        // A platform HUD tap can arrive while the backend is polling input.
+        // Prefer it over the event that woke this loop without manufacturing a
+        // keyboard event.
+        if( cata::input_context_actions::consume( registered_actions,
+                context_direct_action ) ) {
+            result = &context_direct_action;
             break;
         }
-#endif
         if( next_action.type == input_event_t::timeout ) {
             result = &TIMEOUT;
             break;
