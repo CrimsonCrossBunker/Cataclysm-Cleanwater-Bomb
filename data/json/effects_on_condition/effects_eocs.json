@@ -20,7 +20,7 @@
     "type": "effect_on_condition",
     "id": "eoc_social_satisfied",
     "recurrence": [ "1 minutes", "5 minutes" ],
-    "condition": { "u_has_effect": "social_satisfied" },
+    "condition": { "and": [ { "u_has_trait": "CANNIBAL" }, { "u_has_trait": "PSYCHOPATH" } ] },
     "effect": [ { "u_add_morale": "morale_social", "bonus": 6, "max_bonus": 6, "duration": "1 days", "decay_start": "1 days" } ],
     "false_effect": [ { "u_lose_morale": "morale_social" } ]
   },
