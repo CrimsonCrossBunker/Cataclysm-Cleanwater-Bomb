@@ -1351,6 +1351,7 @@
     "symbol": "%",
     "calories": 89,
     "description": "Processed cheese spread.",
+    "display_type": "BY_WEIGHT",
     "price": "20 cent",
     "price_postapoc": "37 cent",
     "material": [ { "type": "cheese", "portion": 10 }, { "type": "milk", "portion": 1 }, { "type": "junk", "portion": 1 } ],

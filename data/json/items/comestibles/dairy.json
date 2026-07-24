@@ -259,7 +259,8 @@
     "price_postapoc": "1 USD 50 cent",
     "vitamins": [ [ "calcium", 32 ], [ "iron", 2 ], [ "milk_allergen", 0 ] ],
     "fun": 5,
-    "flags": [ "NUTRIENT_OVERRIDE" ]
+    "flags": [ "NUTRIENT_OVERRIDE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -280,7 +281,8 @@
     "material": [ { "type": "cheese" } ],
     "volume": "31 ml",
     "fun": 7,
-    "vitamins": [ [ "calcium", 16 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 16 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -350,7 +352,8 @@
     "volume": "250 ml",
     "fun": 1,
     "smoking_result": "mozzarella_cheese_smoked",
-    "vitamins": [ [ "calcium", 13 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 13 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -410,7 +413,8 @@
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 16 ], [ "milk_allergen", 1 ] ],
     "fun": -1,
-    "freezing_point": -459
+    "freezing_point": -459,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -432,7 +436,8 @@
     "material": [ "milk" ],
     "volume": "62 ml",
     "vitamins": [ [ "calcium", 16 ], [ "milk_allergen", 1 ] ],
-    "fun": 4
+    "fun": 4,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -475,7 +480,8 @@
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "vitC", 1 ], [ "calcium", 7 ], [ "milk_allergen", 1 ] ],
     "fun": -5,
-    "freezing_point": -459
+    "freezing_point": -459,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -599,12 +605,14 @@
     "symbol": "%",
     "calories": 135,
     "description": "A slice of pecorino, famous Italian hard cheese used in pasta carbonara.",
+    "display_type": "BY_WEIGHT",
     "price": "45 cent",
     "price_postapoc": "62 cent",
     "material": [ { "type": "cheese" } ],
     "volume": "62 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 2,
-    "vitamins": [ [ "calcium", 19 ], [ "iron", 5 ] ]
+    "vitamins": [ [ "calcium", 19 ], [ "iron", 5 ] ],
+    "stackable": true
   }
 ]

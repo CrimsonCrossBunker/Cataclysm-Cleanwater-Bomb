@@ -17,7 +17,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "flags": [ "RABBIT", "CATTLE" ],
-    "vitamins": [ [ "veggy_allergen", 1 ], [ "vitC", "136 μg" ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ], [ "vitC", "136 μg" ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -39,7 +40,8 @@
     "looks_like": "potato",
     "flags": [ "RAW", "RAT", "MOUSE" ],
     "vitamins": [ [ "calcium", 14 ], [ "iron", 1 ], [ "veggy_allergen", 1 ] ],
-    "fun": -3
+    "fun": -3,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -60,7 +62,8 @@
     "symbol": ",",
     "flags": [ "RAW", "RAT" ],
     "vitamins": [ [ "calcium", 10 ], [ "iron", 8 ], [ "veggy_allergen", 1 ] ],
-    "fun": -3
+    "fun": -3,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -82,7 +85,8 @@
     "flags": [ "RAW", "RAT" ],
     "material": [ "veggy" ],
     "vitamins": [ [ "calcium", 1 ], [ "iron", 8 ], [ "vitC", 2 ], [ "veggy_allergen", 1 ] ],
-    "fun": -2
+    "fun": -2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -103,7 +107,8 @@
     "flags": [ "RAW" ],
     "material": [ "veggy" ],
     "vitamins": [ [ "vitC", 10 ], [ "iron", 2 ], [ "veggy_allergen", 1 ] ],
-    "fun": -2
+    "fun": -2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -167,7 +172,8 @@
     "fun": -2,
     "flags": [ "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "25600 μg" ], [ "iron", "300 μg" ], [ "calcium", "28 mg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "25600 μg" ], [ "iron", "300 μg" ], [ "calcium", "28 mg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -187,7 +193,8 @@
     "volume": "250 ml",
     "flags": [ "FREEZERBURN", "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", 2 ], [ "calcium", 4 ], [ "iron", 2 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 2 ], [ "calcium", 4 ], [ "iron", 2 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -208,7 +215,8 @@
     "volume": "325 ml",
     "flags": [ "RAW" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "veggy_allergen", 1 ], [ "vitC", "15 mg" ], [ "iron", "3 mg" ], [ "calcium", "25 mg" ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ], [ "vitC", "15 mg" ], [ "iron", "3 mg" ], [ "calcium", "25 mg" ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -230,7 +238,8 @@
     "fun": -2,
     "flags": [ "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "8400 μg" ], [ "iron", "800 μg" ], [ "calcium", "29700 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "8400 μg" ], [ "iron", "800 μg" ], [ "calcium", "29700 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -345,7 +354,8 @@
     "//": "It appears that celery is energy-negative for rodents",
     "flags": [ "FREEZERBURN", "RAW", "CATTLE", "RABBIT" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "8400 μg" ], [ "iron", "800 μg" ], [ "calcium", "29700 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "8400 μg" ], [ "iron", "800 μg" ], [ "calcium", "29700 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -365,7 +375,8 @@
     "material": [ "veggy", "cotton" ],
     "volume": "62 ml",
     "fun": -10,
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -422,7 +433,8 @@
     "//": "No data on cows finding cucumbers super tasty",
     "flags": [ "FREEZERBURN", "RAW", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "8400 μg" ], [ "iron", "800 μg" ], [ "calcium", "48200 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "8400 μg" ], [ "iron", "800 μg" ], [ "calcium", "48200 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -436,7 +448,8 @@
     "spoils_in": "2 days",
     "description": "A chopped-up salad cucumber.",
     "price": "30 cent",
-    "price_postapoc": "10 cent"
+    "price_postapoc": "10 cent",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -458,7 +471,8 @@
     "longest_side": "10 cm",
     "flags": [ "FREEZERBURN", "RAW", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "700 μg" ], [ "iron", "300 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "700 μg" ], [ "iron", "300 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -491,7 +505,8 @@
     "fun": -4,
     "flags": [ "RAW", "RAT", "MOUSE" ],
     "//": "Dahlia roots contain an incredible amount of vitamin B6. This isn't a vitamin tracked in Cataclysm, but be careful of vitamin overdose when eating dahlia in real life.",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -513,7 +528,8 @@
     "fun": -2,
     "smoking_result": "dry_veggy",
     "flags": [ "RAW", "RAT", "MOUSE" ],
-    "vitamins": [ [ "vitC", "10600 μg" ], [ "iron", "900 μg" ], [ "calcium", "79800 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "10600 μg" ], [ "iron", "900 μg" ], [ "calcium", "79800 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -533,7 +549,8 @@
     "volume": "135 ml",
     "fun": -8,
     "flags": [ "RAW" ],
-    "vitamins": [ [ "vitC", "3 mg" ], [ "iron", "500 μg" ], [ "calcium", "24600 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "3 mg" ], [ "iron", "500 μg" ], [ "calcium", "24600 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -568,7 +585,8 @@
     "volume": "250 ml",
     "price": "0 cent",
     "price_postapoc": "0 cent",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -590,7 +608,8 @@
     "fun": -18,
     "flags": [ "RAW", "PLANTABLE_SEED" ],
     "vitamins": [ [ "vitC", "5400 μg" ], [ "iron", "600 μg" ], [ "calcium", "32400 μg" ], [ "veggy_allergen", 1 ] ],
-    "//": "Who in their right mind would eat an entire garlic bulb raw?"
+    "//": "Who in their right mind would eat an entire garlic bulb raw?",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -621,7 +640,8 @@
       { "GROWTH_MATURE": "16 days" },
       { "GROWTH_HARVEST": "16 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
-    ]
+    ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -641,7 +661,8 @@
     "volume": "62 ml",
     "flags": [ "EDIBLE_FROZEN", "RAW" ],
     "fun": -15,
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -661,7 +682,8 @@
     "volume": "400 ml",
     "fun": -12,
     "flags": [ "FREEZERBURN", "RAW" ],
-    "vitamins": [ [ "vitC", "62300 μg" ], [ "iron", "1100 μg" ], [ "calcium", "140 mg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "62300 μg" ], [ "iron", "1100 μg" ], [ "calcium", "140 mg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -702,7 +724,8 @@
     "volume": "250 ml",
     "flags": [ "FREEZERBURN", "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "2 mg" ], [ "iron", "300 μg" ], [ "calcium", "13 mg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "2 mg" ], [ "iron", "300 μg" ], [ "calcium", "13 mg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -722,7 +745,8 @@
     "flags": [ "CATTLE", "RABBIT" ],
     "price": "0 cent",
     "price_postapoc": "10 cent",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -744,7 +768,8 @@
     "flags": [ "FREEZERBURN", "RAW" ],
     "smoking_result": "dry_veggy",
     "//": "Raw onions probably aren't all that tasty to most people.",
-    "vitamins": [ [ "vitC", "8100 μg" ], [ "iron", "200 μg" ], [ "calcium", "25300 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "8100 μg" ], [ "iron", "200 μg" ], [ "calcium", "25300 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -872,7 +897,8 @@
     "//": "Lots of negative results for cattle, apparently very much not good for them",
     "flags": [ "FREEZERBURN", "RAW", "RABBIT" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", 30 ], [ "calcium", 2 ], [ "iron", 3 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 30 ], [ "calcium", 2 ], [ "iron", 3 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -893,7 +919,8 @@
     "fun": -12,
     "flags": [ "FREEZERBURN", "RAW", "RABBIT", "CATTLE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", 23 ], [ "calcium", 11 ], [ "iron", 10 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 23 ], [ "calcium", 11 ], [ "iron", 10 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -915,7 +942,8 @@
     "//": "Apparently toxic to rabbits",
     "flags": [ "FREEZERBURN", "RAW", "CATTLE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", 1 ], [ "calcium", 23 ], [ "iron", 10 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 1 ], [ "calcium", 23 ], [ "iron", 10 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -937,7 +965,8 @@
     "fun": -12,
     "flags": [ "FREEZERBURN", "RAW" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "6 mg" ], [ "iron", "1 mg" ], [ "calcium", "20 mg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "6 mg" ], [ "iron", "1 mg" ], [ "calcium", "20 mg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -959,7 +988,8 @@
     "longest_side": "19 cm",
     "flags": [ "RAW" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "4100 μg" ], [ "iron", "100 μg" ], [ "calcium", "43900 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "4100 μg" ], [ "iron", "100 μg" ], [ "calcium", "43900 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -980,7 +1010,8 @@
     "fun": -10,
     "flags": [ "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "4 mg" ], [ "iron", "1 mg" ], [ "calcium", "13 mg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "4 mg" ], [ "iron", "1 mg" ], [ "calcium", "13 mg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1003,7 +1034,8 @@
     "flags": [ "EDIBLE_FROZEN", "RAW", "IRREPLACEABLE_CONSUMABLE" ],
     "//": "Tea is sold by weight not by volume. 1 kg of tea has a volume of 3,4 liters. We use smaller packs of at least 100 mg. Such a tea has a volume of 340 ml minus package makes it around 320 ml. 3 g per serving makes 33 charges.",
     "fun": -1,
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1030,7 +1062,8 @@
     "volume": "50 ml",
     "flags": [ "EDIBLE_FROZEN", "RAW" ],
     "fun": -10,
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1059,7 +1092,8 @@
     "volume": "150 ml",
     "flags": [ "RABBIT", "CATTLE", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "vitC", "16900 μg" ], [ "iron", "300 μg" ], [ "calcium", "12300 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "16900 μg" ], [ "iron", "300 μg" ], [ "calcium", "12300 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1091,7 +1125,8 @@
     "smoking_result": "dry_veggy",
     "volume": "250 ml",
     "//": "average of broccoli, cabbage, carrot, cattail_stalk, celery, chili_pepper, cucumber, lettuce, onion, pumpkin, raw_dandelion, rhubarb, sugar_beet, tomato, zucchini",
-    "vitamins": [ [ "vitC", 36 ], [ "calcium", 4 ], [ "iron", 4 ], [ "veggy_allergen", 1 ], [ "triffid_fiber", 2 ] ]
+    "vitamins": [ [ "vitC", 36 ], [ "calcium", 4 ], [ "iron", 4 ], [ "veggy_allergen", 1 ], [ "triffid_fiber", 2 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1185,7 +1220,8 @@
       { "GROWTH_MATURE": "23 days" },
       { "GROWTH_HARVEST": "22 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
-    ]
+    ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1207,7 +1243,8 @@
     "fun": -10,
     "use_action": [ "POISON" ],
     "//": "Fiddleheads that haven't been boiled can make you sick.  As they are poisonous here, they will get no CATTLE or RABBIT flag as the poison should not get nullified.",
-    "vitamins": [ [ "vitC", 6 ], [ "calcium", 4 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 6 ], [ "calcium", 4 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1227,7 +1264,8 @@
     "material": [ "veggy" ],
     "volume": "45 ml",
     "fun": -2,
-    "vitamins": [ [ "vitC", 1 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 1 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1241,7 +1279,8 @@
     "volume": "250 ml",
     "fun": -8,
     "calories": 6,
-    "vitamins": [ [ "vitC", "7 mg" ], [ "iron", "300 μg" ], [ "calcium", "29 mg" ] ]
+    "vitamins": [ [ "vitC", "7 mg" ], [ "iron", "300 μg" ], [ "calcium", "29 mg" ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1262,7 +1301,8 @@
     "material": [ "veggy" ],
     "volume": "62 ml",
     "longest_side": "20 cm",
-    "vitamins": [ [ "vitC", 6 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 6 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1284,7 +1324,8 @@
     "flags": [ "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
     "fun": -5,
-    "vitamins": [ [ "vitC", "95700 μg" ], [ "iron", "400 μg" ], [ "calcium", "11900 μg" ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", "95700 μg" ], [ "iron", "400 μg" ], [ "calcium", "11900 μg" ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1319,7 +1360,8 @@
     "flags": [ "EDIBLE_FROZEN", "RAW", "NO_AUTO_CONSUME" ],
     "use_action": [ "BLECH" ],
     "vitamins": [ [ "iron", "500 μg" ], [ "calcium", "5 mg" ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1361,7 +1403,8 @@
     "flags": [ "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "vitC", "12100 μg" ], [ "iron", "1300 μg" ], [ "calcium", "49300 μg" ], [ "veggy_allergen", 1 ] ],
-    "fun": -8
+    "fun": -8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1383,7 +1426,8 @@
     "flags": [ "RAW" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "vitC", "60500 μg" ], [ "iron", "650 μg" ], [ "calcium", "24650 μg" ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1400,7 +1444,8 @@
     "volume": "30 ml",
     "flags": [ "INEDIBLE" ],
     "smoking_result": "dry_seaweed",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1417,7 +1462,8 @@
     "volume": "600 ml",
     "flags": [ "INEDIBLE" ],
     "smoking_result": "dry_seaweed_pile",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1437,7 +1483,8 @@
     "volume": "250 ml",
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "calcium", 3 ], [ "iron", 3 ], [ "vitC", 1 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 3 ], [ "iron", 3 ], [ "vitC", 1 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1457,7 +1504,8 @@
     "volume": "250 ml",
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT" ],
     "smoking_result": "kombu",
-    "vitamins": [ [ "calcium", 3 ], [ "iron", 3 ], [ "vitC", 1 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 3 ], [ "iron", 3 ], [ "vitC", 1 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1477,7 +1525,8 @@
     "volume": "250 ml",
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT" ],
     "smoking_result": "dry_veggy",
-    "vitamins": [ [ "calcium", 2 ], [ "iron", 4 ], [ "vitC", 1 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 2 ], [ "iron", 4 ], [ "vitC", 1 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1499,7 +1548,8 @@
     "flags": [ "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE", "FREEZERBURN" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "vitC", 4 ], [ "iron", 2 ], [ "calcium", 2 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1521,7 +1571,8 @@
     "flags": [ "RAW" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "vitC", 4 ], [ "iron", 1 ], [ "calcium", 1 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1543,7 +1594,8 @@
     "flags": [ "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE", "FREEZERBURN" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "vitC", 4 ], [ "iron", 2 ], [ "calcium", 2 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1565,7 +1617,8 @@
     "flags": [ "RAW", "CATTLE", "RABBIT", "RAT", "MOUSE", "FREEZERBURN" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "vitC", 4 ], [ "iron", 2 ], [ "calcium", 2 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1587,7 +1640,8 @@
     "flags": [ "RAW" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "vitC", 4 ], [ "iron", 2 ], [ "calcium", 2 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1608,7 +1662,8 @@
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "calcium", 2 ], [ "iron", 4 ], [ "vitC", 3 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1629,7 +1684,8 @@
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "calcium", 2 ], [ "iron", 4 ], [ "vitC", 3 ], [ "veggy_allergen", 1 ] ],
-    "fun": -3
+    "fun": -3,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1650,7 +1706,8 @@
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "calcium", 4 ], [ "iron", 4 ], [ "vitC", 5 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1671,7 +1728,8 @@
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "calcium", 4 ], [ "iron", 4 ], [ "vitC", 5 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1693,7 +1751,8 @@
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "calcium", 2 ], [ "iron", 2 ], [ "vitC", 3 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1714,6 +1773,7 @@
     "flags": [ "FREEZERBURN", "CATTLE", "RABBIT", "RAT", "MOUSE" ],
     "smoking_result": "dry_veggy",
     "vitamins": [ [ "calcium", 2 ], [ "iron", 2 ], [ "vitC", 3 ], [ "veggy_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   }
 ]

@@ -13,7 +13,8 @@
     "symbol": "!",
     "color": "white",
     "flags": [ "SINGLE_USE" ],
-    "use_action": { "type": "heal", "bandages_power": 1, "bleed": 4, "move_cost": 750 }
+    "use_action": { "type": "heal", "bandages_power": 1, "bleed": 4, "move_cost": 750 },
+    "stackable": true
   },
   {
     "id": "alcohol_wipes",
@@ -29,7 +30,8 @@
     "symbol": ",",
     "color": "white",
     "flags": [ "SINGLE_USE", "IRREPLACEABLE_CONSUMABLE" ],
-    "use_action": { "type": "heal", "disinfectant_power": 2, "bite": 0.3, "move_cost": 500 }
+    "use_action": { "type": "heal", "disinfectant_power": 2, "bite": 0.3, "move_cost": 500 },
+    "stackable": true
   },
   {
     "id": "anesthetic_kit",

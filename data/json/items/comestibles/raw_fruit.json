@@ -733,8 +733,7 @@
     "material": [ "fruit" ],
     "spoils_in": "360 days",
     "melee_damage": { "bash": 2 },
-    "flags": [ "INEDIBLE" ],
-    "stackable": true
+    "flags": [ "INEDIBLE" ]
   },
   {
     "type": "ITEM",
@@ -788,7 +787,7 @@
     "name": { "str": "watermelon" },
     "weight": "4518 g",
     "color": "green",
-    "spoils_in": "21 days",
+    "spoils_in": "10 days",
     "comestible_type": "FOOD",
     "symbol": "%",
     "quench": 826,
@@ -801,8 +800,7 @@
     "volume": "7150 ml",
     "flags": [ "EATEN_COLD", "FREEZERBURN", "INEDIBLE" ],
     "vitamins": [ [ "vitC", "366 mg" ], [ "iron", "10800 μg" ], [ "calcium", "316300 μg" ], [ "fruit_allergen", 1 ] ],
-    "melee_damage": { "bash": 2 },
-    "stackable": true
+    "melee_damage": { "bash": 2 }
   },
   {
     "type": "ITEM",
@@ -811,7 +809,7 @@
     "name": { "str": "watermelon wedge" },
     "weight": "286 g",
     "color": "green",
-    "spoils_in": "7 days 12 hours",
+    "spoils_in": "8 hours",
     "comestible_type": "FOOD",
     "symbol": "%",
     "quench": 52,
@@ -847,8 +845,7 @@
     "flags": [ "EATEN_COLD", "INEDIBLE" ],
     "fun": 4,
     "vitamins": [ [ "vitC", "202600 μg" ], [ "iron", "1200 μg" ], [ "calcium", "49700 μg" ], [ "fruit_allergen", 1 ] ],
-    "melee_damage": { "bash": 1 },
-    "stackable": true
+    "melee_damage": { "bash": 1 }
   },
   {
     "type": "ITEM",
@@ -857,7 +854,7 @@
     "name": { "str": "handful of cantaloupe melon chunks", "str_pl": "handfuls of cantaloupe melon chunks" },
     "weight": "138 g",
     "color": "light_red",
-    "spoils_in": "3 days",
+    "spoils_in": "2 days",
     "comestible_type": "FOOD",
     "symbol": "%",
     "quench": 25,
