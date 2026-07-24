@@ -279,16 +279,15 @@ final class AndroidHudEditor {
                 Toast.LENGTH_SHORT).show();
             return;
         }
-        String[] labels = new String[sources.size()];
-        for (int i = 0; i < sources.size(); ++i) {
-            AndroidHudModel.InfoSource source = sources.get(i);
-            labels[i] = source.category + " · " + source.title;
+        ArrayList<AndroidHudSearchDialog.Item<AndroidHudModel.InfoSource>> items =
+            new ArrayList<>();
+        for (AndroidHudModel.InfoSource source : sources) {
+            items.add(new AndroidHudSearchDialog.Item<>(source, source.id,
+                source.category + " · " + source.title + "  [" + source.id + "]",
+                source.title, source.category, source.renderer));
         }
-        new AlertDialog.Builder(activity)
-            .setTitle("选择信息源")
-            .setItems(labels, (dialog, which) -> addInfo(sources.get(which)))
-            .setNegativeButton("取消", null)
-            .show();
+        AndroidHudSearchDialog.showSingle(activity, "选择信息源",
+            "搜索标题、分类或 ID", items, this::addInfo);
     }
 
     private void addInfo(AndroidHudModel.InfoSource source) {
@@ -321,30 +320,18 @@ final class AndroidHudEditor {
             Toast.makeText(activity, "该场景还没有记录到可绑定动作", Toast.LENGTH_SHORT).show();
             return;
         }
-        String[] labels = new String[actions.size()];
-        boolean[] selected = new boolean[actions.size()];
-        for (int i = 0; i < actions.size(); ++i) {
-            AndroidHudModel.ActionDescriptor action = actions.get(i);
-            labels[i] = riskPrefix(action) + action.label + "  [" + action.id + "]";
-        }
-        AlertDialog dialog = new AlertDialog.Builder(activity)
-            .setTitle("选择控件动作")
-            .setMultiChoiceItems(labels, selected,
-                (ignored, which, checked) -> selected[which] = checked)
-            .setPositiveButton("添加", null)
-            .setNegativeButton("取消", null)
-            .create();
-        dialog.setOnShowListener(ignored -> dialog.getButton(
-            DialogInterface.BUTTON_POSITIVE).setOnClickListener(view -> {
+        AndroidHudSearchDialog.showMultiple(activity, "选择控件动作",
+            "搜索动作名称、ID 或分组", actionSearchItems(actions), null, "添加",
+            selectedIds -> {
                 AndroidHudModel.Element control = newElement(AndroidHudModel.TYPE_CONTROL);
-                for (int i = 0; i < actions.size(); ++i) {
-                    if (selected[i]) {
-                        control.actionIds.add(actions.get(i).id);
+                for (AndroidHudModel.ActionDescriptor action : actions) {
+                    if (selectedIds.contains(action.id)) {
+                        control.actionIds.add(action.id);
                     }
                 }
                 if (control.actionIds.isEmpty()) {
                     Toast.makeText(activity, "至少选择一个动作", Toast.LENGTH_SHORT).show();
-                    return;
+                    return false;
                 }
                 control.defaultActionId = control.actionIds.get(0);
                 control.selectedActionId = control.defaultActionId;
@@ -352,9 +339,8 @@ final class AndroidHudEditor {
                 control.frame.height = 100;
                 control.style.showLabel = false;
                 addToCurrentScope(control);
-                dialog.dismiss();
-            }));
-        dialog.show();
+                return true;
+            });
     }
 
     private void showSelectedProperties() {
@@ -483,29 +469,20 @@ final class AndroidHudEditor {
     private void showControlBindingDialog(AndroidHudModel.Element working) {
         List<AndroidHudModel.ActionDescriptor> actions =
             new ArrayList<>(scene.actionCatalog.values());
-        String[] labels = new String[actions.size()];
-        boolean[] selected = new boolean[actions.size()];
-        for (int i = 0; i < actions.size(); ++i) {
-            labels[i] = riskPrefix(actions.get(i)) + actions.get(i).label +
-                "  [" + actions.get(i).id + "]";
-            selected[i] = working.actionIds.contains(actions.get(i).id);
-        }
-        new AlertDialog.Builder(activity)
-            .setTitle("控件候选动作")
-            .setMultiChoiceItems(labels, selected,
-                (dialog, which, checked) -> selected[which] = checked)
-            .setPositiveButton("下一步", (dialog, which) -> {
+        AndroidHudSearchDialog.showMultiple(activity, "控件候选动作",
+            "搜索动作名称、ID 或分组", actionSearchItems(actions),
+            working.actionIds, "下一步", selectedIds -> {
                 working.actionIds.clear();
-                for (int i = 0; i < actions.size(); ++i) {
-                    if (selected[i]) {
-                        working.actionIds.add(actions.get(i).id);
+                for (AndroidHudModel.ActionDescriptor action : actions) {
+                    if (selectedIds.contains(action.id)) {
+                        working.actionIds.add(action.id);
                     }
                 }
                 if (working.actionIds.isEmpty()) {
                     working.defaultActionId = "";
                     working.selectedActionId = "";
                     working.authorizedDangerousActions.clear();
-                    return;
+                    return true;
                 }
                 if (!working.actionIds.contains(working.defaultActionId)) {
                     working.defaultActionId = working.actionIds.get(0);
@@ -515,9 +492,21 @@ final class AndroidHudEditor {
                 }
                 working.authorizedDangerousActions.retainAll(working.actionIds);
                 showRiskAuthorization(working, actions);
-            })
-            .setNegativeButton("取消", null)
-            .show();
+                return true;
+            });
+    }
+
+    private List<AndroidHudSearchDialog.Item<AndroidHudModel.ActionDescriptor>>
+            actionSearchItems(List<AndroidHudModel.ActionDescriptor> actions) {
+        ArrayList<AndroidHudSearchDialog.Item<AndroidHudModel.ActionDescriptor>> items =
+            new ArrayList<>();
+        for (AndroidHudModel.ActionDescriptor action : actions) {
+            items.add(new AndroidHudSearchDialog.Item<>(action, action.id,
+                riskPrefix(action) + action.label + " · " + action.group +
+                    "  [" + action.id + "]",
+                action.label, action.group, action.risk));
+        }
+        return items;
     }
 
     private void showRiskAuthorization(AndroidHudModel.Element working,

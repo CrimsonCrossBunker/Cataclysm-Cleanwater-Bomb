@@ -78,6 +78,29 @@ public class AndroidHudModelTest {
         assertEquals(AndroidHudModel.SELECTOR_MODE_MENU, control.copy().selectorMode);
     }
 
+    @Test
+    public void searchMatchesChineseCatalogText() {
+        assertTrue(AndroidHudModel.matchesSearch("天气",
+            "环境信息", "位置 日期 天气", "environment.summary"));
+        assertFalse(AndroidHudModel.matchesSearch("雷达",
+            "环境信息", "位置 日期 天气", "environment.summary"));
+    }
+
+    @Test
+    public void searchIgnoresLatinCase() {
+        assertTrue(AndroidHudModel.matchesSearch("PICKUP",
+            "拾取", "pickup", "context"));
+    }
+
+    @Test
+    public void everySearchKeywordMustMatchAcrossFields() {
+        assertTrue(AndroidHudModel.matchesSearch("wear inventory",
+            "穿上", "WEAR", "inventory"));
+        assertFalse(AndroidHudModel.matchesSearch("wear combat",
+            "穿上", "WEAR", "inventory"));
+        assertTrue(AndroidHudModel.matchesSearch("   ", "任意内容"));
+    }
+
     private static AndroidHudModel.Element element(String id, String type) {
         AndroidHudModel.Element result = new AndroidHudModel.Element();
         result.id = id;
