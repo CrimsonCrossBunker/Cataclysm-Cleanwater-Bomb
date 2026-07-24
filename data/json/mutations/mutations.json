@@ -1676,8 +1676,8 @@
   {
     "type": "mutation",
     "id": "PSYCHOPATH",
-    "name": { "str": "Uncaring" },
-    "description": "You don't feel any strong feelings for your fellow man.",
+    "name": { "str": "Morbid Unconcern" },
+    "description": "You don't feel any strong feelings for your fellow man. You have no empathy. The suffering of others doesn't bother them at all. They don't mind if others are butchered or left unburied unless it affects them. You also feels no mood boost from socializing.",
     "types": [ "HUMAN_EMPATHY" ],
     "points": 2,
     "starting_trait": true,
