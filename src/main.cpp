@@ -36,6 +36,9 @@
 #include "cata_allocator.h"
 #include "cata_path.h"
 #include "catalua_ui.h"
+#if defined(__ANDROID__)
+    #include "android_hud.h"
+#endif
 #include "color.h"
 #include "compatibility.h"
 #include "crash.h"
@@ -1017,6 +1020,9 @@ int main( int argc, const char *argv[] )
         shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
         get_event_bus().send<event_type::game_begin>( getVersionString() );
         while( !g->do_turn() ) {}
+#if defined(__ANDROID__)
+        android_hud::clear_snapshot();
+#endif
         cata::lua_ui::shutdown();
         // do_turn returned true: the game ended (e.g. the recording's own
         // save/quit ran). Under replay there is no interactive user to drive the

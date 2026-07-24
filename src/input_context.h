@@ -69,7 +69,8 @@ class input_context
         // Whatever's on top is our current input context.
         static input_context_stack_impl input_context_stack;
 #endif
-        input_context() : category( "default" ), registered_any_input( false ),
+        input_context() : category( "default" ), hud_scene_id( "default" ),
+            hud_scene_title( "default" ), registered_any_input( false ),
             coordinate_input_received( false ), handling_coordinate_input( false ) {
 #if defined(__ANDROID__) || defined(TILES)
             input_context_stack.push( handle );
@@ -83,7 +84,8 @@ class input_context
         // outside that window can be ignored
         explicit input_context( const std::string &category,
                                 const keyboard_mode preferred_keyboard_mode = keyboard_mode::keycode )
-            : category( category ), registered_any_input( false ),
+            : category( category ), hud_scene_id( category ), hud_scene_title( category ),
+              registered_any_input( false ),
               coordinate_input_received( false ), handling_coordinate_input( false ),
               preferred_keyboard_mode( preferred_keyboard_mode ) {
 #if defined(__ANDROID__) || defined(TILES)
@@ -147,11 +149,13 @@ class input_context
             // Don't touch the handle
 #if defined(__ANDROID__)
             registered_manual_keys = std::forward<Rhs>( other ).registered_manual_keys;
-            android_direct_action = std::forward<Rhs>( other ).android_direct_action;
 #endif
+            context_direct_action = std::forward<Rhs>( other ).context_direct_action;
             registered_actions = std::forward<Rhs>( other ).registered_actions;
             edittext = std::forward<Rhs>( other ).edittext;
             category = std::forward<Rhs>( other ).category;
+            hud_scene_id = std::forward<Rhs>( other ).hud_scene_id;
+            hud_scene_title = std::forward<Rhs>( other ).hud_scene_title;
             coordinate = std::forward<Rhs>( other ).coordinate;
             registered_any_input = std::forward<Rhs>( other ).registered_any_input;
             coordinate_input_received = std::forward<Rhs>( other ).coordinate_input_received;
@@ -195,6 +199,16 @@ class input_context
         std::string &get_category() {
             return category;
         }
+        const std::string &get_hud_scene_id() const {
+            return hud_scene_id;
+        }
+        const std::string &get_hud_scene_title() const {
+            return hud_scene_title;
+        }
+        void set_hud_scene( const std::string &id, const std::string &title = "" ) {
+            hud_scene_id = id.empty() ? category : id;
+            hud_scene_title = title.empty() ? hud_scene_id : title;
+        }
         std::vector<std::string> &get_registered_actions() {
             return registered_actions;
         }
@@ -205,9 +219,11 @@ class input_context
 
         bool operator==( const input_context &other ) const {
             return category == other.category &&
+                   hud_scene_id == other.hud_scene_id &&
+                   hud_scene_title == other.hud_scene_title &&
                    registered_actions == other.registered_actions &&
                    registered_manual_keys == other.registered_manual_keys &&
-                   android_direct_action == other.android_direct_action &&
+                   context_direct_action == other.context_direct_action &&
                    allow_text_entry == other.allow_text_entry &&
                    registered_any_input == other.registered_any_input &&
                    coordinate == other.coordinate &&
@@ -493,11 +509,11 @@ class input_context
     private:
 #if defined(__ANDROID__)
         std::vector<manual_key> registered_manual_keys;
-        // Storage for a direct action received from the Android HUD.  Returning
-        // this string from handle_input keeps it on the same action-dispatch
-        // path as keyboard input without manufacturing an input_event.
-        std::string android_direct_action;
 #endif
+        // Storage for a named action received from a platform UI.  Returning it
+        // from handle_input uses the normal action-dispatch path without
+        // manufacturing a keyboard event.
+        std::string context_direct_action;
         std::vector<std::string> registered_actions;
         std::string edittext;
     public:
@@ -506,6 +522,8 @@ class input_context
         bool is_registered_action( const std::string &action_name ) const;
     private:
         std::string category; // The input category this context uses.
+        std::string hud_scene_id;
+        std::string hud_scene_title;
         point coordinate;
 
         bool registered_any_input;

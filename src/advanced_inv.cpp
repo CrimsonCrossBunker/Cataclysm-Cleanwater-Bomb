@@ -1288,6 +1288,9 @@ bool advanced_inventory::show_sort_menu( advanced_inventory_pane &pane )
 input_context advanced_inventory::register_ctxt() const
 {
     input_context ctxt( "ADVANCED_INVENTORY" );
+#if defined(__ANDROID__)
+    ctxt.set_hud_scene( "inventory.advanced", _( "Advanced inventory" ) );
+#endif
     ctxt.register_action( "HELP_KEYBINDINGS" );
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "UP" );

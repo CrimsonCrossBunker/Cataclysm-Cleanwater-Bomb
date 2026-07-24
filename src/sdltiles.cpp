@@ -27,6 +27,7 @@
 #include <mutex>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <type_traits>
@@ -110,7 +111,7 @@ std::unique_ptr<cataimgui::client> imclient;
 
     #include "action.h"
     #include "android_hud.h"
-    #include "catalua_ui.h"
+    #include "input_context_actions.h"
     #include "inventory.h"
     #include "map.h"
     #include "vehicle.h"
@@ -1008,7 +1009,8 @@ extern "C" {
 
     JNIEXPORT jboolean JNICALL
     Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeEnqueueHudAction(
-        JNIEnv *env, jclass jcls, jstring action, jint context_revision )
+        JNIEnv *env, jclass jcls, jstring action, jint context_revision,
+        jboolean dangerous_authorized )
     {
         ( void )jcls;
         if( action == nullptr ) {
@@ -1022,7 +1024,8 @@ extern "C" {
 
         const std::string action_s( raw_action );
         env->ReleaseStringUTFChars( action, raw_action );
-        return android_hud::enqueue_action( action_s, context_revision ) ? JNI_TRUE : JNI_FALSE;
+        return cata::input_context_actions::enqueue( action_s,
+                context_revision, dangerous_authorized == JNI_TRUE ) ? JNI_TRUE : JNI_FALSE;
     }
 
     JNIEXPORT jstring JNICALL
@@ -1043,74 +1046,24 @@ extern "C" {
         android_hud::set_minimap_rect( { x, y, width, height, visible == JNI_TRUE } );
     }
 
-    JNIEXPORT jstring JNICALL
-    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetLuaUiSnapshot(
-        JNIEnv *env, jclass jcls )
+    JNIEXPORT void JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSetHudSubscriptions(
+        JNIEnv *env, jclass jcls, jstring encoded_sources )
     {
         ( void )jcls;
-        const std::string snapshot = cata::lua_ui::android_snapshot_json();
-        return env->NewStringUTF( snapshot.c_str() );
-    }
-
-    JNIEXPORT jboolean JNICALL
-    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSubmitLuaUiInteraction(
-        JNIEnv *env, jclass jcls, jstring widget_id, jstring value )
-    {
-        ( void )jcls;
-        if( widget_id == nullptr || value == nullptr ) {
-            return JNI_FALSE;
-        }
-        const char *raw_id = env->GetStringUTFChars( widget_id, nullptr );
-        const char *raw_value = env->GetStringUTFChars( value, nullptr );
-        if( raw_id == nullptr || raw_value == nullptr ) {
-            if( raw_id != nullptr ) {
-                env->ReleaseStringUTFChars( widget_id, raw_id );
+        std::vector<std::string> sources;
+        if( encoded_sources != nullptr ) {
+            const char *raw_sources = env->GetStringUTFChars( encoded_sources, nullptr );
+            if( raw_sources != nullptr ) {
+                std::istringstream input( raw_sources );
+                std::string source;
+                while( sources.size() < 512 && std::getline( input, source ) ) {
+                    sources.push_back( source );
+                }
+                env->ReleaseStringUTFChars( encoded_sources, raw_sources );
             }
-            if( raw_value != nullptr ) {
-                env->ReleaseStringUTFChars( value, raw_value );
-            }
-            return JNI_FALSE;
         }
-        const bool accepted = cata::lua_ui::submit_android_interaction( raw_id, raw_value );
-        env->ReleaseStringUTFChars( widget_id, raw_id );
-        env->ReleaseStringUTFChars( value, raw_value );
-        return accepted ? JNI_TRUE : JNI_FALSE;
-    }
-
-    JNIEXPORT jboolean JNICALL
-    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSelectLuaUiPage(
-        JNIEnv *env, jclass jcls, jstring page_id )
-    {
-        ( void )jcls;
-        if( page_id == nullptr ) {
-            return JNI_FALSE;
-        }
-        const char *raw_id = env->GetStringUTFChars( page_id, nullptr );
-        if( raw_id == nullptr ) {
-            return JNI_FALSE;
-        }
-        const bool accepted = cata::lua_ui::select_android_page( raw_id );
-        env->ReleaseStringUTFChars( page_id, raw_id );
-        return accepted ? JNI_TRUE : JNI_FALSE;
-    }
-
-    // Compatibility shim for an old, no-longer-rendered extra-button layout.
-    // Its text is treated as an action ID and rejected unless it is part of the
-    // explicit HUD action catalogue; it can no longer inject keyboard input.
-    JNIEXPORT void JNICALL Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeButtonClick(
-        JNIEnv *env, jclass jcls, jstring action )
-    {
-        ( void )jcls;
-        if( action == nullptr ) {
-            return;
-        }
-        const char *raw_action = env->GetStringUTFChars( action, nullptr );
-        if( raw_action == nullptr ) {
-            return;
-        }
-        const std::string action_s( raw_action );
-        env->ReleaseStringUTFChars( action, raw_action );
-        android_hud::enqueue_action( action_s );
+        android_hud::set_subscriptions( sources );
     }
 
 } // "C"
@@ -5983,7 +5936,7 @@ static void CheckMessages()
     // Native HUD actions arrive on the Android UI thread rather than through
     // SDL.  Wake input_context immediately so it can consume the queued named
     // action; otherwise modal menus wait until an unrelated touch event arrives.
-    if( android_hud::has_pending_action() ) {
+    if( cata::input_context_actions::has_pending() ) {
         last_input.type = input_event_t::timeout;
         return;
     }

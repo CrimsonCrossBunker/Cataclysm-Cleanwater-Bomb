@@ -2084,6 +2084,9 @@ static tripoint_abs_omt display()
     std::vector<tripoint_abs_omt> &display_path = data.display_path;
     tripoint_abs_omt &select = data.select;
     input_context ictxt( "OVERMAP" );
+#if defined(__ANDROID__)
+    ictxt.set_hud_scene( "map.overmap", _( "Overmap" ) );
+#endif
 
     background_pane bg_pane;
 
