@@ -59,14 +59,8 @@
         "                        "
       ],
       "palettes": [ "fcl_mealgrub_protein_farm" ],
-      "terrain": {
-        ".": "t_strconc_floor",
-        ",": "t_sidewalk"
-      },
-      "furniture": {
-        "0": "f_fvat_empty",
-        "E": "f_machinery_electronic"
-      },
+      "terrain": { ".": "t_strconc_floor", ",": "t_sidewalk" },
+      "furniture": { "0": "f_fvat_empty", "E": "f_machinery_electronic" },
       "items": {
         "G": { "item": "fcl_mealgrub_precursor", "chance": 80, "repeat": [ 1, 3 ] },
         "d": { "item": "SUS_office_desk", "chance": 60 },

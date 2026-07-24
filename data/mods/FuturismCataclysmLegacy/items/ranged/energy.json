@@ -117,14 +117,7 @@
     "firing_requirements": { "DEFAULT": [ { "pocket": "ammo", "qty": 1 }, { "pocket": "fusion pellet", "qty": 1 } ] },
     "energy_drain": "5 kJ",
     "flags": [ "NEVER_JAMS", "NON_FOULING", "USE_UPS", "FIRING_EXT_POWER" ],
-    "valid_mod_locations": [
-      [ "accessories", 4 ],
-      [ "grip", 1 ],
-      [ "rail", 1 ],
-      [ "sights", 1 ],
-      [ "stock", 1 ],
-      [ "underbarrel", 1 ]
-    ],
+    "valid_mod_locations": [ [ "accessories", 4 ], [ "grip", 1 ], [ "rail", 1 ], [ "sights", 1 ], [ "stock", 1 ], [ "underbarrel", 1 ] ],
     "melee_damage": { "bash": 18 }
   },
   {

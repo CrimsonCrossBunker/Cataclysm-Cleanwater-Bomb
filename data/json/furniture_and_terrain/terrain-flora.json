@@ -2219,12 +2219,7 @@
     "transforms_into": "t_bamboo_harvested",
     "examine_action": [ "harvest_ter", "fertilize_terrain" ],
     "harvest_by_season": [ { "seasons": [ "spring" ], "id": "bamboo_harv" } ],
-    "terrain_growth": {
-      "transform": "t_bamboo_long",
-      "growth_time": "7 days",
-      "growth_multiplier": 1.0,
-      "fertilize_seasons": [ "spring" ]
-    },
+    "terrain_growth": { "transform": "t_bamboo_long", "growth_time": "7 days", "growth_multiplier": 1.0, "fertilize_seasons": [ "spring" ] },
     "bash": {
       "str_min": 2,
       "str_max": 6,
@@ -2264,10 +2259,7 @@
       "str_max": 100,
       "str_min_supported": 100,
       "bash_below": true,
-      "items": [
-        { "item": "raw_bamboo", "prob": 15, "count": [ 1, 1 ] },
-        { "item": "bamboo_stalk", "prob": 5, "count": [ 1, 1 ] }
-      ]
+      "items": [ { "item": "raw_bamboo", "prob": 15, "count": [ 1, 1 ] }, { "item": "bamboo_stalk", "prob": 5, "count": [ 1, 1 ] } ]
     },
     "terrain_growth": {
       "transform": "t_bamboo_tall",
@@ -2318,10 +2310,7 @@
       "str_max": 400,
       "str_min_supported": 100,
       "bash_below": true,
-      "items": [
-        { "item": "splinter", "count": [ 0, 3 ] },
-        { "item": "withered", "count": [ 0, 2 ] }
-      ]
+      "items": [ { "item": "splinter", "count": [ 0, 3 ] }, { "item": "withered", "count": [ 0, 2 ] } ]
     }
   },
   {

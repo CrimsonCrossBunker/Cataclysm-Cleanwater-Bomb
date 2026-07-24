@@ -88,7 +88,8 @@ static const itype_id itype_test_multimag_consume_gunmod( "test_multimag_consume
 static const itype_id
 itype_test_multimag_consume_gunmod_mult( "test_multimag_consume_gunmod_mult" );
 static const itype_id itype_test_multimag_consume_toolmod( "test_multimag_consume_toolmod" );
-static const itype_id itype_test_multimag_external_bionic_gun( "test_multimag_external_bionic_gun" );
+static const itype_id
+itype_test_multimag_external_bionic_gun( "test_multimag_external_bionic_gun" );
 static const itype_id itype_test_multimag_external_ups_gun( "test_multimag_external_ups_gun" );
 static const itype_id itype_test_multimag_gun( "test_multimag_gun" );
 static const itype_id itype_test_multimag_gun_consume( "test_multimag_gun_consume" );

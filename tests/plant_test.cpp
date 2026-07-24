@@ -1163,7 +1163,7 @@ TEST_CASE( "terrain_growth_data_loads_from_json", "[terrain_growth][plant]" )
     CHECK( seed.terrain_growth->transform == ter_test_t_terrain_growth_middle );
     CHECK( seed.terrain_growth->growth_time == 2_days );
     CHECK( seed.terrain_growth->growth_multiplier == 1.0f );
-    CHECK( seed.terrain_growth->fertilize_seasons == std::set<season_type>{ SPRING } );
+    CHECK( seed.terrain_growth->fertilize_seasons == std::set<season_type> { SPRING } );
 
     const ter_t &middle = ter_test_t_terrain_growth_middle.obj();
     REQUIRE( middle.terrain_growth );
@@ -1171,7 +1171,7 @@ TEST_CASE( "terrain_growth_data_loads_from_json", "[terrain_growth][plant]" )
     CHECK( middle.terrain_growth->transform == ter_test_t_terrain_growth_final );
     CHECK( middle.terrain_growth->growth_time == 4_days );
     CHECK( middle.terrain_growth->growth_multiplier == 1.0f );
-    CHECK( middle.terrain_growth->fertilize_seasons == std::set<season_type>{ SPRING, SUMMER } );
+    CHECK( middle.terrain_growth->fertilize_seasons == std::set<season_type> { SPRING, SUMMER } );
 
     CHECK( !ter_test_t_terrain_growth_final->terrain_growth );
 }
