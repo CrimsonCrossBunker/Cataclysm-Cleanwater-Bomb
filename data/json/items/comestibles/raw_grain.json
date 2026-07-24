@@ -275,7 +275,8 @@
     "price": "25 cent",
     "price_postapoc": "20 cent",
     "volume": "252 ml",
-    "vitamins": [ [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -308,7 +309,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "volume": "2 ml",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -353,7 +355,8 @@
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "into": "flour",
-    "recipe": "flour_mill_1_15"
+    "recipe": "flour_mill_1_15",
+    "stackable": true
   },
   {
     "type": "ITEM",

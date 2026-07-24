@@ -431,7 +431,8 @@
     "vitamins": [ [ "iron", 3 ], [ "veggy_allergen", 1 ] ],
     "fun": -15,
     "into": "flour_wheat_free",
-    "recipe": "flour_wheat_free_mill_1_4"
+    "recipe": "flour_wheat_free_mill_1_4",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -457,7 +458,8 @@
     "vitamins": [ [ "iron", 3 ], [ "veggy_allergen", 1 ] ],
     "fun": -15,
     "into": "flour_wheat_free",
-    "recipe": "flour_wheat_free_mill_1_4"
+    "recipe": "flour_wheat_free_mill_1_4",
+    "stackable": true
   },
   {
     "type": "ITEM",

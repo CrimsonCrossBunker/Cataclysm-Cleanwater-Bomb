@@ -1468,7 +1468,11 @@ std::optional<int> deploy_furn_actor::use( Character *p, item &it,
 
     here->furn_set( suitable.value(), furn_type, false, false, true );
     it.spill_contents( suitable.value() );
-    form_loc( *p, here, pos, it ).remove_item();
+    if( it.count_by_charges() && it.count() > 1 ) {
+        it.split( 1 );
+    } else {
+        form_loc( *p, here, pos, it ).remove_item();
+    }
     p->mod_moves( -to_moves<int>( 2_seconds ) );
     return 0;
 }
