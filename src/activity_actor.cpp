@@ -9346,7 +9346,7 @@ void tree_communion_activity_actor::do_turn( player_activity &act, Character &wh
                         who.remove_effect( effect_social_dissatisfied );
                     }
                     if( ( who.has_flag( json_flag_SOCIAL1 ) || who.has_flag( json_flag_SOCIAL2 ) ) &&
-                        !who.has_effect( effect_social_satisfied ) ) {
+                        !who.has_effect( effect_social_satisfied ) && !who.has_flag( json_flag_PSYCHOPATH ) ) {
                         who.add_effect( effect_social_satisfied, 3_hours, false, 1 );
                     }
                     if( ( who.has_flag( json_flag_ASOCIAL1 ) || who.has_flag( json_flag_ASOCIAL2 ) ) &&
