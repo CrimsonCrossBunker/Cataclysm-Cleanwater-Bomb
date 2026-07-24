@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -671,6 +672,28 @@ final class AndroidHudModel {
         }
         String value = raw.trim();
         return value.length() > maximum ? value.substring(0, maximum) : value;
+    }
+
+    static boolean matchesSearch(String query, String... fields) {
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        if (normalizedQuery.isEmpty()) {
+            return true;
+        }
+        StringBuilder searchable = new StringBuilder();
+        if (fields != null) {
+            for (String field : fields) {
+                if (field != null && !field.isEmpty()) {
+                    searchable.append(field).append('\n');
+                }
+            }
+        }
+        String haystack = searchable.toString().toLowerCase(Locale.ROOT);
+        for (String keyword : normalizedQuery.split("\\s+")) {
+            if (!haystack.contains(keyword)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String acceptedAction(String candidate, List<String> actions) {
