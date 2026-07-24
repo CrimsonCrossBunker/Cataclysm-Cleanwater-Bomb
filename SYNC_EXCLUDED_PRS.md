@@ -58,6 +58,11 @@ de-charge 系列此前的回退工作多数已作废（分支回到 master），
 | #87351 | 2026-06-02 | CMake+vcpkg to select SDL3 or SDL2 | fork 锁定 SDL3，不需要 SDL2 切换路径 |
 | #87717 | 2026-06-20 | fix: Crash in any ImGui window on alt + F4 | 上游随即被 #87720 revert，两者净零；同步无意义 |
 | #87720 | 2026-06-20 | Revert "fix: Crash in any ImGui window on alt + F4" | 撤销 #87717；与 #87717 成对跳过 |
+| #88046 | 2026-07-19 | Mod dependencies on NoNPCNeeds for major in repo mods | 会让 Magiclysm、Xedra Evolved、Aftershock Exoplanet 强制禁用 NPC 生存需求，与 CCB 的 NPC needs 方向相反 |
+| #87286 | 2026-07-20 | Add dragonfly head mutation for Insect | CCB `Limb_WIP` 已有更细的 `head_dragonfly`、独立复眼/子部位/护甲覆盖和不同数值；同步会重复 ID |
+| #88061 | 2026-07-20 | Weekly Changelog 2026-07-13 to 2026-07-20 | 仅上游周报；CCB 保留自己的 changelog，不直接同步 |
+| #88036 | 2026-07-21 | Add cloak and blanket coverage for wings | 建立在上游通用翅膀身体部位体系上，与 CCB `Limb_WIP` 结构和数值分叉较大 |
+| #88020 | 2026-07-23 | More region layouts + Voronoi library | 大型世界生成基础设施而非内容同步；与 CCB 区域/维度/overmap/MSVC 改动冲突，且上游跨区域边界仍未稳定 |
 
 ---
 
@@ -125,3 +130,29 @@ de-charge 系列此前的回退工作多数已作废（分支回到 master），
 **同步的 PR 编号：** #87992, #87989, #87990, #87983, #87975, #87994, #87987, #87950, #87997, #87996, #88003, #87934, #87951, #87948, #88001, #87999, #88007, #88015, #88019, #88018, #87985, #88013, #88022, #88010, #88026, #88025, #88012, #88029, #88037, #88035, #88028, #87930, #88030, #88042, #88043, #88041, #88040
 
 **剔除 PR：** #88031（氢氧化钾 de-charge 后续修复，与 fork charges + container 模型冲突）
+
+
+### sync-cdda-20260724-selected (2026-07-24)
+
+同步范围：从上次 `sync-cdda-20260719-selected` 的上游终点 #88040，到 upstream/master #88060，共 45 commits / 36 PRs；同步 31 个 PR（其中 #88044 部分同步），剔除 5 个 PR。
+
+**冲突与适配处理：**
+
+| PR | 文件/范围 | 处理方式 |
+|---|---|---|
+| #88038 | Noonien 血清、`CANNOT_GAIN_WEARINESS`、饥饿 UI | 保留全部血清数值和内容；与 CCB 已有 `HUNGER_DISRUPTION` 合并，并由 #88081 移除临时 UI 特判 |
+| #88044 | Closetland / Sky Island 维度清理 | 仅同步 Closetland 的动态返回维度修复；保留 CCB 已重构的 Sky Island 传送前清理和存档兜底逻辑 |
+| #88068 | `BLEEDING_RATE` | 采用上游连续流血倍率和旧 `BLEEDSLOW*` 迁移，作为 Armus 血清前置 |
+| #88081 | `HUNGER_DISRUPTION` | 复用 CCB 已有标志、C++ 和 UI 实现，只补齐 Noonien、Dhampir、Arvore、Lilin 的应用点 |
+| #88088 | `PAUSE_INFECTIONS` | 同步感染暂停机制；修正上游 JSON 中误写为隐形效果的 flag 说明 |
+| #88060 | Armus 血清 | CCB 无同名内容，完整采用上游伤害减免、流血、感染和副作用数值 |
+
+**同步的 PR 编号：** #88050, #88055, #88059, #88058, #88057, #88038, #88044（部分）, #88071, #88075, #88073, #88064, #88068, #88076, #88080, #88034, #88086, #88084, #87880, #88081, #88082, #87933, #88065, #88089, #88088, #88083, #88097, #88054, #88095, #88101, #88102, #88060
+
+**剔除 PR：**
+
+- #88046：大型模组强制依赖 NoNPCNeeds，与 CCB NPC 饮食/疲劳/睡眠方向相反。
+- #87286：CCB `Limb_WIP` 已有更详细且数值不同的蜻蜓头体系，避免重复 ID。
+- #88061：仅上游周报，CCB changelog 独立维护。
+- #88036：上游翅膀身体部位/装备覆盖体系与 CCB `Limb_WIP` 分叉较大。
+- #88020：Voronoi 区域生成属于高风险基础设施，非本轮内容同步范围。
