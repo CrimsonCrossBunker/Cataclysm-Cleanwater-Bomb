@@ -23,7 +23,8 @@
     "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "uneven" },
     "flags": [ "RAW", "INEDIBLE", "LUPINE", "NO_TEMP", "PUNCTURE_VEHICLE_WHEELS" ],
     "into": "meal_bone",
-    "recipe": "meal_bone_mill_1_4"
+    "recipe": "meal_bone_mill_1_4",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -101,7 +102,8 @@
     "material": [ "powder" ],
     "volume": "125 ml",
     "flags": [ "NO_TEMP" ],
-    "fun": -10
+    "fun": -10,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -130,7 +132,8 @@
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "into": "meal_bone_tainted",
-    "recipe": "meal_bone_tainted_mill_6_1"
+    "recipe": "meal_bone_tainted_mill_6_1",
+    "stackable": true
   },
   {
     "type": "ITEM",

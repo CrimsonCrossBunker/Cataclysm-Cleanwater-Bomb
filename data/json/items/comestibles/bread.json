@@ -162,7 +162,8 @@
     "calories": 77,
     "flags": [ "EATEN_HOT" ],
     "fun": 1,
-    "vitamins": [ [ "calcium", 3 ], [ "iron", 6 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 3 ], [ "iron", 6 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -292,7 +293,8 @@
     "volume": "41 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 2,
-    "vitamins": [ [ "calcium", 4 ], [ "iron", 7 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 4 ], [ "iron", 7 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -357,7 +359,8 @@
     "volume": "420 ml",
     "flags": [ "INEDIBLE" ],
     "vitamins": [ [ "calcium", 12 ], [ "iron", 90 ], [ "wheat_allergen", 1 ] ],
-    "fun": -4
+    "fun": -4,
+    "stackable": true
   },
   {
     "type": "ITEM",

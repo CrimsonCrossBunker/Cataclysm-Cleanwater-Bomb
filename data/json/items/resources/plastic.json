@@ -45,7 +45,8 @@
     "material": [ "hard_plastic_transp" ],
     "symbol": ",",
     "color": "light_blue",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "10l_plastic",
@@ -90,7 +91,8 @@
     "material": [ "plastic" ],
     "symbol": ",",
     "color": "light_blue",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "nylon",
@@ -125,7 +127,8 @@
     "material": [ "lycra" ],
     "symbol": ",",
     "color": "light_blue",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "plastic_sheet",
@@ -143,7 +146,8 @@
     "symbol": ")",
     "color": "light_blue",
     "use_action": { "type": "deploy_furn", "furn_type": "f_plastic_groundsheet" },
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "plastic_sheet_small",
@@ -157,7 +161,8 @@
     "price_postapoc": "2 cent",
     "material": [ "plastic" ],
     "symbol": ",",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "polycarbonate_sheet",
@@ -209,7 +214,8 @@
     "material": [ "hard_plastic_transp" ],
     "symbol": ",",
     "color": "light_blue",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "inhalation_valve",
@@ -225,7 +231,8 @@
     "material": [ "plastic", "rubber" ],
     "symbol": ",",
     "color": "light_blue",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   },
   {
     "id": "filter_port_40mm",
@@ -242,6 +249,7 @@
     "material": [ "hard_plastic_transp" ],
     "symbol": ",",
     "color": "light_blue",
-    "flags": [ "NO_SALVAGE" ]
+    "flags": [ "NO_SALVAGE" ],
+    "stackable": true
   }
 ]

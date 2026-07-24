@@ -83,7 +83,8 @@
     "material": [ "wheat" ],
     "volume": "250 ml",
     "flags": [ "EATEN_HOT", "TRADER_AVOID" ],
-    "vitamins": [ [ "calcium", 1 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 1 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -104,7 +105,8 @@
     "flags": [ "EDIBLE_FROZEN", "RAW" ],
     "volume": "62 ml",
     "vitamins": [ [ "calcium", 1 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ],
-    "fun": -6
+    "fun": -6,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -126,7 +128,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT", "TRADER_AVOID", "FREEZERBURN" ],
     "fun": 5,
-    "vitamins": [ [ "calcium", 10 ], [ "iron", 11 ], [ "wheat_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 10 ], [ "iron", 11 ], [ "wheat_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -151,7 +154,8 @@
     "use_action": [ "BLECH" ],
     "flags": [ "EDIBLE_FROZEN", "RAW", "NO_AUTO_CONSUME" ],
     "vitamins": [ [ "iron", 3 ], [ "wheat_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -175,7 +179,8 @@
     "flags": [ "EDIBLE_FROZEN", "RAW", "NO_AUTO_CONSUME" ],
     "use_action": [ "BLECH" ],
     "vitamins": [ [ "iron", 4 ], [ "wheat_allergen", 1 ] ],
-    "fun": -5
+    "fun": -5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -222,7 +227,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT", "NUTRIENT_OVERRIDE" ],
     "fun": 2,
-    "vitamins": [ [ "calcium", 1 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 1 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
