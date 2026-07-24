@@ -2791,7 +2791,7 @@
   {
     "id": "PAUSE_INFECTIONS",
     "type": "json_flag",
-    "info": "If you're invisible, now you're not"
+    "info": "Infections cannot progress to a fatal stage while you have this flag."
   },
   {
     "id": "ANIMALEMPATH2",
