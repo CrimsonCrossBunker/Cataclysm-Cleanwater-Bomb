@@ -16,6 +16,7 @@
     "type": "vehicle_part",
     "name": "airship balloon",
     "item": "airship_balloon_item",
+    "categories": [ "movement" ],
     "height": 30,
     "requirements": {
       "install": { "skills": [ [ "mechanics", 2 ] ], "time": "60 m", "using": [ [ "rope_natural_short", 1 ] ] },
@@ -36,6 +37,7 @@
     "type": "vehicle_part",
     "name": "external airship balloon",
     "location": "structure",
+    "categories": [ "movement" ],
     "//": "Overhead canopy acting as its own structural frame, so it can stand alone over empty tiles without a frame beneath.  Overhead flags keep it from being boarded or blocking movement.",
     "extend": { "flags": [ "EXTENDABLE", "AISLE", "ROOF", "NOCOLLIDE", "NOCOLLIDEBELOW" ] }
   },
@@ -58,6 +60,7 @@
     "type": "vehicle_part",
     "name": "aircraft propeller",
     "item": "metal_propeller_item",
+    "categories": [ "movement" ],
     "propeller_diameter": 3,
     "requirements": {
       "install": { "skills": [ [ "mechanics", 6 ] ], "time": "2 h", "using": [ [ "welding_standard", 20 ] ] },
@@ -75,6 +78,7 @@
     "type": "vehicle_part",
     "name": "wooden aircraft propeller",
     "item": "wood_propeller_item",
+    "categories": [ "movement" ],
     "propeller_diameter": 2,
     "requirements": {
       "install": { "skills": [ [ "mechanics", 5 ] ], "time": "2 h", "using": [ [ "vehicle_nail_install", 20 ] ] },
