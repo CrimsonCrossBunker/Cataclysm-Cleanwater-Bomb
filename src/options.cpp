@@ -4541,7 +4541,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                         continue;
                     case options_action_type::open_hud_editor:
 #if defined(__ANDROID__)
-                        android_native_ui::show_lua_hud_editor();
+                        android_native_ui::show_android_hud_manager();
 #endif
                         continue;
                     case options_action_type::close:

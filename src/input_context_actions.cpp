@@ -28,6 +28,7 @@ constexpr std::size_t maximum_pending_actions = 16;
 std::mutex context_mutex;
 context_snapshot active_context;
 std::unordered_set<std::string> active_allowed_actions;
+std::unordered_set<std::string> active_dangerous_actions;
 std::deque<queued_action> pending_actions;
 int active_label_revision = std::numeric_limits<int>::min();
 std::uint64_t active_catalog_token = 0;
@@ -162,12 +163,17 @@ bool action_descriptor::operator==( const action_descriptor &rhs ) const
 }
 
 bool needs_publish( const std::string &category,
+                    const std::string &hud_scene_id,
+                    const std::string &hud_scene_title,
                     const std::vector<std::string> &registered_action_ids,
                     const std::uint64_t catalog_token,
                     const int label_revision )
 {
     std::lock_guard<std::mutex> lock( context_mutex );
-    if( category != active_context.category || catalog_token != active_catalog_token ||
+    if( category != active_context.category ||
+        hud_scene_id != active_context.hud_scene_id ||
+        hud_scene_title != active_context.hud_scene_title ||
+        catalog_token != active_catalog_token ||
         label_revision != active_label_revision ) {
         return true;
     }
@@ -189,6 +195,8 @@ bool needs_publish( const std::string &category,
 }
 
 void publish( const std::string &category,
+              const std::string &hud_scene_id,
+              const std::string &hud_scene_title,
               const std::vector<action_descriptor> &registered_actions,
               const std::uint64_t catalog_token,
               const int label_revision )
@@ -211,21 +219,29 @@ void publish( const std::string &category,
     }
 
     std::lock_guard<std::mutex> lock( context_mutex );
-    if( active_context.category == category && active_context.actions == filtered ) {
+    if( active_context.category == category &&
+        active_context.hud_scene_id == hud_scene_id &&
+        active_context.hud_scene_title == hud_scene_title &&
+        active_context.actions == filtered ) {
         active_catalog_token = catalog_token;
         active_label_revision = label_revision;
         return;
     }
     active_context.category = category;
+    active_context.hud_scene_id = hud_scene_id.empty() ? category : hud_scene_id;
+    active_context.hud_scene_title = hud_scene_title.empty() ?
+                                     active_context.hud_scene_id : hud_scene_title;
     active_context.actions = std::move( filtered );
     active_context.revision = next_revision( active_context.revision );
     active_catalog_token = catalog_token;
     active_label_revision = label_revision;
     active_allowed_actions.clear();
+    active_dangerous_actions.clear();
     active_allowed_actions.reserve( active_context.actions.size() );
     for( const action_descriptor &action : active_context.actions ) {
-        if( !action.dangerous ) {
-            active_allowed_actions.insert( action.id );
+        active_allowed_actions.insert( action.id );
+        if( action.dangerous ) {
+            active_dangerous_actions.insert( action.id );
         }
     }
     pending_actions.clear();
@@ -251,10 +267,12 @@ std::vector<bool> validate_candidates( const int context_revision,
     return result;
 }
 
-bool enqueue( const std::string &action, const int context_revision )
+bool enqueue( const std::string &action, const int context_revision,
+              const bool dangerous_authorized )
 {
     std::lock_guard<std::mutex> lock( context_mutex );
     if( active_allowed_actions.count( action ) == 0 ||
+        ( active_dangerous_actions.count( action ) > 0 && !dangerous_authorized ) ||
         ( context_revision >= 0 && context_revision != active_context.revision ) ||
         pending_actions.size() >= maximum_pending_actions ) {
         return false;
@@ -288,11 +306,14 @@ void clear()
 {
     std::lock_guard<std::mutex> lock( context_mutex );
     active_context.category.clear();
+    active_context.hud_scene_id.clear();
+    active_context.hud_scene_title.clear();
     active_context.actions.clear();
     active_context.revision = next_revision( active_context.revision );
     active_catalog_token = 0;
     active_label_revision = std::numeric_limits<int>::min();
     active_allowed_actions.clear();
+    active_dangerous_actions.clear();
     pending_actions.clear();
 }
 

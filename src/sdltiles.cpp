@@ -27,6 +27,7 @@
 #include <mutex>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <type_traits>
@@ -110,7 +111,6 @@ std::unique_ptr<cataimgui::client> imclient;
 
     #include "action.h"
     #include "android_hud.h"
-    #include "catalua_ui.h"
     #include "input_context_actions.h"
     #include "inventory.h"
     #include "map.h"
@@ -981,6 +981,10 @@ static_assert( std::atomic<uint32_t>::is_always_lock_free,
                "visible-frame inbox needs lock-free uint32 atomics on every shipped ABI" );
 
 static android_visible_frame_inbox visible_frame_inbox;
+// Java lifecycle/focus callbacks run on the Android UI thread.  They may only
+// publish a request here; all renderer and game UI work is consumed later on
+// the SDL/game thread.
+static std::atomic<uint32_t> android_display_refresh_sequence{ 0 };
 
 extern "C" {
 
@@ -999,6 +1003,15 @@ extern "C" {
         on_native_ime_insets_changed( left, top, right, bottom, visible );
     }
 
+    JNIEXPORT void JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeRequestDisplayRefresh(
+        JNIEnv *env, jclass jcls )
+    {
+        ( void )env;
+        ( void )jcls;
+        android_display_refresh_sequence.fetch_add( 1, std::memory_order_release );
+    }
+
     JNIEXPORT void JNICALL Java_com_cleverraven_cataclysmdda_CataclysmDDA_onNativeImeInsetsChanged(
         JNIEnv *env, jclass jcls, jint left, jint top, jint right, jint bottom, jboolean visible )
     {
@@ -1009,7 +1022,8 @@ extern "C" {
 
     JNIEXPORT jboolean JNICALL
     Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeEnqueueHudAction(
-        JNIEnv *env, jclass jcls, jstring action, jint context_revision )
+        JNIEnv *env, jclass jcls, jstring action, jint context_revision,
+        jboolean dangerous_authorized )
     {
         ( void )jcls;
         if( action == nullptr ) {
@@ -1024,7 +1038,7 @@ extern "C" {
         const std::string action_s( raw_action );
         env->ReleaseStringUTFChars( action, raw_action );
         return cata::input_context_actions::enqueue( action_s,
-                context_revision ) ? JNI_TRUE : JNI_FALSE;
+                context_revision, dangerous_authorized == JNI_TRUE ) ? JNI_TRUE : JNI_FALSE;
     }
 
     JNIEXPORT jstring JNICALL
@@ -1045,57 +1059,24 @@ extern "C" {
         android_hud::set_minimap_rect( { x, y, width, height, visible == JNI_TRUE } );
     }
 
-    JNIEXPORT jstring JNICALL
-    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetLuaUiSnapshot(
-        JNIEnv *env, jclass jcls )
+    JNIEXPORT void JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSetHudSubscriptions(
+        JNIEnv *env, jclass jcls, jstring encoded_sources )
     {
         ( void )jcls;
-        const std::string snapshot = cata::lua_ui::android_snapshot_json();
-        return env->NewStringUTF( snapshot.c_str() );
-    }
-
-    JNIEXPORT jboolean JNICALL
-    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSubmitLuaUiInteraction(
-        JNIEnv *env, jclass jcls, jstring widget_id, jstring value )
-    {
-        ( void )jcls;
-        if( widget_id == nullptr || value == nullptr ) {
-            return JNI_FALSE;
-        }
-        const char *raw_id = env->GetStringUTFChars( widget_id, nullptr );
-        const char *raw_value = env->GetStringUTFChars( value, nullptr );
-        if( raw_id == nullptr || raw_value == nullptr ) {
-            if( raw_id != nullptr ) {
-                env->ReleaseStringUTFChars( widget_id, raw_id );
+        std::vector<std::string> sources;
+        if( encoded_sources != nullptr ) {
+            const char *raw_sources = env->GetStringUTFChars( encoded_sources, nullptr );
+            if( raw_sources != nullptr ) {
+                std::istringstream input( raw_sources );
+                std::string source;
+                while( sources.size() < 512 && std::getline( input, source ) ) {
+                    sources.push_back( source );
+                }
+                env->ReleaseStringUTFChars( encoded_sources, raw_sources );
             }
-            if( raw_value != nullptr ) {
-                env->ReleaseStringUTFChars( value, raw_value );
-            }
-            return JNI_FALSE;
         }
-        const bool accepted = cata::lua_ui::submit_android_interaction( raw_id, raw_value );
-        env->ReleaseStringUTFChars( widget_id, raw_id );
-        env->ReleaseStringUTFChars( value, raw_value );
-        return accepted ? JNI_TRUE : JNI_FALSE;
-    }
-
-    // Compatibility shim for an old, no-longer-rendered extra-button layout.
-    // Its text is treated as an action ID and rejected unless it is part of the
-    // explicit HUD action catalogue; it can no longer inject keyboard input.
-    JNIEXPORT void JNICALL Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeButtonClick(
-        JNIEnv *env, jclass jcls, jstring action )
-    {
-        ( void )jcls;
-        if( action == nullptr ) {
-            return;
-        }
-        const char *raw_action = env->GetStringUTFChars( action, nullptr );
-        if( raw_action == nullptr ) {
-            return;
-        }
-        const std::string action_s( raw_action );
-        env->ReleaseStringUTFChars( action, raw_action );
-        cata::input_context_actions::enqueue( action_s, -1 );
+        android_hud::set_subscriptions( sources );
     }
 
 } // "C"
@@ -4648,6 +4629,7 @@ input_context touch_input_context;
 static const input_context *touch_input_context_owner = nullptr;
 static bool android_has_active_world();
 static void android_request_repaint();
+static void android_service_display_refresh_requests();
 
 static bool android_map_zoom_context()
 {
@@ -5088,6 +5070,36 @@ static void android_request_repaint()
 {
     needupdate = true;
     ui_manager::redraw_invalidated();
+}
+
+static void android_force_full_redraw()
+{
+    if( g != nullptr && android_has_active_world() ) {
+        g->invalidate_main_ui_adaptor();
+    } else {
+        ui_manager::invalidate_all_ui_adaptors();
+    }
+    ui_manager::redraw_invalidated();
+    needupdate = true;
+}
+
+static void android_service_display_refresh_requests()
+{
+    static uint32_t serviced_request_sequence = 0;
+    static unsigned serviced_render_epoch = 0;
+    const uint32_t requested_sequence =
+        android_display_refresh_sequence.load( std::memory_order_acquire );
+    const unsigned render_epoch = cata_cursesport::curses_render_epoch;
+    if( requested_sequence == serviced_request_sequence &&
+        render_epoch == serviced_render_epoch ) {
+        return;
+    }
+
+    serviced_request_sequence = requested_sequence;
+    serviced_render_epoch = render_epoch;
+    android_force_full_redraw();
+    // A deferred ImGui underlay clear can advance the epoch during this redraw.
+    serviced_render_epoch = cata_cursesport::curses_render_epoch;
 }
 
 // The SDL "text input active" flag can be set while the keyboard never actually
@@ -5658,12 +5670,13 @@ static void CheckMessages()
     drain_renderer_recovery();
 
 #if defined(__ANDROID__)
+    android_service_display_refresh_requests();
+
     static uint32_t last_seen_visible_frame_seq = 0;
     const uint32_t cur_visible_frame_seq = visible_frame_inbox.even_sequence();
     if( cur_visible_frame_seq != last_seen_visible_frame_seq ) {
         last_seen_visible_frame_seq = cur_visible_frame_seq;
-        needupdate = true;
-        ui_manager::redraw_invalidated();
+        android_force_full_redraw();
     }
 
     uint32_t ticks = GetTicks();
@@ -5708,8 +5721,11 @@ static void CheckMessages()
             // A tap that opened a new screen must not become the first half of a
             // double-tap gesture inside that new input context.
             last_tap_time = 0;
-            needupdate = true;
-            ui_manager::redraw_invalidated();
+            // The HUD action snapshot and the terrain both belong to the input
+            // context being entered.  Merely asking redraw_invalidated() did
+            // nothing when the gameplay adaptor itself was still clean, leaving
+            // the previous Lua scene over a black/stale map until movement.
+            android_force_full_redraw();
         }
     }
 
@@ -7101,6 +7117,12 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     // CheckMessages poll below still reads it.
     SDL_PumpEvents();
     drain_renderer_recovery();
+#if defined(__ANDROID__)
+    // Foreground recovery can replace and blank the display buffer.  Rebuild
+    // the active UI before the pre-poll present, so no empty recovery frame is
+    // ever exposed while waiting for the player's next movement.
+    android_service_display_refresh_requests();
+#endif
 
 #if !defined(__ANDROID__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1)
     if( actual_keyboard_mode( preferred_keyboard_mode ) == keyboard_mode::keychar ) {

@@ -5,7 +5,6 @@
 #include "catalua_ui_actions.h"
 #include "catalua_ui_manifest.h"
 #include "catalua_ui_renderer.h"
-#include "catalua_ui_retained.h"
 #include "catalua_ui_state.h"
 #include "event_bus.h"
 #include "input_context_actions.h"
@@ -20,7 +19,6 @@
 #include <functional>
 #include <iterator>
 #include <limits>
-#include <map>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -425,103 +423,12 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     std::invalid_argument );
 }
 
-TEST_CASE( "retained_lua_renderer_builds_bounded_native_widget_trees",
-           "[lua][ui][renderer][retained]" )
-{
-    using namespace cata::lua_ui;
-
-    retained_ui_document document;
-    std::map<std::string, std::string> interactions = {
-        { "surface/apply", "click" },
-        { "surface/enabled", "bool:0" },
-        { "surface/count", "int:7" },
-        { "surface/name", "text:原生控件" },
-        { "surface/movement", "select:run" },
-        { "surface/ground", "select:drop" }
-    };
-    const retained_interaction_reader reader = [&interactions]( const std::string & id )
-    -> std::optional<std::string> {
-        const auto found = interactions.find( id );
-        if( found == interactions.end() )
-        {
-            return std::nullopt;
-        }
-        const std::string value = found->second;
-        interactions.erase( found );
-        return value;
-    };
-    std::unique_ptr<script_ui_renderer> renderer = make_retained_script_ui_renderer(
-                document, "surface/", reader );
-    script_ui_context context( *renderer );
-
-    CHECK( context.backend() == "retained" );
-    CHECK( context.platform() == "android" );
-    CHECK_FALSE( context.is_immediate_mode() );
-    CHECK( context.uses_native_widgets() );
-    CHECK( context.button_id( "apply", "Apply" ) );
-    CHECK_FALSE( context.checkbox_id( "enabled", "Enabled", true ) );
-    CHECK( context.slider_int_id( "count", "Count", 2, 0, 10 ) == 7 );
-    CHECK( context.input_text_id( "name", "Name", "old" ) == "原生控件" );
-    const std::vector<script_ui_radial_option> radial_options = {
-        { "walk", "行走\\n0.00 秒", true, true },
-        { "run", "奔跑\\n0.50 秒", true, false }
-    };
-    CHECK( context.radial_select_id( "movement", "行走", radial_options ) == "run" );
-    const std::vector<script_ui_action_option> action_options = {
-        { "pickup", "拾取", true },
-        { "drop", "丢脚下", true }
-    };
-    CHECK( context.action_slot_id( "ground", "pickup", 7, action_options ) == "drop" );
-
-    int rendered_items = 0;
-    context.virtual_list( 1000, 24.0, [&rendered_items]( int first, int last ) {
-        rendered_items += last - first;
-    } );
-    CHECK( rendered_items == 200 );
-    REQUIRE( document.nodes.size() == 7 );
-    CHECK( document.nodes.back().type == "virtual_list" );
-    CHECK( document.nodes.back().count == 1000 );
-    CHECK( document.nodes.back().truncated );
-
-    const std::string json = retained_document_json( document );
-    CHECK( json.find( "surface/apply" ) != std::string::npos );
-    CHECK( json.find( "原生控件" ) != std::string::npos );
-    CHECK( json.find( "radial_select" ) != std::string::npos );
-    CHECK( json.find( "\"type\":\"action_slot\"" ) != std::string::npos );
-    CHECK( json.find( "\"contextRevision\":7" ) != std::string::npos );
-    CHECK( json.find( "\"selectedAction\":\"drop\"" ) != std::string::npos );
-    CHECK( json.find( "奔跑" ) != std::string::npos );
-    CHECK( json.find( "\"selected\":true" ) != std::string::npos );
-    CHECK( json.find( "\"truncated\":true" ) != std::string::npos );
-
-    retained_ui_surface surface;
-    surface.id = "hud:editable";
-    surface.title = "Editable";
-    surface.kind = "hud";
-    surface.anchor = "bottom_right";
-    surface.default_width = 0.31;
-    surface.default_height = 0.22;
-    surface.background = false;
-    surface.title_bar = true;
-    surface.movable = false;
-    surface.scalable = false;
-    surface.user_toggleable = false;
-    const std::string surfaces_json = retained_surfaces_json( { surface }, 7, {} );
-    CHECK( surfaces_json.find( "\"defaultWidth\":0.31" ) != std::string::npos );
-    CHECK( surfaces_json.find( "\"defaultHeight\":0.22" ) != std::string::npos );
-    CHECK( surfaces_json.find( "\"background\":false" ) != std::string::npos );
-    CHECK( surfaces_json.find( "\"titleBar\":true" ) != std::string::npos );
-    CHECK( surfaces_json.find( "\"movable\":false" ) != std::string::npos );
-    CHECK( surfaces_json.find( "\"scalable\":false" ) != std::string::npos );
-    CHECK( surfaces_json.find( "\"userToggleable\":false" ) != std::string::npos );
-}
-
 TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive",
            "[lua][ui][actions][input_context]" )
 {
     using namespace cata::input_context_actions;
     cata::input_context_actions::clear();
-    publish( "DEFAULTMODE", {
+    publish( "DEFAULTMODE", "gameplay", "Gameplay", {
         { "pickup", "Pickup", {}, false, false },
         { "DELETE_WORLD", "Delete world", {}, false, false },
         { "delete_character", "Delete character", {}, false, false },
@@ -530,6 +437,8 @@ TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive
     } );
     const context_snapshot first = snapshot();
     CHECK( first.category == "DEFAULTMODE" );
+    CHECK( first.hud_scene_id == "gameplay" );
+    CHECK( first.hud_scene_title == "Gameplay" );
     CHECK( first.revision > 0 );
     REQUIRE( first.actions.size() == 3 );
     CHECK_FALSE( first.actions[0].dangerous );
@@ -537,17 +446,21 @@ TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive
     CHECK( first.actions[2].dangerous );
     CHECK_FALSE( needs_publish(
                      "DEFAULTMODE",
+                     "gameplay",
+                     "Gameplay",
     { "pickup", "DELETE_WORLD", "delete_character", "ANY_INPUT", "any_input" },
     0,
     0 ) );
     CHECK( needs_publish(
                "DEFAULTMODE",
+               "gameplay",
+               "Gameplay",
     { "pickup", "DELETE_WORLD", "delete_character", "ANY_INPUT", "any_input" },
     0,
     1 ) );
     CHECK_FALSE( enqueue( "delete_character", first.revision ) );
 
-    publish( "DEFAULTMODE", {
+    publish( "DEFAULTMODE", "gameplay", "Gameplay", {
         { "pickup", "Pickup", {}, false, false },
         { "DELETE_WORLD", "Delete world", {}, false, false },
         { "delete_character", "Delete character", {}, false, false },
@@ -559,13 +472,16 @@ TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive
     CHECK_FALSE( enqueue( "DELETE_WORLD", first.revision ) );
     CHECK( validate_candidates(
                first.revision, { "pickup", "DELETE_WORLD", "missing" } ) ==
-           std::vector<bool> { true, false, false } );
+           std::vector<bool> { true, true, false } );
+    REQUIRE( enqueue( "DELETE_WORLD", first.revision, true ) );
+    std::string action;
+    REQUIRE( consume( { "DELETE_WORLD" }, action ) );
+    CHECK( action == "DELETE_WORLD" );
     CHECK( validate_candidates(
                first.revision + 1, { "pickup" } ) ==
            std::vector<bool> { false } );
     REQUIRE( enqueue( "pickup", first.revision ) );
 
-    std::string action;
     CHECK_FALSE( consume( { "inventory" }, action ) );
     REQUIRE( enqueue( "pickup", first.revision ) );
     REQUIRE( consume( { "pickup", "inventory" }, action ) );
@@ -581,11 +497,19 @@ TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive
     CHECK_FALSE( has_pending() );
 
     REQUIRE( enqueue( "pickup", first.revision ) );
-    publish( "DEFAULTMODE", {
+    publish( "DEFAULTMODE", "gameplay", "Gameplay", {
         { "pickup", "Pick up", {}, false, false }
     } );
     CHECK( snapshot().revision != first.revision );
     CHECK_FALSE( has_pending() );
+
+    const int action_revision = snapshot().revision;
+    publish( "UILIST", "inventory.items", "Inventory", {
+        { "CONFIRM", "Confirm", {}, false, false }
+    } );
+    CHECK( snapshot().revision != action_revision );
+    CHECK( snapshot().category == "UILIST" );
+    CHECK( snapshot().hud_scene_id == "inventory.items" );
     cata::input_context_actions::clear();
 }
 
@@ -734,7 +658,7 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v2", "[lua][ui][integration]" )
     CHECK( status.loaded );
     CHECK( status.generation > 0 );
     CHECK( status.page_count == 0 );
-    CHECK( status.hud_count == 4 );
+    CHECK( status.hud_count == 0 );
     CHECK( status.event_handler_count == 0 );
     CHECK( status.memory_used > 0 );
     CHECK( status.memory_used <= status.memory_limit );
@@ -788,64 +712,24 @@ end)
            std::string::npos );
 }
 
-TEST_CASE( "lua_pages_use_the_registry_while_android_retains_only_huds",
-           "[lua][ui][renderer][retained][integration]" )
+TEST_CASE( "lua_pages_and_huds_use_the_platform_neutral_registry",
+           "[lua][ui][renderer][integration]" )
 {
     scoped_lua_user_script script;
     script.write( R"lua(
-ui.page("retained_test", {
-    title = "Retained test",
+ui.page("registry_test", {
+    title = "Registry test",
     category = "tools",
     order = 42,
     slots = { "settings.mods", "ingame.extensions" }
 }, function(ctx)
     ctx:text("shared ImGui page")
 end)
-ui.hud("editable_hud", {
-    title = "Editable HUD",
-    default_anchor = "bottom_right",
-    default_x = 18,
-    default_y = 20,
-    default_width = 0.31,
-    default_height = 0.22,
-    interactive = true,
-    background = false,
-    title_bar = true,
-    movable = false,
-    scalable = false,
-    user_toggleable = false
+ui.hud("desktop_hud", {
+    title = "Desktop HUD",
+    anchor = "bottom_right"
 }, function(ctx)
-    ctx:child("details", 120, function()
-        ctx:text("child body")
-    end)
-    ctx:table("stats", 2, function()
-        ctx:table_next_row()
-        ctx:table_next_column()
-        ctx:text("cell")
-    end)
-    ctx:tabs("sections", function()
-        ctx:tab("first", "First", function()
-            ctx:text("tab body")
-        end)
-    end)
-    ctx:tree("advanced", "Advanced", true, function()
-        ctx:text("tree body")
-    end)
-    ctx:virtual_list(3, 20, function(first, last)
-        for index = first, last - 1 do
-            ctx:text("row " .. index)
-        end
-    end)
-    if ctx:button_id("apply", "Apply") then
-        game.state_set("test.retained_clicked", true)
-    end
-    local movement = ctx:radial_select_id("movement", "Walk", {
-        { id = "walk", label = "Walk", enabled = true, selected = true },
-        { id = "run", label = "Run", enabled = true, selected = false }
-    })
-    if movement ~= "" then
-        game.state_set("test.retained_movement", movement)
-    end
+    ctx:text("platform-neutral HUD")
 end)
 )lua" );
 
@@ -854,41 +738,16 @@ end)
     const std::vector<cata::lua_ui::page_info> settings_pages =
         cata::lua_ui::registered_pages( "settings.mods" );
     REQUIRE( settings_pages.size() == 1 );
-    CHECK( settings_pages.front().id == "retained_test" );
-    CHECK( settings_pages.front().title == "Retained test" );
+    CHECK( settings_pages.front().id == "registry_test" );
+    CHECK( settings_pages.front().title == "Registry test" );
     CHECK( settings_pages.front().category == "tools" );
     CHECK( settings_pages.front().order == 42 );
     CHECK_FALSE( cata::lua_ui::has_registered_pages( "main.extensions" ) );
     CHECK( cata::lua_ui::has_registered_pages( "ingame.extensions" ) );
-
-    cata::lua_ui::publish_android_snapshot();
-    const std::string snapshot = cata::lua_ui::android_snapshot_json();
-    CHECK( snapshot.find( "page:retained_test" ) == std::string::npos );
-    CHECK( snapshot.find( "hud:editable_hud" ) != std::string::npos );
-    CHECK( snapshot.find( "\"defaultWidth\":0.31" ) != std::string::npos );
-    CHECK( snapshot.find( "\"defaultHeight\":0.22" ) != std::string::npos );
-    CHECK( snapshot.find( "\"background\":false" ) != std::string::npos );
-    CHECK( snapshot.find( "\"titleBar\":true" ) != std::string::npos );
-    CHECK( snapshot.find( "\"movable\":false" ) != std::string::npos );
-    CHECK( snapshot.find( "\"scalable\":false" ) != std::string::npos );
-    CHECK( snapshot.find( "\"userToggleable\":false" ) != std::string::npos );
-    CHECK( snapshot.find( "\"type\":\"child\"" ) != std::string::npos );
-    CHECK( snapshot.find( "\"type\":\"table\"" ) != std::string::npos );
-    CHECK( snapshot.find( "\"type\":\"tabs\"" ) != std::string::npos );
-    CHECK( snapshot.find( "\"type\":\"virtual_list\"" ) != std::string::npos );
-    CHECK( snapshot.find( "hud:editable_hud/movement" ) != std::string::npos );
-
-    REQUIRE( cata::lua_ui::submit_android_interaction(
-                 "hud:editable_hud/apply", "click" ) );
-    REQUIRE( cata::lua_ui::submit_android_interaction(
-                 "hud:editable_hud/movement", "select:run" ) );
-    cata::lua_ui::publish_android_snapshot();
-    script.write( R"lua(
-assert(game.state_get("test.retained_clicked", false) == true)
-assert(game.state_get("test.retained_movement", "") == "run")
-)lua" );
-    REQUIRE( cata::lua_ui::reload_scripts( error ) );
-    CHECK( cata::lua_ui::status().callback_count == 0 );
+    const cata::lua_ui::runtime_status status = cata::lua_ui::status();
+    CHECK( status.page_count == 1 );
+    CHECK( status.hud_count == 1 );
+    CHECK( status.callback_count == 0 );
 }
 
 TEST_CASE( "lua_game_snapshots_are_bounded_read_only_values", "[lua][ui][game][integration]" )

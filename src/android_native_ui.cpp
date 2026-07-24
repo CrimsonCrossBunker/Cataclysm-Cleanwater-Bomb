@@ -6,7 +6,7 @@
 
 #include "sdl_wrappers.h"
 
-void android_native_ui::show_lua_hud_editor()
+void android_native_ui::show_android_hud_manager()
 {
     JNIEnv *env = static_cast<JNIEnv *>( GetAndroidJNIEnv() );
     jobject activity = static_cast<jobject>( GetAndroidActivity() );

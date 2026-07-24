@@ -9,7 +9,7 @@
 
 namespace android_native_ui
 {
-void show_lua_hud_editor();
+void show_android_hud_manager();
 
 std::optional<std::string> text_input( const std::string &title,
                                        const std::string &initial_value,

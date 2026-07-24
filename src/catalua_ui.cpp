@@ -6,12 +6,10 @@
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <unordered_map>
 #include <vector>
 
 #include "avatar.h"
@@ -26,7 +24,6 @@
 #include "catalua_ui_imgui.h"
 #include "catalua_ui_manifest.h"
 #include "catalua_ui_renderer.h"
-#include "catalua_ui_retained.h"
 #include "catalua_ui_state.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -135,14 +132,9 @@ struct hud_definition {
     float offset_x = 12.0F;
     float offset_y = 12.0F;
     float alpha = 0.8F;
-    float default_width = 0.28F;
-    float default_height = 0.18F;
     bool interactive = false;
     bool background = true;
     bool title_bar = false;
-    bool movable = true;
-    bool scalable = true;
-    bool user_toggleable = true;
     std::vector<std::string> contexts;
     sol::protected_function draw;
     bool enabled = true;
@@ -195,11 +187,6 @@ std::unique_ptr<runtime_state> active_state;
 std::unique_ptr<ui_adaptor> hud_adaptor;
 std::string last_runtime_error;
 std::size_t generation_counter = 0;
-std::mutex android_state_mutex;
-std::unordered_map<std::string, std::string> android_interactions;
-std::chrono::steady_clock::time_point android_last_publish;
-std::string android_published_snapshot =
-    R"({"schema":1,"generation":0,"selectedPage":"","surfaces":[]})";
 
 class source_scope
 {
@@ -424,23 +411,13 @@ void register_hud( runtime_state &state, const std::string &id, const sol::table
     hud_definition replacement;
     replacement.id = id;
     replacement.title = options.get_or( "title", id );
-    replacement.anchor = options.get_or( "default_anchor",
-                                         options.get_or( "anchor", std::string( "top_left" ) ) );
-    replacement.offset_x = static_cast<float>( options.get_or( "default_x",
-                           options.get_or( "x", 12.0 ) ) );
-    replacement.offset_y = static_cast<float>( options.get_or( "default_y",
-                           options.get_or( "y", 12.0 ) ) );
+    replacement.anchor = options.get_or( "anchor", std::string( "top_left" ) );
+    replacement.offset_x = static_cast<float>( options.get_or( "x", 12.0 ) );
+    replacement.offset_y = static_cast<float>( options.get_or( "y", 12.0 ) );
     replacement.alpha = static_cast<float>( std::clamp( options.get_or( "alpha", 0.8 ), 0.0, 1.0 ) );
-    replacement.default_width = static_cast<float>( std::clamp(
-                                    options.get_or( "default_width", 0.28 ), 0.10, 0.90 ) );
-    replacement.default_height = static_cast<float>( std::clamp(
-                                     options.get_or( "default_height", 0.18 ), 0.08, 0.90 ) );
     replacement.interactive = options.get_or( "interactive", false );
     replacement.background = options.get_or( "background", true );
     replacement.title_bar = options.get_or( "title_bar", false );
-    replacement.movable = options.get_or( "movable", true );
-    replacement.scalable = options.get_or( "scalable", true );
-    replacement.user_toggleable = options.get_or( "user_toggleable", true );
     const sol::object raw_contexts = options["contexts"];
     if( raw_contexts.valid() && raw_contexts.get_type() != sol::type::nil ) {
         if( raw_contexts.get_type() != sol::type::table ) {
@@ -966,8 +943,8 @@ void draw_huds()
 void ensure_hud_adaptor()
 {
 #if defined(__ANDROID__)
-    // Android publishes retained widget trees from the game thread and renders
-    // them as native Views.  Do not also draw the same HUD through ImGui.
+    // Android HUD schema 4 is the only in-game HUD on this platform.  Lua
+    // ui.hud registrations remain portable mod data but are not consumed here.
     return;
 #endif
     if( hud_adaptor ) {
@@ -1268,11 +1245,6 @@ bool reload_scripts_with_state( const script_persistent_state *initial_state, st
         }
         active_state = std::move( next );
         active_state->accept_actions = true;
-        {
-            std::lock_guard<std::mutex> lock( android_state_mutex );
-            android_interactions.clear();
-            android_last_publish = {};
-        }
         last_runtime_error.clear();
         error.clear();
         return true;
@@ -1395,128 +1367,11 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
     }
 }
 
-bool submit_android_interaction( const std::string &widget_id,
-                                 const std::string &encoded_value )
-{
-    if( widget_id.empty() || widget_id.size() > 512 || encoded_value.size() > 65536 ) {
-        return false;
-    }
-    const bool valid_value = encoded_value == "click" || encoded_value.rfind( "bool:", 0 ) == 0 ||
-                             encoded_value.rfind( "int:", 0 ) == 0 ||
-                             encoded_value.rfind( "number:", 0 ) == 0 ||
-                             encoded_value.rfind( "text:", 0 ) == 0 ||
-                             encoded_value.rfind( "select:", 0 ) == 0;
-    if( !valid_value ) {
-        return false;
-    }
-    std::lock_guard<std::mutex> lock( android_state_mutex );
-    if( android_interactions.size() >= 256 && android_interactions.count( widget_id ) == 0 ) {
-        return false;
-    }
-    android_interactions[widget_id] = encoded_value;
-    return true;
-}
-
-std::string android_snapshot_json()
-{
-    std::lock_guard<std::mutex> lock( android_state_mutex );
-    return android_published_snapshot;
-}
-
-void publish_android_snapshot()
-{
-    bool has_interactions = false;
-    {
-        std::lock_guard<std::mutex> lock( android_state_mutex );
-        has_interactions = !android_interactions.empty();
-    }
-    const auto now = std::chrono::steady_clock::now();
-    if( !has_interactions && android_last_publish.time_since_epoch().count() != 0 &&
-        std::chrono::duration_cast<std::chrono::milliseconds>( now - android_last_publish ).count() <
-        50 ) {
-        return;
-    }
-    if( !active_state ) {
-        std::lock_guard<std::mutex> lock( android_state_mutex );
-        android_published_snapshot =
-            R"({"schema":1,"generation":0,"selectedPage":"","surfaces":[]})";
-        return;
-    }
-
-    const retained_interaction_reader interactions = []( const std::string & id )
-    -> std::optional<std::string> {
-        std::lock_guard<std::mutex> lock( android_state_mutex );
-        const auto found = android_interactions.find( id );
-        if( found == android_interactions.end() )
-        {
-            return std::nullopt;
-        }
-        std::string value = std::move( found->second );
-        android_interactions.erase( found );
-        return value;
-    };
-
-    std::vector<retained_ui_surface> surfaces;
-    surfaces.reserve( active_state->huds.size() );
-    const std::string active_context =
-        cata::input_context_actions::snapshot().category;
-    for( hud_definition &hud : active_state->huds ) {
-        if( !hud.contexts.empty() &&
-            std::find( hud.contexts.begin(), hud.contexts.end(), active_context ) ==
-            hud.contexts.end() ) {
-            continue;
-        }
-        retained_ui_surface surface;
-        surface.id = "hud:" + hud.id;
-        surface.title = hud.title;
-        surface.kind = "hud";
-        surface.anchor = hud.anchor;
-        surface.offset_x = hud.offset_x;
-        surface.offset_y = hud.offset_y;
-        surface.alpha = hud.alpha;
-        surface.default_width = hud.default_width;
-        surface.default_height = hud.default_height;
-        surface.interactive = hud.interactive;
-        surface.background = hud.background;
-        surface.title_bar = hud.title_bar;
-        surface.movable = hud.movable;
-        surface.scalable = hud.scalable;
-        surface.user_toggleable = hud.user_toggleable;
-        if( hud.enabled ) {
-            std::unique_ptr<script_ui_renderer> renderer = make_retained_script_ui_renderer(
-                        surface.document, surface.id + "/", interactions );
-            script_ui_context context( *renderer );
-            source_scope source( *active_state, hud.source_index );
-            instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
-            const auto started = std::chrono::steady_clock::now();
-            const sol::protected_function_result result = hud.draw( &context );
-            record_callback_timing( *active_state, "Android HUD '" + hud.id + "'", started );
-            if( !result.valid() ) {
-                disable_callback( hud.enabled, hud.error, "Lua HUD '" + hud.id + "'", result );
-            }
-        }
-        surfaces.push_back( std::move( surface ) );
-    }
-
-    const std::string snapshot = retained_surfaces_json( surfaces, active_state->generation,
-                                 {} );
-    std::lock_guard<std::mutex> lock( android_state_mutex );
-    android_published_snapshot = snapshot;
-    android_last_publish = now;
-}
-
 void shutdown()
 {
     hud_adaptor.reset();
     active_state.reset();
     clear_actions();
-    {
-        std::lock_guard<std::mutex> lock( android_state_mutex );
-        android_interactions.clear();
-        android_last_publish = {};
-        android_published_snapshot =
-            R"({"schema":1,"generation":0,"selectedPage":"","surfaces":[]})";
-    }
     last_runtime_error.clear();
 }
 

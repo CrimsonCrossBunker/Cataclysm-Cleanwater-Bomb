@@ -21,6 +21,11 @@ struct action_descriptor {
 
 struct context_snapshot {
     std::string category;
+    // HUD identity is intentionally independent from the keybinding category.
+    // Generic input categories (notably UILIST) may opt into stable, distinct
+    // HUD scenes without changing their bindings.
+    std::string hud_scene_id;
+    std::string hud_scene_title;
     int revision = 0;
     std::vector<action_descriptor> actions;
 };
@@ -29,10 +34,14 @@ struct context_snapshot {
 // wait for input.  Internal transport actions are removed.  The revision only
 // changes when the effective context or action catalogue changes.
 bool needs_publish( const std::string &category,
+                    const std::string &hud_scene_id,
+                    const std::string &hud_scene_title,
                     const std::vector<std::string> &registered_action_ids,
                     std::uint64_t catalog_token,
                     int label_revision );
 void publish( const std::string &category,
+              const std::string &hud_scene_id,
+              const std::string &hud_scene_title,
               const std::vector<action_descriptor> &registered_actions,
               std::uint64_t catalog_token = 0, int label_revision = 0 );
 
@@ -44,10 +53,11 @@ context_snapshot snapshot();
 std::vector<bool> validate_candidates( int context_revision,
                                        const std::vector<std::string> &actions );
 
-// Queue one named action for the currently published context.  The caller must
-// supply the revision it rendered; -1 is reserved for legacy native callers.
-// Destructive/debug actions are never accepted by this HUD path.
-bool enqueue( const std::string &action, int context_revision );
+// Queue one named action for the currently published context.  Risky actions
+// require an explicitly-authorized long press in the Android HUD.  Other
+// callers keep the default false and cannot enqueue them.
+bool enqueue( const std::string &action, int context_revision,
+              bool dangerous_authorized = false );
 bool has_pending();
 
 // Consume a queued action only when it is still registered by this exact

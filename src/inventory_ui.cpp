@@ -3399,6 +3399,9 @@ inventory_selector::inventory_selector( Character &u, const inventory_selector_p
     , _uimode( preset.save_state == nullptr ? inventory_sel_default_state.uimode :
                preset.save_state->uimode )
 {
+#if defined(__ANDROID__)
+    ctxt.set_hud_scene( "inventory.main", _( "Inventory" ) );
+#endif
     item_name_cache_users++;
     tp_start =
         std::chrono::time_point_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() );

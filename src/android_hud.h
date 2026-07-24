@@ -3,6 +3,7 @@
 #define CATA_SRC_ANDROID_HUD_H
 
 #include <string>
+#include <vector>
 
 class avatar;
 
@@ -24,8 +25,10 @@ struct minimap_rect {
 
 void set_minimap_rect( const minimap_rect &rect );
 minimap_rect get_minimap_rect();
+void set_subscriptions( const std::vector<std::string> &sources );
 
 void publish_snapshot( const avatar &player, int safe_mode );
+void clear_snapshot();
 std::string snapshot_json();
 
 } // namespace android_hud

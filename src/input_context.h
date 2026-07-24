@@ -69,7 +69,8 @@ class input_context
         // Whatever's on top is our current input context.
         static input_context_stack_impl input_context_stack;
 #endif
-        input_context() : category( "default" ), registered_any_input( false ),
+        input_context() : category( "default" ), hud_scene_id( "default" ),
+            hud_scene_title( "default" ), registered_any_input( false ),
             coordinate_input_received( false ), handling_coordinate_input( false ) {
 #if defined(__ANDROID__) || defined(TILES)
             input_context_stack.push( handle );
@@ -83,7 +84,8 @@ class input_context
         // outside that window can be ignored
         explicit input_context( const std::string &category,
                                 const keyboard_mode preferred_keyboard_mode = keyboard_mode::keycode )
-            : category( category ), registered_any_input( false ),
+            : category( category ), hud_scene_id( category ), hud_scene_title( category ),
+              registered_any_input( false ),
               coordinate_input_received( false ), handling_coordinate_input( false ),
               preferred_keyboard_mode( preferred_keyboard_mode ) {
 #if defined(__ANDROID__) || defined(TILES)
@@ -152,6 +154,8 @@ class input_context
             registered_actions = std::forward<Rhs>( other ).registered_actions;
             edittext = std::forward<Rhs>( other ).edittext;
             category = std::forward<Rhs>( other ).category;
+            hud_scene_id = std::forward<Rhs>( other ).hud_scene_id;
+            hud_scene_title = std::forward<Rhs>( other ).hud_scene_title;
             coordinate = std::forward<Rhs>( other ).coordinate;
             registered_any_input = std::forward<Rhs>( other ).registered_any_input;
             coordinate_input_received = std::forward<Rhs>( other ).coordinate_input_received;
@@ -195,6 +199,16 @@ class input_context
         std::string &get_category() {
             return category;
         }
+        const std::string &get_hud_scene_id() const {
+            return hud_scene_id;
+        }
+        const std::string &get_hud_scene_title() const {
+            return hud_scene_title;
+        }
+        void set_hud_scene( const std::string &id, const std::string &title = "" ) {
+            hud_scene_id = id.empty() ? category : id;
+            hud_scene_title = title.empty() ? hud_scene_id : title;
+        }
         std::vector<std::string> &get_registered_actions() {
             return registered_actions;
         }
@@ -205,6 +219,8 @@ class input_context
 
         bool operator==( const input_context &other ) const {
             return category == other.category &&
+                   hud_scene_id == other.hud_scene_id &&
+                   hud_scene_title == other.hud_scene_title &&
                    registered_actions == other.registered_actions &&
                    registered_manual_keys == other.registered_manual_keys &&
                    context_direct_action == other.context_direct_action &&
@@ -506,6 +522,8 @@ class input_context
         bool is_registered_action( const std::string &action_name ) const;
     private:
         std::string category; // The input category this context uses.
+        std::string hud_scene_id;
+        std::string hud_scene_title;
         point coordinate;
 
         bool registered_any_input;

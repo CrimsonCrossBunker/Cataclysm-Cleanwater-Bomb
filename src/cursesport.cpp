@@ -40,6 +40,17 @@ unsigned cata_cursesport::curses_render_epoch = 0;
 void cata_cursesport::bump_curses_render_epoch()
 {
     ++curses_render_epoch;
+    // stdscr is refreshed unconditionally before every SDL input wait.  If it
+    // has no real changes, replaying its full (normally black) backing cells
+    // after an epoch change would erase a game/map window that was already
+    // rebuilt above it.  Active background panes call erase() and therefore
+    // leave draw armed; only acknowledge the untouched housekeeping window.
+    if( catacurses::stdscr ) {
+        WINDOW *const screen = catacurses::stdscr.get<WINDOW>();
+        if( screen != nullptr && !screen->draw ) {
+            screen->last_render_epoch = curses_render_epoch;
+        }
+    }
 }
 
 static bool wmove_internal( const catacurses::window &win_, const point &p )

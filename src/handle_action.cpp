@@ -2588,7 +2588,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
     // touching map/terrain or movement-mode state; the main-menu path can be
     // entered while those world objects are not ready for a regular action.
     if( act == ACTION_MANAGE_ANDROID_EXTRA_BUTTONS ) {
-        android_native_ui::show_lua_hud_editor();
+        android_native_ui::show_android_hud_manager();
         return false;
     }
 #endif

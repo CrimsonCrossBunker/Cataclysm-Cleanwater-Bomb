@@ -536,14 +536,16 @@ const std::string &input_context::handle_input( const int timeout )
         append_catalog_token( entry.second.translated() );
     }
     if( cata::input_context_actions::needs_publish(
-            category, registered_actions, catalog_token, label_revision ) ) {
+            category, hud_scene_id, hud_scene_title, registered_actions,
+            catalog_token, label_revision ) ) {
         std::vector<cata::input_context_actions::action_descriptor> context_actions;
         context_actions.reserve( registered_actions.size() );
         for( const std::string &action : registered_actions ) {
             context_actions.push_back( { action, get_action_name( action ), {}, false, false } );
         }
         cata::input_context_actions::publish(
-            category, context_actions, catalog_token, label_revision );
+            category, hud_scene_id, hud_scene_title, context_actions,
+            catalog_token, label_revision );
     }
     if( cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
         inp_mngr.set_timeout( old_timeout );

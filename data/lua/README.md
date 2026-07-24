@@ -4,8 +4,9 @@ This directory contains the built-in Lua entry point and modules for the
 experimental, versioned UI runtime. The Lua drawing context targets the
 platform-neutral `script_ui_renderer` contract. Complete pages use the shared
 ImGui page host on Android and desktop Tiles; terminal builds use the ImTui
-fallback. Android retained native Views are reserved for in-game HUD surfaces.
-Scripts do not import or depend on any of those backends.
+fallback. `ui.hud` uses that same host on non-Android builds only. Android's
+in-game HUD is the separate native schema-4 subsystem and never calls Lua.
+Scripts do not import or depend on any renderer backend.
 
 The current platform policy is Android on SDL3, with Linux and Windows still
 using SDL2 while their SDL3 migration proceeds separately. This does not alter
@@ -77,18 +78,13 @@ end)
 
 ui.hud("stamina", {
     title = "Stamina",
-    default_anchor = "top_right", -- top_left/top_right/bottom_left/bottom_right
-    default_x = 16,
-    default_y = 16,
-    default_width = 0.28,  -- fraction of the Android overlay
-    default_height = 0.18,
+    anchor = "top_right", -- top_left/top_right/bottom_left/bottom_right
+    x = 16,
+    y = 16,
     alpha = 0.8,
     interactive = false,
     background = true,
     title_bar = false,
-    movable = true,
-    scalable = true,
-    user_toggleable = true,
     contexts = { "DEFAULTMODE" } -- optional active input_context allow-list
 }, function(ctx)
     local p = game.player_snapshot()
@@ -104,6 +100,10 @@ Registering the same page or HUD id again replaces the earlier definition.
 Event registrations are additive. An event payload contains `type`, `turn`,
 `data`, and `data_types`. Boolean and integer fields keep their Lua types;
 other game-specific ids and coordinates are exposed as strings.
+
+`ui.hud` is not consumed on Android. Use Android HUD schema 4 for in-game
+information and controls there. Cross-platform mods may still register a Lua
+HUD for desktop/terminal builds alongside Android-specific schema-4 templates.
 
 The string-title form of `ui.page` remains compatible and registers in
 `main.extensions` and `ingame.extensions`. The descriptor form accepts:
@@ -130,10 +130,10 @@ Renderer metadata lets a script choose a portable fallback without importing
 backend-specific APIs:
 
 ```lua
-ctx:backend()             -- "imgui" or "retained"
-ctx:platform()            -- "sdl2", "sdl3", "imtui", or "android"
+ctx:backend()             -- "imgui"
+ctx:platform()            -- "sdl2", "sdl3", or "imtui"
 ctx:is_immediate_mode()   -- true for ImGui/ImTui
-ctx:uses_native_widgets() -- true for Android native Views
+ctx:uses_native_widgets() -- false for the current renderer
 ctx:supports("text_input")
 ```
 
@@ -179,9 +179,8 @@ name = ctx:input_text("Name", name)
 ```
 
 The forms above use the visible label as the widget id for compatibility.
-For native retained-mode adapters, translated labels, dynamic labels, or
-repeated labels, use an explicit stable id that is unique within the page or
-HUD callback:
+For translated labels, dynamic labels, or repeated labels, use an explicit
+stable id that is unique within the page or HUD callback:
 
 ```lua
 if ctx:button_id("apply_changes", "Apply") then end
@@ -200,7 +199,7 @@ local selected = ctx:radial_select_id("movement", "行走", {
 })
 ```
 
-An action slot is a retained HUD control whose selected action is validated
+An action slot is a semantic HUD control whose selected action is validated
 against the exact input-context revision that produced it:
 
 ```lua
@@ -215,19 +214,18 @@ game.state_set("hud.ground_action", selected)
 ```
 
 Pass only candidates present in `input.available`. With no available candidate
-the native control is disabled, with one candidate the whole control is a
+the widget is disabled, with one candidate the whole widget is a
 single trigger, and with multiple candidates it becomes a large trigger plus a
 small selector. Selecting a candidate returns its id; pressing the trigger
 queues that named action directly in the renderer and does not return a
 synthetic click or key. Stable widget ids and character state preserve the
-choice across redraws, hot reload, and native View recreation.
+choice across redraws and hot reloads.
 
 Every interactive method has a matching `_id` form whose first argument is
 the stable id and second argument is the visible label. Buttons report a
 one-frame activation. Other inputs use a controlled-value model: the script
 passes the current value on every draw and receives the updated value. This is
-the shared interaction contract for immediate ImGui/ImTui and Android native
-renderers.
+the shared interaction contract for ImGui/ImTui renderers.
 
 Structured layout callbacks keep backend Begin/End and Push/Pop pairs outside
 Lua, including when a nested callback raises an error:
@@ -265,81 +263,70 @@ end)
 ```
 
 `ctx:table` accepts 1..64 columns. A virtual list accepts up to 1,000,000
-logical items, but the Android retained renderer emits at most 200 items in a
-snapshot. The callback receives a zero-based, half-open `[first, last)` range;
-render only that range (add one when indexing a normal Lua sequence).
+logical items. The callback receives a zero-based, half-open `[first, last)`
+visible range; render only that range (add one when indexing a normal Lua
+sequence).
 
-## Android HUD renderer
+## Android HUD separation
 
-On Android, Lua callbacks and game snapshots run only on the game thread. C++
-publishes immutable retained widget trees only for HUD surfaces. The UI thread
-polls them every 100 ms, reuses native Views by stable widget id, and returns
-bounded one-shot interactions to the next game-thread render. The Android UI
-thread never calls Lua or accesses live game objects. Complete Lua pages are
-drawn by the same ImGui host used by SDL2 desktop Tiles and do not create
-Android page Views or a separate native page chooser.
+Android never consumes `ui.hud` registrations and has no Lua HUD renderer,
+snapshot JNI, retained widget tree, or Lua interaction bridge. Schema 4 is the
+only Android in-game HUD. It has no built-in or dynamically injected layout.
+The first time an input scene is observed, Android creates one empty layout.
+Future official templates must be explicitly chosen and copied once; they
+never merge into or overwrite a user layout.
 
-HUD surfaces honor `anchor`, `x`, `y`, and `alpha`, and are repositioned after
-rotation or split-screen resizing. Touches inside Lua HUD surfaces are kept
-out of the Android HUD long-press editor.
+An HUD scene has a stable `hud_scene_id` and title independent of its keybinding
+category. This lets two actual screens that both use `UILIST` opt into separate
+layouts. Every scene owns multiple named layouts and one active layout.
+Android is landscape-only and uses one 1920×1080 virtual canvas, so there is no
+portrait/landscape duplication.
 
-Lua HUD configuration uses a versioned scene hierarchy:
+A layout contains exactly three element types:
 
-1. A fixed `input_context` category, such as `DEFAULTMODE`.
-2. An official or user layout for the current portrait/landscape orientation.
-3. Stable Lua surfaces, Lua `action_slot` overrides, and user action buttons.
+- An information element references one read-only native source.
+- A control references one or more actions from that scene's last known action
+  catalogue. The main region triggers the selected action; a small secondary
+  region opens the complete candidate menu by default. Individual controls may
+  instead configure that secondary region to cycle candidates one at a time.
+- An element group contains nested information, controls, and groups.
 
-Open **Options → HUD layout** on Android (or the existing in-game Android HUD
-management action) to choose a scene and layout. The official layout is
-read-only; editing it first creates a user copy. In canvas edit mode, drag an
-element to move it, drag its bottom-right corner to resize it, or long-press it
-to edit size, opacity, and visibility. The edit bar can add a new action button
-or change the candidate actions of an existing Lua action slot. A single
-candidate uses the whole button as its trigger. Multiple candidates add a much
-smaller selector region.
+Child positions are relative to the parent group's origin, while child sizes
+remain in the same 1920×1080 units as root elements. Moving a group therefore
+moves its entire subtree. Resizing a group does not scale or rewrite any child;
+content outside the new group bounds is clipped. The editor only manipulates
+the current hierarchy level. Enter a group before editing its children.
 
-The schema 2 store keeps all scenes and layouts in one internal JSON package.
-It is still separated by portrait/landscape orientation and stable HUD/widget
-ids, so it survives Lua hot reload and native View recreation. Existing schema
-1 position/visibility data is migrated into a user layout named `旧版布局`.
-Import, export, and share operate on the complete package for backup,
-cross-device transfer, and mod layout sharing; normal edits stay in app-private
-storage and do not create files.
+Open the full manager through the Android HUD option or hold three fingers on
+the current game screen. The editor supports a grid, offline placeholder
+previews, drag/resize, element properties, nested group navigation, undo,
+redo, cancel, and Done. Edits remain in a detached draft; Done validates and
+atomically commits the complete layout.
 
-Imported action ids are configuration only. The renderer intersects them with
-the current immutable action catalogue, removes dangerous entries, and the
-trigger still carries the current context revision into the bounded native
-action queue. A layout package therefore cannot grant an action that the
-current game scene did not register.
+C++ owns the information-source catalogue and publishes only immutable values
+subscribed by the active layout. Sources include the semantic pieces of the
+mobile sidebar, formatted logs, the SDL pixel minimap, a 7×7 overmap grid, a
+local square-cell threat radar, and every raw widget as an advanced source.
+Lua pages and non-Android Lua HUDs are not information sources for schema 4.
 
-`default_anchor`, `default_x`, and `default_y` are aliases for the portable
-`anchor`, `x`, and `y` defaults. `default_width` and `default_height` are
-Android overlay fractions clamped to safe bounds. `movable`, `scalable`, and
-`user_toggleable` default to `true`; set one to `false` when a built-in or mod
-HUD must keep that part of its script-defined layout. User overrides stay on
-the Android device and never mutate the Lua script or character save. A mod can
-freely change implementation details during hot reload as long as its HUD and
-widget ids remain stable; renamed ids intentionally appear as new elements.
-`contexts` optionally limits a HUD to one or more exact `input_context`
-categories. A mismatched HUD callback is not run and Android does not allocate
-or retain a surface for it.
+Controls carry the exact input-context revision they rendered. An imported
+action ID cannot execute unless it is registered by that current scene.
+Destructive/debug actions remain visible in the catalogue, but a layout must
+explicitly authorize each one and the player must long-press it at runtime.
+Stale, unauthorized, or unregistered commands are rejected by the native
+bounded queue.
 
-The native HUD adapter maps text, buttons, checkboxes, sliders, inputs,
-progress bars, and structured containers to Android Views. Immediate-mode-only
-details such as exact same-line or table-column placement may use a simplified
-native layout, so capability-aware HUD scripts should prioritize semantic
-structure over pixel-identical layouts.
+Schema 4 is stored with Android `AtomicFile` under app-private storage.
+Existing schema 1–3 HUD and old extra-button preferences are copied into a
+separate archive and are not migrated or activated. Export supports one layout
+or all scenes. Import always shows a validated preview; full packages may be
+merged or may replace only the current schema-4 package.
 
-`action_slot` uses a retained `ActionSlotView` on Android and the same semantic
-widget through ImGui/ImTui elsewhere. Android reparses or restyles a slot only
-when its stable id, context revision, candidates, or selection changes. Lua
-never draws it per pixel and the Android UI thread never calls Lua.
-
-The official Android `DEFAULTMODE` layout does not create the older native
-action pad, including when loading a saved layout that still contains one.
-This keeps the Lua HUD as the single owner of game-map actions and prevents
-duplicate buttons. Native action pads remain a compatibility fallback for
-modal contexts that have not yet received a Lua layout.
+Schema-4 game reads and snapshot publication run on the game thread. Android
+Views poll immutable snapshots and never access live game objects. Leaving
+gameplay invalidates the snapshot so controls and scene information cannot leak
+into a different screen. Lua pages remain available on Android through the
+ordinary ImGui page host and are unrelated to this HUD snapshot.
 
 ## Game API and reload state
 

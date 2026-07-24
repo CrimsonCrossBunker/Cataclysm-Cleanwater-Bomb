@@ -596,8 +596,15 @@ void cataimgui::client::new_frame( int display_buffer_w, int display_buffer_h )
 #endif
     if( clear_screen && clear_sdl_window() ) {
         // The SDL buffer and the curses window cache are separate.  Clearing only
-        // the former would make unchanged curses content disappear, so force every
-        // curses window to emit all of its cells again during this frame.
+        // the former would make unchanged UI content disappear.  Force the live
+        // adaptor stack to run its redraw callbacks in this same frame, then make
+        // every curses window those callbacks own re-emit all of its cells.
+        //
+        // This is deliberately done here, before redraw_invalidated() scans the
+        // adaptor flags.  A deferred clear is commonly left by the destructor of
+        // a transient ImGui popup (including hit animations); clearing without
+        // invalidating its underlay produced a black frame until the next move.
+        ui_manager::invalidate_all_ui_adaptors();
 #if defined(TILES)
         cata_cursesport::bump_curses_render_epoch();
 #endif

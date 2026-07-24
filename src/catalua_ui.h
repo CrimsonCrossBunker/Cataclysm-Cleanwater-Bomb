@@ -64,15 +64,9 @@ runtime_status status();
 // runtime callbacks.  This does not expose game bindings.
 bool validate_snippet( std::string_view source, int instruction_limit, std::string &error );
 
-// Android's Java UI thread only exchanges immutable JSON and queued widget
-// events.  Lua callbacks and game snapshots remain on the game thread.
-void publish_android_snapshot();
-std::string android_snapshot_json();
-bool submit_android_interaction( const std::string &widget_id, const std::string &encoded_value );
-
 // Platform-neutral page registry.  Slots are logical navigation locations,
-// never pixel coordinates.  Complete pages use the shared ImGui/ImTui host;
-// Android native Views are reserved for HUD surfaces.
+// never pixel coordinates.  Complete pages use the shared ImGui/ImTui host.
+// Android's native schema-4 HUD is a separate subsystem.
 std::vector<page_info> registered_pages( std::string_view slot = {} );
 bool has_registered_pages( std::string_view slot = {} );
 bool show_page( const std::string &page_id );
