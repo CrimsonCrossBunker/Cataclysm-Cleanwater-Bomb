@@ -4537,6 +4537,9 @@ static uint32_t finger_down_time = 0;
 static uint32_t finger_repeat_time = 0;
 // the last time a single tap was detected. used for double-tap detection.
 static uint32_t last_tap_time = 0;
+static float pinch_start_distance = 0.0f;
+static int pinch_start_zoom = 0;
+static bool pinch_zoom_handled = false;
 // when did the hardware back button start being pressed? 0 if not touching, otherwise the time in milliseconds.
 static uint32_t ac_back_down_time = 0;
 // has a second finger touched the screen while the first was touching?
@@ -4550,6 +4553,57 @@ static bool quick_shortcuts_toggle_handled = false;
 uint32_t finger_repeat_delay = 500;
 // should we make sure the sdl surface is visible? set to true whenever the SDL window is shown.
 static bool needs_sdl_surface_visibility_refresh = true;
+
+input_context touch_input_context;
+static bool android_has_active_world();
+static void android_request_repaint();
+
+static bool android_map_zoom_context()
+{
+    const std::string &category = touch_input_context.get_category();
+    return android_has_active_world() && ( category == "DEFAULTMODE" || category == "LOOK" );
+}
+
+static void android_begin_pinch_zoom()
+{
+    pinch_start_distance = std::hypot( finger_down_x - second_finger_down_x,
+                                       finger_down_y - second_finger_down_y );
+    pinch_start_zoom = g ? g->get_zoom() : 0;
+    pinch_zoom_handled = false;
+}
+
+static void android_update_pinch_zoom()
+{
+    if( !get_option<bool>( "ANDROID_CONTINUOUS_ZOOM" ) || !android_map_zoom_context() ||
+        !g || pinch_start_distance <= 0.0f || pinch_start_zoom <= 0 ) {
+        return;
+    }
+
+    const float current_distance = std::hypot( finger_curr_x - second_finger_curr_x,
+                                   finger_curr_y - second_finger_curr_y );
+    if( current_distance <= 0.0f ) {
+        return;
+    }
+
+    const int configured_min = get_option<int>( "ANDROID_ZOOM_MIN" );
+    const int configured_max = get_option<int>( "ANDROID_ZOOM_MAX" );
+    const int minimum_zoom = std::min( configured_min, configured_max );
+    const int maximum_zoom = std::max( configured_min, configured_max );
+    int target_zoom = static_cast<int>( std::lround( pinch_start_zoom * current_distance /
+                                        pinch_start_distance ) );
+    // Two-unit steps feel continuous while avoiding a resize for every pixel of motion.
+    target_zoom = 2 * static_cast<int>( std::lround( target_zoom / 2.0f ) );
+    target_zoom = std::clamp( target_zoom, minimum_zoom, maximum_zoom );
+
+    if( target_zoom != g->get_zoom() ) {
+        g->set_zoom( target_zoom );
+        g->mark_main_ui_adaptor_resize();
+        android_request_repaint();
+        ui_manager::redraw_invalidated();
+        needupdate = true;
+        pinch_zoom_handled = true;
+    }
+}
 
 // SDL_FingerID is an opaque per-touch ID, not a 0-based index, so map raw
 // IDs to local slots 0/1/2 here.
@@ -4594,8 +4648,6 @@ std::map<std::string, quick_shortcuts_t> quick_shortcuts_map;
 // A copy of the last known input_context from the input manager. It's important this is a copy, as there are times
 // the input manager has an empty input_context (eg. when player is moving over slow objects) and we don't want our
 // quick shortcuts to disappear momentarily.
-input_context touch_input_context;
-
 static bool android_has_active_world()
 {
     return world_generator && world_generator->active_world;
@@ -6194,9 +6246,16 @@ static void CheckMessages()
                             }
                         }
 
+                        if( is_two_finger_touch ) {
+                            android_update_pinch_zoom();
+                        }
+
                     } else if( slot == 1 ) {
                         second_finger_curr_x = GetFingerX( ev, WindowWidth );
                         second_finger_curr_y = GetFingerY( ev, WindowHeight );
+                        if( is_two_finger_touch ) {
+                            android_update_pinch_zoom();
+                        }
                     } else if( slot == 2 ) {
                         third_finger_curr_x = GetFingerX( ev, WindowWidth );
                         third_finger_curr_y = GetFingerY( ev, WindowHeight );
@@ -6220,6 +6279,7 @@ static void CheckMessages()
                             second_finger_down_x = second_finger_curr_x = GetFingerX( ev, WindowWidth );
                             second_finger_down_y = second_finger_curr_y = GetFingerY( ev, WindowHeight );
                             is_two_finger_touch = true;
+                            android_begin_pinch_zoom();
                         }
                     } else if( finger_slot_for( GetFingerID( ev ), true ) == 2 ) {
                         if( !is_quick_shortcut_touch ) {
@@ -6227,6 +6287,9 @@ static void CheckMessages()
                             third_finger_down_y = third_finger_curr_y = GetFingerY( ev, WindowHeight );
                             is_three_finger_touch = true;
                             is_two_finger_touch = false;
+                            pinch_start_distance = 0.0f;
+                            pinch_start_zoom = 0;
+                            pinch_zoom_handled = false;
                         }
                     }
                     break;
@@ -6262,7 +6325,7 @@ static void CheckMessages()
                         } else {
                             if( is_two_finger_touch ) {
                                 // handle zoom in/out
-                                if( is_default_mode ) {
+                                if( !pinch_zoom_handled && is_default_mode ) {
                                     float x1 = ( finger_curr_x - finger_down_x );
                                     float y1 = ( finger_curr_y - finger_down_y );
                                     float d1 = std::sqrt( x1 * x1 + y1 * y1 );
@@ -6396,6 +6459,9 @@ static void CheckMessages()
                                                   finger_down_y = finger_curr_y = -1.0f;
                         is_two_finger_touch = false;
                         is_three_finger_touch = false;
+                        pinch_start_distance = 0.0f;
+                        pinch_start_zoom = 0;
+                        pinch_zoom_handled = false;
                         finger_down_time = 0;
                         finger_repeat_time = 0;
                         // ensure virtual joystick and quick shortcuts are updated properly
