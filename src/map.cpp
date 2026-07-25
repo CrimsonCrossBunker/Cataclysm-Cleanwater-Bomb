@@ -3697,10 +3697,14 @@ std::optional<tripoint_bub_ms> map::vehicle_ladder_destination( const tripoint_b
     tripoint_bub_ms dest = from;
     for( int dist = 1; dist <= max_descent; ++dist ) {
         const tripoint_bub_ms candidate( from.xy(), from.z() - dist );
-        dest = candidate;
-        if( !is_open_air( candidate ) || veh_at( candidate ) ) {
-            break;
+        if( is_open_air( candidate ) && !veh_at( candidate ) ) {
+            dest = candidate;
+            continue;
         }
+        if( passable( candidate ) ) {
+            return candidate;
+        }
+        return std::nullopt;
     }
 
     return dest;
