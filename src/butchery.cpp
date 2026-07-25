@@ -68,6 +68,7 @@ static const harvest_drop_type_id harvest_drop_skin( "skin" );
 static const itype_id itype_burnt_out_bionic( "burnt_out_bionic" );
 
 static const json_character_flag json_flag_INSTANT_BLEED( "INSTANT_BLEED" );
+static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 
 static const morale_type morale_butcher( "morale_butcher" );
 
@@ -352,7 +353,11 @@ bool set_up_butchery( player_activity &act, Character &you, butchery_data bd )
                     // give us a message indicating we are dissecting without the stomach for it, but not actually butchering. lower morale penalty.
                     you.add_msg_if_player( m_good, SNIPPET.random_from_category(
                                                "msg_human_dissection_no_prof" ).value_or( translation() ).translated() );
-                    you.add_morale( morale_butcher, -40, 0, 1_days, 2_hours );
+                    if( you.has_flag( json_flag_INSENSITIVITY ) ) {
+                        you.add_morale( morale_butcher, -20, 0, 1_days, 2_hours );
+                    } else {
+                        you.add_morale( morale_butcher, -40, 0, 1_days, 2_hours );
+                    }
                 }
             } else {
                 // standard refusal to butcher
@@ -366,7 +371,11 @@ bool set_up_butchery( player_activity &act, Character &you, butchery_data bd )
                 // give the player a random message showing their disgust and cause morale penalty.
                 you.add_msg_if_player( m_good, SNIPPET.random_from_category(
                                            "msg_human_butchery" ).value_or( translation() ).translated() );
-                you.add_morale( morale_butcher, -50, 0, 2_days, 3_hours );
+                    if( you.has_flag( json_flag_INSENSITIVITY ) ) {
+                        you.add_morale( morale_butcher, -25, 0, 2_days, 3_hours );
+                    } else {
+                        you.add_morale( morale_butcher, -50, 0, 2_days, 3_hours );
+                    }
             }
         } else {
             if( you.has_proficiency( proficiency_prof_dissect_humans ) ) {

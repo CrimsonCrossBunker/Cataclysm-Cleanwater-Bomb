@@ -96,6 +96,7 @@ static const json_character_flag json_flag_PRED2( "PRED2" );
 static const json_character_flag json_flag_PRED3( "PRED3" );
 static const json_character_flag json_flag_PRED4( "PRED4" );
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
+static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 
 static const morale_type morale_killed_monster( "morale_killed_monster" );
 
@@ -1800,7 +1801,8 @@ void spell_effect::guilt( const spell &sp, Creature &caster, const tripoint_bub_
 
         Character &guy = *guilt_target;
         if( guy.has_flag( json_flag_NUMB ) || guy.has_flag( json_flag_PSYCHOPATH ) ||
-            guy.has_flag( json_flag_PRED3 ) || guy.has_flag( json_flag_PRED4 ) ) {
+            guy.has_flag( json_flag_PRED3 ) || guy.has_flag( json_flag_PRED4 ) ||
+            guy.has_flag( json_flag_INSENSITIVITY ) ) {
             // specially immune.
             return;
         }
