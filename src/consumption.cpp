@@ -1488,7 +1488,7 @@ void Character::modify_morale( item &food, const int nutr )
             }
         } else if( psycho ) {
             add_msg_if_player( _( "Meh.  You've eaten worse." ) );
-        } else if( spiritual ) {
+        } else if( spiritual && !insensitivity ) {
             add_msg_if_player( m_bad,
                                _( "This is probably going to count against you if there's still an afterlife." ) );
             add_morale( morale_cannibal, -60, -400, 60_minutes, 30_minutes );
