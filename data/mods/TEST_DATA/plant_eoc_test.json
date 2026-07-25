@@ -155,6 +155,77 @@
     }
   },
   {
+    "type": "furniture",
+    "id": "test_f_planter_no_overgrowth",
+    "copy-from": "f_planter",
+    "name": "test planter without crop overgrowth",
+    "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
+    "plant_data": {
+      "transform": "test_f_planter_no_overgrowth_seed",
+      "max_water_storage": 0
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_no_overgrowth_seed",
+    "copy-from": "test_f_plant_seed",
+    "name": "test planter seed without crop overgrowth",
+    "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
+    "plant_data": {
+      "transform": "test_f_planter_no_overgrowth_seedling",
+      "base": "test_f_planter_no_overgrowth",
+      "max_water_storage": 0
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_no_overgrowth_seedling",
+    "copy-from": "test_f_plant_seedling",
+    "name": "test planter seedling without crop overgrowth",
+    "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
+    "plant_data": {
+      "transform": "test_f_planter_no_overgrowth_mature",
+      "base": "test_f_planter_no_overgrowth",
+      "max_water_storage": 0
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_no_overgrowth_mature",
+    "copy-from": "test_f_plant_mature",
+    "name": "test planter mature without crop overgrowth",
+    "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
+    "plant_data": {
+      "transform": "test_f_planter_no_overgrowth_harvest",
+      "base": "test_f_planter_no_overgrowth",
+      "max_water_storage": 0
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_no_overgrowth_harvest",
+    "copy-from": "test_f_plant_harvest",
+    "name": "test planter harvest without crop overgrowth",
+    "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
+    "plant_data": {
+      "transform": "test_f_planter_no_overgrowth_overgrown",
+      "base": "test_f_planter_no_overgrowth",
+      "max_water_storage": 0
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "test_f_planter_no_overgrowth_overgrown",
+    "copy-from": "test_f_plant_overgrown",
+    "name": "test planter overgrown without crop overgrowth",
+    "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
+    "plant_data": {
+      "transform": "test_f_planter_no_overgrowth_overgrown",
+      "base": "test_f_planter_no_overgrowth",
+      "max_water_storage": 0
+    }
+  },
+  {
     "type": "ITEM",
     "subtypes": [ "SEED", "COMESTIBLE" ],
     "id": "test_seed_eoc",
