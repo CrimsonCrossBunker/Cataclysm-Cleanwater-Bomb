@@ -15,6 +15,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "catacharset.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character_attire.h"
@@ -39,6 +40,7 @@
 #include "point.h"
 #include "string_formatter.h"
 #include "translation.h"
+#include "translations.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
@@ -2621,6 +2623,112 @@ TEST_CASE( "legacy_labels_place_layout_uses_original_content_columns",
     CHECK( place_info->_width + sidebar->_padding +
            place_overmap->_width == sidebar->_width - 2 );
 }
+
+#if defined(LOCALIZE)
+TEST_CASE( "explicit_widget_label_width_aligns_translated_place_rows",
+           "[widget][layout][label][translations]" )
+{
+    on_out_of_scope reset_language( []() {
+        set_language( "en" );
+    } );
+    set_language( "zh_CN" );
+
+    avatar &ava = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    fill_overmap_area( ava, oter_id( "field" ) );
+
+    widget place = widget_id( "ll_place_layout" ).obj();
+    const std::vector<std::string> lines = string_split(
+            remove_color_tags( place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
+
+    REQUIRE( lines.size() == 8 );
+    for( const std::string &line : lines ) {
+        CHECK( utf8_width( line ) == 80 );
+    }
+
+    // Snow may have no value.  Every other translated row must begin its
+    // value after the same ten-cell label plus the inherited ": " separator.
+    for( const int row : {
+             0, 1, 2, 3, 5, 6, 7
+         } ) {
+        const std::string &line = lines[row];
+        const std::size_t separator = line.find( ':' );
+        REQUIRE( separator != std::string::npos );
+        const std::size_t value = line.find_first_not_of( ' ', separator + 1 );
+        REQUIRE( value != std::string::npos );
+        CAPTURE( row, line );
+        CHECK( utf8_width( line.substr( 0, value ) ) == 12 );
+    }
+}
+
+TEST_CASE( "explicit_widget_label_width_aligns_translated_movement_grid",
+           "[widget][layout][label][translations]" )
+{
+    on_out_of_scope reset_language( []() {
+        set_language( "en" );
+    } );
+    set_language( "zh_CN" );
+
+    avatar &ava = get_avatar();
+    clear_avatar();
+    ava.movecounter = 0;
+    ava.set_focus( 100 );
+    ava.set_speed_base( 100 );
+
+    widget movement = widget_id( "ll_movement_layout" ).obj();
+    const std::vector<std::string> lines = string_split(
+            remove_color_tags( movement.layout_with_label_width(
+                                   ava, 42, 4 ) ), '\n' );
+
+    REQUIRE( lines.size() == 2 );
+    for( const std::string &line : lines ) {
+        CHECK( utf8_width( line ) == 42 );
+    }
+
+    const std::array<int, 3> starts = { 0, 15, 30 };
+    const std::array<int, 3> widths = { 13, 13, 12 };
+    const std::array<std::array<widget_id, 3>, 2> fields = { {
+            {
+                widget_id( "sound_num" ), widget_id( "mood_desc_label" ),
+                widget_id( "focus_num" )
+            },
+            {
+                widget_id( "stamina_graph_classic" ), widget_id( "speed_num" ),
+                widget_id( "move_count_mode_desc" )
+            }
+        }
+    };
+    std::array<int, 3> first_row_values = {};
+    for( std::size_t row = 0; row < lines.size(); row++ ) {
+        const std::string &line = lines[row];
+        for( std::size_t column = 0; column < starts.size(); column++ ) {
+            const std::string field = utf8_wrapper( line ).substr_display(
+                                          starts[column], widths[column] ).str();
+            CAPTURE( column, line, field );
+            const widget_id &source = fields[row][column];
+            const std::string prefix = source->_label.translated() +
+                                       source->_separator;
+            REQUIRE( field.rfind( prefix, 0 ) == 0 );
+            const std::size_t value = field.find_first_not_of(
+                                          ' ', prefix.size() );
+            REQUIRE( value != std::string::npos );
+            const int value_column = starts[column] +
+                                     utf8_width( field.substr( 0, value ) );
+            // Explicit label layouts reserve one shared separator slot as
+            // well as the configured label slot.  A child whose inherited
+            // separator is only one cell therefore cannot shift its value
+            // left of a sibling using the normal ": " separator.
+            CHECK( value_column == starts[column] + 6 );
+            if( row == 0 ) {
+                first_row_values[column] = value_column;
+            } else {
+                CHECK( value_column == first_row_values[column] );
+            }
+        }
+    }
+}
+#endif
 
 static void test_widget_flag_nopad( const bodypart_id &bid, int bleed_int, avatar &ava,
                                     const widget_id &wgt, bool skip_pad )

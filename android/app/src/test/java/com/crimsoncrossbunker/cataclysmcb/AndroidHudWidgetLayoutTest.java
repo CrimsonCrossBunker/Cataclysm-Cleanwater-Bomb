@@ -80,4 +80,19 @@ public class AndroidHudWidgetLayoutTest {
         assertFalse(AndroidHudWidgetLayout.hasCustomColumns(element));
         assertEquals(0, AndroidHudWidgetLayout.labelColumns(source(), element));
     }
+
+    @Test
+    public void terminalGridDefaultsOnAndCanBeDisabled() {
+        AndroidHudModel.Element element = new AndroidHudModel.Element();
+
+        assertTrue(AndroidHudWidgetLayout.terminalGrid(element));
+
+        element.providerSettings.put(
+            AndroidHudWidgetLayout.SETTING_TERMINAL_GRID, "false");
+        assertFalse(AndroidHudWidgetLayout.terminalGrid(element));
+
+        element.providerSettings.put(
+            AndroidHudWidgetLayout.SETTING_TERMINAL_GRID, "true");
+        assertTrue(AndroidHudWidgetLayout.terminalGrid(element));
+    }
 }

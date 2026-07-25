@@ -1090,6 +1090,7 @@ final class AndroidHudEditor {
 
     private final class WidgetLayoutPropertyFields {
         private final AndroidHudModel.InfoSource source;
+        private final CheckBox terminalGrid;
         private final CheckBox customColumns;
         private final EditText columns;
         private final CheckBox customLabelColumns;
@@ -1102,6 +1103,13 @@ final class AndroidHudEditor {
             content.addView(propertySection("原版 Widget 排版"), matchRow());
             content.addView(propertyHelp(
                 "这里使用 CCB 的字符网格列宽。它只控制标签、值和组合子列的排版；元素宽度仍只负责位置、点击区域和裁剪/滑动，不再参与对齐计算。"),
+                matchRow());
+
+            terminalGrid = check("固定终端字符格",
+                AndroidHudWidgetLayout.terminalGrid(element));
+            content.addView(terminalGrid);
+            content.addView(propertyHelp(
+                "开启后，一个汉字占两格、拉丁字符占一格，连续空格保持固定格宽，Android 会忠实显示 CCB 生成的列位置；关闭后使用普通文本排版。"),
                 matchRow());
 
             customColumns = check("自定义总列宽",
@@ -1117,7 +1125,7 @@ final class AndroidHudEditor {
                 "关闭时继承信息源原版值；legacy labels 组合默认使用 42 列（侧边栏 44 列减去左右各 1 列绘制边距）。"),
                 matchRow());
 
-            customLabelColumns = check("自定义标签列宽",
+            customLabelColumns = check("统一标签与数值列",
                 AndroidHudWidgetLayout.hasCustomLabelColumns(element));
             content.addView(customLabelColumns);
             labelColumns = textInput(customLabelColumns.isChecked() ?
@@ -1125,9 +1133,9 @@ final class AndroidHudEditor {
                     AndroidHudWidgetLayout.SETTING_LABEL_COLUMNS) : "");
             labelColumns.setHint("自动");
             labelColumns.setInputType(InputType.TYPE_CLASS_NUMBER);
-            content.addView(labeled("标签列宽（0–40）", labelColumns));
+            content.addView(labeled("标签槽宽度（0–40 格）", labelColumns));
             content.addView(propertyHelp(
-                "关闭时保留 CCB 对每个组合递归计算的标签宽度；设为 0 会取消共享标签补齐。无标签项和固定子列不会被添加标签空白。"),
+                "开启后，每个嵌套字段使用同样的“标签槽 + 分隔符槽”，使声音/耐力、心情/速度、专注/移动的标签分别上下对齐，数值也分别上下对齐。关闭时保留各组合自己的 CCB 自动宽度；设为 0 会取消共享标签补齐。"),
                 matchRow());
 
             customColumns.setOnCheckedChangeListener((button, checked) ->
@@ -1139,6 +1147,14 @@ final class AndroidHudEditor {
         }
 
         boolean applyTo(AndroidHudModel.Element element) {
+            if (terminalGrid.isChecked()) {
+                element.providerSettings.remove(
+                    AndroidHudWidgetLayout.SETTING_TERMINAL_GRID);
+            } else {
+                element.providerSettings.put(
+                    AndroidHudWidgetLayout.SETTING_TERMINAL_GRID, "false");
+            }
+
             int resolvedColumns =
                 AndroidHudWidgetLayout.defaultColumns(source);
             if (customColumns.isChecked()) {

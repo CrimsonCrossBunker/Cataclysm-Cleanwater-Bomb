@@ -8,6 +8,7 @@ package com.crimsoncrossbunker.cataclysmcb;
 final class AndroidHudWidgetLayout {
     static final String SETTING_COLUMNS = "layoutColumns";
     static final String SETTING_LABEL_COLUMNS = "labelColumns";
+    static final String SETTING_TERMINAL_GRID = "terminalGrid";
     static final int MIN_COLUMNS = 8;
     static final int MAX_COLUMNS = 80;
     static final int MIN_LABEL_COLUMNS = 0;
@@ -57,6 +58,16 @@ final class AndroidHudWidgetLayout {
 
     static boolean hasCustomLabelColumns(AndroidHudModel.Element element) {
         return parse(element, SETTING_LABEL_COLUMNS) != null;
+    }
+
+    static boolean terminalGrid(AndroidHudModel.Element element) {
+        if (element == null) {
+            return true;
+        }
+        String configured =
+            element.providerSettings.get(SETTING_TERMINAL_GRID);
+        return configured == null ||
+            !"false".equalsIgnoreCase(configured.trim());
     }
 
     static String subscription(AndroidHudModel.InfoSource source,

@@ -79,6 +79,10 @@ final class AndroidHudRendererRegistry {
             appendRichText(content,
                 snapshot.value(source.id, widgetColumns, labelColumns, preview),
                 element.style.sourceColors);
+            if (AndroidHudWidgetLayout.supports(source) &&
+                    AndroidHudWidgetLayout.terminalGrid(element)) {
+                AndroidHudColumnText.apply(content);
+            }
             text.setText(content);
             applyTextStyle(text, element.style, true);
             text.setGravity(alignment(element.style.alignment) | Gravity.CENTER_VERTICAL);

@@ -244,14 +244,24 @@ class widget
         friend class generic_factory<widget>;
         friend struct mod_tracker;
 
+        struct label_layout_override {
+            int label_width = -1;
+            int separator_width = -1;
+
+            bool enabled() const {
+                return label_width >= 0;
+            }
+        };
+
         widget_id id;
         std::vector<std::pair<widget_id, mod_id>> src;
         bool was_loaded = false;
         const widget_clause *get_clause( const std::string &clause_id = "" ) const;
         std::vector<const widget_clause *> get_clauses() const;
+        int maximum_separator_width( std::set<widget_id> &visited ) const;
         std::string layout_internal( const avatar &ava, unsigned int max_width,
                                      int label_width, bool skip_pad,
-                                     int label_width_override );
+                                     const label_layout_override &label_override );
 
     public:
         widget() = default;
@@ -348,9 +358,9 @@ class widget
         // label area, so the returned string is equal to max_width.
         std::string layout( const avatar &ava, unsigned int max_width = 0, int label_width = 0,
                             bool skip_pad = false );
-        // Layout with one explicit label-column width applied recursively to
-        // padded, labeled descendants.  Widgets marked W_LABEL_NONE and
-        // W_NO_PADDING keep their original behavior.
+        // Layout with one explicit label-column width and one shared separator
+        // slot applied recursively to padded, labeled descendants.  Widgets
+        // marked W_LABEL_NONE and W_NO_PADDING keep their original behavior.
         std::string layout_with_label_width( const avatar &ava, unsigned int max_width,
                                              int label_width, bool skip_pad = false );
         // Display labeled widget, with value (number, graph, or string) from an avatar
