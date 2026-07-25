@@ -458,18 +458,32 @@ final class AndroidHudEditor {
             selectorMode = spinner(selectorModes,
                 AndroidHudModel.SELECTOR_MODE_CYCLE.equals(working.selectorMode) ? 1 : 0);
             content.addView(labeled("多个动作时的切换方式", selectorMode));
+        }
+        if (AndroidHudModel.supportsActionBinding(working)) {
             Button actions = new Button(activity);
-            actions.setText("配置控件动作");
+            actions.setText(actionBindingButtonText(working));
             LinearLayout riskPanel = verticalPanel();
             riskPanel.setPadding(0, dp(4), 0, dp(4));
             populateRiskAuthorizationPanel(riskPanel, working, riskAuthorizationChecks);
-            actions.setOnClickListener(view -> showControlBindingDialog(working,
-                () -> populateRiskAuthorizationPanel(
-                    riskPanel, working, riskAuthorizationChecks)));
+            actions.setOnClickListener(view -> {
+                applyRiskAuthorizationChecks(working, riskAuthorizationChecks);
+                showActionBindingDialog(working, () -> {
+                    actions.setText(actionBindingButtonText(working));
+                    populateRiskAuthorizationPanel(
+                        riskPanel, working, riskAuthorizationChecks);
+                });
+            });
+            content.addView(propertySection(AndroidHudModel.TYPE_INFO.equals(working.type) ?
+                "点击交互" : "控件动作"), matchRow());
+            if (AndroidHudModel.TYPE_INFO.equals(working.type)) {
+                content.addView(propertyHelp(
+                    "未绑定时信息只负责显示；绑定一个动作时点击直接触发，绑定多个动作时点击弹出选择菜单。"),
+                    matchRow());
+            }
             content.addView(actions, matchRow());
             content.addView(propertySection("高风险动作授权"), matchRow());
             content.addView(propertyHelp(
-                "勾选只代表允许该控件触发；运行时仍必须长按，游戏原有确认不会被绕过。"),
+                "勾选只代表允许该元素触发；运行时仍必须长按。多动作信息需长按打开菜单后选择，游戏原有确认不会被绕过。"),
                 matchRow());
             content.addView(riskPanel, matchRow());
         }
@@ -530,14 +544,7 @@ final class AndroidHudEditor {
                         AndroidHudModel.SELECTOR_MODE_CYCLE :
                         AndroidHudModel.SELECTOR_MODE_MENU;
                 }
-                working.authorizedDangerousActions.retainAll(working.actionIds);
-                for (String actionId : riskAuthorizationChecks.keySet()) {
-                    if (riskAuthorizationChecks.get(actionId).isChecked()) {
-                        working.authorizedDangerousActions.add(actionId);
-                    } else {
-                        working.authorizedDangerousActions.remove(actionId);
-                    }
-                }
+                applyRiskAuthorizationChecks(working, riskAuthorizationChecks);
                 View radiusView = content.findViewWithTag("radius");
                 if (radiusView instanceof EditText) {
                     int radius = Math.round(parseFloat((EditText)radiusView, 10, 3, 30));
@@ -551,11 +558,13 @@ final class AndroidHudEditor {
         dialog.show();
     }
 
-    private void showControlBindingDialog(AndroidHudModel.Element working,
+    private void showActionBindingDialog(AndroidHudModel.Element working,
             Runnable onChanged) {
         List<AndroidHudModel.ActionDescriptor> actions =
             new ArrayList<>(scene.actionCatalog.values());
-        AndroidHudSearchDialog.showMultiple(activity, "控件候选动作",
+        String title = AndroidHudModel.TYPE_INFO.equals(working.type) ?
+            "信息点击动作" : "控件候选动作";
+        AndroidHudSearchDialog.showMultiple(activity, title,
             "搜索动作名称、ID 或分组", actionSearchItems(actions),
             working.actionIds, "下一步", selectedIds -> {
                 working.actionIds.clear();
@@ -571,11 +580,13 @@ final class AndroidHudEditor {
                     onChanged.run();
                     return true;
                 }
-                if (!working.actionIds.contains(working.defaultActionId)) {
-                    working.defaultActionId = working.actionIds.get(0);
-                }
-                if (!working.actionIds.contains(working.selectedActionId)) {
-                    working.selectedActionId = working.defaultActionId;
+                if (AndroidHudModel.TYPE_CONTROL.equals(working.type)) {
+                    if (!working.actionIds.contains(working.defaultActionId)) {
+                        working.defaultActionId = working.actionIds.get(0);
+                    }
+                    if (!working.actionIds.contains(working.selectedActionId)) {
+                        working.selectedActionId = working.defaultActionId;
+                    }
                 }
                 working.authorizedDangerousActions.retainAll(working.actionIds);
                 onChanged.run();
@@ -843,6 +854,24 @@ final class AndroidHudEditor {
         return AndroidHudModel.RISK_SAFE.equals(action.risk) ? "" : "⚠ ";
     }
 
+    private static String actionBindingButtonText(AndroidHudModel.Element element) {
+        String kind = AndroidHudModel.TYPE_INFO.equals(element.type) ?
+            "点击动作" : "控件动作";
+        return "配置" + kind + "（" + element.actionIds.size() + "）";
+    }
+
+    private static void applyRiskAuthorizationChecks(AndroidHudModel.Element element,
+            LinkedHashMap<String, CheckBox> checks) {
+        element.authorizedDangerousActions.retainAll(element.actionIds);
+        for (String actionId : checks.keySet()) {
+            if (checks.get(actionId).isChecked()) {
+                element.authorizedDangerousActions.add(actionId);
+            } else {
+                element.authorizedDangerousActions.remove(actionId);
+            }
+        }
+    }
+
     private void populateRiskAuthorizationPanel(LinearLayout panel,
             AndroidHudModel.Element element,
             LinkedHashMap<String, CheckBox> checks) {
@@ -859,7 +888,7 @@ final class AndroidHudEditor {
             panel.addView(authorized, matchRow());
         }
         if (checks.isEmpty()) {
-            panel.addView(propertyHelp("当前控件没有需要额外授权的动作。"), matchRow());
+            panel.addView(propertyHelp("当前元素没有需要额外授权的动作。"), matchRow());
         }
     }
 

@@ -28,7 +28,7 @@ final class AndroidHudModel {
     static final int MAX_LAYOUTS_PER_SCENE = 64;
     static final int MAX_ELEMENTS_PER_LAYOUT = 512;
     static final int MAX_ELEMENT_DEPTH = 8;
-    static final int MAX_ACTIONS_PER_CONTROL = 64;
+    static final int MAX_ACTIONS_PER_ELEMENT = 64;
     static final int MAX_PACKAGE_CHARS = 2 * 1024 * 1024;
 
     static final String KIND_PACKAGE = "package";
@@ -316,12 +316,14 @@ final class AndroidHudModel {
         String sourceId = "";
         final LinkedHashMap<String, String> providerSettings = new LinkedHashMap<>();
 
-        // Control payload.
+        // Interactive payload shared by information and control elements.
         final ArrayList<String> actionIds = new ArrayList<>();
+        final HashSet<String> authorizedDangerousActions = new HashSet<>();
+
+        // Control presentation payload.
         String defaultActionId = "";
         String selectedActionId = "";
         String selectorMode = SELECTOR_MODE_MENU;
-        final HashSet<String> authorizedDangerousActions = new HashSet<>();
 
         Element copy() {
             Element result = new Element();
@@ -372,17 +374,21 @@ final class AndroidHudModel {
                 }
                 json.put("providerSettings", settings);
             } else if (TYPE_CONTROL.equals(type)) {
+                json.put("defaultActionId", defaultActionId);
+                json.put("selectedActionId", selectedActionId);
+                json.put("selectorMode", selectorMode);
+            }
+            if (shouldEncodeActionBinding(this)) {
                 JSONArray actions = new JSONArray();
                 for (String action : actionIds) {
                     actions.put(action);
                 }
                 json.put("actionIds", actions);
-                json.put("defaultActionId", defaultActionId);
-                json.put("selectedActionId", selectedActionId);
-                json.put("selectorMode", selectorMode);
                 JSONArray authorized = new JSONArray();
-                for (String action : authorizedDangerousActions) {
-                    authorized.put(action);
+                for (String action : actionIds) {
+                    if (authorizedDangerousActions.contains(action)) {
+                        authorized.put(action);
+                    }
                 }
                 json.put("authorizedDangerousActions", authorized);
             }
@@ -433,17 +439,11 @@ final class AndroidHudModel {
                         }
                     }
                 }
-            } else {
-                JSONArray actions = json.optJSONArray("actionIds");
-                if (actions != null) {
-                    for (int i = 0; i < actions.length() &&
-                            result.actionIds.size() < MAX_ACTIONS_PER_CONTROL; ++i) {
-                        String action = safeActionId(actions.optString(i, ""));
-                        if (!action.isEmpty() && !result.actionIds.contains(action)) {
-                            result.actionIds.add(action);
-                        }
-                    }
-                }
+            }
+            if (supportsActionBinding(type)) {
+                decodeActionBinding(json, result);
+            }
+            if (TYPE_CONTROL.equals(type)) {
                 result.defaultActionId = acceptedAction(
                     json.optString("defaultActionId", ""), result.actionIds);
                 result.selectedActionId = acceptedAction(
@@ -457,16 +457,6 @@ final class AndroidHudModel {
                 result.selectorMode = SELECTOR_MODE_CYCLE.equals(
                     json.optString("selectorMode", SELECTOR_MODE_MENU)) ?
                     SELECTOR_MODE_CYCLE : SELECTOR_MODE_MENU;
-                JSONArray authorized = json.optJSONArray("authorizedDangerousActions");
-                if (authorized != null) {
-                    for (int i = 0; i < authorized.length(); ++i) {
-                        String action = acceptedAction(authorized.optString(i, ""),
-                            result.actionIds);
-                        if (!action.isEmpty()) {
-                            result.authorizedDangerousActions.add(action);
-                        }
-                    }
-                }
             }
             return result;
         }
@@ -678,6 +668,19 @@ final class AndroidHudModel {
         return TYPE_GROUP.equals(type) || TYPE_INFO.equals(type) || TYPE_CONTROL.equals(type);
     }
 
+    static boolean supportsActionBinding(String type) {
+        return TYPE_INFO.equals(type) || TYPE_CONTROL.equals(type);
+    }
+
+    static boolean supportsActionBinding(Element element) {
+        return element != null && supportsActionBinding(element.type);
+    }
+
+    static boolean shouldEncodeActionBinding(Element element) {
+        return supportsActionBinding(element) &&
+            (TYPE_CONTROL.equals(element.type) || !element.actionIds.isEmpty());
+    }
+
     static boolean requiresSquareFrame(Element element) {
         return element != null && TYPE_INFO.equals(element.type) &&
             ("map.pixel".equals(element.sourceId) ||
@@ -689,6 +692,29 @@ final class AndroidHudModel {
         if (requiresSquareFrame(element)) {
             element.frame.height = element.frame.width;
             element.overflowMode = OVERFLOW_FIXED;
+        }
+    }
+
+    private static void decodeActionBinding(JSONObject json, Element result) {
+        JSONArray actions = json.optJSONArray("actionIds");
+        if (actions != null) {
+            for (int i = 0; i < actions.length() &&
+                    result.actionIds.size() < MAX_ACTIONS_PER_ELEMENT; ++i) {
+                String action = safeActionId(actions.optString(i, ""));
+                if (!action.isEmpty() && !result.actionIds.contains(action)) {
+                    result.actionIds.add(action);
+                }
+            }
+        }
+        JSONArray authorized = json.optJSONArray("authorizedDangerousActions");
+        if (authorized != null) {
+            for (int i = 0; i < authorized.length(); ++i) {
+                String action = acceptedAction(authorized.optString(i, ""),
+                    result.actionIds);
+                if (!action.isEmpty()) {
+                    result.authorizedDangerousActions.add(action);
+                }
+            }
         }
     }
 

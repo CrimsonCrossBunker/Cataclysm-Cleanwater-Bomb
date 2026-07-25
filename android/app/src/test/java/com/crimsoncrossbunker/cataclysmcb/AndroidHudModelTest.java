@@ -79,6 +79,37 @@ public class AndroidHudModelTest {
     }
 
     @Test
+    public void informationActionBindingsAreDetachedInDraft() {
+        AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
+        info.sourceId = "character.summary";
+        info.actionIds.add("INVENTORY");
+        info.actionIds.add("PLAYER_INFO");
+        info.actionIds.add("ITEMACTION");
+        info.authorizedDangerousActions.add("ITEMACTION");
+
+        AndroidHudModel.Element draft = info.copy();
+        draft.actionIds.remove("PLAYER_INFO");
+        draft.authorizedDangerousActions.clear();
+
+        assertEquals(3, info.actionIds.size());
+        assertEquals(2, draft.actionIds.size());
+        assertTrue(info.authorizedDangerousActions.contains("ITEMACTION"));
+        assertFalse(draft.authorizedDangerousActions.contains("ITEMACTION"));
+        assertTrue(AndroidHudModel.supportsActionBinding(info));
+        assertTrue(AndroidHudModel.shouldEncodeActionBinding(info));
+    }
+
+    @Test
+    public void informationWithoutActionsKeepsJsonCompact() {
+        AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
+        info.sourceId = "environment.summary";
+
+        assertFalse(AndroidHudModel.shouldEncodeActionBinding(info));
+        info.actionIds.add("INVENTORY");
+        assertTrue(AndroidHudModel.shouldEncodeActionBinding(info));
+    }
+
+    @Test
     public void newElementsUseTransparentCompactTypographyByDefault() {
         AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
 

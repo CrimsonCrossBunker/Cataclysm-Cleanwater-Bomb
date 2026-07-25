@@ -8,7 +8,9 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -16,7 +18,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -122,6 +123,7 @@ final class AndroidHudOverlay extends FrameLayout {
             if (entry.content instanceof ControlView) {
                 ((ControlView)entry.content).cancelRepeat();
             }
+            entry.host.clearRuntimeInteraction();
         }
         activity.setHudMinimapRect(0, 0, 0, 0, false);
     }
@@ -359,6 +361,7 @@ final class AndroidHudOverlay extends FrameLayout {
             if (entry.content instanceof ControlView) {
                 ((ControlView)entry.content).dispose();
             }
+            entry.host.clearRuntimeInteraction();
             if (entry.host.getParent() instanceof ViewGroup) {
                 ((ViewGroup)entry.host.getParent()).removeView(entry.host);
             }
@@ -500,6 +503,9 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void bindRuntimeState() {
         boolean preview = editor.isEditing() && editor.isPreview();
+        boolean editing = editor.isEditing();
+        LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionCatalog =
+            actionsForDisplayedScene();
         activeMinimapView = null;
         for (RenderedElement entry : rendered.values()) {
             AndroidHudModel.Element element = entry.element;
@@ -510,9 +516,10 @@ final class AndroidHudOverlay extends FrameLayout {
                 }
                 rendererRegistry.bind(entry.content, source, element, snapshot, preview,
                     this::publishMinimap);
+                bindInformationInteraction(entry, actionCatalog, editing);
             } else if (AndroidHudModel.TYPE_CONTROL.equals(element.type)) {
-                ((ControlView)entry.content).bind(element, actionsForDisplayedScene(), snapshot,
-                    editor.isEditing(), new ControlCallback() {
+                ((ControlView)entry.content).bind(element, actionCatalog,
+                    editing, new ControlCallback() {
                         @Override
                         public void trigger(String actionId, boolean authorized) {
                             triggerAction(element, actionId, authorized);
@@ -527,8 +534,43 @@ final class AndroidHudOverlay extends FrameLayout {
                             }
                         }
                     });
+            } else {
+                entry.host.clearRuntimeInteraction();
             }
         }
+    }
+
+    private void bindInformationInteraction(RenderedElement entry,
+            LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionCatalog,
+            boolean editing) {
+        ArrayList<String> choices =
+            AndroidHudActionMenu.availableActions(entry.element, actionCatalog);
+        if (editing || choices.isEmpty()) {
+            entry.host.clearRuntimeInteraction();
+            return;
+        }
+        entry.host.setRuntimeInteraction(
+            () -> activateInformationAction(entry.element, entry.host, false),
+            () -> activateInformationAction(entry.element, entry.host, true));
+    }
+
+    private void activateInformationAction(AndroidHudModel.Element element,
+            View anchor, boolean authorizedGesture) {
+        LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionCatalog =
+            actionsForDisplayedScene();
+        ArrayList<String> choices =
+            AndroidHudActionMenu.availableActions(element, actionCatalog);
+        if (choices.isEmpty()) {
+            Toast.makeText(activity, "该信息没有当前界面可用的动作",
+                Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (choices.size() == 1) {
+            triggerAction(element, choices.get(0), authorizedGesture);
+            return;
+        }
+        AndroidHudActionMenu.show(anchor, choices, actionCatalog, "",
+            actionId -> triggerAction(element, actionId, authorizedGesture));
     }
 
     private LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionsForDisplayedScene() {
@@ -714,15 +756,88 @@ final class AndroidHudOverlay extends FrameLayout {
 
     static final class ElementHost extends FrameLayout {
         final String elementId;
+        private final GestureDetector runtimeGestures;
         private boolean editorTouchCapture;
+        private Runnable runtimeClick;
+        private Runnable runtimeLongPress;
 
         ElementHost(Context context, String elementId) {
             super(context);
             this.elementId = elementId;
+            runtimeGestures = new GestureDetector(context,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onDown(MotionEvent event) {
+                        return hasRuntimeInteraction();
+                    }
+
+                    @Override
+                    public boolean onSingleTapUp(MotionEvent event) {
+                        if (!hasRuntimeInteraction() || runtimeClick == null) {
+                            return false;
+                        }
+                        runtimeClick.run();
+                        return true;
+                    }
+
+                    @Override
+                    public void onLongPress(MotionEvent event) {
+                        if (!hasRuntimeInteraction() || runtimeLongPress == null) {
+                            return;
+                        }
+                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        runtimeLongPress.run();
+                    }
+                });
         }
 
         void setEditorTouchCapture(boolean capture) {
             editorTouchCapture = capture;
+            if (capture) {
+                cancelRuntimeGesture();
+            }
+        }
+
+        void setRuntimeInteraction(Runnable click, Runnable longPress) {
+            boolean wasEnabled = hasRuntimeInteraction();
+            if (!wasEnabled) {
+                cancelRuntimeGesture();
+            }
+            runtimeClick = click;
+            runtimeLongPress = longPress;
+            if (!editorTouchCapture) {
+                setClickable(false);
+            }
+        }
+
+        void clearRuntimeInteraction() {
+            cancelRuntimeGesture();
+            runtimeClick = null;
+            runtimeLongPress = null;
+            if (!editorTouchCapture) {
+                setClickable(false);
+            }
+        }
+
+        @Override
+        public boolean dispatchTouchEvent(MotionEvent event) {
+            boolean handled = super.dispatchTouchEvent(event);
+            boolean runtimeHandled = hasRuntimeInteraction() &&
+                runtimeGestures.onTouchEvent(event);
+            return handled || runtimeHandled;
+        }
+
+        private void cancelRuntimeGesture() {
+            long now = SystemClock.uptimeMillis();
+            MotionEvent cancel = MotionEvent.obtain(
+                now, now, MotionEvent.ACTION_CANCEL, 0, 0, 0);
+            runtimeGestures.onTouchEvent(cancel);
+            cancel.recycle();
+        }
+
+        private boolean hasRuntimeInteraction() {
+            return !editorTouchCapture &&
+                (runtimeClick != null || runtimeLongPress != null);
         }
 
         @Override
@@ -831,13 +946,9 @@ final class AndroidHudOverlay extends FrameLayout {
 
         void bind(AndroidHudModel.Element element,
                 LinkedHashMap<String, AndroidHudModel.ActionDescriptor> catalog,
-                AndroidHudSnapshot snapshot, boolean editing, ControlCallback callback) {
-            ArrayList<String> choices = new ArrayList<>();
-            for (String id : element.actionIds) {
-                if (catalog.containsKey(id)) {
-                    choices.add(id);
-                }
-            }
+                boolean editing, ControlCallback callback) {
+            ArrayList<String> choices =
+                AndroidHudActionMenu.availableActions(element, catalog);
             String selected = element.selectedActionId;
             if (!choices.contains(selected)) {
                 selected = choices.contains(element.defaultActionId) ?
@@ -868,45 +979,18 @@ final class AndroidHudOverlay extends FrameLayout {
             selector.setEnabled(!editing && choices.size() > 1);
             selector.setOnClickListener(view -> {
                 if (menuMode) {
-                    showActionMenu(element, catalog, snapshot, editing, callback,
-                        choices, active);
+                    AndroidHudActionMenu.show(selector, choices, catalog, active,
+                        chosenActionId -> {
+                            callback.select(chosenActionId);
+                            bind(element, catalog, editing, callback);
+                        });
                     return;
                 }
                 int index = choices.indexOf(active);
                 String next = choices.get((index + 1 + choices.size()) % choices.size());
                 callback.select(next);
-                bind(element, catalog, snapshot, editing, callback);
+                bind(element, catalog, editing, callback);
             });
-        }
-
-        private void showActionMenu(AndroidHudModel.Element element,
-                LinkedHashMap<String, AndroidHudModel.ActionDescriptor> catalog,
-                AndroidHudSnapshot snapshot, boolean editing, ControlCallback callback,
-                ArrayList<String> choices, String active) {
-            PopupMenu menu = new PopupMenu(getContext(), selector);
-            for (int index = 0; index < choices.size(); ++index) {
-                String id = choices.get(index);
-                AndroidHudModel.ActionDescriptor action = catalog.get(id);
-                String label = action == null || action.label.isEmpty() ? id : action.label;
-                if (action != null && !AndroidHudModel.RISK_SAFE.equals(action.risk)) {
-                    label = "⚠ " + label;
-                }
-                if (id.equals(active)) {
-                    label = "✓ " + label;
-                }
-                menu.getMenu().add(0, index, index, label);
-            }
-            menu.setOnMenuItemClickListener(item -> {
-                int index = item.getItemId();
-                if (index < 0 || index >= choices.size()) {
-                    return false;
-                }
-                String selected = choices.get(index);
-                callback.select(selected);
-                bind(element, catalog, snapshot, editing, callback);
-                return true;
-            });
-            menu.show();
         }
 
         private void cancelRepeat() {
