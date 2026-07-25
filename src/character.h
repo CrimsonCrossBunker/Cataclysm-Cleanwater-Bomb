@@ -1612,6 +1612,11 @@ class Character : public Creature, public visitable
         void calc_discomfort();
         /** Apply morale penalties for murder */
         void apply_murder_penalties( Creature *victim );
+        void record_mental_metric_guilt_kill();
+        void record_mental_metric_human_dissection();
+        void record_mental_metric_cannibalism();
+        int insensitivity_score() const;
+        void maybe_gain_insensitivity();
         /** Recalculate encumbrance for all body parts as if `new_item` was also worn. */
         void calc_encumbrance( const item &new_item );
         // recalculates bodyparts based on enchantments modifying them and the default anatomy.
@@ -4160,6 +4165,10 @@ class Character : public Creature, public visitable
          * body part's temperature hovers around a threshold. Runtime only, not serialized.
          */
         std::map<bodypart_id, std::pair<int, time_point>> temp_message_record;
+
+        int mental_metric_guilt_kills = 0;
+        int mental_metric_human_dissections = 0;
+        int mental_metric_cannibalism = 0;
 
         /**
          * Traits / mutations of the character. Key is the mutation id (it's also a valid

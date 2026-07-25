@@ -1677,7 +1677,7 @@
     "type": "mutation",
     "id": "PSYCHOPATH",
     "name": { "str": "Morbid Unconcern" },
-    "description": "You don't feel any strong feelings for your fellow man.  You have no empathy.  The suffering of others doesn't bother you at all.  You don't mind if others are butchered or left unburied unless it affects youself.  You also feels no mood boost from socializing.",
+    "description": "You don't feel any strong feelings for your fellow man.  You have no empathy.  The suffering of others doesn't bother you at all.  You don't mind if others are butchered or left unburied unless it affects yourself.  You also feel no mood boost from socializing.",
     "types": [ "HUMAN_EMPATHY" ],
     "cancels": [ "SOCIAL1", "SOCIAL2" ],
     "points": 2,
@@ -1697,6 +1697,17 @@
     "starting_trait": true,
     "chargen_allow_npc": false,
     "vitamin_cost": 160
+  },
+  {
+    "type": "mutation",
+    "id": "INSENSITIVITY",
+    "name": { "str": "Insensitivity" },
+    "description": "Perhaps from seeing too much, killing too much, or harvesting too much from those who used to look like you.  You have grown numb to what ordinary people call immoral.  Murder no longer burdens your conscience.  Harvesting resources from bloody corpses or even feeding on your own kind doesn't disgust you like it used to.  In normal times, this would be a tragic turn, but perhaps not after the Cataclysm.",
+    "points": 0,
+    "starting_trait": false,
+    "chargen_allow_npc": false,
+    "valid": false,
+    "flags": [ "INSENSITIVITY" ]
   },
   {
     "type": "mutation",

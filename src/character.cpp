@@ -57,6 +57,7 @@
 #include "item_pocket.h"
 #include "item_stack.h"
 #include "itype.h"
+#include "kill_tracker.h"
 #include "lightmap.h"
 #include "line.h"
 #include "localized_comparator.h"
@@ -355,6 +356,7 @@ static const trait_id trait_FAT( "FAT" );
 static const trait_id trait_GILLS( "GILLS" );
 static const trait_id trait_GILLS_CEPH( "GILLS_CEPH" );
 static const trait_id trait_HIBERNATE( "HIBERNATE" );
+static const trait_id trait_INSENSITIVITY( "INSENSITIVITY" );
 static const trait_id trait_INSOMNIA( "INSOMNIA" );
 static const trait_id trait_LEG_TENT_BRACE( "LEG_TENT_BRACE" );
 static const trait_id trait_LIGHTSTEP( "LIGHTSTEP" );
@@ -7633,6 +7635,54 @@ bool Character::empathizes_with_monster( const mtype_id &monster ) const
         return true;
     }
     return false;
+}
+
+void Character::record_mental_metric_guilt_kill()
+{
+    mental_metric_guilt_kills++;
+    maybe_gain_insensitivity();
+}
+
+void Character::record_mental_metric_human_dissection()
+{
+    mental_metric_human_dissections++;
+}
+
+void Character::record_mental_metric_cannibalism()
+{
+    mental_metric_cannibalism++;
+}
+
+int Character::insensitivity_score() const
+{
+    const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
+                                        0 );
+    return mental_metric_guilt_kills * 5 +
+           std::min( mental_metric_human_dissections, 100 ) * 10 +
+           std::min( g->get_kill_tracker().monster_kill_count(), 5000 ) / 10 +
+           days_survived * 2 +
+           std::min( mental_metric_cannibalism, 100 );
+}
+
+void Character::maybe_gain_insensitivity()
+{
+    if( has_trait( trait_INSENSITIVITY ) ) {
+        return;
+    }
+
+    const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
+                                        0 );
+    if( days_survived < 30 || g->get_kill_tracker().monster_kill_count() < 100 ||
+        mental_metric_guilt_kills < 50 || mental_metric_human_dissections < 1 ) {
+        return;
+    }
+
+    if( insensitivity_score() < 1000 ) {
+        return;
+    }
+
+    set_mutation( trait_INSENSITIVITY );
+    add_msg_if_player( m_neutral, _( "The horror has become routine." ) );
 }
 
 bool Character::is_driving() const

@@ -180,6 +180,7 @@ static const json_character_flag json_flag_NUMB( "NUMB" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB( "PARTIAL_BIONIC_LIMB" );
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
+static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 static const json_character_flag json_flag_SAPIOVORE( "SAPIOVORE" );
 static const json_character_flag json_flag_SPIRITUAL( "SPIRITUAL" );
 static const json_character_flag json_flag_STOP_SLEEP_DEPRIVATION( "STOP_SLEEP_DEPRIVATION" );
@@ -636,6 +637,9 @@ void Character::apply_murder_penalties( Creature *victim )
         player_character.add_morale( morale_killer_has_killed, -15, 0, 1_days, 1_hours );
     }
     if( victim->as_monster() || ( victim->as_npc() && victim->as_npc()->hit_by_player ) ) {
+        if( victim->as_npc() && victim->as_npc()->hit_by_player ) {
+            player_character.record_mental_metric_guilt_kill();
+        }
         int morale_effect = -90;
         // Just because you like eating people doesn't mean you love killing innocents
         if( player_character.has_flag( json_flag_CANNIBAL ) && morale_effect < 0 ) {
@@ -646,13 +650,15 @@ void Character::apply_murder_penalties( Creature *victim )
         }
         if( player_character.has_flag( json_flag_PSYCHOPATH ) ||
             player_character.has_flag( json_flag_SAPIOVORE ) ||
-            player_character.has_flag( json_flag_NUMB ) ) {
+            player_character.has_flag( json_flag_NUMB ) ||
+            player_character.has_flag( json_flag_INSENSITIVITY ) ) {
             morale_effect = 0;
         } // only god can juge me
         if( player_character.has_flag( json_flag_SPIRITUAL ) &&
             !player_character.has_flag( json_flag_PSYCHOPATH ) &&
             !player_character.has_flag( json_flag_SAPIOVORE ) &&
-            !player_character.has_flag( json_flag_NUMB ) ) {
+            !player_character.has_flag( json_flag_NUMB ) &&
+            !player_character.has_flag( json_flag_INSENSITIVITY ) ) {
             add_msg( _( "You feel ashamed of your actions." ) );
             morale_effect -= 10;
         }
@@ -2508,6 +2514,8 @@ void Character::wake_up()
         return;
     }
 
+    const bool was_sleeping = has_effect( effect_sleep );
+
     // Do not remove effect_sleep or effect_alarm_clock now otherwise it invalidates an effect
     // iterator in player::process_effects().
     // We just set it for later removal (also happening in player::process_effects(), so no side
@@ -2526,6 +2534,10 @@ void Character::wake_up()
 
     if( movement_mode_is( move_mode_prone ) ) {
         set_movement_mode( move_mode_walk );
+    }
+
+    if( was_sleeping && is_avatar() ) {
+        maybe_gain_insensitivity();
     }
 }
 
