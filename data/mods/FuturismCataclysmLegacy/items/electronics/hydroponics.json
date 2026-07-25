@@ -1,0 +1,17 @@
+[
+  {
+    "id": "fcl_hydroponics_core",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "name": { "str": "hydroponics core" },
+    "description": "A compact Helixwirl control core that projects the energy field used to keep hydroponic crops at their mature state.",
+    "weight": "800 g",
+    "volume": "500 ml",
+    "price": "2 kUSD",
+    "price_postapoc": "20 USD",
+    "material": [ "steel", "plastic" ],
+    "symbol": "o",
+    "color": "light_blue",
+    "category": "tools"
+  }
+]
