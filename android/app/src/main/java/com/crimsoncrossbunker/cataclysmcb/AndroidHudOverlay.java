@@ -125,7 +125,7 @@ final class AndroidHudOverlay extends FrameLayout {
             }
             entry.host.clearRuntimeInteraction();
         }
-        activity.setHudMinimapRect(0, 0, 0, 0, false);
+        clearPublishedMinimap();
     }
 
     void showManager() {
@@ -354,7 +354,7 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void clearRenderedTree() {
         if (activeMinimapView != null) {
-            activity.setHudMinimapRect(0, 0, 0, 0, false);
+            clearPublishedMinimap();
             activeMinimapView = null;
         }
         for (RenderedElement entry : rendered.values()) {
@@ -516,8 +516,9 @@ final class AndroidHudOverlay extends FrameLayout {
                 }
                 rendererRegistry.bind(entry.content, source, element, snapshot, preview,
                     this::publishMinimap);
-                bindInformationInteraction(entry, actionCatalog, editing);
+                bindElementInteraction(entry, actionCatalog, editing, true);
             } else if (AndroidHudModel.TYPE_CONTROL.equals(element.type)) {
+                entry.host.clearRuntimeInteraction();
                 ((ControlView)entry.content).bind(element, actionCatalog,
                     editing, new ControlCallback() {
                         @Override
@@ -535,14 +536,14 @@ final class AndroidHudOverlay extends FrameLayout {
                         }
                     });
             } else {
-                entry.host.clearRuntimeInteraction();
+                bindElementInteraction(entry, actionCatalog, editing, false);
             }
         }
     }
 
-    private void bindInformationInteraction(RenderedElement entry,
+    private void bindElementInteraction(RenderedElement entry,
             LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionCatalog,
-            boolean editing) {
+            boolean editing, boolean observeHandledChildTouches) {
         ArrayList<String> choices =
             AndroidHudActionMenu.availableActions(entry.element, actionCatalog);
         if (editing || choices.isEmpty()) {
@@ -550,18 +551,19 @@ final class AndroidHudOverlay extends FrameLayout {
             return;
         }
         entry.host.setRuntimeInteraction(
-            () -> activateInformationAction(entry.element, entry.host, false),
-            () -> activateInformationAction(entry.element, entry.host, true));
+            () -> activateElementAction(entry.element, entry.host, false),
+            () -> activateElementAction(entry.element, entry.host, true),
+            observeHandledChildTouches);
     }
 
-    private void activateInformationAction(AndroidHudModel.Element element,
+    private void activateElementAction(AndroidHudModel.Element element,
             View anchor, boolean authorizedGesture) {
         LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionCatalog =
             actionsForDisplayedScene();
         ArrayList<String> choices =
             AndroidHudActionMenu.availableActions(element, actionCatalog);
         if (choices.isEmpty()) {
-            Toast.makeText(activity, "该信息没有当前界面可用的动作",
+            Toast.makeText(activity, "该元素没有当前界面可用的动作",
                 Toast.LENGTH_SHORT).show();
             return;
         }
@@ -661,7 +663,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private void publishMinimap(View view, boolean visible) {
         if (!visible || editor.isEditing()) {
             if (view == activeMinimapView) {
-                activity.setHudMinimapRect(0, 0, 0, 0, false);
+                clearPublishedMinimap();
                 activeMinimapView = null;
             }
             return;
@@ -674,10 +676,21 @@ final class AndroidHudOverlay extends FrameLayout {
             if (activeMinimapView != view || !snapshot.ready) {
                 return;
             }
-            int[] location = new int[2];
-            view.getLocationOnScreen(location);
-            activity.setHudMinimapRect(location[0], location[1],
-                view.getWidth(), view.getHeight(), view.getVisibility() == VISIBLE);
+            int viewportWidth = getWidth();
+            int viewportHeight = getHeight();
+            if (viewportWidth <= 0 || viewportHeight <= 0) {
+                clearPublishedMinimap();
+                return;
+            }
+            int[] viewLocation = new int[2];
+            int[] overlayLocation = new int[2];
+            view.getLocationOnScreen(viewLocation);
+            getLocationOnScreen(overlayLocation);
+            activity.setHudMinimapRect(
+                viewLocation[0] - overlayLocation[0],
+                viewLocation[1] - overlayLocation[1],
+                view.getWidth(), view.getHeight(),
+                viewportWidth, viewportHeight, view.getVisibility() == VISIBLE);
         });
     }
 
@@ -686,9 +699,14 @@ final class AndroidHudOverlay extends FrameLayout {
             entry.host.setVisibility(visible && entry.element.visible ? VISIBLE : GONE);
         }
         if (!visible) {
-            activity.setHudMinimapRect(0, 0, 0, 0, false);
+            clearPublishedMinimap();
             activeMinimapView = null;
         }
+    }
+
+    private void clearPublishedMinimap() {
+        activity.setHudMinimapRect(0, 0, 0, 0,
+            Math.max(0, getWidth()), Math.max(0, getHeight()), false);
     }
 
     private void cancelThreeFingerGesture() {
@@ -760,6 +778,7 @@ final class AndroidHudOverlay extends FrameLayout {
         private boolean editorTouchCapture;
         private Runnable runtimeClick;
         private Runnable runtimeLongPress;
+        private boolean observeHandledChildTouches;
 
         ElementHost(Context context, String elementId) {
             super(context);
@@ -798,13 +817,15 @@ final class AndroidHudOverlay extends FrameLayout {
             }
         }
 
-        void setRuntimeInteraction(Runnable click, Runnable longPress) {
+        void setRuntimeInteraction(Runnable click, Runnable longPress,
+                boolean observeHandledTouches) {
             boolean wasEnabled = hasRuntimeInteraction();
             if (!wasEnabled) {
                 cancelRuntimeGesture();
             }
             runtimeClick = click;
             runtimeLongPress = longPress;
+            observeHandledChildTouches = observeHandledTouches;
             if (!editorTouchCapture) {
                 setClickable(false);
             }
@@ -814,6 +835,7 @@ final class AndroidHudOverlay extends FrameLayout {
             cancelRuntimeGesture();
             runtimeClick = null;
             runtimeLongPress = null;
+            observeHandledChildTouches = false;
             if (!editorTouchCapture) {
                 setClickable(false);
             }
@@ -823,6 +845,7 @@ final class AndroidHudOverlay extends FrameLayout {
         public boolean dispatchTouchEvent(MotionEvent event) {
             boolean handled = super.dispatchTouchEvent(event);
             boolean runtimeHandled = hasRuntimeInteraction() &&
+                (observeHandledChildTouches || !handled) &&
                 runtimeGestures.onTouchEvent(event);
             return handled || runtimeHandled;
         }

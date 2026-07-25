@@ -15,11 +15,14 @@ class avatar;
 namespace android_hud
 {
 
+/** Rectangle in Android HUD-overlay pixels plus the coordinate-space size. */
 struct minimap_rect {
     int x = 0;
     int y = 0;
     int width = 0;
     int height = 0;
+    int viewport_width = 0;
+    int viewport_height = 0;
     bool visible = false;
 };
 

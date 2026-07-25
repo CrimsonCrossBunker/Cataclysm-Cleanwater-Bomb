@@ -237,7 +237,7 @@ public class CataclysmDDA extends SDLActivity {
         boolean dangerousAuthorized);
     private static native String nativeGetHudSnapshot();
     private static native void nativeSetHudMinimapRect(int x, int y, int width, int height,
-        boolean visible);
+        int viewportWidth, int viewportHeight, boolean visible);
     private static native void nativeSetHudSubscriptions(String encodedSources);
     private static native void nativeRequestDisplayRefresh();
 
@@ -275,9 +275,11 @@ public class CataclysmDDA extends SDLActivity {
         }
     }
 
-    void setHudMinimapRect(int x, int y, int width, int height, boolean visible) {
+    void setHudMinimapRect(int x, int y, int width, int height,
+            int viewportWidth, int viewportHeight, boolean visible) {
         try {
-            nativeSetHudMinimapRect(x, y, width, height, visible);
+            nativeSetHudMinimapRect(x, y, width, height,
+                viewportWidth, viewportHeight, visible);
         } catch (UnsatisfiedLinkError ignored) {
         }
     }

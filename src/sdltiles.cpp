@@ -1052,11 +1052,14 @@ extern "C" {
 
     JNIEXPORT void JNICALL
     Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSetHudMinimapRect(
-        JNIEnv *env, jclass jcls, jint x, jint y, jint width, jint height, jboolean visible )
+        JNIEnv *env, jclass jcls, jint x, jint y, jint width, jint height,
+        jint viewport_width, jint viewport_height, jboolean visible )
     {
         ( void )env;
         ( void )jcls;
-        android_hud::set_minimap_rect( { x, y, width, height, visible == JNI_TRUE } );
+        android_hud::set_minimap_rect( {
+            x, y, width, height, viewport_width, viewport_height, visible == JNI_TRUE
+        } );
     }
 
     JNIEXPORT void JNICALL
@@ -1358,10 +1361,31 @@ void refresh_display()
     RenderCopy( renderer, display_buffer, NULL, &dstrect );
     const android_hud::minimap_rect hud_minimap = android_hud::get_minimap_rect();
     if( hud_minimap.visible && hud_minimap.width > 0 && hud_minimap.height > 0 &&
+        hud_minimap.viewport_width > 0 && hud_minimap.viewport_height > 0 &&
         g != nullptr && tilecontext != nullptr ) {
-        tilecontext->draw_minimap( point( hud_minimap.x, hud_minimap.y ),
-        { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
-        hud_minimap.width, hud_minimap.height );
+        int output_width = 0;
+        int output_height = 0;
+        GetRendererOutputSize( renderer, &output_width, &output_height );
+        if( output_width > 0 && output_height > 0 ) {
+            // Android View pixels and the SDL Surface backing pixels can differ.
+            // Scale both edges so rounding cannot introduce a size/position gap.
+            const auto scale_edge = []( const int value, const int source_size,
+            const int target_size ) {
+                return static_cast<int>( std::lround(
+                                             static_cast<double>( value ) * target_size / source_size ) );
+            };
+            const int left = scale_edge( hud_minimap.x,
+                                         hud_minimap.viewport_width, output_width );
+            const int top = scale_edge( hud_minimap.y,
+                                        hud_minimap.viewport_height, output_height );
+            const int right = scale_edge( hud_minimap.x + hud_minimap.width,
+                                          hud_minimap.viewport_width, output_width );
+            const int bottom = scale_edge( hud_minimap.y + hud_minimap.height,
+                                           hud_minimap.viewport_height, output_height );
+            tilecontext->draw_minimap( point( left, top ),
+            { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
+            std::max( 1, right - left ), std::max( 1, bottom - top ) );
+        }
     }
 #else
     // When a shockwave is active, blit the frame through a distorted mesh so the

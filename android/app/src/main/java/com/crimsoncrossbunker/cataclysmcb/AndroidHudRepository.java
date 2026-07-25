@@ -32,6 +32,7 @@ final class AndroidHudRepository {
     private static final String LEGACY_ARCHIVE_NAME = "android-hud-legacy-v1-v3.json";
     private static final String MIGRATION_PREFS = "android_hud_schema4";
     private static final String LEGACY_ARCHIVED = "legacy_archived";
+    private static final String OFFICIAL_TEMPLATE_VERSION_PREFIX = "official_template_version.";
     private static final String EMPTY_LAYOUT_NAME = "空白布局";
 
     enum ImportMode {
@@ -105,6 +106,8 @@ final class AndroidHudRepository {
             sceneId = "scene.unknown";
         }
         AndroidHudModel.Scene existing = data.scenes.get(sceneId);
+        boolean changed = false;
+        boolean created = false;
         if (existing == null) {
             if (data.scenes.size() >= AndroidHudModel.MAX_SCENES) {
                 return null;
@@ -116,13 +119,46 @@ final class AndroidHudRepository {
             existing.layouts.put(empty.id, empty);
             existing.activeLayoutId = empty.id;
             data.scenes.put(existing.id, existing);
-            save();
+            changed = true;
+            created = true;
         } else {
             String accepted = acceptedTitle(title, sceneId);
             if (!accepted.equals(existing.title)) {
                 existing.title = accepted;
-                save();
+                changed = true;
             }
+        }
+        AndroidHudOfficialTemplates.Seed seed =
+            AndroidHudOfficialTemplates.forScene(existing.id);
+        int templateVersionToMark = 0;
+        if (seed != null) {
+            SharedPreferences templates = context.getSharedPreferences(
+                MIGRATION_PREFS, Context.MODE_PRIVATE);
+            String versionKey = OFFICIAL_TEMPLATE_VERSION_PREFIX + existing.id;
+            int installedVersion = templates.getInt(versionKey, 0);
+            if (created || installedVersion < seed.version) {
+                if (existing.layouts.containsKey(seed.layout.id)) {
+                    templateVersionToMark = seed.version;
+                } else if (existing.layouts.size() <
+                        AndroidHudModel.MAX_LAYOUTS_PER_SCENE) {
+                    boolean activate = isPristineEmptyScene(existing);
+                    existing.layouts.put(seed.layout.id, seed.layout.copy());
+                    if (activate) {
+                        existing.activeLayoutId = seed.layout.id;
+                    }
+                    changed = true;
+                    templateVersionToMark = seed.version;
+                }
+            }
+        }
+        if (changed) {
+            save();
+        }
+        if (templateVersionToMark > 0) {
+            context.getSharedPreferences(MIGRATION_PREFS, Context.MODE_PRIVATE).edit()
+                .putInt(OFFICIAL_TEMPLATE_VERSION_PREFIX + existing.id,
+                    templateVersionToMark)
+                .apply();
         }
         return existing.copy();
     }
@@ -517,6 +553,15 @@ final class AndroidHudRepository {
         result.id = newLayoutId();
         result.name = EMPTY_LAYOUT_NAME;
         return result;
+    }
+
+    private static boolean isPristineEmptyScene(AndroidHudModel.Scene scene) {
+        if (scene.layouts.size() != 1) {
+            return false;
+        }
+        AndroidHudModel.Layout active = scene.activeLayout();
+        return active != null && active.elements.isEmpty() &&
+            EMPTY_LAYOUT_NAME.equals(active.name);
     }
 
     private static String newLayoutId() {

@@ -473,17 +473,18 @@ final class AndroidHudEditor {
                         riskPanel, working, riskAuthorizationChecks);
                 });
             });
-            content.addView(propertySection(AndroidHudModel.TYPE_INFO.equals(working.type) ?
-                "点击交互" : "控件动作"), matchRow());
-            if (AndroidHudModel.TYPE_INFO.equals(working.type)) {
+            content.addView(propertySection(actionBindingSectionTitle(working)), matchRow());
+            if (!AndroidHudModel.TYPE_CONTROL.equals(working.type)) {
                 content.addView(propertyHelp(
-                    "未绑定时信息只负责显示；绑定一个动作时点击直接触发，绑定多个动作时点击弹出选择菜单。"),
+                    AndroidHudModel.TYPE_GROUP.equals(working.type) ?
+                        "未绑定时元素组只负责组织内容；绑定一个动作时点击组内未被子元素处理的区域直接触发，绑定多个动作时弹出选择菜单。" :
+                        "未绑定时信息只负责显示；绑定一个动作时点击直接触发，绑定多个动作时点击弹出选择菜单。"),
                     matchRow());
             }
             content.addView(actions, matchRow());
             content.addView(propertySection("高风险动作授权"), matchRow());
             content.addView(propertyHelp(
-                "勾选只代表允许该元素触发；运行时仍必须长按。多动作信息需长按打开菜单后选择，游戏原有确认不会被绕过。"),
+                "勾选只代表允许该元素触发；运行时仍必须长按。多个动作需长按打开菜单后选择，游戏原有确认不会被绕过。"),
                 matchRow());
             content.addView(riskPanel, matchRow());
         }
@@ -562,8 +563,9 @@ final class AndroidHudEditor {
             Runnable onChanged) {
         List<AndroidHudModel.ActionDescriptor> actions =
             new ArrayList<>(scene.actionCatalog.values());
-        String title = AndroidHudModel.TYPE_INFO.equals(working.type) ?
-            "信息点击动作" : "控件候选动作";
+        String title = AndroidHudModel.TYPE_GROUP.equals(working.type) ?
+            "元素组点击动作" : AndroidHudModel.TYPE_INFO.equals(working.type) ?
+                "信息点击动作" : "控件候选动作";
         AndroidHudSearchDialog.showMultiple(activity, title,
             "搜索动作名称、ID 或分组", actionSearchItems(actions),
             working.actionIds, "下一步", selectedIds -> {
@@ -592,6 +594,14 @@ final class AndroidHudEditor {
                 onChanged.run();
                 return true;
             });
+    }
+
+    private static String actionBindingSectionTitle(AndroidHudModel.Element element) {
+        if (AndroidHudModel.TYPE_GROUP.equals(element.type)) {
+            return "元素组点击";
+        }
+        return AndroidHudModel.TYPE_INFO.equals(element.type) ?
+            "点击交互" : "控件动作";
     }
 
     private List<AndroidHudSearchDialog.Item<AndroidHudModel.ActionDescriptor>>

@@ -110,6 +110,34 @@ public class AndroidHudModelTest {
     }
 
     @Test
+    public void groupActionBindingsAreDetachedInDraft() {
+        AndroidHudModel.Element group = element("group.test", AndroidHudModel.TYPE_GROUP);
+        group.actionIds.add("INVENTORY");
+        group.actionIds.add("PLAYER_INFO");
+        group.authorizedDangerousActions.add("PLAYER_INFO");
+
+        AndroidHudModel.Element draft = group.copy();
+        draft.actionIds.remove("INVENTORY");
+        draft.authorizedDangerousActions.clear();
+
+        assertTrue(AndroidHudModel.supportsActionBinding(group));
+        assertTrue(AndroidHudModel.shouldEncodeActionBinding(group));
+        assertEquals(2, group.actionIds.size());
+        assertTrue(group.authorizedDangerousActions.contains("PLAYER_INFO"));
+        assertEquals(1, draft.actionIds.size());
+        assertFalse(draft.authorizedDangerousActions.contains("PLAYER_INFO"));
+    }
+
+    @Test
+    public void groupWithoutActionsKeepsJsonCompact() {
+        AndroidHudModel.Element group = element("group.test", AndroidHudModel.TYPE_GROUP);
+
+        assertFalse(AndroidHudModel.shouldEncodeActionBinding(group));
+        group.actionIds.add("INVENTORY");
+        assertTrue(AndroidHudModel.shouldEncodeActionBinding(group));
+    }
+
+    @Test
     public void newElementsUseTransparentCompactTypographyByDefault() {
         AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
 

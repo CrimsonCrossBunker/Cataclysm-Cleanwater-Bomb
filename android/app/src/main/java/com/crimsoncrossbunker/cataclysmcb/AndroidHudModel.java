@@ -316,7 +316,7 @@ final class AndroidHudModel {
         String sourceId = "";
         final LinkedHashMap<String, String> providerSettings = new LinkedHashMap<>();
 
-        // Interactive payload shared by information and control elements.
+        // Interactive payload shared by groups, information and controls.
         final ArrayList<String> actionIds = new ArrayList<>();
         final HashSet<String> authorizedDangerousActions = new HashSet<>();
 
@@ -669,7 +669,7 @@ final class AndroidHudModel {
     }
 
     static boolean supportsActionBinding(String type) {
-        return TYPE_INFO.equals(type) || TYPE_CONTROL.equals(type);
+        return TYPE_GROUP.equals(type) || TYPE_INFO.equals(type) || TYPE_CONTROL.equals(type);
     }
 
     static boolean supportsActionBinding(Element element) {
