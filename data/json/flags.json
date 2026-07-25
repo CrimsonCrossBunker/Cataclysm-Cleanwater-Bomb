@@ -2940,6 +2940,10 @@
     "type": "json_flag"
   },
   {
+    "id": "INSENSITIVITY",
+    "type": "json_flag"
+  },
+  {
     "id": "BANK_NETWORKED",
     "type": "json_flag",
     "//": "Vending machines with this flag will allow purchasing items with your bank balance."
