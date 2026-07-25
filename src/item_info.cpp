@@ -3831,7 +3831,20 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
                            t->throw_dispersion_multiplier != 1.0f ||
                            t->throw_speed_multiplier != 1.0f ||
                            t->throw_weight_multiplier != 1.0f;
-    if( !has_bonus ) {
+    const bool has_mod_bonus = t->gunmod &&
+                               ( t->gunmod->throw_damage_multiplier != 1.0f ||
+                                 t->gunmod->throw_range_multiplier != 1.0f ||
+                                 t->gunmod->throw_stamina_multiplier != 1.0f ||
+                                 t->gunmod->throw_dispersion_multiplier != 1.0f ||
+                                 t->gunmod->throw_speed_multiplier != 1.0f ||
+                                 t->gunmod->throw_weight_multiplier != 1.0f ||
+                                 t->gunmod->throw_damage_add != 0.0f ||
+                                 t->gunmod->throw_range_add != 0.0f ||
+                                 t->gunmod->throw_stamina_add != 0.0f ||
+                                 t->gunmod->throw_dispersion_add != 0.0f ||
+                                 t->gunmod->throw_speed_add != 0.0f ||
+                                 t->gunmod->throw_weight_add != 0.0f );
+    if( !has_bonus && !has_mod_bonus ) {
         return;
     }
 
@@ -3864,6 +3877,65 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
     if( t->throw_weight_multiplier != 1.0f ) {
         info.emplace_back( "BASE", _( "Throwing effective weight: " ), "x<num>",
                            iteminfo::is_decimal, t->throw_weight_multiplier );
+    }
+
+    if( has_mod_bonus ) {
+        const islot_gunmod &mod = *t->gunmod;
+        info.emplace_back( "DESCRIPTION", _( "When installed on a wielded gun:" ) );
+        if( mod.throw_damage_multiplier != 1.0f ) {
+            info.emplace_back( "BASE", _( "Throwing damage: " ), "x<num>",
+                               iteminfo::is_decimal, mod.throw_damage_multiplier );
+        }
+        if( mod.throw_damage_add != 0.0f ) {
+            info.emplace_back( "BASE", _( "Throwing damage: " ), "<num>",
+                               iteminfo::is_decimal | iteminfo::show_plus, mod.throw_damage_add );
+        }
+        if( mod.throw_range_multiplier != 1.0f ) {
+            info.emplace_back( "BASE", _( "Throwing range: " ), "x<num>",
+                               iteminfo::is_decimal, mod.throw_range_multiplier );
+        }
+        if( mod.throw_range_add != 0.0f ) {
+            info.emplace_back( "BASE", _( "Throwing range: " ), "<num>",
+                               iteminfo::is_decimal | iteminfo::show_plus, mod.throw_range_add );
+        }
+        if( mod.throw_stamina_multiplier != 1.0f ) {
+            info.emplace_back( "BASE", _( "Throwing stamina cost: " ), "x<num>",
+                               iteminfo::is_decimal | iteminfo::lower_is_better,
+                               mod.throw_stamina_multiplier );
+        }
+        if( mod.throw_stamina_add != 0.0f ) {
+            info.emplace_back( "BASE", _( "Throwing stamina cost: " ), "<num>",
+                               iteminfo::is_decimal | iteminfo::lower_is_better | iteminfo::show_plus,
+                               mod.throw_stamina_add );
+        }
+        if( mod.throw_dispersion_multiplier != 1.0f ) {
+            info.emplace_back( "BASE", _( "Throwing dispersion: " ), "x<num>",
+                               iteminfo::is_decimal | iteminfo::lower_is_better,
+                               mod.throw_dispersion_multiplier );
+        }
+        if( mod.throw_dispersion_add != 0.0f ) {
+            info.emplace_back( "BASE", _( "Throwing dispersion: " ), "<num>",
+                               iteminfo::is_decimal | iteminfo::lower_is_better | iteminfo::show_plus,
+                               mod.throw_dispersion_add );
+        }
+        if( mod.throw_speed_multiplier != 1.0f ) {
+            info.emplace_back( "BASE", _( "Throwing speed: " ), "x<num>",
+                               iteminfo::is_decimal | iteminfo::lower_is_better,
+                               mod.throw_speed_multiplier );
+        }
+        if( mod.throw_speed_add != 0.0f ) {
+            info.emplace_back( "BASE", _( "Throwing speed: " ), "<num>",
+                               iteminfo::is_decimal | iteminfo::lower_is_better | iteminfo::show_plus,
+                               mod.throw_speed_add );
+        }
+        if( mod.throw_weight_multiplier != 1.0f ) {
+            info.emplace_back( "BASE", _( "Throwing effective weight: " ), "x<num>",
+                               iteminfo::is_decimal, mod.throw_weight_multiplier );
+        }
+        if( mod.throw_weight_add != 0.0f ) {
+            info.emplace_back( "BASE", _( "Throwing effective weight: " ), "<num>",
+                               iteminfo::is_decimal | iteminfo::show_plus, mod.throw_weight_add );
+        }
     }
 }
 

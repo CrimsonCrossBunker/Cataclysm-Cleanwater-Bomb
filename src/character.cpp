@@ -3815,40 +3815,76 @@ int Character::throw_range( const item &it ) const
     return ret;
 }
 
+// Combines a wielded item's own throwing multiplier with the multiplicative and
+// additive bonuses of any installed gunmods:
+// final = base * product( mod multipliers ) + sum( mod adds ).
+static float throw_bonus_with_mods( const item_location &wielded, float base,
+                                    float islot_gunmod::*mult, float islot_gunmod::*add )
+{
+    float mult_total = 1.0f;
+    float add_total = 0.0f;
+    if( wielded && wielded->is_gun() ) {
+        for( const item *mod : wielded->gunmods() ) {
+            const islot_gunmod &slot = *mod->type->gunmod;
+            mult_total *= slot.*mult;
+            add_total += slot.*add;
+        }
+    }
+    return base * mult_total + add_total;
+}
+
 float Character::throw_damage_multiplier() const
 {
     const item_location wielded = get_wielded_item();
-    return wielded ? wielded->type->throw_damage_multiplier : 1.0f;
+    return throw_bonus_with_mods( wielded,
+                                  wielded ? wielded->type->throw_damage_multiplier : 1.0f,
+                                  &islot_gunmod::throw_damage_multiplier,
+                                  &islot_gunmod::throw_damage_add );
 }
 
 float Character::throw_range_multiplier() const
 {
     const item_location wielded = get_wielded_item();
-    return wielded ? wielded->type->throw_range_multiplier : 1.0f;
+    return throw_bonus_with_mods( wielded,
+                                  wielded ? wielded->type->throw_range_multiplier : 1.0f,
+                                  &islot_gunmod::throw_range_multiplier,
+                                  &islot_gunmod::throw_range_add );
 }
 
 float Character::throw_stamina_multiplier() const
 {
     const item_location wielded = get_wielded_item();
-    return wielded ? wielded->type->throw_stamina_multiplier : 1.0f;
+    return throw_bonus_with_mods( wielded,
+                                  wielded ? wielded->type->throw_stamina_multiplier : 1.0f,
+                                  &islot_gunmod::throw_stamina_multiplier,
+                                  &islot_gunmod::throw_stamina_add );
 }
 
 float Character::throw_dispersion_multiplier() const
 {
     const item_location wielded = get_wielded_item();
-    return wielded ? wielded->type->throw_dispersion_multiplier : 1.0f;
+    return throw_bonus_with_mods( wielded,
+                                  wielded ? wielded->type->throw_dispersion_multiplier : 1.0f,
+                                  &islot_gunmod::throw_dispersion_multiplier,
+                                  &islot_gunmod::throw_dispersion_add );
 }
 
 float Character::throw_speed_multiplier() const
 {
     const item_location wielded = get_wielded_item();
-    return wielded ? wielded->type->throw_speed_multiplier : 1.0f;
+    return throw_bonus_with_mods( wielded,
+                                  wielded ? wielded->type->throw_speed_multiplier : 1.0f,
+                                  &islot_gunmod::throw_speed_multiplier,
+                                  &islot_gunmod::throw_speed_add );
 }
 
 float Character::throw_weight_multiplier() const
 {
     const item_location wielded = get_wielded_item();
-    return wielded ? wielded->type->throw_weight_multiplier : 1.0f;
+    return throw_bonus_with_mods( wielded,
+                                  wielded ? wielded->type->throw_weight_multiplier : 1.0f,
+                                  &islot_gunmod::throw_weight_multiplier,
+                                  &islot_gunmod::throw_weight_add );
 }
 
 const std::vector<material_id> Character::fleshy = { material_flesh, material_hflesh };
