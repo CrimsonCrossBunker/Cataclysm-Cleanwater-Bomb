@@ -3120,5 +3120,10 @@
     "id": "GENDER_INVARIANCE",
     "type": "json_flag",
     "//": "Preventing a character from changing their gender will override GENDER_FLUIDITY."
+  },
+  {
+    "id": "NO_CROP_OVERGROWTH",
+    "type": "json_flag",
+    "//": "Furniture with this flag prevents plants growing on it from becoming overgrown."
   }
 ]
