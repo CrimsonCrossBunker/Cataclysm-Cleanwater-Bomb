@@ -305,7 +305,9 @@ std::optional<int> run_compact_dialog( const std::string &title, const std::stri
 } // namespace
 
 std::optional<int> select( const std::string &title, const std::vector<entry> &entries,
-                           const std::string &message, int initial_selection )
+                           const std::string &message, int initial_selection,
+                           const std::string &hud_scene_id,
+                           const std::string &hud_scene_title )
 {
     if( entries.empty() ) {
         return std::nullopt;
@@ -313,6 +315,14 @@ std::optional<int> select( const std::string &title, const std::vector<entry> &e
     initial_selection = std::clamp( initial_selection, 0, static_cast<int>( entries.size() ) - 1 );
     choice_window viewer( title, message, entries, initial_selection );
     input_context ctxt( "ANDROID_IMGUI_CHOICE" );
+#if defined(__ANDROID__)
+    if( !hud_scene_id.empty() ) {
+        ctxt.set_hud_scene( hud_scene_id, hud_scene_title.empty() ? title : hud_scene_title );
+    }
+#else
+    ( void )hud_scene_id;
+    ( void )hud_scene_title;
+#endif
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "SELECT" );
     ctxt.register_action( "MOUSE_MOVE" );

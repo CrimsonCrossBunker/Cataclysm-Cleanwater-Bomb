@@ -21,7 +21,9 @@ struct entry {
 std::optional<int> select( const std::string &title,
                            const std::vector<entry> &entries,
                            const std::string &message = std::string(),
-                           int initial_selection = 0 );
+                           int initial_selection = 0,
+                           const std::string &hud_scene_id = std::string(),
+                           const std::string &hud_scene_title = std::string() );
 
 bool confirm( const std::string &title,
               const std::string &message,

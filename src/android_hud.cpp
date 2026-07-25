@@ -495,7 +495,32 @@ void clear_snapshot()
 
 std::string snapshot_json()
 {
+    // Blocking ImGui menus own their input context without running the normal
+    // game-map draw loop.  Synchronize the lightweight scene/action metadata
+    // here so Java can switch layouts while such a page is open; keep the last
+    // published player information immutable until the game loop refreshes it.
+    const cata::input_context_actions::context_snapshot context =
+        cata::input_context_actions::snapshot();
     std::lock_guard<std::mutex> lock( hud_mutex );
+    if( latest_snapshot.ready && !context.category.empty() &&
+        ( context.revision != latest_snapshot.context_revision ||
+          context.category != latest_snapshot.input_category ||
+          context.hud_scene_id != latest_snapshot.scene_id ||
+          context.hud_scene_title != latest_snapshot.scene_title ) ) {
+        latest_snapshot.context_revision = context.revision;
+        latest_snapshot.input_category = context.category;
+        latest_snapshot.scene_id = context.hud_scene_id.empty() ?
+                                   context.category : context.hud_scene_id;
+        latest_snapshot.scene_title = context.hud_scene_title.empty() ?
+                                      latest_snapshot.scene_id : context.hud_scene_title;
+        latest_snapshot.actions.clear();
+        for( const cata::input_context_actions::action_descriptor &action : context.actions ) {
+            latest_snapshot.actions.push_back( {
+                action.id, action.label, action.group, action.repeatable, action.dangerous
+            } );
+        }
+        ++latest_snapshot.revision;
+    }
     std::ostringstream out;
     JsonOut json( out );
     json.start_object();

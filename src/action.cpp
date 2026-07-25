@@ -762,7 +762,9 @@ bool can_interact_at( action_id action, map &here, const tripoint_bub_ms &p )
 }
 
 static int query_action_menu_entries( const std::string &title,
-                                      const std::vector<uilist_entry> &entries );
+                                      const std::vector<uilist_entry> &entries,
+                                      const std::string &hud_scene_id = std::string(),
+                                      const std::string &hud_scene_title = std::string() );
 
 action_id handle_interact( map &here, const tripoint_bub_ms &pos )
 {
@@ -800,7 +802,9 @@ action_id handle_interact( map &here, const tripoint_bub_ms &pos )
                               ctxt.get_action_name( action_ident( act ) ) );
     }
 
-    const int selected = query_action_menu_entries( _( "Actions for this tile" ), entries );
+    const int selected = query_action_menu_entries(
+                             _( "Actions for this tile" ), entries,
+                             "gameplay.interact", _( "Actions for this tile" ) );
     if( selected < 0 ) {
         return ACTION_NULL;
     }
@@ -817,7 +821,9 @@ static bool dangerous_menu_action( const int action )
 #endif
 
 static int query_action_menu_entries( const std::string &title,
-                                      const std::vector<uilist_entry> &entries )
+                                      const std::vector<uilist_entry> &entries,
+                                      const std::string &hud_scene_id,
+                                      const std::string &hud_scene_title )
 {
 #if defined(TILES)
     std::vector<adaptive_imgui_dialog::entry> imgui_entries;
@@ -826,9 +832,13 @@ static int query_action_menu_entries( const std::string &title,
         imgui_entries.push_back( { entry.txt, entry.desc, entry.enabled,
                                    dangerous_menu_action( entry.retval ) } );
     }
-    const std::optional<int> selected = adaptive_imgui_dialog::select( title, imgui_entries );
+    const std::optional<int> selected = adaptive_imgui_dialog::select(
+                                            title, imgui_entries, std::string(), 0,
+                                            hud_scene_id, hud_scene_title );
     return selected ? entries[*selected].retval : -1;
 #else
+    ( void )hud_scene_id;
+    ( void )hud_scene_title;
     uilist menu;
     menu.settext( title );
     menu.entries = entries;
@@ -1115,7 +1125,8 @@ action_id handle_action_menu( map &here )
             title += ": " + catgname;
         }
 
-        const int selection = query_action_menu_entries( title, entries );
+        const int selection = query_action_menu_entries(
+                                  title, entries, "gameplay.action_menu", _( "Actions" ) );
 
         if( selection < 0 || selection == NUM_ACTIONS ) {
             return ACTION_NULL;
@@ -1184,7 +1195,9 @@ action_id handle_main_menu()
     entries.emplace_back( ACTION_EXPORT_BUG_REPORT_ARCHIVE, true, 'd',
                           _( "Export save archive for github bug report" ) );
 
-    const int selection = query_action_menu_entries( _( "MAIN MENU" ), entries );
+    const int selection = query_action_menu_entries(
+                              _( "MAIN MENU" ), entries,
+                              "gameplay.main_menu", _( "MAIN MENU" ) );
 
     if( selection == lua_extensions_entry ) {
         cata::lua_ui::show_slot( "ingame.extensions" );
