@@ -79,6 +79,55 @@ public class AndroidHudModelTest {
     }
 
     @Test
+    public void newElementsUseTransparentCompactTypographyByDefault() {
+        AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
+
+        assertEquals(10f, info.style.fontSizeSp, 0f);
+        assertFalse(info.style.background);
+        assertFalse(info.style.border);
+        assertFalse(info.style.textOutline);
+        assertEquals(AndroidHudModel.OVERFLOW_FIXED, info.overflowMode);
+    }
+
+    @Test
+    public void styleAndScrollableOverflowAreDetachedInDraft() {
+        AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
+        info.sourceId = "log.messages";
+        info.overflowMode = AndroidHudModel.OVERFLOW_SCROLL;
+        info.style.textBold = true;
+        info.style.textItalic = true;
+        info.style.textOutline = true;
+        info.style.textOutlineColor = 0xFF123456;
+        info.style.textOutlineWidthSp = 3f;
+
+        AndroidHudModel.Element restored = info.copy();
+        restored.style.textOutlineColor = 0xFF654321;
+
+        assertEquals(AndroidHudModel.OVERFLOW_SCROLL, restored.overflowMode);
+        assertTrue(restored.style.textBold);
+        assertTrue(restored.style.textItalic);
+        assertTrue(restored.style.textOutline);
+        assertEquals(0xFF123456, info.style.textOutlineColor);
+        assertEquals(0xFF654321, restored.style.textOutlineColor);
+        assertEquals(3f, restored.style.textOutlineWidthSp, 0f);
+    }
+
+    @Test
+    public void gridInformationIsNormalizedToFixedSquareFrame() {
+        AndroidHudModel.Element map = element("map.test", AndroidHudModel.TYPE_INFO);
+        map.sourceId = "map.pixel";
+        map.frame.width = 420f;
+        map.frame.height = 180f;
+        map.overflowMode = AndroidHudModel.OVERFLOW_SCROLL;
+
+        AndroidHudModel.normalizeElementGeometry(map);
+
+        assertEquals(420f, map.frame.width, 0f);
+        assertEquals(420f, map.frame.height, 0f);
+        assertEquals(AndroidHudModel.OVERFLOW_FIXED, map.overflowMode);
+    }
+
+    @Test
     public void searchMatchesChineseCatalogText() {
         assertTrue(AndroidHudModel.matchesSearch("天气",
             "环境信息", "位置 日期 天气", "environment.summary"));

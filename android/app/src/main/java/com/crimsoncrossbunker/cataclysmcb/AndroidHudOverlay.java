@@ -17,6 +17,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -155,6 +156,10 @@ final class AndroidHudOverlay extends FrameLayout {
 
     float canvasScaleY() {
         return getHeight() / (float)AndroidHudModel.CANVAS_HEIGHT;
+    }
+
+    float canvasUniformScale() {
+        return Math.min(canvasScaleX(), canvasScaleY());
     }
 
     void editLayout(String sceneId, String layoutId) {
@@ -372,12 +377,29 @@ final class AndroidHudOverlay extends FrameLayout {
         parent.addView(host);
 
         View content = null;
+        FrameLayout groupContent = null;
+        ScrollView scrollContainer = null;
         if (AndroidHudModel.TYPE_GROUP.equals(element.type)) {
+            groupContent = new FrameLayout(activity);
+            groupContent.setClipChildren(element.clipChildren);
+            groupContent.setClipToPadding(element.clipChildren);
+            if (AndroidHudModel.OVERFLOW_SCROLL.equals(element.overflowMode)) {
+                scrollContainer = verticalScroller();
+                scrollContainer.addView(groupContent, new ScrollView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+                host.addView(scrollContainer, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            } else {
+                host.addView(groupContent, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            }
             if (element.style.showLabel) {
                 TextView title = new TextView(activity);
                 title.setText(element.label.isEmpty() ? "元素组" : element.label);
-                title.setTextColor(element.style.textColor);
-                title.setTextSize(element.style.fontSizeSp);
+                AndroidHudRendererRegistry.applyTextStyle(title, element.style, false);
                 title.setPadding(dp(5), 0, dp(5), 0);
                 host.addView(title, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -385,7 +407,7 @@ final class AndroidHudOverlay extends FrameLayout {
                 content = title;
             }
             for (AndroidHudModel.Element child : element.children) {
-                renderElement(host, child, element.id);
+                renderElement(groupContent, child, element.id);
             }
         } else if (AndroidHudModel.TYPE_INFO.equals(element.type)) {
             AndroidHudModel.InfoSource source = sourceCatalog.get(element.sourceId);
@@ -393,15 +415,28 @@ final class AndroidHudOverlay extends FrameLayout {
                 source = missingSource(element.sourceId);
             }
             content = rendererRegistry.create(activity, source);
-            host.addView(content, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            if (AndroidHudModel.OVERFLOW_SCROLL.equals(element.overflowMode) &&
+                    !AndroidHudModel.requiresSquareFrame(element)) {
+                scrollContainer = verticalScroller();
+                scrollContainer.addView(content, new ScrollView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+                host.addView(scrollContainer, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            } else {
+                host.addView(content, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            }
         } else {
             ControlView control = new ControlView(activity);
             content = control;
             host.addView(control, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
-        RenderedElement renderedElement = new RenderedElement(element, parentGroupId, host, content);
+        RenderedElement renderedElement = new RenderedElement(element, parentGroupId, host,
+            content, groupContent, scrollContainer);
         rendered.put(element.id, renderedElement);
         applyStyle(renderedElement);
         editor.configureElementInteraction(renderedElement);
@@ -424,13 +459,40 @@ final class AndroidHudOverlay extends FrameLayout {
         if (renderedElement == null) {
             return;
         }
-        int width = Math.max(dp(24), Math.round(element.frame.width * canvasScaleX()));
-        int height = Math.max(dp(24), Math.round(element.frame.height * canvasScaleY()));
+        int width;
+        int height;
+        if (AndroidHudModel.requiresSquareFrame(element)) {
+            int side = Math.max(dp(24),
+                Math.round(element.frame.width * canvasUniformScale()));
+            width = side;
+            height = side;
+        } else {
+            width = Math.max(dp(24), Math.round(element.frame.width * canvasScaleX()));
+            height = Math.max(dp(24), Math.round(element.frame.height * canvasScaleY()));
+        }
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(width, height,
             Gravity.TOP | Gravity.LEFT);
         params.leftMargin = Math.round(element.frame.x * canvasScaleX());
         params.topMargin = Math.round(element.frame.y * canvasScaleY());
         renderedElement.host.setLayoutParams(params);
+        if (renderedElement.groupContent != null) {
+            int contentHeight = height;
+            if (renderedElement.scrollContainer != null) {
+                for (AndroidHudModel.Element child : element.children) {
+                    float childBottom = child.frame.y + child.frame.height;
+                    contentHeight = Math.max(contentHeight,
+                        Math.round(childBottom * canvasScaleY()));
+                }
+            }
+            if (renderedElement.scrollContainer == null) {
+                renderedElement.groupContent.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            } else {
+                renderedElement.groupContent.setLayoutParams(new ScrollView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, contentHeight));
+            }
+        }
         for (AndroidHudModel.Element child : element.children) {
             layoutElement(child);
         }
@@ -612,6 +674,20 @@ final class AndroidHudOverlay extends FrameLayout {
         return source;
     }
 
+    private ScrollView verticalScroller() {
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        scroll.setClipToPadding(true);
+        scroll.setVerticalScrollBarEnabled(true);
+        scroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        scroll.setOnScrollChangeListener((view, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            if (activeMinimapView != null) {
+                publishMinimap(activeMinimapView, true);
+            }
+        });
+        return scroll;
+    }
+
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
@@ -621,13 +697,18 @@ final class AndroidHudOverlay extends FrameLayout {
         final String parentGroupId;
         final ElementHost host;
         final View content;
+        final FrameLayout groupContent;
+        final ScrollView scrollContainer;
 
         RenderedElement(AndroidHudModel.Element element, String parentGroupId,
-                ElementHost host, View content) {
+                ElementHost host, View content, FrameLayout groupContent,
+                ScrollView scrollContainer) {
             this.element = element;
             this.parentGroupId = parentGroupId;
             this.host = host;
             this.content = content;
+            this.groupContent = groupContent;
+            this.scrollContainer = scrollContainer;
         }
     }
 
@@ -779,8 +860,7 @@ final class AndroidHudOverlay extends FrameLayout {
             String label = element.label.isEmpty() ?
                 descriptor == null ? active : descriptor.label : element.label;
             trigger.setText(label.isEmpty() ? "未绑定" : label);
-            trigger.setTextColor(element.style.textColor);
-            trigger.setTextSize(element.style.fontSizeSp);
+            AndroidHudRendererRegistry.applyTextStyle(trigger, element.style, false);
             trigger.setEnabled(!editing && descriptor != null);
             boolean menuMode = AndroidHudModel.SELECTOR_MODE_MENU.equals(element.selectorMode);
             selector.setText(menuMode ? "☰" : "↻");

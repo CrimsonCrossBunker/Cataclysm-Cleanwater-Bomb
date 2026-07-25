@@ -41,6 +41,8 @@ final class AndroidHudModel {
     static final String RISK_DANGEROUS = "dangerous";
     static final String SELECTOR_MODE_MENU = "menu";
     static final String SELECTOR_MODE_CYCLE = "cycle";
+    static final String OVERFLOW_FIXED = "fixed";
+    static final String OVERFLOW_SCROLL = "scroll";
 
     private AndroidHudModel() {
     }
@@ -302,6 +304,7 @@ final class AndroidHudModel {
         String type = TYPE_INFO;
         String label = "";
         boolean visible = true;
+        String overflowMode = OVERFLOW_FIXED;
         final Frame frame = new Frame();
         final Style style = new Style();
 
@@ -326,6 +329,7 @@ final class AndroidHudModel {
             result.type = type;
             result.label = label;
             result.visible = visible;
+            result.overflowMode = overflowMode;
             result.frame.set(frame);
             result.style.set(style);
             result.clipChildren = clipChildren;
@@ -350,6 +354,7 @@ final class AndroidHudModel {
                 json.put("label", label);
             }
             json.put("visible", visible);
+            json.put("overflow", overflowMode);
             json.put("frame", frame.toJson());
             json.put("style", style.toJson());
             if (TYPE_GROUP.equals(type)) {
@@ -400,6 +405,9 @@ final class AndroidHudModel {
             result.type = type;
             result.label = boundedText(json.optString("label", ""), 100);
             result.visible = json.optBoolean("visible", true);
+            result.overflowMode = OVERFLOW_SCROLL.equals(
+                json.optString("overflow", OVERFLOW_FIXED)) ?
+                OVERFLOW_SCROLL : OVERFLOW_FIXED;
             result.frame.set(Frame.fromJson(json.optJSONObject("frame")));
             result.style.set(Style.fromJson(json.optJSONObject("style")));
             ids.add(id);
@@ -413,6 +421,7 @@ final class AndroidHudModel {
                 if (result.sourceId.isEmpty()) {
                     return null;
                 }
+                normalizeElementGeometry(result);
                 JSONObject settings = json.optJSONObject("providerSettings");
                 if (settings != null) {
                     Iterator<String> keys = settings.keys();
@@ -500,14 +509,19 @@ final class AndroidHudModel {
 
     static final class Style {
         float opacity = .90f;
-        float fontSizeSp = 14f;
+        float fontSizeSp = 10f;
         int textColor = 0xFFFFFFFF;
         int backgroundColor = 0xCC111820;
         int borderColor = 0x996E8CA3;
+        int textOutlineColor = 0xFF000000;
+        float textOutlineWidthSp = 1.5f;
         String alignment = "left";
         boolean showLabel = true;
-        boolean background = true;
-        boolean border = true;
+        boolean background;
+        boolean border;
+        boolean textBold;
+        boolean textItalic;
+        boolean textOutline;
 
         void set(Style other) {
             opacity = other.opacity;
@@ -515,10 +529,15 @@ final class AndroidHudModel {
             textColor = other.textColor;
             backgroundColor = other.backgroundColor;
             borderColor = other.borderColor;
+            textOutlineColor = other.textOutlineColor;
+            textOutlineWidthSp = other.textOutlineWidthSp;
             alignment = other.alignment;
             showLabel = other.showLabel;
             background = other.background;
             border = other.border;
+            textBold = other.textBold;
+            textItalic = other.textItalic;
+            textOutline = other.textOutline;
         }
 
         JSONObject toJson() throws JSONException {
@@ -528,10 +547,15 @@ final class AndroidHudModel {
             json.put("textColor", textColor);
             json.put("backgroundColor", backgroundColor);
             json.put("borderColor", borderColor);
+            json.put("textOutlineColor", textOutlineColor);
+            json.put("textOutlineWidthSp", textOutlineWidthSp);
             json.put("alignment", alignment);
             json.put("showLabel", showLabel);
             json.put("background", background);
             json.put("border", border);
+            json.put("textBold", textBold);
+            json.put("textItalic", textItalic);
+            json.put("textOutline", textOutline);
             return json;
         }
 
@@ -541,16 +565,23 @@ final class AndroidHudModel {
                 return result;
             }
             result.opacity = clampFinite(json.optDouble("opacity", .90), .1, 1);
-            result.fontSizeSp = clampFinite(json.optDouble("fontSizeSp", 14), 8, 40);
+            result.fontSizeSp = clampFinite(json.optDouble("fontSizeSp", 10), 8, 40);
             result.textColor = (int)json.optLong("textColor", 0xFFFFFFFFL);
             result.backgroundColor = (int)json.optLong("backgroundColor", 0xCC111820L);
             result.borderColor = (int)json.optLong("borderColor", 0x996E8CA3L);
+            result.textOutlineColor =
+                (int)json.optLong("textOutlineColor", 0xFF000000L);
+            result.textOutlineWidthSp =
+                clampFinite(json.optDouble("textOutlineWidthSp", 1.5), .5, 6);
             String alignment = json.optString("alignment", "left");
             result.alignment = "center".equals(alignment) || "right".equals(alignment) ?
                 alignment : "left";
             result.showLabel = json.optBoolean("showLabel", true);
-            result.background = json.optBoolean("background", true);
-            result.border = json.optBoolean("border", true);
+            result.background = json.optBoolean("background", false);
+            result.border = json.optBoolean("border", false);
+            result.textBold = json.optBoolean("textBold", false);
+            result.textItalic = json.optBoolean("textItalic", false);
+            result.textOutline = json.optBoolean("textOutline", false);
             return result;
         }
     }
@@ -610,6 +641,7 @@ final class AndroidHudModel {
         float defaultWidth = 320;
         float defaultHeight = 100;
         boolean multiline;
+        boolean square;
 
         static InfoSource fromJson(JSONObject json) {
             if (json == null) {
@@ -624,6 +656,7 @@ final class AndroidHudModel {
             result.defaultHeight = clampFinite(json.optDouble("defaultHeight", 100), 32,
                 CANVAS_HEIGHT);
             result.multiline = json.optBoolean("multiline", false);
+            result.square = json.optBoolean("square", false);
             return result.id.isEmpty() || result.renderer.isEmpty() ? null : result;
         }
     }
@@ -643,6 +676,20 @@ final class AndroidHudModel {
 
     private static boolean isElementType(String type) {
         return TYPE_GROUP.equals(type) || TYPE_INFO.equals(type) || TYPE_CONTROL.equals(type);
+    }
+
+    static boolean requiresSquareFrame(Element element) {
+        return element != null && TYPE_INFO.equals(element.type) &&
+            ("map.pixel".equals(element.sourceId) ||
+             "map.overmap_grid".equals(element.sourceId) ||
+             "radar.threat_grid".equals(element.sourceId));
+    }
+
+    static void normalizeElementGeometry(Element element) {
+        if (requiresSquareFrame(element)) {
+            element.frame.height = element.frame.width;
+            element.overflowMode = OVERFLOW_FIXED;
+        }
     }
 
     static String safeId(String raw) {

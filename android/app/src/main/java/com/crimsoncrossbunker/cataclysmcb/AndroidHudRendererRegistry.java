@@ -70,10 +70,10 @@ final class AndroidHudRendererRegistry {
             String title = element.label.isEmpty() ? source.title : element.label;
             String value = snapshot.value(source.id, preview);
             text.setText(element.style.showLabel ? title + "  " + value : value);
-            text.setTextSize(element.style.fontSizeSp);
-            text.setTextColor(element.style.textColor);
+            applyTextStyle(text, element.style, true);
             text.setGravity(alignment(element.style.alignment) | Gravity.CENTER_VERTICAL);
-            text.setSingleLine(!source.multiline);
+            text.setSingleLine(!source.multiline &&
+                !AndroidHudModel.OVERFLOW_SCROLL.equals(element.overflowMode));
         }
     }
 
@@ -117,8 +117,7 @@ final class AndroidHudRendererRegistry {
                 }
             }
             text.setText(content);
-            text.setTextSize(element.style.fontSizeSp);
-            text.setTextColor(element.style.textColor);
+            applyTextStyle(text, element.style, true);
             text.setGravity(alignment(element.style.alignment));
         }
     }
@@ -149,7 +148,7 @@ final class AndroidHudRendererRegistry {
         public void bind(View view, AndroidHudModel.InfoSource source,
                 AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
                 boolean preview, MinimapPublisher minimapPublisher) {
-            ((OvermapGridView)view).bind(snapshot, preview, element.style.textColor);
+            ((OvermapGridView)view).bind(snapshot, preview, element.style);
         }
     }
 
@@ -182,6 +181,29 @@ final class AndroidHudRendererRegistry {
         return text;
     }
 
+    static void applyTextStyle(TextView text, AndroidHudModel.Style style,
+            boolean monospace) {
+        int typefaceStyle = Typeface.NORMAL;
+        if (style.textBold) {
+            typefaceStyle |= Typeface.BOLD;
+        }
+        if (style.textItalic) {
+            typefaceStyle |= Typeface.ITALIC;
+        }
+        text.setTypeface(monospace ? Typeface.MONOSPACE : Typeface.DEFAULT, typefaceStyle);
+        text.setTextSize(style.fontSizeSp);
+        text.setTextColor(style.textColor);
+        if (style.textOutline) {
+            float scale = text.getResources().getDisplayMetrics().scaledDensity;
+            text.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            text.setShadowLayer(Math.max(1f, style.textOutlineWidthSp * scale),
+                0f, 0f, style.textOutlineColor);
+        } else {
+            text.getPaint().clearShadowLayer();
+            text.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
+    }
+
     private static int alignment(String alignment) {
         if ("center".equals(alignment)) {
             return Gravity.CENTER_HORIZONTAL;
@@ -197,6 +219,9 @@ final class AndroidHudRendererRegistry {
         private AndroidHudSnapshot snapshot = AndroidHudSnapshot.empty();
         private boolean preview;
         private int fallbackColor;
+        private int outlineColor;
+        private float outlineWidth;
+        private boolean outline;
 
         OvermapGridView(Context context) {
             super(context);
@@ -204,10 +229,23 @@ final class AndroidHudRendererRegistry {
             paint.setTextAlign(Paint.Align.CENTER);
         }
 
-        void bind(AndroidHudSnapshot value, boolean isPreview, int textColor) {
+        void bind(AndroidHudSnapshot value, boolean isPreview,
+                AndroidHudModel.Style style) {
             snapshot = value;
             preview = isPreview;
-            fallbackColor = textColor;
+            fallbackColor = style.textColor;
+            outlineColor = style.textOutlineColor;
+            outlineWidth = style.textOutlineWidthSp *
+                getResources().getDisplayMetrics().scaledDensity;
+            outline = style.textOutline;
+            int typefaceStyle = Typeface.NORMAL;
+            if (style.textBold) {
+                typefaceStyle |= Typeface.BOLD;
+            }
+            if (style.textItalic) {
+                typefaceStyle |= Typeface.ITALIC;
+            }
+            paint.setTypeface(Typeface.create(Typeface.MONOSPACE, typefaceStyle));
             invalidate();
         }
 
@@ -225,6 +263,15 @@ final class AndroidHudRendererRegistry {
                 paint.setColor(source == null ? fallbackColor : source.color);
                 float x = left + (index % 7 + .5f) * cell;
                 float y = top + (index / 7 + .72f) * cell;
+                if (outline) {
+                    int fill = paint.getColor();
+                    paint.setStyle(Paint.Style.STROKE);
+                    paint.setStrokeWidth(Math.max(1f, outlineWidth * 2f));
+                    paint.setColor(outlineColor);
+                    canvas.drawText(symbol, x, y, paint);
+                    paint.setStyle(Paint.Style.FILL);
+                    paint.setColor(fill);
+                }
                 canvas.drawText(symbol, x, y, paint);
             }
             paint.setStyle(Paint.Style.STROKE);

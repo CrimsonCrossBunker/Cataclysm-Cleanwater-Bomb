@@ -77,6 +77,7 @@ struct hud_info_source {
     int default_width = 320;
     int default_height = 100;
     bool multiline = false;
+    bool square = false;
 };
 
 struct hud_info_value {
@@ -299,11 +300,11 @@ std::vector<hud_info_source> make_source_catalog()
     result.push_back( { "log.messages", _( "Message log" ), _( "Logs" ), "log", "", 0,
                         620, 250, true } );
     result.push_back( { "map.pixel", _( "Pixel minimap" ), _( "Maps and radar" ),
-                        "pixel_minimap", "", 0, 400, 400, true } );
+                        "pixel_minimap", "", 0, 400, 400, true, true } );
     result.push_back( { "map.overmap_grid", _( "7x7 overmap grid" ), _( "Maps and radar" ),
-                        "overmap_grid", "", 0, 350, 350, true } );
+                        "overmap_grid", "", 0, 350, 350, true, true } );
     result.push_back( { "radar.threat_grid", _( "Local threat grid" ), _( "Maps and radar" ),
-                        "threat_grid", "", 0, 350, 350, true } );
+                        "threat_grid", "", 0, 350, 350, true, true } );
 
     const std::string advanced = _( "Advanced raw widgets" );
     for( const widget &raw : widget::get_all() ) {
@@ -556,6 +557,7 @@ std::string snapshot_json()
         json.member( "defaultWidth", source.default_width );
         json.member( "defaultHeight", source.default_height );
         json.member( "multiline", source.multiline );
+        json.member( "square", source.square );
         json.end_object();
     }
     json.end_array();
