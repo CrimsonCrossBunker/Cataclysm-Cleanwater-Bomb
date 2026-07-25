@@ -1,0 +1,24 @@
+[
+  {
+    "id": "fcl_helixwirl_hydroponics_manual",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "category": "manuals",
+    "name": { "str": "Helixwirl Biotechnologies internal hydroponics memorandum" },
+    "description": "An internal Helixwirl Biotechnologies memorandum detailing the hydroponics core's field-control architecture.  The documentation is dry and technical, except for one bizarre structure whose function cannot be identified.  A warning in huge, bright-red lettering reads: DO NOT ALTER, IF PRODUCTION REVEALS ANY DEVIATION FROM THE REFERENCE, DISCARD THE UNIT IMMEDIATELY.",
+    "weight": "700 g",
+    "volume": "750 ml",
+    "price": "100 USD",
+    "price_postapoc": "10 USD",
+    "looks_like": "file",
+    "material": [ "paper" ],
+    "symbol": "?",
+    "color": "light_blue",
+    "intelligence": 12,
+    "required_level": 0,
+    "max_level": 8,
+    "time": "90 m",
+    "read_skill": "electronics",
+    "read_fun": -30
+  }
+]

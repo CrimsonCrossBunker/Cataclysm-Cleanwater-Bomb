@@ -723,6 +723,7 @@ Can also be used as `pre_flags` for `construction`.
 - ```PLACE_ITEM``` Valid terrain for `place_item()` to put items on.
 - ```PLANTABLE``` This terrain or furniture can have seeds planted in it.
 - ```PLANT``` A 'furniture' that grows and fruits.
+- ```NO_CROP_OVERGROWTH``` Furniture with this flag prevents plants growing on it from becoming overgrown. Crops can still reach and remain at the harvest stage.
 - ```PLOWABLE``` Terrain can be plowed.
 - ```RAIL``` This is a railroad, railroad vehicles can use it to move.
 - ```RAMP_DOWN``` The end of a ramp that leads down, walking into this moves you one z-level down.  Overrides `WALL`, while still displaying the tile as Impassable.

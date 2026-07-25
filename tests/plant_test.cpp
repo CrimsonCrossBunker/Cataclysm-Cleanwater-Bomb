@@ -46,6 +46,10 @@ static const furn_str_id furn_test_f_plant_mature( "test_f_plant_mature" );
 static const furn_str_id furn_test_f_plant_overgrown( "test_f_plant_overgrown" );
 static const furn_str_id furn_test_f_plant_seed( "test_f_plant_seed" );
 static const furn_str_id furn_test_f_plant_seedling( "test_f_plant_seedling" );
+static const furn_str_id furn_test_f_planter_no_overgrowth_seed( "test_f_planter_no_overgrowth_seed" );
+static const furn_str_id furn_test_f_planter_no_overgrowth_seedling( "test_f_planter_no_overgrowth_seedling" );
+static const furn_str_id furn_test_f_planter_no_overgrowth_mature( "test_f_planter_no_overgrowth_mature" );
+static const furn_str_id furn_test_f_planter_no_overgrowth_harvest( "test_f_planter_no_overgrowth_harvest" );
 static const furn_str_id
 furn_test_f_planter_high_water_mature( "test_f_planter_high_water_mature" );
 static const furn_str_id furn_test_f_planter_high_water_seed( "test_f_planter_high_water_seed" );
@@ -809,6 +813,42 @@ TEST_CASE( "crop_overgrown_enabled_world_option", "[plant][world_option]" )
     CHECK( here.furn( plot ) != furn_test_f_plant_overgrown );
     // But the plant must be allowed to reach harvest, not be stuck at mature.
     CHECK( here.furn( plot ) == furn_test_f_plant_harvest );
+    CHECK( iexamine::is_plant_harvestable( here, plot ) );
+}
+
+TEST_CASE( "planter_flag_prevents_crop_overgrowth", "[plant][furniture][flag]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_OVERGROWN_ENABLED"].setValue( "true" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.add_item( plot, item( itype_test_seed_eoc ) );
+    here.furn_set( plot, furn_test_f_planter_no_overgrowth_seed );
+
+    for( const furn_str_id &expected : { furn_test_f_planter_no_overgrowth_seedling,
+                                         furn_test_f_planter_no_overgrowth_mature,
+                                         furn_test_f_planter_no_overgrowth_harvest } ) {
+        calendar::turn += 1_hours;
+        here.grow_plant( plot );
+        CHECK( here.furn( plot ) == expected );
+        CHECK( here.furn( plot ).obj().has_flag( "NO_CROP_OVERGROWTH" ) );
+    }
+
+    calendar::turn += 1_hours;
+    here.grow_plant( plot );
+
+    CHECK( here.furn( plot ) == furn_test_f_planter_no_overgrowth_harvest );
+    CHECK( !iexamine::is_plant_overgrown( here, plot ) );
     CHECK( iexamine::is_plant_harvestable( here, plot ) );
 }
 
