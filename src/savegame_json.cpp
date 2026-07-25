@@ -844,6 +844,14 @@ void Character::load( const JsonObject &data )
     //legacy value, maintained until kill_xp dependency removed from in-repo mods
     data.read( "kill_xp", kill_xp );
 
+    if( data.has_member( "mental_metrics" ) ) {
+        JsonObject mental_metrics = data.get_object( "mental_metrics" );
+        mental_metrics.allow_omitted_members();
+        mental_metrics.read( "guilt_kills", mental_metric_guilt_kills );
+        mental_metrics.read( "human_dissections", mental_metric_human_dissections );
+        mental_metrics.read( "cannibalism", mental_metric_cannibalism );
+    }
+
     data.read( "moncams", moncams );
 
     data.read( "magic", magic );
@@ -1488,6 +1496,13 @@ void Character::store( JsonOut &json ) const
 
     //legacy value, maintained until kill_xp dependency removed from in-repo mods
     json.member( "kill_xp", kill_xp );
+
+    json.member( "mental_metrics" );
+    json.start_object();
+    json.member( "guilt_kills", mental_metric_guilt_kills );
+    json.member( "human_dissections", mental_metric_human_dissections );
+    json.member( "cannibalism", mental_metric_cannibalism );
+    json.end_object();
 
     // breathing
     json.member( "underwater", underwater );
