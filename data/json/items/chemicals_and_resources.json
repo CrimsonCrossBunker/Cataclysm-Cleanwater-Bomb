@@ -608,7 +608,8 @@
     "price": "5 cent",
     "price_postapoc": "5 cent",
     "material": [ "powder" ],
-    "volume": "50 ml"
+    "volume": "50 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -954,7 +955,8 @@
     "volume": "50 ml",
     "weight": "961 mg",
     "ammo_type": "components",
-    "count": 100
+    "count": 100,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1009,7 +1011,8 @@
     "ammo_type": "esbit",
     "container": "box_small",
     "count": 1620,
-    "stack_size": 200
+    "stack_size": 200,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1043,7 +1046,8 @@
     "description": "A chunk of unshielded plutonium.  You should probably get very far away from this, if you enjoy not being irradiated.",
     "flags": [ "TRADER_AVOID", "LEAK_ALWAYS", "RADIOACTIVE" ],
     "volume": "50 ml",
-    "weight": "990 g"
+    "weight": "990 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1059,7 +1063,8 @@
     "description": "Some uranium.  You should probably get very far away from this, if you enjoy not being irradiated.",
     "flags": [ "TRADER_AVOID", "LEAK_ALWAYS", "RADIOACTIVE" ],
     "volume": "50 ml",
-    "weight": "953 g"
+    "weight": "953 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1317,7 +1322,8 @@
     "volume": "250 ml",
     "weight": "70 g",
     "container": "bag_plastic_small",
-    "melee_damage": { "bash": 1 }
+    "melee_damage": { "bash": 1 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1369,7 +1375,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "212 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1383,7 +1390,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "212 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1397,7 +1405,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "180 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1411,7 +1420,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "212 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1425,7 +1435,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "200 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1439,7 +1450,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "212 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1453,7 +1465,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "240 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1467,7 +1480,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "240 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1481,7 +1495,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "240 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1495,7 +1510,8 @@
     "price": "0 cent",
     "price_postapoc": "0 cent",
     "weight": "210 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1546,7 +1562,8 @@
     "description": "A handful of flakes shaved off a bar of soap, suitable for use in a washing machine.",
     "volume": "13 ml",
     "weight": "4 g",
-    "flags": [ "DETERGENT" ]
+    "flags": [ "DETERGENT" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1607,7 +1624,8 @@
     "description": "A steel canister containing carbon, iron, titanium, copper, and other elements in specifically engineered atomic-scale configurations.  A nanofabricator can assemble them into usable items.",
     "material": [ "steel" ],
     "volume": "300 ml",
-    "weight": "250 g"
+    "weight": "250 g",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1872,7 +1890,8 @@
     "color": "light_gray",
     "looks_like": "lc_link_sheet",
     "flags": [ "FRAGILE_MELEE" ],
-    "melee_damage": { "bash": 2 }
+    "melee_damage": { "bash": 2 },
+    "stackable": true
   },
   {
     "id": "cobalt_60",
@@ -1887,7 +1906,8 @@
     "material": [ "steel", "plastic" ],
     "flags": [ "LEAK_ALWAYS", "RADIOACTIVE" ],
     "volume": "90 ml",
-    "weight": "80 g"
+    "weight": "80 g",
+    "stackable": true
   },
   {
     "id": "wooden_bead",
@@ -2242,7 +2262,8 @@
     "price": "0 cent",
     "price_postapoc": "10 cent",
     "symbol": "=",
-    "color": "white"
+    "color": "white",
+    "stackable": true
   },
   {
     "id": "silicone",
@@ -2340,7 +2361,8 @@
     "material": [ "exodii_ceramic" ],
     "volume": "500 ml",
     "weight": "65 g",
-    "melee_damage": { "bash": 1 }
+    "melee_damage": { "bash": 1 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2371,7 +2393,8 @@
     "description": "A small chunk of styrofoam.",
     "material": [ "styrofoam" ],
     "volume": "150 ml",
-    "weight": "5 g"
+    "weight": "5 g",
+    "stackable": true
   },
   {
     "id": "glue_weak",

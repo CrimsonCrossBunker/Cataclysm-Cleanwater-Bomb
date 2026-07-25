@@ -18,7 +18,8 @@
     "fun": 15,
     "quench": 3,
     "flags": [ "EATEN_HOT", "FREEZERBURN" ],
-    "vitamins": [ [ "vitC", 5 ], [ "calcium", 0 ], [ "iron", 2 ], [ "meat_allergen", 1 ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 5 ], [ "calcium", 0 ], [ "iron", 2 ], [ "meat_allergen", 1 ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "liver_onion",
@@ -38,7 +39,8 @@
     "calories": 398,
     "quench": -3,
     "flags": [ "EATEN_HOT", "FREEZERBURN" ],
-    "vitamins": [ [ "vitC", 1 ], [ "calcium", 0 ], [ "iron", 8 ], [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 1 ], [ "calcium", 0 ], [ "iron", 8 ], [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "fried_livers",
@@ -66,7 +68,8 @@
       [ "meat_allergen", 1 ],
       [ "wheat_allergen", 1 ],
       [ "milk_allergen", 1 ]
-    ]
+    ],
+    "stackable": true
   },
   {
     "id": "fried_heart",
@@ -94,7 +97,8 @@
       [ "meat_allergen", 1 ],
       [ "wheat_allergen", 1 ],
       [ "milk_allergen", 1 ]
-    ]
+    ],
+    "stackable": true
   },
   {
     "id": "stuffed_heart",
@@ -114,7 +118,8 @@
     "weight": "89 g",
     "calories": 400,
     "flags": [ "EATEN_HOT" ],
-    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "humble_pie",
@@ -134,7 +139,8 @@
     "volume": "250 ml",
     "weight": "249 g",
     "flags": [ "EATEN_HOT" ],
-    "vitamins": [ [ "vitC", 15 ], [ "calcium", 1 ], [ "iron", 40 ], [ "meat_allergen", 1 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 15 ], [ "calcium", 1 ], [ "iron", 40 ], [ "meat_allergen", 1 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "stewed_tripe",
@@ -155,7 +161,8 @@
     "weight": "70 g",
     "flags": [ "EATEN_HOT" ],
     "calories": 130,
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "fried_tripe",
@@ -176,7 +183,8 @@
     "weight": "70 g",
     "flags": [ "EATEN_HOT" ],
     "calories": 310,
-    "vitamins": [ [ "meat_allergen", 1 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "leverpostej",
@@ -209,7 +217,8 @@
       [ "veggy_allergen", 1 ],
       [ "wheat_allergen", 1 ],
       [ "milk_allergen", 1 ]
-    ]
+    ],
+    "stackable": true
   },
   {
     "id": "fried_brain",
@@ -230,7 +239,8 @@
     "weight": "250 g",
     "flags": [ "EATEN_HOT" ],
     "calories": 285,
-    "vitamins": [ [ "vitC", 6 ], [ "iron", 13 ], [ "calcium", 1 ], [ "meat_allergen", 1 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 6 ], [ "iron", 13 ], [ "calcium", 1 ], [ "meat_allergen", 1 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "deviled_kidney",
@@ -258,7 +268,8 @@
       [ "meat_allergen", 1 ],
       [ "veggy_allergen", 1 ],
       [ "wheat_allergen", 1 ]
-    ]
+    ],
+    "stackable": true
   },
   {
     "id": "grilled_sweetbread",
@@ -308,7 +319,8 @@
     "weight": "180 g",
     "calories": 100,
     "flags": [ "EATEN_HOT" ],
-    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "tÖttchen",
@@ -329,7 +341,8 @@
     "weight": "180 g",
     "calories": 400,
     "flags": [ "EATEN_HOT" ],
-    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "scrambledeggsandbrain",
@@ -350,7 +363,8 @@
     "weight": "180 g",
     "calories": 400,
     "flags": [ "EATEN_HOT" ],
-    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "veggy_allergen", 1 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "sausage_casings",
@@ -374,12 +388,5 @@
     "color": "red",
     "material": [ "plastic" ],
     "volume": "8 ml"
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "id": "homemade_hotdogs",
-    "name": { "str": "homemade hot dog" },
-    "copy-from": "hotdogs_frozen"
   }
 ]

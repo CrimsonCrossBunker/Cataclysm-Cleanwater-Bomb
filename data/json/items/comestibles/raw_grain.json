@@ -17,7 +17,8 @@
     "material": [ "veggy" ],
     "volume": "195 ml",
     "flags": [ "EATEN_HOT", "RAW" ],
-    "vitamins": [ [ "vitC", 12 ], [ "iron", 4 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 12 ], [ "iron", 4 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -50,7 +51,8 @@
       { "GROWTH_MATURE": "20 days" },
       { "GROWTH_HARVEST": "20 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
-    ]
+    ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -69,7 +71,8 @@
     "volume": "111 ml",
     "fun": -8,
     "flags": [ "RAW" ],
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -211,7 +214,8 @@
     "petfood": [ "CATTLEFOOD" ],
     "smoking_result": "dry_wheat_stalks",
     "volume": "1 L",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -243,7 +247,8 @@
     "price": "25 cent",
     "price_postapoc": "20 cent",
     "volume": "900 ml",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -392,7 +397,8 @@
       "NUTRIENT_OVERRIDE"
     ],
     "into": "flour",
-    "recipe": "flour_mill_1_15"
+    "recipe": "flour_mill_1_15",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -723,7 +729,8 @@
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "into": "paste_seed",
-    "recipe": "paste_seed_mill_1_1"
+    "recipe": "paste_seed_mill_1_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -783,7 +790,8 @@
       { "GROWTH_MATURE": "23 days" },
       { "GROWTH_HARVEST": "22 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
-    ]
+    ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -805,7 +813,8 @@
     "petfood": [ "CATTLEFOOD" ],
     "smoking_result": "dry_buckwheat_stalks",
     "volume": "315 ml",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -826,7 +835,8 @@
     "price": "25 cent",
     "price_postapoc": "20 cent",
     "volume": "315 ml",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -847,6 +857,7 @@
     "price": "25 cent",
     "price_postapoc": "20 cent",
     "volume": "290 ml",
-    "vitamins": [ [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "wheat_allergen", 1 ] ],
+    "stackable": true
   }
 ]
