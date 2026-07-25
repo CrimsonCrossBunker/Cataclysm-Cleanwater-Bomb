@@ -55,13 +55,6 @@ runtime_status status();
 // runtime callbacks.  This does not expose game bindings.
 bool validate_snippet( std::string_view source, int instruction_limit, std::string &error );
 
-// Android's Java UI thread only exchanges immutable JSON and queued widget
-// events.  Lua callbacks and game snapshots remain on the game thread.
-void publish_android_snapshot();
-std::string android_snapshot_json();
-bool submit_android_interaction( const std::string &widget_id, const std::string &encoded_value );
-bool select_android_page( const std::string &page_id );
-
 // Reload scripts, let the user choose a registered page, and run it as a
 // regular cataimgui window.  The runtime is initialized lazily on first use.
 void show();

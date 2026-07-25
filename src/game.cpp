@@ -3616,7 +3616,6 @@ void game::draw( ui_adaptor &ui )
     // Android owns its HUD in a native View overlay.  Do not render or reserve
     // the terminal sidebar underneath it.
     android_hud::publish_snapshot( u, static_cast<int>( safe_mode ) );
-    cata::lua_ui::publish_android_snapshot();
 #else
     draw_panels( true );
 #endif

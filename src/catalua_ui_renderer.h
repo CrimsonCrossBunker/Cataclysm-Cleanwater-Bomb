@@ -42,9 +42,8 @@ struct script_ui_renderer_info {
     bool supports( script_ui_capability capability ) const;
 };
 
-// Platform-neutral rendering contract used by Lua UI callbacks.  ImGui,
-// ImTui, and Android native UI adapters can implement this interface without
-// exposing their own widget types to Lua.
+// Platform-neutral rendering contract used by Lua UI callbacks.  ImGui and
+// ImTui implement this interface without exposing backend widget types to Lua.
 class script_ui_renderer
 {
     public:
@@ -67,10 +66,9 @@ class script_ui_renderer
                                    const std::optional<std::string> &overlay ) = 0;
 
         // Interactive widgets use stable ids independent of their visible
-        // labels.  A retained renderer may key native view state and queued
-        // interaction events by this id.  Values follow a controlled-widget
-        // model: Lua supplies the current value and receives the renderer's
-        // value for this frame; button results are one-shot activations.
+        // labels.  Values follow a controlled-widget model: Lua supplies the
+        // current value and receives the renderer's value for this frame;
+        // button results are one-shot activations.
         virtual bool button( const std::string &id, const std::string &label ) = 0;
         virtual bool small_button( const std::string &id, const std::string &label ) = 0;
         virtual bool checkbox( const std::string &id, const std::string &label, bool value ) = 0;

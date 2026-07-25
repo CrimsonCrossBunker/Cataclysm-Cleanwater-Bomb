@@ -2,9 +2,10 @@
 
 This directory contains the built-in Lua entry point and modules for the
 experimental, versioned UI runtime. The Lua drawing context targets the
-platform-neutral `script_ui_renderer` contract: desktop Tiles renders through
-ImGui, curses renders through ImTui, and Android renders retained widget trees
-as native Views. Scripts do not import or depend on any of those backends.
+platform-neutral `script_ui_renderer` contract. Lua pages use the shared
+ImGui/ImTui host, and `ui.hud` uses that host on non-Android builds. Android's
+in-game HUD is the separate native schema-4 subsystem and never calls Lua.
+Scripts do not import or depend on a renderer backend.
 
 The current platform policy is Android on SDL3, with Linux and Windows still
 using SDL2 while their SDL3 migration proceeds separately. This does not alter
@@ -64,18 +65,13 @@ end)
 
 ui.hud("stamina", {
     title = "Stamina",
-    default_anchor = "top_right", -- top_left/top_right/bottom_left/bottom_right
-    default_x = 16,
-    default_y = 16,
-    default_width = 0.28,  -- fraction of the Android overlay
-    default_height = 0.18,
+    anchor = "top_right", -- top_left/top_right/bottom_left/bottom_right
+    x = 16,
+    y = 16,
     alpha = 0.8,
     interactive = false,
     background = true,
-    title_bar = false,
-    movable = true,
-    scalable = true,
-    user_toggleable = true
+    title_bar = false
 }, function(ctx)
     local p = game.player_snapshot()
     ctx:progress_bar(p.stamina / math.max(1, p.stamina_max), "Stamina")
@@ -101,10 +97,10 @@ Renderer metadata lets a script choose a portable fallback without importing
 backend-specific APIs:
 
 ```lua
-ctx:backend()             -- "imgui" or "retained"
+ctx:backend()             -- "imgui"
 ctx:platform()            -- "sdl2", "sdl3", "imtui", or "android"
 ctx:is_immediate_mode()   -- true for ImGui/ImTui
-ctx:uses_native_widgets() -- true for Android native Views
+ctx:uses_native_widgets() -- false for the shared page/HUD host
 ctx:supports("text_input")
 ```
 
@@ -147,9 +143,8 @@ name = ctx:input_text("Name", name)
 ```
 
 The forms above use the visible label as the widget id for compatibility.
-For native retained-mode adapters, translated labels, dynamic labels, or
-repeated labels, use an explicit stable id that is unique within the page or
-HUD callback:
+For translated labels, dynamic labels, or repeated labels, use an explicit
+stable id that is unique within the page or HUD callback:
 
 ```lua
 if ctx:button_id("apply_changes", "Apply") then end
@@ -162,8 +157,7 @@ Every interactive method has a matching `_id` form whose first argument is
 the stable id and second argument is the visible label. Buttons report a
 one-frame activation. Other inputs use a controlled-value model: the script
 passes the current value on every draw and receives the updated value. This is
-the shared interaction contract for immediate ImGui/ImTui and Android native
-renderers.
+the shared interaction contract for immediate ImGui/ImTui renderers.
 
 Structured layout callbacks keep backend Begin/End and Push/Pop pairs outside
 Lua, including when a nested callback raises an error:
@@ -201,43 +195,19 @@ end)
 ```
 
 `ctx:table` accepts 1..64 columns. A virtual list accepts up to 1,000,000
-logical items, but the Android retained renderer emits at most 200 items in a
-snapshot. The callback receives a zero-based, half-open `[first, last)` range;
-render only that range (add one when indexing a normal Lua sequence).
+logical items. The callback receives a zero-based, half-open `[first, last)`
+range; render only that range (add one when indexing a normal Lua sequence).
 
-## Android native renderer
+## Android HUD separation
 
-On Android, Lua callbacks and game snapshots run only on the game thread. C++
-publishes an immutable JSON widget tree, and the UI thread polls it every
-100 ms, reuses native Views by stable widget id, and returns bounded one-shot
-interactions to the next game-thread render. The Android UI thread never calls
-Lua or accesses live game objects.
+Android HUD schema 4 is an independent native subsystem. It owns in-game
+information, controls, element groups, per-scene layouts, and layout
+import/export. It does not consume `ui.hud` registrations, retained widget
+trees, or Lua interaction snapshots.
 
-Pages are selected with the **Lua** button in the top-right corner and can be
-closed from their title bar. HUD surfaces honor `anchor`, `x`, `y`, and
-`alpha`, and are repositioned after rotation or split-screen resizing. Touches
-inside Lua UI surfaces are kept out of the Android HUD long-press editor.
-
-Lua HUDs also participate in the Android HUD editor. Long-press an empty part
-of the game view to enter editing, then drag a Lua HUD to move it, drag its
-bottom-right corner to resize it, or long-press it to edit size, opacity, and
-visibility. Layout overrides are stored by stable HUD id and separately for
-portrait and landscape; they survive Lua hot reload and Android View
-recreation. **Android HUD → Manage Lua HUD** can restore a hidden HUD or reset
-the current orientation to script defaults.
-
-`default_anchor`, `default_x`, and `default_y` are aliases for the portable
-`anchor`, `x`, and `y` defaults. `default_width` and `default_height` are
-Android overlay fractions clamped to safe bounds. `movable`, `scalable`, and
-`user_toggleable` default to `true`; set one to `false` when a built-in or mod
-HUD must keep that part of its script-defined layout. User overrides stay on
-the Android device and never mutate the Lua script or character save.
-
-The native adapter maps text, buttons, checkboxes, sliders, inputs, progress
-bars, and structured containers to Android Views. Immediate-mode-only details
-such as exact same-line or table-column placement may use a simplified native
-layout, so capability-aware scripts should prioritize semantic structure over
-pixel-identical layouts.
+Lua `ui.page` remains available through the shared page host. Lua `ui.hud`
+remains available on non-Android builds, so portable mods can keep the
+registration while providing an Android schema-4 template separately.
 
 ## Game API and reload state
 
