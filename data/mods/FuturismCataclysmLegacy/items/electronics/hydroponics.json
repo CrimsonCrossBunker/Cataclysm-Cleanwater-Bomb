@@ -4,7 +4,7 @@
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
     "name": { "str": "hydroponics core" },
-    "description": "A compact Helixwirl control core that projects the energy field used to keep hydroponic crops at their mature state.",
+    "description": "A compact Helixwirl control core that projects the energy field used to keep hydroponic crops at their mature state.  You can't understand its principles at all.  Its technology definitely uses some undisclosed research results from other technical routes, but if you get the blueprints and follow the tutorial to manufacture it, it may not be as difficult as you imagine.",
     "weight": "800 g",
     "volume": "500 ml",
     "price": "2 kUSD",
