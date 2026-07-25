@@ -75,6 +75,7 @@ final class AndroidHudSearchDialog {
             listener.selected(catalog.visible.get(position).value);
             dialog.dismiss();
         });
+        dialog.setOnShowListener(ignored -> configureDialog(context, dialog, catalog.root));
         dialog.show();
     }
 
@@ -100,12 +101,14 @@ final class AndroidHudSearchDialog {
                 selected.remove(itemId);
             }
         });
-        dialog.setOnShowListener(ignored -> dialog.getButton(
-            DialogInterface.BUTTON_POSITIVE).setOnClickListener(view -> {
+        dialog.setOnShowListener(ignored -> {
+            configureDialog(context, dialog, catalog.root);
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(view -> {
                 if (listener.confirmed(new LinkedHashSet<>(selected))) {
                     dialog.dismiss();
                 }
-            }));
+            });
+        });
         dialog.show();
     }
 
@@ -127,6 +130,8 @@ final class AndroidHudSearchDialog {
             root.setOrientation(LinearLayout.VERTICAL);
             int padding = dp(context, 18);
             root.setPadding(padding, dp(context, 4), padding, dp(context, 8));
+            root.setMinimumHeight(Math.round(
+                context.getResources().getDisplayMetrics().heightPixels * .68f));
 
             EditText search = new EditText(context);
             search.setHint(searchHint);
@@ -136,15 +141,16 @@ final class AndroidHudSearchDialog {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
             FrameLayout results = new FrameLayout(context);
-            int maximumHeight = dp(context, 420);
-            int availableHeight = Math.round(
-                context.getResources().getDisplayMetrics().heightPixels * .55f);
             root.addView(results, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Math.min(maximumHeight, availableHeight)));
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
             list = new ListView(context);
             list.setChoiceMode(selected == null ?
                 ListView.CHOICE_MODE_SINGLE : ListView.CHOICE_MODE_MULTIPLE);
+            list.setNestedScrollingEnabled(true);
+            list.setVerticalScrollBarEnabled(true);
+            list.setOverScrollMode(ListView.OVER_SCROLL_ALWAYS);
+            list.setFastScrollEnabled(items.size() > 40);
             adapter = new ArrayAdapter<>(context,
                 selected == null ? android.R.layout.simple_list_item_1 :
                     android.R.layout.simple_list_item_multiple_choice,
@@ -193,6 +199,21 @@ final class AndroidHudSearchDialog {
                     list.setItemChecked(i, selected.contains(visible.get(i).id));
                 }
             }
+        }
+    }
+
+    private static void configureDialog(Context context, AlertDialog dialog, ViewGroup root) {
+        int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = context.getResources().getDisplayMetrics().heightPixels;
+        ViewGroup.LayoutParams params = root.getLayoutParams();
+        if (params != null) {
+            params.height = Math.round(screenHeight * .72f);
+            root.setLayoutParams(params);
+        }
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(
+                Math.min(screenWidth, dp(context, 760)),
+                Math.round(screenHeight * .94f));
         }
     }
 

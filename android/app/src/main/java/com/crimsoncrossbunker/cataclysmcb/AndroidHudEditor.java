@@ -2,6 +2,7 @@ package com.crimsoncrossbunker.cataclysmcb;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.text.InputType;
 import android.view.Gravity;
@@ -31,13 +32,6 @@ import java.util.UUID;
  */
 final class AndroidHudEditor {
     private static final int MAX_HISTORY = 50;
-    private static final int[] COLOR_VALUES = {
-        0xFFFFFFFF, 0xFFB0BEC5, 0xFF80CBC4, 0xFFFFD54F, 0xFFFF8A80, 0xFF90CAF9,
-        0xCC111820, 0xCC263441, 0x00000000
-    };
-    private static final String[] COLOR_NAMES = {
-        "白色", "灰蓝", "青色", "黄色", "红色", "浅蓝", "深色半透明", "蓝灰半透明", "透明"
-    };
 
     private final CataclysmDDA activity;
     private final AndroidHudOverlay overlay;
@@ -199,10 +193,21 @@ final class AndroidHudEditor {
                         float dx = rawDx / Math.max(.001f, overlay.canvasScaleX());
                         float dy = rawDy / Math.max(.001f, overlay.canvasScaleY());
                         if (resize) {
-                            element.frame.width = clamp(startWidth + dx, 32,
-                                AndroidHudModel.CANVAS_WIDTH);
-                            element.frame.height = clamp(startHeight + dy, 32,
-                                AndroidHudModel.CANVAS_HEIGHT);
+                            if (AndroidHudModel.requiresSquareFrame(element)) {
+                                float rawDelta = Math.abs(rawDx) >= Math.abs(rawDy) ?
+                                    rawDx : rawDy;
+                                float side = clamp(startWidth + rawDelta /
+                                    Math.max(.001f, overlay.canvasUniformScale()), 32,
+                                    Math.min(AndroidHudModel.CANVAS_WIDTH,
+                                        AndroidHudModel.CANVAS_HEIGHT));
+                                element.frame.width = side;
+                                element.frame.height = side;
+                            } else {
+                                element.frame.width = clamp(startWidth + dx, 32,
+                                    AndroidHudModel.CANVAS_WIDTH);
+                                element.frame.height = clamp(startHeight + dy, 32,
+                                    AndroidHudModel.CANVAS_HEIGHT);
+                            }
                         } else {
                             element.frame.x = clamp(startX + dx, 0,
                                 AndroidHudModel.CANVAS_WIDTH - element.frame.width);
@@ -299,10 +304,18 @@ final class AndroidHudEditor {
         info.label = source.title;
         info.frame.width = source.defaultWidth;
         info.frame.height = source.defaultHeight;
+        info.style.background = false;
+        info.style.border = false;
         if ("pixel_minimap".equals(source.renderer) ||
                 "overmap_grid".equals(source.renderer) ||
                 "threat_grid".equals(source.renderer)) {
             info.style.showLabel = false;
+        }
+        if (source.square || AndroidHudModel.requiresSquareFrame(info)) {
+            float side = Math.min(info.frame.width, info.frame.height);
+            info.frame.width = side;
+            info.frame.height = side;
+            info.overflowMode = AndroidHudModel.OVERFLOW_FIXED;
         }
         if ("threat_grid".equals(source.renderer)) {
             info.providerSettings.put("radius", "10");
@@ -350,6 +363,7 @@ final class AndroidHudEditor {
             return;
         }
         AndroidHudModel.Element working = original.copy();
+        boolean squareFrame = AndroidHudModel.requiresSquareFrame(working);
         LinearLayout content = verticalPanel();
         EditText label = textInput(working.label);
         content.addView(labeled("名称", label));
@@ -360,8 +374,14 @@ final class AndroidHudEditor {
         EditText height = numberInput(working.frame.height);
         content.addView(labeled("X（虚拟画布单位）", x));
         content.addView(labeled("Y（虚拟画布单位）", y));
-        content.addView(labeled("宽度", width));
-        content.addView(labeled("高度", height));
+        content.addView(labeled(squareFrame ? "正方形边长" : "宽度", width));
+        if (!squareFrame) {
+            content.addView(labeled("高度", height));
+        } else {
+            TextView squareHelp = propertyHelp(
+                "该网格信息强制使用正方形，编辑边框与实际渲染区域完全一致。");
+            content.addView(squareHelp, matchRow());
+        }
 
         CheckBox visible = check("显示", working.visible);
         CheckBox showLabel = check("显示名称", working.style.showLabel);
@@ -372,27 +392,56 @@ final class AndroidHudEditor {
         content.addView(background);
         content.addView(border);
 
+        String[] overflowModes = { "固定", "内容超出时可滑动" };
+        Spinner overflow = spinner(overflowModes,
+            AndroidHudModel.OVERFLOW_SCROLL.equals(working.overflowMode) ? 1 : 0);
+        boolean overflowAvailable = !squareFrame &&
+            !AndroidHudModel.TYPE_CONTROL.equals(working.type);
+        if (!overflowAvailable) {
+            overflow.setSelection(0);
+            overflow.setEnabled(false);
+        }
+        content.addView(labeled("内容行为", overflow));
+
         String[] alignments = { "左对齐", "居中", "右对齐" };
         Spinner alignment = spinner(alignments,
             "center".equals(working.style.alignment) ? 1 :
                 "right".equals(working.style.alignment) ? 2 : 0);
         content.addView(labeled("对齐", alignment));
-        Spinner textColor = colorSpinner(working.style.textColor);
-        Spinner backgroundColor = colorSpinner(working.style.backgroundColor);
-        Spinner borderColor = colorSpinner(working.style.borderColor);
-        content.addView(labeled("文字颜色", textColor));
-        content.addView(labeled("背景颜色", backgroundColor));
-        content.addView(labeled("边框颜色", borderColor));
 
-        float[] styleValues = { working.style.opacity, working.style.fontSizeSp };
+        CheckBox bold = check("粗体", working.style.textBold);
+        CheckBox italic = check("斜体", working.style.textItalic);
+        CheckBox outline = check("文字描边", working.style.textOutline);
+        content.addView(bold);
+        content.addView(italic);
+        content.addView(outline);
+
+        ColorField textColor = colorField("文字颜色", working.style.textColor);
+        ColorField outlineColor = colorField("描边颜色", working.style.textOutlineColor);
+        ColorField backgroundColor =
+            colorField("背景颜色", working.style.backgroundColor);
+        ColorField borderColor = colorField("边框颜色", working.style.borderColor);
+        content.addView(textColor.root, matchRow());
+        content.addView(outlineColor.root, matchRow());
+        content.addView(backgroundColor.root, matchRow());
+        content.addView(borderColor.root, matchRow());
+
+        float[] styleValues = {
+            working.style.opacity,
+            working.style.fontSizeSp,
+            working.style.textOutlineWidthSp
+        };
         addSlider(content, "不透明度", 10, 100,
             Math.round(styleValues[0] * 100), "%",
             value -> styleValues[0] = value / 100f);
         addSlider(content, "字体", 8, 40, Math.round(styleValues[1]), "sp",
             value -> styleValues[1] = value);
+        addSlider(content, "描边粗细", 1, 6, Math.round(styleValues[2]), "sp",
+            value -> styleValues[2] = value);
 
         CheckBox clip = null;
         Spinner selectorMode = null;
+        LinkedHashMap<String, CheckBox> riskAuthorizationChecks = new LinkedHashMap<>();
         if (AndroidHudModel.TYPE_GROUP.equals(working.type)) {
             clip = check("裁剪超出组边界的子元素", working.clipChildren);
             content.addView(clip);
@@ -410,42 +459,69 @@ final class AndroidHudEditor {
                 AndroidHudModel.SELECTOR_MODE_CYCLE.equals(working.selectorMode) ? 1 : 0);
             content.addView(labeled("多个动作时的切换方式", selectorMode));
             Button actions = new Button(activity);
-            actions.setText("配置动作、默认动作与高风险授权");
-            actions.setOnClickListener(view -> showControlBindingDialog(working));
+            actions.setText("配置控件动作");
+            LinearLayout riskPanel = verticalPanel();
+            riskPanel.setPadding(0, dp(4), 0, dp(4));
+            populateRiskAuthorizationPanel(riskPanel, working, riskAuthorizationChecks);
+            actions.setOnClickListener(view -> showControlBindingDialog(working,
+                () -> populateRiskAuthorizationPanel(
+                    riskPanel, working, riskAuthorizationChecks)));
             content.addView(actions, matchRow());
+            content.addView(propertySection("高风险动作授权"), matchRow());
+            content.addView(propertyHelp(
+                "勾选只代表允许该控件触发；运行时仍必须长按，游戏原有确认不会被绕过。"),
+                matchRow());
+            content.addView(riskPanel, matchRow());
         }
 
         final CheckBox finalClip = clip;
         final Spinner finalSelectorMode = selectorMode;
+        ScrollView propertyScroll = scroll(content);
+        int screenHeight = activity.getResources().getDisplayMetrics().heightPixels;
+        propertyScroll.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, Math.round(screenHeight * .72f)));
         AlertDialog dialog = new AlertDialog.Builder(activity)
             .setTitle("元素属性")
-            .setView(scroll(content))
+            .setView(propertyScroll)
             .setPositiveButton("保存", null)
             .setNegativeButton("取消", null)
             .create();
-        dialog.setOnShowListener(ignored -> dialog.getButton(
-            DialogInterface.BUTTON_POSITIVE).setOnClickListener(view -> {
+        dialog.setOnShowListener(ignored -> {
+            if (dialog.getWindow() != null) {
+                int screenWidth = activity.getResources().getDisplayMetrics().widthPixels;
+                dialog.getWindow().setLayout(
+                    Math.min(screenWidth, dp(760)), Math.round(screenHeight * .94f));
+            }
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(view -> {
                 working.label = AndroidHudModel.boundedText(label.getText().toString(), 100);
-                working.frame.x = parseFloat(x, working.frame.x, 0,
-                    AndroidHudModel.CANVAS_WIDTH);
-                working.frame.y = parseFloat(y, working.frame.y, 0,
-                    AndroidHudModel.CANVAS_HEIGHT);
                 working.frame.width = parseFloat(width, working.frame.width, 32,
                     AndroidHudModel.CANVAS_WIDTH);
-                working.frame.height = parseFloat(height, working.frame.height, 32,
-                    AndroidHudModel.CANVAS_HEIGHT);
+                working.frame.height = squareFrame ? working.frame.width :
+                    parseFloat(height, working.frame.height, 32,
+                        AndroidHudModel.CANVAS_HEIGHT);
+                working.frame.x = parseFloat(x, working.frame.x, 0,
+                    AndroidHudModel.CANVAS_WIDTH - working.frame.width);
+                working.frame.y = parseFloat(y, working.frame.y, 0,
+                    AndroidHudModel.CANVAS_HEIGHT - working.frame.height);
                 working.visible = visible.isChecked();
+                working.overflowMode = overflowAvailable &&
+                    overflow.getSelectedItemPosition() == 1 ?
+                    AndroidHudModel.OVERFLOW_SCROLL : AndroidHudModel.OVERFLOW_FIXED;
                 working.style.showLabel = showLabel.isChecked();
                 working.style.background = background.isChecked();
                 working.style.border = border.isChecked();
                 working.style.alignment = alignment.getSelectedItemPosition() == 1 ?
                     "center" : alignment.getSelectedItemPosition() == 2 ? "right" : "left";
-                working.style.textColor = COLOR_VALUES[textColor.getSelectedItemPosition()];
-                working.style.backgroundColor =
-                    COLOR_VALUES[backgroundColor.getSelectedItemPosition()];
-                working.style.borderColor = COLOR_VALUES[borderColor.getSelectedItemPosition()];
+                working.style.textColor = textColor.value;
+                working.style.textOutlineColor = outlineColor.value;
+                working.style.backgroundColor = backgroundColor.value;
+                working.style.borderColor = borderColor.value;
                 working.style.opacity = styleValues[0];
                 working.style.fontSizeSp = styleValues[1];
+                working.style.textOutlineWidthSp = styleValues[2];
+                working.style.textBold = bold.isChecked();
+                working.style.textItalic = italic.isChecked();
+                working.style.textOutline = outline.isChecked();
                 if (finalClip != null) {
                     working.clipChildren = finalClip.isChecked();
                 }
@@ -453,6 +529,14 @@ final class AndroidHudEditor {
                     working.selectorMode = finalSelectorMode.getSelectedItemPosition() == 1 ?
                         AndroidHudModel.SELECTOR_MODE_CYCLE :
                         AndroidHudModel.SELECTOR_MODE_MENU;
+                }
+                working.authorizedDangerousActions.retainAll(working.actionIds);
+                for (String actionId : riskAuthorizationChecks.keySet()) {
+                    if (riskAuthorizationChecks.get(actionId).isChecked()) {
+                        working.authorizedDangerousActions.add(actionId);
+                    } else {
+                        working.authorizedDangerousActions.remove(actionId);
+                    }
                 }
                 View radiusView = content.findViewWithTag("radius");
                 if (radiusView instanceof EditText) {
@@ -462,11 +546,13 @@ final class AndroidHudEditor {
                 replaceElement(working);
                 recordHistory();
                 dialog.dismiss();
-            }));
+            });
+        });
         dialog.show();
     }
 
-    private void showControlBindingDialog(AndroidHudModel.Element working) {
+    private void showControlBindingDialog(AndroidHudModel.Element working,
+            Runnable onChanged) {
         List<AndroidHudModel.ActionDescriptor> actions =
             new ArrayList<>(scene.actionCatalog.values());
         AndroidHudSearchDialog.showMultiple(activity, "控件候选动作",
@@ -482,6 +568,7 @@ final class AndroidHudEditor {
                     working.defaultActionId = "";
                     working.selectedActionId = "";
                     working.authorizedDangerousActions.clear();
+                    onChanged.run();
                     return true;
                 }
                 if (!working.actionIds.contains(working.defaultActionId)) {
@@ -491,7 +578,7 @@ final class AndroidHudEditor {
                     working.selectedActionId = working.defaultActionId;
                 }
                 working.authorizedDangerousActions.retainAll(working.actionIds);
-                showRiskAuthorization(working, actions);
+                onChanged.run();
                 return true;
             });
     }
@@ -507,42 +594,6 @@ final class AndroidHudEditor {
                 action.label, action.group, action.risk));
         }
         return items;
-    }
-
-    private void showRiskAuthorization(AndroidHudModel.Element working,
-            List<AndroidHudModel.ActionDescriptor> allActions) {
-        ArrayList<AndroidHudModel.ActionDescriptor> risky = new ArrayList<>();
-        for (AndroidHudModel.ActionDescriptor action : allActions) {
-            if (working.actionIds.contains(action.id) &&
-                    !AndroidHudModel.RISK_SAFE.equals(action.risk)) {
-                risky.add(action);
-            }
-        }
-        if (risky.isEmpty()) {
-            return;
-        }
-        String[] labels = new String[risky.size()];
-        boolean[] authorized = new boolean[risky.size()];
-        for (int i = 0; i < risky.size(); ++i) {
-            labels[i] = risky.get(i).label + "  [" + risky.get(i).id + "]";
-            authorized[i] = working.authorizedDangerousActions.contains(risky.get(i).id);
-        }
-        new AlertDialog.Builder(activity)
-            .setTitle("显式授权高风险动作")
-            .setMessage("只有勾选授权并在游戏中长按，按钮才会触发这些动作。")
-            .setMultiChoiceItems(labels, authorized,
-                (dialog, which, checked) -> authorized[which] = checked)
-            .setPositiveButton("确认授权", (dialog, which) -> {
-                working.authorizedDangerousActions.clear();
-                for (int i = 0; i < risky.size(); ++i) {
-                    if (authorized[i]) {
-                        working.authorizedDangerousActions.add(risky.get(i).id);
-                    }
-                }
-            })
-            .setNegativeButton("全部不授权", (dialog, which) ->
-                working.authorizedDangerousActions.clear())
-            .show();
     }
 
     private void deleteSelected() {
@@ -792,6 +843,26 @@ final class AndroidHudEditor {
         return AndroidHudModel.RISK_SAFE.equals(action.risk) ? "" : "⚠ ";
     }
 
+    private void populateRiskAuthorizationPanel(LinearLayout panel,
+            AndroidHudModel.Element element,
+            LinkedHashMap<String, CheckBox> checks) {
+        panel.removeAllViews();
+        checks.clear();
+        for (String actionId : element.actionIds) {
+            AndroidHudModel.ActionDescriptor action = scene.actionCatalog.get(actionId);
+            if (action == null || AndroidHudModel.RISK_SAFE.equals(action.risk)) {
+                continue;
+            }
+            CheckBox authorized = check("允许“" + action.label + "”  [" + action.id + "]",
+                element.authorizedDangerousActions.contains(action.id));
+            checks.put(action.id, authorized);
+            panel.addView(authorized, matchRow());
+        }
+        if (checks.isEmpty()) {
+            panel.addView(propertyHelp("当前控件没有需要额外授权的动作。"), matchRow());
+        }
+    }
+
     private LinearLayout verticalPanel() {
         LinearLayout layout = new LinearLayout(activity);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -814,9 +885,31 @@ final class AndroidHudEditor {
     private ScrollView scroll(View content) {
         ScrollView scroll = new ScrollView(activity);
         scroll.setFillViewport(true);
+        scroll.setClipToPadding(false);
+        scroll.setPadding(0, 0, 0, dp(28));
+        scroll.setVerticalScrollBarEnabled(true);
+        scroll.setNestedScrollingEnabled(true);
         scroll.addView(content, new ScrollView.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return scroll;
+    }
+
+    private TextView propertySection(String value) {
+        TextView text = new TextView(activity);
+        text.setText(value);
+        text.setTextColor(0xFF80CBC4);
+        text.setTextSize(14f);
+        text.setPadding(0, dp(14), 0, dp(4));
+        return text;
+    }
+
+    private TextView propertyHelp(String value) {
+        TextView text = new TextView(activity);
+        text.setText(value);
+        text.setTextColor(0xFFB6C6CE);
+        text.setTextSize(12f);
+        text.setPadding(0, dp(4), 0, dp(8));
+        return text;
     }
 
     private EditText textInput(String value) {
@@ -848,15 +941,34 @@ final class AndroidHudEditor {
         return spinner;
     }
 
-    private Spinner colorSpinner(int current) {
-        int selected = 0;
-        for (int i = 0; i < COLOR_VALUES.length; ++i) {
-            if (COLOR_VALUES[i] == current) {
-                selected = i;
-                break;
-            }
-        }
-        return spinner(COLOR_NAMES, selected);
+    private ColorField colorField(String title, int current) {
+        LinearLayout root = new LinearLayout(activity);
+        root.setOrientation(LinearLayout.HORIZONTAL);
+        root.setGravity(Gravity.CENTER_VERTICAL);
+        TextView label = new TextView(activity);
+        label.setText(title);
+        root.addView(label, new LinearLayout.LayoutParams(dp(96),
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+        Button button = new Button(activity);
+        button.setAllCaps(false);
+        ColorField field = new ColorField(root, button, current);
+        updateColorButton(field);
+        button.setOnClickListener(view -> AndroidHudColorPickerDialog.show(
+            activity, title, field.value, color -> {
+                field.value = color;
+                updateColorButton(field);
+            }));
+        root.addView(button, new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        return field;
+    }
+
+    private void updateColorButton(ColorField field) {
+        field.button.setText(String.format("#%08X", field.value));
+        field.button.setBackgroundTintList(ColorStateList.valueOf(field.value));
+        double luminance = .299 * Color.red(field.value) +
+            .587 * Color.green(field.value) + .114 * Color.blue(field.value);
+        field.button.setTextColor(luminance >= 150 ? Color.BLACK : Color.WHITE);
     }
 
     private interface SliderCallback {
@@ -927,5 +1039,17 @@ final class AndroidHudEditor {
 
     private static float clamp(float value, float minimum, float maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    private static final class ColorField {
+        final LinearLayout root;
+        final Button button;
+        int value;
+
+        ColorField(LinearLayout root, Button button, int value) {
+            this.root = root;
+            this.button = button;
+            this.value = value;
+        }
     }
 }
