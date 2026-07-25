@@ -10,6 +10,7 @@ import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -50,11 +51,16 @@ final class AndroidHudColorPickerDialog {
             Math.round(initialHsv[1] * 100), "%");
         SeekRow brightness = seekRow(context, "亮度", 100,
             Math.round(initialHsv[2] * 100), "%");
-        SeekRow alpha = seekRow(context, "透明度", 255, Color.alpha(initialColor), "");
+        SeekRow alpha = seekRow(context, "不透明度", 255,
+            Color.alpha(initialColor), "/255");
         content.addView(hue.root, row());
         content.addView(saturation.root, row());
         content.addView(brightness.root, row());
         content.addView(alpha.root, row());
+        TextView alphaHelp = new TextView(context);
+        alphaHelp.setText("不透明度：0 = 完全透明，255 = 完全不透明");
+        alphaHelp.setTextSize(12f);
+        content.addView(alphaHelp, row());
 
         int[] selected = { initialColor };
         boolean[] syncing = { false };
@@ -139,12 +145,32 @@ final class AndroidHudColorPickerDialog {
         syncing[0] = false;
         applyPreview(preview, initialColor);
 
-        new AlertDialog.Builder(context)
+        ScrollView scroll = new ScrollView(context);
+        scroll.setFillViewport(true);
+        scroll.setClipToPadding(false);
+        scroll.setVerticalScrollBarEnabled(true);
+        scroll.setOverScrollMode(ScrollView.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        scroll.setPadding(0, 0, 0, dp(context, 20));
+        scroll.addView(content, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        AlertDialog dialog = new AlertDialog.Builder(context)
             .setTitle(title)
-            .setView(content)
-            .setPositiveButton("选择", (dialog, which) -> listener.selected(selected[0]))
+            .setView(scroll)
+            .setPositiveButton("选择", (ignored, which) -> listener.selected(selected[0]))
             .setNegativeButton("取消", null)
-            .show();
+            .create();
+        dialog.setOnShowListener(ignored -> {
+            if (dialog.getWindow() == null) {
+                return;
+            }
+            int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = context.getResources().getDisplayMetrics().heightPixels;
+            dialog.getWindow().setLayout(
+                Math.min(screenWidth, dp(context, 720)),
+                Math.round(screenHeight * .92f));
+        });
+        dialog.show();
     }
 
     private static SeekRow seekRow(Context context, String label, int maximum,

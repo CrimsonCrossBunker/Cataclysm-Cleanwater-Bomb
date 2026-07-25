@@ -43,6 +43,9 @@ final class AndroidHudModel {
     static final String SELECTOR_MODE_CYCLE = "cycle";
     static final String OVERFLOW_FIXED = "fixed";
     static final String OVERFLOW_SCROLL = "scroll";
+    static final String TEXT_EFFECT_NONE = "none";
+    static final String TEXT_EFFECT_OUTLINE = "outline";
+    static final String TEXT_EFFECT_SHADOW = "shadow";
 
     private AndroidHudModel() {
     }
@@ -307,6 +310,7 @@ final class AndroidHudModel {
         String overflowMode = OVERFLOW_FIXED;
         final Frame frame = new Frame();
         final Style style = new Style();
+        final ControlAppearance controlAppearance = new ControlAppearance();
 
         // Group payload.
         boolean clipChildren = true;
@@ -334,6 +338,7 @@ final class AndroidHudModel {
             result.overflowMode = overflowMode;
             result.frame.set(frame);
             result.style.set(style);
+            result.controlAppearance.set(controlAppearance);
             result.clipChildren = clipChildren;
             for (Element child : children) {
                 result.children.add(child.copy());
@@ -377,6 +382,7 @@ final class AndroidHudModel {
                 json.put("defaultActionId", defaultActionId);
                 json.put("selectedActionId", selectedActionId);
                 json.put("selectorMode", selectorMode);
+                json.put("controlAppearance", controlAppearance.toJson());
             }
             if (shouldEncodeActionBinding(this)) {
                 JSONArray actions = new JSONArray();
@@ -415,7 +421,10 @@ final class AndroidHudModel {
                 json.optString("overflow", OVERFLOW_FIXED)) ?
                 OVERFLOW_SCROLL : OVERFLOW_FIXED;
             result.frame.set(Frame.fromJson(json.optJSONObject("frame")));
-            result.style.set(Style.fromJson(json.optJSONObject("style")));
+            JSONObject encodedStyle = json.optJSONObject("style");
+            boolean hasExplicitContentPadding =
+                Style.hasExplicitContentPadding(encodedStyle);
+            result.style.set(Style.fromJson(encodedStyle));
             ids.add(id);
             count[0]++;
 
@@ -444,6 +453,33 @@ final class AndroidHudModel {
                 decodeActionBinding(json, result);
             }
             if (TYPE_CONTROL.equals(type)) {
+                JSONObject appearance = json.optJSONObject("controlAppearance");
+                if (!hasExplicitContentPadding) {
+                    if (appearance == null) {
+                        // Pre-ControlAppearance controls were platform Buttons
+                        // with implicit horizontal/vertical content padding.
+                        // Make that old visual spacing explicit in Style.
+                        result.style.setContentPadding(8f, 2f);
+                    } else if (appearance.has("horizontalPaddingDp") ||
+                            appearance.has("verticalPaddingDp")) {
+                        // ControlAppearance briefly owned content padding.
+                        // Consume those legacy fields once; new files keep all
+                        // element content insets in the shared Style object.
+                        float horizontal = clampFinite(
+                            appearance.optDouble("horizontalPaddingDp", 8f), 0, 64);
+                        float vertical = clampFinite(
+                            appearance.optDouble("verticalPaddingDp", 2f), 0, 64);
+                        result.style.setContentPadding(horizontal, vertical);
+                    }
+                }
+                result.controlAppearance.set(appearance == null ?
+                    ControlAppearance.fromLegacy(result.style) :
+                    ControlAppearance.fromJson(appearance));
+                if (appearance == null && "left".equals(result.style.alignment)) {
+                    // Legacy platform Buttons always centered their text; the
+                    // stored default alignment was never applied to controls.
+                    result.style.alignment = "center";
+                }
                 result.defaultActionId = acceptedAction(
                     json.optString("defaultActionId", ""), result.actionIds);
                 result.selectedActionId = acceptedAction(
@@ -505,13 +541,22 @@ final class AndroidHudModel {
         int borderColor = 0x996E8CA3;
         int textOutlineColor = 0xFF000000;
         float textOutlineWidthSp = 1.5f;
+        int textShadowColor = 0x99000000;
+        float textShadowRadiusSp = 2f;
+        float textShadowOffsetXSp = 1f;
+        float textShadowOffsetYSp = 1f;
+        float contentPaddingLeftDp;
+        float contentPaddingTopDp;
+        float contentPaddingRightDp;
+        float contentPaddingBottomDp;
         String alignment = "left";
+        String textEffect = TEXT_EFFECT_NONE;
         boolean showLabel = true;
         boolean background;
         boolean border;
         boolean textBold;
         boolean textItalic;
-        boolean textOutline;
+        boolean sourceColors = true;
 
         void set(Style other) {
             opacity = other.opacity;
@@ -521,13 +566,22 @@ final class AndroidHudModel {
             borderColor = other.borderColor;
             textOutlineColor = other.textOutlineColor;
             textOutlineWidthSp = other.textOutlineWidthSp;
+            textShadowColor = other.textShadowColor;
+            textShadowRadiusSp = other.textShadowRadiusSp;
+            textShadowOffsetXSp = other.textShadowOffsetXSp;
+            textShadowOffsetYSp = other.textShadowOffsetYSp;
+            contentPaddingLeftDp = other.contentPaddingLeftDp;
+            contentPaddingTopDp = other.contentPaddingTopDp;
+            contentPaddingRightDp = other.contentPaddingRightDp;
+            contentPaddingBottomDp = other.contentPaddingBottomDp;
             alignment = other.alignment;
+            textEffect = other.textEffect;
             showLabel = other.showLabel;
             background = other.background;
             border = other.border;
             textBold = other.textBold;
             textItalic = other.textItalic;
-            textOutline = other.textOutline;
+            sourceColors = other.sourceColors;
         }
 
         JSONObject toJson() throws JSONException {
@@ -539,13 +593,40 @@ final class AndroidHudModel {
             json.put("borderColor", borderColor);
             json.put("textOutlineColor", textOutlineColor);
             json.put("textOutlineWidthSp", textOutlineWidthSp);
+            if (!TEXT_EFFECT_NONE.equals(textEffect)) {
+                json.put("textEffect", textEffect);
+            }
+            if (TEXT_EFFECT_SHADOW.equals(textEffect) ||
+                    textShadowColor != 0x99000000 ||
+                    Float.compare(textShadowRadiusSp, 2f) != 0 ||
+                    Float.compare(textShadowOffsetXSp, 1f) != 0 ||
+                    Float.compare(textShadowOffsetYSp, 1f) != 0) {
+                json.put("textShadowColor", textShadowColor);
+                json.put("textShadowRadiusSp", textShadowRadiusSp);
+                json.put("textShadowOffsetXSp", textShadowOffsetXSp);
+                json.put("textShadowOffsetYSp", textShadowOffsetYSp);
+            }
+            if (sameContentPadding()) {
+                if (contentPaddingLeftDp != 0f) {
+                    json.put("paddingDp", contentPaddingLeftDp);
+                }
+            } else if (hasContentPadding()) {
+                JSONArray padding = new JSONArray();
+                padding.put(contentPaddingLeftDp);
+                padding.put(contentPaddingTopDp);
+                padding.put(contentPaddingRightDp);
+                padding.put(contentPaddingBottomDp);
+                json.put("contentPadding", padding);
+            }
             json.put("alignment", alignment);
             json.put("showLabel", showLabel);
             json.put("background", background);
             json.put("border", border);
             json.put("textBold", textBold);
             json.put("textItalic", textItalic);
-            json.put("textOutline", textOutline);
+            if (!sourceColors) {
+                json.put("sourceColors", false);
+            }
             return json;
         }
 
@@ -554,7 +635,7 @@ final class AndroidHudModel {
             if (json == null) {
                 return result;
             }
-            result.opacity = clampFinite(json.optDouble("opacity", .90), .1, 1);
+            result.opacity = clampFinite(json.optDouble("opacity", .90), 0, 1);
             result.fontSizeSp = clampFinite(json.optDouble("fontSizeSp", 10), 8, 40);
             result.textColor = (int)json.optLong("textColor", 0xFFFFFFFFL);
             result.backgroundColor = (int)json.optLong("backgroundColor", 0xCC111820L);
@@ -562,17 +643,222 @@ final class AndroidHudModel {
             result.textOutlineColor =
                 (int)json.optLong("textOutlineColor", 0xFF000000L);
             result.textOutlineWidthSp =
-                clampFinite(json.optDouble("textOutlineWidthSp", 1.5), .5, 6);
+                clampFinite(json.optDouble("textOutlineWidthSp", 1.5), 0, 6);
+            result.textShadowColor =
+                (int)json.optLong("textShadowColor", 0x99000000L);
+            result.textShadowRadiusSp =
+                clampFinite(json.optDouble("textShadowRadiusSp", 2), 0, 12);
+            result.textShadowOffsetXSp =
+                clampFinite(json.optDouble("textShadowOffsetXSp", 1), -12, 12);
+            result.textShadowOffsetYSp =
+                clampFinite(json.optDouble("textShadowOffsetYSp", 1), -12, 12);
+            float uniformPadding =
+                clampFinite(json.optDouble("paddingDp", 0), 0, 64);
+            result.contentPaddingLeftDp = uniformPadding;
+            result.contentPaddingTopDp = uniformPadding;
+            result.contentPaddingRightDp = uniformPadding;
+            result.contentPaddingBottomDp = uniformPadding;
+            JSONArray padding = json.optJSONArray("contentPadding");
+            if (padding != null) {
+                result.contentPaddingLeftDp =
+                    clampFinite(padding.optDouble(0, uniformPadding), 0, 64);
+                result.contentPaddingTopDp =
+                    clampFinite(padding.optDouble(1, uniformPadding), 0, 64);
+                result.contentPaddingRightDp =
+                    clampFinite(padding.optDouble(2, uniformPadding), 0, 64);
+                result.contentPaddingBottomDp =
+                    clampFinite(padding.optDouble(3, uniformPadding), 0, 64);
+            }
             String alignment = json.optString("alignment", "left");
             result.alignment = "center".equals(alignment) || "right".equals(alignment) ?
                 alignment : "left";
+            String legacyEffect = json.optBoolean("textOutline", false) ?
+                TEXT_EFFECT_OUTLINE : TEXT_EFFECT_NONE;
+            String textEffect = json.optString("textEffect", legacyEffect);
+            result.textEffect = TEXT_EFFECT_OUTLINE.equals(textEffect) ||
+                TEXT_EFFECT_SHADOW.equals(textEffect) ? textEffect : TEXT_EFFECT_NONE;
             result.showLabel = json.optBoolean("showLabel", true);
             result.background = json.optBoolean("background", false);
             result.border = json.optBoolean("border", false);
             result.textBold = json.optBoolean("textBold", false);
             result.textItalic = json.optBoolean("textItalic", false);
-            result.textOutline = json.optBoolean("textOutline", false);
+            result.sourceColors = json.optBoolean("sourceColors", true);
             return result;
+        }
+
+        void setContentPadding(float horizontal, float vertical) {
+            contentPaddingLeftDp = horizontal;
+            contentPaddingTopDp = vertical;
+            contentPaddingRightDp = horizontal;
+            contentPaddingBottomDp = vertical;
+        }
+
+        static boolean hasExplicitContentPadding(JSONObject json) {
+            return json != null &&
+                (json.has("paddingDp") || json.has("contentPadding"));
+        }
+
+        private boolean hasContentPadding() {
+            return contentPaddingLeftDp != 0f || contentPaddingTopDp != 0f ||
+                contentPaddingRightDp != 0f || contentPaddingBottomDp != 0f;
+        }
+
+        private boolean sameContentPadding() {
+            return Float.compare(contentPaddingLeftDp, contentPaddingTopDp) == 0 &&
+                Float.compare(contentPaddingLeftDp, contentPaddingRightDp) == 0 &&
+                Float.compare(contentPaddingLeftDp, contentPaddingBottomDp) == 0;
+        }
+    }
+
+    /**
+     * Control-only visual state.  It is serialized separately from Style so
+     * information/group containers do not accumulate button-specific fields.
+     * A missing object means a pre-ControlAppearance layout and is migrated
+     * from the legacy background/border fields.
+     */
+    static final class ControlAppearance {
+        private static final boolean DEFAULT_SURFACE = true;
+        private static final int DEFAULT_SURFACE_COLOR = 0xCC263746;
+        private static final int DEFAULT_PRESSED_OVERLAY_COLOR = 0x33FFFFFF;
+        private static final boolean DEFAULT_BORDER = false;
+        private static final int DEFAULT_BORDER_COLOR = 0xFF6E8CA3;
+        private static final float DEFAULT_BORDER_WIDTH_DP = 1f;
+        private static final float DEFAULT_CORNER_RADIUS_DP = 8f;
+        private static final boolean DEFAULT_SHADOW = false;
+        private static final int DEFAULT_SHADOW_COLOR = 0x66000000;
+        private static final float DEFAULT_SHADOW_RADIUS_DP = 6f;
+        private static final float DEFAULT_SHADOW_OFFSET_X_DP = 0f;
+        private static final float DEFAULT_SHADOW_OFFSET_Y_DP = 2f;
+        private static final float DEFAULT_SELECTOR_WIDTH_DP = 38f;
+        private static final float DEFAULT_BUTTON_GAP_DP = 2f;
+
+        boolean surface = DEFAULT_SURFACE;
+        int surfaceColor = DEFAULT_SURFACE_COLOR;
+        int pressedOverlayColor = DEFAULT_PRESSED_OVERLAY_COLOR;
+        boolean border = DEFAULT_BORDER;
+        int borderColor = DEFAULT_BORDER_COLOR;
+        float borderWidthDp = DEFAULT_BORDER_WIDTH_DP;
+        float cornerRadiusDp = DEFAULT_CORNER_RADIUS_DP;
+        boolean shadow = DEFAULT_SHADOW;
+        int shadowColor = DEFAULT_SHADOW_COLOR;
+        float shadowRadiusDp = DEFAULT_SHADOW_RADIUS_DP;
+        float shadowOffsetXDp = DEFAULT_SHADOW_OFFSET_X_DP;
+        float shadowOffsetYDp = DEFAULT_SHADOW_OFFSET_Y_DP;
+        float selectorWidthDp = DEFAULT_SELECTOR_WIDTH_DP;
+        float buttonGapDp = DEFAULT_BUTTON_GAP_DP;
+
+        void set(ControlAppearance other) {
+            surface = other.surface;
+            surfaceColor = other.surfaceColor;
+            pressedOverlayColor = other.pressedOverlayColor;
+            border = other.border;
+            borderColor = other.borderColor;
+            borderWidthDp = other.borderWidthDp;
+            cornerRadiusDp = other.cornerRadiusDp;
+            shadow = other.shadow;
+            shadowColor = other.shadowColor;
+            shadowRadiusDp = other.shadowRadiusDp;
+            shadowOffsetXDp = other.shadowOffsetXDp;
+            shadowOffsetYDp = other.shadowOffsetYDp;
+            selectorWidthDp = other.selectorWidthDp;
+            buttonGapDp = other.buttonGapDp;
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject json = new JSONObject();
+            putChanged(json, "surface", surface, DEFAULT_SURFACE);
+            putChanged(json, "surfaceColor", surfaceColor, DEFAULT_SURFACE_COLOR);
+            putChanged(json, "pressedOverlayColor", pressedOverlayColor,
+                DEFAULT_PRESSED_OVERLAY_COLOR);
+            putChanged(json, "border", border, DEFAULT_BORDER);
+            putChanged(json, "borderColor", borderColor, DEFAULT_BORDER_COLOR);
+            putChanged(json, "borderWidthDp", borderWidthDp, DEFAULT_BORDER_WIDTH_DP);
+            putChanged(json, "cornerRadiusDp", cornerRadiusDp, DEFAULT_CORNER_RADIUS_DP);
+            putChanged(json, "shadow", shadow, DEFAULT_SHADOW);
+            putChanged(json, "shadowColor", shadowColor, DEFAULT_SHADOW_COLOR);
+            putChanged(json, "shadowRadiusDp", shadowRadiusDp, DEFAULT_SHADOW_RADIUS_DP);
+            putChanged(json, "shadowOffsetXDp", shadowOffsetXDp,
+                DEFAULT_SHADOW_OFFSET_X_DP);
+            putChanged(json, "shadowOffsetYDp", shadowOffsetYDp,
+                DEFAULT_SHADOW_OFFSET_Y_DP);
+            putChanged(json, "selectorWidthDp", selectorWidthDp,
+                DEFAULT_SELECTOR_WIDTH_DP);
+            putChanged(json, "buttonGapDp", buttonGapDp, DEFAULT_BUTTON_GAP_DP);
+            return json;
+        }
+
+        static ControlAppearance fromJson(JSONObject json) {
+            ControlAppearance result = new ControlAppearance();
+            if (json == null) {
+                return result;
+            }
+            result.surface = json.optBoolean("surface", DEFAULT_SURFACE);
+            result.surfaceColor =
+                (int)json.optLong("surfaceColor", DEFAULT_SURFACE_COLOR);
+            result.pressedOverlayColor =
+                (int)json.optLong("pressedOverlayColor",
+                    DEFAULT_PRESSED_OVERLAY_COLOR);
+            result.border = json.optBoolean("border", DEFAULT_BORDER);
+            result.borderColor =
+                (int)json.optLong("borderColor", DEFAULT_BORDER_COLOR);
+            result.borderWidthDp = clampFinite(
+                json.optDouble("borderWidthDp", DEFAULT_BORDER_WIDTH_DP), 0, 12);
+            result.cornerRadiusDp = clampFinite(
+                json.optDouble("cornerRadiusDp", DEFAULT_CORNER_RADIUS_DP), 0, 64);
+            result.shadow = json.optBoolean("shadow", DEFAULT_SHADOW);
+            result.shadowColor =
+                (int)json.optLong("shadowColor", DEFAULT_SHADOW_COLOR);
+            result.shadowRadiusDp = clampFinite(
+                json.optDouble("shadowRadiusDp", DEFAULT_SHADOW_RADIUS_DP), 0, 32);
+            result.shadowOffsetXDp = clampFinite(
+                json.optDouble("shadowOffsetXDp", DEFAULT_SHADOW_OFFSET_X_DP), -32, 32);
+            result.shadowOffsetYDp = clampFinite(
+                json.optDouble("shadowOffsetYDp", DEFAULT_SHADOW_OFFSET_Y_DP), -32, 32);
+            result.selectorWidthDp = clampFinite(
+                json.optDouble("selectorWidthDp", DEFAULT_SELECTOR_WIDTH_DP), 24, 120);
+            result.buttonGapDp = clampFinite(
+                json.optDouble("buttonGapDp", DEFAULT_BUTTON_GAP_DP), 0, 32);
+            return result;
+        }
+
+        static ControlAppearance fromLegacy(Style style) {
+            ControlAppearance result = new ControlAppearance();
+            // Legacy controls were android.widget.Button instances, so they
+            // always had a platform button surface even when the separate host
+            // container's "background" option was disabled.  Mapping that
+            // host flag to the new button surface made every existing control
+            // become plain text after migration.
+            result.surface = true;
+            if (style.background) {
+                result.surfaceColor = style.backgroundColor;
+            }
+            result.border = style.border;
+            result.borderColor = style.borderColor;
+            // Platform Button shadows were never a user setting.  Migrating
+            // them as disabled removes the old transparent-button ghost.
+            result.shadow = false;
+            return result;
+        }
+
+        private static void putChanged(JSONObject json, String key,
+                boolean value, boolean defaultValue) throws JSONException {
+            if (value != defaultValue) {
+                json.put(key, value);
+            }
+        }
+
+        private static void putChanged(JSONObject json, String key,
+                int value, int defaultValue) throws JSONException {
+            if (value != defaultValue) {
+                json.put(key, value);
+            }
+        }
+
+        private static void putChanged(JSONObject json, String key,
+                float value, float defaultValue) throws JSONException {
+            if (Float.compare(value, defaultValue) != 0) {
+                json.put(key, value);
+            }
         }
     }
 
@@ -632,6 +918,8 @@ final class AndroidHudModel {
         float defaultHeight = 100;
         boolean multiline;
         boolean square;
+        boolean configurableWidgetLayout;
+        int defaultWidgetColumns;
 
         static InfoSource fromJson(JSONObject json) {
             if (json == null) {
@@ -647,6 +935,13 @@ final class AndroidHudModel {
                 CANVAS_HEIGHT);
             result.multiline = json.optBoolean("multiline", false);
             result.square = json.optBoolean("square", false);
+            result.configurableWidgetLayout =
+                json.optBoolean("configurableWidgetLayout", false);
+            result.defaultWidgetColumns = Math.max(
+                AndroidHudWidgetLayout.MIN_COLUMNS,
+                Math.min(AndroidHudWidgetLayout.MAX_COLUMNS,
+                    json.optInt("defaultWidgetColumns",
+                        AndroidHudWidgetLayout.MIN_COLUMNS)));
             return result.id.isEmpty() || result.renderer.isEmpty() ? null : result;
         }
     }

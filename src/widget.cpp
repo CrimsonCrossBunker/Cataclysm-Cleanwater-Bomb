@@ -1844,10 +1844,31 @@ static std::string append_line( const std::string &line, bool first_row, int max
 std::string widget::layout( const avatar &ava, unsigned int max_width, int label_width,
                             bool skip_pad )
 {
+    return layout_internal( ava, max_width, label_width, skip_pad, -1 );
+}
+
+std::string widget::layout_with_label_width( const avatar &ava,
+        const unsigned int max_width, const int label_width, const bool skip_pad )
+{
+    return layout_internal( ava, max_width, 0, skip_pad,
+                            std::max( 0, label_width ) );
+}
+
+std::string widget::layout_internal( const avatar &ava,
+                                     const unsigned int max_width,
+                                     const int label_width,
+                                     const bool skip_pad,
+                                     const int label_width_override )
+{
     std::string ret;
+    const bool force_label_width = label_width_override >= 0;
     if( _style == "layout" ) {
         std::vector<string_id<widget>> wgts = widgets( !_clauses.empty() );
-        int layout_label_width = ( label_width == 0 || ! _pad_labels ) ? _label_width : label_width;
+        int layout_label_width = ( label_width == 0 || ! _pad_labels ) ?
+                                 _label_width : label_width;
+        if( force_label_width ) {
+            layout_label_width = label_width_override;
+        }
 
         if( _arrange == "rows" ) {
             std::string sep;
@@ -1855,8 +1876,10 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
             // Stack rows vertically into a multiline widget
             for( const widget_id &wid : wgts ) {
                 widget cur_child = wid.obj();
-                ret += sep + cur_child.layout( ava, max_width, layout_label_width,
-                                               skip_pad || wid->has_flag( json_flag_W_NO_PADDING ) );
+                ret += sep + cur_child.layout_internal(
+                           ava, max_width, layout_label_width,
+                           skip_pad || wid->has_flag( json_flag_W_NO_PADDING ),
+                           label_width_override );
                 sep = "\n";
                 h += wid->_height < 0 ? 0 : wid->_height;
             }
@@ -1925,8 +1948,10 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
                 }
                 const bool skip_pad_this = skip_pad || wid->has_flag( json_flag_W_NO_PADDING );
                 // Layout child in this column
-                const std::string txt = cur_child.layout( ava, skip_pad_this ? 0 : cur_width,
-                                        layout_label_width, skip_pad_this );
+                const std::string txt = cur_child.layout_internal(
+                                            ava, skip_pad_this ? 0 : cur_width,
+                                            layout_label_width, skip_pad_this,
+                                            label_width_override );
                 // Store the resulting text for this column
                 cols.emplace_back( string_split( txt, '\n' ) );
                 widths.emplace_back( cur_width );
@@ -1980,18 +2005,30 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
         // For multi-line widgets, each line is separated by a '\n' character
         while( ( strpos = shown.find( '\n' ) ) != std::string::npos && row_num < _height ) {
             // Process line, including '\n'
+            const int current_label_width = force_label_width && row_num == 0 &&
+                                            _pad_labels &&
+                                            !has_flag( json_flag_W_LABEL_NONE ) ?
+                                            label_width_override : 0;
             ret += append_line( shown.substr( 0, strpos + 1 ), row_num == 0, max_width,
                                 has_flag( json_flag_W_LABEL_NONE ) ? translation() : _label,
-                                0, _separator, _text_align, _label_align, skip_pad );
+                                current_label_width, _separator, _text_align,
+                                _label_align, skip_pad );
             // Delete used token
             shown.erase( 0, strpos + 1 );
             row_num++;
         }
         if( row_num < _height ) {
             // Process last line, or first for single-line widgets
+            int current_label_width = row_num == 0 && _pad_labels ?
+                                      label_width : 0;
+            if( force_label_width && row_num == 0 && _pad_labels ) {
+                current_label_width = has_flag( json_flag_W_LABEL_NONE ) ?
+                                      0 : label_width_override;
+            }
             ret += append_line( shown, row_num == 0, max_width,
                                 has_flag( json_flag_W_LABEL_NONE ) ? translation() : _label,
-                                row_num == 0 && _pad_labels ? label_width : 0, _separator, _text_align, _label_align, skip_pad );
+                                current_label_width, _separator, _text_align,
+                                _label_align, skip_pad );
         }
         if( !ret.empty() && ret.back() == '\n' ) {
             ret.pop_back();

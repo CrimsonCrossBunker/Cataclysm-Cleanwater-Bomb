@@ -45,7 +45,8 @@ class pixel_minimap
         void set_type( pixel_minimap_type type );
         void set_settings( const pixel_minimap_settings &settings );
 
-        void draw( const SDL_Rect &screen_rect, const tripoint_bub_ms &center );
+        void draw( const SDL_Rect &screen_rect, const tripoint_bub_ms &center,
+                   bool force_scale_to_fit = false );
 
         // Drop every renderer-owned GPU resource (main texture, texture
         // pool) along with the projector and submap cache. All of it
@@ -105,7 +106,7 @@ class pixel_minimap
 
         submap_cache &get_cache_at( const tripoint_abs_sm &abs_sm_pos );
 
-        void set_screen_rect( const SDL_Rect &screen_rect );
+        void set_screen_rect( const SDL_Rect &screen_rect, bool force_scale_to_fit );
 
         void draw_beacon( const SDL_Rect &rect, const SDL_Color &color );
 
@@ -143,6 +144,7 @@ class pixel_minimap
         SDL_Rect screen_rect;
         SDL_Rect main_tex_clip_rect;
         SDL_Rect screen_clip_rect;
+        bool forced_scale_to_fit = false;
 
         SDL_Texture_Ptr main_tex;
 

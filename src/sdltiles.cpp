@@ -1384,7 +1384,8 @@ void refresh_display()
                                            hud_minimap.viewport_height, output_height );
             tilecontext->draw_minimap( point( left, top ),
             { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
-            std::max( 1, right - left ), std::max( 1, bottom - top ) );
+            std::max( 1, right - left ), std::max( 1, bottom - top ),
+            true );
         }
     }
 #else

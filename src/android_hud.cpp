@@ -8,6 +8,7 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -62,7 +63,7 @@ struct hud_text_run {
     bool bold = false;
 };
 
-struct hud_message {
+struct hud_rich_text {
     std::string text;
     std::vector<hud_text_run> runs;
 };
@@ -73,16 +74,25 @@ struct hud_info_source {
     std::string category;
     std::string renderer;
     std::string widget_id;
-    unsigned int widget_width = 24;
+    unsigned int default_widget_columns = 24;
     int default_width = 320;
     int default_height = 100;
     bool multiline = false;
     bool square = false;
+    bool configurable_widget_layout = false;
 };
 
 struct hud_info_value {
     std::string source_id;
-    std::string text;
+    unsigned int layout_columns = 0;
+    int label_columns = -1;
+    hud_rich_text content;
+};
+
+struct hud_subscription {
+    std::string source_id;
+    unsigned int layout_columns = 0;
+    int label_columns = -1;
 };
 
 struct hud_snapshot {
@@ -97,13 +107,13 @@ struct hud_snapshot {
     std::vector<hud_info_value> values;
     std::vector<hud_contact> hostile_contacts;
     std::vector<hud_overmap_cell> overmap_cells;
-    std::vector<hud_message> messages;
+    std::vector<hud_rich_text> messages;
 };
 
 std::mutex hud_mutex;
 hud_snapshot latest_snapshot;
 minimap_rect latest_minimap_rect;
-std::unordered_set<std::string> active_subscriptions;
+std::vector<hud_subscription> active_subscriptions;
 std::chrono::steady_clock::time_point last_snapshot_refresh;
 std::vector<hud_info_source> source_catalog;
 int source_catalog_language_revision = -1;
@@ -128,9 +138,9 @@ int android_argb( const nc_color &color )
                              static_cast<unsigned int>( g << 8 ) | static_cast<unsigned int>( b ) );
 }
 
-hud_message parse_formatted_message( const std::string &formatted )
+hud_rich_text parse_formatted_text( const std::string &formatted )
 {
-    hud_message result;
+    hud_rich_text result;
     std::stack<nc_color> colors;
     colors.push( c_white );
     for( std::string segment : split_by_color( formatted ) ) {
@@ -149,7 +159,7 @@ hud_message parse_formatted_message( const std::string &formatted )
         }
         hud_text_run run;
         run.text = remove_color_tags( segment );
-        run.color = android_argb( colors.top() );
+        run.color = android_argb( colors.empty() ? c_white : colors.top() );
         result.text += run.text;
         result.runs.push_back( std::move( run ) );
     }
@@ -159,13 +169,28 @@ hud_message parse_formatted_message( const std::string &formatted )
     return result;
 }
 
+void write_rich_text_members( JsonOut &json, const hud_rich_text &value )
+{
+    json.member( "text", value.text );
+    json.member( "runs" );
+    json.start_array();
+    for( const hud_text_run &run : value.runs ) {
+        json.start_object();
+        json.member( "text", run.text );
+        json.member( "color", run.color );
+        json.member( "bold", run.bold );
+        json.end_object();
+    }
+    json.end_array();
+}
+
 void add_widget_source( std::vector<hud_info_source> &result, const std::string &id,
                         const std::string &title, const std::string &category,
-                        const std::string &widget_id, const unsigned int widget_width,
+                        const std::string &widget_id, const unsigned int default_widget_columns,
                         const int default_width, const int default_height,
                         const bool multiline = false )
 {
-    result.push_back( { id, title, category, "text", widget_id, widget_width,
+    result.push_back( { id, title, category, "text", widget_id, default_widget_columns,
                         default_width, default_height, multiline } );
 }
 
@@ -307,6 +332,9 @@ std::vector<hud_info_source> make_source_catalog()
                         "threat_grid", "", 0, 350, 350, true, true } );
 
     const std::string advanced = _( "Advanced raw widgets" );
+    // The original legacy-labels sidebar window is 44 cells wide.  Its draw
+    // callback reserves one margin cell on each side, so widgets receive 42.
+    constexpr int legacy_sidebar_content_columns = 42;
     for( const widget &raw : widget::get_all() ) {
         const std::string widget_id = raw.getId().str();
         if( !safe_source_id( widget_id ) ) {
@@ -316,9 +344,15 @@ std::vector<hud_info_source> make_source_catalog()
         const std::string title = translated_label.empty() ? widget_id : translated_label;
         const int width = std::clamp( raw._width > 0 ? raw._width * 18 : 360, 140, 1200 );
         const int height = std::clamp( raw._height > 0 ? raw._height * 42 : 90, 64, 800 );
+        // Widgets without an explicit width inherit the original content
+        // width.  In particular ll_place_layout resolves to 26 + 2 + 14.
         result.push_back( { "widget." + widget_id, title, advanced, "text", widget_id,
-                            static_cast<unsigned int>( std::clamp( raw._width, 8, 80 ) ),
-                            width, height, raw._height > 1 || raw._style == "layout" } );
+                            static_cast<unsigned int>( std::clamp(
+                                        raw._width > 0 ? raw._width :
+                                        legacy_sidebar_content_columns,
+                                        8, 80 ) ),
+                            width, height, raw._height > 1 || raw._style == "layout",
+                            false, true } );
     }
     return result;
 }
@@ -333,34 +367,87 @@ const std::vector<hud_info_source> &current_source_catalog()
     return source_catalog;
 }
 
-std::string render_widget_info( const avatar &player, const hud_info_source &source )
+hud_rich_text render_widget_info( const avatar &player,
+                                  const hud_info_source &source,
+                                  const unsigned int requested_columns,
+                                  const int requested_label_columns )
 {
     const widget_id id( source.widget_id );
     if( !id.is_valid() ) {
         return {};
     }
-    // widget::layout mutates transient range/height state.  Render a copy and
-    // publish only immutable plain text to Android.
+    // widget::layout mutates transient range/height state.  Render a copy, then
+    // project its color-tagged output into an immutable platform-neutral value.
     widget rendered = id.obj();
-    return remove_color_tags( rendered.layout( player, source.widget_width, 0, true ) );
+    const unsigned int columns = source.configurable_widget_layout &&
+                                 requested_columns > 0 ?
+                                 requested_columns :
+                                 source.default_widget_columns;
+    if( source.configurable_widget_layout && requested_label_columns >= 0 &&
+        requested_label_columns < static_cast<int>( columns ) ) {
+        return parse_formatted_text( rendered.layout_with_label_width(
+                                         player, columns,
+                                         requested_label_columns ) );
+    }
+    // Curated no-label sources keep their compact representation.  Advanced
+    // sources use the original CCB separator, padding and recursive labels.
+    return parse_formatted_text( rendered.layout(
+                                     player, columns, 0,
+                                     !source.configurable_widget_layout ) );
 }
 
 void append_subscribed_values( hud_snapshot &next, const avatar &player,
-                               const std::unordered_set<std::string> &subscriptions )
+                               const std::vector<hud_subscription> &subscriptions )
 {
+    std::unordered_map<std::string, const hud_info_source *> sources_by_id;
+    sources_by_id.reserve( next.sources.size() );
     for( const hud_info_source &source : next.sources ) {
-        if( source.renderer != "text" || subscriptions.count( source.id ) == 0 ) {
+        if( source.renderer == "text" ) {
+            sources_by_id.emplace( source.id, &source );
+        }
+    }
+    std::unordered_set<std::string> rendered_keys;
+    rendered_keys.reserve( subscriptions.size() );
+    for( const hud_subscription &subscription : subscriptions ) {
+        const auto found = sources_by_id.find( subscription.source_id );
+        if( found == sources_by_id.end() ) {
             continue;
         }
-        next.values.push_back( { source.id, render_widget_info( player, source ) } );
+        const hud_info_source &source = *found->second;
+        const unsigned int columns = source.configurable_widget_layout ?
+                                     subscription.layout_columns : 0;
+        const int label_columns = source.configurable_widget_layout &&
+                                  subscription.label_columns >= 0 &&
+                                  subscription.label_columns <
+                                  static_cast<int>( columns > 0 ? columns :
+                                                    source.default_widget_columns ) ?
+                                  subscription.label_columns : -1;
+        const std::string key = source.id + '\t' +
+                                std::to_string( columns ) + '\t' +
+                                std::to_string( label_columns );
+        if( !rendered_keys.insert( key ).second ) {
+            continue;
+        }
+        next.values.push_back( { source.id, columns, label_columns,
+                                 render_widget_info( player, source, columns,
+                                         label_columns ) } );
     }
+}
+
+bool has_subscription( const std::vector<hud_subscription> &subscriptions,
+                       const std::string &source_id )
+{
+    return std::any_of( subscriptions.begin(), subscriptions.end(),
+    [&source_id]( const hud_subscription & subscription ) {
+        return subscription.source_id == source_id;
+    } );
 }
 
 void append_messages( hud_snapshot &next )
 {
     for( const std::pair<std::string, std::string> &message :
          Messages::recent_messages_with_formatting( 8 ) ) {
-        next.messages.push_back( parse_formatted_message( message.second ) );
+        next.messages.push_back( parse_formatted_text( message.second ) );
     }
 }
 
@@ -417,14 +504,50 @@ minimap_rect get_minimap_rect()
 
 void set_subscriptions( const std::vector<std::string> &sources )
 {
-    std::unordered_set<std::string> accepted;
+    std::vector<hud_subscription> accepted;
     accepted.reserve( std::min<std::size_t>( sources.size(), 512 ) );
-    for( const std::string &source : sources ) {
+    std::unordered_set<std::string> seen;
+    for( const std::string &encoded : sources ) {
         if( accepted.size() >= 512 ) {
             break;
         }
-        if( safe_source_id( source ) ) {
-            accepted.insert( source );
+        const std::size_t columns_separator = encoded.find( '\t' );
+        const std::size_t labels_separator = columns_separator == std::string::npos ?
+                                             std::string::npos :
+                                             encoded.find( '\t', columns_separator + 1 );
+        const std::string source_id = encoded.substr( 0, columns_separator );
+        if( !safe_source_id( source_id ) ) {
+            continue;
+        }
+        unsigned int layout_columns = 0;
+        if( columns_separator != std::string::npos ) {
+            const std::string raw_columns = encoded.substr(
+                                                columns_separator + 1,
+                                                labels_separator == std::string::npos ?
+                                                std::string::npos :
+                                                labels_separator - columns_separator - 1 );
+            char *end = nullptr;
+            const long parsed = std::strtol( raw_columns.c_str(), &end, 10 );
+            if( end != raw_columns.c_str() && *end == '\0' ) {
+                layout_columns = static_cast<unsigned int>(
+                                   std::clamp<long>( parsed, 8, 80 ) );
+            }
+        }
+        int label_columns = -1;
+        if( labels_separator != std::string::npos ) {
+            const std::string raw_labels = encoded.substr( labels_separator + 1 );
+            char *end = nullptr;
+            const long parsed = std::strtol( raw_labels.c_str(), &end, 10 );
+            if( end != raw_labels.c_str() && *end == '\0' ) {
+                label_columns = static_cast<int>(
+                                    std::clamp<long>( parsed, -1, 40 ) );
+            }
+        }
+        const std::string key = source_id + '\t' +
+                                std::to_string( layout_columns ) + '\t' +
+                                std::to_string( label_columns );
+        if( seen.insert( key ).second ) {
+            accepted.push_back( { source_id, layout_columns, label_columns } );
         }
     }
     std::lock_guard<std::mutex> lock( hud_mutex );
@@ -437,7 +560,7 @@ void publish_snapshot( const avatar &player, const int )
     const cata::input_context_actions::context_snapshot context =
         cata::input_context_actions::snapshot();
     const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-    std::unordered_set<std::string> subscriptions;
+    std::vector<hud_subscription> subscriptions;
     bool context_changed = false;
     {
         std::lock_guard<std::mutex> lock( hud_mutex );
@@ -465,13 +588,13 @@ void publish_snapshot( const avatar &player, const int )
     }
     next.sources = current_source_catalog();
     append_subscribed_values( next, player, subscriptions );
-    if( subscriptions.count( "log.messages" ) > 0 ) {
+    if( has_subscription( subscriptions, "log.messages" ) ) {
         append_messages( next );
     }
-    if( subscriptions.count( "map.overmap_grid" ) > 0 ) {
+    if( has_subscription( subscriptions, "map.overmap_grid" ) ) {
         append_overmap( next, player );
     }
-    if( subscriptions.count( "radar.threat_grid" ) > 0 ) {
+    if( has_subscription( subscriptions, "radar.threat_grid" ) ) {
         append_hostiles( next, player );
     }
 
@@ -558,6 +681,12 @@ std::string snapshot_json()
         json.member( "defaultHeight", source.default_height );
         json.member( "multiline", source.multiline );
         json.member( "square", source.square );
+        json.member( "configurableWidgetLayout",
+                     source.configurable_widget_layout );
+        if( source.configurable_widget_layout ) {
+            json.member( "defaultWidgetColumns",
+                         source.default_widget_columns );
+        }
         json.end_object();
     }
     json.end_array();
@@ -567,26 +696,22 @@ std::string snapshot_json()
     for( const hud_info_value &value : latest_snapshot.values ) {
         json.start_object();
         json.member( "sourceId", value.source_id );
-        json.member( "text", value.text );
+        if( value.layout_columns > 0 ) {
+            json.member( "layoutColumns", value.layout_columns );
+        }
+        if( value.label_columns >= 0 ) {
+            json.member( "labelColumns", value.label_columns );
+        }
+        write_rich_text_members( json, value.content );
         json.end_object();
     }
     json.end_array();
 
     json.member( "messages" );
     json.start_array();
-    for( const hud_message &message : latest_snapshot.messages ) {
+    for( const hud_rich_text &message : latest_snapshot.messages ) {
         json.start_object();
-        json.member( "text", message.text );
-        json.member( "runs" );
-        json.start_array();
-        for( const hud_text_run &run : message.runs ) {
-            json.start_object();
-            json.member( "text", run.text );
-            json.member( "color", run.color );
-            json.member( "bold", run.bold );
-            json.end_object();
-        }
-        json.end_array();
+        write_rich_text_members( json, message );
         json.end_object();
     }
     json.end_array();

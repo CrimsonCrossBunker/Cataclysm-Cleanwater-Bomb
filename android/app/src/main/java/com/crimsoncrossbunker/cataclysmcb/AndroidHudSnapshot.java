@@ -12,9 +12,15 @@ import java.util.List;
 final class AndroidHudSnapshot {
     static final int SCHEMA = 3;
 
-    static final class Message {
+    static final class RichText {
         String text = "";
         final ArrayList<Run> runs = new ArrayList<>();
+
+        static RichText plain(String value) {
+            RichText result = new RichText();
+            result.text = value;
+            return result;
+        }
     }
 
     static final class Run {
@@ -45,8 +51,8 @@ final class AndroidHudSnapshot {
         new LinkedHashMap<>();
     final LinkedHashMap<String, AndroidHudModel.InfoSource> sources =
         new LinkedHashMap<>();
-    final LinkedHashMap<String, String> values = new LinkedHashMap<>();
-    final ArrayList<Message> messages = new ArrayList<>();
+    final LinkedHashMap<String, RichText> values = new LinkedHashMap<>();
+    final ArrayList<RichText> messages = new ArrayList<>();
     final ArrayList<Cell> overmap = new ArrayList<>();
     final ArrayList<Contact> hostiles = new ArrayList<>();
 
@@ -96,33 +102,64 @@ final class AndroidHudSnapshot {
                 }
                 String id = AndroidHudModel.safeId(value.optString("sourceId", ""));
                 if (!id.isEmpty()) {
-                    result.values.put(id, value.optString("text", ""));
+                    int layoutColumns = Math.max(0,
+                        Math.min(AndroidHudWidgetLayout.MAX_COLUMNS,
+                            value.optInt("layoutColumns",
+                                value.optInt("widgetWidth", 0))));
+                    int labelColumns = value.has("labelColumns") ?
+                        Math.max(AndroidHudWidgetLayout.MIN_LABEL_COLUMNS,
+                            Math.min(AndroidHudWidgetLayout.MAX_LABEL_COLUMNS,
+                                value.optInt("labelColumns", 0))) :
+                        AndroidHudWidgetLayout.AUTO_LABEL_COLUMNS;
+                    result.values.put(valueKey(id, layoutColumns, labelColumns),
+                        decodeRichText(value));
                 }
             }
         }
-        decodeMessages(json.optJSONArray("messages"), result.messages);
+        decodeRichTextArray(json.optJSONArray("messages"), result.messages);
         decodeCells(json.optJSONArray("overmap"), result.overmap);
         decodeContacts(json.optJSONArray("hostiles"), result.hostiles);
         return result;
     }
 
-    String value(String sourceId, boolean preview) {
+    RichText value(String sourceId, int layoutColumns,
+            int labelColumns, boolean preview) {
         AndroidHudModel.InfoSource source = sources.get(sourceId);
         if (preview && source != null) {
-            return source.multiline ? "示例数据\n离线布局预览" : "示例数据";
+            return RichText.plain(source.multiline ?
+                "示例数据\n离线布局预览" : "示例数据");
         }
-        String value = values.get(sourceId);
-        if (value != null && !value.trim().isEmpty()) {
+        RichText value = values.get(
+            valueKey(sourceId, layoutColumns, labelColumns));
+        if (value == null && layoutColumns != 0) {
+            value = values.get(valueKey(sourceId, 0,
+                AndroidHudWidgetLayout.AUTO_LABEL_COLUMNS));
+        }
+        if (value == null) {
+            String prefix = sourceId + '\u001f';
+            for (String key : values.keySet()) {
+                if (key.startsWith(prefix)) {
+                    value = values.get(key);
+                    break;
+                }
+            }
+        }
+        if (value != null && !value.text.trim().isEmpty()) {
             return value;
         }
-        return "—";
+        return RichText.plain("—");
+    }
+
+    private static String valueKey(String sourceId, int layoutColumns,
+            int labelColumns) {
+        return sourceId + '\u001f' + layoutColumns + '\u001f' + labelColumns;
     }
 
     List<AndroidHudModel.ActionDescriptor> actionList() {
         return new ArrayList<>(actions.values());
     }
 
-    private static void decodeMessages(JSONArray encoded, List<Message> target) {
+    private static void decodeRichTextArray(JSONArray encoded, List<RichText> target) {
         if (encoded == null) {
             return;
         }
@@ -131,24 +168,29 @@ final class AndroidHudSnapshot {
             if (entry == null) {
                 continue;
             }
-            Message message = new Message();
-            message.text = entry.optString("text", "");
-            JSONArray runs = entry.optJSONArray("runs");
-            if (runs != null) {
-                for (int j = 0; j < runs.length() && j < 128; ++j) {
-                    JSONObject encodedRun = runs.optJSONObject(j);
-                    if (encodedRun == null) {
-                        continue;
-                    }
-                    Run run = new Run();
-                    run.text = encodedRun.optString("text", "");
-                    run.color = (int)encodedRun.optLong("color", 0xFFFFFFFFL);
-                    run.bold = encodedRun.optBoolean("bold", false);
-                    message.runs.add(run);
-                }
-            }
-            target.add(message);
+            target.add(decodeRichText(entry));
         }
+    }
+
+    private static RichText decodeRichText(JSONObject encoded) {
+        RichText result = new RichText();
+        result.text = encoded.optString("text", "");
+        JSONArray runs = encoded.optJSONArray("runs");
+        if (runs == null) {
+            return result;
+        }
+        for (int i = 0; i < runs.length() && i < 128; ++i) {
+            JSONObject encodedRun = runs.optJSONObject(i);
+            if (encodedRun == null) {
+                continue;
+            }
+            Run run = new Run();
+            run.text = encodedRun.optString("text", "");
+            run.color = (int)encodedRun.optLong("color", 0xFFFFFFFFL);
+            run.bold = encodedRun.optBoolean("bold", false);
+            result.runs.add(run);
+        }
+        return result;
     }
 
     private static void decodeCells(JSONArray encoded, List<Cell> target) {

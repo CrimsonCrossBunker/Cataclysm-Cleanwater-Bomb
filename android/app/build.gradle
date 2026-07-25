@@ -482,6 +482,10 @@ sourceSets {
 dependencies {
     api fileTree(include: ['*.jar'], dir: 'libs')
     testImplementation 'junit:junit:4.13.2'
+    // Android's host-side JSONObject is only a throwing SDK stub.  The
+    // reference implementation lets model tests exercise real HUD
+    // import/export round trips without adding anything to the APK.
+    testImplementation 'org.json:json:20240303'
     implementation files(
         'libs/SDL3-3.4.10.aar',
         'libs/SDL3_image-3.4.4.aar',

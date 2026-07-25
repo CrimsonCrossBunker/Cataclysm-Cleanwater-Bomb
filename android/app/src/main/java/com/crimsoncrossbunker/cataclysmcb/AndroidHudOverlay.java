@@ -15,7 +15,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -26,11 +25,11 @@ import org.json.JSONException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Schema-4 Android HUD runtime and canvas.
@@ -140,6 +139,10 @@ final class AndroidHudOverlay extends FrameLayout {
         return new ArrayList<>(sourceCatalog.values());
     }
 
+    AndroidHudModel.InfoSource infoSource(String sourceId) {
+        return sourceCatalog.get(AndroidHudModel.safeId(sourceId));
+    }
+
     String currentSceneId() {
         return currentSceneId;
     }
@@ -162,6 +165,20 @@ final class AndroidHudOverlay extends FrameLayout {
 
     float canvasUniformScale() {
         return Math.min(canvasScaleX(), canvasScaleY());
+    }
+
+    int minimumElementSizePixels() {
+        return dp(24);
+    }
+
+    float contentScopeWidth(AndroidHudModel.Element group) {
+        return AndroidHudGeometry.contentWidthCanvasUnits(
+            group, canvasScaleX(), getResources().getDisplayMetrics().density);
+    }
+
+    float contentScopeHeight(AndroidHudModel.Element group) {
+        return AndroidHudGeometry.contentHeightCanvasUnits(
+            group, canvasScaleY(), getResources().getDisplayMetrics().density);
     }
 
     void editLayout(String sceneId, String layoutId) {
@@ -207,6 +224,7 @@ final class AndroidHudOverlay extends FrameLayout {
 
     void relayoutEditorDraft() {
         layoutRenderedTree();
+        publishSubscriptions();
         invalidate();
     }
 
@@ -306,6 +324,7 @@ final class AndroidHudOverlay extends FrameLayout {
             if (!next.sources.isEmpty()) {
                 sourceCatalog.clear();
                 sourceCatalog.putAll(next.sources);
+                publishSubscriptions();
             }
             if (!next.ready || next.sceneId.isEmpty()) {
                 if (!editor.isEditing()) {
@@ -403,7 +422,8 @@ final class AndroidHudOverlay extends FrameLayout {
                 TextView title = new TextView(activity);
                 title.setText(element.label.isEmpty() ? "元素组" : element.label);
                 AndroidHudRendererRegistry.applyTextStyle(title, element.style, false);
-                title.setPadding(dp(5), 0, dp(5), 0);
+                title.setIncludeFontPadding(false);
+                title.setPadding(0, 0, 0, 0);
                 host.addView(title, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.TOP));
@@ -462,29 +482,39 @@ final class AndroidHudOverlay extends FrameLayout {
         if (renderedElement == null) {
             return;
         }
-        int width;
-        int height;
-        if (AndroidHudModel.requiresSquareFrame(element)) {
-            int side = Math.max(dp(24),
-                Math.round(element.frame.width * canvasUniformScale()));
-            width = side;
-            height = side;
-        } else {
-            width = Math.max(dp(24), Math.round(element.frame.width * canvasScaleX()));
-            height = Math.max(dp(24), Math.round(element.frame.height * canvasScaleY()));
-        }
+        int minimumPixels = minimumElementSizePixels();
+        int width = AndroidHudGeometry.renderedWidthPixels(
+            element, canvasScaleX(), canvasScaleY(), minimumPixels);
+        int height = AndroidHudGeometry.renderedHeightPixels(
+            element, canvasScaleX(), canvasScaleY(), minimumPixels);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(width, height,
             Gravity.TOP | Gravity.LEFT);
         params.leftMargin = Math.round(element.frame.x * canvasScaleX());
         params.topMargin = Math.round(element.frame.y * canvasScaleY());
         renderedElement.host.setLayoutParams(params);
+        if (AndroidHudModel.requiresSquareFrame(element) &&
+                renderedElement.content != null) {
+            int contentWidth = Math.max(0, width -
+                renderedElement.host.getPaddingLeft() -
+                renderedElement.host.getPaddingRight());
+            int contentHeight = Math.max(0, height -
+                renderedElement.host.getPaddingTop() -
+                renderedElement.host.getPaddingBottom());
+            int contentSide = Math.min(contentWidth, contentHeight);
+            renderedElement.content.setLayoutParams(new FrameLayout.LayoutParams(
+                contentSide, contentSide, Gravity.CENTER));
+        }
         if (renderedElement.groupContent != null) {
-            int contentHeight = height;
+            int contentHeight = Math.max(0, height -
+                renderedElement.host.getPaddingTop() -
+                renderedElement.host.getPaddingBottom());
             if (renderedElement.scrollContainer != null) {
                 for (AndroidHudModel.Element child : element.children) {
-                    float childBottom = child.frame.y + child.frame.height;
+                    int childBottom = Math.round(child.frame.y * canvasScaleY()) +
+                        AndroidHudGeometry.renderedHeightPixels(
+                            child, canvasScaleX(), canvasScaleY(), minimumPixels);
                     contentHeight = Math.max(contentHeight,
-                        Math.round(childBottom * canvasScaleY()));
+                        childBottom);
                 }
             }
             if (renderedElement.scrollContainer == null) {
@@ -603,6 +633,17 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void applyStyle(RenderedElement entry) {
         AndroidHudModel.Element element = entry.element;
+        applyContentPadding(entry);
+        if (entry.content instanceof ControlView) {
+            // Keep the editor frame fully visible even when the user makes a
+            // runtime control completely transparent.
+            entry.host.setAlpha(1f);
+            entry.content.setAlpha(element.style.opacity);
+            ((ControlView)entry.content).applyStyle(
+                element.style, element.controlAppearance);
+            applyEditorFrame(entry, element);
+            return;
+        }
         entry.host.setAlpha(element.style.opacity);
         if (!element.style.background && !element.style.border && !editor.isEditing()) {
             entry.host.setBackgroundColor(Color.TRANSPARENT);
@@ -620,6 +661,35 @@ final class AndroidHudOverlay extends FrameLayout {
         entry.host.setBackground(background);
     }
 
+    private void applyContentPadding(RenderedElement entry) {
+        AndroidHudModel.Style style = entry.element.style;
+        if (entry.content instanceof ControlView) {
+            // A control's surface fills the element frame.  Its Style padding
+            // is applied between that surface and each button label.
+            entry.host.setPadding(0, 0, 0, 0);
+            return;
+        }
+        entry.host.setPadding(
+            dp(style.contentPaddingLeftDp),
+            dp(style.contentPaddingTopDp),
+            dp(style.contentPaddingRightDp),
+            dp(style.contentPaddingBottomDp));
+    }
+
+    private void applyEditorFrame(RenderedElement entry,
+            AndroidHudModel.Element element) {
+        if (!editor.isEditing()) {
+            entry.host.setBackgroundColor(Color.TRANSPARENT);
+            return;
+        }
+        GradientDrawable frame = new GradientDrawable();
+        frame.setColor(Color.TRANSPARENT);
+        frame.setCornerRadius(dp(6));
+        frame.setStroke(dp(2), editor.isSelected(element.id) ?
+            0xFF80D8FF : 0x996E8CA3);
+        entry.host.setBackground(frame);
+    }
+
     void refreshElementStyles() {
         for (RenderedElement entry : rendered.values()) {
             applyStyle(entry);
@@ -627,7 +697,7 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private void publishSubscriptions() {
-        Set<String> subscriptions = new HashSet<>();
+        Set<String> subscriptions = new TreeSet<>();
         collectSubscriptions(displayedLayout == null ? null : displayedLayout.elements,
             subscriptions);
         StringBuilder encoded = new StringBuilder();
@@ -644,7 +714,7 @@ final class AndroidHudOverlay extends FrameLayout {
         }
     }
 
-    private static void collectSubscriptions(List<AndroidHudModel.Element> elements,
+    private void collectSubscriptions(List<AndroidHudModel.Element> elements,
             Set<String> target) {
         if (elements == null) {
             return;
@@ -654,7 +724,11 @@ final class AndroidHudOverlay extends FrameLayout {
                 continue;
             }
             if (AndroidHudModel.TYPE_INFO.equals(element.type)) {
-                target.add(element.sourceId);
+                AndroidHudModel.InfoSource source = sourceCatalog.get(element.sourceId);
+                String subscription = AndroidHudWidgetLayout.subscription(source, element);
+                if (!subscription.isEmpty()) {
+                    target.add(subscription);
+                }
             }
             collectSubscriptions(element.children, target);
         }
@@ -749,6 +823,10 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private int dp(float value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
@@ -881,8 +959,8 @@ final class AndroidHudOverlay extends FrameLayout {
         private static final long REPEAT_DELAY_MS = 350L;
         private static final long REPEAT_INTERVAL_MS = 90L;
 
-        private final Button trigger;
-        private final Button selector;
+        private final AndroidHudControlButton trigger;
+        private final AndroidHudControlButton selector;
         private final Handler repeatHandler = new Handler();
         private final Runnable repeater = new Runnable() {
             @Override
@@ -908,15 +986,9 @@ final class AndroidHudOverlay extends FrameLayout {
         ControlView(Context context) {
             super(context);
             setOrientation(HORIZONTAL);
-            trigger = new Button(context);
-            trigger.setAllCaps(false);
-            trigger.setMinWidth(0);
-            trigger.setMinHeight(0);
-            selector = new Button(context);
+            trigger = new AndroidHudControlButton(context);
+            selector = new AndroidHudControlButton(context);
             selector.setText("▾");
-            selector.setTextSize(11f);
-            selector.setMinWidth(0);
-            selector.setMinHeight(0);
             addView(trigger, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.MATCH_PARENT, 1f));
             addView(selector, new LinearLayout.LayoutParams(
@@ -947,6 +1019,7 @@ final class AndroidHudOverlay extends FrameLayout {
                     case MotionEvent.ACTION_DOWN:
                         pressed = true;
                         repeated = false;
+                        trigger.setPressed(true);
                         repeatHandler.removeCallbacks(repeater);
                         repeatHandler.postDelayed(repeater, REPEAT_DELAY_MS);
                         return true;
@@ -957,6 +1030,7 @@ final class AndroidHudOverlay extends FrameLayout {
                             boundCallback.trigger(boundActionId, false);
                         }
                         pressed = false;
+                        trigger.setPressed(false);
                         return true;
                     case MotionEvent.ACTION_CANCEL:
                         cancelRepeat();
@@ -994,12 +1068,17 @@ final class AndroidHudOverlay extends FrameLayout {
             String label = element.label.isEmpty() ?
                 descriptor == null ? active : descriptor.label : element.label;
             trigger.setText(label.isEmpty() ? "未绑定" : label);
-            AndroidHudRendererRegistry.applyTextStyle(trigger, element.style, false);
-            trigger.setEnabled(!editing && descriptor != null);
+            // The editor host intercepts gestures, so keep the child visually
+            // enabled there and disable only its interaction.  Disabling the
+            // Button itself would let the platform theme gray out the user's
+            // configured text and surface colors.
+            trigger.setEnabled(editing || descriptor != null);
+            trigger.setClickable(!editing && descriptor != null);
+            trigger.setLongClickable(!editing && descriptor != null);
             boolean menuMode = AndroidHudModel.SELECTOR_MODE_MENU.equals(element.selectorMode);
             selector.setText(menuMode ? "☰" : "↻");
             selector.setVisibility(choices.size() > 1 ? VISIBLE : GONE);
-            selector.setEnabled(!editing && choices.size() > 1);
+            selector.setEnabled(editing || choices.size() > 1);
             selector.setOnClickListener(view -> {
                 if (menuMode) {
                     AndroidHudActionMenu.show(selector, choices, catalog, active,
@@ -1014,11 +1093,28 @@ final class AndroidHudOverlay extends FrameLayout {
                 callback.select(next);
                 bind(element, catalog, editing, callback);
             });
+            // setOnClickListener marks a View clickable, so apply the editor
+            // interaction state after replacing the listener.
+            selector.setClickable(!editing && choices.size() > 1);
+        }
+
+        void applyStyle(AndroidHudModel.Style style,
+                AndroidHudModel.ControlAppearance appearance) {
+            trigger.applyAppearance(style, appearance, false);
+            selector.applyAppearance(style, appearance, true);
+            LinearLayout.LayoutParams selectorParams =
+                (LinearLayout.LayoutParams)selector.getLayoutParams();
+            selectorParams.width = Math.round(
+                appearance.selectorWidthDp * getResources().getDisplayMetrics().density);
+            selectorParams.leftMargin = Math.round(
+                appearance.buttonGapDp * getResources().getDisplayMetrics().density);
+            selector.setLayoutParams(selectorParams);
         }
 
         private void cancelRepeat() {
             pressed = false;
             repeated = false;
+            trigger.setPressed(false);
             repeatHandler.removeCallbacks(repeater);
         }
 

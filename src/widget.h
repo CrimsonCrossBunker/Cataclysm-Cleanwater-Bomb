@@ -249,6 +249,9 @@ class widget
         bool was_loaded = false;
         const widget_clause *get_clause( const std::string &clause_id = "" ) const;
         std::vector<const widget_clause *> get_clauses() const;
+        std::string layout_internal( const avatar &ava, unsigned int max_width,
+                                     int label_width, bool skip_pad,
+                                     int label_width_override );
 
     public:
         widget() = default;
@@ -345,6 +348,11 @@ class widget
         // label area, so the returned string is equal to max_width.
         std::string layout( const avatar &ava, unsigned int max_width = 0, int label_width = 0,
                             bool skip_pad = false );
+        // Layout with one explicit label-column width applied recursively to
+        // padded, labeled descendants.  Widgets marked W_LABEL_NONE and
+        // W_NO_PADDING keep their original behavior.
+        std::string layout_with_label_width( const avatar &ava, unsigned int max_width,
+                                             int label_width, bool skip_pad = false );
         // Display labeled widget, with value (number, graph, or string) from an avatar
         std::string show( const avatar &ava, unsigned int max_width );
         // Return a window_panel for rendering this widget at given width (and possibly height)
@@ -411,4 +419,3 @@ std::string format_widget_multiline( const std::vector<std::string> &keys, int m
                                      int width, int &height, bool join = false );
 
 #endif // CATA_SRC_WIDGET_H
-

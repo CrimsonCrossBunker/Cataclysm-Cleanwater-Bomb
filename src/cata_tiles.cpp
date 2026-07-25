@@ -1906,10 +1906,10 @@ void cata_tiles::set_draw_cache_dirty()
 }
 
 void cata_tiles::draw_minimap( const point &dest, const tripoint_bub_ms &center, int width,
-                               int height )
+                               int height, const bool force_scale_to_fit )
 {
     minimap->set_type( is_isometric() ? pixel_minimap_type::iso : pixel_minimap_type::ortho );
-    minimap->draw( SDL_Rect{ dest.x, dest.y, width, height }, center );
+    minimap->draw( SDL_Rect{ dest.x, dest.y, width, height }, center, force_scale_to_fit );
 }
 
 bool cata_tiles::has_blinking_minimap() const

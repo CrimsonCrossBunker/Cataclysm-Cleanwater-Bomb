@@ -141,6 +141,7 @@ static const widget_id widget_test_int_color_num( "test_int_color_num" );
 static const widget_id widget_test_layout_cols_in_cols( "test_layout_cols_in_cols" );
 static const widget_id widget_test_layout_nopad( "test_layout_nopad" );
 static const widget_id widget_test_layout_nopad_noflag( "test_layout_nopad_noflag" );
+static const widget_id widget_test_layout_rows1( "test_layout_rows1" );
 static const widget_id widget_test_layout_rows_in_columns( "test_layout_rows_in_columns" );
 static const widget_id widget_test_lighting_clause( "test_lighting_clause" );
 static const widget_id widget_test_mana_num( "test_mana_num" );
@@ -2580,6 +2581,45 @@ TEST_CASE( "widget_rows_in_columns", "[widget]" )
 
         CHECK( wgt.layout( ava, 68 ) == expected );
     }
+}
+
+TEST_CASE( "explicit_widget_label_width_reaches_nested_rows",
+           "[widget][layout][label]" )
+{
+    avatar &ava = get_avatar();
+    clear_avatar();
+    ava.movecounter = 0;
+    ava.set_focus( 100 );
+    ava.set_speed_base( 100 );
+    ava.magic->set_mana( 1000 );
+
+    widget rows = widget_test_layout_rows1.obj();
+    const std::vector<std::string> lines = string_split(
+            rows.layout_with_label_width( ava, 20, 8 ), '\n' );
+
+    REQUIRE( lines.size() == 4 );
+    CHECK( lines[0].substr( 0, 10 ) == "MOVE:     " );
+    CHECK( lines[1].substr( 0, 10 ) == "SPEED:    " );
+    CHECK( lines[2].substr( 0, 10 ) == "FOCUS:    " );
+    CHECK( lines[3].substr( 0, 10 ) == "MANA:     " );
+}
+
+TEST_CASE( "legacy_labels_place_layout_uses_original_content_columns",
+           "[widget][layout][sidebar]" )
+{
+    const widget_id sidebar( "legacy_labels_sidebar" );
+    const widget_id place_info( "ll_place_info" );
+    const widget_id place_overmap( "ll_place_overmap" );
+
+    REQUIRE( sidebar.is_valid() );
+    REQUIRE( place_info.is_valid() );
+    REQUIRE( place_overmap.is_valid() );
+    CHECK( sidebar->_width - 2 == 42 );
+    CHECK( place_info->_width == 26 );
+    CHECK( sidebar->_padding == 2 );
+    CHECK( place_overmap->_width == 14 );
+    CHECK( place_info->_width + sidebar->_padding +
+           place_overmap->_width == sidebar->_width - 2 );
 }
 
 static void test_widget_flag_nopad( const bodypart_id &bid, int bleed_int, avatar &ava,
