@@ -84,6 +84,8 @@ static const quality_id qual_CUT_FINE( "CUT_FINE" );
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_survival( "survival" );
 
+static const species_id species_HUMAN( "HUMAN" );
+
 namespace io
 {
     // *INDENT-OFF*
@@ -1169,6 +1171,10 @@ void destroy_the_carcass( const butchery_data &bd, Character &you )
         case butcher_type::DISSECT:
             add_msg( m_good, SNIPPET.random_from_category( "harvest_drop_default_dissect_success" ).value_or(
                          translation() ).translated() );
+
+            if( corpse->id == mtype_id::NULL_ID() || corpse->in_species( species_HUMAN ) ) {
+                you.record_mental_metric_human_dissection();
+            }
 
             // Remove the target from the map
             target.remove_item();

@@ -1494,7 +1494,7 @@ void Character::modify_morale( item &food, const int nutr )
             add_morale( morale_cannibal, -60, -400, 60_minutes, 30_minutes );
         } else if( numb || insensitivity ) {
             add_msg_if_player( m_bad, _( "You find this meal distasteful, but necessary." ) );
-            if( insensitivity ){
+            if( insensitivity ) {
                 add_morale( morale_cannibal, -30, -400, 60_minutes, 30_minutes );
             } else {
                 add_morale( morale_cannibal, -60, -400, 60_minutes, 30_minutes );
@@ -1503,6 +1503,7 @@ void Character::modify_morale( item &food, const int nutr )
             add_msg_if_player( m_bad, _( "You feel horrible for eating a person." ) );
             add_morale( morale_cannibal, -60, -400, 60_minutes, 30_minutes );
         }
+        record_mental_metric_cannibalism();
     }
 
     // While raw flesh usually means negative morale, carnivores and cullers get a small bonus.

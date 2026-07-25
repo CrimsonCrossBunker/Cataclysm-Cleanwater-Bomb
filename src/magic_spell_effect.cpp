@@ -1800,6 +1800,7 @@ void spell_effect::guilt( const spell &sp, Creature &caster, const tripoint_bub_
         guilt_thresholds[max_kills] = _( "You feel uneasy about killing %s." );
 
         Character &guy = *guilt_target;
+        guy.record_mental_metric_guilt_kill();
         if( guy.has_flag( json_flag_NUMB ) || guy.has_flag( json_flag_PSYCHOPATH ) ||
             guy.has_flag( json_flag_PRED3 ) || guy.has_flag( json_flag_PRED4 ) ||
             guy.has_flag( json_flag_INSENSITIVITY ) ) {

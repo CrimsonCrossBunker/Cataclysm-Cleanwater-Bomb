@@ -637,6 +637,9 @@ void Character::apply_murder_penalties( Creature *victim )
         player_character.add_morale( morale_killer_has_killed, -15, 0, 1_days, 1_hours );
     }
     if( victim->as_monster() || ( victim->as_npc() && victim->as_npc()->hit_by_player ) ) {
+        if( victim->as_npc() && victim->as_npc()->hit_by_player ) {
+            player_character.record_mental_metric_guilt_kill();
+        }
         int morale_effect = -90;
         // Just because you like eating people doesn't mean you love killing innocents
         if( player_character.has_flag( json_flag_CANNIBAL ) && morale_effect < 0 ) {
@@ -2511,6 +2514,8 @@ void Character::wake_up()
         return;
     }
 
+    const bool was_sleeping = has_effect( effect_sleep );
+
     // Do not remove effect_sleep or effect_alarm_clock now otherwise it invalidates an effect
     // iterator in player::process_effects().
     // We just set it for later removal (also happening in player::process_effects(), so no side
@@ -2529,6 +2534,10 @@ void Character::wake_up()
 
     if( movement_mode_is( move_mode_prone ) ) {
         set_movement_mode( move_mode_walk );
+    }
+
+    if( was_sleeping && is_avatar() ) {
+        maybe_gain_insensitivity();
     }
 }
 

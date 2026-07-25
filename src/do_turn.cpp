@@ -709,6 +709,9 @@ void game::simulate_turn_prefix()
     mission::process_all();
     avatar &u = get_avatar();
     map &m = get_map();
+    if( calendar::once_every( 1_days ) && !u.in_sleep_state() ) {
+        u.maybe_gain_insensitivity();
+    }
     // If controlling a vehicle that is owned by someone else
     if( calendar::once_every( 1_minutes ) ) {
         if( u.in_vehicle && u.controlling_vehicle ) {
