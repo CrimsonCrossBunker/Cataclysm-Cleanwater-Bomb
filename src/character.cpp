@@ -7640,6 +7640,7 @@ bool Character::empathizes_with_monster( const mtype_id &monster ) const
 void Character::record_mental_metric_guilt_kill()
 {
     mental_metric_guilt_kills++;
+    maybe_gain_insensitivity();
 }
 
 void Character::record_mental_metric_human_dissection()
