@@ -10,6 +10,7 @@
 #include "input_context_actions.h"
 #include "json_loader.h"
 #include "path_info.h"
+#include "ui_profile.h"
 #include "weather.h"
 
 #include <algorithm>
@@ -50,6 +51,10 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
                 static_cast<std::uint32_t>( capability::action_slots ),
                 false, true
             };
+        }
+
+        double available_width() const override {
+            return 1000.0;
         }
 
         void text( const std::string &value ) override {
@@ -339,6 +344,19 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( context.platform() == "test" );
     CHECK_FALSE( context.is_immediate_mode() );
     CHECK( context.uses_native_widgets() );
+    const cata::lua_ui::script_ui_environment environment = context.environment();
+    const cata::ui::profile profile = cata::ui::current_profile();
+    CHECK( environment.profile == profile.id );
+    CHECK( environment.input == std::string( cata::ui::input_mode_name( profile.input ) ) );
+    CHECK( environment.density == std::string( cata::ui::density_mode_name( profile.density ) ) );
+    CHECK( environment.breakpoint == std::string( cata::ui::layout_breakpoint_name(
+                profile.breakpoint_for_width( 1000.0F ) ) ) );
+    CHECK( environment.minimum_target == profile.minimum_target );
+    CHECK( environment.touch == profile.is_touch() );
+    CHECK( environment.hover == profile.allow_hover );
+    CHECK( environment.swipe_scroll == profile.allow_swipe );
+    CHECK( environment.keyboard_navigation == profile.keyboard_navigation );
+    CHECK( environment.long_press_dangerous == profile.long_press_dangerous );
     CHECK( context.supports( "progress_bar" ) );
     CHECK( context.supports( "buttons" ) );
     CHECK( context.supports( "tables" ) );
@@ -359,6 +377,13 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( renderer.progress == 0.75 );
     REQUIRE( renderer.progress_overlay );
     CHECK( *renderer.progress_overlay == "75%" );
+
+    context.item_width( "normal" );
+    CHECK( renderer.item_width == cata::ui::current_profile().width_normal );
+    context.text_tone( "ready", "good" );
+    CHECK( renderer.calls.back() == "colored:ready" );
+    CHECK_THROWS_AS( context.item_width( "pixels" ), std::invalid_argument );
+    CHECK_THROWS_AS( context.text_tone( "bad tone", "purple" ), std::invalid_argument );
 
     CHECK( context.button( "apply" ) );
     CHECK_FALSE( context.small_button( "add" ) );
@@ -396,6 +421,19 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     context.child( "details", 120.0, [&context]() {
         context.text( "inside child" );
     } );
+    context.scroll( "semantic_scroll", "normal", [&context]() {
+        context.text( "inside semantic scroll" );
+    } );
+    context.grid( "responsive_grid", 1, 2, 3, [&context]() {
+        context.table_next_row();
+        CHECK( context.table_next_column() );
+    } );
+    const int responsive_columns =
+        profile.breakpoint_for_width( 1000.0F ) == cata::ui::layout_breakpoint::narrow ? 1 :
+        profile.breakpoint_for_width( 1000.0F ) == cata::ui::layout_breakpoint::wide ? 3 : 2;
+    CHECK( std::find( renderer.calls.begin(), renderer.calls.end(),
+                      "table_begin:responsive_grid:" +
+                      std::to_string( responsive_columns ) ) != renderer.calls.end() );
     context.table( "stats", 2, [&context]() {
         context.table_next_row();
         CHECK( context.table_next_column() );
@@ -417,7 +455,10 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     context.virtual_list( 5, 20.0, [&virtual_items]( int first, int last ) {
         virtual_items += last - first;
     } );
-    CHECK( virtual_items == 5 );
+    context.virtual_list_rows( 3, "normal", [&virtual_items]( int first, int last ) {
+        virtual_items += last - first;
+    } );
+    CHECK( virtual_items == 8 );
     CHECK_THROWS_AS( context.table( "bad", 0, []() {} ), std::invalid_argument );
     CHECK_THROWS_AS( context.virtual_list( -1, 1.0, []( int, int ) {} ),
     std::invalid_argument );
@@ -540,7 +581,7 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
     })json" ) );
     CHECK( base.id == "base" );
     CHECK( base.version == "1.0.0" );
-    CHECK( base.api_version == api_version );
+    CHECK( base.api_version == 2 );
     CHECK( base.has_capability( "game.read" ) );
     CHECK_FALSE( base.has_capability( "game.actions" ) );
 
@@ -550,6 +591,12 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
     })json" ) );
     CHECK_NOTHROW( validate_script_manifests( { base, extension } ) );
     CHECK_THROWS( validate_script_manifests( { extension, base } ) );
+
+    const script_manifest v3 = read_script_manifest( json_loader::from_string( R"json({
+        "id": "v3", "version": "3", "api_version": 3,
+        "capabilities": [ "ui.pages" ], "dependencies": []
+    })json" ) );
+    CHECK( v3.api_version == api_version );
 
     extension.dependencies = { "missing" };
     CHECK_THROWS( validate_script_manifests( { base, extension } ) );
@@ -648,7 +695,7 @@ TEST_CASE( "lua_snippets_have_an_instruction_budget", "[lua][ui][sandbox]" )
     }
 }
 
-TEST_CASE( "bundled_lua_ui_script_registers_api_v2", "[lua][ui][integration]" )
+TEST_CASE( "bundled_lua_ui_script_registers_api_v3", "[lua][ui][integration]" )
 {
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
