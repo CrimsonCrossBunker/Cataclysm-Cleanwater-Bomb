@@ -26,6 +26,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "catalua_ui_actions.h"
 #include "character.h"
 #include "character_attire.h"
@@ -4325,6 +4326,9 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
 bool game::handle_action()
 {
+    if( cata::lua_ui::process_pending_navigation() ) {
+        return false;
+    }
     if( const std::optional<bool> lua_action = cata::lua_ui::process_next_action() ) {
         return *lua_action;
     }

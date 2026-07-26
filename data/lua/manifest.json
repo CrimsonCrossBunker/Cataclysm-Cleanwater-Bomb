@@ -8,7 +8,9 @@
     "ui.pages",
     "ui.hud",
     "events",
-    "state.character"
+    "state.character",
+    "state.world",
+    "state.page"
   ],
   "dependencies": [
     

@@ -51,8 +51,9 @@ bool reload_scripts( std::string &error );
 // logged and reported through status(), without aborting game startup.
 void on_world_ready();
 
-// Save the current runtime's small typed state to a per-character sidecar.
-// Failure is reported but must not invalidate the main game save.
+// Save small typed character and world state to independent sidecars.  Page
+// state is session-only.  A sidecar failure is reported but must never
+// invalidate the main game save.
 bool save_persistent_state( std::string &error );
 
 // Tear down event subscriptions and HUD adaptors when leaving a game.
@@ -72,6 +73,10 @@ std::vector<page_info> registered_pages( std::string_view slot = {} );
 bool has_registered_pages( std::string_view slot = {} );
 bool show_page( const std::string &page_id );
 void show_slot( std::string_view slot );
+
+// Open one page requested by a Lua event callback at the next safe game-input
+// boundary.  Returns true when a request was handled.
+bool process_pending_navigation();
 
 // Reload scripts, let the user choose a registered page, and run it as a
 // regular cataimgui window.  The runtime is initialized lazily on first use.

@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "cata_imgui.h"
 #include "catalua_ui_renderer.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_stdlib.h"
@@ -121,66 +122,78 @@ class imgui_script_ui_renderer final : public script_ui_renderer
         }
 
         bool button( const std::string &id, const std::string &label ) override {
-            return ImGui::Button( widget_label( id, label ).c_str(),
-                                  ImVec2( 0.0F, touch_target_height() ) );
+            const bool activated = ImGui::Button(
+                                       widget_label( id, label ).c_str(),
+                                       ImVec2( 0.0F, touch_target_height() ) );
+            return activated && !cataimgui::interaction_suppressed();
         }
 
         bool small_button( const std::string &id, const std::string &label ) override {
             if( profile_.is_touch() ) {
                 return button( id, label );
             }
-            return ImGui::SmallButton( widget_label( id, label ).c_str() );
+            const bool activated =
+                ImGui::SmallButton( widget_label( id, label ).c_str() );
+            return activated && !cataimgui::interaction_suppressed();
         }
 
         bool checkbox( const std::string &id, const std::string &label, bool value ) override {
+            const bool original = value;
             ImGui::Checkbox( widget_label( id, label ).c_str(), &value );
-            return value;
+            return cataimgui::interaction_suppressed() ? original : value;
         }
 
         bool radio_button( const std::string &id, const std::string &label,
                            bool active ) override {
-            return ImGui::RadioButton( widget_label( id, label ).c_str(), active );
+            const bool activated =
+                ImGui::RadioButton( widget_label( id, label ).c_str(), active );
+            return activated && !cataimgui::interaction_suppressed();
         }
 
         bool selectable( const std::string &id, const std::string &label,
                          bool selected ) override {
-            return ImGui::Selectable(
-                       widget_label( id, label ).c_str(), selected, 0,
-                       ImVec2( 0.0F, touch_target_height() ) );
+            const bool activated = ImGui::Selectable(
+                                       widget_label( id, label ).c_str(), selected, 0,
+                                       ImVec2( 0.0F, touch_target_height() ) );
+            return activated && !cataimgui::interaction_suppressed();
         }
 
         int slider_int( const std::string &id, const std::string &label, int value, int minimum,
                         int maximum ) override {
+            const int original = value;
             ImGui::SliderInt( widget_label( id, label ).c_str(), &value, minimum, maximum );
-            return value;
+            return cataimgui::interaction_suppressed() ? original : value;
         }
 
         double slider_float( const std::string &id, const std::string &label, double value,
                              double minimum, double maximum ) override {
+            const double original = value;
             float result = static_cast<float>( value );
             ImGui::SliderFloat( widget_label( id, label ).c_str(), &result,
                                 static_cast<float>( minimum ),
                                 static_cast<float>( maximum ) );
-            return result;
+            return cataimgui::interaction_suppressed() ? original : result;
         }
 
         int input_int( const std::string &id, const std::string &label, int value ) override {
+            const int original = value;
             ImGui::InputInt( widget_label( id, label ).c_str(), &value );
-            return value;
+            return cataimgui::interaction_suppressed() ? original : value;
         }
 
         double input_float( const std::string &id, const std::string &label,
                             double value ) override {
+            const double original = value;
             float result = static_cast<float>( value );
             ImGui::InputFloat( widget_label( id, label ).c_str(), &result );
-            return result;
+            return cataimgui::interaction_suppressed() ? original : result;
         }
 
         std::string input_text( const std::string &id, const std::string &label,
                                 const std::string &value ) override {
             std::string result = value;
             ImGui::InputText( widget_label( id, label ).c_str(), &result );
-            return result;
+            return cataimgui::interaction_suppressed() ? value : result;
         }
 
         std::string radial_select(
@@ -189,7 +202,8 @@ class imgui_script_ui_renderer final : public script_ui_renderer
             const std::string popup_id = widget_label( id + "/popup", "radial" );
             if( ImGui::Button(
                     widget_label( id, center_label ).c_str(),
-                    ImVec2( 0.0F, touch_target_height() ) ) ) {
+                    ImVec2( 0.0F, touch_target_height() ) ) &&
+                !cataimgui::interaction_suppressed() ) {
                 ImGui::OpenPopup( popup_id.c_str() );
             }
             std::string result;
@@ -199,7 +213,8 @@ class imgui_script_ui_renderer final : public script_ui_renderer
                         if( ImGui::Selectable(
                                 widget_label( id + "/" + option.id, option.label ).c_str(),
                                 option.selected, 0,
-                                ImVec2( 0.0F, touch_target_height() ) ) ) {
+                                ImVec2( 0.0F, touch_target_height() ) ) &&
+                            !cataimgui::interaction_suppressed() ) {
                             result = option.id;
                             ImGui::CloseCurrentPopup();
                         }
@@ -250,7 +265,8 @@ class imgui_script_ui_renderer final : public script_ui_renderer
                                      ImGui::GetStyle().ItemSpacing.x );
             }
             if( ImGui::Button( widget_label( id + "/trigger", current->label ).c_str(),
-                               trigger_size ) ) {
+                               trigger_size ) &&
+                !cataimgui::interaction_suppressed() ) {
                 cata::input_context_actions::enqueue( current->id, context_revision );
             }
 
@@ -258,7 +274,8 @@ class imgui_script_ui_renderer final : public script_ui_renderer
             if( has_selector ) {
                 ImGui::SameLine();
                 if( ImGui::Button( widget_label( id + "/selector", "▾" ).c_str(),
-                                   ImVec2( selector_width, touch_target_height() ) ) ) {
+                                   ImVec2( selector_width, touch_target_height() ) ) &&
+                    !cataimgui::interaction_suppressed() ) {
                     ImGui::OpenPopup( popup_id.c_str() );
                 }
                 if( ImGui::BeginPopup( popup_id.c_str() ) ) {
@@ -266,7 +283,8 @@ class imgui_script_ui_renderer final : public script_ui_renderer
                         if( ImGui::Selectable(
                                 widget_label( id + "/" + option->id, option->label ).c_str(),
                                 option == current, 0,
-                                ImVec2( 0.0F, touch_target_height() ) ) ) {
+                                ImVec2( 0.0F, touch_target_height() ) ) &&
+                            !cataimgui::interaction_suppressed() ) {
                             result = option->id;
                             ImGui::CloseCurrentPopup();
                         }
@@ -281,6 +299,11 @@ class imgui_script_ui_renderer final : public script_ui_renderer
                     const std::function<void()> &draw ) override {
             ImGui::BeginChild( widget_label( id, "" ).c_str(),
                                ImVec2( 0.0F, static_cast<float>( height ) ), true );
+            const bool suppress_interaction = cataimgui::handle_vertical_swipe(
+                                                  profile_.allow_swipe,
+                                                  profile_.frame_padding_x );
+            const cataimgui::scoped_interaction_suppression suppression(
+                suppress_interaction );
             try {
                 draw();
             } catch( ... ) {
@@ -344,7 +367,16 @@ class imgui_script_ui_renderer final : public script_ui_renderer
             if( tab_depth_ == 0 ) {
                 throw std::runtime_error( "ctx:tab must be called inside ctx:tabs" );
             }
-            if( !ImGui::BeginTabItem( widget_label( id, label ).c_str() ) ) {
+            const bool suppressed = cataimgui::interaction_suppressed();
+            if( suppressed ) {
+                ImGui::BeginDisabled();
+            }
+            const bool open =
+                ImGui::BeginTabItem( widget_label( id, label ).c_str() );
+            if( suppressed ) {
+                ImGui::EndDisabled();
+            }
+            if( !open ) {
                 return false;
             }
             try {
@@ -360,7 +392,16 @@ class imgui_script_ui_renderer final : public script_ui_renderer
         bool tree( const std::string &id, const std::string &label, bool default_open,
                    const std::function<void()> &draw ) override {
             ImGui::SetNextItemOpen( default_open, ImGuiCond_Once );
-            if( !ImGui::TreeNode( widget_label( id, label ).c_str() ) ) {
+            const bool suppressed = cataimgui::interaction_suppressed();
+            if( suppressed ) {
+                ImGui::BeginDisabled();
+            }
+            const bool open =
+                ImGui::TreeNode( widget_label( id, label ).c_str() );
+            if( suppressed ) {
+                ImGui::EndDisabled();
+            }
+            if( !open ) {
                 return false;
             }
             try {

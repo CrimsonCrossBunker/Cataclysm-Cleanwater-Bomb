@@ -41,6 +41,8 @@ const std::set<std::string> &supported_script_capabilities()
         "game.actions",
         "game.read",
         "state.character",
+        "state.page",
+        "state.world",
         "ui.hud",
         "ui.pages"
     };

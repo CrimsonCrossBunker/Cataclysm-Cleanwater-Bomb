@@ -21,8 +21,11 @@
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_game.h"
+#include "catalua_ui_i18n.h"
 #include "catalua_ui_imgui.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_navigation.h"
+#include "catalua_ui_navigation_internal.h"
 #include "catalua_ui_renderer.h"
 #include "catalua_ui_state.h"
 #include "debug.h"
@@ -58,6 +61,7 @@ constexpr std::size_t default_memory_limit = 32U * 1024U * 1024U;
 constexpr int script_instruction_limit = 1000000;
 constexpr int callback_instruction_limit = 250000;
 constexpr std::uint64_t slow_callback_threshold_us = 8000;
+constexpr std::size_t maximum_page_stack_depth = 32;
 
 struct memory_tracker {
     std::size_t used = 0;
@@ -167,6 +171,8 @@ class runtime_state : public event_subscriber
 
         memory_tracker memory;
         script_persistent_state persistent_state;
+        script_persistent_state world_state;
+        script_persistent_state page_state;
         sol::state lua;
         std::vector<fs::path> module_roots;
         std::vector<script_source> sources;
@@ -176,6 +182,7 @@ class runtime_state : public event_subscriber
         std::size_t generation = 0;
         bool accept_actions = false;
         std::optional<std::size_t> current_source;
+        std::optional<std::string> current_page;
         std::uint64_t callback_count = 0;
         std::uint64_t callback_time_total_us = 0;
         std::uint64_t callback_time_max_us = 0;
@@ -209,6 +216,26 @@ class source_scope
     private:
         runtime_state &state_;
         std::optional<std::size_t> previous_;
+};
+
+class page_scope
+{
+    public:
+        page_scope( runtime_state &state, std::string page_id ) :
+            state_( state ), previous_( state.current_page ) {
+            state_.current_page = std::move( page_id );
+        }
+
+        page_scope( const page_scope & ) = delete;
+        page_scope &operator=( const page_scope & ) = delete;
+
+        ~page_scope() {
+            state_.current_page = previous_;
+        }
+
+    private:
+        runtime_state &state_;
+        std::optional<std::string> previous_;
 };
 
 const script_manifest &current_manifest( const runtime_state &state )
@@ -329,8 +356,8 @@ void register_page( runtime_state &state, const std::string &id, const sol::obje
                     sol::protected_function draw )
 {
     require_capability( state, "ui.pages" );
-    if( id.empty() ) {
-        throw std::runtime_error( "ui.page requires a non-empty id" );
+    if( id.empty() || id.size() > 128 ) {
+        throw std::runtime_error( "ui.page id must contain 1 to 128 bytes" );
     }
     if( !draw.valid() ) {
         throw std::runtime_error( "ui.page requires a draw function" );
@@ -472,13 +499,12 @@ void register_event_handler( runtime_state &state, const std::string &name,
     } );
 }
 
-sol::object persistent_get( const runtime_state &runtime, sol::this_state lua,
-                            const std::string &key,
-                            const sol::object &default_value )
+sol::object typed_state_get( const script_persistent_state &store,
+                             sol::this_state lua, const std::string &key,
+                             const sol::object &default_value )
 {
-    require_capability( runtime, "state.character" );
-    const auto found = runtime.persistent_state.find( key );
-    if( found == runtime.persistent_state.end() ) {
+    const auto found = store.find( key );
+    if( found == store.end() ) {
         return default_value;
     }
     return std::visit( [lua]( const auto & value ) {
@@ -486,33 +512,96 @@ sol::object persistent_get( const runtime_state &runtime, sol::this_state lua,
     }, found->second );
 }
 
-void persistent_set( runtime_state &runtime, const std::string &key, const sol::object &value )
+void typed_state_set( script_persistent_state &store, const std::string &key,
+                      const sol::object &value, const std::string &api_name )
 {
-    require_capability( runtime, "state.character" );
     if( key.empty() ) {
-        throw std::runtime_error( "game.state_set requires a non-empty key" );
+        throw std::runtime_error( api_name + " requires a non-empty key" );
     }
     switch( value.get_type() ) {
         case sol::type::boolean:
-            assign_persistent_value( runtime.persistent_state, key, value.as<bool>() );
+            assign_persistent_value( store, key, value.as<bool>() );
             break;
         case sol::type::number:
             if( value.is<lua_Integer>() ) {
-                assign_persistent_value( runtime.persistent_state, key,
+                assign_persistent_value( store, key,
                                          static_cast<std::int64_t>( value.as<lua_Integer>() ) );
             } else {
-                assign_persistent_value( runtime.persistent_state, key, value.as<double>() );
+                assign_persistent_value( store, key, value.as<double>() );
             }
             break;
         case sol::type::string:
-            assign_persistent_value( runtime.persistent_state, key, value.as<std::string>() );
+            assign_persistent_value( store, key, value.as<std::string>() );
             break;
         case sol::type::nil:
-            runtime.persistent_state.erase( key );
+            store.erase( key );
             break;
         default:
-            throw std::runtime_error( "game.state_set only accepts boolean, number, string, or nil" );
+            throw std::runtime_error(
+                api_name + " only accepts boolean, number, string, or nil" );
     }
+}
+
+sol::object persistent_get( const runtime_state &runtime, sol::this_state lua,
+                            const std::string &key,
+                            const sol::object &default_value )
+{
+    require_capability( runtime, "state.character" );
+    return typed_state_get( runtime.persistent_state, lua, key, default_value );
+}
+
+void persistent_set( runtime_state &runtime, const std::string &key,
+                     const sol::object &value )
+{
+    require_capability( runtime, "state.character" );
+    typed_state_set( runtime.persistent_state, key, value, "game.state_set" );
+}
+
+std::string scoped_state_key( const runtime_state &runtime,
+                              const std::string &scope,
+                              const std::string &key )
+{
+    if( key.empty() || key.size() > 128 ) {
+        throw std::invalid_argument(
+            "state keys must contain 1 to 128 bytes" );
+    }
+    const script_manifest &manifest = current_manifest( runtime );
+    std::string result = "v3:" + scope + ":" +
+                         std::to_string( manifest.id.size() ) + ":" +
+                         manifest.id + ":";
+    if( scope == "page" ) {
+        if( !runtime.current_page ) {
+            throw std::runtime_error(
+                "state.page is only available while drawing a page" );
+        }
+        result += std::to_string( runtime.current_page->size() ) + ":" +
+                  *runtime.current_page + ":";
+    }
+    result += key;
+    if( result.size() > persistent_state_max_key_bytes ) {
+        throw std::invalid_argument(
+            "namespaced state key exceeds the 256 byte storage limit" );
+    }
+    return result;
+}
+
+sol::object scoped_state_get( const runtime_state &runtime,
+                              const script_persistent_state &store,
+                              sol::this_state lua, const std::string &scope,
+                              const std::string &key,
+                              const sol::object &default_value )
+{
+    return typed_state_get( store, lua,
+                            scoped_state_key( runtime, scope, key ),
+                            default_value );
+}
+
+void scoped_state_set( runtime_state &runtime, script_persistent_state &store,
+                       const std::string &scope, const std::string &key,
+                       const sol::object &value )
+{
+    typed_state_set( store, scoped_state_key( runtime, scope, key ), value,
+                     "state." + scope + ".set" );
 }
 
 sol::table lua_runtime_status( sol::this_state lua )
@@ -710,6 +799,17 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
     sol::protected_function draw ) {
         register_hud( state, id, options, std::move( draw ) );
     } );
+    install_navigation_api(
+        ui,
+    [&state]() {
+        require_capability( state, "ui.pages" );
+    },
+    [&state]() {
+        return state.accept_actions && state.current_source.has_value();
+    },
+    [&state]( const std::string & page_id ) {
+        return find_definition( state.pages, page_id ) != state.pages.end();
+    } );
 
     sol::table events = state.lua.create_named_table( "events" );
     events.set_function( "on", [&state]( const std::string & name,
@@ -743,6 +843,62 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
         persistent_set( state, key, value );
     } );
     game.set_function( "runtime_status", lua_runtime_status );
+    install_i18n_api( state.lua );
+
+    sol::table state_api = state.lua.create_named_table( "state" );
+    sol::table character_state = state.lua.create_table();
+    character_state.set_function(
+        "get",
+        [&state]( sol::this_state lua, const std::string & key,
+    const sol::object & default_value ) {
+        require_capability( state, "state.character" );
+        return scoped_state_get( state, state.persistent_state, lua,
+                                 "character", key, default_value );
+    } );
+    character_state.set_function(
+        "set",
+    [&state]( const std::string & key, const sol::object & value ) {
+        require_capability( state, "state.character" );
+        scoped_state_set( state, state.persistent_state,
+                          "character", key, value );
+    } );
+    state_api["character"] = std::move( character_state );
+
+    sol::table world_state = state.lua.create_table();
+    world_state.set_function(
+        "get",
+        [&state]( sol::this_state lua, const std::string & key,
+    const sol::object & default_value ) {
+        require_capability( state, "state.world" );
+        return scoped_state_get( state, state.world_state, lua,
+                                 "world", key, default_value );
+    } );
+    world_state.set_function(
+        "set",
+    [&state]( const std::string & key, const sol::object & value ) {
+        require_capability( state, "state.world" );
+        scoped_state_set( state, state.world_state,
+                          "world", key, value );
+    } );
+    state_api["world"] = std::move( world_state );
+
+    sol::table page_state = state.lua.create_table();
+    page_state.set_function(
+        "get",
+        [&state]( sol::this_state lua, const std::string & key,
+    const sol::object & default_value ) {
+        require_capability( state, "state.page" );
+        return scoped_state_get( state, state.page_state, lua,
+                                 "page", key, default_value );
+    } );
+    page_state.set_function(
+        "set",
+    [&state]( const std::string & key, const sol::object & value ) {
+        require_capability( state, "state.page" );
+        scoped_state_set( state, state.page_state,
+                          "page", key, value );
+    } );
+    state_api["page"] = std::move( page_state );
 
     state.lua.set_function( "print", []( const sol::variadic_args & values ) {
         std::string message;
@@ -859,9 +1015,17 @@ cata_path persistent_state_path()
     return PATH_INFO::player_base_save_path() + ".lua_ui.json";
 }
 
-bool load_persistent_state_file( script_persistent_state &state, std::string &error )
+std::optional<cata_path> world_state_path()
 {
-    const cata_path path = persistent_state_path();
+    if( !world_generator || world_generator->active_world == nullptr ) {
+        return std::nullopt;
+    }
+    return world_generator->active_world->folder_path() / "lua_ui_world.json";
+}
+
+bool load_state_file( const cata_path &path, script_persistent_state &state,
+                      std::string &error )
+{
     if( !file_exist( path ) ) {
         state.clear();
         error.clear();
@@ -882,6 +1046,22 @@ bool load_persistent_state_file( script_persistent_state &state, std::string &er
         return true;
     } catch( const std::exception &exception ) {
         state.clear();
+        error = path.get_unrelative_path().string() + ": " + exception.what();
+        return false;
+    }
+}
+
+bool write_state_file( const cata_path &path,
+                       const script_persistent_state &state,
+                       std::string &error )
+{
+    try {
+        write_to_file( path, [&]( std::ostream & output ) {
+            write_persistent_state( output, state );
+        } );
+        error.clear();
+        return true;
+    } catch( const std::exception &exception ) {
         error = path.get_unrelative_path().string() + ": " + exception.what();
         return false;
     }
@@ -1062,7 +1242,88 @@ void runtime_state::notify( const cata::event &event )
     }
 }
 
-void draw_registered_page( const std::string &page_id )
+struct page_stack_entry {
+    std::string page_id;
+    navigation_parameters parameters;
+};
+
+sol::table parameters_to_lua( runtime_state &state,
+                              const navigation_parameters &parameters )
+{
+    sol::table result = state.lua.create_table();
+    for( const auto &parameter : parameters ) {
+        const std::string &key = parameter.first;
+        const script_persistent_value &value = parameter.second;
+        std::visit( [&result, &key]( const auto & entry ) {
+            result[key] = entry;
+        }, value );
+    }
+    return result;
+}
+
+bool consume_navigation_requests( std::vector<page_stack_entry> &stack,
+                                  const std::size_t minimum_depth )
+{
+    bool close_requested = false;
+    while( const std::optional<navigation_request> request =
+               take_navigation_request() ) {
+        switch( request->type ) {
+            case navigation_request_type::open_page:
+                if( find_page( request->page_id ) == nullptr ) {
+                    ::add_msg( m_bad, _( "Lua page is no longer registered: %s" ),
+                               request->page_id );
+                } else if( stack.size() >= maximum_page_stack_depth ) {
+                    ::add_msg( m_warning,
+                               _( "Lua page navigation reached its maximum depth." ) );
+                } else {
+                    stack.push_back( { request->page_id, request->parameters } );
+                }
+                break;
+            case navigation_request_type::back:
+                if( stack.size() > minimum_depth ) {
+                    stack.pop_back();
+                } else {
+                    close_requested = true;
+                }
+                break;
+            case navigation_request_type::close:
+                close_requested = true;
+                break;
+        }
+    }
+    return close_requested;
+}
+
+int page_host_poll_timeout()
+{
+    // Mouse/touch events wake the input wait immediately.  This timeout only
+    // provides an animation/redraw heartbeat and is intentionally slower than
+    // the old 5 ms busy loop.
+    return cata::ui::current_profile().is_touch() ? 16 : 33;
+}
+
+template<typename Draw>
+void draw_scrollable_child( const char *id, const ImVec2 size,
+                            const ImGuiChildFlags child_flags,
+                            const bool always_show_scrollbar, Draw &&draw )
+{
+    if( ImGui::BeginChild( id, size, child_flags,
+                           always_show_scrollbar ?
+                           ImGuiWindowFlags_AlwaysVerticalScrollbar :
+                           ImGuiWindowFlags_None ) ) {
+        const cata::ui::profile profile = cata::ui::current_profile();
+        const bool suppress_interaction = cataimgui::handle_vertical_swipe(
+                                              profile.allow_swipe,
+                                              profile.frame_padding_x );
+        const cataimgui::scoped_interaction_suppression suppression(
+            suppress_interaction );
+        draw();
+    }
+    ImGui::EndChild();
+}
+
+void draw_registered_page( const std::string &page_id,
+                           const navigation_parameters &parameters = {} )
 {
     page_definition *page = find_page( page_id );
     if( page == nullptr ) {
@@ -1077,9 +1338,11 @@ void draw_registered_page( const std::string &page_id )
     std::unique_ptr<script_ui_renderer> renderer = make_imgui_script_ui_renderer();
     script_ui_context context( *renderer );
     source_scope source( *active_state, page->source_index );
+    page_scope current_page( *active_state, page->id );
     instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
     const auto started = std::chrono::steady_clock::now();
-    const sol::protected_function_result result = page->draw( &context );
+    const sol::protected_function_result result =
+        page->draw( &context, parameters_to_lua( *active_state, parameters ) );
     record_callback_timing( *active_state, "page '" + page->id + "'", started );
     if( !result.valid() ) {
         disable_callback( page->enabled, page->error, "Lua page '" + page->id + "'", result );
@@ -1090,8 +1353,11 @@ void draw_registered_page( const std::string &page_id )
 class lua_page_window : public cataimgui::window
 {
     public:
-        lua_page_window( std::string page_id, const std::string &title ) :
-            cataimgui::window( title ), page_id_( std::move( page_id ) ) {}
+        lua_page_window( std::string page_id, const std::string &title,
+                         navigation_parameters parameters = {} ) :
+            cataimgui::window( title ) {
+            stack_.push_back( { std::move( page_id ), std::move( parameters ) } );
+        }
 
         void run() {
             input_context context( "HELP_KEYBINDINGS" );
@@ -1102,8 +1368,15 @@ class lua_page_window : public cataimgui::window
             ui_manager::redraw();
             while( get_is_open() ) {
                 ui_manager::redraw();
-                if( context.handle_input( 5 ) == "QUIT" ) {
+                if( consume_navigation_requests( stack_, 1 ) ) {
                     break;
+                }
+                if( context.handle_input( page_host_poll_timeout() ) == "QUIT" ) {
+                    if( stack_.size() > 1 ) {
+                        stack_.pop_back();
+                    } else {
+                        break;
+                    }
                 }
             }
         }
@@ -1117,6 +1390,15 @@ class lua_page_window : public cataimgui::window
         void draw_controls() override {
             const cata::ui::profile profile = cata::ui::current_profile();
             const ui_profile_style_guard style( profile );
+            const bool has_back = stack_.size() > 1;
+            if( has_back &&
+                ImGui::Button( _( "Back" ),
+                               ImVec2( 0.0F, profile.minimum_target ) ) ) {
+                stack_.pop_back();
+            }
+            if( has_back ) {
+                ImGui::SameLine();
+            }
             if( ImGui::Button( _( "Reload Lua" ),
                                ImVec2( 0.0F, profile.minimum_target ) ) ) {
                 std::string error;
@@ -1134,11 +1416,18 @@ class lua_page_window : public cataimgui::window
                                  static_cast<double>( snapshot.memory_limit ) / ( 1024.0 * 1024.0 ) );
             ImGui::Separator();
 
-            draw_registered_page( page_id_ );
+            if( !stack_.empty() ) {
+                draw_scrollable_child(
+                    "##lua_page_content", ImVec2( 0.0F, 0.0F ),
+                ImGuiChildFlags_None, true, [this]() {
+                    draw_registered_page( stack_.back().page_id,
+                                          stack_.back().parameters );
+                } );
+            }
         }
 
     private:
-        std::string page_id_;
+        std::vector<page_stack_entry> stack_;
 };
 
 class lua_page_hub_window : public cataimgui::window
@@ -1152,13 +1441,38 @@ class lua_page_hub_window : public cataimgui::window
         void run() {
             input_context context( "HELP_KEYBINDINGS" );
             context.register_action( "QUIT" );
+            context.register_action( "UP" );
+            context.register_action( "DOWN" );
+            context.register_action( "LEFT" );
+            context.register_action( "RIGHT" );
+            context.register_action( "PAGE_UP" );
+            context.register_action( "PAGE_DOWN" );
             context.register_action( "ANY_INPUT" );
             context.register_action( "HELP_KEYBINDINGS" );
             ui_manager::redraw();
             while( get_is_open() ) {
                 ui_manager::redraw();
-                if( context.handle_input( 5 ) == "QUIT" ) {
+                if( consume_navigation_requests( page_stack_, 0 ) ) {
                     break;
+                }
+                const std::string action =
+                    context.handle_input( page_host_poll_timeout() );
+                if( action == "QUIT" ) {
+                    if( !page_stack_.empty() ) {
+                        page_stack_.pop_back();
+                    } else {
+                        break;
+                    }
+                } else if( page_stack_.empty() ) {
+                    if( action == "UP" || action == "LEFT" ) {
+                        move_selection( -1 );
+                    } else if( action == "DOWN" || action == "RIGHT" ) {
+                        move_selection( 1 );
+                    } else if( action == "PAGE_UP" ) {
+                        move_selection( -5 );
+                    } else if( action == "PAGE_DOWN" ) {
+                        move_selection( 5 );
+                    }
                 }
             }
         }
@@ -1172,6 +1486,28 @@ class lua_page_hub_window : public cataimgui::window
         void draw_controls() override {
             const cata::ui::profile profile = cata::ui::current_profile();
             const ui_profile_style_guard style( profile );
+
+            if( !page_stack_.empty() ) {
+                if( ImGui::Button( _( "Back" ),
+                                   ImVec2( 0.0F, profile.minimum_target ) ) ) {
+                    page_stack_.pop_back();
+                    return;
+                }
+                ImGui::SameLine();
+                const page_definition *page =
+                    find_page( page_stack_.back().page_id );
+                ImGui::TextUnformatted(
+                    page == nullptr ? page_stack_.back().page_id.c_str() :
+                    page->title.c_str() );
+                ImGui::Separator();
+                draw_scrollable_child(
+                    "##lua_stacked_page_content", ImVec2( 0.0F, 0.0F ),
+                ImGuiChildFlags_None, true, [this]() {
+                    draw_registered_page( page_stack_.back().page_id,
+                                          page_stack_.back().parameters );
+                } );
+                return;
+            }
 
             ImGui::TextUnformatted( _( "Extensions" ) );
             ImGui::SameLine();
@@ -1200,39 +1536,48 @@ class lua_page_hub_window : public cataimgui::window
             if( single_column ) {
                 draw_horizontal_navigation( profile );
                 ImGui::Separator();
-                if( ImGui::BeginChild( "##lua_extension_content", ImVec2( 0.0F, 0.0F ),
-                                       ImGuiChildFlags_None,
-                                       ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                draw_scrollable_child(
+                    "##lua_extension_content", ImVec2( 0.0F, 0.0F ),
+                ImGuiChildFlags_None, true, [this]() {
                     draw_registered_page( pages_[selected_].id );
-                }
-                ImGui::EndChild();
+                } );
             } else {
                 const float navigation_width = std::clamp(
                                                    available.x * 0.27F,
                                                    profile.width_normal,
                                                    profile.width_wide );
-                if( ImGui::BeginChild( "##lua_extension_navigation",
-                                       ImVec2( navigation_width, 0.0F ),
-                                       ImGuiChildFlags_Borders ) ) {
+                draw_scrollable_child(
+                    "##lua_extension_navigation",
+                    ImVec2( navigation_width, 0.0F ),
+                ImGuiChildFlags_Borders, false, [this, &profile]() {
                     draw_vertical_navigation( profile.minimum_target );
-                }
-                ImGui::EndChild();
+                } );
                 ImGui::SameLine();
-                if( ImGui::BeginChild( "##lua_extension_content", ImVec2( 0.0F, 0.0F ),
-                                       ImGuiChildFlags_Borders,
-                                       ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                draw_scrollable_child(
+                    "##lua_extension_content", ImVec2( 0.0F, 0.0F ),
+                ImGuiChildFlags_Borders, true, [this]() {
                     ImGui::TextUnformatted( pages_[selected_].title.c_str() );
                     ImGui::Separator();
                     draw_registered_page( pages_[selected_].id );
-                }
-                ImGui::EndChild();
+                } );
             }
         }
 
     private:
         std::string slot_;
         std::vector<page_info> pages_;
+        std::vector<page_stack_entry> page_stack_;
         int selected_ = 0;
+        bool scroll_to_selection_ = true;
+
+        void move_selection( const int delta ) {
+            if( pages_.empty() || delta == 0 ) {
+                return;
+            }
+            const int count = static_cast<int>( pages_.size() );
+            selected_ = ( selected_ + delta % count + count ) % count;
+            scroll_to_selection_ = true;
+        }
 
         std::string selected_id() const {
             if( selected_ < 0 || static_cast<std::size_t>( selected_ ) >= pages_.size() ) {
@@ -1259,8 +1604,14 @@ class lua_page_hub_window : public cataimgui::window
                 }
                 if( ImGui::Selectable( ( page.title + "###lua_page_" + page.id ).c_str(),
                                        selected_ == static_cast<int>( index ), 0,
-                                       ImVec2( 0.0F, target_height ) ) ) {
+                                       ImVec2( 0.0F, target_height ) ) &&
+                    !cataimgui::interaction_suppressed() ) {
                     selected_ = static_cast<int>( index );
+                }
+                if( selected_ == static_cast<int>( index ) &&
+                    scroll_to_selection_ ) {
+                    ImGui::SetScrollHereY( 0.5F );
+                    scroll_to_selection_ = false;
                 }
             }
         }
@@ -1276,10 +1627,27 @@ class lua_page_hub_window : public cataimgui::window
                     if( index > 0 ) {
                         ImGui::SameLine();
                     }
+                    const bool selected =
+                        selected_ == static_cast<int>( index );
+                    if( selected ) {
+                        ImGui::PushStyleColor(
+                            ImGuiCol_Button,
+                            ImVec4( 0.08F, 0.30F, 0.34F, 1.0F ) );
+                        ImGui::PushStyleColor(
+                            ImGuiCol_Border,
+                            ImVec4( 0.32F, 0.72F, 0.75F, 1.0F ) );
+                    }
                     if( ImGui::Button( ( pages_[index].title + "###lua_page_" +
                                          pages_[index].id ).c_str(),
                                        ImVec2( 0.0F, profile.minimum_target ) ) ) {
                         selected_ = static_cast<int>( index );
+                    }
+                    if( selected ) {
+                        ImGui::PopStyleColor( 2 );
+                    }
+                    if( selected && scroll_to_selection_ ) {
+                        ImGui::SetScrollHereX( 0.5F );
+                        scroll_to_selection_ = false;
                     }
                 }
             }
@@ -1287,14 +1655,24 @@ class lua_page_hub_window : public cataimgui::window
         }
 };
 
-bool reload_scripts_with_state( const script_persistent_state *initial_state, std::string &error )
+bool reload_scripts_with_state(
+    const script_persistent_state *initial_character_state,
+    const script_persistent_state *initial_world_state,
+    std::string &error )
 {
     try {
         auto next = std::make_unique<runtime_state>();
         if( active_state ) {
             next->persistent_state = active_state->persistent_state;
-        } else if( initial_state != nullptr ) {
-            next->persistent_state = *initial_state;
+            next->world_state = active_state->world_state;
+            next->page_state = active_state->page_state;
+        } else {
+            if( initial_character_state != nullptr ) {
+                next->persistent_state = *initial_character_state;
+            }
+            if( initial_world_state != nullptr ) {
+                next->world_state = *initial_world_state;
+            }
         }
         next->sources = active_script_sources();
         initialize_state( *next, module_roots( next->sources ) );
@@ -1309,6 +1687,7 @@ bool reload_scripts_with_state( const script_persistent_state *initial_state, st
         }
         active_state = std::move( next );
         active_state->accept_actions = true;
+        clear_navigation_requests();
         last_runtime_error.clear();
         error.clear();
         return true;
@@ -1339,7 +1718,7 @@ bool reload_scripts( std::string &error )
     // scripts, so only surface its error after a successful script reload.
     std::string profile_error;
     cata::ui::reload_profile( profile_error );
-    const bool reloaded = reload_scripts_with_state( nullptr, error );
+    const bool reloaded = reload_scripts_with_state( nullptr, nullptr, error );
     if( reloaded && !profile_error.empty() ) {
         record_runtime_error( "UI profile reload failed", profile_error );
     }
@@ -1351,16 +1730,35 @@ void on_world_ready()
     // A save/new-game transition is a runtime boundary, unlike an in-page hot
     // reload.  Never retain callbacks or state belonging to the previous world.
     active_state.reset();
-    script_persistent_state saved_state;
-    std::string state_error;
-    load_persistent_state_file( saved_state, state_error );
+    clear_navigation_requests();
+    script_persistent_state saved_character_state;
+    std::string character_state_error;
+    load_state_file( persistent_state_path(), saved_character_state,
+                     character_state_error );
+
+    script_persistent_state saved_world_state;
+    std::string world_state_error;
+    if( const std::optional<cata_path> path = world_state_path() ) {
+        load_state_file( *path, saved_world_state, world_state_error );
+    }
 
     std::string script_error;
-    if( !reload_scripts_with_state( &saved_state, script_error ) ) {
+    if( !reload_scripts_with_state( &saved_character_state,
+                                    &saved_world_state, script_error ) ) {
         ::add_msg( m_bad, _( "Lua initialization failed: %s" ), script_error );
-    } else if( !state_error.empty() ) {
-        record_runtime_error( "Lua state load failed", state_error );
-        ::add_msg( m_warning, _( "Lua state could not be loaded; using defaults: %s" ), state_error );
+    }
+    if( !character_state_error.empty() ) {
+        record_runtime_error( "Lua character state load failed",
+                              character_state_error );
+        ::add_msg( m_warning,
+                   _( "Lua character state could not be loaded; using defaults: %s" ),
+                   character_state_error );
+    }
+    if( !world_state_error.empty() ) {
+        record_runtime_error( "Lua world state load failed", world_state_error );
+        ::add_msg( m_warning,
+                   _( "Lua world state could not be loaded; using defaults: %s" ),
+                   world_state_error );
     }
     ensure_hud_adaptor();
 }
@@ -1371,20 +1769,32 @@ bool save_persistent_state( std::string &error )
         error.clear();
         return true;
     }
-    const cata_path path = persistent_state_path();
-    try {
-        if( !write_to_file( path, [&]( std::ostream & output ) {
-        write_persistent_state( output, active_state->persistent_state );
-        }, _( "Lua UI state" ) ) ) {
-            throw std::runtime_error( "unable to write file" );
-        }
-        error.clear();
-        return true;
-    } catch( const std::exception &exception ) {
-        error = path.get_unrelative_path().string() + ": " + exception.what();
-        record_runtime_error( "Lua state save failed", error );
-        return false;
+
+    std::vector<std::string> errors;
+    std::string character_error;
+    if( !write_state_file( persistent_state_path(), active_state->persistent_state,
+                           character_error ) ) {
+        record_runtime_error( "Lua character state save failed", character_error );
+        errors.push_back( character_error );
     }
+
+    if( const std::optional<cata_path> path = world_state_path() ) {
+        std::string world_error;
+        if( !write_state_file( *path, active_state->world_state,
+                               world_error ) ) {
+            record_runtime_error( "Lua world state save failed", world_error );
+            errors.push_back( world_error );
+        }
+    }
+
+    error.clear();
+    for( const std::string &entry : errors ) {
+        if( !error.empty() ) {
+            error += "; ";
+        }
+        error += entry;
+    }
+    return errors.empty();
 }
 
 runtime_status status()
@@ -1445,6 +1855,7 @@ void shutdown()
     hud_adaptor.reset();
     active_state.reset();
     clear_actions();
+    clear_navigation_requests();
     last_runtime_error.clear();
 }
 
@@ -1504,6 +1915,30 @@ bool show_page( const std::string &page_id )
     lua_page_window window( page->id, page->title );
     window.run();
     return true;
+}
+
+bool process_pending_navigation()
+{
+    while( const std::optional<navigation_request> request =
+               take_navigation_request() ) {
+        if( request->type != navigation_request_type::open_page ) {
+            continue;
+        }
+        if( !active_state ) {
+            clear_navigation_requests();
+            return false;
+        }
+        page_definition *page = find_page( request->page_id );
+        if( page == nullptr ) {
+            ::add_msg( m_bad, _( "Lua page is no longer registered: %s" ),
+                       request->page_id );
+            continue;
+        }
+        lua_page_window window( page->id, page->title, request->parameters );
+        window.run();
+        return true;
+    }
+    return false;
 }
 
 void show_slot( const std::string_view slot )
