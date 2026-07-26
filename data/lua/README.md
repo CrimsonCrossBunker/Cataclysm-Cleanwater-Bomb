@@ -49,10 +49,11 @@ contain letters, digits, `_`, `-`, and `.` and cannot contain empty segments.
 
 The runtime loads automatically after a new game or save has initialized.
 Open a page from **Main menu → Other → Extensions**, the in-game
-**Extensions** entry, **Options → Mods**, or
-**Debug menu → Info… → Open Lua UI pages**, depending on the slots registered
-by that page. Press **Reload Lua** after editing a script; recompiling the game
-is not required.
+**Extensions** entry, or **Debug menu → Info… → Open Lua UI pages**, depending
+on the slots registered by that page. Android also exposes `settings.mods`
+pages from its touch options screen. Desktop keeps the original options UI, so
+desktop mods should also register a main-menu or in-game slot. Press
+**Reload Lua** after editing a script; recompiling the game is not required.
 Every entry script is loaded into a new Lua state first. If any script fails,
 the candidate state is discarded and the currently running state stays active.
 
@@ -70,8 +71,8 @@ Each source may contain `lua/manifest.json`:
 
 API versions 2 and 3 are accepted. API v2 keeps its existing behavior while
 new code should target v3. Supported capabilities are `game.read`,
-`game.actions`, `ui.pages`, `ui.hud`,
-`events`, and `state.character`. Unknown capabilities, an incompatible API,
+`game.actions`, `ui.pages`, `ui.hud`, `events`, `state.character`,
+`state.world`, and `state.page`. Unknown capabilities, an incompatible API,
 duplicate ids, missing dependencies, or dependencies that load later reject
 the whole candidate transaction. The bundled manifest is mandatory. A local
 user script without a manifest keeps all capabilities for compatibility. An
@@ -86,7 +87,7 @@ the capabilities of a more privileged source.
 ## Registration
 
 ```lua
-ui.page("inventory_tools", "Inventory tools", function(ctx)
+ui.page("inventory_tools", "Inventory tools", function(ctx, params)
     ctx:text("Hello, " .. game.player_name())
 end)
 
@@ -95,7 +96,7 @@ ui.page("my_mod_settings", {
     category = "settings",
     order = 50,
     slots = { "settings.mods", "main.extensions", "ingame.extensions" }
-}, function(ctx)
+}, function(ctx, params)
     ctx:heading("My mod settings")
 end)
 
@@ -143,8 +144,65 @@ The string-title form of `ui.page` remains compatible and registers in
 Slots are navigation contracts, not pixel coordinates. A mod therefore
 registers one page implementation and lets the page host place it correctly
 for touch, mouse/keyboard, or terminal input. Pages in `settings.mods` appear
-under the Mods entry in the shared Tiles options page. Re-registering a page
+under the Mods entry in Android's touch options page. Re-registering a page
 during hot reload keeps the selected page when its stable id still exists.
+
+## Page navigation
+
+Every page callback receives `function(ctx, params)`. The second argument is an
+empty table when the page was opened from a navigation slot, so API v2
+one-argument callbacks remain valid. A page, HUD, or event callback may request
+safe navigation:
+
+```lua
+ui.page("quest_detail", "Quest detail", function(ctx, params)
+    ctx:heading(params.title or "Quest")
+    if ctx:button_id("back", i18n.gettext("Back")) then
+        ui.back()
+    end
+end)
+
+events.on("game_begin", function(event)
+    ui.open("quest_detail", {
+        title = event.data.cdda_version,
+        first_visit = true
+    })
+end)
+```
+
+- `ui.open(page_id, params)` pushes a registered page onto the current host.
+- `ui.back()` pops one page; at the root it closes the host.
+- `ui.close()` closes the complete page host.
+
+Navigation is queued and consumed after the active draw/event callback has
+returned, so Lua never creates or destroys an ImGui window in the middle of a
+frame. Entry scripts cannot navigate while they are registering surfaces. An
+event-triggered open is consumed at the next normal game-input boundary.
+
+The queue holds at most 16 requests and a host stack holds at most 32 pages. An
+`ui.open` parameter table accepts at most 32 unique string keys and only
+boolean, integer, finite floating-point, or string values. Keys are limited to
+64 bytes, strings to 4096 bytes, and the complete table to 16 KiB. A target
+must already be registered and its id must contain 1 to 128 bytes.
+
+## Localization
+
+Use the renderer-independent `i18n` facade for visible strings:
+
+```lua
+local title = i18n.gettext("Inventory")
+local hint = i18n.pgettext("Lua tool hint", "Back")
+local count = i18n.ngettext("%d item", "%d items", item_count)
+local contextual = i18n.npgettext(
+    "Lua inventory count", "%d item", "%d items", item_count
+)
+local revision = i18n.language_revision()
+```
+
+These functions return owned Lua strings from the active game catalogue.
+`language_revision()` changes after the game language changes and can be used
+to invalidate a Mod's own translated-label cache. Message and context sizes
+are bounded; plural counts must be non-negative.
 
 ## Drawing context
 
@@ -395,7 +453,7 @@ ordinary ImGui page host and are unrelated to this HUD snapshot.
 
 ## Game API and reload state
 
-- `game.api_version` is `2`.
+- `game.api_version` is `3`. Manifests targeting API v2 remain accepted.
 - `game.add_msg(text)` writes to the game message log.
 - `game.player_name()` returns the current avatar name.
 - `game.player_snapshot()` returns copied character status: name, moves, stamina,
@@ -457,24 +515,49 @@ ordinary ImGui page host and are unrelated to this HUD snapshot.
   `last_slow_callback`. A callback taking at least 8 ms is recorded as slow;
   use these cumulative fields to find HUD or event callbacks doing too much
   per frame.
-- `game.state_get(key, default)` and `game.state_set(key, value)` preserve small
-  boolean, integer, floating-point, or string values across successful and
-  failed hot reloads. Integer and floating-point number types remain distinct.
-  A candidate reload receives a copy of the active state; its changes are only
-  committed when every entry script succeeds. Passing `nil` to `state_set`
-  removes a key. The state is saved per character in
-  `<encoded-character-id>.lua_ui.json` beside the normal character save and is
-  restored before entry scripts run. It therefore follows world snapshots and
-  graveyard handling without being embedded in the main save format.
+- `game.state_get(key, default)` and `game.state_set(key, value)` are the API v2
+  compatibility state. They remain per-character and use their original,
+  unnamespaced keys.
 
-Local Lua variables are replaced on successful reload. Use the state API for
-values that should survive editing or restarting the game. State is limited to
-1024 keys, 256 bytes per key, 64 KiB per string, 512 KiB of key/value data, and
-a 1 MiB sidecar file. Invalid values and non-finite numbers are rejected before
-changing the active state. A missing file means empty state; a damaged or
-unsupported file is reported in `debug.log` and `game.runtime_status()` while
-the game and Lua scripts continue with defaults. Failure to write this
-experimental sidecar never invalidates the main game save.
+API v3 adds three explicitly scoped stores:
+
+```lua
+local enabled = state.character.get("enabled", false)
+state.character.set("enabled", not enabled)
+
+local chapter = state.world.get("chapter", 1)
+state.world.set("chapter", chapter + 1)
+
+-- Only legal while this page's draw callback is active.
+local draft = state.page.get("draft", "")
+state.page.set("draft", draft)
+```
+
+- `state.character` survives reloads and restarts for the current character.
+- `state.world` survives reloads and restarts and is shared by characters in
+  the current world.
+- `state.page` survives successful hot reloads for the current runtime session,
+  but is cleared when leaving/reloading a world. It is available only from a
+  page draw callback.
+
+Every API v3 key is automatically namespaced by the registering manifest id;
+page keys are additionally namespaced by page id. Two Mods can therefore use
+the same local key without collisions. A candidate reload receives copies of
+all three stores and commits mutations only if every entry script succeeds.
+Passing `nil` to a `set` function removes that key. Character state is stored
+beside the normal save as `<encoded-character-id>.lua_ui.json`; world state is
+stored as `<world>/lua_ui_world.json`. Both are restored before entry scripts
+run. Page state is deliberately memory-only.
+
+Local Lua variables are replaced on successful reload. Use the appropriate
+state scope for values that should survive editing or restarting the game.
+Each store is limited to 1024 keys, 256 bytes per stored namespaced key, 64 KiB
+per string, and 512 KiB of key/value data; each persistent sidecar is limited
+to 1 MiB. Invalid values and non-finite numbers are rejected before changing
+the active state. A missing file means empty state; a damaged or unsupported
+file is reported in `debug.log` and `game.runtime_status()` while the game and
+Lua scripts continue with defaults. Failure to write either experimental
+sidecar never invalidates the main game save.
 
 All snapshot calls are read-only and return ordinary Lua tables containing
 copied booleans, numbers, and strings. They never expose native `avatar`,
