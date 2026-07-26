@@ -148,22 +148,26 @@ class options_imgui_page : public cataimgui::window
             const ImVec2 window_pos = ImGui::GetWindowPos();
             const ImVec2 window_size = ImGui::GetWindowSize();
             const cata::ui::profile profile = cata::ui::current_profile();
-            const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 28.0F );
-            const float footer_height = profile.minimum_target + 16.0F;
+            const float edge_padding = std::max( profile.frame_padding_x,
+                                                 profile.item_spacing_x * 1.5F );
+            const float footer_height = profile.row_wide;
 
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
 
-            if( profile.is_touch() ) {
-                cataimgui::PushGuiFont1_5x();
+            const bool scaled_font = profile.text_scale != 1.0F;
+            if( scaled_font ) {
+                cataimgui::PushGuiFontScaled( profile.text_scale );
             }
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
             ImGui::PushStyleVar( ImGuiStyleVar_FramePadding,
                                  ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing,
                                  ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_WindowPadding,
+                ImVec2( edge_padding, profile.frame_padding_y * 1.5F ) );
             ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 0.98F ) );
             ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
             ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
@@ -179,9 +183,21 @@ class options_imgui_page : public cataimgui::window
                 ImGui::Separator();
             }
 
-            const float detail_width = std::clamp( window_size.x * 0.31F, 300.0F, 540.0F );
-            const float list_width = std::max( 320.0F, ImGui::GetContentRegionAvail().x -
-                                               detail_width - 12.0F );
+            const float content_width = ImGui::GetContentRegionAvail().x;
+            const float detail_width_max = std::max(
+                                               1.0F,
+                                               std::min( profile.width_wide,
+                                                       content_width -
+                                                       profile.width_compact -
+                                                       profile.item_spacing_x ) );
+            const float detail_width_min = std::min( profile.width_normal,
+                                           detail_width_max );
+            const float detail_width = std::clamp(
+                                           window_size.x * 0.31F,
+                                           detail_width_min, detail_width_max );
+            const float list_width = std::max(
+                                         1.0F, content_width -
+                                         detail_width - profile.item_spacing_x );
             std::string focused_tooltip;
 
             const std::string child_id = "##option_rows_" +
@@ -214,8 +230,8 @@ class options_imgui_page : public cataimgui::window
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 4 );
-            if( profile.is_touch() ) {
-                cataimgui::PopGuiFont1_5x();
+            if( scaled_font ) {
+                cataimgui::PopGuiFontScaled();
             }
         }
 
@@ -227,9 +243,13 @@ class options_imgui_page : public cataimgui::window
         int content_drag_tab = 0;
 
         void draw_footer( const float window_width, const float edge_padding ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
             if( snapshot.world_options_only && snapshot.with_tabs ) {
-                constexpr float gap = 8.0F;
-                const float width = ( ImGui::GetContentRegionAvail().x - gap * 2.0F ) / 3.0F;
+                const float gap = profile.item_spacing_x;
+                const float width = std::max(
+                                        1.0F,
+                                        ( ImGui::GetContentRegionAvail().x -
+                                          gap * 2.0F ) / 3.0F );
                 const std::array<std::pair<options_action_type, const char *>, 3> buttons = {{
                         { options_action_type::close, _( "Cancel" ) },
                         { options_action_type::previous_tab, _( "Previous" ) },
@@ -244,7 +264,8 @@ class options_imgui_page : public cataimgui::window
                         ImGui::PushStyleColor( ImGuiCol_Button,
                                                ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
                     }
-                    if( ImGui::Button( buttons[index].second, ImVec2( width, 50.0F ) ) ) {
+                    if( ImGui::Button( buttons[index].second,
+                                       ImVec2( width, profile.row_normal ) ) ) {
                         actions.push_back( { buttons[index].first, 0 } );
                     }
                     if( buttons[index].first == options_action_type::close ) {
@@ -253,19 +274,25 @@ class options_imgui_page : public cataimgui::window
                 }
                 return;
             }
-            const float close_width = std::clamp( window_width * 0.20F, 220.0F, 360.0F );
+            const float close_width = std::clamp(
+                                          window_width * 0.20F,
+                                          profile.width_normal, profile.width_wide );
             ImGui::SetCursorPosX( std::max( edge_padding,
                                             window_width - edge_padding - close_width ) );
-            if( ImGui::Button( _( "Back" ), ImVec2( close_width, 50.0F ) ) ) {
+            if( ImGui::Button( _( "Back" ),
+                               ImVec2( close_width, profile.row_normal ) ) ) {
                 actions.push_back( { options_action_type::close, 0 } );
             }
         }
 
         void draw_tabs() {
-            if( ImGui::BeginChild( "##options_tabs", ImVec2( 0.0F, 62.0F ),
-                                   ImGuiChildFlags_None,
-                                   ImGuiWindowFlags_HorizontalScrollbar |
-                                   ImGuiWindowFlags_NoScrollWithMouse ) ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( ImGui::BeginChild(
+                    "##options_tabs",
+                    ImVec2( 0.0F, profile.row_normal + profile.item_spacing_y ),
+                    ImGuiChildFlags_None,
+                    ImGuiWindowFlags_HorizontalScrollbar |
+                    ImGuiWindowFlags_NoScrollWithMouse ) ) {
                 for( size_t index = 0; index < snapshot.tabs.size(); ++index ) {
                     if( index > 0 ) {
                         ImGui::SameLine();
@@ -279,10 +306,13 @@ class options_imgui_page : public cataimgui::window
                         ImGui::PushStyleColor( ImGuiCol_Text,
                                                ImVec4( 0.90F, 1.0F, 1.0F, 1.0F ) );
                     }
-                    const float width = ImGui::CalcTextSize( snapshot.tabs[index].c_str() ).x + 34.0F;
+                    const float width =
+                        ImGui::CalcTextSize( snapshot.tabs[index].c_str() ).x +
+                        profile.frame_padding_x * 2.0F;
                     const std::string label = snapshot.tabs[index] + "###options_tab_" +
                                               std::to_string( index );
-                    if( ImGui::Button( label.c_str(), ImVec2( width, 48.0F ) ) && !selected ) {
+                    if( ImGui::Button( label.c_str(),
+                                       ImVec2( width, profile.row_compact ) ) && !selected ) {
                         actions.push_back( { options_action_type::select_tab,
                                              static_cast<int>( index ) } );
                     }
@@ -294,7 +324,9 @@ class options_imgui_page : public cataimgui::window
                     if( !snapshot.tabs.empty() ) {
                         ImGui::SameLine();
                     }
-                    if( ImGui::Button( _( "Mods" ), ImVec2( 180.0F, 48.0F ) ) ) {
+                    if( ImGui::Button( _( "Mods" ),
+                                       ImVec2( profile.width_compact,
+                                               profile.row_compact ) ) ) {
                         actions.push_back( { options_action_type::open_mod_pages, 0 } );
                     }
                 }
@@ -302,11 +334,14 @@ class options_imgui_page : public cataimgui::window
                     if( !snapshot.tabs.empty() || snapshot.has_mod_pages ) {
                         ImGui::SameLine();
                     }
-                    if( ImGui::Button( _( "HUD layout" ), ImVec2( 210.0F, 48.0F ) ) ) {
+                    if( ImGui::Button( _( "HUD layout" ),
+                                       ImVec2( profile.width_normal,
+                                               profile.row_compact ) ) ) {
                         actions.push_back( { options_action_type::open_hud_editor, 0 } );
                     }
                 }
-                if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                if( profile.allow_swipe &&
+                    ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
                     ImGui::IsMouseDragging( ImGuiMouseButton_Left ) ) {
                     ImGui::SetScrollX( ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x );
                 }
@@ -315,7 +350,8 @@ class options_imgui_page : public cataimgui::window
         }
 
         bool handle_content_gesture() {
-            if( !cata::ui::current_profile().allow_swipe ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( !profile.allow_swipe ) {
                 return false;
             }
             ImGuiIO &io = ImGui::GetIO();
@@ -331,13 +367,14 @@ class options_imgui_page : public cataimgui::window
 
             const ImVec2 distance( io.MousePos.x - content_drag_start.x,
                                    io.MousePos.y - content_drag_start.y );
-            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            const bool moved = std::hypot( distance.x, distance.y ) >
+                               profile.frame_padding_x;
             if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
                 std::abs( distance.y ) > std::abs( distance.x ) ) {
                 ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
             }
             if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
-                if( std::abs( distance.x ) > 120.0F &&
+                if( std::abs( distance.x ) > profile.width_compact * 0.5F &&
                     std::abs( distance.x ) > std::abs( distance.y ) * 1.25F ) {
                     const int next_tab = content_drag_tab + ( distance.x < 0.0F ? 1 : -1 );
                     if( next_tab >= 0 && next_tab < static_cast<int>( snapshot.tabs.size() ) ) {
@@ -374,10 +411,24 @@ class options_imgui_page : public cataimgui::window
                     ImGui::BeginDisabled();
                 }
                 const float available = ImGui::GetContentRegionAvail().x;
-                const float arrow_width = 58.0F;
-                const float value_width = std::clamp( available * 0.28F, 150.0F, 300.0F );
-                const float name_width = std::max( 120.0F, available - value_width -
-                                                   arrow_width * 2.0F - 24.0F );
+                const float arrow_width = row_height;
+                const float value_width_max = std::max(
+                                                  1.0F,
+                                                  std::min(
+                                                      profile.width_normal,
+                                                      available -
+                                                      arrow_width * 2.0F -
+                                                      profile.item_spacing_x * 3.0F ) );
+                const float value_width_min = std::min( profile.width_compact,
+                                                        value_width_max );
+                const float value_width = std::clamp(
+                                              available * 0.28F,
+                                              value_width_min, value_width_max );
+                const float name_width = std::max(
+                                             1.0F,
+                                             available - value_width -
+                                             arrow_width * 2.0F -
+                                             profile.item_spacing_x * 3.0F );
 
                 if( ImGui::Button( row.name.c_str(), ImVec2( name_width, row_height ) ) &&
                     !suppress_click ) {

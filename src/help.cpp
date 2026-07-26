@@ -76,20 +76,28 @@ class adaptive_help_viewer : public cataimgui::window
         void draw_controls() override {
             const ImVec2 window_pos = ImGui::GetWindowPos();
             const ImVec2 window_size = ImGui::GetWindowSize();
-            const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 30.0F );
-            constexpr float footer_height = 66.0F;
+            const cata::ui::profile profile = cata::ui::current_profile();
+            const float edge_padding = std::max( profile.frame_padding_x,
+                                                 profile.item_spacing_x * 1.5F );
+            const float footer_height = profile.row_wide;
 
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            const bool large_font = cata::ui::current_profile().is_touch();
-            if( large_font ) {
-                cataimgui::PushGuiFont1_5x();
+            const bool scaled_font = profile.text_scale != 1.0F;
+            if( scaled_font ) {
+                cataimgui::PushGuiFontScaled( profile.text_scale );
             }
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 8.0F, 7.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_FramePadding,
+                ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_ItemSpacing,
+                ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_WindowPadding,
+                ImVec2( edge_padding, profile.frame_padding_y * 1.5F ) );
             ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
             ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
@@ -99,7 +107,9 @@ class adaptive_help_viewer : public cataimgui::window
 
             ImGui::TextUnformatted( _( "Help" ) );
             ImGui::Separator();
-            const float topic_width = std::clamp( window_size.x * 0.32F, 300.0F, 520.0F );
+            const float topic_width = std::clamp(
+                                          window_size.x * 0.32F,
+                                          profile.width_normal, profile.width_wide );
             if( ImGui::BeginChild( "##adaptive_help_topics", ImVec2( topic_width, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
@@ -116,7 +126,8 @@ class adaptive_help_viewer : public cataimgui::window
                     }
                     const std::string label = topics[index].title + "###adaptive_help_topic_" +
                                               std::to_string( index );
-                    if( ImGui::Button( label.c_str(), ImVec2( -1.0F, 48.0F ) ) &&
+                    if( ImGui::Button( label.c_str(),
+                                       ImVec2( -1.0F, profile.row_compact ) ) &&
                         !suppress_click ) {
                         selected_topic = static_cast<int>( index );
                         reset_body_scroll = true;
@@ -141,7 +152,8 @@ class adaptive_help_viewer : public cataimgui::window
                     ImGui::TextUnformatted( topics[selected_topic].title.c_str() );
                     ImGui::Separator();
                     const float wrap_width = std::max( 1.0F,
-                                                       ImGui::GetContentRegionAvail().x - 10.0F );
+                                                       ImGui::GetContentRegionAvail().x -
+                                                       profile.frame_padding_x );
                     cataimgui::draw_colored_text( topics[selected_topic].body, c_light_gray,
                                                   wrap_width );
                 }
@@ -149,17 +161,20 @@ class adaptive_help_viewer : public cataimgui::window
             ImGui::EndChild();
 
             ImGui::Separator();
-            const float button_width = std::clamp( window_size.x * 0.20F, 220.0F, 360.0F );
+            const float button_width = std::clamp(
+                                           window_size.x * 0.20F,
+                                           profile.width_normal, profile.width_wide );
             ImGui::SetCursorPosX( std::max( edge_padding,
                                             window_size.x - edge_padding - button_width ) );
-            if( ImGui::Button( _( "Back" ), ImVec2( button_width, 50.0F ) ) ) {
+            if( ImGui::Button( _( "Back" ),
+                               ImVec2( button_width, profile.row_normal ) ) ) {
                 close_requested = true;
             }
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 4 );
-            if( large_font ) {
-                cataimgui::PopGuiFont1_5x();
+            if( scaled_font ) {
+                cataimgui::PopGuiFontScaled();
             }
         }
 
@@ -172,7 +187,8 @@ class adaptive_help_viewer : public cataimgui::window
         adaptive_vertical_drag_state body_drag;
 
         static bool handle_vertical_drag( adaptive_vertical_drag_state &state ) {
-            if( !cata::ui::current_profile().allow_swipe ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( !profile.allow_swipe ) {
                 return false;
             }
             ImGuiIO &io = ImGui::GetIO();
@@ -185,7 +201,8 @@ class adaptive_help_viewer : public cataimgui::window
                 return false;
             }
             const ImVec2 distance( io.MousePos.x - state.start.x, io.MousePos.y - state.start.y );
-            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            const bool moved = std::hypot( distance.x, distance.y ) >
+                               profile.frame_padding_x;
             if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
                 std::abs( distance.y ) > std::abs( distance.x ) ) {
                 ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );

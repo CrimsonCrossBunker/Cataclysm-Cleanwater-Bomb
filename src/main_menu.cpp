@@ -137,21 +137,27 @@ class document_viewer : public cataimgui::window
         }
 
         void draw_controls() override {
+            const cata::ui::profile profile = cata::ui::current_profile();
             const ImVec2 window_pos = ImGui::GetWindowPos();
             const ImVec2 window_size = ImGui::GetWindowSize();
-            const float edge_padding = std::clamp( window_size.x * 0.025F, 18.0F, 42.0F );
-            constexpr float footer_height = 66.0F;
+            const float edge_padding = std::max( profile.frame_padding_x * 2.0F,
+                                                 profile.item_spacing_x * 2.0F );
+            const float footer_height = profile.row_wide;
 
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            const bool large_font = cata::ui::current_profile().is_touch();
-            if( large_font ) {
-                cataimgui::PushGuiFont1_5x();
+            const bool scaled_font = profile.text_scale != 1.0F;
+            if( scaled_font ) {
+                cataimgui::PushGuiFontScaled( profile.text_scale );
             }
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 14.0F, 9.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 14.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_FramePadding,
+                ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_WindowPadding,
+                ImVec2( edge_padding, profile.frame_padding_y * 2.0F ) );
             ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
             ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.07F, 0.13F, 0.16F, 1.0F ) );
@@ -165,22 +171,27 @@ class document_viewer : public cataimgui::window
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 handle_vertical_drag();
-                const float wrap_width = std::max( 1.0F, ImGui::GetContentRegionAvail().x - 10.0F );
+                const float wrap_width = std::max(
+                                             1.0F, ImGui::GetContentRegionAvail().x -
+                                             profile.item_spacing_x );
                 cataimgui::draw_colored_text( body, c_light_gray, wrap_width );
             }
             ImGui::EndChild();
             ImGui::Separator();
-            const float button_width = std::clamp( window_size.x * 0.22F, 220.0F, 380.0F );
+            const float button_width = std::clamp(
+                                           window_size.x * 0.22F,
+                                           profile.width_normal, profile.width_wide );
             ImGui::SetCursorPosX( std::max( edge_padding,
                                             window_size.x - edge_padding - button_width ) );
-            if( ImGui::Button( _( "Back" ), ImVec2( button_width, 50.0F ) ) ) {
+            if( ImGui::Button( _( "Back" ),
+                               ImVec2( button_width, profile.row_normal ) ) ) {
                 close_requested = true;
             }
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 3 );
-            if( large_font ) {
-                cataimgui::PopGuiFont1_5x();
+            if( scaled_font ) {
+                cataimgui::PopGuiFontScaled();
             }
         }
 
@@ -256,38 +267,52 @@ class main_menu_imgui : public cataimgui::window
                 return;
             }
 
+            const cata::ui::profile profile = cata::ui::current_profile();
             const ImVec2 window_pos = ImGui::GetWindowPos();
             const ImVec2 window_size = ImGui::GetWindowSize();
-            const float edge_padding = std::clamp( window_size.x * 0.018F, 12.0F, 24.0F );
-            const float primary_gap = std::clamp( window_size.x * 0.006F, 5.0F, 10.0F );
-            const float bottom_hint_space = std::max( 36.0F,
-                                            ImGui::GetTextLineHeightWithSpacing() * 2.2F );
+            const float edge_padding = std::max( profile.frame_padding_x,
+                                                 profile.item_spacing_x * 1.5F );
+            const float primary_gap = profile.item_spacing_x;
+            const float bottom_hint_space = std::max(
+                                                profile.row_normal,
+                                                ImGui::GetTextLineHeightWithSpacing() * 2.2F );
 
-            const bool large_font = cata::ui::current_profile().is_touch();
-            if( large_font ) {
-                cataimgui::PushGuiFont1_5x();
+            const bool scaled_font = profile.text_scale != 1.0F;
+            if( scaled_font ) {
+                cataimgui::PushGuiFontScaled( profile.text_scale );
             }
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 9.0F );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0F );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 8.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( primary_gap, 4.0F ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_FramePadding,
+                ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_ItemSpacing,
+                ImVec2( primary_gap, profile.item_spacing_y ) );
 
-            const float primary_height = std::max( 48.0F, ImGui::GetTextLineHeight() + 22.0F );
+            const float primary_height = std::max(
+                                             profile.row_normal,
+                                             ImGui::GetTextLineHeight() +
+                                             profile.frame_padding_y * 2.0F );
             const float available_width = window_size.x - edge_padding * 2.0F;
             const float primary_width = ( available_width - primary_gap *
                                           ( snapshot.primary_items.size() - 1 ) ) /
                                         snapshot.primary_items.size();
-            const float primary_y = window_size.y - bottom_hint_space - primary_height - 8.0F;
+            const float primary_y = window_size.y - bottom_hint_space - primary_height -
+                                    profile.item_spacing_y;
 
             ImDrawList *draw_list = ImGui::GetWindowDrawList();
-            const ImVec2 primary_panel_min( window_pos.x + edge_padding - 8.0F,
-                                            window_pos.y + primary_y - 8.0F );
-            const ImVec2 primary_panel_max( window_pos.x + window_size.x - edge_padding + 8.0F,
-                                            window_pos.y + primary_y + primary_height + 8.0F );
+            const ImVec2 primary_panel_min(
+                window_pos.x + edge_padding - profile.frame_padding_y,
+                window_pos.y + primary_y - profile.frame_padding_y );
+            const ImVec2 primary_panel_max(
+                window_pos.x + window_size.x - edge_padding + profile.frame_padding_y,
+                window_pos.y + primary_y + primary_height + profile.frame_padding_y );
             draw_list->AddRectFilled( primary_panel_min, primary_panel_max,
-                                      IM_COL32( 8, 13, 18, 226 ), 13.0F );
+                                      IM_COL32( 8, 13, 18, 226 ), profile.corner_radius );
             draw_list->AddRect( primary_panel_min, primary_panel_max,
-                                IM_COL32( 74, 111, 122, 180 ), 13.0F, 1.0F );
+                                IM_COL32( 74, 111, 122, 180 ),
+                                profile.corner_radius, 1.0F );
 
             std::vector<float> primary_centers;
             primary_centers.reserve( snapshot.primary_items.size() );
@@ -321,7 +346,7 @@ class main_menu_imgui : public cataimgui::window
             if( !snapshot.secondary_items.empty() && expanded_primary == snapshot.selected_primary &&
                 expanded_primary >= 0 && static_cast<size_t>( expanded_primary ) < primary_centers.size() ) {
                 draw_secondary_panel( window_pos, window_size, primary_y,
-                                      primary_centers[expanded_primary] );
+                                      primary_centers[expanded_primary], profile );
             }
 
             if( expanded_primary >= 0 && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) &&
@@ -330,8 +355,8 @@ class main_menu_imgui : public cataimgui::window
             }
 
             ImGui::PopStyleVar( 4 );
-            if( large_font ) {
-                cataimgui::PopGuiFont1_5x();
+            if( scaled_font ) {
+                cataimgui::PopGuiFontScaled();
             }
         }
 
@@ -368,29 +393,47 @@ class main_menu_imgui : public cataimgui::window
         }
 
         void draw_secondary_panel( const ImVec2 &window_pos, const ImVec2 &window_size,
-                                   const float primary_y, const float anchor_x ) {
-            const float item_gap = 3.0F;
-            const float item_height = std::max( 38.0F, ImGui::GetTextLineHeight() + 14.0F );
+                                   const float primary_y, const float anchor_x,
+                                   const cata::ui::profile &profile ) {
+            const float item_gap = profile.item_spacing_y;
+            const float item_height = std::max(
+                                          profile.row_compact,
+                                          ImGui::GetTextLineHeight() +
+                                          profile.frame_padding_y * 2.0F );
             float widest_label = 0.0F;
             for( const std::string &label : snapshot.secondary_items ) {
                 widest_label = std::max( widest_label, ImGui::CalcTextSize( label.c_str() ).x );
             }
-            const float panel_padding = 10.0F;
-            const float panel_width = std::clamp( widest_label + 52.0F, 220.0F,
-                                                  std::min( 440.0F, window_size.x - 24.0F ) );
+            const float panel_padding = profile.frame_padding_x;
+            const float panel_width_max = std::max(
+                                              1.0F,
+                                              std::min( profile.width_wide,
+                                                      window_size.x -
+                                                      panel_padding * 2.0F ) );
+            const float panel_width_min = std::min( profile.width_normal,
+                                                    panel_width_max );
+            const float panel_width = std::clamp(
+                                          widest_label + profile.frame_padding_x * 4.0F,
+                                          panel_width_min, panel_width_max );
             const float panel_height = panel_padding * 2.0F + item_height *
                                        snapshot.secondary_items.size() + item_gap *
                                        ( snapshot.secondary_items.size() - 1 );
-            const float panel_x = std::clamp( anchor_x - panel_width * 0.5F, 12.0F,
-                                              window_size.x - panel_width - 12.0F );
-            const float panel_y = std::max( 12.0F, primary_y - panel_height - 12.0F );
+            const float panel_x = std::clamp(
+                                      anchor_x - panel_width * 0.5F, panel_padding,
+                                      std::max( panel_padding,
+                                                window_size.x - panel_width -
+                                                panel_padding ) );
+            const float panel_y = std::max(
+                                      panel_padding,
+                                      primary_y - panel_height - profile.item_spacing_y );
 
             ImDrawList *draw_list = ImGui::GetWindowDrawList();
             const ImVec2 panel_min( window_pos.x + panel_x, window_pos.y + panel_y );
             const ImVec2 panel_max( panel_min.x + panel_width, panel_min.y + panel_height );
-            draw_list->AddRectFilled( panel_min, panel_max, IM_COL32( 7, 12, 17, 238 ), 12.0F );
+            draw_list->AddRectFilled( panel_min, panel_max, IM_COL32( 7, 12, 17, 238 ),
+                                      profile.corner_radius );
             draw_list->AddRect( panel_min, panel_max, IM_COL32( 70, 113, 125, 205 ),
-                                12.0F, 1.0F );
+                                profile.corner_radius, 1.0F );
 
             for( size_t index = 0; index < snapshot.secondary_items.size(); ++index ) {
                 const float item_y = panel_y + panel_padding + index * ( item_height + item_gap );
