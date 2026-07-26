@@ -110,25 +110,70 @@ public class AndroidHudModelTest {
     }
 
     @Test
-    public void widgetLayoutSettingsSurviveSchemaFourRoundTrip() throws Exception {
+    public void typedInformationFormattingSurvivesSchemaFiveRoundTrip() throws Exception {
         AndroidHudModel.Layout layout = new AndroidHudModel.Layout();
         layout.id = "layout.test";
         AndroidHudModel.Element info = element(
             "info.widget", AndroidHudModel.TYPE_INFO);
-        info.sourceId = "widget.ll_place_layout";
-        info.providerSettings.put(
-            AndroidHudWidgetLayout.SETTING_COLUMNS, "42");
-        info.providerSettings.put(
-            AndroidHudWidgetLayout.SETTING_LABEL_COLUMNS, "6");
+        info.sourceId = "sidebar.legacy.place";
+        info.infoPresentation.columns = 42;
+        info.infoPresentation.labelColumns = 6;
+        info.infoPresentation.appearanceMode =
+            AndroidHudModel.INFO_APPEARANCE_CUSTOM;
         layout.elements.add(info);
 
         AndroidHudModel.Element restored =
             AndroidHudModel.Layout.fromJson(layout.toJson()).find("info.widget");
 
-        assertEquals("42", restored.providerSettings.get(
-            AndroidHudWidgetLayout.SETTING_COLUMNS));
-        assertEquals("6", restored.providerSettings.get(
-            AndroidHudWidgetLayout.SETTING_LABEL_COLUMNS));
+        assertEquals(42, restored.infoPresentation.columns);
+        assertEquals(6, restored.infoPresentation.labelColumns);
+        assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
+            restored.infoPresentation.appearanceMode);
+        assertFalse(layout.toJson().getJSONArray("elements").getJSONObject(0)
+            .has("providerSettings"));
+    }
+
+    @Test
+    public void schemaFourPackageMigratesAndRoundTripsAsSchemaFive() throws Exception {
+        org.json.JSONObject legacy = new org.json.JSONObject(
+            "{\"format\":\"cataclysm-android-hud\",\"kind\":\"package\"," +
+            "\"schema\":4,\"scenes\":[{\"id\":\"gameplay.map\"," +
+            "\"title\":\"Gameplay\",\"activeLayoutId\":\"layout.test\"," +
+            "\"lastKnownActions\":[],\"layouts\":[{" +
+            "\"id\":\"layout.test\",\"name\":\"Legacy\",\"elements\":[{" +
+            "\"id\":\"info.widget\",\"type\":\"info\"," +
+            "\"sourceId\":\"widget.ll_movement_layout\"," +
+            "\"providerSettings\":{\"layoutColumns\":\"36\"," +
+            "\"labelColumns\":\"4\",\"terminalGrid\":\"false\"}," +
+            "\"frame\":{\"x\":0,\"y\":0,\"width\":300,\"height\":100}," +
+            "\"style\":{\"sourceColors\":false}}]}]}]}");
+
+        AndroidHudModel.PackageData migrated =
+            AndroidHudModel.PackageData.fromJson(legacy);
+        AndroidHudModel.Element restored = migrated.scenes.get("gameplay.map")
+            .activeLayout().find("info.widget");
+
+        assertEquals("sidebar.legacy.movement", restored.sourceId);
+        assertEquals(36, restored.infoPresentation.columns);
+        assertEquals(4, restored.infoPresentation.labelColumns);
+        assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
+            restored.infoPresentation.appearanceMode);
+
+        org.json.JSONObject schemaFive = migrated.toJson();
+        org.json.JSONObject encodedInfo = schemaFive.getJSONArray("scenes")
+            .getJSONObject(0).getJSONArray("layouts").getJSONObject(0)
+            .getJSONArray("elements").getJSONObject(0);
+        assertEquals(AndroidHudModel.SCHEMA, schemaFive.getInt("schema"));
+        assertFalse(encodedInfo.has("providerSettings"));
+        assertTrue(encodedInfo.has("info"));
+
+        AndroidHudModel.Element roundTripped =
+            AndroidHudModel.PackageData.fromJson(schemaFive)
+                .scenes.get("gameplay.map").activeLayout().find("info.widget");
+        assertEquals(36, roundTripped.infoPresentation.columns);
+        assertEquals(4, roundTripped.infoPresentation.labelColumns);
+        assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
+            roundTripped.infoPresentation.appearanceMode);
     }
 
     @Test
@@ -166,6 +211,7 @@ public class AndroidHudModelTest {
         assertEquals(10f, info.style.fontSizeSp, 0f);
         assertFalse(info.style.background);
         assertFalse(info.style.border);
+        assertFalse(info.style.showLabel);
         assertEquals(AndroidHudModel.TEXT_EFFECT_NONE, info.style.textEffect);
         assertTrue(info.style.sourceColors);
         assertEquals(0f, info.style.contentPaddingLeftDp, 0f);

@@ -23,16 +23,16 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Atomic schema-4 repository.  It owns persistence, validation and package
+ * Atomic schema-5 repository.  It owns persistence, validation and package
  * import/export; Views only ever receive detached model copies.
  */
 final class AndroidHudRepository {
     private static final String TAG = "AndroidHudRepository";
-    private static final String STORE_NAME = "android-hud-layouts-v4.json";
+    private static final String STORE_NAME = "android-hud-layouts-v5.json";
+    private static final String LEGACY_V4_STORE_NAME = "android-hud-layouts-v4.json";
     private static final String LEGACY_ARCHIVE_NAME = "android-hud-legacy-v1-v3.json";
-    private static final String MIGRATION_PREFS = "android_hud_schema4";
+    private static final String MIGRATION_PREFS = "android_hud_schema5";
     private static final String LEGACY_ARCHIVED = "legacy_archived";
-    private static final String OFFICIAL_TEMPLATE_VERSION_PREFIX = "official_template_version.";
     private static final String EMPTY_LAYOUT_NAME = "空白布局";
 
     enum ImportMode {
@@ -64,6 +64,7 @@ final class AndroidHudRepository {
 
     private final Context context;
     private final AtomicFile store;
+    private final AtomicFile legacyV4Store;
     private final AtomicFile legacyArchive;
     private AndroidHudModel.PackageData data;
 
@@ -74,11 +75,19 @@ final class AndroidHudRepository {
             Log.w(TAG, "Could not create HUD storage directory");
         }
         store = new AtomicFile(new File(directory, STORE_NAME));
+        legacyV4Store = new AtomicFile(new File(directory, LEGACY_V4_STORE_NAME));
         legacyArchive = new AtomicFile(new File(directory, LEGACY_ARCHIVE_NAME));
         archiveLegacyOnce();
-        data = readStore();
+        data = readStore(store);
+        boolean migratedV4 = false;
+        if (data == null) {
+            data = readStore(legacyV4Store);
+            migratedV4 = data != null;
+        }
         if (data == null) {
             data = new AndroidHudModel.PackageData();
+        }
+        if (migratedV4 || !store.getBaseFile().exists()) {
             save();
         }
     }
@@ -107,7 +116,6 @@ final class AndroidHudRepository {
         }
         AndroidHudModel.Scene existing = data.scenes.get(sceneId);
         boolean changed = false;
-        boolean created = false;
         if (existing == null) {
             if (data.scenes.size() >= AndroidHudModel.MAX_SCENES) {
                 return null;
@@ -120,7 +128,6 @@ final class AndroidHudRepository {
             existing.activeLayoutId = empty.id;
             data.scenes.put(existing.id, existing);
             changed = true;
-            created = true;
         } else {
             String accepted = acceptedTitle(title, sceneId);
             if (!accepted.equals(existing.title)) {
@@ -128,37 +135,8 @@ final class AndroidHudRepository {
                 changed = true;
             }
         }
-        AndroidHudOfficialTemplates.Seed seed =
-            AndroidHudOfficialTemplates.forScene(existing.id);
-        int templateVersionToMark = 0;
-        if (seed != null) {
-            SharedPreferences templates = context.getSharedPreferences(
-                MIGRATION_PREFS, Context.MODE_PRIVATE);
-            String versionKey = OFFICIAL_TEMPLATE_VERSION_PREFIX + existing.id;
-            int installedVersion = templates.getInt(versionKey, 0);
-            if (created || installedVersion < seed.version) {
-                if (existing.layouts.containsKey(seed.layout.id)) {
-                    templateVersionToMark = seed.version;
-                } else if (existing.layouts.size() <
-                        AndroidHudModel.MAX_LAYOUTS_PER_SCENE) {
-                    boolean activate = isPristineEmptyScene(existing);
-                    existing.layouts.put(seed.layout.id, seed.layout.copy());
-                    if (activate) {
-                        existing.activeLayoutId = seed.layout.id;
-                    }
-                    changed = true;
-                    templateVersionToMark = seed.version;
-                }
-            }
-        }
         if (changed) {
             save();
-        }
-        if (templateVersionToMark > 0) {
-            context.getSharedPreferences(MIGRATION_PREFS, Context.MODE_PRIVATE).edit()
-                .putInt(OFFICIAL_TEMPLATE_VERSION_PREFIX + existing.id,
-                    templateVersionToMark)
-                .apply();
         }
         return existing.copy();
     }
@@ -210,6 +188,23 @@ final class AndroidHudRepository {
         created.id = newLayoutId();
         created.name = uniqueLayoutName(scene,
             AndroidHudModel.boundedText(name, 100).isEmpty() ? EMPTY_LAYOUT_NAME : name, "");
+        scene.layouts.put(created.id, created);
+        scene.activeLayoutId = created.id;
+        save();
+        return created.copy();
+    }
+
+    synchronized AndroidHudModel.Layout createOfficialLayout(String sceneId) {
+        AndroidHudModel.Scene scene = data.scenes.get(AndroidHudModel.safeId(sceneId));
+        AndroidHudOfficialTemplates.Seed seed =
+            AndroidHudOfficialTemplates.forScene(sceneId);
+        if (scene == null || seed == null ||
+                scene.layouts.size() >= AndroidHudModel.MAX_LAYOUTS_PER_SCENE) {
+            return null;
+        }
+        AndroidHudModel.Layout created = seed.layout.copy();
+        created.id = uniqueLayoutId(scene, created.id);
+        created.name = uniqueLayoutName(scene, created.name, "");
         scene.layouts.put(created.id, created);
         scene.activeLayoutId = created.id;
         save();
@@ -336,8 +331,10 @@ final class AndroidHudRepository {
             throw new JSONException("HUD package is empty or too large");
         }
         JSONObject root = new JSONObject(raw);
-        if (root.optInt("schema", 0) != AndroidHudModel.SCHEMA) {
-            throw new JSONException("Only schema 4 HUD files can be imported");
+        int schema = root.optInt("schema", 0);
+        if (schema != AndroidHudModel.SCHEMA &&
+                schema != AndroidHudModel.LEGACY_SCHEMA) {
+            throw new JSONException("Only schema 4 or 5 HUD files can be imported");
         }
         String kind = root.optString("kind", AndroidHudModel.KIND_PACKAGE);
         if (AndroidHudModel.KIND_LAYOUT.equals(kind)) {
@@ -449,18 +446,18 @@ final class AndroidHudRepository {
         return true;
     }
 
-    private AndroidHudModel.PackageData readStore() {
-        if (!store.getBaseFile().exists()) {
+    private AndroidHudModel.PackageData readStore(AtomicFile candidate) {
+        if (!candidate.getBaseFile().exists()) {
             return null;
         }
         try {
-            String raw = readAtomic(store);
+            String raw = readAtomic(candidate);
             if (raw.length() > AndroidHudModel.MAX_PACKAGE_CHARS) {
                 throw new IOException("HUD store is too large");
             }
             return AndroidHudModel.PackageData.fromJson(new JSONObject(raw));
         } catch (IOException | JSONException e) {
-            Log.w(TAG, "Ignoring invalid schema-4 HUD store", e);
+            Log.w(TAG, "Ignoring invalid Android HUD store", e);
             return null;
         }
     }
@@ -481,7 +478,7 @@ final class AndroidHudRepository {
         }
         try {
             JSONObject archive = new JSONObject();
-            archive.put("note", "Archived only; schema 1-3 are never activated by schema 4.");
+            archive.put("note", "Archived only; schema 1-3 are never activated by schema 5.");
             archive.put("schema", 0);
             JSONObject stores = new JSONObject();
             stores.put("lua_ui_hud", encodePreferences(
@@ -553,15 +550,6 @@ final class AndroidHudRepository {
         result.id = newLayoutId();
         result.name = EMPTY_LAYOUT_NAME;
         return result;
-    }
-
-    private static boolean isPristineEmptyScene(AndroidHudModel.Scene scene) {
-        if (scene.layouts.size() != 1) {
-            return false;
-        }
-        AndroidHudModel.Layout active = scene.activeLayout();
-        return active != null && active.elements.isEmpty() &&
-            EMPTY_LAYOUT_NAME.equals(active.name);
     }
 
     private static String newLayoutId() {

@@ -22,19 +22,19 @@ public class AndroidHudOfficialTemplatesTest {
         Set<String> sources = new HashSet<>();
         collectSources(seed.layout.elements, sources);
         assertEquals(15, sources.size());
-        assertTrue(sources.contains("widget.ll_limbs_layout"));
-        assertTrue(sources.contains("widget.ll_movement_layout"));
-        assertTrue(sources.contains("widget.ll_stats_layout"));
-        assertTrue(sources.contains("widget.all_weariness_layout"));
-        assertTrue(sources.contains("widget.ll_needs_layout"));
-        assertTrue(sources.contains("widget.ll_place_layout"));
-        assertTrue(sources.contains("widget.wind_temp_layout"));
-        assertTrue(sources.contains("widget.oxygen_layout"));
-        assertTrue(sources.contains("widget.weapon_style_layout"));
-        assertTrue(sources.contains("widget.vehicle_acf_label_layout"));
-        assertTrue(sources.contains("widget.compass_all_danger_layout"));
-        assertTrue(sources.contains("widget.ll_weight_carried_value"));
-        assertTrue(sources.contains("widget.rad_badge_desc"));
+        assertTrue(sources.contains("sidebar.legacy.limbs"));
+        assertTrue(sources.contains("sidebar.legacy.movement"));
+        assertTrue(sources.contains("sidebar.legacy.stats"));
+        assertTrue(sources.contains("sidebar.legacy.weariness"));
+        assertTrue(sources.contains("sidebar.legacy.needs"));
+        assertTrue(sources.contains("sidebar.legacy.place"));
+        assertTrue(sources.contains("sidebar.legacy.wind_temperature"));
+        assertTrue(sources.contains("sidebar.legacy.oxygen"));
+        assertTrue(sources.contains("sidebar.legacy.weapon_style"));
+        assertTrue(sources.contains("sidebar.legacy.vehicle"));
+        assertTrue(sources.contains("sidebar.legacy.compass"));
+        assertTrue(sources.contains("sidebar.legacy.carry_weight"));
+        assertTrue(sources.contains("sidebar.legacy.radiation"));
         assertTrue(sources.contains("log.messages"));
         assertTrue(sources.contains("map.pixel"));
         assertFalse(sources.contains("widget.ll_limbs_sa_layout"));
@@ -45,11 +45,10 @@ public class AndroidHudOfficialTemplatesTest {
         for (AndroidHudModel.Element element : seed.layout.elements) {
             if (AndroidHudModel.TYPE_GROUP.equals(element.type)) {
                 groupCount++;
-                assertEquals(1, element.children.size());
-                assertTrue(AndroidHudModel.supportsActionBinding(element));
             }
         }
-        assertEquals(13, groupCount);
+        assertEquals(0, groupCount);
+        assertEquals(15, seed.layout.elements.size());
     }
 
     @Test
@@ -57,13 +56,13 @@ public class AndroidHudOfficialTemplatesTest {
         AndroidHudModel.Layout layout =
             AndroidHudOfficialTemplates.forScene("gameplay.map").layout;
         AndroidHudModel.Element limbs =
-            layout.find("official.sidebar.group.ll_limbs_layout");
+            layout.find("official.sidebar.info.sidebar.legacy.limbs");
         AndroidHudModel.Element movement =
-            layout.find("official.sidebar.group.ll_movement_layout");
+            layout.find("official.sidebar.info.sidebar.legacy.movement");
         AndroidHudModel.Element stats =
-            layout.find("official.sidebar.group.ll_stats_layout");
+            layout.find("official.sidebar.info.sidebar.legacy.stats");
         AndroidHudModel.Element weariness =
-            layout.find("official.sidebar.group.all_weariness_layout");
+            layout.find("official.sidebar.info.sidebar.legacy.weariness");
 
         assertEquals(limbs.frame.x, movement.frame.x, 0f);
         assertTrue(limbs.frame.y < movement.frame.y);

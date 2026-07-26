@@ -65,12 +65,22 @@ final class AndroidHudSearchDialog {
 
     static <T> void showSingle(Context context, String title, String searchHint,
             List<Item<T>> items, SingleChoiceListener<T> listener) {
+        showSingle(context, title, searchHint, items, listener, null, null);
+    }
+
+    static <T> void showSingle(Context context, String title, String searchHint,
+            List<Item<T>> items, SingleChoiceListener<T> listener,
+            String alternateLabel, Runnable alternate) {
         CatalogView<T> catalog = new CatalogView<>(context, searchHint, items, null);
-        AlertDialog dialog = new AlertDialog.Builder(context)
+        AlertDialog.Builder builder = new AlertDialog.Builder(context)
             .setTitle(title)
             .setView(catalog.root)
-            .setNegativeButton("取消", null)
-            .create();
+            .setNegativeButton("取消", null);
+        if (alternateLabel != null && alternate != null) {
+            builder.setNeutralButton(alternateLabel, (dialog, which) ->
+                alternate.run());
+        }
+        AlertDialog dialog = builder.create();
         catalog.list.setOnItemClickListener((parent, view, position, id) -> {
             listener.selected(catalog.visible.get(position).value);
             dialog.dismiss();

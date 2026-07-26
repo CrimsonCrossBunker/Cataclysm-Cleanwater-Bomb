@@ -399,6 +399,7 @@ final class AndroidHudOverlay extends FrameLayout {
         parent.addView(host);
 
         View content = null;
+        TextView titleView = null;
         FrameLayout groupContent = null;
         ScrollView scrollContainer = null;
         if (AndroidHudModel.TYPE_GROUP.equals(element.type)) {
@@ -428,6 +429,7 @@ final class AndroidHudOverlay extends FrameLayout {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.TOP));
                 content = title;
+                titleView = title;
             }
             for (AndroidHudModel.Element child : element.children) {
                 renderElement(groupContent, child, element.id);
@@ -452,6 +454,14 @@ final class AndroidHudOverlay extends FrameLayout {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
             }
+            titleView = new TextView(activity);
+            titleView.setText(element.label.isEmpty() ? source.title : element.label);
+            titleView.setIncludeFontPadding(false);
+            titleView.setPadding(0, 0, 0, 0);
+            titleView.setVisibility(element.style.showLabel ? VISIBLE : GONE);
+            host.addView(titleView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
         } else {
             ControlView control = new ControlView(activity);
             content = control;
@@ -459,7 +469,7 @@ final class AndroidHudOverlay extends FrameLayout {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
         RenderedElement renderedElement = new RenderedElement(element, parentGroupId, host,
-            content, groupContent, scrollContainer);
+            content, titleView, groupContent, scrollContainer);
         rendered.put(element.id, renderedElement);
         applyStyle(renderedElement);
         editor.configureElementInteraction(renderedElement);
@@ -634,6 +644,11 @@ final class AndroidHudOverlay extends FrameLayout {
     private void applyStyle(RenderedElement entry) {
         AndroidHudModel.Element element = entry.element;
         applyContentPadding(entry);
+        if (entry.titleView != null) {
+            entry.titleView.setVisibility(element.style.showLabel ? VISIBLE : GONE);
+            AndroidHudRendererRegistry.applyTextStyle(
+                entry.titleView, element.style, false);
+        }
         if (entry.content instanceof ControlView) {
             // Keep the editor frame fully visible even when the user makes a
             // runtime control completely transparent.
@@ -725,7 +740,7 @@ final class AndroidHudOverlay extends FrameLayout {
             }
             if (AndroidHudModel.TYPE_INFO.equals(element.type)) {
                 AndroidHudModel.InfoSource source = sourceCatalog.get(element.sourceId);
-                String subscription = AndroidHudWidgetLayout.subscription(source, element);
+                String subscription = AndroidHudInfoFormat.subscription(source, element);
                 if (!subscription.isEmpty()) {
                     target.add(subscription);
                 }
@@ -804,7 +819,7 @@ final class AndroidHudOverlay extends FrameLayout {
         source.id = id;
         source.title = "缺失信息源";
         source.category = "高级";
-        source.renderer = "text";
+        source.renderer = "rich_text";
         return source;
     }
 
@@ -835,16 +850,19 @@ final class AndroidHudOverlay extends FrameLayout {
         final String parentGroupId;
         final ElementHost host;
         final View content;
+        final TextView titleView;
         final FrameLayout groupContent;
         final ScrollView scrollContainer;
 
         RenderedElement(AndroidHudModel.Element element, String parentGroupId,
-                ElementHost host, View content, FrameLayout groupContent,
+                ElementHost host, View content, TextView titleView,
+                FrameLayout groupContent,
                 ScrollView scrollContainer) {
             this.element = element;
             this.parentGroupId = parentGroupId;
             this.host = host;
             this.content = content;
+            this.titleView = titleView;
             this.groupContent = groupContent;
             this.scrollContainer = scrollContainer;
         }

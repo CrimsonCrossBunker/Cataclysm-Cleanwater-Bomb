@@ -30,11 +30,12 @@ final class AndroidHudRendererRegistry {
     }
 
     private final Map<String, Renderer> renderers = new HashMap<>();
-    private final Renderer fallback = new TextRenderer();
+    private final Renderer fallback = new RichTextRenderer();
 
     AndroidHudRendererRegistry() {
-        renderers.put("text", fallback);
-        renderers.put("log", new LogRenderer());
+        renderers.put("terminal_widget", new TerminalRenderer());
+        renderers.put("rich_text", fallback);
+        renderers.put("message_log", new LogRenderer());
         renderers.put("pixel_minimap", new PixelMinimapRenderer());
         renderers.put("overmap_grid", new OvermapRenderer());
         renderers.put("threat_grid", new ThreatRenderer());
@@ -54,12 +55,28 @@ final class AndroidHudRendererRegistry {
         return renderer == null ? fallback : renderer;
     }
 
-    private static final class TextRenderer implements Renderer {
+    private static final class TerminalRenderer implements Renderer {
         @Override
         public View create(Context context) {
-            TextView text = baseText(context);
-            text.setTypeface(Typeface.MONOSPACE);
-            return text;
+            return new AndroidHudTerminalView(context);
+        }
+
+        @Override
+        public void bind(View view, AndroidHudModel.InfoSource source,
+                AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
+                boolean preview, MinimapPublisher minimapPublisher) {
+            int columns = AndroidHudInfoFormat.columns(source, element);
+            int labelColumns = AndroidHudInfoFormat.labelColumns(source, element);
+            ((AndroidHudTerminalView)view).bind(
+                snapshot.terminalValue(source.id, columns, labelColumns, preview),
+                element.style, AndroidHudInfoFormat.nativeAppearance(element));
+        }
+    }
+
+    private static final class RichTextRenderer implements Renderer {
+        @Override
+        public View create(Context context) {
+            return baseText(context);
         }
 
         @Override
@@ -67,29 +84,13 @@ final class AndroidHudRendererRegistry {
                 AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
                 boolean preview, MinimapPublisher minimapPublisher) {
             TextView text = (TextView)view;
-            String title = element.label.isEmpty() ? source.title : element.label;
             SpannableStringBuilder content = new SpannableStringBuilder();
-            if (element.style.showLabel) {
-                content.append(title).append("  ");
-            }
-            int widgetColumns =
-                AndroidHudWidgetLayout.columns(source, element);
-            int labelColumns =
-                AndroidHudWidgetLayout.labelColumns(source, element);
-            appendRichText(content,
-                snapshot.value(source.id, widgetColumns, labelColumns, preview),
-                element.style.sourceColors);
-            if (AndroidHudWidgetLayout.supports(source) &&
-                    AndroidHudWidgetLayout.terminalGrid(element)) {
-                AndroidHudColumnText.apply(content);
-            }
+            content.append(preview ? "示例数据" : "—");
             text.setText(content);
-            applyTextStyle(text, element.style, true);
+            applyTextStyle(text, element.style, false);
             text.setGravity(alignment(element.style.alignment) | Gravity.CENTER_VERTICAL);
-            text.setSingleLine(!source.multiline &&
+            text.setSingleLine(source == null || !source.multiline &&
                 !AndroidHudModel.OVERFLOW_SCROLL.equals(element.overflowMode));
-            text.setHorizontallyScrolling(
-                AndroidHudWidgetLayout.supports(source));
         }
     }
 
@@ -105,9 +106,6 @@ final class AndroidHudRendererRegistry {
                 boolean preview, MinimapPublisher minimapPublisher) {
             TextView text = (TextView)view;
             SpannableStringBuilder content = new SpannableStringBuilder();
-            if (element.style.showLabel) {
-                content.append(element.label.isEmpty() ? source.title : element.label).append('\n');
-            }
             if (preview) {
                 content.append("示例日志：布局可在非当前场景编辑");
             } else {
@@ -165,11 +163,7 @@ final class AndroidHudRendererRegistry {
         public void bind(View view, AndroidHudModel.InfoSource source,
                 AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
                 boolean preview, MinimapPublisher minimapPublisher) {
-            int radius = 10;
-            try {
-                radius = Integer.parseInt(element.providerSettings.get("radius"));
-            } catch (NumberFormatException | NullPointerException ignored) {
-            }
+            int radius = element.infoPresentation.radarRadius;
             ((ThreatGridView)view).bind(snapshot, preview, Math.max(3, Math.min(30, radius)));
         }
     }

@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Full-screen schema-4 editor.  All edits stay in a detached draft with
+ * Full-screen schema-5 editor.  All edits stay in a detached draft with
  * bounded undo/redo history until Done performs one atomic repository commit.
  */
 final class AndroidHudEditor {
@@ -275,6 +275,10 @@ final class AndroidHudEditor {
     }
 
     private void showInfoCatalog() {
+        showInfoCatalog(false);
+    }
+
+    private void showInfoCatalog(boolean advancedOnly) {
         List<AndroidHudModel.InfoSource> sources = overlay.infoSources();
         if (sources.isEmpty()) {
             Toast.makeText(activity, "信息源目录尚未就绪，请进入游戏后再试",
@@ -283,13 +287,26 @@ final class AndroidHudEditor {
         }
         ArrayList<AndroidHudSearchDialog.Item<AndroidHudModel.InfoSource>> items =
             new ArrayList<>();
+        boolean hasAdvanced = false;
         for (AndroidHudModel.InfoSource source : sources) {
+            boolean advanced = "advanced".equals(source.catalogTier);
+            hasAdvanced |= advanced;
+            if (advanced != advancedOnly) {
+                continue;
+            }
+            String kind = source.composite ? "原版组合（内部固定）" :
+                advanced ? "开发者原始 Widget" : source.category;
             items.add(new AndroidHudSearchDialog.Item<>(source, source.id,
-                source.category + " · " + source.title + "  [" + source.id + "]",
-                source.title, source.category, source.renderer));
+                kind + " · " + source.title + "  [" + source.id + "]",
+                source.title, source.category, source.renderer, source.catalogTier));
         }
-        AndroidHudSearchDialog.showSingle(activity, "选择信息源",
-            "搜索标题、分类或 ID", items, this::addInfo);
+        String alternateLabel = advancedOnly ? "返回常用信息" :
+            hasAdvanced ? "开发者/高级" : null;
+        AndroidHudSearchDialog.showSingle(activity,
+            advancedOnly ? "高级原始 Widget" : "选择信息源",
+            "搜索标题、分类或 ID", items, this::addInfo,
+            alternateLabel, alternateLabel == null ? null :
+                () -> showInfoCatalog(!advancedOnly));
     }
 
     private void addInfo(AndroidHudModel.InfoSource source) {
@@ -315,7 +332,7 @@ final class AndroidHudEditor {
             info.overflowMode = AndroidHudModel.OVERFLOW_FIXED;
         }
         if ("threat_grid".equals(source.renderer)) {
-            info.providerSettings.put("radius", "10");
+            info.infoPresentation.radarRadius = 10;
         }
         addToCurrentScope(info);
     }
@@ -404,9 +421,9 @@ final class AndroidHudEditor {
         AndroidHudModel.InfoSource selectedSource =
             AndroidHudModel.TYPE_INFO.equals(working.type) ?
                 overlay.infoSource(working.sourceId) : null;
-        WidgetLayoutPropertyFields widgetLayoutFields =
-            AndroidHudWidgetLayout.supports(selectedSource) ?
-                new WidgetLayoutPropertyFields(
+        InfoFormatPropertyFields infoFormatFields =
+            AndroidHudInfoFormat.isTerminal(selectedSource) ?
+                new InfoFormatPropertyFields(
                     content, selectedSource, working) : null;
         TextStyleFields textFields = new TextStyleFields(content, working.style,
             AndroidHudModel.TYPE_INFO.equals(working.type));
@@ -422,7 +439,8 @@ final class AndroidHudEditor {
         if (AndroidHudModel.TYPE_INFO.equals(working.type) &&
                 "radar.threat_grid".equals(working.sourceId)) {
             content.addView(propertySection("信息源"), matchRow());
-            EditText radius = textInput(working.providerSettings.get("radius"));
+            EditText radius = textInput(
+                String.valueOf(working.infoPresentation.radarRadius));
             radius.setInputType(InputType.TYPE_CLASS_NUMBER);
             content.addView(labeled("雷达半径（3–30 格）", radius));
             radius.setTag("radius");
@@ -503,8 +521,8 @@ final class AndroidHudEditor {
                 if (controlFields != null) {
                     controlFields.applyTo(working.controlAppearance);
                 }
-                if (widgetLayoutFields != null &&
-                        !widgetLayoutFields.applyTo(working)) {
+                if (infoFormatFields != null &&
+                        !infoFormatFields.applyTo(working)) {
                     return;
                 }
                 textFields.applyTo(working.style);
@@ -520,7 +538,7 @@ final class AndroidHudEditor {
                 View radiusView = content.findViewWithTag("radius");
                 if (radiusView instanceof EditText) {
                     int radius = Math.round(parseFloat((EditText)radiusView, 10, 3, 30));
-                    working.providerSettings.put("radius", String.valueOf(radius));
+                    working.infoPresentation.radarRadius = radius;
                 }
                 replaceElement(working);
                 recordHistory();
@@ -1088,15 +1106,15 @@ final class AndroidHudEditor {
         return Math.max(minimum, Math.min(maximum, value));
     }
 
-    private final class WidgetLayoutPropertyFields {
+    private final class InfoFormatPropertyFields {
         private final AndroidHudModel.InfoSource source;
-        private final CheckBox terminalGrid;
+        private final Spinner appearance;
         private final CheckBox customColumns;
         private final EditText columns;
         private final CheckBox customLabelColumns;
         private final EditText labelColumns;
 
-        WidgetLayoutPropertyFields(LinearLayout content,
+        InfoFormatPropertyFields(LinearLayout content,
                 AndroidHudModel.InfoSource source,
                 AndroidHudModel.Element element) {
             this.source = source;
@@ -1105,20 +1123,25 @@ final class AndroidHudEditor {
                 "这里使用 CCB 的字符网格列宽。它只控制标签、值和组合子列的排版；元素宽度仍只负责位置、点击区域和裁剪/滑动，不再参与对齐计算。"),
                 matchRow());
 
-            terminalGrid = check("固定终端字符格",
-                AndroidHudWidgetLayout.terminalGrid(element));
-            content.addView(terminalGrid);
+            if (source.composite) {
+                content.addView(propertyHelp(
+                    "这是一个 CCB 原版组合，内部行列由 Widget 树统一排版，不能在 Android 元素组中逐项移动。需要自由摆放时，请从“单项信息”分别添加对应字段。"),
+                    matchRow());
+            }
+            String[] appearances = { "原版样式", "自定义样式" };
+            appearance = spinner(appearances,
+                AndroidHudInfoFormat.nativeAppearance(element) ? 0 : 1);
+            content.addView(labeled("外观模式", appearance));
             content.addView(propertyHelp(
-                "开启后，一个汉字占两格、拉丁字符占一格，连续空格保持固定格宽，Android 会忠实显示 CCB 生成的列位置；关闭后使用普通文本排版。"),
+                "原版样式始终保留 CCB 动态颜色和终端字形。自定义样式才会应用下方的统一颜色、粗斜体、描边与投影；两种模式都使用 C++ 提供的字符列，不会破坏对齐。"),
                 matchRow());
 
             customColumns = check("自定义总列宽",
-                AndroidHudWidgetLayout.hasCustomColumns(element));
+                AndroidHudInfoFormat.hasCustomColumns(element));
             content.addView(customColumns);
             columns = textInput(customColumns.isChecked() ?
-                element.providerSettings.get(
-                    AndroidHudWidgetLayout.SETTING_COLUMNS) :
-                String.valueOf(AndroidHudWidgetLayout.defaultColumns(source)));
+                String.valueOf(element.infoPresentation.columns) :
+                String.valueOf(AndroidHudInfoFormat.defaultColumns(source)));
             columns.setInputType(InputType.TYPE_CLASS_NUMBER);
             content.addView(labeled("总列宽（8–80）", columns));
             content.addView(propertyHelp(
@@ -1126,11 +1149,10 @@ final class AndroidHudEditor {
                 matchRow());
 
             customLabelColumns = check("统一标签与数值列",
-                AndroidHudWidgetLayout.hasCustomLabelColumns(element));
+                AndroidHudInfoFormat.hasCustomLabelColumns(element));
             content.addView(customLabelColumns);
             labelColumns = textInput(customLabelColumns.isChecked() ?
-                element.providerSettings.get(
-                    AndroidHudWidgetLayout.SETTING_LABEL_COLUMNS) : "");
+                String.valueOf(element.infoPresentation.labelColumns) : "");
             labelColumns.setHint("自动");
             labelColumns.setInputType(InputType.TYPE_CLASS_NUMBER);
             content.addView(labeled("标签槽宽度（0–40 格）", labelColumns));
@@ -1147,51 +1169,43 @@ final class AndroidHudEditor {
         }
 
         boolean applyTo(AndroidHudModel.Element element) {
-            if (terminalGrid.isChecked()) {
-                element.providerSettings.remove(
-                    AndroidHudWidgetLayout.SETTING_TERMINAL_GRID);
-            } else {
-                element.providerSettings.put(
-                    AndroidHudWidgetLayout.SETTING_TERMINAL_GRID, "false");
-            }
+            element.infoPresentation.appearanceMode =
+                appearance.getSelectedItemPosition() == 1 ?
+                AndroidHudModel.INFO_APPEARANCE_CUSTOM :
+                AndroidHudModel.INFO_APPEARANCE_NATIVE;
 
             int resolvedColumns =
-                AndroidHudWidgetLayout.defaultColumns(source);
+                AndroidHudInfoFormat.defaultColumns(source);
             if (customColumns.isChecked()) {
                 Integer value = parseInteger(columns);
                 if (value == null ||
-                        value < AndroidHudWidgetLayout.MIN_COLUMNS ||
-                        value > AndroidHudWidgetLayout.MAX_COLUMNS) {
+                        value < AndroidHudInfoFormat.MIN_COLUMNS ||
+                        value > AndroidHudInfoFormat.MAX_COLUMNS) {
                     Toast.makeText(activity, "总列宽必须是 8–80 的整数",
                         Toast.LENGTH_SHORT).show();
                     return false;
                 }
                 resolvedColumns = value;
-                element.providerSettings.put(
-                    AndroidHudWidgetLayout.SETTING_COLUMNS,
-                    String.valueOf(value));
+                element.infoPresentation.columns = value;
             } else {
-                element.providerSettings.remove(
-                    AndroidHudWidgetLayout.SETTING_COLUMNS);
+                element.infoPresentation.columns = 0;
             }
 
             if (customLabelColumns.isChecked()) {
                 Integer value = parseInteger(labelColumns);
                 if (value == null ||
-                        value < AndroidHudWidgetLayout.MIN_LABEL_COLUMNS ||
-                        value > AndroidHudWidgetLayout.MAX_LABEL_COLUMNS ||
+                        value < AndroidHudInfoFormat.MIN_LABEL_COLUMNS ||
+                        value > AndroidHudInfoFormat.MAX_LABEL_COLUMNS ||
                         value >= resolvedColumns) {
                     Toast.makeText(activity,
                         "标签列宽必须是 0–40 的整数，并且小于总列宽",
                         Toast.LENGTH_SHORT).show();
                     return false;
                 }
-                element.providerSettings.put(
-                    AndroidHudWidgetLayout.SETTING_LABEL_COLUMNS,
-                    String.valueOf(value));
+                element.infoPresentation.labelColumns = value;
             } else {
-                element.providerSettings.remove(
-                    AndroidHudWidgetLayout.SETTING_LABEL_COLUMNS);
+                element.infoPresentation.labelColumns =
+                    AndroidHudInfoFormat.AUTO_LABEL_COLUMNS;
             }
             return true;
         }

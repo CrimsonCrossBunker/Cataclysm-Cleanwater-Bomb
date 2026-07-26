@@ -10,7 +10,7 @@ import java.util.List;
 
 /** Immutable Java-side projection of the game-thread HUD snapshot. */
 final class AndroidHudSnapshot {
-    static final int SCHEMA = 3;
+    static final int SCHEMA = 4;
 
     static final class RichText {
         String text = "";
@@ -27,6 +27,49 @@ final class AndroidHudSnapshot {
         String text = "";
         int color = 0xFFFFFFFF;
         boolean bold;
+    }
+
+    static final class TerminalCell {
+        int column;
+        int span = 1;
+        String text = "";
+        int color = 0xFFFFFFFF;
+        boolean bold;
+    }
+
+    static final class TerminalRow {
+        final ArrayList<TerminalCell> cells = new ArrayList<>();
+    }
+
+    static final class TerminalText {
+        int columns = AndroidHudInfoFormat.MIN_COLUMNS;
+        final ArrayList<TerminalRow> rows = new ArrayList<>();
+
+        boolean hasVisibleContent() {
+            for (TerminalRow row : rows) {
+                if (!row.cells.isEmpty()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static TerminalText plain(String text, int columns) {
+            TerminalText result = new TerminalText();
+            result.columns = Math.max(AndroidHudInfoFormat.MIN_COLUMNS,
+                Math.min(AndroidHudInfoFormat.MAX_COLUMNS, columns));
+            TerminalRow row = new TerminalRow();
+            TerminalCell cell = new TerminalCell();
+            cell.column = 0;
+            // Java must not infer terminal width from UTF-16 length.  A
+            // fallback occupies the whole logical row; real content always
+            // receives exact columns and spans from C++.
+            cell.span = result.columns;
+            cell.text = text;
+            row.cells.add(cell);
+            result.rows.add(row);
+            return result;
+        }
     }
 
     static final class Cell {
@@ -51,7 +94,7 @@ final class AndroidHudSnapshot {
         new LinkedHashMap<>();
     final LinkedHashMap<String, AndroidHudModel.InfoSource> sources =
         new LinkedHashMap<>();
-    final LinkedHashMap<String, RichText> values = new LinkedHashMap<>();
+    final LinkedHashMap<String, TerminalText> terminalValues = new LinkedHashMap<>();
     final ArrayList<RichText> messages = new ArrayList<>();
     final ArrayList<Cell> overmap = new ArrayList<>();
     final ArrayList<Contact> hostiles = new ArrayList<>();
@@ -103,16 +146,17 @@ final class AndroidHudSnapshot {
                 String id = AndroidHudModel.safeId(value.optString("sourceId", ""));
                 if (!id.isEmpty()) {
                     int layoutColumns = Math.max(0,
-                        Math.min(AndroidHudWidgetLayout.MAX_COLUMNS,
+                        Math.min(AndroidHudInfoFormat.MAX_COLUMNS,
                             value.optInt("layoutColumns",
                                 value.optInt("widgetWidth", 0))));
                     int labelColumns = value.has("labelColumns") ?
-                        Math.max(AndroidHudWidgetLayout.MIN_LABEL_COLUMNS,
-                            Math.min(AndroidHudWidgetLayout.MAX_LABEL_COLUMNS,
+                        Math.max(AndroidHudInfoFormat.MIN_LABEL_COLUMNS,
+                            Math.min(AndroidHudInfoFormat.MAX_LABEL_COLUMNS,
                                 value.optInt("labelColumns", 0))) :
-                        AndroidHudWidgetLayout.AUTO_LABEL_COLUMNS;
-                    result.values.put(valueKey(id, layoutColumns, labelColumns),
-                        decodeRichText(value));
+                        AndroidHudInfoFormat.AUTO_LABEL_COLUMNS;
+                    result.terminalValues.put(
+                        valueKey(id, layoutColumns, labelColumns),
+                        decodeTerminal(value.optJSONObject("terminal")));
                 }
             }
         }
@@ -122,32 +166,31 @@ final class AndroidHudSnapshot {
         return result;
     }
 
-    RichText value(String sourceId, int layoutColumns,
+    TerminalText terminalValue(String sourceId, int layoutColumns,
             int labelColumns, boolean preview) {
         AndroidHudModel.InfoSource source = sources.get(sourceId);
-        if (preview && source != null) {
-            return RichText.plain(source.multiline ?
-                "示例数据\n离线布局预览" : "示例数据");
-        }
-        RichText value = values.get(
+        TerminalText value = terminalValues.get(
             valueKey(sourceId, layoutColumns, labelColumns));
         if (value == null && layoutColumns != 0) {
-            value = values.get(valueKey(sourceId, 0,
-                AndroidHudWidgetLayout.AUTO_LABEL_COLUMNS));
+            value = terminalValues.get(valueKey(sourceId, 0,
+                AndroidHudInfoFormat.AUTO_LABEL_COLUMNS));
         }
         if (value == null) {
             String prefix = sourceId + '\u001f';
-            for (String key : values.keySet()) {
+            for (String key : terminalValues.keySet()) {
                 if (key.startsWith(prefix)) {
-                    value = values.get(key);
+                    value = terminalValues.get(key);
                     break;
                 }
             }
         }
-        if (value != null && !value.text.trim().isEmpty()) {
+        if (value != null && value.hasVisibleContent()) {
             return value;
         }
-        return RichText.plain("—");
+        int columns = layoutColumns > 0 ? layoutColumns :
+            source == null ? AndroidHudInfoFormat.MIN_COLUMNS :
+            source.defaultColumns;
+        return TerminalText.plain(preview ? "示例数据" : "—", columns);
     }
 
     private static String valueKey(String sourceId, int layoutColumns,
@@ -189,6 +232,53 @@ final class AndroidHudSnapshot {
             run.color = (int)encodedRun.optLong("color", 0xFFFFFFFFL);
             run.bold = encodedRun.optBoolean("bold", false);
             result.runs.add(run);
+        }
+        return result;
+    }
+
+    private static TerminalText decodeTerminal(JSONObject encoded) {
+        TerminalText result = new TerminalText();
+        if (encoded == null) {
+            return result;
+        }
+        result.columns = Math.max(AndroidHudInfoFormat.MIN_COLUMNS,
+            Math.min(AndroidHudInfoFormat.MAX_COLUMNS,
+                encoded.optInt("columns", AndroidHudInfoFormat.MIN_COLUMNS)));
+        JSONArray rows = encoded.optJSONArray("rows");
+        if (rows == null) {
+            return result;
+        }
+        int totalCells = 0;
+        for (int rowIndex = 0; rowIndex < rows.length() && rowIndex < 128; ++rowIndex) {
+            JSONObject encodedRow = rows.optJSONObject(rowIndex);
+            TerminalRow row = new TerminalRow();
+            JSONArray cells = encodedRow == null ? null :
+                encodedRow.optJSONArray("cells");
+            if (cells != null) {
+                for (int cellIndex = 0; cellIndex < cells.length() &&
+                        totalCells < 4096; ++cellIndex) {
+                    JSONObject encodedCell = cells.optJSONObject(cellIndex);
+                    if (encodedCell == null) {
+                        continue;
+                    }
+                    TerminalCell cell = new TerminalCell();
+                    cell.column = Math.max(0, Math.min(result.columns - 1,
+                        encodedCell.optInt("column", 0)));
+                    cell.span = Math.max(1, Math.min(
+                        result.columns - cell.column,
+                        encodedCell.optInt("span", 1)));
+                    cell.text = AndroidHudModel.boundedText(
+                        encodedCell.optString("text", ""), 256);
+                    if (cell.text.isEmpty()) {
+                        continue;
+                    }
+                    cell.color = (int)encodedCell.optLong("color", 0xFFFFFFFFL);
+                    cell.bold = encodedCell.optBoolean("bold", false);
+                    row.cells.add(cell);
+                    totalCells++;
+                }
+            }
+            result.rows.add(row);
         }
         return result;
     }
