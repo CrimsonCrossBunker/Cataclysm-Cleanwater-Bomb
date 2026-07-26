@@ -63,9 +63,10 @@ script_manifest read_script_manifest( const JsonValue &input )
     if( result.version.empty() || result.version.size() > maximum_manifest_version_bytes ) {
         throw std::invalid_argument( "Lua manifest version must contain 1 to 64 bytes" );
     }
-    if( result.api_version != api_version ) {
+    if( result.api_version < minimum_api_version || result.api_version > api_version ) {
         throw std::invalid_argument( "Lua manifest '" + result.id + "' requires API " +
                                      std::to_string( result.api_version ) + ", runtime provides " +
+                                     std::to_string( minimum_api_version ) + ".." +
                                      std::to_string( api_version ) );
     }
 

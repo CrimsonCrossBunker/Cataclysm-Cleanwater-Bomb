@@ -623,6 +623,22 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
     state.lua["collectgarbage"] = sol::nil;
     install_module_searcher( state );
 
+    state.lua.new_usertype<script_ui_environment>(
+        "ScriptUiEnvironment", sol::no_constructor,
+        "profile", &script_ui_environment::profile,
+        "input", &script_ui_environment::input,
+        "density", &script_ui_environment::density,
+        "breakpoint", &script_ui_environment::breakpoint,
+        "minimum_target", &script_ui_environment::minimum_target,
+        "touch", &script_ui_environment::touch,
+        "hover", &script_ui_environment::hover,
+        "swipe_scroll", &script_ui_environment::swipe_scroll,
+        "native_text_input", &script_ui_environment::native_text_input,
+        "keyboard_navigation", &script_ui_environment::keyboard_navigation,
+        "pointer_activation", &script_ui_environment::pointer_activation,
+        "tap_activation", &script_ui_environment::tap_activation,
+        "long_press_dangerous", &script_ui_environment::long_press_dangerous );
+
     state.lua.new_usertype<script_ui_context>(
         "ScriptUiContext", sol::no_constructor,
         "backend", &script_ui_context::backend,
@@ -630,16 +646,19 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
         "supports", &script_ui_context::supports,
         "is_immediate_mode", &script_ui_context::is_immediate_mode,
         "uses_native_widgets", &script_ui_context::uses_native_widgets,
+        "environment", &script_ui_context::environment,
         "text", &script_ui_context::text,
         "heading", &script_ui_context::heading,
         "bullet_text", &script_ui_context::bullet_text,
         "disabled_text", &script_ui_context::disabled_text,
         "text_colored", &script_ui_context::text_colored,
+        "text_tone", &script_ui_context::text_tone,
         "separator", &script_ui_context::separator,
         "same_line", &script_ui_context::same_line,
         "new_line", &script_ui_context::new_line,
         "spacing", &script_ui_context::spacing,
         "set_next_item_width", &script_ui_context::set_next_item_width,
+        "item_width", &script_ui_context::item_width,
         "progress_bar", &script_ui_context::progress_bar,
         "button", &script_ui_context::button,
         "button_id", &script_ui_context::button_id,
@@ -669,7 +688,9 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
                    state, context, id, selected_action, context_revision, options );
     },
     "child", &script_ui_context::child,
+    "scroll", &script_ui_context::scroll,
     "table", &script_ui_context::table,
+    "grid", &script_ui_context::grid,
     "table_next_row", &script_ui_context::table_next_row,
     "table_next_column", &script_ui_context::table_next_column,
     "tabs", &script_ui_context::tabs,
@@ -677,7 +698,8 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
     "tree", &script_ui_context::tree,
     "modal", &script_ui_context::modal,
     "tooltip", &script_ui_context::tooltip,
-    "virtual_list", &script_ui_context::virtual_list );
+    "virtual_list", &script_ui_context::virtual_list,
+    "virtual_list_rows", &script_ui_context::virtual_list_rows );
 
     sol::table ui = state.lua.create_named_table( "ui" );
     ui.set_function( "page", [&state]( const std::string & id, const sol::object & descriptor,
@@ -883,6 +905,43 @@ void disable_callback( bool &enabled, std::string &stored_error, const std::stri
     record_runtime_error( context, stored_error );
 }
 
+class ui_profile_style_guard
+{
+    public:
+        explicit ui_profile_style_guard( const cata::ui::profile &profile ) :
+            scaled_font_( profile.text_scale != 1.0F ) {
+            if( scaled_font_ ) {
+                cataimgui::PushGuiFontScaled( profile.text_scale );
+            }
+            const float frame_padding_y = profile.is_touch() ?
+                                          std::max(
+                                              profile.frame_padding_y,
+                                              ( profile.minimum_target -
+                                                ImGui::GetTextLineHeight() ) * 0.5F ) :
+                                          profile.frame_padding_y;
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_FramePadding,
+                ImVec2( profile.frame_padding_x, frame_padding_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_ItemSpacing,
+                ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+        }
+
+        ui_profile_style_guard( const ui_profile_style_guard & ) = delete;
+        ui_profile_style_guard &operator=( const ui_profile_style_guard & ) = delete;
+
+        ~ui_profile_style_guard() {
+            ImGui::PopStyleVar( 3 );
+            if( scaled_font_ ) {
+                cataimgui::PopGuiFontScaled();
+            }
+        }
+
+    private:
+        bool scaled_font_;
+};
+
 void draw_huds()
 {
     if( !active_state ) {
@@ -943,7 +1002,7 @@ void draw_huds()
 void ensure_hud_adaptor()
 {
 #if defined(__ANDROID__)
-    // Android HUD schema 4 is the only in-game HUD on this platform.  Lua
+    // Android HUD schema 6 is the only in-game HUD on this platform.  Lua
     // ui.hud registrations remain portable mod data but are not consumed here.
     return;
 #endif
@@ -1056,7 +1115,10 @@ class lua_page_window : public cataimgui::window
         }
 
         void draw_controls() override {
-            if( ImGui::Button( _( "Reload Lua" ) ) ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            const ui_profile_style_guard style( profile );
+            if( ImGui::Button( _( "Reload Lua" ),
+                               ImVec2( 0.0F, profile.minimum_target ) ) ) {
                 std::string error;
                 if( reload_scripts( error ) ) {
                     ::add_msg( _( "Lua UI scripts reloaded." ) );
@@ -1109,11 +1171,7 @@ class lua_page_hub_window : public cataimgui::window
 
         void draw_controls() override {
             const cata::ui::profile profile = cata::ui::current_profile();
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding,
-                                 ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing,
-                                 ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+            const ui_profile_style_guard style( profile );
 
             ImGui::TextUnformatted( _( "Extensions" ) );
             ImGui::SameLine();
@@ -1132,14 +1190,15 @@ class lua_page_hub_window : public cataimgui::window
 
             if( pages_.empty() ) {
                 ImGui::TextWrapped( "%s", _( "No extension pages are registered here." ) );
-                ImGui::PopStyleVar( 3 );
                 return;
             }
             selected_ = std::clamp( selected_, 0, static_cast<int>( pages_.size() ) - 1 );
             const ImVec2 available = ImGui::GetContentRegionAvail();
-            const bool single_column = available.x < 760.0F;
+            const bool single_column =
+                profile.breakpoint_for_width( available.x ) ==
+                cata::ui::layout_breakpoint::narrow;
             if( single_column ) {
-                draw_horizontal_navigation( profile.minimum_target );
+                draw_horizontal_navigation( profile );
                 ImGui::Separator();
                 if( ImGui::BeginChild( "##lua_extension_content", ImVec2( 0.0F, 0.0F ),
                                        ImGuiChildFlags_None,
@@ -1148,7 +1207,10 @@ class lua_page_hub_window : public cataimgui::window
                 }
                 ImGui::EndChild();
             } else {
-                const float navigation_width = std::clamp( available.x * 0.27F, 220.0F, 360.0F );
+                const float navigation_width = std::clamp(
+                                                   available.x * 0.27F,
+                                                   profile.width_normal,
+                                                   profile.width_wide );
                 if( ImGui::BeginChild( "##lua_extension_navigation",
                                        ImVec2( navigation_width, 0.0F ),
                                        ImGuiChildFlags_Borders ) ) {
@@ -1165,8 +1227,6 @@ class lua_page_hub_window : public cataimgui::window
                 }
                 ImGui::EndChild();
             }
-
-            ImGui::PopStyleVar( 3 );
         }
 
     private:
@@ -1205,16 +1265,20 @@ class lua_page_hub_window : public cataimgui::window
             }
         }
 
-        void draw_horizontal_navigation( const float target_height ) {
-            if( ImGui::BeginChild( "##lua_extension_tabs", ImVec2( 0.0F, target_height + 8.0F ),
-                                   ImGuiChildFlags_None,
-                                   ImGuiWindowFlags_HorizontalScrollbar ) ) {
+        void draw_horizontal_navigation( const cata::ui::profile &profile ) {
+            if( ImGui::BeginChild(
+                    "##lua_extension_tabs",
+                    ImVec2( 0.0F, profile.minimum_target +
+                            profile.item_spacing_y ),
+                    ImGuiChildFlags_None,
+                    ImGuiWindowFlags_HorizontalScrollbar ) ) {
                 for( std::size_t index = 0; index < pages_.size(); ++index ) {
                     if( index > 0 ) {
                         ImGui::SameLine();
                     }
                     if( ImGui::Button( ( pages_[index].title + "###lua_page_" +
-                                         pages_[index].id ).c_str(), ImVec2( 0.0F, target_height ) ) ) {
+                                         pages_[index].id ).c_str(),
+                                       ImVec2( 0.0F, profile.minimum_target ) ) ) {
                         selected_ = static_cast<int>( index );
                     }
                 }
@@ -1270,7 +1334,16 @@ bool is_safe_module_name( std::string_view name )
 
 bool reload_scripts( std::string &error )
 {
-    return reload_scripts_with_state( nullptr, error );
+    // The profile loader is an independent, early Lua sandbox.  A bad profile
+    // falls back to compiled defaults and must not invalidate working Mod UI
+    // scripts, so only surface its error after a successful script reload.
+    std::string profile_error;
+    cata::ui::reload_profile( profile_error );
+    const bool reloaded = reload_scripts_with_state( nullptr, error );
+    if( reloaded && !profile_error.empty() ) {
+        record_runtime_error( "UI profile reload failed", profile_error );
+    }
+    return reloaded;
 }
 
 void on_world_ready()

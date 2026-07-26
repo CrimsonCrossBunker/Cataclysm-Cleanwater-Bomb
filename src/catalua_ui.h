@@ -11,7 +11,8 @@
 namespace cata::lua_ui
 {
 
-constexpr int api_version = 2;
+constexpr int minimum_api_version = 2;
+constexpr int api_version = 3;
 
 struct runtime_status {
     bool loaded = false;
@@ -66,7 +67,7 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
 
 // Platform-neutral page registry.  Slots are logical navigation locations,
 // never pixel coordinates.  Complete pages use the shared ImGui/ImTui host.
-// Android's native schema-4 HUD is a separate subsystem.
+// Android's native schema-6 HUD is a separate subsystem.
 std::vector<page_info> registered_pages( std::string_view slot = {} );
 bool has_registered_pages( std::string_view slot = {} );
 bool show_page( const std::string &page_id );

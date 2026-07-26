@@ -9,6 +9,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_stdlib.h"
 #include "input_context_actions.h"
+#include "ui_profile.h"
 
 namespace cata::lua_ui
 {
@@ -56,8 +57,14 @@ std::string widget_label( const std::string &id, const std::string &label )
 class imgui_script_ui_renderer final : public script_ui_renderer
 {
     public:
+        imgui_script_ui_renderer() : profile_( cata::ui::current_profile() ) {}
+
         script_ui_renderer_info info() const override {
             return { "imgui", platform_name(), capability_mask, true, false };
+        }
+
+        double available_width() const override {
+            return ImGui::GetContentRegionAvail().x;
         }
 
         void text( const std::string &value ) override {
@@ -114,10 +121,14 @@ class imgui_script_ui_renderer final : public script_ui_renderer
         }
 
         bool button( const std::string &id, const std::string &label ) override {
-            return ImGui::Button( widget_label( id, label ).c_str() );
+            return ImGui::Button( widget_label( id, label ).c_str(),
+                                  ImVec2( 0.0F, touch_target_height() ) );
         }
 
         bool small_button( const std::string &id, const std::string &label ) override {
+            if( profile_.is_touch() ) {
+                return button( id, label );
+            }
             return ImGui::SmallButton( widget_label( id, label ).c_str() );
         }
 
@@ -133,7 +144,9 @@ class imgui_script_ui_renderer final : public script_ui_renderer
 
         bool selectable( const std::string &id, const std::string &label,
                          bool selected ) override {
-            return ImGui::Selectable( widget_label( id, label ).c_str(), selected );
+            return ImGui::Selectable(
+                       widget_label( id, label ).c_str(), selected, 0,
+                       ImVec2( 0.0F, touch_target_height() ) );
         }
 
         int slider_int( const std::string &id, const std::string &label, int value, int minimum,
@@ -174,7 +187,9 @@ class imgui_script_ui_renderer final : public script_ui_renderer
             const std::string &id, const std::string &center_label,
             const std::vector<script_ui_radial_option> &options ) override {
             const std::string popup_id = widget_label( id + "/popup", "radial" );
-            if( ImGui::Button( widget_label( id, center_label ).c_str() ) ) {
+            if( ImGui::Button(
+                    widget_label( id, center_label ).c_str(),
+                    ImVec2( 0.0F, touch_target_height() ) ) ) {
                 ImGui::OpenPopup( popup_id.c_str() );
             }
             std::string result;
@@ -183,7 +198,8 @@ class imgui_script_ui_renderer final : public script_ui_renderer
                     if( option.enabled ) {
                         if( ImGui::Selectable(
                                 widget_label( id + "/" + option.id, option.label ).c_str(),
-                                option.selected ) ) {
+                                option.selected, 0,
+                                ImVec2( 0.0F, touch_target_height() ) ) ) {
                             result = option.id;
                             ImGui::CloseCurrentPopup();
                         }
@@ -209,7 +225,9 @@ class imgui_script_ui_renderer final : public script_ui_renderer
             }
             if( available.empty() ) {
                 ImGui::BeginDisabled();
-                ImGui::Button( widget_label( id, "—" ).c_str(), ImVec2( -1.0F, 0.0F ) );
+                ImGui::Button(
+                    widget_label( id, "—" ).c_str(),
+                    ImVec2( -1.0F, touch_target_height() ) );
                 ImGui::EndDisabled();
                 return {};
             }
@@ -222,9 +240,11 @@ class imgui_script_ui_renderer final : public script_ui_renderer
                 selected == available.end() ? available.front() : *selected;
             const std::string popup_id = widget_label( id + "/popup", "actions" );
             const bool has_selector = available.size() > 1;
-            ImVec2 trigger_size( -1.0F, 0.0F );
+            ImVec2 trigger_size( -1.0F, touch_target_height() );
+            float selector_width = 0.0F;
             if( has_selector ) {
-                const float selector_width = ImGui::GetFrameHeight();
+                selector_width = std::max(
+                                     ImGui::GetFrameHeight(), touch_target_height() );
                 trigger_size.x = std::max(
                                      1.0F, ImGui::GetContentRegionAvail().x - selector_width -
                                      ImGui::GetStyle().ItemSpacing.x );
@@ -238,14 +258,15 @@ class imgui_script_ui_renderer final : public script_ui_renderer
             if( has_selector ) {
                 ImGui::SameLine();
                 if( ImGui::Button( widget_label( id + "/selector", "▾" ).c_str(),
-                                   ImVec2( ImGui::GetFrameHeight(), 0.0F ) ) ) {
+                                   ImVec2( selector_width, touch_target_height() ) ) ) {
                     ImGui::OpenPopup( popup_id.c_str() );
                 }
                 if( ImGui::BeginPopup( popup_id.c_str() ) ) {
                     for( const script_ui_action_option *option : available ) {
                         if( ImGui::Selectable(
                                 widget_label( id + "/" + option->id, option->label ).c_str(),
-                                option == current ) ) {
+                                option == current, 0,
+                                ImVec2( 0.0F, touch_target_height() ) ) ) {
                             result = option->id;
                             ImGui::CloseCurrentPopup();
                         }
@@ -389,6 +410,11 @@ class imgui_script_ui_renderer final : public script_ui_renderer
         }
 
     private:
+        float touch_target_height() const {
+            return profile_.is_touch() ? profile_.minimum_target : 0.0F;
+        }
+
+        const cata::ui::profile profile_;
         int table_depth_ = 0;
         int tab_depth_ = 0;
 };

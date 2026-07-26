@@ -1,5 +1,6 @@
 #include "cata_imgui.h"
 
+#include <algorithm>
 #include <cmath>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -1315,20 +1316,31 @@ void cataimgui::PushMonoFont()
     ImGui::PushFont( font, font->LegacySize );
 }
 
-void cataimgui::PushGuiFont1_5x()
+void cataimgui::PushGuiFontScaled( const float scale )
 {
-    if( ImGui::GetIO().Fonts->Fonts.Size > 2 ) {
+    const float safe_scale = std::max( 0.1F, scale );
+    if( safe_scale > 1.0F && ImGui::GetIO().Fonts->Fonts.Size > 2 ) {
         ImFont *font = ImGui::GetIO().Fonts->Fonts[2];
-        ImGui::PushFont( font, font->LegacySize );
+        ImGui::PushFont( font, font->LegacySize * safe_scale / 1.5F );
     } else {
         ImFont *font = ImGui::GetIO().Fonts->Fonts[0];
-        ImGui::PushFont( font, font->LegacySize * 1.5f );
+        ImGui::PushFont( font, font->LegacySize * safe_scale );
     }
+}
+
+void cataimgui::PopGuiFontScaled()
+{
+    ImGui::PopFont();
+}
+
+void cataimgui::PushGuiFont1_5x()
+{
+    PushGuiFontScaled( 1.5F );
 }
 
 void cataimgui::PopGuiFont1_5x()
 {
-    ImGui::PopFont();
+    PopGuiFontScaled();
 }
 
 
