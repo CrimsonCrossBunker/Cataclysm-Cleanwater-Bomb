@@ -16,7 +16,7 @@
       { "item": "ceramic_armor", "prob": 15 },
       { "item": "tonfa", "prob": 10 },
       { "item": "shocktonfa_off", "prob": 5 },
-      { "item": "alloy_plate", "prob": 10 }
+      { "item": "alloy_sheet", "count": [ 1, 10 ], "prob": 10 }
     ]
   },
   {
