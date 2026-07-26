@@ -756,6 +756,8 @@ Identifier                  | Description
 `custom`                    | A bonus or penalty to custom attributes. Syntax is the same as for values, using the id of custom value key. Custom attributes can be read using the `math` function.
 `emitter`                   | Grants the emit_id.
 `modified_bodyparts`        | Modifies the body plan (standard is human).  `gain` adds body_part_id, `lose` removes body_part_id.
+`max_hp_modifier`           | Modifies the maximum HP of the given `part` (a body_part_id, or `"all"` for every part).  Supports `add` and `multiply`, both of which accept math expressions.  Characters only; evaluated on enchantment cache recalculation.
+`limb_score_modifier`       | Modifies the limb score `score` (see `limb_scores.json`) provided by body parts.  With an optional `part` field the modifier only affects that body part's contribution, otherwise it applies to the aggregated score.  Supports `add` and `multiply`, both of which accept math expressions.  Characters only; evaluated on enchantment cache recalculation.
 `mutations`                 | Grants the mutation/trait ID.  Note: enchantments effects added this way won't stack, due how mutations work.
 `ench_effects`              | Grants the effect_id.  Requires the `intensity` for the effect.
 
@@ -786,6 +788,17 @@ There are two possible syntaxes.  The first is by defining an enchantment object
       { "part": "mouth", "multiply": -0.5 }, // multiplication would multiply the entire encumbrance value; -0.5 would result in 50% encumbrance
       { "part": "arm_l", "add": 1 }, // `"multiply": 1` would double the encumbrancce
       { "part": "leg_r", "add": { "math": [ "rand(3) * -1" ] } }, // supports math and stuff, works for both character/npcs and monsters. multiple `encumbrance_modifier`es of the same part do stack
+    ],
+    "max_hp_modifier": [ // the maximum HP of the given body part will be modified by this value; only works for characters (player and NPCs), not monsters
+      { "part": "hand_l", "add": 10 }, // adding would increase the part's max HP
+      { "part": "torso", "multiply": 0.5 }, // multiplication would multiply the part's entire max HP; 0.5 would result in 150% max HP
+      { "part": "all", "add": -5 }, // "all" will apply to every body part
+      { "part": "arm_l2", "add": { "math": [ "u_my_custom_var * 10" ] } } // supports math and character variables; multiple `max_hp_modifier`s of the same part do stack. Note: math is evaluated when the enchantment cache is recalculated (equipment/mutation change, save load, or the `u_recalculate_enchantment_cache` effect), not continuously
+    ],
+    "limb_score_modifier": [ // the limb score (see limb_scores.json) provided by body parts will be modified by this value; only works for characters (player and NPCs), not monsters
+      { "score": "swim", "add": 0.2 }, // without "part", the modifier applies globally to the aggregated score
+      { "score": "lift", "part": "arm_l2", "multiply": { "math": [ "u_my_custom_var * 0.05" ] } }, // with "part", only that body part's contribution to the score is modified
+      { "score": "manip", "part": "hand_l", "add": -0.1 } // works for the manip score as well; multiple modifiers of the same score (and part) do stack. Math is evaluated on enchantment cache recalculation, same as `max_hp_modifier`
     ],
     "melee_damage_bonus": [ // adds this amount of damage to attack; adding damage adds flat number to attacks, multiplier multiplies existing damage after adding
     { "type": "bash", "add": 10 }, // add 10 would straight add 10 damage of this type to each attack

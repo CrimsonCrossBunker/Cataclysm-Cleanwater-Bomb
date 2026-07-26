@@ -44,6 +44,8 @@ static const itype_id
 itype_test_MELEE_STAMINA_CONSUMPTION_ench_item_2( "test_MELEE_STAMINA_CONSUMPTION_ench_item_2" );
 static const itype_id itype_test_MELEE_TO_HIT_ench_item_1( "test_MELEE_TO_HIT_ench_item_1" );
 static const itype_id itype_test_MELEE_TO_HIT_ench_item_2( "test_MELEE_TO_HIT_ench_item_2" );
+static const itype_id itype_test_MAX_HP_BP_ench_item( "test_MAX_HP_BP_ench_item" );
+static const itype_id itype_test_LIMB_SCORE_ench_item( "test_LIMB_SCORE_ench_item" );
 static const itype_id
 itype_test_PAIN_PENALTY_MOD_ench_item_1( "test_PAIN_PENALTY_MOD_ench_item_1" );
 static const itype_id itype_test_SPEED_ench_item( "test_SPEED_ench_item" );
@@ -467,4 +469,41 @@ TEST_CASE( "Enchantment_PAIN_PENALTY_MOD_test", "[magic][enchantments]" )
     REQUIRE( guy.get_int() == 7 );
     REQUIRE( guy.get_per() == 1 );
     REQUIRE( guy.get_speed() == 89 );
+}
+
+TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
+{
+    clear_map_without_vision();
+    Character &guy = get_player_character();
+    clear_avatar();
+
+    static const bodypart_id bp_arm_l( "arm_l" );
+    static const bodypart_id bp_arm_r( "arm_r" );
+    static const bodypart_id bp_leg_r( "leg_r" );
+    static const limb_score_id score_lift( "lift" );
+    static const limb_score_id score_balance( "balance" );
+
+    INFO( "Default character: arm max HP is 84 (60 base + 8 str * 3)" );
+    const int arm_l_hp_before = guy.get_part_hp_max( bp_arm_l );
+    const int arm_r_hp_before = guy.get_part_hp_max( bp_arm_r );
+    const int leg_r_hp_before = guy.get_part_hp_max( bp_leg_r );
+    REQUIRE( arm_l_hp_before == 84 );
+
+    const float lift_before = guy.get_limb_score( score_lift );
+    const float balance_before = guy.get_limb_score( score_balance );
+
+    INFO( "Obtain item with per-bodypart max HP enchantment" );
+    guy.i_add( item( itype_test_MAX_HP_BP_ench_item ) );
+    guy.recalculate_enchantment_cache();
+    INFO( "Left arm gains 20 max HP, right arm is unchanged, right leg is multiplied by 1.5" );
+    CHECK( guy.get_part_hp_max( bp_arm_l ) == arm_l_hp_before + 20 );
+    CHECK( guy.get_part_hp_max( bp_arm_r ) == arm_r_hp_before );
+    CHECK( guy.get_part_hp_max( bp_leg_r ) == static_cast<int>( leg_r_hp_before * 1.5 ) );
+
+    INFO( "Obtain item with limb score enchantment" );
+    guy.i_add( item( itype_test_LIMB_SCORE_ench_item ) );
+    guy.recalculate_enchantment_cache();
+    INFO( "Left arm's lift contribution is doubled, balance gets a global +0.5" );
+    CHECK( guy.get_limb_score( score_lift ) == Approx( lift_before + 0.5f ) );
+    CHECK( guy.get_limb_score( score_balance ) == Approx( balance_before + 0.5f ) );
 }

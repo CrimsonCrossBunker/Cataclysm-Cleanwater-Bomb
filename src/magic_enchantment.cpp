@@ -593,6 +593,24 @@ void enchantment::load( const JsonObject &jo, std::string_view,
     load_add_and_multiply_dbl_or_var<bodypart_str_id>( jo, "encumbrance_modifier", "part",
             encumbrance_values_add, encumbrance_values_multiply );
 
+    load_add_and_multiply_dbl_or_var<bodypart_str_id>( jo, "max_hp_modifier", "part",
+            max_hp_values_add, max_hp_values_multiply );
+
+    if( jo.has_array( "limb_score_modifier" ) ) {
+        for( const JsonObject value_obj : jo.get_array( "limb_score_modifier" ) ) {
+            limb_score_mod_bp mod;
+            mandatory( value_obj, false, "score", mod.score );
+            optional( value_obj, false, "part", mod.part, bodypart_str_id::NULL_ID() );
+            if( value_obj.has_member( "add" ) ) {
+                mod.add = get_dbl_or_var( value_obj, "add" );
+            }
+            if( value_obj.has_member( "multiply" ) ) {
+                mod.mult = get_dbl_or_var( value_obj, "multiply" );
+            }
+            limb_score_mods.emplace_back( mod );
+        }
+    }
+
     load_add_and_multiply_dbl_or_var<damage_type_id>( jo, "melee_damage_bonus", "type",
             damage_values_add, damage_values_multiply );
 
@@ -667,6 +685,33 @@ void enchant_cache::load( const JsonObject &jo, std::string_view,
 
     load_add_and_multiply<bodypart_str_id>( jo, "encumbrance_modifier", "part",
                                             encumbrance_values_add, encumbrance_values_multiply );
+
+    load_add_and_multiply<bodypart_str_id>( jo, "max_hp_modifier", "part",
+                                            max_hp_values_add, max_hp_values_multiply );
+
+    if( jo.has_array( "limb_score_modifier" ) ) {
+        for( const JsonObject value_obj : jo.get_array( "limb_score_modifier" ) ) {
+            const limb_score_id score( value_obj.get_string( "score" ) );
+            const bodypart_str_id part( value_obj.get_string( "part", "" ) );
+            const double add = value_obj.get_float( "add", 0.0 );
+            const double mult = value_obj.get_float( "multiply", 0.0 );
+            if( part.is_null() ) {
+                if( add != 0.0 ) {
+                    limb_score_add.emplace( score, add );
+                }
+                if( mult != 0.0 ) {
+                    limb_score_multiply.emplace( score, mult );
+                }
+            } else {
+                if( add != 0.0 ) {
+                    limb_score_bp_add.emplace( std::make_pair( part, score ), add );
+                }
+                if( mult != 0.0 ) {
+                    limb_score_bp_multiply.emplace( std::make_pair( part, score ), mult );
+                }
+            }
+        }
+    }
 
     load_add_and_multiply<damage_type_id>( jo, "melee_damage_bonus", "type",
                                            damage_values_add, damage_values_multiply );
@@ -792,6 +837,71 @@ void enchant_cache::serialize( JsonOut &jsout ) const
     save_add_and_multiply<bodypart_str_id>( jsout, "encumbrance_modifier", "part",
                                             encumbrance_values_add, encumbrance_values_multiply );
 
+    save_add_and_multiply<bodypart_str_id>( jsout, "max_hp_modifier", "part",
+                                            max_hp_values_add, max_hp_values_multiply );
+
+    if( !limb_score_add.empty() || !limb_score_multiply.empty() ||
+        !limb_score_bp_add.empty() || !limb_score_bp_multiply.empty() ) {
+        jsout.member( "limb_score_modifier" );
+        jsout.start_array();
+        std::set<limb_score_id> scores_add_multiply;
+        for( const std::pair<const limb_score_id, double> &pair : limb_score_add ) {
+            if( float_equals( pair.second, 0.0 ) ) {
+                continue;
+            }
+            jsout.start_object();
+            jsout.member( "score", pair.first );
+            jsout.member( "add", pair.second );
+            const double multiply = get_value<limb_score_id>( pair.first, limb_score_multiply );
+            if( !float_equals( multiply, 0.0 ) ) {
+                jsout.member( "multiply", multiply );
+                scores_add_multiply.insert( pair.first );
+            }
+            jsout.end_object();
+        }
+        for( const std::pair<const limb_score_id, double> &pair : limb_score_multiply ) {
+            if( float_equals( pair.second, 0.0 ) ||
+                scores_add_multiply.find( pair.first ) != scores_add_multiply.end() ) {
+                continue;
+            }
+            jsout.start_object();
+            jsout.member( "score", pair.first );
+            jsout.member( "multiply", pair.second );
+            jsout.end_object();
+        }
+        std::set<std::pair<bodypart_str_id, limb_score_id>> bp_add_multiply;
+        for( const std::pair<const std::pair<bodypart_str_id, limb_score_id>, double> &pair :
+             limb_score_bp_add ) {
+            if( float_equals( pair.second, 0.0 ) ) {
+                continue;
+            }
+            jsout.start_object();
+            jsout.member( "score", pair.first.second );
+            jsout.member( "part", pair.first.first );
+            jsout.member( "add", pair.second );
+            const double multiply = get_value<std::pair<bodypart_str_id, limb_score_id>>( pair.first,
+                                    limb_score_bp_multiply );
+            if( !float_equals( multiply, 0.0 ) ) {
+                jsout.member( "multiply", multiply );
+                bp_add_multiply.insert( pair.first );
+            }
+            jsout.end_object();
+        }
+        for( const std::pair<const std::pair<bodypart_str_id, limb_score_id>, double> &pair :
+             limb_score_bp_multiply ) {
+            if( float_equals( pair.second, 0.0 ) ||
+                bp_add_multiply.find( pair.first ) != bp_add_multiply.end() ) {
+                continue;
+            }
+            jsout.start_object();
+            jsout.member( "score", pair.first.second );
+            jsout.member( "part", pair.first.first );
+            jsout.member( "multiply", pair.second );
+            jsout.end_object();
+        }
+        jsout.end_array();
+    }
+
     save_add_and_multiply<damage_type_id>( jsout, "melee_damage_bonus", "type", damage_values_add,
                                            damage_values_multiply );
 
@@ -904,6 +1014,36 @@ void enchant_cache::force_add( const enchant_cache &rhs )
         // values do not multiply against each other, they add.
         // so +10% and -10% will add to 0%
         encumbrance_values_multiply[pair_values.first] += pair_values.second;
+    }
+
+    for( const std::pair<const bodypart_str_id, double> &pair_values : rhs.max_hp_values_add ) {
+        max_hp_values_add[pair_values.first] += pair_values.second;
+    }
+    for( const std::pair<const bodypart_str_id, double> &pair_values :
+         rhs.max_hp_values_multiply ) {
+        // values do not multiply against each other, they add.
+        // so +10% and -10% will add to 0%
+        max_hp_values_multiply[pair_values.first] += pair_values.second;
+    }
+
+    for( const std::pair<const limb_score_id, double> &pair_values : rhs.limb_score_add ) {
+        limb_score_add[pair_values.first] += pair_values.second;
+    }
+    for( const std::pair<const limb_score_id, double> &pair_values :
+         rhs.limb_score_multiply ) {
+        // values do not multiply against each other, they add.
+        // so +10% and -10% will add to 0%
+        limb_score_multiply[pair_values.first] += pair_values.second;
+    }
+    for( const std::pair<const std::pair<bodypart_str_id, limb_score_id>, double> &pair_values :
+         rhs.limb_score_bp_add ) {
+        limb_score_bp_add[pair_values.first] += pair_values.second;
+    }
+    for( const std::pair<const std::pair<bodypart_str_id, limb_score_id>, double> &pair_values :
+         rhs.limb_score_bp_multiply ) {
+        // values do not multiply against each other, they add.
+        // so +10% and -10% will add to 0%
+        limb_score_bp_multiply[pair_values.first] += pair_values.second;
     }
 
     for( const std::pair<const damage_type_id, double> &pair_values : rhs.armor_values_add ) {
@@ -1024,6 +1164,25 @@ void enchant_cache::force_add_with_dialogue( const enchantment &rhs, const const
     for( const std::pair<const bodypart_str_id, dbl_or_var> &pair_values :
          rhs.encumbrance_values_multiply ) {
         encumbrance_values_multiply[pair_values.first] += pair_values.second.evaluate( d );
+    }
+
+    for( const std::pair<const bodypart_str_id, dbl_or_var> &pair_values :
+         rhs.max_hp_values_add ) {
+        max_hp_values_add[pair_values.first] += pair_values.second.evaluate( d );
+    }
+    for( const std::pair<const bodypart_str_id, dbl_or_var> &pair_values :
+         rhs.max_hp_values_multiply ) {
+        max_hp_values_multiply[pair_values.first] += pair_values.second.evaluate( d );
+    }
+
+    for( const enchantment::limb_score_mod_bp &mod : rhs.limb_score_mods ) {
+        if( mod.part.is_null() ) {
+            limb_score_add[mod.score] += mod.add.evaluate( d );
+            limb_score_multiply[mod.score] += mod.mult.evaluate( d );
+        } else {
+            limb_score_bp_add[std::make_pair( mod.part, mod.score )] += mod.add.evaluate( d );
+            limb_score_bp_multiply[std::make_pair( mod.part, mod.score )] += mod.mult.evaluate( d );
+        }
     }
 
     for( const std::pair<const damage_type_id, dbl_or_var> &pair_values :
@@ -1221,6 +1380,24 @@ int enchant_cache::get_extra_damage_add( const damage_type_id &value ) const
     return get_value<damage_type_id>( value, extra_damage_add );
 }
 
+int enchant_cache::get_max_hp_add( const bodypart_str_id &value ) const
+{
+    return get_value<bodypart_str_id>( value,
+                                       max_hp_values_add ) + get_value<bodypart_str_id>( body_part_all, max_hp_values_add );
+}
+
+double enchant_cache::get_limb_score_add( const limb_score_id &score ) const
+{
+    return get_value<limb_score_id>( score, limb_score_add );
+}
+
+double enchant_cache::get_limb_score_bp_add( const bodypart_str_id &bp,
+        const limb_score_id &score ) const
+{
+    return get_value<std::pair<bodypart_str_id, limb_score_id>>( std::make_pair( bp, score ),
+            limb_score_bp_add );
+}
+
 double enchant_cache::get_value_multiply( const enchant_vals::mod value ) const
 {
     return get_value<enchant_vals::mod>( value, values_multiply );
@@ -1256,6 +1433,25 @@ double enchant_cache::get_armor_multiply( const damage_type_id &value ) const
 double enchant_cache::get_extra_damage_multiply( const damage_type_id &value ) const
 {
     return get_value<damage_type_id>( value, extra_damage_multiply );
+}
+
+double enchant_cache::get_max_hp_multiply( const bodypart_str_id &value ) const
+{
+    return get_value<bodypart_str_id>( value,
+                                       max_hp_values_multiply ) + get_value<bodypart_str_id>( body_part_all,
+                                               max_hp_values_multiply );
+}
+
+double enchant_cache::get_limb_score_multiply( const limb_score_id &score ) const
+{
+    return get_value<limb_score_id>( score, limb_score_multiply );
+}
+
+double enchant_cache::get_limb_score_bp_multiply( const bodypart_str_id &bp,
+        const limb_score_id &score ) const
+{
+    return get_value<std::pair<bodypart_str_id, limb_score_id>>( std::make_pair( bp, score ),
+            limb_score_bp_multiply );
 }
 
 enchant_cache::special_vision enchant_cache::get_vision( const const_dialogue &d ) const
@@ -1547,6 +1743,12 @@ void enchant_cache::clear()
     armor_values_multiply.clear();
     encumbrance_values_add.clear();
     encumbrance_values_multiply.clear();
+    max_hp_values_add.clear();
+    max_hp_values_multiply.clear();
+    limb_score_add.clear();
+    limb_score_multiply.clear();
+    limb_score_bp_add.clear();
+    limb_score_bp_multiply.clear();
     extra_damage_add.clear();
     extra_damage_multiply.clear();
     special_vision_vector.clear();

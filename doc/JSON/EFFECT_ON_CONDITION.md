@@ -3283,6 +3283,34 @@ Removes all scratch and deep_scratch wounds from bodypart alpha talker picks fro
   }
 ```
 
+#### `u_recalculate_enchantment_cache`, `npc_recalculate_enchantment_cache`
+
+Forces the talker to recalculate its enchantment cache.  Enchantment values written as math expressions or variables (for example in `max_hp_modifier` or `limb_score_modifier`) are only evaluated when the cache is recalculated; use this effect after changing a variable those expressions depend on.  Side effects include recalculating body parts (if any active enchantment modifies them), stamina cap and HP.
+
+| Syntax | Optionality | Value  | Info |
+| --- | --- | --- | --- |
+| "u_recalculate_enchantment_cache", "npc_recalculate_enchantment_cache" | **mandatory** | any | the value is ignored |
+
+##### Valid talkers:
+
+| Avatar | NPC | Monster | Furniture | Item | Vehicle |
+| ------ | --- | ---- | ------- | --- | ---- |
+| ✔️ | ✔️ | ❌ | ❌ | ❌ | ❌ |
+
+##### Examples
+
+Refresh enchantment values after raising the custom variable that scales a new limb's max HP
+```jsonc
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_LIMB_GROWTH",
+    "effect": [
+      { "math": [ "u_limb_power", "+=", "1" ] },
+      { "u_recalculate_enchantment_cache": true }
+    ]
+  }
+```
+
 #### `u_deal_damage`, `npc_deal_damage`
 
 Deal damage, the same way melee attack deals damage; it can't be dodged, but it can be mitigated by armor

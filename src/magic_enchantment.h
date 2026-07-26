@@ -265,6 +265,20 @@ class enchantment
         std::map<bodypart_str_id, dbl_or_var> encumbrance_values_add; // NOLINT(cata-serialize)
         std::map<bodypart_str_id, dbl_or_var> encumbrance_values_multiply; // NOLINT(cata-serialize)
 
+        // per-bodypart maximum HP modifiers, keyed by bodypart ("all" acts as a wildcard)
+        std::map<bodypart_str_id, dbl_or_var> max_hp_values_add; // NOLINT(cata-serialize)
+        std::map<bodypart_str_id, dbl_or_var> max_hp_values_multiply; // NOLINT(cata-serialize)
+
+        // a single limb score modifier entry; a NULL_ID part means the modifier is global
+        struct limb_score_mod_bp {
+            limb_score_id score;
+            bodypart_str_id part;
+            dbl_or_var add;
+            dbl_or_var mult;
+        };
+        // limb score modifiers, optionally restricted to a single bodypart
+        std::vector<limb_score_mod_bp> limb_score_mods; // NOLINT(cata-serialize)
+
         std::map<damage_type_id, dbl_or_var> damage_values_add; // NOLINT(cata-serialize)
         std::map<damage_type_id, dbl_or_var> damage_values_multiply; // NOLINT(cata-serialize)
 
@@ -363,6 +377,14 @@ class enchant_cache : public enchantment
         double get_armor_multiply( const damage_type_id &value ) const;
         double get_encumbrance_multiply( const bodypart_str_id &value ) const;
         double get_extra_damage_multiply( const damage_type_id &value ) const;
+        int get_max_hp_add( const bodypart_str_id &value ) const;
+        double get_max_hp_multiply( const bodypart_str_id &value ) const;
+        // global limb score modifiers (apply to the final aggregated score)
+        double get_limb_score_add( const limb_score_id &score ) const;
+        double get_limb_score_multiply( const limb_score_id &score ) const;
+        // per-bodypart limb score modifiers (apply to that part's contribution)
+        double get_limb_score_bp_add( const bodypart_str_id &bp, const limb_score_id &score ) const;
+        double get_limb_score_bp_multiply( const bodypart_str_id &bp, const limb_score_id &score ) const;
         int skill_mult_bonus( const skill_id &value_type, int base_value ) const;
         // attempts to add two like enchantments together.
         // if their conditions don't match, return false. else true.
@@ -438,6 +460,15 @@ class enchant_cache : public enchantment
 
         std::map<bodypart_str_id, double> encumbrance_values_add; // NOLINT(cata-serialize)
         std::map<bodypart_str_id, double> encumbrance_values_multiply; // NOLINT(cata-serialize)
+
+        std::map<bodypart_str_id, double> max_hp_values_add; // NOLINT(cata-serialize)
+        std::map<bodypart_str_id, double> max_hp_values_multiply; // NOLINT(cata-serialize)
+
+        std::map<limb_score_id, double> limb_score_add; // NOLINT(cata-serialize)
+        std::map<limb_score_id, double> limb_score_multiply; // NOLINT(cata-serialize)
+        std::map<std::pair<bodypart_str_id, limb_score_id>, double> limb_score_bp_add; // NOLINT(cata-serialize)
+        // NOLINTNEXTLINE(cata-serialize)
+        std::map<std::pair<bodypart_str_id, limb_score_id>, double> limb_score_bp_multiply;
 
         std::map<damage_type_id, double> damage_values_add; // NOLINT(cata-serialize)
         std::map<damage_type_id, double> damage_values_multiply; // NOLINT(cata-serialize)

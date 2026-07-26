@@ -5260,6 +5260,36 @@
   },
   {
     "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "id": "test_MAX_HP_BP_ench_item",
+    "copy-from": "test_item_ench",
+    "name": "test_MAX_HP_BP_ench_item",
+    "passive_effects": [
+      {
+        "max_hp_modifier": [
+          { "part": "arm_l", "add": 20 },
+          { "part": "leg_r", "multiply": 0.5 }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "id": "test_LIMB_SCORE_ench_item",
+    "copy-from": "test_item_ench",
+    "name": "test_LIMB_SCORE_ench_item",
+    "passive_effects": [
+      {
+        "limb_score_modifier": [
+          { "score": "lift", "part": "arm_l", "multiply": 1.0 },
+          { "score": "balance", "add": 0.5 }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "ITEM",
     "id": "test_rock_cheese",
     "category": "spare_parts",
     "symbol": ",",

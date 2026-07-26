@@ -14,6 +14,7 @@
 #include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "generic_factory.h"
+#include "magic_enchantment.h"
 #include "messages.h"
 #include "move_mode.h"
 #include "output.h"
@@ -210,8 +211,13 @@ float Character::manipulator_score( const std::map<bodypart_str_id, bodypart> &b
                     }
                 }
             }
-            total = std::min( total + id.first.get_limb_score( *this, limb_score_manip, -1, override_encumb,
-                              override_wounds ) * id.second * local_mul,
+            // per-bodypart limb score modifiers from enchantments
+            float part_score = id.first.get_limb_score( *this, limb_score_manip, -1, override_encumb,
+                               override_wounds );
+            part_score = part_score * ( 1.0f + enchantment_cache->get_limb_score_bp_multiply(
+                                            id.first.get_id().id(), limb_score_manip ) ) +
+                         enchantment_cache->get_limb_score_bp_add( id.first.get_id().id(), limb_score_manip );
+            total = std::min( total + part_score * id.second * local_mul,
                               id.first.get_limb_score_max( limb_score_manip ) * local_mul * id.second );
         }
         add_msg_debug( debugmode::DF_CHARACTER,
@@ -224,7 +230,11 @@ float Character::manipulator_score( const std::map<bodypart_str_id, bodypart> &b
     if( score_groups_max == score_groups.end() ) {
         return 0.0f;
     } else {
-        return std::max( 0.0f, *score_groups_max );
+        // global limb score modifiers from enchantments
+        const float modified = *score_groups_max * ( 1.0f +
+                               enchantment_cache->get_limb_score_multiply( limb_score_manip ) ) +
+                               enchantment_cache->get_limb_score_add( limb_score_manip );
+        return std::max( 0.0f, modified );
     }
 }
 
@@ -254,6 +264,9 @@ float Character::get_limb_score( const limb_score_id &score, const bp_type &bp,
             mod = id.second.get_limb_score( *this, score, skill, override_encumb,
                                             override_wounds ) * id.first->limbtypes.at( bp );
         }
+        // per-bodypart limb score modifiers from enchantments
+        mod = mod * ( 1.0f + enchantment_cache->get_limb_score_bp_multiply( id.first, score ) ) +
+              enchantment_cache->get_limb_score_bp_add( id.first, score );
         if( cache_flag_EFFECT_LIMB_SCORE_MOD_LOCAL ) {
             for( const effect &local : get_effects_from_bp( id.first ) ) {
                 float local_mul = 1.0f;
@@ -272,6 +285,9 @@ float Character::get_limb_score( const limb_score_id &score, const bp_type &bp,
         }
         total += mod;
     }
+    // global limb score modifiers from enchantments
+    total = total * ( 1.0f + enchantment_cache->get_limb_score_multiply( score ) ) +
+            enchantment_cache->get_limb_score_add( score );
     return std::max( 0.0f, total * effect_mul );
 }
 
