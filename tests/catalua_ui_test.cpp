@@ -3,7 +3,10 @@
 #include "calendar.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
+#include "catalua_ui_i18n.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_navigation.h"
+#include "catalua_ui_navigation_internal.h"
 #include "catalua_ui_renderer.h"
 #include "catalua_ui_state.h"
 #include "event_bus.h"
@@ -12,6 +15,7 @@
 #include "path_info.h"
 #include "ui_profile.h"
 #include "weather.h"
+#include "worldfactory.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -24,6 +28,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -291,8 +296,11 @@ class scoped_lua_user_script
 class scoped_lua_state_file
 {
     public:
-        scoped_lua_state_file() : path_( ( PATH_INFO::player_base_save_path() +
-                                               ".lua_ui.json" ).get_unrelative_path() ) {
+        scoped_lua_state_file() : scoped_lua_state_file(
+                ( PATH_INFO::player_base_save_path() +
+                  ".lua_ui.json" ).get_unrelative_path() ) {}
+
+        explicit scoped_lua_state_file( fs::path path ) : path_( std::move( path ) ) {
             if( fs::exists( path_ ) ) {
                 std::ifstream input( path_, std::ios::binary );
                 previous_ = std::string( std::istreambuf_iterator<char>( input ),
@@ -326,6 +334,18 @@ class scoped_lua_state_file
 
         bool exists() const {
             return fs::exists( path_ );
+        }
+
+        std::string read() const {
+            std::ifstream input( path_, std::ios::binary );
+            const std::string result{
+                std::istreambuf_iterator<char>( input ),
+                std::istreambuf_iterator<char>()
+            };
+            if( !input ) {
+                throw std::runtime_error( "Unable to read Lua state test file" );
+            }
+            return result;
         }
 
     private:
@@ -610,6 +630,144 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
     })json" ) ) );
 }
 
+TEST_CASE( "lua_i18n_api_returns_owned_translations_and_validates_plural_counts",
+           "[lua][ui][i18n]" )
+{
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    cata::lua_ui::install_i18n_api( lua );
+
+    const sol::table i18n = lua["i18n"];
+    REQUIRE( i18n.valid() );
+
+    sol::protected_function gettext = i18n["gettext"];
+    sol::protected_function_result translated = gettext( "Lua UI test message" );
+    REQUIRE( translated.valid() );
+    CHECK_FALSE( translated.get<std::string>().empty() );
+
+    sol::protected_function pgettext = i18n["pgettext"];
+    translated = pgettext( "Lua UI test context", "Lua UI contextual message" );
+    REQUIRE( translated.valid() );
+    CHECK_FALSE( translated.get<std::string>().empty() );
+
+    sol::protected_function ngettext = i18n["ngettext"];
+    translated = ngettext( "Lua UI item", "Lua UI items", std::int64_t{ 2 } );
+    REQUIRE( translated.valid() );
+    CHECK_FALSE( translated.get<std::string>().empty() );
+
+    const sol::protected_function_result invalid_plural =
+        ngettext( "Lua UI item", "Lua UI items", std::int64_t{ -1 } );
+    REQUIRE_FALSE( invalid_plural.valid() );
+    const sol::error plural_error = invalid_plural;
+    CHECK( std::string( plural_error.what() ).find( "cannot be negative" ) !=
+           std::string::npos );
+
+    sol::protected_function language_revision = i18n["language_revision"];
+    const sol::protected_function_result revision = language_revision();
+    REQUIRE( revision.valid() );
+    CHECK( revision.get<int>() >= 0 );
+}
+
+TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
+           "[lua][ui][navigation]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_navigation_requests();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::table );
+    sol::table ui = lua.create_named_table( "ui" );
+    bool authorized = false;
+    bool callback_active = false;
+    install_navigation_api(
+        ui,
+    [&authorized]() {
+        if( !authorized ) {
+            throw std::runtime_error( "navigation capability denied" );
+        }
+    },
+    [&callback_active]() {
+        return callback_active;
+    },
+    []( const std::string & page_id ) {
+        return page_id == "target";
+    } );
+
+    sol::protected_function open = ui["open"];
+    sol::protected_function_result result = open( "target" );
+    CHECK_FALSE( result.valid() );
+    CHECK( pending_navigation_request_count() == 0 );
+
+    authorized = true;
+    result = open( "target" );
+    CHECK_FALSE( result.valid() );
+    const sol::error inactive_error = result;
+    CHECK( std::string( inactive_error.what() ).find( "active callback" ) !=
+           std::string::npos );
+
+    callback_active = true;
+    sol::table parameters = lua.create_table();
+    parameters["boolean"] = true;
+    parameters["integer"] = static_cast<lua_Integer>( 5000000000LL );
+    parameters["float"] = 1.25;
+    parameters["string"] = "typed";
+    result = open( "target", parameters );
+    REQUIRE( result.valid() );
+    REQUIRE( pending_navigation_request_count() == 1 );
+
+    const std::optional<navigation_request> request = take_navigation_request();
+    REQUIRE( request );
+    CHECK( request->type == navigation_request_type::open_page );
+    CHECK( request->page_id == "target" );
+    CHECK( std::get<bool>( request->parameters.at( "boolean" ) ) );
+    CHECK( std::get<std::int64_t>( request->parameters.at( "integer" ) ) ==
+           5000000000LL );
+    CHECK( std::get<double>( request->parameters.at( "float" ) ) == 1.25 );
+    CHECK( std::get<std::string>( request->parameters.at( "string" ) ) ==
+           "typed" );
+
+    SECTION( "unknown pages and unsupported values are rejected before enqueue" ) {
+        result = open( "missing" );
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 0 );
+
+        sol::table invalid = lua.create_table();
+        invalid["nested"] = lua.create_table();
+        result = open( "target", invalid );
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 0 );
+
+        invalid = lua.create_table();
+        invalid["infinite"] = std::numeric_limits<double>::infinity();
+        result = open( "target", invalid );
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 0 );
+
+        invalid = lua.create_table();
+        for( int index = 0; index < 5; ++index ) {
+            invalid["value_" + std::to_string( index )] =
+                std::string( 4096, 'x' );
+        }
+        result = open( "target", invalid );
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 0 );
+    }
+
+    SECTION( "the pending queue has a hard upper bound" ) {
+        sol::protected_function back = ui["back"];
+        for( int index = 0; index < 16; ++index ) {
+            result = back();
+            REQUIRE( result.valid() );
+        }
+        CHECK( pending_navigation_request_count() == 16 );
+        result = back();
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 16 );
+    }
+
+    clear_navigation_requests();
+}
+
 TEST_CASE( "lua_persistent_state_codec_is_typed_and_bounded", "[lua][ui][state]" )
 {
     using namespace cata::lua_ui;
@@ -720,6 +878,60 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v3", "[lua][ui][integration]" )
     CHECK( stopped.last_error.empty() );
 }
 
+TEST_CASE( "lua_event_callbacks_can_request_safe_page_navigation",
+           "[lua][ui][navigation][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "3.0.0",
+        "api_version": 3,
+        "capabilities": [ "ui.pages", "events" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+ui.page("navigation_target", "Navigation target", function(ctx, params)
+    ctx:text(params.label or "missing")
+end)
+
+local top_level_ok, top_level_error = pcall(function()
+    ui.open("navigation_target")
+end)
+assert(top_level_ok == false)
+assert(string.find(top_level_error, "active callback", 1, true) ~= nil)
+
+events.on("game_begin", function(event)
+    ui.open("navigation_target", {
+        integer = 42,
+        float = 1.25,
+        label = event.data.cdda_version
+    })
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    CHECK( pending_navigation_request_count() == 0 );
+    get_event_bus().send<event_type::game_begin>( "navigation-event" );
+    REQUIRE( pending_navigation_request_count() == 1 );
+
+    const std::optional<navigation_request> request = take_navigation_request();
+    REQUIRE( request );
+    CHECK( request->type == navigation_request_type::open_page );
+    CHECK( request->page_id == "navigation_target" );
+    CHECK( std::get<std::int64_t>( request->parameters.at( "integer" ) ) == 42 );
+    CHECK( std::get<double>( request->parameters.at( "float" ) ) == 1.25 );
+    CHECK( std::get<std::string>( request->parameters.at( "label" ) ) ==
+           "navigation-event" );
+
+    get_event_bus().send<event_type::game_begin>( "queued-before-shutdown" );
+    REQUIRE( pending_navigation_request_count() == 1 );
+    shutdown();
+    CHECK( pending_navigation_request_count() == 0 );
+}
+
 TEST_CASE( "lua_capabilities_follow_the_registering_source_into_callbacks",
            "[lua][ui][manifest][integration]" )
 {
@@ -741,6 +953,9 @@ assert(read_ok == false)
 assert(string.find(read_error, "game.read", 1, true) ~= nil)
 assert(pcall(function() game.actions.status() end) == false)
 assert(pcall(function() game.state_set("forbidden", true) end) == false)
+assert(pcall(function() state.character.set("forbidden", true) end) == false)
+assert(pcall(function() state.world.set("forbidden", true) end) == false)
+assert(pcall(function() state.page.set("forbidden", true) end) == false)
 assert(pcall(function()
     ui.hud("forbidden", {}, function(ctx) end)
 end) == false)
@@ -1310,6 +1525,107 @@ assert(game.state_get("persist.string", "default") == "default")
     const cata::lua_ui::runtime_status recovered = cata::lua_ui::status();
     CHECK( recovered.loaded );
     CHECK( recovered.last_error.find( "state load failed" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v3_state_scopes_are_namespaced_transactional_and_persistent",
+           "[lua][ui][state][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    REQUIRE( world_generator );
+    REQUIRE( world_generator->active_world != nullptr );
+    scoped_lua_state_file character_file;
+    scoped_lua_state_file world_file(
+        ( world_generator->active_world->folder_path() /
+          "lua_ui_world.json" ).get_unrelative_path() );
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "3.0.0",
+        "api_version": 3,
+        "capabilities": [
+            "ui.pages",
+            "events",
+            "state.character",
+            "state.world",
+            "state.page"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.state_set("shared", "v2 compatibility")
+state.character.set("shared", "character")
+state.world.set("shared", "world")
+state.character.set("integer", 5000000000)
+state.world.set("float", 1.25)
+
+local page_ok, page_error = pcall(function()
+    state.page.get("outside", "missing")
+end)
+assert(page_ok == false)
+assert(string.find(page_error, "only available while drawing a page", 1, true) ~= nil)
+
+ui.page("state_scope_page", "State scope page", function(ctx)
+    local draws = state.page.get("draws", 0)
+    state.page.set("draws", draws + 1)
+    ctx:text("state")
+end)
+
+events.on("game_begin", function(event)
+    assert(pcall(function()
+        state.page.set("outside_event", true)
+    end) == false)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "state-scope-test" );
+    REQUIRE( save_persistent_state( error ) );
+    CHECK( error.empty() );
+    REQUIRE( character_file.exists() );
+    REQUIRE( world_file.exists() );
+
+    const std::string character_json = character_file.read();
+    CHECK( character_json.find( "\"shared\"" ) != std::string::npos );
+    CHECK( character_json.find( "v3:character:4:user:shared" ) !=
+           std::string::npos );
+    CHECK( character_json.find( "v2 compatibility" ) != std::string::npos );
+    CHECK( character_json.find( "\"character\"" ) != std::string::npos );
+    const std::string world_json = world_file.read();
+    CHECK( world_json.find( "v3:world:4:user:shared" ) != std::string::npos );
+    CHECK( world_json.find( "\"world\"" ) != std::string::npos );
+
+    shutdown();
+    script.write( R"lua(
+assert(game.state_get("shared", "missing") == "v2 compatibility")
+assert(state.character.get("shared", "missing") == "character")
+assert(state.world.get("shared", "missing") == "world")
+assert(state.character.get("integer", 0) == 5000000000)
+assert(math.type(state.character.get("integer", 0)) == "integer")
+assert(state.world.get("float", 0.0) == 1.25)
+assert(math.type(state.world.get("float", 0.0)) == "float")
+)lua" );
+    on_world_ready();
+    REQUIRE( status().loaded );
+    CHECK( status().last_error.empty() );
+
+    script.write( R"lua(
+assert(state.character.get("shared", "missing") == "character")
+assert(state.world.get("shared", "missing") == "world")
+state.character.set("shared", "candidate character")
+state.world.set("shared", "candidate world")
+error("expected scoped-state transaction failure")
+)lua" );
+    CHECK_FALSE( reload_scripts( error ) );
+    CHECK( error.find( "expected scoped-state transaction failure" ) !=
+           std::string::npos );
+
+    script.write( R"lua(
+assert(state.character.get("shared", "missing") == "character")
+assert(state.world.get("shared", "missing") == "world")
+)lua" );
+    REQUIRE( reload_scripts( error ) );
 }
 
 TEST_CASE( "lua_event_payloads_are_typed_and_callbacks_are_isolated", "[lua][ui][integration]" )
