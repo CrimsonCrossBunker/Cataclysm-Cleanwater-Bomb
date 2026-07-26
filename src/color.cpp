@@ -839,7 +839,7 @@ static void draw_header( const catacurses::window &w )
     wnoutrefresh( w );
 }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 namespace
 {
 struct adaptive_color_row {
@@ -1132,7 +1132,7 @@ class adaptive_color_ui : public cataimgui::window
 
 void color_manager::show_gui()
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     show_gui_imgui();
     return;
 #endif
@@ -1391,7 +1391,7 @@ void color_manager::show_gui()
     }
 }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 void color_manager::show_gui_imgui()
 {
     enum class picker_kind : int {

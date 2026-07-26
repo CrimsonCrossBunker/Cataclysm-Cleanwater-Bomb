@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "achievement.h"
-#if defined(TILES)
+#if defined(__ANDROID__)
     #include "adaptive_character_creator.h"
     #include "adaptive_imgui_dialog.h"
 #endif
@@ -1502,7 +1502,7 @@ std::string get_character_stat_header( int selected_stat_index )
 
 const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait )
 {
-#if !defined(TILES)
+#if !defined(__ANDROID__)
     // Because the keys will change on each loop if I clear the entries, and
     // if I don't clear the entries, the menu bugs out
     static std::array<int, 60> keys = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -1524,7 +1524,7 @@ const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait 
         variants.emplace_back( &pr.second );
     }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     std::vector<adaptive_imgui_dialog::entry> entries;
     entries.reserve( variants.size() + 1 );
     entries.push_back( { ret != nullptr ? _( "Unselect" ) : _( "Unselected" ),
@@ -3107,7 +3107,7 @@ void character_creator_ui_impl::draw_top_bar( const avatar &u ) const
                                       ui_parent->get_current_tab_input().get_desc( "HELP_KEYBINDINGS" ) ) );
 }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 namespace
 {
 
@@ -3254,12 +3254,12 @@ adaptive_character_creator_snapshot make_adaptive_character_creator_snapshot(
 }
 
 } // namespace
-#endif // TILES
+#endif // __ANDROID__
 
 bool character_creator_ui::display()
 {
     cc_uistate.reset();
-#if !defined(TILES)
+#if !defined(__ANDROID__)
     character_creator_ui_impl ccui( this );
 #endif
 
@@ -3279,7 +3279,7 @@ bool character_creator_ui::display()
     // set first tab
     upon_switching_tab();
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     // Register the adaptive Tiles window only after character data is initialized. Scenario sorting can
     // load historical achievements and trigger a nested redraw; registering before that point
     // would expose partially built selection vectors to the view.
@@ -3296,11 +3296,11 @@ bool character_creator_ui::display()
         input_context &current_tab_input = get_current_tab_input();
         input_context::scoped_activation active_tab_context( current_tab_input );
 
-#if defined(TILES)
+#if defined(__ANDROID__)
         ccui->set_snapshot( make_adaptive_character_creator_snapshot( *this ) );
 #endif
         ui_manager::redraw();
-#if defined(TILES)
+#if defined(__ANDROID__)
         while( const std::optional<adaptive_character_creator_action> mobile_action =
                    ccui->take_action() ) {
             // Model actions may synchronously open another UI or load persistent data.  Publish a
@@ -3362,7 +3362,7 @@ bool character_creator_ui::display()
         }
 #endif
         if( !cc_uistate.top_bar_button_action.empty() ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
             ccui->show_loading();
 #endif
             handle_action( cc_uistate.top_bar_button_action );
@@ -3819,7 +3819,7 @@ void character_creator_uistate::reset()
     finished_character_creator = false;
 }
 
-#if !defined(TILES)
+#if !defined(__ANDROID__)
 static int choose_location( const avatar &you )
 {
     uilist select_location;
@@ -3877,7 +3877,7 @@ bool character_creator_ui::handle_action( const std::string &action )
 
     const auto confirm_character_action = []( const std::string & title,
     const std::string & message, const std::string & confirm_label, const bool danger ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
         return adaptive_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ), danger );
 #else
         ( void )title;
@@ -3998,7 +3998,7 @@ bool character_creator_ui::handle_action( const std::string &action )
             return std::tie( a.population, a.name ) > std::tie( b.population, b.name );
         };
         std::sort( cities.begin(), cities.end(), cities_cmp_population );
-#if defined(TILES)
+#if defined(__ANDROID__)
         std::vector<adaptive_imgui_dialog::entry> city_entries;
         city_entries.reserve( cities.size() + 1 );
         city_entries.push_back( { _( "Random" ), _( "Let the game choose a starting city." ),
@@ -4034,7 +4034,7 @@ bool character_creator_ui::handle_action( const std::string &action )
         }
 #endif
     } else if( action == "CHOOSE_LOCATION" ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
         std::vector<adaptive_imgui_dialog::entry> location_entries;
         std::vector<int> location_ids;
         location_entries.push_back( { _( "Random location" ),

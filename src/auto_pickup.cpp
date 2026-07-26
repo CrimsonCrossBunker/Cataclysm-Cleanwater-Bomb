@@ -18,7 +18,7 @@
 #if defined(__ANDROID__)
     #include "android_native_ui.h"
 #endif
-#if defined(TILES)
+#if defined(__ANDROID__)
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
 #endif
@@ -60,7 +60,7 @@
 
 using namespace auto_pickup;
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 namespace
 {
 struct adaptive_auto_pickup_row {
@@ -598,7 +598,7 @@ void user_interface::show()
         return;
     }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     show_imgui();
     return;
 #endif
@@ -859,7 +859,7 @@ void user_interface::show()
     }
 }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 void user_interface::show_imgui()
 {
     size_t selected_tab = 0;

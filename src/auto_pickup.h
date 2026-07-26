@@ -94,7 +94,7 @@ class user_interface
         std::vector<tab> tabs;
 
         void show();
-#if defined(TILES)
+#if defined(__ANDROID__)
         void show_imgui();
 #endif
 

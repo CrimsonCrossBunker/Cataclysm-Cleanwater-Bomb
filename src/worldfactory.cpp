@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <utility>
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     #include "adaptive_imgui_dialog.h"
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
@@ -57,7 +57,7 @@ std::unique_ptr<worldfactory> world_generator;
   */
 static const int max_worldname_len = 32;
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 namespace
 {
 
@@ -1026,7 +1026,7 @@ static std::optional<std::string> prompt_world_name( const std::string &title,
 
 int worldfactory::show_worldgen_advanced( WORLD *world )
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     const int width = std::max( FULL_SCREEN_WIDTH, TERMX / 2 );
     const int offset_x = TERMX > FULL_SCREEN_WIDTH ? ( TERMX - width ) / 2 : 0;
     const catacurses::window bridge = catacurses::newwin( TERMY, width, point( offset_x, 0 ) );
@@ -1320,7 +1320,7 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
         return get_world( world_names[0] );
     }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     std::vector<adaptive_imgui_dialog::entry> entries;
     entries.reserve( world_names.size() );
     for( const std::string &name : world_names ) {
@@ -1768,7 +1768,7 @@ std::map<int, inclusive_rectangle<point>> worldfactory::draw_mod_list( const cat
 
 void worldfactory::show_active_world_mods( const std::vector<mod_id> &world_mods )
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     adaptive_mod_imgui viewer;
     input_context imgui_ctxt( "DEFAULT" );
     imgui_ctxt.register_action( "QUIT" );
@@ -1894,7 +1894,7 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
         }
     }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     struct adaptive_mod_tab_data {
         std::string id;
         std::vector<mod_id> mods;
@@ -2614,7 +2614,7 @@ static std::string get_opt_slider( int width, int current, int max, bool no_colo
 
 int worldfactory::show_worldgen_basic( WORLD *world )
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     {
         std::vector<option_slider_id> adaptive_sliders;
         std::vector<int> adaptive_levels;

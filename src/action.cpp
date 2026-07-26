@@ -812,7 +812,7 @@ action_id handle_interact( map &here, const tripoint_bub_ms &pos )
     return static_cast<action_id>( selected );
 }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 static bool dangerous_menu_action( const int action )
 {
     return action == ACTION_QUICKLOAD || action == ACTION_QUIT_TO_SNAPSHOT ||
@@ -825,7 +825,7 @@ static int query_action_menu_entries( const std::string &title,
                                       const std::string &hud_scene_id,
                                       const std::string &hud_scene_title )
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     std::vector<adaptive_imgui_dialog::entry> imgui_entries;
     imgui_entries.reserve( entries.size() );
     for( const uilist_entry &entry : entries ) {

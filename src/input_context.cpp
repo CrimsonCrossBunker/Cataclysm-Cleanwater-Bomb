@@ -50,7 +50,7 @@ enum class kb_menu_status {
     remove, reset, add, add_global, execute, show, filter
 };
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 enum class keybindings_action_type : int {
     search,
     clear_search,
@@ -89,7 +89,7 @@ class keybindings_ui : public cataimgui::window
         std::string hotkeys;
         int highlight_row_index = -1;
         int scroll_offset = 0;
-#if defined(TILES)
+#if defined(__ANDROID__)
         int imgui_selected_row = 0;
         bool imgui_dragging = false;
         ImVec2 imgui_drag_start;
@@ -99,14 +99,14 @@ class keybindings_ui : public cataimgui::window
         //std::string filter_text;
         keybindings_ui( bool permit_execute_action, input_context *parent );
         void init();
-#if defined(TILES)
+#if defined(__ANDROID__)
         std::optional<keybindings_action> take_imgui_action();
 #endif
 
     protected:
         cataimgui::bounds get_bounds() override;
         void draw_controls() override;
-#if defined(TILES)
+#if defined(__ANDROID__)
         void draw_controls_adaptive();
         bool handle_imgui_drag( const cata::ui::profile &profile );
 #endif
@@ -794,7 +794,7 @@ keybindings_ui::keybindings_ui( bool permit_execute_action,
         } } );
 }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 std::optional<keybindings_action> keybindings_ui::take_imgui_action()
 {
     if( imgui_actions.empty() ) {
@@ -808,7 +808,7 @@ std::optional<keybindings_action> keybindings_ui::take_imgui_action()
 
 cataimgui::bounds keybindings_ui::get_bounds()
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     const cata::ui::profile profile = cata::ui::current_profile();
     return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
            cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
@@ -819,7 +819,7 @@ cataimgui::bounds keybindings_ui::get_bounds()
 
 void keybindings_ui::draw_controls()
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     draw_controls_adaptive();
     return;
 #endif
@@ -943,7 +943,7 @@ void keybindings_ui::draw_controls()
     last_status = status;
 }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 bool keybindings_ui::handle_imgui_drag( const cata::ui::profile &profile )
 {
     if( !profile.allow_swipe ) {
@@ -1357,7 +1357,7 @@ action_id input_context::display_menu( bool permit_execute_action )
     while( true ) {
         kb_menu.highlight_row_index = -1;
         ui_manager::redraw();
-#if defined(TILES)
+#if defined(__ANDROID__)
         const std::optional<keybindings_action> imgui_action = kb_menu.take_imgui_action();
         if( imgui_action ) {
             raw_input_char = 0;

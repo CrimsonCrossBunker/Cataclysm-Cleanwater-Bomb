@@ -74,7 +74,7 @@ namespace
 
 generic_factory<option_slider> option_slider_factory( "option slider" );
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 struct option_row_snapshot {
     int source_index = 0;
     bool group = false;
@@ -4485,7 +4485,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         wnoutrefresh( w_options );
     } );
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     std::unique_ptr<options_imgui_page> options_ui =
         std::make_unique<options_imgui_page>();
     const auto make_options_snapshot = [&]() {
@@ -4546,7 +4546,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
 #endif
 
     while( true ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
         if( options_ui ) {
             options_ui->set_snapshot( make_options_snapshot() );
         }
@@ -4556,7 +4556,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         recalc_startpos = false;
         std::string action;
         std::optional<int> imgui_row_target;
-#if defined(TILES)
+#if defined(__ANDROID__)
         if( options_ui ) {
             const std::optional<options_action> ui_action = options_ui->take_action();
             if( ui_action ) {

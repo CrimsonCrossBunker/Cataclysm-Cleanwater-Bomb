@@ -16,7 +16,7 @@
 #if defined(__ANDROID__)
     #include "android_native_ui.h"
 #endif
-#if defined(TILES)
+#if defined(__ANDROID__)
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
 #endif
@@ -49,7 +49,7 @@
 #include "ui_manager.h"
 #include "worldfactory.h"
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 namespace
 {
 struct adaptive_safemode_row {
@@ -374,7 +374,7 @@ std::string safemode::npc_type_name()
 
 void safemode::show( const std::string &custom_name_in, bool is_safemode_in )
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     show_imgui( custom_name_in, is_safemode_in );
     return;
 #endif
@@ -815,7 +815,7 @@ void safemode::show( const std::string &custom_name_in, bool is_safemode_in )
     }
 }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 void safemode::show_imgui( const std::string &custom_name, bool is_safemode )
 {
     const auto global_rules_old = global_rules;

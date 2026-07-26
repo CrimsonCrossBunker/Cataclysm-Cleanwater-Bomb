@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
 #endif
@@ -37,7 +37,7 @@
 #include "ui_profile.h"
 #include "ui_manager.h"
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 namespace
 {
 struct adaptive_help_topic {
@@ -390,7 +390,7 @@ std::string help::format_help_topic( const std::vector<translation> &messages ) 
 
 void help::display_help() const
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     std::vector<adaptive_help_topic> topics;
     topics.reserve( help_texts.size() );
     for( const auto &entry : help_texts ) {

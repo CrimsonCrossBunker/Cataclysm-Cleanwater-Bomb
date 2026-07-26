@@ -22,7 +22,7 @@
     #include <emscripten.h>
 #endif
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     #include "adaptive_imgui_dialog.h"
     #include "cata_imgui.h"
     #include "imgui/imgui.h"
@@ -94,7 +94,7 @@ enum class main_menu_opts : int {
     NUM_MENU_OPTS,
 };
 
-#if defined(TILES)
+#if defined(__ANDROID__)
 struct main_menu_snapshot {
     std::vector<std::string> primary_items;
     std::vector<std::string> secondary_items;
@@ -236,7 +236,11 @@ class main_menu_imgui : public cataimgui::window
         }
 
         void set_snapshot( main_menu_snapshot next ) {
+            if( !has_snapshot || next.selected_primary != snapshot.selected_primary ) {
+                expanded_primary = next.selected_primary;
+            }
             snapshot = std::move( next );
+            has_snapshot = true;
         }
 
         std::optional<main_menu_action> take_action() {
@@ -321,7 +325,7 @@ class main_menu_imgui : public cataimgui::window
                 if( index > 0 ) {
                     ImGui::SameLine( 0.0F, primary_gap );
                 }
-                const bool selected = static_cast<int>( index ) == expanded_primary;
+                const bool selected = static_cast<int>( index ) == snapshot.selected_primary;
                 const bool is_quit = static_cast<int>( index ) ==
                                      static_cast<int>( main_menu_opts::QUIT );
                 push_button_colors( selected, is_quit );
@@ -364,6 +368,7 @@ class main_menu_imgui : public cataimgui::window
         main_menu_snapshot snapshot;
         std::deque<main_menu_action> actions;
         int expanded_primary = -1;
+        bool has_snapshot = false;
 
         void close_submenu() {
             expanded_primary = -1;
@@ -1053,7 +1058,7 @@ void main_menu::display_text( const std::string &text, const std::string &title,
 
 void main_menu::show_text( const std::string &text, const std::string &title )
 {
-#if defined(TILES)
+#if defined(__ANDROID__)
     document_viewer viewer( title, text );
     input_context text_ctxt( "MAIN_MENU_TEXT", keyboard_mode::keychar );
     text_ctxt.register_action( "QUIT" );
@@ -1216,7 +1221,7 @@ bool main_menu::opening_screen()
         sel2 = last_world_pos;
     }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     const auto plain_menu_text = []( const std::string & text ) {
         return remove_color_tags( shortcut_text( c_white, text ) );
     };
@@ -1281,7 +1286,7 @@ bool main_menu::opening_screen()
     } );
     ui.mark_resize();
 
-#if defined(TILES)
+#if defined(__ANDROID__)
     const bool use_touch_main_menu = cata::ui::current_profile().use_touch_main_menu;
     main_menu_imgui imgui_menu;
     imgui_menu.set_visible( use_touch_main_menu );
@@ -1321,13 +1326,13 @@ bool main_menu::opening_screen()
 #endif
 
     while( !start ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
         imgui_menu.set_snapshot( make_main_menu_snapshot() );
 #endif
         ui_manager::redraw();
         std::string action;
         input_event sInput;
-#if defined(TILES)
+#if defined(__ANDROID__)
         const std::optional<main_menu_action> imgui_action = imgui_menu.take_action();
         if( imgui_action ) {
             switch( imgui_action->type ) {
@@ -1469,7 +1474,7 @@ bool main_menu::opening_screen()
         // also check special keys
         if( action == "QUIT" ) {
 #if !defined(EMSCRIPTEN)
-#if defined(TILES)
+#if defined(__ANDROID__)
             imgui_menu.set_visible( false );
             on_out_of_scope restore_imgui_menu( [&imgui_menu, use_touch_main_menu]() {
                 imgui_menu.set_visible( use_touch_main_menu );
@@ -1533,7 +1538,7 @@ bool main_menu::opening_screen()
                 on_move();
             }
         } else if( action == "CONFIRM" ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
             imgui_menu.set_visible( false );
             on_out_of_scope restore_imgui_menu( [&imgui_menu, use_touch_main_menu]() {
                 imgui_menu.set_visible( use_touch_main_menu );
@@ -1867,7 +1872,7 @@ bool main_menu::new_character_tab()
     if( sel2 == 1 ) {
         if( templates.empty() ) {
             on_error();
-#if defined(TILES)
+#if defined(__ANDROID__)
             adaptive_imgui_dialog::message( _( "Preset Character" ),
                                             _( "No templates found!" ) );
 #else
@@ -1876,7 +1881,7 @@ bool main_menu::new_character_tab()
             return false;
         }
         while( true ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
             std::vector<adaptive_imgui_dialog::entry> template_entries;
             template_entries.reserve( templates.size() );
             for( const std::string &tmpl : templates ) {
@@ -1903,7 +1908,7 @@ bool main_menu::new_character_tab()
                 return false;
             }
 
-#if defined(TILES)
+#if defined(__ANDROID__)
             const std::vector<adaptive_imgui_dialog::entry> template_actions = {
                 { _( "Load" ), _( "Create a character from this template." ), true, false },
                 { _( "Delete" ), _( "Permanently delete this template." ), true, true },
@@ -1923,7 +1928,7 @@ bool main_menu::new_character_tab()
 #endif
             bool delete_confirmed = false;
             if( res == "DELETE" ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
                 delete_confirmed = adaptive_imgui_dialog::confirm(
                                        _( "Delete template" ),
                                        string_format( _( "Are you sure you want to delete %s?" ),
@@ -1945,7 +1950,7 @@ bool main_menu::new_character_tab()
                 const cata_path template_path = PATH_INFO::templatedir_path() /
                                                 ( templates[opt_val] + ".template" );
                 if( !file_exist( template_path ) ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
                     adaptive_imgui_dialog::message(
                         _( "Preset Character" ), _( "No templates found!" ) );
 #else
@@ -2127,7 +2132,7 @@ bool main_menu::load_character_tab( const std::string &worldname )
     }
 
     int opt_val = 0;
-#if defined(TILES)
+#if defined(__ANDROID__)
     std::vector<adaptive_imgui_dialog::entry> save_entries;
     save_entries.reserve( savegames.size() );
 #else
@@ -2147,14 +2152,14 @@ bool main_menu::load_character_tab( const std::string &worldname )
             playtime_str = string_format( "<color_c_light_blue>[%02d:%02d:%02d]</color>",
                                           pt_hrs, pt_min, static_cast<int>( pt_sec ) );
         }
-#if defined(TILES)
+#if defined(__ANDROID__)
         save_entries.push_back( { save_str, remove_color_tags( playtime_str ), true, false } );
 #else
         // TODO: Replace this API to allow adding context without an empty description.
         mmenu.entries.emplace_back( opt_val++, true, MENU_AUTOASSIGN, save_str, "", playtime_str );
 #endif
     }
-#if defined(TILES)
+#if defined(__ANDROID__)
     const std::optional<int> selected_save = adaptive_imgui_dialog::select(
                 string_format( _( "Load character from \"%s\"" ), worldname ), save_entries );
     if( !selected_save ) {
@@ -2186,7 +2191,7 @@ void main_menu::world_tab( const std::string &worldname )
     }
 
     int opt_val = 0;
-#if defined(TILES)
+#if defined(__ANDROID__)
     std::vector<adaptive_imgui_dialog::entry> world_actions;
     world_actions.reserve( vWorldSubItems.size() );
     for( size_t index = 0; index < vWorldSubItems.size(); ++index ) {
@@ -2221,7 +2226,7 @@ void main_menu::world_tab( const std::string &worldname )
 
     const auto confirm_world_action = []( const std::string & title, const std::string & message,
     const std::string & confirm_label, const bool danger ) {
-#if defined(TILES)
+#if defined(__ANDROID__)
         return adaptive_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ), danger );
 #else
         ( void )title;
@@ -2303,7 +2308,7 @@ void main_menu::world_tab( const std::string &worldname )
                 break;
             }
             int char_opt = 0;
-#if defined(TILES)
+#if defined(__ANDROID__)
             std::vector<adaptive_imgui_dialog::entry> character_entries;
             character_entries.reserve( saves.size() );
             for( const save_t &s : saves ) {
@@ -2356,7 +2361,7 @@ void main_menu::world_tab( const std::string &worldname )
                 break;
             }
             int char_opt = 0;
-#if defined(TILES)
+#if defined(__ANDROID__)
             std::vector<adaptive_imgui_dialog::entry> character_entries;
             character_entries.reserve( saves.size() );
             for( const save_t &s : saves ) {
