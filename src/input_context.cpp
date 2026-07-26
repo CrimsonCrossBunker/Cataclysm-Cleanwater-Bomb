@@ -108,7 +108,7 @@ class keybindings_ui : public cataimgui::window
         void draw_controls() override;
 #if defined(TILES)
         void draw_controls_adaptive();
-        bool handle_imgui_drag();
+        bool handle_imgui_drag( const cata::ui::profile &profile );
 #endif
         void on_resized() override {
             init();
@@ -944,9 +944,9 @@ void keybindings_ui::draw_controls()
 }
 
 #if defined(TILES)
-bool keybindings_ui::handle_imgui_drag()
+bool keybindings_ui::handle_imgui_drag( const cata::ui::profile &profile )
 {
-    if( !cata::ui::current_profile().allow_swipe ) {
+    if( !profile.allow_swipe ) {
         return false;
     }
     ImGuiIO &io = ImGui::GetIO();
@@ -961,7 +961,8 @@ bool keybindings_ui::handle_imgui_drag()
     }
     const ImVec2 distance( io.MousePos.x - imgui_drag_start.x,
                            io.MousePos.y - imgui_drag_start.y );
-    const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+    const bool moved = std::hypot( distance.x, distance.y ) >
+                       profile.frame_padding_x;
     if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
         std::abs( distance.y ) > std::abs( distance.x ) ) {
         const float delta_y = io.MousePos.y - imgui_drag_last.y;
@@ -978,19 +979,27 @@ void keybindings_ui::draw_controls_adaptive()
 {
     const ImVec2 window_pos = ImGui::GetWindowPos();
     const ImVec2 window_size = ImGui::GetWindowSize();
-    const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 30.0F );
-    constexpr float footer_height = 72.0F;
+    const cata::ui::profile profile = cata::ui::current_profile();
+    const float edge_padding = std::max( profile.frame_padding_x,
+                                         profile.item_spacing_x * 1.5F );
+    const float footer_height = profile.row_wide;
     ImGui::GetWindowDrawList()->AddRectFilled(
         window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
         IM_COL32( 6, 9, 12, 255 ) );
-    const bool large_font = cata::ui::current_profile().is_touch();
-    if( large_font ) {
-        cataimgui::PushGuiFont1_5x();
+    const bool scaled_font = profile.text_scale != 1.0F;
+    if( scaled_font ) {
+        cataimgui::PushGuiFontScaled( profile.text_scale );
     }
-    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 7.0F, 7.0F ) );
-    ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_FramePadding,
+        ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_ItemSpacing,
+        ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_WindowPadding,
+        ImVec2( edge_padding, profile.frame_padding_y * 1.5F ) );
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
     ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
     ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
@@ -1005,14 +1014,25 @@ void keybindings_ui::draw_controls_adaptive()
     const std::string filter_text = get_filter();
     const std::string search_label = filter_text.empty() ? _( "Search" ) :
                                      string_format( _( "Search: %s" ), filter_text );
-    if( ImGui::Button( search_label.c_str(), ImVec2( 620.0F, 48.0F ) ) ) {
+    const float clear_width = profile.width_compact;
+    const float search_width = std::max(
+                                   1.0F,
+                                   std::min( profile.width_wide,
+                                           ImGui::GetContentRegionAvail().x -
+                                           clear_width -
+                                           profile.item_spacing_x ) );
+    if( ImGui::Button(
+            search_label.c_str(),
+            ImVec2( search_width, profile.row_compact ) ) ) {
         imgui_actions.push_back( { keybindings_action_type::search } );
     }
     ImGui::SameLine();
     if( filter_text.empty() ) {
         ImGui::BeginDisabled();
     }
-    if( ImGui::Button( _( "Clear" ), ImVec2( 180.0F, 48.0F ) ) ) {
+    if( ImGui::Button(
+            _( "Clear" ),
+            ImVec2( clear_width, profile.row_compact ) ) ) {
         imgui_actions.push_back( { keybindings_action_type::clear_search } );
     }
     if( filter_text.empty() ) {
@@ -1030,11 +1050,12 @@ void keybindings_ui::draw_controls_adaptive()
     if( ImGui::BeginChild( "##adaptive_keybinding_rows", ImVec2( 0.0F, -footer_height ),
                            ImGuiChildFlags_Borders,
                            ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
-        const bool suppress_click = handle_imgui_drag();
+        const bool suppress_click = handle_imgui_drag( profile );
         if( ImGui::BeginTable( "##adaptive_keybinding_table", 3,
                                ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
                                ImGuiTableFlags_SizingStretchProp ) ) {
-            ImGui::TableSetupColumn( "*", ImGuiTableColumnFlags_WidthFixed, 56.0F );
+            ImGui::TableSetupColumn( "*", ImGuiTableColumnFlags_WidthFixed,
+                                     profile.minimum_target );
             ImGui::TableSetupColumn( _( "Action Name" ), ImGuiTableColumnFlags_WidthStretch, 0.56F );
             ImGui::TableSetupColumn( _( "Assigned Key(s)" ), ImGuiTableColumnFlags_WidthStretch, 0.44F );
             ImGui::TableHeadersRow();
@@ -1051,12 +1072,13 @@ void keybindings_ui::draw_controls_adaptive()
                                         attributes.input_events != basic_attributes.input_events;
                 const bool selected = static_cast<int>( index ) == imgui_selected_row;
                 ImGui::PushID( action_id.c_str() );
-                ImGui::TableNextRow( ImGuiTableRowFlags_None, 56.0F );
+                ImGui::TableNextRow( ImGuiTableRowFlags_None, profile.row_normal );
                 ImGui::TableSetColumnIndex( 0 );
                 ImGui::TextUnformatted( customized ? "*" : "" );
                 ImGui::TableSetColumnIndex( 1 );
                 if( ImGui::Selectable( ctxt->get_action_name( action_id ).c_str(), selected,
-                                       ImGuiSelectableFlags_None, ImVec2( 0.0F, 48.0F ) ) &&
+                                       ImGuiSelectableFlags_None,
+                                       ImVec2( 0.0F, profile.row_compact ) ) &&
                     !suppress_click ) {
                     imgui_selected_row = static_cast<int>( index );
                 }
@@ -1079,8 +1101,11 @@ void keybindings_ui::draw_controls_adaptive()
         }
     };
     const float width_available = ImGui::GetContentRegionAvail().x;
-    const float button_width = ( width_available - 7.0F * edit_buttons.size() ) /
-                               edit_buttons.size();
+    const float button_width = std::max(
+                                   1.0F,
+                                   ( width_available -
+                                     profile.item_spacing_x * ( edit_buttons.size() - 1 ) ) /
+                                   edit_buttons.size() );
     const bool empty = filtered_registered_actions.empty();
     for( size_t index = 0; index < edit_buttons.size(); ++index ) {
         if( index > 0 ) {
@@ -1091,7 +1116,9 @@ void keybindings_ui::draw_controls_adaptive()
         if( disabled ) {
             ImGui::BeginDisabled();
         }
-        if( ImGui::Button( edit_buttons[index].second, ImVec2( button_width, 50.0F ) ) ) {
+        if( ImGui::Button(
+                edit_buttons[index].second,
+                ImVec2( button_width, profile.row_normal ) ) ) {
             imgui_actions.push_back( { edit_buttons[index].first } );
         }
         if( disabled ) {
@@ -1100,8 +1127,8 @@ void keybindings_ui::draw_controls_adaptive()
     }
     ImGui::PopStyleColor( 6 );
     ImGui::PopStyleVar( 4 );
-    if( large_font ) {
-        cataimgui::PopGuiFont1_5x();
+    if( scaled_font ) {
+        cataimgui::PopGuiFontScaled();
     }
     last_status = status;
 }
