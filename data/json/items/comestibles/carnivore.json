@@ -11,7 +11,8 @@
     "color": "red",
     "parasites": 32,
     "vitamins": [ [ "meat_allergen", 1 ] ],
-    "flags": [ "RAW" ]
+    "flags": [ "RAW" ],
+    "stackable": true
   },
   {
     "id": "froglegs",
@@ -224,7 +225,8 @@
     "price": "1 USD",
     "price_postapoc": "10 cent",
     "volume": "40 ml",
-    "flags": [ "INEDIBLE" ]
+    "flags": [ "INEDIBLE" ],
+    "stackable": true
   },
   {
     "id": "oyster_shucked",
@@ -834,7 +836,8 @@
     "spoils_in": "1 day",
     "calories": 471,
     "fun": 5,
-    "vitamins": [ [ "iron", 17 ], [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "iron", 17 ], [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "pepperbone",
@@ -855,7 +858,8 @@
     "spoils_in": "1 day",
     "calories": 471,
     "fun": 6,
-    "vitamins": [ [ "iron", 17 ], [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "iron", 17 ], [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "offal",
@@ -1658,7 +1662,8 @@
     "volume": "25 ml",
     "parasites": 3,
     "fun": -20,
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "tallow",
@@ -1737,7 +1742,8 @@
     "fun": -10,
     "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE", "RAW" ],
     "smoking_result": "dry_meat_tainted",
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1771,7 +1777,8 @@
     "spoils_in": "2 days",
     "price": "0 cent",
     "price_postapoc": "0 cent",
-    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE", "NO_REPAIR" ]
+    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE", "NO_REPAIR" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1794,7 +1801,8 @@
     "spoils_in": "2 days",
     "price": "0 cent",
     "price_postapoc": "0 cent",
-    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE", "NO_REPAIR" ]
+    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE", "NO_REPAIR" ],
+    "stackable": true
   },
   {
     "id": "blood_tainted",
@@ -1853,7 +1861,8 @@
     "volume": "50 ml",
     "fun": -10,
     "flags": [ "TRADER_AVOID", "RAW" ],
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1888,7 +1897,8 @@
     "volume": "250 ml",
     "fun": -10,
     "flags": [ "RAW" ],
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1922,7 +1932,8 @@
     "material": [ "flesh" ],
     "volume": "62 ml",
     "fun": -18,
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1962,7 +1973,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": -3,
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1994,7 +2006,8 @@
     "material": [ "flesh" ],
     "flags": [ "TRADER_AVOID" ],
     "fun": -12,
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2064,7 +2077,8 @@
     "material": [ "fur", "flesh" ],
     "flags": [ "NO_SALVAGE", "TRADER_AVOID" ],
     "fun": -24,
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2106,7 +2120,8 @@
     "volume": "500 ml",
     "fun": -25,
     "vitamins": [ [ "mutagen_beast", 250 ], [ "meat_allergen", 1 ] ],
-    "flags": [ "PREDATOR_FUN" ]
+    "flags": [ "PREDATOR_FUN" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2126,7 +2141,8 @@
     "volume": "1 L",
     "fun": -25,
     "vitamins": [ [ "mutagen_beast", 300 ], [ "meat_allergen", 1 ] ],
-    "flags": [ "PREDATOR_FUN" ]
+    "flags": [ "PREDATOR_FUN" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2146,7 +2162,8 @@
     "use_action": [ "POISON" ],
     "volume": "250 ml",
     "fun": -30,
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2166,7 +2183,8 @@
     "fun": -30,
     "spoils_in": "1 day",
     "vitamins": [ [ "meat_allergen", 1 ] ],
-    "flags": [ "STRICT_HUMANITARIANISM" ]
+    "flags": [ "STRICT_HUMANITARIANISM" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2185,7 +2203,8 @@
     "volume": "50 ml",
     "fun": -20,
     "spoils_in": "30 days",
-    "vitamins": [ [ "vitC", 8 ], [ "calcium", 72 ], [ "iron", 231 ], [ "mutant_toxin", 110 ], [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 8 ], [ "calcium", 72 ], [ "iron", 231 ], [ "mutant_toxin", 110 ], [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "meat_frond",
@@ -2225,7 +2244,8 @@
         { "id": "badpoison", "duration": 3600 },
         { "id": "shakes", "duration": 810 }
       ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "meat_bark",
@@ -2392,7 +2412,8 @@
     "material": [ "mi-go_flesh" ],
     "volume": "250 ml",
     "fun": -10,
-    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE" ]
+    "flags": [ "TRADER_AVOID", "NUTRIENT_OVERRIDE" ],
+    "stackable": true
   },
   {
     "id": "blood_mi-go",
@@ -2426,7 +2447,8 @@
     "price_postapoc": "0 cent",
     "material": [ "mi-go_bone" ],
     "volume": "250 ml",
-    "fun": -10
+    "fun": -10,
+    "stackable": true
   },
   {
     "id": "poultry",

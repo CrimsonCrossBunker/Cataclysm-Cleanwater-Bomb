@@ -19,7 +19,8 @@
     "fun": -8,
     "flags": [ "FREEZERBURN", "RAW" ],
     "vitamins": [ [ "iron", "900 μg" ], [ "calcium", "28 mg" ], [ "egg_allergen", 1 ] ],
-    "rot_spawn": { "monster": "mon_chicken_chick", "chance": 70 }
+    "rot_spawn": { "monster": "mon_chicken_chick", "chance": 70 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -261,7 +262,8 @@
     "price_postapoc": "1 USD",
     "spoils_in": "5 days",
     "flags": [ "FREEZERBURN", "RAW", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "calcium", 7 ], [ "iron", 18 ], [ "mutant_toxin", 25 ], [ "egg_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 7 ], [ "iron", 18 ], [ "mutant_toxin", 25 ], [ "egg_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -581,7 +583,8 @@
     "volume": "250 ml",
     "vitamins": [ [ "vitC", 42 ], [ "calcium", 5 ], [ "iron", 8 ], [ "mutant_toxin", 25 ], [ "egg_allergen", 1 ] ],
     "fun": 5,
-    "flags": [ "RAW" ]
+    "flags": [ "RAW" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -602,7 +605,8 @@
     "volume": "25 ml",
     "fun": 1,
     "vitamins": [ [ "vitC", 1 ], [ "egg_allergen", 1 ] ],
-    "flags": [ "RAW" ]
+    "flags": [ "RAW" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1017,7 +1021,8 @@
     "material": [ "egg" ],
     "fun": -8,
     "vitamins": [ [ "vitC", 12 ], [ "mutant_toxin", 27 ], [ "egg_allergen", 1 ] ],
-    "flags": [ "RAW" ]
+    "flags": [ "RAW" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1048,7 +1053,8 @@
     "flags": [ "EDIBLE_FROZEN", "NO_AUTO_CONSUME" ],
     "fun": -4,
     "freezing_point": -274,
-    "vitamins": [ [ "egg_allergen", 1 ] ]
+    "vitamins": [ [ "egg_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1084,7 +1090,8 @@
     "flags": [ "EATEN_HOT", "FREEZERBURN" ],
     "fun": 3,
     "vitamins": [ [ "egg_allergen", 1 ] ],
-    "extend": { "rot_spawn": { "chance": 0 } }
+    "extend": { "rot_spawn": { "chance": 0 } },
+    "stackable": true
   },
   {
     "type": "ITEM",

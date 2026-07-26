@@ -344,13 +344,13 @@ std::optional<std::string> veh_interact::service_installation_denial( const vehi
         return _( "This part cannot be installed." );
     }
     if( vpart.has_flag( "FUNNEL" ) &&
-        std::none_of( parts_here.begin(), parts_here.end(), [&]( const int index ) {
+    std::none_of( parts_here.begin(), parts_here.end(), [&]( const int index ) {
     return veh.part( index ).is_tank();
     } ) ) {
         return _( "Funnels need to be installed over a tank." );
     }
     if( vpart.has_flag( "TURRET" ) &&
-        std::any_of( parts_here.begin(), parts_here.end(), [&]( const int index ) {
+    std::any_of( parts_here.begin(), parts_here.end(), [&]( const int index ) {
     return veh.part( index ).is_turret();
     } ) ) {
         return _( "Can't install turret on another turret." );
@@ -799,7 +799,7 @@ std::optional<veh_interact::service_selection> veh_interact::do_vehicle_service_
                 return result;
             }
         } else if( action == "REMOVE" ) {
-            part_selection_filter = [this]( const map &, const vehicle_part &part ) {
+            part_selection_filter = [this]( const map &, const vehicle_part & part ) {
                 return !service_removal_denial( *veh, veh->index_of_part( &part ) );
             };
             if( const std::optional<int> selected = select_part_at_cursor( here ) ) {
@@ -1088,7 +1088,8 @@ bool veh_interact::update_part_requirements( map &here )
     }
 
     if( vehicle_service_mode ) {
-        std::string nmsg = _( "The dealership supplies all skills, tools, lifting, and installation materials.\n" );
+        std::string nmsg =
+            _( "The dealership supplies all skills, tools, lifting, and installation materials.\n" );
         const std::optional<std::string> denial = service_installation_denial(
                     *veh, -cursor_vp_mount, *sel_vpart_info );
         if( denial ) {
@@ -3000,18 +3001,18 @@ void veh_interact::display_mode( const map &here )
                               pgettext( "veh_interact", "select part" ),
                               task_reason::CAN_DO ),
                 vehicle_service_mode ? veh_act_desc( main_context, "REPAIR",
-                                       pgettext( "veh_interact", "repair" ), task_reason::CAN_DO ) :
+                                                     pgettext( "veh_interact", "repair" ), task_reason::CAN_DO ) :
                 veh_act_desc( main_context, "QUIT", pgettext( "veh_interact", "back" ),
                               task_reason::CAN_DO ),
                 vehicle_service_mode ? veh_act_desc( main_context, "REMOVE",
-                                       pgettext( "veh_interact", "remove" ), task_reason::CAN_DO ) :
+                                                     pgettext( "veh_interact", "remove" ), task_reason::CAN_DO ) :
                 std::string(),
                 veh_act_desc( main_context, "QUIT",
                               pgettext( "veh_interact", "back" ),
                               task_reason::CAN_DO ),
             }
         };
-        std::array<int, maximum_action_count + 1> pos;
+        std::array < int, maximum_action_count + 1 > pos;
         pos[0] = 0;
         for( size_t i = 0; i < action_cnt; ++i ) {
             pos[i + 1] = pos[i] + utf8_width( actions[i], true );

@@ -19,7 +19,8 @@
     "flags": [ "EATEN_HOT" ],
     "looks_like": "bread",
     "fun": 4,
-    "vitamins": [ [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "sourdough_young_uncovered_active",
@@ -41,7 +42,8 @@
     "calories": 192,
     "countdown_interval": "6 days",
     "revert_to": "sourdough_starter_uncovered",
-    "vitamins": [ [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "sourdough_split_uncovered_active",
@@ -63,7 +65,8 @@
     "calories": 192,
     "countdown_interval": "1 day",
     "revert_to": "sourdough_starter_uncovered",
-    "vitamins": [ [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "sourdough_starter_uncovered",
@@ -83,7 +86,8 @@
     "flags": [ "SOFT" ],
     "fun": -1,
     "calories": 192,
-    "vitamins": [ [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -104,7 +108,8 @@
     "volume": "75 ml",
     "flags": [ "EATEN_HOT", "EDIBLE_FROZEN" ],
     "fun": 2,
-    "vitamins": [ [ "calcium", 5 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 5 ], [ "iron", 10 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -123,7 +128,8 @@
     "material": [ "wheat" ],
     "volume": "60 ml",
     "flags": [ "EATEN_HOT", "EDIBLE_FROZEN" ],
-    "vitamins": [ [ "calcium", 5 ], [ "iron", 12 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 5 ], [ "iron", 12 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -142,7 +148,8 @@
     "material": [ "wheat" ],
     "volume": "60 ml",
     "flags": [ "EATEN_HOT", "EDIBLE_FROZEN" ],
-    "vitamins": [ [ "calcium", 5 ], [ "iron", 12 ], [ "wheat_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 5 ], [ "iron", 12 ], [ "wheat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",

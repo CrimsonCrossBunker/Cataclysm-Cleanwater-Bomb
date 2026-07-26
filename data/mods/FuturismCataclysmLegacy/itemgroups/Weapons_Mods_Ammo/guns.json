@@ -17,36 +17,25 @@
     "id": "fcl_fusion_pellet",
     "type": "item_group",
     "subtype": "collection",
-    "items": [
-      { "item": "fcl_fusion_pellet", "charges": [ 0, 25 ] },
-      { "group": "fcl_fusion_pack" }
-    ]
+    "items": [ { "item": "fcl_fusion_pellet", "charges": [ 0, 25 ] }, { "group": "fcl_fusion_pack" } ]
   },
   {
     "id": "fcl_fusion_pack",
     "type": "item_group",
     "subtype": "collection",
-    "items": [
-      { "item": "fcl_fusion_pack", "charges": [ 0, 3 ] }
-    ]
+    "items": [ { "item": "fcl_fusion_pack", "charges": [ 0, 3 ] } ]
   },
   {
     "id": "fcl_fusion_ftk29_mag",
     "type": "item_group",
     "subtype": "collection",
-    "items": [
-      { "item": "medium_battery_cell", "charges": [ 0, 56 ] },
-      { "item": "fcl_fusion_10_mag", "charges": [ 0, 10 ] }
-    ]
+    "items": [ { "item": "medium_battery_cell", "charges": [ 0, 56 ] }, { "item": "fcl_fusion_10_mag", "charges": [ 0, 10 ] } ]
   },
   {
     "id": "fcl_fusion_ftk07_mag",
     "type": "item_group",
     "subtype": "collection",
-    "items": [
-      { "item": "heavy_battery_cell", "charges": [ 0, 259 ] },
-      { "item": "fcl_fusion_20_mag", "charges": [ 0, 20 ] }
-    ]
+    "items": [ { "item": "heavy_battery_cell", "charges": [ 0, 259 ] }, { "item": "fcl_fusion_20_mag", "charges": [ 0, 20 ] } ]
   },
   {
     "type": "item_group",

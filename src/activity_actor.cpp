@@ -3030,7 +3030,8 @@ void move_items_activity_actor::do_turn( player_activity &act, Character &who )
         // This is for hauling across zlevels, remove when going up and down stairs
         // is no longer teleportation
         const tripoint_bub_ms src = target.pos_bub( here );
-        const int distance = src.z() == dest.z() ? std::max( static_cast<int>( trig_dist( src, dest ) ), 1 ) : 1;
+        const int distance = src.z() == dest.z() ? std::max( static_cast<int>( trig_dist( src, dest ) ),
+                             1 ) : 1;
         // Yuck, I'm sticking weariness scaling based on activity level here
         const float weary_mult = who.exertion_adjusted_move_multiplier( exertion_level() );
         who.mod_moves( -Pickup::cost_to_move_item( who, newit ) * distance / weary_mult );
@@ -10336,7 +10337,7 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     const ter_t &terrain = here.ter( plant_position ).obj();
     if( terrain.terrain_growth ) {
         const ret_val<void> can_fert = multi_farm_activity_actor::can_fertilize( who,
-                                        plant_position );
+                                       plant_position );
         if( !can_fert.success() ) {
             add_msg( m_info, can_fert.str() );
             act.set_to_null();
@@ -10351,10 +10352,10 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
                                          fertilizer_max_reduction );
         const time_duration effective_reduction = terrain.terrain_growth->growth_time * reduction_pct;
         const time_duration real_reduction = terrain.terrain_growth->growth_multiplier > 0.0f &&
-                                              crop_growth_speed > 0.0f ?
-                                              effective_reduction /
-                                              ( terrain.terrain_growth->growth_multiplier * crop_growth_speed ) :
-                                              0_seconds;
+                                             crop_growth_speed > 0.0f ?
+                                             effective_reduction /
+                                             ( terrain.terrain_growth->growth_multiplier * crop_growth_speed ) :
+                                             0_seconds;
 
         std::list<item> planted;
         if( fertilizer->count_by_charges() ) {
@@ -14227,7 +14228,8 @@ void vehicle_part_install_service_activity_actor::finish( player_activity &act, 
     map &here = get_map();
     const optional_vpart_position ovp = here.veh_at( vehicle_pos );
     vehicle *target = ovp ? &ovp->vehicle() : nullptr;
-    const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) : nullptr;
+    const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) :
+                               nullptr;
     const bool valid_target = target != nullptr && target->pos_abs() == vehicle_pos &&
                               marker != nullptr && marker->is_str() && marker->str() == "yes" &&
                               target->is_owned_by( get_avatar() ) &&
@@ -14353,8 +14355,8 @@ void collect_vehicle_service_removal_side_outputs( map &here, vehicle &veh, cons
     vehicle_stack contents = veh.get_items( part );
     outputs.insert( outputs.end(), contents.begin(), contents.end() );
 
-    const auto collect_dependent = [&]( const std::string &parent_flag,
-    const std::string &child_flag ) {
+    const auto collect_dependent = [&]( const std::string & parent_flag,
+    const std::string & child_flag ) {
         if( !part.info().has_flag( parent_flag ) ) {
             return;
         }
@@ -14395,7 +14397,8 @@ void vehicle_part_remove_service_activity_actor::finish( player_activity &act, C
     npc *mechanic = g->find_npc( mechanic_id );
     const optional_vpart_position ovp = here.veh_at( vehicle_pos );
     vehicle *target = ovp ? &ovp->vehicle() : nullptr;
-    const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) : nullptr;
+    const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) :
+                               nullptr;
     const bool valid_target = target != nullptr && target->pos_abs() == vehicle_pos &&
                               marker != nullptr && marker->is_str() && marker->str() == "yes" &&
                               target->is_owned_by( get_avatar() ) &&
@@ -14455,7 +14458,7 @@ void vehicle_part_remove_service_activity_actor::finish( player_activity &act, C
                                   counter_items.size() + outputs.size() <=
                                   static_cast<size_t>( counter_items.count_limit() ) &&
                                   output_volume <= counter_items.free_volume() &&
-                                  std::none_of( outputs.begin(), outputs.end(), []( const item &output ) {
+    std::none_of( outputs.begin(), outputs.end(), []( const item & output ) {
         return item_is_blacklisted( output.typeId() );
     } );
     if( !counter_has_room ) {

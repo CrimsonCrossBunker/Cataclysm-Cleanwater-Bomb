@@ -19,7 +19,8 @@
       "type": "consume_drug",
       "activation_message": "You take a %s.",
       "effects": [ { "id": "melatonin", "duration": "14 h" } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "adderall",
@@ -49,7 +50,8 @@
     "addiction_potential": 10,
     "addiction_type": "amphetamine",
     "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
-    "use_action": { "type": "consume_drug", "activation_message": "You take some %s." }
+    "use_action": { "type": "consume_drug", "activation_message": "You take some %s." },
+    "stackable": true
   },
   {
     "id": "adrenaline_injector",
@@ -72,7 +74,8 @@
       "activation_message": "You inject yourself with the injector.",
       "effects": [ { "id": "pkill2", "duration": 480 } ]
     },
-    "flags": [ "NO_INGEST", "IRREPLACEABLE_CONSUMABLE" ]
+    "flags": [ "NO_INGEST", "IRREPLACEABLE_CONSUMABLE" ],
+    "stackable": true
   },
   {
     "id": "antibiotics",
@@ -90,7 +93,8 @@
     "color": "white",
     "container": "bottle_plastic_pill_prescription",
     "use_action": [ "ANTIBIOTIC" ],
-    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ]
+    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
+    "stackable": true
   },
   {
     "id": "antifungal",
@@ -108,7 +112,8 @@
     "color": "white",
     "container": "bottle_plastic_pill_prescription",
     "use_action": [ "ANTIFUNGAL" ],
-    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ]
+    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
+    "stackable": true
   },
   {
     "id": "antiparasitic",
@@ -127,7 +132,8 @@
     "container": "bottle_plastic_pill_prescription",
     "healthy": -5,
     "use_action": [ "ANTIPARASITIC" ],
-    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ]
+    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
+    "stackable": true
   },
   {
     "id": "aspirin",
@@ -151,7 +157,8 @@
       "activation_message": "You take some %s.",
       "effects": [ { "id": "pkill1_nsaid", "duration": 9000 } ]
     },
-    "vitamins": [ [ "vit_bloodthinner", 4320 ] ]
+    "vitamins": [ [ "vit_bloodthinner", 4320 ] ],
+    "stackable": true
   },
   {
     "id": "ibuprofen",
@@ -175,7 +182,8 @@
       "activation_message": "You take some %s.",
       "effects": [ { "id": "pkill1_nsaid", "duration": 9000 } ]
     },
-    "vitamins": [ [ "vit_ibuprofen", 216 ] ]
+    "vitamins": [ [ "vit_ibuprofen", 216 ] ],
+    "stackable": true
   },
   {
     "id": "naproxen",
@@ -199,7 +207,8 @@
       "activation_message": "You take some %s.",
       "effects": [ { "id": "pkill1_nsaid", "duration": 18000 } ]
     },
-    "vitamins": [ [ "vit_ibuprofen", 432 ] ]
+    "vitamins": [ [ "vit_ibuprofen", 432 ] ],
+    "stackable": true
   },
   {
     "id": "acetaminophen",
@@ -222,7 +231,8 @@
       "type": "consume_drug",
       "activation_message": "You take some %s.",
       "effects": [ { "id": "pkill1_acetaminophen", "duration": 9000 } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "metaprolol",
@@ -242,7 +252,8 @@
     "healthy": -1,
     "flags": [ "WATER_DISSOLVE", "NO_TEMP" ],
     "use_action": { "type": "consume_drug", "activation_message": "You take some %s." },
-    "vitamins": [ [ "vit_betablocker", 864 ] ]
+    "vitamins": [ [ "vit_betablocker", 864 ] ],
+    "stackable": true
   },
   {
     "id": "bfipowder",
@@ -261,7 +272,8 @@
     "color": "white",
     "container": "bottle_plastic_small",
     "flags": [ "NO_INGEST", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
-    "use_action": { "type": "heal", "disinfectant_power": 4, "bite": 0.95, "move_cost": 2000 }
+    "use_action": { "type": "heal", "disinfectant_power": 4, "bite": 0.95, "move_cost": 2000 },
+    "stackable": true
   },
   {
     "id": "caff_gum",
@@ -282,7 +294,8 @@
     "stim": 4,
     "fun": 1,
     "flags": [ "NO_INGEST" ],
-    "use_action": [ "CHEW" ]
+    "use_action": [ "CHEW" ],
+    "stackable": true
   },
   {
     "id": "caffeine",
@@ -304,7 +317,8 @@
     "addiction_potential": 3,
     "addiction_type": "caffeine",
     "use_action": { "type": "consume_drug", "activation_message": "You take a %s." },
-    "sleepiness_mod": 9
+    "sleepiness_mod": 9,
+    "stackable": true
   },
   {
     "id": "chaw",
@@ -328,7 +342,8 @@
     "addiction_potential": 40,
     "addiction_type": "nicotine",
     "flags": [ "NO_INGEST" ],
-    "use_action": [ "CHEW" ]
+    "use_action": [ "CHEW" ],
+    "stackable": true
   },
   {
     "id": "chem_hydrogen_peroxide",
@@ -426,7 +441,8 @@
         "description": "A compact, slim cigar in the form of a cigarette.  It's a popular choice for those who want a taste of luxury without the time commitment of a full-sized cigar.  Addictive and hazardous to health.",
         "color": "brown"
       }
-    ]
+    ],
+    "stackable": true
   },
   {
     "id": "cigar",
@@ -464,7 +480,8 @@
         "name": { "str": "cheap cigar" },
         "description": "Cheap, machine-made cigar.  While not as luxurious as hand-rolled cigars, it's still enjoyable."
       }
-    ]
+    ],
+    "stackable": true
   },
   {
     "id": "debug_chloroform_rag",
@@ -514,7 +531,8 @@
       "type": "consume_drug",
       "activation_message": "You take some %s.",
       "effects": [ { "id": "pkill2", "duration": 1080 }, { "id": "cough_suppress", "duration": 1000 } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "coke",
@@ -539,7 +557,8 @@
     "addiction_potential": 50,
     "addiction_type": "cocaine",
     "flags": [ "NO_INGEST", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
-    "use_action": [ "COKE" ]
+    "use_action": [ "COKE" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -603,7 +622,8 @@
         ]
       }
     ],
-    "flags": [ "IRREPLACEABLE_CONSUMABLE" ]
+    "flags": [ "IRREPLACEABLE_CONSUMABLE" ],
+    "stackable": true
   },
   {
     "id": "myopia_transition_contacts_weekly",
@@ -957,7 +977,8 @@
       "fields_produced": { "fd_cracksmoke": 2 },
       "charges_needed": { "fire": 1 },
       "tools_needed": { "apparatus": -1 }
-    }
+    },
+    "stackable": true
   },
   {
     "id": "dayquil",
@@ -1041,7 +1062,8 @@
     "flags": [ "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
     "addiction_potential": 20,
     "addiction_type": "diazepam",
-    "use_action": [ "ANTICONVULSANT" ]
+    "use_action": [ "ANTICONVULSANT" ],
+    "stackable": true
   },
   {
     "id": "hi_q_shatter",
@@ -1083,7 +1105,8 @@
       "charges_needed": { "fire": 1 },
       "tools_needed": { "apparatus": -1 },
       "moves": 6000
-    }
+    },
+    "stackable": true
   },
   {
     "id": "hi_q_wax",
@@ -1121,7 +1144,8 @@
       "charges_needed": { "fire": 1 },
       "tools_needed": { "apparatus": -1 },
       "moves": 6000
-    }
+    },
+    "stackable": true
   },
   {
     "id": "hi_q_distillate",
@@ -1181,7 +1205,8 @@
     "addiction_potential": 50,
     "addiction_type": "nicotine",
     "flags": [ "NO_INGEST", "IRREPLACEABLE_CONSUMABLE" ],
-    "use_action": [ "ECIG" ]
+    "use_action": [ "ECIG" ],
+    "stackable": true
   },
   {
     "id": "eyedrops",
@@ -1198,7 +1223,8 @@
     "symbol": "!",
     "color": "light_blue",
     "use_action": [ "EYEDROPS" ],
-    "flags": [ "NO_INGEST", "NPC_SAFE" ]
+    "flags": [ "NO_INGEST", "NPC_SAFE" ],
+    "stackable": true
   },
   {
     "id": "steroid_eyedrops",
@@ -1220,7 +1246,8 @@
       "effects": [ { "id": "steroid_eye", "duration": "3 h" } ],
       "moves": 300
     },
-    "flags": [ "NO_INGEST", "NPC_SAFE" ]
+    "flags": [ "NO_INGEST", "NPC_SAFE" ],
+    "stackable": true
   },
   {
     "id": "flu_shot",
@@ -1231,14 +1258,15 @@
     "description": "A pharmaceutical flu shot designed for mass vaccinations, still in its packaging.  Purported to provide immunity to influenza, for the flu season for which it was developed.",
     "display_type": "BY_VOLUME",
     "weight": "12 g",
-    "volume": "10ml",
+    "volume": "10 ml",
     "price": "50 USD",
     "price_postapoc": "15 USD",
     "material": [ "plastic" ],
     "symbol": "!",
     "color": "magenta",
     "use_action": [ "FLU_VACCINE" ],
-    "flags": [ "NO_INGEST", "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE" ]
+    "flags": [ "NO_INGEST", "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE" ],
+    "stackable": true
   },
   {
     "id": "handrolled_cig",
@@ -1260,7 +1288,8 @@
     "addiction_potential": 50,
     "addiction_type": "nicotine",
     "flags": [ "NO_INGEST", "NO_TEMP" ],
-    "use_action": [ "SMOKING" ]
+    "use_action": [ "SMOKING" ],
+    "stackable": true
   },
   {
     "id": "heroin",
@@ -1296,7 +1325,8 @@
         { "id": "pkill2", "duration": 1200 },
         { "id": "cough_suppress", "duration": 1000 }
       ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "iodine",
@@ -1314,7 +1344,8 @@
     "color": "white",
     "container": "bottle_plastic_pill_supplement",
     "flags": [ "NO_TEMP" ],
-    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "effects": [ { "id": "iodine", "duration": 7200 } ] }
+    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "effects": [ { "id": "iodine", "duration": 7200 } ] },
+    "stackable": true
   },
   {
     "id": "joint",
@@ -1335,7 +1366,8 @@
     "fun": 15,
     "addiction_potential": 5,
     "flags": [ "NO_INGEST", "NO_TEMP" ],
-    "use_action": [ "SMOKING" ]
+    "use_action": [ "SMOKING" ],
+    "stackable": true
   },
   {
     "id": "lsd",
@@ -1359,7 +1391,8 @@
       "type": "consume_drug",
       "activation_message": "You eat the pink tablet.",
       "effects": [ { "id": "hallu", "duration": 3600 } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "meth",
@@ -1385,7 +1418,8 @@
     "addiction_potential": 50,
     "addiction_type": "amphetamine",
     "flags": [ "NO_INGEST", "WATER_DISSOLVE", "NO_TEMP" ],
-    "use_action": [ "METH" ]
+    "use_action": [ "METH" ],
+    "stackable": true
   },
   {
     "id": "pure_meth",
@@ -1412,7 +1446,8 @@
     "addiction_potential": 40,
     "addiction_type": "amphetamine",
     "flags": [ "NO_INGEST", "WATER_DISSOLVE", "NO_TEMP" ],
-    "use_action": [ "METH" ]
+    "use_action": [ "METH" ],
+    "stackable": true
   },
   {
     "id": "morphine",
@@ -1443,7 +1478,8 @@
       "activation_message": "You shoot up.",
       "tools_needed": { "syringe": -1 },
       "effects": [ { "id": "pkill3", "duration": 120 }, { "id": "pkill2", "duration": 1200 } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "wintergreen_oil",
@@ -1514,7 +1550,8 @@
     "fun": 1,
     "addiction_type": "nicotine",
     "flags": [ "NO_INGEST" ],
-    "use_action": [ "CHEW" ]
+    "use_action": [ "CHEW" ],
+    "stackable": true
   },
   {
     "id": "nyquil",
@@ -1562,7 +1599,8 @@
       "type": "consume_drug",
       "activation_message": "You take an %s.",
       "effects": [ { "id": "took_antihistamine", "duration": "10 h" } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "oxycodone",
@@ -1591,7 +1629,8 @@
       "type": "consume_drug",
       "activation_message": "You take some %s.",
       "effects": [ { "id": "pkill3", "duration": 120 }, { "id": "pkill2", "duration": 1200 } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "pills_sleep",
@@ -1623,7 +1662,8 @@
     "addiction_potential": 40,
     "addiction_type": "sleeping pill",
     "use_action": { "type": "consume_drug", "activation_message": "You take a %s." },
-    "sleepiness_mod": -40
+    "sleepiness_mod": -40,
+    "stackable": true
   },
   {
     "id": "poppy_pain",
@@ -1650,7 +1690,8 @@
       "type": "consume_drug",
       "activation_message": "You take some %s.",
       "effects": [ { "id": "pkill2", "duration": 1080 } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "poppy_sleep",
@@ -1673,7 +1714,8 @@
     "vitamins": [ [ "vit_mme", 200 ] ],
     "flags": [ "NO_TEMP" ],
     "use_action": { "type": "consume_drug", "activation_message": "You take a %s." },
-    "sleepiness_mod": -40
+    "sleepiness_mod": -40,
+    "stackable": true
   },
   {
     "id": "poppysyrup",
@@ -1721,7 +1763,8 @@
       "tools_needed": { "syringe": -1 },
       "effects": [ { "id": "prophylactic_antivenom", "duration": "120 m" }, { "id": "nausea", "duration": "5 m" } ]
     },
-    "flags": [ "NO_INGEST", "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE" ]
+    "flags": [ "NO_INGEST", "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE" ],
+    "stackable": true
   },
   {
     "id": "prozac",
@@ -1745,7 +1788,8 @@
     "flags": [ "IRREPLACEABLE_CONSUMABLE", "NO_TEMP" ],
     "addiction_potential": 5,
     "addiction_type": "amphetamine",
-    "use_action": [ "PROZAC" ]
+    "use_action": [ "PROZAC" ],
+    "stackable": true
   },
   {
     "id": "prussian_blue",
@@ -1763,7 +1807,8 @@
     "symbol": "!",
     "color": "blue",
     "container": "bottle_plastic_pill_supplement",
-    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "effects": [ { "id": "pblue", "duration": 3600 } ] }
+    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "effects": [ { "id": "pblue", "duration": 3600 } ] },
+    "stackable": true
   },
   {
     "id": "quikclot",
@@ -1782,7 +1827,8 @@
     "color": "light_gray",
     "container": "bag_plastic_small",
     "flags": [ "NO_INGEST", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
-    "use_action": { "type": "heal", "bleed": 20, "move_cost": 2000 }
+    "use_action": { "type": "heal", "bleed": 20, "move_cost": 2000 },
+    "stackable": true
   },
   {
     "id": "saline",
@@ -1831,7 +1877,8 @@
     ],
     "stim": -30,
     "flags": [ "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
-    "use_action": [ "THORAZINE" ]
+    "use_action": [ "THORAZINE" ],
+    "stackable": true
   },
   {
     "id": "thyme_oil",
@@ -1884,7 +1931,8 @@
       "charges_needed": { "fire": 1 },
       "tools_needed": { "apparatus": -1 },
       "moves": 250
-    }
+    },
+    "stackable": true
   },
   {
     "id": "tramadol",
@@ -1911,7 +1959,8 @@
       "type": "consume_drug",
       "activation_message": "You take some %s.",
       "effects": [ { "id": "pkill_l", "duration": 27000 } ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "vitamins",
@@ -1936,7 +1985,8 @@
     },
     "//": "Yes, the vitamins are intentionally duplicated here. The consume/use/iteminfo UI needs them in use_action, but to actually pass on the vitamins they need to be in the comestible data, as below.",
     "//2": "TODO: Fix this...",
-    "vitamins": [ [ "calcium", 36 ], [ "iron", 36 ], [ "vitC", 36 ] ]
+    "vitamins": [ [ "calcium", 36 ], [ "iron", 36 ], [ "vitC", 36 ] ],
+    "stackable": true
   },
   {
     "id": "calcium_tablet",
@@ -1954,7 +2004,8 @@
     "symbol": "!",
     "color": "magenta",
     "container": "bottle_plastic_pill_supplement",
-    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "vitamins": [ [ "calcium", 75 ] ] }
+    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "vitamins": [ [ "calcium", 75 ] ] },
+    "stackable": true
   },
   {
     "id": "bonemeal_tablet",
@@ -1975,7 +2026,8 @@
     "looks_like": "calcium_tablet",
     "flags": [ "NO_TEMP" ],
     "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "vitamins": [ [ "calcium", 24 ] ] },
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "flavored_bonemeal_tablet",
@@ -1996,7 +2048,8 @@
     "looks_like": "calcium_tablet",
     "flags": [ "NO_TEMP" ],
     "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "vitamins": [ [ "calcium", 23 ] ] },
-    "vitamins": [ [ "meat_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "vitc_tablet",
@@ -2030,7 +2083,8 @@
     "flags": [ "IRREPLACEABLE_CONSUMABLE", "NO_TEMP" ],
     "symbol": "!",
     "color": "magenta",
-    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "vitamins": [ [ "vitC", 92 ] ] }
+    "use_action": { "type": "consume_drug", "activation_message": "You take a %s.", "vitamins": [ [ "vitC", 92 ] ] },
+    "stackable": true
   },
   {
     "id": "gummy_vitamins",
@@ -2100,7 +2154,8 @@
         "description": "A pill that's just made of sugar, meant to help keep the daily routine of taking birth control pills.",
         "weight": 0
       }
-    ]
+    ],
+    "stackable": true
   },
   {
     "id": "inj_iron",
@@ -2122,7 +2177,8 @@
       "activation_message": "You inject some iron.",
       "tools_needed": { "syringe": -1 },
       "vitamins": [ [ "iron", 100 ] ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "weed",
@@ -2155,7 +2211,8 @@
       "tools_needed": { "apparatus": -1 },
       "moves": 420
     },
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "xanax",
@@ -2187,7 +2244,8 @@
     "flags": [ "IRREPLACEABLE_CONSUMABLE", "NO_TEMP" ],
     "addiction_potential": 40,
     "addiction_type": "diazepam",
-    "use_action": [ "XANAX" ]
+    "use_action": [ "XANAX" ],
+    "stackable": true
   },
   {
     "id": "weak_antibiotic",
@@ -2206,7 +2264,8 @@
     "container": "bottle_plastic_pill_prescription",
     "healthy": -2,
     "use_action": [ "WEAK_ANTIBIOTIC" ],
-    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ]
+    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
+    "stackable": true
   },
   {
     "id": "pepto",
@@ -2256,7 +2315,8 @@
       "activation_message": "You take an %s.",
       "effects": [ { "id": "tummy_tablet", "duration": 6400 } ],
       "vitamins": [ [ "calcium", 25 ] ]
-    }
+    },
+    "stackable": true
   },
   {
     "id": "panacea",
@@ -2279,7 +2339,8 @@
       "activation_message": "You feel AMAZING!",
       "effects": [ { "id": "panacea", "duration": "1 m" }, { "id": "cureall" } ]
     },
-    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ]
+    "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
+    "stackable": true
   },
   {
     "id": "cattail_jelly",
@@ -2325,7 +2386,8 @@
     "container": "bottle_plastic_pill_prescription",
     "healthy": -10,
     "flags": [ "NPC_SAFE", "IRREPLACEABLE_CONSUMABLE", "WATER_DISSOLVE", "NO_TEMP" ],
-    "use_action": { "type": "STRONG_ANTIBIOTIC" }
+    "use_action": { "type": "STRONG_ANTIBIOTIC" },
+    "stackable": true
   },
   {
     "id": "cocaine_topical",
@@ -2415,7 +2477,8 @@
         "name": { "str": "citrus flavored nicotine pouch" },
         "description": "A pouch containing citrus-flavored nicotine salts."
       }
-    ]
+    ],
+    "stackable": true
   },
   {
     "id": "birth_control",
@@ -2432,7 +2495,8 @@
     "symbol": "!",
     "color": "white",
     "flags": [ "NO_TEMP" ],
-    "use_action": { "type": "consume_drug", "activation_message": "You take a %s." }
+    "use_action": { "type": "consume_drug", "activation_message": "You take a %s." },
+    "stackable": true
   },
   {
     "id": "estrogen",
@@ -2449,7 +2513,8 @@
     "symbol": "!",
     "color": "white",
     "flags": [ "NO_TEMP" ],
-    "use_action": { "type": "consume_drug", "activation_message": "You set the pill under your tongue and let it dissolve." }
+    "use_action": { "type": "consume_drug", "activation_message": "You set the pill under your tongue and let it dissolve." },
+    "stackable": true
   },
   {
     "id": "testosterone",
@@ -2470,7 +2535,8 @@
       "type": "consume_drug",
       "tools_needed": { "syringe": -1 },
       "activation_message": "You inject yourself with the injector."
-    }
+    },
+    "stackable": true
   },
   {
     "id": "sunscreen",

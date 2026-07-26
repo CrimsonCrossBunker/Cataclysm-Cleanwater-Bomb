@@ -14,7 +14,8 @@
     "looks_like": "box_small",
     "material": [ "plastic", "copper" ],
     "symbol": "#",
-    "color": "white"
+    "color": "white",
+    "stackable": true
   },
   {
     "id": "magnetron",

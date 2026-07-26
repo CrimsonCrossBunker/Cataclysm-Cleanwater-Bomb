@@ -115,7 +115,8 @@
     "calories": 200,
     "flags": [ "EATEN_HOT" ],
     "vitamins": [ [ "iron", 10 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 15
+    "fun": 15,
+    "stackable": true
   },
   {
     "id": "toasterpastryfrozen",
@@ -129,7 +130,8 @@
     "container": "box_snack",
     "price": "2 USD",
     "price_postapoc": "62 cent",
-    "fun": 5
+    "fun": 5,
+    "stackable": true
   },
   {
     "id": "toasterpastry",
@@ -158,7 +160,8 @@
     "volume": "125 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 6,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -180,7 +183,8 @@
     "volume": "83 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "iron", 16 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 4
+    "fun": 4,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -202,7 +206,8 @@
     "volume": "100 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 6,
-    "vitamins": [ [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -223,7 +228,8 @@
     "volume": "83 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 8 ], [ "iron", 8 ], [ "junk_allergen", 1 ] ],
-    "fun": 10
+    "fun": 10,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -244,7 +250,8 @@
     "volume": "50 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 10,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -265,7 +272,8 @@
     "volume": "250 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 4 ], [ "iron", 6 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 20
+    "fun": 20,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -288,7 +296,8 @@
     "volume": "30 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 4,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -310,7 +319,8 @@
     "volume": "30 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "iron", 9 ], [ "junk_allergen", 1 ] ],
-    "fun": 3
+    "fun": 3,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -332,7 +342,8 @@
     "volume": "30 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 3,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -354,7 +365,8 @@
     "volume": "33 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 5,
-    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -376,7 +388,8 @@
     "volume": "30 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 4,
-    "vitamins": [ [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -416,7 +429,8 @@
     "stim": 1,
     "fun": 7,
     "flags": [ "EDIBLE_FROZEN" ],
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -438,7 +452,8 @@
     "volume": "50 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 6,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -475,7 +490,8 @@
     "volume": "50 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 10,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -497,7 +513,8 @@
     "volume": "93 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 4 ], [ "iron", 6 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 2
+    "fun": 2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -528,7 +545,8 @@
     "//": "dimensions are picked from oreo",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 2 ], [ "iron", 6 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 7
+    "fun": 7,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -649,7 +667,8 @@
     "material": [ "wheat", "junk" ],
     "volume": "166 ml",
     "vitamins": [ [ "calcium", 3 ], [ "iron", 6 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 15
+    "fun": 15,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -711,7 +730,8 @@
     "volume": "8 ml",
     "fun": 2,
     "flags": [ "EDIBLE_FROZEN", "NO_AUTO_CONSUME" ],
-    "vitamins": [ [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -739,7 +759,8 @@
     "volume": "250 ml",
     "fun": 4,
     "vitamins": [ [ "vitC", 4 ], [ "calcium", 1 ], [ "iron", 3 ], [ "junk_allergen", 1 ] ],
-    "flags": [ "EATEN_HOT" ]
+    "flags": [ "EATEN_HOT" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -760,7 +781,8 @@
     "volume": "250 ml",
     "fun": 6,
     "vitamins": [ [ "vitC", 4 ], [ "calcium", 17 ], [ "iron", 4 ], [ "milk_allergen", 1 ] ],
-    "flags": [ "EATEN_HOT" ]
+    "flags": [ "EATEN_HOT" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -782,7 +804,8 @@
     "volume": "83 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 4,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -805,7 +828,8 @@
     "volume": "13 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 4,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -828,7 +852,8 @@
     "volume": "30 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 4,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -849,7 +874,8 @@
     "material": [ "junk" ],
     "volume": "30 ml",
     "vitamins": [ [ "calcium", 9 ], [ "junk_allergen", 1 ] ],
-    "fun": 2
+    "fun": 2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -869,7 +895,8 @@
     "material": [ "junk", "fruit" ],
     "volume": "175 ml",
     "vitamins": [ [ "calcium", 9 ], [ "vitC", 14 ], [ "iron", 1 ], [ "fruit_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 5
+    "fun": 5,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -948,7 +975,8 @@
         "description": "<mixed_chips_flavor>",
         "weight": 5
       }
-    ]
+    ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -970,7 +998,8 @@
     "volume": "83 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 5 ], [ "iron", 3 ], [ "junk_allergen", 1 ] ],
-    "fun": 8
+    "fun": 8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -992,7 +1021,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 16,
-    "vitamins": [ [ "calcium", 12 ], [ "iron", 6 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 12 ], [ "iron", 6 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1019,7 +1049,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 16,
-    "vitamins": [ [ "vitC", 5 ], [ "calcium", 2 ], [ "iron", 24 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 5 ], [ "calcium", 2 ], [ "iron", 24 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1055,7 +1086,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 20,
-    "vitamins": [ [ "calcium", 10 ], [ "iron", 12 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 10 ], [ "iron", 12 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1076,7 +1108,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 16,
-    "vitamins": [ [ "calcium", 8 ], [ "iron", 17 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 8 ], [ "iron", 17 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1124,7 +1157,8 @@
     "volume": "62 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 8 ], [ "iron", 4 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 4
+    "fun": 4,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1152,7 +1186,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 5,
-    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1174,7 +1209,8 @@
     "material": [ { "type": "processed_food", "portion": 10 }, { "type": "flesh", "portion": 1 }, { "type": "junk", "portion": 1 } ],
     "volume": "500 ml",
     "fun": -3,
-    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1196,7 +1232,8 @@
     "volume": "500 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 2,
-    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1217,7 +1254,8 @@
     "material": [ "flesh", "junk" ],
     "volume": "250 ml",
     "fun": 12,
-    "vitamins": [ [ "iron", 4 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "iron", 4 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1246,7 +1284,8 @@
       [ "meat_allergen", 1 ],
       [ "wheat_allergen", 1 ],
       [ "junk_allergen", 1 ]
-    ]
+    ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1267,7 +1306,8 @@
     "volume": "125 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": -18,
-    "vitamins": [ [ "calcium", 6 ], [ "iron", 8 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 6 ], [ "iron", 8 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1337,7 +1377,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 12,
-    "vitamins": [ [ "calcium", 25 ], [ "iron", 25 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 25 ], [ "iron", 25 ], [ "wheat_allergen", 1 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1358,7 +1399,8 @@
     "volume": "31 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 6,
-    "vitamins": [ [ "calcium", 15 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 15 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1380,7 +1422,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": 6,
-    "vitamins": [ [ "vitC", 4 ], [ "calcium", 17 ], [ "iron", 3 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 4 ], [ "calcium", 17 ], [ "iron", 3 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1402,7 +1445,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT", "EDIBLE_FROZEN", "FREEZERBURN" ],
     "fun": 6,
-    "vitamins": [ [ "calcium", 4 ], [ "iron", 7 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 4 ], [ "iron", 7 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1424,7 +1468,8 @@
     "volume": "75 ml",
     "flags": [ "EATEN_HOT" ],
     "fun": -6,
-    "vitamins": [ [ "iron", 3 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "iron", 3 ], [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "hotdogs_campfire",
@@ -1463,7 +1508,8 @@
       [ "meat_allergen", 1 ],
       [ "wheat_allergen", 1 ],
       [ "junk_allergen", 1 ]
-    ]
+    ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1479,6 +1525,13 @@
     "volume": "375 ml",
     "fun": 18,
     "//": "The fun value is high to justify crafting this versus a normal hot dog."
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "homemade_hotdogs",
+    "name": { "str": "homemade hot dog" },
+    "copy-from": "hotdogs_frozen"
   },
   {
     "type": "ITEM",
@@ -1501,7 +1554,8 @@
     "volume": "50 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 4 ], [ "junk_allergen", 1 ], [ "milk_allergen", 1 ] ],
-    "fun": 6
+    "fun": 6,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1525,7 +1579,8 @@
     "material": [ "junk", "nut" ],
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": 6,
-    "vitamins": [ [ "calcium", 1 ], [ "iron", 3 ], [ "junk_allergen", 1 ], [ "nut_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 1 ], [ "iron", 3 ], [ "junk_allergen", 1 ], [ "nut_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1544,10 +1599,11 @@
     "price": "12 USD",
     "price_postapoc": "14 USD",
     "material": [ "flesh", "egg", "junk" ],
-    "volume": "250ml",
+    "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "vitamins": [ [ "iron", 10 ], [ "meat_allergen", 1 ], [ "egg_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": -2
+    "fun": -2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1566,7 +1622,7 @@
     "price": "12 USD",
     "price_postapoc": "14 USD",
     "material": [ "wheat", "milk", "egg", "flesh", "junk" ],
-    "volume": "250ml",
+    "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "vitamins": [
       [ "calcium", 30 ],
@@ -1576,7 +1632,8 @@
       [ "milk_allergen", 1 ],
       [ "junk_allergen", 1 ]
     ],
-    "fun": -2
+    "fun": -2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1595,10 +1652,11 @@
     "price": "12 USD",
     "price_postapoc": "14 USD",
     "material": [ "wheat", "milk", "veggy", "junk" ],
-    "volume": "250ml",
+    "volume": "250 ml",
     "flags": [ "EATEN_HOT" ],
     "vitamins": [ [ "calcium", 30 ], [ "iron", 15 ], [ "milk_allergen", 1 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": -2
+    "fun": -2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1617,10 +1675,11 @@
     "price": "12 USD",
     "price_postapoc": "14 USD",
     "material": [ "flesh", "egg", "junk" ],
-    "volume": "500ml",
+    "volume": "500 ml",
     "flags": [ "EATEN_HOT" ],
     "vitamins": [ [ "iron", 10 ], [ "meat_allergen", 1 ], [ "egg_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 4
+    "fun": 4,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1639,7 +1698,7 @@
     "price": "12 USD",
     "price_postapoc": "14 USD",
     "material": [ "wheat", "milk", "flesh", "egg", "junk" ],
-    "volume": "500ml",
+    "volume": "500 ml",
     "flags": [ "EATEN_HOT" ],
     "vitamins": [
       [ "calcium", 30 ],
@@ -1649,7 +1708,8 @@
       [ "milk_allergen", 1 ],
       [ "junk_allergen", 1 ]
     ],
-    "fun": 4
+    "fun": 4,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1668,10 +1728,11 @@
     "price": "12 USD",
     "price_postapoc": "14 USD",
     "material": [ "wheat", "milk", "veggy", "junk" ],
-    "volume": "500ml",
+    "volume": "500 ml",
     "flags": [ "EATEN_HOT" ],
     "vitamins": [ [ "calcium", 30 ], [ "iron", 15 ], [ "milk_allergen", 1 ], [ "veggy_allergen", 1 ], [ "junk_allergen", 1 ] ],
-    "fun": 2
+    "fun": 2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1690,7 +1751,8 @@
     "volume": "500 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "fun": -3,
-    "vitamins": [ [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1710,10 +1772,11 @@
     "price": "5 cent",
     "price_postapoc": "10 cent",
     "material": [ "flesh", "junk" ],
-    "volume": "250ml",
+    "volume": "250 ml",
     "flags": [ "EATEN_COLD" ],
     "fun": -2,
-    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1734,7 +1797,8 @@
     "volume": "250 ml",
     "phase": "solid",
     "fun": 5,
-    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "meat_allergen", 1 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1810,7 +1874,8 @@
     "volume": "250 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 10 ], [ "iron", 5 ], [ "wheat_allergen", 1 ], [ "egg_allergen", 1 ] ],
-    "fun": 8
+    "fun": 8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1833,7 +1898,8 @@
     "volume": "250 ml",
     "flags": [ "EDIBLE_FROZEN" ],
     "vitamins": [ [ "calcium", 10 ], [ "iron", 6 ], [ "veggy_allergen", 1 ], [ "wheat_allergen", 1 ] ],
-    "fun": 8
+    "fun": 8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1854,7 +1920,8 @@
     "spoils_in": "7 days",
     "calories": 150,
     "fun": 3,
-    "vitamins": [ [ "calcium", 6 ], [ "iron", 4 ], [ "wheat_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 6 ], [ "iron", 4 ], [ "wheat_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1875,7 +1942,8 @@
     "spoils_in": "7 days",
     "calories": 180,
     "fun": 3,
-    "vitamins": [ [ "calcium", 6 ], [ "iron", 4 ], [ "wheat_allergen", 1 ], [ "milk_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 6 ], [ "iron", 4 ], [ "wheat_allergen", 1 ], [ "milk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",

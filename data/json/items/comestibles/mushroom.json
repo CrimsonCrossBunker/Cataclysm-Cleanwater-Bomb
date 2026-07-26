@@ -58,7 +58,8 @@
     "fun": 1,
     "flags": [ "FREEZERBURN" ],
     "smoking_result": "dry_mushroom",
-    "vitamins": [ [ "calcium", 2 ], [ "iron", 52 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "calcium", 2 ], [ "iron", 52 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -132,6 +133,7 @@
     "fun": -3,
     "flags": [ "FREEZERBURN", "FORAGE_POISON", "FORAGE_HALLU", "RAW" ],
     "smoking_result": "dry_mushroom",
-    "vitamins": [ [ "vitC", 2 ], [ "iron", 2 ], [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 2 ], [ "iron", 2 ], [ "veggy_allergen", 1 ] ],
+    "stackable": true
   }
 ]

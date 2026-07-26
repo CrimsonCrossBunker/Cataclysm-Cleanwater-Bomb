@@ -311,7 +311,8 @@ void submap::mirror( bool horizontally )
 
         std::map<point_sm_ms, terrain_growth_state> mirror_growth;
         for( const auto &elem : terrain_growth ) {
-            mirror_growth.emplace( point( -elem.first.x(), elem.first.y() ) + point( SEEX - 1, 0 ), elem.second );
+            mirror_growth.emplace( point( -elem.first.x(), elem.first.y() ) + point( SEEX - 1, 0 ),
+                                   elem.second );
         }
         terrain_growth = mirror_growth;
     } else {
@@ -334,7 +335,8 @@ void submap::mirror( bool horizontally )
 
         std::map<point_sm_ms, terrain_growth_state> mirror_growth;
         for( const auto &elem : terrain_growth ) {
-            mirror_growth.emplace( point( elem.first.x(), -elem.first.y() ) + point( 0, SEEY - 1 ), elem.second );
+            mirror_growth.emplace( point( elem.first.x(), -elem.first.y() ) + point( 0, SEEY - 1 ),
+                                   elem.second );
         }
         terrain_growth = mirror_growth;
     }

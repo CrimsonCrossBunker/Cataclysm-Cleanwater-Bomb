@@ -3,11 +3,7 @@
     "type": "item_group",
     "id": "energy_weapon_armory",
     "copy-from": "energy_weapon_armory",
-    "extend": {
-      "items": [
-        { "group": "fcl_fusion_pellet", "prob": 2 }
-      ]
-    }
+    "extend": { "items": [ { "group": "fcl_fusion_pellet", "prob": 2 } ] }
   },
   {
     "id": "hospital_bed",

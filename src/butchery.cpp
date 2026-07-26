@@ -373,11 +373,11 @@ bool set_up_butchery( player_activity &act, Character &you, butchery_data bd )
                 // give the player a random message showing their disgust and cause morale penalty.
                 you.add_msg_if_player( m_good, SNIPPET.random_from_category(
                                            "msg_human_butchery" ).value_or( translation() ).translated() );
-                    if( you.has_flag( json_flag_INSENSITIVITY ) ) {
-                        you.add_morale( morale_butcher, -25, 0, 2_days, 3_hours );
-                    } else {
-                        you.add_morale( morale_butcher, -50, 0, 2_days, 3_hours );
-                    }
+                if( you.has_flag( json_flag_INSENSITIVITY ) ) {
+                    you.add_morale( morale_butcher, -25, 0, 2_days, 3_hours );
+                } else {
+                    you.add_morale( morale_butcher, -50, 0, 2_days, 3_hours );
+                }
             }
         } else {
             if( you.has_proficiency( proficiency_prof_dissect_humans ) ) {

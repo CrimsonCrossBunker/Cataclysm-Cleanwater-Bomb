@@ -2198,7 +2198,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
         const Creature *target_critter = get_creature_tracker().creature_at( pos, true );
         if( target_critter != nullptr && !weapon.ammo_effects().count( ammo_effect_MAGIC ) ) {
             target_mobility_multiplier = projectile_target_mobility_weight( *target_critter,
-                                        get_map(), &you );
+                                         get_map(), &you );
         }
     }
 
@@ -2243,7 +2243,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
             // to the current aim mode's threshold.
             const recoil_prediction aim_to_type = ( aim_type == ui.get_selected_aim_type() ) ? aim_to_selected :
                                                   predict_recoil( you, weapon, target, ui.get_sight_dispersion(), aim_type,
-                                                                  start_recoil );
+                                                          start_recoil );
             prediction.steadiness = calc_steadiness( you, weapon, pos, aim_to_type.recoil );
         }
 

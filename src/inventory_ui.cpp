@@ -5364,7 +5364,7 @@ std::vector<item_location> trade_selector::get_item_locations() const
     std::vector<item_location> result;
     std::unordered_set<const item *> seen;
     for( const inventory_column *column : get_all_columns() ) {
-        for( const inventory_entry *entry : column->get_entries( []( const inventory_entry &candidate ) {
+        for( const inventory_entry *entry : column->get_entries( []( const inventory_entry & candidate ) {
         return candidate.is_item();
         }, true ) ) {
             entry->cache_denial( preset );

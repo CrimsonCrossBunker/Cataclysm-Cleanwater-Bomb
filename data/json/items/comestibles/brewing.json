@@ -766,7 +766,8 @@
     "vitamins": [ [ "calcium", 6 ], [ "iron", 29 ], [ "veggy_allergen", 1 ] ],
     "fun": -15,
     "countdown_interval": "4 days",
-    "revert_to": "malted_grain"
+    "revert_to": "malted_grain",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -788,7 +789,8 @@
     "volume": "1 L",
     "flags": [ "EDIBLE_FROZEN", "RAW" ],
     "vitamins": [ [ "calcium", 6 ], [ "iron", 29 ], [ "veggy_allergen", 1 ] ],
-    "fun": -15
+    "fun": -15,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -812,7 +814,8 @@
     "vitamins": [ [ "calcium", 6 ], [ "iron", 29 ], [ "veggy_allergen", 1 ] ],
     "fun": -15,
     "countdown_interval": "2 hours",
-    "revert_to": "soaked_dandelion"
+    "revert_to": "soaked_dandelion",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -835,7 +838,8 @@
     "volume": "250 ml",
     "flags": [ "EDIBLE_FROZEN", "RAW" ],
     "vitamins": [ [ "vitC", 23 ], [ "calcium", 11 ], [ "iron", 10 ], [ "veggy_allergen", 1 ] ],
-    "fun": -4
+    "fun": -4,
+    "stackable": true
   },
   {
     "type": "ITEM",

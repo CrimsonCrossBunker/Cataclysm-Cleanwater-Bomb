@@ -17,7 +17,8 @@
     "material": [ "fruit" ],
     "volume": "120 ml",
     "fun": 3,
-    "vitamins": [ [ "vitC", 3 ], [ "calcium", 2 ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 3 ], [ "calcium", 2 ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -36,7 +37,8 @@
     "material": [ "nut" ],
     "volume": "120 ml",
     "fun": 3,
-    "vitamins": [ [ "vitC", 2 ], [ "calcium", 3 ], [ "nut_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 2 ], [ "calcium", 3 ], [ "nut_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -56,7 +58,8 @@
     "vitamins": [ [ "nut_allergen", 1 ], [ "bread_allergen", 1 ] ],
     "volume": "100 ml",
     "fun": 4,
-    "quench": -1
+    "quench": -1,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -75,7 +78,8 @@
     "material": [ "bread", "sugar" ],
     "vitamins": [ [ "bread_allergen", 1 ] ],
     "volume": "100 ml",
-    "fun": 7
+    "fun": 7,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -94,6 +98,7 @@
     "material": [ "bread", "sugar" ],
     "vitamins": [ [ "bread_allergen", 1 ], [ "egg_allergen", 1 ], [ "milk_allergen", 1 ] ],
     "volume": "300 ml",
-    "fun": 9
+    "fun": 9,
+    "stackable": true
   }
 ]

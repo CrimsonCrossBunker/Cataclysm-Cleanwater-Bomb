@@ -16,7 +16,8 @@
     "volume": "250 ml",
     "flags": [ "EATEN_HOT", "RAD_STERILIZED", "DECAY_EXPOSED_ATMOSPHERE" ],
     "looks_like": "mre_beef",
-    "fun": -1
+    "fun": -1,
+    "stackable": true
   },
   {
     "type": "ITEM",

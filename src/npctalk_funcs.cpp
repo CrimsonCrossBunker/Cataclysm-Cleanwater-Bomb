@@ -606,7 +606,8 @@ void talk_function::quote_vehicle_full_repair( npc &p )
                                 repair_time + std::min( maximum_repair_time,
                                         vehicle_part_repair_service_time( veh->part( index ), p ) ) );
     }
-    veh->set_value( vehicle_full_repair_snapshot, talk_function::vehicle_service_state_snapshot( *veh ) );
+    veh->set_value( vehicle_full_repair_snapshot,
+                    talk_function::vehicle_service_state_snapshot( *veh ) );
     p.set_value( vehicle_full_repair_valid, 1 );
     p.set_value( vehicle_full_repair_cost, cost );
     p.set_value( vehicle_full_repair_cost_text, format_money( cost ) );
@@ -682,7 +683,7 @@ static int vehicle_part_install_labor_cost( const vpart_info &part, const double
     }
     const double calculated = std::ceil( pristine_value * multiplier );
     return std::max( 1, static_cast<int>( std::min<double>(
-                         calculated, std::numeric_limits<int>::max() ) ) );
+            calculated, std::numeric_limits<int>::max() ) ) );
 }
 
 struct vehicle_part_install_candidate {
@@ -753,7 +754,7 @@ static std::optional<vehicle_part_install_candidate> choose_vehicle_part_source(
             }
             const int item_cost = supplied_by_mechanic ? std::max( 0,
                                   npc_trading::trading_price( player_character, mechanic,
-                                          { location, 1 } ) ) : 0;
+            { location, 1 } ) ) : 0;
             candidates.push_back( { location, supplied_by_mechanic, item_cost, labor_cost,
                                     add_vehicle_repair_service_cost( item_cost, labor_cost ) } );
         }
@@ -870,7 +871,7 @@ void talk_function::select_vehicle_part_service( npc &p )
         }
         const time_duration repair_time = vehicle_part_repair_service_time( part, p );
         if( !query_yn( _( "Repair the %1$s's %2$s to pristine condition for %3$s?  "
-                         "Estimated time: %4$s." ), veh->name, part.name(), format_money( cost ),
+                          "Estimated time: %4$s." ), veh->name, part.name(), format_money( cost ),
                        to_string_approx( repair_time ) ) ) {
             return;
         }
@@ -929,7 +930,7 @@ void talk_function::select_vehicle_part_service( npc &p )
             return;
         }
         if( !query_yn( _( "Remove the %1$s from the %2$s for %3$s?  All recovered items will be "
-                         "placed on the front counter.  Estimated time: %4$s." ),
+                          "placed on the front counter.  Estimated time: %4$s." ),
                        part.name(), veh->name, format_money( cost ),
                        to_string_approx( removal_time ) ) ) {
             return;
@@ -972,7 +973,7 @@ void talk_function::select_vehicle_part_service( npc &p )
         return;
     }
     const std::optional<int> direction = choose_vehicle_part_direction(
-                                             here, *veh, selection->mount, part );
+            here, *veh, selection->mount, part );
     if( !direction ) {
         return;
     }
@@ -982,7 +983,8 @@ void talk_function::select_vehicle_part_service( npc &p )
     }
     const bool disable_flyable = veh->would_install_prevent_flyable( part, player_character );
     if( disable_flyable &&
-        !query_yn( _( "Installing this part will make the vehicle no longer flightworthy.  Continue?" ) ) ) {
+        !query_yn(
+            _( "Installing this part will make the vehicle no longer flightworthy.  Continue?" ) ) ) {
         return;
     }
     if( !query_yn( _( "Install %1$s into the %2$s for %3$s?  Estimated time: %4$s." ),
@@ -993,7 +995,7 @@ void talk_function::select_vehicle_part_service( npc &p )
 
     std::vector<item *> protected_trade_items;
     std::unordered_set<item *> protected_trade_item_set;
-    const auto protect_item = [&]( item *protected_item ) {
+    const auto protect_item = [&]( item * protected_item ) {
         if( protected_trade_item_set.insert( protected_item ).second &&
             !protected_item->has_var( VAR_TRADE_IGNORE ) ) {
             protected_item->set_var( VAR_TRADE_IGNORE, 1 );
@@ -1031,7 +1033,8 @@ void talk_function::select_vehicle_part_service( npc &p )
             p.op_of_u.owed += candidate->total_cost;
         }
         p.set_value( vehicle_part_service_status, "invalidated" );
-        add_msg( m_bad, _( "The installation order changed during checkout.  %s credits the full payment." ),
+        add_msg( m_bad,
+                 _( "The installation order changed during checkout.  %s credits the full payment." ),
                  p.get_name() );
         return;
     }
