@@ -29,7 +29,9 @@ class choice_window : public cataimgui::window
                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                ImGuiWindowFlags_NoSavedSettings ),
             title_( std::move( title ) ), message_( std::move( message ) ),
-            entries_( std::move( entries ) ), selected_( initial_selection ) {}
+            entries_( std::move( entries ) ), selected_( initial_selection ) {
+            select_enabled_entry();
+        }
 
         std::optional<int> take_choice() {
             if( choices_.empty() ) {
@@ -44,6 +46,36 @@ class choice_window : public cataimgui::window
             const bool result = cancel_requested_;
             cancel_requested_ = false;
             return result;
+        }
+
+        void move_selection( const int delta ) {
+            if( entries_.empty() || delta == 0 ) {
+                return;
+            }
+            const int count = static_cast<int>( entries_.size() );
+            const int direction = delta > 0 ? 1 : -1;
+            int remaining = std::abs( delta );
+            int candidate = std::clamp( selected_, 0, count - 1 );
+            while( remaining-- > 0 ) {
+                for( int attempts = 0; attempts < count; ++attempts ) {
+                    candidate = ( candidate + direction + count ) % count;
+                    if( entries_[candidate].enabled ) {
+                        break;
+                    }
+                }
+            }
+            if( entries_[candidate].enabled ) {
+                selected_ = candidate;
+                scroll_to_selection_ = true;
+            }
+        }
+
+        void activate_selection() {
+            if( selected_ >= 0 &&
+                static_cast<size_t>( selected_ ) < entries_.size() &&
+                entries_[selected_].enabled ) {
+                choices_.push_back( selected_ );
+            }
         }
 
     protected:
@@ -96,7 +128,9 @@ class choice_window : public cataimgui::window
             if( ImGui::BeginChild( "##adaptive_choice_entries", ImVec2( 0.0F, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
-                const bool suppress_click = handle_vertical_drag();
+                const bool suppress_click = cataimgui::handle_vertical_swipe(
+                                                profile.allow_swipe,
+                                                profile.frame_padding_x );
                 for( size_t index = 0; index < entries_.size(); ++index ) {
                     draw_entry( static_cast<int>( index ), entries_[index], suppress_click );
                 }
@@ -128,35 +162,24 @@ class choice_window : public cataimgui::window
         int selected_ = 0;
         std::deque<int> choices_;
         bool cancel_requested_ = false;
-        bool dragging_ = false;
-        ImVec2 drag_start_;
+        bool scroll_to_selection_ = true;
 
-        bool handle_vertical_drag() {
-            const cata::ui::profile profile = cata::ui::current_profile();
-            if( !profile.allow_swipe ) {
-                return false;
+        void select_enabled_entry() {
+            if( entries_.empty() ) {
+                selected_ = -1;
+                return;
             }
-            ImGuiIO &io = ImGui::GetIO();
-            if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
-                ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
-                dragging_ = true;
-                drag_start_ = io.MousePos;
+            selected_ = std::clamp( selected_, 0, static_cast<int>( entries_.size() ) - 1 );
+            if( entries_[selected_].enabled ) {
+                return;
             }
-            if( !dragging_ ) {
-                return false;
+            for( size_t index = 0; index < entries_.size(); ++index ) {
+                if( entries_[index].enabled ) {
+                    selected_ = static_cast<int>( index );
+                    return;
+                }
             }
-            const ImVec2 distance( io.MousePos.x - drag_start_.x,
-                                   io.MousePos.y - drag_start_.y );
-            const bool moved = std::hypot( distance.x, distance.y ) >
-                               profile.frame_padding_x;
-            if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
-                std::abs( distance.y ) > std::abs( distance.x ) ) {
-                ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
-            }
-            if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
-                dragging_ = false;
-            }
-            return moved;
+            selected_ = -1;
         }
 
         void draw_entry( const int index, const entry &item, const bool suppress_click ) {
@@ -179,6 +202,13 @@ class choice_window : public cataimgui::window
                 selected_ = index;
                 choices_.push_back( index );
             }
+            if( item.enabled && ImGui::IsItemHovered() ) {
+                selected_ = index;
+            }
+            if( selected && scroll_to_selection_ ) {
+                ImGui::SetScrollHereY( 0.5F );
+                scroll_to_selection_ = false;
+            }
             if( selected || item.danger ) {
                 ImGui::PopStyleColor( 2 );
             }
@@ -199,13 +229,15 @@ class compact_dialog_window : public cataimgui::window
 {
     public:
         compact_dialog_window( std::string title, std::string message,
-                               std::vector<entry> entries ) :
+                               std::vector<entry> entries, const int initial_selection ) :
             cataimgui::window( "Adaptive ImGui compact dialog",
                                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                ImGuiWindowFlags_NoSavedSettings ),
             title_( std::move( title ) ), message_( std::move( message ) ),
-            entries_( std::move( entries ) ) {}
+            entries_( std::move( entries ) ), selected_( initial_selection ) {
+            select_enabled_entry();
+        }
 
         std::optional<int> take_choice() {
             if( choices_.empty() ) {
@@ -214,6 +246,30 @@ class compact_dialog_window : public cataimgui::window
             const int result = choices_.front();
             choices_.pop_front();
             return result;
+        }
+
+        void move_selection( const int delta ) {
+            if( entries_.empty() || delta == 0 ) {
+                return;
+            }
+            const int count = static_cast<int>( entries_.size() );
+            const int direction = delta > 0 ? 1 : -1;
+            int candidate = std::clamp( selected_, 0, count - 1 );
+            for( int attempts = 0; attempts < count; ++attempts ) {
+                candidate = ( candidate + direction + count ) % count;
+                if( entries_[candidate].enabled ) {
+                    selected_ = candidate;
+                    return;
+                }
+            }
+        }
+
+        void activate_selection() {
+            if( selected_ >= 0 &&
+                static_cast<size_t>( selected_ ) < entries_.size() &&
+                entries_[selected_].enabled ) {
+                choices_.push_back( selected_ );
+            }
         }
 
     protected:
@@ -264,6 +320,7 @@ class compact_dialog_window : public cataimgui::window
 
             ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, profile.corner_radius );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.0F );
             ImGui::PushStyleVar(
                 ImGuiStyleVar_FramePadding,
                 ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
@@ -309,22 +366,48 @@ class compact_dialog_window : public cataimgui::window
                     if( index > 0 ) {
                         ImGui::SameLine( 0.0F, gap );
                     }
-                    if( entries_[index].danger ) {
+                    ImGui::PushID( static_cast<int>( index ) );
+                    const bool selected = selected_ == static_cast<int>( index );
+                    if( !entries_[index].enabled ) {
+                        ImGui::BeginDisabled();
+                    }
+                    if( selected ) {
+                        ImGui::PushStyleColor(
+                            ImGuiCol_Button,
+                            entries_[index].danger ?
+                            ImVec4( 0.48F, 0.10F, 0.08F, 1.0F ) :
+                            ImVec4( 0.08F, 0.30F, 0.34F, 1.0F ) );
+                        ImGui::PushStyleColor(
+                            ImGuiCol_Border,
+                            entries_[index].danger ?
+                            ImVec4( 0.90F, 0.34F, 0.25F, 1.0F ) :
+                            ImVec4( 0.32F, 0.72F, 0.75F, 1.0F ) );
+                    } else if( entries_[index].danger ) {
                         ImGui::PushStyleColor( ImGuiCol_Button,
                                                ImVec4( 0.34F, 0.08F, 0.07F, 1.0F ) );
                     }
                     if( ImGui::Button( entries_[index].label.c_str(),
                                        ImVec2( button_width, button_height ) ) ) {
+                        selected_ = static_cast<int>( index );
                         choices_.push_back( static_cast<int>( index ) );
                     }
-                    if( entries_[index].danger ) {
+                    if( entries_[index].enabled && ImGui::IsItemHovered() ) {
+                        selected_ = static_cast<int>( index );
+                    }
+                    if( selected ) {
+                        ImGui::PopStyleColor( 2 );
+                    } else if( entries_[index].danger ) {
                         ImGui::PopStyleColor();
                     }
+                    if( !entries_[index].enabled ) {
+                        ImGui::EndDisabled();
+                    }
+                    ImGui::PopID();
                 }
             }
             ImGui::EndChild();
             ImGui::PopStyleColor( 6 );
-            ImGui::PopStyleVar( 5 );
+            ImGui::PopStyleVar( 6 );
             if( scaled_font ) {
                 cataimgui::PopGuiFontScaled();
             }
@@ -334,21 +417,53 @@ class compact_dialog_window : public cataimgui::window
         std::string title_;
         std::string message_;
         std::vector<entry> entries_;
+        int selected_ = 0;
         std::deque<int> choices_;
+
+        void select_enabled_entry() {
+            if( entries_.empty() ) {
+                selected_ = -1;
+                return;
+            }
+            selected_ = std::clamp( selected_, 0, static_cast<int>( entries_.size() ) - 1 );
+            if( entries_[selected_].enabled ) {
+                return;
+            }
+            for( size_t index = 0; index < entries_.size(); ++index ) {
+                if( entries_[index].enabled ) {
+                    selected_ = static_cast<int>( index );
+                    return;
+                }
+            }
+            selected_ = -1;
+        }
 };
 
 std::optional<int> run_compact_dialog( const std::string &title, const std::string &message,
-                                       const std::vector<entry> &entries )
+                                       const std::vector<entry> &entries,
+                                       const int initial_selection = 0 )
 {
-    compact_dialog_window viewer( title, message, entries );
+    compact_dialog_window viewer( title, message, entries, initial_selection );
     input_context ctxt( "ADAPTIVE_IMGUI_CHOICE" );
+    ctxt.register_action( "LEFT" );
+    ctxt.register_action( "RIGHT" );
+    ctxt.register_action( "UP" );
+    ctxt.register_action( "DOWN" );
+    ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "QUIT" );
     while( true ) {
         ui_manager::redraw();
         if( const std::optional<int> choice = viewer.take_choice() ) {
             return choice;
         }
-        if( ctxt.handle_input() == "QUIT" ) {
+        const std::string action = ctxt.handle_input();
+        if( action == "LEFT" || action == "UP" ) {
+            viewer.move_selection( -1 );
+        } else if( action == "RIGHT" || action == "DOWN" ) {
+            viewer.move_selection( 1 );
+        } else if( action == "CONFIRM" ) {
+            viewer.activate_selection();
+        } else if( action == "QUIT" ) {
             return std::nullopt;
         }
     }
@@ -376,6 +491,11 @@ std::optional<int> select( const std::string &title, const std::vector<entry> &e
     ( void )hud_scene_title;
 #endif
     ctxt.register_action( "QUIT" );
+    ctxt.register_action( "UP" );
+    ctxt.register_action( "DOWN" );
+    ctxt.register_action( "PAGE_UP" );
+    ctxt.register_action( "PAGE_DOWN" );
+    ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "SELECT" );
     ctxt.register_action( "MOUSE_MOVE" );
 
@@ -384,7 +504,21 @@ std::optional<int> select( const std::string &title, const std::vector<entry> &e
         if( const std::optional<int> choice = viewer.take_choice() ) {
             return choice;
         }
-        if( viewer.take_cancel() || ctxt.handle_input() == "QUIT" ) {
+        if( viewer.take_cancel() ) {
+            return std::nullopt;
+        }
+        const std::string action = ctxt.handle_input();
+        if( action == "UP" ) {
+            viewer.move_selection( -1 );
+        } else if( action == "DOWN" ) {
+            viewer.move_selection( 1 );
+        } else if( action == "PAGE_UP" ) {
+            viewer.move_selection( -5 );
+        } else if( action == "PAGE_DOWN" ) {
+            viewer.move_selection( 5 );
+        } else if( action == "CONFIRM" ) {
+            viewer.activate_selection();
+        } else if( action == "QUIT" ) {
             return std::nullopt;
         }
     }
@@ -398,7 +532,8 @@ bool confirm( const std::string &title, const std::string &message,
         { confirm_label, std::string(), true, danger },
         { cancel_label, std::string(), true, false }
     };
-    const std::optional<int> result = run_compact_dialog( title, message, entries );
+    const std::optional<int> result = run_compact_dialog( title, message, entries,
+                                      danger ? 1 : 0 );
     return result && *result == 0;
 }
 

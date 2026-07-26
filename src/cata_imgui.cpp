@@ -876,6 +876,78 @@ static void PushOrPopColor( std::string_view seg, int minimumColorStackSize )
     }
 }
 
+namespace
+{
+
+thread_local int interaction_suppression_depth = 0;
+
+} // namespace
+
+bool cataimgui::handle_vertical_swipe( const bool enabled, const float threshold )
+{
+    if( !enabled ) {
+        return false;
+    }
+
+    ImGuiStorage *storage = ImGui::GetStateStorage();
+    const ImGuiID dragging_key = ImGui::GetID( "##cata_vertical_swipe_dragging" );
+    const ImGuiID moved_key = ImGui::GetID( "##cata_vertical_swipe_moved" );
+    const ImGuiID start_x_key = ImGui::GetID( "##cata_vertical_swipe_start_x" );
+    const ImGuiID start_y_key = ImGui::GetID( "##cata_vertical_swipe_start_y" );
+    ImGuiIO &io = ImGui::GetIO();
+
+    bool dragging = storage->GetBool( dragging_key, false );
+    bool moved = storage->GetBool( moved_key, false );
+    if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+        ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+        dragging = true;
+        moved = false;
+        storage->SetFloat( start_x_key, io.MousePos.x );
+        storage->SetFloat( start_y_key, io.MousePos.y );
+    }
+    if( !dragging ) {
+        storage->SetBool( moved_key, false );
+        return false;
+    }
+
+    const float distance_x = io.MousePos.x - storage->GetFloat( start_x_key );
+    const float distance_y = io.MousePos.y - storage->GetFloat( start_y_key );
+    if( std::abs( distance_y ) > std::abs( distance_x ) &&
+        std::hypot( distance_x, distance_y ) > std::max( 1.0F, threshold ) ) {
+        moved = true;
+    }
+    if( moved && ImGui::IsMouseDown( ImGuiMouseButton_Left ) ) {
+        ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
+    }
+    if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+        dragging = false;
+    }
+
+    storage->SetBool( dragging_key, dragging );
+    storage->SetBool( moved_key, moved );
+    return moved;
+}
+
+cataimgui::scoped_interaction_suppression::scoped_interaction_suppression(
+    const bool enabled ) : enabled_( enabled )
+{
+    if( enabled_ ) {
+        ++interaction_suppression_depth;
+    }
+}
+
+cataimgui::scoped_interaction_suppression::~scoped_interaction_suppression()
+{
+    if( enabled_ ) {
+        --interaction_suppression_depth;
+    }
+}
+
+bool cataimgui::interaction_suppressed()
+{
+    return interaction_suppression_depth > 0;
+}
+
 /**
  * Scrolls the current ImGui window by a scroll action
  *
