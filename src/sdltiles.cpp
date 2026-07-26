@@ -1043,11 +1043,31 @@ extern "C" {
 
     JNIEXPORT jstring JNICALL
     Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetHudSnapshot(
-        JNIEnv *env, jclass jcls )
+        JNIEnv *env, jclass jcls, jint known_catalog_revision )
     {
         ( void )jcls;
-        const std::string snapshot = android_hud::snapshot_json();
+        const std::string snapshot = android_hud::snapshot_json(
+                                         known_catalog_revision );
         return env->NewStringUTF( snapshot.c_str() );
+    }
+
+    JNIEXPORT jstring JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetHudLayoutSchema(
+        JNIEnv *env, jclass jcls, jstring source_id )
+    {
+        ( void )jcls;
+        if( source_id == nullptr ) {
+            return env->NewStringUTF( "{}" );
+        }
+        const char *raw_source_id =
+            env->GetStringUTFChars( source_id, nullptr );
+        if( raw_source_id == nullptr ) {
+            return env->NewStringUTF( "{}" );
+        }
+        const std::string schema =
+            android_hud::layout_schema_json( raw_source_id );
+        env->ReleaseStringUTFChars( source_id, raw_source_id );
+        return env->NewStringUTF( schema.c_str() );
     }
 
     JNIEXPORT void JNICALL
@@ -1067,19 +1087,15 @@ extern "C" {
         JNIEnv *env, jclass jcls, jstring encoded_sources )
     {
         ( void )jcls;
-        std::vector<std::string> sources;
+        std::string requests;
         if( encoded_sources != nullptr ) {
             const char *raw_sources = env->GetStringUTFChars( encoded_sources, nullptr );
             if( raw_sources != nullptr ) {
-                std::istringstream input( raw_sources );
-                std::string source;
-                while( sources.size() < 512 && std::getline( input, source ) ) {
-                    sources.push_back( source );
-                }
+                requests = raw_sources;
                 env->ReleaseStringUTFChars( encoded_sources, raw_sources );
             }
         }
-        android_hud::set_subscriptions( sources );
+        android_hud::set_subscriptions( requests );
     }
 
 } // "C"

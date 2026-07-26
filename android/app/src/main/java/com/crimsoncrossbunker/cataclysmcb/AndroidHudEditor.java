@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Full-screen schema-5 editor.  All edits stay in a detached draft with
+ * Full-screen schema-6 editor.  All edits stay in a detached draft with
  * bounded undo/redo history until Done performs one atomic repository commit.
  */
 final class AndroidHudEditor {
@@ -278,7 +278,7 @@ final class AndroidHudEditor {
         showInfoCatalog(false);
     }
 
-    private void showInfoCatalog(boolean advancedOnly) {
+    private void showInfoCatalog(boolean advancedTab) {
         List<AndroidHudModel.InfoSource> sources = overlay.infoSources();
         if (sources.isEmpty()) {
             Toast.makeText(activity, "信息源目录尚未就绪，请进入游戏后再试",
@@ -287,26 +287,35 @@ final class AndroidHudEditor {
         }
         ArrayList<AndroidHudSearchDialog.Item<AndroidHudModel.InfoSource>> items =
             new ArrayList<>();
-        boolean hasAdvanced = false;
         for (AndroidHudModel.InfoSource source : sources) {
             boolean advanced = "advanced".equals(source.catalogTier);
-            hasAdvanced |= advanced;
-            if (advanced != advancedOnly) {
+            if (!advancedTab &&
+                    !AndroidHudModel.isCommonInfoSource(source)) {
                 continue;
             }
-            String kind = source.composite ? "原版组合（内部固定）" :
-                advanced ? "开发者原始 Widget" : source.category;
+            String breadcrumb;
+            if (!source.sidebarTitle.isEmpty()) {
+                breadcrumb = source.sidebarTitle + " › " + source.title;
+            } else if (advanced) {
+                breadcrumb = "开发者/高级 › " + source.category +
+                    " › " + source.title;
+            } else {
+                breadcrumb = "通用信息 › " + source.title;
+            }
+            String state = source.defaultEnabled ? "" : " 〔默认关闭〕";
+            String kind = source.composite ? "原版组合" :
+                advanced ? "开发者信息" : source.category;
             items.add(new AndroidHudSearchDialog.Item<>(source, source.id,
-                kind + " · " + source.title + "  [" + source.id + "]",
-                source.title, source.category, source.renderer, source.catalogTier));
+                breadcrumb + state + "\n" + kind + "  [" + source.id + "]",
+                source.title, source.category, source.renderer,
+                source.catalogTier, source.sidebarTitle, breadcrumb));
         }
-        String alternateLabel = advancedOnly ? "返回常用信息" :
-            hasAdvanced ? "开发者/高级" : null;
+        String alternateLabel = advancedTab ? "返回常用信息" : "开发者/高级";
         AndroidHudSearchDialog.showSingle(activity,
-            advancedOnly ? "高级原始 Widget" : "选择信息源",
-            "搜索标题、分类或 ID", items, this::addInfo,
-            alternateLabel, alternateLabel == null ? null :
-                () -> showInfoCatalog(!advancedOnly));
+            advancedTab ? "开发者/高级（包含全部常用信息）" :
+                "常用信息（侧边栏分组）",
+            "搜索全部后代、侧边栏、标题或 ID", items, this::addInfo,
+            alternateLabel, () -> showInfoCatalog(!advancedTab));
     }
 
     private void addInfo(AndroidHudModel.InfoSource source) {
@@ -1108,24 +1117,42 @@ final class AndroidHudEditor {
 
     private final class InfoFormatPropertyFields {
         private final AndroidHudModel.InfoSource source;
+        private final AndroidHudModel.Element working;
+        private final AndroidHudLayoutSchema layoutSchema;
+        private final Spinner layoutMode;
         private final Spinner appearance;
         private final CheckBox customColumns;
         private final EditText columns;
-        private final CheckBox customLabelColumns;
-        private final EditText labelColumns;
+        private final Button nodeOverrides;
+        private final CheckBox sourceBackgrounds;
+        private final CheckBox sourceAttributes;
+        private final ColorField cellBackgroundColor;
 
         InfoFormatPropertyFields(LinearLayout content,
                 AndroidHudModel.InfoSource source,
                 AndroidHudModel.Element element) {
             this.source = source;
+            working = element;
+            layoutSchema = loadLayoutSchema(source.id);
             content.addView(propertySection("原版 Widget 排版"), matchRow());
             content.addView(propertyHelp(
-                "这里使用 CCB 的字符网格列宽。它只控制标签、值和组合子列的排版；元素宽度仍只负责位置、点击区域和裁剪/滑动，不再参与对齐计算。"),
+                "排版使用 CCB Widget 树和字符网格；元素边框仍只负责位置、点击区域与裁剪/滑动。每个信息实例拥有独立配置，不会修改游戏全局 Widget。"),
                 matchRow());
 
-            if (source.composite) {
+            String[] layoutModes = { "原版", "自定义", "完全松散" };
+            int selectedMode = AndroidHudModel.INFO_LAYOUT_CUSTOM.equals(
+                element.infoPresentation.layoutMode) ? 1 :
+                AndroidHudModel.INFO_LAYOUT_LOOSE.equals(
+                    element.infoPresentation.layoutMode) ? 2 : 0;
+            layoutMode = spinner(layoutModes, selectedMode);
+            content.addView(labeled("信息排版模式", layoutMode));
+            content.addView(propertyHelp(
+                "原版：严格使用所属侧边栏的列宽、分隔符和间距；自定义：从原版开始应用稀疏逐节点覆盖；完全松散：保留树、顺序和颜色，取消固定宽度与尾部补齐，兄弟列只留 1 格。切换模式不会删除覆盖。"),
+                matchRow());
+
+            if (source.contextAmbiguous && !source.contextWarning.isEmpty()) {
                 content.addView(propertyHelp(
-                    "这是一个 CCB 原版组合，内部行列由 Widget 树统一排版，不能在 Android 元素组中逐项移动。需要自由摆放时，请从“单项信息”分别添加对应字段。"),
+                    "上下文提示：" + source.contextWarning),
                     matchRow());
             }
             String[] appearances = { "原版样式", "自定义样式" };
@@ -1133,7 +1160,7 @@ final class AndroidHudEditor {
                 AndroidHudInfoFormat.nativeAppearance(element) ? 0 : 1);
             content.addView(labeled("外观模式", appearance));
             content.addView(propertyHelp(
-                "原版样式始终保留 CCB 动态颜色和终端字形。自定义样式才会应用下方的统一颜色、粗斜体、描边与投影；两种模式都使用 C++ 提供的字符列，不会破坏对齐。"),
+                "原版样式严格保留 CCB 的前景、背景、亮色/粗体和高亮属性，下面的颜色与文字效果不会覆盖它。切到自定义样式后，才可分别决定是否沿用来源前景、背景和属性。"),
                 matchRow());
 
             customColumns = check("自定义总列宽",
@@ -1145,30 +1172,41 @@ final class AndroidHudEditor {
             columns.setInputType(InputType.TYPE_CLASS_NUMBER);
             content.addView(labeled("总列宽（8–80）", columns));
             content.addView(propertyHelp(
-                "关闭时继承信息源原版值；legacy labels 组合默认使用 42 列（侧边栏 44 列减去左右各 1 列绘制边距）。"),
+                "仅自定义模式使用该值；关闭时继承所属侧边栏的内容列宽（侧边栏宽度减左右各 1 格）。"),
                 matchRow());
 
-            customLabelColumns = check("统一标签与数值列",
-                AndroidHudInfoFormat.hasCustomLabelColumns(element));
-            content.addView(customLabelColumns);
-            labelColumns = textInput(customLabelColumns.isChecked() ?
-                String.valueOf(element.infoPresentation.labelColumns) : "");
-            labelColumns.setHint("自动");
-            labelColumns.setInputType(InputType.TYPE_CLASS_NUMBER);
-            content.addView(labeled("标签槽宽度（0–40 格）", labelColumns));
+            nodeOverrides = new Button(activity);
+            updateNodeOverrideButton();
+            nodeOverrides.setOnClickListener(view -> showNodeCatalog());
+            content.addView(nodeOverrides, matchRow());
             content.addView(propertyHelp(
-                "开启后，每个嵌套字段使用同样的“标签槽 + 分隔符槽”，使声音/耐力、心情/速度、专注/移动的标签分别上下对齐，数值也分别上下对齐。关闭时保留各组合自己的 CCB 自动宽度；设为 0 会取消共享标签补齐。"),
+                "进入 Widget 树后可按节点覆盖分配宽度、本地标签槽、直属列间距和分隔符。节点路径稳定且配置是稀疏的；条件分支会显示标记。"),
                 matchRow());
+            addMissingOverridesSection(content);
+
+            content.addView(propertySection("终端来源属性"), matchRow());
+            sourceBackgrounds = check("自定义样式沿用来源背景",
+                element.infoPresentation.sourceBackgrounds);
+            sourceAttributes = check("自定义样式沿用来源高亮/粗体",
+                element.infoPresentation.sourceAttributes);
+            content.addView(sourceBackgrounds);
+            content.addView(sourceAttributes);
+            cellBackgroundColor = colorField("自定义终端基础背景",
+                element.infoPresentation.cellBackgroundColor);
+            content.addView(cellBackgroundColor.root, matchRow());
 
             customColumns.setOnCheckedChangeListener((button, checked) ->
                 columns.setEnabled(checked));
-            customLabelColumns.setOnCheckedChangeListener((button, checked) ->
-                labelColumns.setEnabled(checked));
             columns.setEnabled(customColumns.isChecked());
-            labelColumns.setEnabled(customLabelColumns.isChecked());
         }
 
         boolean applyTo(AndroidHudModel.Element element) {
+            element.infoPresentation.layoutMode =
+                layoutMode.getSelectedItemPosition() == 1 ?
+                AndroidHudModel.INFO_LAYOUT_CUSTOM :
+                layoutMode.getSelectedItemPosition() == 2 ?
+                AndroidHudModel.INFO_LAYOUT_LOOSE :
+                AndroidHudModel.INFO_LAYOUT_ORIGINAL;
             element.infoPresentation.appearanceMode =
                 appearance.getSelectedItemPosition() == 1 ?
                 AndroidHudModel.INFO_APPEARANCE_CUSTOM :
@@ -1190,24 +1228,232 @@ final class AndroidHudEditor {
             } else {
                 element.infoPresentation.columns = 0;
             }
-
-            if (customLabelColumns.isChecked()) {
-                Integer value = parseInteger(labelColumns);
-                if (value == null ||
-                        value < AndroidHudInfoFormat.MIN_LABEL_COLUMNS ||
-                        value > AndroidHudInfoFormat.MAX_LABEL_COLUMNS ||
-                        value >= resolvedColumns) {
-                    Toast.makeText(activity,
-                        "标签列宽必须是 0–40 的整数，并且小于总列宽",
-                        Toast.LENGTH_SHORT).show();
-                    return false;
-                }
-                element.infoPresentation.labelColumns = value;
-            } else {
-                element.infoPresentation.labelColumns =
-                    AndroidHudInfoFormat.AUTO_LABEL_COLUMNS;
-            }
+            element.infoPresentation.sourceBackgrounds =
+                sourceBackgrounds.isChecked();
+            element.infoPresentation.sourceAttributes =
+                sourceAttributes.isChecked();
+            element.infoPresentation.cellBackgroundColor =
+                cellBackgroundColor.value;
             return true;
+        }
+
+        private AndroidHudLayoutSchema loadLayoutSchema(String sourceId) {
+            try {
+                String encoded = activity.getHudLayoutSchema(sourceId);
+                return encoded.isEmpty() ? null :
+                    AndroidHudLayoutSchema.parse(encoded);
+            } catch (Exception error) {
+                return null;
+            }
+        }
+
+        private void updateNodeOverrideButton() {
+            nodeOverrides.setText("编辑逐节点排版（" +
+                working.infoPresentation.nodeOverrides.size() + " 项）");
+            nodeOverrides.setEnabled(layoutSchema != null &&
+                layoutSchema.available);
+        }
+
+        private void addMissingOverridesSection(LinearLayout content) {
+            if (layoutSchema == null || !layoutSchema.available) {
+                content.addView(propertyHelp(
+                    "当前无法读取该信息源的 Widget 树；已有覆盖仍会保留，进入游戏并加载目录后可继续编辑。"),
+                    matchRow());
+                return;
+            }
+            java.util.Set<String> paths = layoutSchema.paths();
+            ArrayList<String> missing = new ArrayList<>();
+            for (AndroidHudModel.NodeOverride node :
+                    working.infoPresentation.nodeOverrides) {
+                if (!paths.contains(node.path)) {
+                    missing.add(node.path);
+                }
+            }
+            if (!missing.isEmpty()) {
+                content.addView(propertySection(
+                    "缺失节点覆盖（保留但运行时忽略）"), matchRow());
+                content.addView(propertyHelp(
+                    android.text.TextUtils.join("\n", missing)), matchRow());
+                Button clear = new Button(activity);
+                clear.setText("清理全部缺失覆盖");
+                clear.setOnClickListener(view -> {
+                    working.infoPresentation.nodeOverrides.removeIf(
+                        node -> !paths.contains(node.path));
+                    updateNodeOverrideButton();
+                    clear.setEnabled(false);
+                });
+                content.addView(clear, matchRow());
+            }
+        }
+
+        private void showNodeCatalog() {
+            if (layoutSchema == null || !layoutSchema.available) {
+                return;
+            }
+            ArrayList<AndroidHudSearchDialog.Item<AndroidHudLayoutSchema.Node>>
+                items = new ArrayList<>();
+            for (AndroidHudLayoutSchema.Node node :
+                    layoutSchema.flattened()) {
+                AndroidHudModel.NodeOverride configured =
+                    working.infoPresentation.overrideForPath(node.path);
+                String marker = configured == null ? "" : " ●";
+                String branch = node.conditional ||
+                    node.conditionalBranches ? " 〔条件分支〕" : "";
+                String breadcrumb = layoutSchema.breadcrumb(node);
+                items.add(new AndroidHudSearchDialog.Item<>(
+                    node, node.path, breadcrumb + marker + branch +
+                    "\n[" + node.path + "]",
+                    node.label, node.id, node.path, node.style,
+                    node.arrangement, breadcrumb));
+            }
+            AndroidHudSearchDialog.showSingle(activity,
+                "逐节点排版覆盖", "搜索标签、ID、路径或上级节点",
+                items, this::showNodeProperties);
+        }
+
+        private void showNodeProperties(AndroidHudLayoutSchema.Node node) {
+            AndroidHudModel.NodeOverride existing =
+                working.infoPresentation.overrideForPath(node.path);
+            AndroidHudModel.NodeOverride edit = existing == null ?
+                new AndroidHudModel.NodeOverride() : existing.copy();
+            edit.path = node.path;
+
+            LinearLayout panel = verticalPanel();
+            panel.addView(propertyHelp(
+                layoutSchema.breadcrumb(node) + "\n" + node.path +
+                "\n原版：宽 " + node.originalWidthColumns +
+                "，标签槽 " + node.originalLabelColumns +
+                "，间距 " + node.originalGapColumns +
+                "，分隔符“" + node.separator + "”"), matchRow());
+            CheckBox useWidth = check("覆盖分配宽度",
+                edit.widthColumns != null);
+            EditText width = textInput(edit.widthColumns == null ? "" :
+                String.valueOf(edit.widthColumns));
+            width.setInputType(InputType.TYPE_CLASS_NUMBER);
+            panel.addView(useWidth);
+            panel.addView(labeled("宽度（1–80 格）", width));
+
+            CheckBox useLabels = check("覆盖本地标签槽",
+                edit.labelColumns != null);
+            EditText labels = textInput(edit.labelColumns == null ? "" :
+                String.valueOf(edit.labelColumns));
+            labels.setInputType(InputType.TYPE_CLASS_NUMBER);
+            panel.addView(useLabels);
+            panel.addView(labeled("标签槽（0–40 格）", labels));
+
+            CheckBox useGap = check("覆盖直属列间距",
+                edit.gapColumns != null);
+            EditText gap = textInput(edit.gapColumns == null ? "" :
+                String.valueOf(edit.gapColumns));
+            gap.setInputType(InputType.TYPE_CLASS_NUMBER);
+            panel.addView(useGap);
+            panel.addView(labeled("间距（0–8 格）", gap));
+
+            CheckBox useSeparator = check("覆盖分隔符",
+                edit.separator != null);
+            EditText separator = textInput(
+                edit.separator == null ? "" : edit.separator);
+            panel.addView(useSeparator);
+            panel.addView(labeled("分隔符（最多 32 字节）", separator));
+            useWidth.setOnCheckedChangeListener((button, checked) ->
+                width.setEnabled(checked));
+            useLabels.setOnCheckedChangeListener((button, checked) ->
+                labels.setEnabled(checked));
+            useGap.setOnCheckedChangeListener((button, checked) ->
+                gap.setEnabled(checked));
+            useSeparator.setOnCheckedChangeListener((button, checked) ->
+                separator.setEnabled(checked));
+            width.setEnabled(useWidth.isChecked());
+            labels.setEnabled(useLabels.isChecked());
+            gap.setEnabled(useGap.isChecked());
+            separator.setEnabled(useSeparator.isChecked());
+
+            AlertDialog dialog = new AlertDialog.Builder(activity)
+                .setTitle(node.displayName())
+                .setView(scroll(panel))
+                .setPositiveButton("保存", null)
+                .setNeutralButton("恢复原版", null)
+                .setNegativeButton("取消", null)
+                .create();
+            dialog.setOnShowListener(ignored -> {
+                dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+                    .setOnClickListener(view -> {
+                        Integer widthValue = useWidth.isChecked() ?
+                            parseInteger(width) : null;
+                        Integer labelValue = useLabels.isChecked() ?
+                            parseInteger(labels) : null;
+                        Integer gapValue = useGap.isChecked() ?
+                            parseInteger(gap) : null;
+                        if (widthValue != null &&
+                                (widthValue < 1 || widthValue > 80) ||
+                                useWidth.isChecked() && widthValue == null) {
+                            Toast.makeText(activity,
+                                "宽度必须是 1–80 的整数",
+                                Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        int assignedWidth = widthValue == null ?
+                            (node.originalWidthColumns > 0 ?
+                                node.originalWidthColumns :
+                                AndroidHudInfoFormat.columns(source, working)) :
+                            widthValue;
+                        if (labelValue != null &&
+                                (labelValue < 0 || labelValue > 40 ||
+                                    labelValue >= assignedWidth) ||
+                                useLabels.isChecked() && labelValue == null) {
+                            Toast.makeText(activity,
+                                "标签槽必须是 0–40 的整数，并小于节点宽度",
+                                Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        if (gapValue != null &&
+                                (gapValue < 0 || gapValue > 8) ||
+                                useGap.isChecked() && gapValue == null) {
+                            Toast.makeText(activity,
+                                "间距必须是 0–8 的整数",
+                                Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        String separatorValue = useSeparator.isChecked() ?
+                            separator.getText().toString() : null;
+                        if (separatorValue != null &&
+                                separatorValue.getBytes(
+                                    java.nio.charset.StandardCharsets.UTF_8).length > 32) {
+                            Toast.makeText(activity,
+                                "分隔符最多 32 字节",
+                                Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        edit.widthColumns = widthValue;
+                        edit.labelColumns = labelValue;
+                        edit.gapColumns = gapValue;
+                        edit.separator = separatorValue;
+                        saveNodeOverride(existing, edit);
+                        updateNodeOverrideButton();
+                        dialog.dismiss();
+                    });
+                dialog.getButton(DialogInterface.BUTTON_NEUTRAL)
+                    .setOnClickListener(view -> {
+                        if (existing != null) {
+                            working.infoPresentation.nodeOverrides
+                                .remove(existing);
+                        }
+                        updateNodeOverrideButton();
+                        dialog.dismiss();
+                    });
+            });
+            dialog.show();
+        }
+
+        private void saveNodeOverride(AndroidHudModel.NodeOverride existing,
+                AndroidHudModel.NodeOverride edit) {
+            if (existing != null) {
+                working.infoPresentation.nodeOverrides.remove(existing);
+            }
+            if (edit.widthColumns != null || edit.labelColumns != null ||
+                    edit.gapColumns != null || edit.separator != null) {
+                working.infoPresentation.nodeOverrides.add(edit);
+            }
         }
 
         private Integer parseInteger(EditText input) {

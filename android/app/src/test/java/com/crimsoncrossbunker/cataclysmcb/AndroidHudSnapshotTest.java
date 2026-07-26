@@ -1,11 +1,28 @@
 package com.crimsoncrossbunker.cataclysmcb;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
 public class AndroidHudSnapshotTest {
+    @Test
+    public void catalogRevisionDistinguishesDeltaFromAnEmptyCatalog()
+            throws Exception {
+        AndroidHudSnapshot delta = AndroidHudSnapshot.parse(
+            "{\"schema\":5,\"ready\":true,\"revision\":2," +
+            "\"catalogRevision\":7}");
+        AndroidHudSnapshot emptyCatalog = AndroidHudSnapshot.parse(
+            "{\"schema\":5,\"ready\":true,\"revision\":3," +
+            "\"catalogRevision\":8,\"infoSources\":[]}");
+
+        assertEquals(7, delta.catalogRevision);
+        assertFalse(delta.sourceCatalogIncluded);
+        assertTrue(emptyCatalog.sourceCatalogIncluded);
+        assertTrue(emptyCatalog.sources.isEmpty());
+    }
+
     @Test
     public void terminalLayoutVariantsKeepIndependentCellPositions() throws Exception {
         String raw = "{\"schema\":4,\"ready\":true,\"revision\":1," +
@@ -74,6 +91,32 @@ public class AndroidHudSnapshotTest {
 
         assertEquals("示例数据", terminal.rows.get(0).cells.get(0).text);
         assertEquals(42, terminal.rows.get(0).cells.get(0).span);
+    }
+
+    @Test
+    public void schemaFivePreservesBackgroundSpaceAndAttributesByRequestKey()
+            throws Exception {
+        String key =
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        String raw = "{\"schema\":5,\"ready\":true,\"revision\":1," +
+            "\"values\":[{\"requestKey\":\"" + key + "\"," +
+            "\"sourceId\":\"widget.test\",\"terminal\":{\"columns\":12," +
+            "\"foreground\":-4144960,\"background\":-16777216," +
+            "\"bold\":false,\"blink\":false,\"rows\":[{\"cells\":[{" +
+            "\"column\":0,\"span\":4,\"text\":\"    \"," +
+            "\"foreground\":-1,\"background\":-65536," +
+            "\"bold\":true,\"blink\":true}]}]}}]}";
+
+        AndroidHudSnapshot.TerminalText terminal =
+            AndroidHudSnapshot.parse(raw).terminalValue(
+                key, "widget.test", 12, false);
+        AndroidHudSnapshot.TerminalCell cell =
+            terminal.rows.get(0).cells.get(0);
+        assertEquals("    ", cell.text);
+        assertEquals(0xFFFF0000, cell.background);
+        assertTrue(cell.bold);
+        assertTrue(cell.blink);
+        assertEquals(0xFF000000, terminal.background);
     }
 
     private static String value(String id, int columns, int labels,

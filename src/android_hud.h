@@ -28,11 +28,18 @@ struct minimap_rect {
 
 void set_minimap_rect( const minimap_rect &rect );
 minimap_rect get_minimap_rect();
-void set_subscriptions( const std::vector<std::string> &sources );
+/** Accepts the bounded schema-2 JSON request document produced by Android. */
+void set_subscriptions( const std::string &requests_json );
 
 void publish_snapshot( const avatar &player, int safe_mode );
 void clear_snapshot();
-std::string snapshot_json();
+/**
+ * Serialize a frame; the large source catalog is included only when the
+ * caller's cached catalog revision is stale.
+ */
+std::string snapshot_json( int known_catalog_revision = -1 );
+/** On-demand Widget tree descriptor for the per-node layout editor. */
+std::string layout_schema_json( const std::string &source_id );
 
 } // namespace android_hud
 

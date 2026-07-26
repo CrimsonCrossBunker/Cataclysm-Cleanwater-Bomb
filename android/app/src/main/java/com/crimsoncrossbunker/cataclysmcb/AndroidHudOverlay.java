@@ -22,14 +22,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONException;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.TreeMap;
 
 /**
  * Schema-4 Android HUD runtime and canvas.
@@ -86,6 +87,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private String currentSceneTitle = "";
     private String lastSubscriptions = "";
     private int lastSnapshotRevision = -1;
+    private int lastCatalogRevision = -1;
     private boolean started;
     private boolean threeFingerTracking;
     private float gestureStartX;
@@ -310,7 +312,7 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private void refreshSnapshot() {
-        String raw = activity.getHudSnapshot();
+        String raw = activity.getHudSnapshot(lastCatalogRevision);
         if (raw == null || raw.isEmpty()) {
             return;
         }
@@ -321,9 +323,10 @@ final class AndroidHudOverlay extends FrameLayout {
             }
             lastSnapshotRevision = next.revision;
             snapshot = next;
-            if (!next.sources.isEmpty()) {
+            if (next.sourceCatalogIncluded) {
                 sourceCatalog.clear();
                 sourceCatalog.putAll(next.sources);
+                lastCatalogRevision = next.catalogRevision;
                 publishSubscriptions();
             }
             if (!next.ready || next.sceneId.isEmpty()) {
@@ -712,17 +715,23 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private void publishSubscriptions() {
-        Set<String> subscriptions = new TreeSet<>();
+        TreeMap<String, JSONObject> subscriptions = new TreeMap<>();
         collectSubscriptions(displayedLayout == null ? null : displayedLayout.elements,
             subscriptions);
-        StringBuilder encoded = new StringBuilder();
-        for (String source : subscriptions) {
-            if (encoded.length() > 0) {
-                encoded.append('\n');
+        String next;
+        try {
+            JSONObject document = new JSONObject();
+            document.put("schema", 2);
+            JSONArray requests = new JSONArray();
+            for (JSONObject request : subscriptions.values()) {
+                requests.put(request);
             }
-            encoded.append(source);
+            document.put("requests", requests);
+            next = document.toString();
+        } catch (JSONException error) {
+            Log.w(TAG, "Could not encode HUD subscriptions", error);
+            return;
         }
-        String next = encoded.toString();
         if (!next.equals(lastSubscriptions)) {
             lastSubscriptions = next;
             activity.setHudSubscriptions(next);
@@ -730,7 +739,7 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private void collectSubscriptions(List<AndroidHudModel.Element> elements,
-            Set<String> target) {
+            Map<String, JSONObject> target) {
         if (elements == null) {
             return;
         }
@@ -740,9 +749,10 @@ final class AndroidHudOverlay extends FrameLayout {
             }
             if (AndroidHudModel.TYPE_INFO.equals(element.type)) {
                 AndroidHudModel.InfoSource source = sourceCatalog.get(element.sourceId);
-                String subscription = AndroidHudInfoFormat.subscription(source, element);
-                if (!subscription.isEmpty()) {
-                    target.add(subscription);
+                AndroidHudInfoFormat.Request request =
+                    AndroidHudInfoFormat.request(source, element);
+                if (request != null) {
+                    target.put(request.key, request.json);
                 }
             }
             collectSubscriptions(element.children, target);

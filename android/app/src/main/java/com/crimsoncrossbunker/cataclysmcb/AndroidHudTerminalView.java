@@ -19,6 +19,8 @@ final class AndroidHudTerminalView extends View {
         AndroidHudSnapshot.TerminalText.plain("—",
             AndroidHudInfoFormat.MIN_COLUMNS);
     private AndroidHudModel.Style style = new AndroidHudModel.Style();
+    private AndroidHudModel.InfoPresentation presentation =
+        new AndroidHudModel.InfoPresentation();
     private boolean nativeAppearance = true;
     private float cellWidth = 1f;
     private float lineHeight = 1f;
@@ -31,10 +33,13 @@ final class AndroidHudTerminalView extends View {
     }
 
     void bind(AndroidHudSnapshot.TerminalText value,
-            AndroidHudModel.Style requestedStyle, boolean useNativeAppearance) {
+            AndroidHudModel.Style requestedStyle,
+            AndroidHudModel.InfoPresentation requestedPresentation,
+            boolean useNativeAppearance) {
         terminal = value == null ? AndroidHudSnapshot.TerminalText.plain(
             "—", AndroidHudInfoFormat.MIN_COLUMNS) : value;
         style = requestedStyle;
+        presentation = requestedPresentation;
         nativeAppearance = useNativeAppearance;
         updateMetrics();
         if (!nativeAppearance &&
@@ -79,9 +84,17 @@ final class AndroidHudTerminalView extends View {
 
         for (int rowIndex = 0; rowIndex < terminal.rows.size(); ++rowIndex) {
             float baseline = rowIndex * lineHeight + baselineOffset;
+            int rowBackground = nativeAppearance ||
+                presentation.sourceBackgrounds ?
+                terminal.background : presentation.cellBackgroundColor;
+            paint.clearShadowLayer();
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(rowBackground);
+            canvas.drawRect(originX, rowIndex * lineHeight,
+                originX + logicalWidth, (rowIndex + 1) * lineHeight, paint);
             for (AndroidHudSnapshot.TerminalCell cell :
                     terminal.rows.get(rowIndex).cells) {
-                drawCell(canvas, cell, originX, baseline);
+                drawCell(canvas, cell, originX, baseline, rowIndex);
             }
         }
         paint.clearShadowLayer();
@@ -90,10 +103,12 @@ final class AndroidHudTerminalView extends View {
     }
 
     private void drawCell(Canvas canvas, AndroidHudSnapshot.TerminalCell cell,
-            float originX, float baseline) {
+            float originX, float baseline, int rowIndex) {
         boolean custom = !nativeAppearance;
+        boolean sourceAttributes = nativeAppearance ||
+            presentation.sourceAttributes;
         int typefaceStyle = Typeface.NORMAL;
-        if (cell.bold || custom && style.textBold) {
+        if (sourceAttributes && cell.bold || custom && style.textBold) {
             typefaceStyle |= Typeface.BOLD;
         }
         if (custom && style.textItalic) {
@@ -111,8 +126,17 @@ final class AndroidHudTerminalView extends View {
         }
         float x = originX + cell.column * cellWidth +
             Math.max(0f, (targetWidth - measured) / 2f);
+        int backgroundColor = nativeAppearance ||
+            presentation.sourceBackgrounds ?
+            cell.background : presentation.cellBackgroundColor;
+        paint.clearShadowLayer();
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(backgroundColor);
+        float cellLeft = originX + cell.column * cellWidth;
+        canvas.drawRect(cellLeft, rowIndex * lineHeight,
+            cellLeft + targetWidth, (rowIndex + 1) * lineHeight, paint);
         int fillColor = nativeAppearance || style.sourceColors ?
-            cell.color : style.textColor;
+            cell.foreground : style.textColor;
         paint.setColor(fillColor);
 
         if (custom && AndroidHudModel.TEXT_EFFECT_SHADOW.equals(style.textEffect) &&

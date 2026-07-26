@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <clocale>
 #include <cmath>
@@ -6,8 +7,10 @@
 #include <locale>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "activity_tracker.h"
@@ -2622,6 +2625,102 @@ TEST_CASE( "legacy_labels_place_layout_uses_original_content_columns",
     CHECK( place_overmap->_width == 14 );
     CHECK( place_info->_width + sidebar->_padding +
            place_overmap->_width == sidebar->_width - 2 );
+}
+
+TEST_CASE( "core_sidebar_catalog_has_stable_direct_group_ids",
+           "[widget][layout][sidebar][android_hud]" )
+{
+    int sidebar_count = 0;
+    int group_count = 0;
+    int disabled_count = 0;
+    std::set<std::string> source_ids;
+    for( const widget &sidebar : widget::get_all() ) {
+        if( sidebar._style != "sidebar" ) {
+            continue;
+        }
+        ++sidebar_count;
+        std::unordered_map<std::string, int> occurrences;
+        for( const widget_id &child : sidebar._widgets ) {
+            REQUIRE( child.is_valid() );
+            const int occurrence = occurrences[child.str()]++;
+            const std::string source_id =
+                "sidebar." + sidebar.getId().str() + ".group." +
+                child.str() + "." + std::to_string( occurrence );
+            CHECK( source_ids.insert( source_id ).second );
+            disabled_count += child->has_flag(
+                                  "W_DISABLED_BY_DEFAULT" ) ? 1 : 0;
+            ++group_count;
+        }
+    }
+
+    CHECK( sidebar_count == 13 );
+    CHECK( group_count == 211 );
+    CHECK( source_ids.size() == 211 );
+    CHECK( disabled_count > 0 );
+}
+
+TEST_CASE( "thick_sidebar_hud_layout_preserves_original_and_custom_columns",
+           "[widget][layout][sidebar][android_hud]" )
+{
+    avatar &ava = get_avatar();
+    clear_avatar();
+    ava.movecounter = 0;
+    ava.set_focus( 100 );
+    ava.set_speed_base( 100 );
+
+    widget thick = widget_id( "thick_side_by_side" ).obj();
+    const int original_height = widget_id( "thick_side_by_side" )->_height;
+    widget_hud_layout original;
+    original.mode = widget_hud_layout_mode::original;
+    original.columns = 64;
+    original.inherited_separator = ": ";
+    original.inherited_padding = 2;
+    const std::vector<std::string> original_lines = string_split(
+                remove_color_tags( thick.layout_for_hud( ava, original ) ),
+                '\n' );
+    REQUIRE_FALSE( original_lines.empty() );
+    for( const std::string &line : original_lines ) {
+        CHECK( utf8_width( line ) == 64 );
+        CHECK( utf8_wrapper( line ).substr_display( 13, 2 ).str() == "  " );
+    }
+    const auto movement_line = std::find_if(
+                                   original_lines.begin(), original_lines.end(),
+    []( const std::string & line ) {
+        return line.find( "Sound" ) != std::string::npos;
+    } );
+    REQUIRE( movement_line != original_lines.end() );
+    CHECK( movement_line->find( "Sound" ) == 15 );
+    CHECK( movement_line->find( "Mood" ) == 32 );
+    CHECK( movement_line->find( "Focus" ) == 49 );
+
+    widget_hud_layout custom = original;
+    custom.mode = widget_hud_layout_mode::custom;
+    custom.node_overrides[
+        "thick_side_by_side@0/thick_body_graph@0"].width_columns = 10;
+    const std::vector<std::string> custom_lines = string_split(
+                remove_color_tags( thick.layout_for_hud( ava, custom ) ),
+                '\n' );
+    const auto custom_movement = std::find_if(
+                                     custom_lines.begin(), custom_lines.end(),
+    []( const std::string & line ) {
+        return line.find( "Sound" ) != std::string::npos;
+    } );
+    REQUIRE( custom_movement != custom_lines.end() );
+    CHECK( custom_movement->find( "Sound" ) == 12 );
+    CHECK( custom_movement->find( "Mood" ) == 30 );
+    CHECK( custom_movement->find( "Focus" ) == 48 );
+
+    widget_hud_layout loose = original;
+    loose.mode = widget_hud_layout_mode::loose;
+    const std::vector<std::string> loose_lines = string_split(
+                remove_color_tags( thick.layout_for_hud( ava, loose ) ),
+                '\n' );
+    REQUIRE_FALSE( loose_lines.empty() );
+    for( const std::string &line : loose_lines ) {
+        CHECK( ( line.empty() || line.back() != ' ' ) );
+    }
+    CHECK( widget_id( "thick_side_by_side" )->_height ==
+           original_height );
 }
 
 #if defined(LOCALIZE)

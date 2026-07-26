@@ -110,14 +110,21 @@ public class AndroidHudModelTest {
     }
 
     @Test
-    public void typedInformationFormattingSurvivesSchemaFiveRoundTrip() throws Exception {
+    public void typedInformationFormattingSurvivesSchemaSixRoundTrip() throws Exception {
         AndroidHudModel.Layout layout = new AndroidHudModel.Layout();
         layout.id = "layout.test";
         AndroidHudModel.Element info = element(
             "info.widget", AndroidHudModel.TYPE_INFO);
-        info.sourceId = "sidebar.legacy.place";
+        info.sourceId =
+            "sidebar.legacy_labels_sidebar.group.ll_place_layout.0";
+        info.infoPresentation.layoutMode =
+            AndroidHudModel.INFO_LAYOUT_CUSTOM;
         info.infoPresentation.columns = 42;
-        info.infoPresentation.labelColumns = 6;
+        AndroidHudModel.NodeOverride override =
+            new AndroidHudModel.NodeOverride();
+        override.path = "ll_place_layout@0";
+        override.labelColumns = 6;
+        info.infoPresentation.nodeOverrides.add(override);
         info.infoPresentation.appearanceMode =
             AndroidHudModel.INFO_APPEARANCE_CUSTOM;
         layout.elements.add(info);
@@ -126,7 +133,10 @@ public class AndroidHudModelTest {
             AndroidHudModel.Layout.fromJson(layout.toJson()).find("info.widget");
 
         assertEquals(42, restored.infoPresentation.columns);
-        assertEquals(6, restored.infoPresentation.labelColumns);
+        assertEquals(AndroidHudModel.INFO_LAYOUT_CUSTOM,
+            restored.infoPresentation.layoutMode);
+        assertEquals(6, restored.infoPresentation.nodeOverrides
+            .get(0).labelColumns.intValue());
         assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
             restored.infoPresentation.appearanceMode);
         assertFalse(layout.toJson().getJSONArray("elements").getJSONObject(0)
@@ -134,7 +144,7 @@ public class AndroidHudModelTest {
     }
 
     @Test
-    public void schemaFourPackageMigratesAndRoundTripsAsSchemaFive() throws Exception {
+    public void schemaFourPackageMigratesAndRoundTripsAsSchemaSix() throws Exception {
         org.json.JSONObject legacy = new org.json.JSONObject(
             "{\"format\":\"cataclysm-android-hud\",\"kind\":\"package\"," +
             "\"schema\":4,\"scenes\":[{\"id\":\"gameplay.map\"," +
@@ -153,27 +163,105 @@ public class AndroidHudModelTest {
         AndroidHudModel.Element restored = migrated.scenes.get("gameplay.map")
             .activeLayout().find("info.widget");
 
-        assertEquals("sidebar.legacy.movement", restored.sourceId);
+        assertEquals("sidebar.legacy_labels_sidebar.group." +
+            "ll_movement_layout.0", restored.sourceId);
         assertEquals(36, restored.infoPresentation.columns);
-        assertEquals(4, restored.infoPresentation.labelColumns);
+        assertEquals(AndroidHudModel.INFO_LAYOUT_CUSTOM,
+            restored.infoPresentation.layoutMode);
+        assertEquals("ll_movement_layout@0",
+            restored.infoPresentation.nodeOverrides.get(0).path);
+        assertEquals(4, restored.infoPresentation.nodeOverrides
+            .get(0).labelColumns.intValue());
         assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
             restored.infoPresentation.appearanceMode);
 
-        org.json.JSONObject schemaFive = migrated.toJson();
-        org.json.JSONObject encodedInfo = schemaFive.getJSONArray("scenes")
+        org.json.JSONObject schemaSix = migrated.toJson();
+        org.json.JSONObject encodedInfo = schemaSix.getJSONArray("scenes")
             .getJSONObject(0).getJSONArray("layouts").getJSONObject(0)
             .getJSONArray("elements").getJSONObject(0);
-        assertEquals(AndroidHudModel.SCHEMA, schemaFive.getInt("schema"));
+        assertEquals(AndroidHudModel.SCHEMA, schemaSix.getInt("schema"));
         assertFalse(encodedInfo.has("providerSettings"));
         assertTrue(encodedInfo.has("info"));
 
         AndroidHudModel.Element roundTripped =
-            AndroidHudModel.PackageData.fromJson(schemaFive)
+            AndroidHudModel.PackageData.fromJson(schemaSix)
                 .scenes.get("gameplay.map").activeLayout().find("info.widget");
         assertEquals(36, roundTripped.infoPresentation.columns);
-        assertEquals(4, roundTripped.infoPresentation.labelColumns);
+        assertEquals(4, roundTripped.infoPresentation.nodeOverrides
+            .get(0).labelColumns.intValue());
         assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
             roundTripped.infoPresentation.appearanceMode);
+    }
+
+    @Test
+    public void schemaSixRawWidgetIdIsNeverRewritten() throws Exception {
+        org.json.JSONObject encoded = new org.json.JSONObject(
+            "{\"format\":\"cataclysm-android-hud\",\"kind\":\"package\"," +
+            "\"schema\":6,\"scenes\":[{\"id\":\"gameplay.map\"," +
+            "\"activeLayoutId\":\"layout.test\",\"layouts\":[{" +
+            "\"id\":\"layout.test\",\"elements\":[{" +
+            "\"id\":\"info.raw\",\"type\":\"info\"," +
+            "\"sourceId\":\"widget.ll_movement_layout\"," +
+            "\"frame\":{\"x\":0,\"y\":0,\"width\":300,\"height\":100}" +
+            "}]}]}]}");
+
+        AndroidHudModel.Element restored =
+            AndroidHudModel.PackageData.fromJson(encoded)
+                .scenes.get("gameplay.map").activeLayout().find("info.raw");
+        assertEquals("widget.ll_movement_layout", restored.sourceId);
+    }
+
+    @Test
+    public void unknownNodePathsAreRetainedAndValuesAreBounded()
+            throws Exception {
+        AndroidHudModel.Layout layout = new AndroidHudModel.Layout();
+        layout.id = "layout.test";
+        AndroidHudModel.Element info =
+            element("info.test", AndroidHudModel.TYPE_INFO);
+        info.sourceId = "widget.test";
+        info.infoPresentation.layoutMode =
+            AndroidHudModel.INFO_LAYOUT_CUSTOM;
+        AndroidHudModel.NodeOverride node =
+            new AndroidHudModel.NodeOverride();
+        node.path = "removed_widget@0/old_child@0";
+        node.widthColumns = 999;
+        node.labelColumns = 999;
+        node.gapColumns = 999;
+        info.infoPresentation.nodeOverrides.add(node);
+        layout.elements.add(info);
+
+        AndroidHudModel.Element restored =
+            AndroidHudModel.Layout.fromJson(layout.toJson()).find("info.test");
+        AndroidHudModel.NodeOverride restoredNode =
+            restored.infoPresentation.nodeOverrides.get(0);
+        assertEquals(node.path, restoredNode.path);
+        assertEquals(80, restoredNode.widthColumns.intValue());
+        assertEquals(40, restoredNode.labelColumns.intValue());
+        assertEquals(8, restoredNode.gapColumns.intValue());
+    }
+
+    @Test
+    public void implicitLegacyNativeOpacityBecomesOpaqueButExplicitIsKept()
+            throws Exception {
+        String prefix =
+            "{\"format\":\"cataclysm-android-hud\",\"kind\":\"package\"," +
+            "\"schema\":5,\"scenes\":[{\"id\":\"gameplay.map\"," +
+            "\"activeLayoutId\":\"layout.test\",\"layouts\":[{" +
+            "\"id\":\"layout.test\",\"elements\":[";
+        String suffix = "]}]}]}";
+        String common =
+            "\"type\":\"info\",\"sourceId\":\"widget.test\"," +
+            "\"frame\":{\"x\":0,\"y\":0,\"width\":300,\"height\":100}";
+        org.json.JSONObject encoded = new org.json.JSONObject(prefix +
+            "{\"id\":\"implicit\"," + common + "}," +
+            "{\"id\":\"explicit\"," + common +
+            ",\"style\":{\"opacity\":0.9}}" + suffix);
+
+        AndroidHudModel.Layout restored =
+            AndroidHudModel.PackageData.fromJson(encoded)
+                .scenes.get("gameplay.map").activeLayout();
+        assertEquals(1f, restored.find("implicit").style.opacity, 0f);
+        assertEquals(.9f, restored.find("explicit").style.opacity, 0f);
     }
 
     @Test

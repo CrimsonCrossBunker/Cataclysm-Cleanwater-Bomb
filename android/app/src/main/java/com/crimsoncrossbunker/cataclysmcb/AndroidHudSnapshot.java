@@ -10,7 +10,8 @@ import java.util.List;
 
 /** Immutable Java-side projection of the game-thread HUD snapshot. */
 final class AndroidHudSnapshot {
-    static final int SCHEMA = 4;
+    static final int SCHEMA = 5;
+    static final int LEGACY_SCHEMA = 4;
 
     static final class RichText {
         String text = "";
@@ -25,16 +26,20 @@ final class AndroidHudSnapshot {
 
     static final class Run {
         String text = "";
-        int color = 0xFFFFFFFF;
+        int foreground = 0xFFC0C0C0;
+        int background = 0xFF000000;
         boolean bold;
+        boolean blink;
     }
 
     static final class TerminalCell {
         int column;
         int span = 1;
         String text = "";
-        int color = 0xFFFFFFFF;
+        int foreground = 0xFFC0C0C0;
+        int background = 0xFF000000;
         boolean bold;
+        boolean blink;
     }
 
     static final class TerminalRow {
@@ -43,6 +48,10 @@ final class AndroidHudSnapshot {
 
     static final class TerminalText {
         int columns = AndroidHudInfoFormat.MIN_COLUMNS;
+        int foreground = 0xFFC0C0C0;
+        int background = 0xFF000000;
+        boolean bold;
+        boolean blink;
         final ArrayList<TerminalRow> rows = new ArrayList<>();
 
         boolean hasVisibleContent() {
@@ -86,6 +95,8 @@ final class AndroidHudSnapshot {
 
     boolean ready;
     int revision = -1;
+    int catalogRevision = -1;
+    boolean sourceCatalogIncluded;
     int contextRevision = -1;
     String inputCategory = "";
     String sceneId = "";
@@ -105,12 +116,14 @@ final class AndroidHudSnapshot {
 
     static AndroidHudSnapshot parse(String raw) throws JSONException {
         JSONObject json = new JSONObject(raw);
-        if (json.optInt("schema", 0) != SCHEMA) {
+        int schema = json.optInt("schema", 0);
+        if (schema != SCHEMA && schema != LEGACY_SCHEMA) {
             throw new JSONException("Unsupported native HUD snapshot");
         }
         AndroidHudSnapshot result = new AndroidHudSnapshot();
         result.ready = json.optBoolean("ready", false);
         result.revision = json.optInt("revision", -1);
+        result.catalogRevision = json.optInt("catalogRevision", -1);
         result.contextRevision = json.optInt("contextRevision", -1);
         result.inputCategory = AndroidHudModel.safeId(json.optString("inputCategory", ""));
         result.sceneId = AndroidHudModel.safeId(json.optString("sceneId", ""));
@@ -127,6 +140,7 @@ final class AndroidHudSnapshot {
             }
         }
         JSONArray sources = json.optJSONArray("infoSources");
+        result.sourceCatalogIncluded = sources != null;
         if (sources != null) {
             for (int i = 0; i < sources.length() && i < 4096; ++i) {
                 AndroidHudModel.InfoSource source =
@@ -145,17 +159,21 @@ final class AndroidHudSnapshot {
                 }
                 String id = AndroidHudModel.safeId(value.optString("sourceId", ""));
                 if (!id.isEmpty()) {
-                    int layoutColumns = Math.max(0,
-                        Math.min(AndroidHudInfoFormat.MAX_COLUMNS,
-                            value.optInt("layoutColumns",
-                                value.optInt("widgetWidth", 0))));
-                    int labelColumns = value.has("labelColumns") ?
-                        Math.max(AndroidHudInfoFormat.MIN_LABEL_COLUMNS,
-                            Math.min(AndroidHudInfoFormat.MAX_LABEL_COLUMNS,
-                                value.optInt("labelColumns", 0))) :
-                        AndroidHudInfoFormat.AUTO_LABEL_COLUMNS;
-                    result.terminalValues.put(
-                        valueKey(id, layoutColumns, labelColumns),
+                    String requestKey = value.optString("requestKey", "");
+                    if (requestKey.isEmpty()) {
+                        int layoutColumns = Math.max(0,
+                            Math.min(AndroidHudInfoFormat.MAX_COLUMNS,
+                                value.optInt("layoutColumns",
+                                    value.optInt("widgetWidth", 0))));
+                        int labelColumns = value.has("labelColumns") ?
+                            Math.max(AndroidHudInfoFormat.MIN_LABEL_COLUMNS,
+                                Math.min(AndroidHudInfoFormat.MAX_LABEL_COLUMNS,
+                                    value.optInt("labelColumns", 0))) :
+                            AndroidHudInfoFormat.AUTO_LABEL_COLUMNS;
+                        requestKey = valueKey(
+                            id, layoutColumns, labelColumns);
+                    }
+                    result.terminalValues.put(requestKey,
                         decodeTerminal(value.optJSONObject("terminal")));
                 }
             }
@@ -166,15 +184,25 @@ final class AndroidHudSnapshot {
         return result;
     }
 
+    TerminalText terminalValue(String requestKey, String sourceId,
+            int layoutColumns, boolean preview) {
+        AndroidHudModel.InfoSource source = sources.get(sourceId);
+        TerminalText value = terminalValues.get(requestKey);
+        if (value != null && value.hasVisibleContent()) {
+            return value;
+        }
+        int columns = layoutColumns > 0 ? layoutColumns :
+            source == null ? AndroidHudInfoFormat.MIN_COLUMNS :
+            source.defaultColumns;
+        return TerminalText.plain(preview ? "示例数据" : "—", columns);
+    }
+
+    // Schema-4 compatibility for imported tests and a one-frame native/Java
+    // upgrade boundary.  New callers always use the request hash above.
     TerminalText terminalValue(String sourceId, int layoutColumns,
             int labelColumns, boolean preview) {
-        AndroidHudModel.InfoSource source = sources.get(sourceId);
         TerminalText value = terminalValues.get(
             valueKey(sourceId, layoutColumns, labelColumns));
-        if (value == null && layoutColumns != 0) {
-            value = terminalValues.get(valueKey(sourceId, 0,
-                AndroidHudInfoFormat.AUTO_LABEL_COLUMNS));
-        }
         if (value == null) {
             String prefix = sourceId + '\u001f';
             for (String key : terminalValues.keySet()) {
@@ -187,10 +215,7 @@ final class AndroidHudSnapshot {
         if (value != null && value.hasVisibleContent()) {
             return value;
         }
-        int columns = layoutColumns > 0 ? layoutColumns :
-            source == null ? AndroidHudInfoFormat.MIN_COLUMNS :
-            source.defaultColumns;
-        return TerminalText.plain(preview ? "示例数据" : "—", columns);
+        return terminalValue("", sourceId, layoutColumns, preview);
     }
 
     private static String valueKey(String sourceId, int layoutColumns,
@@ -229,8 +254,12 @@ final class AndroidHudSnapshot {
             }
             Run run = new Run();
             run.text = encodedRun.optString("text", "");
-            run.color = (int)encodedRun.optLong("color", 0xFFFFFFFFL);
+            run.foreground = (int)encodedRun.optLong("foreground",
+                encodedRun.optLong("color", 0xFFC0C0C0L));
+            run.background = (int)encodedRun.optLong(
+                "background", 0xFF000000L);
             run.bold = encodedRun.optBoolean("bold", false);
+            run.blink = encodedRun.optBoolean("blink", false);
             result.runs.add(run);
         }
         return result;
@@ -244,6 +273,12 @@ final class AndroidHudSnapshot {
         result.columns = Math.max(AndroidHudInfoFormat.MIN_COLUMNS,
             Math.min(AndroidHudInfoFormat.MAX_COLUMNS,
                 encoded.optInt("columns", AndroidHudInfoFormat.MIN_COLUMNS)));
+        result.foreground = (int)encoded.optLong(
+            "foreground", 0xFFC0C0C0L);
+        result.background = (int)encoded.optLong(
+            "background", 0xFF000000L);
+        result.bold = encoded.optBoolean("bold", false);
+        result.blink = encoded.optBoolean("blink", false);
         JSONArray rows = encoded.optJSONArray("rows");
         if (rows == null) {
             return result;
@@ -267,13 +302,19 @@ final class AndroidHudSnapshot {
                     cell.span = Math.max(1, Math.min(
                         result.columns - cell.column,
                         encodedCell.optInt("span", 1)));
-                    cell.text = AndroidHudModel.boundedText(
-                        encodedCell.optString("text", ""), 256);
+                    cell.text = encodedCell.optString("text", "");
+                    if (cell.text.length() > 256) {
+                        cell.text = cell.text.substring(0, 256);
+                    }
                     if (cell.text.isEmpty()) {
                         continue;
                     }
-                    cell.color = (int)encodedCell.optLong("color", 0xFFFFFFFFL);
+                    cell.foreground = (int)encodedCell.optLong("foreground",
+                        encodedCell.optLong("color", 0xFFC0C0C0L));
+                    cell.background = (int)encodedCell.optLong(
+                        "background", 0xFF000000L);
                     cell.bold = encodedCell.optBoolean("bold", false);
+                    cell.blink = encodedCell.optBoolean("blink", false);
                     row.cells.add(cell);
                     totalCells++;
                 }

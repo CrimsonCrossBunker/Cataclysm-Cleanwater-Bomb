@@ -235,7 +235,8 @@ public class CataclysmDDA extends SDLActivity {
 
     private static native boolean nativeEnqueueHudAction(String actionId, int contextRevision,
         boolean dangerousAuthorized);
-    private static native String nativeGetHudSnapshot();
+    private static native String nativeGetHudSnapshot(int knownCatalogRevision);
+    private static native String nativeGetHudLayoutSchema(String sourceId);
     private static native void nativeSetHudMinimapRect(int x, int y, int width, int height,
         int viewportWidth, int viewportHeight, boolean visible);
     private static native void nativeSetHudSubscriptions(String encodedSources);
@@ -267,9 +268,17 @@ public class CataclysmDDA extends SDLActivity {
         }
     }
 
-    String getHudSnapshot() {
+    String getHudSnapshot(int knownCatalogRevision) {
         try {
-            return nativeGetHudSnapshot();
+            return nativeGetHudSnapshot(knownCatalogRevision);
+        } catch (UnsatisfiedLinkError e) {
+            return "";
+        }
+    }
+
+    String getHudLayoutSchema(String sourceId) {
+        try {
+            return nativeGetHudLayoutSchema(sourceId == null ? "" : sourceId);
         } catch (UnsatisfiedLinkError e) {
             return "";
         }

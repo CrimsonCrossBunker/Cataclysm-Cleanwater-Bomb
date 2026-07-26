@@ -12,7 +12,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Pure schema-5 domain model for the Android HUD.
+ * Pure schema-6 domain model for the Android HUD.
  *
  * Coordinates use one 1920x1080 landscape canvas.  Root element coordinates
  * are canvas-relative; child coordinates are relative to their parent group's
@@ -20,7 +20,8 @@ import java.util.Set;
  * its clipping rectangle without scaling its children.
  */
 final class AndroidHudModel {
-    static final int SCHEMA = 5;
+    static final int SCHEMA = 6;
+    static final int LEGACY_SCHEMA_V5 = 5;
     static final int LEGACY_SCHEMA = 4;
     static final int CANVAS_WIDTH = 1920;
     static final int CANVAS_HEIGHT = 1080;
@@ -29,6 +30,7 @@ final class AndroidHudModel {
     static final int MAX_ELEMENTS_PER_LAYOUT = 512;
     static final int MAX_ELEMENT_DEPTH = 8;
     static final int MAX_ACTIONS_PER_ELEMENT = 64;
+    static final int MAX_NODE_OVERRIDES = 256;
     static final int MAX_PACKAGE_CHARS = 2 * 1024 * 1024;
 
     static final String KIND_PACKAGE = "package";
@@ -48,6 +50,9 @@ final class AndroidHudModel {
     static final String TEXT_EFFECT_SHADOW = "shadow";
     static final String INFO_APPEARANCE_NATIVE = "native";
     static final String INFO_APPEARANCE_CUSTOM = "custom";
+    static final String INFO_LAYOUT_ORIGINAL = "original";
+    static final String INFO_LAYOUT_CUSTOM = "custom";
+    static final String INFO_LAYOUT_LOOSE = "loose";
 
     private AndroidHudModel() {
     }
@@ -78,7 +83,8 @@ final class AndroidHudModel {
 
         static PackageData fromJson(JSONObject root) throws JSONException {
             int schema = root == null ? 0 : root.optInt("schema", 0);
-            if (root == null || (schema != SCHEMA && schema != LEGACY_SCHEMA) ||
+            if (root == null || (schema != SCHEMA &&
+                    schema != LEGACY_SCHEMA_V5 && schema != LEGACY_SCHEMA) ||
                     !KIND_PACKAGE.equals(root.optString("kind", KIND_PACKAGE))) {
                 throw new JSONException("Unsupported Android HUD package");
             }
@@ -88,7 +94,7 @@ final class AndroidHudModel {
                 throw new JSONException("Missing scenes");
             }
             for (int i = 0; i < scenes.length() && result.scenes.size() < MAX_SCENES; ++i) {
-                Scene scene = Scene.fromJson(scenes.optJSONObject(i));
+                Scene scene = Scene.fromJson(scenes.optJSONObject(i), schema);
                 if (scene != null && !result.scenes.containsKey(scene.id)) {
                     result.scenes.put(scene.id, scene);
                 }
@@ -144,7 +150,7 @@ final class AndroidHudModel {
             return json;
         }
 
-        static Scene fromJson(JSONObject json) throws JSONException {
+        static Scene fromJson(JSONObject json, int schema) throws JSONException {
             if (json == null) {
                 return null;
             }
@@ -159,7 +165,7 @@ final class AndroidHudModel {
             if (layouts != null) {
                 for (int i = 0; i < layouts.length() &&
                         result.layouts.size() < MAX_LAYOUTS_PER_SCENE; ++i) {
-                    Layout layout = Layout.fromJson(layouts.optJSONObject(i));
+                    Layout layout = Layout.fromJson(layouts.optJSONObject(i), schema);
                     if (layout != null && !result.layouts.containsKey(layout.id)) {
                         result.layouts.put(layout.id, layout);
                     }
@@ -234,6 +240,10 @@ final class AndroidHudModel {
         }
 
         static Layout fromJson(JSONObject json) throws JSONException {
+            return fromJson(json, SCHEMA);
+        }
+
+        static Layout fromJson(JSONObject json, int schema) throws JSONException {
             if (json == null) {
                 return null;
             }
@@ -247,7 +257,7 @@ final class AndroidHudModel {
             Set<String> ids = new HashSet<>();
             int[] count = { 0 };
             if (elements != null) {
-                decodeElements(elements, result.elements, ids, count, 0);
+                decodeElements(elements, result.elements, ids, count, 0, schema);
             }
             return result;
         }
@@ -421,7 +431,8 @@ final class AndroidHudModel {
             return json;
         }
 
-        static Element fromJson(JSONObject json, Set<String> ids, int[] count, int depth)
+        static Element fromJson(JSONObject json, Set<String> ids, int[] count,
+                int depth, int schema)
                 throws JSONException {
             if (json == null || depth > MAX_ELEMENT_DEPTH ||
                     count[0] >= MAX_ELEMENTS_PER_LAYOUT) {
@@ -442,6 +453,8 @@ final class AndroidHudModel {
                 OVERFLOW_SCROLL : OVERFLOW_FIXED;
             result.frame.set(Frame.fromJson(json.optJSONObject("frame")));
             JSONObject encodedStyle = json.optJSONObject("style");
+            boolean hasExplicitOpacity =
+                encodedStyle != null && encodedStyle.has("opacity");
             boolean hasExplicitContentPadding =
                 Style.hasExplicitContentPadding(encodedStyle);
             result.style.set(Style.fromJson(encodedStyle));
@@ -450,17 +463,19 @@ final class AndroidHudModel {
 
             if (TYPE_GROUP.equals(type)) {
                 result.clipChildren = json.optBoolean("clipChildren", true);
-                decodeElements(json.optJSONArray("children"), result.children, ids, count, depth + 1);
+                decodeElements(json.optJSONArray("children"), result.children,
+                    ids, count, depth + 1, schema);
             } else if (TYPE_INFO.equals(type)) {
                 result.sourceId = migrateSourceId(
-                    safeId(json.optString("sourceId", "")));
+                    safeId(json.optString("sourceId", "")), schema);
                 if (result.sourceId.isEmpty()) {
                     return null;
                 }
                 normalizeElementGeometry(result);
                 result.infoPresentation.set(InfoPresentation.fromJson(
                     json.optJSONObject("info"),
-                    json.optJSONObject("providerSettings"), result.style));
+                    json.optJSONObject("providerSettings"), result.style,
+                    result.sourceId, schema));
             }
             if (supportsActionBinding(type)) {
                 decodeActionBinding(json, result);
@@ -507,34 +522,136 @@ final class AndroidHudModel {
                     json.optString("selectorMode", SELECTOR_MODE_MENU)) ?
                     SELECTOR_MODE_CYCLE : SELECTOR_MODE_MENU;
             }
+            if (schema <= LEGACY_SCHEMA_V5 && !hasExplicitOpacity) {
+                boolean nativeInformation = TYPE_INFO.equals(type) &&
+                    INFO_APPEARANCE_NATIVE.equals(
+                        result.infoPresentation.appearanceMode);
+                // Schema 4/5 native terminal information inherited 90% only
+                // because it was the generic Style default.  Promote that
+                // implicit value to the strict, opaque native default while
+                // preserving every explicitly stored opacity.
+                result.style.opacity = nativeInformation ? 1f : .90f;
+            }
+            return result;
+        }
+    }
+
+    static final class NodeOverride {
+        String path = "";
+        Integer widthColumns;
+        Integer labelColumns;
+        Integer gapColumns;
+        String separator;
+
+        NodeOverride copy() {
+            NodeOverride result = new NodeOverride();
+            result.path = path;
+            result.widthColumns = widthColumns;
+            result.labelColumns = labelColumns;
+            result.gapColumns = gapColumns;
+            result.separator = separator;
+            return result;
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONObject json = new JSONObject();
+            json.put("path", path);
+            if (widthColumns != null) {
+                json.put("widthColumns", widthColumns);
+            }
+            if (labelColumns != null) {
+                json.put("labelColumns", labelColumns);
+            }
+            if (gapColumns != null) {
+                json.put("gapColumns", gapColumns);
+            }
+            if (separator != null) {
+                json.put("separator", separator);
+            }
+            return json;
+        }
+
+        static NodeOverride fromJson(JSONObject json) {
+            if (json == null) {
+                return null;
+            }
+            String path = safeNodePath(json.optString("path", ""));
+            if (path.isEmpty()) {
+                return null;
+            }
+            NodeOverride result = new NodeOverride();
+            result.path = path;
+            if (json.has("widthColumns")) {
+                result.widthColumns = clampInteger(
+                    json.optInt("widthColumns", 1), 1, 80);
+            }
+            if (json.has("labelColumns")) {
+                result.labelColumns = clampInteger(
+                    json.optInt("labelColumns", 0), 0, 40);
+            }
+            if (json.has("gapColumns")) {
+                result.gapColumns = clampInteger(
+                    json.optInt("gapColumns", 0), 0, 8);
+            }
+            if (json.has("separator")) {
+                result.separator = safeSeparator(
+                    json.optString("separator", ""));
+            }
             return result;
         }
     }
 
     /**
-     * Typed information-only formatting.  Character columns are independent
-     * from the element frame; zero/-1 mean source-native automatic values.
+     * Typed information-only formatting.  Character columns and sparse
+     * Widget-node overrides are independent from the element's pixel frame.
      */
     static final class InfoPresentation {
+        String layoutMode = INFO_LAYOUT_ORIGINAL;
         int columns;
-        int labelColumns = -1;
+        final ArrayList<NodeOverride> nodeOverrides = new ArrayList<>();
         int radarRadius = 10;
         String appearanceMode = INFO_APPEARANCE_NATIVE;
+        boolean sourceBackgrounds = true;
+        boolean sourceAttributes = true;
+        int cellBackgroundColor = 0xFF000000;
 
         void set(InfoPresentation other) {
+            layoutMode = other.layoutMode;
             columns = other.columns;
-            labelColumns = other.labelColumns;
+            nodeOverrides.clear();
+            for (NodeOverride node : other.nodeOverrides) {
+                nodeOverrides.add(node.copy());
+            }
             radarRadius = other.radarRadius;
             appearanceMode = other.appearanceMode;
+            sourceBackgrounds = other.sourceBackgrounds;
+            sourceAttributes = other.sourceAttributes;
+            cellBackgroundColor = other.cellBackgroundColor;
+        }
+
+        NodeOverride overrideForPath(String path) {
+            for (NodeOverride node : nodeOverrides) {
+                if (node.path.equals(path)) {
+                    return node;
+                }
+            }
+            return null;
         }
 
         JSONObject toJson() throws JSONException {
             JSONObject json = new JSONObject();
+            if (!INFO_LAYOUT_ORIGINAL.equals(layoutMode)) {
+                json.put("layoutMode", layoutMode);
+            }
             if (columns > 0) {
                 json.put("columns", columns);
             }
-            if (labelColumns >= 0) {
-                json.put("labelColumns", labelColumns);
+            if (!nodeOverrides.isEmpty()) {
+                JSONArray overrides = new JSONArray();
+                for (NodeOverride node : nodeOverrides) {
+                    overrides.put(node.toJson());
+                }
+                json.put("nodeOverrides", overrides);
             }
             if (radarRadius != 10) {
                 json.put("radarRadius", radarRadius);
@@ -542,21 +659,64 @@ final class AndroidHudModel {
             if (!INFO_APPEARANCE_NATIVE.equals(appearanceMode)) {
                 json.put("appearance", appearanceMode);
             }
+            if (!sourceBackgrounds) {
+                json.put("sourceBackgrounds", false);
+            }
+            if (!sourceAttributes) {
+                json.put("sourceAttributes", false);
+            }
+            if (cellBackgroundColor != 0xFF000000) {
+                json.put("cellBackgroundColor", cellBackgroundColor);
+            }
             return json;
         }
 
         static InfoPresentation fromJson(JSONObject encoded,
-                JSONObject legacySettings, Style style) {
+                JSONObject legacySettings, Style style, String sourceId,
+                int schema) {
             InfoPresentation result = new InfoPresentation();
             if (encoded != null) {
-                result.columns = clampInteger(encoded.optInt("columns", 0), 0, 80);
-                int labels = encoded.optInt("labelColumns", -1);
-                result.labelColumns = labels >= 0 && labels <= 40 ? labels : -1;
+                int rawColumns = encoded.optInt("columns", 0);
+                result.columns = rawColumns <= 0 ? 0 :
+                    clampInteger(rawColumns, 8, 80);
+                String mode = encoded.optString(
+                    "layoutMode", INFO_LAYOUT_ORIGINAL);
+                result.layoutMode = INFO_LAYOUT_CUSTOM.equals(mode) ||
+                    INFO_LAYOUT_LOOSE.equals(mode) ? mode :
+                    INFO_LAYOUT_ORIGINAL;
+                JSONArray overrides = encoded.optJSONArray("nodeOverrides");
+                if (overrides != null) {
+                    Set<String> knownPaths = new HashSet<>();
+                    for (int i = 0; i < overrides.length() &&
+                            result.nodeOverrides.size() < MAX_NODE_OVERRIDES; ++i) {
+                        NodeOverride node = NodeOverride.fromJson(
+                            overrides.optJSONObject(i));
+                        if (node != null && knownPaths.add(node.path)) {
+                            result.nodeOverrides.add(node);
+                        }
+                    }
+                }
+                int legacyLabels = encoded.optInt("labelColumns", -1);
+                if (legacyLabels >= 0 && legacyLabels <= 40 &&
+                        result.nodeOverrides.size() < MAX_NODE_OVERRIDES) {
+                    addLegacyRootLabelOverride(
+                        result, sourceId, legacyLabels);
+                }
+                if (schema <= LEGACY_SCHEMA_V5 &&
+                        (result.columns > 0 || legacyLabels >= 0)) {
+                    result.layoutMode = INFO_LAYOUT_CUSTOM;
+                }
                 result.radarRadius =
                     clampInteger(encoded.optInt("radarRadius", 10), 3, 30);
                 result.appearanceMode = INFO_APPEARANCE_CUSTOM.equals(
                     encoded.optString("appearance", INFO_APPEARANCE_NATIVE)) ?
                     INFO_APPEARANCE_CUSTOM : INFO_APPEARANCE_NATIVE;
+                result.sourceBackgrounds =
+                    encoded.optBoolean("sourceBackgrounds", true);
+                result.sourceAttributes =
+                    encoded.optBoolean("sourceAttributes", true);
+                result.cellBackgroundColor = (int)encoded.optLong(
+                    "cellBackgroundColor", 0xFF000000L);
                 return result;
             }
             if (legacySettings == null) {
@@ -565,8 +725,14 @@ final class AndroidHudModel {
 
             result.columns = parseLegacyInteger(
                 legacySettings.optString("layoutColumns", ""), 0, 8, 80);
-            result.labelColumns = parseLegacyInteger(
+            int legacyLabels = parseLegacyInteger(
                 legacySettings.optString("labelColumns", ""), -1, 0, 40);
+            if (legacyLabels >= 0) {
+                addLegacyRootLabelOverride(result, sourceId, legacyLabels);
+            }
+            if (result.columns > 0 || legacyLabels >= 0) {
+                result.layoutMode = INFO_LAYOUT_CUSTOM;
+            }
             result.radarRadius = parseLegacyInteger(
                 legacySettings.optString("radius", ""), 10, 3, 30);
             if ("false".equalsIgnoreCase(
@@ -578,6 +744,18 @@ final class AndroidHudModel {
             return result;
         }
 
+        private static void addLegacyRootLabelOverride(
+                InfoPresentation result, String sourceId, int labels) {
+            String path = rootPathForSource(sourceId);
+            if (path.isEmpty() || result.overrideForPath(path) != null) {
+                return;
+            }
+            NodeOverride node = new NodeOverride();
+            node.path = path;
+            node.labelColumns = labels;
+            result.nodeOverrides.add(node);
+        }
+
         private static int parseLegacyInteger(String raw, int fallback,
                 int minimum, int maximum) {
             try {
@@ -585,10 +763,6 @@ final class AndroidHudModel {
             } catch (NumberFormatException | NullPointerException ignored) {
                 return fallback;
             }
-        }
-
-        private static int clampInteger(int value, int minimum, int maximum) {
-            return Math.max(minimum, Math.min(maximum, value));
         }
     }
 
@@ -628,7 +802,7 @@ final class AndroidHudModel {
     }
 
     static final class Style {
-        float opacity = .90f;
+        float opacity = 1f;
         float fontSizeSp = 10f;
         int textColor = 0xFFFFFFFF;
         int backgroundColor = 0xCC111820;
@@ -680,7 +854,7 @@ final class AndroidHudModel {
 
         JSONObject toJson() throws JSONException {
             JSONObject json = new JSONObject();
-            if (Float.compare(opacity, .90f) != 0) {
+            if (Float.compare(opacity, 1f) != 0) {
                 json.put("opacity", opacity);
             }
             if (Float.compare(fontSizeSp, 10f) != 0) {
@@ -755,7 +929,7 @@ final class AndroidHudModel {
             if (json == null) {
                 return result;
             }
-            result.opacity = clampFinite(json.optDouble("opacity", .90), 0, 1);
+            result.opacity = clampFinite(json.optDouble("opacity", 1), 0, 1);
             result.fontSizeSp = clampFinite(json.optDouble("fontSizeSp", 10), 8, 40);
             result.textColor = (int)json.optLong("textColor", 0xFFFFFFFFL);
             result.backgroundColor = (int)json.optLong("backgroundColor", 0xCC111820L);
@@ -1041,6 +1215,14 @@ final class AndroidHudModel {
         boolean square;
         boolean terminalConfigurable;
         boolean composite;
+        boolean defaultEnabled = true;
+        boolean contextAmbiguous;
+        String sidebarId = "";
+        String sidebarTitle = "";
+        String contextWarning = "";
+        int sidebarOrder = -1;
+        int groupOrder = -1;
+        int occurrence;
         int defaultColumns;
         int defaultLabelColumns = -1;
 
@@ -1054,7 +1236,8 @@ final class AndroidHudModel {
             result.category = boundedText(json.optString("category", "高级"), 100);
             result.renderer = safeId(json.optString("renderer", "rich_text"));
             String tier = safeId(json.optString("catalogTier", "single"));
-            result.catalogTier = "recommended".equals(tier) ||
+            result.catalogTier = "common".equals(tier) ||
+                "recommended".equals(tier) ||
                 "advanced".equals(tier) ? tier : "single";
             result.defaultWidth = clampFinite(json.optDouble("defaultWidth", 320), 32, CANVAS_WIDTH);
             result.defaultHeight = clampFinite(json.optDouble("defaultHeight", 100), 32,
@@ -1065,6 +1248,17 @@ final class AndroidHudModel {
                 json.optBoolean("terminalConfigurable",
                     json.optBoolean("configurableWidgetLayout", false));
             result.composite = json.optBoolean("composite", false);
+            result.defaultEnabled = json.optBoolean("defaultEnabled", true);
+            result.contextAmbiguous =
+                json.optBoolean("contextAmbiguous", false);
+            result.sidebarId = safeId(json.optString("sidebarId", ""));
+            result.sidebarTitle = boundedText(
+                json.optString("sidebarTitle", result.sidebarId), 100);
+            result.contextWarning = boundedText(
+                json.optString("contextWarning", ""), 240);
+            result.sidebarOrder = json.optInt("sidebarOrder", -1);
+            result.groupOrder = json.optInt("groupOrder", -1);
+            result.occurrence = Math.max(0, json.optInt("occurrence", 0));
             result.defaultColumns = Math.max(
                 AndroidHudInfoFormat.MIN_COLUMNS,
                 Math.min(AndroidHudInfoFormat.MAX_COLUMNS,
@@ -1079,12 +1273,13 @@ final class AndroidHudModel {
     }
 
     private static void decodeElements(JSONArray encoded, List<Element> target, Set<String> ids,
-            int[] count, int depth) throws JSONException {
+            int[] count, int depth, int schema) throws JSONException {
         if (encoded == null || depth > MAX_ELEMENT_DEPTH) {
             return;
         }
         for (int i = 0; i < encoded.length() && count[0] < MAX_ELEMENTS_PER_LAYOUT; ++i) {
-            Element element = Element.fromJson(encoded.optJSONObject(i), ids, count, depth);
+            Element element = Element.fromJson(
+                encoded.optJSONObject(i), ids, count, depth, schema);
             if (element != null) {
                 target.add(element);
             }
@@ -1166,41 +1361,102 @@ final class AndroidHudModel {
         return safeId(raw);
     }
 
-    private static String migrateSourceId(String sourceId) {
-        if (!sourceId.startsWith("widget.")) {
+    private static String migrateSourceId(String sourceId, int schema) {
+        if (schema >= SCHEMA) {
             return sourceId;
         }
-        String widget = sourceId.substring("widget.".length());
-        switch (widget) {
+        String legacy = sourceId;
+        if (sourceId.startsWith("widget.")) {
+            legacy = sourceId.substring("widget.".length());
+        }
+        switch (legacy) {
+            case "sidebar.legacy.limbs":
             case "ll_limbs_layout":
-                return "sidebar.legacy.limbs";
+                return legacyLabelsGroup("ll_limbs_layout");
+            case "sidebar.legacy.movement":
             case "ll_movement_layout":
-                return "sidebar.legacy.movement";
+                return legacyLabelsGroup("ll_movement_layout");
+            case "sidebar.legacy.stats":
             case "ll_stats_layout":
-                return "sidebar.legacy.stats";
+                return legacyLabelsGroup("ll_stats_layout");
+            case "sidebar.legacy.weariness":
             case "all_weariness_layout":
-                return "sidebar.legacy.weariness";
+                return legacyLabelsGroup("all_weariness_layout");
+            case "sidebar.legacy.needs":
             case "ll_needs_layout":
-                return "sidebar.legacy.needs";
+                return legacyLabelsGroup("ll_needs_layout");
+            case "sidebar.legacy.place":
             case "ll_place_layout":
-                return "sidebar.legacy.place";
+                return legacyLabelsGroup("ll_place_layout");
+            case "sidebar.legacy.wind_temperature":
             case "wind_temp_layout":
-                return "sidebar.legacy.wind_temperature";
+                return legacyLabelsGroup("wind_temp_layout");
+            case "sidebar.legacy.oxygen":
             case "oxygen_layout":
-                return "sidebar.legacy.oxygen";
+                return legacyLabelsGroup("oxygen_layout");
+            case "sidebar.legacy.weapon_style":
             case "weapon_style_layout":
-                return "sidebar.legacy.weapon_style";
+                return legacyLabelsGroup("weapon_style_layout");
+            case "sidebar.legacy.vehicle":
             case "vehicle_acf_label_layout":
-                return "sidebar.legacy.vehicle";
+                return legacyLabelsGroup("vehicle_acf_label_layout");
+            case "sidebar.legacy.compass":
             case "compass_all_danger_layout":
-                return "sidebar.legacy.compass";
+                return legacyLabelsGroup("compass_all_danger_layout");
+            case "sidebar.legacy.carry_weight":
             case "ll_weight_carried_value":
-                return "sidebar.legacy.carry_weight";
+                return legacyLabelsGroup("ll_weight_carried_value");
+            case "sidebar.legacy.radiation":
             case "rad_badge_desc":
-                return "sidebar.legacy.radiation";
+                return legacyLabelsGroup("rad_badge_desc");
             default:
                 return sourceId;
         }
+    }
+
+    private static String legacyLabelsGroup(String widgetId) {
+        return "sidebar.legacy_labels_sidebar.group." + widgetId + ".0";
+    }
+
+    private static String rootPathForSource(String sourceId) {
+        if (sourceId.startsWith("widget.")) {
+            String widgetId = sourceId.substring("widget.".length());
+            return safeId(widgetId).isEmpty() ? "" : widgetId + "@0";
+        }
+        int marker = sourceId.indexOf(".group.");
+        int occurrence = sourceId.lastIndexOf('.');
+        if (marker < 0 || occurrence <= marker + ".group.".length()) {
+            return "";
+        }
+        String widgetId = sourceId.substring(
+            marker + ".group.".length(), occurrence);
+        return safeId(widgetId).isEmpty() ? "" : widgetId + "@0";
+    }
+
+    private static String safeNodePath(String raw) {
+        if (raw == null || raw.isEmpty() || raw.length() > 2048) {
+            return "";
+        }
+        for (int i = 0; i < raw.length(); ++i) {
+            char c = raw.charAt(i);
+            if (!Character.isLetterOrDigit(c) && c != '_' && c != '-' &&
+                    c != '.' && c != ':' && c != '@' && c != '/') {
+                return "";
+            }
+        }
+        return raw;
+    }
+
+    private static String safeSeparator(String raw) {
+        if (raw == null || raw.length() > 32 ||
+                raw.indexOf('\r') >= 0 || raw.indexOf('\n') >= 0) {
+            return "";
+        }
+        return raw;
+    }
+
+    private static int clampInteger(int value, int minimum, int maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
     }
 
     static String boundedText(String raw, int maximum) {
@@ -1231,6 +1487,11 @@ final class AndroidHudModel {
             }
         }
         return true;
+    }
+
+    static boolean isCommonInfoSource(InfoSource source) {
+        return source != null &&
+            !"advanced".equals(source.catalogTier);
     }
 
     private static String acceptedAction(String candidate, List<String> actions) {

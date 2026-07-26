@@ -23,15 +23,16 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Atomic schema-5 repository.  It owns persistence, validation and package
+ * Atomic schema-6 repository.  It owns persistence, validation and package
  * import/export; Views only ever receive detached model copies.
  */
 final class AndroidHudRepository {
     private static final String TAG = "AndroidHudRepository";
-    private static final String STORE_NAME = "android-hud-layouts-v5.json";
+    private static final String STORE_NAME = "android-hud-layouts-v6.json";
+    private static final String LEGACY_V5_STORE_NAME = "android-hud-layouts-v5.json";
     private static final String LEGACY_V4_STORE_NAME = "android-hud-layouts-v4.json";
     private static final String LEGACY_ARCHIVE_NAME = "android-hud-legacy-v1-v3.json";
-    private static final String MIGRATION_PREFS = "android_hud_schema5";
+    private static final String MIGRATION_PREFS = "android_hud_schema6";
     private static final String LEGACY_ARCHIVED = "legacy_archived";
     private static final String EMPTY_LAYOUT_NAME = "空白布局";
 
@@ -64,6 +65,7 @@ final class AndroidHudRepository {
 
     private final Context context;
     private final AtomicFile store;
+    private final AtomicFile legacyV5Store;
     private final AtomicFile legacyV4Store;
     private final AtomicFile legacyArchive;
     private AndroidHudModel.PackageData data;
@@ -75,19 +77,24 @@ final class AndroidHudRepository {
             Log.w(TAG, "Could not create HUD storage directory");
         }
         store = new AtomicFile(new File(directory, STORE_NAME));
+        legacyV5Store = new AtomicFile(new File(directory, LEGACY_V5_STORE_NAME));
         legacyV4Store = new AtomicFile(new File(directory, LEGACY_V4_STORE_NAME));
         legacyArchive = new AtomicFile(new File(directory, LEGACY_ARCHIVE_NAME));
         archiveLegacyOnce();
         data = readStore(store);
-        boolean migratedV4 = false;
+        boolean migratedLegacy = false;
+        if (data == null) {
+            data = readStore(legacyV5Store);
+            migratedLegacy = data != null;
+        }
         if (data == null) {
             data = readStore(legacyV4Store);
-            migratedV4 = data != null;
+            migratedLegacy = data != null;
         }
         if (data == null) {
             data = new AndroidHudModel.PackageData();
         }
-        if (migratedV4 || !store.getBaseFile().exists()) {
+        if (migratedLegacy || !store.getBaseFile().exists()) {
             save();
         }
     }
@@ -333,8 +340,9 @@ final class AndroidHudRepository {
         JSONObject root = new JSONObject(raw);
         int schema = root.optInt("schema", 0);
         if (schema != AndroidHudModel.SCHEMA &&
+                schema != AndroidHudModel.LEGACY_SCHEMA_V5 &&
                 schema != AndroidHudModel.LEGACY_SCHEMA) {
-            throw new JSONException("Only schema 4 or 5 HUD files can be imported");
+            throw new JSONException("Only schema 4, 5 or 6 HUD files can be imported");
         }
         String kind = root.optString("kind", AndroidHudModel.KIND_PACKAGE);
         if (AndroidHudModel.KIND_LAYOUT.equals(kind)) {
@@ -348,7 +356,7 @@ final class AndroidHudRepository {
             sourceScene.title = acceptedTitle(encodedScene == null ? "" :
                 encodedScene.optString("title", ""), sourceScene.id);
             AndroidHudModel.Layout layout = AndroidHudModel.Layout.fromJson(
-                root.optJSONObject("layout"));
+                root.optJSONObject("layout"), schema);
             if (layout == null) {
                 throw new JSONException("Missing layout");
             }

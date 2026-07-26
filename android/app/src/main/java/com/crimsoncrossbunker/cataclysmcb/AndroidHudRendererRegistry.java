@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.view.Gravity;
@@ -66,10 +67,13 @@ final class AndroidHudRendererRegistry {
                 AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
                 boolean preview, MinimapPublisher minimapPublisher) {
             int columns = AndroidHudInfoFormat.columns(source, element);
-            int labelColumns = AndroidHudInfoFormat.labelColumns(source, element);
+            String requestKey =
+                AndroidHudInfoFormat.requestKey(source, element);
             ((AndroidHudTerminalView)view).bind(
-                snapshot.terminalValue(source.id, columns, labelColumns, preview),
-                element.style, AndroidHudInfoFormat.nativeAppearance(element));
+                snapshot.terminalValue(
+                    requestKey, source.id, columns, preview),
+                element.style, element.infoPresentation,
+                AndroidHudInfoFormat.nativeAppearance(element));
         }
     }
 
@@ -111,7 +115,7 @@ final class AndroidHudRendererRegistry {
             } else {
                 for (AndroidHudSnapshot.RichText message : snapshot.messages) {
                     int messageStart = content.length();
-                    appendRichText(content, message, element.style.sourceColors);
+                    appendRichText(content, message, element);
                     if (content.length() > messageStart) {
                         content.append('\n');
                     }
@@ -181,17 +185,33 @@ final class AndroidHudRendererRegistry {
     }
 
     private static void appendRichText(SpannableStringBuilder target,
-            AndroidHudSnapshot.RichText value, boolean sourceColors) {
-        if (!sourceColors || value.runs.isEmpty()) {
+            AndroidHudSnapshot.RichText value,
+            AndroidHudModel.Element element) {
+        boolean nativeAppearance =
+            AndroidHudInfoFormat.nativeAppearance(element);
+        boolean sourceForeground = nativeAppearance ||
+            element.style.sourceColors;
+        boolean sourceBackground = nativeAppearance ||
+            element.infoPresentation.sourceBackgrounds;
+        boolean sourceAttributes = nativeAppearance ||
+            element.infoPresentation.sourceAttributes;
+        if ((!sourceForeground && !sourceBackground &&
+                !sourceAttributes) || value.runs.isEmpty()) {
             target.append(value.text);
             return;
         }
         for (AndroidHudSnapshot.Run run : value.runs) {
             int start = target.length();
             target.append(run.text);
-            target.setSpan(new ForegroundColorSpan(run.color), start,
-                target.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            if (run.bold) {
+            if (sourceForeground) {
+                target.setSpan(new ForegroundColorSpan(run.foreground), start,
+                    target.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            if (sourceBackground) {
+                target.setSpan(new BackgroundColorSpan(run.background), start,
+                    target.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            if (sourceAttributes && run.bold) {
                 target.setSpan(new StyleSpan(Typeface.BOLD), start,
                     target.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
