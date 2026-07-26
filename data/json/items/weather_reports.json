@@ -2,6 +2,7 @@
   {
     "type": "ITEM",
     "abstract": "abstract_weather_report",
+    "category": "books",
     "name": { "str_sp": "abstract weather report" },
     "symbol": ",",
     "color": "white",
