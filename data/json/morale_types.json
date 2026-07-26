@@ -310,6 +310,16 @@
     "text": "Numb"
   },
   {
+    "id": "morale_perm_emotionalvolatility",
+    "type": "morale_type",
+    "text": "Emotional Volatility"
+  },
+  {
+    "id": "morale_perm_emotionalflatness",
+    "type": "morale_type",
+    "text": "Emotional Flatness"
+  },
+  {
     "id": "morale_perm_constrained",
     "type": "morale_type",
     "text": "Uncomfortable gear"
