@@ -1995,10 +1995,11 @@
     "categories": [ "warfare" ],
     "color": "dark_gray",
     "broken_color": "dark_gray",
-    "durability": 660,
+    "durability": 780,
+    "bonus": 50,
     "item": "alloy_plate",
     "location": "armor",
-    "//": "240 cm weld to install, 60 cm weld per damage quadrant",
+    "//": "240 cm weld to install, 50 cm weld and 1 superalloy sheet per damage quadrant",
     "requirements": {
       "install": {
         "skills": [ [ "mechanics", 4 ] ],
@@ -2010,15 +2011,18 @@
         "time": "30 m",
         "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
       },
-      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "10 m", "using": [ [ "repair_welding_standard", 6 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 5 ] ]
+      }
     },
     "flags": [ "ARMOR", "SHOCK_RESISTANT" ],
     "breaks_into": [
-      { "item": "ch_steel_lump", "count": [ 4, 6 ] },
-      { "item": "ch_steel_chunk", "count": [ 4, 6 ] },
-      { "item": "scrap", "count": [ 4, 6 ] }
+      { "item": "scrap", "count": [ 6, 18 ] },
+      { "item": "alloy_sheet", "count": [ 4, 8 ] }
     ],
-    "damage_reduction": { "all": 56 },
+    "damage_reduction": { "all": 70 },
     "variants": [ { "symbols": ")", "symbols_broken": ")" } ]
   },
   {
