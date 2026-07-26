@@ -46,10 +46,14 @@ static const furn_str_id furn_test_f_plant_mature( "test_f_plant_mature" );
 static const furn_str_id furn_test_f_plant_overgrown( "test_f_plant_overgrown" );
 static const furn_str_id furn_test_f_plant_seed( "test_f_plant_seed" );
 static const furn_str_id furn_test_f_plant_seedling( "test_f_plant_seedling" );
-static const furn_str_id furn_test_f_planter_no_overgrowth_seed( "test_f_planter_no_overgrowth_seed" );
-static const furn_str_id furn_test_f_planter_no_overgrowth_seedling( "test_f_planter_no_overgrowth_seedling" );
-static const furn_str_id furn_test_f_planter_no_overgrowth_mature( "test_f_planter_no_overgrowth_mature" );
-static const furn_str_id furn_test_f_planter_no_overgrowth_harvest( "test_f_planter_no_overgrowth_harvest" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_seed( "test_f_planter_no_overgrowth_seed" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_seedling( "test_f_planter_no_overgrowth_seedling" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_mature( "test_f_planter_no_overgrowth_mature" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_harvest( "test_f_planter_no_overgrowth_harvest" );
 static const furn_str_id
 furn_test_f_planter_high_water_mature( "test_f_planter_high_water_mature" );
 static const furn_str_id furn_test_f_planter_high_water_seed( "test_f_planter_high_water_seed" );
@@ -835,9 +839,11 @@ TEST_CASE( "planter_flag_prevents_crop_overgrowth", "[plant][furniture][flag]" )
     here.add_item( plot, item( itype_test_seed_eoc ) );
     here.furn_set( plot, furn_test_f_planter_no_overgrowth_seed );
 
-    for( const furn_str_id &expected : { furn_test_f_planter_no_overgrowth_seedling,
-                                         furn_test_f_planter_no_overgrowth_mature,
-                                         furn_test_f_planter_no_overgrowth_harvest } ) {
+    for( const furn_str_id &expected : {
+             furn_test_f_planter_no_overgrowth_seedling,
+             furn_test_f_planter_no_overgrowth_mature,
+             furn_test_f_planter_no_overgrowth_harvest
+         } ) {
         calendar::turn += 1_hours;
         here.grow_plant( plot );
         CHECK( here.furn( plot ) == expected );

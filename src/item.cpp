@@ -4211,7 +4211,7 @@ void item::calc_temp( const units::temperature &temp, const float insulation,
     if( std::abs( temperature_difference ) < 0.4 ) {
         return;
     }
-    const float mass = to_gram( weight() ) / ( is_stackable() ? charges : 1); // g
+    const float mass = to_gram( weight() ) / ( is_stackable() ? charges : 1 ); // g
 
     // If item has negative energy set to environment temperature (it not been processed ever)
     if( units::to_joule_per_gram( specific_energy ) < 0 ) {
@@ -4221,7 +4221,8 @@ void item::calc_temp( const units::temperature &temp, const float insulation,
 
     // specific_energy = item thermal energy (J/g). Stored in the item
     // temperature = item temperature (K). Stored in the item
-    const float conductivity_term = 0.0076 * std::pow( to_milliliter( volume() ) / ( is_stackable() ? charges : 1),
+    const float conductivity_term = 0.0076 * std::pow( to_milliliter( volume() ) /
+                                    ( is_stackable() ? charges : 1 ),
                                     2.0 / 3.0 ) / insulation;
     const float specific_heat_liquid = get_specific_heat_liquid();
     const float specific_heat_solid = get_specific_heat_solid();
