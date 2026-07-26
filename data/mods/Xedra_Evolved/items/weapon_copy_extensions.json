@@ -342,7 +342,6 @@
   },
   {
     "type": "ITEM",
-    "subtypes": [ "GUN" ],
     "id": "staff_sling",
     "copy-from": "staff_sling",
     "name": { "str": "staff sling" },

@@ -1003,25 +1003,5 @@
     "overwrite_min_cycle_recoil": 540,
     "add_mod": [ [ "muzzle", 1 ] ]
   },
-  {
-    "id": "staff_sling_grenade_cradle",
-    "type": "ITEM",
-    "subtypes": [ "GUNMOD" ],
-    "name": { "str": "grenade cradle for staff sling", "str_pl": "grenade cradles for staff slings" },
-    "description": "A larger cradle with a longer sling for fitting to a staff sling to enable it to throw grenades.",
-    "weight": "96 g",
-    "volume": "250 ml",
-    "integral_volume": "0 ml",
-    "integral_weight": "0 g",
-    "price": "1 USD 50 cent",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "leather" ],
-    "symbol": ":",
-    "color": "brown",
-    "location": "bore",
-    "mod_targets": [ "staff_sling" ],
-    "install_time": "1 m",
-    "ammo_modifier": [ "sling-ready_grenade" ],
-    "pocket_mods": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "sling-ready_grenade": 1 }, "open_container": true } ]
-  }
+
 ]
