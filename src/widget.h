@@ -247,9 +247,15 @@ class widget
         struct label_layout_override {
             int label_width = -1;
             int separator_width = -1;
+            std::string inherited_separator;
+            int inherited_padding = -1;
 
             bool enabled() const {
                 return label_width >= 0;
+            }
+
+            bool has_inherited_context() const {
+                return inherited_padding >= 0;
             }
         };
 
@@ -258,7 +264,9 @@ class widget
         bool was_loaded = false;
         const widget_clause *get_clause( const std::string &clause_id = "" ) const;
         std::vector<const widget_clause *> get_clauses() const;
-        int maximum_separator_width( std::set<widget_id> &visited ) const;
+        int maximum_separator_width( std::set<widget_id> &visited,
+                                     const label_layout_override &label_override ) const;
+        int natural_label_width( std::set<widget_id> &visited ) const;
         std::string layout_internal( const avatar &ava, unsigned int max_width,
                                      int label_width, bool skip_pad,
                                      const label_layout_override &label_override );
@@ -363,6 +371,16 @@ class widget
         // marked W_LABEL_NONE and W_NO_PADDING keep their original behavior.
         std::string layout_with_label_width( const avatar &ava, unsigned int max_width,
                                              int label_width, bool skip_pad = false );
+        // Render one widget subtree with an immutable sidebar-formatting
+        // context.  Unlike widget::finalize(), this does not write inherited
+        // separator, padding or translated label widths into global widgets.
+        // A negative label_width derives one shared width from the current
+        // translated labels in this subtree.
+        std::string layout_for_hud( const avatar &ava, unsigned int max_width,
+                                    int label_width = -1,
+                                    const std::string &label_separator = ": ",
+                                    int column_padding = 2,
+                                    bool skip_pad = false );
         // Display labeled widget, with value (number, graph, or string) from an avatar
         std::string show( const avatar &ava, unsigned int max_width );
         // Return a window_panel for rendering this widget at given width (and possibly height)

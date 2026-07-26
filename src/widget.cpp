@@ -1854,21 +1854,27 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
     return layout_internal( ava, max_width, label_width, skip_pad, {} );
 }
 
-int widget::maximum_separator_width( std::set<widget_id> &visited ) const
+int widget::maximum_separator_width( std::set<widget_id> &visited,
+                                     const label_layout_override &label_override ) const
 {
     if( !visited.insert( id ).second ) {
         return 0;
     }
     if( _style != "layout" ) {
+        const std::string &separator = label_override.has_inherited_context() &&
+                                       !explicit_separator ?
+                                       label_override.inherited_separator : _separator;
         return _pad_labels && !has_flag( json_flag_W_LABEL_NONE ) ?
-               utf8_width( _separator, true ) : 0;
+               utf8_width( separator, true ) : 0;
     }
 
     int result = 0;
-    const auto include_child = [&result, &visited]( const widget_id & child_id ) {
+    const auto include_child = [&result, &visited,
+             &label_override]( const widget_id & child_id ) {
         if( child_id.is_valid() && !child_id->has_flag( json_flag_W_NO_PADDING ) ) {
             result = std::max( result,
-                               child_id->maximum_separator_width( visited ) );
+                               child_id->maximum_separator_width( visited,
+                                       label_override ) );
         }
     };
     for( const widget_id &child_id : _widgets ) {
@@ -1882,13 +1888,69 @@ int widget::maximum_separator_width( std::set<widget_id> &visited ) const
     return result;
 }
 
+int widget::natural_label_width( std::set<widget_id> &visited ) const
+{
+    if( !visited.insert( id ).second ) {
+        return 0;
+    }
+    if( _style != "layout" ) {
+        return _label.empty() || !_pad_labels ||
+               has_flag( json_flag_W_LABEL_NONE ) ?
+               0 : utf8_width( _label.translated(), true );
+    }
+
+    int result = 0;
+    const auto include_child = [&result, &visited]( const widget_id & child_id ) {
+        if( child_id.is_valid() && !child_id->has_flag( json_flag_W_NO_PADDING ) ) {
+            result = std::max( result,
+                               child_id->natural_label_width( visited ) );
+        }
+    };
+    for( const widget_id &child_id : _widgets ) {
+        include_child( child_id );
+    }
+    for( const widget_clause &clause : _clauses ) {
+        for( const widget_id &child_id : clause.widgets ) {
+            include_child( child_id );
+        }
+    }
+    // Column layouts do not pad their own label, but their labeled leaves
+    // still participate in one HUD-wide label slot.  Returning the descendant
+    // maximum here is what aligns e.g. Sound/Stamina, Mood/Speed and
+    // Focus/Move across adjacent rows.
+    return result;
+}
+
 std::string widget::layout_with_label_width( const avatar &ava,
         const unsigned int max_width, const int label_width, const bool skip_pad )
 {
     label_layout_override label_override;
     label_override.label_width = std::max( 0, label_width );
     std::set<widget_id> visited;
-    label_override.separator_width = maximum_separator_width( visited );
+    label_override.separator_width = maximum_separator_width( visited,
+                                     label_override );
+    return layout_internal( ava, max_width, 0, skip_pad, label_override );
+}
+
+std::string widget::layout_for_hud( const avatar &ava,
+                                    const unsigned int max_width,
+                                    const int label_width,
+                                    const std::string &label_separator,
+                                    const int column_padding,
+                                    const bool skip_pad )
+{
+    label_layout_override label_override;
+    label_override.inherited_separator = label_separator;
+    label_override.inherited_padding = std::max( 0, column_padding );
+    if( label_width >= 0 ) {
+        label_override.label_width = label_width;
+    } else {
+        std::set<widget_id> labels_visited;
+        label_override.label_width = natural_label_width( labels_visited );
+    }
+    std::set<widget_id> separators_visited;
+    label_override.separator_width = maximum_separator_width(
+                                         separators_visited, label_override );
     return layout_internal( ava, max_width, 0, skip_pad, label_override );
 }
 
@@ -1929,7 +1991,9 @@ std::string widget::layout_internal( const avatar &ava,
                 debugmsg( "widget layout has no widgets" );
             }
             // Number of spaces between columns
-            const int col_padding = _padding;
+            const int col_padding = label_override.has_inherited_context() &&
+                                    !explicit_padding ?
+                                    label_override.inherited_padding : _padding;
             // Subtract column padding to get space available for widgets
             const int avail_width = max_width - col_padding * ( num_widgets - 1 );
             // Divide available width equally among all widgets
@@ -2027,6 +2091,9 @@ std::string widget::layout_internal( const avatar &ava,
             set_height_for_widget( id, h_max );
         }
     } else {
+        const std::string &separator = label_override.has_inherited_context() &&
+                                       !explicit_separator ?
+                                       label_override.inherited_separator : _separator;
         // Get displayed value (colorized)
         std::string shown = show( ava, max_width );
         // If nothing was printed, the widget never had a chance to adjust the height. Adjust it here.
@@ -2050,7 +2117,7 @@ std::string widget::layout_internal( const avatar &ava,
                                             label_override.label_width : 0;
             ret += append_line( shown.substr( 0, strpos + 1 ), row_num == 0, max_width,
                                 has_flag( json_flag_W_LABEL_NONE ) ? translation() : _label,
-                                current_label_width, _separator, _text_align,
+                                current_label_width, separator, _text_align,
                                 _label_align, skip_pad,
                                 apply_label_override ? label_override.separator_width : -1 );
             // Delete used token
@@ -2069,7 +2136,7 @@ std::string widget::layout_internal( const avatar &ava,
             }
             ret += append_line( shown, row_num == 0, max_width,
                                 has_flag( json_flag_W_LABEL_NONE ) ? translation() : _label,
-                                current_label_width, _separator, _text_align,
+                                current_label_width, separator, _text_align,
                                 _label_align, skip_pad,
                                 apply_label_override ? label_override.separator_width : -1 );
         }

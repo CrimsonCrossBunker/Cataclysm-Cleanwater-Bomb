@@ -2662,7 +2662,7 @@ TEST_CASE( "explicit_widget_label_width_aligns_translated_place_rows",
     }
 }
 
-TEST_CASE( "explicit_widget_label_width_aligns_translated_movement_grid",
+TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
            "[widget][layout][label][translations]" )
 {
     on_out_of_scope reset_language( []() {
@@ -2677,15 +2677,6 @@ TEST_CASE( "explicit_widget_label_width_aligns_translated_movement_grid",
     ava.set_speed_base( 100 );
 
     widget movement = widget_id( "ll_movement_layout" ).obj();
-    const std::vector<std::string> lines = string_split(
-            remove_color_tags( movement.layout_with_label_width(
-                                   ava, 42, 4 ) ), '\n' );
-
-    REQUIRE( lines.size() == 2 );
-    for( const std::string &line : lines ) {
-        CHECK( utf8_width( line ) == 42 );
-    }
-
     const std::array<int, 3> starts = { 0, 15, 30 };
     const std::array<int, 3> widths = { 13, 13, 12 };
     const std::array<std::array<widget_id, 3>, 2> fields = { {
@@ -2699,31 +2690,48 @@ TEST_CASE( "explicit_widget_label_width_aligns_translated_movement_grid",
             }
         }
     };
-    std::array<int, 3> first_row_values = {};
-    for( std::size_t row = 0; row < lines.size(); row++ ) {
-        const std::string &line = lines[row];
-        for( std::size_t column = 0; column < starts.size(); column++ ) {
-            const std::string field = utf8_wrapper( line ).substr_display(
-                                          starts[column], widths[column] ).str();
-            CAPTURE( column, line, field );
-            const widget_id &source = fields[row][column];
-            const std::string prefix = source->_label.translated() +
-                                       source->_separator;
-            REQUIRE( field.rfind( prefix, 0 ) == 0 );
-            const std::size_t value = field.find_first_not_of(
-                                          ' ', prefix.size() );
-            REQUIRE( value != std::string::npos );
-            const int value_column = starts[column] +
-                                     utf8_width( field.substr( 0, value ) );
-            // Explicit label layouts reserve one shared separator slot as
-            // well as the configured label slot.  A child whose inherited
-            // separator is only one cell therefore cannot shift its value
-            // left of a sibling using the normal ": " separator.
-            CHECK( value_column == starts[column] + 6 );
-            if( row == 0 ) {
-                first_row_values[column] = value_column;
-            } else {
-                CHECK( value_column == first_row_values[column] );
+    for( const bool derive_hud_width : {
+             false, true
+         } ) {
+        const std::string formatted = derive_hud_width ?
+                                      movement.layout_for_hud( ava, 42 ) :
+                                      movement.layout_with_label_width( ava, 42, 4 );
+        const std::vector<std::string> lines = string_split(
+                remove_color_tags( formatted ), '\n' );
+
+        CAPTURE( derive_hud_width );
+        REQUIRE( lines.size() == 2 );
+        for( const std::string &line : lines ) {
+            CHECK( utf8_width( line ) == 42 );
+        }
+
+        std::array<int, 3> first_row_values = {};
+        for( std::size_t row = 0; row < lines.size(); row++ ) {
+            const std::string &line = lines[row];
+            for( std::size_t column = 0; column < starts.size(); column++ ) {
+                const std::string field = utf8_wrapper( line ).substr_display(
+                                              starts[column], widths[column] ).str();
+                CAPTURE( row, column, line, field );
+                const widget_id &source = fields[row][column];
+                const std::string separator = derive_hud_width &&
+                                              !source->explicit_separator ?
+                                              ": " : source->_separator;
+                const std::string prefix = source->_label.translated() + separator;
+                REQUIRE( field.rfind( prefix, 0 ) == 0 );
+                const std::size_t value = field.find_first_not_of(
+                                              ' ', prefix.size() );
+                REQUIRE( value != std::string::npos );
+                const int value_column = starts[column] +
+                                         utf8_width( field.substr( 0, value ) );
+                // Both paths reserve one shared separator slot as well as the
+                // label slot, so a one-cell separator cannot shift a value
+                // left of a sibling using the normal ": " separator.
+                CHECK( value_column == starts[column] + 6 );
+                if( row == 0 ) {
+                    first_row_values[column] = value_column;
+                } else {
+                    CHECK( value_column == first_row_values[column] );
+                }
             }
         }
     }
