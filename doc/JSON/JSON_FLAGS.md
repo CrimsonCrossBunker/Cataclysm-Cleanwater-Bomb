@@ -1795,6 +1795,8 @@ Note: Vehicle parts requiring other parts is defined by setting a `requires_flag
 - ```SECURITY``` If installed, will emit a loud noise when the vehicle is smashed.
 - ```SHARP``` Striking a monster with this part does cutting damage instead of bashing damage, and prevents stunning the monster.
 - ```SHOCK_ABSORBER``` This part protects non-frame parts on the same tile from shock damage from collisions.  It doesn't provide protect against direct impacts or other attacks.
+- ```SHOCK_RESISTANT``` This part protects self from shock damage from collisions.  It works like `SHOCK_ABSORBER`, also doesn't provide protect against direct impacts or other attacks.
+- ```SHOCK_IMMUNE``` This part is immune to shock damage from collisions. When the impact damage is transmitted to the component, it will return to 0.
 - ```SIMPLE_PART``` This part can be installed or removed from that otherwise prevent modification.
 - ```SMASH_REMOVE``` When you remove this part, instead of getting the item back, you will get the bash results.
 - ```SOLAR_PANEL``` Recharges vehicle batteries when exposed to sunlight.  Has a 1/4 chance of being broken on car generation.
