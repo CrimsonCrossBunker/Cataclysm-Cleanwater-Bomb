@@ -14,6 +14,11 @@
 
 enum character_creator_tab : int;
 
+namespace cata::ui
+{
+struct profile;
+} // namespace cata::ui
+
 struct adaptive_character_creator_row_snapshot {
     int index = 0;
     std::string label;
@@ -97,19 +102,19 @@ class adaptive_character_creator_ui : public cataimgui::window
         void queue_command( const std::string &command );
         void queue_value( adaptive_character_creator_action_type type, const std::string &value );
         void draw_loading_page();
-        void draw_identity_bar();
+        void draw_identity_bar( const cata::ui::profile &profile );
         void draw_age_input( const char *id, float width );
         void draw_height_input( const char *id, float width );
-        void draw_summary_description_inputs();
-        bool draw_template_save_controls();
-        void draw_tabs();
-        bool handle_vertical_drag( drag_state &state );
-        void draw_selection_page( float footer_height );
+        void draw_summary_description_inputs( const cata::ui::profile &profile );
+        bool draw_template_save_controls( const cata::ui::profile &profile );
+        void draw_tabs( const cata::ui::profile &profile );
+        bool handle_vertical_drag( drag_state &state, const cata::ui::profile &profile );
+        void draw_selection_page( float footer_height, const cata::ui::profile &profile );
         void draw_preview_panel( float height );
         const adaptive_character_creator_row_snapshot *selected_row() const;
-        void draw_current_details();
-        void draw_summary_page( float footer_height );
-        void draw_footer();
+        void draw_current_details( const cata::ui::profile &profile );
+        void draw_summary_page( float footer_height, const cata::ui::profile &profile );
+        void draw_footer( const cata::ui::profile &profile );
 };
 
 #endif // TILES
