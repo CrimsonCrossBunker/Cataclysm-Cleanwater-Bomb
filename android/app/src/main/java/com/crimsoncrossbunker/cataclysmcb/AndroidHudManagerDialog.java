@@ -76,7 +76,7 @@ final class AndroidHudManagerDialog {
             plan = repository.inspectImport(raw);
         } catch (JSONException error) {
             Toast.makeText(activity,
-                "无法导入：仅支持经过校验的 schema 4/5 HUD JSON",
+                "无法导入：仅支持经过校验的 schema 4/5/6 HUD JSON",
                 Toast.LENGTH_LONG).show();
             return;
         }

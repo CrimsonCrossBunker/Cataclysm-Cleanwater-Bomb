@@ -1,5 +1,5 @@
 -- The bundled Lua UI entry point intentionally registers no surfaces.
 --
--- Android HUD schema 4 is an independent native subsystem and does not consume
+-- Android HUD schema 6 is an independent native subsystem and does not consume
 -- ui.hud registrations.  Lua ui.page remains available to Android mods through
 -- the shared ImGui page host; ui.hud remains available on non-Android builds.

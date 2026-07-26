@@ -1,17 +1,38 @@
-# Lua UI API v2
+# Lua UI API v3
 
 This directory contains the built-in Lua entry point and modules for the
 experimental, versioned UI runtime. The Lua drawing context targets the
 platform-neutral `script_ui_renderer` contract. Complete pages use the shared
 ImGui page host on Android and desktop Tiles; terminal builds use the ImTui
-fallback. `ui.hud` uses that same host on non-Android builds only. Android's
-in-game HUD is the separate native schema-4 subsystem and never calls Lua.
-Scripts do not import or depend on any renderer backend.
+fallback. Desktop keeps its established keyboard UI and Widget sidebar;
+Android applies a separate touch profile and owns the native schema-6 HUD.
+`ui.hud` uses the immediate host on non-Android builds only. Scripts do not
+import or depend on a renderer backend.
 
 The current platform policy is Android on SDL3, with Linux and Windows still
-using SDL2 while their SDL3 migration proceeds separately. This does not alter
-the Lua API: use `ctx:platform()` and renderer capabilities only when a layout
-needs a portable fallback.
+using SDL2 while their SDL3 migration proceeds separately. API v3 code should
+use `ctx:environment()` for layout and interaction decisions. `ctx:platform()`
+is retained for API v2 diagnostics and must not be used to distinguish touch
+from desktop interaction.
+
+## Bootstrap profiles
+
+Before the world Lua runtime exists, an isolated data-only Lua loader selects
+one built-in profile:
+
+- `ui/profiles/android_touch.lua`
+- `ui/profiles/pc_legacy.lua`
+- `ui/profiles/terminal_legacy.lua`
+
+These files return one schema-checked table. They receive no standard
+libraries, game bindings, file access, or Mod search path and run under small
+memory and instruction limits. Invalid profiles fall back to compiled C++
+defaults, so a UI edit cannot make the game unbootable.
+
+Profiles own physical metrics and input mapping. Page and Mod code owns only
+semantic content and actions. Android may therefore render a normal action as
+a large tappable button while PC retains keyboard navigation and its original
+sidebar.
 
 ## Loading and hot reload
 
@@ -41,13 +62,15 @@ Each source may contain `lua/manifest.json`:
 {
   "id": "my_mod_id",
   "version": "1.0.0",
-  "api_version": 2,
+  "api_version": 3,
   "capabilities": [ "game.read", "ui.pages", "events" ],
   "dependencies": [ "another_mod_id" ]
 }
 ```
 
-Supported capabilities are `game.read`, `game.actions`, `ui.pages`, `ui.hud`,
+API versions 2 and 3 are accepted. API v2 keeps its existing behavior while
+new code should target v3. Supported capabilities are `game.read`,
+`game.actions`, `ui.pages`, `ui.hud`,
 `events`, and `state.character`. Unknown capabilities, an incompatible API,
 duplicate ids, missing dependencies, or dependencies that load later reject
 the whole candidate transaction. The bundled manifest is mandatory. A local
@@ -101,9 +124,12 @@ Event registrations are additive. An event payload contains `type`, `turn`,
 `data`, and `data_types`. Boolean and integer fields keep their Lua types;
 other game-specific ids and coordinates are exposed as strings.
 
-`ui.hud` is not consumed on Android. Use Android HUD schema 4 for in-game
-information and controls there. Cross-platform mods may still register a Lua
-HUD for desktop/terminal builds alongside Android-specific schema-4 templates.
+`ui.hud` is not consumed on Android. Android uses the native schema-6 layout
+for in-game information and controls. Cross-platform mods should expose common
+information through the original Widget system; PC renders the Widget in its
+sidebar and Android exposes the same Widget in the HUD information catalogue.
+The legacy immediate `ui.hud` remains available on desktop/terminal during the
+API v2 compatibility period.
 
 The string-title form of `ui.page` remains compatible and registers in
 `main.extensions` and `ingame.extensions`. The descriptor form accepts:
@@ -135,6 +161,16 @@ ctx:platform()            -- "sdl2", "sdl3", or "imtui"
 ctx:is_immediate_mode()   -- true for ImGui/ImTui
 ctx:uses_native_widgets() -- false for the current renderer
 ctx:supports("text_input")
+
+local env = ctx:environment()
+env.profile                -- android_touch/pc_legacy/terminal_legacy
+env.input                  -- touch/mouse_keyboard/terminal
+env.density                -- touch/comfortable/compact
+env.breakpoint             -- narrow/regular/wide
+env.touch
+env.hover
+env.keyboard_navigation
+env.long_press_dangerous
 ```
 
 Capability names are `colored_text`, `inline_layout`, `item_width`,
@@ -162,6 +198,31 @@ ctx:spacing()
 ctx:set_next_item_width(240)
 ctx:progress_bar(0.75, "75%")
 ```
+
+API v3 replaces physical layout values with profile tokens:
+
+```lua
+ctx:text_tone("Ready", "good")
+ctx:item_width("normal") -- compact/normal/wide/fill
+
+ctx:scroll("details", "normal", function()
+    ctx:text("The profile decides the region height.")
+end)
+
+ctx:grid("cards", 1, 2, 3, function()
+    -- narrow/regular/wide column counts; use table_next_row/column as usual.
+end)
+
+ctx:virtual_list_rows(#items, "compact", function(first, last)
+    for index = first, last - 1 do
+        ctx:text(items[index + 1])
+    end
+end)
+```
+
+Semantic tones are `normal`, `muted`, `good`, `warning`, `bad`, and `info`.
+Interactive widgets automatically use the touch profile's minimum target on
+Android. Mods do not mark a widget as “Android-clickable”.
 
 Inputs return the new value (or whether an action was activated):
 
@@ -270,8 +331,8 @@ sequence).
 ## Android HUD separation
 
 Android never consumes `ui.hud` registrations and has no Lua HUD renderer,
-snapshot JNI, retained widget tree, or Lua interaction bridge. Schema 4 is the
-only Android in-game HUD. It has no built-in or dynamically injected layout.
+retained Lua widget tree, or direct Java-to-Lua interaction bridge. Schema 6 is
+the only Android in-game HUD. It has no automatically injected layout.
 The first time an input scene is observed, Android creates one empty layout.
 Future official templates must be explicitly chosen and copied once; they
 never merge into or overwrite a user layout.
@@ -307,7 +368,10 @@ C++ owns the information-source catalogue and publishes only immutable values
 subscribed by the active layout. Sources include the semantic pieces of the
 mobile sidebar, formatted logs, the SDL pixel minimap, a 7×7 overmap grid, a
 local square-cell threat radar, and every raw widget as an advanced source.
-Lua pages and non-Android Lua HUDs are not information sources for schema 4.
+Lua pages and non-Android Lua HUDs are not information sources for schema 6.
+Original C++/JSON Widgets remain the shared information contract: PC keeps the
+original sidebar renderer while Android projects those Widgets into editable
+HUD information elements.
 
 Controls carry the exact input-context revision they rendered. An imported
 action ID cannot execute unless it is registered by that current scene.
@@ -316,13 +380,14 @@ explicitly authorize each one and the player must long-press it at runtime.
 Stale, unauthorized, or unregistered commands are rejected by the native
 bounded queue.
 
-Schema 4 is stored with Android `AtomicFile` under app-private storage.
-Existing schema 1–3 HUD and old extra-button preferences are copied into a
-separate archive and are not migrated or activated. Export supports one layout
-or all scenes. Import always shows a validated preview; full packages may be
-merged or may replace only the current schema-4 package.
+Schema 6 is stored with Android `AtomicFile` under app-private storage.
+Supported schema 4 and 5 files are validated and migrated when imported;
+older archived HUD/extra-button preferences are never silently activated.
+Export supports one layout or all scenes. Import always shows a validated
+preview; full packages may be merged or may replace only the current schema-6
+package.
 
-Schema-4 game reads and snapshot publication run on the game thread. Android
+Schema-6 game reads and snapshot publication run on the game thread. Android
 Views poll immutable snapshots and never access live game objects. Leaving
 gameplay invalidates the snapshot so controls and scene information cannot leak
 into a different screen. Lua pages remain available on Android through the

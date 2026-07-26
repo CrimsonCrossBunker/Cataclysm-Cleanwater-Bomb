@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Schema-4 Android HUD runtime and canvas.
+ * Schema-6 Android HUD runtime and canvas.
  *
  * The model, repository, renderer registry, editor and manager are separate
  * modules.  This class only coordinates immutable native snapshots with a
