@@ -130,19 +130,27 @@ class adaptive_safemode_ui : public cataimgui::window
         void draw_controls() override {
             const ImVec2 window_pos = ImGui::GetWindowPos();
             const ImVec2 window_size = ImGui::GetWindowSize();
-            const float edge_padding = std::clamp( window_size.x * 0.015F, 12.0F, 26.0F );
-            constexpr float footer_height = 72.0F;
+            const cata::ui::profile profile = cata::ui::current_profile();
+            const float edge_padding = std::max( profile.frame_padding_x,
+                                                 profile.item_spacing_x * 1.5F );
+            const float footer_height = profile.row_wide;
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            const bool large_font = cata::ui::current_profile().is_touch();
-            if( large_font ) {
-                cataimgui::PushGuiFont1_5x();
+            const bool scaled_font = profile.text_scale != 1.0F;
+            if( scaled_font ) {
+                cataimgui::PushGuiFontScaled( profile.text_scale );
             }
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 7.0F );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 10.0F, 8.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 6.0F, 6.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 10.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_FramePadding,
+                ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_ItemSpacing,
+                ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_WindowPadding,
+                ImVec2( edge_padding, profile.frame_padding_y * 1.5F ) );
             ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
             ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
@@ -160,8 +168,8 @@ class adaptive_safemode_ui : public cataimgui::window
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 4 );
-            if( large_font ) {
-                cataimgui::PopGuiFont1_5x();
+            if( scaled_font ) {
+                cataimgui::PopGuiFontScaled();
             }
         }
 
@@ -172,6 +180,7 @@ class adaptive_safemode_ui : public cataimgui::window
         ImVec2 drag_start;
 
         void draw_tabs() {
+            const cata::ui::profile profile = cata::ui::current_profile();
             for( int index = 0; index < 2; ++index ) {
                 if( index > 0 ) {
                     ImGui::SameLine();
@@ -185,7 +194,9 @@ class adaptive_safemode_ui : public cataimgui::window
                 }
                 const std::string label = remove_color_tags( snapshot.tabs[index] ) +
                                           "###adaptive_safe_tab_" + std::to_string( index );
-                if( ImGui::Button( label.c_str(), ImVec2( 260.0F, 46.0F ) ) && !selected ) {
+                if( ImGui::Button(
+                        label.c_str(),
+                        ImVec2( profile.width_normal, profile.row_compact ) ) && !selected ) {
                     actions.push_back( { adaptive_safemode_action_type::select_tab, index } );
                 }
                 if( index == 1 && !snapshot.character_available ) {
@@ -198,7 +209,8 @@ class adaptive_safemode_ui : public cataimgui::window
         }
 
         bool handle_drag() {
-            if( !cata::ui::current_profile().allow_swipe ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( !profile.allow_swipe ) {
                 return false;
             }
             ImGuiIO &io = ImGui::GetIO();
@@ -211,7 +223,8 @@ class adaptive_safemode_ui : public cataimgui::window
                 return false;
             }
             const ImVec2 distance( io.MousePos.x - drag_start.x, io.MousePos.y - drag_start.y );
-            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            const bool moved = std::hypot( distance.x, distance.y ) >
+                               profile.frame_padding_x;
             if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
                 std::abs( distance.y ) > std::abs( distance.x ) ) {
                 ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
@@ -224,8 +237,10 @@ class adaptive_safemode_ui : public cataimgui::window
 
         bool field_button( const char *label, adaptive_safemode_action_type type,
                            int row, bool suppress_click ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
             ImGui::PushID( static_cast<int>( type ) );
-            const bool clicked = ImGui::Button( label, ImVec2( -1.0F, 44.0F ) );
+            const bool clicked = ImGui::Button(
+                                     label, ImVec2( -1.0F, profile.row_compact ) );
             ImGui::PopID();
             if( clicked && !suppress_click ) {
                 actions.push_back( { type, row } );
@@ -235,6 +250,7 @@ class adaptive_safemode_ui : public cataimgui::window
         }
 
         void draw_rows( float footer_height ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
             if( ImGui::BeginChild( "##adaptive_safe_rows", ImVec2( 0.0F, -footer_height ),
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
@@ -242,7 +258,8 @@ class adaptive_safemode_ui : public cataimgui::window
                 if( ImGui::BeginTable( "##adaptive_safe_table", 8,
                                        ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
                                        ImGuiTableFlags_SizingStretchProp ) ) {
-                    ImGui::TableSetupColumn( "#", ImGuiTableColumnFlags_WidthFixed, 54.0F );
+                    ImGui::TableSetupColumn( "#", ImGuiTableColumnFlags_WidthFixed,
+                                             profile.minimum_target );
                     ImGui::TableSetupColumn( _( "Rules" ), ImGuiTableColumnFlags_WidthStretch, 0.30F );
                     ImGui::TableSetupColumn( _( "Attitude" ), ImGuiTableColumnFlags_WidthStretch, 0.13F );
                     ImGui::TableSetupColumn( _( "Dist" ), ImGuiTableColumnFlags_WidthStretch, 0.08F );
@@ -253,7 +270,7 @@ class adaptive_safemode_ui : public cataimgui::window
                     ImGui::TableHeadersRow();
                     for( const adaptive_safemode_row &row : snapshot.rows ) {
                         ImGui::PushID( row.index );
-                        ImGui::TableNextRow( ImGuiTableRowFlags_None, 54.0F );
+                        ImGui::TableNextRow( ImGuiTableRowFlags_None, profile.row_normal );
                         ImGui::TableSetColumnIndex( 0 );
                         ImGui::Text( "%d", row.index + 1 );
                         ImGui::TableSetColumnIndex( 1 );
@@ -262,7 +279,8 @@ class adaptive_safemode_ui : public cataimgui::window
                                                        "###adaptive_safe_rule";
                         if( ImGui::Selectable( rule_label.c_str(), selected,
                                                ImGuiSelectableFlags_None,
-                                               ImVec2( 0.0F, 44.0F ) ) && !suppress_click ) {
+                                               ImVec2( 0.0F, profile.row_compact ) ) &&
+                            !suppress_click ) {
                             actions.push_back( { adaptive_safemode_action_type::select_row, row.index } );
                         }
                         ImGui::TableSetColumnIndex( 2 );
@@ -293,6 +311,7 @@ class adaptive_safemode_ui : public cataimgui::window
         }
 
         void draw_toolbar() {
+            const cata::ui::profile profile = cata::ui::current_profile();
             const std::array<std::pair<adaptive_safemode_action_type, const char *>, 9> buttons = {{
                     { adaptive_safemode_action_type::add_default, _( "Defaults" ) },
                     { adaptive_safemode_action_type::add, _( "Add" ) },
@@ -305,7 +324,11 @@ class adaptive_safemode_ui : public cataimgui::window
                     { adaptive_safemode_action_type::close, _( "Back" ) },
                 }
             };
-            const float width = ( ImGui::GetContentRegionAvail().x - 6.0F * 8.0F ) / buttons.size();
+            const float width = std::max(
+                                    1.0F,
+                                    ( ImGui::GetContentRegionAvail().x -
+                                      profile.item_spacing_x * ( buttons.size() - 1 ) ) /
+                                    buttons.size() );
             for( size_t index = 0; index < buttons.size(); ++index ) {
                 if( index > 0 ) {
                     ImGui::SameLine();
@@ -319,7 +342,8 @@ class adaptive_safemode_ui : public cataimgui::window
                 if( disabled ) {
                     ImGui::BeginDisabled();
                 }
-                if( ImGui::Button( buttons[index].second, ImVec2( width, 50.0F ) ) ) {
+                if( ImGui::Button( buttons[index].second,
+                                   ImVec2( width, profile.row_normal ) ) ) {
                     actions.push_back( { buttons[index].first, snapshot.selected_row } );
                 }
                 if( disabled ) {

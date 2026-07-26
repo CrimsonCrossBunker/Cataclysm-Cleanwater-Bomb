@@ -916,18 +916,26 @@ class adaptive_color_ui : public cataimgui::window
         void draw_controls() override {
             const ImVec2 window_pos = ImGui::GetWindowPos();
             const ImVec2 window_size = ImGui::GetWindowSize();
-            const float edge_padding = std::clamp( window_size.x * 0.018F, 14.0F, 30.0F );
+            const cata::ui::profile profile = cata::ui::current_profile();
+            const float edge_padding = std::max( profile.frame_padding_x,
+                                                 profile.item_spacing_x * 1.5F );
             ImGui::GetWindowDrawList()->AddRectFilled(
                 window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
                 IM_COL32( 6, 9, 12, 255 ) );
-            const bool large_font = cata::ui::current_profile().is_touch();
-            if( large_font ) {
-                cataimgui::PushGuiFont1_5x();
+            const bool scaled_font = profile.text_scale != 1.0F;
+            if( scaled_font ) {
+                cataimgui::PushGuiFontScaled( profile.text_scale );
             }
-            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 8.0F );
-            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 12.0F, 9.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 7.0F, 7.0F ) );
-            ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( edge_padding, 12.0F ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_FramePadding,
+                ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_ItemSpacing,
+                ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_WindowPadding,
+                ImVec2( edge_padding, profile.frame_padding_y * 1.5F ) );
             ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
             ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
             ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
@@ -943,8 +951,8 @@ class adaptive_color_ui : public cataimgui::window
 
             ImGui::PopStyleColor( 6 );
             ImGui::PopStyleVar( 4 );
-            if( large_font ) {
-                cataimgui::PopGuiFont1_5x();
+            if( scaled_font ) {
+                cataimgui::PopGuiFontScaled();
             }
         }
 
@@ -955,7 +963,8 @@ class adaptive_color_ui : public cataimgui::window
         ImVec2 drag_start;
 
         bool handle_drag() {
-            if( !cata::ui::current_profile().allow_swipe ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( !profile.allow_swipe ) {
                 return false;
             }
             ImGuiIO &io = ImGui::GetIO();
@@ -968,7 +977,8 @@ class adaptive_color_ui : public cataimgui::window
                 return false;
             }
             const ImVec2 distance( io.MousePos.x - drag_start.x, io.MousePos.y - drag_start.y );
-            const bool moved = std::hypot( distance.x, distance.y ) > 14.0F;
+            const bool moved = std::hypot( distance.x, distance.y ) >
+                               profile.frame_padding_x;
             if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
                 std::abs( distance.y ) > std::abs( distance.x ) ) {
                 ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
@@ -981,11 +991,14 @@ class adaptive_color_ui : public cataimgui::window
 
         bool color_field( const char *id, const std::string &label, const ImVec4 &color,
                           adaptive_color_action_type action, int row, bool suppress_click ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
             bool clicked = ImGui::ColorButton( id, color,
                                                ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop,
-                                               ImVec2( 42.0F, 42.0F ) );
+                                               ImVec2( profile.row_compact,
+                                                       profile.row_compact ) );
             ImGui::SameLine();
-            clicked = ImGui::Button( label.c_str(), ImVec2( -1.0F, 44.0F ) ) || clicked;
+            clicked = ImGui::Button( label.c_str(),
+                                     ImVec2( -1.0F, profile.row_compact ) ) || clicked;
             if( clicked && !suppress_click ) {
                 actions.push_back( { action, row } );
                 return true;
@@ -994,7 +1007,8 @@ class adaptive_color_ui : public cataimgui::window
         }
 
         void draw_manager() {
-            constexpr float footer_height = 72.0F;
+            const cata::ui::profile profile = cata::ui::current_profile();
+            const float footer_height = profile.row_wide;
             ImGui::TextUnformatted( _( "Color manager" ) );
             ImGui::SameLine();
             ImGui::TextDisabled( "%s", _( "Some color changes may require a restart." ) );
@@ -1012,10 +1026,11 @@ class adaptive_color_ui : public cataimgui::window
                     ImGui::TableHeadersRow();
                     for( const adaptive_color_row &row : snapshot.rows ) {
                         ImGui::PushID( row.index );
-                        ImGui::TableNextRow( ImGuiTableRowFlags_None, 56.0F );
+                        ImGui::TableNextRow( ImGuiTableRowFlags_None, profile.row_normal );
                         ImGui::TableSetColumnIndex( 0 );
                         if( ImGui::Selectable( row.name.c_str(), row.index == snapshot.selected_row,
-                                               ImGuiSelectableFlags_None, ImVec2( 0.0F, 48.0F ) ) &&
+                                               ImGuiSelectableFlags_None,
+                                               ImVec2( 0.0F, profile.row_compact ) ) &&
                             !suppress_click ) {
                             actions.push_back( { adaptive_color_action_type::select_row, row.index } );
                         }
@@ -1043,22 +1058,28 @@ class adaptive_color_ui : public cataimgui::window
                     { adaptive_color_action_type::close, _( "Back" ) },
                 }
             };
-            const float width = ( ImGui::GetContentRegionAvail().x -
-                                  ImGui::GetStyle().ItemSpacing.x * ( buttons.size() - 1 ) ) / buttons.size();
+            const float width = std::max(
+                                    1.0F,
+                                    ( ImGui::GetContentRegionAvail().x -
+                                      profile.item_spacing_x * ( buttons.size() - 1 ) ) /
+                                    buttons.size() );
             for( size_t index = 0; index < buttons.size(); ++index ) {
                 if( index > 0 ) {
                     ImGui::SameLine();
                 }
-                if( ImGui::Button( buttons[index].second, ImVec2( width, 50.0F ) ) ) {
+                if( ImGui::Button( buttons[index].second,
+                                   ImVec2( width, profile.row_normal ) ) ) {
                     actions.push_back( { buttons[index].first, snapshot.selected_row } );
                 }
             }
         }
 
         void draw_picker() {
+            const cata::ui::profile profile = cata::ui::current_profile();
             ImGui::TextUnformatted( snapshot.picker_title.c_str() );
             ImGui::SameLine();
-            if( ImGui::Button( _( "Back" ), ImVec2( 180.0F, 48.0F ) ) ) {
+            if( ImGui::Button( _( "Back" ),
+                               ImVec2( profile.width_compact, profile.row_compact ) ) ) {
                 actions.push_back( { adaptive_color_action_type::cancel_picker, 0 } );
             }
             ImGui::Separator();
@@ -1066,9 +1087,15 @@ class adaptive_color_ui : public cataimgui::window
                                    ImGuiChildFlags_Borders,
                                    ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
                 const bool suppress_click = handle_drag();
-                constexpr int columns = 4;
-                const float button_width = ( ImGui::GetContentRegionAvail().x -
-                                             ImGui::GetStyle().ItemSpacing.x * ( columns - 1 ) ) / columns;
+                const cata::ui::layout_breakpoint breakpoint =
+                    profile.breakpoint_for_width( ImGui::GetContentRegionAvail().x );
+                const int columns = breakpoint == cata::ui::layout_breakpoint::narrow ? 2 :
+                                    breakpoint == cata::ui::layout_breakpoint::wide ? 4 : 3;
+                const float button_width = std::max(
+                                               1.0F,
+                                               ( ImGui::GetContentRegionAvail().x -
+                                                 profile.item_spacing_x * ( columns - 1 ) ) /
+                                               columns );
                 for( size_t index = 0; index < snapshot.choices.size(); ++index ) {
                     if( index % columns != 0 ) {
                         ImGui::SameLine();
@@ -1078,11 +1105,18 @@ class adaptive_color_ui : public cataimgui::window
                     if( choice.has_color ) {
                         ImGui::ColorButton( "##choice_preview", choice.color,
                                             ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop,
-                                            ImVec2( 38.0F, 44.0F ) );
+                                            ImVec2( profile.row_compact,
+                                                    profile.row_compact ) );
                         ImGui::SameLine();
                     }
-                    const float label_width = choice.has_color ? button_width - 46.0F : button_width;
-                    if( ImGui::Button( choice.label.c_str(), ImVec2( label_width, 48.0F ) ) &&
+                    const float label_width = choice.has_color ?
+                                              std::max( 1.0F, button_width -
+                                                        profile.row_compact -
+                                                        profile.item_spacing_x ) :
+                                              button_width;
+                    if( ImGui::Button(
+                            choice.label.c_str(),
+                            ImVec2( label_width, profile.row_compact ) ) &&
                         !suppress_click ) {
                         actions.push_back( { adaptive_color_action_type::choose,
                                              static_cast<int>( index ) } );
