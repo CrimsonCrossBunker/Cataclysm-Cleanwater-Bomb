@@ -1,0 +1,41 @@
+-- Desktop keeps the established keyboard/mouse screens and sidebar.  Shared
+-- Lua pages may still consume these compact semantic metrics.
+return {
+    schema = 1,
+    id = "pc_legacy",
+    input = "mouse_keyboard",
+    density = "comfortable",
+    metrics = {
+        text_scale = 1.0,
+        minimum_target = 34,
+        frame_padding_x = 9,
+        frame_padding_y = 5,
+        item_spacing_x = 8,
+        item_spacing_y = 5,
+        corner_radius = 5,
+        page_width = 0.88,
+        page_height = 0.88,
+
+        width_compact = 160,
+        width_normal = 240,
+        width_wide = 360,
+        row_compact = 28,
+        row_normal = 34,
+        row_wide = 42,
+        panel_compact = 160,
+        panel_normal = 280,
+        panel_wide = 440,
+        breakpoint_narrow = 720,
+        breakpoint_wide = 1280,
+    },
+    interaction = {
+        hover = true,
+        swipe_scroll = false,
+        native_text_input = false,
+        keyboard_navigation = true,
+        pointer_activation = true,
+        tap_activation = false,
+        long_press_dangerous = false,
+        touch_main_menu = false,
+    },
+}
