@@ -2193,7 +2193,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
     }
 
     const double start_recoil = mode == target_ui::TargetMode::Fire ?
-                                ui.get_predicted_recoil() : you.recoil;
+                                ui.get_predicted_recoil() : 0.0;
 
     double target_mobility_multiplier = 1.0;
     if( mode == target_ui::TargetMode::Fire ) {
@@ -2308,7 +2308,8 @@ static void print_confidence_rating_bar( const catacurses::window &w,
 }
 
 static int print_ranged_chance( const catacurses::window &w, int line_number,
-                                const std::vector<aim_type_prediction> &aim_chances, const int time )
+                                const std::vector<aim_type_prediction> &aim_chances, const int time,
+                                const target_ui::TargetMode mode )
 {
     std::vector<aim_type_prediction> sorted = aim_chances;
 
@@ -2325,13 +2326,17 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
     bool narrow = panel_manager::get_manager().get_current_layout().panels().begin()->get_width() <= 42;
     nc_color col = c_light_gray;
 
+    const bool is_throw = mode == target_ui::TargetMode::Throw ||
+                          mode == target_ui::TargetMode::ThrowBlind;
 
-    const auto &current_steadiness_it = std::find_if( sorted.begin(),
-    sorted.end(), []( const aim_type_prediction & atp ) {
-        return atp.is_default;
-    } );
-    if( current_steadiness_it != sorted.end() ) {
-        line_number = print_steadiness( w, line_number, current_steadiness_it->steadiness );
+    if( !is_throw ) {
+        const auto &current_steadiness_it = std::find_if( sorted.begin(),
+        sorted.end(), []( const aim_type_prediction & atp ) {
+            return atp.is_default;
+        } );
+        if( current_steadiness_it != sorted.end() ) {
+            line_number = print_steadiness( w, line_number, current_steadiness_it->steadiness );
+        }
     }
 
     // Start printing by available width of aim window
@@ -2358,11 +2363,16 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
         }
         for( const aim_type_prediction &out : sorted ) {
             if( display_numbers ) {
-                t_aims[aim_iter] = string_format( "<color_dark_gray>%s:</color>", out.name );
+                t_aims[aim_iter] = string_format( "<color_dark_gray>%s:</color>",
+                                                   is_throw ? _( "Throw" ) : out.name );
                 t_confidence[( aim_iter * 5 ) + 4] = string_format( "<color_light_blue>%d</color>", out.moves );
             } else {
-                print_colored_text( w, point( 1, line_number ), col, col, string_format( _( "%s %s:" ), out.name,
-                                    _( "Aim" ) ) );
+                if( is_throw ) {
+                    print_colored_text( w, point( 1, line_number ), col, col, _( "Throw:" ) );
+                } else {
+                    print_colored_text( w, point( 1, line_number ), col, col, string_format( _( "%s %s:" ), out.name,
+                                        _( "Aim" ) ) );
+                }
                 right_print( w, line_number++, 1, c_light_blue, _( "Moves" ) );
                 right_print( w, line_number, 1, c_light_blue, string_format( "%d", out.moves ) );
             }
@@ -2410,11 +2420,17 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
 
         for( const aim_type_prediction &out : sorted ) {
             std::string col_hl = out.is_default ? "light_green" : "light_gray";
-            std::string desc = time ==  0 ?
-                               string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color>",
-                                              out.hotkey, col_hl, out.name, _( "Aim" ), _( "Moves to fire" ), out.moves ) :
-                               string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color> (%d)",
-                                              out.hotkey, col_hl, out.name, _( "Aim" ), _( "Moves to fire" ), out.moves, time );
+            std::string desc;
+            if( is_throw ) {
+                desc = string_format( "<color_white>[%s]</color> <color_%s>%s</color> | %s: <color_light_blue>%3d</color>",
+                                      out.hotkey, col_hl, _( "Throw" ), _( "Moves to throw" ), out.moves );
+            } else {
+                desc = time == 0 ?
+                       string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color>",
+                                      out.hotkey, col_hl, out.name, _( "Aim" ), _( "Moves to fire" ), out.moves ) :
+                       string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color> (%d)",
+                                      out.hotkey, col_hl, out.name, _( "Aim" ), _( "Moves to fire" ), out.moves, time );
+            }
 
             print_colored_text( w, point( 1, line_number++ ), col, col, desc );
 
@@ -2479,7 +2495,7 @@ static int print_aim( const target_ui &ui, Character &you, const catacurses::win
 
     int time = RAS_time( you, load_loc );
 
-    return print_ranged_chance( w, line_number, aim_chances, time );
+    return print_ranged_chance( w, line_number, aim_chances, time, target_ui::TargetMode::Fire );
 }
 
 static void draw_throw_aim( const target_ui &ui, const Character &you, const catacurses::window &w,
@@ -2522,7 +2538,7 @@ static void draw_throw_aim( const target_ui &ui, const Character &you, const cat
             throwing_target_mode, ctxt, weapon, dispersion, confidence_config, attributes, target_pos,
             item_location() );
 
-    text_y = print_ranged_chance( w, text_y, aim_chances, 0 );
+    text_y = print_ranged_chance( w, text_y, aim_chances, 0, throwing_target_mode );
 }
 
 std::vector<aim_type> Character::get_aim_types( const item &gun ) const
