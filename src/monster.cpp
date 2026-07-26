@@ -3201,7 +3201,6 @@ void monster::die( map *here, Creature *nkiller )
             death_spell.cast_all_effects( *this, pos_bub() );              // ditto.
         }
     }
-    // Cleanwater: 撤销 PR #84242 — 移除人类怪物强制谋杀惩罚
 
     if( type->mdeath_effect.eoc.has_value() ) {
         //Not a hallucination, go process the death effects.

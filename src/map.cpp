@@ -3732,10 +3732,14 @@ std::optional<tripoint_bub_ms> map::vehicle_ladder_destination( const tripoint_b
     tripoint_bub_ms dest = from;
     for( int dist = 1; dist <= max_descent; ++dist ) {
         const tripoint_bub_ms candidate( from.xy(), from.z() - dist );
-        dest = candidate;
-        if( !is_open_air( candidate ) || veh_at( candidate ) ) {
-            break;
+        if( is_open_air( candidate ) && !veh_at( candidate ) ) {
+            dest = candidate;
+            continue;
         }
+        if( passable( candidate ) ) {
+            return candidate;
+        }
+        return std::nullopt;
     }
 
     return dest;
@@ -10461,7 +10465,8 @@ void map::grow_plant( const tripoint_bub_ms &p )
     const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( *seed->type->seed );
     const int overgrown_stage_idx = iexamine::get_plant_overgrown_stage_idx( *seed->type->seed );
 
-    const bool overgrown_enabled = crop_overgrown_enabled;
+    const bool overgrown_enabled = crop_overgrown_enabled &&
+                                   !initial_furn.has_flag( "NO_CROP_OVERGROWTH" );
     // When overgrowth is disabled, clamp growth at the stage just before
     // overgrown (usually harvest), not at mature.  Mature is too early and
     // would prevent harvesting entirely.

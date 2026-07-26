@@ -18,5 +18,15 @@
     "type": "construction_group",
     "id": "place_reinforced_ground_solar_panel_v3",
     "name": "Place Reinforced Quantum Solar Panel Array"
+  },
+  {
+    "type": "construction_group",
+    "id": "fcl_build_hydroponics",
+    "name": "Build hydroponics unit"
+  },
+  {
+    "type": "construction_group",
+    "id": "fcl_build_hydroponics_heater",
+    "name": "Build hydroponics heater"
   }
 ]

@@ -723,6 +723,7 @@ Can also be used as `pre_flags` for `construction`.
 - ```PLACE_ITEM``` Valid terrain for `place_item()` to put items on.
 - ```PLANTABLE``` This terrain or furniture can have seeds planted in it.
 - ```PLANT``` A 'furniture' that grows and fruits.
+- ```NO_CROP_OVERGROWTH``` Furniture with this flag prevents plants growing on it from becoming overgrown. Crops can still reach and remain at the harvest stage.
 - ```PLOWABLE``` Terrain can be plowed.
 - ```RAIL``` This is a railroad, railroad vehicles can use it to move.
 - ```RAMP_DOWN``` The end of a ramp that leads down, walking into this moves you one z-level down.  Overrides `WALL`, while still displaying the tile as Impassable.
@@ -1197,7 +1198,7 @@ Used to describe monster characteristics and set their properties and abilities.
 - ```GROUP_MORALE``` More courageous when near friends.
 - ```GUILT_ANIMAL``` Killing this monster(i.e. a hatchling or a kitten) causes guilt to the player and is counted for the kill thresholds of animals where player experiences progressively less morale penalty. WARNING: Do not use without 'death_guilt' death function or together with other guilt flags.
 - ```GUILT_CHILD``` Killing this monster(i.e. a zombie child or mutant child) causes guilt to the player and is counted for the kill thresholds of children where player experiences progressively less morale penalty. WARNING: Do not use without 'death_guilt' death function or together with other guilt flags.
-- ```GUILT_HUMAN``` Killing this monster(i.e. a panicked person or futile fighter) counts as murdering an NPC. This is a special case, and does not require a death_function. (The effect is hardcoded)
+- ```GUILT_HUMAN``` Killing this monster(i.e. a panicked person or futile fighter) causes guilt to the player and is counted for the kill thresholds of non-NPC humans where player experiences progressively less morale penalty. WARNING: Do not use without 'death_guilt' death function or together with other guilt flags.
 - ```GUILT_OTHERS``` Killing this monster(i.e. a blood sacrifice) causes guilt to the player and is counted for the kill thresholds of monsters that do not fit other categories where player experiences progressively less morale penalty. WARNING: Do not use without 'death_guilt' death function or together with other guilt flags.
 - ```HARDTOSHOOT``` It's one size smaller for ranged attacks, no less than the `TINY` flag.
 - ```HAS_MIND``` Is sapient and capable of reason (mi-go, triffids, cyborgs, etc.).  `HUMAN` assumes `HAS_MIND`.
