@@ -1002,6 +1002,5 @@
     "min_skills": [ [ "weapon", 2 ] ],
     "overwrite_min_cycle_recoil": 540,
     "add_mod": [ [ "muzzle", 1 ] ]
-  },
-
+  }
 ]

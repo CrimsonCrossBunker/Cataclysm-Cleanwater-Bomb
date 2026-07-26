@@ -19,8 +19,7 @@
     "throw_stamina_multiplier": 2,
     "throw_dispersion_multiplier": 0.85,
     "throw_speed_multiplier": 2.5,
-    "throw_weight_multiplier": 1.5,
-    "durability": 6
+    "throw_weight_multiplier": 1.5
   },
   {
     "id": "slingshot",
@@ -80,7 +79,6 @@
     "throw_dispersion_multiplier": 0.85,
     "throw_speed_multiplier": 2,
     "throw_weight_multiplier": 1.2,
-    "durability": 8,
     "melee_damage": { "bash": 14 }
   },
   {
@@ -130,7 +128,6 @@
     "throw_stamina_multiplier": 4.5,
     "throw_dispersion_multiplier": 0.85,
     "throw_speed_multiplier": 4,
-    "throw_weight_multiplier": 1.8,
-    "durability": 6
+    "throw_weight_multiplier": 1.8
   }
 ]
