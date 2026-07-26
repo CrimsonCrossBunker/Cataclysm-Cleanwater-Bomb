@@ -1707,6 +1707,7 @@
     "starting_trait": false,
     "chargen_allow_npc": false,
     "valid": false,
+    "purifiable": false,
     "flags": [ "INSENSITIVITY" ]
   },
   {
@@ -4073,6 +4074,32 @@
     "kcal": true,
     "transform": { "target": "EATHEALTH", "msg_transform": "Your hyper-metabolism slows down.", "active": false, "moves": 0 },
     "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": 349 }, { "value": "REGEN_HP_AWAKE", "multiply": 0.85 } ] } ]
+  },
+  {
+    "type": "mutation",
+    "id": "EMOTIONALVOLATILITY",
+    "name": { "str": "Emotional Volatility" },
+    "description": "Your emotions fluctuate more than the average person; you cry more easily and laugh more easily.",
+    "types": [ "ATTITUDE" ],
+    "cancels": [ "EMOTIONALFLATNESS" ],
+    "points": 0,
+    "mixed_effect": true,
+    "starting_trait": true,
+    "chargen_allow_npc": false,
+    "valid": false
+  },
+  {
+    "type": "mutation",
+    "id": "EMOTIONALFLATNESS",
+    "name": { "str": "Emotional Flatness" },
+    "description": "Compared to others, you are less likely to experience significant emotional changes.  You feel that the intensity of your emotions is only about half that of others.",
+    "types": [ "ATTITUDE" ],
+    "cancels": [ "EMOTIONALVOLATILITY" ],
+    "points": 0,
+    "mixed_effect": true,
+    "starting_trait": true,
+    "chargen_allow_npc": false,
+    "valid": false
   },
   {
     "type": "mutation",
