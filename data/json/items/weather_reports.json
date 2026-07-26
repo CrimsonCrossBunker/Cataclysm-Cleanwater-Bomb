@@ -1,7 +1,8 @@
 [
   {
+    "type": "ITEM",
     "abstract": "abstract_weather_report",
-    "copy-from": "abstract_HEW_printout_data",
+    "name": { "str_sp": "abstract weather report" },
     "symbol": ",",
     "color": "white",
     "volume": "4 ml",
@@ -10,11 +11,13 @@
     "stackable": true
   },
   {
+    "type": "ITEM",
     "abstract": "abstract_mws_weather_data",
     "copy-from": "abstract_weather_report",
     "price": "0 cent"
   },
   {
+    "type": "ITEM",
     "abstract": "abstract_HEW_printout_data",
     "copy-from": "abstract_weather_report",
     "flags": [ "TRADER_AVOID" ]
