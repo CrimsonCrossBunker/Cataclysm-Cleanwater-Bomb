@@ -15,6 +15,7 @@
 
 #if defined(__ANDROID__)
     #include "avatar.h"
+    #include "catacharset.h"
     #include "color.h"
     #include "coordinates.h"
     #include "creature.h"
@@ -68,25 +69,46 @@ struct hud_rich_text {
     std::vector<hud_text_run> runs;
 };
 
+struct hud_terminal_cell {
+    int column = 0;
+    int span = 1;
+    std::string text;
+    int color = 0xffffffff;
+    bool bold = false;
+};
+
+struct hud_terminal_row {
+    std::vector<hud_terminal_cell> cells;
+};
+
+struct hud_terminal_text {
+    unsigned int columns = 0;
+    std::vector<hud_terminal_row> rows;
+};
+
 struct hud_info_source {
     std::string id;
     std::string title;
     std::string category;
     std::string renderer;
+    std::string catalog_tier = "single";
     std::string widget_id;
     unsigned int default_widget_columns = 24;
+    int default_label_columns = -1;
     int default_width = 320;
     int default_height = 100;
     bool multiline = false;
     bool square = false;
     bool configurable_widget_layout = false;
+    bool composite = false;
+    bool legacy_labels_context = false;
 };
 
 struct hud_info_value {
     std::string source_id;
     unsigned int layout_columns = 0;
     int label_columns = -1;
-    hud_rich_text content;
+    hud_terminal_text content;
 };
 
 struct hud_subscription {
@@ -169,6 +191,62 @@ hud_rich_text parse_formatted_text( const std::string &formatted )
     return result;
 }
 
+hud_terminal_text parse_formatted_terminal( const std::string &formatted,
+        const unsigned int columns )
+{
+    const hud_rich_text rich = parse_formatted_text( formatted );
+    hud_terminal_text result;
+    result.columns = columns;
+    result.rows.emplace_back();
+    int column = 0;
+
+    for( const hud_text_run &run : rich.runs ) {
+        for( const uint32_t codepoint : utf8_to_utf32( run.text ) ) {
+            if( codepoint == U'\n' ) {
+                result.rows.emplace_back();
+                column = 0;
+                continue;
+            }
+
+            const std::string glyph = utf32_to_utf8( codepoint );
+            const int width = std::max( 0, utf8_width( glyph, true ) );
+            hud_terminal_row &row = result.rows.back();
+            if( width == 0 ) {
+                if( !row.cells.empty() ) {
+                    row.cells.back().text += glyph;
+                }
+                continue;
+            }
+            if( codepoint == U' ' || codepoint == U'\t' ) {
+                column += width;
+                continue;
+            }
+
+            // Consecutive printable ASCII in one style can be drawn as one
+            // monospace segment.  CJK, symbols and combining sequences retain
+            // their own explicit cell span so Android never has to implement
+            // a second wcwidth table.
+            const bool group_ascii = codepoint >= 0x21 && codepoint <= 0x7e;
+            if( group_ascii && !row.cells.empty() ) {
+                hud_terminal_cell &previous = row.cells.back();
+                if( previous.column + previous.span == column &&
+                    previous.color == run.color && previous.bold == run.bold &&
+                    previous.text.size() ==
+                    static_cast<std::size_t>( previous.span ) ) {
+                    previous.text += glyph;
+                    previous.span += width;
+                    column += width;
+                    continue;
+                }
+            }
+
+            row.cells.push_back( { column, width, glyph, run.color, run.bold } );
+            column += width;
+        }
+    }
+    return result;
+}
+
 void write_rich_text_members( JsonOut &json, const hud_rich_text &value )
 {
     json.member( "text", value.text );
@@ -184,20 +262,128 @@ void write_rich_text_members( JsonOut &json, const hud_rich_text &value )
     json.end_array();
 }
 
+void write_terminal_members( JsonOut &json, const hud_terminal_text &value )
+{
+    json.member( "terminal" );
+    json.start_object();
+    json.member( "columns", value.columns );
+    json.member( "rows" );
+    json.start_array();
+    for( const hud_terminal_row &row : value.rows ) {
+        json.start_object();
+        json.member( "cells" );
+        json.start_array();
+        for( const hud_terminal_cell &cell : row.cells ) {
+            json.start_object();
+            json.member( "column", cell.column );
+            json.member( "span", cell.span );
+            json.member( "text", cell.text );
+            json.member( "color", cell.color );
+            if( cell.bold ) {
+                json.member( "bold", true );
+            }
+            json.end_object();
+        }
+        json.end_array();
+        json.end_object();
+    }
+    json.end_array();
+    json.end_object();
+}
+
 void add_widget_source( std::vector<hud_info_source> &result, const std::string &id,
                         const std::string &title, const std::string &category,
                         const std::string &widget_id, const unsigned int default_widget_columns,
                         const int default_width, const int default_height,
                         const bool multiline = false )
 {
-    result.push_back( { id, title, category, "text", widget_id, default_widget_columns,
-                        default_width, default_height, multiline } );
+    hud_info_source source;
+    source.id = id;
+    source.title = title;
+    source.category = category;
+    source.renderer = "terminal_widget";
+    source.catalog_tier = "single";
+    source.widget_id = widget_id;
+    source.default_widget_columns = default_widget_columns;
+    source.default_width = default_width;
+    source.default_height = default_height;
+    source.multiline = multiline;
+    result.push_back( std::move( source ) );
+}
+
+void add_sidebar_source( std::vector<hud_info_source> &result,
+                         const std::string &id, const std::string &title,
+                         const std::string &widget_id, const int default_width,
+                         const int default_height )
+{
+    hud_info_source source;
+    source.id = id;
+    source.title = title;
+    source.category = _( "Original sidebar groups" );
+    source.renderer = "terminal_widget";
+    source.catalog_tier = "recommended";
+    source.widget_id = widget_id;
+    source.default_widget_columns = 42;
+    source.default_width = default_width;
+    source.default_height = default_height;
+    source.multiline = true;
+    source.configurable_widget_layout = true;
+    source.composite = true;
+    source.legacy_labels_context = true;
+    result.push_back( std::move( source ) );
+}
+
+void add_special_source( std::vector<hud_info_source> &result,
+                         const std::string &id, const std::string &title,
+                         const std::string &category, const std::string &renderer,
+                         const int default_width, const int default_height,
+                         const bool multiline, const bool square )
+{
+    hud_info_source source;
+    source.id = id;
+    source.title = title;
+    source.category = category;
+    source.renderer = renderer;
+    source.catalog_tier = "recommended";
+    source.default_width = default_width;
+    source.default_height = default_height;
+    source.multiline = multiline;
+    source.square = square;
+    result.push_back( std::move( source ) );
 }
 
 std::vector<hud_info_source> make_source_catalog()
 {
     std::vector<hud_info_source> result;
     result.reserve( widget::get_all().size() + 80 );
+    add_sidebar_source( result, "sidebar.legacy.limbs", _( "Limbs" ),
+                        "ll_limbs_layout", 450, 112 );
+    add_sidebar_source( result, "sidebar.legacy.movement", _( "Movement" ),
+                        "ll_movement_layout", 450, 112 );
+    add_sidebar_source( result, "sidebar.legacy.stats", _( "Stats" ),
+                        "ll_stats_layout", 450, 112 );
+    add_sidebar_source( result, "sidebar.legacy.weariness", _( "Weariness" ),
+                        "all_weariness_layout", 450, 112 );
+    add_sidebar_source( result, "sidebar.legacy.needs", _( "Needs" ),
+                        "ll_needs_layout", 450, 150 );
+    add_sidebar_source( result, "sidebar.legacy.place", _( "Place" ),
+                        "ll_place_layout", 450, 260 );
+    add_sidebar_source( result, "sidebar.legacy.wind_temperature",
+                        _( "Wind and temperature" ), "wind_temp_layout", 450, 112 );
+    add_sidebar_source( result, "sidebar.legacy.oxygen", _( "Oxygen" ),
+                        "oxygen_layout", 450, 70 );
+    add_sidebar_source( result, "sidebar.legacy.weapon_style",
+                        _( "Weapon and martial arts style" ),
+                        "weapon_style_layout", 450, 140 );
+    add_sidebar_source( result, "sidebar.legacy.vehicle", _( "Vehicle" ),
+                        "vehicle_acf_label_layout", 450, 100 );
+    add_sidebar_source( result, "sidebar.legacy.compass", _( "Compass" ),
+                        "compass_all_danger_layout", 450, 240 );
+    add_sidebar_source( result, "sidebar.legacy.carry_weight",
+                        _( "Carried weight" ), "ll_weight_carried_value", 450, 70 );
+    add_sidebar_source( result, "sidebar.legacy.radiation", _( "Radiation" ),
+                        "rad_badge_desc", 450, 70 );
+
     const std::string location = _( "Location and environment" );
     const std::string character = _( "Character" );
     const std::string needs = _( "Needs and load" );
@@ -322,14 +508,14 @@ std::vector<hud_info_source> make_source_catalog()
         }
     }
 
-    result.push_back( { "log.messages", _( "Message log" ), _( "Logs" ), "log", "", 0,
-                        620, 250, true } );
-    result.push_back( { "map.pixel", _( "Pixel minimap" ), _( "Maps and radar" ),
-                        "pixel_minimap", "", 0, 400, 400, true, true } );
-    result.push_back( { "map.overmap_grid", _( "7x7 overmap grid" ), _( "Maps and radar" ),
-                        "overmap_grid", "", 0, 350, 350, true, true } );
-    result.push_back( { "radar.threat_grid", _( "Local threat grid" ), _( "Maps and radar" ),
-                        "threat_grid", "", 0, 350, 350, true, true } );
+    add_special_source( result, "log.messages", _( "Message log" ), _( "Logs" ),
+                        "message_log", 620, 250, true, false );
+    add_special_source( result, "map.pixel", _( "Pixel minimap" ), _( "Maps and radar" ),
+                        "pixel_minimap", 400, 400, true, true );
+    add_special_source( result, "map.overmap_grid", _( "7x7 overmap grid" ),
+                        _( "Maps and radar" ), "overmap_grid", 350, 350, true, true );
+    add_special_source( result, "radar.threat_grid", _( "Local threat grid" ),
+                        _( "Maps and radar" ), "threat_grid", 350, 350, true, true );
 
     const std::string advanced = _( "Advanced raw widgets" );
     // The original legacy-labels sidebar window is 44 cells wide.  Its draw
@@ -346,13 +532,23 @@ std::vector<hud_info_source> make_source_catalog()
         const int height = std::clamp( raw._height > 0 ? raw._height * 42 : 90, 64, 800 );
         // Widgets without an explicit width inherit the original content
         // width.  In particular ll_place_layout resolves to 26 + 2 + 14.
-        result.push_back( { "widget." + widget_id, title, advanced, "text", widget_id,
-                            static_cast<unsigned int>( std::clamp(
-                                        raw._width > 0 ? raw._width :
-                                        legacy_sidebar_content_columns,
-                                        8, 80 ) ),
-                            width, height, raw._height > 1 || raw._style == "layout",
-                            false, true } );
+        hud_info_source source;
+        source.id = "widget." + widget_id;
+        source.title = title;
+        source.category = advanced;
+        source.renderer = "terminal_widget";
+        source.catalog_tier = "advanced";
+        source.widget_id = widget_id;
+        source.default_widget_columns = static_cast<unsigned int>( std::clamp(
+                                            raw._width > 0 ? raw._width :
+                                            legacy_sidebar_content_columns, 8, 80 ) );
+        source.default_width = width;
+        source.default_height = height;
+        source.multiline = raw._height > 1 || raw._style == "layout";
+        source.configurable_widget_layout = true;
+        source.composite = raw._style == "layout" || raw._style == "sidebar";
+        source.legacy_labels_context = true;
+        result.push_back( std::move( source ) );
     }
     return result;
 }
@@ -367,10 +563,10 @@ const std::vector<hud_info_source> &current_source_catalog()
     return source_catalog;
 }
 
-hud_rich_text render_widget_info( const avatar &player,
-                                  const hud_info_source &source,
-                                  const unsigned int requested_columns,
-                                  const int requested_label_columns )
+hud_terminal_text render_widget_info( const avatar &player,
+                                      const hud_info_source &source,
+                                      const unsigned int requested_columns,
+                                      const int requested_label_columns )
 {
     const widget_id id( source.widget_id );
     if( !id.is_valid() ) {
@@ -383,17 +579,28 @@ hud_rich_text render_widget_info( const avatar &player,
                                  requested_columns > 0 ?
                                  requested_columns :
                                  source.default_widget_columns;
-    if( source.configurable_widget_layout && requested_label_columns >= 0 &&
-        requested_label_columns < static_cast<int>( columns ) ) {
-        return parse_formatted_text( rendered.layout_with_label_width(
-                                         player, columns,
-                                         requested_label_columns ) );
+    std::string formatted;
+    if( source.configurable_widget_layout && source.legacy_labels_context ) {
+        const int label_columns = requested_label_columns >= 0 &&
+                                  requested_label_columns <
+                                  static_cast<int>( columns ) ?
+                                  requested_label_columns :
+                                  source.default_label_columns;
+        formatted = rendered.layout_for_hud( player, columns, label_columns,
+                                             ": ", 2 );
+    } else if( source.configurable_widget_layout &&
+               requested_label_columns >= 0 &&
+               requested_label_columns < static_cast<int>( columns ) ) {
+        formatted = rendered.layout_with_label_width(
+                        player, columns, requested_label_columns );
+    } else {
+        // Curated single-value sources keep their compact no-label
+        // representation.  Composite and advanced sources keep the original
+        // CCB label, separator and row/column structure.
+        formatted = rendered.layout( player, columns, 0,
+                                     !source.configurable_widget_layout );
     }
-    // Curated no-label sources keep their compact representation.  Advanced
-    // sources use the original CCB separator, padding and recursive labels.
-    return parse_formatted_text( rendered.layout(
-                                     player, columns, 0,
-                                     !source.configurable_widget_layout ) );
+    return parse_formatted_terminal( formatted, columns );
 }
 
 void append_subscribed_values( hud_snapshot &next, const avatar &player,
@@ -402,7 +609,7 @@ void append_subscribed_values( hud_snapshot &next, const avatar &player,
     std::unordered_map<std::string, const hud_info_source *> sources_by_id;
     sources_by_id.reserve( next.sources.size() );
     for( const hud_info_source &source : next.sources ) {
-        if( source.renderer == "text" ) {
+        if( source.renderer == "terminal_widget" ) {
             sources_by_id.emplace( source.id, &source );
         }
     }
@@ -420,7 +627,7 @@ void append_subscribed_values( hud_snapshot &next, const avatar &player,
                                   subscription.label_columns >= 0 &&
                                   subscription.label_columns <
                                   static_cast<int>( columns > 0 ? columns :
-                                                    source.default_widget_columns ) ?
+                                          source.default_widget_columns ) ?
                                   subscription.label_columns : -1;
         const std::string key = source.id + '\t' +
                                 std::to_string( columns ) + '\t' +
@@ -530,7 +737,7 @@ void set_subscriptions( const std::vector<std::string> &sources )
             const long parsed = std::strtol( raw_columns.c_str(), &end, 10 );
             if( end != raw_columns.c_str() && *end == '\0' ) {
                 layout_columns = static_cast<unsigned int>(
-                                   std::clamp<long>( parsed, 8, 80 ) );
+                                     std::clamp<long>( parsed, 8, 80 ) );
             }
         }
         int label_columns = -1;
@@ -648,7 +855,7 @@ std::string snapshot_json()
     std::ostringstream out;
     JsonOut json( out );
     json.start_object();
-    json.member( "schema", 3 );
+    json.member( "schema", 4 );
     json.member( "revision", latest_snapshot.revision );
     json.member( "ready", latest_snapshot.ready );
     json.member( "contextRevision", latest_snapshot.context_revision );
@@ -677,15 +884,21 @@ std::string snapshot_json()
         json.member( "title", source.title );
         json.member( "category", source.category );
         json.member( "renderer", source.renderer );
+        json.member( "catalogTier", source.catalog_tier );
         json.member( "defaultWidth", source.default_width );
         json.member( "defaultHeight", source.default_height );
         json.member( "multiline", source.multiline );
         json.member( "square", source.square );
-        json.member( "configurableWidgetLayout",
-                     source.configurable_widget_layout );
         if( source.configurable_widget_layout ) {
-            json.member( "defaultWidgetColumns",
-                         source.default_widget_columns );
+            json.member( "terminalConfigurable", true );
+            json.member( "defaultColumns", source.default_widget_columns );
+            if( source.default_label_columns >= 0 ) {
+                json.member( "defaultLabelColumns",
+                             source.default_label_columns );
+            }
+        }
+        if( source.composite ) {
+            json.member( "composite", true );
         }
         json.end_object();
     }
@@ -702,7 +915,7 @@ std::string snapshot_json()
         if( value.label_columns >= 0 ) {
             json.member( "labelColumns", value.label_columns );
         }
-        write_rich_text_members( json, value.content );
+        write_terminal_members( json, value.content );
         json.end_object();
     }
     json.end_array();
