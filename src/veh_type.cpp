@@ -913,6 +913,10 @@ void vpart_info::check() const
     if( durability <= 0 ) {
         debugmsg( "vehicle part %s has zero or negative durability", id.str() );
     }
+    if( auto_process.has_value() && !has_flag( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
+        debugmsg( "vehicle part %s has auto_process but lacks ENABLED_DRAINS_EPOWER: "
+                  "it will not drain power at runtime", id.str() );
+    }
     if( dmg_mod < 0 ) {
         debugmsg( "vehicle part %s has negative damage modifier", id.str() );
     }

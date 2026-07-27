@@ -2218,6 +2218,12 @@ class map
         void process_auto_process_furniture();
         void catch_up_auto_process_furniture( const tripoint_bub_ms &p,
                                               const time_duration &elapsed );
+    private:
+        /** Shared completion logic for auto-process furniture: replaces the item with the
+         *  rule's results, spills extra results onto the tile and fires EOC hooks. */
+        void finish_auto_process_furniture_item( item &it, const auto_process_rule &rule,
+                const auto_process_station &station, const tripoint_bub_ms &p );
+    public:
         // All active items connected to the power_grid with their connection points.
         std::vector<item_reference> item_network_connections( vehicle *power_grid );
     private:

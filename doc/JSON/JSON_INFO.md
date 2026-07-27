@@ -3472,11 +3472,12 @@ Strength required to move the furniture around. Negative values indicate an unmo
 
 (Optional) Makes this furniture an auto-process station.  Every turn it injects its
 `power` as processing energy into matching items lying on its tile (see
-`"auto_process"` in ITEM.md).  **Each item on the tile independently receives the
-full `power`** each turn, so placing N items does NOT split the energy.  Items inside
-containers (e.g. backpacks) on the tile are also processed recursively.  Furniture
-stations are always on and do not draw from any power grid; `power` abstracts fuel or
-manual processes.
+`"auto_process"` in ITEM.md).  Items are processed **serially**: only the first
+pending item on the tile is advanced each turn (putting N items on one tile does
+NOT multiply the throughput), matching both vehicle stations and off-map
+catch-up.  Items inside containers (e.g. backpacks) on the tile are also
+processed recursively.  Furniture stations are always on and do not draw from
+any power grid; `power` abstracts fuel or manual processes.
 
 ```json
 "auto_process": {

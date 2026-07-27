@@ -721,8 +721,8 @@ CBMs can be defined like this:
 "auto_process": [                 // (Optional) Automatic processing rules for auto-craft stations (vehicle parts or furniture with a matching "auto_process" station definition).  Array of objects:
   {
     "action": "COOK",             // Action type this rule responds to (open string; the station must list it in its "actions")
-    "energy": "300 kJ",           // (Optional, default 0 J) Energy the station must accumulate on the item before it transforms
-    "results": [ "meat_cooked" ], // Item types produced on completion.  With a single result, charges/rot/flags are inherited from the input
+    "energy": "300 kJ",           // (Optional, default 0 J) Energy the station must accumulate on the item before it transforms.  For count_by_charges items this is the cost per charge, so a stack of N charges needs N times the energy
+    "results": [ "meat_cooked" ], // Item types produced on completion.  Charges/rot/flags are inherited from the input (charges scale to count_by_charges results); progress for other actions is preserved
     "completion_eoc": "eoc_id"    // (Optional) Effect-on-condition activated on the result item when the transformation completes
   }
 ]

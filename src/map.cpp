@@ -9625,6 +9625,7 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
     }
     field_furn_locs.clear();
     field_ter_locs.clear();
+    auto_process_tiles.clear();
     submaps_with_active_items.clear();
     submaps_with_active_items_dirty.clear();
     set_abs_sub( w );
@@ -9754,6 +9755,17 @@ void map::shift_traps( const point_rel_sm &shift )
         } else {
             iter = field_ter_locs.erase( iter );
         }
+    }
+    {
+        // std::set keys can't be mutated in place; rebuild with the offset applied.
+        std::set<tripoint_bub_ms> shifted_auto_process_tiles;
+        for( tripoint_bub_ms pos : auto_process_tiles ) {
+            pos += offset;
+            if( inbounds( pos ) ) {
+                shifted_auto_process_tiles.insert( pos );
+            }
+        }
+        auto_process_tiles = std::move( shifted_auto_process_tiles );
     }
     for( auto &traps : traplocs ) {
         for( auto iter = traps.begin(); iter != traps.end(); ) {
@@ -13023,6 +13035,73 @@ const furn_str_id &drawsq_params::furniture_override() const
 {
     return furn_override;
 }
+
+static int auto_process_target_joules( const item &it, const auto_process_rule &rule,
+                                       const auto_process_station &station )
+{
+    // count_by_charges items (e.g. a stack of meat) need energy per charge.
+    const int count = it.count_by_charges() ? it.charges : 1;
+    return units::to_joule<int>( rule.energy_cost * station.energy_mult ) * count;
+}
+
+void map::finish_auto_process_furniture_item( item &it, const auto_process_rule &rule,
+        const auto_process_station &station, const tripoint_bub_ms &p )
+{
+    if( rule.results.empty() ) {
+        it = item();
+        return;
+    }
+    const bool input_count_by_charges = it.count_by_charges();
+    const int input_charges = it.charges;
+    item first( rule.results.front(), calendar::turn );
+    if( input_count_by_charges && first.count_by_charges() ) {
+        first.charges = input_charges;
+    }
+    first.set_relative_rot( it.get_relative_rot() );
+    recipe rec;
+    first.inherit_flags( it, rec );
+    // COOK-specific backward compat: cooks_like + flag_COOKED
+    if( rule.action == "COOK" && it.is_comestible() ) {
+        const islot_comestible &comest = *it.get_comestible();
+        if( !first.has_flag( flag_NUTRIENT_OVERRIDE ) && !comest.cooks_like.is_empty() ) {
+            item component( comest.cooks_like, it.birthday(), 1 );
+            first.components.add( component );
+            first.recipe_charges = it.count();
+        }
+        first.set_flag_recursive( flag_COOKED );
+    }
+    // Preserve progress accumulated for other actions on this item type.
+    for( const auto_process_rule &other : it.type->auto_process ) {
+        if( other.action == rule.action ) {
+            continue;
+        }
+        const std::string other_var = it.get_var( "auto_process_" + other.action, "0" );
+        if( other_var != "0" ) {
+            first.set_var( "auto_process_" + other.action, other_var );
+        }
+    }
+    it = first;
+    for( size_t ri = 1; ri < rule.results.size(); ri++ ) {
+        item extra( rule.results[ri], calendar::turn );
+        if( input_count_by_charges && extra.count_by_charges() ) {
+            extra.charges *= input_charges;
+        }
+        add_item_or_charges( p, extra );
+    }
+    // EOC hooks on completion
+    if( rule.completion_eoc.is_valid() ) {
+        item_location loc( map_cursor( get_abs( p ) ), &it );
+        dialogue d( get_talker_for( loc ), nullptr );
+        rule.completion_eoc->activate( d );
+    }
+    if( station.completion_eoc.is_valid() ) {
+        // No talker available for furniture — nullptr is intentional.
+        // EOC authors must not reference alpha/beta in station-level EOCs.
+        dialogue d( nullptr, nullptr );
+        station.completion_eoc->activate( d );
+    }
+}
+
 void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
         const time_duration &elapsed )
 {
@@ -13052,7 +13131,7 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
             if( st.actions.count( rule.action ) == 0 ) {
                 continue;
             }
-            const int target_j = units::to_joule<int>( rule.energy_cost * st.energy_mult );
+            const int target_j = auto_process_target_joules( it, rule, st );
             const int done = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
             if( done < target_j ) {
                 pending.push_back( { &it, &rule, target_j, done } );
@@ -13075,7 +13154,14 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
         return;
     }
 
-    int energy_remaining = roll_remainder( units::to_millijoule( station.power * elapsed ) / 1000.0 );
+    // Cap the pool at the total remaining demand: avoids int overflow in
+    // roll_remainder for long off-map spans and skips computing unused energy.
+    int64_t total_needed = 0;
+    for( const pending_item &pi : pending ) {
+        total_needed += pi.target_j - pi.energy_done;
+    }
+    const double raw_j = units::to_millijoule( station.power * elapsed ) / 1000.0;
+    int energy_remaining = roll_remainder( std::min( raw_j, static_cast<double>( total_needed ) ) );
 
     for( pending_item &pi : pending ) {
         const int needed = pi.target_j - pi.energy_done;
@@ -13085,41 +13171,7 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
 
         pi.it->set_var( "auto_process_" + pi.rule->action, std::to_string( pi.energy_done ) );
         if( pi.energy_done >= pi.target_j ) {
-            if( pi.rule->results.empty() ) {
-                *pi.it = item();
-            } else {
-                item first( pi.rule->results.front(), calendar::turn );
-                const bool single = pi.rule->results.size() == 1;
-                if( single && pi.it->count_by_charges() ) {
-                    first.charges = pi.it->charges;
-                }
-                first.set_relative_rot( pi.it->get_relative_rot() );
-                recipe rec;
-                first.inherit_flags( *pi.it, rec );
-                if( pi.rule->action == "COOK" && pi.it->is_comestible() ) {
-                    const islot_comestible &comest = *pi.it->get_comestible();
-                    if( !first.has_flag( flag_NUTRIENT_OVERRIDE ) && !comest.cooks_like.is_empty() ) {
-                        item component( comest.cooks_like, pi.it->birthday(), 1 );
-                        first.components.add( component );
-                        first.recipe_charges = pi.it->count();
-                    }
-                    first.set_flag_recursive( flag_COOKED );
-                }
-                *pi.it = first;
-                for( size_t ri = 1; ri < pi.rule->results.size(); ri++ ) {
-                    add_item_or_charges( p, item( pi.rule->results[ri], calendar::turn ) );
-                }
-                // EOC hooks on completion
-                if( pi.rule->completion_eoc.is_valid() ) {
-                    item_location loc( map_cursor( get_abs( p ) ), pi.it );
-                    dialogue d( get_talker_for( loc ), nullptr );
-                    pi.rule->completion_eoc->activate( d );
-                }
-                if( station.completion_eoc.is_valid() ) {
-                    dialogue d( nullptr, nullptr );
-                    station.completion_eoc->activate( d );
-                }
-            }
+            finish_auto_process_furniture_item( *pi.it, *pi.rule, station, p );
         }
         if( energy_remaining <= 0 ) {
             break;
@@ -13149,78 +13201,57 @@ void map::process_auto_process_furniture()
         const int energy_per_turn_j = roll_remainder( units::to_millijoule( station.power *
                                       1_turns ) / 1000.0 );
 
-        // Recursive lambda to process items including those inside containers.
+        // Serial semantics matching vehicle stations and off-map catch-up:
+        // only the first pending item on the tile is advanced each turn.
         // Only rules whose action is in station.actions are considered.
-        std::function<void( item & )> process_item = [&]( item & it ) {
-            for( const auto_process_rule &rule : it.type->auto_process ) {
-                if( station.actions.count( rule.action ) == 0 ) {
+        item *current = nullptr;
+        const auto_process_rule *rule = nullptr;
+        const auto find_pending = [&]( item & it, auto & find ) -> bool {
+            for( const auto_process_rule &candidate : it.type->auto_process ) {
+                if( station.actions.count( candidate.action ) == 0 ) {
                     continue;
                 }
-                const int target_j = units::to_joule<int>( rule.energy_cost * station.energy_mult );
-                const std::string var_name = "auto_process_" + rule.action;
-                int energy_done = std::stoi( it.get_var( var_name, "0" ) );
-                if( energy_done >= target_j ) {
-                    continue;
+                const int target_j = auto_process_target_joules( it, candidate, station );
+                const int done = std::stoi( it.get_var( "auto_process_" + candidate.action, "0" ) );
+                if( done < target_j ) {
+                    current = &it;
+                    rule = &candidate;
+                    return true;
                 }
-                energy_done += std::min( energy_per_turn_j, target_j - energy_done );
-                it.set_var( var_name, std::to_string( energy_done ) );
-                // Station-level advance EOC: fired each turn while processing is in progress.
-                // No talker available for furniture — nullptr is intentional.
-                if( energy_done < target_j && station.advance_eoc.is_valid() ) {
-                    dialogue d( nullptr, nullptr );
-                    station.advance_eoc->activate( d );
-                }
-                if( energy_done >= target_j ) {
-                    if( rule.results.empty() ) {
-                        it = item();
-                    } else {
-                        item first( rule.results.front(), calendar::turn );
-                        const bool single = rule.results.size() == 1;
-                        if( single && it.count_by_charges() ) {
-                            first.charges = it.charges;
-                        }
-                        first.set_relative_rot( it.get_relative_rot() );
-                        recipe rec;
-                        first.inherit_flags( it, rec );
-                        // COOK-specific backward compat: cooks_like + flag_COOKED
-                        if( rule.action == "COOK" && it.is_comestible() ) {
-                            const islot_comestible &comest = *it.get_comestible();
-                            if( !first.has_flag( flag_NUTRIENT_OVERRIDE ) && !comest.cooks_like.is_empty() ) {
-                                item component( comest.cooks_like, it.birthday(), 1 );
-                                first.components.add( component );
-                                first.recipe_charges = it.count();
-                            }
-                            first.set_flag_recursive( flag_COOKED );
-                        }
-                        it = first;
-                        for( size_t ri = 1; ri < rule.results.size(); ri++ ) {
-                            add_item_or_charges( p, item( rule.results[ri], calendar::turn ) );
-                        }
-                        // EOC hooks on completion
-                        if( rule.completion_eoc.is_valid() ) {
-                            item_location loc( map_cursor( get_abs( p ) ), &it );
-                            dialogue d( get_talker_for( loc ), nullptr );
-                            rule.completion_eoc->activate( d );
-                        }
-                        if( station.completion_eoc.is_valid() ) {
-                            // No talker available for furniture — nullptr is intentional.
-                            // EOC authors must not reference alpha/beta in station-level EOCs.
-                            dialogue d( nullptr, nullptr );
-                            station.completion_eoc->activate( d );
-                        }
-                    }
-                }
-                break; // One rule processed per item per turn
             }
             // Recurse into containers (e.g. items inside backpacks on the tile)
             for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
-                process_item( *content );
+                if( find( *content, find ) ) {
+                    return true;
+                }
             }
+            return false;
         };
 
-        map_stack items = i_at( p );
-        for( item &it : items ) {
-            process_item( it );
+        {
+            map_stack items = i_at( p );
+            for( item &it : items ) {
+                if( find_pending( it, find_pending ) ) {
+                    break;
+                }
+            }
+        }
+
+        if( current != nullptr ) {
+            const int target_j = auto_process_target_joules( *current, *rule, station );
+            const std::string var_name = "auto_process_" + rule->action;
+            int energy_done = std::stoi( current->get_var( var_name, "0" ) );
+            energy_done += std::min( energy_per_turn_j, target_j - energy_done );
+            current->set_var( var_name, std::to_string( energy_done ) );
+            // Station-level advance EOC: fired each turn while processing is in progress.
+            // No talker available for furniture — nullptr is intentional.
+            if( energy_done < target_j && station.advance_eoc.is_valid() ) {
+                dialogue d( nullptr, nullptr );
+                station.advance_eoc->activate( d );
+            }
+            if( energy_done >= target_j ) {
+                finish_auto_process_furniture_item( *current, *rule, station, p );
+            }
         }
         ++tile_it;
     }

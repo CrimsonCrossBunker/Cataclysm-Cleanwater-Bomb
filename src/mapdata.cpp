@@ -1803,6 +1803,14 @@ void furn_t::check() const
             debugmsg( "%s: plant_data water_consumption_multiplier must be > 0", id.c_str() );
         }
     }
+    if( auto_process.has_value() ) {
+        if( auto_process->energy_mult <= 0.0 ) {
+            debugmsg( "furniture %s auto_process energy_mult must be > 0", id.c_str() );
+        }
+        if( auto_process->power < 0_W ) {
+            debugmsg( "furniture %s auto_process power must be >= 0", id.c_str() );
+        }
+    }
 }
 
 int activity_byproduct::roll() const

@@ -1739,21 +1739,8 @@ void vehicle::use_auto_cooker( map &here, int p )
     }
 
     vp.enabled = true;
-    const auto reset_cookable_recursive = [&]( item & it, auto & reset ) -> void {
-        for( const auto_process_rule &rule : it.type->auto_process ) {
-            if( station.actions.count( rule.action ) ) {
-                it.set_var( "auto_process_" + rule.action, "0" );
-            }
-        }
-        for( item *content : it.all_items_top( pocket_type::CONTAINER ) )
-        {
-            reset( *content, reset );
-        }
-    };
-    for( item &it : items ) {
-        reset_cookable_recursive( it, reset_cookable_recursive );
-    }
-
+    // Progress vars on partially processed items are intentionally kept so that
+    // toggling the station off and on again resumes where it left off.
     add_msg( m_good, _( "You turn on the auto-craft station." ) );
 }
 

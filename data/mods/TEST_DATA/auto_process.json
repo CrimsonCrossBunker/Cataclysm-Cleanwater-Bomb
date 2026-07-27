@@ -1,0 +1,115 @@
+[
+  {
+    "type": "furniture",
+    "id": "test_f_auto_process_station",
+    "name": "auto-process test station",
+    "description": "Test furniture that automatically processes items lying on its tile.",
+    "symbol": "&",
+    "color": "light_red",
+    "move_cost_mod": 2,
+    "required_str": 8,
+    "auto_process": { "actions": [ "COOK", "DRY" ], "power": "1000 W" }
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "test_ap_meat",
+    "name": { "str_sp": "test auto-process meat" },
+    "weight": "100 g",
+    "color": "red",
+    "spoils_in": "1 day",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 100,
+    "description": "Test meat for auto-process tests.",
+    "material": [ "flesh" ],
+    "volume": "100 ml",
+    "auto_process": [ { "action": "COOK", "results": [ "test_ap_meat_cooked" ], "energy": "10 kJ" } ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "test_ap_meat_cooked",
+    "copy-from": "test_ap_meat",
+    "auto_process": [  ],
+    "name": { "str_sp": "test auto-process cooked meat" },
+    "flags": [ "NUTRIENT_OVERRIDE" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "test_ap_multi",
+    "name": { "str_sp": "test auto-process multi-rule meat" },
+    "weight": "100 g",
+    "color": "red",
+    "spoils_in": "1 day",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 100,
+    "description": "Test meat with two auto-process rules.",
+    "material": [ "flesh" ],
+    "volume": "100 ml",
+    "auto_process": [
+      { "action": "COOK", "results": [ "test_ap_multi_cooked" ], "energy": "10 kJ" },
+      { "action": "DRY", "results": [ "test_ap_multi_dried" ], "energy": "40 kJ" }
+    ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "test_ap_multi_cooked",
+    "copy-from": "test_ap_multi",
+    "auto_process": [  ],
+    "name": { "str_sp": "test auto-process cooked multi-rule meat" },
+    "flags": [ "NUTRIENT_OVERRIDE" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "test_ap_multi_dried",
+    "copy-from": "test_ap_multi",
+    "auto_process": [  ],
+    "name": { "str_sp": "test auto-process dried multi-rule meat" },
+    "flags": [ "NUTRIENT_OVERRIDE" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "test_ap_byproduct",
+    "name": { "str_sp": "test auto-process byproduct meat" },
+    "weight": "100 g",
+    "color": "red",
+    "spoils_in": "1 day",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 100,
+    "description": "Test meat with a multi-result auto-process rule.",
+    "material": [ "flesh" ],
+    "volume": "100 ml",
+    "auto_process": [ { "action": "COOK", "results": [ "test_ap_byproduct_cooked", "test_ap_drippings" ], "energy": "10 kJ" } ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "test_ap_byproduct_cooked",
+    "copy-from": "test_ap_byproduct",
+    "auto_process": [  ],
+    "name": { "str_sp": "test auto-process cooked byproduct meat" },
+    "flags": [ "NUTRIENT_OVERRIDE" ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "test_ap_drippings",
+    "name": { "str_sp": "test auto-process drippings" },
+    "weight": "20 g",
+    "color": "brown",
+    "spoils_in": "1 day",
+    "comestible_type": "FOOD",
+    "symbol": "%",
+    "calories": 50,
+    "description": "Test drippings produced as an extra auto-process result.",
+    "material": [ "flesh" ],
+    "volume": "20 ml"
+  }
+]

@@ -8666,6 +8666,14 @@ static bool is_sm_tile_outside( const tripoint_abs_ms &real_global_pos )
               sm->get_furn( p ).obj().has_flag( ter_furn_flag::TFLAG_INDOORS ) );
 }
 
+static int auto_process_target_joules( const item &it, const auto_process_rule &rule,
+                                       const auto_process_station &station )
+{
+    // count_by_charges items (e.g. a stack of meat) need energy per charge.
+    const int count = it.count_by_charges() ? it.charges : 1;
+    return units::to_joule<int>( rule.energy_cost * station.energy_mult ) * count;
+}
+
 std::pair<item *, const auto_process_rule *> vehicle::find_auto_process_item( item &it,
         const auto_process_station &station )
 {
@@ -8676,7 +8684,7 @@ std::pair<item *, const auto_process_rule *> vehicle::find_auto_process_item( it
         if( station.actions.count( rule.action ) == 0 ) {
             continue;
         }
-        const int target_j = units::to_joule<int>( rule.energy_cost * station.energy_mult );
+        const int target_j = auto_process_target_joules( it, rule, station );
         const int done_j = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
         if( done_j < target_j ) {
             return { &it, &rule };
@@ -8702,10 +8710,11 @@ std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_proces
         return extras;
     }
 
+    const bool input_count_by_charges = it.count_by_charges();
+    const int input_charges = it.charges;
     item first_result( rule.results.front(), calendar::turn );
-    const bool single_result = rule.results.size() == 1;
-    if( single_result && it.count_by_charges() ) {
-        first_result.charges = it.charges;
+    if( input_count_by_charges && first_result.count_by_charges() ) {
+        first_result.charges = input_charges;
     }
     first_result.set_relative_rot( it.get_relative_rot() );
 
@@ -8723,11 +8732,26 @@ std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_proces
         first_result.set_flag_recursive( flag_COOKED );
     }
 
+    // Preserve progress accumulated for other actions on this item type.
+    for( const auto_process_rule &other : it.type->auto_process ) {
+        if( other.action == rule.action ) {
+            continue;
+        }
+        const std::string other_var = it.get_var( "auto_process_" + other.action, "0" );
+        if( other_var != "0" ) {
+            first_result.set_var( "auto_process_" + other.action, other_var );
+        }
+    }
+
     it = first_result;
 
     // Extra results are returned to the caller to place in the same cargo
     for( size_t ri = 1; ri < rule.results.size(); ri++ ) {
         extras.emplace_back( rule.results[ri], calendar::turn );
+        item &extra = extras.back();
+        if( input_count_by_charges && extra.count_by_charges() ) {
+            extra.charges *= input_charges;
+        }
     }
 
     // EOC hooks on completion
@@ -8746,7 +8770,7 @@ std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_proces
 std::vector<item> vehicle::advance_auto_process_item( item &it, const auto_process_rule &rule,
         int energy_per_turn_j, const auto_process_station &station, int part )
 {
-    const int target_j = units::to_joule<int>( rule.energy_cost * station.energy_mult );
+    const int target_j = auto_process_target_joules( it, rule, station );
     const std::string var_name = "auto_process_" + rule.action;
 
     int energy_done = std::stoi( it.get_var( var_name, "0" ) );
@@ -8794,7 +8818,7 @@ void vehicle::process_auto_process_part( map &here, int p )
         return;
     }
 
-    const units::power cook_power = -vp.info().epower;
+    const units::power cook_power = -part_epower( vp );
     if( cook_power <= 0_W ) {
         vp.enabled = false;
         return;
@@ -8821,7 +8845,7 @@ void vehicle::catch_up_auto_process( map &here, int p, const time_duration &elap
         return;
     }
 
-    const units::power cook_power = -vp.info().epower;
+    const units::power cook_power = -part_epower( vp );
     if( cook_power <= 0_W ) {
         return;
     }
@@ -8841,7 +8865,7 @@ void vehicle::catch_up_auto_process( map &here, int p, const time_duration &elap
             if( st.actions.count( rule.action ) == 0 ) {
                 continue;
             }
-            const int target_j = units::to_joule<int>( rule.energy_cost * st.energy_mult );
+            const int target_j = auto_process_target_joules( it, rule, st );
             const int done = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
             if( done < target_j ) {
                 pending.push_back( { &it, &rule, target_j, done } );
@@ -8865,7 +8889,14 @@ void vehicle::catch_up_auto_process( map &here, int p, const time_duration &elap
         return;
     }
 
-    int energy_remaining = roll_remainder( units::to_millijoule( cook_power * elapsed ) / 1000.0 );
+    // Cap the pool at the total remaining demand: avoids int overflow in
+    // roll_remainder for long off-map spans and skips computing unused energy.
+    int64_t total_needed = 0;
+    for( const pending_item &pi : pending ) {
+        total_needed += pi.target_j - pi.energy_done;
+    }
+    const double raw_j = units::to_millijoule( cook_power * elapsed ) / 1000.0;
+    int energy_remaining = roll_remainder( std::min( raw_j, static_cast<double>( total_needed ) ) );
 
     for( pending_item &pi : pending ) {
         const int needed = pi.target_j - pi.energy_done;
@@ -9002,7 +9033,7 @@ void vehicle::update_time( map &here, const time_point &update_to )
     units::power standby_power = 0_W;
     for( const vpart_reference &vp : get_all_parts() ) {
         if( vp.info().auto_process.has_value() && vp.part().enabled ) {
-            standby_power += vp.info().epower;
+            standby_power += part_epower( vp.part() );
         }
     }
     if( standby_power < 0_W ) {
