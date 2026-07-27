@@ -181,6 +181,18 @@ static const widget_id widget_test_weather_text( "test_weather_text" );
 static const widget_id widget_test_weather_text_height5( "test_weather_text_height5" );
 static const widget_id widget_test_weight_clauses_fun( "test_weight_clauses_fun" );
 static const widget_id widget_test_weight_clauses_normal( "test_weight_clauses_normal" );
+static const widget_id widget_focus_num( "focus_num" );
+static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
+static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
+static const widget_id widget_ll_place_info( "ll_place_info" );
+static const widget_id widget_ll_place_layout( "ll_place_layout" );
+static const widget_id widget_ll_place_overmap( "ll_place_overmap" );
+static const widget_id widget_mood_desc_label( "mood_desc_label" );
+static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
+static const widget_id widget_sound_num( "sound_num" );
+static const widget_id widget_speed_num( "speed_num" );
+static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
+static const widget_id widget_thick_side_by_side( "thick_side_by_side" );
 
 // dseguin 2022 - Ugly hack to scrape content from the window object.
 // Scrapes the window w at origin, reading the number of cols and rows.
@@ -2612,19 +2624,15 @@ TEST_CASE( "explicit_widget_label_width_reaches_nested_rows",
 TEST_CASE( "legacy_labels_place_layout_uses_original_content_columns",
            "[widget][layout][sidebar]" )
 {
-    const widget_id sidebar( "legacy_labels_sidebar" );
-    const widget_id place_info( "ll_place_info" );
-    const widget_id place_overmap( "ll_place_overmap" );
-
-    REQUIRE( sidebar.is_valid() );
-    REQUIRE( place_info.is_valid() );
-    REQUIRE( place_overmap.is_valid() );
-    CHECK( sidebar->_width - 2 == 42 );
-    CHECK( place_info->_width == 26 );
-    CHECK( sidebar->_padding == 2 );
-    CHECK( place_overmap->_width == 14 );
-    CHECK( place_info->_width + sidebar->_padding +
-           place_overmap->_width == sidebar->_width - 2 );
+    REQUIRE( widget_legacy_labels_sidebar.is_valid() );
+    REQUIRE( widget_ll_place_info.is_valid() );
+    REQUIRE( widget_ll_place_overmap.is_valid() );
+    CHECK( widget_legacy_labels_sidebar->_width - 2 == 42 );
+    CHECK( widget_ll_place_info->_width == 26 );
+    CHECK( widget_legacy_labels_sidebar->_padding == 2 );
+    CHECK( widget_ll_place_overmap->_width == 14 );
+    CHECK( widget_ll_place_info->_width + widget_legacy_labels_sidebar->_padding +
+           widget_ll_place_overmap->_width == widget_legacy_labels_sidebar->_width - 2 );
 }
 
 TEST_CASE( "core_sidebar_catalog_has_stable_direct_group_ids",
@@ -2668,8 +2676,8 @@ TEST_CASE( "thick_sidebar_hud_layout_preserves_original_and_custom_columns",
     ava.set_focus( 100 );
     ava.set_speed_base( 100 );
 
-    widget thick = widget_id( "thick_side_by_side" ).obj();
-    const int original_height = widget_id( "thick_side_by_side" )->_height;
+    widget thick = widget_thick_side_by_side.obj();
+    const int original_height = widget_thick_side_by_side->_height;
     widget_hud_layout original;
     original.mode = widget_hud_layout_mode::original;
     original.columns = 64;
@@ -2685,7 +2693,7 @@ TEST_CASE( "thick_sidebar_hud_layout_preserves_original_and_custom_columns",
     }
     const auto movement_line = std::find_if(
                                    original_lines.begin(), original_lines.end(),
-    []( const std::string & line ) {
+    []( const std::string_view line ) {
         return line.find( "Sound" ) != std::string::npos;
     } );
     REQUIRE( movement_line != original_lines.end() );
@@ -2702,7 +2710,7 @@ TEST_CASE( "thick_sidebar_hud_layout_preserves_original_and_custom_columns",
                 '\n' );
     const auto custom_movement = std::find_if(
                                      custom_lines.begin(), custom_lines.end(),
-    []( const std::string & line ) {
+    []( const std::string_view line ) {
         return line.find( "Sound" ) != std::string::npos;
     } );
     REQUIRE( custom_movement != custom_lines.end() );
@@ -2719,7 +2727,7 @@ TEST_CASE( "thick_sidebar_hud_layout_preserves_original_and_custom_columns",
     for( const std::string &line : loose_lines ) {
         CHECK( ( line.empty() || line.back() != ' ' ) );
     }
-    CHECK( widget_id( "thick_side_by_side" )->_height ==
+    CHECK( widget_thick_side_by_side->_height ==
            original_height );
 }
 
@@ -2737,7 +2745,7 @@ TEST_CASE( "explicit_widget_label_width_aligns_translated_place_rows",
     clear_map_without_vision();
     fill_overmap_area( ava, oter_id( "field" ) );
 
-    widget place = widget_id( "ll_place_layout" ).obj();
+    widget place = widget_ll_place_layout.obj();
     const std::vector<std::string> lines = string_split(
             remove_color_tags( place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
 
@@ -2775,17 +2783,17 @@ TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
     ava.set_focus( 100 );
     ava.set_speed_base( 100 );
 
-    widget movement = widget_id( "ll_movement_layout" ).obj();
+    widget movement = widget_ll_movement_layout.obj();
     const std::array<int, 3> starts = { 0, 15, 30 };
     const std::array<int, 3> widths = { 13, 13, 12 };
     const std::array<std::array<widget_id, 3>, 2> fields = { {
             {
-                widget_id( "sound_num" ), widget_id( "mood_desc_label" ),
-                widget_id( "focus_num" )
+                widget_sound_num, widget_mood_desc_label,
+                widget_focus_num
             },
             {
-                widget_id( "stamina_graph_classic" ), widget_id( "speed_num" ),
-                widget_id( "move_count_mode_desc" )
+                widget_stamina_graph_classic, widget_speed_num,
+                widget_move_count_mode_desc
             }
         }
     };

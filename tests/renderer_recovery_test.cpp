@@ -694,7 +694,7 @@ TEST_CASE( "scaled_pointer_coordinates_cover_the_complete_text_and_map_windows",
 
     const point window_origin_cells( 3, 4 );
     const point window_size_cells( 20, 12 );
-    const point target_cell = window_size_cells - point( 1, 1 );
+    const point target_cell = window_size_cells - point::south_east;
     const point map_center( 100, 200 );
     catacurses::window capture_win = catacurses::newwin(
                                          window_size_cells.y, window_size_cells.x,
