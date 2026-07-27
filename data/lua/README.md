@@ -389,6 +389,12 @@ The callback receives a safe `ctx` facade. It deliberately does not expose
 manual ImGui Begin/End or Push/Pop pairs, so one script cannot corrupt the
 global ImGui stack.
 
+`ctx` is ephemeral: it is valid only while the page's current draw callback is
+running. Do not save it in a global, table, closure, scheduled callback, event
+handler, or service. Calls through a retained context are rejected after draw
+returns. Keep persistent values in Lua or the scoped `state` APIs and use the
+fresh `ctx` supplied to each redraw.
+
 Renderer metadata lets a script choose a portable fallback without importing
 backend-specific APIs:
 
@@ -826,7 +832,9 @@ and modules but cannot collide with another Mod.
 Entry scripts and every page, event, scheduler, and service callback run under
 an instruction budget. A callback that errors or exceeds its budget is removed
 or disabled independently and the error is recorded in `debug.log`; other
-callbacks continue. A failed entry script never replaces the current runtime.
+callbacks continue. Budget errors cannot be suppressed with `pcall` or
+`xpcall`; they propagate to the C++ callback boundary. A failed entry script
+never replaces the current runtime.
 
 Only the safe base functions and isolated package, math, string, and table
 libraries are exposed. The package table has empty paths/searchers and exists

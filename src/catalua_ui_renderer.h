@@ -158,6 +158,7 @@ class script_ui_context
 {
     public:
         explicit script_ui_context( script_ui_renderer &renderer );
+        void invalidate() noexcept;
 
         std::string backend() const;
         std::string platform() const;
@@ -234,7 +235,9 @@ class script_ui_context
                                 const std::function<void( int, int )> &draw_range ) const;
 
     private:
-        script_ui_renderer &renderer_;
+        script_ui_renderer &renderer() const;
+
+        script_ui_renderer *renderer_;
         const cata::ui::profile profile_;
 };
 

@@ -54,6 +54,8 @@
 ---@field label string
 ---@field enabled? boolean
 
+---Ephemeral drawing facade. Valid only during the current page draw callback;
+---do not retain it in globals, closures, events, services, or scheduled work.
 ---@class ScriptUiContext
 local ScriptUiContext = {}
 
@@ -314,7 +316,7 @@ local CcbUiApi = {}
 
 ---@param id string
 ---@param descriptor CcbPageDescriptor
----@param draw fun(ctx: ScriptUiContext, params: CcbScalarMap)
+---@param draw fun(ctx: ScriptUiContext, params: CcbScalarMap) ctx is valid only for this invocation
 function CcbUiApi.page(id, descriptor, draw) end
 
 ---@class CcbEventOptions

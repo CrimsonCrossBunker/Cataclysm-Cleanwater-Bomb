@@ -18,6 +18,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_imgui.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catalua_sol.h"
@@ -68,6 +69,7 @@ namespace fs = std::filesystem;
 constexpr std::size_t default_memory_limit = 32U * 1024U * 1024U;
 constexpr int script_instruction_limit = 1000000;
 constexpr int callback_instruction_limit = 250000;
+constexpr int instruction_hook_quantum = 1000;
 constexpr std::uint64_t slow_callback_threshold_us = 8000;
 constexpr std::size_t maximum_page_stack_depth = 32;
 
@@ -98,17 +100,27 @@ void *limited_allocator( void *userdata, void *pointer, std::size_t old_size,
     return result;
 }
 
-void instruction_limit_hook( lua_State *lua, lua_Debug * )
-{
-    luaL_error( lua, "Lua instruction budget exceeded" );
-}
-
 class instruction_guard
 {
     public:
         instruction_guard( lua_State *lua, int limit ) : lua_( lua ), old_hook_( lua_gethook( lua ) ),
-            old_mask_( lua_gethookmask( lua ) ), old_count_( lua_gethookcount( lua ) ) {
-            lua_sethook( lua_, instruction_limit_hook, LUA_MASKCOUNT, std::max( 1, limit ) );
+            old_mask_( lua_gethookmask( lua ) ), old_count_( lua_gethookcount( lua ) ),
+            previous_( active() ), remaining_( std::max( 1, limit ) ) {
+            bool parent_exceeded = false;
+            for( instruction_guard *ancestor = previous_; ancestor != nullptr;
+                 ancestor = ancestor->previous_ ) {
+                if( ancestor->lua_ == lua_ ) {
+                    parent_exceeded = ancestor->consume( instruction_hook_quantum ) ||
+                                      parent_exceeded;
+                }
+            }
+            if( parent_exceeded ) {
+                mark_exceeded( lua_ );
+                throw std::runtime_error( "Lua instruction budget exceeded" );
+            }
+            active() = this;
+            lua_sethook( lua_, instruction_limit_hook, LUA_MASKCOUNT,
+                         instruction_hook_quantum );
         }
 
         instruction_guard( const instruction_guard & ) = delete;
@@ -116,14 +128,98 @@ class instruction_guard
 
         ~instruction_guard() {
             lua_sethook( lua_, old_hook_, old_mask_, old_count_ );
+            active() = previous_;
+        }
+
+        static bool budget_exceeded( lua_State *lua ) noexcept {
+            for( instruction_guard *guard = active(); guard != nullptr;
+                 guard = guard->previous_ ) {
+                if( guard->lua_ == lua && guard->exceeded_ ) {
+                    return true;
+                }
+            }
+            return false;
         }
 
     private:
+        static instruction_guard *&active() noexcept {
+            static thread_local instruction_guard *guard = nullptr;
+            return guard;
+        }
+
+        static void mark_exceeded( lua_State *lua ) noexcept {
+            for( instruction_guard *guard = active(); guard != nullptr;
+                 guard = guard->previous_ ) {
+                if( guard->lua_ == lua ) {
+                    guard->exceeded_ = true;
+                    guard->remaining_ = 0;
+                }
+            }
+        }
+
+        static void instruction_limit_hook( lua_State *lua, lua_Debug * ) {
+            bool exceeded = false;
+            for( instruction_guard *guard = active(); guard != nullptr;
+                 guard = guard->previous_ ) {
+                if( guard->lua_ == lua ) {
+                    exceeded = guard->consume( instruction_hook_quantum ) || exceeded;
+                }
+            }
+            if( exceeded ) {
+                mark_exceeded( lua );
+                luaL_error( lua, "Lua instruction budget exceeded" );
+            }
+        }
+
+        bool consume( int amount ) noexcept {
+            if( exceeded_ || remaining_ <= amount ) {
+                exceeded_ = true;
+                remaining_ = 0;
+                return true;
+            }
+            remaining_ -= amount;
+            return false;
+        }
+
         lua_State *lua_;
         lua_Hook old_hook_;
         int old_mask_;
         int old_count_;
+        instruction_guard *previous_;
+        int remaining_;
+        bool exceeded_ = false;
 };
+
+int guarded_protected_call( lua_State *lua )
+{
+    if( instruction_guard::budget_exceeded( lua ) ) {
+        return luaL_error( lua, "Lua instruction budget exceeded" );
+    }
+
+    const int argument_count = lua_gettop( lua );
+    lua_pushvalue( lua, lua_upvalueindex( 1 ) );
+    lua_insert( lua, 1 );
+    lua_call( lua, argument_count, LUA_MULTRET );
+
+    if( instruction_guard::budget_exceeded( lua ) ) {
+        return luaL_error( lua, "Lua instruction budget exceeded" );
+    }
+    return lua_gettop( lua );
+}
+
+void install_guarded_protected_calls( lua_State *lua )
+{
+    static constexpr std::array<const char *, 2> function_names = { "pcall", "xpcall" };
+    for( const char *name : function_names ) {
+        lua_getglobal( lua, name );
+        if( !lua_isfunction( lua, -1 ) ) {
+            lua_pop( lua, 1 );
+            throw std::runtime_error( std::string( "Lua base library is missing " ) + name );
+        }
+        lua_pushcclosure( lua, guarded_protected_call, 1 );
+        lua_setglobal( lua, name );
+    }
+}
 
 struct page_definition {
     std::string id;
@@ -1079,6 +1175,7 @@ void initialize_state( runtime_state &state )
 
     state.lua.open_libraries( sol::lib::base, sol::lib::package, sol::lib::math,
                               sol::lib::string, sol::lib::table );
+    install_guarded_protected_calls( state.lua.lua_state() );
     state.lua["dofile"] = sol::nil;
     state.lua["load"] = sol::nil;
     state.lua["loadfile"] = sol::nil;
@@ -1852,13 +1949,18 @@ void draw_registered_page( const std::string &page_id,
     }
 
     std::unique_ptr<script_ui_renderer> renderer = make_imgui_script_ui_renderer();
-    script_ui_context context( *renderer );
+    const std::shared_ptr<script_ui_context> context =
+        std::make_shared<script_ui_context>( *renderer );
+    on_out_of_scope invalidate_context( [context]() {
+        context->invalidate();
+    } );
     source_scope source( *active_state, page->source_index );
     page_scope current_page( *active_state, page->id );
     instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
     const auto started = std::chrono::steady_clock::now();
     const sol::protected_function_result result =
-        page->draw( &context, parameters_to_lua( *active_state, parameters ) );
+        page->draw( context, parameters_to_lua( *active_state, parameters ) );
+    context->invalidate();
     record_callback_timing( *active_state, "page '" + page->id + "'", started );
     if( !result.valid() ) {
         disable_callback( page->enabled, page->error, "Lua page '" + page->id + "'", result );
@@ -2390,6 +2492,7 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
         memory_tracker memory;
         sol::state lua( sol::default_at_panic, limited_allocator, &memory );
         lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string, sol::lib::table );
+        install_guarded_protected_calls( lua.lua_state() );
         lua["dofile"] = sol::nil;
         lua["load"] = sol::nil;
         lua["loadfile"] = sol::nil;

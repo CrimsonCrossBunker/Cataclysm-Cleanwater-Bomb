@@ -551,6 +551,12 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK_THROWS_AS( context.table( "bad", 0, []() {} ), std::invalid_argument );
     CHECK_THROWS_AS( context.virtual_list( -1, 1.0, []( int, int ) {} ),
     std::invalid_argument );
+
+    const std::size_t call_count = renderer.calls.size();
+    context.invalidate();
+    CHECK_THROWS_AS( context.backend(), std::runtime_error );
+    CHECK_THROWS_AS( context.text( "after draw" ), std::runtime_error );
+    CHECK( renderer.calls.size() == call_count );
 }
 
 TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive",
@@ -1107,6 +1113,30 @@ TEST_CASE( "lua_snippets_have_an_instruction_budget", "[lua][ui][sandbox]" )
 
     SECTION( "infinite loops are interrupted" ) {
         CHECK_FALSE( cata::lua_ui::validate_snippet( "while true do end", 1000, error ) );
+        CHECK( error.find( "instruction budget exceeded" ) != std::string::npos );
+    }
+
+    SECTION( "pcall cannot swallow the budget error" ) {
+        CHECK_FALSE( cata::lua_ui::validate_snippet( R"lua(
+pcall(function()
+    pcall(function()
+        while true do end
+    end)
+end)
+return true
+)lua", 4000, error ) );
+        CHECK( error.find( "instruction budget exceeded" ) != std::string::npos );
+    }
+
+    SECTION( "xpcall cannot swallow the budget error" ) {
+        CHECK_FALSE( cata::lua_ui::validate_snippet( R"lua(
+xpcall(function()
+    while true do end
+end, function(message)
+    return message
+end)
+return true
+)lua", 4000, error ) );
         CHECK( error.find( "instruction budget exceeded" ) != std::string::npos );
     }
 
