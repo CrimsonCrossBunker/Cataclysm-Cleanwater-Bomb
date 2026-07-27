@@ -1560,7 +1560,7 @@ std::vector<widget_id> widget::all_layout_children() const
     for( const widget_id &child : result ) {
         const int count = ++result_counts[child.str()];
         maximum_counts[child.str()] = std::max(
-                                           maximum_counts[child.str()], count );
+                                          maximum_counts[child.str()], count );
     }
     const auto include_branch =
     [&]( const std::vector<widget_id> &branch ) {
@@ -1568,8 +1568,8 @@ std::vector<widget_id> widget::all_layout_children() const
         for( const widget_id &child : branch ) {
             const int count = ++branch_counts[child.str()];
             maximum_counts[child.str()] = std::max(
-                                               maximum_counts[child.str()],
-                                               count );
+                                              maximum_counts[child.str()],
+                                              count );
             if( known_conditional.insert( child ).second ) {
                 conditional_order.push_back( child );
             }
@@ -2235,17 +2235,19 @@ std::string widget::layout_internal( const avatar &ava,
 
             const auto configured_child_width =
             [&]( const std::size_t index ) -> std::optional<int> {
-                if( !custom ) {
+                if( !custom )
+                {
                     return std::nullopt;
                 }
                 const auto configured = hud_layout->node_overrides.find(
-                                            child_paths[index] );
+                    child_paths[index] );
                 if( configured == hud_layout->node_overrides.end() ||
-                    !configured->second.width_columns.has_value() ) {
+                    !configured->second.width_columns.has_value() )
+                {
                     return std::nullopt;
                 }
                 return std::clamp(
-                           *configured->second.width_columns, 1, 80 );
+                    *configured->second.width_columns, 1, 80 );
             };
 
             // Total widget width w/o padding

@@ -2696,7 +2696,7 @@ TEST_CASE( "thick_sidebar_hud_layout_preserves_original_and_custom_columns",
     widget_hud_layout custom = original;
     custom.mode = widget_hud_layout_mode::custom;
     custom.node_overrides[
-        "thick_side_by_side@0/thick_body_graph@0"].width_columns = 10;
+     "thick_side_by_side@0/thick_body_graph@0"].width_columns = 10;
     const std::vector<std::string> custom_lines = string_split(
                 remove_color_tags( thick.layout_for_hud( ava, custom ) ),
                 '\n' );

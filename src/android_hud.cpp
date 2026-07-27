@@ -252,7 +252,7 @@ hud_rich_text parse_formatted_text( const std::string &formatted )
         hud_text_run run;
         run.text = remove_color_tags( segment );
         const resolved_terminal_style style = resolve_terminal_style(
-                    colors.empty() ? c_light_gray : colors.top() );
+                colors.empty() ? c_light_gray : colors.top() );
         run.foreground = style.foreground;
         run.background = style.background;
         run.bold = style.bold;
@@ -1022,7 +1022,7 @@ std::string layout_schema_json( const std::string &source_id )
 static bool safe_request_key( const std::string &key )
 {
     return key.size() == 64 &&
-           std::all_of( key.begin(), key.end(), []( const unsigned char c ) {
+    std::all_of( key.begin(), key.end(), []( const unsigned char c ) {
         return std::isxdigit( c ) != 0;
     } );
 }
@@ -1081,7 +1081,7 @@ void set_subscriptions( const std::string &requests_json )
                     if( request.has_int( "columns" ) ) {
                         subscription.layout.columns =
                             static_cast<unsigned int>( std::clamp(
-                                    request.get_int( "columns" ), 8, 80 ) );
+                                                           request.get_int( "columns" ), 8, 80 ) );
                     }
 
                     int override_count = 0;
