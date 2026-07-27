@@ -3481,6 +3481,17 @@ void options_manager::add_options_android()
                                         to_translation( "Options regarding Android gestures." ) ),
     [&]( const std::string & page_id ) {
         if( android_ui_mode::is_new_ui_build() ) {
+            add( "ANDROID_LONG_PRESS_CONTEXT", page_id,
+                 to_translation( "Long press selects a map tile" ),
+                 to_translation( "If true, holding one finger still during gameplay opens precise tile selection instead of repeatedly sending the tap key." ),
+                 true
+               );
+
+            add( "ANDROID_CONTEXT_ZOOM", page_id, to_translation( "Tile selection zoom" ),
+                 to_translation( "Temporarily enlarge map tiles to at least this scale while selecting a tile after a long press." ),
+                 4, 64, 48
+               );
+
             add( "ANDROID_CONTINUOUS_ZOOM", page_id,
                  to_translation( "Continuous pinch zoom" ),
                  to_translation( "If true, pinch gestures resize map tiles continuously instead of changing one large zoom step after release." ),

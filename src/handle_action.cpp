@@ -1142,6 +1142,59 @@ static void smash( const std::optional<tripoint_bub_ms> &p = std::nullopt )
     }
 }
 
+void game::execute_contextual_action( const action_id action, const tripoint_bub_ms &target )
+{
+    map &here = get_map();
+    avatar &player_character = get_avatar();
+
+    if( !can_interact_at( action, here, target ) ) {
+        add_msg( m_info, _( "That action is no longer available at the selected tile." ) );
+        return;
+    }
+
+    const bool vertical_action = action == ACTION_MOVE_UP || action == ACTION_MOVE_DOWN;
+    if( ( vertical_action && target != player_character.pos_bub() ) ||
+        ( !vertical_action && square_dist( target.xy(), player_character.pos_bub().xy() ) > 1 ) ) {
+        add_msg( m_info, _( "You are no longer close enough to perform that action." ) );
+        return;
+    }
+
+    switch( action ) {
+        case ACTION_OPEN:
+            open( target );
+            break;
+        case ACTION_CLOSE:
+            if( player_character.is_mounted() &&
+                !player_character.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) {
+                add_msg( m_info, _( "You can't close things while you're riding." ) );
+            } else {
+                close( target );
+            }
+            break;
+        case ACTION_EXAMINE:
+            examine( target );
+            break;
+        case ACTION_PICKUP:
+            pickup( target );
+            break;
+        case ACTION_BUTCHER:
+            butcher( target );
+            break;
+        case ACTION_CHAT:
+            chat( target );
+            break;
+        case ACTION_MOVE_UP:
+            vertical_move( 1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
+            break;
+        case ACTION_MOVE_DOWN:
+            vertical_move( -1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
+            break;
+        default:
+            add_msg( m_info, _( "That action cannot be queued." ) );
+            break;
+    }
+}
+
 avatar::smash_result avatar::smash( tripoint_bub_ms &smashp )
 {
     avatar::smash_result ret;

@@ -1,5 +1,13 @@
 [
   {
+    "id": "ACT_CONTEXTUAL_ACTION",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "performing queued actions",
+    "based_on": "neither",
+    "can_resume": false
+  },
+  {
     "id": "ACT_RELOAD",
     "type": "activity_type",
     "activity_level": "NO_EXERCISE",
