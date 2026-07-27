@@ -3,11 +3,15 @@
 #include "calendar.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
+#include "catalua_ui_events.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_modules.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
 #include "catalua_ui_renderer.h"
+#include "catalua_ui_scheduler.h"
+#include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
 #include "event_bus.h"
 #include "input_context_actions.h"
@@ -293,6 +297,71 @@ class scoped_lua_user_script
         std::optional<std::string> previous_manifest_;
 };
 
+class scoped_lua_user_module
+{
+    public:
+        explicit scoped_lua_user_module( const fs::path &relative_path ) :
+            path_( fs::u8path( PATH_INFO::config_dir() ) / "lua" / relative_path ) {
+            std::error_code error;
+            fs::create_directories( path_.parent_path(), error );
+            if( error ) {
+                throw std::runtime_error(
+                    "Unable to create Lua module test directory: " + error.message() );
+            }
+            if( fs::exists( path_ ) ) {
+                std::ifstream input( path_, std::ios::binary );
+                previous_ = std::string( std::istreambuf_iterator<char>( input ),
+                                         std::istreambuf_iterator<char>() );
+                if( !input ) {
+                    throw std::runtime_error( "Unable to read existing Lua module" );
+                }
+            }
+        }
+
+        scoped_lua_user_module( const scoped_lua_user_module & ) = delete;
+        scoped_lua_user_module &operator=( const scoped_lua_user_module & ) = delete;
+
+        ~scoped_lua_user_module() {
+            if( previous_ ) {
+                std::ofstream output( path_, std::ios::binary | std::ios::trunc );
+                output << *previous_;
+            } else {
+                std::error_code error;
+                fs::remove( path_, error );
+            }
+        }
+
+        void write( const std::string &source ) const {
+            std::ofstream output( path_, std::ios::binary | std::ios::trunc );
+            output << source;
+            if( !output ) {
+                throw std::runtime_error( "Unable to write Lua test module" );
+            }
+        }
+
+    private:
+        fs::path path_;
+        std::optional<std::string> previous_;
+};
+
+class scoped_calendar_turn
+{
+    public:
+        scoped_calendar_turn() : previous_( calendar::turn ) {}
+        scoped_calendar_turn( const scoped_calendar_turn & ) = delete;
+        scoped_calendar_turn &operator=( const scoped_calendar_turn & ) = delete;
+        ~scoped_calendar_turn() {
+            calendar::turn = previous_;
+        }
+
+        time_point original() const {
+            return previous_;
+        }
+
+    private:
+        time_point previous_;
+};
+
 class scoped_lua_state_file
 {
     public:
@@ -422,8 +491,8 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( context.radial_select_id( "movement", "Walk", radial_options ) == "run" );
     CHECK( renderer.last_widget_id == "movement" );
     const std::vector<cata::lua_ui::script_ui_action_option> action_options = {
-        { "pickup", "Pickup", true },
-        { "drop", "Drop", true }
+        { "pickup", "Pickup", true, false, {} },
+        { "drop", "Drop", true, false, {} }
     };
     CHECK( context.action_slot_id( "ground", "pickup", 4, action_options ) == "drop" );
     CHECK( renderer.last_widget_id == "ground" );
@@ -616,7 +685,13 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "id": "v3", "version": "3", "api_version": 3,
         "capabilities": [ "ui.pages" ], "dependencies": []
     })json" ) );
-    CHECK( v3.api_version == api_version );
+    CHECK( v3.api_version == 3 );
+    const script_manifest v4 = read_script_manifest( json_loader::from_string( R"json({
+        "id": "v4", "version": "4", "api_version": 4,
+        "capabilities": [ "modules.import", "scheduler", "services.consume" ],
+        "dependencies": []
+    })json" ) );
+    CHECK( v4.api_version == api_version );
 
     extension.dependencies = { "missing" };
     CHECK_THROWS( validate_script_manifests( { base, extension } ) );
@@ -632,6 +707,185 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "id": "removed-hud", "version": "1", "api_version": 3,
         "capabilities": [ "ui.hud" ], "dependencies": []
     })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "old-scheduler", "version": "1", "api_version": 3,
+        "capabilities": [ "scheduler" ], "dependencies": []
+    })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "dangerous-without-actions", "version": "1", "api_version": 4,
+        "capabilities": [ "game.actions.dangerous" ], "dependencies": []
+    })json" ) ) );
+    CHECK( capability_minimum_api_version( "scheduler" ) == 4 );
+    CHECK( capability_minimum_api_version( "game.read" ) == minimum_api_version );
+}
+
+TEST_CASE( "lua_v4_modules_are_source_scoped_and_dependency_gated",
+           "[lua][modules][sandbox]" )
+{
+    using cata::lua_ui::script_manifest;
+    using cata::lua_ui::script_module_resolver;
+    using cata::lua_ui::script_module_source;
+
+    const fs::path builtin_root = fs::u8path( PATH_INFO::datadir() ) / "lua";
+    const fs::path empty_root = fs::u8path( PATH_INFO::config_dir() ) / "lua";
+
+    script_manifest builtin;
+    builtin.id = "builtin";
+    builtin.version = "4";
+    builtin.api_version = 4;
+
+    script_manifest consumer;
+    consumer.id = "consumer";
+    consumer.version = "4";
+    consumer.api_version = 4;
+    consumer.dependencies = { "builtin" };
+
+    script_module_resolver resolver( {
+        script_module_source{ builtin, builtin_root },
+        script_module_source{ consumer, empty_root }
+    } );
+
+    CHECK_FALSE( resolver.resolve_local( 1, "ui.profiles.pc_legacy" ) );
+    const auto imported =
+        resolver.resolve_import( 1, "builtin", "ui.profiles.pc_legacy" );
+    REQUIRE( imported );
+    CHECK( imported->source_index == 0 );
+    CHECK( imported->cache_key == "builtin:ui.profiles.pc_legacy" );
+    CHECK_FALSE( resolver.resolve_import( 1, "missing_mod",
+                                          "ui.profiles.pc_legacy" ) );
+    CHECK_FALSE( resolver.resolve_local( 1, "../escape" ) );
+
+    consumer.dependencies.clear();
+    script_module_resolver builtin_is_implicit( {
+        script_module_source{ builtin, builtin_root },
+        script_module_source{ consumer, empty_root }
+    } );
+    CHECK( builtin_is_implicit.resolve_import( 1, "builtin",
+            "ui.profiles.pc_legacy" ) );
+
+    script_manifest provider = builtin;
+    provider.id = "provider";
+    script_module_resolver undeclared_provider( {
+        script_module_source{ provider, builtin_root },
+        script_module_source{ consumer, empty_root }
+    } );
+    CHECK_FALSE( undeclared_provider.resolve_import(
+                     1, "provider", "ui.profiles.pc_legacy" ) );
+
+    consumer.api_version = 3;
+    script_module_resolver legacy( {
+        script_module_source{ builtin, builtin_root },
+        script_module_source{ consumer, empty_root }
+    } );
+    CHECK( legacy.resolve_local( 1, "ui.profiles.pc_legacy" ) );
+}
+
+TEST_CASE( "lua_turn_scheduler_is_bounded_stable_and_source_owned",
+           "[lua][scheduler]" )
+{
+    using cata::lua_ui::deterministic_turn_scheduler;
+
+    deterministic_turn_scheduler scheduler;
+    const std::uint64_t later = scheduler.schedule_after( 100, 10, 1 );
+    const std::uint64_t first = scheduler.schedule_after( 100, 5, 1 );
+    const std::uint64_t second = scheduler.schedule_after( 100, 5, 2 );
+    const std::uint64_t repeating = scheduler.schedule_every( 100, 3, 1 );
+
+    CHECK( scheduler.take_due( 102 ).empty() );
+    auto due = scheduler.take_due( 103 );
+    REQUIRE( due.size() == 1 );
+    CHECK( due[0].id == repeating );
+    CHECK( scheduler.contains( repeating ) );
+
+    due = scheduler.take_due( 105 );
+    REQUIRE( due.size() == 2 );
+    CHECK( due[0].id == first );
+    CHECK( due[1].id == second );
+    CHECK_FALSE( scheduler.contains( first ) );
+    CHECK_FALSE( scheduler.cancel( second, 2 ) );
+
+    CHECK_FALSE( scheduler.cancel( later, 2 ) );
+    CHECK( scheduler.cancel( later, 1 ) );
+    CHECK( scheduler.cancel( repeating, 1 ) );
+    CHECK( scheduler.size() == 0 );
+
+    CHECK_THROWS_AS( scheduler.schedule_after( 0, 0, 1 ),
+                     std::invalid_argument );
+    CHECK_THROWS_AS( scheduler.schedule_every(
+                         0, deterministic_turn_scheduler::maximum_delay_turns + 1, 1 ),
+                     std::invalid_argument );
+}
+
+TEST_CASE( "lua_event_subscriptions_are_priority_stable_and_source_owned",
+           "[lua][events]" )
+{
+    using cata::lua_ui::script_event_registry;
+
+    script_event_registry registry;
+    const std::uint64_t normal = registry.subscribe( "game:avatar_moves", 0, 1, false );
+    const std::uint64_t high_first =
+        registry.subscribe( "game:avatar_moves", 50, 1, false );
+    const std::uint64_t high_second =
+        registry.subscribe( "game:avatar_moves", 50, 2, true );
+    registry.subscribe( "custom:other:event", 100, 2, false );
+
+    const auto matching = registry.matching( "game:avatar_moves" );
+    REQUIRE( matching.size() == 3 );
+    CHECK( matching[0].id == high_first );
+    CHECK( matching[1].id == high_second );
+    CHECK( matching[2].id == normal );
+    CHECK( matching[1].once );
+
+    CHECK_FALSE( registry.unsubscribe( high_second, 1 ) );
+    CHECK( registry.unsubscribe( high_second, 2 ) );
+    CHECK_FALSE( registry.contains( high_second ) );
+    CHECK( registry.unsubscribe_unchecked( normal ) );
+    CHECK_THROWS_AS(
+        registry.subscribe( "event", script_event_registry::maximum_priority + 1,
+                            1, false ),
+        std::invalid_argument );
+    CHECK( cata::lua_ui::is_safe_custom_event_segment( "quest.completed" ) );
+    CHECK_FALSE( cata::lua_ui::is_safe_custom_event_segment( "../escape" ) );
+    CHECK( cata::lua_ui::is_lifecycle_event_name(
+               "ccb.lifecycle.world_ready" ) );
+}
+
+TEST_CASE( "lua_service_registry_is_bounded_versioned_and_provider_safe",
+           "[lua][services]" )
+{
+    using namespace cata::lua_ui;
+
+    script_service_registry registry;
+    registry.provide( {
+        "mod:provider", "quest.api", 2, 1, { "get", "update" }
+    } );
+    REQUIRE( registry.size() == 1 );
+    const script_service_definition *service =
+        registry.find( "mod:provider", "quest.api" );
+    REQUIRE( service != nullptr );
+    CHECK( service->version == 2 );
+    CHECK( service->methods == std::vector<std::string> { "get", "update" } );
+
+    registry.provide( {
+        "mod:provider", "quest.api", 3, 1, { "get" }
+    } );
+    REQUIRE( registry.size() == 1 );
+    service = registry.find( "mod:provider", "quest.api" );
+    REQUIRE( service != nullptr );
+    CHECK( service->version == 3 );
+    CHECK( service->methods == std::vector<std::string> { "get" } );
+
+    CHECK( is_safe_service_provider_identifier( "author:story_mod" ) );
+    CHECK_FALSE( is_safe_service_identifier( "author:story_mod" ) );
+    CHECK_THROWS_AS(
+        registry.provide( { "../provider", "service", 1, 0, { "call" } } ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        registry.provide( { "provider", "service", 0, 0, { "call" } } ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        registry.provide( { "provider", "service", 1, 0, { "same", "same" } } ),
+        std::invalid_argument );
 }
 
 TEST_CASE( "lua_i18n_api_returns_owned_translations_and_validates_plural_counts",
@@ -863,7 +1117,7 @@ TEST_CASE( "lua_snippets_have_an_instruction_budget", "[lua][ui][sandbox]" )
     }
 }
 
-TEST_CASE( "bundled_lua_ui_script_registers_api_v3", "[lua][ui][integration]" )
+TEST_CASE( "bundled_lua_ui_script_registers_api_v4", "[lua][ui][integration]" )
 {
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
@@ -884,6 +1138,307 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v3", "[lua][ui][integration]" )
     CHECK( stopped.event_handler_count == 0 );
     CHECK( stopped.memory_used == 0 );
     CHECK( stopped.last_error.empty() );
+}
+
+TEST_CASE( "lua_v4_services_copy_values_and_restore_provider_identity",
+           "[lua][services][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [
+            "services.consume",
+            "services.provide",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+services.provide("counter.api", {
+    version = 2,
+    methods = {
+        add = function(arguments)
+            local calls = state.character.get("service.calls", 0) + 1
+            state.character.set("service.calls", calls)
+            arguments.value = 999
+            return {
+                value = arguments.left + arguments.right,
+                calls = calls,
+                provider = ccb_source_id
+            }
+        end
+    }
+})
+
+assert(services.available("user", "counter.api"))
+assert(services.available("user", "counter.api", 2))
+assert(not services.available("user", "counter.api", 3))
+local visible = services.list()
+assert(#visible == 1)
+assert(visible[1].provider == "user")
+assert(visible[1].name == "counter.api")
+assert(visible[1].version == 2)
+assert(visible[1].methods[1] == "add")
+
+local arguments = { left = 20, right = 22, value = 1 }
+local result = services.call("user", "counter.api", "add", arguments)
+assert(result.value == 42)
+assert(result.calls == 1)
+assert(result.provider == "user")
+assert(arguments.value == 1)
+assert(pcall(function()
+    services.call("builtin", "missing", "call", {})
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v4_registry_returns_bounded_detached_definition_snapshots",
+           "[lua][registry][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [ "registry.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local kinds = registry.kinds()
+assert(#kinds == 8)
+assert(type(registry.revision()) == "number")
+
+local page = registry.list("item", { offset = 0, limit = 2 })
+assert(page.kind == "item")
+assert(page.limit == 2)
+assert(page.returned <= 2)
+assert(page.total >= page.returned)
+assert(type(page.has_more) == "boolean")
+if page.returned > 0 then
+    local id = page.entries[1].id
+    local first = registry.get("item", id)
+    assert(first.kind == "item")
+    assert(first.id == id)
+    assert(type(first.name) == "string")
+    local original_name = first.name
+    first.name = "detached mutation"
+    assert(registry.get("item", id).name == original_name)
+end
+
+local detailed = registry.list("skill", { limit = 1, details = true })
+if detailed.returned > 0 then
+    assert(detailed.entries[1].kind == "skill")
+end
+assert(registry.get("item", "__missing_lua_registry_id__") == nil)
+assert(pcall(function() registry.list("unknown") end) == false)
+assert(pcall(function()
+    registry.list("item", { limit = 257 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v4_modules_use_strict_source_environments_and_consumer_caches",
+           "[lua][modules][sandbox][integration]" )
+{
+    scoped_lua_user_script script;
+    scoped_lua_user_module module( fs::path( "test_modules" ) / "counter.lua" );
+    module.write( R"lua(
+module_evaluations = (module_evaluations or 0) + 1
+return {
+    evaluations = module_evaluations,
+    source = ccb_source_id
+}
+)lua" );
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [ "modules.import" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local first = require("test_modules.counter")
+local second = require("test_modules.counter")
+assert(rawequal(first, second))
+assert(first.evaluations == 1)
+assert(first.source == "user")
+assert(modules.source_id() == "user")
+
+local profile = modules.import("builtin", "ui.profiles.pc_legacy")
+assert(profile.id == "pc_legacy")
+profile.id = "consumer-local mutation"
+assert(modules.import("builtin", "ui.profiles.pc_legacy").id ==
+       "consumer-local mutation")
+
+local saved_game = game
+game = nil
+assert(game == nil)
+game = saved_game
+assert(rawget(_G, "game") == saved_game)
+assert(package.path == "")
+assert(package.cpath == "")
+assert(package.loadlib == nil)
+assert(package.searchpath == nil)
+assert(package.loaded._G == nil)
+
+assert(pcall(function()
+    modules.import("missing-provider", "test_modules.counter")
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v4_scheduler_is_live_and_can_add_the_first_game_event_handler",
+           "[lua][scheduler][events][integration]" )
+{
+    scoped_calendar_turn turn;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [ "events", "scheduler", "state.character" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+state.character.set("v4.scheduler.after", 0)
+state.character.set("v4.scheduler.repeat", 0)
+state.character.set("v4.scheduler.late_event", false)
+
+scheduler.after(1, function(id, now, due)
+    assert(math.type(id) == "integer")
+    assert(now >= due)
+    state.character.set("v4.scheduler.after", 1)
+    events.on("game_begin", function(event)
+        assert(event.type == "game_begin")
+        state.character.set("v4.scheduler.late_event", true)
+    end)
+end)
+
+scheduler.every(1, function()
+    local count = state.character.get("v4.scheduler.repeat", 0) + 1
+    state.character.set("v4.scheduler.repeat", count)
+    return count < 2
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( cata::lua_ui::status().event_handler_count == 0 );
+
+    calendar::turn = turn.original() + 1_turns;
+    cata::lua_ui::on_turn();
+    CHECK( cata::lua_ui::status().event_handler_count == 1 );
+    get_event_bus().send<event_type::game_begin>( "lua-v4-late-event" );
+
+    calendar::turn = turn.original() + 2_turns;
+    cata::lua_ui::on_turn();
+    calendar::turn = turn.original() + 3_turns;
+    cata::lua_ui::on_turn();
+
+    script.write( R"lua(
+assert(state.character.get("v4.scheduler.after", 0) == 1)
+assert(state.character.get("v4.scheduler.repeat", 0) == 2)
+assert(state.character.get("v4.scheduler.late_event", false) == true)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v4_custom_and_lifecycle_events_are_ordered_typed_and_bounded",
+           "[lua][events][lifecycle][integration]" )
+{
+    REQUIRE( world_generator );
+    REQUIRE( world_generator->active_world != nullptr );
+    scoped_lua_state_file character_file;
+    scoped_lua_state_file world_file(
+        ( world_generator->active_world->folder_path() /
+          "lua_ui_world.json" ).get_unrelative_path() );
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [ "events", "state.character" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+state.character.set("v4.events.reload", 0)
+state.character.set("v4.events.before_save", 0)
+state.character.set("v4.events.after_save", 0)
+
+events.on("ccb.lifecycle.reload", { once = true }, function(event)
+    assert(event.type == "ccb.lifecycle.reload")
+    state.character.set(
+        "v4.events.reload",
+        state.character.get("v4.events.reload", 0) + 1)
+end)
+events.on("ccb.lifecycle.before_save", function()
+    state.character.set(
+        "v4.events.before_save",
+        state.character.get("v4.events.before_save", 0) + 1)
+end)
+events.on("ccb.lifecycle.after_save", function(event)
+    assert(event.data.success == true)
+    state.character.set(
+        "v4.events.after_save",
+        state.character.get("v4.events.after_save", 0) + 1)
+end)
+
+local order = ""
+local high = events.on("probe", { priority = 50 }, function(event)
+    assert(event.type == "user:probe")
+    assert(event.data.answer == 42)
+    assert(event.data_types.answer == "integer")
+    order = order .. "H"
+end)
+events.on("probe", { priority = 0, once = true }, function()
+    order = order .. "O"
+end)
+assert(events.emit("probe", { answer = 42 }) == true)
+assert(order == "HO")
+assert(events.emit("probe", { answer = 42 }) == true)
+assert(order == "HOH")
+assert(events.off(high) == true)
+assert(events.off(high) == false)
+
+local from_self = events.on_from("user", "from-self", function(event)
+    assert(event.type == "user:from-self")
+    order = order .. "S"
+end)
+assert(events.emit("from-self", {}) == true)
+assert(order == "HOHS")
+assert(events.off(from_self) == true)
+assert(pcall(function()
+    events.emit("nested", { invalid = {} })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    REQUIRE( cata::lua_ui::save_persistent_state( error ) );
+    CHECK( error.empty() );
+
+    script.write( R"lua(
+assert(state.character.get("v4.events.reload", 0) == 1)
+assert(state.character.get("v4.events.before_save", 0) == 1)
+assert(state.character.get("v4.events.after_save", 0) == 1)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_event_callbacks_can_request_safe_page_navigation",
@@ -1420,6 +1975,75 @@ assert(status.results[4].action_taken == false)
     player.set_desired_movement_mode( original_desired_mode );
     cata::lua_ui::shutdown();
     CHECK_FALSE( cata::lua_ui::process_next_action() );
+}
+
+TEST_CASE( "lua_named_context_actions_require_capability_and_one_time_confirmation",
+           "[lua][actions][capability][integration]" )
+{
+    using namespace cata::input_context_actions;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [ "events", "game.actions" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+events.on("game_begin", function()
+    local context = game.actions.context_snapshot()
+    assert(context.available.SAFE_ACTION == true)
+    assert(context.available.DANGEROUS_ACTION == false)
+    local safe_id = game.actions.enqueue_context("SAFE_ACTION", context.revision)
+    assert(math.type(safe_id) == "integer")
+    local allowed, error = pcall(function()
+        game.actions.enqueue_context("DANGEROUS_ACTION", context.revision)
+    end)
+    assert(allowed == false)
+    assert(string.find(error, "game.actions.dangerous", 1, true) ~= nil)
+end)
+)lua" );
+
+    publish( "LUA_TEST", "lua.test", "Lua test", {
+        { "SAFE_ACTION", "Safe action", {}, false, false },
+        { "DANGEROUS_ACTION", "Dangerous action", {}, false, true }
+    } );
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "named-action-capability" );
+    const std::optional<bool> dispatched = cata::lua_ui::process_next_action();
+    REQUIRE( dispatched );
+    CHECK_FALSE( *dispatched );
+    CHECK( has_pending() );
+    std::string consumed;
+    CHECK( consume( { "SAFE_ACTION", "DANGEROUS_ACTION" }, consumed ) );
+    CHECK( consumed == "SAFE_ACTION" );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [
+            "events",
+            "game.actions",
+            "game.actions.dangerous"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+events.on("game_begin", function()
+    local context = game.actions.context_snapshot()
+    assert(context.available.DANGEROUS_ACTION == true)
+    local request = game.actions.enqueue_context(
+        "DANGEROUS_ACTION", context.revision)
+    assert(game.actions.cancel(request) == true)
+end)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "named-action-dangerous" );
+    CHECK_FALSE( cata::lua_ui::process_next_action() );
+    cata::input_context_actions::clear();
 }
 
 TEST_CASE( "lua_reload_is_transactional", "[lua][ui][integration]" )
