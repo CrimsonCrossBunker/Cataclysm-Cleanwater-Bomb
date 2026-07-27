@@ -126,6 +126,7 @@ static const json_character_flag json_flag_CARNIVORE_DIET( "CARNIVORE_DIET" );
 static const json_character_flag json_flag_HEMOVORE( "HEMOVORE" );
 static const json_character_flag json_flag_HERBIVORE_DIET( "HERBIVORE_DIET" );
 static const json_character_flag json_flag_IMMUNE_SPOIL( "IMMUNE_SPOIL" );
+static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 static const json_character_flag json_flag_NUMB( "NUMB" );
 static const json_character_flag json_flag_PARAIMMUNE( "PARAIMMUNE" );
 static const json_character_flag json_flag_PRED1( "PRED1" );
@@ -1447,11 +1448,7 @@ void Character::modify_morale( item &food, const int nutr )
         const bool sapiovore = has_flag( json_flag_SAPIOVORE );
         const bool spiritual = has_flag( json_flag_SPIRITUAL );
         const bool numb = has_flag( json_flag_NUMB );
-        // Cleanwater: 撤销 PR #81357 (Remove almost all consumption bonuses from cannibals) 和
-        // PR #81379 (Remove cannibal's last consumption bonus)
-        // 方法：还原为原始士气数值和持续时间，恢复食人+精神病+灵性(+25)、食人+精神病(+15)、
-        // 食人+灵性(+15)、精神病+灵性(+5)的组合加成，纯食人恢复+10奖励，惩罚持续时间恢复60分钟
-        // 追加修复：将食人上位flag噬人症加入最高阶士气加成判断；修复精神病文本顺序错误覆盖食血变异类flag效果
+        const bool insensitivity = has_flag( json_flag_INSENSITIVITY );
         if( ( cannibal || sapiovore ) && psycho && spiritual ) {
             add_msg_if_player( m_good,
                                _( "You feast upon the human flesh, and in doing so, devour their spirit." ) );
@@ -1491,17 +1488,22 @@ void Character::modify_morale( item &food, const int nutr )
             }
         } else if( psycho ) {
             add_msg_if_player( _( "Meh.  You've eaten worse." ) );
-        } else if( spiritual ) {
+        } else if( spiritual && !insensitivity ) {
             add_msg_if_player( m_bad,
                                _( "This is probably going to count against you if there's still an afterlife." ) );
             add_morale( morale_cannibal, -60, -400, 60_minutes, 30_minutes );
-        } else if( numb ) {
+        } else if( numb || insensitivity ) {
             add_msg_if_player( m_bad, _( "You find this meal distasteful, but necessary." ) );
-            add_morale( morale_cannibal, -60, -400, 60_minutes, 30_minutes );
+            if( insensitivity ) {
+                add_morale( morale_cannibal, -30, -400, 60_minutes, 30_minutes );
+            } else {
+                add_morale( morale_cannibal, -60, -400, 60_minutes, 30_minutes );
+            }
         } else {
             add_msg_if_player( m_bad, _( "You feel horrible for eating a person." ) );
             add_morale( morale_cannibal, -60, -400, 60_minutes, 30_minutes );
         }
+        record_mental_metric_cannibalism();
     }
 
     // While raw flesh usually means negative morale, carnivores and cullers get a small bonus.

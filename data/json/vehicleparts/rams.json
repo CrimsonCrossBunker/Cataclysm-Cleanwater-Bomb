@@ -36,11 +36,11 @@
     "item": "alloy_plate",
     "color": "dark_gray",
     "broken_color": "dark_gray",
-    "durability": 750,
+    "durability": 860,
+    "bonus": 50,
     "breaks_into": [
-      { "item": "mc_steel_lump", "count": [ 4, 6 ] },
-      { "item": "mc_steel_chunk", "count": [ 4, 6 ] },
-      { "item": "scrap", "count": [ 4, 6 ] }
+      { "item": "scrap", "count": [ 6, 18 ] },
+      { "item": "alloy_sheet", "count": [ 4, 8 ] }
     ],
     "requirements": {
       "install": {
@@ -53,9 +53,14 @@
         "time": "15 m",
         "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ]
       },
-      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "10 m", "using": [ [ "repair_welding_standard", 5 ] ] }
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 5 ] ]
+      }
     },
-    "damage_reduction": { "all": 70 }
+    "damage_reduction": { "all": 87 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] }
   },
   {
     "id": "ram_hardsteel",

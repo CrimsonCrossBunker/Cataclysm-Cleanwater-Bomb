@@ -65,6 +65,7 @@
 #include "memorial_logger.h"
 #include "messages.h"
 #include "mod_manager.h"
+#include "mp_gamestate.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -94,6 +95,8 @@
     #endif
     #include <tchar.h>
 #endif
+
+static const dimension_id dimension_world_default( "default" );
 
 static const mod_id MOD_INFORMATION_dda( "dda" );
 
@@ -286,8 +289,6 @@ void game::load_master()
 bool game::load_dimension_data()
 {
     const cata_path datafile = PATH_INFO::current_dimension_save_path() / SAVE_DIMENSION_DATA;
-    // if for whatever reason the dimension data file doesn't have a set region_type, use the default one
-    overmap_buffer.current_region_type = "default";
     // If dimension_data.gsav doesn't exist, return false
     return read_from_file_optional( datafile, [this, &datafile]( std::istream & is ) {
         unserialize_dimension_data( datafile, is );
@@ -308,7 +309,9 @@ bool game::load( const std::string &world )
 
     try {
         world_generator->set_active_world( wptr );
-        g->setup();
+        if( !g->setup() ) {
+            return false;
+        }
         g->load( wptr->world_saves.front() );
     } catch( const std::exception &err ) {
         debugmsg( "cannot load world '%s': %s", world, err.what() );
@@ -424,6 +427,7 @@ bool game::load( const save_t &name )
                         uistate.deserialize( jsin.get_object() );
                     } );
                     reload_npcs();
+                    cata_mp::mp_cleanup_stale_npcs_after_load();
                     validate_npc_followers();
                     validate_mounted_npcs();
                     validate_camps();
@@ -1088,9 +1092,9 @@ cata_path PATH_INFO::dimensions_save_path()
 
 cata_path PATH_INFO::current_dimension_save_path()
 {
-    std::string dimension_prefix = g->get_dimension_prefix();
-    if( !dimension_prefix.empty() ) {
-        return PATH_INFO::dimensions_save_path() / dimension_prefix;
+    dimension_id dimension_prefix = g->get_dimension_prefix();
+    if( dimension_prefix != dimension_world_default ) {
+        return PATH_INFO::dimensions_save_path() / dimension_prefix.str();
     }
     return PATH_INFO::world_base_save_path();
 }

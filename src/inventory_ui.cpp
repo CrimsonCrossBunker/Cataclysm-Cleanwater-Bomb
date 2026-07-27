@@ -506,6 +506,12 @@ void uistatedata::deserialize( const JsonObject &jo )
     jo.read( "overmap_fast_scroll", overmap_fast_scroll );
     jo.read( "tileset_zoom", tileset_zoom );
     jo.read( "overmap_tileset_zoom", overmap_tileset_zoom );
+    if( tileset_zoom <= 0 ) {
+        tileset_zoom = DEFAULT_TILESET_ZOOM;
+    }
+    if( overmap_tileset_zoom <= 0 ) {
+        overmap_tileset_zoom = DEFAULT_TILESET_ZOOM;
+    }
     jo.read( "overmap_sidebar_uistate", overmap_sidebar_state );
     jo.read( "editmap_uistate", editmap_state );
     jo.read( "distraction_noise", distraction_noise );
@@ -5351,6 +5357,28 @@ trade_selector::trade_selector( trade_ui *parent, Character &u,
 trade_selector::select_t trade_selector::to_trade() const
 {
     return to_use;
+}
+
+std::vector<item_location> trade_selector::get_item_locations() const
+{
+    std::vector<item_location> result;
+    std::unordered_set<const item *> seen;
+    for( const inventory_column *column : get_all_columns() ) {
+        for( const inventory_entry *entry : column->get_entries( []( const inventory_entry & candidate ) {
+        return candidate.is_item();
+        }, true ) ) {
+            entry->cache_denial( preset );
+            if( !entry->is_selectable() ) {
+                continue;
+            }
+            for( const item_location &loc : entry->locations ) {
+                if( loc && seen.insert( &*loc ).second ) {
+                    result.push_back( loc );
+                }
+            }
+        }
+    }
+    return result;
 }
 
 void trade_selector::execute()

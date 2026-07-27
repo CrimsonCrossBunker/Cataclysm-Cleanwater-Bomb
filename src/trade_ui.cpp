@@ -66,6 +66,41 @@ bool _npc_passes_trade_filter( npc const &np, item const &it )
     return np.myclass->get_shopkeeper_blacklist().matches( it, np ) == nullptr;
 }
 
+void populate_trade_selectors( Character &you, npc &trader, trade_selector &you_pane,
+                               trade_selector &trader_pane )
+{
+    you_pane.add_character_items( you );
+    you_pane.add_nearby_items( 1 );
+    if( !trader.has_trait( trait_TRADE_BACKEND ) ) {
+        trader_pane.add_character_items( trader );
+    }
+    if( trader.is_shopkeeper() ) {
+        trader_pane.categorize_map_items( true );
+
+        add_fallback_zone( trader );
+
+        zone_manager &zmgr = zone_manager::get_manager();
+        const std::unordered_set<tripoint_bub_ms> src =
+            zmgr.get_point_set_loot( trader.pos_abs(), PICKUP_RANGE, trader.get_fac_id() );
+
+        for( const tripoint_bub_ms &pt : src ) {
+            trader_pane.add_map_items( pt );
+            trader_pane.add_vehicle_items( pt );
+        }
+    } else if( !trader.is_player_ally() ) {
+        trader_pane.add_nearby_items( 1 );
+    }
+
+    map &here = get_map();
+    for( const wrapped_vehicle &wv : here.get_vehicles() ) {
+        if( wv.v->owner == faction_your_followers ) {
+            for( const tripoint_abs_ms &veh_pt : wv.v->get_points() ) {
+                you_pane.add_vehicle_items( here.get_bub( veh_pt ) );
+            }
+        }
+    }
+}
+
 } // namespace
 
 trade_preset::trade_preset( Character const &you, Character const &trader )
@@ -148,38 +183,7 @@ trade_ui::trade_ui( party_t &you, npc &trader, currency_t cost, std::string titl
       _parties{ &trader, &you }, _title( std::move( title ) )
 
 {
-    _panes[_you]->add_character_items( you );
-    _panes[_you]->add_nearby_items( 1 );
-    if( !trader.has_trait( trait_TRADE_BACKEND ) ) {
-        _panes[_trader]->add_character_items( trader );
-    }
-    if( trader.is_shopkeeper() ) {
-        _panes[_trader]->categorize_map_items( true );
-
-        add_fallback_zone( trader );
-
-        zone_manager &zmgr = zone_manager::get_manager();
-
-        std::unordered_set<tripoint_bub_ms> const src =
-            zmgr.get_point_set_loot( trader.pos_abs(), PICKUP_RANGE, trader.get_fac_id() );
-
-        for( tripoint_bub_ms const &pt : src ) {
-            _panes[_trader]->add_map_items( pt );
-            _panes[_trader]->add_vehicle_items( pt );
-        }
-    } else if( !trader.is_player_ally() ) {
-        _panes[_trader]->add_nearby_items( 1 );
-    }
-
-    const map &here = get_map();
-
-    for( const wrapped_vehicle &wv : get_map().get_vehicles() ) {
-        if( wv.v->owner == faction_your_followers ) {
-            for( const tripoint_abs_ms &veh_pt : wv.v->get_points() ) {
-                _panes[_you]->add_vehicle_items( here.get_bub( veh_pt ) );
-            }
-        }
-    }
+    populate_trade_selectors( you, trader, *_panes[_you], *_panes[_trader] );
 
     if( trader.will_exchange_items_freely() ) {
         _cost = 0;
@@ -203,6 +207,16 @@ trade_ui::trade_ui( party_t &you, npc &trader, currency_t cost, std::string titl
         _draw_header();
         wnoutrefresh( _header_w );
     } );
+}
+
+trade_ui::item_locations_t trade_ui::get_item_locations( party_t &you, npc &trader )
+{
+    trade_preset you_preset( you, trader );
+    trade_preset trader_preset( trader, you );
+    trade_selector you_pane( nullptr, you, you_preset );
+    trade_selector trader_pane( nullptr, trader, trader_preset );
+    populate_trade_selectors( you, trader, you_pane, trader_pane );
+    return { you_pane.get_item_locations(), trader_pane.get_item_locations() };
 }
 
 void trade_ui::pushevent( event const &ev )

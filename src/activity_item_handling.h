@@ -1,3 +1,5 @@
+#pragma once
+
 #include <memory>
 #include <optional>
 #include <unordered_set>
@@ -38,8 +40,9 @@ struct requirement_failure_reasons {
 
 namespace zone_sorting
 {
-// the boolean in this pair being true indicates the item is from a vehicle storage space
-using zone_items = std::vector<std::pair<item *, bool>>;
+// The optional part index in this pair indicates which vehicle cargo part the
+// item is stored in; std::nullopt means the item is on the ground.
+using zone_items = std::vector<std::pair<item *, std::optional<int>>>;
 
 struct unload_sort_options {
     bool unload_mods = false;
@@ -90,7 +93,12 @@ unload_sort_options set_unload_options( Character &you, const tripoint_abs_ms &s
 // return items at the given location from vehicle cargo and ground
 // TODO: build into map class
 zone_items populate_items( const tripoint_bub_ms &src_bub );
-// returns whether to ignore the zones at `src`
+// return all cargo parts on the same tile as the given position
+std::vector<vpart_reference> cargo_parts_at( const tripoint_bub_ms &pos );
+// return a vpart_reference for the cargo part at `pos` with the given part index,
+// or std::nullopt if the vehicle is no longer there.
+std::optional<vpart_reference> cargo_part_from_index( const tripoint_bub_ms &pos, int part_index );
+
 // if one zone is ignored, all will be
 bool ignore_contents( Character &you, const tripoint_abs_ms &src );
 

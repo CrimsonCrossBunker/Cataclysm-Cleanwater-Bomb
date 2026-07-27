@@ -1,0 +1,48 @@
+[
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "fcl_fusion_10_mag",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_MAGAZINES",
+    "skill_used": "electronics",
+    "skills_required": [ [ "mechanics", 4 ], [ "fabrication", 4 ] ],
+    "difficulty": 6,
+    "time": "1 h",
+    "book_learn": [ [ "advanced_electronics", 7 ], [ "textbook_electronics", 8 ] ],
+    "using": [ [ "soldering_standard", 20 ] ],
+    "qualities": [ { "id": "SCREW_FINE", "level": 1 }, { "id": "WRENCH_FINE", "level": 1 } ],
+    "proficiencies": [ { "proficiency": "prof_elec_soldering" }, { "proficiency": "prof_electromagnetics" } ],
+    "components": [
+      [ [ "fcl_fusion_pack", 1 ] ],
+      [ [ "nanomaterial", 3 ] ],
+      [ [ "circuit", 2 ] ],
+      [ [ "cable", 4 ] ],
+      [ [ "e_scrap", 8 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "fcl_fusion_20_mag",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_MAGAZINES",
+    "skill_used": "electronics",
+    "skills_required": [ [ "mechanics", 5 ], [ "fabrication", 5 ] ],
+    "difficulty": 8,
+    "time": "2 h",
+    "book_learn": [ [ "advanced_electronics", 8 ], [ "textbook_electronics", 9 ] ],
+    "using": [ [ "soldering_standard", 35 ] ],
+    "qualities": [ { "id": "SCREW_FINE", "level": 1 }, { "id": "WRENCH_FINE", "level": 1 } ],
+    "proficiencies": [ { "proficiency": "prof_elec_soldering" }, { "proficiency": "prof_electromagnetics" } ],
+    "components": [
+      [ [ "fcl_fusion_pack", 2 ] ],
+      [ [ "nanomaterial", 5 ] ],
+      [ [ "amplifier", 1 ] ],
+      [ [ "processor", 1 ] ],
+      [ [ "circuit", 4 ] ],
+      [ [ "cable", 8 ] ],
+      [ [ "e_scrap", 16 ] ]
+    ]
+  }
+]

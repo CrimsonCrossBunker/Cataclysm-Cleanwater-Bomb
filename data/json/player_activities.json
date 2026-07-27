@@ -141,6 +141,28 @@
     "interruptable_with_kb": true
   },
   {
+    "id": "ACT_VEHICLE_PART_INSTALL_SERVICE",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "installing a vehicle part",
+    "rooted": true,
+    "based_on": "time",
+    "can_resume": false,
+    "interruptable": true,
+    "interruptable_with_kb": true
+  },
+  {
+    "id": "ACT_VEHICLE_PART_REMOVE_SERVICE",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "removing a vehicle part",
+    "rooted": true,
+    "based_on": "time",
+    "can_resume": false,
+    "interruptable": true,
+    "interruptable_with_kb": true
+  },
+  {
     "id": "ACT_BASH",
     "type": "activity_type",
     "activity_level": "MODERATE_EXERCISE",

@@ -4,6 +4,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <CDDA_ROOT>$(MSBuildThisFileDirectory)..\</CDDA_ROOT>
+    <_CDDA_TRACY_VCPKG_ROOT>$(MSBuildThisFileDirectory)vcpkg_installed\$(VcpkgTriplet)\$(VcpkgTriplet)</_CDDA_TRACY_VCPKG_ROOT>
     <TargetName>$(ProjectName)-$(Configuration)-$(Platform)</TargetName>
     <IntDir>$(CDDA_ROOT)objwin\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <OutDir>$(CDDA_ROOT)objwin\$(Configuration)\$(Platform)\$(ProjectName)\</OutDir>
@@ -20,6 +21,8 @@
     <CDDA_LLD_LINK_PATH Condition="'$(CDDA_LLD_LINK_PATH)'==''">$(_CDDA_LLVM_BIN_PATH)</CDDA_LLD_LINK_PATH>
     <_CDDA_ENABLE_THIN_ARCHIVES>false</_CDDA_ENABLE_THIN_ARCHIVES>
     <_CDDA_ENABLE_THIN_ARCHIVES Condition="'$(CDDA_ENABLE_THIN_ARCHIVES)'!=''">true</_CDDA_ENABLE_THIN_ARCHIVES>
+    <_CDDA_ENABLE_TRACY>false</_CDDA_ENABLE_TRACY>
+    <_CDDA_ENABLE_TRACY Condition="'$(CDDA_TRACY)'=='1' Or '$(CDDA_TRACY)'=='true'">true</_CDDA_ENABLE_TRACY>
     <_CDDA_USE_LLD_LINK>false</_CDDA_USE_LLD_LINK>
     <_CDDA_USE_LLD_LINK Condition="'$(CDDA_USE_LLD_LINK)'!='' Or $(_CDDA_ENABLE_THIN_ARCHIVES)">true</_CDDA_USE_LLD_LINK>
     <_UseSDL3>false</_UseSDL3>
@@ -31,6 +34,7 @@
     <VcpkgAdditionalInstallOptions>--clean-after-build</VcpkgAdditionalInstallOptions>
     <VcpkgAdditionalInstallOptions Condition="$(_UseSDL3)">$(VcpkgAdditionalInstallOptions) --x-feature=sdl3</VcpkgAdditionalInstallOptions>
     <VcpkgAdditionalInstallOptions Condition="!$(_UseSDL3) And !$(Configuration.Contains(NoTiles))">$(VcpkgAdditionalInstallOptions) --x-feature=sdl2</VcpkgAdditionalInstallOptions>
+    <VcpkgAdditionalInstallOptions Condition="$(_CDDA_ENABLE_TRACY)">$(VcpkgAdditionalInstallOptions) --x-feature=tracy</VcpkgAdditionalInstallOptions>
     <CustomBuildAfterTargets>VcpkgInstallManifestDependencies</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="$(_CDDA_USE_CCACHE)">
@@ -89,6 +93,13 @@
     <ClCompile Condition="$(_CDDA_BACKTRACE)">
       <PreprocessorDefinitions>BACKTRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Condition="$(_CDDA_ENABLE_TRACY)">
+      <PreprocessorDefinitions>TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- The Tracy vcpkg port installs public headers below include/tracy/tracy.
+           Add include/tracy as the search root so profiling.h can keep using
+           the upstream include form: tracy/Tracy.hpp. -->
+      <AdditionalIncludeDirectories>$(_CDDA_TRACY_VCPKG_ROOT)\include\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Condition="$(_CDDA_USE_CCACHE)">
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <ObjectFileName>$(IntDir)%(FileName).obj</ObjectFileName>
@@ -102,6 +113,11 @@
       <LinkStatus />
       <LinkTimeCodeGeneration />
       <AdditionalDependencies>dbghelp.lib;winmm.lib;imm32.lib;version.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;setupapi.lib;shlwapi.lib;WindowsApp.lib;mincore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link Condition="$(_CDDA_ENABLE_TRACY)">
+      <AdditionalLibraryDirectories Condition="$(Configuration.StartsWith(Release))">$(_CDDA_TRACY_VCPKG_ROOT)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="$(Configuration.StartsWith(Debug))">$(_CDDA_TRACY_VCPKG_ROOT)\debug\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>TracyClient.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <!-- VS2022 DebugFastLink segfaults https://developercommunity.visualstudio.com/t/Visual-Studio-2022-version-1742-crashe/10243923 -->
     <!-- Fixed in VS2022 17.7 == 14.37 -->

@@ -141,6 +141,14 @@
     "description": "Any vehicles in this zone are marked for deconstruction."
   },
   {
+    "id": "VEHICLE_SERVICE_OUTPUT",
+    "type": "LOOT_ZONE",
+    "name": "Vehicle Service Output",
+    "hidden": true,
+    "display_field": "fd_vehicle_service_output_zone",
+    "description": "NPC vehicle services place removed parts and related items in this zone."
+  },
+  {
     "id": "VEHICLE_PATROL",
     "type": "LOOT_ZONE",
     "name": "Vehicle Patrol Zone",

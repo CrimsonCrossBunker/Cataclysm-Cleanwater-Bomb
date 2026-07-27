@@ -26,6 +26,16 @@ namespace cata_mp
 // processes connect/disconnect/action events from remote players.
 void process_mp_events();
 
+// Cheap outer gate for the game loop.  Single-player code should test this
+// before calling any per-turn multiplayer work so queues, cleanup, logging and
+// UI synchronization are not entered at all in a solo session.
+bool is_session_active();
+
+// Run all multiplayer work associated with the start of a game turn.  The
+// caller must first check is_session_active(); keeping the gate at the call
+// site makes the single-player hot path one predictable mode check.
+void process_session_turn();
+
 // Returns a JSON string describing the remote player's current position,
 // HP, and nearby visible tiles. Sent to the client after each action.
 std::string serialize_remote_player_state();
@@ -209,12 +219,17 @@ void set_host_mode( bool enabled );
 // whether it is also a headless dedicated server.
 bool is_hosting();
 
-// Called from the main loop when a world is unloaded (quit-to-menu). Resets
-// per-world MP state — currently the stale-NPC sweep guard — so re-entering any
+// Called when a world is unloaded (quit-to-menu). Resets per-world MP state —
+// currently the stale-NPC sweep guard — so re-entering any
 // world in the same process re-runs the orphan-proxy cleanup instead of
 // skipping it (the one-shot guard otherwise leaves phantom proxies from a prior
 // load-in; reproduced 2026-06-03).
 void mp_on_world_exit();
+
+// Load-time migration for worlds with co-op history.  Removes proxy NPCs left
+// by an interrupted multiplayer session while the loading screen is active,
+// rather than discovering and scanning for them from the per-turn hot path.
+void mp_cleanup_stale_npcs_after_load();
 
 // Host: the world's overmap seed (g->get_seed()), captured on the game thread.
 // Sent to the client in the join 'welcome' so it can match the host's terrain.

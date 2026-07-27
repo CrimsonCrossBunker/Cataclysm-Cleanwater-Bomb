@@ -762,6 +762,12 @@
   },
   {
     "type": "keybinding",
+    "id": "EXPORT",
+    "name": "Export",
+    "bindings": [ { "input_method": "keyboard_char", "key": "E" }, { "input_method": "keyboard_code", "key": "e", "mod": [ "shift" ] } ]
+  },
+  {
+    "type": "keybinding",
     "id": "SCROLL_RECIPE_INFO_UP",
     "category": "CRAFTING",
     "name": "Scroll recipe info up",

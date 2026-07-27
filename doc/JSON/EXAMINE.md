@@ -45,6 +45,7 @@
 These are actions that will be performed when a terrain/furniture is examined.
 The hardcoded examine actions specified as a `"examine_action": "ACTION"`, where `ACTION` is replaced with one of the strings from the list below.
 The examine actors are specified as JSON objects with a `type` corresponding to a certain type of action, and other members filling in the data for how the action functions.
+Examine actions and examine actors can be mixed within single key, like `"examine_action": [ "locked_object_pickable", "chainfence", { "type": "effect_on_conditions", ... } ]`
 
 ## Hardcoded Examine Actions
 
@@ -58,6 +59,7 @@ The examine actors are specified as JSON objects with a `type` corresponding to 
 - ```controls_gate``` Controls the attached gate.
 - ```dirtmound``` Plant seeds and plants.
 - ```elevator``` Use the elevator to change floors.
+- ```fertilize_terrain``` Fertilize a terrain with `terrain_growth` data.  Consumes fertilizer and starts that terrain's growth timer.
 - ```finite_water_source``` Drink or get liquid from this terrain/furniture. Unlike ordinary `water_source`, terrain with this examine action will get liquid from a finite source (liquid is placed on that tile as an item during the mapgen) and will stop functioning if said liquid if exhausted on that tile. Should be used in pair with `liquid_source`
 - ```flower_poppy``` Pick the mutated poppy.
 - ```fswitch``` Flip the switch and the rocks will shift.
@@ -83,6 +85,16 @@ The examine actors are specified as JSON objects with a `type` corresponding to 
 - ```mortar``` Shoot a projectile.
 
 ## Examine Actors
+
+All examine actions share the keys `"type"` and `"name"`
+
+```jsonc
+  {
+    "type": "appliance_convert",
+    "name": "Take down"
+    ...
+  }
+```
 
 ### `appliance_convert`
 

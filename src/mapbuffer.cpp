@@ -450,7 +450,7 @@ const std::unordered_set<std::string> *mapbuffer::zzip_listing( const cata_path 
 // seeking around in them, so we're using the json streaming API.
 submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     // Map the tripoint to the submap quad that stores it.
     const tripoint_abs_omt om_addr = project_to<coords::omt>( p );
     const cata_path dirname = find_dirname( om_addr );

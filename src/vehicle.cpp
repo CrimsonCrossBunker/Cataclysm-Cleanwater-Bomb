@@ -7956,7 +7956,14 @@ void vehicle::damage_all( map &here, int dmg1, int dmg2, const damage_type_id &t
         const int distance = 1 + square_dist( vp.mount, impact );
         if( distance > 1 ) {
             int net_dmg = rng( dmg1, dmg2 ) / ( distance * distance );
-            if( vpi.location != vpart_location_structure || !vpi.has_flag( "PROTRUSION" ) ) {
+            if( vpi.location != vpart_location_structure || !vpi.has_flag( "PROTRUSION" ) || vpi.has_flag( "SHOCK_IMMUNE" ) || vpi.has_flag( "SHOCK_RESISTANT" ) ) {
+                if( vpi.has_flag( "SHOCK_IMMUNE" ) ) {
+                    net_dmg = 0;
+                    continue;
+                }
+                if( vpi.has_flag( "SHOCK_RESISTANT" ) ) {
+                    net_dmg = std::max( 0, net_dmg - ( vpi.bonus > 0 ? vpi.bonus : 10 ) );
+                }
                 const int shock_absorber = part_with_feature( vp.mount, "SHOCK_ABSORBER", true );
                 if( shock_absorber >= 0 ) {
                     const vehicle_part &vp_shock_absorber = part( shock_absorber );
