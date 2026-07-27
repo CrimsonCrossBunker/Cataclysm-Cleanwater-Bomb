@@ -260,6 +260,15 @@ jobs:
             artifact: android-x64
             ext: apk
             content: application/apk
+          - name: Android x64 New UI
+            os: ubuntu-latest
+            tiles: 1
+            sdl3: 1
+            android: arm64
+            new_ui: 1
+            artifact: android-x64-new-ui
+            ext: apk
+            content: application/apk
           - name: Android x32
             os: ubuntu-latest
             tiles: 1
@@ -796,7 +805,11 @@ jobs:
           gpg -d --passphrase "${{ secrets.KEYSTORE_PASSWORD }}" --batch keystore.properties.asc > keystore.properties
           export UPSTREAM_BUILD_NUMBER="$((11581 + ${{ github.run_number }}))"
           chmod +x gradlew
-          if [ ${{ matrix.android }} = arm64 ]
+          if [ "${{ matrix.new_ui }}" = 1 ]
+          then
+               ./gradlew -Pj=$((`nproc`+0)) -Pabi_arm_32=false -Pprebuilt_shaders=true assembleNewUiRelease
+               mv ./app/build/outputs/apk/newUi/release/*.apk ../ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.apk
+          elif [ ${{ matrix.android }} = arm64 ]
           then
                ./gradlew -Pj=$((`nproc`+0)) -Pabi_arm_32=false -Pprebuilt_shaders=true assembleExperimentalRelease
                mv ./app/build/outputs/apk/experimental/release/*.apk ../ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.apk
