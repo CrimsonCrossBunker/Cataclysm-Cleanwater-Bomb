@@ -532,6 +532,7 @@ class vpart_info
 
     private:
         bool was_loaded = false; // used by generic_factory
+        std::optional<std::string> default_tint_color_string;
         std::vector<std::pair<vpart_id, mod_id>> src;
         friend class generic_factory<vpart_info>;
         friend struct mod_tracker;
