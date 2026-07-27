@@ -317,10 +317,10 @@ void install_module_searcher( runtime_state &state )
 }
 
 template<typename Definition>
-auto find_definition( std::vector<Definition> &definitions, const std::string &id )
+auto find_definition( std::vector<Definition> &definitions, const std::string_view id )
 {
-    return std::find_if( definitions.begin(), definitions.end(), [&id]( const Definition & entry ) {
-        return entry.id == id;
+    return std::find_if( definitions.begin(), definitions.end(), [id]( const Definition & entry ) {
+        return entry.id.compare( id ) == 0;
     } );
 }
 
@@ -977,7 +977,7 @@ bool write_state_file( const cata_path &path,
     }
 }
 
-page_definition *find_page( const std::string &id )
+page_definition *find_page( const std::string_view id )
 {
     if( !active_state ) {
         return nullptr;
@@ -1732,7 +1732,7 @@ bool has_registered_pages( const std::string_view slot )
     } );
 }
 
-bool show_page( const std::string &page_id )
+bool show_page( const std::string_view page_id )
 {
     std::string error;
     if( !active_state && !reload_scripts( error ) ) {

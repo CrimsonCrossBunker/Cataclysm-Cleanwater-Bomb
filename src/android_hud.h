@@ -3,7 +3,10 @@
 #define CATA_SRC_ANDROID_HUD_H
 
 #include <string>
+#include <string_view>
 #include <vector>
+
+#include "point.h"
 
 class avatar;
 
@@ -17,8 +20,7 @@ namespace android_hud
 
 /** Rectangle in Android HUD-overlay pixels plus the coordinate-space size. */
 struct minimap_rect {
-    int x = 0;
-    int y = 0;
+    point origin = point::zero;
     int width = 0;
     int height = 0;
     int viewport_width = 0;
@@ -29,7 +31,7 @@ struct minimap_rect {
 void set_minimap_rect( const minimap_rect &rect );
 minimap_rect get_minimap_rect();
 /** Accepts the bounded schema-2 JSON request document produced by Android. */
-void set_subscriptions( const std::string &requests_json );
+void set_subscriptions( std::string_view requests_json );
 
 void publish_snapshot( const avatar &player, int safe_mode );
 void clear_snapshot();
@@ -39,7 +41,7 @@ void clear_snapshot();
  */
 std::string snapshot_json( int known_catalog_revision = -1 );
 /** On-demand Widget tree descriptor for the per-node layout editor. */
-std::string layout_schema_json( const std::string &source_id );
+std::string layout_schema_json( std::string_view source_id );
 
 } // namespace android_hud
 

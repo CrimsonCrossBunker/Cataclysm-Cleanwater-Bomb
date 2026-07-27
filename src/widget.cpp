@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <string_view>
 
 #include "avatar.h"
 #include "cata_utility.h"
@@ -75,7 +76,7 @@ std::string hud_child_path( const std::string &parent, const widget_id &id,
     return parent.empty() ? segment : parent + "/" + segment;
 }
 
-std::string clip_hud_column_line( const std::string &line, const int columns )
+std::string clip_hud_column_line( const std::string_view line, const int columns )
 {
     if( columns <= 0 ) {
         return {};
@@ -135,7 +136,7 @@ std::string fit_hud_column_line( std::string line, const int columns )
     return line;
 }
 
-std::string trim_hud_trailing_spaces( std::string line )
+std::string trim_hud_trailing_spaces( const std::string_view line )
 {
     std::string plain = remove_color_tags( line );
     while( !plain.empty() && plain.back() == ' ' ) {
@@ -2174,11 +2175,9 @@ std::string widget::layout_internal( const avatar &ava,
     std::string effective_separator;
     if( node_override != nullptr && node_override->separator.has_value() ) {
         effective_separator = *node_override->separator;
-    } else if( explicit_separator ) {
-        effective_separator = _separator;
-    } else if( contextual ) {
+    } else if( !explicit_separator && contextual ) {
         effective_separator = inherited_separator;
-    } else if( label_override.has_inherited_context() ) {
+    } else if( !explicit_separator && label_override.has_inherited_context() ) {
         effective_separator = label_override.inherited_separator;
     } else {
         effective_separator = _separator;

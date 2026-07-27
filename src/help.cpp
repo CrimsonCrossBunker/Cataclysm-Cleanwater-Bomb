@@ -367,12 +367,16 @@ std::string help::format_help_topic( const std::vector<translation> &messages ) 
                 break;
             }
             const std::string action = line_proc.substr( pos + 7, pos2 - pos - 7 );
-            const std::string replacement = "<color_light_blue>" +
-                                            press_x( look_up_action( action ), "", "" ) + "</color>";
+            std::string replacement = "<color_light_blue>";
+            replacement += press_x( look_up_action( action ), "", "" );
+            replacement += "</color>";
             if( replacement.empty() ) {
                 debugmsg( "Help json: Unknown action: %s", action );
             } else {
-                line_proc = string_replace( line_proc, "<press_" + action + ">", replacement );
+                std::string token = "<press_";
+                token += action;
+                token += '>';
+                line_proc = string_replace( line_proc, token, replacement );
             }
             pos = line_proc.find( "<press_", pos2, 7 );
         }

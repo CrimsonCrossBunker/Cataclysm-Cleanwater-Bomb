@@ -983,14 +983,14 @@ minimap_rect get_minimap_rect()
     return latest_minimap_rect;
 }
 
-std::string layout_schema_json( const std::string &source_id )
+std::string layout_schema_json( const std::string_view source_id )
 {
     if( !android_ui_mode::is_new_ui_build() ) {
         return "{}";
     }
     std::optional<hud_info_source> selected;
     for( const hud_info_source &source : current_source_catalog() ) {
-        if( source.id == source_id ) {
+        if( source.id.compare( source_id ) == 0 ) {
             selected = source;
             break;
         }
@@ -1049,7 +1049,7 @@ static bool safe_node_path( const std::string &path )
     } );
 }
 
-void set_subscriptions( const std::string &requests_json )
+void set_subscriptions( const std::string_view requests_json )
 {
     if( !android_ui_mode::is_new_ui_build() ) {
         return;
@@ -1058,7 +1058,7 @@ void set_subscriptions( const std::string &requests_json )
     std::unordered_set<std::string> seen;
     if( requests_json.size() <= 1024 * 1024 ) {
         try {
-            std::istringstream input( requests_json );
+            std::istringstream input{ std::string( requests_json ) };
             TextJsonIn json( input );
             TextJsonObject root = json.get_object();
             if( root.get_int( "schema", 0 ) == 2 ) {
@@ -1376,7 +1376,7 @@ minimap_rect get_minimap_rect()
     return {};
 }
 
-void set_subscriptions( const std::string & )
+void set_subscriptions( std::string_view )
 {
 }
 
@@ -1393,7 +1393,7 @@ std::string snapshot_json( const int )
     return "{}";
 }
 
-std::string layout_schema_json( const std::string & )
+std::string layout_schema_json( std::string_view )
 {
     return "{}";
 }

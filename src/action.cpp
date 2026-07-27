@@ -798,6 +798,7 @@ action_id handle_interact( map &here, const tripoint_bub_ms &pos )
     }
 
     std::vector<uilist_entry> entries;
+    entries.reserve( valid_actions.size() );
     for( action_id act : valid_actions ) {
         entries.emplace_back( act, true, hotkey_for_action( act, 1 ),
                               ctxt.get_action_name( action_ident( act ) ) );

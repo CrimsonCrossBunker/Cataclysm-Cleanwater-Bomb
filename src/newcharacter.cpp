@@ -13,6 +13,8 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -29,6 +31,7 @@
 #include "calendar_ui.h"
 #include "cata_imgui.h"
 #include "cata_path.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -3109,7 +3112,13 @@ void character_creator_ui_impl::draw_controls()
 static void build_preview_avatar( const avatar &src, avatar &dst )
 {
     // Snapshot the global RNG engine and restore it afterwards so previewing consumes no RNG.
-    const cata_default_random_engine saved_rng = rng_get_engine();
+    std::ostringstream saved_rng;
+    saved_rng << rng_get_engine();
+    const std::string saved_rng_state = saved_rng.str();
+    on_out_of_scope restore_rng( [saved_rng_state]() {
+        std::istringstream input( saved_rng_state );
+        input >> rng_get_engine();
+    } );
 
     dst.male = src.male;
     dst.set_body();
@@ -3129,7 +3138,6 @@ static void build_preview_avatar( const avatar &src, avatar &dst )
         dst.add_profession_items( false );
     }
 
-    rng_get_engine() = saved_rng;
 }
 
 // Produce the character paper-doll preview texture (base sprite plus mutation/worn/wielded
@@ -4221,12 +4229,12 @@ bool character_creator_ui::handle_action( const std::string &action )
 {
     avatar &you = get_avatar();
 
-    const auto confirm_character_action = []( const std::string & title,
+    const auto confirm_character_action = []( const std::string_view title,
     const std::string & message, const std::string & confirm_label, const bool danger ) {
 #if defined(__ANDROID__)
         if( android_ui_mode::is_new_ui_build() ) {
-            return adaptive_imgui_dialog::confirm( title, message, confirm_label, _( "Cancel" ),
-                                                   danger );
+            return adaptive_imgui_dialog::confirm( std::string( title ), message, confirm_label,
+                                                   _( "Cancel" ), danger );
         }
 #endif
         ( void )title;

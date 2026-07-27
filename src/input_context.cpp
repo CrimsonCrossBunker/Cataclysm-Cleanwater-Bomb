@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -525,7 +526,7 @@ const std::string &input_context::handle_input( const int timeout )
         // translated labels is much cheaper than rebuilding every action
         // descriptor, and keeps the cache independent of input_context's ABI.
         std::uint64_t catalog_token = 1469598103934665603ULL;
-        const auto append_catalog_token = [&catalog_token]( const std::string & value ) {
+        const auto append_catalog_token = [&catalog_token]( const std::string_view value ) {
             for( const unsigned char byte : value ) {
                 catalog_token ^= byte;
                 catalog_token *= 1099511628211ULL;

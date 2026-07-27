@@ -70,7 +70,7 @@ bool has_registered_pages( std::string_view )
     return false;
 }
 
-bool show_page( const std::string & )
+bool show_page( std::string_view )
 {
     return false;
 }

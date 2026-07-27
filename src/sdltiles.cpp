@@ -1114,7 +1114,7 @@ extern "C" {
             return;
         }
         android_hud::set_minimap_rect( {
-            x, y, width, height, viewport_width, viewport_height, visible == JNI_TRUE
+            point( x, y ), width, height, viewport_width, viewport_height, visible == JNI_TRUE
         } );
     }
 
@@ -1430,13 +1430,13 @@ void refresh_display()
                     return static_cast<int>( std::lround(
                                                  static_cast<double>( value ) * target_size / source_size ) );
                 };
-                const int left = scale_edge( hud_minimap.x,
+                const int left = scale_edge( hud_minimap.origin.x,
                                              hud_minimap.viewport_width, output_width );
-                const int top = scale_edge( hud_minimap.y,
+                const int top = scale_edge( hud_minimap.origin.y,
                                             hud_minimap.viewport_height, output_height );
-                const int right = scale_edge( hud_minimap.x + hud_minimap.width,
+                const int right = scale_edge( hud_minimap.origin.x + hud_minimap.width,
                                               hud_minimap.viewport_width, output_width );
-                const int bottom = scale_edge( hud_minimap.y + hud_minimap.height,
+                const int bottom = scale_edge( hud_minimap.origin.y + hud_minimap.height,
                                                hud_minimap.viewport_height, output_height );
                 tilecontext->draw_minimap( point( left, top ),
                 { get_player_character().pos_bub().xy(), g->ter_view_p.z() },

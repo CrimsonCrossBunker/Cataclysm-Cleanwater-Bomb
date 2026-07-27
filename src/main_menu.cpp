@@ -17,6 +17,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 
 #if defined(EMSCRIPTEN)
     #include <emscripten.h>
@@ -2276,12 +2277,13 @@ void main_menu::world_tab( const std::string &worldname )
         return;
     }
 
-    const auto confirm_world_action = []( const std::string & title, const std::string & message,
+    const auto confirm_world_action = []( const std::string_view title,
+                                          const std::string & message,
     const std::string & confirm_label, const bool danger ) {
 #if defined(__ANDROID__)
         if( android_ui_mode::is_new_ui_build() ) {
             return adaptive_imgui_dialog::confirm(
-                       title, message, confirm_label, _( "Cancel" ), danger );
+                       std::string( title ), message, confirm_label, _( "Cancel" ), danger );
         }
 #endif
         ( void )title;

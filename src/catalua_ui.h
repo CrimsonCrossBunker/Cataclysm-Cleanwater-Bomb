@@ -79,7 +79,7 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
 // Android's native schema-6 HUD is a separate subsystem.
 std::vector<page_info> registered_pages( std::string_view slot = {} );
 bool has_registered_pages( std::string_view slot = {} );
-bool show_page( const std::string &page_id );
+bool show_page( std::string_view page_id );
 void show_slot( std::string_view slot );
 
 // Open one page requested by a Lua event callback at the next safe game-input

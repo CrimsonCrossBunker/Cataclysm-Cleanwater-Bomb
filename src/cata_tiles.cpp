@@ -1365,7 +1365,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 // tint overlay. We do this before the layer loop so that:
                 //   (a) we can skip bounds/sprite tracking for tiles that won't be tinted,
                 //   (b) the overlay pass later can iterate only tinted tiles.
-                auto &row_points = here.draw_points_cache.tiles[cur_zlevel][row];
+                draw_points_cache_t::row_vec &row_points =
+                    here.draw_points_cache.tiles[cur_zlevel][row];
                 row_sprites.clear();
                 row_tinted.clear();
                 if( row_sprites.capacity() < row_points.size() ) {

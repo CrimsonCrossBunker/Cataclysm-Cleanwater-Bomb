@@ -493,7 +493,7 @@ profile make_profile( const input_mode input )
 
 profile current_profile()
 {
-    std::lock_guard<std::mutex> lock( profile_mutex );
+    std::scoped_lock lock( profile_mutex );
     if( !active_profile ) {
         profile loaded;
         load_selected_profile( loaded, active_profile_error );
@@ -506,7 +506,7 @@ bool reload_profile( std::string &error )
 {
     profile loaded;
     const bool valid = load_selected_profile( loaded, error );
-    std::lock_guard<std::mutex> lock( profile_mutex );
+    std::scoped_lock lock( profile_mutex );
     active_profile = std::move( loaded );
     active_profile_error = error;
     return valid;
@@ -514,7 +514,7 @@ bool reload_profile( std::string &error )
 
 std::string profile_last_error()
 {
-    std::lock_guard<std::mutex> lock( profile_mutex );
+    std::scoped_lock lock( profile_mutex );
     return active_profile_error;
 }
 
@@ -682,7 +682,7 @@ bool load_profile_from_lua( const std::string_view source, const std::string_vie
 
 void reset_profile_cache_for_tests()
 {
-    std::lock_guard<std::mutex> lock( profile_mutex );
+    std::scoped_lock lock( profile_mutex );
     active_profile.reset();
     active_profile_error.clear();
 }
