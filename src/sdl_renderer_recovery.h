@@ -461,6 +461,14 @@ struct renderer_recovery_test_support {
                                         int &min_term_h );
     // Current backing-store (drawable) pixel dimensions.
     static void current_drawable_dims( int &w, int &h );
+    // Feed a raw SDL-window point through the production display-buffer
+    // conversion and input_context coordinate pickers. These seams verify that
+    // display scaling never shrinks the reachable text or map area.
+    static std::optional<point> text_cell_at_window_point(
+        const point &window_point, const catacurses::window &capture_win );
+    static std::optional<point> map_cell_at_window_point(
+        const point &window_point, const catacurses::window &capture_win,
+        const point &center );
     // Inject divergent drawable pixels and notify a resize, standing in for a
     // DPI change the headless backend cannot produce. Cleared at teardown.
     static void override_drawable_pixels( int w, int h );

@@ -4991,7 +4991,7 @@ const std::vector<debug_action_entry> &all_actions()
         {
             debug_menu_index::LUA_UI, translate_marker( "Lua UI pages" ), "lua script ui", "Game", []()
             {
-                cata::lua_ui::show();
+                cata::lua_ui::show_slot( "debug.tools" );
             }
         },
 #endif

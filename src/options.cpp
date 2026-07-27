@@ -1,8 +1,11 @@
 #include "options.h"
 
+#include <array>
 #include <cfloat>
 #include <climits>
 #include <clocale>
+#include <cmath>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <stdexcept>
@@ -10,6 +13,7 @@
 #include "android_ui_mode.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "catalua_ui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "color.h"
@@ -38,21 +42,24 @@
 #include "system_locale.h"
 #include "translations.h"
 #include "try_parse_integer.h"
+#include "ui_profile.h"
 #include "ui_manager.h"
 #include "worldfactory.h"
 
+#if defined(TILES)
+    #include "cata_imgui.h"
+    #include "imgui/imgui.h"
+#endif
+
 #if defined(__ANDROID__)
     #include <jni.h>
+    #include "android_native_ui.h"
     #include "sdl_wrappers.h" // for GetAndroidJNIEnv(), GetAndroidActivity()
 #endif
 
 #if defined(TILES)
     #include "cata_tiles.h"
 #endif // TILES
-
-#if defined(__ANDROID__)
-    #include <jni.h>
-#endif
 
 #include <algorithm>
 #include <cstdlib>
@@ -67,6 +74,402 @@ namespace
 {
 
 generic_factory<option_slider> option_slider_factory( "option slider" );
+
+#if defined(__ANDROID__)
+struct option_row_snapshot {
+    int source_index = 0;
+    bool group = false;
+    bool expanded = false;
+    bool enabled = true;
+    std::string name;
+    std::string value;
+    std::string tooltip;
+};
+
+struct options_snapshot {
+    std::string title;
+    std::vector<std::string> tabs;
+    std::vector<option_row_snapshot> rows;
+    int selected_tab = 0;
+    bool world_options_only = false;
+    bool with_tabs = false;
+    bool has_mod_pages = false;
+    bool has_hud_editor = false;
+};
+
+enum class options_action_type : int {
+    select_tab,
+    activate_row,
+    previous_value,
+    next_value,
+    previous_tab,
+    next_tab,
+    open_mod_pages,
+    open_hud_editor,
+    close,
+};
+
+struct options_action {
+    options_action_type type;
+    int index;
+};
+
+class options_imgui_page : public cataimgui::window
+{
+    public:
+        options_imgui_page() : cataimgui::window(
+                "Adaptive options",
+                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoSavedSettings ) {}
+
+        void set_snapshot( options_snapshot next ) {
+            snapshot = std::move( next );
+        }
+
+        std::optional<options_action> take_action() {
+            if( actions.empty() ) {
+                return std::nullopt;
+            }
+            options_action result = actions.front();
+            actions.pop_front();
+            return result;
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( profile.is_touch() ) {
+                return { 0.0F, 0.0F, 1.0F, 1.0F };
+            }
+            return { -1.0F, -1.0F, profile.page_width, profile.page_height };
+        }
+
+        void draw_controls() override {
+            const ImVec2 window_pos = ImGui::GetWindowPos();
+            const ImVec2 window_size = ImGui::GetWindowSize();
+            const cata::ui::profile profile = cata::ui::current_profile();
+            const float edge_padding = std::max( profile.frame_padding_x,
+                                                 profile.item_spacing_x * 1.5F );
+            const float footer_height = profile.row_wide;
+
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+                IM_COL32( 6, 9, 12, 255 ) );
+
+            const bool scaled_font = profile.text_scale != 1.0F;
+            if( scaled_font ) {
+                cataimgui::PushGuiFontScaled( profile.text_scale );
+            }
+            ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+            ImGui::PushStyleVar( ImGuiStyleVar_FramePadding,
+                                 ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing,
+                                 ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_WindowPadding,
+                ImVec2( edge_padding, profile.frame_padding_y * 1.5F ) );
+            ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 0.98F ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.28F, 0.31F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
+
+            ImGui::TextUnformatted( snapshot.title.c_str() );
+            ImGui::Separator();
+
+            if( !snapshot.world_options_only ) {
+                draw_tabs();
+                ImGui::Separator();
+            }
+
+            const float content_width = ImGui::GetContentRegionAvail().x;
+            const float detail_width_max = std::max(
+                                               1.0F,
+                                               std::min( profile.width_wide,
+                                                       content_width -
+                                                       profile.width_compact -
+                                                       profile.item_spacing_x ) );
+            const float detail_width_min = std::min( profile.width_normal,
+                                           detail_width_max );
+            const float detail_width = std::clamp(
+                                           window_size.x * 0.31F,
+                                           detail_width_min, detail_width_max );
+            const float list_width = std::max(
+                                         1.0F, content_width -
+                                         detail_width - profile.item_spacing_x );
+            std::string focused_tooltip;
+
+            const std::string child_id = "##option_rows_" +
+                                         std::to_string( snapshot.selected_tab );
+            if( ImGui::BeginChild( child_id.c_str(), ImVec2( list_width, -footer_height ),
+                                   ImGuiChildFlags_Borders, ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+                const bool suppress_click = handle_content_gesture();
+                draw_rows( focused_tooltip, suppress_click );
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+            if( ImGui::BeginChild( "##option_details", ImVec2( 0.0F, -footer_height ),
+                                   ImGuiChildFlags_Borders ) ) {
+                ImGui::TextUnformatted( _( "Description" ) );
+                ImGui::Separator();
+                if( focused_tooltip.empty() ) {
+                    ImGui::TextWrapped( "%s",
+                                        profile.is_touch() ?
+                                        _( "Tap an option to change it.  Use the arrows to choose the previous or next value." ) :
+                                        _( "Select an option to change it. Use the arrows or keyboard to choose a value." ) );
+                } else {
+                    ImGui::TextWrapped( "%s", focused_tooltip.c_str() );
+                }
+            }
+            ImGui::EndChild();
+
+            ImGui::Separator();
+            draw_footer( window_size.x, edge_padding );
+
+            ImGui::PopStyleColor( 6 );
+            ImGui::PopStyleVar( 4 );
+            if( scaled_font ) {
+                cataimgui::PopGuiFontScaled();
+            }
+        }
+
+    private:
+        options_snapshot snapshot;
+        std::deque<options_action> actions;
+        bool content_dragging = false;
+        ImVec2 content_drag_start;
+        int content_drag_tab = 0;
+
+        void draw_footer( const float window_width, const float edge_padding ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( snapshot.world_options_only && snapshot.with_tabs ) {
+                const float gap = profile.item_spacing_x;
+                const float width = std::max(
+                                        1.0F,
+                                        ( ImGui::GetContentRegionAvail().x -
+                                          gap * 2.0F ) / 3.0F );
+                const std::array<std::pair<options_action_type, const char *>, 3> buttons = {{
+                        { options_action_type::close, _( "Cancel" ) },
+                        { options_action_type::previous_tab, _( "Previous" ) },
+                        { options_action_type::next_tab, _( "Next" ) },
+                    }
+                };
+                for( size_t index = 0; index < buttons.size(); ++index ) {
+                    if( index > 0 ) {
+                        ImGui::SameLine( 0.0F, gap );
+                    }
+                    if( buttons[index].first == options_action_type::close ) {
+                        ImGui::PushStyleColor( ImGuiCol_Button,
+                                               ImVec4( 0.28F, 0.08F, 0.08F, 1.0F ) );
+                    }
+                    if( ImGui::Button( buttons[index].second,
+                                       ImVec2( width, profile.row_normal ) ) ) {
+                        actions.push_back( { buttons[index].first, 0 } );
+                    }
+                    if( buttons[index].first == options_action_type::close ) {
+                        ImGui::PopStyleColor();
+                    }
+                }
+                return;
+            }
+            const float close_width = std::clamp(
+                                          window_width * 0.20F,
+                                          profile.width_normal, profile.width_wide );
+            ImGui::SetCursorPosX( std::max( edge_padding,
+                                            window_width - edge_padding - close_width ) );
+            if( ImGui::Button( _( "Back" ),
+                               ImVec2( close_width, profile.row_normal ) ) ) {
+                actions.push_back( { options_action_type::close, 0 } );
+            }
+        }
+
+        void draw_tabs() {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( ImGui::BeginChild(
+                    "##options_tabs",
+                    ImVec2( 0.0F, profile.row_normal + profile.item_spacing_y ),
+                    ImGuiChildFlags_None,
+                    ImGuiWindowFlags_HorizontalScrollbar |
+                    ImGuiWindowFlags_NoScrollWithMouse ) ) {
+                for( size_t index = 0; index < snapshot.tabs.size(); ++index ) {
+                    if( index > 0 ) {
+                        ImGui::SameLine();
+                    }
+                    const bool selected = static_cast<int>( index ) == snapshot.selected_tab;
+                    if( selected ) {
+                        ImGui::PushStyleColor( ImGuiCol_Button,
+                                               ImVec4( 0.08F, 0.30F, 0.34F, 1.0F ) );
+                        ImGui::PushStyleColor( ImGuiCol_Border,
+                                               ImVec4( 0.32F, 0.72F, 0.75F, 1.0F ) );
+                        ImGui::PushStyleColor( ImGuiCol_Text,
+                                               ImVec4( 0.90F, 1.0F, 1.0F, 1.0F ) );
+                    }
+                    const float width =
+                        ImGui::CalcTextSize( snapshot.tabs[index].c_str() ).x +
+                        profile.frame_padding_x * 2.0F;
+                    const std::string label = snapshot.tabs[index] + "###options_tab_" +
+                                              std::to_string( index );
+                    if( ImGui::Button( label.c_str(),
+                                       ImVec2( width, profile.row_compact ) ) && !selected ) {
+                        actions.push_back( { options_action_type::select_tab,
+                                             static_cast<int>( index ) } );
+                    }
+                    if( selected ) {
+                        ImGui::PopStyleColor( 3 );
+                    }
+                }
+                if( snapshot.has_mod_pages ) {
+                    if( !snapshot.tabs.empty() ) {
+                        ImGui::SameLine();
+                    }
+                    if( ImGui::Button( _( "Mods" ),
+                                       ImVec2( profile.width_compact,
+                                               profile.row_compact ) ) ) {
+                        actions.push_back( { options_action_type::open_mod_pages, 0 } );
+                    }
+                }
+                if( snapshot.has_hud_editor ) {
+                    if( !snapshot.tabs.empty() || snapshot.has_mod_pages ) {
+                        ImGui::SameLine();
+                    }
+                    if( ImGui::Button( _( "HUD layout" ),
+                                       ImVec2( profile.width_normal,
+                                               profile.row_compact ) ) ) {
+                        actions.push_back( { options_action_type::open_hud_editor, 0 } );
+                    }
+                }
+                if( profile.allow_swipe &&
+                    ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                    ImGui::IsMouseDragging( ImGuiMouseButton_Left ) ) {
+                    ImGui::SetScrollX( ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x );
+                }
+            }
+            ImGui::EndChild();
+        }
+
+        bool handle_content_gesture() {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            if( !profile.allow_swipe ) {
+                return false;
+            }
+            ImGuiIO &io = ImGui::GetIO();
+            if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+                ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+                content_dragging = true;
+                content_drag_start = io.MousePos;
+                content_drag_tab = snapshot.selected_tab;
+            }
+            if( !content_dragging ) {
+                return false;
+            }
+
+            const ImVec2 distance( io.MousePos.x - content_drag_start.x,
+                                   io.MousePos.y - content_drag_start.y );
+            const bool moved = std::hypot( distance.x, distance.y ) >
+                               profile.frame_padding_x;
+            if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
+                std::abs( distance.y ) > std::abs( distance.x ) ) {
+                ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
+            }
+            if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+                if( std::abs( distance.x ) > profile.width_compact * 0.5F &&
+                    std::abs( distance.x ) > std::abs( distance.y ) * 1.25F ) {
+                    const int next_tab = content_drag_tab + ( distance.x < 0.0F ? 1 : -1 );
+                    if( next_tab >= 0 && next_tab < static_cast<int>( snapshot.tabs.size() ) ) {
+                        actions.push_back( { options_action_type::select_tab, next_tab } );
+                    }
+                }
+                content_dragging = false;
+            }
+            return moved;
+        }
+
+        void draw_rows( std::string &focused_tooltip, const bool suppress_click ) {
+            const cata::ui::profile profile = cata::ui::current_profile();
+            const float row_height = std::max( profile.minimum_target,
+                                               ImGui::GetTextLineHeight() +
+                                               profile.frame_padding_y * 2.0F );
+            for( const option_row_snapshot &row : snapshot.rows ) {
+                ImGui::PushID( row.source_index );
+                if( row.group ) {
+                    const std::string label = std::string( row.expanded ? "− " : "+ " ) + row.name;
+                    if( ImGui::Button( label.c_str(), ImVec2( -1.0F, row_height ) ) &&
+                        !suppress_click ) {
+                        actions.push_back( { options_action_type::activate_row,
+                                             row.source_index } );
+                    }
+                    if( ImGui::IsItemHovered() ) {
+                        focused_tooltip = row.tooltip;
+                    }
+                    ImGui::PopID();
+                    continue;
+                }
+
+                if( !row.enabled ) {
+                    ImGui::BeginDisabled();
+                }
+                const float available = ImGui::GetContentRegionAvail().x;
+                const float arrow_width = row_height;
+                const float value_width_max = std::max(
+                                                  1.0F,
+                                                  std::min(
+                                                      profile.width_normal,
+                                                      available -
+                                                      arrow_width * 2.0F -
+                                                      profile.item_spacing_x * 3.0F ) );
+                const float value_width_min = std::min( profile.width_compact,
+                                                        value_width_max );
+                const float value_width = std::clamp(
+                                              available * 0.28F,
+                                              value_width_min, value_width_max );
+                const float name_width = std::max(
+                                             1.0F,
+                                             available - value_width -
+                                             arrow_width * 2.0F -
+                                             profile.item_spacing_x * 3.0F );
+
+                if( ImGui::Button( row.name.c_str(), ImVec2( name_width, row_height ) ) &&
+                    !suppress_click ) {
+                    actions.push_back( { options_action_type::activate_row,
+                                         row.source_index } );
+                }
+                bool hovered = ImGui::IsItemHovered();
+                ImGui::SameLine();
+                if( ImGui::Button( "‹", ImVec2( arrow_width, row_height ) ) && !suppress_click ) {
+                    actions.push_back( { options_action_type::previous_value,
+                                         row.source_index } );
+                }
+                hovered |= ImGui::IsItemHovered();
+                ImGui::SameLine();
+                ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.06F, 0.17F, 0.17F, 1.0F ) );
+                ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.76F, 0.96F, 0.88F, 1.0F ) );
+                if( ImGui::Button( row.value.c_str(), ImVec2( value_width, row_height ) ) &&
+                    !suppress_click ) {
+                    actions.push_back( { options_action_type::activate_row,
+                                         row.source_index } );
+                }
+                hovered |= ImGui::IsItemHovered();
+                ImGui::PopStyleColor( 2 );
+                ImGui::SameLine();
+                if( ImGui::Button( "›", ImVec2( arrow_width, row_height ) ) && !suppress_click ) {
+                    actions.push_back( { options_action_type::next_value,
+                                         row.source_index } );
+                }
+                hovered |= ImGui::IsItemHovered();
+                if( hovered ) {
+                    focused_tooltip = row.tooltip;
+                }
+                if( !row.enabled ) {
+                    ImGui::EndDisabled();
+                }
+                ImGui::PopID();
+            }
+        }
+};
+#endif
 
 } // namespace
 
@@ -4107,18 +4510,142 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         wnoutrefresh( w_options );
     } );
 
+#if defined(__ANDROID__)
+    std::unique_ptr<options_imgui_page> options_ui;
+    if( android_ui_mode::is_new_ui_build() ) {
+        options_ui = std::make_unique<options_imgui_page>();
+    }
+    const auto make_options_snapshot = [&]() {
+        options_snapshot snapshot;
+        snapshot.title = world_options_only ? _( "World options" ) : _( "Options" );
+        snapshot.world_options_only = world_options_only;
+        snapshot.with_tabs = with_tabs;
+        snapshot.selected_tab = iCurrentPage;
+        snapshot.has_mod_pages = !world_options_only &&
+                                 cata::lua_ui::has_registered_pages( "settings.mods" );
+#if defined(__ANDROID__)
+        snapshot.has_hud_editor = !world_options_only;
+#endif
+        if( !world_options_only ) {
+            snapshot.tabs.reserve( pages_.size() );
+            for( size_t index = 0; index < pages_.size(); ++index ) {
+                if( ingame && static_cast<int>( index ) == iWorldOptPage ) {
+                    snapshot.tabs.emplace_back( _( "Current world" ) );
+                } else {
+                    snapshot.tabs.push_back( pages_[index].name_.translated() );
+                }
+            }
+        }
+
+        options_container &current_options = ( ingame || world_options_only ) &&
+                                             iCurrentPage == iWorldOptPage ? ACTIVE_WORLD_OPTIONS : OPTIONS;
+        const std::vector<PageItem> &items = pages_[iCurrentPage].items_;
+        snapshot.rows.reserve( items.size() );
+        for( size_t index = 0; index < items.size(); ++index ) {
+            const PageItem &item = items[index];
+            if( item.type == ItemType::BlankLine ) {
+                continue;
+            }
+            option_row_snapshot row;
+            row.source_index = static_cast<int>( index );
+            row.tooltip = item.fmt_tooltip( item.group, current_options );
+            if( item.type == ItemType::GroupHeader ) {
+                row.group = true;
+                row.expanded = groups_state[item.data];
+                row.name = find_group( item.group ).name_.translated();
+                snapshot.rows.push_back( std::move( row ) );
+                continue;
+            }
+            if( !groups_state[item.group] ) {
+                continue;
+            }
+            const cOpt &option = current_options.find( item.data )->second;
+            if( option.is_hidden() ) {
+                continue;
+            }
+            row.name = option.getMenuText();
+            row.value = option.getValueName();
+            row.enabled = !option.hasPrerequisite() || option.checkPrerequisite();
+            snapshot.rows.push_back( std::move( row ) );
+        }
+        return snapshot;
+    };
+#endif
+
     while( true ) {
+#if defined(__ANDROID__)
+        if( options_ui ) {
+            options_ui->set_snapshot( make_options_snapshot() );
+        }
+#endif
         ui_manager::redraw();
 
         recalc_startpos = false;
+        std::string action;
+        std::optional<int> imgui_row_target;
+#if defined(__ANDROID__)
+        if( options_ui ) {
+            const std::optional<options_action> ui_action = options_ui->take_action();
+            if( ui_action ) {
+                switch( ui_action->type ) {
+                    case options_action_type::select_tab:
+                        iCurrentPage = clamp( ui_action->index, 0,
+                                              static_cast<int>( pages_.size() ) - 1 );
+                        iCurrentLine = 0;
+                        iStartPos = 0;
+                        recalc_startpos = true;
+                        sfx::play_variant_sound( "menu_move", "default", 100 );
+                        continue;
+                    case options_action_type::activate_row:
+                        imgui_row_target = ui_action->index;
+                        action = "CONFIRM";
+                        break;
+                    case options_action_type::previous_value:
+                        imgui_row_target = ui_action->index;
+                        action = "LEFT";
+                        break;
+                    case options_action_type::next_value:
+                        imgui_row_target = ui_action->index;
+                        action = "RIGHT";
+                        break;
+                    case options_action_type::previous_tab:
+                        action = "PREV_TAB";
+                        break;
+                    case options_action_type::next_tab:
+                        action = "NEXT_TAB";
+                        break;
+                    case options_action_type::open_mod_pages:
+                        cata::lua_ui::show_slot( "settings.mods" );
+                        continue;
+                    case options_action_type::open_hud_editor:
+#if defined(__ANDROID__)
+                        android_native_ui::show_android_hud_manager();
+#endif
+                        continue;
+                    case options_action_type::close:
+                        action = "QUIT";
+                        break;
+                }
+            } else {
+                action = ctxt.handle_input();
+            }
+        } else {
+            action = ctxt.handle_input();
+        }
+#else
+        action = ctxt.handle_input();
+#endif
+
         Page &page = pages_[iCurrentPage];
         auto &page_items = page.items_;
+        if( imgui_row_target ) {
+            iCurrentLine = clamp( *imgui_row_target, 0,
+                                  static_cast<int>( page_items.size() ) - 1 );
+        }
 
         options_manager::options_container &cOPTIONS = ( ingame || world_options_only ) &&
                 iCurrentPage == iWorldOptPage ?
                 ACTIVE_WORLD_OPTIONS : OPTIONS;
-
-        std::string action = ctxt.handle_input();
 
         if( world_options_only && ( action == "NEXT_TAB" || action == "PREV_TAB" || action == "QUIT" ) ) {
             return action;
@@ -4144,6 +4671,18 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                        get_options().get_option( current_opt.getPrerequisite() ).getMenuText() );
                 return;
             }
+
+#if defined(__ANDROID__)
+            if( options_ui && current_opt.getType() == "string_input" ) {
+                const std::optional<std::string> value = android_native_ui::text_input(
+                            current_opt.getMenuText(), current_opt.getValue(),
+                            current_opt.getMaxLength() );
+                if( value ) {
+                    current_opt.setValue( *value );
+                }
+                return;
+            }
+#endif
 
             if( action == "LEFT" ) {
                 current_opt.setPrev();

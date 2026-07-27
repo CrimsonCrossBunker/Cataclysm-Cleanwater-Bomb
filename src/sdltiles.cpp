@@ -983,6 +983,10 @@ static_assert( std::atomic<uint32_t>::is_always_lock_free,
                "visible-frame inbox needs lock-free uint32 atomics on every shipped ABI" );
 
 static android_visible_frame_inbox visible_frame_inbox;
+// Java lifecycle/focus callbacks run on the Android UI thread.  They may only
+// publish a request here; all renderer and game UI work is consumed later on
+// the SDL/game thread.
+static std::atomic<uint32_t> android_display_refresh_sequence{ 0 };
 static std::mutex extra_button_input_mutex;
 static std::deque<input_event> extra_button_inputs;
 
@@ -1001,6 +1005,15 @@ extern "C" {
         ( void )env;
         ( void )jcls;
         on_native_ime_insets_changed( left, top, right, bottom, visible );
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeRequestDisplayRefresh(
+        JNIEnv *env, jclass jcls )
+    {
+        ( void )env;
+        ( void )jcls;
+        android_display_refresh_sequence.fetch_add( 1, std::memory_order_release );
     }
 
     JNIEXPORT void JNICALL Java_com_cleverraven_cataclysmdda_CataclysmDDA_onNativeImeInsetsChanged(
@@ -1060,26 +1073,49 @@ extern "C" {
 
     JNIEXPORT jstring JNICALL
     Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetHudSnapshot(
-        JNIEnv *env, jclass jcls )
+        JNIEnv *env, jclass jcls, jint known_catalog_revision )
     {
         ( void )jcls;
         if( !android_ui_mode::is_new_ui_build() ) {
             return env->NewStringUTF( "{}" );
         }
-        const std::string snapshot = android_hud::snapshot_json();
+        const std::string snapshot = android_hud::snapshot_json(
+                                         known_catalog_revision );
         return env->NewStringUTF( snapshot.c_str() );
+    }
+
+    JNIEXPORT jstring JNICALL
+    Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeGetHudLayoutSchema(
+        JNIEnv *env, jclass jcls, jstring source_id )
+    {
+        ( void )jcls;
+        if( !android_ui_mode::is_new_ui_build() || source_id == nullptr ) {
+            return env->NewStringUTF( "{}" );
+        }
+        const char *raw_source_id =
+            env->GetStringUTFChars( source_id, nullptr );
+        if( raw_source_id == nullptr ) {
+            return env->NewStringUTF( "{}" );
+        }
+        const std::string schema =
+            android_hud::layout_schema_json( raw_source_id );
+        env->ReleaseStringUTFChars( source_id, raw_source_id );
+        return env->NewStringUTF( schema.c_str() );
     }
 
     JNIEXPORT void JNICALL
     Java_com_crimsoncrossbunker_cataclysmcb_CataclysmDDA_nativeSetHudMinimapRect(
-        JNIEnv *env, jclass jcls, jint x, jint y, jint width, jint height, jboolean visible )
+        JNIEnv *env, jclass jcls, jint x, jint y, jint width, jint height,
+        jint viewport_width, jint viewport_height, jboolean visible )
     {
         ( void )env;
         ( void )jcls;
         if( !android_ui_mode::is_new_ui_build() ) {
             return;
         }
-        android_hud::set_minimap_rect( { x, y, width, height, visible == JNI_TRUE } );
+        android_hud::set_minimap_rect( {
+            point( x, y ), width, height, viewport_width, viewport_height, visible == JNI_TRUE
+        } );
     }
 
     JNIEXPORT void JNICALL
@@ -1090,19 +1126,15 @@ extern "C" {
         if( !android_ui_mode::is_new_ui_build() ) {
             return;
         }
-        std::vector<std::string> sources;
+        std::string requests;
         if( encoded_sources != nullptr ) {
             const char *raw_sources = env->GetStringUTFChars( encoded_sources, nullptr );
             if( raw_sources != nullptr ) {
-                std::istringstream input( raw_sources );
-                std::string source;
-                while( sources.size() < 512 && std::getline( input, source ) ) {
-                    sources.push_back( source );
-                }
+                requests = raw_sources;
                 env->ReleaseStringUTFChars( encoded_sources, raw_sources );
             }
         }
-        android_hud::set_subscriptions( sources );
+        android_hud::set_subscriptions( requests );
     }
 
 } // "C"
@@ -1385,10 +1417,32 @@ void refresh_display()
     if( android_ui_mode::is_new_ui_build() ) {
         const android_hud::minimap_rect hud_minimap = android_hud::get_minimap_rect();
         if( hud_minimap.visible && hud_minimap.width > 0 && hud_minimap.height > 0 &&
+            hud_minimap.viewport_width > 0 && hud_minimap.viewport_height > 0 &&
             g != nullptr && tilecontext != nullptr ) {
-            tilecontext->draw_minimap( point( hud_minimap.x, hud_minimap.y ),
-            { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
-            hud_minimap.width, hud_minimap.height );
+            int output_width = 0;
+            int output_height = 0;
+            GetRendererOutputSize( renderer, &output_width, &output_height );
+            if( output_width > 0 && output_height > 0 ) {
+                // Android View pixels and the SDL Surface backing pixels can differ.
+                // Scale both edges so rounding cannot introduce a size/position gap.
+                const auto scale_edge = []( const int value, const int source_size,
+                const int target_size ) {
+                    return static_cast<int>( std::lround(
+                                                 static_cast<double>( value ) * target_size / source_size ) );
+                };
+                const int left = scale_edge( hud_minimap.origin.x,
+                                             hud_minimap.viewport_width, output_width );
+                const int top = scale_edge( hud_minimap.origin.y,
+                                            hud_minimap.viewport_height, output_height );
+                const int right = scale_edge( hud_minimap.origin.x + hud_minimap.width,
+                                              hud_minimap.viewport_width, output_width );
+                const int bottom = scale_edge( hud_minimap.origin.y + hud_minimap.height,
+                                               hud_minimap.viewport_height, output_height );
+                tilecontext->draw_minimap( point( left, top ),
+                { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
+                std::max( 1, right - left ), std::max( 1, bottom - top ),
+                true );
+            }
         }
     }
 #else
@@ -2851,6 +2905,31 @@ void renderer_recovery_test_support::current_drawable_dims( int &w, int &h )
     h = DrawableHeight;
 }
 
+std::optional<point> renderer_recovery_test_support::text_cell_at_window_point(
+    const point &window_point, const catacurses::window &capture_win )
+{
+    const SDL_Point buffer_point = window_to_display_buffer_coords(
+                                       SDL_Point{ window_point.x, window_point.y } );
+    input_context context( "SCALED_POINTER_TEST" );
+    context.coordinate_input_received = true;
+    context.coordinate = point( buffer_point.x, buffer_point.y );
+    return context.get_coordinates_text( capture_win );
+}
+
+std::optional<point> renderer_recovery_test_support::map_cell_at_window_point(
+    const point &window_point, const catacurses::window &capture_win,
+    const point &center )
+{
+    const SDL_Point buffer_point = window_to_display_buffer_coords(
+                                       SDL_Point{ window_point.x, window_point.y } );
+    input_context context( "SCALED_POINTER_TEST" );
+    context.coordinate_input_received = true;
+    context.coordinate = point( buffer_point.x, buffer_point.y );
+    const std::optional<tripoint_bub_ms> mapped = context.get_coordinates(
+                capture_win, center, true );
+    return mapped ? std::optional<point>( mapped->xy().raw() ) : std::nullopt;
+}
+
 void renderer_recovery_test_support::override_drawable_pixels( const int w, const int h )
 {
     test_drawable_override_w = w;
@@ -4137,6 +4216,12 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
         // Special font for the terrain window
         update = draw_window( overmap_font, w, force_full );
     } else if( g && w == g->w_pixel_minimap && pixel_minimap_option ) {
+#if defined(__ANDROID__)
+        // Android's HUD publishes an explicit screen-space rectangle and draws
+        // its minimap during refresh_display().  The curses window remains the
+        // 1x1 placeholder created by game::init_ui(); rendering it here leaves a
+        // tiny duplicate minimap at the upper-left corner of the game surface.
+#else
         // ensure the space the minimap covers is "dirtied".
         // this is necessary when it's the only part of the sidebar being drawn
         // TODO: Figure out how to properly make the minimap code do whatever it is this does
@@ -4149,6 +4234,7 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
         { get_player_character().pos_bub().xy(), g->ter_view_p.z() },
         win->width * font->width, win->height * font->height );
         update = true;
+#endif
 
     } else {
         // Either not using tiles (tilecontext) or not the w_terrain window.
@@ -4649,8 +4735,13 @@ uint32_t finger_repeat_delay = 500;
 static bool needs_sdl_surface_visibility_refresh = true;
 
 input_context touch_input_context;
+// The copied context contains transient fields (timeout, coordinates, next action)
+// that change while handling a single gesture.  Track the owning stack object
+// separately so those mutations are not mistaken for opening a different screen.
+static const input_context *touch_input_context_owner = nullptr;
 static bool android_has_active_world();
 static void android_request_repaint();
+static void android_service_display_refresh_requests();
 
 static bool android_map_zoom_context()
 {
@@ -5093,6 +5184,36 @@ static void android_request_repaint()
 {
     needupdate = true;
     ui_manager::redraw_invalidated();
+}
+
+static void android_force_full_redraw()
+{
+    if( g != nullptr && android_has_active_world() ) {
+        g->invalidate_main_ui_adaptor();
+    } else {
+        ui_manager::invalidate_all_ui_adaptors();
+    }
+    ui_manager::redraw_invalidated();
+    needupdate = true;
+}
+
+static void android_service_display_refresh_requests()
+{
+    static uint32_t serviced_request_sequence = 0;
+    static unsigned serviced_render_epoch = 0;
+    const uint32_t requested_sequence =
+        android_display_refresh_sequence.load( std::memory_order_acquire );
+    const unsigned render_epoch = cata_cursesport::curses_render_epoch;
+    if( requested_sequence == serviced_request_sequence &&
+        render_epoch == serviced_render_epoch ) {
+        return;
+    }
+
+    serviced_request_sequence = requested_sequence;
+    serviced_render_epoch = render_epoch;
+    android_force_full_redraw();
+    // A deferred ImGui underlay clear can advance the epoch during this redraw.
+    serviced_render_epoch = cata_cursesport::curses_render_epoch;
 }
 
 // The SDL "text input active" flag can be set while the keyboard never actually
@@ -5676,12 +5797,13 @@ static void CheckMessages()
     drain_renderer_recovery();
 
 #if defined(__ANDROID__)
+    android_service_display_refresh_requests();
+
     static uint32_t last_seen_visible_frame_seq = 0;
     const uint32_t cur_visible_frame_seq = visible_frame_inbox.even_sequence();
     if( cur_visible_frame_seq != last_seen_visible_frame_seq ) {
         last_seen_visible_frame_seq = cur_visible_frame_seq;
-        needupdate = true;
-        ui_manager::redraw_invalidated();
+        android_force_full_redraw();
     }
 
     uint32_t ticks = GetTicks();
@@ -5707,10 +5829,13 @@ static void CheckMessages()
 
     // Copy the current input context
     input_context *new_input_context = input_context::input_context_stack.back();
-    if( new_input_context && *new_input_context != touch_input_context ) {
+    if( new_input_context ) {
+        const bool owner_changed = new_input_context != touch_input_context_owner;
+        const bool category_changed = new_input_context->get_category() !=
+                                      touch_input_context.get_category();
 
         // If we were in an allow_text_entry input context, and text input is still active, and we're auto-managing keyboard, hide it.
-        if( touch_input_context.allow_text_entry &&
+        if( ( owner_changed || category_changed ) && touch_input_context.allow_text_entry &&
             !android_wants_text_input( *new_input_context ) &&
             IsTextInputActive( ::window.get() ) &&
             get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
@@ -5718,8 +5843,17 @@ static void CheckMessages()
         }
 
         touch_input_context = *new_input_context;
-        needupdate = true;
-        ui_manager::redraw_invalidated();
+        touch_input_context_owner = new_input_context;
+        if( owner_changed || category_changed ) {
+            // A tap that opened a new screen must not become the first half of a
+            // double-tap gesture inside that new input context.
+            last_tap_time = 0;
+            // The HUD action snapshot and the terrain both belong to the input
+            // context being entered.  Merely asking redraw_invalidated() did
+            // nothing when the gameplay adaptor itself was still clean, leaving
+            // the previous Lua scene over a black/stale map until movement.
+            android_force_full_redraw();
+        }
     }
 
     bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE" &&
@@ -5975,12 +6109,18 @@ static void CheckMessages()
             last_tap_time > 0 &&
             ticks - last_tap_time >= static_cast<uint32_t>
             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-            // Single tap
-            last_tap_time = ticks;
-            last_input = input_event( is_default_mode ? get_key_event_from_string(
-                                          get_option<std::string>( "ANDROID_TAP_KEY" ) ) : '\n', input_event_t::keyboard_char );
+            // Gameplay keeps its configurable tap key.  Menus use the pointer
+            // coordinates emitted on finger-up and must not receive a second,
+            // delayed Enter/confirm for the same physical tap.
+            if( is_default_mode ) {
+                last_input = input_event( get_key_event_from_string(
+                                              get_option<std::string>( "ANDROID_TAP_KEY" ) ),
+                                          input_event_t::keyboard_char );
+            }
             last_tap_time = 0;
-            return;
+            if( is_default_mode ) {
+                return;
+            }
         }
 
         // ensure hint text pops up even if player doesn't move finger to trigger a FINGERMOTION event
@@ -6022,9 +6162,31 @@ static void CheckMessages()
         convert_event_to_display_buffer_coords( &ev_display );
         imclient->process_input( &ev_display, imgui_buf_w, imgui_buf_h );
 
+        bool imgui_owns_text_event = cataimgui::client::want_text_input() &&
+                                     ( ev.type == CATA_KEYDOWN || ev.type == CATA_KEYUP ||
+                                       ev.type == CATA_TEXTINPUT || ev.type == CATA_TEXTEDITING );
+#if defined(__ANDROID__)
+        // Android's system Back key dismisses the focused text widget below;
+        // it is not text editing input and must keep following that path.
+        if( imgui_owns_text_event &&
+            ( ev.type == CATA_KEYDOWN || ev.type == CATA_KEYUP ) &&
+            GetKeysym( ev ).sym == SDLK_AC_BACK ) {
+            imgui_owns_text_event = false;
+        }
+#endif
+
         // Window events: SDL3 flattens the SDL_WINDOWEVENT+subtype to top-level events.
         // IsWindowEvent/GetWindowEventID normalize across versions.
-        if( IsWindowEvent( ev ) ) {
+        if( imgui_owns_text_event ) {
+            // ImGui has already received this event.  Wake the current input
+            // context so the widget redraws, but do not also resolve the same
+            // keystroke through gameplay/menu bindings (for example, typing
+            // 'a' in a name field must not invoke CHANGE_AGE).
+            last_input = input_event();
+            last_input.type = input_event_t::timeout;
+            text_refresh = true;
+            ui_manager::redraw_invalidated();
+        } else if( IsWindowEvent( ev ) ) {
             switch( GetWindowEventID( ev ) ) {
 #if defined(__ANDROID__)
                 // SDL will send a focus lost event whenever the app loses focus (eg. lock screen, switch app focus etc.)
@@ -6468,8 +6630,20 @@ static void CheckMessages()
                         if( android_imgui_touch_active ) {
                             android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
                             android_process_imgui_touch( CATA_MOUSEBUTTONUP, finger_curr_x, finger_curr_y );
-                            // Wake the owning ImGui loop so it can draw the click result.
-                            last_input.type = input_event_t::timeout;
+                            if( last_tap_time > 0 &&
+                                ticks - last_tap_time < static_cast<uint32_t>(
+                                    get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
+                                // ImGui windows consume touch as synthetic mouse events and
+                                // bypass the regular menu gesture branch below.  Preserve the
+                                // same double-tap Back gesture for dialogs such as keybindings.
+                                last_input = input_event( KEY_ESCAPE,
+                                                          input_event_t::keyboard_char );
+                                last_tap_time = 0;
+                            } else {
+                                // Wake the owning ImGui loop so it can draw the click result.
+                                last_input.type = input_event_t::timeout;
+                                last_tap_time = ticks;
+                            }
                         } else if( is_quick_shortcut_touch ) {
                             input_event *quick_shortcut = get_quick_shortcut_under_finger();
                             if( quick_shortcut ) {
@@ -6644,15 +6818,25 @@ static void CheckMessages()
                                     if( android_ui_mode::is_new_ui_build() && !is_default_mode &&
                                         touch_input_context.is_action_registered( "SELECT" ) &&
                                         held_distance < hold_deadzone ) {
-                                        last_input = input_event( MouseInput::LeftButtonReleased,
-                                                                  input_event_t::mouse );
-                                        const SDL_Point touch_point = window_to_display_buffer_coords( SDL_Point{
-                                            static_cast<int>( std::lround( finger_curr_x ) ),
-                                            static_cast<int>( std::lround( finger_curr_y ) )
-                                        } );
-                                        last_input.mouse_pos = point( touch_point.x, touch_point.y );
-                                        last_input_has_explicit_mouse_pos = true;
-                                        last_tap_time = 0;
+                                        if( last_tap_time > 0 &&
+                                            ticks - last_tap_time < static_cast<uint32_t>(
+                                                get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
+                                            // Preserve double-tap Back without adding a delayed
+                                            // single-tap confirmation on top of pointer selection.
+                                            last_input = input_event( KEY_ESCAPE,
+                                                                      input_event_t::keyboard_char );
+                                            last_tap_time = 0;
+                                        } else {
+                                            last_input = input_event( MouseInput::LeftButtonReleased,
+                                                                      input_event_t::mouse );
+                                            const SDL_Point touch_point = window_to_display_buffer_coords( SDL_Point{
+                                                static_cast<int>( std::lround( finger_curr_x ) ),
+                                                static_cast<int>( std::lround( finger_curr_y ) )
+                                            } );
+                                            last_input.mouse_pos = point( touch_point.x, touch_point.y );
+                                            last_input_has_explicit_mouse_pos = true;
+                                            last_tap_time = ticks;
+                                        }
                                     } else {
                                         handle_finger_input( ticks );
                                     }
@@ -7072,6 +7256,12 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     // CheckMessages poll below still reads it.
     SDL_PumpEvents();
     drain_renderer_recovery();
+#if defined(__ANDROID__)
+    // Foreground recovery can replace and blank the display buffer.  Rebuild
+    // the active UI before the pre-poll present, so no empty recovery frame is
+    // ever exposed while waiting for the player's next movement.
+    android_service_display_refresh_requests();
+#endif
 
 #if !defined(__ANDROID__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1)
     if( actual_keyboard_mode( preferred_keyboard_mode ) == keyboard_mode::keychar ) {
@@ -7256,6 +7446,32 @@ window_dimensions get_window_dimensions( const point &pos, const point &size )
     return get_window_dimensions( {}, pos, size );
 }
 
+window_dimensions get_window_dimensions_for_input( const catacurses::window &win )
+{
+    window_dimensions dim = get_window_dimensions( win );
+    const int display_scale = get_scaling_factor();
+    if( display_scale <= 1 ) {
+        return dim;
+    }
+
+    // Mouse events are normalized to display_buffer coordinates before they
+    // reach input_context. Convert the legacy physical-size fields into that
+    // same domain, but never scale the input coordinate a second time.
+    dim.scaled_font_size.x /= display_scale;
+    dim.scaled_font_size.y /= display_scale;
+
+    // Terrain and tiled overmap sizes are already expressed in display-buffer
+    // pixels because their render paths use terminal dimensions directly.
+    const bool is_terrain_or_overmap =
+        ( use_tiles && g && win == g->w_terrain ) ||
+        ( use_tiles && use_tiles_overmap && g && win == g->w_overmap );
+    if( !is_terrain_or_overmap ) {
+        dim.window_size_pixel.x /= display_scale;
+        dim.window_size_pixel.y /= display_scale;
+    }
+    return dim;
+}
+
 std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses::window
         &capture_win_, const point &offset, const bool center_cursor ) const
 {
@@ -7267,63 +7483,26 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
     }
 
     const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
-    const window_dimensions dim = get_window_dimensions( capture_win );
+    const window_dimensions dim = get_window_dimensions_for_input( capture_win );
 
     const point &win_min = dim.window_pos_pixel;
-    point win_size = dim.window_size_pixel;
-    point logical_coordinate = coordinate;
-    const int scaling_factor = get_scaling_factor();
-
-    // convert window size and coordinate to logical if UI is scaled
-    if( scaling_factor > 1 ) {
-        logical_coordinate.x /= scaling_factor;
-        logical_coordinate.y /= scaling_factor;
-
-        const bool is_terrain_or_overmap = ( use_tiles && g && capture_win == g->w_terrain ) ||
-                                           ( use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap );
-        if( !is_terrain_or_overmap ) {
-            win_size.x /= scaling_factor;
-            win_size.y /= scaling_factor;
-        }
-    }
-
+    const point &win_size = dim.window_size_pixel;
     const point win_max = win_min + win_size;
 
     // Translate mouse coordinates to map coordinates based on tile size
     // Check if click is within bounds of the window we care about
     const half_open_rectangle<point> win_bounds( win_min, win_max );
-    if( !win_bounds.contains( logical_coordinate ) ) {
+    if( !win_bounds.contains( coordinate ) ) {
         return std::nullopt;
     }
 
-    const point screen_pos = logical_coordinate - win_min;
+    const point screen_pos = coordinate - win_min;
 
     const bool use_isometric = g->w_overmap &&
                                capture_win == g->w_overmap ? false : g->is_tileset_isometric();
 
-    // convert tile size to logical if UI is scaled
-    point logical_tile_size;
-    if( scaling_factor > 1 ) {
-        const bool is_terrain = use_tiles && g && capture_win == g->w_terrain;
-        const bool is_overmap = use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap;
-
-        if( is_terrain ) {
-            logical_tile_size.x = tilecontext->get_tile_width();
-            logical_tile_size.y = tilecontext->get_tile_height();
-        } else if( is_overmap ) {
-            logical_tile_size.x = overmap_tilecontext->get_tile_width();
-            logical_tile_size.y = overmap_tilecontext->get_tile_height();
-        } else {
-            logical_tile_size = dim.scaled_font_size;
-            logical_tile_size.x /= scaling_factor;
-            logical_tile_size.y /= scaling_factor;
-        }
-    } else {
-        logical_tile_size = dim.scaled_font_size;
-    }
-
     const point_bub_ms p = cata_tiles::screen_to_player(
-                               screen_pos, logical_tile_size, win_size,
+                               screen_pos, dim.scaled_font_size, win_size,
                                point_bub_ms( offset ), use_isometric );
 
     return tripoint_bub_ms( p, get_map().get_abs_sub().z() );

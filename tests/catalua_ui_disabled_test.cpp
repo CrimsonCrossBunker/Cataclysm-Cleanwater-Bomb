@@ -27,9 +27,14 @@ TEST_CASE( "disabled_lua_ui_build_has_an_inert_facade", "[lua][ui][build]" )
     CHECK( cata::lua_ui::save_persistent_state( error ) );
     CHECK( error.empty() );
     CHECK_FALSE( cata::lua_ui::process_next_action().has_value() );
+    CHECK( cata::lua_ui::registered_pages().empty() );
+    CHECK_FALSE( cata::lua_ui::has_registered_pages() );
+    CHECK_FALSE( cata::lua_ui::show_page( "missing" ) );
+    CHECK_FALSE( cata::lua_ui::process_pending_navigation() );
 
     cata::lua_ui::on_world_ready();
     cata::lua_ui::clear_actions();
+    cata::lua_ui::show_slot( "main.extensions" );
     cata::lua_ui::shutdown();
     cata::lua_ui::show();
 }

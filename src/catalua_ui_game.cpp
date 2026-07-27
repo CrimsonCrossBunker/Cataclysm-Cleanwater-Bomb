@@ -21,6 +21,7 @@
 #include "item_category.h"
 #include "map.h"
 #include "mission.h"
+#include "move_mode.h"
 #include "mutation.h"
 #include "player_activity.h"
 #include "point.h"
@@ -97,9 +98,47 @@ sol::table player_snapshot( sol::this_state lua )
     result["radiation"] = player.get_rad();
     result["bionic_power_kj"] = units::to_kilojoule( player.get_power_level() );
     result["bionic_power_max_kj"] = units::to_kilojoule( player.get_max_power_level() );
+    const move_mode_id current_mode = player.current_movement_mode();
+    const move_mode_id desired_mode = player.get_desired_move_mode();
+    result["movement_mode_id"] = current_mode.str();
+    result["movement_mode_name"] = current_mode.is_valid() ? current_mode->name() : current_mode.str();
+    result["desired_movement_mode_id"] = desired_mode.str();
+    result["desired_movement_mode_name"] = desired_mode.is_valid() ? desired_mode->name() :
+                                           desired_mode.str();
+    result["movement_mode_pending"] = current_mode != desired_mode;
     result["x"] = position.x();
     result["y"] = position.y();
     result["z"] = position.z();
+    return result;
+}
+
+sol::table movement_modes_snapshot( sol::this_state lua )
+{
+    const avatar &player = get_avatar();
+    const move_mode_id current_mode = player.current_movement_mode();
+    const move_mode_id desired_mode = player.get_desired_move_mode();
+    const std::vector<move_mode_id> &modes = move_modes_by_speed();
+    sol::state_view state( lua );
+    sol::table items = state.create_table();
+    for( std::size_t index = 0; index < modes.size(); ++index ) {
+        const move_mode_id &mode = modes[index];
+        const int switch_moves = player.move_mode_switch_cost( current_mode, mode );
+        sol::table item = state.create_table();
+        item["id"] = mode.str();
+        item["name"] = mode->name();
+        item["available"] = player.can_switch_to( mode );
+        item["current"] = mode == current_mode;
+        item["desired"] = mode == desired_mode;
+        item["switch_moves"] = switch_moves;
+        item["switch_seconds"] = static_cast<double>( switch_moves ) /
+                                 std::max( 1, player.get_speed() );
+        items[index + 1] = std::move( item );
+    }
+    sol::table result = state.create_table();
+    result["items"] = std::move( items );
+    result["count"] = modes.size();
+    result["current_id"] = current_mode.str();
+    result["desired_id"] = desired_mode.str();
     return result;
 }
 
@@ -669,6 +708,10 @@ void install_game_snapshot_api( sol::table &game, std::function<void()> require_
     game.set_function( "player_stats", [require_read]( sol::this_state lua ) {
         require_read();
         return player_snapshot( lua );
+    } );
+    game.set_function( "movement_modes_snapshot", [require_read]( sol::this_state lua ) {
+        require_read();
+        return movement_modes_snapshot( lua );
     } );
     game.set_function( "time_snapshot", [require_read]( sol::this_state lua ) {
         require_read();

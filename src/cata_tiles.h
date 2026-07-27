@@ -620,7 +620,8 @@ class cata_tiles
         void draw_om( const point &dest, const tripoint_abs_omt &center_abs_omt, bool blink );
 
         /** Minimap functionality */
-        void draw_minimap( const point &dest, const tripoint_bub_ms &center, int width, int height );
+        void draw_minimap( const point &dest, const tripoint_bub_ms &center,
+                           int width, int height, bool force_scale_to_fit = false );
 
         /**
          * Resolve a candidate tile id (following looks_like fallbacks) and return

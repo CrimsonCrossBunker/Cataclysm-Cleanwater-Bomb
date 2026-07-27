@@ -151,10 +151,36 @@ ImU32 ImU32_from_color( const nc_color &color );
 
 void set_scroll( scroll &s );
 
+// Converts a one-finger vertical drag in the current ImGui window into scroll.
+// Gesture state is stored in that ImGui window, so callers do not need to
+// duplicate per-frame touch state.  Returns true after the drag crosses the
+// threshold, including its release frame.
+bool handle_vertical_swipe( bool enabled, float threshold );
+
+// Renderer widgets can use this guard to prevent a completed swipe from also
+// activating the control that originally received the touch.
+class scoped_interaction_suppression
+{
+    public:
+        explicit scoped_interaction_suppression( bool enabled );
+        scoped_interaction_suppression( const scoped_interaction_suppression & ) = delete;
+        scoped_interaction_suppression &operator=( const scoped_interaction_suppression & ) = delete;
+        ~scoped_interaction_suppression();
+
+    private:
+        bool enabled_;
+};
+
+bool interaction_suppressed();
+
 void draw_colored_text( const std::string &original_text, const nc_color &color,
                         float wrap_width = 0.0F, bool *is_selected = nullptr,
                         bool *is_focused = nullptr, bool *is_hovered = nullptr );
 #ifndef TUI
+    // Clear the persistent SDL display buffer at the start of the next ImGui frame.
+    // Use when a transparent ImGui overlay moves or shrinks and would otherwise
+    // leave pixels from its previous frame behind.
+    void request_clear();
     bool clear_pending();
 #endif
 void draw_colored_text( const std::string &original_text, nc_color &color,
@@ -192,6 +218,7 @@ class window
         size_t str_width_to_pixels( size_t len );
         size_t str_height_to_pixels( size_t len );
         std::string get_filter();
+        void set_filter( const std::string &text );
         void clear_filter();
         void defocus_filter();
         void mark_resized();
@@ -207,6 +234,7 @@ class window
         virtual void draw_controls() = 0;
         void draw_filter( const input_context &ctxt, bool filtering_active );
         void hide_if_hidden() const;
+        void set_redraw_underlay( bool value );
 };
 
 #ifdef TUI
@@ -220,6 +248,8 @@ bool InputFloat( const char *label, float *v, float step = 0.0f, float step_fast
 
 void PushGuiFont();
 void PushMonoFont();
+void PushGuiFontScaled( float scale );
+void PopGuiFontScaled();
 void PushGuiFont1_5x();
 void PopGuiFont1_5x();
 

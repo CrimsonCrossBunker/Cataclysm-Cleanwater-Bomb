@@ -3,18 +3,24 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <exception>
 #include <iterator>
 #include <list>
 #include <memory>
 #include <optional>
 #include <set>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
 #include "action.h"
+#if defined(__ANDROID__)
+    #include "android_native_ui.h"
+#endif
 #include "android_ui_mode.h"
 #include "cata_imgui.h"
 #include "cata_utility.h"
@@ -38,12 +44,29 @@
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "translations.h"
+#include "ui_profile.h"
 #include "ui_manager.h"
 #include "sdl_gamepad.h"
 
 enum class kb_menu_status {
     remove, reset, add, add_global, execute, show, filter
 };
+
+#if defined(__ANDROID__)
+enum class keybindings_action_type : int {
+    search,
+    clear_search,
+    remove,
+    add_local,
+    add_global,
+    reset,
+    close,
+};
+
+struct keybindings_action {
+    keybindings_action_type type;
+};
+#endif
 
 class keybindings_ui : public cataimgui::window
 {
@@ -68,13 +91,27 @@ class keybindings_ui : public cataimgui::window
         std::string hotkeys;
         int highlight_row_index = -1;
         int scroll_offset = 0;
+#if defined(__ANDROID__)
+        int imgui_selected_row = 0;
+        bool imgui_dragging = false;
+        ImVec2 imgui_drag_start;
+        ImVec2 imgui_drag_last;
+        std::deque<keybindings_action> imgui_actions;
+#endif
         //std::string filter_text;
         keybindings_ui( bool permit_execute_action, input_context *parent );
         void init();
+#if defined(__ANDROID__)
+        std::optional<keybindings_action> take_imgui_action();
+#endif
 
     protected:
         cataimgui::bounds get_bounds() override;
         void draw_controls() override;
+#if defined(__ANDROID__)
+        void draw_controls_adaptive();
+        bool handle_imgui_drag( const cata::ui::profile &profile );
+#endif
         void on_resized() override {
             init();
         };
@@ -489,7 +526,7 @@ const std::string &input_context::handle_input( const int timeout )
         // translated labels is much cheaper than rebuilding every action
         // descriptor, and keeps the cache independent of input_context's ABI.
         std::uint64_t catalog_token = 1469598103934665603ULL;
-        const auto append_catalog_token = [&catalog_token]( const std::string & value ) {
+        const auto append_catalog_token = [&catalog_token]( const std::string_view value ) {
             for( const unsigned char byte : value ) {
                 catalog_token ^= byte;
                 catalog_token *= 1099511628211ULL;
@@ -711,7 +748,18 @@ static const std::map<fallback_action, int> fallback_keys = {
 };
 
 keybindings_ui::keybindings_ui( bool permit_execute_action,
-                                input_context *parent ) : cataimgui::window( _( "KEYBINDINGS" ), ImGuiWindowFlags_NoNav )
+                                input_context *parent ) : cataimgui::window( _( "KEYBINDINGS" ),
+#if defined(__ANDROID__)
+                                            android_ui_mode::is_new_ui_build() ?
+                                            ( ImGuiWindowFlags_NoTitleBar |
+                                                    ImGuiWindowFlags_NoCollapse |
+                                                    ImGuiWindowFlags_NoResize |
+                                                    ImGuiWindowFlags_NoMove |
+                                                    ImGuiWindowFlags_NoSavedSettings |
+                                                    ImGuiWindowFlags_NoNav ) :
+#endif
+                                            ImGuiWindowFlags_NoNav
+                                                                               )
 {
     this->ctxt = parent;
 
@@ -753,13 +801,40 @@ keybindings_ui::keybindings_ui( bool permit_execute_action,
         } } );
 }
 
+#if defined(__ANDROID__)
+std::optional<keybindings_action> keybindings_ui::take_imgui_action()
+{
+    if( imgui_actions.empty() ) {
+        return std::nullopt;
+    }
+    keybindings_action result = imgui_actions.front();
+    imgui_actions.pop_front();
+    return result;
+}
+#endif
+
 cataimgui::bounds keybindings_ui::get_bounds()
 {
-    return { -1.f, -1.f, float( str_width_to_pixels( width ) ), float( str_height_to_pixels( TERMY ) ) };
+#if defined(__ANDROID__)
+    if( android_ui_mode::is_new_ui_build() ) {
+        const cata::ui::profile profile = cata::ui::current_profile();
+        return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+               cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
+    }
+#endif
+    return { -1.f, -1.f, float( str_width_to_pixels( width ) ),
+             float( str_height_to_pixels( TERMY ) )
+           };
 }
 
 void keybindings_ui::draw_controls()
 {
+#if defined(__ANDROID__)
+    if( android_ui_mode::is_new_ui_build() ) {
+        draw_controls_adaptive();
+        return;
+    }
+#endif
     scroll_offset = INT_MAX;
     size_t legend_idx = 0;
     for( ; legend_idx < 4; legend_idx++ ) {
@@ -879,6 +954,197 @@ void keybindings_ui::draw_controls()
     }
     last_status = status;
 }
+
+#if defined(__ANDROID__)
+bool keybindings_ui::handle_imgui_drag( const cata::ui::profile &profile )
+{
+    if( !profile.allow_swipe ) {
+        return false;
+    }
+    ImGuiIO &io = ImGui::GetIO();
+    if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+        ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+        imgui_dragging = true;
+        imgui_drag_start = io.MousePos;
+        imgui_drag_last = io.MousePos;
+    }
+    if( !imgui_dragging ) {
+        return false;
+    }
+    const ImVec2 distance( io.MousePos.x - imgui_drag_start.x,
+                           io.MousePos.y - imgui_drag_start.y );
+    const bool moved = std::hypot( distance.x, distance.y ) >
+                       profile.frame_padding_x;
+    if( ImGui::IsMouseDown( ImGuiMouseButton_Left ) &&
+        std::abs( distance.y ) > std::abs( distance.x ) ) {
+        const float delta_y = io.MousePos.y - imgui_drag_last.y;
+        ImGui::SetScrollY( ImGui::GetScrollY() - delta_y );
+    }
+    imgui_drag_last = io.MousePos;
+    if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+        imgui_dragging = false;
+    }
+    return moved;
+}
+
+void keybindings_ui::draw_controls_adaptive()
+{
+    const ImVec2 window_pos = ImGui::GetWindowPos();
+    const ImVec2 window_size = ImGui::GetWindowSize();
+    const cata::ui::profile profile = cata::ui::current_profile();
+    const float edge_padding = std::max( profile.frame_padding_x,
+                                         profile.item_spacing_x * 1.5F );
+    const float footer_height = profile.row_wide;
+    ImGui::GetWindowDrawList()->AddRectFilled(
+        window_pos, ImVec2( window_pos.x + window_size.x, window_pos.y + window_size.y ),
+        IM_COL32( 6, 9, 12, 255 ) );
+    const bool scaled_font = profile.text_scale != 1.0F;
+    if( scaled_font ) {
+        cataimgui::PushGuiFontScaled( profile.text_scale );
+    }
+    ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, profile.corner_radius );
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_FramePadding,
+        ImVec2( profile.frame_padding_x, profile.frame_padding_y ) );
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_ItemSpacing,
+        ImVec2( profile.item_spacing_x, profile.item_spacing_y ) );
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_WindowPadding,
+        ImVec2( edge_padding, profile.frame_padding_y * 1.5F ) );
+    ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0.035F, 0.050F, 0.062F, 1.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.22F, 0.36F, 0.40F, 0.78F ) );
+    ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.065F, 0.085F, 0.105F, 1.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.10F, 0.28F, 0.31F, 1.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4( 0.13F, 0.39F, 0.42F, 1.0F ) );
+    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.90F, 0.94F, 0.95F, 1.0F ) );
+
+    ImGui::TextUnformatted( _( "Keybindings" ) );
+    ImGui::SameLine();
+    ImGui::TextDisabled( "%s", legend.front().c_str() );
+    ImGui::SameLine();
+    const std::string filter_text = get_filter();
+    const std::string search_label = filter_text.empty() ? _( "Search" ) :
+                                     string_format( _( "Search: %s" ), filter_text );
+    const float clear_width = profile.width_compact;
+    const float search_width = std::max(
+                                   1.0F,
+                                   std::min( profile.width_wide,
+                                           ImGui::GetContentRegionAvail().x -
+                                           clear_width -
+                                           profile.item_spacing_x ) );
+    if( ImGui::Button(
+            search_label.c_str(),
+            ImVec2( search_width, profile.row_compact ) ) ) {
+        imgui_actions.push_back( { keybindings_action_type::search } );
+    }
+    ImGui::SameLine();
+    if( filter_text.empty() ) {
+        ImGui::BeginDisabled();
+    }
+    if( ImGui::Button(
+            _( "Clear" ),
+            ImVec2( clear_width, profile.row_compact ) ) ) {
+        imgui_actions.push_back( { keybindings_action_type::clear_search } );
+    }
+    if( filter_text.empty() ) {
+        ImGui::EndDisabled();
+    }
+    ImGui::Separator();
+
+    scroll_offset = 0;
+    if( filtered_registered_actions.empty() ) {
+        imgui_selected_row = 0;
+    } else {
+        imgui_selected_row = std::clamp( imgui_selected_row, 0,
+                                         static_cast<int>( filtered_registered_actions.size() ) - 1 );
+    }
+    if( ImGui::BeginChild( "##adaptive_keybinding_rows", ImVec2( 0.0F, -footer_height ),
+                           ImGuiChildFlags_Borders,
+                           ImGuiWindowFlags_AlwaysVerticalScrollbar ) ) {
+        const bool suppress_click = handle_imgui_drag( profile );
+        if( ImGui::BeginTable( "##adaptive_keybinding_table", 3,
+                               ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
+                               ImGuiTableFlags_SizingStretchProp ) ) {
+            ImGui::TableSetupColumn( "*", ImGuiTableColumnFlags_WidthFixed,
+                                     profile.minimum_target );
+            ImGui::TableSetupColumn( _( "Action Name" ), ImGuiTableColumnFlags_WidthStretch, 0.56F );
+            ImGui::TableSetupColumn( _( "Assigned Key(s)" ), ImGuiTableColumnFlags_WidthStretch, 0.44F );
+            ImGui::TableHeadersRow();
+            cataimgui::set_scroll( keybinds_scroll );
+            for( size_t index = 0; index < filtered_registered_actions.size(); ++index ) {
+                const std::string &action_id = filtered_registered_actions[index];
+                bool overwrite_default = false;
+                const action_attributes &attributes = inp_mngr.get_action_attributes(
+                        action_id, ctxt->category, &overwrite_default );
+                bool basic_overwrite_default = false;
+                const action_attributes &basic_attributes = inp_mngr.get_action_attributes(
+                            action_id, ctxt->category, &basic_overwrite_default, true );
+                const bool customized = overwrite_default != basic_overwrite_default ||
+                                        attributes.input_events != basic_attributes.input_events;
+                const bool selected = static_cast<int>( index ) == imgui_selected_row;
+                ImGui::PushID( action_id.c_str() );
+                ImGui::TableNextRow( ImGuiTableRowFlags_None, profile.row_normal );
+                ImGui::TableSetColumnIndex( 0 );
+                ImGui::TextUnformatted( customized ? "*" : "" );
+                ImGui::TableSetColumnIndex( 1 );
+                if( ImGui::Selectable( ctxt->get_action_name( action_id ).c_str(), selected,
+                                       ImGuiSelectableFlags_None,
+                                       ImVec2( 0.0F, profile.row_compact ) ) &&
+                    !suppress_click ) {
+                    imgui_selected_row = static_cast<int>( index );
+                }
+                ImGui::TableSetColumnIndex( 2 );
+                ImGui::TextWrapped( "%s", ctxt->get_desc( action_id ).c_str() );
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+    }
+    ImGui::EndChild();
+    ImGui::Separator();
+
+    const std::array<std::pair<keybindings_action_type, const char *>, 5> edit_buttons = {{
+            { keybindings_action_type::remove, _( "Remove" ) },
+            { keybindings_action_type::add_local, _( "Add local" ) },
+            { keybindings_action_type::add_global, _( "Add global" ) },
+            { keybindings_action_type::reset, _( "Reset" ) },
+            { keybindings_action_type::close, _( "Back" ) },
+        }
+    };
+    const float width_available = ImGui::GetContentRegionAvail().x;
+    const float button_width = std::max(
+                                   1.0F,
+                                   ( width_available -
+                                     profile.item_spacing_x * ( edit_buttons.size() - 1 ) ) /
+                                   edit_buttons.size() );
+    const bool empty = filtered_registered_actions.empty();
+    for( size_t index = 0; index < edit_buttons.size(); ++index ) {
+        if( index > 0 ) {
+            ImGui::SameLine();
+        }
+        const bool disabled = empty &&
+                              edit_buttons[index].first != keybindings_action_type::close;
+        if( disabled ) {
+            ImGui::BeginDisabled();
+        }
+        if( ImGui::Button(
+                edit_buttons[index].second,
+                ImVec2( button_width, profile.row_normal ) ) ) {
+            imgui_actions.push_back( { edit_buttons[index].first } );
+        }
+        if( disabled ) {
+            ImGui::EndDisabled();
+        }
+    }
+    ImGui::PopStyleColor( 6 );
+    ImGui::PopStyleVar( 4 );
+    if( scaled_font ) {
+        cataimgui::PopGuiFontScaled();
+    }
+    last_status = status;
+}
+#endif
 
 void keybindings_ui::init()
 {
@@ -1103,6 +1369,70 @@ action_id input_context::display_menu( bool permit_execute_action )
     while( true ) {
         kb_menu.highlight_row_index = -1;
         ui_manager::redraw();
+#if defined(__ANDROID__)
+        if( android_ui_mode::is_new_ui_build() ) {
+            const std::optional<keybindings_action> imgui_action = kb_menu.take_imgui_action();
+            if( imgui_action ) {
+                raw_input_char = 0;
+                switch( imgui_action->type ) {
+                    case keybindings_action_type::search: {
+#if defined(__ANDROID__)
+                        const std::optional<std::string> value = android_native_ui::text_input(
+                                    _( "Search keybindings" ), kb_menu.get_filter(), 120 );
+#else
+                        string_input_popup popup;
+                        popup.title( _( "Search keybindings" ) ).text( kb_menu.get_filter() )
+                        .max_length( 120 );
+                        const std::string edited = popup.query_string();
+                        const std::optional<std::string> value = popup.canceled() ? std::nullopt :
+                                std::optional<std::string>( edited );
+#endif
+                        if( value ) {
+                            kb_menu.set_filter( *value );
+                            kb_menu.filtered_registered_actions = filter_strings_by_phrase(
+                                    org_registered_actions, *value );
+                            kb_menu.imgui_selected_row = 0;
+                        }
+                        continue;
+                    }
+                    case keybindings_action_type::clear_search:
+                        kb_menu.set_filter( "" );
+                        kb_menu.filtered_registered_actions = org_registered_actions;
+                        kb_menu.imgui_selected_row = 0;
+                        continue;
+                    case keybindings_action_type::remove:
+                        kb_menu.status = kb_menu_status::remove;
+                        action = "SELECT";
+                        break;
+                    case keybindings_action_type::add_local:
+                        kb_menu.status = kb_menu_status::add;
+                        action = "SELECT";
+                        break;
+                    case keybindings_action_type::add_global:
+                        kb_menu.status = kb_menu_status::add_global;
+                        action = "SELECT";
+                        break;
+                    case keybindings_action_type::reset:
+                        kb_menu.status = kb_menu_status::reset;
+                        action = "SELECT";
+                        break;
+                    case keybindings_action_type::close:
+                        action = "QUIT";
+                        break;
+                }
+                kb_menu.highlight_row_index = kb_menu.imgui_selected_row;
+            } else {
+                action = ctxt.handle_input();
+                raw_input_char = ctxt.get_raw_input().get_first_input();
+            }
+        } else if( kb_menu.has_button_action() ) {
+            action = kb_menu.get_button_action();
+            raw_input_char = 0;
+        } else {
+            action = ctxt.handle_input();
+            raw_input_char = ctxt.get_raw_input().get_first_input();
+        }
+#else
         if( kb_menu.has_button_action() ) {
             action = kb_menu.get_button_action();
             raw_input_char = 0;
@@ -1110,6 +1440,7 @@ action_id input_context::display_menu( bool permit_execute_action )
             action = ctxt.handle_input();
             raw_input_char = ctxt.get_raw_input().get_first_input();
         }
+#endif
         for( const std::pair<const fallback_action, int> &v : fallback_keys ) {
             if( v.second == raw_input_char ) {
                 action.clear();
@@ -1302,24 +1633,11 @@ std::optional<point> input_context::get_coordinates_text( const catacurses::wind
     if( !coordinate_input_received ) {
         return std::nullopt;
     }
-    const window_dimensions dim = get_window_dimensions( capture_win );
-    const int scaling_factor = get_scaling_factor();
-    point logical_coordinate = coordinate;
-    int fw = dim.scaled_font_size.x;
-    int fh = dim.scaled_font_size.y;
-
-    // convert coordinate and font sizeto logical if UI is scaled
-    if( scaling_factor > 1 ) {
-        logical_coordinate.x /= scaling_factor;
-        logical_coordinate.y /= scaling_factor;
-        fw /= scaling_factor;
-        fh /= scaling_factor;
-    }
-
+    const window_dimensions dim = get_window_dimensions_for_input( capture_win );
     const point &win_min = dim.window_pos_pixel;
-    const point screen_pos = logical_coordinate - win_min;
-    const point selected( divide_round_down( screen_pos.x, fw ),
-                          divide_round_down( screen_pos.y, fh ) );
+    const point screen_pos = coordinate - win_min;
+    const point selected( divide_round_down( screen_pos.x, dim.scaled_font_size.x ),
+                          divide_round_down( screen_pos.y, dim.scaled_font_size.y ) );
     return selected;
 #endif
 }

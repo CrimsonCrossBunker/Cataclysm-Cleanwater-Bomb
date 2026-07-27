@@ -35,7 +35,8 @@ static bool restart_redrawing = false;
 #endif
 static ui_stack_t ui_stack;
 
-ui_adaptor::ui_adaptor() : is_imgui( false ), disabling_uis_below( false ),
+ui_adaptor::ui_adaptor() : is_imgui( false ), redraw_uis_below( false ),
+    disabling_uis_below( false ),
     is_debug_message_ui( false ),
     invalidated( false ), deferred_resize( false )
 {
@@ -43,6 +44,7 @@ ui_adaptor::ui_adaptor() : is_imgui( false ), disabling_uis_below( false ),
 }
 
 ui_adaptor::ui_adaptor( ui_adaptor::disable_uis_below ) : is_imgui( false ),
+    redraw_uis_below( false ),
     disabling_uis_below( true ),
     is_debug_message_ui( false ), invalidated( false ), deferred_resize( false )
 {
@@ -50,6 +52,7 @@ ui_adaptor::ui_adaptor( ui_adaptor::disable_uis_below ) : is_imgui( false ),
 }
 
 ui_adaptor::ui_adaptor( ui_adaptor::debug_message_ui ) : is_imgui( false ),
+    redraw_uis_below( false ),
     disabling_uis_below( true ),
     is_debug_message_ui( true ), invalidated( false ), deferred_resize( false )
 {
@@ -381,6 +384,16 @@ void ui_adaptor::redraw_invalidated( )
         return;
     }
 #if defined(TILES)
+    bool rebuild_imgui_underlay = false;
+    for( const ui_adaptor &ui : ui_stack ) {
+        rebuild_imgui_underlay |= ui.redraw_uis_below;
+    }
+    if( !imgui_frame_started && rebuild_imgui_underlay ) {
+        cataimgui::request_clear();
+        for( ui_adaptor &ui : ui_stack ) {
+            ui.invalidated = true;
+        }
+    }
     display_buffer_draw_scope draw_scope;
     if( !draw_scope.should_draw() ) {
         // Return before the redraw callbacks clear their invalidation flags, so a

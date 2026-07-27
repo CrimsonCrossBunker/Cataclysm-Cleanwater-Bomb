@@ -4,11 +4,12 @@ if (CATA_ENABLE_LUA_UI)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sol)
 endif()
 
-function(configure_lua_ui target)
-    target_compile_definitions(${target} PUBLIC
+# Configure a target's Lua UI compile definition and optional runtime dependency.
+function(configure_lua_ui TARGET)
+    target_compile_definitions(${TARGET} PUBLIC
         CATA_ENABLE_LUA_UI=$<BOOL:${CATA_ENABLE_LUA_UI}>)
     if (CATA_ENABLE_LUA_UI)
-        target_link_libraries(${target} PUBLIC libsol)
+        target_link_libraries(${TARGET} PUBLIC libsol)
     endif()
 endfunction()
 
@@ -49,8 +50,10 @@ set(CATALUA_UI_ENABLED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_actions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_game.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_i18n.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_imgui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_manifest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_navigation.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_renderer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_state.cpp)
 if (CATA_ENABLE_LUA_UI)

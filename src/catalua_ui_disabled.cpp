@@ -60,6 +60,30 @@ bool validate_snippet( std::string_view, int, std::string &error )
     return false;
 }
 
+std::vector<page_info> registered_pages( std::string_view )
+{
+    return {};
+}
+
+bool has_registered_pages( std::string_view )
+{
+    return false;
+}
+
+bool show_page( std::string_view )
+{
+    return false;
+}
+
+void show_slot( std::string_view )
+{
+}
+
+bool process_pending_navigation()
+{
+    return false;
+}
+
 void show()
 {
 }

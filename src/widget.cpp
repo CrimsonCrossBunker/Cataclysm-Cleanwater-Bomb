@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <string_view>
 
 #include "avatar.h"
 #include "cata_utility.h"
@@ -49,6 +50,100 @@ const static std::string default_separator = ": ";
 namespace
 {
 generic_factory<widget> widget_factory( "widgets" );
+thread_local int hud_layout_render_depth = 0;
+
+class scoped_hud_layout_render
+{
+    public:
+        scoped_hud_layout_render() {
+            ++hud_layout_render_depth;
+        }
+
+        ~scoped_hud_layout_render() {
+            --hud_layout_render_depth;
+        }
+};
+
+std::string hud_node_segment( const widget_id &id, const int occurrence )
+{
+    return id.str() + "@" + std::to_string( occurrence );
+}
+
+std::string hud_child_path( const std::string &parent, const widget_id &id,
+                            const int occurrence )
+{
+    const std::string segment = hud_node_segment( id, occurrence );
+    return parent.empty() ? segment : parent + "/" + segment;
+}
+
+std::string clip_hud_column_line( const std::string_view line, const int columns )
+{
+    if( columns <= 0 ) {
+        return {};
+    }
+    std::string clipped;
+    int remaining = columns;
+    int open_colors = 0;
+    for( std::string segment : split_by_color( line ) ) {
+        if( segment.empty() ) {
+            continue;
+        }
+        if( segment.front() == '<' ) {
+            const color_tag_parse_result tag =
+                get_color_from_tag( segment, report_color_error::no );
+            if( tag.type != color_tag_parse_result::non_color_tag ) {
+                const std::size_t tag_end = segment.find( '>' );
+                clipped.append( segment, 0, tag_end + 1 );
+                segment.erase( 0, tag_end + 1 );
+                if( tag.type == color_tag_parse_result::open_color_tag ) {
+                    ++open_colors;
+                } else if( open_colors > 0 ) {
+                    --open_colors;
+                }
+            }
+        }
+        const int segment_width = utf8_width( segment );
+        if( segment_width <= remaining ) {
+            clipped += segment;
+            remaining -= segment_width;
+            continue;
+        }
+        if( remaining > 0 ) {
+            clipped += utf8_wrapper( segment ).substr_display(
+                           0, remaining ).str();
+        }
+        for( int i = 0; i < open_colors; ++i ) {
+            clipped += "</color>";
+        }
+        return clipped;
+    }
+    return clipped;
+}
+
+std::string fit_hud_column_line( std::string line, const int columns )
+{
+    if( columns <= 0 ) {
+        return {};
+    }
+    int width = utf8_width( line, true );
+    if( width > columns ) {
+        line = clip_hud_column_line( line, columns );
+        width = utf8_width( line, true );
+    }
+    if( width < columns ) {
+        line.append( columns - width, ' ' );
+    }
+    return line;
+}
+
+std::string trim_hud_trailing_spaces( const std::string_view line )
+{
+    std::string plain = remove_color_tags( line );
+    while( !plain.empty() && plain.back() == ' ' ) {
+        plain.pop_back();
+    }
+    return clip_hud_column_line( line, utf8_width( plain ) );
+}
 } // namespace
 
 template<>
@@ -1196,6 +1291,12 @@ bool widget::uses_text_function() const
 // Simple workaround from the copied widget from the panel to set the widget's height globally
 static void set_height_for_widget( const widget_id &id, int height )
 {
+    // Android HUD rendering works on copies with an immutable formatting
+    // context.  Dynamic height is useful to that render, but must not leak
+    // into the shared Widget factory or another sidebar context.
+    if( hud_layout_render_depth > 0 ) {
+        return;
+    }
     const std::vector<widget> &wlist = widget::get_all();
     auto iter = std::find_if( wlist.begin(), wlist.end(), [&id]( const widget & w ) {
         return w.getId() == id;
@@ -1519,6 +1620,45 @@ std::vector<string_id<widget>> widget::widgets( bool from_condition )
     return _widgets;
 }
 
+std::vector<widget_id> widget::all_layout_children() const
+{
+    std::vector<widget_id> result = _widgets;
+    std::unordered_map<std::string, int> result_counts;
+    std::unordered_map<std::string, int> maximum_counts;
+    std::vector<widget_id> conditional_order;
+    std::set<widget_id> known_conditional;
+    for( const widget_id &child : result ) {
+        const int count = ++result_counts[child.str()];
+        maximum_counts[child.str()] = std::max(
+                                          maximum_counts[child.str()], count );
+    }
+    const auto include_branch =
+    [&]( const std::vector<widget_id> &branch ) {
+        std::unordered_map<std::string, int> branch_counts;
+        for( const widget_id &child : branch ) {
+            const int count = ++branch_counts[child.str()];
+            maximum_counts[child.str()] = std::max(
+                                              maximum_counts[child.str()],
+                                              count );
+            if( known_conditional.insert( child ).second ) {
+                conditional_order.push_back( child );
+            }
+        }
+    };
+    for( const widget_clause &clause : _clauses ) {
+        include_branch( clause.widgets );
+    }
+    include_branch( _default_clause.widgets );
+    for( const widget_id &child : conditional_order ) {
+        while( result_counts[child.str()] <
+               maximum_counts[child.str()] ) {
+            result.push_back( child );
+            ++result_counts[child.str()];
+        }
+    }
+    return result;
+}
+
 std::string widget::number_cond( enumeration_conjunction join_type ) const
 {
     std::vector<const widget_clause *> wplist = get_clauses();
@@ -1738,7 +1878,8 @@ std::string widget::graph( int value ) const
 // For widget::layout, process each row to append to the layout string
 static std::string append_line( const std::string &line, bool first_row, int max_width,
                                 const translation &label, int label_width, const std::string &_separator,
-                                widget_alignment text_align, widget_alignment label_align, bool skip_pad )
+                                widget_alignment text_align, widget_alignment label_align, bool skip_pad,
+                                const int separator_width_override = -1 )
 {
     // utf8_width subtracts 1 for each newline; add it back for multiline widgets
     const int newline_fix = !line.empty() && line.back() == '\n' ? 1 : 0;
@@ -1746,6 +1887,12 @@ static std::string append_line( const std::string &line, bool first_row, int max
     // Prepare label
     int lbl_w = 0;
     std::string lbl;
+    const int separator_width = separator_width_override >= 0 ?
+                                separator_width_override :
+                                static_cast<int>( _separator.length() );
+    const int rendered_separator_width = separator_width_override >= 0 ?
+                                         utf8_width( _separator, true ) :
+                                         static_cast<int>( _separator.length() );
     if( first_row && !label.empty() ) {
         lbl = label.translated();
         lbl_w = utf8_width( lbl, true );
@@ -1753,8 +1900,8 @@ static std::string append_line( const std::string &line, bool first_row, int max
     }
     // Don't process label width if label_width = 0 for empty labels
     if( !skip_pad && ( label_width > 0 || !label.empty() ) ) {
-        lbl_w += _separator.length();
-        label_width += _separator.length();
+        lbl_w += rendered_separator_width;
+        label_width += separator_width;
         // Use empty spaces in place of label if none exist
         if( label.empty() ) {
             lbl.append( label_width, ' ' );
@@ -1844,19 +1991,255 @@ static std::string append_line( const std::string &line, bool first_row, int max
 std::string widget::layout( const avatar &ava, unsigned int max_width, int label_width,
                             bool skip_pad )
 {
+    return layout_internal( ava, max_width, label_width, skip_pad, {} );
+}
+
+int widget::maximum_separator_width( std::set<widget_id> &visited,
+                                     const label_layout_override &label_override ) const
+{
+    if( !visited.insert( id ).second ) {
+        return 0;
+    }
+    if( _style != "layout" ) {
+        const std::string &separator = label_override.has_inherited_context() &&
+                                       !explicit_separator ?
+                                       label_override.inherited_separator : _separator;
+        return _pad_labels && !has_flag( json_flag_W_LABEL_NONE ) ?
+               utf8_width( separator, true ) : 0;
+    }
+
+    int result = 0;
+    const auto include_child = [&result, &visited,
+             &label_override]( const widget_id & child_id ) {
+        if( child_id.is_valid() && !child_id->has_flag( json_flag_W_NO_PADDING ) ) {
+            result = std::max( result,
+                               child_id->maximum_separator_width( visited,
+                                       label_override ) );
+        }
+    };
+    for( const widget_id &child_id : _widgets ) {
+        include_child( child_id );
+    }
+    for( const widget_clause &clause : _clauses ) {
+        for( const widget_id &child_id : clause.widgets ) {
+            include_child( child_id );
+        }
+    }
+    return result;
+}
+
+int widget::natural_label_width( std::set<widget_id> &visited ) const
+{
+    if( !visited.insert( id ).second ) {
+        return 0;
+    }
+    if( _style != "layout" ) {
+        return _label.empty() || !_pad_labels ||
+               has_flag( json_flag_W_LABEL_NONE ) ?
+               0 : utf8_width( _label.translated(), true );
+    }
+
+    int result = 0;
+    const auto include_child = [&result, &visited]( const widget_id & child_id ) {
+        if( child_id.is_valid() && !child_id->has_flag( json_flag_W_NO_PADDING ) ) {
+            result = std::max( result,
+                               child_id->natural_label_width( visited ) );
+        }
+    };
+    for( const widget_id &child_id : _widgets ) {
+        include_child( child_id );
+    }
+    for( const widget_clause &clause : _clauses ) {
+        for( const widget_id &child_id : clause.widgets ) {
+            include_child( child_id );
+        }
+    }
+    // Column layouts do not pad their own label, but their labeled leaves
+    // still participate in one HUD-wide label slot.  Returning the descendant
+    // maximum here is what aligns e.g. Sound/Stamina, Mood/Speed and
+    // Focus/Move across adjacent rows.
+    return result;
+}
+
+int widget::contextual_label_width( std::set<std::string> &visited,
+                                    const label_layout_override &label_override,
+                                    const std::string &node_path ) const
+{
+    if( !visited.insert( node_path ).second ) {
+        return 0;
+    }
+    const widget_hud_layout *layout = label_override.hud_layout;
+    if( layout != nullptr && layout->mode == widget_hud_layout_mode::custom ) {
+        const auto configured = layout->node_overrides.find( node_path );
+        if( configured != layout->node_overrides.end() &&
+            configured->second.label_columns.has_value() ) {
+            return std::clamp( *configured->second.label_columns, 0, 40 );
+        }
+    }
+    if( _style != "layout" ) {
+        return _label.empty() || !_pad_labels ||
+               has_flag( json_flag_W_LABEL_NONE ) ?
+               0 : utf8_width( _label.translated(), true );
+    }
+
+    int result = 0;
+    std::unordered_map<std::string, int> occurrences;
+    for( const widget_id &child_id : all_layout_children() ) {
+        if( !child_id.is_valid() || child_id->has_flag( json_flag_W_NO_PADDING ) ) {
+            continue;
+        }
+        const int occurrence = occurrences[child_id.str()]++;
+        const std::string child_path = hud_child_path( node_path, child_id, occurrence );
+        result = std::max( result, child_id->contextual_label_width(
+                               visited, label_override, child_path ) );
+    }
+    // Column layouts normally do not own a label scope, but their leaves
+    // still participate in the nearest parent row scope.
+    return result;
+}
+
+std::string widget::layout_with_label_width( const avatar &ava,
+        const unsigned int max_width, const int label_width, const bool skip_pad )
+{
+    label_layout_override label_override;
+    label_override.label_width = std::max( 0, label_width );
+    std::set<widget_id> visited;
+    label_override.separator_width = maximum_separator_width( visited,
+                                     label_override );
+    return layout_internal( ava, max_width, 0, skip_pad, label_override );
+}
+
+std::string widget::layout_for_hud( const avatar &ava,
+                                    const unsigned int max_width,
+                                    const int label_width,
+                                    const std::string &label_separator,
+                                    const int column_padding,
+                                    const bool skip_pad )
+{
+    label_layout_override label_override;
+    label_override.inherited_separator = label_separator;
+    label_override.inherited_padding = std::max( 0, column_padding );
+    if( label_width >= 0 ) {
+        label_override.label_width = label_width;
+    } else {
+        std::set<widget_id> labels_visited;
+        label_override.label_width = natural_label_width( labels_visited );
+    }
+    std::set<widget_id> separators_visited;
+    label_override.separator_width = maximum_separator_width(
+                                         separators_visited, label_override );
+    return layout_internal( ava, max_width, 0, skip_pad, label_override );
+}
+
+std::string widget::layout_for_hud( const avatar &ava,
+                                    const widget_hud_layout &layout )
+{
+    scoped_hud_layout_render immutable_render;
+    label_layout_override label_override;
+    label_override.inherited_separator = layout.inherited_separator;
+    label_override.inherited_padding = std::max( 0, layout.inherited_padding );
+    label_override.hud_layout = &layout;
+    const bool loose = layout.mode == widget_hud_layout_mode::loose;
+    const unsigned int columns = loose ? 0 : layout.columns;
+    return layout_internal( ava, columns, 0, loose, label_override,
+                            hud_node_segment( id, 0 ),
+                            layout.inherited_separator,
+                            std::max( 0, layout.inherited_padding ) );
+}
+
+std::string widget::layout_internal( const avatar &ava,
+                                     const unsigned int max_width,
+                                     const int label_width,
+                                     const bool skip_pad,
+                                     const label_layout_override &label_override,
+                                     const std::string &node_path,
+                                     const std::string &inherited_separator,
+                                     const int inherited_padding )
+{
     std::string ret;
+    const bool force_label_width = label_override.enabled();
+    const bool contextual = label_override.has_hud_layout();
+    const widget_hud_layout *hud_layout = label_override.hud_layout;
+    const bool custom = contextual &&
+                        hud_layout->mode == widget_hud_layout_mode::custom;
+    const bool loose = contextual &&
+                       hud_layout->mode == widget_hud_layout_mode::loose;
+    const widget_hud_node_override *node_override = nullptr;
+    if( custom ) {
+        const auto configured = hud_layout->node_overrides.find( node_path );
+        if( configured != hud_layout->node_overrides.end() ) {
+            node_override = &configured->second;
+        }
+    }
+
+    std::string effective_separator;
+    if( node_override != nullptr && node_override->separator.has_value() ) {
+        effective_separator = *node_override->separator;
+    } else if( !explicit_separator && contextual ) {
+        effective_separator = inherited_separator;
+    } else if( !explicit_separator && label_override.has_inherited_context() ) {
+        effective_separator = label_override.inherited_separator;
+    } else {
+        effective_separator = _separator;
+    }
+
+    int effective_padding = _padding;
+    if( loose ) {
+        effective_padding = 1;
+    } else if( node_override != nullptr &&
+               node_override->gap_columns.has_value() ) {
+        effective_padding = std::clamp( *node_override->gap_columns, 0, 8 );
+    } else if( !explicit_padding ) {
+        if( contextual ) {
+            effective_padding = std::max( 0, inherited_padding );
+        } else if( label_override.has_inherited_context() ) {
+            effective_padding = std::max( 0, label_override.inherited_padding );
+        }
+    }
+
     if( _style == "layout" ) {
         std::vector<string_id<widget>> wgts = widgets( !_clauses.empty() );
-        int layout_label_width = ( label_width == 0 || ! _pad_labels ) ? _label_width : label_width;
+        int layout_label_width = ( label_width == 0 || ! _pad_labels ) ?
+                                 _label_width : label_width;
+        if( force_label_width ) {
+            layout_label_width = label_override.label_width;
+        } else if( contextual ) {
+            if( node_override != nullptr &&
+                node_override->label_columns.has_value() ) {
+                layout_label_width = std::clamp(
+                                         *node_override->label_columns, 0, 40 );
+            } else if( _pad_labels ) {
+                std::set<std::string> labels_visited;
+                layout_label_width = contextual_label_width(
+                                         labels_visited, label_override, node_path );
+            } else {
+                // A column layout carries the nearest row scope down to its
+                // leaves instead of introducing a new one.
+                layout_label_width = label_width;
+            }
+        }
+
+        std::vector<std::string> child_paths;
+        child_paths.reserve( wgts.size() );
+        std::unordered_map<std::string, int> occurrences;
+        for( const widget_id &wid : wgts ) {
+            const int occurrence = occurrences[wid.str()]++;
+            child_paths.emplace_back( hud_child_path(
+                                          node_path, wid, occurrence ) );
+        }
 
         if( _arrange == "rows" ) {
             std::string sep;
             int h = 0;
             // Stack rows vertically into a multiline widget
-            for( const widget_id &wid : wgts ) {
+            for( std::size_t i = 0; i < wgts.size(); ++i ) {
+                const widget_id &wid = wgts[i];
                 widget cur_child = wid.obj();
-                ret += sep + cur_child.layout( ava, max_width, layout_label_width,
-                                               skip_pad || wid->has_flag( json_flag_W_NO_PADDING ) );
+                ret += sep + cur_child.layout_internal(
+                           ava, max_width, layout_label_width,
+                           skip_pad || wid->has_flag( json_flag_W_NO_PADDING ),
+                           label_override, child_paths[i],
+                           effective_separator, effective_padding );
                 sep = "\n";
                 h += wid->_height < 0 ? 0 : wid->_height;
             }
@@ -1866,20 +2249,94 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
             const int num_widgets = wgts.size();
             if( num_widgets == 0 ) {
                 debugmsg( "widget layout has no widgets" );
+                return "";
             }
             // Number of spaces between columns
-            const int col_padding = _padding;
+            const int col_padding = effective_padding;
+
+            if( loose ) {
+                std::vector<std::vector<std::string>> cols;
+                std::size_t row_count = 0;
+                for( std::size_t i = 0; i < wgts.size(); ++i ) {
+                    const widget_id &wid = wgts[i];
+                    widget cur_child = wid.obj();
+                    const std::string txt = cur_child.layout_internal(
+                                                ava, 0, layout_label_width, true,
+                                                label_override, child_paths[i],
+                                                effective_separator,
+                                                effective_padding );
+                    cols.emplace_back( string_split( txt, '\n' ) );
+                    row_count = std::max( row_count, cols.back().size() );
+                }
+
+                std::string row_separator;
+                int h_max = 0;
+                for( std::size_t row = 0; row < row_count; ++row ) {
+                    std::string line;
+                    bool any_value = false;
+                    for( const std::vector<std::string> &column : cols ) {
+                        if( row >= column.size() || column[row].empty() ) {
+                            continue;
+                        }
+                        const std::string cell =
+                            trim_hud_trailing_spaces( column[row] );
+                        if( string_empty_or_whitespace(
+                                remove_color_tags( cell ) ) ) {
+                            continue;
+                        }
+                        if( any_value ) {
+                            line.push_back( ' ' );
+                        }
+                        line += cell;
+                        any_value = true;
+                    }
+                    if( any_value ) {
+                        ret += row_separator + line;
+                        row_separator = "\n";
+                        ++h_max;
+                    }
+                }
+                set_height_for_widget( id, h_max );
+                return ret;
+            }
+
             // Subtract column padding to get space available for widgets
-            const int avail_width = max_width - col_padding * ( num_widgets - 1 );
+            const int avail_width = std::max<int>(
+                                        0, static_cast<int>( max_width ) -
+                                        col_padding * ( num_widgets - 1 ) );
             // Divide available width equally among all widgets
             const int child_width = avail_width / num_widgets;
+
+            const auto configured_child_width =
+            [&]( const std::size_t index ) -> std::optional<int> {
+                if( !custom )
+                {
+                    return std::nullopt;
+                }
+                const auto configured = hud_layout->node_overrides.find(
+                    child_paths[index] );
+                if( configured == hud_layout->node_overrides.end() ||
+                    !configured->second.width_columns.has_value() )
+                {
+                    return std::nullopt;
+                }
+                return std::clamp(
+                    *configured->second.width_columns, 1, 80 );
+            };
+
             // Total widget width w/o padding
-            const int total_widget_width = std::accumulate( wgts.begin(), wgts.end(), 0,
-            [child_width]( int sum, const widget_id & wid ) {
-                const widget &cur_child = wid.obj();
-                return sum + ( cur_child._style == "layout" &&
-                               cur_child._width > 0 ? cur_child._width : child_width );
-            } );
+            int total_widget_width = 0;
+            for( std::size_t i = 0; i < wgts.size(); ++i ) {
+                const widget &cur_child = wgts[i].obj();
+                const std::optional<int> configured =
+                    configured_child_width( i );
+                const bool fixed = configured.has_value() ||
+                                   ( cur_child._style == "layout" &&
+                                     cur_child._width > 0 );
+                total_widget_width += fixed ?
+                                      configured.value_or( cur_child._width ) :
+                                      child_width;
+            }
             // Total widget width with padding
             const int total_widget_padded_width = total_widget_width + col_padding * ( num_widgets - 1 );
             // Keep remainder to distribute
@@ -1887,24 +2344,30 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
             // Store the (potentially) multi-row text for each column
             std::vector<std::vector<std::string>> cols;
             std::vector<int> widths;
+            std::vector<bool> fit_widths;
             unsigned int total_width = 0;
             std::string debug_widths;
             for( size_t i = 0; i < wgts.size(); i++ ) {
                 const widget_id &wid = wgts[i];
                 widget cur_child = wid.obj();
                 int cur_width = child_width;
+                const std::optional<int> configured =
+                    configured_child_width( i );
                 // determine spacing based on type of column
                 if( _arrange == "minimum_columns" ) {
-                    if( cur_child._width > 0 ) {
-                        cur_width = cur_child._width;
+                    if( configured.has_value() || cur_child._width > 0 ) {
+                        cur_width = configured.value_or( cur_child._width );
                     }
                     // if last widget make it take the remaining space
-                    if( i == wgts.size() - 1 ) {
+                    if( i == wgts.size() - 1 &&
+                        !configured.has_value() ) {
                         cur_width = std::max<int>( 0, avail_width - total_width );
                     }
                 } else { //columns
-                    if( cur_child._style == "layout" && cur_child._width > 0 ) {
-                        cur_width = cur_child._width;
+                    if( configured.has_value() ||
+                        ( cur_child._style == "layout" &&
+                          cur_child._width > 0 ) ) {
+                        cur_width = configured.value_or( cur_child._width );
                     }
                     // Spread remainder over the first few columns
                     if( remainder > 0 ) {
@@ -1925,11 +2388,16 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
                 }
                 const bool skip_pad_this = skip_pad || wid->has_flag( json_flag_W_NO_PADDING );
                 // Layout child in this column
-                const std::string txt = cur_child.layout( ava, skip_pad_this ? 0 : cur_width,
-                                        layout_label_width, skip_pad_this );
+                const std::string txt = cur_child.layout_internal(
+                                            ava, skip_pad_this ? 0 : cur_width,
+                                            layout_label_width, skip_pad_this,
+                                            label_override, child_paths[i],
+                                            effective_separator,
+                                            effective_padding );
                 // Store the resulting text for this column
                 cols.emplace_back( string_split( txt, '\n' ) );
                 widths.emplace_back( cur_width );
+                fit_widths.emplace_back( contextual && !skip_pad_this );
             }
 
             int h_max = 0;
@@ -1940,13 +2408,15 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
                 std::string line;
                 for( size_t c = 0; c < cols.size(); c++ ) {
                     if( r >= cols[c].size() ) {
-                        if( !skip_pad ) {
+                        if( fit_widths[c] ) {
                             // No row r for this column, pad with empty space
                             line += std::string( widths[c], ' ' );
                         }
                     } else {
                         any_val = true;
-                        line += cols[c][r];
+                        line += fit_widths[c] ?
+                                fit_hud_column_line( cols[c][r], widths[c] ) :
+                                cols[c][r];
                     }
                     if( !skip_pad && c + 1 < cols.size() ) {
                         // Add padding between columns
@@ -1980,18 +2450,55 @@ std::string widget::layout( const avatar &ava, unsigned int max_width, int label
         // For multi-line widgets, each line is separated by a '\n' character
         while( ( strpos = shown.find( '\n' ) ) != std::string::npos && row_num < _height ) {
             // Process line, including '\n'
+            const bool apply_label_override = force_label_width && row_num == 0 &&
+                                              _pad_labels &&
+                                              !has_flag( json_flag_W_LABEL_NONE );
+            int current_label_width = apply_label_override ?
+                                      label_override.label_width : 0;
+            if( contextual && row_num == 0 && _pad_labels &&
+                !has_flag( json_flag_W_LABEL_NONE ) ) {
+                current_label_width = label_width;
+                if( node_override != nullptr &&
+                    node_override->label_columns.has_value() ) {
+                    current_label_width = std::clamp(
+                                              *node_override->label_columns,
+                                              0, 40 );
+                }
+            }
             ret += append_line( shown.substr( 0, strpos + 1 ), row_num == 0, max_width,
                                 has_flag( json_flag_W_LABEL_NONE ) ? translation() : _label,
-                                0, _separator, _text_align, _label_align, skip_pad );
+                                current_label_width, effective_separator, _text_align,
+                                _label_align, skip_pad,
+                                apply_label_override ? label_override.separator_width : -1 );
             // Delete used token
             shown.erase( 0, strpos + 1 );
             row_num++;
         }
         if( row_num < _height ) {
             // Process last line, or first for single-line widgets
+            int current_label_width = row_num == 0 && _pad_labels ?
+                                      label_width : 0;
+            const bool apply_label_override = force_label_width && row_num == 0 &&
+                                              _pad_labels &&
+                                              !has_flag( json_flag_W_LABEL_NONE );
+            if( apply_label_override ) {
+                current_label_width = label_override.label_width;
+            }
+            if( contextual && row_num == 0 && _pad_labels &&
+                !has_flag( json_flag_W_LABEL_NONE ) ) {
+                current_label_width = label_width;
+                if( node_override != nullptr &&
+                    node_override->label_columns.has_value() ) {
+                    current_label_width = std::clamp(
+                                              *node_override->label_columns,
+                                              0, 40 );
+                }
+            }
             ret += append_line( shown, row_num == 0, max_width,
                                 has_flag( json_flag_W_LABEL_NONE ) ? translation() : _label,
-                                row_num == 0 && _pad_labels ? label_width : 0, _separator, _text_align, _label_align, skip_pad );
+                                current_label_width, effective_separator, _text_align,
+                                _label_align, skip_pad,
+                                apply_label_override ? label_override.separator_width : -1 );
         }
         if( !ret.empty() && ret.back() == '\n' ) {
             ret.pop_back();

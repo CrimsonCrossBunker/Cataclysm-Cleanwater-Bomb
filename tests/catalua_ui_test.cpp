@@ -3,14 +3,21 @@
 #include "calendar.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
+#include "catalua_ui_i18n.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_navigation.h"
+#include "catalua_ui_navigation_internal.h"
 #include "catalua_ui_renderer.h"
 #include "catalua_ui_state.h"
 #include "event_bus.h"
+#include "input_context_actions.h"
 #include "json_loader.h"
 #include "path_info.h"
+#include "ui_profile.h"
 #include "weather.h"
+#include "worldfactory.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -21,6 +28,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -43,9 +51,15 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
                 static_cast<std::uint32_t>( capability::trees ) |
                 static_cast<std::uint32_t>( capability::modals ) |
                 static_cast<std::uint32_t>( capability::tooltips ) |
-                static_cast<std::uint32_t>( capability::virtualization ),
+                static_cast<std::uint32_t>( capability::virtualization ) |
+                static_cast<std::uint32_t>( capability::radial_selection ) |
+                static_cast<std::uint32_t>( capability::action_slots ),
                 false, true
             };
+        }
+
+        double available_width() const override {
+            return 1000.0;
         }
 
         void text( const std::string &value ) override {
@@ -125,6 +139,26 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
                                 const std::string &value ) override {
             last_widget_id = id;
             return value + "-edited";
+        }
+        std::string radial_select(
+            const std::string &id, const std::string &,
+            const std::vector<cata::lua_ui::script_ui_radial_option> &options ) override {
+            last_widget_id = id;
+            const auto found = std::find_if( options.begin(), options.end(),
+            []( const cata::lua_ui::script_ui_radial_option & option ) {
+                return option.enabled && !option.selected;
+            } );
+            return found == options.end() ? std::string() : found->id;
+        }
+        std::string action_slot(
+            const std::string &id, const std::string &selected_action, int,
+            const std::vector<cata::lua_ui::script_ui_action_option> &options ) override {
+            last_widget_id = id;
+            const auto found = std::find_if( options.begin(), options.end(),
+            [&]( const cata::lua_ui::script_ui_action_option & option ) {
+                return option.enabled && option.id != selected_action;
+            } );
+            return found == options.end() ? selected_action : found->id;
         }
         void child( const std::string &id, double,
                     const std::function<void()> &draw ) override {
@@ -262,8 +296,11 @@ class scoped_lua_user_script
 class scoped_lua_state_file
 {
     public:
-        scoped_lua_state_file() : path_( ( PATH_INFO::player_base_save_path() +
-                                               ".lua_ui.json" ).get_unrelative_path() ) {
+        scoped_lua_state_file() : scoped_lua_state_file(
+                ( PATH_INFO::player_base_save_path() +
+                  ".lua_ui.json" ).get_unrelative_path() ) {}
+
+        explicit scoped_lua_state_file( fs::path path ) : path_( std::move( path ) ) {
             if( fs::exists( path_ ) ) {
                 std::ifstream input( path_, std::ios::binary );
                 previous_ = std::string( std::istreambuf_iterator<char>( input ),
@@ -299,6 +336,18 @@ class scoped_lua_state_file
             return fs::exists( path_ );
         }
 
+        std::string read() const {
+            std::ifstream input( path_, std::ios::binary );
+            const std::string result{
+                std::istreambuf_iterator<char>( input ),
+                std::istreambuf_iterator<char>()
+            };
+            if( !input ) {
+                throw std::runtime_error( "Unable to read Lua state test file" );
+            }
+            return result;
+        }
+
     private:
         fs::path path_;
         std::optional<std::string> previous_;
@@ -315,10 +364,25 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( context.platform() == "test" );
     CHECK_FALSE( context.is_immediate_mode() );
     CHECK( context.uses_native_widgets() );
+    const cata::lua_ui::script_ui_environment environment = context.environment();
+    const cata::ui::profile profile = cata::ui::current_profile();
+    CHECK( environment.profile == profile.id );
+    CHECK( environment.input == std::string( cata::ui::input_mode_name( profile.input ) ) );
+    CHECK( environment.density == std::string( cata::ui::density_mode_name( profile.density ) ) );
+    CHECK( environment.breakpoint == std::string( cata::ui::layout_breakpoint_name(
+                profile.breakpoint_for_width( 1000.0F ) ) ) );
+    CHECK( environment.minimum_target == profile.minimum_target );
+    CHECK( environment.touch == profile.is_touch() );
+    CHECK( environment.hover == profile.allow_hover );
+    CHECK( environment.swipe_scroll == profile.allow_swipe );
+    CHECK( environment.keyboard_navigation == profile.keyboard_navigation );
+    CHECK( environment.long_press_dangerous == profile.long_press_dangerous );
     CHECK( context.supports( "progress_bar" ) );
     CHECK( context.supports( "buttons" ) );
     CHECK( context.supports( "tables" ) );
     CHECK( context.supports( "virtualization" ) );
+    CHECK( context.supports( "radial_selection" ) );
+    CHECK( context.supports( "action_slots" ) );
     CHECK_FALSE( context.supports( "text_input" ) );
     CHECK_FALSE( context.supports( "unknown" ) );
 
@@ -334,6 +398,13 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     REQUIRE( renderer.progress_overlay );
     CHECK( *renderer.progress_overlay == "75%" );
 
+    context.item_width( "normal" );
+    CHECK( renderer.item_width == cata::ui::current_profile().width_normal );
+    context.text_tone( "ready", "good" );
+    CHECK( renderer.calls.back() == "colored:ready" );
+    CHECK_THROWS_AS( context.item_width( "pixels" ), std::invalid_argument );
+    CHECK_THROWS_AS( context.text_tone( "bad tone", "purple" ), std::invalid_argument );
+
     CHECK( context.button( "apply" ) );
     CHECK_FALSE( context.small_button( "add" ) );
     CHECK_FALSE( context.checkbox( "enabled", true ) );
@@ -344,6 +415,18 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( context.input_int( "count", 5 ) == 6 );
     CHECK( context.input_float( "ratio", 0.5 ) == 1.0 );
     CHECK( context.input_text( "name", "value" ) == "value-edited" );
+    const std::vector<cata::lua_ui::script_ui_radial_option> radial_options = {
+        { "walk", "Walk", true, true },
+        { "run", "Run", true, false }
+    };
+    CHECK( context.radial_select_id( "movement", "Walk", radial_options ) == "run" );
+    CHECK( renderer.last_widget_id == "movement" );
+    const std::vector<cata::lua_ui::script_ui_action_option> action_options = {
+        { "pickup", "Pickup", true },
+        { "drop", "Drop", true }
+    };
+    CHECK( context.action_slot_id( "ground", "pickup", 4, action_options ) == "drop" );
+    CHECK( renderer.last_widget_id == "ground" );
 
     CHECK( context.button_id( "apply_action", "Apply translated" ) );
     CHECK( renderer.calls.back() == "button:apply_action:Apply translated" );
@@ -358,6 +441,19 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     context.child( "details", 120.0, [&context]() {
         context.text( "inside child" );
     } );
+    context.scroll( "semantic_scroll", "normal", [&context]() {
+        context.text( "inside semantic scroll" );
+    } );
+    context.grid( "responsive_grid", 1, 2, 3, [&context]() {
+        context.table_next_row();
+        CHECK( context.table_next_column() );
+    } );
+    const int responsive_columns =
+        profile.breakpoint_for_width( 1000.0F ) == cata::ui::layout_breakpoint::narrow ? 1 :
+        profile.breakpoint_for_width( 1000.0F ) == cata::ui::layout_breakpoint::wide ? 3 : 2;
+    CHECK( std::find( renderer.calls.begin(), renderer.calls.end(),
+                      "table_begin:responsive_grid:" +
+                      std::to_string( responsive_columns ) ) != renderer.calls.end() );
     context.table( "stats", 2, [&context]() {
         context.table_next_row();
         CHECK( context.table_next_column() );
@@ -379,10 +475,103 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     context.virtual_list( 5, 20.0, [&virtual_items]( int first, int last ) {
         virtual_items += last - first;
     } );
-    CHECK( virtual_items == 5 );
+    context.virtual_list_rows( 3, "normal", [&virtual_items]( int first, int last ) {
+        virtual_items += last - first;
+    } );
+    CHECK( virtual_items == 8 );
     CHECK_THROWS_AS( context.table( "bad", 0, []() {} ), std::invalid_argument );
     CHECK_THROWS_AS( context.virtual_list( -1, 1.0, []( int, int ) {} ),
     std::invalid_argument );
+}
+
+TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive",
+           "[lua][ui][actions][input_context]" )
+{
+    using namespace cata::input_context_actions;
+    cata::input_context_actions::clear();
+    publish( "DEFAULTMODE", "gameplay", "Gameplay", {
+        { "pickup", "Pickup", {}, false, false },
+        { "DELETE_WORLD", "Delete world", {}, false, false },
+        { "delete_character", "Delete character", {}, false, false },
+        { "ANY_INPUT", "Any input", {}, false, false },
+        { "any_input", "Any input lower case", {}, false, false }
+    } );
+    const context_snapshot first = snapshot();
+    CHECK( first.category == "DEFAULTMODE" );
+    CHECK( first.hud_scene_id == "gameplay" );
+    CHECK( first.hud_scene_title == "Gameplay" );
+    CHECK( first.revision > 0 );
+    REQUIRE( first.actions.size() == 3 );
+    CHECK_FALSE( first.actions[0].dangerous );
+    CHECK( first.actions[1].dangerous );
+    CHECK( first.actions[2].dangerous );
+    CHECK_FALSE( needs_publish(
+                     "DEFAULTMODE",
+                     "gameplay",
+                     "Gameplay",
+    { "pickup", "DELETE_WORLD", "delete_character", "ANY_INPUT", "any_input" },
+    0,
+    0 ) );
+    CHECK( needs_publish(
+               "DEFAULTMODE",
+               "gameplay",
+               "Gameplay",
+    { "pickup", "DELETE_WORLD", "delete_character", "ANY_INPUT", "any_input" },
+    0,
+    1 ) );
+    CHECK_FALSE( enqueue( "delete_character", first.revision ) );
+
+    publish( "DEFAULTMODE", "gameplay", "Gameplay", {
+        { "pickup", "Pickup", {}, false, false },
+        { "DELETE_WORLD", "Delete world", {}, false, false },
+        { "delete_character", "Delete character", {}, false, false },
+        { "ANY_INPUT", "Any input", {}, false, false },
+        { "any_input", "Any input lower case", {}, false, false }
+    } );
+    CHECK( snapshot().revision == first.revision );
+    CHECK_FALSE( enqueue( "pickup", first.revision + 1 ) );
+    CHECK_FALSE( enqueue( "DELETE_WORLD", first.revision ) );
+    CHECK( validate_candidates(
+               first.revision, { "pickup", "DELETE_WORLD", "missing" } ) ==
+           std::vector<bool> { true, true, false } );
+    REQUIRE( enqueue( "DELETE_WORLD", first.revision, true ) );
+    std::string action;
+    REQUIRE( consume( { "DELETE_WORLD" }, action ) );
+    CHECK( action == "DELETE_WORLD" );
+    CHECK( validate_candidates(
+               first.revision + 1, { "pickup" } ) ==
+           std::vector<bool> { false } );
+    REQUIRE( enqueue( "pickup", first.revision ) );
+
+    CHECK_FALSE( consume( { "inventory" }, action ) );
+    REQUIRE( enqueue( "pickup", first.revision ) );
+    REQUIRE( consume( { "pickup", "inventory" }, action ) );
+    CHECK( action == "pickup" );
+
+    for( int index = 0; index < 16; ++index ) {
+        REQUIRE( enqueue( "pickup", first.revision ) );
+    }
+    CHECK_FALSE( enqueue( "pickup", first.revision ) );
+    for( int index = 0; index < 16; ++index ) {
+        REQUIRE( consume( { "pickup" }, action ) );
+    }
+    CHECK_FALSE( has_pending() );
+
+    REQUIRE( enqueue( "pickup", first.revision ) );
+    publish( "DEFAULTMODE", "gameplay", "Gameplay", {
+        { "pickup", "Pick up", {}, false, false }
+    } );
+    CHECK( snapshot().revision != first.revision );
+    CHECK_FALSE( has_pending() );
+
+    const int action_revision = snapshot().revision;
+    publish( "UILIST", "inventory.items", "Inventory", {
+        { "CONFIRM", "Confirm", {}, false, false }
+    } );
+    CHECK( snapshot().revision != action_revision );
+    CHECK( snapshot().category == "UILIST" );
+    CHECK( snapshot().hud_scene_id == "inventory.items" );
+    cata::input_context_actions::clear();
 }
 
 TEST_CASE( "lua_module_names_stay_inside_script_roots", "[lua][ui][sandbox]" )
@@ -412,7 +601,7 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
     })json" ) );
     CHECK( base.id == "base" );
     CHECK( base.version == "1.0.0" );
-    CHECK( base.api_version == api_version );
+    CHECK( base.api_version == 2 );
     CHECK( base.has_capability( "game.read" ) );
     CHECK_FALSE( base.has_capability( "game.actions" ) );
 
@@ -422,6 +611,12 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
     })json" ) );
     CHECK_NOTHROW( validate_script_manifests( { base, extension } ) );
     CHECK_THROWS( validate_script_manifests( { extension, base } ) );
+
+    const script_manifest v3 = read_script_manifest( json_loader::from_string( R"json({
+        "id": "v3", "version": "3", "api_version": 3,
+        "capabilities": [ "ui.pages" ], "dependencies": []
+    })json" ) );
+    CHECK( v3.api_version == api_version );
 
     extension.dependencies = { "missing" };
     CHECK_THROWS( validate_script_manifests( { base, extension } ) );
@@ -434,9 +629,147 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "capabilities": [ "native.pointers" ], "dependencies": []
     })json" ) ) );
     CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
-        "id": "removed-hud", "version": "1", "api_version": 2,
+        "id": "removed-hud", "version": "1", "api_version": 3,
         "capabilities": [ "ui.hud" ], "dependencies": []
     })json" ) ) );
+}
+
+TEST_CASE( "lua_i18n_api_returns_owned_translations_and_validates_plural_counts",
+           "[lua][ui][i18n]" )
+{
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    cata::lua_ui::install_i18n_api( lua );
+
+    const sol::table i18n = lua["i18n"];
+    REQUIRE( i18n.valid() );
+
+    sol::protected_function lua_gettext = i18n["gettext"];
+    sol::protected_function_result translated = lua_gettext( "Lua UI test message" );
+    REQUIRE( translated.valid() );
+    CHECK_FALSE( translated.get<std::string>().empty() );
+
+    sol::protected_function lua_pgettext = i18n["pgettext"];
+    translated = lua_pgettext( "Lua UI test context", "Lua UI contextual message" );
+    REQUIRE( translated.valid() );
+    CHECK_FALSE( translated.get<std::string>().empty() );
+
+    sol::protected_function lua_ngettext = i18n["ngettext"];
+    translated = lua_ngettext( "Lua UI item", "Lua UI items", std::int64_t{ 2 } );
+    REQUIRE( translated.valid() );
+    CHECK_FALSE( translated.get<std::string>().empty() );
+
+    const sol::protected_function_result invalid_plural =
+        lua_ngettext( "Lua UI item", "Lua UI items", std::int64_t{ -1 } );
+    REQUIRE_FALSE( invalid_plural.valid() );
+    const sol::error plural_error = invalid_plural;
+    CHECK( std::string( plural_error.what() ).find( "cannot be negative" ) !=
+           std::string::npos );
+
+    sol::protected_function language_revision = i18n["language_revision"];
+    const sol::protected_function_result revision = language_revision();
+    REQUIRE( revision.valid() );
+    CHECK( revision.get<int>() >= 0 );
+}
+
+TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
+           "[lua][ui][navigation]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_navigation_requests();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::table );
+    sol::table ui = lua.create_named_table( "ui" );
+    bool authorized = false;
+    bool callback_active = false;
+    install_navigation_api(
+        ui,
+    [&authorized]() {
+        if( !authorized ) {
+            throw std::runtime_error( "navigation capability denied" );
+        }
+    },
+    [&callback_active]() {
+        return callback_active;
+    },
+    []( const std::string & page_id ) {
+        return page_id == "target";
+    } );
+
+    sol::protected_function open = ui["open"];
+    sol::protected_function_result result = open( "target" );
+    CHECK_FALSE( result.valid() );
+    CHECK( pending_navigation_request_count() == 0 );
+
+    authorized = true;
+    result = open( "target" );
+    CHECK_FALSE( result.valid() );
+    const sol::error inactive_error = result;
+    CHECK( std::string( inactive_error.what() ).find( "active callback" ) !=
+           std::string::npos );
+
+    callback_active = true;
+    sol::table parameters = lua.create_table();
+    parameters["boolean"] = true;
+    parameters["integer"] = static_cast<lua_Integer>( 5000000000LL );
+    parameters["float"] = 1.25;
+    parameters["string"] = "typed";
+    result = open( "target", parameters );
+    REQUIRE( result.valid() );
+    REQUIRE( pending_navigation_request_count() == 1 );
+
+    const std::optional<navigation_request> request = take_navigation_request();
+    REQUIRE( request );
+    CHECK( request->type == navigation_request_type::open_page );
+    CHECK( request->page_id == "target" );
+    CHECK( std::get<bool>( request->parameters.at( "boolean" ) ) );
+    CHECK( std::get<std::int64_t>( request->parameters.at( "integer" ) ) ==
+           5000000000LL );
+    CHECK( std::get<double>( request->parameters.at( "float" ) ) == 1.25 );
+    CHECK( std::get<std::string>( request->parameters.at( "string" ) ) ==
+           "typed" );
+
+    SECTION( "unknown pages and unsupported values are rejected before enqueue" ) {
+        result = open( "missing" );
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 0 );
+
+        sol::table invalid = lua.create_table();
+        invalid["nested"] = lua.create_table();
+        result = open( "target", invalid );
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 0 );
+
+        invalid = lua.create_table();
+        invalid["infinite"] = std::numeric_limits<double>::infinity();
+        result = open( "target", invalid );
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 0 );
+
+        invalid = lua.create_table();
+        for( int index = 0; index < 5; ++index ) {
+            invalid["value_" + std::to_string( index )] =
+                std::string( 4096, 'x' );
+        }
+        result = open( "target", invalid );
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 0 );
+    }
+
+    SECTION( "the pending queue has a hard upper bound" ) {
+        sol::protected_function back = ui["back"];
+        for( int index = 0; index < 16; ++index ) {
+            result = back();
+            REQUIRE( result.valid() );
+        }
+        CHECK( pending_navigation_request_count() == 16 );
+        result = back();
+        CHECK_FALSE( result.valid() );
+        CHECK( pending_navigation_request_count() == 16 );
+    }
+
+    clear_navigation_requests();
 }
 
 TEST_CASE( "lua_persistent_state_codec_is_typed_and_bounded", "[lua][ui][state]" )
@@ -524,7 +857,7 @@ TEST_CASE( "lua_snippets_have_an_instruction_budget", "[lua][ui][sandbox]" )
     }
 }
 
-TEST_CASE( "bundled_lua_ui_script_registers_api_v2", "[lua][ui][integration]" )
+TEST_CASE( "bundled_lua_ui_script_registers_api_v3", "[lua][ui][integration]" )
 {
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
@@ -545,6 +878,60 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v2", "[lua][ui][integration]" )
     CHECK( stopped.event_handler_count == 0 );
     CHECK( stopped.memory_used == 0 );
     CHECK( stopped.last_error.empty() );
+}
+
+TEST_CASE( "lua_event_callbacks_can_request_safe_page_navigation",
+           "[lua][ui][navigation][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "3.0.0",
+        "api_version": 3,
+        "capabilities": [ "ui.pages", "events" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+ui.page("navigation_target", "Navigation target", function(ctx, params)
+    ctx:text(params.label or "missing")
+end)
+
+local top_level_ok, top_level_error = pcall(function()
+    ui.open("navigation_target")
+end)
+assert(top_level_ok == false)
+assert(string.find(top_level_error, "active callback", 1, true) ~= nil)
+
+events.on("game_begin", function(event)
+    ui.open("navigation_target", {
+        integer = 42,
+        float = 1.25,
+        label = event.data.cdda_version
+    })
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    CHECK( pending_navigation_request_count() == 0 );
+    get_event_bus().send<event_type::game_begin>( "navigation-event" );
+    REQUIRE( pending_navigation_request_count() == 1 );
+
+    const std::optional<navigation_request> request = take_navigation_request();
+    REQUIRE( request );
+    CHECK( request->type == navigation_request_type::open_page );
+    CHECK( request->page_id == "navigation_target" );
+    CHECK( std::get<std::int64_t>( request->parameters.at( "integer" ) ) == 42 );
+    CHECK( std::get<double>( request->parameters.at( "float" ) ) == 1.25 );
+    CHECK( std::get<std::string>( request->parameters.at( "label" ) ) ==
+           "navigation-event" );
+
+    get_event_bus().send<event_type::game_begin>( "queued-before-shutdown" );
+    REQUIRE( pending_navigation_request_count() == 1 );
+    shutdown();
+    CHECK( pending_navigation_request_count() == 0 );
 }
 
 TEST_CASE( "lua_capabilities_follow_the_registering_source_into_callbacks",
@@ -568,6 +955,9 @@ assert(read_ok == false)
 assert(string.find(read_error, "game.read", 1, true) ~= nil)
 assert(pcall(function() game.actions.status() end) == false)
 assert(pcall(function() game.state_set("forbidden", true) end) == false)
+assert(pcall(function() state.character.set("forbidden", true) end) == false)
+assert(pcall(function() state.world.set("forbidden", true) end) == false)
+assert(pcall(function() state.page.set("forbidden", true) end) == false)
 assert(ui.hud == nil)
 
 events.on("game_begin", function(event)
@@ -584,18 +974,32 @@ end)
            std::string::npos );
 }
 
-TEST_CASE( "lua_pages_register_without_an_android_bridge",
+TEST_CASE( "lua_pages_use_the_platform_neutral_registry",
            "[lua][ui][renderer][integration]" )
 {
     scoped_lua_user_script script;
     script.write( R"lua(
-ui.page("registry_test", "Registry test", function(ctx)
-    ctx:text("shared page")
+ui.page("registry_test", {
+    title = "Registry test",
+    category = "tools",
+    order = 42,
+    slots = { "settings.mods", "ingame.extensions" }
+}, function(ctx)
+    ctx:text("shared ImGui page")
 end)
 )lua" );
 
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    const std::vector<cata::lua_ui::page_info> settings_pages =
+        cata::lua_ui::registered_pages( "settings.mods" );
+    REQUIRE( settings_pages.size() == 1 );
+    CHECK( settings_pages.front().id == "registry_test" );
+    CHECK( settings_pages.front().title == "Registry test" );
+    CHECK( settings_pages.front().category == "tools" );
+    CHECK( settings_pages.front().order == 42 );
+    CHECK_FALSE( cata::lua_ui::has_registered_pages( "main.extensions" ) );
+    CHECK( cata::lua_ui::has_registered_pages( "ingame.extensions" ) );
     const cata::lua_ui::runtime_status status = cata::lua_ui::status();
     CHECK( status.page_count == 1 );
     CHECK( status.callback_count == 0 );
@@ -639,9 +1043,31 @@ assert(math.type(player.stamina) == "integer")
 assert(math.type(player.stamina_max) == "integer")
 assert(type(player.kcal_percent) == "number")
 assert(type(player.bionic_power_kj) == "number")
+assert(type(player.movement_mode_id) == "string")
+assert(type(player.movement_mode_name) == "string")
+assert(type(player.desired_movement_mode_id) == "string")
+assert(type(player.desired_movement_mode_name) == "string")
+assert(type(player.movement_mode_pending) == "boolean")
 assert(math.type(player.x) == "integer")
 assert(game.player_stats().name == player.name)
 assert_plain_snapshot(player)
+
+local movement = game.movement_modes_snapshot()
+assert(type(movement.items) == "table")
+assert(math.type(movement.count) == "integer")
+assert(movement.count == #movement.items)
+assert(type(movement.current_id) == "string")
+assert(type(movement.desired_id) == "string")
+for _, mode in ipairs(movement.items) do
+    assert(type(mode.id) == "string")
+    assert(type(mode.name) == "string")
+    assert(type(mode.available) == "boolean")
+    assert(type(mode.current) == "boolean")
+    assert(type(mode.desired) == "boolean")
+    assert(math.type(mode.switch_moves) == "integer")
+    assert(type(mode.switch_seconds) == "number")
+end
+assert_plain_snapshot(movement)
 
 local clock = game.time_snapshot()
 assert(type(clock) == "table")
@@ -913,6 +1339,10 @@ events.on("game_begin", function(event)
 
     local cancel_id = game.actions.enqueue("cancel_activity")
     assert(math.type(cancel_id) == "integer")
+    local set_mode_id = game.actions.enqueue("set_move_mode", { id = "walk" })
+    assert(math.type(set_mode_id) == "integer")
+    local cycle_id = game.actions.enqueue("cycle_move_mode")
+    assert(math.type(cycle_id) == "integer")
 
     assert(pcall(function()
         game.actions.enqueue("move", { direction = "sideways" })
@@ -921,32 +1351,50 @@ events.on("game_begin", function(event)
         game.actions.enqueue("use_item", { uid = 0 })
     end) == false)
     assert(pcall(function()
+        game.actions.enqueue("set_move_mode", { id = "../run" })
+    end) == false)
+    assert(pcall(function()
         game.actions.enqueue("unknown")
     end) == false)
 
     local queued = game.actions.status(0)
-    assert(queued.pending_count == 1)
-    assert(#queued.pending == 1)
+    assert(queued.pending_count == 3)
+    assert(#queued.pending == 3)
     assert(queued.pending[1].type == "cancel_activity")
     assert(queued.pending[1].status == "queued")
+    assert(queued.pending[2].type == "set_move_mode")
+    assert(queued.pending[2].status == "queued")
+    assert(queued.pending[3].type == "cycle_move_mode")
+    assert(queued.pending[3].status == "queued")
     assert(queued.result_count == 1)
     assert(#queued.results == 0)
 end)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 
+    avatar &player = get_avatar();
+    const move_mode_id original_desired_mode = player.get_desired_move_mode();
+    player.set_desired_movement_mode( move_mode_id( "walk" ) );
+    const move_mode_id desired_mode_before = player.get_desired_move_mode();
     get_event_bus().send<event_type::game_begin>( "lua-action-test" );
     const std::optional<bool> handled = cata::lua_ui::process_next_action();
     REQUIRE( handled );
     CHECK_FALSE( *handled );
+    const std::optional<bool> set_mode = cata::lua_ui::process_next_action();
+    REQUIRE( set_mode );
+    CHECK_FALSE( *set_mode );
+    const std::optional<bool> cycled = cata::lua_ui::process_next_action();
+    REQUIRE( cycled );
+    CHECK_FALSE( *cycled );
+    CHECK( player.get_desired_move_mode() != desired_mode_before );
     CHECK_FALSE( cata::lua_ui::process_next_action() );
 
     script.write( R"lua(
 local status = game.actions.status(1000000)
 assert(status.pending_count == 0)
-assert(status.result_count == 2)
+assert(status.result_count == 4)
 assert(status.result_limit == 128)
-assert(#status.results == 2)
+assert(#status.results == 4)
 assert(status.results[1].type == "wait")
 assert(status.results[1].status == "canceled")
 assert(status.results[1].action_taken == false)
@@ -954,9 +1402,16 @@ assert(status.results[2].type == "cancel_activity")
 assert(status.results[2].status == "failed")
 assert(status.results[2].action_taken == false)
 assert(string.find(status.results[2].error, "no activity", 1, true) ~= nil)
+assert(status.results[3].type == "set_move_mode")
+assert(status.results[3].status == "succeeded")
+assert(status.results[3].action_taken == false)
+assert(status.results[4].type == "cycle_move_mode")
+assert(status.results[4].status == "succeeded")
+assert(status.results[4].action_taken == false)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 
+    player.set_desired_movement_mode( original_desired_mode );
     cata::lua_ui::shutdown();
     CHECK_FALSE( cata::lua_ui::process_next_action() );
 }
@@ -1062,6 +1517,107 @@ assert(game.state_get("persist.string", "default") == "default")
     const cata::lua_ui::runtime_status recovered = cata::lua_ui::status();
     CHECK( recovered.loaded );
     CHECK( recovered.last_error.find( "state load failed" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v3_state_scopes_are_namespaced_transactional_and_persistent",
+           "[lua][ui][state][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    REQUIRE( world_generator );
+    REQUIRE( world_generator->active_world != nullptr );
+    scoped_lua_state_file character_file;
+    scoped_lua_state_file world_file(
+        ( world_generator->active_world->folder_path() /
+          "lua_ui_world.json" ).get_unrelative_path() );
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "3.0.0",
+        "api_version": 3,
+        "capabilities": [
+            "ui.pages",
+            "events",
+            "state.character",
+            "state.world",
+            "state.page"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.state_set("shared", "v2 compatibility")
+state.character.set("shared", "character")
+state.world.set("shared", "world")
+state.character.set("integer", 5000000000)
+state.world.set("float", 1.25)
+
+local page_ok, page_error = pcall(function()
+    state.page.get("outside", "missing")
+end)
+assert(page_ok == false)
+assert(string.find(page_error, "only available while drawing a page", 1, true) ~= nil)
+
+ui.page("state_scope_page", "State scope page", function(ctx)
+    local draws = state.page.get("draws", 0)
+    state.page.set("draws", draws + 1)
+    ctx:text("state")
+end)
+
+events.on("game_begin", function(event)
+    assert(pcall(function()
+        state.page.set("outside_event", true)
+    end) == false)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "state-scope-test" );
+    REQUIRE( save_persistent_state( error ) );
+    CHECK( error.empty() );
+    REQUIRE( character_file.exists() );
+    REQUIRE( world_file.exists() );
+
+    const std::string character_json = character_file.read();
+    CHECK( character_json.find( "\"shared\"" ) != std::string::npos );
+    CHECK( character_json.find( "v3:character:4:user:shared" ) !=
+           std::string::npos );
+    CHECK( character_json.find( "v2 compatibility" ) != std::string::npos );
+    CHECK( character_json.find( "\"character\"" ) != std::string::npos );
+    const std::string world_json = world_file.read();
+    CHECK( world_json.find( "v3:world:4:user:shared" ) != std::string::npos );
+    CHECK( world_json.find( "\"world\"" ) != std::string::npos );
+
+    shutdown();
+    script.write( R"lua(
+assert(game.state_get("shared", "missing") == "v2 compatibility")
+assert(state.character.get("shared", "missing") == "character")
+assert(state.world.get("shared", "missing") == "world")
+assert(state.character.get("integer", 0) == 5000000000)
+assert(math.type(state.character.get("integer", 0)) == "integer")
+assert(state.world.get("float", 0.0) == 1.25)
+assert(math.type(state.world.get("float", 0.0)) == "float")
+)lua" );
+    on_world_ready();
+    REQUIRE( status().loaded );
+    CHECK( status().last_error.empty() );
+
+    script.write( R"lua(
+assert(state.character.get("shared", "missing") == "character")
+assert(state.world.get("shared", "missing") == "world")
+state.character.set("shared", "candidate character")
+state.world.set("shared", "candidate world")
+error("expected scoped-state transaction failure")
+)lua" );
+    CHECK_FALSE( reload_scripts( error ) );
+    CHECK( error.find( "expected scoped-state transaction failure" ) !=
+           std::string::npos );
+
+    script.write( R"lua(
+assert(state.character.get("shared", "missing") == "character")
+assert(state.world.get("shared", "missing") == "world")
+)lua" );
+    REQUIRE( reload_scripts( error ) );
 }
 
 TEST_CASE( "lua_event_payloads_are_typed_and_callbacks_are_isolated", "[lua][ui][integration]" )

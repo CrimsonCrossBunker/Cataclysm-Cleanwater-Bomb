@@ -32,9 +32,7 @@ class main_menu
         std::vector<std::string> mmenu_title;
         std::string mmenu_motd;
         std::string mmenu_credits;
-        int mmenu_motd_len;
-        int mmenu_credits_len;
-        std::vector<std::string> vMenuItems; // MOTD, New Game, Load Game, etc.
+        std::vector<std::string> vMenuItems; // New Game, Load Game, Settings, etc.
         std::vector<std::string> vWorldSubItems;
         std::vector<std::string> vNewGameSubItems;
         std::vector<std::string> vNewGameHints;
@@ -44,6 +42,8 @@ class main_menu
         std::vector< std::vector<std::string> > vCoopHotkeys;
         std::vector<std::string> vSettingsSubItems;
         std::vector< std::vector<std::string> > vSettingsHotkeys;
+        std::vector<std::string> vOtherSubItems;
+        std::vector< std::vector<std::string> > vOtherHotkeys;
         std::vector< std::vector<std::string> > vMenuHotkeys; // hotkeys for the vMenuItems
         std::string vdaytip; //tip of the day
 
@@ -79,8 +79,8 @@ class main_menu
         // These variables are shared between @opening_screen and the tab functions.
         // TODO: But this is an ugly short-term solution.
         input_context ctxt;
-        int sel1 = 1;
-        int sel2 = 1;
+        int sel1 = 0;
+        int sel2 = 0;
         size_t last_world_pos = 0;
         int sub_opt_off = 0;
         point LAST_TERM;
@@ -117,6 +117,8 @@ class main_menu
         void print_menu( const catacurses::window &w_open, int iSel, const point &offset, int sel_line );
 
         void display_text( const std::string &text, const std::string &title, int &selected );
+        void show_text( const std::string &text, const std::string &title );
+        bool start_tutorial();
 
         void display_sub_menu( int sel, const point &bottom_left, int sel_line );
 
@@ -131,4 +133,3 @@ class main_menu
 };
 
 #endif // CATA_SRC_MAIN_MENU_H
-

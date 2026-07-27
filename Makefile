@@ -1121,8 +1121,10 @@ LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_ui.cpp \
   $(SRC_DIR)/catalua_ui_actions.cpp \
   $(SRC_DIR)/catalua_ui_game.cpp \
+  $(SRC_DIR)/catalua_ui_i18n.cpp \
   $(SRC_DIR)/catalua_ui_imgui.cpp \
   $(SRC_DIR)/catalua_ui_manifest.cpp \
+  $(SRC_DIR)/catalua_ui_navigation.cpp \
   $(SRC_DIR)/catalua_ui_renderer.cpp \
   $(SRC_DIR)/catalua_ui_state.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)

@@ -126,6 +126,7 @@
 #if defined(__ANDROID__)
     #include <jni.h>
 
+    #include "android_native_ui.h"
     #include "sdl_wrappers.h"
 #endif
 
@@ -2617,7 +2618,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
     // touching map/terrain or movement-mode state; the main-menu path can be
     // entered while those world objects are not ready for a regular action.
     if( act == ACTION_MANAGE_ANDROID_EXTRA_BUTTONS ) {
-        manage_android_buttons();
+        if( android_ui_mode::is_new_ui_build() ) {
+            android_native_ui::show_android_hud_manager();
+        } else {
+            manage_android_buttons();
+        }
         return false;
     }
 #endif
@@ -4361,6 +4366,9 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 bool game::handle_action()
 {
     if constexpr( cata::lua_ui::is_enabled() ) {
+        if( cata::lua_ui::process_pending_navigation() ) {
+            return false;
+        }
         if( const std::optional<bool> lua_action = cata::lua_ui::process_next_action() ) {
             return *lua_action;
         }

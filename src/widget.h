@@ -4,9 +4,11 @@
 
 #include <climits>
 #include <functional>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -165,6 +167,35 @@ struct enum_traits<widget_alignment> {
     static constexpr widget_alignment last = widget_alignment::num_widget_alignments;
 };
 
+/**
+ * Immutable, per-render formatting for Android HUD Widget trees.
+ *
+ * Paths are made from widget ids plus a sibling occurrence suffix, for example
+ * "thick_side_by_side@0/thick_rs_column@0/ll_movement_layout@0".  Keeping the
+ * overrides outside widget objects lets the same Widget participate in
+ * several sidebar layouts without inherited fields leaking between them.
+ */
+enum class widget_hud_layout_mode : int {
+    original,
+    custom,
+    loose
+};
+
+struct widget_hud_node_override {
+    std::optional<int> width_columns;
+    std::optional<int> label_columns;
+    std::optional<int> gap_columns;
+    std::optional<std::string> separator;
+};
+
+struct widget_hud_layout {
+    widget_hud_layout_mode mode = widget_hud_layout_mode::original;
+    unsigned int columns = 0;
+    std::string inherited_separator = ": ";
+    int inherited_padding = 2;
+    std::unordered_map<std::string, widget_hud_node_override> node_overrides;
+};
+
 // Use generic_factory for loading JSON data.
 class JsonObject;
 class widget;
@@ -244,11 +275,43 @@ class widget
         friend class generic_factory<widget>;
         friend struct mod_tracker;
 
+        struct label_layout_override {
+            int label_width = -1;
+            int separator_width = -1;
+            std::string inherited_separator;
+            int inherited_padding = -1;
+            const widget_hud_layout *hud_layout = nullptr;
+
+            bool enabled() const {
+                return label_width >= 0;
+            }
+
+            bool has_inherited_context() const {
+                return inherited_padding >= 0 || hud_layout != nullptr;
+            }
+
+            bool has_hud_layout() const {
+                return hud_layout != nullptr;
+            }
+        };
+
         widget_id id;
         std::vector<std::pair<widget_id, mod_id>> src;
         bool was_loaded = false;
         const widget_clause *get_clause( const std::string &clause_id = "" ) const;
         std::vector<const widget_clause *> get_clauses() const;
+        int maximum_separator_width( std::set<widget_id> &visited,
+                                     const label_layout_override &label_override ) const;
+        int natural_label_width( std::set<widget_id> &visited ) const;
+        int contextual_label_width( std::set<std::string> &visited,
+                                    const label_layout_override &label_override,
+                                    const std::string &node_path ) const;
+        std::string layout_internal( const avatar &ava, unsigned int max_width,
+                                     int label_width, bool skip_pad,
+                                     const label_layout_override &label_override,
+                                     const std::string &node_path = "",
+                                     const std::string &inherited_separator = "",
+                                     int inherited_padding = -1 );
 
     public:
         widget() = default;
@@ -345,6 +408,27 @@ class widget
         // label area, so the returned string is equal to max_width.
         std::string layout( const avatar &ava, unsigned int max_width = 0, int label_width = 0,
                             bool skip_pad = false );
+        // Layout with one explicit label-column width and one shared separator
+        // slot applied recursively to padded, labeled descendants.  Widgets
+        // marked W_LABEL_NONE and W_NO_PADDING keep their original behavior.
+        std::string layout_with_label_width( const avatar &ava, unsigned int max_width,
+                                             int label_width, bool skip_pad = false );
+        // Render one widget subtree with an immutable sidebar-formatting
+        // context.  Unlike widget::finalize(), this does not write inherited
+        // separator, padding or translated label widths into global widgets.
+        // A negative label_width derives one shared width from the current
+        // translated labels in this subtree.
+        std::string layout_for_hud( const avatar &ava, unsigned int max_width,
+                                    int label_width = -1,
+                                    const std::string &label_separator = ": ",
+                                    int column_padding = 2,
+                                    bool skip_pad = false );
+        // Render using a complete, immutable sidebar/custom/loose layout.
+        std::string layout_for_hud( const avatar &ava,
+                                    const widget_hud_layout &layout );
+        // All statically reachable layout children, including conditional
+        // branches.  Used by the Android node-layout editor.
+        std::vector<widget_id> all_layout_children() const;
         // Display labeled widget, with value (number, graph, or string) from an avatar
         std::string show( const avatar &ava, unsigned int max_width );
         // Return a window_panel for rendering this widget at given width (and possibly height)
@@ -411,4 +495,3 @@ std::string format_widget_multiline( const std::vector<std::string> &keys, int m
                                      int width, int &height, bool join = false );
 
 #endif // CATA_SRC_WIDGET_H
-

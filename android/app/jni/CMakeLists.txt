@@ -44,7 +44,7 @@ list(REMOVE_DUPLICATES _sdl3_subdir_inc)
 
 add_subdirectory(${CATA_REPO_ROOT}/src/third-party third-party)
 
-file(GLOB CATA_SOURCES ${CATA_REPO_ROOT}/src/*.cpp
+file(GLOB CATA_SOURCES CONFIGURE_DEPENDS ${CATA_REPO_ROOT}/src/*.cpp
      ${CATA_REPO_ROOT}/src/cata_allocator_c.c)
 
 option(CCB_ANDROID_NEW_UI
@@ -56,8 +56,10 @@ set(
   ${CATA_REPO_ROOT}/src/catalua_ui.cpp
   ${CATA_REPO_ROOT}/src/catalua_ui_actions.cpp
   ${CATA_REPO_ROOT}/src/catalua_ui_game.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_i18n.cpp
   ${CATA_REPO_ROOT}/src/catalua_ui_imgui.cpp
   ${CATA_REPO_ROOT}/src/catalua_ui_manifest.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_navigation.cpp
   ${CATA_REPO_ROOT}/src/catalua_ui_renderer.cpp
   ${CATA_REPO_ROOT}/src/catalua_ui_state.cpp)
 if(CATA_ENABLE_LUA_UI)

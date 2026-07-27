@@ -76,7 +76,7 @@ final class AndroidHudManagerDialog {
             plan = repository.inspectImport(raw);
         } catch (JSONException error) {
             Toast.makeText(activity,
-                "无法导入：仅支持经过校验的 schema 4 HUD JSON",
+                "无法导入：仅支持经过校验的 schema 4/5/6 HUD JSON",
                 Toast.LENGTH_LONG).show();
             return;
         }
@@ -95,7 +95,7 @@ final class AndroidHudManagerDialog {
                 .show();
             return;
         }
-        String[] actions = { "合并：保留本机布局", "整体替换：删除当前 schema 4 布局" };
+        String[] actions = { "合并：保留本机布局", "整体替换：删除当前 schema 5 布局" };
         new AlertDialog.Builder(activity)
             .setTitle("整包导入预览")
             .setMessage(summary)
@@ -146,6 +146,20 @@ final class AndroidHudManagerDialog {
         duplicate.setOnClickListener(view -> createLayout(scene.id, true));
         create.addView(duplicate, weighted());
         content.addView(create, row());
+        if (AndroidHudOfficialTemplates.forScene(scene.id) != null) {
+            Button official = touchButton("＋ 从官方 CCB 信息模板创建");
+            official.setOnClickListener(view -> {
+                AndroidHudModel.Layout created =
+                    repository.createOfficialLayout(scene.id);
+                if (created == null) {
+                    Toast.makeText(activity, "无法创建官方模板",
+                        Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                overlay.editLayout(scene.id, created.id);
+            });
+            content.addView(official, row());
+        }
 
         show("布局 · " + scene.title, content, (dialog, which) -> showScenes());
     }
@@ -259,7 +273,7 @@ final class AndroidHudManagerDialog {
     private void confirmReplace(AndroidHudRepository.ImportPlan plan) {
         new AlertDialog.Builder(activity)
             .setTitle("整体替换当前 HUD？")
-            .setMessage("当前 schema 4 的全部场景与布局会被导入包替换。旧 v1–v3 归档不会受影响。")
+            .setMessage("当前 schema 5 的全部场景与布局会被导入包替换。旧布局归档不会受影响。")
             .setPositiveButton("确认替换", (dialog, which) ->
                 applyImport(plan, AndroidHudRepository.ImportMode.REPLACE))
             .setNegativeButton("取消", null)

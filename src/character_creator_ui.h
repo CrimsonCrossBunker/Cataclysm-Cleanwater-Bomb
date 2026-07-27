@@ -1,4 +1,5 @@
 #include <array>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -239,7 +240,8 @@ std::string get_gender_string( bool male );
 
 const mutation_variant *variant_trait_selection_menu( const trait_id &cur_trait );
 
-void draw_character_stats( const Character &who, bool draw_effective_stats );
+void draw_character_stats( const Character &who, bool draw_effective_stats,
+                           const std::function<void()> &draw_description = {} );
 void draw_character_skills( const Character &who );
 void draw_starting_vehicle( const Character &who );
 void draw_character_proficiencies( const Character &who );

@@ -32,6 +32,7 @@ class help
                                                int selected, std::map<int, input_event> &hotkeys ) const;
         static std::string get_note_colors();
         static std::string get_dir_grid();
+        std::string format_help_topic( const std::vector<translation> &messages ) const;
         // Modifier for each mods order
         int current_order_start = 0;
         std::string current_src;

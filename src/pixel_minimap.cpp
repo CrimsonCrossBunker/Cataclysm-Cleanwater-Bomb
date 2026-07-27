@@ -423,26 +423,32 @@ bool pixel_minimap::process_cache( const tripoint_bub_ms &center )
     return chunks_repainted;
 }
 
-void pixel_minimap::set_screen_rect( const SDL_Rect &screen_rect )
+void pixel_minimap::set_screen_rect( const SDL_Rect &screen_rect,
+                                     const bool force_scale_to_fit )
 {
-    if( this->screen_rect == screen_rect && main_tex && tex_pool && projector ) {
+    if( this->screen_rect == screen_rect &&
+        forced_scale_to_fit == force_scale_to_fit &&
+        main_tex && tex_pool && projector ) {
         return;
     }
 
     this->screen_rect = screen_rect;
+    forced_scale_to_fit = force_scale_to_fit;
 
     projector = create_projector( screen_rect );
     pixel_size = get_pixel_size( projector->get_tile_size(), settings.mode );
 
     const point size_on_screen = projector->get_tiles_size( total_tiles_count );
 
-    if( settings.scale_to_fit ) {
+    if( settings.scale_to_fit || forced_scale_to_fit ) {
         main_tex_clip_rect = SDL_Rect{ 0, 0, size_on_screen.x, size_on_screen.y };
-        screen_clip_rect = fit_rect_inside( main_tex_clip_rect, screen_rect );
+        screen_clip_rect = forced_scale_to_fit ?
+                           screen_rect : fit_rect_inside( main_tex_clip_rect, screen_rect );
 
         main_tex = create_cache_texture( renderer, size_on_screen.x, size_on_screen.y );
-        // This texture is scaled to fit the screen; use linear filtering for smooth presentation.
-        SetTextureScaleQuality( main_tex, "linear" );
+        // HUD frames must be filled exactly while retaining a crisp cell grid.
+        // The regular option keeps its historical smooth scaling behavior.
+        SetTextureScaleQuality( main_tex, forced_scale_to_fit ? "nearest" : "linear" );
 
     } else {
         const point d( ( size_on_screen.x - screen_rect.w ) / 2, ( size_on_screen.y - screen_rect.h ) / 2 );
@@ -678,7 +684,8 @@ std::vector<pixel_minimap::beacon> pixel_minimap::collect_critter_beacons(
 }
 
 //the main call for drawing the pixel minimap to the screen
-void pixel_minimap::draw( const SDL_Rect &screen_rect, const tripoint_bub_ms &center )
+void pixel_minimap::draw( const SDL_Rect &screen_rect, const tripoint_bub_ms &center,
+                          const bool force_scale_to_fit )
 {
     if( !g ) {
         return;
@@ -688,7 +695,7 @@ void pixel_minimap::draw( const SDL_Rect &screen_rect, const tripoint_bub_ms &ce
         return;
     }
 
-    set_screen_rect( screen_rect );
+    set_screen_rect( screen_rect, force_scale_to_fit );
     const bool chunks_repainted = process_cache( center );
     render( center, chunks_repainted );
 }

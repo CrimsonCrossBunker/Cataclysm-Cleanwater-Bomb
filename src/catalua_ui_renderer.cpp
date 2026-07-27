@@ -1,6 +1,9 @@
 #include "catalua_ui_renderer.h"
 
 #include <stdexcept>
+#include <unordered_set>
+
+#include "ui_profile.h"
 
 namespace cata::lua_ui
 {
@@ -40,6 +43,10 @@ script_ui_capability capability_from_name( std::string_view name )
         return script_ui_capability::tooltips;
     } else if( name == "virtualization" ) {
         return script_ui_capability::virtualization;
+    } else if( name == "radial_selection" ) {
+        return script_ui_capability::radial_selection;
+    } else if( name == "action_slots" ) {
+        return script_ui_capability::action_slots;
     }
     return static_cast<script_ui_capability>( 0 );
 }
@@ -50,6 +57,11 @@ bool script_ui_renderer_info::supports( script_ui_capability capability ) const
 {
     const std::uint32_t mask = static_cast<std::uint32_t>( capability );
     return mask != 0 && ( capabilities & mask ) == mask;
+}
+
+script_ui_context::script_ui_context( script_ui_renderer &renderer ) :
+    renderer_( renderer ), profile_( cata::ui::current_profile() )
+{
 }
 
 std::string script_ui_context::backend() const
@@ -75,6 +87,27 @@ bool script_ui_context::is_immediate_mode() const
 bool script_ui_context::uses_native_widgets() const
 {
     return renderer_.info().native_widgets;
+}
+
+script_ui_environment script_ui_context::environment() const
+{
+    return {
+        profile_.id,
+        std::string( cata::ui::input_mode_name( profile_.input ) ),
+        std::string( cata::ui::density_mode_name( profile_.density ) ),
+        std::string( cata::ui::layout_breakpoint_name(
+                         profile_.breakpoint_for_width(
+                             static_cast<float>( renderer_.available_width() ) ) ) ),
+        profile_.minimum_target,
+        profile_.is_touch(),
+        profile_.allow_hover,
+        profile_.allow_swipe,
+        profile_.native_text_input,
+        profile_.keyboard_navigation,
+        profile_.pointer_activation,
+        profile_.tap_activation,
+        profile_.long_press_dangerous
+    };
 }
 
 void script_ui_context::text( const std::string &value ) const
@@ -103,6 +136,26 @@ void script_ui_context::text_colored( const std::string &value, double red, doub
     renderer_.text_colored( value, red, green, blue, alpha );
 }
 
+void script_ui_context::text_tone( const std::string &value, const std::string &tone ) const
+{
+    if( tone == "normal" ) {
+        renderer_.text( value );
+    } else if( tone == "muted" ) {
+        renderer_.disabled_text( value );
+    } else if( tone == "good" ) {
+        renderer_.text_colored( value, 0.30, 0.85, 0.42, 1.0 );
+    } else if( tone == "warning" ) {
+        renderer_.text_colored( value, 1.0, 0.70, 0.20, 1.0 );
+    } else if( tone == "bad" ) {
+        renderer_.text_colored( value, 1.0, 0.32, 0.28, 1.0 );
+    } else if( tone == "info" ) {
+        renderer_.text_colored( value, 0.35, 0.72, 1.0, 1.0 );
+    } else {
+        throw std::invalid_argument(
+            "ctx:text_tone tone must be normal, muted, good, warning, bad, or info" );
+    }
+}
+
 void script_ui_context::separator() const
 {
     renderer_.separator();
@@ -126,6 +179,16 @@ void script_ui_context::spacing() const
 void script_ui_context::set_next_item_width( double width ) const
 {
     renderer_.set_next_item_width( width );
+}
+
+void script_ui_context::item_width( const std::string &token ) const
+{
+    cata::ui::size_token parsed;
+    if( !cata::ui::size_token_from_name( token, parsed ) ) {
+        throw std::invalid_argument(
+            "ctx:item_width token must be compact, normal, wide, or fill" );
+    }
+    renderer_.set_next_item_width( profile_.item_width( parsed ) );
 }
 
 void script_ui_context::progress_bar( double fraction,
@@ -245,6 +308,45 @@ std::string script_ui_context::input_text_id( const std::string &id, const std::
     return renderer_.input_text( id, label, value );
 }
 
+std::string script_ui_context::radial_select_id(
+    const std::string &id, const std::string &center_label,
+    const std::vector<script_ui_radial_option> &options ) const
+{
+    if( id.empty() || center_label.empty() || options.empty() || options.size() > 8 ) {
+        throw std::invalid_argument(
+            "ctx:radial_select_id requires an id, center label, and 1..8 options" );
+    }
+    std::unordered_set<std::string> option_ids;
+    for( const script_ui_radial_option &option : options ) {
+        if( option.id.empty() || option.label.empty() || option.id.size() > 64 ||
+            !option_ids.insert( option.id ).second ) {
+            throw std::invalid_argument(
+                "ctx:radial_select_id option ids must be unique, non-empty, and at most 64 bytes" );
+        }
+    }
+    return renderer_.radial_select( id, center_label, options );
+}
+
+std::string script_ui_context::action_slot_id(
+    const std::string &id, const std::string &selected_action,
+    const int context_revision, const std::vector<script_ui_action_option> &options ) const
+{
+    if( id.empty() || id.size() > 128 || context_revision < 0 || options.size() > 16 ) {
+        throw std::invalid_argument(
+            "ctx:action_slot_id requires a 1..128 byte id, a non-negative context revision, "
+            "and at most 16 options" );
+    }
+    std::unordered_set<std::string> option_ids;
+    for( const script_ui_action_option &option : options ) {
+        if( option.id.empty() || option.label.empty() || option.id.size() > 64 ||
+            !option_ids.insert( option.id ).second ) {
+            throw std::invalid_argument(
+                "ctx:action_slot_id option ids must be unique, non-empty, and at most 64 bytes" );
+        }
+    }
+    return renderer_.action_slot( id, selected_action, context_revision, options );
+}
+
 void script_ui_context::child( const std::string &id, double height,
                                const std::function<void()> &draw ) const
 {
@@ -254,6 +356,17 @@ void script_ui_context::child( const std::string &id, double height,
     renderer_.child( id, height, draw );
 }
 
+void script_ui_context::scroll( const std::string &id, const std::string &height_token,
+                                const std::function<void()> &draw ) const
+{
+    cata::ui::size_token parsed;
+    if( !cata::ui::size_token_from_name( height_token, parsed ) ) {
+        throw std::invalid_argument(
+            "ctx:scroll height token must be compact, normal, wide, or fill" );
+    }
+    child( id, profile_.panel_height( parsed ), draw );
+}
+
 void script_ui_context::table( const std::string &id, int columns,
                                const std::function<void()> &draw ) const
 {
@@ -261,6 +374,31 @@ void script_ui_context::table( const std::string &id, int columns,
         throw std::invalid_argument( "ctx:table requires an id, 1..64 columns, and callback" );
     }
     renderer_.table( id, columns, draw );
+}
+
+void script_ui_context::grid( const std::string &id, const int narrow_columns,
+                              const int regular_columns, const int wide_columns,
+                              const std::function<void()> &draw ) const
+{
+    if( narrow_columns < 1 || narrow_columns > 64 ||
+        regular_columns < 1 || regular_columns > 64 ||
+        wide_columns < 1 || wide_columns > 64 ) {
+        throw std::invalid_argument( "ctx:grid requires three column counts in the range 1..64" );
+    }
+    int columns = regular_columns;
+    switch( profile_.breakpoint_for_width(
+                static_cast<float>( renderer_.available_width() ) ) ) {
+        case cata::ui::layout_breakpoint::narrow:
+            columns = narrow_columns;
+            break;
+        case cata::ui::layout_breakpoint::regular:
+            columns = regular_columns;
+            break;
+        case cata::ui::layout_breakpoint::wide:
+            columns = wide_columns;
+            break;
+    }
+    table( id, columns, draw );
 }
 
 void script_ui_context::table_next_row() const
@@ -321,6 +459,19 @@ void script_ui_context::virtual_list( int item_count, double item_height,
             "ctx:virtual_list requires 0..1000000 items, positive height, and callback" );
     }
     renderer_.virtual_list( item_count, item_height, draw_range );
+}
+
+void script_ui_context::virtual_list_rows(
+    const int item_count, const std::string &row_token,
+    const std::function<void( int, int )> &draw_range ) const
+{
+    cata::ui::size_token parsed;
+    if( !cata::ui::size_token_from_name( row_token, parsed ) ||
+        parsed == cata::ui::size_token::fill ) {
+        throw std::invalid_argument(
+            "ctx:virtual_list_rows token must be compact, normal, or wide" );
+    }
+    virtual_list( item_count, profile_.row_height( parsed ), draw_range );
 }
 
 } // namespace cata::lua_ui

@@ -1,6 +1,7 @@
 package com.crimsoncrossbunker.cataclysmcb;
 
 import org.libsdl.app.SDLActivity;
+import org.libsdl.app.CleanwaterDummyEdit;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -134,6 +135,10 @@ public class CataclysmDDA extends SDLActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (mLayout != null) {
+            if (AndroidUiMode.isNewUiBuild()) {
+                mTextEdit = new CleanwaterDummyEdit(this);
+                mLayout.addView(mTextEdit, new RelativeLayout.LayoutParams(0, 0));
+            }
             mLayout.setVisibility(View.INVISIBLE);
         }
         setImeInsetListener();
@@ -152,6 +157,7 @@ public class CataclysmDDA extends SDLActivity {
         if (AndroidUiMode.isNewUiBuild() && hudOverlay != null) {
             hudOverlay.start();
         }
+        requestDisplayRefresh();
     }
 
     @Override
@@ -167,6 +173,7 @@ public class CataclysmDDA extends SDLActivity {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
             applySystemUiMode();
+            requestDisplayRefresh();
         }
     }
 
@@ -298,10 +305,23 @@ public class CataclysmDDA extends SDLActivity {
 
     private static native boolean nativeEnqueueHudAction(String actionId, int contextRevision,
         boolean dangerousAuthorized);
-    private static native String nativeGetHudSnapshot();
+    private static native String nativeGetHudSnapshot(int knownCatalogRevision);
+    private static native String nativeGetHudLayoutSchema(String sourceId);
     private static native void nativeSetHudMinimapRect(int x, int y, int width, int height,
-        boolean visible);
+        int viewportWidth, int viewportHeight, boolean visible);
     private static native void nativeSetHudSubscriptions(String encodedSources);
+    private static native void nativeRequestDisplayRefresh();
+
+    private void requestDisplayRefresh() {
+        if (!AndroidUiMode.isNewUiBuild()) {
+            return;
+        }
+        try {
+            nativeRequestDisplayRefresh();
+        } catch (UnsatisfiedLinkError ignored) {
+            // Activity callbacks can run before libmain has finished loading.
+        }
+    }
 
     private void installAndroidHudOverlay() {
         if (!AndroidUiMode.isNewUiBuild() || mLayout == null || hudOverlay != null) {
@@ -321,17 +341,27 @@ public class CataclysmDDA extends SDLActivity {
         }
     }
 
-    String getHudSnapshot() {
+    String getHudSnapshot(int knownCatalogRevision) {
         try {
-            return nativeGetHudSnapshot();
+            return nativeGetHudSnapshot(knownCatalogRevision);
         } catch (UnsatisfiedLinkError e) {
             return "";
         }
     }
 
-    void setHudMinimapRect(int x, int y, int width, int height, boolean visible) {
+    String getHudLayoutSchema(String sourceId) {
         try {
-            nativeSetHudMinimapRect(x, y, width, height, visible);
+            return nativeGetHudLayoutSchema(sourceId == null ? "" : sourceId);
+        } catch (UnsatisfiedLinkError e) {
+            return "";
+        }
+    }
+
+    void setHudMinimapRect(int x, int y, int width, int height,
+            int viewportWidth, int viewportHeight, boolean visible) {
+        try {
+            nativeSetHudMinimapRect(x, y, width, height,
+                viewportWidth, viewportHeight, visible);
         } catch (UnsatisfiedLinkError ignored) {
         }
     }
@@ -339,6 +369,7 @@ public class CataclysmDDA extends SDLActivity {
     void setHudSubscriptions(String encodedSources) {
         try {
             nativeSetHudSubscriptions(encodedSources == null ? "" : encodedSources);
+            requestDisplayRefresh();
         } catch (UnsatisfiedLinkError ignored) {
         }
     }
@@ -516,6 +547,7 @@ public class CataclysmDDA extends SDLActivity {
                     } else {
                         reloadPlayButtons();
                     }
+                    requestDisplayRefresh();
                 }
             });
         } catch(Exception e) {

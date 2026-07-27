@@ -1365,7 +1365,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 // tint overlay. We do this before the layer loop so that:
                 //   (a) we can skip bounds/sprite tracking for tiles that won't be tinted,
                 //   (b) the overlay pass later can iterate only tinted tiles.
-                auto &row_points = here.draw_points_cache.tiles[cur_zlevel][row];
+                draw_points_cache_t::row_vec &row_points =
+                    here.draw_points_cache.tiles[cur_zlevel][row];
                 row_sprites.clear();
                 row_tinted.clear();
                 if( row_sprites.capacity() < row_points.size() ) {
@@ -1985,10 +1986,10 @@ void cata_tiles::set_draw_cache_dirty()
 }
 
 void cata_tiles::draw_minimap( const point &dest, const tripoint_bub_ms &center, int width,
-                               int height )
+                               int height, const bool force_scale_to_fit )
 {
     minimap->set_type( is_isometric() ? pixel_minimap_type::iso : pixel_minimap_type::ortho );
-    minimap->draw( SDL_Rect{ dest.x, dest.y, width, height }, center );
+    minimap->draw( SDL_Rect{ dest.x, dest.y, width, height }, center, force_scale_to_fit );
 }
 
 bool cata_tiles::has_blinking_minimap() const

@@ -79,6 +79,478 @@ public class AndroidHudModelTest {
     }
 
     @Test
+    public void informationActionBindingsAreDetachedInDraft() {
+        AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
+        info.sourceId = "character.summary";
+        info.actionIds.add("INVENTORY");
+        info.actionIds.add("PLAYER_INFO");
+        info.actionIds.add("ITEMACTION");
+        info.authorizedDangerousActions.add("ITEMACTION");
+
+        AndroidHudModel.Element draft = info.copy();
+        draft.actionIds.remove("PLAYER_INFO");
+        draft.authorizedDangerousActions.clear();
+
+        assertEquals(3, info.actionIds.size());
+        assertEquals(2, draft.actionIds.size());
+        assertTrue(info.authorizedDangerousActions.contains("ITEMACTION"));
+        assertFalse(draft.authorizedDangerousActions.contains("ITEMACTION"));
+        assertTrue(AndroidHudModel.supportsActionBinding(info));
+        assertTrue(AndroidHudModel.shouldEncodeActionBinding(info));
+    }
+
+    @Test
+    public void informationWithoutActionsKeepsJsonCompact() {
+        AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
+        info.sourceId = "environment.summary";
+
+        assertFalse(AndroidHudModel.shouldEncodeActionBinding(info));
+        info.actionIds.add("INVENTORY");
+        assertTrue(AndroidHudModel.shouldEncodeActionBinding(info));
+    }
+
+    @Test
+    public void typedInformationFormattingSurvivesSchemaSixRoundTrip() throws Exception {
+        AndroidHudModel.Layout layout = new AndroidHudModel.Layout();
+        layout.id = "layout.test";
+        AndroidHudModel.Element info = element(
+            "info.widget", AndroidHudModel.TYPE_INFO);
+        info.sourceId =
+            "sidebar.legacy_labels_sidebar.group.ll_place_layout.0";
+        info.infoPresentation.layoutMode =
+            AndroidHudModel.INFO_LAYOUT_CUSTOM;
+        info.infoPresentation.columns = 42;
+        AndroidHudModel.NodeOverride override =
+            new AndroidHudModel.NodeOverride();
+        override.path = "ll_place_layout@0";
+        override.labelColumns = 6;
+        info.infoPresentation.nodeOverrides.add(override);
+        info.infoPresentation.appearanceMode =
+            AndroidHudModel.INFO_APPEARANCE_CUSTOM;
+        layout.elements.add(info);
+
+        AndroidHudModel.Element restored =
+            AndroidHudModel.Layout.fromJson(layout.toJson()).find("info.widget");
+
+        assertEquals(42, restored.infoPresentation.columns);
+        assertEquals(AndroidHudModel.INFO_LAYOUT_CUSTOM,
+            restored.infoPresentation.layoutMode);
+        assertEquals(6, restored.infoPresentation.nodeOverrides
+            .get(0).labelColumns.intValue());
+        assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
+            restored.infoPresentation.appearanceMode);
+        assertFalse(layout.toJson().getJSONArray("elements").getJSONObject(0)
+            .has("providerSettings"));
+    }
+
+    @Test
+    public void schemaFourPackageMigratesAndRoundTripsAsSchemaSix() throws Exception {
+        org.json.JSONObject legacy = new org.json.JSONObject(
+            "{\"format\":\"cataclysm-android-hud\",\"kind\":\"package\"," +
+            "\"schema\":4,\"scenes\":[{\"id\":\"gameplay.map\"," +
+            "\"title\":\"Gameplay\",\"activeLayoutId\":\"layout.test\"," +
+            "\"lastKnownActions\":[],\"layouts\":[{" +
+            "\"id\":\"layout.test\",\"name\":\"Legacy\",\"elements\":[{" +
+            "\"id\":\"info.widget\",\"type\":\"info\"," +
+            "\"sourceId\":\"widget.ll_movement_layout\"," +
+            "\"providerSettings\":{\"layoutColumns\":\"36\"," +
+            "\"labelColumns\":\"4\",\"terminalGrid\":\"false\"}," +
+            "\"frame\":{\"x\":0,\"y\":0,\"width\":300,\"height\":100}," +
+            "\"style\":{\"sourceColors\":false}}]}]}]}");
+
+        AndroidHudModel.PackageData migrated =
+            AndroidHudModel.PackageData.fromJson(legacy);
+        AndroidHudModel.Element restored = migrated.scenes.get("gameplay.map")
+            .activeLayout().find("info.widget");
+
+        assertEquals("sidebar.legacy_labels_sidebar.group." +
+            "ll_movement_layout.0", restored.sourceId);
+        assertEquals(36, restored.infoPresentation.columns);
+        assertEquals(AndroidHudModel.INFO_LAYOUT_CUSTOM,
+            restored.infoPresentation.layoutMode);
+        assertEquals("ll_movement_layout@0",
+            restored.infoPresentation.nodeOverrides.get(0).path);
+        assertEquals(4, restored.infoPresentation.nodeOverrides
+            .get(0).labelColumns.intValue());
+        assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
+            restored.infoPresentation.appearanceMode);
+
+        org.json.JSONObject schemaSix = migrated.toJson();
+        org.json.JSONObject encodedInfo = schemaSix.getJSONArray("scenes")
+            .getJSONObject(0).getJSONArray("layouts").getJSONObject(0)
+            .getJSONArray("elements").getJSONObject(0);
+        assertEquals(AndroidHudModel.SCHEMA, schemaSix.getInt("schema"));
+        assertFalse(encodedInfo.has("providerSettings"));
+        assertTrue(encodedInfo.has("info"));
+
+        AndroidHudModel.Element roundTripped =
+            AndroidHudModel.PackageData.fromJson(schemaSix)
+                .scenes.get("gameplay.map").activeLayout().find("info.widget");
+        assertEquals(36, roundTripped.infoPresentation.columns);
+        assertEquals(4, roundTripped.infoPresentation.nodeOverrides
+            .get(0).labelColumns.intValue());
+        assertEquals(AndroidHudModel.INFO_APPEARANCE_CUSTOM,
+            roundTripped.infoPresentation.appearanceMode);
+    }
+
+    @Test
+    public void schemaSixRawWidgetIdIsNeverRewritten() throws Exception {
+        org.json.JSONObject encoded = new org.json.JSONObject(
+            "{\"format\":\"cataclysm-android-hud\",\"kind\":\"package\"," +
+            "\"schema\":6,\"scenes\":[{\"id\":\"gameplay.map\"," +
+            "\"activeLayoutId\":\"layout.test\",\"layouts\":[{" +
+            "\"id\":\"layout.test\",\"elements\":[{" +
+            "\"id\":\"info.raw\",\"type\":\"info\"," +
+            "\"sourceId\":\"widget.ll_movement_layout\"," +
+            "\"frame\":{\"x\":0,\"y\":0,\"width\":300,\"height\":100}" +
+            "}]}]}]}");
+
+        AndroidHudModel.Element restored =
+            AndroidHudModel.PackageData.fromJson(encoded)
+                .scenes.get("gameplay.map").activeLayout().find("info.raw");
+        assertEquals("widget.ll_movement_layout", restored.sourceId);
+    }
+
+    @Test
+    public void unknownNodePathsAreRetainedAndValuesAreBounded()
+            throws Exception {
+        AndroidHudModel.Layout layout = new AndroidHudModel.Layout();
+        layout.id = "layout.test";
+        AndroidHudModel.Element info =
+            element("info.test", AndroidHudModel.TYPE_INFO);
+        info.sourceId = "widget.test";
+        info.infoPresentation.layoutMode =
+            AndroidHudModel.INFO_LAYOUT_CUSTOM;
+        AndroidHudModel.NodeOverride node =
+            new AndroidHudModel.NodeOverride();
+        node.path = "removed_widget@0/old_child@0";
+        node.widthColumns = 999;
+        node.labelColumns = 999;
+        node.gapColumns = 999;
+        info.infoPresentation.nodeOverrides.add(node);
+        layout.elements.add(info);
+
+        AndroidHudModel.Element restored =
+            AndroidHudModel.Layout.fromJson(layout.toJson()).find("info.test");
+        AndroidHudModel.NodeOverride restoredNode =
+            restored.infoPresentation.nodeOverrides.get(0);
+        assertEquals(node.path, restoredNode.path);
+        assertEquals(80, restoredNode.widthColumns.intValue());
+        assertEquals(40, restoredNode.labelColumns.intValue());
+        assertEquals(8, restoredNode.gapColumns.intValue());
+    }
+
+    @Test
+    public void implicitLegacyNativeOpacityBecomesOpaqueButExplicitIsKept()
+            throws Exception {
+        String prefix =
+            "{\"format\":\"cataclysm-android-hud\",\"kind\":\"package\"," +
+            "\"schema\":5,\"scenes\":[{\"id\":\"gameplay.map\"," +
+            "\"activeLayoutId\":\"layout.test\",\"layouts\":[{" +
+            "\"id\":\"layout.test\",\"elements\":[";
+        String suffix = "]}]}]}";
+        String common =
+            "\"type\":\"info\",\"sourceId\":\"widget.test\"," +
+            "\"frame\":{\"x\":0,\"y\":0,\"width\":300,\"height\":100}";
+        org.json.JSONObject encoded = new org.json.JSONObject(prefix +
+            "{\"id\":\"implicit\"," + common + "}," +
+            "{\"id\":\"explicit\"," + common +
+            ",\"style\":{\"opacity\":0.9}}" + suffix);
+
+        AndroidHudModel.Layout restored =
+            AndroidHudModel.PackageData.fromJson(encoded)
+                .scenes.get("gameplay.map").activeLayout();
+        assertEquals(1f, restored.find("implicit").style.opacity, 0f);
+        assertEquals(.9f, restored.find("explicit").style.opacity, 0f);
+    }
+
+    @Test
+    public void groupActionBindingsAreDetachedInDraft() {
+        AndroidHudModel.Element group = element("group.test", AndroidHudModel.TYPE_GROUP);
+        group.actionIds.add("INVENTORY");
+        group.actionIds.add("PLAYER_INFO");
+        group.authorizedDangerousActions.add("PLAYER_INFO");
+
+        AndroidHudModel.Element draft = group.copy();
+        draft.actionIds.remove("INVENTORY");
+        draft.authorizedDangerousActions.clear();
+
+        assertTrue(AndroidHudModel.supportsActionBinding(group));
+        assertTrue(AndroidHudModel.shouldEncodeActionBinding(group));
+        assertEquals(2, group.actionIds.size());
+        assertTrue(group.authorizedDangerousActions.contains("PLAYER_INFO"));
+        assertEquals(1, draft.actionIds.size());
+        assertFalse(draft.authorizedDangerousActions.contains("PLAYER_INFO"));
+    }
+
+    @Test
+    public void groupWithoutActionsKeepsJsonCompact() {
+        AndroidHudModel.Element group = element("group.test", AndroidHudModel.TYPE_GROUP);
+
+        assertFalse(AndroidHudModel.shouldEncodeActionBinding(group));
+        group.actionIds.add("INVENTORY");
+        assertTrue(AndroidHudModel.shouldEncodeActionBinding(group));
+    }
+
+    @Test
+    public void newElementsUseTransparentCompactTypographyByDefault() {
+        AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
+
+        assertEquals(10f, info.style.fontSizeSp, 0f);
+        assertFalse(info.style.background);
+        assertFalse(info.style.border);
+        assertFalse(info.style.showLabel);
+        assertEquals(AndroidHudModel.TEXT_EFFECT_NONE, info.style.textEffect);
+        assertTrue(info.style.sourceColors);
+        assertEquals(0f, info.style.contentPaddingLeftDp, 0f);
+        assertEquals(0f, info.style.contentPaddingTopDp, 0f);
+        assertEquals(0f, info.style.contentPaddingRightDp, 0f);
+        assertEquals(0f, info.style.contentPaddingBottomDp, 0f);
+        assertEquals(AndroidHudModel.OVERFLOW_FIXED, info.overflowMode);
+    }
+
+    @Test
+    public void styleAndScrollableOverflowAreDetachedInDraft() {
+        AndroidHudModel.Element info = element("info.test", AndroidHudModel.TYPE_INFO);
+        info.sourceId = "log.messages";
+        info.overflowMode = AndroidHudModel.OVERFLOW_SCROLL;
+        info.style.textBold = true;
+        info.style.textItalic = true;
+        info.style.textEffect = AndroidHudModel.TEXT_EFFECT_OUTLINE;
+        info.style.sourceColors = false;
+        info.style.textOutlineColor = 0xFF123456;
+        info.style.textOutlineWidthSp = 3f;
+        info.style.contentPaddingLeftDp = 2f;
+        info.style.contentPaddingTopDp = 4f;
+        info.style.contentPaddingRightDp = 6f;
+        info.style.contentPaddingBottomDp = 8f;
+
+        AndroidHudModel.Element restored = info.copy();
+        restored.style.textOutlineColor = 0xFF654321;
+
+        assertEquals(AndroidHudModel.OVERFLOW_SCROLL, restored.overflowMode);
+        assertTrue(restored.style.textBold);
+        assertTrue(restored.style.textItalic);
+        assertEquals(AndroidHudModel.TEXT_EFFECT_OUTLINE, restored.style.textEffect);
+        assertFalse(restored.style.sourceColors);
+        assertEquals(0xFF123456, info.style.textOutlineColor);
+        assertEquals(0xFF654321, restored.style.textOutlineColor);
+        assertEquals(3f, restored.style.textOutlineWidthSp, 0f);
+        assertEquals(2f, restored.style.contentPaddingLeftDp, 0f);
+        assertEquals(4f, restored.style.contentPaddingTopDp, 0f);
+        assertEquals(6f, restored.style.contentPaddingRightDp, 0f);
+        assertEquals(8f, restored.style.contentPaddingBottomDp, 0f);
+    }
+
+    @Test
+    public void contentPaddingUsesCompactJsonAndSurvivesRoundTrip() throws Exception {
+        AndroidHudModel.Layout layout = new AndroidHudModel.Layout();
+        layout.id = "layout.test";
+        AndroidHudModel.Element uniform = element(
+            "info.uniform", AndroidHudModel.TYPE_INFO);
+        uniform.sourceId = "environment.weather";
+        uniform.style.contentPaddingLeftDp = 5f;
+        uniform.style.contentPaddingTopDp = 5f;
+        uniform.style.contentPaddingRightDp = 5f;
+        uniform.style.contentPaddingBottomDp = 5f;
+        AndroidHudModel.Element asymmetric = element(
+            "info.asymmetric", AndroidHudModel.TYPE_INFO);
+        asymmetric.sourceId = "environment.time";
+        asymmetric.style.contentPaddingLeftDp = 1f;
+        asymmetric.style.contentPaddingTopDp = 2f;
+        asymmetric.style.contentPaddingRightDp = 3f;
+        asymmetric.style.contentPaddingBottomDp = 4f;
+        layout.elements.add(uniform);
+        layout.elements.add(asymmetric);
+
+        org.json.JSONObject encoded = layout.toJson();
+        org.json.JSONArray elements = encoded.getJSONArray("elements");
+        assertTrue(elements.getJSONObject(0).getJSONObject("style").has("paddingDp"));
+        assertFalse(elements.getJSONObject(0).getJSONObject("style")
+            .has("contentPadding"));
+        assertTrue(elements.getJSONObject(1).getJSONObject("style")
+            .has("contentPadding"));
+
+        AndroidHudModel.Layout restored = AndroidHudModel.Layout.fromJson(encoded);
+        assertEquals(5f,
+            restored.find("info.uniform").style.contentPaddingBottomDp, 0f);
+        assertEquals(1f,
+            restored.find("info.asymmetric").style.contentPaddingLeftDp, 0f);
+        assertEquals(4f,
+            restored.find("info.asymmetric").style.contentPaddingBottomDp, 0f);
+    }
+
+    @Test
+    public void legacyControlPaddingMigratesIntoSharedStyle() throws Exception {
+        AndroidHudModel.Layout layout = new AndroidHudModel.Layout();
+        layout.id = "layout.test";
+        AndroidHudModel.Element control = element(
+            "control.test", AndroidHudModel.TYPE_CONTROL);
+        layout.elements.add(control);
+        org.json.JSONObject encoded = layout.toJson();
+        org.json.JSONObject encodedControl =
+            encoded.getJSONArray("elements").getJSONObject(0);
+        encodedControl.getJSONObject("controlAppearance")
+            .put("horizontalPaddingDp", 11f)
+            .put("verticalPaddingDp", 3f);
+
+        AndroidHudModel.Element restored =
+            AndroidHudModel.Layout.fromJson(encoded).find("control.test");
+
+        assertEquals(11f, restored.style.contentPaddingLeftDp, 0f);
+        assertEquals(3f, restored.style.contentPaddingTopDp, 0f);
+        assertEquals(11f, restored.style.contentPaddingRightDp, 0f);
+        assertEquals(3f, restored.style.contentPaddingBottomDp, 0f);
+        assertFalse(restored.controlAppearance.toJson()
+            .has("horizontalPaddingDp"));
+        assertFalse(restored.controlAppearance.toJson()
+            .has("verticalPaddingDp"));
+    }
+
+    @Test
+    public void controlAppearanceIsDetachedAndDefaultsToVisibleWithoutShadow() {
+        AndroidHudModel.Element control = element(
+            "control.test", AndroidHudModel.TYPE_CONTROL);
+
+        AndroidHudModel.Element copy = control.copy();
+        copy.controlAppearance.surfaceColor = 0xFF123456;
+        copy.controlAppearance.shadow = true;
+
+        assertTrue(control.controlAppearance.surface);
+        assertFalse(control.controlAppearance.shadow);
+        assertEquals(0xCC263746, control.controlAppearance.surfaceColor);
+        assertEquals(0xFF123456, copy.controlAppearance.surfaceColor);
+        assertTrue(copy.controlAppearance.shadow);
+    }
+
+    @Test
+    public void controlAppearanceSupportsZeroStrengthAndIndependentShadows() {
+        AndroidHudModel.Element control = element(
+            "control.test", AndroidHudModel.TYPE_CONTROL);
+        control.style.opacity = 0f;
+        control.style.textEffect = AndroidHudModel.TEXT_EFFECT_SHADOW;
+        control.style.textShadowRadiusSp = 0f;
+        control.style.textShadowOffsetXSp = -4f;
+        control.controlAppearance.surfaceColor = 0x80123456;
+        control.controlAppearance.border = true;
+        control.controlAppearance.borderWidthDp = 0f;
+        control.controlAppearance.shadow = true;
+        control.controlAppearance.shadowColor = 0x40112233;
+        control.controlAppearance.shadowRadiusDp = 0f;
+        control.controlAppearance.shadowOffsetXDp = -7f;
+
+        AndroidHudModel.Element restored = control.copy();
+
+        assertEquals(0f, restored.style.opacity, 0f);
+        assertEquals(AndroidHudModel.TEXT_EFFECT_SHADOW,
+            restored.style.textEffect);
+        assertEquals(0f, restored.style.textShadowRadiusSp, 0f);
+        assertEquals(-4f, restored.style.textShadowOffsetXSp, 0f);
+        assertEquals(0x80123456, restored.controlAppearance.surfaceColor);
+        assertTrue(restored.controlAppearance.border);
+        assertEquals(0f, restored.controlAppearance.borderWidthDp, 0f);
+        assertTrue(restored.controlAppearance.shadow);
+        assertEquals(0x40112233, restored.controlAppearance.shadowColor);
+        assertEquals(0f, restored.controlAppearance.shadowRadiusDp, 0f);
+        assertEquals(-7f, restored.controlAppearance.shadowOffsetXDp, 0f);
+    }
+
+    @Test
+    public void controlAppearanceSurvivesLayoutJsonRoundTrip() throws Exception {
+        AndroidHudModel.Layout layout = new AndroidHudModel.Layout();
+        layout.id = "layout.test";
+        layout.name = "Test";
+        AndroidHudModel.Element control = element(
+            "control.test", AndroidHudModel.TYPE_CONTROL);
+        control.actionIds.add("ACTION_TEST");
+        control.defaultActionId = "ACTION_TEST";
+        control.selectedActionId = "ACTION_TEST";
+        control.controlAppearance.surface = true;
+        control.controlAppearance.surfaceColor = 0xCC263746;
+        control.controlAppearance.pressedOverlayColor = 0x55778899;
+        control.controlAppearance.border = true;
+        control.controlAppearance.borderColor = 0xFF112233;
+        control.controlAppearance.borderWidthDp = 3f;
+        layout.elements.add(control);
+
+        AndroidHudModel.Layout restored =
+            AndroidHudModel.Layout.fromJson(layout.toJson());
+        AndroidHudModel.Element restoredControl = restored.find("control.test");
+
+        assertTrue(restoredControl.controlAppearance.surface);
+        assertEquals(0xCC263746, restoredControl.controlAppearance.surfaceColor);
+        assertEquals(0x55778899,
+            restoredControl.controlAppearance.pressedOverlayColor);
+        assertTrue(restoredControl.controlAppearance.border);
+        assertEquals(0xFF112233, restoredControl.controlAppearance.borderColor);
+        assertEquals(3f, restoredControl.controlAppearance.borderWidthDp, 0f);
+    }
+
+    @Test
+    public void legacyControlPreservesPlatformButtonSurfaceWithoutGhostShadow() {
+        AndroidHudModel.Element control = element(
+            "control.test", AndroidHudModel.TYPE_CONTROL);
+        control.style.background = false;
+        control.style.backgroundColor = 0xAA102030;
+        control.style.border = true;
+        control.style.borderColor = 0xFF405060;
+
+        AndroidHudModel.ControlAppearance restored =
+            AndroidHudModel.ControlAppearance.fromLegacy(control.style);
+
+        assertTrue(restored.surface);
+        assertEquals(0xCC263746, restored.surfaceColor);
+        assertTrue(restored.border);
+        assertEquals(0xFF405060, restored.borderColor);
+        assertFalse(restored.shadow);
+    }
+
+    @Test
+    public void legacyControlUsesExplicitHostColorWhenItHadOne() {
+        AndroidHudModel.Element control = element(
+            "control.test", AndroidHudModel.TYPE_CONTROL);
+        control.style.background = true;
+        control.style.backgroundColor = 0xAA102030;
+
+        AndroidHudModel.ControlAppearance restored =
+            AndroidHudModel.ControlAppearance.fromLegacy(control.style);
+
+        assertTrue(restored.surface);
+        assertEquals(0xAA102030, restored.surfaceColor);
+    }
+
+    @Test
+    public void textEffectsCanBeCompletelyDisabledWithZeroStrength() {
+        AndroidHudModel.Element info = element(
+            "info.test", AndroidHudModel.TYPE_INFO);
+        info.style.textEffect = AndroidHudModel.TEXT_EFFECT_OUTLINE;
+        info.style.textOutlineWidthSp = 0f;
+        info.style.textShadowRadiusSp = 0f;
+
+        AndroidHudModel.Element restored = info.copy();
+
+        assertEquals(AndroidHudModel.TEXT_EFFECT_OUTLINE,
+            restored.style.textEffect);
+        assertEquals(0f, restored.style.textOutlineWidthSp, 0f);
+        assertEquals(0f, restored.style.textShadowRadiusSp, 0f);
+    }
+
+    @Test
+    public void gridInformationIsNormalizedToFixedSquareFrame() {
+        AndroidHudModel.Element map = element("map.test", AndroidHudModel.TYPE_INFO);
+        map.sourceId = "map.pixel";
+        map.frame.width = 420f;
+        map.frame.height = 180f;
+        map.overflowMode = AndroidHudModel.OVERFLOW_SCROLL;
+
+        AndroidHudModel.normalizeElementGeometry(map);
+
+        assertEquals(420f, map.frame.width, 0f);
+        assertEquals(420f, map.frame.height, 0f);
+        assertEquals(AndroidHudModel.OVERFLOW_FIXED, map.overflowMode);
+    }
+
+    @Test
     public void searchMatchesChineseCatalogText() {
         assertTrue(AndroidHudModel.matchesSearch("天气",
             "环境信息", "位置 日期 天气", "environment.summary"));

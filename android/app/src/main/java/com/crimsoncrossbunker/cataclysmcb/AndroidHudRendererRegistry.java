@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.view.Gravity;
@@ -30,11 +31,12 @@ final class AndroidHudRendererRegistry {
     }
 
     private final Map<String, Renderer> renderers = new HashMap<>();
-    private final Renderer fallback = new TextRenderer();
+    private final Renderer fallback = new RichTextRenderer();
 
     AndroidHudRendererRegistry() {
-        renderers.put("text", fallback);
-        renderers.put("log", new LogRenderer());
+        renderers.put("terminal_widget", new TerminalRenderer());
+        renderers.put("rich_text", fallback);
+        renderers.put("message_log", new LogRenderer());
         renderers.put("pixel_minimap", new PixelMinimapRenderer());
         renderers.put("overmap_grid", new OvermapRenderer());
         renderers.put("threat_grid", new ThreatRenderer());
@@ -54,12 +56,31 @@ final class AndroidHudRendererRegistry {
         return renderer == null ? fallback : renderer;
     }
 
-    private static final class TextRenderer implements Renderer {
+    private static final class TerminalRenderer implements Renderer {
         @Override
         public View create(Context context) {
-            TextView text = baseText(context);
-            text.setTypeface(Typeface.MONOSPACE);
-            return text;
+            return new AndroidHudTerminalView(context);
+        }
+
+        @Override
+        public void bind(View view, AndroidHudModel.InfoSource source,
+                AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
+                boolean preview, MinimapPublisher minimapPublisher) {
+            int columns = AndroidHudInfoFormat.columns(source, element);
+            String requestKey =
+                AndroidHudInfoFormat.requestKey(source, element);
+            ((AndroidHudTerminalView)view).bind(
+                snapshot.terminalValue(
+                    requestKey, source.id, columns, preview),
+                element.style, element.infoPresentation,
+                AndroidHudInfoFormat.nativeAppearance(element));
+        }
+    }
+
+    private static final class RichTextRenderer implements Renderer {
+        @Override
+        public View create(Context context) {
+            return baseText(context);
         }
 
         @Override
@@ -67,13 +88,13 @@ final class AndroidHudRendererRegistry {
                 AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
                 boolean preview, MinimapPublisher minimapPublisher) {
             TextView text = (TextView)view;
-            String title = element.label.isEmpty() ? source.title : element.label;
-            String value = snapshot.value(source.id, preview);
-            text.setText(element.style.showLabel ? title + "  " + value : value);
-            text.setTextSize(element.style.fontSizeSp);
-            text.setTextColor(element.style.textColor);
+            SpannableStringBuilder content = new SpannableStringBuilder();
+            content.append(preview ? "示例数据" : "—");
+            text.setText(content);
+            applyTextStyle(text, element.style, false);
             text.setGravity(alignment(element.style.alignment) | Gravity.CENTER_VERTICAL);
-            text.setSingleLine(!source.multiline);
+            text.setSingleLine(source == null || !source.multiline &&
+                !AndroidHudModel.OVERFLOW_SCROLL.equals(element.overflowMode));
         }
     }
 
@@ -89,36 +110,19 @@ final class AndroidHudRendererRegistry {
                 boolean preview, MinimapPublisher minimapPublisher) {
             TextView text = (TextView)view;
             SpannableStringBuilder content = new SpannableStringBuilder();
-            if (element.style.showLabel) {
-                content.append(element.label.isEmpty() ? source.title : element.label).append('\n');
-            }
             if (preview) {
                 content.append("示例日志：布局可在非当前场景编辑");
             } else {
-                for (AndroidHudSnapshot.Message message : snapshot.messages) {
+                for (AndroidHudSnapshot.RichText message : snapshot.messages) {
                     int messageStart = content.length();
-                    if (message.runs.isEmpty()) {
-                        content.append(message.text);
-                    } else {
-                        for (AndroidHudSnapshot.Run run : message.runs) {
-                            int start = content.length();
-                            content.append(run.text);
-                            content.setSpan(new ForegroundColorSpan(run.color), start,
-                                content.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                            if (run.bold) {
-                                content.setSpan(new StyleSpan(Typeface.BOLD), start,
-                                    content.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                            }
-                        }
-                    }
+                    appendRichText(content, message, element);
                     if (content.length() > messageStart) {
                         content.append('\n');
                     }
                 }
             }
             text.setText(content);
-            text.setTextSize(element.style.fontSizeSp);
-            text.setTextColor(element.style.textColor);
+            applyTextStyle(text, element.style, true);
             text.setGravity(alignment(element.style.alignment));
         }
     }
@@ -149,7 +153,7 @@ final class AndroidHudRendererRegistry {
         public void bind(View view, AndroidHudModel.InfoSource source,
                 AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
                 boolean preview, MinimapPublisher minimapPublisher) {
-            ((OvermapGridView)view).bind(snapshot, preview, element.style.textColor);
+            ((OvermapGridView)view).bind(snapshot, preview, element.style);
         }
     }
 
@@ -163,23 +167,86 @@ final class AndroidHudRendererRegistry {
         public void bind(View view, AndroidHudModel.InfoSource source,
                 AndroidHudModel.Element element, AndroidHudSnapshot snapshot,
                 boolean preview, MinimapPublisher minimapPublisher) {
-            int radius = 10;
-            try {
-                radius = Integer.parseInt(element.providerSettings.get("radius"));
-            } catch (NumberFormatException | NullPointerException ignored) {
-            }
+            int radius = element.infoPresentation.radarRadius;
             ((ThreatGridView)view).bind(snapshot, preview, Math.max(3, Math.min(30, radius)));
         }
     }
 
     private static TextView baseText(Context context) {
         TextView text = new TextView(context);
-        int padding = Math.round(6 * context.getResources().getDisplayMetrics().density);
-        text.setPadding(padding, padding, padding, padding);
+        // Element Style owns all content padding.  TextView's defaults must
+        // not add a second, invisible inset around imported layouts.
+        text.setIncludeFontPadding(false);
+        text.setPadding(0, 0, 0, 0);
         text.setTextColor(Color.WHITE);
         text.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
         text.setLineSpacing(0, 1.05f);
         return text;
+    }
+
+    private static void appendRichText(SpannableStringBuilder target,
+            AndroidHudSnapshot.RichText value,
+            AndroidHudModel.Element element) {
+        boolean nativeAppearance =
+            AndroidHudInfoFormat.nativeAppearance(element);
+        boolean sourceForeground = nativeAppearance ||
+            element.style.sourceColors;
+        boolean sourceBackground = nativeAppearance ||
+            element.infoPresentation.sourceBackgrounds;
+        boolean sourceAttributes = nativeAppearance ||
+            element.infoPresentation.sourceAttributes;
+        if ((!sourceForeground && !sourceBackground &&
+                !sourceAttributes) || value.runs.isEmpty()) {
+            target.append(value.text);
+            return;
+        }
+        for (AndroidHudSnapshot.Run run : value.runs) {
+            int start = target.length();
+            target.append(run.text);
+            if (sourceForeground) {
+                target.setSpan(new ForegroundColorSpan(run.foreground), start,
+                    target.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            if (sourceBackground) {
+                target.setSpan(new BackgroundColorSpan(run.background), start,
+                    target.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            if (sourceAttributes && run.bold) {
+                target.setSpan(new StyleSpan(Typeface.BOLD), start,
+                    target.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+    }
+
+    static void applyTextStyle(TextView text, AndroidHudModel.Style style,
+            boolean monospace) {
+        int typefaceStyle = Typeface.NORMAL;
+        if (style.textBold) {
+            typefaceStyle |= Typeface.BOLD;
+        }
+        if (style.textItalic) {
+            typefaceStyle |= Typeface.ITALIC;
+        }
+        text.setTypeface(monospace ? Typeface.MONOSPACE : Typeface.DEFAULT, typefaceStyle);
+        text.setTextSize(style.fontSizeSp);
+        text.setTextColor(style.textColor);
+        float scale = text.getResources().getDisplayMetrics().scaledDensity;
+        if (AndroidHudModel.TEXT_EFFECT_OUTLINE.equals(style.textEffect) &&
+                style.textOutlineWidthSp > 0f) {
+            text.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            text.setShadowLayer(style.textOutlineWidthSp * scale,
+                0f, 0f, style.textOutlineColor);
+        } else if (AndroidHudModel.TEXT_EFFECT_SHADOW.equals(style.textEffect) &&
+                style.textShadowRadiusSp > 0f) {
+            text.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            text.setShadowLayer(style.textShadowRadiusSp * scale,
+                style.textShadowOffsetXSp * scale,
+                style.textShadowOffsetYSp * scale,
+                style.textShadowColor);
+        } else {
+            text.getPaint().clearShadowLayer();
+            text.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
     }
 
     private static int alignment(String alignment) {
@@ -197,6 +264,14 @@ final class AndroidHudRendererRegistry {
         private AndroidHudSnapshot snapshot = AndroidHudSnapshot.empty();
         private boolean preview;
         private int fallbackColor;
+        private int outlineColor;
+        private float outlineWidth;
+        private String textEffect = AndroidHudModel.TEXT_EFFECT_NONE;
+        private int shadowColor;
+        private float shadowRadius;
+        private float shadowOffsetX;
+        private float shadowOffsetY;
+        private boolean sourceColors;
 
         OvermapGridView(Context context) {
             super(context);
@@ -204,10 +279,35 @@ final class AndroidHudRendererRegistry {
             paint.setTextAlign(Paint.Align.CENTER);
         }
 
-        void bind(AndroidHudSnapshot value, boolean isPreview, int textColor) {
+        void bind(AndroidHudSnapshot value, boolean isPreview,
+                AndroidHudModel.Style style) {
             snapshot = value;
             preview = isPreview;
-            fallbackColor = textColor;
+            fallbackColor = style.textColor;
+            outlineColor = style.textOutlineColor;
+            outlineWidth = style.textOutlineWidthSp *
+                getResources().getDisplayMetrics().scaledDensity;
+            textEffect = style.textEffect;
+            sourceColors = style.sourceColors;
+            float scale = getResources().getDisplayMetrics().scaledDensity;
+            shadowColor = style.textShadowColor;
+            shadowRadius = style.textShadowRadiusSp * scale;
+            shadowOffsetX = style.textShadowOffsetXSp * scale;
+            shadowOffsetY = style.textShadowOffsetYSp * scale;
+            if (AndroidHudModel.TEXT_EFFECT_SHADOW.equals(textEffect) &&
+                    style.textShadowRadiusSp > 0f) {
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+            } else {
+                setLayerType(View.LAYER_TYPE_NONE, null);
+            }
+            int typefaceStyle = Typeface.NORMAL;
+            if (style.textBold) {
+                typefaceStyle |= Typeface.BOLD;
+            }
+            if (style.textItalic) {
+                typefaceStyle |= Typeface.ITALIC;
+            }
+            paint.setTypeface(Typeface.create(Typeface.MONOSPACE, typefaceStyle));
             invalidate();
         }
 
@@ -218,15 +318,34 @@ final class AndroidHudRendererRegistry {
             float left = (getWidth() - cell * 7f) / 2f;
             float top = (getHeight() - cell * 7f) / 2f;
             paint.setTextSize(cell * .68f);
+            if (AndroidHudModel.TEXT_EFFECT_SHADOW.equals(textEffect) &&
+                    shadowRadius > 0f) {
+                paint.setShadowLayer(shadowRadius, shadowOffsetX,
+                    shadowOffsetY, shadowColor);
+            } else {
+                paint.clearShadowLayer();
+            }
             for (int index = 0; index < 49; ++index) {
                 AndroidHudSnapshot.Cell source = !preview && index < snapshot.overmap.size() ?
                     snapshot.overmap.get(index) : null;
                 String symbol = source == null ? (preview ? "·" : "#") : source.symbol;
-                paint.setColor(source == null ? fallbackColor : source.color);
+                paint.setColor(source == null || !sourceColors ?
+                    fallbackColor : source.color);
                 float x = left + (index % 7 + .5f) * cell;
                 float y = top + (index / 7 + .72f) * cell;
+                if (AndroidHudModel.TEXT_EFFECT_OUTLINE.equals(textEffect) &&
+                        outlineWidth > 0f) {
+                    int fill = paint.getColor();
+                    paint.setStyle(Paint.Style.STROKE);
+                    paint.setStrokeWidth(Math.max(1f, outlineWidth * 2f));
+                    paint.setColor(outlineColor);
+                    canvas.drawText(symbol, x, y, paint);
+                    paint.setStyle(Paint.Style.FILL);
+                    paint.setColor(fill);
+                }
                 canvas.drawText(symbol, x, y, paint);
             }
+            paint.clearShadowLayer();
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(Math.max(2f, cell * .05f));
             paint.setColor(0xFFFFFFFF);

@@ -8,30 +8,32 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONException;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.TreeMap;
 
 /**
- * Schema-4 Android HUD runtime and canvas.
+ * Schema-6 Android HUD runtime and canvas.
  *
  * The model, repository, renderer registry, editor and manager are separate
  * modules.  This class only coordinates immutable native snapshots with a
@@ -85,6 +87,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private String currentSceneTitle = "";
     private String lastSubscriptions = "";
     private int lastSnapshotRevision = -1;
+    private int lastCatalogRevision = -1;
     private boolean started;
     private boolean threeFingerTracking;
     private float gestureStartX;
@@ -121,8 +124,9 @@ final class AndroidHudOverlay extends FrameLayout {
             if (entry.content instanceof ControlView) {
                 ((ControlView)entry.content).cancelRepeat();
             }
+            entry.host.clearRuntimeInteraction();
         }
-        activity.setHudMinimapRect(0, 0, 0, 0, false);
+        clearPublishedMinimap();
     }
 
     void showManager() {
@@ -135,6 +139,10 @@ final class AndroidHudOverlay extends FrameLayout {
 
     List<AndroidHudModel.InfoSource> infoSources() {
         return new ArrayList<>(sourceCatalog.values());
+    }
+
+    AndroidHudModel.InfoSource infoSource(String sourceId) {
+        return sourceCatalog.get(AndroidHudModel.safeId(sourceId));
     }
 
     String currentSceneId() {
@@ -155,6 +163,24 @@ final class AndroidHudOverlay extends FrameLayout {
 
     float canvasScaleY() {
         return getHeight() / (float)AndroidHudModel.CANVAS_HEIGHT;
+    }
+
+    float canvasUniformScale() {
+        return Math.min(canvasScaleX(), canvasScaleY());
+    }
+
+    int minimumElementSizePixels() {
+        return dp(24);
+    }
+
+    float contentScopeWidth(AndroidHudModel.Element group) {
+        return AndroidHudGeometry.contentWidthCanvasUnits(
+            group, canvasScaleX(), getResources().getDisplayMetrics().density);
+    }
+
+    float contentScopeHeight(AndroidHudModel.Element group) {
+        return AndroidHudGeometry.contentHeightCanvasUnits(
+            group, canvasScaleY(), getResources().getDisplayMetrics().density);
     }
 
     void editLayout(String sceneId, String layoutId) {
@@ -200,6 +226,7 @@ final class AndroidHudOverlay extends FrameLayout {
 
     void relayoutEditorDraft() {
         layoutRenderedTree();
+        publishSubscriptions();
         invalidate();
     }
 
@@ -285,7 +312,7 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private void refreshSnapshot() {
-        String raw = activity.getHudSnapshot();
+        String raw = activity.getHudSnapshot(lastCatalogRevision);
         if (raw == null || raw.isEmpty()) {
             return;
         }
@@ -296,9 +323,11 @@ final class AndroidHudOverlay extends FrameLayout {
             }
             lastSnapshotRevision = next.revision;
             snapshot = next;
-            if (!next.sources.isEmpty()) {
+            if (next.sourceCatalogIncluded) {
                 sourceCatalog.clear();
                 sourceCatalog.putAll(next.sources);
+                lastCatalogRevision = next.catalogRevision;
+                publishSubscriptions();
             }
             if (!next.ready || next.sceneId.isEmpty()) {
                 if (!editor.isEditing()) {
@@ -347,13 +376,14 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void clearRenderedTree() {
         if (activeMinimapView != null) {
-            activity.setHudMinimapRect(0, 0, 0, 0, false);
+            clearPublishedMinimap();
             activeMinimapView = null;
         }
         for (RenderedElement entry : rendered.values()) {
             if (entry.content instanceof ControlView) {
                 ((ControlView)entry.content).dispose();
             }
+            entry.host.clearRuntimeInteraction();
             if (entry.host.getParent() instanceof ViewGroup) {
                 ((ViewGroup)entry.host.getParent()).removeView(entry.host);
             }
@@ -372,20 +402,40 @@ final class AndroidHudOverlay extends FrameLayout {
         parent.addView(host);
 
         View content = null;
+        TextView titleView = null;
+        FrameLayout groupContent = null;
+        ScrollView scrollContainer = null;
         if (AndroidHudModel.TYPE_GROUP.equals(element.type)) {
+            groupContent = new FrameLayout(activity);
+            groupContent.setClipChildren(element.clipChildren);
+            groupContent.setClipToPadding(element.clipChildren);
+            if (AndroidHudModel.OVERFLOW_SCROLL.equals(element.overflowMode)) {
+                scrollContainer = verticalScroller();
+                scrollContainer.addView(groupContent, new ScrollView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+                host.addView(scrollContainer, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            } else {
+                host.addView(groupContent, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            }
             if (element.style.showLabel) {
                 TextView title = new TextView(activity);
                 title.setText(element.label.isEmpty() ? "元素组" : element.label);
-                title.setTextColor(element.style.textColor);
-                title.setTextSize(element.style.fontSizeSp);
-                title.setPadding(dp(5), 0, dp(5), 0);
+                AndroidHudRendererRegistry.applyTextStyle(title, element.style, false);
+                title.setIncludeFontPadding(false);
+                title.setPadding(0, 0, 0, 0);
                 host.addView(title, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.TOP));
                 content = title;
+                titleView = title;
             }
             for (AndroidHudModel.Element child : element.children) {
-                renderElement(host, child, element.id);
+                renderElement(groupContent, child, element.id);
             }
         } else if (AndroidHudModel.TYPE_INFO.equals(element.type)) {
             AndroidHudModel.InfoSource source = sourceCatalog.get(element.sourceId);
@@ -393,15 +443,36 @@ final class AndroidHudOverlay extends FrameLayout {
                 source = missingSource(element.sourceId);
             }
             content = rendererRegistry.create(activity, source);
-            host.addView(content, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            if (AndroidHudModel.OVERFLOW_SCROLL.equals(element.overflowMode) &&
+                    !AndroidHudModel.requiresSquareFrame(element)) {
+                scrollContainer = verticalScroller();
+                scrollContainer.addView(content, new ScrollView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+                host.addView(scrollContainer, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            } else {
+                host.addView(content, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            }
+            titleView = new TextView(activity);
+            titleView.setText(element.label.isEmpty() ? source.title : element.label);
+            titleView.setIncludeFontPadding(false);
+            titleView.setPadding(0, 0, 0, 0);
+            titleView.setVisibility(element.style.showLabel ? VISIBLE : GONE);
+            host.addView(titleView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
         } else {
             ControlView control = new ControlView(activity);
             content = control;
             host.addView(control, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
-        RenderedElement renderedElement = new RenderedElement(element, parentGroupId, host, content);
+        RenderedElement renderedElement = new RenderedElement(element, parentGroupId, host,
+            content, titleView, groupContent, scrollContainer);
         rendered.put(element.id, renderedElement);
         applyStyle(renderedElement);
         editor.configureElementInteraction(renderedElement);
@@ -424,13 +495,50 @@ final class AndroidHudOverlay extends FrameLayout {
         if (renderedElement == null) {
             return;
         }
-        int width = Math.max(dp(24), Math.round(element.frame.width * canvasScaleX()));
-        int height = Math.max(dp(24), Math.round(element.frame.height * canvasScaleY()));
+        int minimumPixels = minimumElementSizePixels();
+        int width = AndroidHudGeometry.renderedWidthPixels(
+            element, canvasScaleX(), canvasScaleY(), minimumPixels);
+        int height = AndroidHudGeometry.renderedHeightPixels(
+            element, canvasScaleX(), canvasScaleY(), minimumPixels);
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(width, height,
             Gravity.TOP | Gravity.LEFT);
         params.leftMargin = Math.round(element.frame.x * canvasScaleX());
         params.topMargin = Math.round(element.frame.y * canvasScaleY());
         renderedElement.host.setLayoutParams(params);
+        if (AndroidHudModel.requiresSquareFrame(element) &&
+                renderedElement.content != null) {
+            int contentWidth = Math.max(0, width -
+                renderedElement.host.getPaddingLeft() -
+                renderedElement.host.getPaddingRight());
+            int contentHeight = Math.max(0, height -
+                renderedElement.host.getPaddingTop() -
+                renderedElement.host.getPaddingBottom());
+            int contentSide = Math.min(contentWidth, contentHeight);
+            renderedElement.content.setLayoutParams(new FrameLayout.LayoutParams(
+                contentSide, contentSide, Gravity.CENTER));
+        }
+        if (renderedElement.groupContent != null) {
+            int contentHeight = Math.max(0, height -
+                renderedElement.host.getPaddingTop() -
+                renderedElement.host.getPaddingBottom());
+            if (renderedElement.scrollContainer != null) {
+                for (AndroidHudModel.Element child : element.children) {
+                    int childBottom = Math.round(child.frame.y * canvasScaleY()) +
+                        AndroidHudGeometry.renderedHeightPixels(
+                            child, canvasScaleX(), canvasScaleY(), minimumPixels);
+                    contentHeight = Math.max(contentHeight,
+                        childBottom);
+                }
+            }
+            if (renderedElement.scrollContainer == null) {
+                renderedElement.groupContent.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            } else {
+                renderedElement.groupContent.setLayoutParams(new ScrollView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, contentHeight));
+            }
+        }
         for (AndroidHudModel.Element child : element.children) {
             layoutElement(child);
         }
@@ -438,6 +546,9 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void bindRuntimeState() {
         boolean preview = editor.isEditing() && editor.isPreview();
+        boolean editing = editor.isEditing();
+        LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionCatalog =
+            actionsForDisplayedScene();
         activeMinimapView = null;
         for (RenderedElement entry : rendered.values()) {
             AndroidHudModel.Element element = entry.element;
@@ -448,9 +559,11 @@ final class AndroidHudOverlay extends FrameLayout {
                 }
                 rendererRegistry.bind(entry.content, source, element, snapshot, preview,
                     this::publishMinimap);
+                bindElementInteraction(entry, actionCatalog, editing, true);
             } else if (AndroidHudModel.TYPE_CONTROL.equals(element.type)) {
-                ((ControlView)entry.content).bind(element, actionsForDisplayedScene(), snapshot,
-                    editor.isEditing(), new ControlCallback() {
+                entry.host.clearRuntimeInteraction();
+                ((ControlView)entry.content).bind(element, actionCatalog,
+                    editing, new ControlCallback() {
                         @Override
                         public void trigger(String actionId, boolean authorized) {
                             triggerAction(element, actionId, authorized);
@@ -465,8 +578,44 @@ final class AndroidHudOverlay extends FrameLayout {
                             }
                         }
                     });
+            } else {
+                bindElementInteraction(entry, actionCatalog, editing, false);
             }
         }
+    }
+
+    private void bindElementInteraction(RenderedElement entry,
+            LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionCatalog,
+            boolean editing, boolean observeHandledChildTouches) {
+        ArrayList<String> choices =
+            AndroidHudActionMenu.availableActions(entry.element, actionCatalog);
+        if (editing || choices.isEmpty()) {
+            entry.host.clearRuntimeInteraction();
+            return;
+        }
+        entry.host.setRuntimeInteraction(
+            () -> activateElementAction(entry.element, entry.host, false),
+            () -> activateElementAction(entry.element, entry.host, true),
+            observeHandledChildTouches);
+    }
+
+    private void activateElementAction(AndroidHudModel.Element element,
+            View anchor, boolean authorizedGesture) {
+        LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionCatalog =
+            actionsForDisplayedScene();
+        ArrayList<String> choices =
+            AndroidHudActionMenu.availableActions(element, actionCatalog);
+        if (choices.isEmpty()) {
+            Toast.makeText(activity, "该元素没有当前界面可用的动作",
+                Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (choices.size() == 1) {
+            triggerAction(element, choices.get(0), authorizedGesture);
+            return;
+        }
+        AndroidHudActionMenu.show(anchor, choices, actionCatalog, "",
+            actionId -> triggerAction(element, actionId, authorizedGesture));
     }
 
     private LinkedHashMap<String, AndroidHudModel.ActionDescriptor> actionsForDisplayedScene() {
@@ -497,6 +646,22 @@ final class AndroidHudOverlay extends FrameLayout {
 
     private void applyStyle(RenderedElement entry) {
         AndroidHudModel.Element element = entry.element;
+        applyContentPadding(entry);
+        if (entry.titleView != null) {
+            entry.titleView.setVisibility(element.style.showLabel ? VISIBLE : GONE);
+            AndroidHudRendererRegistry.applyTextStyle(
+                entry.titleView, element.style, false);
+        }
+        if (entry.content instanceof ControlView) {
+            // Keep the editor frame fully visible even when the user makes a
+            // runtime control completely transparent.
+            entry.host.setAlpha(1f);
+            entry.content.setAlpha(element.style.opacity);
+            ((ControlView)entry.content).applyStyle(
+                element.style, element.controlAppearance);
+            applyEditorFrame(entry, element);
+            return;
+        }
         entry.host.setAlpha(element.style.opacity);
         if (!element.style.background && !element.style.border && !editor.isEditing()) {
             entry.host.setBackgroundColor(Color.TRANSPARENT);
@@ -514,6 +679,35 @@ final class AndroidHudOverlay extends FrameLayout {
         entry.host.setBackground(background);
     }
 
+    private void applyContentPadding(RenderedElement entry) {
+        AndroidHudModel.Style style = entry.element.style;
+        if (entry.content instanceof ControlView) {
+            // A control's surface fills the element frame.  Its Style padding
+            // is applied between that surface and each button label.
+            entry.host.setPadding(0, 0, 0, 0);
+            return;
+        }
+        entry.host.setPadding(
+            dp(style.contentPaddingLeftDp),
+            dp(style.contentPaddingTopDp),
+            dp(style.contentPaddingRightDp),
+            dp(style.contentPaddingBottomDp));
+    }
+
+    private void applyEditorFrame(RenderedElement entry,
+            AndroidHudModel.Element element) {
+        if (!editor.isEditing()) {
+            entry.host.setBackgroundColor(Color.TRANSPARENT);
+            return;
+        }
+        GradientDrawable frame = new GradientDrawable();
+        frame.setColor(Color.TRANSPARENT);
+        frame.setCornerRadius(dp(6));
+        frame.setStroke(dp(2), editor.isSelected(element.id) ?
+            0xFF80D8FF : 0x996E8CA3);
+        entry.host.setBackground(frame);
+    }
+
     void refreshElementStyles() {
         for (RenderedElement entry : rendered.values()) {
             applyStyle(entry);
@@ -521,25 +715,31 @@ final class AndroidHudOverlay extends FrameLayout {
     }
 
     private void publishSubscriptions() {
-        Set<String> subscriptions = new HashSet<>();
+        TreeMap<String, JSONObject> subscriptions = new TreeMap<>();
         collectSubscriptions(displayedLayout == null ? null : displayedLayout.elements,
             subscriptions);
-        StringBuilder encoded = new StringBuilder();
-        for (String source : subscriptions) {
-            if (encoded.length() > 0) {
-                encoded.append('\n');
+        String next;
+        try {
+            JSONObject document = new JSONObject();
+            document.put("schema", 2);
+            JSONArray requests = new JSONArray();
+            for (JSONObject request : subscriptions.values()) {
+                requests.put(request);
             }
-            encoded.append(source);
+            document.put("requests", requests);
+            next = document.toString();
+        } catch (JSONException error) {
+            Log.w(TAG, "Could not encode HUD subscriptions", error);
+            return;
         }
-        String next = encoded.toString();
         if (!next.equals(lastSubscriptions)) {
             lastSubscriptions = next;
             activity.setHudSubscriptions(next);
         }
     }
 
-    private static void collectSubscriptions(List<AndroidHudModel.Element> elements,
-            Set<String> target) {
+    private void collectSubscriptions(List<AndroidHudModel.Element> elements,
+            Map<String, JSONObject> target) {
         if (elements == null) {
             return;
         }
@@ -548,7 +748,12 @@ final class AndroidHudOverlay extends FrameLayout {
                 continue;
             }
             if (AndroidHudModel.TYPE_INFO.equals(element.type)) {
-                target.add(element.sourceId);
+                AndroidHudModel.InfoSource source = sourceCatalog.get(element.sourceId);
+                AndroidHudInfoFormat.Request request =
+                    AndroidHudInfoFormat.request(source, element);
+                if (request != null) {
+                    target.put(request.key, request.json);
+                }
             }
             collectSubscriptions(element.children, target);
         }
@@ -557,7 +762,7 @@ final class AndroidHudOverlay extends FrameLayout {
     private void publishMinimap(View view, boolean visible) {
         if (!visible || editor.isEditing()) {
             if (view == activeMinimapView) {
-                activity.setHudMinimapRect(0, 0, 0, 0, false);
+                clearPublishedMinimap();
                 activeMinimapView = null;
             }
             return;
@@ -570,10 +775,21 @@ final class AndroidHudOverlay extends FrameLayout {
             if (activeMinimapView != view || !snapshot.ready) {
                 return;
             }
-            int[] location = new int[2];
-            view.getLocationOnScreen(location);
-            activity.setHudMinimapRect(location[0], location[1],
-                view.getWidth(), view.getHeight(), view.getVisibility() == VISIBLE);
+            int viewportWidth = getWidth();
+            int viewportHeight = getHeight();
+            if (viewportWidth <= 0 || viewportHeight <= 0) {
+                clearPublishedMinimap();
+                return;
+            }
+            int[] viewLocation = new int[2];
+            int[] overlayLocation = new int[2];
+            view.getLocationOnScreen(viewLocation);
+            getLocationOnScreen(overlayLocation);
+            activity.setHudMinimapRect(
+                viewLocation[0] - overlayLocation[0],
+                viewLocation[1] - overlayLocation[1],
+                view.getWidth(), view.getHeight(),
+                viewportWidth, viewportHeight, view.getVisibility() == VISIBLE);
         });
     }
 
@@ -582,9 +798,14 @@ final class AndroidHudOverlay extends FrameLayout {
             entry.host.setVisibility(visible && entry.element.visible ? VISIBLE : GONE);
         }
         if (!visible) {
-            activity.setHudMinimapRect(0, 0, 0, 0, false);
+            clearPublishedMinimap();
             activeMinimapView = null;
         }
+    }
+
+    private void clearPublishedMinimap() {
+        activity.setHudMinimapRect(0, 0, 0, 0,
+            Math.max(0, getWidth()), Math.max(0, getHeight()), false);
     }
 
     private void cancelThreeFingerGesture() {
@@ -608,11 +829,29 @@ final class AndroidHudOverlay extends FrameLayout {
         source.id = id;
         source.title = "缺失信息源";
         source.category = "高级";
-        source.renderer = "text";
+        source.renderer = "rich_text";
         return source;
     }
 
+    private ScrollView verticalScroller() {
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        scroll.setClipToPadding(true);
+        scroll.setVerticalScrollBarEnabled(true);
+        scroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        scroll.setOnScrollChangeListener((view, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            if (activeMinimapView != null) {
+                publishMinimap(activeMinimapView, true);
+            }
+        });
+        return scroll;
+    }
+
     private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private int dp(float value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
@@ -621,27 +860,113 @@ final class AndroidHudOverlay extends FrameLayout {
         final String parentGroupId;
         final ElementHost host;
         final View content;
+        final TextView titleView;
+        final FrameLayout groupContent;
+        final ScrollView scrollContainer;
 
         RenderedElement(AndroidHudModel.Element element, String parentGroupId,
-                ElementHost host, View content) {
+                ElementHost host, View content, TextView titleView,
+                FrameLayout groupContent,
+                ScrollView scrollContainer) {
             this.element = element;
             this.parentGroupId = parentGroupId;
             this.host = host;
             this.content = content;
+            this.titleView = titleView;
+            this.groupContent = groupContent;
+            this.scrollContainer = scrollContainer;
         }
     }
 
     static final class ElementHost extends FrameLayout {
         final String elementId;
+        private final GestureDetector runtimeGestures;
         private boolean editorTouchCapture;
+        private Runnable runtimeClick;
+        private Runnable runtimeLongPress;
+        private boolean observeHandledChildTouches;
 
         ElementHost(Context context, String elementId) {
             super(context);
             this.elementId = elementId;
+            runtimeGestures = new GestureDetector(context,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onDown(MotionEvent event) {
+                        return hasRuntimeInteraction();
+                    }
+
+                    @Override
+                    public boolean onSingleTapUp(MotionEvent event) {
+                        if (!hasRuntimeInteraction() || runtimeClick == null) {
+                            return false;
+                        }
+                        runtimeClick.run();
+                        return true;
+                    }
+
+                    @Override
+                    public void onLongPress(MotionEvent event) {
+                        if (!hasRuntimeInteraction() || runtimeLongPress == null) {
+                            return;
+                        }
+                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        runtimeLongPress.run();
+                    }
+                });
         }
 
         void setEditorTouchCapture(boolean capture) {
             editorTouchCapture = capture;
+            if (capture) {
+                cancelRuntimeGesture();
+            }
+        }
+
+        void setRuntimeInteraction(Runnable click, Runnable longPress,
+                boolean observeHandledTouches) {
+            boolean wasEnabled = hasRuntimeInteraction();
+            if (!wasEnabled) {
+                cancelRuntimeGesture();
+            }
+            runtimeClick = click;
+            runtimeLongPress = longPress;
+            observeHandledChildTouches = observeHandledTouches;
+            if (!editorTouchCapture) {
+                setClickable(false);
+            }
+        }
+
+        void clearRuntimeInteraction() {
+            cancelRuntimeGesture();
+            runtimeClick = null;
+            runtimeLongPress = null;
+            observeHandledChildTouches = false;
+            if (!editorTouchCapture) {
+                setClickable(false);
+            }
+        }
+
+        @Override
+        public boolean dispatchTouchEvent(MotionEvent event) {
+            boolean handled = super.dispatchTouchEvent(event);
+            boolean runtimeHandled = hasRuntimeInteraction() &&
+                (observeHandledChildTouches || !handled) &&
+                runtimeGestures.onTouchEvent(event);
+            return handled || runtimeHandled;
+        }
+
+        private void cancelRuntimeGesture() {
+            long now = SystemClock.uptimeMillis();
+            MotionEvent cancel = MotionEvent.obtain(
+                now, now, MotionEvent.ACTION_CANCEL, 0, 0, 0);
+            runtimeGestures.onTouchEvent(cancel);
+            cancel.recycle();
+        }
+
+        private boolean hasRuntimeInteraction() {
+            return !editorTouchCapture &&
+                (runtimeClick != null || runtimeLongPress != null);
         }
 
         @Override
@@ -662,8 +987,8 @@ final class AndroidHudOverlay extends FrameLayout {
         private static final long REPEAT_DELAY_MS = 350L;
         private static final long REPEAT_INTERVAL_MS = 90L;
 
-        private final Button trigger;
-        private final Button selector;
+        private final AndroidHudControlButton trigger;
+        private final AndroidHudControlButton selector;
         private final Handler repeatHandler = new Handler();
         private final Runnable repeater = new Runnable() {
             @Override
@@ -689,15 +1014,9 @@ final class AndroidHudOverlay extends FrameLayout {
         ControlView(Context context) {
             super(context);
             setOrientation(HORIZONTAL);
-            trigger = new Button(context);
-            trigger.setAllCaps(false);
-            trigger.setMinWidth(0);
-            trigger.setMinHeight(0);
-            selector = new Button(context);
+            trigger = new AndroidHudControlButton(context);
+            selector = new AndroidHudControlButton(context);
             selector.setText("▾");
-            selector.setTextSize(11f);
-            selector.setMinWidth(0);
-            selector.setMinHeight(0);
             addView(trigger, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.MATCH_PARENT, 1f));
             addView(selector, new LinearLayout.LayoutParams(
@@ -728,6 +1047,7 @@ final class AndroidHudOverlay extends FrameLayout {
                     case MotionEvent.ACTION_DOWN:
                         pressed = true;
                         repeated = false;
+                        trigger.setPressed(true);
                         repeatHandler.removeCallbacks(repeater);
                         repeatHandler.postDelayed(repeater, REPEAT_DELAY_MS);
                         return true;
@@ -738,6 +1058,7 @@ final class AndroidHudOverlay extends FrameLayout {
                             boundCallback.trigger(boundActionId, false);
                         }
                         pressed = false;
+                        trigger.setPressed(false);
                         return true;
                     case MotionEvent.ACTION_CANCEL:
                         cancelRepeat();
@@ -750,13 +1071,9 @@ final class AndroidHudOverlay extends FrameLayout {
 
         void bind(AndroidHudModel.Element element,
                 LinkedHashMap<String, AndroidHudModel.ActionDescriptor> catalog,
-                AndroidHudSnapshot snapshot, boolean editing, ControlCallback callback) {
-            ArrayList<String> choices = new ArrayList<>();
-            for (String id : element.actionIds) {
-                if (catalog.containsKey(id)) {
-                    choices.add(id);
-                }
-            }
+                boolean editing, ControlCallback callback) {
+            ArrayList<String> choices =
+                AndroidHudActionMenu.availableActions(element, catalog);
             String selected = element.selectedActionId;
             if (!choices.contains(selected)) {
                 selected = choices.contains(element.defaultActionId) ?
@@ -779,59 +1096,53 @@ final class AndroidHudOverlay extends FrameLayout {
             String label = element.label.isEmpty() ?
                 descriptor == null ? active : descriptor.label : element.label;
             trigger.setText(label.isEmpty() ? "未绑定" : label);
-            trigger.setTextColor(element.style.textColor);
-            trigger.setTextSize(element.style.fontSizeSp);
-            trigger.setEnabled(!editing && descriptor != null);
+            // The editor host intercepts gestures, so keep the child visually
+            // enabled there and disable only its interaction.  Disabling the
+            // Button itself would let the platform theme gray out the user's
+            // configured text and surface colors.
+            trigger.setEnabled(editing || descriptor != null);
+            trigger.setClickable(!editing && descriptor != null);
+            trigger.setLongClickable(!editing && descriptor != null);
             boolean menuMode = AndroidHudModel.SELECTOR_MODE_MENU.equals(element.selectorMode);
             selector.setText(menuMode ? "☰" : "↻");
             selector.setVisibility(choices.size() > 1 ? VISIBLE : GONE);
-            selector.setEnabled(!editing && choices.size() > 1);
+            selector.setEnabled(editing || choices.size() > 1);
             selector.setOnClickListener(view -> {
                 if (menuMode) {
-                    showActionMenu(element, catalog, snapshot, editing, callback,
-                        choices, active);
+                    AndroidHudActionMenu.show(selector, choices, catalog, active,
+                        chosenActionId -> {
+                            callback.select(chosenActionId);
+                            bind(element, catalog, editing, callback);
+                        });
                     return;
                 }
                 int index = choices.indexOf(active);
                 String next = choices.get((index + 1 + choices.size()) % choices.size());
                 callback.select(next);
-                bind(element, catalog, snapshot, editing, callback);
+                bind(element, catalog, editing, callback);
             });
+            // setOnClickListener marks a View clickable, so apply the editor
+            // interaction state after replacing the listener.
+            selector.setClickable(!editing && choices.size() > 1);
         }
 
-        private void showActionMenu(AndroidHudModel.Element element,
-                LinkedHashMap<String, AndroidHudModel.ActionDescriptor> catalog,
-                AndroidHudSnapshot snapshot, boolean editing, ControlCallback callback,
-                ArrayList<String> choices, String active) {
-            PopupMenu menu = new PopupMenu(getContext(), selector);
-            for (int index = 0; index < choices.size(); ++index) {
-                String id = choices.get(index);
-                AndroidHudModel.ActionDescriptor action = catalog.get(id);
-                String label = action == null || action.label.isEmpty() ? id : action.label;
-                if (action != null && !AndroidHudModel.RISK_SAFE.equals(action.risk)) {
-                    label = "⚠ " + label;
-                }
-                if (id.equals(active)) {
-                    label = "✓ " + label;
-                }
-                menu.getMenu().add(0, index, index, label);
-            }
-            menu.setOnMenuItemClickListener(item -> {
-                int index = item.getItemId();
-                if (index < 0 || index >= choices.size()) {
-                    return false;
-                }
-                String selected = choices.get(index);
-                callback.select(selected);
-                bind(element, catalog, snapshot, editing, callback);
-                return true;
-            });
-            menu.show();
+        void applyStyle(AndroidHudModel.Style style,
+                AndroidHudModel.ControlAppearance appearance) {
+            trigger.applyAppearance(style, appearance, false);
+            selector.applyAppearance(style, appearance, true);
+            LinearLayout.LayoutParams selectorParams =
+                (LinearLayout.LayoutParams)selector.getLayoutParams();
+            selectorParams.width = Math.round(
+                appearance.selectorWidthDp * getResources().getDisplayMetrics().density);
+            selectorParams.leftMargin = Math.round(
+                appearance.buttonGapDp * getResources().getDisplayMetrics().density);
+            selector.setLayoutParams(selectorParams);
         }
 
         private void cancelRepeat() {
             pressed = false;
             repeated = false;
+            trigger.setPressed(false);
             repeatHandler.removeCallbacks(repeater);
         }
 

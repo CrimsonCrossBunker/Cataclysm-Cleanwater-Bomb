@@ -1,5 +1,6 @@
 #include "cata_imgui.h"
 
+#include <algorithm>
 #include <cmath>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -12,6 +13,9 @@
 #include "catacharset.h"
 #include "cached_options.h"
 #include "color.h"
+#if defined(TILES)
+    #include "cursesport.h"
+#endif
 #include "input.h"
 #include "output.h"
 #include "path_info.h"
@@ -592,7 +596,19 @@ void cataimgui::client::new_frame( int display_buffer_w, int display_buffer_h )
     }
 #endif
     if( clear_screen && clear_sdl_window() ) {
-        // Keep the request armed if the clear was deferred by a queued recovery.
+        // The SDL buffer and the curses window cache are separate.  Clearing only
+        // the former would make unchanged UI content disappear.  Force the live
+        // adaptor stack to run its redraw callbacks in this same frame, then make
+        // every curses window those callbacks own re-emit all of its cells.
+        //
+        // This is deliberately done here, before redraw_invalidated() scans the
+        // adaptor flags.  A deferred clear is commonly left by the destructor of
+        // a transient ImGui popup (including hit animations); clearing without
+        // invalidating its underlay produced a black frame until the next move.
+        ui_manager::invalidate_all_ui_adaptors();
+#if defined(TILES)
+        cata_cursesport::bump_curses_render_epoch();
+#endif
         clear_screen = false;
     }
 #if SDL_MAJOR_VERSION >= 3
@@ -663,6 +679,11 @@ bool cataimgui::clear_pending()
     return clear_screen;
 }
 
+void cataimgui::request_clear()
+{
+    clear_screen = true;
+}
+
 void cataimgui::client::process_input( void *input, int display_buffer_w, int display_buffer_h )
 {
     if( any_window_shown() ) {
@@ -681,6 +702,41 @@ void cataimgui::client::process_input( void *input, int display_buffer_w, int di
         ( void )display_buffer_h;
 #if SDL_MAJOR_VERSION >= 3
         ImGui_ImplSDL3_ProcessEvent( evt );
+#if defined(__ANDROID__)
+        // Android keyboards may report editing controls with SDLK_UNKNOWN while
+        // preserving the physical scancode.  The stock SDL3 ImGui backend maps
+        // most controls from keycode only, so normalize the controls needed by
+        // text widgets here.  AddKeyEvent filters duplicates when both paths
+        // resolve the same key.
+        if( evt->type == CATA_KEYDOWN || evt->type == CATA_KEYUP ) {
+            ImGuiKey key = ImGuiKey_None;
+            switch( evt->key.scancode ) {
+                case SDL_SCANCODE_BACKSPACE:
+                    key = ImGuiKey_Backspace;
+                    break;
+                case SDL_SCANCODE_DELETE:
+                    key = ImGuiKey_Delete;
+                    break;
+                case SDL_SCANCODE_LEFT:
+                    key = ImGuiKey_LeftArrow;
+                    break;
+                case SDL_SCANCODE_RIGHT:
+                    key = ImGuiKey_RightArrow;
+                    break;
+                case SDL_SCANCODE_HOME:
+                    key = ImGuiKey_Home;
+                    break;
+                case SDL_SCANCODE_END:
+                    key = ImGuiKey_End;
+                    break;
+                default:
+                    break;
+            }
+            if( key != ImGuiKey_None ) {
+                ImGui::GetIO().AddKeyEvent( key, evt->type == CATA_KEYDOWN );
+            }
+        }
+#endif
 #else
         // Coordinates already converted to display_buffer space by
         // convert_event_to_display_buffer_coords in the event pump.
@@ -818,6 +874,78 @@ static void PushOrPopColor( std::string_view seg, int minimumColorStackSize )
             // Do nothing
             break;
     }
+}
+
+namespace
+{
+
+thread_local int interaction_suppression_depth = 0;
+
+} // namespace
+
+bool cataimgui::handle_vertical_swipe( const bool enabled, const float threshold )
+{
+    if( !enabled ) {
+        return false;
+    }
+
+    ImGuiStorage *storage = ImGui::GetStateStorage();
+    const ImGuiID dragging_key = ImGui::GetID( "##cata_vertical_swipe_dragging" );
+    const ImGuiID moved_key = ImGui::GetID( "##cata_vertical_swipe_moved" );
+    const ImGuiID start_x_key = ImGui::GetID( "##cata_vertical_swipe_start_x" );
+    const ImGuiID start_y_key = ImGui::GetID( "##cata_vertical_swipe_start_y" );
+    ImGuiIO &io = ImGui::GetIO();
+
+    bool dragging = storage->GetBool( dragging_key, false );
+    bool moved = storage->GetBool( moved_key, false );
+    if( ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) &&
+        ImGui::IsMouseClicked( ImGuiMouseButton_Left ) ) {
+        dragging = true;
+        moved = false;
+        storage->SetFloat( start_x_key, io.MousePos.x );
+        storage->SetFloat( start_y_key, io.MousePos.y );
+    }
+    if( !dragging ) {
+        storage->SetBool( moved_key, false );
+        return false;
+    }
+
+    const float distance_x = io.MousePos.x - storage->GetFloat( start_x_key );
+    const float distance_y = io.MousePos.y - storage->GetFloat( start_y_key );
+    if( std::abs( distance_y ) > std::abs( distance_x ) &&
+        std::hypot( distance_x, distance_y ) > std::max( 1.0F, threshold ) ) {
+        moved = true;
+    }
+    if( moved && ImGui::IsMouseDown( ImGuiMouseButton_Left ) ) {
+        ImGui::SetScrollY( ImGui::GetScrollY() - io.MouseDelta.y );
+    }
+    if( ImGui::IsMouseReleased( ImGuiMouseButton_Left ) ) {
+        dragging = false;
+    }
+
+    storage->SetBool( dragging_key, dragging );
+    storage->SetBool( moved_key, moved );
+    return moved;
+}
+
+cataimgui::scoped_interaction_suppression::scoped_interaction_suppression(
+    const bool enabled ) : enabled_( enabled )
+{
+    if( enabled_ ) {
+        ++interaction_suppression_depth;
+    }
+}
+
+cataimgui::scoped_interaction_suppression::~scoped_interaction_suppression()
+{
+    if( enabled_ ) {
+        --interaction_suppression_depth;
+    }
+}
+
+bool cataimgui::interaction_suppressed()
+{
+    return interaction_suppression_depth > 0;
 }
 
 /**
@@ -1014,6 +1142,13 @@ void cataimgui::window::hide_if_hidden() const
     }
 }
 
+void cataimgui::window::set_redraw_underlay( const bool value )
+{
+    if( p_impl ) {
+        p_impl->window_adaptor->redraw_uis_below = value;
+    }
+}
+
 bool cataimgui::window::is_bounds_changed()
 {
     return p_impl->is_resized;
@@ -1202,6 +1337,15 @@ std::string cataimgui::window::get_filter()
     }
 }
 
+void cataimgui::window::set_filter( const std::string &text )
+{
+    if( !filter_impl ) {
+        filter_impl = std::make_unique<cataimgui::filter_box_impl>();
+        filter_impl->id = 0;
+    }
+    filter_impl->text = text;
+}
+
 void cataimgui::window::clear_filter()
 {
     if( filter_impl && filter_impl->id != 0 ) {
@@ -1244,20 +1388,31 @@ void cataimgui::PushMonoFont()
     ImGui::PushFont( font, font->LegacySize );
 }
 
-void cataimgui::PushGuiFont1_5x()
+void cataimgui::PushGuiFontScaled( const float scale )
 {
-    if( ImGui::GetIO().Fonts->Fonts.Size > 2 ) {
+    const float safe_scale = std::max( 0.1F, scale );
+    if( safe_scale > 1.0F && ImGui::GetIO().Fonts->Fonts.Size > 2 ) {
         ImFont *font = ImGui::GetIO().Fonts->Fonts[2];
-        ImGui::PushFont( font, font->LegacySize );
+        ImGui::PushFont( font, font->LegacySize * safe_scale / 1.5F );
     } else {
         ImFont *font = ImGui::GetIO().Fonts->Fonts[0];
-        ImGui::PushFont( font, font->LegacySize * 1.5f );
+        ImGui::PushFont( font, font->LegacySize * safe_scale );
     }
+}
+
+void cataimgui::PopGuiFontScaled()
+{
+    ImGui::PopFont();
+}
+
+void cataimgui::PushGuiFont1_5x()
+{
+    PushGuiFontScaled( 1.5F );
 }
 
 void cataimgui::PopGuiFont1_5x()
 {
-    ImGui::PopFont();
+    PopGuiFontScaled();
 }
 
 

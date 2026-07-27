@@ -7,6 +7,9 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
+
+#include "ui_profile.h"
 
 namespace cata::lua_ui
 {
@@ -29,7 +32,40 @@ enum class script_ui_capability : std::uint32_t {
     trees = 1U << 11,
     modals = 1U << 12,
     tooltips = 1U << 13,
-    virtualization = 1U << 14
+    virtualization = 1U << 14,
+    radial_selection = 1U << 15,
+    action_slots = 1U << 16
+};
+
+struct script_ui_radial_option {
+    std::string id;
+    std::string label;
+    bool enabled = true;
+    bool selected = false;
+};
+
+struct script_ui_action_option {
+    std::string id;
+    std::string label;
+    bool enabled = true;
+};
+
+// Renderer-independent environment exposed to Lua UI API v3.  It describes
+// interaction and semantic layout policy, never an operating-system name.
+struct script_ui_environment {
+    std::string profile;
+    std::string input;
+    std::string density;
+    std::string breakpoint;
+    double minimum_target = 1.0;
+    bool touch = false;
+    bool hover = false;
+    bool swipe_scroll = false;
+    bool native_text_input = false;
+    bool keyboard_navigation = true;
+    bool pointer_activation = false;
+    bool tap_activation = false;
+    bool long_press_dangerous = false;
 };
 
 struct script_ui_renderer_info {
@@ -50,6 +86,7 @@ class script_ui_renderer
         virtual ~script_ui_renderer() = default;
 
         virtual script_ui_renderer_info info() const = 0;
+        virtual double available_width() const = 0;
 
         virtual void text( const std::string &value ) = 0;
         virtual void heading( const std::string &value ) = 0;
@@ -85,6 +122,12 @@ class script_ui_renderer
                                     double value ) = 0;
         virtual std::string input_text( const std::string &id, const std::string &label,
                                         const std::string &value ) = 0;
+        virtual std::string radial_select( const std::string &id,
+                                           const std::string &center_label,
+                                           const std::vector<script_ui_radial_option> &options ) = 0;
+        virtual std::string action_slot(
+            const std::string &id, const std::string &selected_action,
+            int context_revision, const std::vector<script_ui_action_option> &options ) = 0;
 
         // Structured containers execute their body while the adapter owns the
         // matching Begin/End or Push/Pop pair.  This prevents Lua exceptions
@@ -112,13 +155,14 @@ class script_ui_renderer
 class script_ui_context
 {
     public:
-        explicit script_ui_context( script_ui_renderer &renderer ) : renderer_( renderer ) {}
+        explicit script_ui_context( script_ui_renderer &renderer );
 
         std::string backend() const;
         std::string platform() const;
         bool supports( const std::string &capability ) const;
         bool is_immediate_mode() const;
         bool uses_native_widgets() const;
+        script_ui_environment environment() const;
 
         void text( const std::string &value ) const;
         void heading( const std::string &value ) const;
@@ -126,11 +170,13 @@ class script_ui_context
         void disabled_text( const std::string &value ) const;
         void text_colored( const std::string &value, double red, double green, double blue,
                            double alpha ) const;
+        void text_tone( const std::string &value, const std::string &tone ) const;
         void separator() const;
         void same_line() const;
         void new_line() const;
         void spacing() const;
         void set_next_item_width( double width ) const;
+        void item_width( const std::string &token ) const;
         void progress_bar( double fraction, const std::optional<std::string> &overlay ) const;
 
         bool button( const std::string &label ) const;
@@ -157,10 +203,19 @@ class script_ui_context
         std::string input_text( const std::string &label, const std::string &value ) const;
         std::string input_text_id( const std::string &id, const std::string &label,
                                    const std::string &value ) const;
+        std::string radial_select_id( const std::string &id, const std::string &center_label,
+                                      const std::vector<script_ui_radial_option> &options ) const;
+        std::string action_slot_id(
+            const std::string &id, const std::string &selected_action,
+            int context_revision, const std::vector<script_ui_action_option> &options ) const;
         void child( const std::string &id, double height,
                     const std::function<void()> &draw ) const;
+        void scroll( const std::string &id, const std::string &height_token,
+                     const std::function<void()> &draw ) const;
         void table( const std::string &id, int columns,
                     const std::function<void()> &draw ) const;
+        void grid( const std::string &id, int narrow_columns, int regular_columns,
+                   int wide_columns, const std::function<void()> &draw ) const;
         void table_next_row() const;
         bool table_next_column() const;
         void tabs( const std::string &id, const std::function<void()> &draw ) const;
@@ -173,9 +228,12 @@ class script_ui_context
         void tooltip( const std::string &text ) const;
         void virtual_list( int item_count, double item_height,
                            const std::function<void( int, int )> &draw_range ) const;
+        void virtual_list_rows( int item_count, const std::string &row_token,
+                                const std::function<void( int, int )> &draw_range ) const;
 
     private:
         script_ui_renderer &renderer_;
+        const cata::ui::profile profile_;
 };
 
 } // namespace cata::lua_ui

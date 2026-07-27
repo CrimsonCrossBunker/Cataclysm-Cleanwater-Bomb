@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <clocale>
 #include <cmath>
@@ -6,8 +7,10 @@
 #include <locale>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "activity_tracker.h"
@@ -15,6 +18,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "catacharset.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character_attire.h"
@@ -39,6 +43,7 @@
 #include "point.h"
 #include "string_formatter.h"
 #include "translation.h"
+#include "translations.h"
 #include "type_id.h"
 #include "units.h"
 #include "weather.h"
@@ -141,6 +146,7 @@ static const widget_id widget_test_int_color_num( "test_int_color_num" );
 static const widget_id widget_test_layout_cols_in_cols( "test_layout_cols_in_cols" );
 static const widget_id widget_test_layout_nopad( "test_layout_nopad" );
 static const widget_id widget_test_layout_nopad_noflag( "test_layout_nopad_noflag" );
+static const widget_id widget_test_layout_rows1( "test_layout_rows1" );
 static const widget_id widget_test_layout_rows_in_columns( "test_layout_rows_in_columns" );
 static const widget_id widget_test_lighting_clause( "test_lighting_clause" );
 static const widget_id widget_test_mana_num( "test_mana_num" );
@@ -175,6 +181,18 @@ static const widget_id widget_test_weather_text( "test_weather_text" );
 static const widget_id widget_test_weather_text_height5( "test_weather_text_height5" );
 static const widget_id widget_test_weight_clauses_fun( "test_weight_clauses_fun" );
 static const widget_id widget_test_weight_clauses_normal( "test_weight_clauses_normal" );
+static const widget_id widget_focus_num( "focus_num" );
+static const widget_id widget_legacy_labels_sidebar( "legacy_labels_sidebar" );
+static const widget_id widget_ll_movement_layout( "ll_movement_layout" );
+static const widget_id widget_ll_place_info( "ll_place_info" );
+static const widget_id widget_ll_place_layout( "ll_place_layout" );
+static const widget_id widget_ll_place_overmap( "ll_place_overmap" );
+static const widget_id widget_mood_desc_label( "mood_desc_label" );
+static const widget_id widget_move_count_mode_desc( "move_count_mode_desc" );
+static const widget_id widget_sound_num( "sound_num" );
+static const widget_id widget_speed_num( "speed_num" );
+static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
+static const widget_id widget_thick_side_by_side( "thick_side_by_side" );
 
 // dseguin 2022 - Ugly hack to scrape content from the window object.
 // Scrapes the window w at origin, reading the number of cols and rows.
@@ -2581,6 +2599,251 @@ TEST_CASE( "widget_rows_in_columns", "[widget]" )
         CHECK( wgt.layout( ava, 68 ) == expected );
     }
 }
+
+TEST_CASE( "explicit_widget_label_width_reaches_nested_rows",
+           "[widget][layout][label]" )
+{
+    avatar &ava = get_avatar();
+    clear_avatar();
+    ava.movecounter = 0;
+    ava.set_focus( 100 );
+    ava.set_speed_base( 100 );
+    ava.magic->set_mana( 1000 );
+
+    widget rows = widget_test_layout_rows1.obj();
+    const std::vector<std::string> lines = string_split(
+            rows.layout_with_label_width( ava, 20, 8 ), '\n' );
+
+    REQUIRE( lines.size() == 4 );
+    CHECK( lines[0].substr( 0, 10 ) == "MOVE:     " );
+    CHECK( lines[1].substr( 0, 10 ) == "SPEED:    " );
+    CHECK( lines[2].substr( 0, 10 ) == "FOCUS:    " );
+    CHECK( lines[3].substr( 0, 10 ) == "MANA:     " );
+}
+
+TEST_CASE( "legacy_labels_place_layout_uses_original_content_columns",
+           "[widget][layout][sidebar]" )
+{
+    REQUIRE( widget_legacy_labels_sidebar.is_valid() );
+    REQUIRE( widget_ll_place_info.is_valid() );
+    REQUIRE( widget_ll_place_overmap.is_valid() );
+    CHECK( widget_legacy_labels_sidebar->_width - 2 == 42 );
+    CHECK( widget_ll_place_info->_width == 26 );
+    CHECK( widget_legacy_labels_sidebar->_padding == 2 );
+    CHECK( widget_ll_place_overmap->_width == 14 );
+    CHECK( widget_ll_place_info->_width + widget_legacy_labels_sidebar->_padding +
+           widget_ll_place_overmap->_width == widget_legacy_labels_sidebar->_width - 2 );
+}
+
+TEST_CASE( "core_sidebar_catalog_has_stable_direct_group_ids",
+           "[widget][layout][sidebar][android_hud]" )
+{
+    int sidebar_count = 0;
+    int group_count = 0;
+    int disabled_count = 0;
+    std::set<std::string> source_ids;
+    for( const widget &sidebar : widget::get_all() ) {
+        if( sidebar._style != "sidebar" ) {
+            continue;
+        }
+        ++sidebar_count;
+        std::unordered_map<std::string, int> occurrences;
+        for( const widget_id &child : sidebar._widgets ) {
+            REQUIRE( child.is_valid() );
+            const int occurrence = occurrences[child.str()]++;
+            const std::string source_id =
+                "sidebar." + sidebar.getId().str() + ".group." +
+                child.str() + "." + std::to_string( occurrence );
+            CHECK( source_ids.insert( source_id ).second );
+            disabled_count += child->has_flag(
+                                  "W_DISABLED_BY_DEFAULT" ) ? 1 : 0;
+            ++group_count;
+        }
+    }
+
+    CHECK( sidebar_count == 13 );
+    CHECK( group_count == 211 );
+    CHECK( source_ids.size() == 211 );
+    CHECK( disabled_count > 0 );
+}
+
+TEST_CASE( "thick_sidebar_hud_layout_preserves_original_and_custom_columns",
+           "[widget][layout][sidebar][android_hud]" )
+{
+    avatar &ava = get_avatar();
+    clear_avatar();
+    ava.movecounter = 0;
+    ava.set_focus( 100 );
+    ava.set_speed_base( 100 );
+
+    widget thick = widget_thick_side_by_side.obj();
+    const int original_height = widget_thick_side_by_side->_height;
+    widget_hud_layout original;
+    original.mode = widget_hud_layout_mode::original;
+    original.columns = 64;
+    original.inherited_separator = ": ";
+    original.inherited_padding = 2;
+    const std::vector<std::string> original_lines = string_split(
+                remove_color_tags( thick.layout_for_hud( ava, original ) ),
+                '\n' );
+    REQUIRE_FALSE( original_lines.empty() );
+    for( const std::string &line : original_lines ) {
+        CHECK( utf8_width( line ) == 64 );
+        CHECK( utf8_wrapper( line ).substr_display( 13, 2 ).str() == "  " );
+    }
+    const auto movement_line = std::find_if(
+                                   original_lines.begin(), original_lines.end(),
+    []( const std::string_view line ) {
+        return line.find( "Sound" ) != std::string::npos;
+    } );
+    REQUIRE( movement_line != original_lines.end() );
+    CHECK( movement_line->find( "Sound" ) == 15 );
+    CHECK( movement_line->find( "Mood" ) == 32 );
+    CHECK( movement_line->find( "Focus" ) == 49 );
+
+    widget_hud_layout custom = original;
+    custom.mode = widget_hud_layout_mode::custom;
+    custom.node_overrides[
+     "thick_side_by_side@0/thick_body_graph@0"].width_columns = 10;
+    const std::vector<std::string> custom_lines = string_split(
+                remove_color_tags( thick.layout_for_hud( ava, custom ) ),
+                '\n' );
+    const auto custom_movement = std::find_if(
+                                     custom_lines.begin(), custom_lines.end(),
+    []( const std::string_view line ) {
+        return line.find( "Sound" ) != std::string::npos;
+    } );
+    REQUIRE( custom_movement != custom_lines.end() );
+    CHECK( custom_movement->find( "Sound" ) == 12 );
+    CHECK( custom_movement->find( "Mood" ) == 30 );
+    CHECK( custom_movement->find( "Focus" ) == 48 );
+
+    widget_hud_layout loose = original;
+    loose.mode = widget_hud_layout_mode::loose;
+    const std::vector<std::string> loose_lines = string_split(
+                remove_color_tags( thick.layout_for_hud( ava, loose ) ),
+                '\n' );
+    REQUIRE_FALSE( loose_lines.empty() );
+    for( const std::string &line : loose_lines ) {
+        CHECK( ( line.empty() || line.back() != ' ' ) );
+    }
+    CHECK( widget_thick_side_by_side->_height ==
+           original_height );
+}
+
+#if defined(LOCALIZE)
+TEST_CASE( "explicit_widget_label_width_aligns_translated_place_rows",
+           "[widget][layout][label][translations]" )
+{
+    on_out_of_scope reset_language( []() {
+        set_language( "en" );
+    } );
+    set_language( "zh_CN" );
+
+    avatar &ava = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    fill_overmap_area( ava, oter_id( "field" ) );
+
+    widget place = widget_ll_place_layout.obj();
+    const std::vector<std::string> lines = string_split(
+            remove_color_tags( place.layout_with_label_width( ava, 80, 10 ) ), '\n' );
+
+    REQUIRE( lines.size() == 8 );
+    for( const std::string &line : lines ) {
+        CHECK( utf8_width( line ) == 80 );
+    }
+
+    // Snow may have no value.  Every other translated row must begin its
+    // value after the same ten-cell label plus the inherited ": " separator.
+    for( const int row : {
+             0, 1, 2, 3, 5, 6, 7
+         } ) {
+        const std::string &line = lines[row];
+        const std::size_t separator = line.find( ':' );
+        REQUIRE( separator != std::string::npos );
+        const std::size_t value = line.find_first_not_of( ' ', separator + 1 );
+        REQUIRE( value != std::string::npos );
+        CAPTURE( row, line );
+        CHECK( utf8_width( line.substr( 0, value ) ) == 12 );
+    }
+}
+
+TEST_CASE( "widget_label_width_aligns_translated_movement_grid",
+           "[widget][layout][label][translations]" )
+{
+    on_out_of_scope reset_language( []() {
+        set_language( "en" );
+    } );
+    set_language( "zh_CN" );
+
+    avatar &ava = get_avatar();
+    clear_avatar();
+    ava.movecounter = 0;
+    ava.set_focus( 100 );
+    ava.set_speed_base( 100 );
+
+    widget movement = widget_ll_movement_layout.obj();
+    const std::array<int, 3> starts = { 0, 15, 30 };
+    const std::array<int, 3> widths = { 13, 13, 12 };
+    const std::array<std::array<widget_id, 3>, 2> fields = { {
+            {
+                widget_sound_num, widget_mood_desc_label,
+                widget_focus_num
+            },
+            {
+                widget_stamina_graph_classic, widget_speed_num,
+                widget_move_count_mode_desc
+            }
+        }
+    };
+    for( const bool derive_hud_width : {
+             false, true
+         } ) {
+        const std::string formatted = derive_hud_width ?
+                                      movement.layout_for_hud( ava, 42 ) :
+                                      movement.layout_with_label_width( ava, 42, 4 );
+        const std::vector<std::string> lines = string_split(
+                remove_color_tags( formatted ), '\n' );
+
+        CAPTURE( derive_hud_width );
+        REQUIRE( lines.size() == 2 );
+        for( const std::string &line : lines ) {
+            CHECK( utf8_width( line ) == 42 );
+        }
+
+        std::array<int, 3> first_row_values = {};
+        for( std::size_t row = 0; row < lines.size(); row++ ) {
+            const std::string &line = lines[row];
+            for( std::size_t column = 0; column < starts.size(); column++ ) {
+                const std::string field = utf8_wrapper( line ).substr_display(
+                                              starts[column], widths[column] ).str();
+                CAPTURE( row, column, line, field );
+                const widget_id &source = fields[row][column];
+                const std::string separator = derive_hud_width &&
+                                              !source->explicit_separator ?
+                                              ": " : source->_separator;
+                const std::string prefix = source->_label.translated() + separator;
+                REQUIRE( field.rfind( prefix, 0 ) == 0 );
+                const std::size_t value = field.find_first_not_of(
+                                              ' ', prefix.size() );
+                REQUIRE( value != std::string::npos );
+                const int value_column = starts[column] +
+                                         utf8_width( field.substr( 0, value ) );
+                // Both paths reserve one shared separator slot as well as the
+                // label slot, so a one-cell separator cannot shift a value
+                // left of a sibling using the normal ": " separator.
+                CHECK( value_column == starts[column] + 6 );
+                if( row == 0 ) {
+                    first_row_values[column] = value_column;
+                } else {
+                    CHECK( value_column == first_row_values[column] );
+                }
+            }
+        }
+    }
+}
+#endif
 
 static void test_widget_flag_nopad( const bodypart_id &bid, int bleed_int, avatar &ava,
                                     const widget_id &wgt, bool skip_pad )
