@@ -160,10 +160,7 @@
     "copy-from": "f_planter",
     "name": "test planter without crop overgrowth",
     "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
-    "plant_data": {
-      "transform": "test_f_planter_no_overgrowth_seed",
-      "max_water_storage": 0
-    }
+    "plant_data": { "transform": "test_f_planter_no_overgrowth_seed", "max_water_storage": 0 }
   },
   {
     "type": "furniture",
@@ -171,11 +168,7 @@
     "copy-from": "test_f_plant_seed",
     "name": "test planter seed without crop overgrowth",
     "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
-    "plant_data": {
-      "transform": "test_f_planter_no_overgrowth_seedling",
-      "base": "test_f_planter_no_overgrowth",
-      "max_water_storage": 0
-    }
+    "plant_data": { "transform": "test_f_planter_no_overgrowth_seedling", "base": "test_f_planter_no_overgrowth", "max_water_storage": 0 }
   },
   {
     "type": "furniture",
@@ -183,11 +176,7 @@
     "copy-from": "test_f_plant_seedling",
     "name": "test planter seedling without crop overgrowth",
     "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
-    "plant_data": {
-      "transform": "test_f_planter_no_overgrowth_mature",
-      "base": "test_f_planter_no_overgrowth",
-      "max_water_storage": 0
-    }
+    "plant_data": { "transform": "test_f_planter_no_overgrowth_mature", "base": "test_f_planter_no_overgrowth", "max_water_storage": 0 }
   },
   {
     "type": "furniture",
@@ -195,11 +184,7 @@
     "copy-from": "test_f_plant_mature",
     "name": "test planter mature without crop overgrowth",
     "extend": { "flags": [ "NO_CROP_OVERGROWTH" ] },
-    "plant_data": {
-      "transform": "test_f_planter_no_overgrowth_harvest",
-      "base": "test_f_planter_no_overgrowth",
-      "max_water_storage": 0
-    }
+    "plant_data": { "transform": "test_f_planter_no_overgrowth_harvest", "base": "test_f_planter_no_overgrowth", "max_water_storage": 0 }
   },
   {
     "type": "furniture",
