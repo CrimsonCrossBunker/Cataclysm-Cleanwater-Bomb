@@ -300,6 +300,7 @@ android {
     ndkVersion override_ndkVersion
 
     buildFeatures {
+        buildConfig true
         prefab true
     }
 
@@ -374,12 +375,36 @@ android {
     productFlavors {
         stable {
             dimension "version"
+            buildConfigField "boolean", "CCB_NEW_UI", "false"
             resValue "string", "app_name", "Cataclysm: Cleanwater Bomb"
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCCB_ANDROID_NEW_UI=OFF"
+                }
+            }
         }
         experimental {
             dimension "version"
             applicationIdSuffix ".experimental"
+            buildConfigField "boolean", "CCB_NEW_UI", "false"
             resValue "string", "app_name", "Cataclysm: Cleanwater Bomb (experimental)"
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCCB_ANDROID_NEW_UI=OFF"
+                }
+            }
+        }
+        newUi {
+            dimension "version"
+            applicationIdSuffix ".newui"
+            versionNameSuffix "-new-ui"
+            buildConfigField "boolean", "CCB_NEW_UI", "true"
+            resValue "string", "app_name", "Cataclysm: Cleanwater Bomb (New UI)"
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCCB_ANDROID_NEW_UI=ON"
+                }
+            }
         }
     }
 

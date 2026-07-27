@@ -49,6 +49,9 @@ file(GLOB CATA_SOURCES ${CATA_REPO_ROOT}/src/*.cpp
 
 add_library(main SHARED ${CATA_SOURCES})
 
+option(CCB_ANDROID_NEW_UI
+       "Enable the opt-in Android touch UI and customizable HUD" OFF)
+
 # Android always uses SDL3's Vulkan GPU backend when available, so every APK
 # needs SPIR-V shader artifacts. Release CI downloads and validates prebuilt
 # files; local builds generate them as part of the native build by default.
@@ -94,6 +97,7 @@ target_compile_definitions(
   PRIVATE TILES
           SDL_SOUND
           USE_SDL3
+          CCB_ANDROID_NEW_UI=$<BOOL:${CCB_ANDROID_NEW_UI}>
           BACKTRACE
           LOCALIZE
           ZSTD_STATIC_LINKING_ONLY
