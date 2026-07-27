@@ -12,6 +12,15 @@ namespace cata::lua_ui
 
 constexpr int api_version = 2;
 
+constexpr bool is_enabled() noexcept
+{
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+    return true;
+#else
+    return false;
+#endif
+}
+
 struct runtime_status {
     bool loaded = false;
     std::size_t generation = 0;

@@ -12,6 +12,18 @@ using SDL2 while their SDL3 migration proceeds separately. This does not alter
 the Lua API: use `ctx:platform()` and renderer capabilities only when a layout
 needs a portable fallback.
 
+## Build availability
+
+Lua UI is a compile-time experimental feature and is disabled by default for
+desktop, Stable Android, and Experimental Android builds. Enable it explicitly
+with `CATA_ENABLE_LUA_UI=1` when using Make, or
+`-DCATA_ENABLE_LUA_UI=ON` when configuring CMake. The Android `newUi` flavor
+enables it automatically.
+
+When disabled, Lua, sol2, the script runtime, its action queue, and its tests
+are not compiled or linked. The game does not load scripts, create Lua state
+sidecars, or expose the Lua UI debug-menu entry.
+
 ## Loading and hot reload
 
 Scripts are loaded as one transaction in this order:

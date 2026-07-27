@@ -43,16 +43,33 @@ endforeach()
 list(REMOVE_DUPLICATES _sdl3_subdir_inc)
 
 add_subdirectory(${CATA_REPO_ROOT}/src/third-party third-party)
-add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
-add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
 
 file(GLOB CATA_SOURCES ${CATA_REPO_ROOT}/src/*.cpp
      ${CATA_REPO_ROOT}/src/cata_allocator_c.c)
 
-add_library(main SHARED ${CATA_SOURCES})
-
 option(CCB_ANDROID_NEW_UI
        "Enable the opt-in Android touch UI and customizable HUD" OFF)
+option(CATA_ENABLE_LUA_UI "Enable the experimental Lua UI API" OFF)
+
+set(
+  CATALUA_UI_ENABLED_SOURCES
+  ${CATA_REPO_ROOT}/src/catalua_ui.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_actions.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_game.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_imgui.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_manifest.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_renderer.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_state.cpp)
+if(CATA_ENABLE_LUA_UI)
+  add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
+  add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
+  list(REMOVE_ITEM CATA_SOURCES
+       ${CATA_REPO_ROOT}/src/catalua_ui_disabled.cpp)
+else()
+  list(REMOVE_ITEM CATA_SOURCES ${CATALUA_UI_ENABLED_SOURCES})
+endif()
+
+add_library(main SHARED ${CATA_SOURCES})
 
 # Android always uses SDL3's Vulkan GPU backend when available, so every APK
 # needs SPIR-V shader artifacts. Release CI downloads and validates prebuilt
@@ -100,6 +117,7 @@ target_compile_definitions(
           SDL_SOUND
           USE_SDL3
           CCB_ANDROID_NEW_UI=$<BOOL:${CCB_ANDROID_NEW_UI}>
+          CATA_ENABLE_LUA_UI=$<BOOL:${CATA_ENABLE_LUA_UI}>
           BACKTRACE
           LOCALIZE
           ZSTD_STATIC_LINKING_ONLY
@@ -110,7 +128,6 @@ target_compile_options(main PRIVATE -fsigned-char -Wall -Wextra)
 target_link_libraries(
   main
   PRIVATE third-party
-          libsol
           SDL3::SDL3
           SDL3_image::SDL3_image
           SDL3_ttf::SDL3_ttf
@@ -119,3 +136,7 @@ target_link_libraries(
           GLESv2
           GLESv1_CM
           z)
+
+if(CATA_ENABLE_LUA_UI)
+  target_link_libraries(main PRIVATE libsol)
+endif()

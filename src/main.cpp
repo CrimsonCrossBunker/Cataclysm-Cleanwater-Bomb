@@ -1240,7 +1240,9 @@ int main( int argc, const char *argv[] )
             android_hud::clear_snapshot();
         }
 #endif
-        cata::lua_ui::shutdown();
+        if constexpr( cata::lua_ui::is_enabled() ) {
+            cata::lua_ui::shutdown();
+        }
         // do_turn returned true: the game ended (e.g. the recording's own
         // save/quit ran). Under replay there is no interactive user to drive the
         // main menu, so exit instead of looping back into opening_screen() and

@@ -464,7 +464,9 @@ bool game::load( const save_t &name )
                     u.reset();
                     u.recalculate_enchantment_cache();
                     u.enchantment_cache->activate_passive( u );
-                    cata::lua_ui::on_world_ready();
+                    if constexpr( cata::lua_ui::is_enabled() ) {
+                        cata::lua_ui::on_world_ready();
+                    }
                     events().send<event_type::game_load>( getVersionString() );
                     time_of_last_load = std::chrono::steady_clock::now();
                     time_played_at_last_load = std::chrono::seconds( 0 );
@@ -769,10 +771,12 @@ bool game::save()
             debugmsg( "game not saved" );
             return false;
         } else {
-            std::string lua_state_error;
-            if( !cata::lua_ui::save_persistent_state( lua_state_error ) ) {
-                add_msg( m_warning, _( "Game saved, but Lua UI state could not be saved: %s" ),
-                         lua_state_error );
+            if constexpr( cata::lua_ui::is_enabled() ) {
+                std::string lua_state_error;
+                if( !cata::lua_ui::save_persistent_state( lua_state_error ) ) {
+                    add_msg( m_warning, _( "Game saved, but Lua UI state could not be saved: %s" ),
+                             lua_state_error );
+                }
             }
             world_generator->last_world_name = world_generator->active_world->world_name;
             world_generator->last_character_name = u.name;
