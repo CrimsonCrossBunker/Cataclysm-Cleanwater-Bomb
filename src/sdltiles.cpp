@@ -41,6 +41,7 @@
     #endif
 #endif
 
+#include "android_ui_mode.h"
 #include "avatar.h"
 #include "cached_options.h"
 #include "cata_assert.h"
@@ -4574,7 +4575,8 @@ static void android_begin_pinch_zoom()
 
 static void android_update_pinch_zoom()
 {
-    if( !get_option<bool>( "ANDROID_CONTINUOUS_ZOOM" ) || !android_map_zoom_context() ||
+    if( !android_ui_mode::is_new_ui_build() ||
+        !get_option<bool>( "ANDROID_CONTINUOUS_ZOOM" ) || !android_map_zoom_context() ||
         !g || pinch_start_distance <= 0.0f || pinch_start_zoom <= 0 ) {
         return;
     }
@@ -6246,14 +6248,14 @@ static void CheckMessages()
                             }
                         }
 
-                        if( is_two_finger_touch ) {
+                        if( android_ui_mode::is_new_ui_build() && is_two_finger_touch ) {
                             android_update_pinch_zoom();
                         }
 
                     } else if( slot == 1 ) {
                         second_finger_curr_x = GetFingerX( ev, WindowWidth );
                         second_finger_curr_y = GetFingerY( ev, WindowHeight );
-                        if( is_two_finger_touch ) {
+                        if( android_ui_mode::is_new_ui_build() && is_two_finger_touch ) {
                             android_update_pinch_zoom();
                         }
                     } else if( slot == 2 ) {
@@ -6279,7 +6281,9 @@ static void CheckMessages()
                             second_finger_down_x = second_finger_curr_x = GetFingerX( ev, WindowWidth );
                             second_finger_down_y = second_finger_curr_y = GetFingerY( ev, WindowHeight );
                             is_two_finger_touch = true;
-                            android_begin_pinch_zoom();
+                            if( android_ui_mode::is_new_ui_build() ) {
+                                android_begin_pinch_zoom();
+                            }
                         }
                     } else if( finger_slot_for( GetFingerID( ev ), true ) == 2 ) {
                         if( !is_quick_shortcut_touch ) {
