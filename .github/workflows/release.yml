@@ -182,15 +182,17 @@ jobs:
             content: application/zip
             tiles: 1
             sound: 1
-          - name: Windows Tiles Sounds x64 MSVC (SDL3)
-            artifact: windows-with-graphics-and-sounds-sdl3-x64
-            arch: x64
-            os: windows-2022
-            ext: zip
-            content: application/zip
-            tiles: 1
-            sound: 1
-            sdl3: 1
+          # Desktop SDL3 release artifacts are temporarily disabled. Keep the
+          # definitions here so they can be restored after the migration pause.
+          # - name: Windows Tiles Sounds x64 MSVC (SDL3)
+          #   artifact: windows-with-graphics-and-sounds-sdl3-x64
+          #   arch: x64
+          #   os: windows-2022
+          #   ext: zip
+          #   content: application/zip
+          #   tiles: 1
+          #   sound: 1
+          #   sdl3: 1
           - name: Linux Tiles x64
             os: ubuntu-24.04
             android: none
@@ -209,16 +211,16 @@ jobs:
             artifact: linux-with-graphics-and-sounds-x64
             ext: tar.gz
             content: application/gzip
-          - name: Linux Tiles Sounds x64 (SDL3)
-            os: ubuntu-22.04
-            android: none
-            libbacktrace: 1
-            tiles: 1
-            sound: 1
-            sdl3: 1
-            artifact: linux-with-graphics-and-sounds-sdl3-x64
-            ext: tar.gz
-            content: application/gzip
+          # - name: Linux Tiles Sounds x64 (SDL3)
+          #   os: ubuntu-22.04
+          #   android: none
+          #   libbacktrace: 1
+          #   tiles: 1
+          #   sound: 1
+          #   sdl3: 1
+          #   artifact: linux-with-graphics-and-sounds-sdl3-x64
+          #   ext: tar.gz
+          #   content: application/gzip
           - name: Linux Curses x64
             os: ubuntu-24.04
             android: none
@@ -242,14 +244,14 @@ jobs:
             artifact: osx-with-graphics-universal
             ext: dmg
             content: application/x-apple-diskimage
-          - name: macOS Tiles Universal Binary (SDL3)
-            os: macos-15
-            tiles: 1
-            sound: 1
-            sdl3: 1
-            artifact: osx-with-graphics-sdl3-universal
-            ext: dmg
-            content: application/x-apple-diskimage
+          # - name: macOS Tiles Universal Binary (SDL3)
+          #   os: macos-15
+          #   tiles: 1
+          #   sound: 1
+          #   sdl3: 1
+          #   artifact: osx-with-graphics-sdl3-universal
+          #   ext: dmg
+          #   content: application/x-apple-diskimage
           - name: Android x64
             os: ubuntu-latest
             tiles: 1
