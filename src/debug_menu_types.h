@@ -115,7 +115,9 @@ enum class debug_menu_index : int {
     WRITE_CITY_LIST,
     TALK_TOPIC,
     IMGUI_DEMO,
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
     LUA_UI,
+#endif
     VEHICLE_EFFECTS,
     WISHPROFICIENCY,
     RELOAD_GPU_SHADERS,

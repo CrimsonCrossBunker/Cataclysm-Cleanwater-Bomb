@@ -260,10 +260,7 @@
         [ "oxy_torch", 10 ]
       ]
     ],
-    "components": [
-      [ [ "welding_rod_alloy", 10 ], [ "welding_wire_alloy", 10 ], [ "brazing_rod_alloy", 10 ] ],
-      [ [ "alloy_sheet", 1 ] ]
-    ]
+    "components": [ [ [ "welding_rod_alloy", 10 ], [ "welding_wire_alloy", 10 ], [ "brazing_rod_alloy", 10 ] ], [ [ "alloy_sheet", 1 ] ] ]
   },
   {
     "id": "repair_welding_alloys",
