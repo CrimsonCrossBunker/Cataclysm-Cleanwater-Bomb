@@ -16,6 +16,7 @@
 
 #include "calendar.h"
 #include "color.h"
+#include "hsv_color.h"
 #include "lightmap.h"
 #include "coordinates.h"
 #include "memory_fast.h"
@@ -451,6 +452,8 @@ class vpart_info
         /** Color of part for different states */
         nc_color color = c_light_gray;
         nc_color color_broken = c_light_gray;
+        /** Optional default tiles tint for this vehicle part. */
+        std::optional<RGBColor> default_tint_color;
 
         /** Fuel type of engine or tank */
         itype_id fuel_type = itype_id::NULL_ID();

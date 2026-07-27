@@ -112,10 +112,10 @@ std::optional<RGBColor> cata_tiles::get_vpart_tint( const vehicle &veh,
         return std::nullopt;
     }
     const vehicle_part &vp = veh.part( part_idx );
-    if( !vp.has_custom_color() ) {
-        return std::nullopt;
+    if( vp.has_custom_color() ) {
+        return vp.get_color( true ).fg;
     }
-    return vp.get_color().fg;
+    return vp.info().default_tint_color;
 }
 
 #endif // TILES
