@@ -47,6 +47,7 @@
 #include "activity_handlers.h"
 #include "activity_item_handling.h"
 #include "activity_type.h"
+#include "android_ui_mode.h"
 #include "ascii_art.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
@@ -2937,88 +2938,90 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
     }
 
 #if defined(__ANDROID__)
-    // A stationary long press arrives as a synthetic secondary click.  Use it
-    // only to seed a visible cursor: releasing the finger must never immediately
-    // execute an action on a possibly obscured or misidentified tile.
-    const int previous_zoom = get_zoom();
-    const int configured_min = get_option<int>( "ANDROID_ZOOM_MIN" );
-    const int configured_max = get_option<int>( "ANDROID_ZOOM_MAX" );
-    const int minimum_zoom = std::min( configured_min, configured_max );
-    const int maximum_zoom = std::max( configured_min, configured_max );
-    const int selection_zoom = std::clamp( get_option<int>( "ANDROID_CONTEXT_ZOOM" ),
-                                           minimum_zoom, maximum_zoom );
-    const int temporary_zoom = std::max( previous_zoom, selection_zoom );
-    if( temporary_zoom != previous_zoom ) {
-        set_zoom( temporary_zoom );
-        mark_main_ui_adaptor_resize();
-    }
-
-    tripoint_bub_ms center = mouse_target;
-    look_around_result selected = look_around( /*show_window=*/true, center, mouse_target,
-                                  /*has_first_point=*/false, /*select_zone=*/false,
-                                  /*peeking=*/false, /*is_moving_zone=*/false,
-                                  tripoint_bub_ms::zero, /*change_lv=*/false );
-
-    // Restore an automatic temporary zoom, but preserve an explicit pinch made
-    // while the selection cursor was open.
-    if( get_zoom() == temporary_zoom && previous_zoom != temporary_zoom ) {
-        set_zoom( previous_zoom );
-        mark_main_ui_adaptor_resize();
-    }
-    if( !selected.position ) {
-        return false;
-    }
-    mouse_target = *selected.position;
-
-    static constexpr std::array<action_id, 8> contextual_actions = {
-        ACTION_EXAMINE, ACTION_PICKUP, ACTION_OPEN, ACTION_CLOSE,
-        ACTION_BUTCHER, ACTION_CHAT, ACTION_MOVE_UP, ACTION_MOVE_DOWN
-    };
-    const auto has_contextual_action = [&]( const tripoint_bub_ms & pos ) {
-        return std::any_of( contextual_actions.begin(), contextual_actions.end(),
-        [&]( const action_id candidate ) {
-            return can_interact_at( candidate, here, pos );
-        } );
-    };
-
-    // If the finger landed on empty ground, snap to the nearest visible actionable
-    // tile in a one-tile halo.  The highlighted cursor still gives the player a
-    // chance to adjust before this point.
-    if( !has_contextual_action( mouse_target ) ) {
-        std::optional<tripoint_bub_ms> snapped;
-        int best_distance = INT_MAX;
-        for( const tripoint_bub_ms &candidate : here.points_in_radius( mouse_target, 1 ) ) {
-            if( candidate.z() != mouse_target.z() || !u.sees( here, candidate ) ||
-                !has_contextual_action( candidate ) ) {
-                continue;
-            }
-            const int distance = square_dist( mouse_target.xy(), candidate.xy() );
-            if( distance < best_distance ) {
-                best_distance = distance;
-                snapped = candidate;
-            }
+    if( android_ui_mode::is_new_ui_build() ) {
+        // A stationary long press arrives as a synthetic secondary click.  Use it
+        // only to seed a visible cursor: releasing the finger must never immediately
+        // execute an action on a possibly obscured or misidentified tile.
+        const int previous_zoom = get_zoom();
+        const int configured_min = get_option<int>( "ANDROID_ZOOM_MIN" );
+        const int configured_max = get_option<int>( "ANDROID_ZOOM_MAX" );
+        const int minimum_zoom = std::min( configured_min, configured_max );
+        const int maximum_zoom = std::max( configured_min, configured_max );
+        const int selection_zoom = std::clamp( get_option<int>( "ANDROID_CONTEXT_ZOOM" ),
+                                               minimum_zoom, maximum_zoom );
+        const int temporary_zoom = std::max( previous_zoom, selection_zoom );
+        if( temporary_zoom != previous_zoom ) {
+            set_zoom( temporary_zoom );
+            mark_main_ui_adaptor_resize();
         }
-        if( !snapped ) {
-            add_msg( _( "Nothing relevant near the selected tile." ) );
+
+        tripoint_bub_ms center = mouse_target;
+        look_around_result selected = look_around( /*show_window=*/true, center, mouse_target,
+                                      /*has_first_point=*/false, /*select_zone=*/false,
+                                      /*peeking=*/false, /*is_moving_zone=*/false,
+                                      tripoint_bub_ms::zero, /*change_lv=*/false );
+
+        // Restore an automatic temporary zoom, but preserve an explicit pinch made
+        // while the selection cursor was open.
+        if( get_zoom() == temporary_zoom && previous_zoom != temporary_zoom ) {
+            set_zoom( previous_zoom );
+            mark_main_ui_adaptor_resize();
+        }
+        if( !selected.position ) {
             return false;
         }
-        mouse_target = *snapped;
-    }
+        mouse_target = *selected.position;
 
-    std::vector<action_id> actions;
-    while( true ) {
-        const action_id selected_action = handle_interact( here, mouse_target );
-        if( selected_action == ACTION_NULL ) {
-            break;
-        }
-        actions.push_back( selected_action );
-        if( !query_yn( _( "Queue another action for this tile?" ) ) ) {
-            break;
-        }
-    }
+        static constexpr std::array<action_id, 8> contextual_actions = {
+            ACTION_EXAMINE, ACTION_PICKUP, ACTION_OPEN, ACTION_CLOSE,
+            ACTION_BUTCHER, ACTION_CHAT, ACTION_MOVE_UP, ACTION_MOVE_DOWN
+        };
+        const auto has_contextual_action = [&]( const tripoint_bub_ms & pos ) {
+            return std::any_of( contextual_actions.begin(), contextual_actions.end(),
+            [&]( const action_id candidate ) {
+                return can_interact_at( candidate, here, pos );
+            } );
+        };
 
-    queue_contextual_actions( mouse_target, actions );
-    return false;
+        // If the finger landed on empty ground, snap to the nearest visible actionable
+        // tile in a one-tile halo.  The highlighted cursor still gives the player a
+        // chance to adjust before this point.
+        if( !has_contextual_action( mouse_target ) ) {
+            std::optional<tripoint_bub_ms> snapped;
+            int best_distance = INT_MAX;
+            for( const tripoint_bub_ms &candidate : here.points_in_radius( mouse_target, 1 ) ) {
+                if( candidate.z() != mouse_target.z() || !u.sees( here, candidate ) ||
+                    !has_contextual_action( candidate ) ) {
+                    continue;
+                }
+                const int distance = square_dist( mouse_target.xy(), candidate.xy() );
+                if( distance < best_distance ) {
+                    best_distance = distance;
+                    snapped = candidate;
+                }
+            }
+            if( !snapped ) {
+                add_msg( _( "Nothing relevant near the selected tile." ) );
+                return false;
+            }
+            mouse_target = *snapped;
+        }
+
+        std::vector<action_id> actions;
+        while( true ) {
+            const action_id selected_action = handle_interact( here, mouse_target );
+            if( selected_action == ACTION_NULL ) {
+                break;
+            }
+            actions.push_back( selected_action );
+            if( !query_yn( _( "Queue another action for this tile?" ) ) ) {
+                break;
+            }
+        }
+
+        queue_contextual_actions( mouse_target, actions );
+        return false;
+    }
 #endif
 
     const bool is_adjacent = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 1;

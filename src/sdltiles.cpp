@@ -5825,7 +5825,7 @@ static void CheckMessages()
                                                     finger_curr_y - finger_down_y );
             const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
                                         std::max( WindowWidth, WindowHeight );
-            const bool precision_hold = is_default_mode &&
+            const bool precision_hold = android_ui_mode::is_new_ui_build() && is_default_mode &&
                                         get_option<bool>( "ANDROID_LONG_PRESS_CONTEXT" ) &&
                                         held_distance < hold_deadzone;
             if( !precision_hold && ticks - finger_repeat_time > finger_repeat_delay ) {
@@ -6470,7 +6470,8 @@ static void CheckMessages()
                                                                         finger_curr_y - finger_down_y );
                                 const float hold_deadzone = get_option<float>( "ANDROID_DEADZONE_RANGE" ) *
                                                             std::max( WindowWidth, WindowHeight );
-                                const bool precision_hold = is_default_mode &&
+                                const bool precision_hold = android_ui_mode::is_new_ui_build() &&
+                                                            is_default_mode &&
                                                             get_option<bool>( "ANDROID_LONG_PRESS_CONTEXT" ) &&
                                                             ticks - finger_down_time > static_cast<uint32_t>(
                                                                 get_option<int>( "ANDROID_INITIAL_DELAY" ) ) &&
