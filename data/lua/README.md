@@ -3,9 +3,9 @@
 This directory contains the built-in Lua entry point and modules for the
 experimental, versioned UI runtime. The Lua drawing context targets the
 platform-neutral `script_ui_renderer` contract. Lua pages use the shared
-ImGui/ImTui host, and `ui.hud` uses that host on non-Android builds. Android's
-in-game HUD is the separate native schema-4 subsystem and never calls Lua.
-Scripts do not import or depend on a renderer backend.
+ImGui/ImTui host. Android's in-game HUD is the separate native schema-4
+subsystem and never calls Lua. Scripts do not import or depend on a renderer
+backend.
 
 The current platform policy is Android on SDL3, with Linux and Windows still
 using SDL2 while their SDL3 migration proceeds separately. This does not alter
@@ -20,10 +20,10 @@ Scripts are loaded as one transaction in this order:
 2. `lua/main.lua` from each active world mod, in mod load order
 3. `config/lua/main.lua`
 
-The user entry point therefore has the final opportunity to replace a page or
-HUD by registering the same id. `require("foo.bar")` searches the user root,
-active mods in reverse load order, and the built-in root. Module names may only
-contain letters, digits, `_`, `-`, and `.` and cannot contain empty segments.
+The user entry point therefore has the final opportunity to replace a page by
+registering the same id. `require("foo.bar")` searches the user root, active mods
+in reverse load order, and the built-in root. Module names may only contain
+letters, digits, `_`, `-`, and `.` and cannot contain empty segments.
 
 The runtime loads automatically after a new game or save has initialized.
 Open **Debug menu → Info… → Open Lua UI pages** to select a page. Press
@@ -43,14 +43,14 @@ Each source may contain `lua/manifest.json`:
 }
 ```
 
-Supported capabilities are `game.read`, `game.actions`, `ui.pages`, `ui.hud`,
-`events`, and `state.character`. Unknown capabilities, an incompatible API,
-duplicate ids, missing dependencies, or dependencies that load later reject
-the whole candidate transaction. The bundled manifest is mandatory. A local
-user script without a manifest keeps all capabilities for compatibility. An
-active game mod without a manifest receives all compatibility capabilities
-except `game.actions`; declare that capability explicitly before submitting
-queued game mutations.
+Supported capabilities are `game.read`, `game.actions`, `ui.pages`, `events`,
+and `state.character`. Unknown capabilities, an incompatible API, duplicate
+ids, missing dependencies, or dependencies that load later reject the whole
+candidate transaction. The bundled manifest is mandatory. A local user script
+without a manifest keeps all capabilities for compatibility. An active game mod
+without a manifest receives all compatibility capabilities except
+`game.actions`; declare that capability explicitly before submitting queued
+game mutations.
 
 Callbacks retain the manifest identity that registered them. Replacing a page
 id, loading a helper through `require`, or firing an event later never borrows
@@ -63,29 +63,19 @@ ui.page("inventory_tools", "Inventory tools", function(ctx)
     ctx:text("Hello, " .. game.player_name())
 end)
 
-ui.hud("stamina", {
-    title = "Stamina",
-    anchor = "top_right", -- top_left/top_right/bottom_left/bottom_right
-    x = 16,
-    y = 16,
-    alpha = 0.8,
-    interactive = false,
-    background = true,
-    title_bar = false
-}, function(ctx)
-    local p = game.player_snapshot()
-    ctx:progress_bar(p.stamina / math.max(1, p.stamina_max), "Stamina")
-end)
-
 events.on("avatar_moves", function(event)
     print(event.type, event.turn, event.data.terrain)
 end)
 ```
 
-Registering the same page or HUD id again replaces the earlier definition.
-Event registrations are additive. An event payload contains `type`, `turn`,
-`data`, and `data_types`. Boolean and integer fields keep their Lua types;
-other game-specific ids and coordinates are exposed as strings.
+Registering the same page id again replaces the earlier definition. Event
+registrations are additive. An event payload contains `type`, `turn`, `data`,
+and `data_types`. Boolean and integer fields keep their Lua types; other
+game-specific ids and coordinates are exposed as strings.
+
+Lua has no `ui.hud` surface. Android uses its native schema-4 layout for
+in-game information and controls, while desktop retains the original Widget
+sidebar.
 
 ## Drawing context
 
@@ -100,7 +90,7 @@ backend-specific APIs:
 ctx:backend()             -- "imgui"
 ctx:platform()            -- "sdl2", "sdl3", "imtui", or "android"
 ctx:is_immediate_mode()   -- true for ImGui/ImTui
-ctx:uses_native_widgets() -- false for the shared page/HUD host
+ctx:uses_native_widgets() -- false for the shared page host
 ctx:supports("text_input")
 ```
 
@@ -144,7 +134,7 @@ name = ctx:input_text("Name", name)
 
 The forms above use the visible label as the widget id for compatibility.
 For translated labels, dynamic labels, or repeated labels, use an explicit
-stable id that is unique within the page or HUD callback:
+stable id that is unique within the page callback:
 
 ```lua
 if ctx:button_id("apply_changes", "Apply") then end
@@ -202,12 +192,11 @@ range; render only that range (add one when indexing a normal Lua sequence).
 
 Android HUD schema 4 is an independent native subsystem. It owns in-game
 information, controls, element groups, per-scene layouts, and layout
-import/export. It does not consume `ui.hud` registrations, retained widget
-trees, or Lua interaction snapshots.
+import/export. It has no Lua HUD renderer, retained widget tree, or Lua
+interaction snapshot bridge.
 
-Lua `ui.page` remains available through the shared page host. Lua `ui.hud`
-remains available on non-Android builds, so portable mods can keep the
-registration while providing an Android schema-4 template separately.
+Lua `ui.page` remains available through the shared page host. Cross-platform
+in-game information continues to use the original Widget system.
 
 ## Game API and reload state
 
@@ -263,12 +252,11 @@ registration while providing an Android schema-4 template separately.
 - `game.nearby_creatures_snapshot(radius, limit)` returns only creatures the
   avatar can currently see, with kind, attitude, distance, and hit points.
   Radius defaults to 20 and caps at 60; count defaults to 64 and caps at 256.
-- `game.runtime_status()` returns load state, generation, page/HUD/event/source
+- `game.runtime_status()` returns load state, generation, page/event/source
   counts, memory use and limit, latest runtime error, `callback_count`,
   `callback_time_total_us`, `callback_time_max_us`, `slow_callback_count`, and
   `last_slow_callback`. A callback taking at least 8 ms is recorded as slow;
-  use these cumulative fields to find HUD or event callbacks doing too much
-  per frame.
+  use these cumulative fields to find page or event callbacks doing too much.
 - `game.state_get(key, default)` and `game.state_set(key, value)` preserve small
   boolean, integer, floating-point, or string values across successful and
   failed hot reloads. Integer and floating-point number types remain distinct.
@@ -292,8 +280,8 @@ All snapshot calls are read-only and return ordinary Lua tables containing
 copied booleans, numbers, and strings. They never expose native `avatar`,
 `item`, weather, or time objects, so scripts cannot retain dangling game-object
 references across turns or reloads. Inventory results are bounded because page
-and HUD callbacks may run every frame; request only the number of entries the
-current UI needs.
+callbacks may run every frame; request only the number of entries the current
+UI needs.
 
 ## Queued game actions
 
@@ -318,14 +306,14 @@ Allowed directions are `north`, `north_east`, `east`, `south_east`, `south`,
 keeps the latest 128 results. Status entries are `queued`, `succeeded`,
 `failed`, or `canceled` and include request id, action type, turn, error, and
 whether the request consumed a normal action. Invalid ids/options are rejected
-before enqueue. Requests can only be submitted from an active page, HUD, or
-event callback—not while candidate entry scripts are loading—and are disabled
-in multiplayer sessions.
+before enqueue. Requests can only be submitted from an active page or event
+callback—not while candidate entry scripts are loading—and are disabled in
+multiplayer sessions.
 
 ## Isolation and limits
 
-Each runtime has a 32 MiB Lua memory limit. Entry scripts and every page, HUD,
-and event callback run under an instruction budget. A callback that errors or
+Each runtime has a 32 MiB Lua memory limit. Entry scripts and every page and
+event callback run under an instruction budget. A callback that errors or
 exceeds its budget is disabled independently and the error is recorded in
 `debug.log`; other callbacks continue. A failed entry script never replaces
 the current runtime.

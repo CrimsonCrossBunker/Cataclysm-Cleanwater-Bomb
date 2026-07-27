@@ -38,7 +38,6 @@
 #include "mod_manager.h"
 #include "output.h"
 #include "path_info.h"
-#include "point.h"
 #include "translations.h"
 #include "ui_manager.h"
 #include "uilist.h"
@@ -120,22 +119,6 @@ struct page_definition {
     std::size_t source_index = 0;
 };
 
-struct hud_definition {
-    std::string id;
-    std::string title;
-    std::string anchor = "top_left";
-    float offset_x = 12.0F;
-    float offset_y = 12.0F;
-    float alpha = 0.8F;
-    bool interactive = false;
-    bool background = true;
-    bool title_bar = false;
-    sol::protected_function draw;
-    bool enabled = true;
-    std::string error;
-    std::size_t source_index = 0;
-};
-
 struct event_handler_definition {
     event_type type = event_type::num_event_types;
     std::string name;
@@ -165,7 +148,6 @@ class runtime_state : public event_subscriber
         std::vector<fs::path> module_roots;
         std::vector<script_source> sources;
         std::vector<page_definition> pages;
-        std::vector<hud_definition> huds;
         std::vector<event_handler_definition> event_handlers;
         std::size_t generation = 0;
         bool accept_actions = false;
@@ -178,7 +160,6 @@ class runtime_state : public event_subscriber
 };
 
 std::unique_ptr<runtime_state> active_state;
-std::unique_ptr<ui_adaptor> hud_adaptor;
 std::string last_runtime_error;
 std::size_t generation_counter = 0;
 
@@ -332,47 +313,6 @@ void register_page( runtime_state &state, const std::string &id, const std::stri
     }
 }
 
-bool valid_anchor( const std::string &anchor )
-{
-    return anchor == "top_left" || anchor == "top_right" || anchor == "bottom_left" ||
-           anchor == "bottom_right";
-}
-
-void register_hud( runtime_state &state, const std::string &id, const sol::table &options,
-                   sol::protected_function draw )
-{
-    require_capability( state, "ui.hud" );
-    if( id.empty() ) {
-        throw std::runtime_error( "ui.hud requires a non-empty id" );
-    }
-    if( !draw.valid() ) {
-        throw std::runtime_error( "ui.hud requires a draw function" );
-    }
-
-    hud_definition replacement;
-    replacement.id = id;
-    replacement.title = options.get_or( "title", id );
-    replacement.anchor = options.get_or( "anchor", std::string( "top_left" ) );
-    replacement.offset_x = static_cast<float>( options.get_or( "x", 12.0 ) );
-    replacement.offset_y = static_cast<float>( options.get_or( "y", 12.0 ) );
-    replacement.alpha = static_cast<float>( std::clamp( options.get_or( "alpha", 0.8 ), 0.0, 1.0 ) );
-    replacement.interactive = options.get_or( "interactive", false );
-    replacement.background = options.get_or( "background", true );
-    replacement.title_bar = options.get_or( "title_bar", false );
-    replacement.draw = std::move( draw );
-    replacement.source_index = *state.current_source;
-    if( !valid_anchor( replacement.anchor ) ) {
-        throw std::runtime_error( "ui.hud anchor must be top_left, top_right, bottom_left, or bottom_right" );
-    }
-
-    const auto existing = find_definition( state.huds, id );
-    if( existing == state.huds.end() ) {
-        state.huds.emplace_back( std::move( replacement ) );
-    } else {
-        *existing = std::move( replacement );
-    }
-}
-
 void register_event_handler( runtime_state &state, const std::string &name,
                              sol::protected_function callback )
 {
@@ -440,7 +380,6 @@ sol::table lua_runtime_status( sol::this_state lua )
     result["loaded"] = snapshot.loaded;
     result["generation"] = snapshot.generation;
     result["pages"] = snapshot.page_count;
-    result["huds"] = snapshot.hud_count;
     result["event_handlers"] = snapshot.event_handler_count;
     result["sources"] = snapshot.source_count;
     result["memory_used"] = snapshot.memory_used;
@@ -519,10 +458,6 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
     ui.set_function( "page", [&state]( const std::string & id, const std::string & title,
     sol::protected_function draw ) {
         register_page( state, id, title, std::move( draw ) );
-    } );
-    ui.set_function( "hud", [&state]( const std::string & id, const sol::table & options,
-    sol::protected_function draw ) {
-        register_hud( state, id, options, std::move( draw ) );
     } );
 
     sol::table events = state.lua.create_named_table( "events" );
@@ -719,76 +654,6 @@ void disable_callback( bool &enabled, std::string &stored_error, const std::stri
     record_runtime_error( context, stored_error );
 }
 
-void draw_huds()
-{
-    if( !active_state ) {
-        return;
-    }
-    std::unique_ptr<script_ui_renderer> renderer = make_imgui_script_ui_renderer();
-    script_ui_context context( *renderer );
-    const ImGuiViewport *viewport = ImGui::GetMainViewport();
-    for( hud_definition &hud : active_state->huds ) {
-        if( !hud.enabled ) {
-            continue;
-        }
-
-        const bool right = hud.anchor == "top_right" || hud.anchor == "bottom_right";
-        const bool bottom = hud.anchor == "bottom_left" || hud.anchor == "bottom_right";
-        ImVec2 position( right ? viewport->WorkPos.x + viewport->WorkSize.x : viewport->WorkPos.x,
-                         bottom ? viewport->WorkPos.y + viewport->WorkSize.y : viewport->WorkPos.y );
-        position.x += right ? -hud.offset_x : hud.offset_x;
-        position.y += bottom ? -hud.offset_y : hud.offset_y;
-        ImGui::SetNextWindowPos( position, ImGuiCond_Always,
-                                 ImVec2( right ? 1.0F : 0.0F, bottom ? 1.0F : 0.0F ) );
-        ImGui::SetNextWindowBgAlpha( hud.alpha );
-
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove |
-                                 ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav |
-                                 ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse |
-                                 ImGuiWindowFlags_NoBringToFrontOnFocus;
-        if( !hud.interactive ) {
-            flags |= ImGuiWindowFlags_NoInputs;
-        }
-        if( !hud.background ) {
-            flags |= ImGuiWindowFlags_NoBackground;
-        }
-        if( !hud.title_bar ) {
-            flags |= ImGuiWindowFlags_NoTitleBar;
-        }
-
-        const std::string window_id = hud.title + "###lua_hud_" + hud.id;
-        if( ImGui::Begin( window_id.c_str(), nullptr, flags ) ) {
-            source_scope source( *active_state, hud.source_index );
-            instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
-            const auto started = std::chrono::steady_clock::now();
-            const sol::protected_function_result result = hud.draw( &context );
-            record_callback_timing( *active_state, "HUD '" + hud.id + "'", started );
-            if( !result.valid() ) {
-                disable_callback( hud.enabled, hud.error, "Lua HUD '" + hud.id + "'", result );
-            }
-        }
-        ImGui::End();
-    }
-}
-
-void ensure_hud_adaptor()
-{
-#if defined(__ANDROID__)
-    // Android HUD schema 4 is the only in-game HUD on this platform.  Lua
-    // ui.hud registrations remain portable mod data but are not consumed here.
-    return;
-#endif
-    if( hud_adaptor ) {
-        return;
-    }
-    hud_adaptor = std::make_unique<ui_adaptor>();
-    hud_adaptor->is_imgui = true;
-    hud_adaptor->position_absolute( point::zero, point::zero );
-    hud_adaptor->on_redraw( []( ui_adaptor & ) {
-        draw_huds();
-    } );
-}
-
 sol::table event_to_lua( runtime_state &state, const cata::event &event )
 {
     sol::table result = state.lua.create_table();
@@ -972,7 +837,6 @@ void on_world_ready()
         record_runtime_error( "Lua state load failed", state_error );
         ::add_msg( m_warning, _( "Lua state could not be loaded; using defaults: %s" ), state_error );
     }
-    ensure_hud_adaptor();
 }
 
 bool save_persistent_state( std::string &error )
@@ -1005,7 +869,6 @@ runtime_status status()
     if( active_state ) {
         result.generation = active_state->generation;
         result.page_count = active_state->pages.size();
-        result.hud_count = active_state->huds.size();
         result.event_handler_count = active_state->event_handlers.size();
         result.source_count = active_state->sources.size();
         result.memory_used = active_state->memory.used;
@@ -1052,7 +915,6 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
 
 void shutdown()
 {
-    hud_adaptor.reset();
     active_state.reset();
     clear_actions();
     last_runtime_error.clear();
@@ -1065,7 +927,6 @@ void show()
         popup( _( "Unable to load Lua UI scripts:\n%s" ), error );
         return;
     }
-    ensure_hud_adaptor();
     if( active_state->pages.empty() ) {
         popup( _( "Lua loaded successfully, but no UI pages were registered." ) );
         return;

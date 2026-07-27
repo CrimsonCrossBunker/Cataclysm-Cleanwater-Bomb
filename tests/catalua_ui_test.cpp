@@ -433,6 +433,10 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "id": "bad", "version": "1", "api_version": 2,
         "capabilities": [ "native.pointers" ], "dependencies": []
     })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "removed-hud", "version": "1", "api_version": 2,
+        "capabilities": [ "ui.hud" ], "dependencies": []
+    })json" ) ) );
 }
 
 TEST_CASE( "lua_persistent_state_codec_is_typed_and_bounded", "[lua][ui][state]" )
@@ -530,7 +534,6 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v2", "[lua][ui][integration]" )
     CHECK( status.loaded );
     CHECK( status.generation > 0 );
     CHECK( status.page_count == 0 );
-    CHECK( status.hud_count == 0 );
     CHECK( status.event_handler_count == 0 );
     CHECK( status.memory_used > 0 );
     CHECK( status.memory_used <= status.memory_limit );
@@ -539,7 +542,6 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v2", "[lua][ui][integration]" )
     const cata::lua_ui::runtime_status stopped = cata::lua_ui::status();
     CHECK_FALSE( stopped.loaded );
     CHECK( stopped.page_count == 0 );
-    CHECK( stopped.hud_count == 0 );
     CHECK( stopped.event_handler_count == 0 );
     CHECK( stopped.memory_used == 0 );
     CHECK( stopped.last_error.empty() );
@@ -566,9 +568,7 @@ assert(read_ok == false)
 assert(string.find(read_error, "game.read", 1, true) ~= nil)
 assert(pcall(function() game.actions.status() end) == false)
 assert(pcall(function() game.state_set("forbidden", true) end) == false)
-assert(pcall(function()
-    ui.hud("forbidden", {}, function(ctx) end)
-end) == false)
+assert(ui.hud == nil)
 
 events.on("game_begin", function(event)
     game.player_snapshot()
@@ -584,7 +584,7 @@ end)
            std::string::npos );
 }
 
-TEST_CASE( "lua_pages_and_huds_register_without_an_android_bridge",
+TEST_CASE( "lua_pages_register_without_an_android_bridge",
            "[lua][ui][renderer][integration]" )
 {
     scoped_lua_user_script script;
@@ -592,19 +592,12 @@ TEST_CASE( "lua_pages_and_huds_register_without_an_android_bridge",
 ui.page("registry_test", "Registry test", function(ctx)
     ctx:text("shared page")
 end)
-ui.hud("desktop_hud", {
-    title = "Desktop HUD",
-    anchor = "bottom_right"
-}, function(ctx)
-    ctx:text("platform-neutral HUD")
-end)
 )lua" );
 
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     const cata::lua_ui::runtime_status status = cata::lua_ui::status();
     CHECK( status.page_count == 1 );
-    CHECK( status.hud_count == 1 );
     CHECK( status.callback_count == 0 );
 }
 
@@ -992,7 +985,6 @@ error("expected candidate failure")
     CHECK( after_failure.loaded );
     CHECK( after_failure.generation == before.generation );
     CHECK( after_failure.page_count == before.page_count );
-    CHECK( after_failure.hud_count == before.hud_count );
     CHECK( after_failure.event_handler_count == before.event_handler_count );
 
     script.write( R"lua(

@@ -16,7 +16,6 @@ struct runtime_status {
     bool loaded = false;
     std::size_t generation = 0;
     std::size_t page_count = 0;
-    std::size_t hud_count = 0;
     std::size_t event_handler_count = 0;
     std::size_t source_count = 0;
     std::size_t memory_used = 0;
@@ -45,7 +44,7 @@ void on_world_ready();
 // Failure is reported but must not invalidate the main game save.
 bool save_persistent_state( std::string &error );
 
-// Tear down event subscriptions and HUD adaptors when leaving a game.
+// Tear down event subscriptions and runtime state when leaving a game.
 void shutdown();
 
 // Snapshot runtime health for debug tools and tests.
