@@ -1,33 +1,43 @@
 #include "catalua_ui.h"
 
 #include <algorithm>
-#include <cctype>
+#include <array>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_imgui.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catalua_sol.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
+#include "catalua_ui_events.h"
 #include "catalua_ui_game.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_imgui.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_modules.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
 #include "catalua_ui_renderer.h"
+#include "catalua_ui_registry.h"
+#include "catalua_ui_scheduler.h"
+#include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
+#include "catalua_ui_values.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "event.h"
@@ -59,6 +69,7 @@ namespace fs = std::filesystem;
 constexpr std::size_t default_memory_limit = 32U * 1024U * 1024U;
 constexpr int script_instruction_limit = 1000000;
 constexpr int callback_instruction_limit = 250000;
+constexpr int instruction_hook_quantum = 1000;
 constexpr std::uint64_t slow_callback_threshold_us = 8000;
 constexpr std::size_t maximum_page_stack_depth = 32;
 
@@ -89,17 +100,27 @@ void *limited_allocator( void *userdata, void *pointer, std::size_t old_size,
     return result;
 }
 
-void instruction_limit_hook( lua_State *lua, lua_Debug * )
-{
-    luaL_error( lua, "Lua instruction budget exceeded" );
-}
-
 class instruction_guard
 {
     public:
         instruction_guard( lua_State *lua, int limit ) : lua_( lua ), old_hook_( lua_gethook( lua ) ),
-            old_mask_( lua_gethookmask( lua ) ), old_count_( lua_gethookcount( lua ) ) {
-            lua_sethook( lua_, instruction_limit_hook, LUA_MASKCOUNT, std::max( 1, limit ) );
+            old_mask_( lua_gethookmask( lua ) ), old_count_( lua_gethookcount( lua ) ),
+            previous_( active() ), remaining_( std::max( 1, limit ) ) {
+            bool parent_exceeded = false;
+            for( instruction_guard *ancestor = previous_; ancestor != nullptr;
+                 ancestor = ancestor->previous_ ) {
+                if( ancestor->lua_ == lua_ ) {
+                    parent_exceeded = ancestor->consume( instruction_hook_quantum ) ||
+                                      parent_exceeded;
+                }
+            }
+            if( parent_exceeded ) {
+                mark_exceeded( lua_ );
+                throw std::runtime_error( "Lua instruction budget exceeded" );
+            }
+            active() = this;
+            lua_sethook( lua_, instruction_limit_hook, LUA_MASKCOUNT,
+                         instruction_hook_quantum );
         }
 
         instruction_guard( const instruction_guard & ) = delete;
@@ -107,14 +128,98 @@ class instruction_guard
 
         ~instruction_guard() {
             lua_sethook( lua_, old_hook_, old_mask_, old_count_ );
+            active() = previous_;
+        }
+
+        static bool budget_exceeded( lua_State *lua ) noexcept {
+            for( instruction_guard *guard = active(); guard != nullptr;
+                 guard = guard->previous_ ) {
+                if( guard->lua_ == lua && guard->exceeded_ ) {
+                    return true;
+                }
+            }
+            return false;
         }
 
     private:
+        static instruction_guard *&active() noexcept {
+            static thread_local instruction_guard *guard = nullptr;
+            return guard;
+        }
+
+        static void mark_exceeded( lua_State *lua ) noexcept {
+            for( instruction_guard *guard = active(); guard != nullptr;
+                 guard = guard->previous_ ) {
+                if( guard->lua_ == lua ) {
+                    guard->exceeded_ = true;
+                    guard->remaining_ = 0;
+                }
+            }
+        }
+
+        static void instruction_limit_hook( lua_State *lua, lua_Debug * ) {
+            bool exceeded = false;
+            for( instruction_guard *guard = active(); guard != nullptr;
+                 guard = guard->previous_ ) {
+                if( guard->lua_ == lua ) {
+                    exceeded = guard->consume( instruction_hook_quantum ) || exceeded;
+                }
+            }
+            if( exceeded ) {
+                mark_exceeded( lua );
+                luaL_error( lua, "Lua instruction budget exceeded" );
+            }
+        }
+
+        bool consume( int amount ) noexcept {
+            if( exceeded_ || remaining_ <= amount ) {
+                exceeded_ = true;
+                remaining_ = 0;
+                return true;
+            }
+            remaining_ -= amount;
+            return false;
+        }
+
         lua_State *lua_;
         lua_Hook old_hook_;
         int old_mask_;
         int old_count_;
+        instruction_guard *previous_;
+        int remaining_;
+        bool exceeded_ = false;
 };
+
+int guarded_protected_call( lua_State *lua )
+{
+    if( instruction_guard::budget_exceeded( lua ) ) {
+        return luaL_error( lua, "Lua instruction budget exceeded" );
+    }
+
+    const int argument_count = lua_gettop( lua );
+    lua_pushvalue( lua, lua_upvalueindex( 1 ) );
+    lua_insert( lua, 1 );
+    lua_call( lua, argument_count, LUA_MULTRET );
+
+    if( instruction_guard::budget_exceeded( lua ) ) {
+        return luaL_error( lua, "Lua instruction budget exceeded" );
+    }
+    return lua_gettop( lua );
+}
+
+void install_guarded_protected_calls( lua_State *lua )
+{
+    static constexpr std::array<const char *, 2> function_names = { "pcall", "xpcall" };
+    for( const char *name : function_names ) {
+        lua_getglobal( lua, name );
+        if( !lua_isfunction( lua, -1 ) ) {
+            lua_pop( lua, 1 );
+            throw std::runtime_error( std::string( "Lua base library is missing " ) + name );
+        }
+        lua_pushcclosure( lua, guarded_protected_call, 1 );
+        lua_setglobal( lua, name );
+    }
+}
 
 struct page_definition {
     std::string id;
@@ -123,15 +228,6 @@ struct page_definition {
     std::vector<std::string> slots = { "main.extensions", "ingame.extensions" };
     int order = 100;
     sol::protected_function draw;
-    bool enabled = true;
-    std::string error;
-    std::size_t source_index = 0;
-};
-
-struct event_handler_definition {
-    event_type type = event_type::num_event_types;
-    std::string name;
-    sol::protected_function callback;
     bool enabled = true;
     std::string error;
     std::size_t source_index = 0;
@@ -156,10 +252,20 @@ class runtime_state : public event_subscriber
         script_persistent_state world_state;
         script_persistent_state page_state;
         sol::state lua;
-        std::vector<fs::path> module_roots;
         std::vector<script_source> sources;
+        std::unique_ptr<script_module_resolver> module_resolver;
+        std::unordered_map<std::string, sol::object> module_cache;
+        std::set<std::string> loading_modules;
+        std::vector<sol::environment> source_environments;
+        deterministic_turn_scheduler scheduler;
+        std::unordered_map<std::uint64_t, sol::protected_function> scheduled_callbacks;
+        script_service_registry service_registry;
+        std::unordered_map<std::string, sol::protected_function> service_methods;
+        int service_call_depth = 0;
         std::vector<page_definition> pages;
-        std::vector<event_handler_definition> event_handlers;
+        script_event_registry event_registry;
+        std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
+        int event_dispatch_depth = 0;
         std::size_t generation = 0;
         bool accept_actions = false;
         std::optional<std::size_t> current_source;
@@ -174,6 +280,10 @@ class runtime_state : public event_subscriber
 std::unique_ptr<runtime_state> active_state;
 std::string last_runtime_error;
 std::size_t generation_counter = 0;
+
+bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
+                            const std::string &display_name,
+                            const script_value_map &data );
 
 class source_scope
 {
@@ -235,6 +345,46 @@ void require_capability( const runtime_state &state, const std::string &capabili
     }
 }
 
+std::int64_t script_current_turn()
+{
+    return to_turn<std::int64_t>( calendar::turn );
+}
+
+std::uint64_t schedule_callback( runtime_state &state, const std::int64_t delay,
+                                 sol::protected_function callback, const bool repeating )
+{
+    require_capability( state, "scheduler" );
+    if( !state.current_source || !callback.valid() ) {
+        throw std::runtime_error( "scheduler requires an active source and callback function" );
+    }
+    const std::size_t source_index = *state.current_source;
+    const std::uint64_t id = repeating ?
+                             state.scheduler.schedule_every(
+                                 script_current_turn(), delay, source_index ) :
+                             state.scheduler.schedule_after(
+                                 script_current_turn(), delay, source_index );
+    try {
+        state.scheduled_callbacks.emplace( id, std::move( callback ) );
+    } catch( ... ) {
+        state.scheduler.cancel_unchecked( id );
+        throw;
+    }
+    return id;
+}
+
+bool cancel_scheduled_callback( runtime_state &state, const std::uint64_t id )
+{
+    require_capability( state, "scheduler" );
+    if( !state.current_source ) {
+        throw std::runtime_error( "scheduler.cancel is outside a Lua source context" );
+    }
+    if( !state.scheduler.cancel( id, *state.current_source ) ) {
+        return false;
+    }
+    state.scheduled_callbacks.erase( id );
+    return true;
+}
+
 void record_callback_timing( runtime_state &state, const std::string &name,
                              std::chrono::steady_clock::time_point started )
 {
@@ -260,53 +410,11 @@ void record_runtime_error( const std::string &context, const std::string &error 
     DebugLog( D_WARNING, D_MAIN ) << last_runtime_error;
 }
 
-runtime_state *state_from_upvalue( lua_State *lua )
-{
-    return static_cast<runtime_state *>( lua_touserdata( lua, lua_upvalueindex( 1 ) ) );
-}
-
-std::string module_relative_path( std::string name )
-{
-    std::replace( name.begin(), name.end(), '.',
-                  static_cast<char>( fs::path::preferred_separator ) );
-    return name + ".lua";
-}
-
-int module_searcher( lua_State *lua )
-{
-    runtime_state *state = state_from_upvalue( lua );
-    const char *raw_name = luaL_checkstring( lua, 1 );
-    const std::string name = raw_name == nullptr ? std::string() : std::string( raw_name );
-    if( state == nullptr || !is_safe_module_name( name ) ) {
-        lua_pushfstring( lua, "\n\tunsafe Lua module name '%s'", name.c_str() );
-        return 1;
-    }
-
-    const std::string relative = module_relative_path( name );
-    for( const fs::path &root : state->module_roots ) {
-        const fs::path candidate = ( root / relative ).lexically_normal();
-        if( !file_exist( candidate.string() ) ) {
-            continue;
-        }
-        if( luaL_loadfile( lua, candidate.string().c_str() ) != LUA_OK ) {
-            return lua_error( lua );
-        }
-        lua_pushstring( lua, candidate.string().c_str() );
-        return 2;
-    }
-
-    lua_pushfstring( lua, "\n\tno Lua module named '%s'", name.c_str() );
-    return 1;
-}
-
-void install_module_searcher( runtime_state &state )
+void disable_native_module_searchers( runtime_state &state )
 {
     lua_State *lua = state.lua.lua_state();
     lua_getglobal( lua, "package" );
     lua_newtable( lua );
-    lua_pushlightuserdata( lua, &state );
-    lua_pushcclosure( lua, module_searcher, 1 );
-    lua_rawseti( lua, -2, 1 );
     lua_setfield( lua, -2, "searchers" );
     lua_pushliteral( lua, "" );
     lua_setfield( lua, -2, "path" );
@@ -315,6 +423,140 @@ void install_module_searcher( runtime_state &state )
     lua_pushnil( lua );
     lua_setfield( lua, -2, "loadlib" );
     lua_pop( lua, 1 );
+}
+
+sol::object load_module( runtime_state &state, const std::size_t caller_index,
+                         const std::optional<std::string_view> provider_id,
+                         const std::string_view module_name )
+{
+    if( state.module_resolver == nullptr ) {
+        throw std::runtime_error( "Lua module resolver is not initialized" );
+    }
+    const std::optional<script_module_resolution> resolution =
+        provider_id ?
+        state.module_resolver->resolve_import( caller_index, *provider_id, module_name ) :
+        state.module_resolver->resolve_local( caller_index, module_name );
+    if( !resolution ) {
+        const std::string prefix = provider_id ?
+                                   "Lua dependency module '" + std::string( *provider_id ) + ":" :
+                                   "Lua module '";
+        throw std::runtime_error( prefix + std::string( module_name ) +
+                                  "' was not found or is not allowed" );
+    }
+
+    if( caller_index >= state.sources.size() ||
+        caller_index >= state.source_environments.size() ) {
+        throw std::runtime_error( "Lua module caller has an invalid source environment" );
+    }
+    // Modules are source code dependencies, not capability-bearing services.
+    // Execute and cache one copy per consumer so an imported helper uses the
+    // consumer's capabilities and mutable exports never leak between Mods.
+    const std::string cache_key =
+        state.sources[caller_index].manifest.id + "->" + resolution->cache_key;
+    const auto cached = state.module_cache.find( cache_key );
+    if( cached != state.module_cache.end() ) {
+        return cached->second;
+    }
+
+    // Match Lua require's cycle behavior: a recursive request observes true
+    // until the first evaluation supplies its final exported value.
+    sol::object provisional = sol::make_object( state.lua, true );
+    state.module_cache.emplace( cache_key, provisional );
+    if( !state.loading_modules.insert( cache_key ).second ) {
+        return provisional;
+    }
+
+    try {
+        sol::load_result loaded = state.lua.load_file( resolution->path.string() );
+        if( !loaded.valid() ) {
+            const sol::error error = loaded;
+            throw std::runtime_error( resolution->path.string() + ": " + error.what() );
+        }
+        sol::protected_function module = loaded;
+        sol::set_environment( state.source_environments[caller_index], module );
+        source_scope source( state, caller_index );
+        instruction_guard guard( state.lua.lua_state(), script_instruction_limit );
+        sol::protected_function_result result = module();
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( resolution->path.string() + ": " + error.what() );
+        }
+
+        sol::object exported = provisional;
+        if( result.return_count() > 0 && result.get_type() != sol::type::nil ) {
+            exported = result.get<sol::object>();
+        }
+        state.module_cache[cache_key] = exported;
+        state.loading_modules.erase( cache_key );
+        return exported;
+    } catch( ... ) {
+        state.loading_modules.erase( cache_key );
+        state.module_cache.erase( cache_key );
+        throw;
+    }
+}
+
+sol::table clone_api_table( sol::state_view lua, const sol::table &source, const int depth )
+{
+    sol::table result = lua.create_table();
+    for( const auto &entry : source ) {
+        const sol::object key = entry.first;
+        const sol::object value = entry.second;
+        if( depth > 0 && value.get_type() == sol::type::table ) {
+            result[key] = clone_api_table( lua, value.as<sol::table>(), depth - 1 );
+        } else {
+            result[key] = value;
+        }
+    }
+    return result;
+}
+
+void create_source_environments( runtime_state &state )
+{
+    static const std::array<std::string_view, 12> isolated_tables = {
+        "ui", "events", "game", "state", "i18n", "modules", "registry", "scheduler",
+        "services", "math", "string", "table"
+    };
+    static const std::array<std::string_view, 21> safe_globals = {
+        "_VERSION", "assert", "error", "getmetatable", "ipairs", "next", "pairs",
+        "pcall", "print", "rawequal", "rawget", "rawlen", "rawset", "require",
+        "select", "setmetatable", "tonumber", "tostring", "type", "warn", "xpcall"
+    };
+    state.source_environments.clear();
+    state.source_environments.reserve( state.sources.size() );
+    for( std::size_t index = 0; index < state.sources.size(); ++index ) {
+        // Do not use the state globals as an __index fallback.  A fallback
+        // would let a source delete one of its cloned API tables and regain
+        // the shared table, or mutate math/string/table for every other Mod.
+        sol::environment environment( state.lua, sol::create );
+        for( const std::string_view name : safe_globals ) {
+            const sol::object global = state.lua.globals()[std::string( name )];
+            if( global.valid() && global.get_type() != sol::type::nil ) {
+                environment[std::string( name )] = global;
+            }
+        }
+        for( const std::string_view name : isolated_tables ) {
+            const sol::object global = state.lua.globals()[std::string( name )];
+            if( global.valid() && global.get_type() == sol::type::table ) {
+                environment[std::string( name )] =
+                    clone_api_table( state.lua, global.as<sol::table>(), 3 );
+            }
+        }
+
+        // The custom require implementation does not consult package.loaded.
+        // Expose a small compatibility table without cloning package.loaded's
+        // cyclic reference back to the shared global environment.
+        sol::table package = state.lua.create_table();
+        package["path"] = "";
+        package["cpath"] = "";
+        package["loaded"] = state.lua.create_table();
+        package["preload"] = state.lua.create_table();
+        package["searchers"] = state.lua.create_table();
+        environment["package"] = std::move( package );
+        environment["ccb_source_id"] = state.sources[index].manifest.id;
+        environment["_G"] = environment;
+        state.source_environments.emplace_back( std::move( environment ) );
+    }
 }
 
 template<typename Definition>
@@ -399,20 +641,304 @@ void register_page( runtime_state &state, const std::string &id, const sol::obje
     }
 }
 
-void register_event_handler( runtime_state &state, const std::string &name,
-                             sol::protected_function callback )
+std::string local_custom_event_name( const runtime_state &state,
+                                     const std::string_view name )
+{
+    if( !is_safe_custom_event_segment( name ) ) {
+        throw std::runtime_error(
+            "custom Lua event names must contain only letters, digits, '_', '-', or '.'" );
+    }
+    return "custom:" + current_manifest( state ).id + ":" + std::string( name );
+}
+
+std::string subscription_event_name( const runtime_state &state,
+                                     const std::string &name )
+{
+    if( io::enum_is_valid<event_type>( name ) ) {
+        return "game:" + name;
+    }
+    if( is_lifecycle_event_name( name ) ) {
+        return name;
+    }
+    return local_custom_event_name( state, name );
+}
+
+std::string dependency_custom_event_name( const runtime_state &state,
+        const std::string &provider_id, const std::string &name )
+{
+    if( !is_safe_custom_event_segment( name ) ) {
+        throw std::runtime_error( "events.on_from received an invalid custom event name" );
+    }
+    const script_manifest &manifest = current_manifest( state );
+    if( provider_id != manifest.id && provider_id != "builtin" &&
+        !manifest.depends_on( provider_id ) ) {
+        throw std::runtime_error(
+            "events.on_from requires a declared dependency on '" + provider_id + "'" );
+    }
+    const auto provider = std::find_if(
+                              state.sources.begin(), state.sources.end(),
+    [&provider_id]( const script_source & source ) {
+        return source.manifest.id == provider_id;
+    } );
+    if( provider == state.sources.end() ) {
+        throw std::runtime_error( "events.on_from provider is not loaded: " + provider_id );
+    }
+    return "custom:" + provider_id + ":" + name;
+}
+
+std::pair<int, bool> event_options( const sol::optional<sol::table> &options )
+{
+    if( !options ) {
+        return { 0, false };
+    }
+    return {
+        options->get_or( "priority", 0 ),
+        options->get_or( "once", false )
+    };
+}
+
+std::uint64_t register_event_handler(
+    runtime_state &state, std::string normalized_name,
+    const sol::optional<sol::table> &options, sol::protected_function callback )
 {
     require_capability( state, "events" );
-    if( !io::enum_is_valid<event_type>( name ) ) {
-        throw std::runtime_error( "events.on received unknown event type '" + name + "'" );
+    if( !state.current_source || !callback.valid() ) {
+        throw std::runtime_error( "events.on requires an active source and callback function" );
     }
-    if( !callback.valid() ) {
-        throw std::runtime_error( "events.on requires a callback function" );
+    const auto [priority, once] = event_options( options );
+    const std::uint64_t id = state.event_registry.subscribe(
+                                 std::move( normalized_name ), priority,
+                                 *state.current_source, once );
+    try {
+        state.event_callbacks.emplace( id, std::move( callback ) );
+    } catch( ... ) {
+        state.event_registry.unsubscribe_unchecked( id );
+        throw;
     }
-    state.event_handlers.push_back( event_handler_definition{
-        io::string_to_enum<event_type>( name ), name, std::move( callback ), true, {},
-        *state.current_source
+    return id;
+}
+
+bool unregister_event_handler( runtime_state &state, const std::uint64_t id )
+{
+    require_capability( state, "events" );
+    if( !state.current_source ) {
+        throw std::runtime_error( "events.off is outside a Lua source context" );
+    }
+    if( !state.event_registry.unsubscribe( id, *state.current_source ) ) {
+        return false;
+    }
+    state.event_callbacks.erase( id );
+    return true;
+}
+
+std::size_t loaded_source_index( const runtime_state &state,
+                                 const std::string_view source_id )
+{
+    const auto found = std::find_if(
+                           state.sources.begin(), state.sources.end(),
+    [source_id]( const script_source & source ) {
+        return source.manifest.id == source_id;
     } );
+    if( found == state.sources.end() ) {
+        throw std::runtime_error( "Lua source is not loaded: " + std::string( source_id ) );
+    }
+    return static_cast<std::size_t>( std::distance( state.sources.begin(), found ) );
+}
+
+void require_service_dependency( const runtime_state &state,
+                                 const std::string_view provider_id )
+{
+    const script_manifest &consumer = current_manifest( state );
+    if( provider_id != consumer.id && provider_id != "builtin" &&
+        !consumer.depends_on( provider_id ) ) {
+        throw std::runtime_error(
+            "Lua service call requires a declared dependency on '" +
+            std::string( provider_id ) + "'" );
+    }
+    static_cast<void>( loaded_source_index( state, provider_id ) );
+}
+
+void provide_service( runtime_state &state, const std::string &name,
+                      const sol::table &descriptor )
+{
+    require_capability( state, "services.provide" );
+    if( !state.current_source ) {
+        throw std::runtime_error( "services.provide is outside a Lua source context" );
+    }
+    const sol::object methods_object = descriptor["methods"];
+    if( !methods_object.valid() || methods_object.get_type() != sol::type::table ) {
+        throw std::invalid_argument( "services.provide requires a methods table" );
+    }
+
+    const sol::table methods = methods_object.as<sol::table>();
+    std::vector<std::string> method_names;
+    std::unordered_map<std::string, sol::protected_function> callbacks;
+    for( const auto &entry : methods ) {
+        const sol::object key = entry.first;
+        const sol::object value = entry.second;
+        if( key.get_type() != sol::type::string ||
+            value.get_type() != sol::type::function ) {
+            throw std::invalid_argument(
+                "services.provide methods must map string names to functions" );
+        }
+        const std::string method_name = key.as<std::string>();
+        method_names.push_back( method_name );
+        callbacks.emplace(
+            script_service_registry::method_key(
+                current_manifest( state ).id, name, method_name ),
+            value.as<sol::protected_function>() );
+    }
+
+    const std::string provider_id = current_manifest( state ).id;
+    const script_service_definition *previous =
+        state.service_registry.find( provider_id, name );
+    std::vector<std::string> previous_methods =
+        previous == nullptr ? std::vector<std::string>() : previous->methods;
+    auto replacement_methods = state.service_methods;
+    for( const std::string &method : previous_methods ) {
+        replacement_methods.erase(
+            script_service_registry::method_key( provider_id, name, method ) );
+    }
+    for( const auto &[key, callback] : callbacks ) {
+        replacement_methods.insert_or_assign( key, callback );
+    }
+    state.service_registry.provide( {
+        provider_id,
+        name,
+        descriptor.get_or( "version", 1 ),
+        *state.current_source,
+        method_names
+    } );
+    state.service_methods.swap( replacement_methods );
+}
+
+class service_call_scope
+{
+    public:
+        explicit service_call_scope( runtime_state &state ) : state_( state ) {
+            if( state_.service_call_depth >= 16 ) {
+                throw std::runtime_error( "Lua service recursion limit reached" );
+            }
+            ++state_.service_call_depth;
+        }
+
+        service_call_scope( const service_call_scope & ) = delete;
+        service_call_scope &operator=( const service_call_scope & ) = delete;
+
+        ~service_call_scope() {
+            --state_.service_call_depth;
+        }
+
+    private:
+        runtime_state &state_;
+};
+
+sol::table call_service( runtime_state &state, sol::this_state lua,
+                         const std::string &provider_id,
+                         const std::string &service_name,
+                         const std::string &method_name,
+                         const sol::optional<sol::table> &arguments )
+{
+    require_capability( state, "services.consume" );
+    require_service_dependency( state, provider_id );
+    if( !is_safe_service_identifier( service_name ) ||
+        !is_safe_service_identifier( method_name ) ) {
+        throw std::invalid_argument( "services.call received an invalid service or method name" );
+    }
+    const script_service_definition *service =
+        state.service_registry.find( provider_id, service_name );
+    if( service == nullptr ||
+        std::find( service->methods.begin(), service->methods.end(), method_name ) ==
+        service->methods.end() ) {
+        throw std::runtime_error(
+            "Lua service method is unavailable: " + provider_id + "/" +
+            service_name + "/" + method_name );
+    }
+    const std::string key = script_service_registry::method_key(
+                                provider_id, service_name, method_name );
+    const auto callback_entry = state.service_methods.find( key );
+    if( callback_entry == state.service_methods.end() ) {
+        throw std::runtime_error( "Lua service method callback is missing" );
+    }
+
+    static const script_value_map_limits service_limits{
+        64, 128, 8192, 64U * 1024U
+    };
+    const script_value_map copied_arguments =
+        read_script_value_map( arguments, service_limits, "services.call arguments" );
+    sol::protected_function callback = callback_entry->second;
+    script_value_map copied_result;
+    {
+        service_call_scope call_scope( state );
+        source_scope provider( state, service->source_index );
+        instruction_guard guard( state.lua.lua_state(), callback_instruction_limit );
+        const auto started = std::chrono::steady_clock::now();
+        const sol::protected_function_result result =
+            callback( script_value_map_to_lua( state.lua, copied_arguments ) );
+        record_callback_timing(
+            state, "service '" + provider_id + "/" + service_name + "/" +
+            method_name + "'", started );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            record_runtime_error(
+                "Lua service '" + provider_id + "/" + service_name + "/" +
+                method_name + "'", error.what() );
+            throw std::runtime_error( error.what() );
+        }
+        if( result.return_count() > 0 && result.get_type() != sol::type::nil ) {
+            if( result.get_type() != sol::type::table ) {
+                throw std::runtime_error( "Lua service methods must return a table or nil" );
+            }
+            copied_result = read_script_value_map(
+                                result.get<sol::table>(), service_limits,
+                                "services.call result" );
+        }
+    }
+    return script_value_map_to_lua( sol::state_view( lua ), copied_result );
+}
+
+bool service_available( runtime_state &state, const std::string &provider_id,
+                        const std::string &service_name, const int minimum_version )
+{
+    require_capability( state, "services.consume" );
+    require_service_dependency( state, provider_id );
+    if( !is_safe_service_identifier( service_name ) ) {
+        throw std::invalid_argument( "services.available received an invalid service name" );
+    }
+    if( minimum_version < 1 ||
+        minimum_version > script_service_registry::maximum_version ) {
+        throw std::invalid_argument(
+            "services.available minimum version must be within 1..1000000" );
+    }
+    const script_service_definition *service =
+        state.service_registry.find( provider_id, service_name );
+    return service != nullptr && service->version >= minimum_version;
+}
+
+sol::table visible_services( runtime_state &state, sol::this_state lua )
+{
+    require_capability( state, "services.consume" );
+    const script_manifest &consumer = current_manifest( state );
+    sol::state_view lua_state( lua );
+    sol::table result = lua_state.create_table();
+    std::size_t output_index = 1;
+    for( const script_service_definition &service : state.service_registry.all() ) {
+        if( service.provider_id != consumer.id && service.provider_id != "builtin" &&
+            !consumer.depends_on( service.provider_id ) ) {
+            continue;
+        }
+        sol::table entry = lua_state.create_table();
+        entry["provider"] = service.provider_id;
+        entry["name"] = service.name;
+        entry["version"] = service.version;
+        sol::table methods = lua_state.create_table();
+        for( std::size_t index = 0; index < service.methods.size(); ++index ) {
+            methods[index + 1] = service.methods[index];
+        }
+        entry["methods"] = std::move( methods );
+        result[output_index++] = std::move( entry );
+    }
+    return result;
 }
 
 sol::object typed_state_get( const script_persistent_state &store,
@@ -583,8 +1109,11 @@ std::string lua_action_slot( runtime_state &state, script_ui_context &context,
 
     std::vector<script_ui_action_option> options;
     options.reserve( count );
-    std::vector<std::string> action_ids;
-    action_ids.reserve( count );
+    const cata::input_context_actions::context_snapshot input_context =
+        cata::input_context_actions::snapshot();
+    const bool matching_revision = input_context.revision == context_revision;
+    const script_manifest &manifest = current_manifest( state );
+    const std::string source_id = manifest.id;
     for( std::size_t index = 1; index <= count; ++index ) {
         const sol::object raw_option = lua_options[index];
         if( !raw_option.valid() || raw_option.get_type() != sol::type::table ) {
@@ -600,32 +1129,131 @@ std::string lua_action_slot( runtime_state &state, script_ui_context &context,
                 "ctx:action_slot_id options require string id and label fields" );
         }
         const std::string action_id = raw_id.as<std::string>();
+        const auto descriptor = std::find_if(
+                                    input_context.actions.begin(), input_context.actions.end(),
+        [&action_id]( const cata::input_context_actions::action_descriptor & entry ) {
+            return entry.id == action_id;
+        } );
+        const bool available =
+            matching_revision && descriptor != input_context.actions.end();
+        const bool dangerous = available && descriptor->dangerous;
+        const bool capability_allows =
+            !dangerous || manifest.has_capability( "game.actions.dangerous" );
+        const std::string action_label =
+            available && !descriptor->label.empty() ?
+            descriptor->label : raw_label.as<std::string>();
         options.push_back( {
             action_id,
             raw_label.as<std::string>(),
-            option.get_or( "enabled", true )
+            option.get_or( "enabled", true ) &&available &&capability_allows,
+            dangerous,
+            [&state, action_id, action_label, context_revision, source_id, dangerous]()
+            {
+                if( dangerous ) {
+                    require_capability( state, "game.actions.dangerous" );
+                    enqueue_context_action(
+                        action_id, context_revision, source_id );
+                } else {
+                    cata::input_context_actions::enqueue(
+                        action_id, context_revision );
+                }
+            }
         } );
-        action_ids.push_back( action_id );
-    }
-    const std::vector<bool> allowed =
-        cata::input_context_actions::validate_candidates( context_revision, action_ids );
-    for( std::size_t index = 0; index < options.size(); ++index ) {
-        options[index].enabled = options[index].enabled && allowed[index];
     }
     return context.action_slot_id( id, selected_action, context_revision, options );
 }
 
-void initialize_state( runtime_state &state, const std::vector<fs::path> &module_roots )
+void initialize_state( runtime_state &state )
 {
-    state.module_roots = module_roots;
+    std::vector<script_module_source> module_sources;
+    module_sources.reserve( state.sources.size() );
+    for( const script_source &source : state.sources ) {
+        module_sources.push_back( { source.manifest, source.root } );
+    }
+    state.module_resolver =
+        std::make_unique<script_module_resolver>( std::move( module_sources ) );
+
     state.lua.open_libraries( sol::lib::base, sol::lib::package, sol::lib::math,
                               sol::lib::string, sol::lib::table );
+    install_guarded_protected_calls( state.lua.lua_state() );
     state.lua["dofile"] = sol::nil;
     state.lua["load"] = sol::nil;
     state.lua["loadfile"] = sol::nil;
     state.lua["loadstring"] = sol::nil;
     state.lua["collectgarbage"] = sol::nil;
-    install_module_searcher( state );
+    disable_native_module_searchers( state );
+
+    state.lua.set_function(
+        "require",
+    [&state]( const std::string & module_name ) {
+        if( !state.current_source ) {
+            throw std::runtime_error( "require is outside a Lua source context" );
+        }
+        return load_module( state, *state.current_source, std::nullopt, module_name );
+    } );
+
+    sol::table modules = state.lua.create_named_table( "modules" );
+    modules.set_function(
+        "import",
+    [&state]( const std::string & provider_id, const std::string & module_name ) {
+        require_capability( state, "modules.import" );
+        if( !state.current_source ) {
+            throw std::runtime_error( "modules.import is outside a Lua source context" );
+        }
+        return load_module( state, *state.current_source, provider_id, module_name );
+    } );
+    modules.set_function( "source_id", [&state]() {
+        return current_manifest( state ).id;
+    } );
+
+    sol::table scheduler = state.lua.create_named_table( "scheduler" );
+    scheduler.set_function(
+        "after",
+    [&state]( const std::int64_t delay, sol::protected_function callback ) {
+        return schedule_callback( state, delay, std::move( callback ), false );
+    } );
+    scheduler.set_function(
+        "every",
+    [&state]( const std::int64_t interval, sol::protected_function callback ) {
+        return schedule_callback( state, interval, std::move( callback ), true );
+    } );
+    scheduler.set_function( "cancel", [&state]( const std::uint64_t id ) {
+        return cancel_scheduled_callback( state, id );
+    } );
+    scheduler.set_function( "now", [&state]() {
+        require_capability( state, "scheduler" );
+        return script_current_turn();
+    } );
+
+    sol::table services = state.lua.create_named_table( "services" );
+    services.set_function(
+        "provide",
+    [&state]( const std::string & name, const sol::table & descriptor ) {
+        provide_service( state, name, descriptor );
+    } );
+    services.set_function(
+        "call",
+        [&state]( sol::this_state lua, const std::string & provider_id,
+                  const std::string & service_name, const std::string & method_name,
+    const sol::optional<sol::table> &arguments ) {
+        return call_service(
+                   state, lua, provider_id, service_name, method_name, arguments );
+    } );
+    services.set_function(
+        "available",
+        sol::overload(
+            [&state]( const std::string & provider_id,
+    const std::string & service_name ) {
+        return service_available( state, provider_id, service_name, 1 );
+    },
+    [&state]( const std::string & provider_id,
+              const std::string & service_name, const int minimum_version ) {
+        return service_available(
+                   state, provider_id, service_name, minimum_version );
+    } ) );
+    services.set_function( "list", [&state]( sol::this_state lua ) {
+        return visible_services( state, lua );
+    } );
 
     state.lua.new_usertype<script_ui_environment>(
         "ScriptUiEnvironment", sol::no_constructor,
@@ -723,9 +1351,50 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
     } );
 
     sol::table events = state.lua.create_named_table( "events" );
-    events.set_function( "on", [&state]( const std::string & name,
+    events.set_function(
+        "on",
+        sol::overload(
+            [&state]( const std::string & name,
     sol::protected_function callback ) {
-        register_event_handler( state, name, std::move( callback ) );
+        return register_event_handler(
+                   state, subscription_event_name( state, name ),
+                   std::nullopt, std::move( callback ) );
+    },
+    [&state]( const std::string & name, const sol::table & options,
+              sol::protected_function callback ) {
+        return register_event_handler(
+                   state, subscription_event_name( state, name ),
+                   options, std::move( callback ) );
+    } ) );
+    events.set_function(
+        "on_from",
+        sol::overload(
+            [&state]( const std::string & provider_id, const std::string & name,
+    sol::protected_function callback ) {
+        return register_event_handler(
+                   state, dependency_custom_event_name( state, provider_id, name ),
+                   std::nullopt, std::move( callback ) );
+    },
+    [&state]( const std::string & provider_id, const std::string & name,
+              const sol::table & options, sol::protected_function callback ) {
+        return register_event_handler(
+                   state, dependency_custom_event_name( state, provider_id, name ),
+                   options, std::move( callback ) );
+    } ) );
+    events.set_function( "off", [&state]( const std::uint64_t id ) {
+        return unregister_event_handler( state, id );
+    } );
+    events.set_function(
+        "emit",
+        [&state]( const std::string & name,
+    const sol::optional<sol::table> &data ) {
+        require_capability( state, "events" );
+        const std::string source_id = current_manifest( state ).id;
+        const script_value_map copied = read_script_value_map(
+                                            data, script_value_map_limits{}, "events.emit data" );
+        return dispatch_custom_event(
+                   state, local_custom_event_name( state, name ),
+                   source_id + ":" + name, copied );
     } );
 
     sol::table game = state.lua.create_named_table( "game" );
@@ -744,6 +1413,13 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
     install_action_api( game, [&state]() {
         require_capability( state, "game.actions" );
     }, [&state]() {
+        require_capability( state, "game.actions.dangerous" );
+    }, [&state]() {
+        return current_manifest( state ).has_capability(
+                   "game.actions.dangerous" );
+    }, [&state]() {
+        return current_manifest( state ).id;
+    }, [&state]() {
         return state.accept_actions;
     } );
     game.set_function( "state_get", [&state]( sol::this_state lua, const std::string & key,
@@ -755,6 +1431,9 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
     } );
     game.set_function( "runtime_status", lua_runtime_status );
     install_i18n_api( state.lua );
+    install_registry_api( state.lua, [&state]() {
+        require_capability( state, "registry.read" );
+    } );
 
     sol::table state_api = state.lua.create_named_table( "state" );
     sol::table character_state = state.lua.create_table();
@@ -826,6 +1505,8 @@ void initialize_state( runtime_state &state, const std::vector<fs::path> &module
         }
         ::add_msg( "[Lua] " + message );
     } );
+
+    create_source_environments( state );
 }
 
 void run_script( runtime_state &state, const fs::path &path, std::size_t source_index )
@@ -837,6 +1518,10 @@ void run_script( runtime_state &state, const fs::path &path, std::size_t source_
         throw std::runtime_error( path.string() + ": " + error.what() );
     }
     sol::protected_function script = loaded;
+    if( source_index >= state.source_environments.size() ) {
+        throw std::runtime_error( path.string() + ": invalid Lua source environment" );
+    }
+    sol::set_environment( state.source_environments[source_index], script );
     instruction_guard guard( state.lua.lua_state(), script_instruction_limit );
     sol::protected_function_result result = script();
     if( !result.valid() ) {
@@ -909,16 +1594,6 @@ std::vector<script_source> active_script_sources()
     }
     validate_script_manifests( manifests );
     return sources;
-}
-
-std::vector<fs::path> module_roots( const std::vector<script_source> &sources )
-{
-    std::vector<fs::path> roots;
-    roots.reserve( sources.size() );
-    for( auto source = sources.rbegin(); source != sources.rend(); ++source ) {
-        roots.push_back( source->root );
-    }
-    return roots;
 }
 
 cata_path persistent_state_path()
@@ -1059,23 +1734,125 @@ sol::table event_to_lua( runtime_state &state, const cata::event &event )
     return result;
 }
 
-void runtime_state::notify( const cata::event &event )
+std::string script_value_type_name( const script_persistent_value &value )
 {
-    for( event_handler_definition &handler : event_handlers ) {
-        if( !handler.enabled || handler.type != event.type() ) {
+    if( std::holds_alternative<bool>( value ) ) {
+        return "boolean";
+    }
+    if( std::holds_alternative<std::int64_t>( value ) ) {
+        return "integer";
+    }
+    if( std::holds_alternative<double>( value ) ) {
+        return "float";
+    }
+    return "string";
+}
+
+sol::table custom_event_to_lua( runtime_state &state, const std::string &display_name,
+                                const script_value_map &data_values )
+{
+    sol::table result = state.lua.create_table();
+    sol::table data = script_value_map_to_lua( state.lua, data_values );
+    sol::table data_types = state.lua.create_table();
+    for( const auto &[name, value] : data_values ) {
+        data_types[name] = script_value_type_name( value );
+    }
+    result["type"] = display_name;
+    result["turn"] = script_current_turn();
+    result["data"] = std::move( data );
+    result["data_types"] = std::move( data_types );
+    return result;
+}
+
+class event_dispatch_scope
+{
+    public:
+        explicit event_dispatch_scope( runtime_state &state ) : state_( state ) {
+            if( state_.event_dispatch_depth >= 16 ) {
+                throw std::runtime_error( "Lua custom event recursion limit reached" );
+            }
+            ++state_.event_dispatch_depth;
+        }
+
+        event_dispatch_scope( const event_dispatch_scope & ) = delete;
+        event_dispatch_scope &operator=( const event_dispatch_scope & ) = delete;
+
+        ~event_dispatch_scope() {
+            --state_.event_dispatch_depth;
+        }
+
+    private:
+        runtime_state &state_;
+};
+
+bool dispatch_script_event( runtime_state &state, const std::string_view internal_name,
+                            const std::function<sol::table()> &make_payload )
+{
+    event_dispatch_scope dispatch_scope( state );
+    const std::vector<script_event_subscription> handlers =
+        state.event_registry.matching( internal_name );
+    for( const script_event_subscription &handler : handlers ) {
+        if( !state.event_registry.contains( handler.id ) ) {
             continue;
         }
-        sol::table payload = event_to_lua( *this, event );
-        source_scope source( *this, handler.source_index );
-        instruction_guard guard( lua.lua_state(), callback_instruction_limit );
+        const auto callback_entry = state.event_callbacks.find( handler.id );
+        if( callback_entry == state.event_callbacks.end() ) {
+            state.event_registry.unsubscribe_unchecked( handler.id );
+            continue;
+        }
+        sol::protected_function callback = callback_entry->second;
+        source_scope source( state, handler.source_index );
+        instruction_guard guard( state.lua.lua_state(), callback_instruction_limit );
         const auto started = std::chrono::steady_clock::now();
-        const sol::protected_function_result result = handler.callback( payload );
-        record_callback_timing( *this, "event '" + handler.name + "'", started );
+        const sol::protected_function_result result = callback( make_payload() );
+        record_callback_timing(
+            state, "event '" + std::string( internal_name ) + "'", started );
+        bool continue_dispatch = true;
         if( !result.valid() ) {
-            disable_callback( handler.enabled, handler.error,
-                              "Lua event handler '" + handler.name + "'", result );
+            const sol::error error = result;
+            record_runtime_error(
+                "Lua event handler '" + std::string( internal_name ) + "'", error.what() );
+            state.event_registry.unsubscribe_unchecked( handler.id );
+            state.event_callbacks.erase( handler.id );
+        } else {
+            if( result.return_count() > 0 &&
+                result.get_type() == sol::type::boolean &&
+                !result.get<bool>() ) {
+                continue_dispatch = false;
+            }
+            if( handler.once ) {
+                state.event_registry.unsubscribe_unchecked( handler.id );
+                state.event_callbacks.erase( handler.id );
+            }
+        }
+        if( !continue_dispatch ) {
+            return false;
         }
     }
+    return true;
+}
+
+bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
+                            const std::string &display_name,
+                            const script_value_map &data )
+{
+    return dispatch_script_event( state, internal_name, [&state, &display_name, &data]() {
+        return custom_event_to_lua( state, display_name, data );
+    } );
+}
+
+bool dispatch_lifecycle_event( runtime_state &state, const std::string &name,
+                               const script_value_map &data = {} )
+{
+    return dispatch_custom_event( state, name, name, data );
+}
+
+void runtime_state::notify( const cata::event &event )
+{
+    const std::string name = io::enum_to_string( event.type() );
+    dispatch_script_event( *this, "game:" + name, [this, &event]() {
+        return event_to_lua( *this, event );
+    } );
 }
 
 struct page_stack_entry {
@@ -1172,13 +1949,18 @@ void draw_registered_page( const std::string &page_id,
     }
 
     std::unique_ptr<script_ui_renderer> renderer = make_imgui_script_ui_renderer();
-    script_ui_context context( *renderer );
+    const std::shared_ptr<script_ui_context> context =
+        std::make_shared<script_ui_context>( *renderer );
+    on_out_of_scope invalidate_context( [context]() {
+        context->invalidate();
+    } );
     source_scope source( *active_state, page->source_index );
     page_scope current_page( *active_state, page->id );
     instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
     const auto started = std::chrono::steady_clock::now();
     const sol::protected_function_result result =
-        page->draw( &context, parameters_to_lua( *active_state, parameters ) );
+        page->draw( context, parameters_to_lua( *active_state, parameters ) );
+    context->invalidate();
     record_callback_timing( *active_state, "page '" + page->id + "'", started );
     if( !result.valid() ) {
         disable_callback( page->enabled, page->error, "Lua page '" + page->id + "'", result );
@@ -1511,16 +2293,17 @@ bool reload_scripts_with_state(
             }
         }
         next->sources = active_script_sources();
-        initialize_state( *next, module_roots( next->sources ) );
+        initialize_state( *next );
 
         for( std::size_t index = 0; index < next->sources.size(); ++index ) {
             run_script( *next, next->sources[index].entry, index );
         }
 
         next->generation = ++generation_counter;
-        if( !next->event_handlers.empty() ) {
-            get_event_bus().subscribe( next.get() );
-        }
+        // Subscribe even when no entry script registered a game event yet.
+        // A page, service, scheduler, or lifecycle callback may add its first
+        // game-event handler later in the lifetime of this runtime.
+        get_event_bus().subscribe( next.get() );
         active_state = std::move( next );
         active_state->accept_actions = true;
         clear_navigation_requests();
@@ -1534,18 +2317,45 @@ bool reload_scripts_with_state(
     }
 }
 
-} // namespace
-
-bool is_safe_module_name( std::string_view name )
+void run_scheduled_callbacks( runtime_state &state, const std::int64_t now )
 {
-    if( name.empty() || name.front() == '.' || name.back() == '.' || name.find( ".." ) !=
-        std::string_view::npos ) {
-        return false;
+    const std::vector<scheduled_script_task> due = state.scheduler.take_due( now );
+    for( const scheduled_script_task &task : due ) {
+        const auto found = state.scheduled_callbacks.find( task.id );
+        if( found == state.scheduled_callbacks.end() ) {
+            state.scheduler.cancel_unchecked( task.id );
+            continue;
+        }
+
+        sol::protected_function callback = found->second;
+        source_scope source( state, task.source_index );
+        instruction_guard guard( state.lua.lua_state(), callback_instruction_limit );
+        const auto started = std::chrono::steady_clock::now();
+        const sol::protected_function_result result =
+            callback( task.id, now, task.due_turn );
+        record_callback_timing(
+            state, "scheduled callback " + std::to_string( task.id ), started );
+
+        bool keep_repeating = task.interval > 0 && state.scheduler.contains( task.id );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            record_runtime_error(
+                "Lua scheduled callback " + std::to_string( task.id ), error.what() );
+            keep_repeating = false;
+        } else if( result.return_count() > 0 &&
+                   result.get_type() == sol::type::boolean &&
+                   !result.get<bool>() ) {
+            keep_repeating = false;
+        }
+
+        if( !keep_repeating ) {
+            state.scheduler.cancel_unchecked( task.id );
+            state.scheduled_callbacks.erase( task.id );
+        }
     }
-    return std::all_of( name.begin(), name.end(), []( const unsigned char ch ) {
-        return std::isalnum( ch ) != 0 || ch == '_' || ch == '-' || ch == '.';
-    } );
 }
+
+} // namespace
 
 bool reload_scripts( std::string &error )
 {
@@ -1555,17 +2365,31 @@ bool reload_scripts( std::string &error )
     std::string profile_error;
     cata::ui::reload_profile( profile_error );
     const bool reloaded = reload_scripts_with_state( nullptr, nullptr, error );
+    if( reloaded && active_state ) {
+        dispatch_lifecycle_event( *active_state, "ccb.lifecycle.reload" );
+    }
     if( reloaded && !profile_error.empty() ) {
         record_runtime_error( "UI profile reload failed", profile_error );
     }
     return reloaded;
 }
 
+void on_turn()
+{
+    if( active_state ) {
+        run_scheduled_callbacks( *active_state, script_current_turn() );
+    }
+}
+
 void on_world_ready()
 {
     // A save/new-game transition is a runtime boundary, unlike an in-page hot
     // reload.  Never retain callbacks or state belonging to the previous world.
-    active_state.reset();
+    if( active_state ) {
+        active_state->accept_actions = false;
+        dispatch_lifecycle_event( *active_state, "ccb.lifecycle.shutdown" );
+        active_state.reset();
+    }
     clear_navigation_requests();
     script_persistent_state saved_character_state;
     std::string character_state_error;
@@ -1582,6 +2406,8 @@ void on_world_ready()
     if( !reload_scripts_with_state( &saved_character_state,
                                     &saved_world_state, script_error ) ) {
         ::add_msg( m_bad, _( "Lua initialization failed: %s" ), script_error );
+    } else if( active_state ) {
+        dispatch_lifecycle_event( *active_state, "ccb.lifecycle.world_ready" );
     }
     if( !character_state_error.empty() ) {
         record_runtime_error( "Lua character state load failed",
@@ -1604,6 +2430,8 @@ bool save_persistent_state( std::string &error )
         error.clear();
         return true;
     }
+
+    dispatch_lifecycle_event( *active_state, "ccb.lifecycle.before_save" );
 
     std::vector<std::string> errors;
     std::string character_error;
@@ -1629,6 +2457,11 @@ bool save_persistent_state( std::string &error )
         }
         error += entry;
     }
+    dispatch_lifecycle_event(
+    *active_state, "ccb.lifecycle.after_save", {
+        { "success", errors.empty() },
+        { "error", error }
+    } );
     return errors.empty();
 }
 
@@ -1640,7 +2473,7 @@ runtime_status status()
     if( active_state ) {
         result.generation = active_state->generation;
         result.page_count = active_state->pages.size();
-        result.event_handler_count = active_state->event_handlers.size();
+        result.event_handler_count = active_state->event_registry.size();
         result.source_count = active_state->sources.size();
         result.memory_used = active_state->memory.used;
         result.memory_limit = active_state->memory.limit;
@@ -1659,6 +2492,7 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
         memory_tracker memory;
         sol::state lua( sol::default_at_panic, limited_allocator, &memory );
         lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string, sol::lib::table );
+        install_guarded_protected_calls( lua.lua_state() );
         lua["dofile"] = sol::nil;
         lua["load"] = sol::nil;
         lua["loadfile"] = sol::nil;
@@ -1686,7 +2520,11 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
 
 void shutdown()
 {
-    active_state.reset();
+    if( active_state ) {
+        active_state->accept_actions = false;
+        dispatch_lifecycle_event( *active_state, "ccb.lifecycle.shutdown" );
+        active_state.reset();
+    }
     clear_actions();
     clear_navigation_requests();
     last_runtime_error.clear();

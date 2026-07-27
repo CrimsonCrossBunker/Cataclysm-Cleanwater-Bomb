@@ -23,7 +23,9 @@
 #include "move_mode.h"
 #include "mp_gamestate.h"
 #include "mutation.h"
+#include "output.h"
 #include "point.h"
+#include "translations.h"
 
 namespace cata::lua_ui
 {
@@ -42,6 +44,10 @@ struct action_request {
     std::string text_argument;
     std::int64_t integer_argument = 0;
     std::int64_t queued_turn = 0;
+    int context_revision = -1;
+    std::string source_id;
+    std::string label;
+    bool dangerous = false;
 };
 
 struct action_result {
@@ -156,6 +162,47 @@ std::uint64_t enqueue_action( const std::function<void()> &authorize_access,
     return pending_actions.back().id;
 }
 
+cata::input_context_actions::action_descriptor context_action_descriptor(
+    const std::string &action, const int context_revision )
+{
+    const cata::input_context_actions::context_snapshot context =
+        cata::input_context_actions::snapshot();
+    if( context_revision != context.revision ) {
+        throw std::runtime_error(
+            "game.actions.enqueue_context received a stale context revision" );
+    }
+    const auto found = std::find_if(
+                           context.actions.begin(), context.actions.end(),
+    [&action]( const cata::input_context_actions::action_descriptor & entry ) {
+        return entry.id == action;
+    } );
+    if( found == context.actions.end() ) {
+        throw std::runtime_error(
+            "game.actions.enqueue_context action is unavailable in the active context" );
+    }
+    return *found;
+}
+
+std::uint64_t enqueue_context_action_request(
+    const std::function<void()> &authorize_access,
+    const std::function<void()> &authorize_dangerous,
+    const std::function<std::string()> &source_id,
+    const std::function<bool()> &can_mutate, const std::string &action,
+    const int context_revision )
+{
+    authorize_access();
+    if( !can_mutate() ) {
+        throw std::runtime_error(
+            "game.actions.enqueue_context is only available from an active callback" );
+    }
+    const cata::input_context_actions::action_descriptor descriptor =
+        context_action_descriptor( action, context_revision );
+    if( descriptor.dangerous ) {
+        authorize_dangerous();
+    }
+    return enqueue_context_action( action, context_revision, source_id() );
+}
+
 bool cancel_action( std::uint64_t id )
 {
     const auto found = std::find_if( pending_actions.begin(), pending_actions.end(),
@@ -178,6 +225,12 @@ sol::table request_snapshot( sol::state_view &state, const action_request &reque
     snapshot["type"] = request.type;
     snapshot["status"] = "queued";
     snapshot["queued_turn"] = request.queued_turn;
+    if( request.type == "context" ) {
+        snapshot["action"] = request.text_argument;
+        snapshot["context_revision"] = request.context_revision;
+        snapshot["dangerous"] = request.dangerous;
+        snapshot["source"] = request.source_id;
+    }
     return snapshot;
 }
 
@@ -222,7 +275,8 @@ sol::table actions_status( sol::this_state lua, sol::optional<int> requested_res
     return snapshot;
 }
 
-sol::table input_context_snapshot( sol::this_state lua )
+sol::table input_context_snapshot( sol::this_state lua,
+                                   const bool dangerous_available )
 {
     sol::state_view state( lua );
     const cata::input_context_actions::context_snapshot context =
@@ -238,7 +292,7 @@ sol::table input_context_snapshot( sol::this_state lua )
         entry["repeatable"] = action.repeatable;
         entry["dangerous"] = action.dangerous;
         actions[index + 1] = std::move( entry );
-        available[action.id] = !action.dangerous;
+        available[action.id] = !action.dangerous || dangerous_available;
     }
     sol::table result = state.create_table();
     result["category"] = context.category;
@@ -312,6 +366,15 @@ bool dispatch_action( const action_request &request )
         throw std::runtime_error( "Lua game actions are not available in multiplayer sessions" );
     }
     avatar &player = get_avatar();
+    if( request.type == "context" ) {
+        if( !cata::input_context_actions::enqueue(
+                request.text_argument, request.context_revision,
+                request.dangerous ) ) {
+            throw std::runtime_error(
+                "named input action became stale or unavailable before dispatch" );
+        }
+        return false;
+    }
     if( request.type == "wait" ) {
         if( player.activity ) {
             throw std::runtime_error( "cannot wait while an activity is active" );
@@ -403,6 +466,9 @@ bool dispatch_action( const action_request &request )
 } // namespace
 
 void install_action_api( sol::table &game, std::function<void()> authorize_access,
+                         std::function<void()> authorize_dangerous,
+                         std::function<bool()> dangerous_available,
+                         std::function<std::string()> source_id,
                          std::function<bool()> can_mutate )
 {
     sol::state_view state( game.lua_state() );
@@ -418,16 +484,48 @@ void install_action_api( sol::table &game, std::function<void()> authorize_acces
         }
         return cancel_action( request_id );
     } );
+    actions.set_function(
+        "enqueue_context",
+        [authorize_access, authorize_dangerous, source_id, can_mutate](
+    const std::string & action, const int context_revision ) {
+        return enqueue_context_action_request(
+                   authorize_access, authorize_dangerous, source_id, can_mutate,
+                   action, context_revision );
+    } );
     actions.set_function( "status", [authorize_access]( sol::this_state lua,
     sol::optional<int> requested_result_limit ) {
         authorize_access();
         return actions_status( lua, requested_result_limit );
     } );
-    actions.set_function( "context_snapshot", [authorize_access]( sol::this_state lua ) {
+    actions.set_function(
+        "context_snapshot",
+    [authorize_access, dangerous_available]( sol::this_state lua ) {
         authorize_access();
-        return input_context_snapshot( lua );
+        return input_context_snapshot( lua, dangerous_available() );
     } );
     game["actions"] = std::move( actions );
+}
+
+std::uint64_t enqueue_context_action( const std::string &action,
+                                      const int context_revision,
+                                      const std::string &source_id )
+{
+    if( pending_actions.size() >= maximum_pending_actions ) {
+        throw std::runtime_error( "game.actions queue is full" );
+    }
+    const cata::input_context_actions::action_descriptor descriptor =
+        context_action_descriptor( action, context_revision );
+    action_request request;
+    request.id = next_action_id++;
+    request.type = "context";
+    request.text_argument = action;
+    request.queued_turn = current_turn();
+    request.context_revision = context_revision;
+    request.source_id = source_id;
+    request.label = descriptor.label;
+    request.dangerous = descriptor.dangerous;
+    pending_actions.push_back( std::move( request ) );
+    return pending_actions.back().id;
 }
 
 std::optional<bool> process_next_action()
@@ -439,6 +537,14 @@ std::optional<bool> process_next_action()
     pending_actions.pop_front();
     action_result result{ request.id, request.type, "succeeded", {}, request.queued_turn,
                           current_turn(), false };
+    if( request.type == "context" && request.dangerous &&
+        !query_yn(
+            _( "Lua source \"%s\" requests the dangerous action \"%s\" (%s).  Allow it once?" ),
+            request.source_id, request.label, request.text_argument ) ) {
+        result.status = "denied";
+        remember_result( std::move( result ) );
+        return false;
+    }
     try {
         result.action_taken = dispatch_action( request );
     } catch( const std::exception &error ) {

@@ -1116,17 +1116,56 @@ else
   SOURCES := $(wildcard $(SRC_DIR)/*.cpp)
 endif
 C_SOURCES := $(SRC_DIR)/cata_allocator_c.c
-LUA_C_SOURCES := $(wildcard $(SRC_DIR)/lua/*.c)
+LUA_C_SOURCE_NAMES := \
+  lapi.c \
+  lauxlib.c \
+  lbaselib.c \
+  lcode.c \
+  lcorolib.c \
+  lctype.c \
+  ldblib.c \
+  ldebug.c \
+  ldo.c \
+  ldump.c \
+  lfunc.c \
+  lgc.c \
+  linit.c \
+  liolib.c \
+  llex.c \
+  lmathlib.c \
+  lmem.c \
+  loadlib.c \
+  lobject.c \
+  lopcodes.c \
+  loslib.c \
+  lparser.c \
+  lstate.c \
+  lstring.c \
+  lstrlib.c \
+  ltable.c \
+  ltablib.c \
+  ltm.c \
+  lundump.c \
+  lutf8lib.c \
+  lvm.c \
+  lzio.c
+LUA_C_SOURCES := $(addprefix $(SRC_DIR)/lua/,$(LUA_C_SOURCE_NAMES))
 LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_ui.cpp \
   $(SRC_DIR)/catalua_ui_actions.cpp \
+  $(SRC_DIR)/catalua_ui_events.cpp \
   $(SRC_DIR)/catalua_ui_game.cpp \
   $(SRC_DIR)/catalua_ui_i18n.cpp \
   $(SRC_DIR)/catalua_ui_imgui.cpp \
   $(SRC_DIR)/catalua_ui_manifest.cpp \
+  $(SRC_DIR)/catalua_ui_modules.cpp \
   $(SRC_DIR)/catalua_ui_navigation.cpp \
   $(SRC_DIR)/catalua_ui_renderer.cpp \
-  $(SRC_DIR)/catalua_ui_state.cpp
+  $(SRC_DIR)/catalua_ui_registry.cpp \
+  $(SRC_DIR)/catalua_ui_scheduler.cpp \
+  $(SRC_DIR)/catalua_ui_services.cpp \
+  $(SRC_DIR)/catalua_ui_state.cpp \
+  $(SRC_DIR)/catalua_ui_values.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
 HEADERS := $(wildcard $(SRC_DIR)/*.h)
@@ -1437,6 +1476,9 @@ install: version $(TARGET) $(ZZIP_BIN)
 	cp -R --no-preserve=ownership data/motd $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/credits $(DATA_PREFIX)
 	cp -R --no-preserve=ownership data/title $(DATA_PREFIX)
+ifeq ($(CATA_ENABLE_LUA_UI),1)
+	cp -R --no-preserve=ownership data/lua $(DATA_PREFIX)
+endif
 ifeq ($(TILES), 1)
 	cp -R --no-preserve=ownership gfx $(DATA_PREFIX)
 	install -Dm755 -t $(SHARE_DIR)/applications/ data/xdg/org.cataclysmdda.CataclysmDDA.desktop
@@ -1536,6 +1578,9 @@ endif
 	cp -R data/motd $(APPDATADIR)
 	cp -R data/credits $(APPDATADIR)
 	cp -R data/title $(APPDATADIR)
+ifeq ($(CATA_ENABLE_LUA_UI),1)
+	cp -R data/lua $(APPDATADIR)
+endif
 ifdef LANGUAGES
 	$(MAKE) -C lang
 	mkdir -p $(APPRESOURCESDIR)/lang/mo/

@@ -60,33 +60,47 @@ bool script_ui_renderer_info::supports( script_ui_capability capability ) const
 }
 
 script_ui_context::script_ui_context( script_ui_renderer &renderer ) :
-    renderer_( renderer ), profile_( cata::ui::current_profile() )
+    renderer_( &renderer ), profile_( cata::ui::current_profile() )
 {
+}
+
+void script_ui_context::invalidate() noexcept
+{
+    renderer_ = nullptr;
+}
+
+script_ui_renderer &script_ui_context::renderer() const
+{
+    if( renderer_ == nullptr ) {
+        throw std::runtime_error(
+            "Lua UI context is only valid during its current draw callback" );
+    }
+    return *renderer_;
 }
 
 std::string script_ui_context::backend() const
 {
-    return std::string( renderer_.info().backend );
+    return std::string( renderer().info().backend );
 }
 
 std::string script_ui_context::platform() const
 {
-    return std::string( renderer_.info().platform );
+    return std::string( renderer().info().platform );
 }
 
 bool script_ui_context::supports( const std::string &capability ) const
 {
-    return renderer_.info().supports( capability_from_name( capability ) );
+    return renderer().info().supports( capability_from_name( capability ) );
 }
 
 bool script_ui_context::is_immediate_mode() const
 {
-    return renderer_.info().immediate_mode;
+    return renderer().info().immediate_mode;
 }
 
 bool script_ui_context::uses_native_widgets() const
 {
-    return renderer_.info().native_widgets;
+    return renderer().info().native_widgets;
 }
 
 script_ui_environment script_ui_context::environment() const
@@ -97,7 +111,7 @@ script_ui_environment script_ui_context::environment() const
         std::string( cata::ui::density_mode_name( profile_.density ) ),
         std::string( cata::ui::layout_breakpoint_name(
                          profile_.breakpoint_for_width(
-                             static_cast<float>( renderer_.available_width() ) ) ) ),
+                             static_cast<float>( renderer().available_width() ) ) ) ),
         profile_.minimum_target,
         profile_.is_touch(),
         profile_.allow_hover,
@@ -112,44 +126,44 @@ script_ui_environment script_ui_context::environment() const
 
 void script_ui_context::text( const std::string &value ) const
 {
-    renderer_.text( value );
+    renderer().text( value );
 }
 
 void script_ui_context::heading( const std::string &value ) const
 {
-    renderer_.heading( value );
+    renderer().heading( value );
 }
 
 void script_ui_context::bullet_text( const std::string &value ) const
 {
-    renderer_.bullet_text( value );
+    renderer().bullet_text( value );
 }
 
 void script_ui_context::disabled_text( const std::string &value ) const
 {
-    renderer_.disabled_text( value );
+    renderer().disabled_text( value );
 }
 
 void script_ui_context::text_colored( const std::string &value, double red, double green,
                                       double blue, double alpha ) const
 {
-    renderer_.text_colored( value, red, green, blue, alpha );
+    renderer().text_colored( value, red, green, blue, alpha );
 }
 
 void script_ui_context::text_tone( const std::string &value, const std::string &tone ) const
 {
     if( tone == "normal" ) {
-        renderer_.text( value );
+        renderer().text( value );
     } else if( tone == "muted" ) {
-        renderer_.disabled_text( value );
+        renderer().disabled_text( value );
     } else if( tone == "good" ) {
-        renderer_.text_colored( value, 0.30, 0.85, 0.42, 1.0 );
+        renderer().text_colored( value, 0.30, 0.85, 0.42, 1.0 );
     } else if( tone == "warning" ) {
-        renderer_.text_colored( value, 1.0, 0.70, 0.20, 1.0 );
+        renderer().text_colored( value, 1.0, 0.70, 0.20, 1.0 );
     } else if( tone == "bad" ) {
-        renderer_.text_colored( value, 1.0, 0.32, 0.28, 1.0 );
+        renderer().text_colored( value, 1.0, 0.32, 0.28, 1.0 );
     } else if( tone == "info" ) {
-        renderer_.text_colored( value, 0.35, 0.72, 1.0, 1.0 );
+        renderer().text_colored( value, 0.35, 0.72, 1.0, 1.0 );
     } else {
         throw std::invalid_argument(
             "ctx:text_tone tone must be normal, muted, good, warning, bad, or info" );
@@ -158,27 +172,27 @@ void script_ui_context::text_tone( const std::string &value, const std::string &
 
 void script_ui_context::separator() const
 {
-    renderer_.separator();
+    renderer().separator();
 }
 
 void script_ui_context::same_line() const
 {
-    renderer_.same_line();
+    renderer().same_line();
 }
 
 void script_ui_context::new_line() const
 {
-    renderer_.new_line();
+    renderer().new_line();
 }
 
 void script_ui_context::spacing() const
 {
-    renderer_.spacing();
+    renderer().spacing();
 }
 
 void script_ui_context::set_next_item_width( double width ) const
 {
-    renderer_.set_next_item_width( width );
+    renderer().set_next_item_width( width );
 }
 
 void script_ui_context::item_width( const std::string &token ) const
@@ -188,13 +202,13 @@ void script_ui_context::item_width( const std::string &token ) const
         throw std::invalid_argument(
             "ctx:item_width token must be compact, normal, wide, or fill" );
     }
-    renderer_.set_next_item_width( profile_.item_width( parsed ) );
+    renderer().set_next_item_width( profile_.item_width( parsed ) );
 }
 
 void script_ui_context::progress_bar( double fraction,
                                       const std::optional<std::string> &overlay ) const
 {
-    renderer_.progress_bar( fraction, overlay );
+    renderer().progress_bar( fraction, overlay );
 }
 
 bool script_ui_context::button( const std::string &label ) const
@@ -204,7 +218,7 @@ bool script_ui_context::button( const std::string &label ) const
 
 bool script_ui_context::button_id( const std::string &id, const std::string &label ) const
 {
-    return renderer_.button( id, label );
+    return renderer().button( id, label );
 }
 
 bool script_ui_context::small_button( const std::string &label ) const
@@ -214,7 +228,7 @@ bool script_ui_context::small_button( const std::string &label ) const
 
 bool script_ui_context::small_button_id( const std::string &id, const std::string &label ) const
 {
-    return renderer_.small_button( id, label );
+    return renderer().small_button( id, label );
 }
 
 bool script_ui_context::checkbox( const std::string &label, bool value ) const
@@ -225,7 +239,7 @@ bool script_ui_context::checkbox( const std::string &label, bool value ) const
 bool script_ui_context::checkbox_id( const std::string &id, const std::string &label,
                                      bool value ) const
 {
-    return renderer_.checkbox( id, label, value );
+    return renderer().checkbox( id, label, value );
 }
 
 bool script_ui_context::radio_button( const std::string &label, bool active ) const
@@ -236,7 +250,7 @@ bool script_ui_context::radio_button( const std::string &label, bool active ) co
 bool script_ui_context::radio_button_id( const std::string &id, const std::string &label,
         bool active ) const
 {
-    return renderer_.radio_button( id, label, active );
+    return renderer().radio_button( id, label, active );
 }
 
 bool script_ui_context::selectable( const std::string &label, bool selected ) const
@@ -247,7 +261,7 @@ bool script_ui_context::selectable( const std::string &label, bool selected ) co
 bool script_ui_context::selectable_id( const std::string &id, const std::string &label,
                                        bool selected ) const
 {
-    return renderer_.selectable( id, label, selected );
+    return renderer().selectable( id, label, selected );
 }
 
 int script_ui_context::slider_int( const std::string &label, int value, int minimum,
@@ -259,7 +273,7 @@ int script_ui_context::slider_int( const std::string &label, int value, int mini
 int script_ui_context::slider_int_id( const std::string &id, const std::string &label, int value,
                                       int minimum, int maximum ) const
 {
-    return renderer_.slider_int( id, label, value, minimum, maximum );
+    return renderer().slider_int( id, label, value, minimum, maximum );
 }
 
 double script_ui_context::slider_float( const std::string &label, double value, double minimum,
@@ -271,7 +285,7 @@ double script_ui_context::slider_float( const std::string &label, double value, 
 double script_ui_context::slider_float_id( const std::string &id, const std::string &label,
         double value, double minimum, double maximum ) const
 {
-    return renderer_.slider_float( id, label, value, minimum, maximum );
+    return renderer().slider_float( id, label, value, minimum, maximum );
 }
 
 int script_ui_context::input_int( const std::string &label, int value ) const
@@ -282,7 +296,7 @@ int script_ui_context::input_int( const std::string &label, int value ) const
 int script_ui_context::input_int_id( const std::string &id, const std::string &label,
                                      int value ) const
 {
-    return renderer_.input_int( id, label, value );
+    return renderer().input_int( id, label, value );
 }
 
 double script_ui_context::input_float( const std::string &label, double value ) const
@@ -293,7 +307,7 @@ double script_ui_context::input_float( const std::string &label, double value ) 
 double script_ui_context::input_float_id( const std::string &id, const std::string &label,
         double value ) const
 {
-    return renderer_.input_float( id, label, value );
+    return renderer().input_float( id, label, value );
 }
 
 std::string script_ui_context::input_text( const std::string &label,
@@ -305,7 +319,7 @@ std::string script_ui_context::input_text( const std::string &label,
 std::string script_ui_context::input_text_id( const std::string &id, const std::string &label,
         const std::string &value ) const
 {
-    return renderer_.input_text( id, label, value );
+    return renderer().input_text( id, label, value );
 }
 
 std::string script_ui_context::radial_select_id(
@@ -324,7 +338,7 @@ std::string script_ui_context::radial_select_id(
                 "ctx:radial_select_id option ids must be unique, non-empty, and at most 64 bytes" );
         }
     }
-    return renderer_.radial_select( id, center_label, options );
+    return renderer().radial_select( id, center_label, options );
 }
 
 std::string script_ui_context::action_slot_id(
@@ -344,7 +358,7 @@ std::string script_ui_context::action_slot_id(
                 "ctx:action_slot_id option ids must be unique, non-empty, and at most 64 bytes" );
         }
     }
-    return renderer_.action_slot( id, selected_action, context_revision, options );
+    return renderer().action_slot( id, selected_action, context_revision, options );
 }
 
 void script_ui_context::child( const std::string &id, double height,
@@ -353,7 +367,7 @@ void script_ui_context::child( const std::string &id, double height,
     if( id.empty() || height < 0.0 || !draw ) {
         throw std::invalid_argument( "ctx:child requires an id, non-negative height, and callback" );
     }
-    renderer_.child( id, height, draw );
+    renderer().child( id, height, draw );
 }
 
 void script_ui_context::scroll( const std::string &id, const std::string &height_token,
@@ -373,7 +387,7 @@ void script_ui_context::table( const std::string &id, int columns,
     if( id.empty() || columns < 1 || columns > 64 || !draw ) {
         throw std::invalid_argument( "ctx:table requires an id, 1..64 columns, and callback" );
     }
-    renderer_.table( id, columns, draw );
+    renderer().table( id, columns, draw );
 }
 
 void script_ui_context::grid( const std::string &id, const int narrow_columns,
@@ -387,7 +401,7 @@ void script_ui_context::grid( const std::string &id, const int narrow_columns,
     }
     int columns = regular_columns;
     switch( profile_.breakpoint_for_width(
-                static_cast<float>( renderer_.available_width() ) ) ) {
+                static_cast<float>( renderer().available_width() ) ) ) {
         case cata::ui::layout_breakpoint::narrow:
             columns = narrow_columns;
             break;
@@ -403,12 +417,12 @@ void script_ui_context::grid( const std::string &id, const int narrow_columns,
 
 void script_ui_context::table_next_row() const
 {
-    renderer_.table_next_row();
+    renderer().table_next_row();
 }
 
 bool script_ui_context::table_next_column() const
 {
-    return renderer_.table_next_column();
+    return renderer().table_next_column();
 }
 
 void script_ui_context::tabs( const std::string &id, const std::function<void()> &draw ) const
@@ -416,7 +430,7 @@ void script_ui_context::tabs( const std::string &id, const std::function<void()>
     if( id.empty() || !draw ) {
         throw std::invalid_argument( "ctx:tabs requires an id and callback" );
     }
-    renderer_.tabs( id, draw );
+    renderer().tabs( id, draw );
 }
 
 bool script_ui_context::tab( const std::string &id, const std::string &label,
@@ -425,7 +439,7 @@ bool script_ui_context::tab( const std::string &id, const std::string &label,
     if( id.empty() || !draw ) {
         throw std::invalid_argument( "ctx:tab requires an id and callback" );
     }
-    return renderer_.tab( id, label, draw );
+    return renderer().tab( id, label, draw );
 }
 
 bool script_ui_context::tree( const std::string &id, const std::string &label, bool default_open,
@@ -434,7 +448,7 @@ bool script_ui_context::tree( const std::string &id, const std::string &label, b
     if( id.empty() || !draw ) {
         throw std::invalid_argument( "ctx:tree requires an id and callback" );
     }
-    return renderer_.tree( id, label, default_open, draw );
+    return renderer().tree( id, label, default_open, draw );
 }
 
 bool script_ui_context::modal( const std::string &id, const std::string &title, bool open,
@@ -443,12 +457,12 @@ bool script_ui_context::modal( const std::string &id, const std::string &title, 
     if( id.empty() || !draw ) {
         throw std::invalid_argument( "ctx:modal requires an id and callback" );
     }
-    return renderer_.modal( id, title, open, draw );
+    return renderer().modal( id, title, open, draw );
 }
 
 void script_ui_context::tooltip( const std::string &text ) const
 {
-    renderer_.tooltip( text );
+    renderer().tooltip( text );
 }
 
 void script_ui_context::virtual_list( int item_count, double item_height,
@@ -458,7 +472,7 @@ void script_ui_context::virtual_list( int item_count, double item_height,
         throw std::invalid_argument(
             "ctx:virtual_list requires 0..1000000 items, positive height, and callback" );
     }
-    renderer_.virtual_list( item_count, item_height, draw_range );
+    renderer().virtual_list( item_count, item_height, draw_range );
 }
 
 void script_ui_context::virtual_list_rows(

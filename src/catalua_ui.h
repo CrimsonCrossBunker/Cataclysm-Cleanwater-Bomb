@@ -12,7 +12,7 @@ namespace cata::lua_ui
 {
 
 constexpr int minimum_api_version = 2;
-constexpr int api_version = 3;
+constexpr int api_version = 4;
 
 constexpr bool is_enabled() noexcept
 {
@@ -54,6 +54,9 @@ bool is_safe_module_name( std::string_view name );
 // Reload all bundled, active-mod, and user scripts as one transaction.  A
 // failed reload leaves the previous runtime active.
 bool reload_scripts( std::string &error );
+
+// Run deterministic due callbacks once after the game turn advances.
+void on_turn();
 
 // Load scripts after a new game or save has finished initializing.  Errors are
 // logged and reported through status(), without aborting game startup.

@@ -3,7 +3,6 @@
 #define CATA_SRC_CATALUA_UI_NAVIGATION_H
 
 #include <cstddef>
-#include <map>
 #include <optional>
 #include <string>
 
@@ -18,7 +17,7 @@ enum class navigation_request_type : int {
     close
 };
 
-using navigation_parameters = std::map<std::string, script_persistent_value>;
+using navigation_parameters = script_value_map;
 
 struct navigation_request {
     navigation_request_type type = navigation_request_type::close;

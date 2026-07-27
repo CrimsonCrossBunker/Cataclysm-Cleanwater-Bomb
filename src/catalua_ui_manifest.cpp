@@ -34,18 +34,43 @@ bool script_manifest::has_capability( std::string_view capability ) const
     return capabilities.count( std::string( capability ) ) != 0;
 }
 
+bool script_manifest::depends_on( const std::string_view dependency ) const
+{
+    return std::find( dependencies.begin(), dependencies.end(), dependency ) !=
+           dependencies.end();
+}
+
 const std::set<std::string> &supported_script_capabilities()
 {
     static const std::set<std::string> capabilities = {
         "events",
         "game.actions",
+        "game.actions.dangerous",
         "game.read",
+        "modules.import",
+        "registry.read",
+        "scheduler",
+        "services.consume",
+        "services.provide",
         "state.character",
         "state.page",
         "state.world",
         "ui.pages"
     };
     return capabilities;
+}
+
+int capability_minimum_api_version( const std::string_view capability )
+{
+    static const std::set<std::string> version_four = {
+        "game.actions.dangerous",
+        "modules.import",
+        "registry.read",
+        "scheduler",
+        "services.consume",
+        "services.provide"
+    };
+    return version_four.count( std::string( capability ) ) != 0 ? 4 : minimum_api_version;
 }
 
 script_manifest read_script_manifest( const JsonValue &input )
@@ -82,6 +107,12 @@ script_manifest read_script_manifest( const JsonValue &input )
             throw std::invalid_argument( "Lua manifest '" + result.id +
                                          "' requests unknown capability '" + capability + "'" );
         }
+        if( result.api_version < capability_minimum_api_version( capability ) ) {
+            throw std::invalid_argument(
+                "Lua manifest '" + result.id + "' requests capability '" +
+                capability + "' which requires API " +
+                std::to_string( capability_minimum_api_version( capability ) ) );
+        }
         if( !result.capabilities.insert( capability ).second ) {
             throw std::invalid_argument( "Lua manifest '" + result.id +
                                          "' repeats capability '" + capability + "'" );
@@ -102,6 +133,12 @@ script_manifest read_script_manifest( const JsonValue &input )
         }
         result.dependencies.push_back( dependency );
     }
+    if( result.has_capability( "game.actions.dangerous" ) &&
+        !result.has_capability( "game.actions" ) ) {
+        throw std::invalid_argument(
+            "Lua manifest '" + result.id +
+            "' capability 'game.actions.dangerous' requires 'game.actions'" );
+    }
     root.allow_omitted_members();
     return result;
 }
@@ -113,6 +150,8 @@ script_manifest default_script_manifest( const std::string &id, bool allow_actio
     result.version = "legacy";
     result.api_version = api_version;
     result.capabilities = supported_script_capabilities();
+    // Dangerous named input actions always require an explicit manifest.
+    result.capabilities.erase( "game.actions.dangerous" );
     if( !allow_actions ) {
         result.capabilities.erase( "game.actions" );
     }

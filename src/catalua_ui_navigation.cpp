@@ -1,13 +1,11 @@
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
+#include "catalua_ui_values.h"
 
-#include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <deque>
 #include <stdexcept>
 #include <string>
-#include <utility>
 
 namespace cata::lua_ui
 {
@@ -16,85 +14,14 @@ namespace
 {
 
 constexpr std::size_t maximum_pending_requests = 16;
-constexpr std::size_t maximum_parameter_count = 32;
-constexpr std::size_t maximum_parameter_key_bytes = 64;
-constexpr std::size_t maximum_parameter_string_bytes = 4096;
-constexpr std::size_t maximum_parameter_storage_bytes = 16U * 1024U;
 constexpr std::size_t maximum_page_id_bytes = 128;
 
 std::deque<navigation_request> pending_requests;
 
-std::size_t value_storage_size( const script_persistent_value &value )
-{
-    if( const std::string *text = std::get_if<std::string>( &value ) ) {
-        return text->size();
-    }
-    return sizeof( value );
-}
-
 navigation_parameters read_parameters( const sol::optional<sol::table> &raw_parameters )
 {
-    navigation_parameters result;
-    if( !raw_parameters ) {
-        return result;
-    }
-
-    std::size_t storage_size = 0;
-    for( const auto &entry : *raw_parameters ) {
-        const sol::object raw_key = entry.first;
-        const sol::object raw_value = entry.second;
-        if( raw_key.get_type() != sol::type::string ) {
-            throw std::invalid_argument( "ui.open parameter keys must be strings" );
-        }
-        const std::string key = raw_key.as<std::string>();
-        if( key.empty() || key.size() > maximum_parameter_key_bytes ) {
-            throw std::invalid_argument(
-                "ui.open parameter keys must contain 1 to 64 bytes" );
-        }
-        if( result.size() >= maximum_parameter_count ) {
-            throw std::invalid_argument( "ui.open accepts at most 32 parameters" );
-        }
-
-        script_persistent_value value;
-        switch( raw_value.get_type() ) {
-            case sol::type::boolean:
-                value = raw_value.as<bool>();
-                break;
-            case sol::type::number:
-                if( raw_value.is<lua_Integer>() ) {
-                    value = static_cast<std::int64_t>( raw_value.as<lua_Integer>() );
-                } else {
-                    const double number = raw_value.as<double>();
-                    if( !std::isfinite( number ) ) {
-                        throw std::invalid_argument(
-                            "ui.open parameters must contain finite numbers" );
-                    }
-                    value = number;
-                }
-                break;
-            case sol::type::string: {
-                const std::string text = raw_value.as<std::string>();
-                if( text.size() > maximum_parameter_string_bytes ) {
-                    throw std::invalid_argument(
-                        "ui.open parameter strings cannot exceed 4096 bytes" );
-                }
-                value = text;
-                break;
-            }
-            default:
-                throw std::invalid_argument(
-                    "ui.open parameters only accept booleans, numbers, and strings" );
-        }
-        storage_size += key.size() + value_storage_size( value );
-        if( storage_size > maximum_parameter_storage_bytes ) {
-            throw std::invalid_argument(
-                "ui.open parameters cannot exceed 16 KiB" );
-        }
-        if( !result.emplace( key, std::move( value ) ).second ) {
-            throw std::invalid_argument( "ui.open parameter keys must be unique" );
-        }
-    }
-    return result;
+    return read_script_value_map(
+               raw_parameters, script_value_map_limits{}, "ui.open parameters" );
 }
 
 void require_queue_context( const std::function<void()> &authorize_access,

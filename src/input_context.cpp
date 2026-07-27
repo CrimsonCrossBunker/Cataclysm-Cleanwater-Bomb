@@ -25,6 +25,7 @@
 #include "cata_imgui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "color.h"
 #include "coordinates.h"
 #include "cuboid_rectangle.h"
@@ -520,7 +521,9 @@ const std::string &input_context::handle_input( const int timeout )
     }
     next_action.type = input_event_t::error;
     const std::string *result = &CATA_ERROR;
-    if( android_ui_mode::is_new_ui_build() ) {
+    const bool publish_named_actions =
+        android_ui_mode::is_new_ui_build() || cata::lua_ui::is_enabled();
+    if( publish_named_actions ) {
         const int label_revision = detail::get_current_language_version();
         // Most contexts override only a handful of names.  Fingerprinting those
         // translated labels is much cheaper than rebuilding every action
@@ -561,7 +564,7 @@ const std::string &input_context::handle_input( const int timeout )
         // A platform HUD tap can arrive while the backend is polling input.
         // Prefer it over the event that woke this loop without manufacturing a
         // keyboard event.
-        if( android_ui_mode::is_new_ui_build() &&
+        if( publish_named_actions &&
             cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
             result = &context_direct_action;
             break;

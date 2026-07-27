@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -16,6 +17,7 @@ namespace cata::lua_ui
 
 using script_persistent_value = std::variant<bool, std::int64_t, double, std::string>;
 using script_persistent_state = std::unordered_map<std::string, script_persistent_value>;
+using script_value_map = std::map<std::string, script_persistent_value>;
 
 constexpr std::size_t persistent_state_max_keys = 1024;
 constexpr std::size_t persistent_state_max_key_bytes = 256;

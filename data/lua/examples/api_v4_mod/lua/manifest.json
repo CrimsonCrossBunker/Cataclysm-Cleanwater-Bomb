@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../manifest.schema.json",
+  "id": "ccb_lua_v4_example",
+  "version": "1.0.0",
+  "api_version": 4,
+  "capabilities": [
+    "events",
+    "game.actions",
+    "game.read",
+    "modules.import",
+    "registry.read",
+    "scheduler",
+    "services.consume",
+    "services.provide",
+    "state.character",
+    "state.page",
+    "ui.pages"
+  ],
+  "dependencies": [
+    "builtin"
+  ]
+}
