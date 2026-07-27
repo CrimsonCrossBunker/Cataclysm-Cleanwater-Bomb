@@ -644,23 +644,23 @@ TEST_CASE( "lua_i18n_api_returns_owned_translations_and_validates_plural_counts"
     const sol::table i18n = lua["i18n"];
     REQUIRE( i18n.valid() );
 
-    sol::protected_function gettext = i18n["gettext"];
-    sol::protected_function_result translated = gettext( "Lua UI test message" );
+    sol::protected_function lua_gettext = i18n["gettext"];
+    sol::protected_function_result translated = lua_gettext( "Lua UI test message" );
     REQUIRE( translated.valid() );
     CHECK_FALSE( translated.get<std::string>().empty() );
 
-    sol::protected_function pgettext = i18n["pgettext"];
-    translated = pgettext( "Lua UI test context", "Lua UI contextual message" );
+    sol::protected_function lua_pgettext = i18n["pgettext"];
+    translated = lua_pgettext( "Lua UI test context", "Lua UI contextual message" );
     REQUIRE( translated.valid() );
     CHECK_FALSE( translated.get<std::string>().empty() );
 
-    sol::protected_function ngettext = i18n["ngettext"];
-    translated = ngettext( "Lua UI item", "Lua UI items", std::int64_t{ 2 } );
+    sol::protected_function lua_ngettext = i18n["ngettext"];
+    translated = lua_ngettext( "Lua UI item", "Lua UI items", std::int64_t{ 2 } );
     REQUIRE( translated.valid() );
     CHECK_FALSE( translated.get<std::string>().empty() );
 
     const sol::protected_function_result invalid_plural =
-        ngettext( "Lua UI item", "Lua UI items", std::int64_t{ -1 } );
+        lua_ngettext( "Lua UI item", "Lua UI items", std::int64_t{ -1 } );
     REQUIRE_FALSE( invalid_plural.valid() );
     const sol::error plural_error = invalid_plural;
     CHECK( std::string( plural_error.what() ).find( "cannot be negative" ) !=
