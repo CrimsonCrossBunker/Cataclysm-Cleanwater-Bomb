@@ -826,12 +826,16 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
 
     const point p_offset( catacurses::getbegx( w_open ), catacurses::getbegy( w_open ) );
 
+    // Stage the parent before the submenu so the smaller window remains the
+    // topmost layer in curses' virtual screen.  Refreshing w_open afterwards
+    // would paint its blank menu area over w_sub while leaving input active.
+    wnoutrefresh( w_open );
     display_sub_menu( iSel, p_offset + point( offsets[iSel], offset.y - 2 ), sel_line );
 #else
     ( void )offset;
     ( void )sel_line;
-#endif
     wnoutrefresh( w_open );
+#endif
 }
 
 std::vector<std::string> main_menu::load_file( const std::string &path,
