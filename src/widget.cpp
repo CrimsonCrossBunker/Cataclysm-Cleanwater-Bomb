@@ -74,6 +74,75 @@ std::string hud_child_path( const std::string &parent, const widget_id &id,
     const std::string segment = hud_node_segment( id, occurrence );
     return parent.empty() ? segment : parent + "/" + segment;
 }
+
+std::string clip_hud_column_line( const std::string &line, const int columns )
+{
+    if( columns <= 0 ) {
+        return {};
+    }
+    std::string clipped;
+    int remaining = columns;
+    int open_colors = 0;
+    for( std::string segment : split_by_color( line ) ) {
+        if( segment.empty() ) {
+            continue;
+        }
+        if( segment.front() == '<' ) {
+            const color_tag_parse_result tag =
+                get_color_from_tag( segment, report_color_error::no );
+            if( tag.type != color_tag_parse_result::non_color_tag ) {
+                const std::size_t tag_end = segment.find( '>' );
+                clipped.append( segment, 0, tag_end + 1 );
+                segment.erase( 0, tag_end + 1 );
+                if( tag.type == color_tag_parse_result::open_color_tag ) {
+                    ++open_colors;
+                } else if( open_colors > 0 ) {
+                    --open_colors;
+                }
+            }
+        }
+        const int segment_width = utf8_width( segment );
+        if( segment_width <= remaining ) {
+            clipped += segment;
+            remaining -= segment_width;
+            continue;
+        }
+        if( remaining > 0 ) {
+            clipped += utf8_wrapper( segment ).substr_display(
+                           0, remaining ).str();
+        }
+        for( int i = 0; i < open_colors; ++i ) {
+            clipped += "</color>";
+        }
+        return clipped;
+    }
+    return clipped;
+}
+
+std::string fit_hud_column_line( std::string line, const int columns )
+{
+    if( columns <= 0 ) {
+        return {};
+    }
+    int width = utf8_width( line, true );
+    if( width > columns ) {
+        line = clip_hud_column_line( line, columns );
+        width = utf8_width( line, true );
+    }
+    if( width < columns ) {
+        line.append( columns - width, ' ' );
+    }
+    return line;
+}
+
+std::string trim_hud_trailing_spaces( std::string line )
+{
+    std::string plain = remove_color_tags( line );
+    while( !plain.empty() && plain.back() == ' ' ) {
+        plain.pop_back();
+    }
+    return clip_hud_column_line( line, utf8_width( plain ) );
+}
 } // namespace
 
 template<>
@@ -2210,10 +2279,16 @@ std::string widget::layout_internal( const avatar &ava,
                         if( row >= column.size() || column[row].empty() ) {
                             continue;
                         }
+                        const std::string cell =
+                            trim_hud_trailing_spaces( column[row] );
+                        if( string_empty_or_whitespace(
+                                remove_color_tags( cell ) ) ) {
+                            continue;
+                        }
                         if( any_value ) {
                             line.push_back( ' ' );
                         }
-                        line += column[row];
+                        line += cell;
                         any_value = true;
                     }
                     if( any_value ) {
@@ -2270,6 +2345,7 @@ std::string widget::layout_internal( const avatar &ava,
             // Store the (potentially) multi-row text for each column
             std::vector<std::vector<std::string>> cols;
             std::vector<int> widths;
+            std::vector<bool> fit_widths;
             unsigned int total_width = 0;
             std::string debug_widths;
             for( size_t i = 0; i < wgts.size(); i++ ) {
@@ -2322,6 +2398,7 @@ std::string widget::layout_internal( const avatar &ava,
                 // Store the resulting text for this column
                 cols.emplace_back( string_split( txt, '\n' ) );
                 widths.emplace_back( cur_width );
+                fit_widths.emplace_back( contextual && !skip_pad_this );
             }
 
             int h_max = 0;
@@ -2332,13 +2409,15 @@ std::string widget::layout_internal( const avatar &ava,
                 std::string line;
                 for( size_t c = 0; c < cols.size(); c++ ) {
                     if( r >= cols[c].size() ) {
-                        if( !skip_pad ) {
+                        if( fit_widths[c] ) {
                             // No row r for this column, pad with empty space
                             line += std::string( widths[c], ' ' );
                         }
                     } else {
                         any_val = true;
-                        line += cols[c][r];
+                        line += fit_widths[c] ?
+                                fit_hud_column_line( cols[c][r], widths[c] ) :
+                                cols[c][r];
                     }
                     if( !skip_pad && c + 1 < cols.size() ) {
                         // Add padding between columns
