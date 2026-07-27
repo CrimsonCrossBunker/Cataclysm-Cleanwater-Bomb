@@ -86,6 +86,7 @@
 #include "iuse_actor.h"
 #include "json.h"
 #include "lightmap.h"
+#include "line.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -320,9 +321,9 @@ static const fault_id fault_fail_to_feed( "fault_fail_to_feed" );
 static const flag_id json_flag_ALWAYS_AIMED( "ALWAYS_AIMED" );
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 
+static const furn_str_id furn_f_counter( "f_counter" );
 static const furn_str_id furn_f_gunsafe_mj( "f_gunsafe_mj" );
 static const furn_str_id furn_f_gunsafe_ml( "f_gunsafe_ml" );
-static const furn_str_id furn_f_counter( "f_counter" );
 static const furn_str_id furn_f_kiln_empty( "f_kiln_empty" );
 static const furn_str_id furn_f_kiln_metal_empty( "f_kiln_metal_empty" );
 static const furn_str_id furn_f_kiln_portable_empty( "f_kiln_portable_empty" );
@@ -944,7 +945,7 @@ void contextual_action_activity_actor::serialize( JsonOut &jsout ) const
     jsout.start_object();
     jsout.member( "target", target );
     jsout.member( "actions", serialized_actions );
-    jsout.member( "next_action", next_action );
+    jsout.member( "next_action", static_cast<std::uint64_t>( next_action ) );
     jsout.end_object();
 }
 
@@ -952,18 +953,21 @@ std::unique_ptr<activity_actor> contextual_action_activity_actor::deserialize( J
 {
     tripoint_abs_ms target = tripoint_abs_ms::zero;
     std::vector<int> serialized_actions;
-    size_t next_action = 0;
+    std::uint64_t serialized_next_action = 0;
 
     JsonObject data = jsin.get_object();
     data.read( "target", target );
     data.read( "actions", serialized_actions );
-    data.read( "next_action", next_action );
+    data.read( "next_action", serialized_next_action );
 
     std::vector<action_id> actions;
     actions.reserve( serialized_actions.size() );
     for( const int action : serialized_actions ) {
         actions.push_back( static_cast<action_id>( action ) );
     }
+    const std::size_t next_action =
+        serialized_next_action < actions.size() ?
+        static_cast<std::size_t>( serialized_next_action ) : actions.size();
 
     return std::make_unique<contextual_action_activity_actor>( target, std::move( actions ),
             next_action );
@@ -14662,9 +14666,9 @@ void zone_activity_actor::update_vehicle_zone_cache()
 }
 
 // Subsequent same-type items in a sort batch cost 1/divisor of full handling.
-constexpr int zone_sort_batch_discount_divisor = 4;
+static constexpr int zone_sort_batch_discount_divisor = 4;
 // Floor per item so batch handling never becomes free.
-constexpr int zone_sort_batch_min_cost = 10;
+static constexpr int zone_sort_batch_min_cost = 10;
 
 int zone_sort_activity_actor::batch_handling_cost( Character &you, const item &it )
 {

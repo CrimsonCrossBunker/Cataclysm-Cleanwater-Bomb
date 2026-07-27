@@ -235,7 +235,8 @@ runtime_state *state_from_upvalue( lua_State *lua )
 
 std::string module_relative_path( std::string name )
 {
-    std::replace( name.begin(), name.end(), '.', fs::path::preferred_separator );
+    std::replace( name.begin(), name.end(), '.',
+                  static_cast<char>( fs::path::preferred_separator ) );
     return name + ".lua";
 }
 

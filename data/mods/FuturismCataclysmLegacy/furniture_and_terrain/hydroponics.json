@@ -19,11 +19,7 @@
       "sound_fail": "whish.",
       "items": [ { "group": "fcl_hydrop_bash_results" } ]
     },
-    "plant_data": {
-      "transform": "f_fcl_hydroponics_seed",
-      "max_water_storage": 200,
-      "water_consumption_multiplier": 0.5
-    },
+    "plant_data": { "transform": "f_fcl_hydroponics_seed", "max_water_storage": 200, "water_consumption_multiplier": 0.5 },
     "examine_action": "dirtmound"
   },
   {
@@ -35,7 +31,17 @@
     "color": "brown",
     "looks_like": "f_planter",
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_SEED", "NO_CROP_OVERGROWTH" ],
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "DONT_REMOVE_ROTTEN",
+      "GROWTH_SEED",
+      "NO_CROP_OVERGROWTH"
+    ],
     "examine_action": "aggie_plant",
     "copy-from": "f_fcl_hydroponics",
     "plant_data": { "transform": "f_fcl_hydroponics_seedling", "base": "f_fcl_hydroponics" }
@@ -49,7 +55,17 @@
     "color": "green",
     "looks_like": "f_planter_seedling",
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_SEEDLING", "NO_CROP_OVERGROWTH" ],
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "DONT_REMOVE_ROTTEN",
+      "GROWTH_SEEDLING",
+      "NO_CROP_OVERGROWTH"
+    ],
     "examine_action": "aggie_plant",
     "copy-from": "f_fcl_hydroponics_seed",
     "plant_data": { "transform": "f_fcl_hydroponics_mature", "base": "f_fcl_hydroponics" }
@@ -64,7 +80,18 @@
     "looks_like": "f_planter_mature",
     "move_cost_mod": 0,
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_MATURE", "SMALL_HIDE", "NO_CROP_OVERGROWTH" ],
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "DONT_REMOVE_ROTTEN",
+      "GROWTH_MATURE",
+      "SMALL_HIDE",
+      "NO_CROP_OVERGROWTH"
+    ],
     "examine_action": "aggie_plant",
     "copy-from": "f_fcl_hydroponics_seed",
     "plant_data": { "transform": "f_fcl_hydroponics_harvest", "base": "f_fcl_hydroponics" }
@@ -78,13 +105,21 @@
     "color": "light_green",
     "looks_like": "f_planter_harvest",
     "required_str": -1,
-    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_HARVEST", "SMALL_HIDE", "NO_CROP_OVERGROWTH" ],
+    "flags": [
+      "PLANT",
+      "SEALED",
+      "TRANSPARENT",
+      "CONTAINER",
+      "NOITEM",
+      "TINY",
+      "DONT_REMOVE_ROTTEN",
+      "GROWTH_HARVEST",
+      "SMALL_HIDE",
+      "NO_CROP_OVERGROWTH"
+    ],
     "examine_action": "harvest_plant_ex",
     "copy-from": "f_fcl_hydroponics_mature",
-    "plant_data": {
-      "base": "f_fcl_hydroponics",
-      "harvest_multiplier": 2.5
-    }
+    "plant_data": { "base": "f_fcl_hydroponics", "harvest_multiplier": 2.5 }
   },
   {
     "type": "furniture",

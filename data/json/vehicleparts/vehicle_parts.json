@@ -2018,10 +2018,7 @@
       }
     },
     "flags": [ "ARMOR", "SHOCK_RESISTANT" ],
-    "breaks_into": [
-      { "item": "scrap", "count": [ 6, 18 ] },
-      { "item": "alloy_sheet", "count": [ 4, 8 ] }
-    ],
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
     "damage_reduction": { "all": 70 },
     "variants": [ { "symbols": ")", "symbols_broken": ")" } ]
   },

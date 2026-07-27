@@ -5652,9 +5652,9 @@ static void focus_aware_stop_text_input()
 #endif
 }
 
+#if defined(__ANDROID__)
 static bool pop_extra_button_input( input_event &event )
 {
-#if defined(__ANDROID__)
     std::scoped_lock lock( extra_button_input_mutex );
     if( extra_button_inputs.empty() ) {
         return false;
@@ -5662,11 +5662,8 @@ static bool pop_extra_button_input( input_event &event )
     event = extra_button_inputs.front();
     extra_button_inputs.pop_front();
     return true;
-#else
-    ( void )event;
-    return false;
-#endif
 }
+#endif
 
 //Check for any window messages (keypress, paint, mousemove, etc)
 static void CheckMessages()
