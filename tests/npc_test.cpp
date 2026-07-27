@@ -3095,14 +3095,32 @@ TEST_CASE( "npc_shopkeeper_sleep_wake_return", "[npc][needs]" )
         CHECK( guy.pos_abs() == post );
     }
 
-    SECTION( "NO_NPC_FOOD caps unscheduled NPC at TIRED" ) {
+    SECTION( "NO_NPC_FOOD keeps unscheduled NPC at zero sleepiness" ) {
         override_option no_food( "NO_NPC_FOOD", "true" );
         npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
         clear_character( guy, true );
-        guy.set_sleepiness( sleepiness_levels::TIRED );
+        guy.set_sleepiness( sleepiness_levels::EXHAUSTED );
         REQUIRE_FALSE( guy.needs_food() );
         guy.update_needs( 1 );
-        CHECK( guy.get_sleepiness() <= static_cast<int>( sleepiness_levels::TIRED ) );
+        CHECK( guy.get_sleepiness() == 0 );
+    }
+
+    SECTION( "NO_NPC_FOOD removes sleep while preserving NPC suspension" ) {
+        override_option no_food( "NO_NPC_FOOD", "true" );
+        npc &guy = spawn_npc( { 50, 50 }, "test_talker" );
+        clear_character( guy, true );
+        guy.set_sleepiness( sleepiness_levels::EXHAUSTED );
+        guy.add_effect( effect_sleep, 1_hours );
+        guy.add_effect( effect_npc_suspend, 1_hours );
+        REQUIRE( guy.in_sleep_state() );
+        REQUIRE( guy.has_effect( effect_npc_suspend ) );
+        REQUIRE_FALSE( guy.needs_food() );
+
+        guy.update_needs( 1 );
+
+        CHECK( guy.get_sleepiness() == 0 );
+        CHECK_FALSE( guy.has_effect( effect_sleep ) );
+        CHECK( guy.has_effect( effect_npc_suspend ) );
     }
 
     SECTION( "DEAD_TIRED shopkeeper commits to sleep, no oscillation" ) {
@@ -3306,7 +3324,7 @@ TEST_CASE( "schedule_reconciliation_no_npc_food", "[npc][schedule]" )
         CHECK( guy.get_sleepiness() == 0 );
     }
 
-    SECTION( "floors sleepiness at off-shift transition" ) {
+    SECTION( "keeps sleepiness zero off-shift" ) {
         calendar::turn = calendar::turn_zero + 20_hours;
         npc &guy = spawn_scheduled_npc( { 50, 50 }, NC_ROBOFAC_INTERCOM_DAY );
         guy.set_sleepiness( 100 );
@@ -3314,12 +3332,10 @@ TEST_CASE( "schedule_reconciliation_no_npc_food", "[npc][schedule]" )
 
         guy.reconcile_schedule();
 
-        CHECK( guy.get_sleepiness() >= static_cast<int>( sleepiness_levels::TIRED ) );
+        CHECK( guy.get_sleepiness() == 0 );
     }
 
-    SECTION( "on_load sets sleepiness proportional to shift" ) {
-        // 12:00 is 6 hours into a [6,18] shift (12h total).
-        // Expected: TIRED * 6/12 = TIRED/2
+    SECTION( "on_load keeps sleepiness zero" ) {
         calendar::turn = calendar::turn_zero + 12_hours;
         npc &guy = spawn_scheduled_npc( { 50, 50 }, NC_ROBOFAC_INTERCOM_DAY );
         guy.set_sleepiness( 0 );
@@ -3327,12 +3343,10 @@ TEST_CASE( "schedule_reconciliation_no_npc_food", "[npc][schedule]" )
 
         guy.reconcile_schedule_on_load();
 
-        int expected = static_cast<int>( sleepiness_levels::TIRED ) / 2;
-        CHECK( guy.get_sleepiness() >= expected - 5 );
-        CHECK( guy.get_sleepiness() <= expected + 5 );
+        CHECK( guy.get_sleepiness() == 0 );
     }
 
-    SECTION( "loaded NPC covers full shift then sleeps" ) {
+    SECTION( "loaded NPC covers full shift and stays awake" ) {
         // Start just before shift end so we don't need a massive time jump.
         calendar::turn = calendar::turn_zero + 17_hours + 59_minutes;
         map &here = get_map();
@@ -3344,7 +3358,7 @@ TEST_CASE( "schedule_reconciliation_no_npc_food", "[npc][schedule]" )
         const tripoint_abs_ms post = guy.pos_abs();
         REQUIRE( guy.guard_pos == post );
 
-        // Place a bed 3 tiles away for sleep target.
+        // Place a bed 3 tiles away; with NO_NPC_FOOD it should not be used.
         const tripoint_bub_ms bed_pos = guy.pos_bub() + tripoint( 3, 0, 0 );
         here.ter_set( bed_pos, ter_t_floor );
         here.furn_set( bed_pos, furn_f_bed );
@@ -3362,9 +3376,9 @@ TEST_CASE( "schedule_reconciliation_no_npc_food", "[npc][schedule]" )
         guy.update_body( calendar::turn - 10_seconds, calendar::turn );
         guy.npc_update_body();
 
-        CHECK( guy.get_sleepiness() >= static_cast<int>( sleepiness_levels::TIRED ) );
+        CHECK( guy.get_sleepiness() == 0 );
 
-        // BT should now send NPC to sleep.
+        // BT should NOT send NPC to sleep while NO_NPC_FOOD is active.
         bool reached_sleep = false;
         for( int i = 0; i < 20; ++i ) {
             guy.set_moves( 100 );
@@ -3375,7 +3389,7 @@ TEST_CASE( "schedule_reconciliation_no_npc_food", "[npc][schedule]" )
                 break;
             }
         }
-        CHECK( reached_sleep );
+        CHECK_FALSE( reached_sleep );
     }
 }
 
@@ -3448,6 +3462,7 @@ TEST_CASE( "npc_update_body_calls_reconcile_schedule", "[npc][schedule]" )
     guy.npc_update_body();
 
     CHECK_FALSE( guy.in_sleep_state() );
+    CHECK( guy.get_sleepiness() == 0 );
 }
 
 // --- Trade delegate tests ---

@@ -868,5 +868,13 @@
         ]
       }
     ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_test_run_unique_npc",
+    "effect": {
+      "u_run_npc_eocs": [ { "id": "EOC_test_mark_unique_npc", "effect": { "u_add_var": "unique_npc_eoc_ran", "value": "yes" } } ],
+      "unique_ids": [ "EOC_TEST_UNIQUE_NPC" ]
+    }
   }
 ]

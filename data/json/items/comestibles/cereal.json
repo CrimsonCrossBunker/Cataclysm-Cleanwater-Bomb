@@ -19,7 +19,8 @@
     "quench": -2,
     "fun": 10,
     "calories": 354,
-    "vitamins": [ [ "iron", 47 ], [ "junk_allergen", 1 ] ]
+    "vitamins": [ [ "iron", 47 ], [ "junk_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "cereal2",

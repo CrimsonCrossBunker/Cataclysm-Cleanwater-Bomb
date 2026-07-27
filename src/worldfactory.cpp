@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include "android_ui_mode.h"
+
 #if defined(__ANDROID__)
     #include "adaptive_imgui_dialog.h"
     #include "cata_imgui.h"
@@ -1018,7 +1020,7 @@ static std::optional<std::string> prompt_world_name( const std::string &title,
         return true;
     } );
     std::string message = popup.query();
-    if( popup.cancelled() ) {
+    if( popup.cancelled() && android_ui_mode::is_new_ui_build() ) {
         return std::nullopt;
     }
     return message;
@@ -1027,41 +1029,43 @@ static std::optional<std::string> prompt_world_name( const std::string &title,
 int worldfactory::show_worldgen_advanced( WORLD *world )
 {
 #if defined(__ANDROID__)
-    const int width = std::max( FULL_SCREEN_WIDTH, TERMX / 2 );
-    const int offset_x = TERMX > FULL_SCREEN_WIDTH ? ( TERMX - width ) / 2 : 0;
-    const catacurses::window bridge = catacurses::newwin( TERMY, width, point( offset_x, 0 ) );
-    int current_page = 0;
-    while( current_page >= 0 ) {
-        if( current_page == 0 ) {
-            current_page += show_worldgen_tab_modselection( bridge, world, true );
-            continue;
-        }
-        if( current_page == 1 ) {
-            current_page += show_worldgen_tab_options( bridge, world, true );
-            continue;
-        }
-        const std::optional<std::string> result = prompt_world_name(
-                    _( "Choose a new name for this world." ), world->world_name );
-        if( !result ) {
-            current_page = 1;
-            continue;
-        }
-        if( result->empty() ) {
-            if( !adaptive_imgui_dialog::confirm(
-                    _( "World name" ),
-                    _( "World name is empty. Randomize the name?" ),
-                    _( "Randomize" ), _( "Back" ) ) ) {
+    if( android_ui_mode::is_new_ui_build() ) {
+        const int width = std::max( FULL_SCREEN_WIDTH, TERMX / 2 );
+        const int offset_x = TERMX > FULL_SCREEN_WIDTH ? ( TERMX - width ) / 2 : 0;
+        const catacurses::window bridge = catacurses::newwin( TERMY, width, point( offset_x, 0 ) );
+        int current_page = 0;
+        while( current_page >= 0 ) {
+            if( current_page == 0 ) {
+                current_page += show_worldgen_tab_modselection( bridge, world, true );
+                continue;
+            }
+            if( current_page == 1 ) {
+                current_page += show_worldgen_tab_options( bridge, world, true );
+                continue;
+            }
+            const std::optional<std::string> result = prompt_world_name(
+                        _( "Choose a new name for this world." ), world->world_name );
+            if( !result ) {
                 current_page = 1;
                 continue;
             }
-            world->world_name = pick_random_name();
-        } else {
-            world->world_name = *result;
+            if( result->empty() ) {
+                if( !adaptive_imgui_dialog::confirm(
+                        _( "World name" ),
+                        _( "World name is empty. Randomize the name?" ),
+                        _( "Randomize" ), _( "Back" ) ) ) {
+                    current_page = 1;
+                    continue;
+                }
+                world->world_name = pick_random_name();
+            } else {
+                world->world_name = *result;
+            }
+            return current_page;
         }
         return current_page;
     }
-    return current_page;
-#else
+#endif
     // set up window
     catacurses::window wf_win;
     ui_adaptor ui;
@@ -1110,7 +1114,6 @@ int worldfactory::show_worldgen_advanced( WORLD *world )
         }
     }
     return curtab;
-#endif
 }
 
 WORLD *worldfactory::make_new_world( special_game_type special_type )
@@ -1321,26 +1324,29 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
     }
 
 #if defined(__ANDROID__)
-    std::vector<adaptive_imgui_dialog::entry> entries;
-    entries.reserve( world_names.size() );
-    for( const std::string &name : world_names ) {
-        const size_t save_count = get_world( name )->world_saves.size();
-        entries.push_back( {
-            string_format( "%s (%zu)", name, save_count ),
-            save_count == 0 ? _( "Empty world" ) :
-            string_format( n_gettext( "%zu saved character", "%zu saved characters", save_count ),
-                           save_count ),
-            true,
-            false
-        } );
+    if( android_ui_mode::is_new_ui_build() ) {
+        std::vector<adaptive_imgui_dialog::entry> entries;
+        entries.reserve( world_names.size() );
+        for( const std::string &name : world_names ) {
+            const size_t save_count = get_world( name )->world_saves.size();
+            entries.push_back( {
+                string_format( "%s (%zu)", name, save_count ),
+                save_count == 0 ? _( "Empty world" ) :
+                string_format( n_gettext( "%zu saved character", "%zu saved characters", save_count ),
+                               save_count ),
+                true,
+                false
+            } );
+        }
+        const std::optional<int> selected = adaptive_imgui_dialog::select(
+                                                _( "World selection" ), entries,
+                                                _( "Pick a world to enter game" ) );
+        if( selected && *selected >= 0 && static_cast<size_t>( *selected ) < world_names.size() ) {
+            return get_world( world_names[*selected] );
+        }
+        return nullptr;
     }
-    const std::optional<int> selected = adaptive_imgui_dialog::select(
-                                            _( "World selection" ), entries, _( "Pick a world to enter game" ) );
-    if( selected && *selected >= 0 && static_cast<size_t>( *selected ) < world_names.size() ) {
-        return get_world( world_names[*selected] );
-    }
-    return nullptr;
-#else
+#endif
     const int iTooltipHeight = 3;
     int iContentHeight = 0;
     int iMinScreenWidth = 0;
@@ -1546,7 +1552,6 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
     }
 
     return nullptr;
-#endif
 }
 
 void worldfactory::remove_world( const std::string &worldname )
@@ -1769,42 +1774,45 @@ std::map<int, inclusive_rectangle<point>> worldfactory::draw_mod_list( const cat
 void worldfactory::show_active_world_mods( const std::vector<mod_id> &world_mods )
 {
 #if defined(__ANDROID__)
-    adaptive_mod_imgui viewer;
-    input_context imgui_ctxt( "DEFAULT" );
-    imgui_ctxt.register_action( "QUIT" );
-    int selected = world_mods.empty() ? -1 : 0;
-    while( true ) {
-        if( world_mods.empty() ) {
-            selected = -1;
-        } else {
-            selected = clamp( selected, 0, static_cast<int>( world_mods.size() ) - 1 );
-        }
-        adaptive_mod_snapshot snapshot;
-        snapshot.title = _( "Active world mods" );
-        snapshot.read_only = true;
-        snapshot.selected_active = selected;
-        for( const mod_id &mod : world_mods ) {
-            adaptive_mod_entry_snapshot entry;
-            entry.name = mod.is_valid() ? mod->name() : mod.c_str();
-            entry.category = mod.is_valid() ? mod->category.second.translated() : _( "Missing mod" );
-            entry.warning = !mod.is_valid();
-            snapshot.active.push_back( std::move( entry ) );
-        }
-        if( selected >= 0 && world_mods[selected].is_valid() ) {
-            snapshot.description = remove_color_tags(
-                                       mman_ui->get_information( &world_mods[selected].obj() ) );
-        }
-        viewer.set_snapshot( std::move( snapshot ) );
-        ui_manager::redraw();
-        const std::optional<adaptive_mod_action> action = viewer.take_action();
-        if( action ) {
-            if( action->type == adaptive_mod_action_type::select_active ) {
-                selected = action->index;
-            } else if( action->type == adaptive_mod_action_type::close ) {
+    if( android_ui_mode::is_new_ui_build() ) {
+        adaptive_mod_imgui viewer;
+        input_context imgui_ctxt( "DEFAULT" );
+        imgui_ctxt.register_action( "QUIT" );
+        int selected = world_mods.empty() ? -1 : 0;
+        while( true ) {
+            if( world_mods.empty() ) {
+                selected = -1;
+            } else {
+                selected = clamp( selected, 0, static_cast<int>( world_mods.size() ) - 1 );
+            }
+            adaptive_mod_snapshot snapshot;
+            snapshot.title = _( "Active world mods" );
+            snapshot.read_only = true;
+            snapshot.selected_active = selected;
+            for( const mod_id &mod : world_mods ) {
+                adaptive_mod_entry_snapshot entry;
+                entry.name = mod.is_valid() ? mod->name() : mod.c_str();
+                entry.category = mod.is_valid() ? mod->category.second.translated() :
+                                 _( "Missing mod" );
+                entry.warning = !mod.is_valid();
+                snapshot.active.push_back( std::move( entry ) );
+            }
+            if( selected >= 0 && world_mods[selected].is_valid() ) {
+                snapshot.description = remove_color_tags(
+                                           mman_ui->get_information( &world_mods[selected].obj() ) );
+            }
+            viewer.set_snapshot( std::move( snapshot ) );
+            ui_manager::redraw();
+            const std::optional<adaptive_mod_action> action = viewer.take_action();
+            if( action ) {
+                if( action->type == adaptive_mod_action_type::select_active ) {
+                    selected = action->index;
+                } else if( action->type == adaptive_mod_action_type::close ) {
+                    return;
+                }
+            } else if( imgui_ctxt.handle_input() == "QUIT" ) {
                 return;
             }
-        } else if( imgui_ctxt.handle_input() == "QUIT" ) {
-            return;
         }
     }
 #endif
@@ -1895,214 +1903,216 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
     }
 
 #if defined(__ANDROID__)
-    struct adaptive_mod_tab_data {
-        std::string id;
-        std::vector<mod_id> mods;
-    };
-    std::vector<adaptive_mod_tab_data> adaptive_tabs;
-    for( const std::pair<std::string, translation> &tab : get_mod_list_tabs() ) {
-        adaptive_tabs.push_back( { tab.first, {} } );
-    }
-    const std::map<std::string, std::string> &category_tabs = get_mod_list_cat_tab();
-    for( const mod_id &mod : mman->get_usable_mods() ) {
-        const int category_index = mod->category.first;
-        if( category_index < 0 ||
-            static_cast<size_t>( category_index ) >= get_mod_list_categories().size() ) {
-            continue;
-        }
-        const std::string &category_id = get_mod_list_categories()[category_index].first;
-        std::string destination = "tab_default";
-        const auto destination_it = category_tabs.find( category_id );
-        if( destination_it != category_tabs.end() ) {
-            destination = destination_it->second;
-        }
-        const auto tab_it = std::find_if( adaptive_tabs.begin(), adaptive_tabs.end(),
-        [&]( const adaptive_mod_tab_data & tab ) {
-            return tab.id == destination;
-        } );
-        if( tab_it != adaptive_tabs.end() ) {
-            tab_it->mods.push_back( mod );
-        }
-    }
-
-    int selected_category = 0;
-    int selected_available = -1;
-    int selected_active = active_mod_order.empty() ? -1 : 0;
-    bool active_pane = false;
-    std::string filter;
-    adaptive_mod_imgui viewer;
-    input_context imgui_ctxt( "MODMANAGER_DIALOG" );
-    imgui_ctxt.register_action( "QUIT" );
-
-    const auto available_mods = [&]() {
-        std::vector<mod_id> result;
-        if( adaptive_tabs.empty() ) {
-            return result;
-        }
-        selected_category = clamp( selected_category, 0,
-                                   static_cast<int>( adaptive_tabs.size() ) - 1 );
-        for( const mod_id &mod : adaptive_tabs[selected_category].mods ) {
-            if( filter.empty() || lcmatch( mod->name(), filter ) ) {
-                result.push_back( mod );
-            }
-        }
-        return result;
-    };
-
-    const auto show_message = []( const std::string & title, const std::string & message ) {
-        const std::vector<adaptive_imgui_dialog::entry> entries = {
-            { _( "OK" ), std::string(), true, false }
+    if( android_ui_mode::is_new_ui_build() ) {
+        struct adaptive_mod_tab_data {
+            std::string id;
+            std::vector<mod_id> mods;
         };
-        adaptive_imgui_dialog::select( title, entries, message );
-    };
-
-    while( true ) {
-        const std::vector<mod_id> visible_mods = available_mods();
-        if( visible_mods.empty() ) {
-            selected_available = -1;
-        } else {
-            selected_available = clamp( selected_available, 0,
-                                        static_cast<int>( visible_mods.size() ) - 1 );
-        }
-        if( active_mod_order.empty() ) {
-            selected_active = -1;
-        } else {
-            selected_active = clamp( selected_active, 0,
-                                     static_cast<int>( active_mod_order.size() ) - 1 );
-        }
-
-        adaptive_mod_snapshot snapshot;
-        snapshot.title = _( "World mods" );
-        snapshot.filter = filter;
-        snapshot.selected_category = selected_category;
-        snapshot.selected_available = selected_available;
-        snapshot.selected_active = selected_active;
-        snapshot.active_pane = active_pane;
-        snapshot.with_tabs = with_tabs;
+        std::vector<adaptive_mod_tab_data> adaptive_tabs;
         for( const std::pair<std::string, translation> &tab : get_mod_list_tabs() ) {
-            snapshot.categories.push_back( tab.second.translated() );
+            adaptive_tabs.push_back( { tab.first, {} } );
         }
-        for( const mod_id &mod : visible_mods ) {
-            adaptive_mod_entry_snapshot entry;
-            entry.name = mod->name();
-            entry.category = mod->category.second.translated();
-            entry.active = std::find( active_mod_order.begin(), active_mod_order.end(), mod ) !=
-                           active_mod_order.end();
-            entry.warning = mman_ui->find_mod_conflict( mod, active_mod_order ).has_value();
-            snapshot.available.push_back( std::move( entry ) );
-        }
-        for( size_t index = 0; index < active_mod_order.size(); ++index ) {
-            const mod_id &mod = active_mod_order[index];
-            adaptive_mod_entry_snapshot entry;
-            entry.name = mod.is_valid() ? mod->name() : mod.c_str();
-            entry.category = mod.is_valid() ? mod->category.second.translated() : _( "Missing mod" );
-            entry.warning = !mod.is_valid();
-            entry.can_move_up = mman_ui->can_shift_up( index, active_mod_order );
-            entry.can_move_down = mman_ui->can_shift_down( index, active_mod_order );
-            snapshot.active.push_back( std::move( entry ) );
-        }
-        const MOD_INFORMATION *selected_mod = nullptr;
-        if( active_pane && selected_active >= 0 ) {
-            const mod_id &mod = active_mod_order[selected_active];
-            if( mod.is_valid() ) {
-                selected_mod = &mod.obj();
+        const std::map<std::string, std::string> &category_tabs = get_mod_list_cat_tab();
+        for( const mod_id &mod : mman->get_usable_mods() ) {
+            const int category_index = mod->category.first;
+            if( category_index < 0 ||
+                static_cast<size_t>( category_index ) >= get_mod_list_categories().size() ) {
+                continue;
             }
-        } else if( selected_available >= 0 ) {
-            selected_mod = &visible_mods[selected_available].obj();
+            const std::string &category_id = get_mod_list_categories()[category_index].first;
+            std::string destination = "tab_default";
+            const auto destination_it = category_tabs.find( category_id );
+            if( destination_it != category_tabs.end() ) {
+                destination = destination_it->second;
+            }
+            const auto tab_it = std::find_if( adaptive_tabs.begin(), adaptive_tabs.end(),
+            [&]( const adaptive_mod_tab_data & tab ) {
+                return tab.id == destination;
+            } );
+            if( tab_it != adaptive_tabs.end() ) {
+                tab_it->mods.push_back( mod );
+            }
         }
-        if( selected_mod ) {
-            snapshot.description = remove_color_tags( mman_ui->get_information( selected_mod ) );
-        }
-        viewer.set_snapshot( std::move( snapshot ) );
-        ui_manager::redraw();
 
-        std::optional<adaptive_mod_action> ui_action = viewer.take_action();
-        if( !ui_action ) {
-            if( imgui_ctxt.handle_input() == "QUIT" ) {
-                return -999;
+        int selected_category = 0;
+        int selected_available = -1;
+        int selected_active = active_mod_order.empty() ? -1 : 0;
+        bool active_pane = false;
+        std::string filter;
+        adaptive_mod_imgui viewer;
+        input_context imgui_ctxt( "MODMANAGER_DIALOG" );
+        imgui_ctxt.register_action( "QUIT" );
+
+        const auto available_mods = [&]() {
+            std::vector<mod_id> result;
+            if( adaptive_tabs.empty() ) {
+                return result;
             }
-            continue;
-        }
-        switch( ui_action->type ) {
-            case adaptive_mod_action_type::select_category:
-                selected_category = ui_action->index;
+            selected_category = clamp( selected_category, 0,
+                                       static_cast<int>( adaptive_tabs.size() ) - 1 );
+            for( const mod_id &mod : adaptive_tabs[selected_category].mods ) {
+                if( filter.empty() || lcmatch( mod->name(), filter ) ) {
+                    result.push_back( mod );
+                }
+            }
+            return result;
+        };
+
+        const auto show_message = []( const std::string & title, const std::string & message ) {
+            const std::vector<adaptive_imgui_dialog::entry> entries = {
+                { _( "OK" ), std::string(), true, false }
+            };
+            adaptive_imgui_dialog::select( title, entries, message );
+        };
+
+        while( true ) {
+            const std::vector<mod_id> visible_mods = available_mods();
+            if( visible_mods.empty() ) {
                 selected_available = -1;
-                active_pane = false;
-                break;
-            case adaptive_mod_action_type::select_available:
-                selected_available = ui_action->index;
-                active_pane = false;
-                break;
-            case adaptive_mod_action_type::select_active:
-                selected_active = ui_action->index;
-                active_pane = true;
-                break;
-            case adaptive_mod_action_type::add:
-                if( selected_available >= 0 &&
-                    static_cast<size_t>( selected_available ) < visible_mods.size() ) {
-                    const mod_id selected = visible_mods[selected_available];
-                    const std::optional<mod_id> conflict =
-                        mman_ui->find_mod_conflict( selected, active_mod_order );
-                    if( conflict ) {
-                        show_message( _( "Mod conflict" ),
-                                      string_format( _( "Unable to add %s. It conflicts with %s." ),
-                                                     selected->name(), ( *conflict )->name() ) );
-                        break;
-                    }
-                    const size_t previous_size = active_mod_order.size();
-                    mman_ui->try_add( selected, active_mod_order );
-                    const auto active_it = std::find( active_mod_order.begin(), active_mod_order.end(), selected );
-                    if( active_it != active_mod_order.end() ) {
-                        selected_active = static_cast<int>( std::distance( active_mod_order.begin(), active_it ) );
-                        active_pane = true;
-                    } else if( active_mod_order.size() == previous_size ) {
-                        show_message( _( "Unable to add mod" ),
-                                      _( "This mod or one of its dependencies is unavailable. See the description for details." ) );
-                    }
+            } else {
+                selected_available = clamp( selected_available, 0,
+                                            static_cast<int>( visible_mods.size() ) - 1 );
+            }
+            if( active_mod_order.empty() ) {
+                selected_active = -1;
+            } else {
+                selected_active = clamp( selected_active, 0,
+                                         static_cast<int>( active_mod_order.size() ) - 1 );
+            }
+
+            adaptive_mod_snapshot snapshot;
+            snapshot.title = _( "World mods" );
+            snapshot.filter = filter;
+            snapshot.selected_category = selected_category;
+            snapshot.selected_available = selected_available;
+            snapshot.selected_active = selected_active;
+            snapshot.active_pane = active_pane;
+            snapshot.with_tabs = with_tabs;
+            for( const std::pair<std::string, translation> &tab : get_mod_list_tabs() ) {
+                snapshot.categories.push_back( tab.second.translated() );
+            }
+            for( const mod_id &mod : visible_mods ) {
+                adaptive_mod_entry_snapshot entry;
+                entry.name = mod->name();
+                entry.category = mod->category.second.translated();
+                entry.active = std::find( active_mod_order.begin(), active_mod_order.end(), mod ) !=
+                               active_mod_order.end();
+                entry.warning = mman_ui->find_mod_conflict( mod, active_mod_order ).has_value();
+                snapshot.available.push_back( std::move( entry ) );
+            }
+            for( size_t index = 0; index < active_mod_order.size(); ++index ) {
+                const mod_id &mod = active_mod_order[index];
+                adaptive_mod_entry_snapshot entry;
+                entry.name = mod.is_valid() ? mod->name() : mod.c_str();
+                entry.category = mod.is_valid() ? mod->category.second.translated() : _( "Missing mod" );
+                entry.warning = !mod.is_valid();
+                entry.can_move_up = mman_ui->can_shift_up( index, active_mod_order );
+                entry.can_move_down = mman_ui->can_shift_down( index, active_mod_order );
+                snapshot.active.push_back( std::move( entry ) );
+            }
+            const MOD_INFORMATION *selected_mod = nullptr;
+            if( active_pane && selected_active >= 0 ) {
+                const mod_id &mod = active_mod_order[selected_active];
+                if( mod.is_valid() ) {
+                    selected_mod = &mod.obj();
                 }
-                break;
-            case adaptive_mod_action_type::remove:
-                if( selected_active >= 0 ) {
-                    mman_ui->try_rem( static_cast<size_t>( selected_active ), active_mod_order );
-                    if( active_mod_order.empty() ) {
-                        selected_active = -1;
-                        active_pane = false;
-                    } else {
-                        selected_active = std::min( selected_active,
-                                                    static_cast<int>( active_mod_order.size() ) - 1 );
-                    }
+            } else if( selected_available >= 0 ) {
+                selected_mod = &visible_mods[selected_available].obj();
+            }
+            if( selected_mod ) {
+                snapshot.description = remove_color_tags( mman_ui->get_information( selected_mod ) );
+            }
+            viewer.set_snapshot( std::move( snapshot ) );
+            ui_manager::redraw();
+
+            std::optional<adaptive_mod_action> ui_action = viewer.take_action();
+            if( !ui_action ) {
+                if( imgui_ctxt.handle_input() == "QUIT" ) {
+                    return -999;
                 }
-                break;
-            case adaptive_mod_action_type::move_up:
-            case adaptive_mod_action_type::move_down:
-                if( selected_active >= 0 ) {
-                    size_t selection = static_cast<size_t>( selected_active );
-                    mman_ui->try_shift( ui_action->type == adaptive_mod_action_type::move_up ? '-' : '+',
-                                        selection, active_mod_order );
-                    selected_active = static_cast<int>( selection );
+                continue;
+            }
+            switch( ui_action->type ) {
+                case adaptive_mod_action_type::select_category:
+                    selected_category = ui_action->index;
+                    selected_available = -1;
+                    active_pane = false;
+                    break;
+                case adaptive_mod_action_type::select_available:
+                    selected_available = ui_action->index;
+                    active_pane = false;
+                    break;
+                case adaptive_mod_action_type::select_active:
+                    selected_active = ui_action->index;
                     active_pane = true;
+                    break;
+                case adaptive_mod_action_type::add:
+                    if( selected_available >= 0 &&
+                        static_cast<size_t>( selected_available ) < visible_mods.size() ) {
+                        const mod_id selected = visible_mods[selected_available];
+                        const std::optional<mod_id> conflict =
+                            mman_ui->find_mod_conflict( selected, active_mod_order );
+                        if( conflict ) {
+                            show_message( _( "Mod conflict" ),
+                                          string_format( _( "Unable to add %s. It conflicts with %s." ),
+                                                         selected->name(), ( *conflict )->name() ) );
+                            break;
+                        }
+                        const size_t previous_size = active_mod_order.size();
+                        mman_ui->try_add( selected, active_mod_order );
+                        const auto active_it = std::find( active_mod_order.begin(), active_mod_order.end(), selected );
+                        if( active_it != active_mod_order.end() ) {
+                            selected_active = static_cast<int>( std::distance( active_mod_order.begin(), active_it ) );
+                            active_pane = true;
+                        } else if( active_mod_order.size() == previous_size ) {
+                            show_message( _( "Unable to add mod" ),
+                                          _( "This mod or one of its dependencies is unavailable. See the description for details." ) );
+                        }
+                    }
+                    break;
+                case adaptive_mod_action_type::remove:
+                    if( selected_active >= 0 ) {
+                        mman_ui->try_rem( static_cast<size_t>( selected_active ), active_mod_order );
+                        if( active_mod_order.empty() ) {
+                            selected_active = -1;
+                            active_pane = false;
+                        } else {
+                            selected_active = std::min( selected_active,
+                                                        static_cast<int>( active_mod_order.size() ) - 1 );
+                        }
+                    }
+                    break;
+                case adaptive_mod_action_type::move_up:
+                case adaptive_mod_action_type::move_down:
+                    if( selected_active >= 0 ) {
+                        size_t selection = static_cast<size_t>( selected_active );
+                        mman_ui->try_shift( ui_action->type == adaptive_mod_action_type::move_up ? '-' : '+',
+                                            selection, active_mod_order );
+                        selected_active = static_cast<int>( selection );
+                        active_pane = true;
+                    }
+                    break;
+                case adaptive_mod_action_type::filter: {
+                    string_input_popup_imgui popup( 60, filter );
+                    popup.set_label( _( "Filter mods" ) );
+                    popup.set_max_input_length( 256 );
+                    filter = popup.query();
+                    selected_available = -1;
+                    active_pane = false;
+                    break;
                 }
-                break;
-            case adaptive_mod_action_type::filter: {
-                string_input_popup_imgui popup( 60, filter );
-                popup.set_label( _( "Filter mods" ) );
-                popup.set_max_input_length( 256 );
-                filter = popup.query();
-                selected_available = -1;
-                active_pane = false;
-                break;
+                case adaptive_mod_action_type::save_default:
+                    if( mman->set_default_mods( active_mod_order ) ) {
+                        show_message( _( "Default mods" ), _( "Saved list of active mods as default." ) );
+                    }
+                    break;
+                case adaptive_mod_action_type::previous_tab:
+                    return -1;
+                case adaptive_mod_action_type::next_tab:
+                    return 1;
+                case adaptive_mod_action_type::close:
+                    return with_tabs ? -999 : 0;
             }
-            case adaptive_mod_action_type::save_default:
-                if( mman->set_default_mods( active_mod_order ) ) {
-                    show_message( _( "Default mods" ), _( "Saved list of active mods as default." ) );
-                }
-                break;
-            case adaptive_mod_action_type::previous_tab:
-                return -1;
-            case adaptive_mod_action_type::next_tab:
-                return 1;
-            case adaptive_mod_action_type::close:
-                return with_tabs ? -999 : 0;
         }
     }
 #endif
@@ -2615,11 +2625,10 @@ static std::string get_opt_slider( int width, int current, int max, bool no_colo
 int worldfactory::show_worldgen_basic( WORLD *world )
 {
 #if defined(__ANDROID__)
-    {
+    if( android_ui_mode::is_new_ui_build() ) {
         std::vector<option_slider_id> adaptive_sliders;
         std::vector<int> adaptive_levels;
-        for( const option_slider &slider : option_slider::get_all() )
-        {
+        for( const option_slider &slider : option_slider::get_all() ) {
             if( slider.context() == "WORLDGEN" ) {
                 adaptive_sliders.emplace_back( slider.id );
                 adaptive_levels.emplace_back( slider.default_level() );
@@ -2635,8 +2644,7 @@ int worldfactory::show_worldgen_basic( WORLD *world )
         imgui_ctxt.register_action( "SELECT" );
         imgui_ctxt.register_action( "MOUSE_MOVE" );
 
-        const auto make_snapshot = [&]()
-        {
+        const auto make_snapshot = [&]() {
             adaptive_worldgen_snapshot snapshot;
             snapshot.world_name = worldname;
             snapshot.custom_options = custom_options;
@@ -2656,20 +2664,17 @@ int worldfactory::show_worldgen_basic( WORLD *world )
         };
 
         const auto confirm = []( const std::string & title, const std::string & message,
-                                 const std::string & label, const bool danger = false )
-        {
+        const std::string & label, const bool danger = false ) {
             return adaptive_imgui_dialog::confirm( title, message, label, _( "Cancel" ), danger );
         };
 
-        const auto make_bridge_window = []()
-        {
+        const auto make_bridge_window = []() {
             const int width = std::max( FULL_SCREEN_WIDTH, TERMX / 2 );
             const int offset_x = TERMX > FULL_SCREEN_WIDTH ? ( TERMX - width ) / 2 : 0;
             return catacurses::newwin( TERMY, width, point( offset_x, 0 ) );
         };
 
-        while( true )
-        {
+        while( true ) {
             viewer.set_snapshot( make_snapshot() );
             ui_manager::redraw();
             std::optional<adaptive_worldgen_action> ui_action = viewer.take_action();

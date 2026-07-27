@@ -56,7 +56,11 @@ TEST_CASE( "bundled_lua_ui_profile_loads_from_the_data_directory",
     CHECK_FALSE( loaded.id.empty() );
     CHECK( cata::ui::profile_last_error().empty() );
 #if defined(__ANDROID__)
+#if defined(CCB_ANDROID_NEW_UI) && CCB_ANDROID_NEW_UI
     CHECK( loaded.input == cata::ui::input_mode::touch );
+#else
+    CHECK( loaded.input == cata::ui::input_mode::mouse_keyboard );
+#endif
 #elif defined(TILES)
     CHECK( loaded.input == cata::ui::input_mode::mouse_keyboard );
 #else
@@ -64,6 +68,7 @@ TEST_CASE( "bundled_lua_ui_profile_loads_from_the_data_directory",
 #endif
 }
 
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
 TEST_CASE( "all_bundled_lua_ui_profiles_are_valid", "[ui][profile][integration]" )
 {
     namespace fs = std::filesystem;
@@ -166,3 +171,4 @@ return {
         CHECK( parsed.id == fallback.id );
     }
 }
+#endif

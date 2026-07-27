@@ -268,7 +268,9 @@
       "SCHIZOPHRENIC",
       "TOLERANCE",
       "TREE_COMMUNION",
-      "VANITY"
+      "VANITY",
+      "EMOTIONALVOLATILITY",
+      "EMOTIONALFLATNESS"
     ],
     "points": 0,
     "dummy": true,

@@ -1035,7 +1035,7 @@ void weather_manager::on_game_start()
 
 void weather_manager::update_weather()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     Character &player_character = get_player_character();
     weather_changed = false;
     if( weather_id == WEATHER_NULL || calendar::turn >= nextweather ) {

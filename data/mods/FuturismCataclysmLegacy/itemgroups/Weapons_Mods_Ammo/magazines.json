@@ -1,0 +1,8 @@
+[
+  {
+    "type": "item_group",
+    "id": "mags_milspec",
+    "copy-from": "mags_milspec",
+    "extend": { "items": [ [ "fcl_5x50_50_mag", 5 ], [ "fcl_5x50_100_mag", 5 ] ] }
+  }
+]

@@ -1,5 +1,11 @@
 [
   {
+    "type": "item_group",
+    "id": "energy_weapon_armory",
+    "copy-from": "energy_weapon_armory",
+    "extend": { "items": [ { "group": "fcl_fusion_pellet", "prob": 2 } ] }
+  },
+  {
     "id": "hospital_bed",
     "type": "item_group",
     "copy-from": "hospital_bed",
@@ -21,13 +27,13 @@
     "id": "subway",
     "type": "item_group",
     "copy-from": "subway",
-    "extend": { "items": [ [ "fcl_atomic_light", 1 ] ] }
+    "extend": { "items": [ [ "fcl_atomic_smartphone", 1 ], [ "fcl_atomic_light", 1 ] ] }
   },
   {
     "id": "lab_dorm",
     "type": "item_group",
     "copy-from": "lab_dorm",
-    "extend": { "items": [ [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 3 ] ] }
+    "extend": { "items": [ [ "fcl_atomic_smartphone", 3 ], [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 3 ] ] }
   },
   {
     "type": "item_group",
@@ -55,7 +61,8 @@
       "items": [
         { "item": "bio_time_freeze", "prob": 4 },
         { "item": "bio_teleport", "prob": 4 },
-        { "item": "bio_probability_travel", "prob": 4 }
+        { "item": "bio_probability_travel", "prob": 4 },
+        { "item": "fcl_ftk93", "prob": 1 }
       ]
     }
   }

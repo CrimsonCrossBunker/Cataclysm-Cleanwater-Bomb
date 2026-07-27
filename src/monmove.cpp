@@ -532,7 +532,7 @@ bool monster::mating_angry() const
 
 void monster::plan()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     monster_plan mon_plan( *this );
 
     map &here = get_map();

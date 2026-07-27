@@ -173,6 +173,11 @@ IMGUI_DIR = $(SRC_DIR)/third-party/imgui
 IMTUI_DIR = $(SRC_DIR)/third-party/imtui
 LOCALIZE = 1
 ASTYLE_BINARY = astyle
+CATA_ENABLE_LUA_UI ?= 0
+
+ifneq ($(filter $(CATA_ENABLE_LUA_UI),0 1),$(CATA_ENABLE_LUA_UI))
+  $(error CATA_ENABLE_LUA_UI must be 0 or 1)
+endif
 
 # Disable stale game data warning by default
 ifndef WARN_STALE_DATA
@@ -1095,7 +1100,13 @@ ifeq ($(MSYS2),1)
 endif
 
 CFLAGS += $(C_STD) $(WARNINGS) -fvisibility=hidden
-CXXFLAGS += $(CXX_STD) $(CXX_WARNINGS) -fvisibility=hidden -I$(SRC_DIR)/lua
+CXXFLAGS += $(CXX_STD) $(CXX_WARNINGS) -fvisibility=hidden
+ifeq ($(CATA_ENABLE_LUA_UI),1)
+  DEFINES += -DCATA_ENABLE_LUA_UI=1
+  CXXFLAGS += -I$(SRC_DIR)/lua
+else
+  DEFINES += -DCATA_ENABLE_LUA_UI=0
+endif
 
 # Enumerations of all the source files and headers.
 ifeq ($(HEADERPOPULARITY), 1)
@@ -1106,6 +1117,16 @@ else
 endif
 C_SOURCES := $(SRC_DIR)/cata_allocator_c.c
 LUA_C_SOURCES := $(wildcard $(SRC_DIR)/lua/*.c)
+LUA_UI_ENABLED_SOURCES := \
+  $(SRC_DIR)/catalua_ui.cpp \
+  $(SRC_DIR)/catalua_ui_actions.cpp \
+  $(SRC_DIR)/catalua_ui_game.cpp \
+  $(SRC_DIR)/catalua_ui_i18n.cpp \
+  $(SRC_DIR)/catalua_ui_imgui.cpp \
+  $(SRC_DIR)/catalua_ui_manifest.cpp \
+  $(SRC_DIR)/catalua_ui_navigation.cpp \
+  $(SRC_DIR)/catalua_ui_renderer.cpp \
+  $(SRC_DIR)/catalua_ui_state.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
 HEADERS := $(wildcard $(SRC_DIR)/*.h)
@@ -1134,6 +1155,13 @@ ASTYLE_SOURCES := $(sort \
   $(CLANG_TIDY_PLUGIN_HEADERS))
 
 # Third party sources should not be astyle'd
+ifeq ($(CATA_ENABLE_LUA_UI),0)
+  SOURCES := $(filter-out $(LUA_UI_ENABLED_SOURCES),$(SOURCES))
+  TESTSRC := $(filter-out tests/catalua_ui_test.cpp,$(TESTSRC))
+  LUA_C_SOURCES :=
+else
+  SOURCES := $(filter-out $(SRC_DIR)/catalua_ui_disabled.cpp,$(SOURCES))
+endif
 SOURCES += $(THIRD_PARTY_SOURCES)
 C_SOURCES += $(THIRD_PARTY_C_SOURCES) $(LUA_C_SOURCES)
 

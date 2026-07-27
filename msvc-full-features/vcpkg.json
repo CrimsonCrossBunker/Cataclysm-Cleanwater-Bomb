@@ -30,6 +30,12 @@
         { "name": "glslang", "features": [ "tools" ] },
         "sdl3-shadercross"
       ]
+    },
+    "tracy": {
+      "description": "Build with Tracy runtime profiling support.",
+      "dependencies": [
+        "tracy"
+      ]
     }
   },
   "builtin-baseline": "f6672d8e480ccdecddfad3fd1b838ba369ffe6cd"

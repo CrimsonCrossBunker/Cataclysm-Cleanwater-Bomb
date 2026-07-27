@@ -682,6 +682,7 @@ TEST_CASE( "molle_vest_additional_pockets", "[item][tname]" )
 
 TEST_CASE( "nested_items_tname", "[item][tname]" )
 {
+    override_option metric_weight( "USE_METRIC_WEIGHTS", "kg" );
     item backpack_hiking( itype_backpack_hiking );
     item purse( itype_purse );
     item rock( itype_test_rock );

@@ -54,6 +54,7 @@
 #endif
 
 struct scent_block;
+struct terrain_growth_state;
 
 namespace catacurses
 {
@@ -941,6 +942,10 @@ class map
 
         int get_map_damage( const tripoint_bub_ms &p ) const;
         void set_map_damage( const tripoint_bub_ms &p, int dmg );
+
+        const terrain_growth_state *get_terrain_growth( const tripoint_bub_ms &p ) const;
+        void set_terrain_growth( const tripoint_bub_ms &p, const terrain_growth_state &state );
+        void clear_terrain_growth( const tripoint_bub_ms &p );
 
         // Return a bitfield of the adjacent tiles which connect to the given
         // connect_group.  From least-significant bit the order is south, east,
@@ -1986,6 +1991,7 @@ class map
          * Try to grow a harvestable plant to the next stage(s).
          */
         void grow_plant( const tripoint_bub_ms &p );
+        void grow_terrain_plant( const tripoint_bub_ms &p );
         /**
          * Produce sap on tapped maple trees
          * @param p Location of tapped tree

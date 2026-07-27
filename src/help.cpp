@@ -18,6 +18,7 @@
 #endif
 
 #include "action.h"
+#include "android_ui_mode.h"
 #include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -391,27 +392,29 @@ std::string help::format_help_topic( const std::vector<translation> &messages ) 
 void help::display_help() const
 {
 #if defined(__ANDROID__)
-    std::vector<adaptive_help_topic> topics;
-    topics.reserve( help_texts.size() );
-    for( const auto &entry : help_texts ) {
-        topics.push_back( { entry.second.first.translated(),
-                            format_help_topic( entry.second.second ) } );
-    }
-    adaptive_help_viewer viewer( std::move( topics ) );
-    input_context ctxt( "DISPLAY_HELP", keyboard_mode::keychar );
-    ctxt.register_action( "QUIT" );
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
-    while( true ) {
-        ui_manager::redraw();
-        if( viewer.take_close_request() ) {
-            return;
+    if( android_ui_mode::is_new_ui_build() ) {
+        std::vector<adaptive_help_topic> topics;
+        topics.reserve( help_texts.size() );
+        for( const auto &entry : help_texts ) {
+            topics.push_back( { entry.second.first.translated(),
+                                format_help_topic( entry.second.second ) } );
         }
-        if( ctxt.handle_input() == "QUIT" ) {
-            return;
+        adaptive_help_viewer viewer( std::move( topics ) );
+        input_context ctxt( "DISPLAY_HELP", keyboard_mode::keychar );
+        ctxt.register_action( "QUIT" );
+        ctxt.register_action( "SELECT" );
+        ctxt.register_action( "MOUSE_MOVE" );
+        while( true ) {
+            ui_manager::redraw();
+            if( viewer.take_close_request() ) {
+                return;
+            }
+            if( ctxt.handle_input() == "QUIT" ) {
+                return;
+            }
         }
     }
-#else
+#endif
     catacurses::window w_help_border;
     catacurses::window w_help;
 
@@ -500,7 +503,6 @@ void help::display_help() const
             }
         }
     } while( action != "QUIT" );
-#endif
 }
 
 std::string get_hint()

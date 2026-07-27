@@ -17,6 +17,7 @@
 
 #if defined(__ANDROID__)
     #include "android_native_ui.h"
+    #include "android_ui_mode.h"
 #endif
 #if defined(__ANDROID__)
     #include "cata_imgui.h"
@@ -599,8 +600,10 @@ void user_interface::show()
     }
 
 #if defined(__ANDROID__)
-    show_imgui();
-    return;
+    if( android_ui_mode::is_new_ui_build() ) {
+        show_imgui();
+        return;
+    }
 #endif
 
     const int iHeaderHeight = 4;

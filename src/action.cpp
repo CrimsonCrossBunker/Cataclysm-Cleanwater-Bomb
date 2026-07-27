@@ -12,6 +12,7 @@
 #if defined(TILES)
     #include "adaptive_imgui_dialog.h"
 #endif
+#include "android_ui_mode.h"
 #include "avatar.h"
 #include "cached_options.h" // IWYU pragma: keep
 #include "cata_utility.h"
@@ -826,17 +827,19 @@ static int query_action_menu_entries( const std::string &title,
                                       const std::string &hud_scene_title )
 {
 #if defined(__ANDROID__)
-    std::vector<adaptive_imgui_dialog::entry> imgui_entries;
-    imgui_entries.reserve( entries.size() );
-    for( const uilist_entry &entry : entries ) {
-        imgui_entries.push_back( { entry.txt, entry.desc, entry.enabled,
-                                   dangerous_menu_action( entry.retval ) } );
+    if( android_ui_mode::is_new_ui_build() ) {
+        std::vector<adaptive_imgui_dialog::entry> imgui_entries;
+        imgui_entries.reserve( entries.size() );
+        for( const uilist_entry &entry : entries ) {
+            imgui_entries.push_back( { entry.txt, entry.desc, entry.enabled,
+                                       dangerous_menu_action( entry.retval ) } );
+        }
+        const std::optional<int> selected = adaptive_imgui_dialog::select(
+                                                title, imgui_entries, std::string(), 0,
+                                                hud_scene_id, hud_scene_title );
+        return selected ? entries[*selected].retval : -1;
     }
-    const std::optional<int> selected = adaptive_imgui_dialog::select(
-                                            title, imgui_entries, std::string(), 0,
-                                            hud_scene_id, hud_scene_title );
-    return selected ? entries[*selected].retval : -1;
-#else
+#endif
     ( void )hud_scene_id;
     ( void )hud_scene_title;
     uilist menu;
@@ -844,7 +847,6 @@ static int query_action_menu_entries( const std::string &title,
     menu.entries = entries;
     menu.query();
     return menu.ret;
-#endif
 }
 
 action_id handle_action_menu( map &here )
@@ -1177,10 +1179,13 @@ action_id handle_main_menu()
     REGISTER_ACTION( ACTION_COLOR );
     REGISTER_ACTION( ACTION_WORLD_MODS );
     REGISTER_ACTION( ACTION_ACTIONMENU );
-    entries.emplace_back( lua_extensions_entry, true, std::nullopt, _( "Extensions" ) );
+    if( cata::lua_ui::is_enabled() ) {
+        entries.emplace_back( lua_extensions_entry, true, std::nullopt, _( "Extensions" ) );
+    }
 #if defined(__ANDROID__)
     entries.emplace_back( ACTION_MANAGE_ANDROID_EXTRA_BUTTONS, true, std::nullopt,
-                          _( "Customize Android HUD" ) );
+                          android_ui_mode::is_new_ui_build() ?
+                          _( "Customize Android HUD" ) : _( "Manage extra buttons" ) );
 #endif
     REGISTER_ACTION( ACTION_QUICKSAVE );
     REGISTER_ACTION( ACTION_SAVE );

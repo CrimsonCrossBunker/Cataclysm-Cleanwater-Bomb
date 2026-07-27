@@ -8,9 +8,21 @@
         [ "fcl_atomic_coffeemaker", 10 ],
         [ "fcl_plasma_gun", 10 ],
         [ "fcl_plasma_rifle", 10 ],
+        [ "fcl_heavy_rail_rifle", 10 ],
+        [ "fcl_ftk93", 10 ],
+        [ "fcl_fusion_pack", 10 ],
+        [ "fcl_fusion_pellet", 10 ],
+        [ "fcl_ftk29", 10 ],
+        [ "fcl_ftk07", 10 ],
         [ "fcl_bio_neurosoft_aeronautics", 10 ],
         [ "fcl_bio_neurosoft_aircraft_mechanic", 10 ]
       ]
     }
+  },
+  {
+    "type": "item_group",
+    "id": "launchers",
+    "copy-from": "launchers",
+    "extend": { "items": [ { "item": "fcl_rm802", "prob": 40 } ] }
   }
 ]

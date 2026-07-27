@@ -497,6 +497,10 @@ extern std::map<std::string, cata_path> TILESETS;
  */
 extern std::map<std::string, cata_path> SOUNDPACKS;
 
+#if defined(__ANDROID__)
+    bool android_get_default_setting( const char *settings_name, bool default_value );
+#endif
+
 options_manager &get_options();
 
 inline bool has_option( const std::string &name )

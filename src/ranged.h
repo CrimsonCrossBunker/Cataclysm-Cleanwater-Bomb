@@ -8,6 +8,7 @@
 #include "coordinates.h"
 
 class Character;
+class Creature;
 class aim_activity_actor;
 class avatar;
 class gun_mode;
@@ -84,6 +85,9 @@ double calc_steadiness( const Character &you, const item &weapon, const tripoint
 double calculate_aim_cap( const Character &you, const tripoint_bub_ms &target );
 
 double occupied_tile_fraction( creature_size target_size );
+
+double projectile_target_mobility_weight( const Creature &target, const map &here,
+        const Creature *attacker );
 
 struct Target_attributes {
     int range = 1;

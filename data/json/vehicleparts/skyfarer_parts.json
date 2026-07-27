@@ -5,6 +5,7 @@
     "copy-from": "sail",
     "name": { "str": "large sail" },
     "description": "Sails and rigging fit for a yacht or sloop, about as large as a single person can reasonably crew.",
+    "categories": [ "movement", "operations" ],
     "durability": 150,
     "power": "4000 W",
     "item": "sail_large_item",

@@ -11,7 +11,8 @@
     "price_postapoc": "10 cent",
     "material": [ "steel" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "button_plastic",
@@ -55,7 +56,8 @@
     "price_postapoc": "10 cent",
     "material": [ "cotton" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "zipper_long_plastic",
@@ -77,6 +79,7 @@
     "price_postapoc": "10 cent",
     "material": [ "plastic", "cotton" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   }
 ]

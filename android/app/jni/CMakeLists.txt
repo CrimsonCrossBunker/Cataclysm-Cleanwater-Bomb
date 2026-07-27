@@ -43,13 +43,71 @@ endforeach()
 list(REMOVE_DUPLICATES _sdl3_subdir_inc)
 
 add_subdirectory(${CATA_REPO_ROOT}/src/third-party third-party)
-add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
-add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
 
 file(GLOB CATA_SOURCES CONFIGURE_DEPENDS ${CATA_REPO_ROOT}/src/*.cpp
      ${CATA_REPO_ROOT}/src/cata_allocator_c.c)
 
+option(CCB_ANDROID_NEW_UI
+       "Enable the opt-in Android touch UI and customizable HUD" OFF)
+option(CATA_ENABLE_LUA_UI "Enable the experimental Lua UI API" OFF)
+
+set(
+  CATALUA_UI_ENABLED_SOURCES
+  ${CATA_REPO_ROOT}/src/catalua_ui.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_actions.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_game.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_i18n.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_imgui.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_manifest.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_navigation.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_renderer.cpp
+  ${CATA_REPO_ROOT}/src/catalua_ui_state.cpp)
+if(CATA_ENABLE_LUA_UI)
+  add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
+  add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
+  list(REMOVE_ITEM CATA_SOURCES
+       ${CATA_REPO_ROOT}/src/catalua_ui_disabled.cpp)
+else()
+  list(REMOVE_ITEM CATA_SOURCES ${CATALUA_UI_ENABLED_SOURCES})
+endif()
+
 add_library(main SHARED ${CATA_SOURCES})
+
+# Android always uses SDL3's Vulkan GPU backend when available, so every APK
+# needs SPIR-V shader artifacts. Release CI downloads and validates prebuilt
+# files; local builds generate them as part of the native build by default.
+option(CATA_ANDROID_PREBUILT_SHADERS
+       "Use precompiled Android SPIR-V shader artifacts" OFF)
+set(CATA_SHADERS_DIR ${CATA_REPO_ROOT}/data/shaders)
+set(CATA_ANDROID_SHADER_STAMP ${CATA_SHADERS_DIR}/build-spv.stamp)
+file(GLOB CATA_SHADER_SOURCES ${CATA_SHADERS_DIR}/*.frag
+     ${CATA_SHADERS_DIR}/*.vert)
+if(CATA_ANDROID_PREBUILT_SHADERS)
+  foreach(shader ${CATA_SHADER_SOURCES})
+    set(shader_spv "${shader}.spv")
+    if(NOT EXISTS "${shader_spv}")
+      message(FATAL_ERROR "Precompiled Android shader is missing: ${shader_spv}")
+    endif()
+    file(SIZE "${shader_spv}" shader_spv_size)
+    if(shader_spv_size EQUAL 0)
+      message(FATAL_ERROR "Precompiled Android shader is empty: ${shader_spv}")
+    endif()
+  endforeach()
+  message(STATUS "Using precompiled Android SPIR-V shader artifacts")
+else()
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  add_custom_command(
+    OUTPUT ${CATA_ANDROID_SHADER_STAMP}
+    COMMAND
+      ${Python3_EXECUTABLE} ${CATA_REPO_ROOT}/tools/build_shaders.py --shader-dir
+      ${CATA_SHADERS_DIR} --formats spv --stamp ${CATA_ANDROID_SHADER_STAMP}
+    WORKING_DIRECTORY ${CATA_REPO_ROOT}
+    DEPENDS ${CATA_SHADER_SOURCES} ${CATA_REPO_ROOT}/tools/build_shaders.py
+    COMMENT "Compiling Android SPIR-V shader artifacts")
+  add_custom_target(compile_android_shaders ALL
+                    DEPENDS ${CATA_ANDROID_SHADER_STAMP})
+  add_dependencies(main compile_android_shaders)
+endif()
 
 target_include_directories(
   main PRIVATE ${CATA_REPO_ROOT}/src ${CATA_REPO_ROOT}/src/third-party
@@ -60,6 +118,8 @@ target_compile_definitions(
   PRIVATE TILES
           SDL_SOUND
           USE_SDL3
+          CCB_ANDROID_NEW_UI=$<BOOL:${CCB_ANDROID_NEW_UI}>
+          CATA_ENABLE_LUA_UI=$<BOOL:${CATA_ENABLE_LUA_UI}>
           BACKTRACE
           LOCALIZE
           ZSTD_STATIC_LINKING_ONLY
@@ -70,7 +130,6 @@ target_compile_options(main PRIVATE -fsigned-char -Wall -Wextra)
 target_link_libraries(
   main
   PRIVATE third-party
-          libsol
           SDL3::SDL3
           SDL3_image::SDL3_image
           SDL3_ttf::SDL3_ttf
@@ -79,3 +138,7 @@ target_link_libraries(
           GLESv2
           GLESv1_CM
           z)
+
+if(CATA_ENABLE_LUA_UI)
+  target_link_libraries(main PRIVATE libsol)
+endif()

@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include "android_ui_mode.h"
+
 #if defined(__ANDROID__)
     #include "avatar.h"
     #include "catacharset.h"
@@ -965,18 +967,27 @@ void write_layout_schema_node( JsonOut &json, const widget_id &id,
 
 void set_minimap_rect( const minimap_rect &rect )
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return;
+    }
     std::lock_guard<std::mutex> lock( hud_mutex );
     latest_minimap_rect = rect;
 }
 
 minimap_rect get_minimap_rect()
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return {};
+    }
     std::lock_guard<std::mutex> lock( hud_mutex );
     return latest_minimap_rect;
 }
 
 std::string layout_schema_json( const std::string &source_id )
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return "{}";
+    }
     std::optional<hud_info_source> selected;
     for( const hud_info_source &source : current_source_catalog() ) {
         if( source.id == source_id ) {
@@ -1040,6 +1051,9 @@ static bool safe_node_path( const std::string &path )
 
 void set_subscriptions( const std::string &requests_json )
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return;
+    }
     std::vector<hud_subscription> accepted;
     std::unordered_set<std::string> seen;
     if( requests_json.size() <= 1024 * 1024 ) {
@@ -1141,6 +1155,9 @@ void set_subscriptions( const std::string &requests_json )
 
 void publish_snapshot( const avatar &player, const int )
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return;
+    }
     const cata::input_context_actions::context_snapshot context =
         cata::input_context_actions::snapshot();
     const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
@@ -1189,6 +1206,9 @@ void publish_snapshot( const avatar &player, const int )
 
 void clear_snapshot()
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return;
+    }
     // A command queued immediately before leaving a world must never be
     // consumed by an equivalent input context in the next world.
     cata::input_context_actions::clear();
@@ -1204,6 +1224,9 @@ void clear_snapshot()
 
 std::string snapshot_json( const int known_catalog_revision )
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return "{}";
+    }
     // Blocking ImGui menus own their input context without running the normal
     // game-map draw loop.  Synchronize the lightweight scene/action metadata
     // here so Java can switch layouts while such a page is open; keep the last

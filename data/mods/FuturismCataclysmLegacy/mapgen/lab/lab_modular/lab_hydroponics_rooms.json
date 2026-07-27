@@ -1,0 +1,63 @@
+[
+  {
+    "type": "mapgen",
+    "nested_mapgen_id": "lab_common_6x6",
+    "weight": 50,
+    "object": {
+      "mapgensize": [ 6, 6 ],
+      "rotation": [ 0, 3 ],
+      "rows": [
+        "HH..HH",
+        "......",
+        ".HHHH.",
+        ".HHHH.",
+        "......",
+        "HH..HH"
+      ],
+      "palettes": [ "lab_common_palette", "fcl_hydroponics_lab_palette" ],
+      "place_loot": [ { "group": "fcl_hydroponics_lab_documents", "x": 2, "y": 1, "chance": 20 } ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "nested_mapgen_id": "lab_common_9x9_E",
+    "weight": 50,
+    "object": {
+      "mapgensize": [ 9, 9 ],
+      "rows": [
+        "HH.HH|   ",
+        ".....|   ",
+        "HHHHH|   ",
+        ".....|   ",
+        "H...H+   ",
+        ".....|   ",
+        "HHHHH|   ",
+        ".....|   ",
+        "HH.HH|   "
+      ],
+      "palettes": [ "lab_common_palette", "fcl_hydroponics_lab_palette" ],
+      "place_loot": [ { "group": "fcl_hydroponics_lab_documents", "x": 0, "y": 1, "chance": 20 } ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "nested_mapgen_id": "lab_common_9x9_W",
+    "weight": 50,
+    "object": {
+      "mapgensize": [ 9, 9 ],
+      "rows": [
+        "   |HH.HH",
+        "   |.....",
+        "   |HHHHH",
+        "   |.....",
+        "   +H...H",
+        "   |.....",
+        "   |HHHHH",
+        "   |.....",
+        "   |HH.HH"
+      ],
+      "palettes": [ "lab_common_palette", "fcl_hydroponics_lab_palette" ],
+      "place_loot": [ { "group": "fcl_hydroponics_lab_documents", "x": 8, "y": 1, "chance": 20 } ]
+    }
+  }
+]

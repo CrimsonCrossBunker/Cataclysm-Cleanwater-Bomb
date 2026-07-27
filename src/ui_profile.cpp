@@ -13,8 +13,12 @@
 #include <stdexcept>
 #include <string>
 
-#include "catalua_sol.h"
-#include "path_info.h"
+#include "android_ui_mode.h"
+
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+    #include "catalua_sol.h"
+    #include "path_info.h"
+#endif
 
 namespace cata::ui
 {
@@ -22,6 +26,7 @@ namespace cata::ui
 namespace
 {
 
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
 namespace fs = std::filesystem;
 
 constexpr int profile_schema = 1;
@@ -218,11 +223,13 @@ density_mode density_mode_from_name( const std::string &name )
     }
     throw std::invalid_argument( "UI profile density must be touch, comfortable, or compact" );
 }
+#endif
 
 profile fallback_for_build()
 {
 #if defined(__ANDROID__)
-    return make_profile( input_mode::touch );
+    return make_profile( android_ui_mode::is_new_ui_build() ?
+                         input_mode::touch : input_mode::mouse_keyboard );
 #elif defined(TILES)
     return make_profile( input_mode::mouse_keyboard );
 #else
@@ -230,10 +237,11 @@ profile fallback_for_build()
 #endif
 }
 
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
 std::string selected_profile_id()
 {
 #if defined(__ANDROID__)
-    return "android_touch";
+    return android_ui_mode::is_new_ui_build() ? "android_touch" : "pc_legacy";
 #elif defined(TILES)
     return "pc_legacy";
 #else
@@ -297,6 +305,14 @@ bool load_selected_profile( profile &loaded, std::string &error )
     }
     return true;
 }
+#else
+bool load_selected_profile( profile &loaded, std::string &error )
+{
+    loaded = fallback_for_build();
+    error.clear();
+    return true;
+}
+#endif
 
 std::mutex profile_mutex;
 std::optional<profile> active_profile;
@@ -505,6 +521,7 @@ std::string profile_last_error()
 bool load_profile_from_lua( const std::string_view source, const std::string_view source_name,
                             const profile &fallback, profile &result, std::string &error )
 {
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
     try {
         profile_memory_tracker memory;
         sol::state lua( sol::default_at_panic, profile_allocator, &memory );
@@ -655,6 +672,12 @@ bool load_profile_from_lua( const std::string_view source, const std::string_vie
         error = std::string( source_name ) + ": " + exception.what();
         return false;
     }
+#else
+    ( void )source;
+    result = fallback;
+    error = std::string( source_name ) + ": Lua UI is not enabled in this build";
+    return false;
+#endif
 }
 
 void reset_profile_cache_for_tests()

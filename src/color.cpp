@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "android_ui_mode.h"
 #include "cata_path.h"
 #include "cata_utility.h"
 #include "cursesdef.h"
@@ -1133,8 +1134,10 @@ class adaptive_color_ui : public cataimgui::window
 void color_manager::show_gui()
 {
 #if defined(__ANDROID__)
-    show_gui_imgui();
-    return;
+    if( android_ui_mode::is_new_ui_build() ) {
+        show_gui_imgui();
+        return;
+    }
 #endif
     const int iHeaderHeight = 4;
     int iContentHeight = 0;

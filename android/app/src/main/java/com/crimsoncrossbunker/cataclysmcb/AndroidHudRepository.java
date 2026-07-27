@@ -489,8 +489,6 @@ final class AndroidHudRepository {
             archive.put("note", "Archived only; schema 1-3 are never activated by schema 5.");
             archive.put("schema", 0);
             JSONObject stores = new JSONObject();
-            stores.put("lua_ui_hud", encodePreferences(
-                context.getSharedPreferences("lua_ui_hud", Context.MODE_PRIVATE)));
             stores.put("android_hud", encodePreferences(
                 context.getSharedPreferences("android_hud", Context.MODE_PRIVATE)));
             stores.put("extra_buttons", encodePreferences(

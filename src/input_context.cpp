@@ -20,6 +20,7 @@
 #if defined(__ANDROID__)
     #include "android_native_ui.h"
 #endif
+#include "android_ui_mode.h"
 #include "cata_imgui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -518,38 +519,40 @@ const std::string &input_context::handle_input( const int timeout )
     }
     next_action.type = input_event_t::error;
     const std::string *result = &CATA_ERROR;
-    const int label_revision = detail::get_current_language_version();
-    // Most contexts override only a handful of names.  Fingerprinting those
-    // translated labels is much cheaper than rebuilding every action
-    // descriptor, and keeps the cache independent of input_context's ABI.
-    std::uint64_t catalog_token = 1469598103934665603ULL;
-    const auto append_catalog_token = [&catalog_token]( const std::string & value ) {
-        for( const unsigned char byte : value ) {
-            catalog_token ^= byte;
+    if( android_ui_mode::is_new_ui_build() ) {
+        const int label_revision = detail::get_current_language_version();
+        // Most contexts override only a handful of names.  Fingerprinting those
+        // translated labels is much cheaper than rebuilding every action
+        // descriptor, and keeps the cache independent of input_context's ABI.
+        std::uint64_t catalog_token = 1469598103934665603ULL;
+        const auto append_catalog_token = [&catalog_token]( const std::string & value ) {
+            for( const unsigned char byte : value ) {
+                catalog_token ^= byte;
+                catalog_token *= 1099511628211ULL;
+            }
+            catalog_token ^= 0xFFU;
             catalog_token *= 1099511628211ULL;
+        };
+        for( const auto &entry : action_name_overrides ) {
+            append_catalog_token( entry.first );
+            append_catalog_token( entry.second.translated() );
         }
-        catalog_token ^= 0xFFU;
-        catalog_token *= 1099511628211ULL;
-    };
-    for( const auto &entry : action_name_overrides ) {
-        append_catalog_token( entry.first );
-        append_catalog_token( entry.second.translated() );
-    }
-    if( cata::input_context_actions::needs_publish(
-            category, hud_scene_id, hud_scene_title, registered_actions,
-            catalog_token, label_revision ) ) {
-        std::vector<cata::input_context_actions::action_descriptor> context_actions;
-        context_actions.reserve( registered_actions.size() );
-        for( const std::string &action : registered_actions ) {
-            context_actions.push_back( { action, get_action_name( action ), {}, false, false } );
+        if( cata::input_context_actions::needs_publish(
+                category, hud_scene_id, hud_scene_title, registered_actions,
+                catalog_token, label_revision ) ) {
+            std::vector<cata::input_context_actions::action_descriptor> context_actions;
+            context_actions.reserve( registered_actions.size() );
+            for( const std::string &action : registered_actions ) {
+                context_actions.push_back( { action, get_action_name( action ), {}, false, false } );
+            }
+            cata::input_context_actions::publish(
+                category, hud_scene_id, hud_scene_title, context_actions,
+                catalog_token, label_revision );
         }
-        cata::input_context_actions::publish(
-            category, hud_scene_id, hud_scene_title, context_actions,
-            catalog_token, label_revision );
-    }
-    if( cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
-        inp_mngr.set_timeout( old_timeout );
-        return context_direct_action;
+        if( cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
+            inp_mngr.set_timeout( old_timeout );
+            return context_direct_action;
+        }
     }
     while( true ) {
 
@@ -557,8 +560,8 @@ const std::string &input_context::handle_input( const int timeout )
         // A platform HUD tap can arrive while the backend is polling input.
         // Prefer it over the event that woke this loop without manufacturing a
         // keyboard event.
-        if( cata::input_context_actions::consume( registered_actions,
-                context_direct_action ) ) {
+        if( android_ui_mode::is_new_ui_build() &&
+            cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
             result = &context_direct_action;
             break;
         }
@@ -746,12 +749,15 @@ static const std::map<fallback_action, int> fallback_keys = {
 keybindings_ui::keybindings_ui( bool permit_execute_action,
                                 input_context *parent ) : cataimgui::window( _( "KEYBINDINGS" ),
 #if defined(__ANDROID__)
-                                            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-                                            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                                            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav
-#else
-                                            ImGuiWindowFlags_NoNav
+                                            android_ui_mode::is_new_ui_build() ?
+                                            ( ImGuiWindowFlags_NoTitleBar |
+                                                    ImGuiWindowFlags_NoCollapse |
+                                                    ImGuiWindowFlags_NoResize |
+                                                    ImGuiWindowFlags_NoMove |
+                                                    ImGuiWindowFlags_NoSavedSettings |
+                                                    ImGuiWindowFlags_NoNav ) :
 #endif
+                                            ImGuiWindowFlags_NoNav
                                                                                )
 {
     this->ctxt = parent;
@@ -809,19 +815,24 @@ std::optional<keybindings_action> keybindings_ui::take_imgui_action()
 cataimgui::bounds keybindings_ui::get_bounds()
 {
 #if defined(__ANDROID__)
-    const cata::ui::profile profile = cata::ui::current_profile();
-    return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
-           cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
-#else
-    return { -1.f, -1.f, float( str_width_to_pixels( width ) ), float( str_height_to_pixels( TERMY ) ) };
+    if( android_ui_mode::is_new_ui_build() ) {
+        const cata::ui::profile profile = cata::ui::current_profile();
+        return profile.is_touch() ? cataimgui::bounds{ 0.0F, 0.0F, 1.0F, 1.0F } :
+               cataimgui::bounds{ -1.0F, -1.0F, profile.page_width, profile.page_height };
+    }
 #endif
+    return { -1.f, -1.f, float( str_width_to_pixels( width ) ),
+             float( str_height_to_pixels( TERMY ) )
+           };
 }
 
 void keybindings_ui::draw_controls()
 {
 #if defined(__ANDROID__)
-    draw_controls_adaptive();
-    return;
+    if( android_ui_mode::is_new_ui_build() ) {
+        draw_controls_adaptive();
+        return;
+    }
 #endif
     scroll_offset = INT_MAX;
     size_t legend_idx = 0;
@@ -1358,56 +1369,64 @@ action_id input_context::display_menu( bool permit_execute_action )
         kb_menu.highlight_row_index = -1;
         ui_manager::redraw();
 #if defined(__ANDROID__)
-        const std::optional<keybindings_action> imgui_action = kb_menu.take_imgui_action();
-        if( imgui_action ) {
-            raw_input_char = 0;
-            switch( imgui_action->type ) {
-                case keybindings_action_type::search: {
+        if( android_ui_mode::is_new_ui_build() ) {
+            const std::optional<keybindings_action> imgui_action = kb_menu.take_imgui_action();
+            if( imgui_action ) {
+                raw_input_char = 0;
+                switch( imgui_action->type ) {
+                    case keybindings_action_type::search: {
 #if defined(__ANDROID__)
-                    const std::optional<std::string> value = android_native_ui::text_input(
-                                _( "Search keybindings" ), kb_menu.get_filter(), 120 );
+                        const std::optional<std::string> value = android_native_ui::text_input(
+                                    _( "Search keybindings" ), kb_menu.get_filter(), 120 );
 #else
-                    string_input_popup popup;
-                    popup.title( _( "Search keybindings" ) ).text( kb_menu.get_filter() )
-                    .max_length( 120 );
-                    const std::string edited = popup.query_string();
-                    const std::optional<std::string> value = popup.canceled() ? std::nullopt :
-                            std::optional<std::string>( edited );
+                        string_input_popup popup;
+                        popup.title( _( "Search keybindings" ) ).text( kb_menu.get_filter() )
+                        .max_length( 120 );
+                        const std::string edited = popup.query_string();
+                        const std::optional<std::string> value = popup.canceled() ? std::nullopt :
+                                std::optional<std::string>( edited );
 #endif
-                    if( value ) {
-                        kb_menu.set_filter( *value );
-                        kb_menu.filtered_registered_actions = filter_strings_by_phrase(
-                                org_registered_actions, *value );
-                        kb_menu.imgui_selected_row = 0;
+                        if( value ) {
+                            kb_menu.set_filter( *value );
+                            kb_menu.filtered_registered_actions = filter_strings_by_phrase(
+                                    org_registered_actions, *value );
+                            kb_menu.imgui_selected_row = 0;
+                        }
+                        continue;
                     }
-                    continue;
+                    case keybindings_action_type::clear_search:
+                        kb_menu.set_filter( "" );
+                        kb_menu.filtered_registered_actions = org_registered_actions;
+                        kb_menu.imgui_selected_row = 0;
+                        continue;
+                    case keybindings_action_type::remove:
+                        kb_menu.status = kb_menu_status::remove;
+                        action = "SELECT";
+                        break;
+                    case keybindings_action_type::add_local:
+                        kb_menu.status = kb_menu_status::add;
+                        action = "SELECT";
+                        break;
+                    case keybindings_action_type::add_global:
+                        kb_menu.status = kb_menu_status::add_global;
+                        action = "SELECT";
+                        break;
+                    case keybindings_action_type::reset:
+                        kb_menu.status = kb_menu_status::reset;
+                        action = "SELECT";
+                        break;
+                    case keybindings_action_type::close:
+                        action = "QUIT";
+                        break;
                 }
-                case keybindings_action_type::clear_search:
-                    kb_menu.set_filter( "" );
-                    kb_menu.filtered_registered_actions = org_registered_actions;
-                    kb_menu.imgui_selected_row = 0;
-                    continue;
-                case keybindings_action_type::remove:
-                    kb_menu.status = kb_menu_status::remove;
-                    action = "SELECT";
-                    break;
-                case keybindings_action_type::add_local:
-                    kb_menu.status = kb_menu_status::add;
-                    action = "SELECT";
-                    break;
-                case keybindings_action_type::add_global:
-                    kb_menu.status = kb_menu_status::add_global;
-                    action = "SELECT";
-                    break;
-                case keybindings_action_type::reset:
-                    kb_menu.status = kb_menu_status::reset;
-                    action = "SELECT";
-                    break;
-                case keybindings_action_type::close:
-                    action = "QUIT";
-                    break;
+                kb_menu.highlight_row_index = kb_menu.imgui_selected_row;
+            } else {
+                action = ctxt.handle_input();
+                raw_input_char = ctxt.get_raw_input().get_first_input();
             }
-            kb_menu.highlight_row_index = kb_menu.imgui_selected_row;
+        } else if( kb_menu.has_button_action() ) {
+            action = kb_menu.get_button_action();
+            raw_input_char = 0;
         } else {
             action = ctxt.handle_input();
             raw_input_char = ctxt.get_raw_input().get_first_input();

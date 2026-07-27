@@ -15,6 +15,7 @@
 
 #if defined(__ANDROID__)
     #include "android_native_ui.h"
+    #include "android_ui_mode.h"
 #endif
 #if defined(__ANDROID__)
     #include "cata_imgui.h"
@@ -375,8 +376,10 @@ std::string safemode::npc_type_name()
 void safemode::show( const std::string &custom_name_in, bool is_safemode_in )
 {
 #if defined(__ANDROID__)
-    show_imgui( custom_name_in, is_safemode_in );
-    return;
+    if( android_ui_mode::is_new_ui_build() ) {
+        show_imgui( custom_name_in, is_safemode_in );
+        return;
+    }
 #endif
     auto global_rules_old = global_rules;
     auto character_rules_old = character_rules;

@@ -15,6 +15,7 @@
 #include "action.h"
 #include "activity_actor_definitions.h"
 #include "advanced_inv.h"
+#include "android_ui_mode.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
 #include "avatar.h"
@@ -2580,16 +2581,45 @@ static const std::set<action_id> host_ui_actions = {
 };
 #endif
 
+#if defined(__ANDROID__)
+static void manage_android_buttons()
+{
+    JNIEnv *env = ( JNIEnv * )GetAndroidJNIEnv();
+    jobject activity = ( jobject )GetAndroidActivity();
+    if( env == nullptr || activity == nullptr ) {
+        return;
+    }
+    jclass clazz( env->GetObjectClass( activity ) );
+    if( clazz == nullptr ) {
+        env->DeleteLocalRef( activity );
+        return;
+    }
+    jmethodID method_id = env->GetMethodID( clazz, "showButtonManage", "()V" );
+    if( env->ExceptionCheck() ) {
+        env->ExceptionClear();
+    }
+    if( method_id != nullptr ) {
+        env->CallVoidMethod( activity, method_id );
+    }
+    env->DeleteLocalRef( activity );
+    env->DeleteLocalRef( clazz );
+}
+#endif
+
 // NOLINTNEXTLINE(readability-function-size)
 bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
 {
 #if defined(__ANDROID__)
-    // Android HUD management is a Java-side overlay.  Handle it before
+    // Android button management is a Java-side screen.  Handle it before
     // touching map/terrain or movement-mode state; the main-menu path can be
     // entered while those world objects are not ready for a regular action.
     if( act == ACTION_MANAGE_ANDROID_EXTRA_BUTTONS ) {
-        android_native_ui::show_android_hud_manager();
+        if( android_ui_mode::is_new_ui_build() ) {
+            android_native_ui::show_android_hud_manager();
+        } else {
+            manage_android_buttons();
+        }
         return false;
     }
 #endif
@@ -3431,6 +3461,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
 
                 const tripoint_bub_ms pos = player_character.pos_bub();
+                const bool has_vehicle_ladder = here.has_vehicle_ladder_at( pos );
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
                         here.vehicle_ladder_destination( pos, -1 ) ) {
                     if( here.is_open_air( *ladder_dest ) &&
@@ -3452,6 +3483,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         pldrive( tripoint_rel_ms::below );
                         break;
                     }
+                }
+
+                if( has_vehicle_ladder ) {
+                    add_msg( m_info, _( "You can't climb down any farther from here." ) );
+                    break;
                 }
 
                 if( !player_character.in_vehicle ) {
@@ -4326,11 +4362,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
 bool game::handle_action()
 {
-    if( cata::lua_ui::process_pending_navigation() ) {
-        return false;
-    }
-    if( const std::optional<bool> lua_action = cata::lua_ui::process_next_action() ) {
-        return *lua_action;
+    if constexpr( cata::lua_ui::is_enabled() ) {
+        if( cata::lua_ui::process_pending_navigation() ) {
+            return false;
+        }
+        if( const std::optional<bool> lua_action = cata::lua_ui::process_next_action() ) {
+            return *lua_action;
+        }
     }
 
     map &here = get_map();

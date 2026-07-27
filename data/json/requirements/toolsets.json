@@ -248,6 +248,24 @@
     ]
   },
   {
+    "id": "repair_welding_superalloy",
+    "type": "requirement",
+    "qualities": [ { "id": "GLARE", "level": 1 }, { "id": "HAMMER", "level": 2 } ],
+    "tools": [
+      [
+        [ "welder", 200 ],
+        [ "welding_kit", 200 ],
+        [ "welder_crude", 400 ],
+        [ "integrated_welder", 300 ],
+        [ "oxy_torch", 10 ]
+      ]
+    ],
+    "components": [
+      [ [ "welding_rod_alloy", 10 ], [ "welding_wire_alloy", 10 ], [ "brazing_rod_alloy", 10 ] ],
+      [ [ "alloy_sheet", 1 ] ]
+    ]
+  },
+  {
     "id": "repair_welding_alloys",
     "type": "requirement",
     "//": "Repair of aluminum items - per 10 cm of weld (100 seconds each), done this way to use 1 chunk of steel per 10 cm",
@@ -355,6 +373,8 @@
       [ [ "corded_powerdrill", 5 ], [ "cordless_drill", 5 ], [ "fake_lathe", 5 ] ],
       [
         [ "stick", -1 ],
+        [ "bamboo_stalk_dry", -1 ],
+        [ "bamboo_stalk", -1 ],
         [ "small_lc_steel_bar_round", -1 ],
         [ "small_mc_steel_bar_round", -1 ],
         [ "small_hc_steel_bar_round", -1 ],

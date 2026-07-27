@@ -1,5 +1,4 @@
 #include <array>
-#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -224,7 +223,7 @@ static void print_grid_comparison(
     }
 }
 
-static void shadowcasting_runoff( const int iterations, const bool test_bresenham = false )
+static void shadowcasting_runoff( const bool benchmark, const bool test_bresenham = false )
 {
     cata::mdarray<float, point_bub_ms> seen_squares_control = {};
     cata::mdarray<float, point_bub_ms> seen_squares_experiment = {};
@@ -236,10 +235,7 @@ static void shadowcasting_runoff( const int iterations, const bool test_bresenha
 
     const point_bub_ms offset( 65, 65 );
 
-    const std::chrono::high_resolution_clock::time_point start1 =
-        std::chrono::high_resolution_clock::now();
-    for( int i = 0; i < iterations; i++ ) {
-        // First the control algorithm.
+    const auto cast_control = [&]() {
         oldCastLight( seen_squares_control, transparency_cache, 0, 1, 1, 0, offset.x(), offset.y(), 0 );
         oldCastLight( seen_squares_control, transparency_cache, 1, 0, 0, 1, offset.x(), offset.y(), 0 );
 
@@ -251,29 +247,26 @@ static void shadowcasting_runoff( const int iterations, const bool test_bresenha
 
         oldCastLight( seen_squares_control, transparency_cache, 0, -1, -1, 0, offset.x(), offset.y(), 0 );
         oldCastLight( seen_squares_control, transparency_cache, -1, 0, 0, -1, offset.x(), offset.y(), 0 );
-    }
-    const std::chrono::high_resolution_clock::time_point end1 =
-        std::chrono::high_resolution_clock::now();
-
-    const std::chrono::high_resolution_clock::time_point start2 =
-        std::chrono::high_resolution_clock::now();
-    for( int i = 0; i < iterations; i++ ) {
-        // Then the current algorithm.
+    };
+    const auto cast_experiment = [&]() {
         castLightAll<float, float, sight_calc, sight_check, update_light, accumulate_transparency>(
             seen_squares_experiment, transparency_cache, offset );
-    }
-    const std::chrono::high_resolution_clock::time_point end2 =
-        std::chrono::high_resolution_clock::now();
+    };
 
-    if( iterations > 1 ) {
-        const long long diff1 = std::chrono::duration_cast<std::chrono::microseconds>
-                                ( end1 - start1 ).count();
-        const long long diff2 = std::chrono::duration_cast<std::chrono::microseconds>
-                                ( end2 - start2 ).count();
-        printf( "oldCastLight() executed %d times in %lld microseconds.\n",
-                iterations, diff1 );
-        printf( "castLight() executed %d times in %lld microseconds.\n",
-                iterations, diff2 );
+    if( benchmark ) {
+        BENCHMARK( "oldCastLight" ) {
+            cast_control();
+        };
+        BENCHMARK( "castLightAll" ) {
+            cast_experiment();
+        };
+    } else {
+        cast_control();
+        cast_experiment();
+    }
+
+    if( benchmark ) {
+        return;
     }
 
     bool passed = grids_are_equivalent( seen_squares_control, seen_squares_experiment );
@@ -296,8 +289,8 @@ static void shadowcasting_runoff( const int iterations, const bool test_bresenha
     REQUIRE( passed );
 }
 
-static void shadowcasting_float_quad(
-    const int iterations, const unsigned int denominator = DENOMINATOR )
+static void shadowcasting_float_quad( const bool benchmark,
+                                      const unsigned int denominator = DENOMINATOR )
 {
     struct test_grids {
         cata::mdarray<float, point_bub_ms> lit_squares_float = {};
@@ -316,38 +309,32 @@ static void shadowcasting_float_quad(
 
     const point_bub_ms offset( 65, 65 );
 
-    const std::chrono::high_resolution_clock::time_point start1 =
-        std::chrono::high_resolution_clock::now();
-    for( int i = 0; i < iterations; i++ ) {
+    const auto cast_quadrants = [&]() {
         castLightAll<float, four_quadrants, sight_calc, sight_check, update_light_quadrants,
                      accumulate_transparency>(
                          lit_squares_quad, transparency_cache, offset );
-    }
-    const std::chrono::high_resolution_clock::time_point end1 =
-        std::chrono::high_resolution_clock::now();
-
-    const std::chrono::high_resolution_clock::time_point start2 =
-        std::chrono::high_resolution_clock::now();
-    for( int i = 0; i < iterations; i++ ) {
-        // Then the current algorithm.
+    };
+    const auto cast_floats = [&]() {
         castLightAll<float, float, sight_calc, sight_check, update_light,
                      accumulate_transparency>(
                          lit_squares_float, transparency_cache, offset );
-    }
-    const std::chrono::high_resolution_clock::time_point end2 =
-        std::chrono::high_resolution_clock::now();
+    };
 
-    if( iterations > 1 ) {
-        const long long diff1 = std::chrono::duration_cast<std::chrono::microseconds>
-                                ( end1 - start1 ).count();
-        const long long diff2 = std::chrono::duration_cast<std::chrono::microseconds>
-                                ( end2 - start2 ).count();
-        printf( "castLight on four_quadrants (denominator %u) "
-                "executed %d times in %lld microseconds.\n",
-                denominator, iterations, diff1 );
-        printf( "castLight on floats (denominator %u) "
-                "executed %d times in %lld microseconds.\n",
-                denominator, iterations, diff2 );
+    if( benchmark ) {
+        const std::string suffix = " (denominator " + std::to_string( denominator ) + ")";
+        BENCHMARK( "castLight four_quadrants" + suffix ) {
+            cast_quadrants();
+        };
+        BENCHMARK( "castLight floats" + suffix ) {
+            cast_floats();
+        };
+    } else {
+        cast_quadrants();
+        cast_floats();
+    }
+
+    if( benchmark ) {
+        return;
     }
 
     bool passed = grids_are_equivalent( lit_squares_float, lit_squares_quad );
@@ -362,7 +349,7 @@ static void shadowcasting_float_quad(
 
 static void do_3d_benchmark(
     const array_of_grids_of<const float> &transparency_caches,
-    const int iterations )
+    const std::string &name, const bool benchmark )
 {
     struct test_grids {
         std::array<cata::mdarray<float, point_bub_ms>, OVERMAP_LAYERS> seen_squares = {};
@@ -380,24 +367,21 @@ static void do_3d_benchmark(
         floor_caches[z + OVERMAP_DEPTH] = &grids->floor_cache[z + OVERMAP_DEPTH];
     }
 
-    const std::chrono::high_resolution_clock::time_point start =
-        std::chrono::high_resolution_clock::now();
-    for( int i = 0; i < iterations; i++ ) {
+    const auto cast = [&]() {
         cast_zlight<float, sight_calc, sight_check, accumulate_transparency>(
             seen_caches, transparency_caches, floor_caches, origin, 0, 1.0 );
-    }
-    const std::chrono::high_resolution_clock::time_point end =
-        std::chrono::high_resolution_clock::now();
+    };
 
-    if( iterations > 1 ) {
-        const long long diff =
-            std::chrono::duration_cast<std::chrono::microseconds>( end - start ).count();
-        printf( "cast_zlight() executed %d times in %lld microseconds.\n",
-                iterations, diff );
+    if( benchmark ) {
+        BENCHMARK( std::string( name ) ) {
+            cast();
+        };
+    } else {
+        cast();
     }
 }
 
-static void shadowcasting_3d_benchmark( const int iterations )
+static void shadowcasting_3d_benchmark( const bool benchmark )
 {
     struct test_grids {
         std::array<cata::mdarray<float, point_bub_ms>, OVERMAP_LAYERS> transparency_cache = {};
@@ -411,7 +395,7 @@ static void shadowcasting_3d_benchmark( const int iterations )
         randomly_fill_transparency( transparency_cache[z + OVERMAP_DEPTH] );
         transparency_caches[z + OVERMAP_DEPTH] = &transparency_cache[z + OVERMAP_DEPTH];
     }
-    do_3d_benchmark( transparency_caches, iterations );
+    do_3d_benchmark( transparency_caches, "cast_zlight random transparency", benchmark );
 
     // Flat plain
     // TODO: add roofs
@@ -424,7 +408,7 @@ static void shadowcasting_3d_benchmark( const int iterations )
         }
         transparency_cache[z + OVERMAP_DEPTH].fill( value_to_set );
     }
-    do_3d_benchmark( transparency_caches, iterations );
+    do_3d_benchmark( transparency_caches, "cast_zlight flat plain", benchmark );
 
     // Add some obstacles, a ring at distance 5
     cata::mdarray<float, point_bub_ms> &ground_level = transparency_cache[OVERMAP_DEPTH];
@@ -436,10 +420,10 @@ static void shadowcasting_3d_benchmark( const int iterations )
     ground_level[68][68] = LIGHT_TRANSPARENCY_SOLID;
     ground_level[70][65] = LIGHT_TRANSPARENCY_SOLID;
     ground_level[63][68] = LIGHT_TRANSPARENCY_SOLID;
-    do_3d_benchmark( transparency_caches, iterations );
+    do_3d_benchmark( transparency_caches, "cast_zlight obstacles", benchmark );
 }
 
-static void shadowcasting_3d_2d( const int iterations )
+static void shadowcasting_3d_2d( const bool benchmark )
 {
     cata::mdarray<float, point_bub_ms> seen_squares_control = {};
     cata::mdarray<float, point_bub_ms> seen_squares_experiment = {};
@@ -452,15 +436,10 @@ static void shadowcasting_3d_2d( const int iterations )
 
     const tripoint_bub_ms offset( 65, 65, 0 );
 
-    const std::chrono::high_resolution_clock::time_point start1 =
-        std::chrono::high_resolution_clock::now();
-    for( int i = 0; i < iterations; i++ ) {
-        // First the control algorithm.
+    const auto cast_2d = [&]() {
         castLightAll<float, float, sight_calc, sight_check, update_light, accumulate_transparency>(
             seen_squares_control, transparency_cache, offset.xy() );
-    }
-    const std::chrono::high_resolution_clock::time_point end1 =
-        std::chrono::high_resolution_clock::now();
+    };
 
     const tripoint_bub_ms origin( offset );
     array_of_grids_of<const float> transparency_caches;
@@ -473,26 +452,25 @@ static void shadowcasting_3d_2d( const int iterations )
         floor_caches[z + OVERMAP_DEPTH] = &floor_cache;
     }
 
-    const std::chrono::high_resolution_clock::time_point start2 =
-        std::chrono::high_resolution_clock::now();
-    for( int i = 0; i < iterations; i++ ) {
-        // Then the newer algorithm.
+    const auto cast_3d = [&]() {
         cast_zlight<float, sight_calc, sight_check, accumulate_transparency>(
             seen_caches, transparency_caches, floor_caches, origin, 0, 1.0 );
-    }
-    const std::chrono::high_resolution_clock::time_point end2 =
-        std::chrono::high_resolution_clock::now();
+    };
 
-    if( iterations > 1 ) {
-        const long long diff1 =
-            std::chrono::duration_cast<std::chrono::microseconds>( end1 - start1 ).count();
-        const long long diff2 =
-            std::chrono::duration_cast<std::chrono::microseconds>( end2 - start2 ).count();
-        printf( "castLight() executed %d times in %lld microseconds.\n",
-                iterations, diff1 );
-        printf( "cast_zlight() executed %d times in %lld microseconds.\n",
-                iterations, diff2 );
-        printf( "new/old execution time ratio: %.02f.\n", static_cast<double>( diff2 ) / diff1 );
+    if( benchmark ) {
+        BENCHMARK( "castLightAll 2D" ) {
+            cast_2d();
+        };
+        BENCHMARK( "cast_zlight 3D" ) {
+            cast_3d();
+        };
+    } else {
+        cast_2d();
+        cast_3d();
+    }
+
+    if( benchmark ) {
+        return;
     }
 
     bool passed = grids_are_equivalent( seen_squares_control, seen_squares_experiment );
@@ -1108,38 +1086,38 @@ TEST_CASE( "shadowcasting_floating_wall", "[shadowcasting]" )
 // Some random edge cases aren't matching.
 TEST_CASE( "shadowcasting_runoff", "[.]" )
 {
-    shadowcasting_runoff( 1 );
+    shadowcasting_runoff( false );
 }
 
-TEST_CASE( "shadowcasting_performance", "[.]" )
+BENCHMARK_TEST_CASE( "shadowcasting_benchmark", "[shadowcasting]" )
 {
-    shadowcasting_runoff( 100000 );
+    shadowcasting_runoff( true );
 }
 
 TEST_CASE( "shadowcasting_3d_2d", "[.]" )
 {
-    shadowcasting_3d_2d( 1 );
+    shadowcasting_3d_2d( false );
 }
 
-TEST_CASE( "shadowcasting_3d_2d_performance", "[.]" )
+BENCHMARK_TEST_CASE( "shadowcasting_3d_2d_benchmark", "[shadowcasting]" )
 {
-    shadowcasting_3d_2d( 100000 );
+    shadowcasting_3d_2d( true );
 }
 
-TEST_CASE( "shadowcasting_3d_performance", "[.]" )
+BENCHMARK_TEST_CASE( "shadowcasting_3d_benchmark", "[shadowcasting]" )
 {
-    shadowcasting_3d_benchmark( 10000 );
+    shadowcasting_3d_benchmark( true );
 }
 
 TEST_CASE( "shadowcasting_float_quad_equivalence", "[shadowcasting]" )
 {
-    shadowcasting_float_quad( 1 );
+    shadowcasting_float_quad( false );
 }
 
-TEST_CASE( "shadowcasting_float_quad_performance", "[.]" )
+BENCHMARK_TEST_CASE( "shadowcasting_float_quad_benchmark", "[shadowcasting]" )
 {
-    shadowcasting_float_quad( 1000000 );
-    shadowcasting_float_quad( 1000000, 100 );
+    shadowcasting_float_quad( true );
+    shadowcasting_float_quad( true, 100 );
 }
 
 TEST_CASE( "trig_dist_lut_matches_sqrt", "[shadowcasting]" )

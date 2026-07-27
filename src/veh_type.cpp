@@ -281,6 +281,9 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
     optional( jo, was_loaded, "description", description );
     optional( jo, was_loaded, "color", color, nc_color_reader{}, c_light_gray );
     optional( jo, was_loaded, "broken_color", color_broken, nc_color_reader{}, c_light_gray );
+    if( jo.has_member( "default_tint_color" ) ) {
+        default_tint_color_string = jo.get_string( "default_tint_color" );
+    }
     optional( jo, was_loaded, "comfort", comfort, 0 );
     optional( jo, was_loaded, "floor_bedding_warmth", floor_bedding_warmth, 0_C_delta );
     optional( jo, was_loaded, "bonus_fire_warmth_feet", bonus_fire_warmth_feet, 0.6_C_delta );
@@ -713,6 +716,14 @@ void vehicles::parts::finalize()
 
 void vpart_info::finalize()
 {
+    if( default_tint_color_string ) {
+        default_tint_color = RGBColor::try_parse( *default_tint_color_string );
+        if( !default_tint_color ) {
+            debugmsg( "Invalid default_tint_color '%s' on vehicle part '%s'",
+                      *default_tint_color_string, id.str() );
+        }
+    }
+
     if( engine_info && engine_info->fuel_opts.empty() && !fuel_type.is_null() ) {
         engine_info->fuel_opts.push_back( fuel_type );
     }

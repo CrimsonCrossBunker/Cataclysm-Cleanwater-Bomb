@@ -255,6 +255,7 @@ std::string enum_to_string<debug_menu::debug_menu_index>( debug_menu::debug_menu
         case debug_menu::debug_menu_index::OM_TELEPORT_COORDINATES: return "OM_TELEPORT_COORDINATES";
         case debug_menu::debug_menu_index::OM_TELEPORT_CITY: return "OM_TELEPORT_CITY";
         case debug_menu::debug_menu_index::PRINT_OVERMAPS: return "PRINT_OVERMAP";
+        case debug_menu::debug_menu_index::PRINT_REGION_LAYOUT: return "PRINT_REGION_LAYOUT";
         case debug_menu::debug_menu_index::TRAIT_GROUP: return "TRAIT_GROUP";
         case debug_menu::debug_menu_index::ENABLE_ACHIEVEMENTS: return "ENABLE_ACHIEVEMENTS";
         case debug_menu::debug_menu_index::UNLOCK_ALL: return "UNLOCK_ALL";
@@ -1013,7 +1014,9 @@ static int info_uilist()
         { uilist_entry( debug_menu_index::GENERATE_EFFECT_LIST, true, 'L', _( "Generate effect list" ) ) },
         { uilist_entry( debug_menu_index::WRITE_CITY_LIST, true, 'C', _( "Write city list to cities.output" ) ) },
         { uilist_entry( debug_menu_index::IMGUI_DEMO, true, 'u', _( "Open ImGui demo screen" ) ) },
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
         { uilist_entry( debug_menu_index::LUA_UI, true, 'L', _( "Open Lua UI pages" ) ) },
+#endif
 #if defined(TILES) && defined(USE_SDL3)
         { uilist_entry( debug_menu_index::RELOAD_GPU_SHADERS, true, 'P', _( "Reload GPU shaders" ) ) },
 #endif
@@ -1105,7 +1108,8 @@ static int map_uilist()
         { uilist_entry( debug_menu_index::OM_EDITOR, true, 'O', _( "Overmap editor" ) ) },
         { uilist_entry( debug_menu_index::MAP_EXTRA, true, 'm', _( "Spawn map extra" ) ) },
         { uilist_entry( debug_menu_index::NESTED_MAPGEN, true, 'n', _( "Spawn nested mapgen" ) ) },
-        { uilist_entry( debug_menu_index::PRINT_OVERMAPS, true, 'v', _( "Print overmaps" ) ) }
+        { uilist_entry( debug_menu_index::PRINT_OVERMAPS, true, 'v', _( "Print overmaps" ) ) },
+        { uilist_entry( debug_menu_index::PRINT_REGION_LAYOUT, true, 'r', _( "Print region layout" ) ) }
     };
 
     return uilist( _( "Map…" ), uilist_initializer );
@@ -4555,6 +4559,12 @@ const std::vector<debug_action_entry> &all_actions()
                 print_overmaps();
             }
         },
+        {
+            debug_menu_index::PRINT_REGION_LAYOUT, translate_marker( "Print region layout" ), "overmap region layout dump", "Map", []()
+            {
+                overmap_buffer.print_region_layout();
+            }
+        },
 
         // Vehicle
         {
@@ -4975,12 +4985,14 @@ const std::vector<debug_action_entry> &all_actions()
                 run_imgui_demo();
             }
         },
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
         {
             debug_menu_index::LUA_UI, translate_marker( "Lua UI pages" ), "lua script ui", "Game", []()
             {
                 cata::lua_ui::show_slot( "debug.tools" );
             }
         },
+#endif
         {
             debug_menu_index::RELOAD_GPU_SHADERS, translate_marker( "Reload GPU shaders" ), "reload gpu shaders sdl3", "Game", []()
             {

@@ -5,9 +5,63 @@
     "copy-from": "guns_energy",
     "extend": {
       "items": [
-        { "item": "plasma_gun", "prob": 10, "charges": [ 0, 25 ] },
-        { "item": "plasma_rifle", "prob": 1, "charges": [ 0, 25 ] }
+        { "item": "fcl_plasma_gun", "prob": 10, "charges": [ 0, 25 ] },
+        { "item": "fcl_plasma_rifle", "prob": 5, "charges": [ 0, 25 ] },
+        { "item": "fcl_ftk93", "prob": 2, "charges": [ 0, 25 ], "contents-group": "fcl_fusion_pack" },
+        { "item": "fcl_ftk29", "prob": 4, "contents-group": "fcl_fusion_ftk29_mag" },
+        { "item": "fcl_ftk07", "prob": 3, "contents-group": "fcl_fusion_ftk07_mag" }
       ]
     }
+  },
+  {
+    "id": "fcl_fusion_pellet",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [ { "item": "fcl_fusion_pellet", "charges": [ 0, 25 ] }, { "group": "fcl_fusion_pack" } ]
+  },
+  {
+    "id": "fcl_fusion_pack",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [ { "item": "fcl_fusion_pack", "charges": [ 0, 3 ] } ]
+  },
+  {
+    "id": "fcl_fusion_ftk29_mag",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [ { "item": "medium_battery_cell", "charges": [ 0, 56 ] }, { "item": "fcl_fusion_10_mag", "charges": [ 0, 10 ] } ]
+  },
+  {
+    "id": "fcl_fusion_ftk07_mag",
+    "type": "item_group",
+    "subtype": "collection",
+    "items": [ { "item": "heavy_battery_cell", "charges": [ 0, 259 ] }, { "item": "fcl_fusion_20_mag", "charges": [ 0, 20 ] } ]
+  },
+  {
+    "type": "item_group",
+    "id": "guns_pistol_milspec",
+    "copy-from": "guns_pistol_milspec",
+    "extend": { "items": [ { "group": "fcl_nested_needlepistol", "prob": 30 } ] }
+  },
+  {
+    "type": "item_group",
+    "id": "guns_smg_milspec",
+    "copy-from": "guns_smg_milspec",
+    "extend": { "items": [ { "group": "fcl_nested_needlegun", "prob": 30 } ] }
+  },
+  {
+    "type": "item_group",
+    "id": "guns_launcher_grenade",
+    "copy-from": "guns_launcher_grenade",
+    "//": "Factory manufactured grenade launchers (excludes improvised weapons)",
+    "extend": { "items": [ { "item": "fcl_rm802", "prob": 15, "charges": [ 0, 4 ] } ] }
+  },
+  {
+    "type": "item_group",
+    "id": "guns_rifle_milspec",
+    "copy-from": "guns_rifle_milspec",
+    "//": "Military specification rifles only ever found at military sites.",
+    "//2": "Making the assumption any loaded gun will have additional ammo and mags with it.",
+    "extend": { "items": [ { "group": "fcl_nested_rm298", "prob": 10 }, { "group": "fcl_nested_rm614_lmg", "prob": 10 } ] }
   }
 ]

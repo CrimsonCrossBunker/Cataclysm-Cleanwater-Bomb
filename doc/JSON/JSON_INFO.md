@@ -3504,9 +3504,15 @@ Strength required to move the furniture around. Negative values indicate an unmo
       { "seasons": [ "spring", "autumn" ], "id": "burdock_harv" },
       { "seasons": [ "summer" ], "id": "burdock_summer_harv" }
     ],
+    "terrain_growth": {
+      "transform": "t_burdock_tall",
+      "growth_time": "7 days",
+      "growth_multiplier": 1.0,
+      "fertilize_seasons": [ "spring", "summer" ]
+    },
     "liquid_source": { "id": "water", "min_temp": 7.8, "count": [ 24, 48 ] },
     "roof": "t_roof",
-    "examine_action": "pit",
+    "examine_action": [ "pit", "fertilize_terrain" ],
     "boltcut": {
       "result": "t_door_unlocked",
       "duration": "1 seconds",
@@ -3710,6 +3716,45 @@ Example:
 ```jsonc
 "harvest_by_season": [ { "seasons": [ "spring", "summer", "autumn", "winter" ], "id": "blackjack_harv" } ],
 ```
+
+#### `terrain_growth`
+
+(Optional) Object that lets terrain grow into another terrain after it has been fertilized.  This is for terrain-based plants or other terrain stages that are not furniture crops.  To let players start the growth timer, the terrain must also use the `fertilize_terrain` examine action, either alone or in an `examine_action` array.
+
+Example:
+```jsonc
+{
+  "examine_action": "fertilize_terrain",
+  "terrain_growth": {
+    "transform": "t_young_tree",
+    "growth_time": "14 days",
+    "growth_multiplier": 1.0,
+    "fertilize_seasons": [ "spring", "summer" ]
+  }
+}
+```
+
+The growth state is stored per map tile after successful fertilization.  Changing the terrain, for example by harvesting, bashing, construction, mapgen update, or any other `ter_set`, clears that stored growth state.
+
+Terrain growth uses the same `CROP_GROWTH_SPEED` world option as planted crops.  Effective elapsed growth time is real elapsed time multiplied by `CROP_GROWTH_SPEED` and `growth_multiplier`.  Values of `growth_multiplier` greater than 1.0 make this terrain grow faster; values less than 1.0 make it grow slower.
+
+Applying fertilizer also advances the stored growth progress, using the same fertilizer quality and survival-skill reduction rules as furniture plants.  Fertilizer does not immediately transform the terrain; the terrain changes only after enough effective growth time has elapsed.
+
+##### `transform`
+
+Mandatory terrain id.  The terrain this tile becomes when growth completes.
+
+##### `growth_time`
+
+Mandatory time duration.  The effective time required for this terrain stage to grow after fertilization, before `CROP_GROWTH_SPEED`, `growth_multiplier`, and fertilizer progress are applied.
+
+##### `growth_multiplier`
+
+(Optional, default `1.0`) Multiplier applied to this terrain's growth speed.
+
+##### `fertilize_seasons`
+
+(Optional) Array of seasons in which this terrain may be fertilized.  Valid values are `"spring"`, `"summer"`, `"autumn"`, and `"winter"`.  If omitted or empty, the terrain can be fertilized in any season.  This restriction is checked when fertilizer is applied; it does not stop an already-fertilized terrain from continuing to grow after the season changes.
 
 #### `liquid_source`
 

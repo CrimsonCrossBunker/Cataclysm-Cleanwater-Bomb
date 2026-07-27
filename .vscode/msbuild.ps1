@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory)][string]$SolutionPath,
     [Parameter(Mandatory)][string]$Configuration,
-    [string]$Platform = 'x64'
+    [string]$Platform = 'x64',
+    [switch]$EnableTracy
 )
 
 $pf86 = [System.Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
@@ -14,5 +15,15 @@ if (-not $msbuild) {
     exit 1
 }
 
-& $msbuild $SolutionPath /p:Configuration=$Configuration /p:Platform=$Platform /m
+$msbuildArgs = @(
+    $SolutionPath
+    "/p:Configuration=$Configuration"
+    "/p:Platform=$Platform"
+    '/m'
+)
+if ($EnableTracy) {
+    $msbuildArgs += '/p:CDDA_TRACY=1'
+}
+
+& $msbuild @msbuildArgs
 exit $LASTEXITCODE

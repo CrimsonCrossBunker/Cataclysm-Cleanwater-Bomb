@@ -1,0 +1,40 @@
+[
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "fcl_smart_omnicamera",
+    "category": "CC_ELECTRONIC",
+    "subcategory": "CSC_ELECTRONIC_PARTS",
+    "skill_used": "electronics",
+    "skills_required": [ "computer", 4 ],
+    "difficulty": 8,
+    "time": "3 h",
+    "autolearn": true,
+    "book_learn": [ [ "textbook_electronics", 8 ], [ "advanced_electronics", 8 ] ],
+    "using": [ [ "soldering_standard", 50 ], [ "plastic_molding", 3 ] ],
+    "proficiencies": [ { "proficiency": "prof_elec_circuits" }, { "proficiency": "prof_elec_soldering" } ],
+    "qualities": [ { "id": "SCREW", "level": 1 }, { "id": "SAW_M", "level": 1 } ],
+    "components": [
+      [ [ "omnicamera", 1 ] ],
+      [ [ "fcl_bot_eyebot", 1 ], [ "broken_fcl_eyebot", 2 ] ],
+      [ [ "power_supply", 1 ] ],
+      [ [ "cable", 2 ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "ACTIVE_EXERCISE",
+    "result": "fcl_smart_omnicamera_reinforced",
+    "category": "CC_ELECTRONIC",
+    "subcategory": "CSC_ELECTRONIC_PARTS",
+    "skill_used": "fabrication",
+    "difficulty": 3,
+    "time": "60 m",
+    "book_learn": [ [ "textbook_fabrication", 3 ], [ "textbook_mechanics", 3 ], [ "welding_book", 5 ] ],
+    "using": [ [ "welding_standard", 20 ], [ "glue_strong", 4 ] ],
+    "//": "20cm weld",
+    "proficiencies": [ { "proficiency": "prof_metalworking" }, { "proficiency": "prof_welding_basic" }, { "proficiency": "prof_welding" } ],
+    "qualities": [ { "id": "SAW_M", "level": 1 } ],
+    "components": [ [ [ "fcl_smart_omnicamera", 1 ] ], [ [ "mc_wire", 4 ], [ "hc_wire", 4 ], [ "ch_wire", 4 ], [ "qt_wire", 4 ] ] ]
+  }
+]

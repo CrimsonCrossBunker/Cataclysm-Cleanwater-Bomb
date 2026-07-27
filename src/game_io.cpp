@@ -66,6 +66,7 @@
 #include "memorial_logger.h"
 #include "messages.h"
 #include "mod_manager.h"
+#include "mp_gamestate.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -95,6 +96,8 @@
     #endif
     #include <tchar.h>
 #endif
+
+static const dimension_id dimension_world_default( "default" );
 
 static const mod_id MOD_INFORMATION_dda( "dda" );
 
@@ -287,8 +290,6 @@ void game::load_master()
 bool game::load_dimension_data()
 {
     const cata_path datafile = PATH_INFO::current_dimension_save_path() / SAVE_DIMENSION_DATA;
-    // if for whatever reason the dimension data file doesn't have a set region_type, use the default one
-    overmap_buffer.current_region_type = "default";
     // If dimension_data.gsav doesn't exist, return false
     return read_from_file_optional( datafile, [this, &datafile]( std::istream & is ) {
         unserialize_dimension_data( datafile, is );
@@ -309,7 +310,9 @@ bool game::load( const std::string &world )
 
     try {
         world_generator->set_active_world( wptr );
-        g->setup();
+        if( !g->setup() ) {
+            return false;
+        }
         g->load( wptr->world_saves.front() );
     } catch( const std::exception &err ) {
         debugmsg( "cannot load world '%s': %s", world, err.what() );
@@ -425,6 +428,7 @@ bool game::load( const save_t &name )
                         uistate.deserialize( jsin.get_object() );
                     } );
                     reload_npcs();
+                    cata_mp::mp_cleanup_stale_npcs_after_load();
                     validate_npc_followers();
                     validate_mounted_npcs();
                     validate_camps();
@@ -460,7 +464,9 @@ bool game::load( const save_t &name )
                     u.reset();
                     u.recalculate_enchantment_cache();
                     u.enchantment_cache->activate_passive( u );
-                    cata::lua_ui::on_world_ready();
+                    if constexpr( cata::lua_ui::is_enabled() ) {
+                        cata::lua_ui::on_world_ready();
+                    }
                     events().send<event_type::game_load>( getVersionString() );
                     time_of_last_load = std::chrono::steady_clock::now();
                     time_played_at_last_load = std::chrono::seconds( 0 );
@@ -765,10 +771,12 @@ bool game::save()
             debugmsg( "game not saved" );
             return false;
         } else {
-            std::string lua_state_error;
-            if( !cata::lua_ui::save_persistent_state( lua_state_error ) ) {
-                add_msg( m_warning, _( "Game saved, but Lua UI state could not be saved: %s" ),
-                         lua_state_error );
+            if constexpr( cata::lua_ui::is_enabled() ) {
+                std::string lua_state_error;
+                if( !cata::lua_ui::save_persistent_state( lua_state_error ) ) {
+                    add_msg( m_warning, _( "Game saved, but Lua UI state could not be saved: %s" ),
+                             lua_state_error );
+                }
             }
             world_generator->last_world_name = world_generator->active_world->world_name;
             world_generator->last_character_name = u.name;
@@ -1095,9 +1103,9 @@ cata_path PATH_INFO::dimensions_save_path()
 
 cata_path PATH_INFO::current_dimension_save_path()
 {
-    std::string dimension_prefix = g->get_dimension_prefix();
-    if( !dimension_prefix.empty() ) {
-        return PATH_INFO::dimensions_save_path() / dimension_prefix;
+    dimension_id dimension_prefix = g->get_dimension_prefix();
+    if( dimension_prefix != dimension_world_default ) {
+        return PATH_INFO::dimensions_save_path() / dimension_prefix.str();
     }
     return PATH_INFO::world_base_save_path();
 }

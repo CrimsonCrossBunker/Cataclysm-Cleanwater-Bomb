@@ -10,6 +10,7 @@
 #include <limits>
 #include <stdexcept>
 
+#include "android_ui_mode.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "catalua_ui.h"
@@ -3478,6 +3479,18 @@ void options_manager::add_options_world_default()
     } );
     add_empty_line();
 
+    add_option_group( "world_default", Group( "character_progression_opts",
+                      to_translation( "Character progression options" ),
+                      to_translation( "Options regarding character skill progression." ) ),
+    [&]( const std::string & page_id ) {
+        add( "SKILL_TRAINING_SPEED", page_id, to_translation( "Skill training speed" ),
+             to_translation( "Scales experience gained from practicing skills and reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training." ),
+             0.0, 100.0, 1.0, 0.1
+           );
+    } );
+
+    add_empty_line();
+
     add_option_group( "world_default", Group( "monster_props_opts",
                       to_translation( "Monster properties options" ),
                       to_translation( "Options regarding monster properties." ) ),
@@ -3490,6 +3503,16 @@ void options_manager::add_options_world_default()
         add( "MONSTER_RESILIENCE", page_id, to_translation( "Monster resilience" ),
              to_translation( "Determines how much damage monsters can take.  A higher value makes monsters more resilient and a lower makes them more flimsy.  Requires world reset." ),
              1, 1000, 100, COPT_NO_HIDE, "%i%%"
+           );
+
+        add( "EGG_LAYING_SPEED", page_id, to_translation( "Egg-laying speed" ),
+             to_translation( "Multiplier for the rate at which creatures lay eggs.  0.5 is half as fast as default, 2.0 is twice as fast, and 0.0 disables egg laying.  This does not affect creatures that give birth to live young." ),
+             0.0f, 100.0f, 1.0f, 0.1f
+           );
+
+        add( "LIVE_BIRTH_SPEED", page_id, to_translation( "Live-birth speed" ),
+             to_translation( "Multiplier for the rate at which creatures give birth to live young.  0.5 is half as fast as default, 2.0 is twice as fast, and 0.0 disables live births.  This does not affect creatures that lay eggs." ),
+             0.0f, 100.0f, 1.0f, 0.1f
            );
     } );
 
@@ -3860,32 +3883,34 @@ void options_manager::add_options_android()
                                         to_translation( "Android gestures options" ),
                                         to_translation( "Options regarding Android gestures." ) ),
     [&]( const std::string & page_id ) {
-        add( "ANDROID_LONG_PRESS_CONTEXT", page_id,
-             to_translation( "Long press selects a map tile" ),
-             to_translation( "If true, holding one finger still during gameplay opens precise tile selection instead of repeatedly sending the tap key." ),
-             true
-           );
+        if( android_ui_mode::is_new_ui_build() ) {
+            add( "ANDROID_LONG_PRESS_CONTEXT", page_id,
+                 to_translation( "Long press selects a map tile" ),
+                 to_translation( "If true, holding one finger still during gameplay opens precise tile selection instead of repeatedly sending the tap key." ),
+                 true
+               );
 
-        add( "ANDROID_CONTEXT_ZOOM", page_id, to_translation( "Tile selection zoom" ),
-             to_translation( "Temporarily enlarge map tiles to at least this scale while selecting a tile after a long press." ),
-             4, 64, 48
-           );
+            add( "ANDROID_CONTEXT_ZOOM", page_id, to_translation( "Tile selection zoom" ),
+                 to_translation( "Temporarily enlarge map tiles to at least this scale while selecting a tile after a long press." ),
+                 4, 64, 48
+               );
 
-        add( "ANDROID_CONTINUOUS_ZOOM", page_id,
-             to_translation( "Continuous pinch zoom" ),
-             to_translation( "If true, pinch gestures resize map tiles continuously instead of changing one large zoom step after release." ),
-             true
-           );
+            add( "ANDROID_CONTINUOUS_ZOOM", page_id,
+                 to_translation( "Continuous pinch zoom" ),
+                 to_translation( "If true, pinch gestures resize map tiles continuously instead of changing one large zoom step after release." ),
+                 true
+               );
 
-        add( "ANDROID_ZOOM_MIN", page_id, to_translation( "Minimum map zoom" ),
-             to_translation( "The smallest map tile scale allowed during continuous Android pinch zoom." ),
-             4, 64, 4
-           );
+            add( "ANDROID_ZOOM_MIN", page_id, to_translation( "Minimum map zoom" ),
+                 to_translation( "The smallest map tile scale allowed during continuous Android pinch zoom." ),
+                 4, 64, 4
+               );
 
-        add( "ANDROID_ZOOM_MAX", page_id, to_translation( "Maximum map zoom" ),
-             to_translation( "The largest map tile scale allowed during continuous Android pinch zoom." ),
-             4, 64, 64
-           );
+            add( "ANDROID_ZOOM_MAX", page_id, to_translation( "Maximum map zoom" ),
+                 to_translation( "The largest map tile scale allowed during continuous Android pinch zoom." ),
+                 4, 64, 64
+               );
+        }
 
         add( "ANDROID_TAP_KEY", page_id, to_translation( "Tap key (in-game)" ),
              to_translation( "The key to press when tapping during gameplay." ),
@@ -4486,8 +4511,10 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
     } );
 
 #if defined(__ANDROID__)
-    std::unique_ptr<options_imgui_page> options_ui =
-        std::make_unique<options_imgui_page>();
+    std::unique_ptr<options_imgui_page> options_ui;
+    if( android_ui_mode::is_new_ui_build() ) {
+        options_ui = std::make_unique<options_imgui_page>();
+    }
     const auto make_options_snapshot = [&]() {
         options_snapshot snapshot;
         snapshot.title = world_options_only ? _( "World options" ) : _( "Options" );
@@ -4976,7 +5003,7 @@ void options_manager::deserialize( const JsonArray &ja )
         // yay hardcoded list! remove after 0.J
         std::vector<std::string> removed_options = { "DISTANCE_INITIAL_VISIBILITY", "FOV_3D_Z_RANGE", "SAFEMODE",
                                                      "INITIAL_STAT_POINTS", "INITIAL_TRAIT_POINTS", "INITIAL_SKILL_POINTS", "MAX_TRAIT_POINTS",
-                                                     "SKILL_TRAINING_SPEED", "PROFICIENCY_TRAINING_SPEED"
+                                                     "PROFICIENCY_TRAINING_SPEED"
                                                    };
 
         const std::string name = migrateOptionName( joOptions.get_string( "name" ) );
