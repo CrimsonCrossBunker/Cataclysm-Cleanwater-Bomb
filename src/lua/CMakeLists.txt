@@ -1,18 +1,53 @@
-file(GLOB LUA_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
-file(GLOB LUA_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
-
-# We compile Lua C sources with C++ compiler so we don't have to bother
-# with defining 2 different compilers.
-# Apply property ONLY to source files, NOT headers.
-set_source_files_properties(${LUA_SOURCES} PROPERTIES LANGUAGE CXX)
+set(LUA_SOURCE_NAMES
+    lapi.c
+    lauxlib.c
+    lbaselib.c
+    lcode.c
+    lcorolib.c
+    lctype.c
+    ldblib.c
+    ldebug.c
+    ldo.c
+    ldump.c
+    lfunc.c
+    lgc.c
+    linit.c
+    liolib.c
+    llex.c
+    lmathlib.c
+    lmem.c
+    loadlib.c
+    lobject.c
+    lopcodes.c
+    loslib.c
+    lparser.c
+    lstate.c
+    lstring.c
+    lstrlib.c
+    ltable.c
+    ltablib.c
+    ltm.c
+    lundump.c
+    lutf8lib.c
+    lvm.c
+    lzio.c)
+list(TRANSFORM LUA_SOURCE_NAMES
+    PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/"
+    OUTPUT_VARIABLE LUA_SOURCES)
+file(GLOB LUA_HEADERS CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
 
 # Add both sources and headers to the library (headers for IDE visibility)
 add_library(liblua ${LUA_SOURCES} ${LUA_HEADERS})
 target_include_directories(liblua SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-set_target_properties(liblua PROPERTIES LINKER_LANGUAGE CXX)
-
-# Silence all errors. It's C code being compiled as C++, there're lots of them.
-target_compile_options(liblua PRIVATE -w)
+# Lua is third-party C code.  Keep its diagnostics isolated from the game's
+# warning-as-error policy while still compiling it with the platform C compiler.
+if(MSVC)
+    target_compile_options(liblua PRIVATE /w)
+else()
+    target_compile_options(liblua PRIVATE -w)
+endif()
 
 install(TARGETS liblua LIBRARY DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})

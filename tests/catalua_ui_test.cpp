@@ -845,6 +845,12 @@ TEST_CASE( "lua_snippets_have_an_instruction_budget", "[lua][ui][sandbox]" )
         CHECK( error.empty() );
     }
 
+    SECTION( "runtime uses the vendored Lua 5.4 API" ) {
+        CHECK( cata::lua_ui::validate_snippet(
+                   "assert(_VERSION == 'Lua 5.4')", 1000, error ) );
+        CHECK( error.empty() );
+    }
+
     SECTION( "infinite loops are interrupted" ) {
         CHECK_FALSE( cata::lua_ui::validate_snippet( "while true do end", 1000, error ) );
         CHECK( error.find( "instruction budget exceeded" ) != std::string::npos );

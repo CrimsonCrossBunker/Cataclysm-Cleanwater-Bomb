@@ -1116,7 +1116,40 @@ else
   SOURCES := $(wildcard $(SRC_DIR)/*.cpp)
 endif
 C_SOURCES := $(SRC_DIR)/cata_allocator_c.c
-LUA_C_SOURCES := $(wildcard $(SRC_DIR)/lua/*.c)
+LUA_C_SOURCE_NAMES := \
+  lapi.c \
+  lauxlib.c \
+  lbaselib.c \
+  lcode.c \
+  lcorolib.c \
+  lctype.c \
+  ldblib.c \
+  ldebug.c \
+  ldo.c \
+  ldump.c \
+  lfunc.c \
+  lgc.c \
+  linit.c \
+  liolib.c \
+  llex.c \
+  lmathlib.c \
+  lmem.c \
+  loadlib.c \
+  lobject.c \
+  lopcodes.c \
+  loslib.c \
+  lparser.c \
+  lstate.c \
+  lstring.c \
+  lstrlib.c \
+  ltable.c \
+  ltablib.c \
+  ltm.c \
+  lundump.c \
+  lutf8lib.c \
+  lvm.c \
+  lzio.c
+LUA_C_SOURCES := $(addprefix $(SRC_DIR)/lua/,$(LUA_C_SOURCE_NAMES))
 LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_ui.cpp \
   $(SRC_DIR)/catalua_ui_actions.cpp \
