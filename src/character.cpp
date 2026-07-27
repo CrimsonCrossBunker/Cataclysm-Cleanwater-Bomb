@@ -57,6 +57,7 @@
 #include "item_pocket.h"
 #include "item_stack.h"
 #include "itype.h"
+#include "kill_tracker.h"
 #include "lightmap.h"
 #include "line.h"
 #include "localized_comparator.h"
@@ -355,6 +356,7 @@ static const trait_id trait_FAT( "FAT" );
 static const trait_id trait_GILLS( "GILLS" );
 static const trait_id trait_GILLS_CEPH( "GILLS_CEPH" );
 static const trait_id trait_HIBERNATE( "HIBERNATE" );
+static const trait_id trait_INSENSITIVITY( "INSENSITIVITY" );
 static const trait_id trait_INSOMNIA( "INSOMNIA" );
 static const trait_id trait_LEG_TENT_BRACE( "LEG_TENT_BRACE" );
 static const trait_id trait_LIGHTSTEP( "LIGHTSTEP" );
@@ -862,6 +864,24 @@ int Character::effective_dispersion( int dispersion, bool zoom ) const
     return get_character_parallax( zoom ) + dispersion;
 }
 
+double Character::dispersion_variance() const
+{
+    double ability = static_cast<double>( get_per() ) *
+                     ( ( get_limb_score( limb_score_manip ) +
+                         get_limb_score( limb_score_vision ) ) / 2.0 );
+    ability = std::clamp( ability, 0.01, 20.0 );
+    double low;
+    if( ability <= 10.0 ) {
+        low = -20.0 + ability;
+    } else {
+        low = -10.0 + ( ability - 10.0 ) * 0.5;
+    }
+    const double high = 5.0 + 5 * std::log( 1.0 + 0.1 * ability );
+    const double variance = rng_float( low, high );
+    add_msg_debug( debugmode::DF_RANGED, "Semi-random variance adds %1f dispersion.", variance );
+    return variance;
+}
+
 int Character::get_character_parallax( bool zoom ) const
 {
     /** @EFFECT_PER penalizes sight dispersion when low. */
@@ -1099,7 +1119,7 @@ double Character::aim_per_move( const item &gun, double recoil,
     aim_speed = std::min( aim_speed, base_aim_speed_cap * aim_cache.aim_factor_from_length );
 
     // Just a raw scaling factor.
-    aim_speed *= 3.0;
+    aim_speed *= 2.75;
 
     // Minimum improvement is 0.01MoA.  This is just to prevent data anomalies
     aim_speed = std::max( aim_speed, MIN_RECOIL_IMPROVEMENT );
@@ -7615,6 +7635,54 @@ bool Character::empathizes_with_monster( const mtype_id &monster ) const
         return true;
     }
     return false;
+}
+
+void Character::record_mental_metric_guilt_kill()
+{
+    mental_metric_guilt_kills++;
+    maybe_gain_insensitivity();
+}
+
+void Character::record_mental_metric_human_dissection()
+{
+    mental_metric_human_dissections++;
+}
+
+void Character::record_mental_metric_cannibalism()
+{
+    mental_metric_cannibalism++;
+}
+
+int Character::insensitivity_score() const
+{
+    const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
+                                        0 );
+    return mental_metric_guilt_kills * 5 +
+           std::min( mental_metric_human_dissections, 100 ) * 10 +
+           std::min( g->get_kill_tracker().monster_kill_count(), 5000 ) / 10 +
+           days_survived * 2 +
+           std::min( mental_metric_cannibalism, 100 );
+}
+
+void Character::maybe_gain_insensitivity()
+{
+    if( has_trait( trait_INSENSITIVITY ) ) {
+        return;
+    }
+
+    const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
+                                        0 );
+    if( days_survived < 30 || g->get_kill_tracker().monster_kill_count() < 100 ||
+        mental_metric_guilt_kills < 50 || mental_metric_human_dissections < 1 ) {
+        return;
+    }
+
+    if( insensitivity_score() < 1000 ) {
+        return;
+    }
+
+    set_mutation( trait_INSENSITIVITY );
+    add_msg_if_player( m_neutral, _( "The horror has become routine." ) );
 }
 
 bool Character::is_driving() const

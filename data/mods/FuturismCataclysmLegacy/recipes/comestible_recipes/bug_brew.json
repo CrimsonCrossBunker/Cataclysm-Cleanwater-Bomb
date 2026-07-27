@@ -1,0 +1,60 @@
+[
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "fcl_mealgrub_medium",
+    "id_suffix": "simple",
+    "category": "CC_CHEM",
+    "subcategory": "CSC_CHEM_CHEMICALS",
+    "skill_used": "chemistry",
+    "difficulty": 2,
+    "charges": 5,
+    "time": "20 m",
+    "autolearn": true,
+    "batch_time_factors": [ 80, 4 ],
+    "flags": [ "BLIND_HARD", "ALLOW_ROTTEN", "NUTRIENT_OVERRIDE" ],
+    "book_learn": { "fcl_bugbrew_book": { "skill_level": 1 } },
+    "qualities": [ { "id": "BOIL", "level": 1 }, { "id": "CHEM", "level": 2 }, { "id": "CUT", "level": 2 } ],
+    "tools": [ [ [ "surface_heat", 10, "LIST" ] ] ],
+    "components": [
+      [ [ "water", 6 ], [ "water_clean", 6 ] ],
+      [ [ "meal_bone", 2 ], [ "meal_chitin_piece", 1 ] ],
+      [ [ "fertilizer_liquid", 1 ], [ "fertilizer_commercial", 1 ] ],
+      [ [ "any_fat", 2, "LIST" ] ]
+    ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "brew_fcl_mealgrub_broth",
+    "id_suffix": "simple",
+    "category": "CC_CHEM",
+    "subcategory": "CSC_CHEM_CHEMICALS",
+    "skill_used": "chemistry",
+    "difficulty": 0,
+    "charges": 5,
+    "time": "5 m",
+    "autolearn": true,
+    "batch_time_factors": [ 80, 4 ],
+    "book_learn": { "fcl_bugbrew_book": { "skill_level": 1 } },
+    "flags": [ "BLIND_HARD" ],
+    "components": [ [ [ "fcl_mealgrub_spores", 1 ] ], [ [ "fcl_mealgrub_medium", 5 ] ] ]
+  },
+  {
+    "type": "recipe",
+    "activity_level": "LIGHT_EXERCISE",
+    "result": "fcl_mealgrubs",
+    "id_suffix": "simple",
+    "category": "CC_CHEM",
+    "subcategory": "CSC_CHEM_CHEMICALS",
+    "skill_used": "chemistry",
+    "difficulty": 0,
+    "charges": 5,
+    "time": "5 m",
+    "autolearn": true,
+    "batch_time_factors": [ 80, 4 ],
+    "book_learn": { "fcl_bugbrew_book": { "skill_level": 1 } },
+    "flags": [ "BLIND_HARD" ],
+    "components": [ [ [ "water", 6 ], [ "water_clean", 6 ] ], [ [ "fcl_mealgrub_jelly", 5 ] ] ]
+  }
+]

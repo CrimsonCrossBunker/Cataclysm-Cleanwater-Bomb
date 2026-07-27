@@ -12,7 +12,8 @@
     "price_postapoc": "1 USD",
     "material": [ "dense_powder_nonflam" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "id": "dye_powder",
@@ -27,7 +28,8 @@
     "price_postapoc": "50 cent",
     "material": [ "dense_powder_nonflam" ],
     "symbol": "=",
-    "color": "dark_gray"
+    "color": "dark_gray",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -42,7 +44,8 @@
     "container": "bag_canvas",
     "material": [ "dense_powder_nonflam" ],
     "volume": "1 ml",
-    "weight": "2150 mg"
+    "weight": "2150 mg",
+    "stackable": true
   },
   {
     "type": "ITEM",

@@ -1,0 +1,125 @@
+[
+  {
+    "type": "furniture",
+    "id": "f_fcl_hydroponics",
+    "name": "hydroponics unit",
+    "description": "A self-contained hydroponics unit for growing crops indoors.  This technology was originally patented by Helixwirl Biotechnologies, with the patent and surviving units recovered by Trans-Coast Logistics during the company's bankruptcy liquidation.  It relies on a specialized energy field that keeps plants at maturity instead of allowing them to overgrow and wither.  In theory, unauthorized individuals and organizations are not permitted to use it.  In the aftermath of the apocalypse, however, no one seems to care about your patent infringement.",
+    "symbol": "^",
+    "color": "light_blue",
+    "move_cost_mod": 1,
+    "light_emitted": 10,
+    "required_str": 12,
+    "looks_like": "f_planter",
+    "flags": [ "TRANSPARENT", "PLANTABLE", "SHALLOW_WATER", "FLAT", "MOUNTABLE", "NO_CROP_OVERGROWTH" ],
+    "deconstruct": { "items": [ { "group": "fcl_hydrop_deconstruct_results" } ] },
+    "bash": {
+      "str_min": 6,
+      "str_max": 14,
+      "sound": "crunch.",
+      "sound_fail": "whish.",
+      "items": [ { "group": "fcl_hydrop_bash_results" } ]
+    },
+    "plant_data": {
+      "transform": "f_fcl_hydroponics_seed",
+      "max_water_storage": 200,
+      "water_consumption_multiplier": 0.5
+    },
+    "examine_action": "dirtmound"
+  },
+  {
+    "type": "furniture",
+    "id": "f_fcl_hydroponics_seed",
+    "name": "hydroponics unit with seeds",
+    "description": "A self-contained hydroponics unit for growing crops indoors.  It contains planted seeds.  This technology was originally patented by Helixwirl Biotechnologies, with the patent and surviving units recovered by Trans-Coast Logistics during the company's bankruptcy liquidation.  It relies on a specialized energy field that keeps plants at maturity instead of allowing them to overgrow and wither.  In theory, unauthorized individuals and organizations are not permitted to use it.  In the aftermath of the apocalypse, however, no one seems to care about your patent infringement.",
+    "symbol": "^",
+    "color": "brown",
+    "looks_like": "f_planter",
+    "required_str": -1,
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_SEED", "NO_CROP_OVERGROWTH" ],
+    "examine_action": "aggie_plant",
+    "copy-from": "f_fcl_hydroponics",
+    "plant_data": { "transform": "f_fcl_hydroponics_seedling", "base": "f_fcl_hydroponics" }
+  },
+  {
+    "type": "furniture",
+    "id": "f_fcl_hydroponics_seedling",
+    "name": "hydroponics unit with seedlings",
+    "description": "A self-contained hydroponics unit for growing crops indoors.  It contains young seedlings.  This technology was originally patented by Helixwirl Biotechnologies, with the patent and surviving units recovered by Trans-Coast Logistics during the company's bankruptcy liquidation.  It relies on a specialized energy field that keeps plants at maturity instead of allowing them to overgrow and wither.  In theory, unauthorized individuals and organizations are not permitted to use it.  In the aftermath of the apocalypse, however, no one seems to care about your patent infringement.",
+    "symbol": "^",
+    "color": "green",
+    "looks_like": "f_planter_seedling",
+    "required_str": -1,
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_SEEDLING", "NO_CROP_OVERGROWTH" ],
+    "examine_action": "aggie_plant",
+    "copy-from": "f_fcl_hydroponics_seed",
+    "plant_data": { "transform": "f_fcl_hydroponics_mature", "base": "f_fcl_hydroponics" }
+  },
+  {
+    "type": "furniture",
+    "id": "f_fcl_hydroponics_mature",
+    "name": "hydroponics unit with mature plants",
+    "description": "A self-contained hydroponics unit for growing crops indoors.  The plants have matured.  This technology was originally patented by Helixwirl Biotechnologies, with the patent and surviving units recovered by Trans-Coast Logistics during the company's bankruptcy liquidation.  It relies on a specialized energy field that keeps plants at maturity instead of allowing them to overgrow and wither.  In theory, unauthorized individuals and organizations are not permitted to use it.  In the aftermath of the apocalypse, however, no one seems to care about your patent infringement.",
+    "symbol": "#",
+    "color": "green",
+    "looks_like": "f_planter_mature",
+    "move_cost_mod": 0,
+    "required_str": -1,
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_MATURE", "SMALL_HIDE", "NO_CROP_OVERGROWTH" ],
+    "examine_action": "aggie_plant",
+    "copy-from": "f_fcl_hydroponics_seed",
+    "plant_data": { "transform": "f_fcl_hydroponics_harvest", "base": "f_fcl_hydroponics" }
+  },
+  {
+    "type": "furniture",
+    "id": "f_fcl_hydroponics_harvest",
+    "name": "hydroponics unit ready for harvest",
+    "description": "A self-contained hydroponics unit for growing crops indoors.  The plants are ready for harvest.  This technology was originally patented by Helixwirl Biotechnologies, with the patent and surviving units recovered by Trans-Coast Logistics during the company's bankruptcy liquidation.  It relies on a specialized energy field that keeps plants at maturity instead of allowing them to overgrow and wither.  In theory, unauthorized individuals and organizations are not permitted to use it.  In the aftermath of the apocalypse, however, no one seems to care about your patent infringement.",
+    "symbol": "#",
+    "color": "light_green",
+    "looks_like": "f_planter_harvest",
+    "required_str": -1,
+    "flags": [ "PLANT", "SEALED", "TRANSPARENT", "CONTAINER", "NOITEM", "TINY", "DONT_REMOVE_ROTTEN", "GROWTH_HARVEST", "SMALL_HIDE", "NO_CROP_OVERGROWTH" ],
+    "examine_action": "harvest_plant_ex",
+    "copy-from": "f_fcl_hydroponics_mature",
+    "plant_data": {
+      "base": "f_fcl_hydroponics",
+      "harvest_multiplier": 2.5
+    }
+  },
+  {
+    "type": "furniture",
+    "id": "f_fcl_hydroponics_heater",
+    "name": "hydroponics heater",
+    "description": "A dedicated heater for warming hydroponics units.",
+    "symbol": "#",
+    "color": "light_blue",
+    "move_cost_mod": 1,
+    "required_str": 12,
+    "looks_like": "mountable_heater",
+    "flags": [ "TRANSPARENT", "FLAT", "MOUNTABLE" ],
+    "emissions": [ "emit_hot_air2_blast" ],
+    "deconstruct": {
+      "items": [
+        { "item": "small_storage_battery" },
+        { "item": "element", "count": [ 10, 12 ] },
+        { "item": "cable", "count": [ 4, 6 ] },
+        { "item": "sheet_metal", "count": [ 2, 4 ] },
+        { "item": "power_supply", "count": [ 0, 1 ] }
+      ]
+    },
+    "bash": {
+      "str_min": 6,
+      "str_max": 14,
+      "sound": "crunch.",
+      "sound_fail": "whish.",
+      "items": [
+        { "item": "small_storage_battery", "count": [ 0, 1 ] },
+        { "item": "element", "count": [ 4, 12 ] },
+        { "item": "cable", "count": [ 2, 6 ] },
+        { "item": "sheet_metal", "count": [ 1, 3 ] },
+        { "item": "scrap", "count": [ 3, 12 ] },
+        { "item": "power_supply", "count": [ 0, 1 ] }
+      ]
+    }
+  }
+]

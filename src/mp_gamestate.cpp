@@ -397,6 +397,11 @@ bool is_mp_mode()
     return server_mode_ || host_mode_;
 }
 
+bool is_session_active()
+{
+    return is_client_mode() || is_mp_mode();
+}
+
 bool is_hosting()
 {
     return get_active_server() != nullptr;
@@ -1646,7 +1651,7 @@ static void mp_save_npc_ids()
 static void purge_npcs_by_name( const std::string &name );
 
 // Remove stale MP NPCs saved from a previous session.
-// Called once per process lifetime, early in the game loop.
+// Called once per world load while the loading screen is still active.
 static bool mp_cleanup_done = false;
 static void mp_cleanup_stale_npcs()
 {
@@ -1763,6 +1768,24 @@ static void mp_cleanup_stale_npcs()
         mp_log( "[cdda-mp] ORPHAN-SWEEP removed " + std::to_string( orphans )
                 + " loaded + " + std::to_string( overmap_orphans ) + " overmap proxy NPCs" );
     }
+}
+
+void mp_cleanup_stale_npcs_after_load()
+{
+    if( mp_cleanup_done || !world_generator || !world_generator->active_world ) {
+        return;
+    }
+
+    const std::string &worldname = world_generator->active_world->world_name;
+    if( worldname.empty() || !mp_world_has_history( worldname ) ) {
+        // A world with no co-op marker or legacy MP state cannot contain one of
+        // our saved proxy NPCs.  Latch the migration for this load without
+        // scanning the active NPC list or nearby overmaps.
+        mp_cleanup_done = true;
+        return;
+    }
+
+    mp_cleanup_stale_npcs();
 }
 
 // Client: remove NPCs spawned by the client's own divergent local world — the
@@ -6340,10 +6363,6 @@ void process_mp_events()
     // nothing is pending). Keeps the ~32k-cell apply off the single-frame hot path.
     mp_drain_pending_omsync();
 
-    // On the very first tick, purge any MP NPCs that leaked into the world save
-    // from a previous session (server and client share the same world directory).
-    mp_cleanup_stale_npcs();
-
     // Stamp this world as MP-touched so the world pickers can badge it.
     mp_world_marker_update();
 
@@ -6392,6 +6411,24 @@ void process_mp_events()
                 }
                 break;
         }
+    }
+}
+
+void process_session_turn()
+{
+    process_mp_events();
+
+    if( is_client_mode() ) {
+        client_process_incoming();
+        client_resolve_pending_ui();
+    }
+
+    if( is_hosting() ) {
+        grant_client_turn();
+    }
+
+    if( is_client_mode() || is_host_mode() ) {
+        ensure_mp_hud();
     }
 }
 
@@ -7785,7 +7822,6 @@ void client_process_incoming()
         return;
     }
 
-    mp_cleanup_stale_npcs();
     mp_cull_local_npcs();   // drop client-local phantom NPCs (keep only host proxy)
 
     // Send the join message on the first tick — the save is loaded by now.

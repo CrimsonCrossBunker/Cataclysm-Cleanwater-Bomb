@@ -3456,6 +3456,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
 
                 const tripoint_bub_ms pos = player_character.pos_bub();
+                const bool has_vehicle_ladder = here.has_vehicle_ladder_at( pos );
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
                         here.vehicle_ladder_destination( pos, -1 ) ) {
                     if( here.is_open_air( *ladder_dest ) &&
@@ -3477,6 +3478,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         pldrive( tripoint_rel_ms::below );
                         break;
                     }
+                }
+
+                if( has_vehicle_ladder ) {
+                    add_msg( m_info, _( "You can't climb down any farther from here." ) );
+                    break;
                 }
 
                 if( !player_character.in_vehicle ) {

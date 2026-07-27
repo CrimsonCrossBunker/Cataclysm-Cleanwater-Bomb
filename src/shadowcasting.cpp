@@ -544,7 +544,7 @@ void cast_zlight(
     const tripoint_bub_ms &origin, const int offset_distance, const T numerator,
     vertical_direction dir )
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     // The 8 horizontal octant segments within a z-level write to disjoint
     // tile sets, so they can run in parallel without write conflicts.
     // The 4 vertical segments have cross-z dependencies and remain sequential.

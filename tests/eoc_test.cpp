@@ -168,6 +168,8 @@ effect_on_condition_EOC_string_var_var( "EOC_string_var_var" );
 static const effect_on_condition_id effect_on_condition_EOC_teleport_test( "EOC_teleport_test" );
 static const effect_on_condition_id
 effect_on_condition_EOC_test_weapon_damage( "EOC_test_weapon_damage" );
+static const effect_on_condition_id
+effect_on_condition_EOC_test_run_unique_npc( "EOC_test_run_unique_npc" );
 static const effect_on_condition_id effect_on_condition_EOC_try_kill( "EOC_try_kill" );
 static const effect_on_condition_id effect_on_condition_run_eocs_1( "run_eocs_1" );
 static const effect_on_condition_id effect_on_condition_run_eocs_2( "run_eocs_2" );
@@ -276,6 +278,31 @@ TEST_CASE( "EOC_beta_elevate", "[eoc]" )
     effect_on_condition_EOC_try_kill->activate( newDialog );
 
     CHECK( n.hp_percentage() == 0 );
+}
+
+TEST_CASE( "EOC_run_unique_npc_skips_removed_target", "[eoc][npc]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+
+    npc &target = spawn_npc( get_avatar().pos_bub().xy() + point::south, "thug" );
+    target.set_unique_id( "EOC_TEST_UNIQUE_NPC" );
+    const character_id target_id = target.getID();
+    dialogue d( get_talker_for( get_avatar() ), nullptr );
+
+    REQUIRE( effect_on_condition_EOC_test_run_unique_npc->activate( d ) );
+    CHECK( target.get_value( "unique_npc_eoc_ran" ) == "yes" );
+
+    overmap_buffer.remove_npc( target_id );
+    g->remove_npc( target_id );
+    REQUIRE( g->unique_npc_exists( "EOC_TEST_UNIQUE_NPC" ) );
+
+    const std::string debug_message = capture_debugmsg_during( [&]() {
+        effect_on_condition_EOC_test_run_unique_npc->activate( d );
+    } );
+    CHECK( debug_message.empty() );
+
+    g->unique_npc_despawn( "EOC_TEST_UNIQUE_NPC" );
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity): false positive

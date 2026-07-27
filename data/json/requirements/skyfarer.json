@@ -27,7 +27,7 @@
     "id": "wood_structural",
     "type": "requirement",
     "//": "Planks, sticks, and long sticks used in recipes, roughly 1:1 by weight.",
-    "components": [ [ [ "stick_long", 1 ], [ "wood_structural_small", 2, "LIST" ] ] ]
+    "components": [ [ [ "stick_long", 1 ], [ "bamboo_stalk_dry", 1 ], [ "wood_structural_small", 2, "LIST" ] ] ]
   },
   {
     "id": "adhesive_proper",

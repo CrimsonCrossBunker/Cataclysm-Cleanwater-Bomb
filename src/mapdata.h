@@ -188,6 +188,17 @@ struct plant_data {
     bool load( const JsonObject &jsobj, std::string_view member, std::string_view src );
 };
 
+struct terrain_growth_data {
+    ter_str_id transform;
+    time_duration growth_time = 0_seconds;
+    float growth_multiplier = 1.0f;
+    std::set<season_type> fertilize_seasons;
+
+    terrain_growth_data();
+    bool load( const JsonObject &jsobj, std::string_view member );
+    void check( const std::string &context ) const;
+};
+
 /*
  * List of known flags, used in both terrain.json and furniture.json.
  * TRANSPARENT - Players and monsters can see through/past it. Also sets ter_t.transparent
@@ -239,6 +250,7 @@ struct plant_data {
  * FLOWER - This furniture is a flower
  * SHRUB - This terrain is a shrub
  * TREE - This terrain is a tree
+ * NO_STUMP - This tree is cut down using its bash result instead of creating a stump
  * HARVESTED - This terrain has been harvested so it won't bear any fruit
  * YOUNG - This terrain is a young tree
  * FUNGUS - Fungal covered
@@ -325,6 +337,7 @@ enum class ter_furn_flag : int {
     TFLAG_GRAZER_INEDIBLE,
     TFLAG_BROWSABLE,
     TFLAG_TREE,
+    TFLAG_NO_STUMP,
     TFLAG_PLOWABLE,
     TFLAG_ORGANIC,
     TFLAG_CONSOLE,
@@ -540,10 +553,10 @@ struct map_data_common_t {
         translation name_;
 
         // Hardcoded examination function; what happens when the terrain/furniture is examined
-        iexamine_functions examine_func;
+        std::vector<iexamine_functions> examine_func;
 
         // Data-driven examine actor
-        cata::clone_ptr<iexamine_actor> examine_actor;
+        std::vector<cata::clone_ptr<iexamine_actor>> examine_actor;
 
     private:
         std::set<std::string> flags; // string flags which possibly refer to what's documented above.
@@ -569,9 +582,11 @@ struct map_data_common_t {
         std::array<int, NUM_SEASONS> symbol_;
 
         bool can_examine( const tripoint_bub_ms &examp ) const;
+        // checks if it has corresponding examine_func
         bool has_examine( iexamine_examine_function func ) const;
+        // checks if it has corresponding examine_actor
         bool has_examine( const std::string &action ) const;
-        void set_examine( iexamine_functions func );
+        void set_examine( const iexamine_functions &func );
         void examine( Character &, const tripoint_bub_ms & ) const;
 
         int light_emitted = 0;
@@ -728,6 +743,7 @@ struct ter_t : map_data_common_t {
     cata::value_ptr<activity_data_ter> prying;  // Prying action data
 
     cata::value_ptr<plant_data> plant;
+    cata::value_ptr<terrain_growth_data> terrain_growth;
 
     std::string trap_id_str;     // String storing the id string of the trap.
     ter_str_id transforms_into; // Transform into what terrain?

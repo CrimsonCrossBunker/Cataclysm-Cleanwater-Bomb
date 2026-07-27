@@ -11,6 +11,11 @@
 
 static const option_slider_id option_slider_test_world_difficulty( "test_world_difficulty" );
 
+TEST_CASE( "core_data_preserves_the_radiation_mutation_world_default", "[option]" )
+{
+    CHECK( get_option<bool>( "RAD_MUTATION" ) );
+}
+
 TEST_CASE( "option_slider_test", "[option]" )
 {
     options_manager::options_container opts = get_options().get_world_defaults();

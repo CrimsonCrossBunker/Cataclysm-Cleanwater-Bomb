@@ -946,65 +946,73 @@ Effect | Description
 `u_remove_item_with`, `npc_remove_item_with: `string or [variable object](#variable-object) | You or the NPC will delete any instances of item in inventory.<br/>This is an unconditional remove and will not fail if you or the NPC does not have the item.
 `u_buy_monster: `string or [variable object](#variable-object), (*optional* `cost: `int or [variable object](#variable-object)), (*optional* `count: `int or [variable object](#variable-object)), (*optional* `name: `string or [variable object](#variable-object)), (*optional* `pacified: pacified_bool`), (*optional* `true_eocs: eocs_array`), (*optional* `false_eocs: eocs_array`) | The NPC will give your character `count` (default 1) instances of the monster as pets and will subtract `cost` from `op_of_u.owed` if specified.  If the `op_o_u.owed` is less than `cost`, the trade window will open and the player will have to trade to make up the difference; the NPC will not give the player the item unless `cost_num` is satisfied.<br/>If cost isn't present, the NPC gives your character the item at no charge.<br/>If `name` is specified the monster(s) will have the specified name. If `pacified_bool` is set to true, the monster will have the pacified effect applied.  If the monster is sold, then all of the effect_on_conditions in `true_eocs` are run, otherwise all the effect_on_conditions in `false_eocs` are run.
 
-#### NPC vehicle part repair service
+#### NPC vehicle part service
 
-`select_vehicle_part_repair` and `start_vehicle_part_repair` provide a generic paid NPC service for selecting and fully repairing one installed vehicle part.  The service is not tied to a particular NPC, faction, map, or price multiplier.
-
-Before calling `select_vehicle_part_repair`, exactly one loaded vehicle should have the vehicle-scoped string variable `vehicle_part_repair_target` set to `yes`.  The vehicle must be owned by the avatar and must not currently be controlled by the avatar.  Target discovery, location restrictions, and clearing stale target markers are the responsibility of the calling JSON.  A vehicle-scoped EOC can mark its current vehicle talker with:
+`select_vehicle_part_service` provides one interactive NPC service for installing, repairing, or removing a single vehicle part.  Before calling it, exactly one loaded vehicle must have the vehicle-scoped string variable `vehicle_part_repair_target` set to `yes`.  The vehicle must be owned by the avatar and must not currently be controlled by the avatar.  Target discovery, location restrictions, and clearing stale markers are the responsibility of the calling JSON.  A vehicle-scoped EOC can mark its current vehicle talker with:
 
 ```json
 { "u_add_var": "vehicle_part_repair_target", "value": "yes" }
 ```
 
-The repair price multiplier is read from the beta NPC's numeric variable `vehicle_part_repair_price_multiplier`.  It defaults to `1.0` when absent or invalid.  For example, an NPC charging a 50% service premium can select a part with:
+Repair uses the beta NPC's numeric `vehicle_part_repair_price_multiplier`; installation and removal labor use `vehicle_part_install_price_multiplier`.  Both default to `1.0`.  A service charging a 50% premium can be opened with:
 
 ```json
 "effect": [
   { "math": [ "n_vehicle_part_repair_price_multiplier = 1.5" ] },
-  "select_vehicle_part_repair"
+  { "math": [ "n_vehicle_part_install_price_multiplier = 1.5" ] },
+  "select_vehicle_part_service"
 ]
 ```
 
-`select_vehicle_part_repair` opens the normal vehicle-grid interface with only select and exit operations enabled.  Selecting the current grid square opens a list containing only eligible damaged parts installed in that square.  Confirming a part creates a quote and exposes the following beta NPC variables:
+The vehicle grid exposes install, repair, remove, and exit actions.  Installation candidates come only from exact items selectable in the avatar's or NPC's normal trade panes.  Avatar-supplied parts cost labor; NPC-supplied parts cost their current trade price plus labor.  Installation preserves the reserved item's damage, degradation, faults, charges, fuel, ammunition, and contents.
+
+A real damageable part is repairable when it has damage, permanent degradation, or faults, including a full-durability faulty part.  The repair ratio is `damage_ratio + ( 1 - damage_ratio ) * ( 1 - product_of_fault_price_modifiers )`; it is multiplied by pristine post-Cataclysm value and the repair multiplier.  Completion clears damage, degradation, and faults without altering cargo, fuel, or charge.
+
+Removal charges only the same pristine-value labor used by installation.  It ignores skills, tools, lifting, and consumables but enforces vehicle structure, modification, external connection, passenger, animal, and carried-vehicle rules.  Native removal results, including cargo, the part or fragments, recoverable components, dependent parts, and installed tools, are placed in a faction-owned `VEHICLE_SERVICE_OUTPUT` zone on `f_counter` furniture and assigned to the avatar.  If the selected counter cannot hold the complete output at completion, the vehicle remains unchanged and the order is fully credited.
+
+The effect confirms the price and duration, calls the normal NPC payment UI, and starts the corresponding serialized activity.  Payment and completion validate the complete real-part snapshot.  Cancellation or invalidation makes no partial vehicle change, clears the NPC's busy state, returns any reserved install item, and credits the full payment through NPC debt.  `vehicle_part_service_status` may be `cancelled`, `no_vehicle`, `no_value`, `no_output`, `payment_cancelled`, `repairing`, `installing`, `removing`, `complete`, or `invalidated`.
+
+#### NPC whole-vehicle refurbishment service
+
+`quote_vehicle_full_repair` and `start_vehicle_full_repair` provide the whole-vehicle counterpart to the component service.  They use the same `vehicle_part_repair_target` marker, ownership and control checks, and `vehicle_part_repair_price_multiplier` described above.  Quoting does not open a selection UI: every eligible real installed part is included.
+
+`quote_vehicle_full_repair` exposes these beta NPC variables:
 
 Variable | Type | Description
 ---|---|---
-`vehicle_part_repair_selection_valid` | number | `1` when a quote is ready, otherwise `0`.
-`vehicle_part_repair_vehicle_name` | string | Display name of the selected vehicle.
-`vehicle_part_repair_part_name` | string | Display name of the selected part.
-`vehicle_part_repair_damage_percent` | number | Current part damage rounded up to a whole percentage.
-`vehicle_part_repair_cost` | number | Exact quoted price in cents, suitable for a payment effect.
-`vehicle_part_repair_cost_text` | string | Localized formatted price for dialogue text.
-`vehicle_part_repair_time` | number | Quoted service duration in turns.
-`vehicle_part_repair_time_text` | string | Localized approximate duration for dialogue text.
-`vehicle_part_repair_status` | string | Current result or service state.
+`vehicle_full_repair_selection_valid` | number | `1` when a payable whole-vehicle quote is ready, otherwise `0`.
+`vehicle_full_repair_vehicle_name` | string | Display name of the quoted vehicle.
+`vehicle_full_repair_part_count` | number | Number of parts that will be restored.
+`vehicle_full_repair_cost` | number | Sum of the individual part quotes in cents.
+`vehicle_full_repair_cost_text` | string | Localized formatted total price.
+`vehicle_full_repair_time` | number | Total quoted duration in turns, capped at three hours.
+`vehicle_full_repair_time_text` | string | Localized approximate capped duration.
+`vehicle_full_repair_status` | string | Current quote or service state.
 
-Possible `vehicle_part_repair_status` values are `quoted`, `cancelled`, `no_vehicle`, `no_damage`, `no_value`, `repairing`, `complete`, and `invalidated`.  Dialogue text can use tags such as `<npc_val:vehicle_part_repair_cost_text>` and conditions can read the numeric variables with math syntax such as `value_or( n_vehicle_part_repair_selection_valid, 0 ) > 0`.
+Possible `vehicle_full_repair_status` values are `quoted`, `cancelled`, `no_vehicle`, `no_repairs`, `no_value`, `repairing`, `complete`, and `invalidated`.  Zero-value eligible parts are restored as part of an otherwise payable order.  A vehicle with only zero-value eligible parts returns `no_value`.
 
-The quote is the pristine base item's post-Cataclysm value multiplied by the exact damage ratio and the configured multiplier, rounded up to the next cent.  Cargo, fuel, battery charge, and other contents are excluded.  Duration uses the repair NPC's vehicle-part installation/repair times and applicable fault fixes.
-
-`start_vehicle_part_repair` validates the quote and starts the interruptible repair activity.  It should only be called from the successful branch of the payment effect.  The part is changed only after the activity completes and its saved identity, mount point, damage, degradation, and faults are validated again.  Completion clears all faults, permanent degradation, and damage.  Interruption or invalidation leaves the part unchanged and credits the full quoted price back through that NPC's debt to the avatar.
+The quote stores an internal snapshot of every real installed part's index, type, mount point, damage, degradation, and faults.  `start_vehicle_full_repair` validates the complete snapshot before starting the interruptible activity, and completion validates it again before changing any part.  On success all quoted parts are restored and the vehicle is refreshed once.  Interruption or any intervening part change leaves the entire vehicle untouched and credits the full quote back through the NPC's debt to the avatar.
 
 ```json
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_EXAMPLE_START_VEHICLE_PART_REPAIR",
-    "effect": "start_vehicle_part_repair"
+    "id": "EOC_EXAMPLE_START_VEHICLE_FULL_REPAIR",
+    "effect": "start_vehicle_full_repair"
   },
   {
-    "text": "Repair it.",
+    "text": "Refurbish the entire vehicle.",
     "topic": "TALK_DONE",
-    "condition": { "math": [ "value_or( n_vehicle_part_repair_selection_valid, 0 ) > 0" ] },
+    "condition": { "math": [ "value_or( n_vehicle_full_repair_selection_valid, 0 ) > 0" ] },
     "effect": {
-      "u_spend_cash": { "npc_val": "vehicle_part_repair_cost" },
-      "true_eocs": "EOC_EXAMPLE_START_VEHICLE_PART_REPAIR"
+      "u_spend_cash": { "npc_val": "vehicle_full_repair_cost" },
+      "true_eocs": "EOC_EXAMPLE_START_VEHICLE_FULL_REPAIR"
     }
   }
 ]
 ```
 
-`ACT_VEHICLE_PART_REPAIR_SERVICE` is an implementation activity that requires the repair NPC's character ID.  Do not start it directly with `u_assign_activity`; use `start_vehicle_part_repair`.  Other `vehicle_part_repair_*` values stored on the target vehicle are internal order snapshots and are not part of the JSON interface.
+The whole-vehicle service continues to use `ACT_VEHICLE_PART_REPAIR_SERVICE`; component repair orders created by `select_vehicle_part_service` carry their own vehicle snapshot and payment data.
 
 #### Behavior / AI
 

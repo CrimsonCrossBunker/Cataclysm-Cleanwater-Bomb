@@ -95,6 +95,10 @@ public class CataclysmDDA extends SDLActivity {
     private FrameLayout buttonEditorContainer;
     private boolean deleteButtonMode = false;
 
+    public String getUserDirectory() {
+        return StoragePaths.getUserDirectory(getApplicationContext()).getAbsolutePath();
+    }
+
     // libmain.so must load first so cata_allocator binds before SDL's malloc.
     // SDL3 dlsym's SDL_main from getMainSharedObject(), which we point at libmain.so.
     @Override

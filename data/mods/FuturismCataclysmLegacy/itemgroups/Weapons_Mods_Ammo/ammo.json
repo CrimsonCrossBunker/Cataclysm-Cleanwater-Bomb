@@ -1,0 +1,20 @@
+[
+  {
+    "type": "item_group",
+    "id": "ammo_pistol_milspec",
+    "copy-from": "ammo_pistol_milspec",
+    "extend": { "items": [ { "item": "fcl_5x50dart", "prob": 30 }, { "item": "fcl_5x50heavy", "prob": 20 } ] }
+  },
+  {
+    "id": "ammo_casings",
+    "type": "item_group",
+    "copy-from": "ammo_casings",
+    "extend": { "items": [ { "item": "fcl_5x50_hull", "prob": 60 } ] }
+  },
+  {
+    "id": "ammo_casings_milspec",
+    "type": "item_group",
+    "copy-from": "ammo_casings_milspec",
+    "extend": { "items": [ { "item": "fcl_5x50_hull", "prob": 10, "count": [ 1, 30 ] } ] }
+  }
+]
