@@ -15,6 +15,7 @@
 #include "action.h"
 #include "activity_actor_definitions.h"
 #include "advanced_inv.h"
+#include "android_ui_mode.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
 #include "avatar.h"
@@ -2582,7 +2583,7 @@ static const std::set<action_id> host_ui_actions = {
 #endif
 
 #if defined(__ANDROID__)
-static void manage_android_hud()
+static void manage_android_buttons()
 {
     JNIEnv *env = ( JNIEnv * )GetAndroidJNIEnv();
     jobject activity = ( jobject )GetAndroidActivity();
@@ -2594,7 +2595,7 @@ static void manage_android_hud()
         env->DeleteLocalRef( activity );
         return;
     }
-    jmethodID method_id = env->GetMethodID( clazz, "showAndroidHudManager", "()V" );
+    jmethodID method_id = env->GetMethodID( clazz, "showButtonManage", "()V" );
     if( env->ExceptionCheck() ) {
         env->ExceptionClear();
     }
@@ -2611,11 +2612,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
 {
 #if defined(__ANDROID__)
-    // Android HUD management is a Java-side overlay.  Handle it before
+    // Android button management is a Java-side screen.  Handle it before
     // touching map/terrain or movement-mode state; the main-menu path can be
     // entered while those world objects are not ready for a regular action.
     if( act == ACTION_MANAGE_ANDROID_EXTRA_BUTTONS ) {
-        manage_android_hud();
+        manage_android_buttons();
         return false;
     }
 #endif
@@ -3457,6 +3458,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
 
                 const tripoint_bub_ms pos = player_character.pos_bub();
+                const bool has_vehicle_ladder = here.has_vehicle_ladder_at( pos );
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
                         here.vehicle_ladder_destination( pos, -1 ) ) {
                     if( here.is_open_air( *ladder_dest ) &&
@@ -3478,6 +3480,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         pldrive( tripoint_rel_ms::below );
                         break;
                     }
+                }
+
+                if( has_vehicle_ladder ) {
+                    add_msg( m_info, _( "You can't climb down any farther from here." ) );
+                    break;
                 }
 
                 if( !player_character.in_vehicle ) {

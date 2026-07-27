@@ -46,6 +46,8 @@ static const morale_type morale_perm_debug( "morale_perm_debug" );
 static const morale_type morale_perm_filthy( "morale_perm_filthy" );
 static const morale_type morale_perm_masochist( "morale_perm_masochist" );
 static const morale_type morale_perm_numb( "morale_perm_numb" );
+static const morale_type morale_perm_emotionalvolatility( "morale_perm_emotionalvolatility" );
+static const morale_type morale_perm_emotionalflatness( "morale_perm_emotionalflatness" );
 static const morale_type morale_perm_optimist( "morale_perm_optimist" );
 static const morale_type morale_perm_radiophile( "morale_perm_radiophile" );
 
@@ -58,6 +60,8 @@ static const trait_id trait_LEAVES3( "LEAVES3" );
 static const trait_id trait_MASOCHIST( "MASOCHIST" );
 static const trait_id trait_MASOCHIST_MED( "MASOCHIST_MED" );
 static const trait_id trait_NUMB( "NUMB" );
+static const trait_id trait_EMOTIONALVOLATILITY( "EMOTIONALVOLATILITY" );
+static const trait_id trait_EMOTIONALFLATNESS( "EMOTIONALFLATNESS" );
 static const trait_id trait_OPTIMISTIC( "OPTIMISTIC" );
 static const trait_id trait_RADIOPHILE( "RADIOPHILE" );
 static const trait_id trait_ROOTS1( "ROOTS1" );
@@ -74,6 +78,8 @@ bool is_permanent_morale( const morale_type &id )
             morale_perm_optimist,
             morale_perm_badtemper,
             morale_perm_numb,
+            morale_perm_emotionalvolatility,
+            morale_perm_emotionalflatness,
             morale_perm_masochist,
             morale_perm_constrained,
             morale_perm_filthy,
@@ -129,6 +135,9 @@ static const morale_mult optimist( 1.2, 0.8 );
 static const morale_mult badtemper( 0.8, 1.2 );
 // Numb characters have trouble feeling anything
 static const morale_mult numb( 0.25, 0.25 );
+// Emotional trait will apply the multiplication or division of 2.
+static const morale_mult emotionalvolatility( 2, 2 );
+static const morale_mult emotionalflatness( 0.5, 0.5 );
 // Prozac reduces overall negative morale by 75%.
 static const morale_mult prozac( 1.0, 0.25 );
 // The bad prozac effect reduces good morale by 75%.
@@ -280,6 +289,12 @@ player_morale::player_morale() :
     const auto set_numb = []( player_morale * pm, int bonus ) {
         pm->set_permanent( morale_perm_numb, bonus, nullptr );
     };
+    const auto set_emotionalvolatility = []( player_morale * pm, int bonus ) {
+        pm->set_permanent( morale_perm_emotionalvolatility, bonus, nullptr );
+    };
+    const auto set_emotionalflatness = []( player_morale * pm, int bonus ) {
+        pm->set_permanent( morale_perm_emotionalflatness, bonus, nullptr );
+    };
     const auto update_constrained = []( player_morale * pm ) {
         pm->update_constrained_penalty();
     };
@@ -310,6 +325,20 @@ player_morale::player_morale() :
     },
     [set_numb]( player_morale * pm ) {
         set_numb( pm, 0 );
+    } );
+    mutations[trait_EMOTIONALVOLATILITY] =
+    mutation_data( [set_emotionalvolatility]( player_morale * pm ) {
+        set_emotionalvolatility( pm, 1 );
+    },
+    [set_emotionalvolatility]( player_morale * pm ) {
+        set_emotionalvolatility( pm, 0 );
+    } );
+    mutations[trait_EMOTIONALFLATNESS] =
+    mutation_data( [set_emotionalflatness]( player_morale * pm ) {
+        set_emotionalflatness( pm, -1 );
+    },
+    [set_emotionalflatness]( player_morale * pm ) {
+        set_emotionalflatness( pm, 0 );
     } );
     mutations[trait_FLOWERS]       = mutation_data( update_constrained );
     mutations[trait_ROOTS1]        = mutation_data( update_constrained );
@@ -420,6 +449,12 @@ morale_mult player_morale::get_temper_mult() const
     }
     if( has( morale_perm_numb ) ) {
         mult *= morale_mults::numb;
+    }
+    if( has( morale_perm_emotionalvolatility ) ) {
+        mult *= morale_mults::emotionalvolatility;
+    }
+    if( has( morale_perm_emotionalflatness ) ) {
+        mult *= morale_mults::emotionalflatness;
     }
 
     return mult;

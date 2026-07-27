@@ -2378,10 +2378,20 @@ void Item_factory::check_definitions() const
         if( !type->firing_requirements.empty() ) {
             if( type->gun ) {
                 if( type->gun->energy_drain > 0_kJ ) {
-                    msg += "firing_requirements and non-zero energy_drain are mutually exclusive\n";
+                    if( !type->has_flag( flag_FIRING_EXT_POWER ) ) {
+                        msg += "firing_requirements and non-zero energy_drain are mutually exclusive "
+                               "unless FIRING_EXT_POWER is set\n";
+                    } else if( !type->has_flag( flag_USE_UPS ) &&
+                               !type->has_flag( flag_USES_BIONIC_POWER ) ) {
+                        msg += "FIRING_EXT_POWER requires USE_UPS or USES_BIONIC_POWER\n";
+                    }
                 }
                 if( type->gun->ammo_to_fire != 1 ) {
                     msg += "firing_requirements and non-default ammo_to_fire are mutually exclusive\n";
+                }
+                if( type->has_flag( flag_FIRING_EXT_POWER ) &&
+                    type->gun->energy_drain <= 0_kJ ) {
+                    msg += "FIRING_EXT_POWER requires non-zero energy_drain\n";
                 }
             }
             if( type->tool ) {
@@ -2448,6 +2458,11 @@ void Item_factory::check_definitions() const
                                id );
                 }
             }
+        }
+
+        if( type->has_flag( flag_FIRING_EXT_POWER ) &&
+            ( !type->gun || type->firing_requirements.empty() ) ) {
+            msg += "FIRING_EXT_POWER requires a gun with firing_requirements\n";
         }
 
         // Keys must be modes the mod owns via mode_modifier; flag add+hide of one mode.

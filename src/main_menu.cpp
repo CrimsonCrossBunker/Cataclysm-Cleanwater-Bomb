@@ -939,7 +939,9 @@ bool main_menu::opening_screen()
                         world->active_mod_order.emplace_back( MOD_INFORMATION_dda_tutorial );
                         world_generator->set_active_world( world );
                         try {
-                            g->setup();
+                            if( !g->setup() ) {
+                                break;
+                            }
                         } catch( const std::exception &err ) {
                             debugmsg( "Error: %s", err.what() );
                             break;
@@ -1313,7 +1315,9 @@ bool main_menu::new_character_tab()
 
                 world_generator->set_active_world( world );
                 try {
-                    g->setup();
+                    if( !g->setup() ) {
+                        continue;
+                    }
                 } catch( const std::exception &err ) {
                     debugmsg( "Error: %s", err.what() );
                     continue;
@@ -1359,7 +1363,9 @@ bool main_menu::new_character_tab()
         }
         world_generator->set_active_world( world );
         try {
-            g->setup();
+            if( !g->setup() ) {
+                return false;
+            }
         } catch( const std::exception &err ) {
             debugmsg( "Error: %s", err.what() );
             return false;
@@ -1411,7 +1417,9 @@ bool main_menu::load_game( std::string const &worldname, save_t const &savegame 
     world_generator->set_active_world( world );
 
     try {
-        g->setup();
+        if( !g->setup() ) {
+            return false;
+        }
     } catch( const std::exception &err ) {
         debugmsg( "Error: %s", err.what() );
         return false;

@@ -76,6 +76,7 @@
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
+#include "item_factory.h"
 #include "item_group.h"
 #include "item_location.h"
 #include "item_pocket.h"
@@ -128,6 +129,7 @@
 #include "skill.h"
 #include "sounds.h"
 #include "string_formatter.h"
+#include "submap.h"
 #include "talker.h"
 #include "text_snippets.h"
 #include "translation.h"
@@ -260,6 +262,8 @@ static const activity_id ACT_UNLOAD_LOOT( "ACT_UNLOAD_LOOT" );
 static const activity_id ACT_VEHICLE( "ACT_VEHICLE" );
 static const activity_id ACT_VEHICLE_DECONSTRUCTION( "ACT_VEHICLE_DECONSTRUCTION" );
 static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
+static const activity_id ACT_VEHICLE_PART_INSTALL_SERVICE( "ACT_VEHICLE_PART_INSTALL_SERVICE" );
+static const activity_id ACT_VEHICLE_PART_REMOVE_SERVICE( "ACT_VEHICLE_PART_REMOVE_SERVICE" );
 static const activity_id ACT_VEHICLE_PART_REPAIR_SERVICE( "ACT_VEHICLE_PART_REPAIR_SERVICE" );
 static const activity_id ACT_VEHICLE_REPAIR( "ACT_VEHICLE_REPAIR" );
 static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
@@ -288,6 +292,7 @@ static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_blind( "blind" );
 static const efftype_id effect_controlled( "controlled" );
+static const efftype_id effect_currently_busy( "currently_busy" );
 static const efftype_id effect_docile( "docile" );
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_gliding( "gliding" );
@@ -317,6 +322,7 @@ static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 
 static const furn_str_id furn_f_gunsafe_mj( "f_gunsafe_mj" );
 static const furn_str_id furn_f_gunsafe_ml( "f_gunsafe_ml" );
+static const furn_str_id furn_f_counter( "f_counter" );
 static const furn_str_id furn_f_kiln_empty( "f_kiln_empty" );
 static const furn_str_id furn_f_kiln_metal_empty( "f_kiln_metal_empty" );
 static const furn_str_id furn_f_kiln_portable_empty( "f_kiln_portable_empty" );
@@ -449,6 +455,7 @@ static const zone_type_id zone_type_LOOT_IGNORE_FAVORITES( "LOOT_IGNORE_FAVORITE
 static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
 static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
 static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
+static const zone_type_id zone_type_VEHICLE_SERVICE_OUTPUT( "VEHICLE_SERVICE_OUTPUT" );
 
 static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
 
@@ -3086,7 +3093,8 @@ void move_items_activity_actor::do_turn( player_activity &act, Character &who )
         // This is for hauling across zlevels, remove when going up and down stairs
         // is no longer teleportation
         const tripoint_bub_ms src = target.pos_bub( here );
-        const int distance = src.z() == dest.z() ? std::max( rl_dist( src, dest ), 1 ) : 1;
+        const int distance = src.z() == dest.z() ? std::max( static_cast<int>( trig_dist( src, dest ) ),
+                             1 ) : 1;
         // Yuck, I'm sticking weariness scaling based on activity level here
         const float weary_mult = who.exertion_adjusted_move_multiplier( exertion_level() );
         who.mod_moves( -Pickup::cost_to_move_item( who, newit ) * distance / weary_mult );
@@ -9402,7 +9410,7 @@ void tree_communion_activity_actor::do_turn( player_activity &act, Character &wh
                         who.remove_effect( effect_social_dissatisfied );
                     }
                     if( ( who.has_flag( json_flag_SOCIAL1 ) || who.has_flag( json_flag_SOCIAL2 ) ) &&
-                        !who.has_effect( effect_social_satisfied ) ) {
+                        !who.has_effect( effect_social_satisfied ) && !who.has_flag( json_flag_PSYCHOPATH ) ) {
                         who.add_effect( effect_social_satisfied, 3_hours, false, 1 );
                     }
                     if( ( who.has_flag( json_flag_ASOCIAL1 ) || who.has_flag( json_flag_ASOCIAL2 ) ) &&
@@ -10389,6 +10397,50 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
 
     map &here = get_map();
 
+    const ter_t &terrain = here.ter( plant_position ).obj();
+    if( terrain.terrain_growth ) {
+        const ret_val<void> can_fert = multi_farm_activity_actor::can_fertilize( who,
+                                       plant_position );
+        if( !can_fert.success() ) {
+            add_msg( m_info, can_fert.str() );
+            act.set_to_null();
+            return;
+        }
+        const float crop_growth_speed = ::get_option<float>( "CROP_GROWTH_SPEED" );
+        const double survival_level = who.get_skill_level( skill_survival );
+        const double fertilizer_quality = fertilizer->fertilizer_quality;
+        const double reduction_pct = std::min(
+                                         ( fertilizer_base_reduction + fertilizer_survival_bonus * survival_level ) *
+                                         fertilizer_quality,
+                                         fertilizer_max_reduction );
+        const time_duration effective_reduction = terrain.terrain_growth->growth_time * reduction_pct;
+        const time_duration real_reduction = terrain.terrain_growth->growth_multiplier > 0.0f &&
+                                             crop_growth_speed > 0.0f ?
+                                             effective_reduction /
+                                             ( terrain.terrain_growth->growth_multiplier * crop_growth_speed ) :
+                                             0_seconds;
+
+        std::list<item> planted;
+        if( fertilizer->count_by_charges() ) {
+            planted = who.use_charges( fertilizer, 1 );
+        } else {
+            planted = who.use_amount( fertilizer, 1 );
+        }
+        if( planted.empty() ) {
+            debugmsg( "Failed to consume fertilizer %s", fertilizer.c_str() );
+            act.set_to_null();
+            return;
+        }
+
+        terrain_growth_state growth_state;
+        growth_state.fertilized_at = calendar::turn - real_reduction;
+        here.set_terrain_growth( plant_position, growth_state );
+        add_msg( m_info, _( "You fertilize the %s with the %s." ), terrain.name(),
+                 planted.front().tname() );
+        act.set_to_null();
+        return;
+    }
+
     // Can't use item_stack::only_item() since there might be fertilizer
     map_stack items = here.i_at( plant_position );
     const map_stack::iterator seed = std::find_if( items.begin(), items.end(), []( const item & it ) {
@@ -10551,6 +10603,23 @@ ret_val<void> multi_farm_activity_actor::can_fertilize( Character &,
         const tripoint_bub_ms &tile )
 {
     map &here = get_map();
+    // Synchronize terrain growth before deciding whether an existing terrain
+    // growth state means the tile is still waiting on fertilizer.
+    here.grow_terrain_plant( tile );
+
+    const ter_t &terrain = here.ter( tile ).obj();
+    if( terrain.terrain_growth ) {
+        if( here.get_terrain_growth( tile ) != nullptr ) {
+            return ret_val<void>::make_failure( _( "The %s has already been fertilized." ),
+                                                terrain.name() );
+        }
+        if( !terrain.terrain_growth->fertilize_seasons.empty() &&
+            terrain.terrain_growth->fertilize_seasons.count( season_of_year( calendar::turn ) ) == 0 ) {
+            return ret_val<void>::make_failure(
+                       _( "The %s can only be fertilized in the correct season." ), terrain.name() );
+        }
+        return ret_val<void>::make_success();
+    }
     if( !here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, tile ) ) {
         return ret_val<void>::make_failure( _( "Tile isn't a plant" ) );
     }
@@ -11616,8 +11685,14 @@ bool unload_loot_activity_actor::stage_think( player_activity &act, Character &y
         }
 
         //nothing to sort?
-        const std::optional<vpart_reference> ovp = here.veh_at( src_bub ).cargo();
-        if( ( !ovp || ovp->items().empty() ) && here.i_at( src_bub ).empty() ) {
+        bool cargo_empty = true;
+        for( const vpart_reference &vpr : zone_sorting::cargo_parts_at( src_bub ) ) {
+            if( !vpr.items().empty() ) {
+                cargo_empty = false;
+                break;
+            }
+        }
+        if( cargo_empty && here.i_at( src_bub ).empty() ) {
             continue;
         }
 
@@ -11658,8 +11733,6 @@ void unload_loot_activity_actor::stage_do( player_activity &, Character &you )
     zone_sorting::unload_sort_options zone_unload_options = zone_sorting::set_unload_options( you, src,
             false );
 
-    const std::optional<vpart_reference> vp = here.veh_at( src_bub ).cargo();
-
     //Skip items that have already been processed
     for( auto it = items.begin() + num_processed; it < items.end(); ++it ) {
 
@@ -11680,8 +11753,9 @@ void unload_loot_activity_actor::stage_do( player_activity &, Character &you )
         const std::unordered_set<tripoint_abs_ms> dest_set;
 
         zone_sorting::unload_item( you, src,
-                                   zone_unload_options, it->second ? vp : std::nullopt, it->first, dest_set,
-                                   num_processed );
+                                   zone_unload_options,
+                                   it->second ? zone_sorting::cargo_part_from_index( src_bub, *it->second ) : std::nullopt,
+                                   it->first, dest_set, num_processed );
 
         if( you.get_moves() <= 0 ) {
             return;
@@ -14052,14 +14126,76 @@ void vehicle_part_repair_service_activity_actor::start( player_activity &act, Ch
     act.index = mechanic_id.get_value();
 }
 
+static bool vehicle_service_part_needs_repair( const vehicle_part &part )
+{
+    return !part.removed && !part.is_fake && part.max_damage() > 0 &&
+           ( part.damage() > 0 || part.degradation() > 0 || !part.faults().empty() );
+}
+
+static void restore_vehicle_service_part( vehicle_part &part )
+{
+    item restored_base( part.get_base() );
+    restored_base.faults.clear();
+    restored_base.set_degradation( 0 );
+    restored_base.force_set_damage( 0 );
+    part.set_base( std::move( restored_base ) );
+}
+
+void vehicle_part_repair_service_activity_actor::settle_failed_part_order( Character &,
+        const std::string &status )
+{
+    if( npc *mechanic = g->find_npc( mechanic_id ) ) {
+        if( paid_cost > 0 ) {
+            mechanic->op_of_u.owed += paid_cost;
+        }
+        mechanic->set_value( "vehicle_part_service_status", status );
+        mechanic->remove_effect( effect_currently_busy );
+    }
+}
+
 void vehicle_part_repair_service_activity_actor::finish( player_activity &act, Character &who )
 {
     npc *mechanic = g->find_npc( mechanic_id );
-    if( mechanic != nullptr ) {
-        talk_function::finish_vehicle_part_repair( *mechanic );
-    } else {
+    if( full_vehicle && mechanic != nullptr ) {
+        talk_function::finish_vehicle_full_repair( *mechanic );
+    } else if( full_vehicle ) {
         who.add_msg_if_player( m_bad,
                                _( "The mechanic is no longer available, so the vehicle part was not repaired." ) );
+    } else {
+        map &here = get_map();
+        const optional_vpart_position ovp = here.veh_at( vehicle_pos );
+        vehicle *target = ovp ? &ovp->vehicle() : nullptr;
+        const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) :
+                                   nullptr;
+        const bool valid_target = target != nullptr && target->pos_abs() == vehicle_pos &&
+                                  marker != nullptr && marker->is_str() && marker->str() == "yes" &&
+                                  target->is_owned_by( get_avatar() ) &&
+                                  !target->player_in_control( here, get_avatar() ) &&
+                                  talk_function::vehicle_service_state_snapshot( *target ) == vehicle_snapshot;
+        const bool valid_part = valid_target && part_index >= 0 && part_index < target->part_count() &&
+                                vehicle_service_part_needs_repair( target->part( part_index ) );
+        if( !valid_part ) {
+            settle_failed_part_order( who, "invalidated" );
+            who.add_msg_if_player( m_bad,
+                                   _( "The selected vehicle part changed while repairs were underway.  "
+                                      "The order was canceled and fully credited." ) );
+            act.set_to_null();
+            return;
+        }
+
+        const std::string part_name = target->part( part_index ).name();
+        const std::string vehicle_name = target->name;
+        restore_vehicle_service_part( target->part( part_index ) );
+        target->refresh();
+        if( mechanic != nullptr ) {
+            mechanic->set_value( "vehicle_part_service_status", "complete" );
+            mechanic->remove_effect( effect_currently_busy );
+            who.add_msg_if_player( m_good, _( "%1$s completely repairs the %2$s's %3$s." ),
+                                   mechanic->get_name(), vehicle_name, part_name );
+        } else {
+            who.add_msg_if_player( m_good, _( "The %1$s's %2$s is completely repaired." ),
+                                   vehicle_name, part_name );
+        }
     }
     act.set_to_null();
 }
@@ -14067,11 +14203,15 @@ void vehicle_part_repair_service_activity_actor::finish( player_activity &act, C
 void vehicle_part_repair_service_activity_actor::canceled( player_activity &, Character &who )
 {
     npc *mechanic = g->find_npc( mechanic_id );
-    if( mechanic != nullptr ) {
-        talk_function::cancel_vehicle_part_repair( *mechanic );
-    } else {
+    if( full_vehicle && mechanic != nullptr ) {
+        talk_function::cancel_vehicle_full_repair( *mechanic );
+    } else if( full_vehicle ) {
         who.add_msg_if_player( m_bad,
                                _( "The mechanic is no longer available, so the repair service could not be settled." ) );
+    } else {
+        settle_failed_part_order( who, "cancelled" );
+        who.add_msg_if_player( m_info,
+                               _( "The vehicle repair is canceled and the order is fully credited." ) );
     }
 }
 
@@ -14080,6 +14220,11 @@ void vehicle_part_repair_service_activity_actor::serialize( JsonOut &jsout ) con
     jsout.start_object();
     jsout.member( "mechanic_id", mechanic_id );
     jsout.member( "repair_time", initial_wait_time );
+    jsout.member( "full_vehicle", full_vehicle );
+    jsout.member( "vehicle_pos", vehicle_pos );
+    jsout.member( "vehicle_snapshot", vehicle_snapshot );
+    jsout.member( "part_index", part_index );
+    jsout.member( "paid_cost", paid_cost );
     jsout.end_object();
 }
 
@@ -14090,6 +14235,379 @@ std::unique_ptr<activity_actor> vehicle_part_repair_service_activity_actor::dese
     JsonObject data = jsin.get_object();
     data.read( "mechanic_id", actor.mechanic_id );
     data.read( "repair_time", actor.initial_wait_time );
+    data.read( "full_vehicle", actor.full_vehicle );
+    data.read( "vehicle_pos", actor.vehicle_pos );
+    data.read( "vehicle_snapshot", actor.vehicle_snapshot );
+    data.read( "part_index", actor.part_index );
+    data.read( "paid_cost", actor.paid_cost );
+    return actor.clone();
+}
+
+void vehicle_part_install_service_activity_actor::start( player_activity &act, Character &who )
+{
+    wait_activity_actor::start( act, who );
+    act.index = mechanic_id.get_value();
+}
+
+void vehicle_part_install_service_activity_actor::settle_failed_order( Character &who,
+        const std::string &status )
+{
+    npc *mechanic = g->find_npc( mechanic_id );
+    if( mechanic != nullptr ) {
+        if( paid_cost > 0 ) {
+            mechanic->op_of_u.owed += paid_cost;
+        }
+        if( !reserved_part.is_null() ) {
+            if( supplied_by_mechanic ) {
+                reserved_part.set_owner( *mechanic );
+                bool returned_to_shop = false;
+                if( mechanic->is_shopkeeper() ) {
+                    zone_manager &zones = zone_manager::get_manager();
+                    const std::unordered_set<tripoint_bub_ms> shop_tiles =
+                        zones.get_point_set_loot( mechanic->pos_abs(), PICKUP_RANGE,
+                                                  mechanic->get_fac_id() );
+                    if( !shop_tiles.empty() ) {
+                        get_map().add_item_or_charges( *shop_tiles.begin(), reserved_part );
+                        returned_to_shop = true;
+                    }
+                }
+                if( !returned_to_shop ) {
+                    mechanic->i_add( reserved_part );
+                }
+            } else {
+                who.i_add_or_drop( reserved_part );
+            }
+        }
+        mechanic->set_value( "vehicle_part_service_status", status );
+        mechanic->remove_effect( effect_currently_busy );
+    } else if( !reserved_part.is_null() ) {
+        who.i_add_or_drop( reserved_part );
+    }
+    reserved_part = item();
+}
+
+void vehicle_part_install_service_activity_actor::finish( player_activity &act, Character &who )
+{
+    map &here = get_map();
+    const optional_vpart_position ovp = here.veh_at( vehicle_pos );
+    vehicle *target = ovp ? &ovp->vehicle() : nullptr;
+    const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) :
+                               nullptr;
+    const bool valid_target = target != nullptr && target->pos_abs() == vehicle_pos &&
+                              marker != nullptr && marker->is_str() && marker->str() == "yes" &&
+                              target->is_owned_by( get_avatar() ) &&
+                              !target->player_in_control( here, get_avatar() ) &&
+                              talk_function::vehicle_service_state_snapshot( *target ) == vehicle_snapshot;
+    const bool valid_part = part_id.is_valid() && !reserved_part.is_null() &&
+                            reserved_part.typeId() == part_id->base_item;
+    const std::optional<std::string> denial = valid_target && valid_part ?
+            veh_interact::service_installation_denial( *target, mount, part_id.obj() ) :
+            std::optional<std::string>( _( "The installation order is no longer valid." ) );
+
+    if( !valid_target || !valid_part || denial ) {
+        settle_failed_order( who, "invalidated" );
+        who.add_msg_if_player( m_bad,
+                               _( "The vehicle changed while the installation was underway.  "
+                                  "The order was canceled and fully credited." ) );
+        act.set_to_null();
+        return;
+    }
+
+    vehicle_part installed( part_id, item( reserved_part ) );
+    if( part_id->variants.count( variant ) > 0 ) {
+        installed.variant = variant;
+    }
+    installed.direction = units::from_degrees( direction_degrees );
+    const int installed_index = target->install_part( here, mount, std::move( installed ) );
+    if( installed_index < 0 ) {
+        settle_failed_order( who, "invalidated" );
+        who.add_msg_if_player( m_bad,
+                               _( "The vehicle part could not be installed.  The order was fully credited." ) );
+        act.set_to_null();
+        return;
+    }
+
+    reserved_part = item();
+    if( disable_flyable ) {
+        target->set_flyable( false );
+    }
+    here.add_vehicle_to_cache( target );
+    if( npc *mechanic = g->find_npc( mechanic_id ) ) {
+        mechanic->set_value( "vehicle_part_service_status", "complete" );
+        mechanic->remove_effect( effect_currently_busy );
+        who.add_msg_if_player( m_good, _( "%1$s installs the %2$s into the %3$s." ),
+                               mechanic->get_name(), target->part( installed_index ).name(), target->name );
+    } else {
+        who.add_msg_if_player( m_good, _( "The %1$s is installed into the %2$s." ),
+                               target->part( installed_index ).name(), target->name );
+    }
+    act.set_to_null();
+}
+
+void vehicle_part_install_service_activity_actor::canceled( player_activity &, Character &who )
+{
+    settle_failed_order( who, "cancelled" );
+    who.add_msg_if_player( m_info,
+                           _( "The vehicle installation is canceled and the order is fully credited." ) );
+}
+
+void vehicle_part_install_service_activity_actor::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+    jsout.member( "mechanic_id", mechanic_id );
+    jsout.member( "install_time", initial_wait_time );
+    jsout.member( "vehicle_pos", vehicle_pos );
+    jsout.member( "vehicle_snapshot", vehicle_snapshot );
+    jsout.member( "mount", mount );
+    jsout.member( "part_id", part_id );
+    jsout.member( "reserved_part", reserved_part );
+    jsout.member( "supplied_by_mechanic", supplied_by_mechanic );
+    jsout.member( "paid_cost", paid_cost );
+    jsout.member( "variant", variant );
+    jsout.member( "direction_degrees", direction_degrees );
+    jsout.member( "disable_flyable", disable_flyable );
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> vehicle_part_install_service_activity_actor::deserialize(
+    JsonValue &jsin )
+{
+    vehicle_part_install_service_activity_actor actor;
+    JsonObject data = jsin.get_object();
+    data.read( "mechanic_id", actor.mechanic_id );
+    data.read( "install_time", actor.initial_wait_time );
+    data.read( "vehicle_pos", actor.vehicle_pos );
+    data.read( "vehicle_snapshot", actor.vehicle_snapshot );
+    data.read( "mount", actor.mount );
+    data.read( "part_id", actor.part_id );
+    data.read( "reserved_part", actor.reserved_part );
+    data.read( "supplied_by_mechanic", actor.supplied_by_mechanic );
+    data.read( "paid_cost", actor.paid_cost );
+    data.read( "variant", actor.variant );
+    data.read( "direction_degrees", actor.direction_degrees );
+    data.read( "disable_flyable", actor.disable_flyable );
+    return actor.clone();
+}
+
+namespace
+{
+class vehicle_service_remove_handler : public DefaultRemovePartHandler
+{
+    public:
+        void add_item_or_charges( map *, const tripoint_bub_ms &, item, bool ) override {
+            // Outputs are captured before removal and placed on the service counter afterwards.
+        }
+};
+
+void collect_vehicle_service_removal_side_outputs( map &here, vehicle &veh, const int part_index,
+        const bool include_base, std::vector<item> &outputs, std::set<int> &affected_parts )
+{
+    if( part_index < 0 || part_index >= veh.part_count() ||
+        !affected_parts.insert( part_index ).second ) {
+        return;
+    }
+    vehicle_part &part = veh.part( part_index );
+    if( part.removed || part.is_fake ) {
+        return;
+    }
+    if( include_base ) {
+        outputs.push_back( veh.part_to_item( here, part ) );
+    }
+    const std::vector<item> &tools = veh.get_tools( part );
+    outputs.insert( outputs.end(), tools.begin(), tools.end() );
+    vehicle_stack contents = veh.get_items( part );
+    outputs.insert( outputs.end(), contents.begin(), contents.end() );
+
+    const auto collect_dependent = [&]( const std::string & parent_flag,
+    const std::string & child_flag ) {
+        if( !part.info().has_flag( parent_flag ) ) {
+            return;
+        }
+        const int dependent = veh.part_with_feature( part.mount, child_flag, false );
+        if( dependent >= 0 ) {
+            collect_vehicle_service_removal_side_outputs( here, veh, dependent, true,
+                    outputs, affected_parts );
+        }
+    };
+    collect_dependent( "WINDOW", "CURTAIN" );
+    collect_dependent( "SEAT", "SEATBELT" );
+    collect_dependent( "BATTERY_MOUNT", "NEEDS_BATTERY_MOUNT" );
+    collect_dependent( "HANDHELD_BATTERY_MOUNT", "NEEDS_HANDHELD_BATTERY_MOUNT" );
+}
+} // namespace
+
+void vehicle_part_remove_service_activity_actor::start( player_activity &act, Character &who )
+{
+    wait_activity_actor::start( act, who );
+    act.index = mechanic_id.get_value();
+}
+
+void vehicle_part_remove_service_activity_actor::settle_failed_order( Character &,
+        const std::string &status )
+{
+    if( npc *mechanic = g->find_npc( mechanic_id ) ) {
+        if( paid_cost > 0 ) {
+            mechanic->op_of_u.owed += paid_cost;
+        }
+        mechanic->set_value( "vehicle_part_service_status", status );
+        mechanic->remove_effect( effect_currently_busy );
+    }
+}
+
+void vehicle_part_remove_service_activity_actor::finish( player_activity &act, Character &who )
+{
+    map &here = get_map();
+    npc *mechanic = g->find_npc( mechanic_id );
+    const optional_vpart_position ovp = here.veh_at( vehicle_pos );
+    vehicle *target = ovp ? &ovp->vehicle() : nullptr;
+    const diag_value *marker = target ? target->maybe_get_value( "vehicle_part_repair_target" ) :
+                               nullptr;
+    const bool valid_target = target != nullptr && target->pos_abs() == vehicle_pos &&
+                              marker != nullptr && marker->is_str() && marker->str() == "yes" &&
+                              target->is_owned_by( get_avatar() ) &&
+                              !target->player_in_control( here, get_avatar() ) &&
+                              talk_function::vehicle_service_state_snapshot( *target ) == vehicle_snapshot;
+    const bool valid_part = valid_target && part_index >= 0 && part_index < target->part_count() &&
+                            !veh_interact::service_removal_denial( *target, part_index );
+    const faction_id mechanic_faction = mechanic != nullptr ? mechanic->get_fac_id() : faction_id();
+    const tripoint_bub_ms output_bub = here.get_bub( output_pos );
+    const bool valid_output = mechanic != nullptr && here.inbounds( output_bub ) &&
+                              here.furn( output_bub ) == furn_f_counter &&
+                              zone_manager::get_manager().has( zone_type_VEHICLE_SERVICE_OUTPUT,
+                                      output_pos, mechanic_faction );
+    if( !valid_part || !valid_output ) {
+        settle_failed_order( who, "invalidated" );
+        who.add_msg_if_player( m_bad,
+                               _( "The vehicle or service counter changed while removal was underway.  "
+                                  "The order was canceled and fully credited." ) );
+        act.set_to_null();
+        return;
+    }
+
+    vehicle_part &part = target->part( part_index );
+    const vpart_info &info = part.info();
+    const bool broken = part.is_broken();
+    const bool smash_remove = info.has_flag( "SMASH_REMOVE" );
+    std::vector<item> outputs;
+    std::set<int> affected_parts;
+    collect_vehicle_service_removal_side_outputs( here, *target, part_index, false,
+            outputs, affected_parts );
+    if( broken || smash_remove ) {
+        item_group::ItemList pieces = part.pieces_for_broken_part();
+        outputs.insert( outputs.end(), pieces.begin(), pieces.end() );
+    } else {
+        outputs.push_back( target->removed_part( here, part ) );
+        const double component_success_chance = std::pow( 0.8, part.damage_level() );
+        const double charges_min = std::clamp( component_success_chance, 0.0, 1.0 );
+        const double charges_max = std::clamp( component_success_chance + 0.1, 0.0, 1.0 );
+        for( item salvage : part.get_salvageable() ) {
+            if( salvage.count_by_charges() ) {
+                salvage.charges *= rng_float( charges_min, charges_max );
+                if( salvage.charges > 0 ) {
+                    outputs.push_back( std::move( salvage ) );
+                }
+            } else if( component_success_chance > rng_float( 0.0, 1.0 ) ) {
+                outputs.push_back( std::move( salvage ) );
+            }
+        }
+    }
+
+    const map_stack counter_items = here.i_at( output_bub );
+    units::volume output_volume = 0_ml;
+    for( const item &output : outputs ) {
+        output_volume += output.volume();
+    }
+    const bool counter_has_room = here.can_put_items( output_bub ) &&
+                                  counter_items.size() + outputs.size() <=
+                                  static_cast<size_t>( counter_items.count_limit() ) &&
+                                  output_volume <= counter_items.free_volume() &&
+    std::none_of( outputs.begin(), outputs.end(), []( const item & output ) {
+        return item_is_blacklisted( output.typeId() );
+    } );
+    if( !counter_has_room ) {
+        settle_failed_order( who, "invalidated" );
+        who.add_msg_if_player( m_bad,
+                               _( "The service counter no longer has room for the complete removal order.  "
+                                  "The vehicle was left unchanged and the order was fully credited." ) );
+        act.set_to_null();
+        return;
+    }
+    for( item &output : outputs ) {
+        output.set_owner( get_avatar() );
+    }
+
+    const std::string part_name = part.name();
+    const std::string vehicle_name = target->name;
+    const point_rel_ms part_mount = part.mount;
+    bool removes_entire_vehicle = true;
+    for( int index = 0; index < target->part_count(); ++index ) {
+        const vehicle_part &candidate = target->part( index );
+        if( !candidate.removed && !candidate.is_fake && affected_parts.count( index ) == 0 ) {
+            removes_entire_vehicle = false;
+            break;
+        }
+    }
+    if( removes_entire_vehicle ) {
+        here.destroy_vehicle( target );
+    } else {
+        target->unlink_cables( here, part_mount, get_avatar(), false,
+                               info.location == vpart_location_structure,
+                               info.has_flag( VPFLAG_CABLE_PORTS ) || info.has_flag( VPFLAG_BATTERY ) );
+        vehicle_service_remove_handler handler;
+        target->remove_part( part, handler );
+        target->part_removal_cleanup( here );
+        if( disable_flyable ) {
+            target->set_flyable( false );
+        }
+    }
+
+    for( item &output : outputs ) {
+        here.add_item( output_bub, std::move( output ) );
+    }
+    if( mechanic != nullptr ) {
+        mechanic->set_value( "vehicle_part_service_status", "complete" );
+        mechanic->remove_effect( effect_currently_busy );
+        who.add_msg_if_player( m_good,
+                               _( "%1$s removes the %2$s from the %3$s and places the results on the counter." ),
+                               mechanic->get_name(), part_name, vehicle_name );
+    }
+    act.set_to_null();
+}
+
+void vehicle_part_remove_service_activity_actor::canceled( player_activity &, Character &who )
+{
+    settle_failed_order( who, "cancelled" );
+    who.add_msg_if_player( m_info,
+                           _( "The vehicle part removal is canceled and the order is fully credited." ) );
+}
+
+void vehicle_part_remove_service_activity_actor::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+    jsout.member( "mechanic_id", mechanic_id );
+    jsout.member( "removal_time", initial_wait_time );
+    jsout.member( "vehicle_pos", vehicle_pos );
+    jsout.member( "vehicle_snapshot", vehicle_snapshot );
+    jsout.member( "part_index", part_index );
+    jsout.member( "paid_cost", paid_cost );
+    jsout.member( "output_pos", output_pos );
+    jsout.member( "disable_flyable", disable_flyable );
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> vehicle_part_remove_service_activity_actor::deserialize(
+    JsonValue &jsin )
+{
+    vehicle_part_remove_service_activity_actor actor;
+    JsonObject data = jsin.get_object();
+    data.read( "mechanic_id", actor.mechanic_id );
+    data.read( "removal_time", actor.initial_wait_time );
+    data.read( "vehicle_pos", actor.vehicle_pos );
+    data.read( "vehicle_snapshot", actor.vehicle_snapshot );
+    data.read( "part_index", actor.part_index );
+    data.read( "paid_cost", actor.paid_cost );
+    data.read( "output_pos", actor.output_pos );
+    data.read( "disable_flyable", actor.disable_flyable );
     return actor.clone();
 }
 
@@ -14143,6 +14661,23 @@ void zone_activity_actor::update_vehicle_zone_cache()
     }
 }
 
+// Subsequent same-type items in a sort batch cost 1/divisor of full handling.
+constexpr int zone_sort_batch_discount_divisor = 4;
+// Floor per item so batch handling never becomes free.
+constexpr int zone_sort_batch_min_cost = 10;
+
+int zone_sort_activity_actor::batch_handling_cost( Character &you, const item &it )
+{
+    int cost = you.item_handling_cost( it, true, INVENTORY_HANDLING_PENALTY, -1,
+                                       /*bulk_cost=*/true );
+    if( it.typeId() == last_batch_itype ) {
+        cost = std::max( zone_sort_batch_min_cost, cost / zone_sort_batch_discount_divisor );
+    } else {
+        last_batch_itype = it.typeId();
+    }
+    return cost;
+}
+
 void zone_sort_activity_actor::update_other_activity_items()
 {
     other_activity_items.clear();
@@ -14162,6 +14697,11 @@ void zone_sort_activity_actor::update_other_activity_items()
 
 void zone_sort_activity_actor::do_turn( player_activity &act, Character &you )
 {
+    // A deserialized avatar activity resumes past INIT, so re-establish the
+    // process-local personal-zone freeze before doing any work.
+    if( you.is_avatar() && stage != UNINIT ) {
+        zone_manager::get_manager().freeze_personal_shift();
+    }
     update_other_activity_items();
     // Save viewport state before base call. For NPCs, revert_after_activity()
     // replaces the activity and destroys this actor before returning.
@@ -14174,8 +14714,11 @@ void zone_sort_activity_actor::do_turn( player_activity &act, Character &you )
     // vp_active catches same-turn completion where had_viewport is stale.
     avatar *const av = you.as_avatar();
     const bool vp_active = av != nullptr && av->zone_sort_viewport.active;
-    if( act.is_null() && !you.has_destination() && ( had_viewport || vp_active ) ) {
-        if( !test_mode ) {
+    if( act.is_null() && !you.has_destination() ) {
+        if( you.is_avatar() ) {
+            zone_manager::get_manager().unfreeze_personal_shift();
+        }
+        if( ( had_viewport || vp_active ) && !test_mode ) {
             const int restore_zoom = vp_active ?
                                      av->zone_sort_viewport.saved_zoom : saved_zoom;
             g->set_zoom( restore_zoom );
@@ -14190,6 +14733,9 @@ void zone_sort_activity_actor::do_turn( player_activity &act, Character &you )
 void zone_sort_activity_actor::canceled( player_activity &, Character &you )
 {
     restore_viewport( you );
+    if( you.is_avatar() ) {
+        zone_manager::get_manager().unfreeze_personal_shift();
+    }
 }
 
 void zone_sort_activity_actor::restore_viewport( Character &you )
@@ -14209,6 +14755,9 @@ void zone_sort_activity_actor::stage_init( player_activity &, Character &you )
 {
     zone_manager &mgr = zone_manager::get_manager();
     mgr.cache_avatar_location();
+    if( you.is_avatar() ) {
+        mgr.freeze_personal_shift();
+    }
     coord_set.clear();
     unreachable_sources.clear();
     const faction_id fac = you.get_faction_id();
@@ -14260,6 +14809,7 @@ bool zone_sort_activity_actor::stage_think( player_activity &act, Character &you
     // in stage_do when items are picked up from the new source.
     dropoff_coords.clear();
     picked_up_stuff.clear();
+    distance_fee_charged.clear();
     drag_worst_tile.reset();
 
     // Clear unreachable_sources when position or grab state changed -
@@ -14504,6 +15054,387 @@ void zone_sort_activity_actor::return_items_to_source( Character &you,
     dropoff_coords.clear();
 }
 
+void zone_sort_activity_actor::deliver_picked_items( Character &you,
+        const tripoint_bub_ms &src_bub )
+{
+    map &here = get_map();
+    const zone_manager &mgr = zone_manager::get_manager();
+    const faction_id fac_id = you.get_faction_id();
+    const tripoint_abs_ms abspos = you.pos_abs();
+
+    if( dropoff_coords.empty() || picked_up_stuff.empty() ) {
+        return;
+    }
+
+    auto dest_iter = dropoff_coords.begin();
+    while( dest_iter != dropoff_coords.end() ) {
+        const tripoint_abs_ms drop_dest = *dest_iter;
+        const tripoint_bub_ms drop_bub = here.get_bub( drop_dest );
+        if( here.inbounds( drop_bub ) && !here.is_open_air( drop_bub ) &&
+            ( square_dist( abspos, drop_dest ) <= 1 ||
+              zone_sorting::route_length( you, drop_bub ) != INT_MAX ) ) {
+            auto iter = picked_up_stuff.begin();
+            // Item locations can be invalidated by inventory restacking / charge-merging
+            // between pickup and delivery. Purge stale entries and continue with what remains.
+            auto stale = std::remove_if( picked_up_stuff.begin(), picked_up_stuff.end(),
+            []( const item_location & loc ) {
+                return !loc.get_item();
+            } );
+            if( stale != picked_up_stuff.end() ) {
+                add_msg_debug( debugmode::DF_ACTIVITY,
+                               "zone_sort deliver_picked_items: purged %zu stale item_locations",
+                               static_cast<size_t>( std::distance( stale, picked_up_stuff.end() ) ) );
+                picked_up_stuff.erase( stale, picked_up_stuff.end() );
+            }
+            if( picked_up_stuff.empty() ) {
+                return;
+            }
+            while( iter != picked_up_stuff.end() ) {
+                if( you.get_moves() <= 0 ) { // Ran out of moves dropping stuff
+                    return;
+                }
+
+                // Place item at destination directly. Zone binding
+                // determines the fallback chain: vehicle-only zones skip
+                // ground, everything else tries cargo then ground.
+                const zone_type_id drop_zt = mgr.get_near_zone_type_for_item( **iter,
+                                             drop_dest, 0, fac_id );
+                const bool vehicle_only = drop_zt != zone_type_id::NULL_ID() &&
+                                          mgr.has_vehicle( drop_zt, drop_dest, fac_id ) &&
+                                          !mgr.has_terrain( drop_zt, drop_dest, fac_id );
+                bool placed = false;
+                item copy( **iter );
+                for( const vpart_reference &ovp : zone_sorting::cargo_parts_at( drop_bub ) ) {
+                    if( ovp.vehicle().add_item( here, ovp.part(), copy ) ) {
+                        placed = true;
+                        break;
+                    }
+                }
+                if( !placed && !vehicle_only ) {
+                    item copy( **iter );
+                    item_location ground = here.add_item_or_charges_ret_loc(
+                                               drop_bub, copy, false );
+                    placed = ground.get_item() != nullptr;
+                }
+
+                if( placed ) {
+                    if( square_dist( abspos, drop_dest ) > 1 &&
+                        distance_fee_charged.insert( drop_dest ).second ) {
+                        you.mod_moves( -std::min( 100 * rl_dist( src_bub, drop_bub ), 500 ) );
+                    }
+                    you.mod_moves( -batch_handling_cost( you, **iter ) );
+                    if( const vehicle_cursor *veh_curs = iter->veh_cursor() ) {
+                        vehicle &cart_with_items = veh_curs->veh;
+                        cart_with_items.remove_item( cart_with_items.part( veh_curs->part ), iter->get_item() );
+                    } else if( iter->carrier() ) {
+                        iter->carrier()->i_rem( iter->get_item() );
+                    }
+                    iter = picked_up_stuff.erase( iter );
+                    // dumb. Go through and clear our any now-invalidated item_locations. Then reset iter to the start, to *make sure* we iterate everything.
+                    // Definitely wasteful, but I am not paid enough to figure out a better way.
+                    auto cleanup_iter = picked_up_stuff.begin();
+                    while( cleanup_iter != picked_up_stuff.end() ) {
+                        if( !cleanup_iter->get_item() ) {
+                            cleanup_iter = picked_up_stuff.erase( cleanup_iter );
+                        } else {
+                            cleanup_iter++;
+                        }
+                    }
+                    // Again: Always reset to the start if we dropped stuff.
+                    iter = picked_up_stuff.begin();
+                } else {
+                    iter++; // Failed to drop for some reason?!
+                }
+            }
+            dest_iter = dropoff_coords.erase( dest_iter ); // Done dropping stuff here.
+        } else {
+            dest_iter = dropoff_coords.erase( dest_iter ); // No longer reachable or valid.
+        }
+    }
+}
+
+bool zone_sort_activity_actor::try_adjacent_delivery( Character &you, item &thisitem,
+        const zone_type_id &zt_id,
+        const std::unordered_set<tripoint_abs_ms> &dest_set,
+        const tripoint_bub_ms &src_bub,
+        zone_sorting::zone_items::iterator it )
+{
+    map &here = get_map();
+    const zone_manager &mgr = zone_manager::get_manager();
+    const faction_id fac_id = you.get_faction_id();
+    const tripoint_abs_ms abspos = you.pos_abs();
+    const tripoint_abs_ms src( placement );
+
+    for( const tripoint_abs_ms &dest : dest_set ) {
+        if( dest == src ) {
+            continue;
+        }
+        if( square_dist( abspos, dest ) > 1 ) {
+            continue;
+        }
+        const tripoint_bub_ms dest_bub = here.get_bub( dest );
+        if( !here.inbounds( dest_bub ) || here.is_open_air( dest_bub ) ) {
+            continue;
+        }
+        item copy_thisitem( thisitem );
+        // Vehicle-only zones don't fall back to ground placement.
+        // All other zones (terrain, dual-bound) try cargo first, then ground.
+        // No overflow to adjacent tiles in either case.
+        const bool vehicle_only = mgr.has_vehicle( zt_id, dest, fac_id ) &&
+                                  !mgr.has_terrain( zt_id, dest, fac_id );
+        bool placed = false;
+        for( const vpart_reference &ovp : zone_sorting::cargo_parts_at( dest_bub ) ) {
+            if( ovp.vehicle().add_item( here, ovp.part(), copy_thisitem ) ) {
+                placed = true;
+                break;
+            }
+        }
+        if( !placed && !vehicle_only ) {
+            item_location ground = here.add_item_or_charges_ret_loc( dest_bub, copy_thisitem, false );
+            placed = ground.get_item() != nullptr;
+        }
+        if( !placed ) {
+            continue;
+        }
+        you.mod_moves( -batch_handling_cost( you, copy_thisitem ) );
+        if( it->second ) {
+            if( const std::optional<vpart_reference> src_vp = zone_sorting::cargo_part_from_index(
+                        src_bub, *it->second ) ) {
+                src_vp->vehicle().remove_item( src_vp->part(), &thisitem );
+            }
+        } else {
+            here.i_rem( src_bub, &thisitem );
+        }
+        num_processed--;
+        return true;
+    }
+    return false;
+}
+
+std::optional<item_location> zone_sort_activity_actor::pick_up_item( Character &you,
+        item &thisitem,
+        zone_sorting::zone_items::iterator it,
+        const tripoint_bub_ms &src_bub,
+        bool &cart_or_carry_blocked,
+        bool &drag_gate_fired,
+        bool &knockdown_gate_fired )
+{
+    map &here = get_map();
+    item_location thisitem_loc;
+    bool cart_at_source = false;
+    if( you.is_avatar() && you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
+        const tripoint_bub_ms cart_position = you.pos_bub() + you.as_avatar()->grab_point;
+        cart_at_source = ( cart_position == src_bub );
+    }
+
+    if( cart_at_source && it->second ) {
+        // Virtual pickup: cart IS the transport. Leave item in cart cargo,
+        // just create an item_location pointing at the original.
+        const std::optional<vpart_reference> src_vp = zone_sorting::cargo_part_from_index(
+                    src_bub, *it->second );
+        thisitem_loc = item_location( vehicle_cursor( src_vp->vehicle(), src_vp->part_index() ),
+                                      &thisitem );
+        virtual_pickup_active = true;
+        you.mod_moves( -batch_handling_cost( you, thisitem ) );
+        return thisitem_loc;
+    }
+
+    // Physical pickup: copy item to cart or inventory, remove from source.
+    item copy_thisitem( thisitem );
+    if( you.is_avatar() && you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
+        const tripoint_bub_ms cart_position = you.pos_bub() + you.as_avatar()->grab_point;
+        if( std::optional<vpart_reference> ovp = here.veh_at( cart_position ).cargo() ) {
+            vehicle &veh = ovp->vehicle();
+            bool drag_ok = true;
+            if( drag_worst_tile ) {
+                units::mass projected = veh.total_mass( here ) + copy_thisitem.weight();
+                if( veh.drag_str_req_at( here, *drag_worst_tile, projected ) >
+                    you.get_arm_str() ) {
+                    drag_ok = false;
+                }
+            }
+            if( !drag_ok ) {
+                // Cart would be too heavy to drag - stop loading.
+                cart_or_carry_blocked = true;
+                drag_gate_fired = true;
+                return std::nullopt;
+            }
+            std::optional<vehicle_stack::iterator> vehstack = veh.add_item( here, ovp->part(),
+                    copy_thisitem );
+            if( vehstack ) {
+                thisitem_loc = item_location( vehicle_cursor( veh, ovp->part_index() ),
+                                              &*vehstack.value() );
+            }
+        }
+    }
+    if( !thisitem_loc ) {
+        if( !you.is_avatar() || you.as_avatar()->get_grab_type() != object_type::VEHICLE ) {
+            // Knock-down gate: never pick up items so heavy they would
+            // cause the character to collapse (exceed max_pickup_capacity).
+            // TODO: handle these items via hauling instead of skipping them.
+            if( you.weight_carried() + copy_thisitem.weight() > you.max_pickup_capacity() ) {
+                cart_or_carry_blocked = true;
+                knockdown_gate_fired = true;
+                return std::nullopt;
+            }
+            // No-grab weight gate: stop picking up when over capacity.
+            // Always allow at least one item so heavy things like corpses
+            // can be sorted one at a time.
+            if( !picked_up_stuff.empty() &&
+                you.weight_carried() + copy_thisitem.weight() > you.weight_capacity() ) {
+                cart_or_carry_blocked = true;
+                return std::nullopt;
+            }
+        }
+        thisitem_loc = you.try_add( copy_thisitem );
+    }
+    if( !thisitem_loc ) {
+        cart_or_carry_blocked = true;
+        return std::nullopt;
+    }
+    you.mod_moves( -batch_handling_cost( you, copy_thisitem ) );
+    // Remove the item we just copy-teleported
+    if( it->second ) {
+        if( const std::optional<vpart_reference> src_vp = zone_sorting::cargo_part_from_index(
+                    src_bub, *it->second ) ) {
+            src_vp->vehicle().remove_item( src_vp->part(), &thisitem );
+        }
+    } else {
+        here.i_rem( src_bub, &thisitem );
+    }
+    num_processed--;
+    return thisitem_loc;
+}
+
+bool zone_sort_activity_actor::rebuild_dropoff_coords( Character &you,
+        const std::unordered_set<tripoint_abs_ms> &dest_set,
+        const zone_type_id &zt_id, const tripoint_abs_ms &abspos )
+{
+    map &here = get_map();
+
+    dropoff_coords.clear();
+    std::vector<std::pair<int, tripoint_abs_ms>> dest_candidates;
+    dest_candidates.reserve( dest_set.size() );
+    for( const tripoint_abs_ms &possible_dest : dest_set ) {
+        const tripoint_bub_ms dest_bub = here.get_bub( possible_dest );
+        if( !here.inbounds( dest_bub ) || here.is_open_air( dest_bub ) ) {
+            continue;
+        }
+        dest_candidates.emplace_back( square_dist( abspos, possible_dest ), possible_dest );
+    }
+    std::sort( dest_candidates.begin(), dest_candidates.end(),
+    []( const std::pair<int, tripoint_abs_ms> &a, const std::pair<int, tripoint_abs_ms> &b ) {
+        return a.first < b.first;
+    } );
+    for( const auto &[cheb, possible_dest] : dest_candidates ) {
+        if( cheb <= 1 ) {
+            // Adjacent - always reachable, skip A* probe
+            dropoff_coords.emplace_back( possible_dest );
+            continue;
+        }
+        const tripoint_bub_ms dest_bub = here.get_bub( possible_dest );
+        const int dist = zone_sorting::route_length( you, dest_bub );
+        if( dist == INT_MAX ) {
+            continue;
+        }
+        dropoff_coords.emplace_back( possible_dest );
+    }
+
+    current_dropoff_zt_id = zt_id;
+    if( !drag_worst_tile ) {
+        drag_worst_tile = zone_sorting::worst_drag_tile_on_route( you, dropoff_coords );
+    }
+
+    // Expand viewport bbox to include newly discovered destinations.
+    if( you.is_avatar() && you.as_avatar()->zone_sort_viewport.active ) {
+        avatar::zone_sort_viewport_t &vp = you.as_avatar()->zone_sort_viewport;
+        bool grew = false;
+        for( const tripoint_abs_ms &d : dropoff_coords ) {
+            grew |= zone_sorting::expand_bbox_raw( vp.bbox_min, vp.bbox_max, d );
+        }
+        if( grew ) {
+            const int bbox_w = vp.bbox_max.x() - vp.bbox_min.x();
+            const int bbox_h = vp.bbox_max.y() - vp.bbox_min.y();
+            vp.center.x() = ( vp.bbox_min.x() + vp.bbox_max.x() ) / 2;
+            vp.center.y() = ( vp.bbox_min.y() + vp.bbox_max.y() ) / 2;
+            vp.target_zoom = zone_sorting::calc_target_zoom(
+                                 bbox_w, bbox_h,
+                                 TERRAIN_WINDOW_WIDTH, TERRAIN_WINDOW_HEIGHT,
+                                 g->get_zoom(), viewport_saved_zoom );
+            if( !test_mode ) {
+                g->set_zoom( vp.target_zoom );
+                g->mark_main_ui_adaptor_resize();
+            }
+        }
+    }
+
+    return !dropoff_coords.empty();
+}
+
+bool zone_sort_activity_actor::find_dropoff_destination( Character &you,
+        const tripoint_bub_ms &src_bub,
+        tripoint_abs_ms &destination )
+{
+    ( void )src_bub;
+    map &here = get_map();
+    const zone_manager &mgr = zone_manager::get_manager();
+    const faction_id fac_id = you.get_faction_id();
+
+    // Non-destructive capacity check. The old probe-and-undo approach
+    // (place items then remove them) destroyed count_by_charges items at
+    // the destination via merge_charges. This volume check is conservative
+    // but safe; the actual dropoff loop handles edge cases if we're wrong.
+    auto dest_free_volume = [this, &here, &mgr, fac_id]( const tripoint_bub_ms & dest_bub )
+    -> units::volume {
+        const bool dest_vehicle_only = current_dropoff_zt_id != zone_type_id::NULL_ID() &&
+        mgr.has_vehicle( current_dropoff_zt_id, here.get_abs( dest_bub ), fac_id ) &&
+        !mgr.has_terrain( current_dropoff_zt_id, here.get_abs( dest_bub ), fac_id );
+        units::volume avail = 0_ml;
+        for( const vpart_reference &vp_dest : zone_sorting::cargo_parts_at( dest_bub ) )
+        {
+            avail += vp_dest.items().free_volume();
+        }
+        if( !dest_vehicle_only )
+        {
+            avail += here.free_volume( dest_bub );
+        }
+        return avail;
+    };
+
+    // Find a dropoff location that can take all the items picked up.
+    units::volume batch_volume = 0_ml;
+    for( const item_location &loc : picked_up_stuff ) {
+        if( loc.get_item() ) {
+            batch_volume += loc->volume();
+        }
+    }
+    for( const tripoint_abs_ms &dest : dropoff_coords ) {
+        if( batch_volume <= dest_free_volume( here.get_bub( dest ) ) ) {
+            destination = dest;
+            return true;
+        }
+    }
+
+    // No single destination can hold everything. Fallback: find one
+    // that can accept at least the first item. The dropoff loop handles
+    // partial delivery and tries remaining destinations for leftovers.
+    units::volume first_vol = 0_ml;
+    for( const item_location &loc : picked_up_stuff ) {
+        if( loc.get_item() ) {
+            first_vol = loc->volume();
+            break;
+        }
+    }
+    for( const tripoint_abs_ms &dest : dropoff_coords ) {
+        if( first_vol <= dest_free_volume( here.get_bub( dest ) ) ) {
+            destination = dest;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
 {
     ( void )act;
@@ -14526,91 +15457,14 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
     // Dropping off.  CCB keeps the reachability checks from route-based
     // sorting, but performs the actual delivery directly so YO remains a
     // fast sorting command instead of a walking-haul simulator.
-    if( !dropoff_coords.empty() && !picked_up_stuff.empty() ) {
-        auto dest_iter = dropoff_coords.begin();
-        while( dest_iter != dropoff_coords.end() ) {
-            const tripoint_abs_ms drop_dest = *dest_iter;
-            const tripoint_bub_ms drop_bub = here.get_bub( drop_dest );
-            if( here.inbounds( drop_bub ) && !here.is_open_air( drop_bub ) &&
-                ( square_dist( abspos, drop_dest ) <= 1 ||
-                  zone_sorting::route_length( you, drop_bub ) != INT_MAX ) ) {
-                bool charged_delivery = false;
-                auto iter = picked_up_stuff.begin();
-                // ensure validity of all item_locations before we start this - if any have been invalidated there's a bug somewhere earlier
-                for( item_location itm_loc : picked_up_stuff ) {
-                    if( !itm_loc.get_item() ) {
-                        debugmsg( "Lost item_location during sorting" );
-                        stage = LAST;
-                        return;
-                    }
-                }
-                while( iter != picked_up_stuff.end() ) {
-                    if( you.get_moves() <= 0 ) { // Ran out of moves dropping stuff
-                        return;
-                    }
-
-                    // Place item at destination directly. Zone binding
-                    // determines the fallback chain: vehicle-only zones skip
-                    // ground, everything else tries cargo then ground.
-                    const zone_type_id drop_zt = mgr.get_near_zone_type_for_item( **iter,
-                                                 drop_dest, 0, fac_id );
-                    const bool vehicle_only = drop_zt != zone_type_id::NULL_ID() &&
-                                              mgr.has_vehicle( drop_zt, drop_dest, fac_id ) &&
-                                              !mgr.has_terrain( drop_zt, drop_dest, fac_id );
-                    bool placed = false;
-                    if( std::optional<vpart_reference> ovp = here.veh_at( drop_bub ).cargo() ) {
-                        item copy( **iter );
-                        if( ovp->vehicle().add_item( here, ovp->part(), copy ) ) {
-                            placed = true;
-                        }
-                    }
-                    if( !placed && !vehicle_only ) {
-                        item copy( **iter );
-                        item_location ground = here.add_item_or_charges_ret_loc(
-                                                   drop_bub, copy, false );
-                        placed = ground.get_item() != nullptr;
-                    }
-                    if( placed ) {
-                        if( !charged_delivery && square_dist( abspos, drop_dest ) > 1 ) {
-                            you.mod_moves( -std::min( 100 * rl_dist( src_bub, drop_bub ), 500 ) );
-                            charged_delivery = true;
-                        }
-                        you.mod_moves( -you.item_handling_cost( **iter ) );
-                        if( const vehicle_cursor *veh_curs = iter->veh_cursor() ) {
-                            vehicle &cart_with_items = veh_curs->veh;
-                            cart_with_items.remove_item( cart_with_items.part( veh_curs->part ), iter->get_item() );
-                        } else if( iter->carrier() ) {
-                            iter->carrier()->i_rem( iter->get_item() );
-                        }
-                        iter = picked_up_stuff.erase( iter );
-                        // dumb. Go through and clear our any now-invalidated item_locations. Then reset iter to the start, to *make sure* we iterate everything.
-                        // Definitely wasteful, but I am not paid enough to figure out a better way.
-                        auto cleanup_iter = picked_up_stuff.begin();
-                        while( cleanup_iter != picked_up_stuff.end() ) {
-                            if( !cleanup_iter->get_item() ) {
-                                cleanup_iter = picked_up_stuff.erase( cleanup_iter );
-                            } else {
-                                cleanup_iter++;
-                            }
-                        }
-                        // Again: Always reset to the start if we dropped stuff.
-                        iter = picked_up_stuff.begin();
-                    } else {
-                        iter++; // Failed to drop for some reason?!
-                    }
-                }
-                dest_iter = dropoff_coords.erase( dest_iter ); // Done dropping stuff here.
-            } else {
-                dest_iter = dropoff_coords.erase( dest_iter ); // No longer reachable or valid.
-            }
-        }
-    }
+    deliver_picked_items( you, src_bub );
 
     // Reset iteration state when a batch has been fully delivered.
     // Must happen before items.begin() + num_processed arithmetic below.
     if( picked_up_stuff.empty() ) {
         virtual_pickup_active = false;
         num_processed = 0;
+        distance_fee_charged.clear();
     }
 
     bool is_adjacent_or_closer = square_dist( you.pos_bub(), src_bub ) <= 1;
@@ -14629,8 +15483,6 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
 
     zone_sorting::unload_sort_options zone_unload_options = zone_sorting::set_unload_options( you, src,
             false );
-
-    const std::optional<vpart_reference> vp = here.veh_at( src_bub ).cargo();
 
     // When the grabbed cart is at a terrain-only unsorted zone (no vehicle
     // zone), it's being used for transport - don't re-sort its cargo.
@@ -14695,9 +15547,14 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
         }
 
         std::optional<bool> move_and_reset = zone_sorting::unload_item( you, src,
-                                             zone_unload_options, it->second ? vp : std::nullopt, it->first, dest_set, num_processed );
+                                             zone_unload_options,
+                                             it->second ? zone_sorting::cargo_part_from_index( src_bub, *it->second ) : std::nullopt,
+                                             it->first, dest_set, num_processed );
         // out of moves, or unloaded item container was destroyed or prompted an activity restart
         if( !move_and_reset ) {
+            return;
+        }
+        if( *move_and_reset ) {
             return;
         }
 
@@ -14708,55 +15565,11 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
 
         // Adjacent delivery: if any destination is adjacent to the player,
         // place items directly without the full pickup-route-dropoff cycle.
-        {
-            bool delivered = false;
-            for( const tripoint_abs_ms &dest : dest_set ) {
-                if( dest == src ) {
-                    continue;
-                }
-                if( square_dist( abspos, dest ) > 1 ) {
-                    continue;
-                }
-                const tripoint_bub_ms dest_bub = here.get_bub( dest );
-                if( !here.inbounds( dest_bub ) || here.is_open_air( dest_bub ) ) {
-                    continue;
-                }
-                item copy_thisitem( thisitem );
-                // Vehicle-only zones don't fall back to ground placement.
-                // All other zones (terrain, dual-bound) try cargo first, then ground.
-                // No overflow to adjacent tiles in either case.
-                const bool vehicle_only = mgr.has_vehicle( zt_id, dest, fac_id ) &&
-                                          !mgr.has_terrain( zt_id, dest, fac_id );
-                bool placed = false;
-                if( std::optional<vpart_reference> ovp = here.veh_at( dest_bub ).cargo() ) {
-                    if( ovp->vehicle().add_item( here, ovp->part(), copy_thisitem ) ) {
-                        placed = true;
-                    }
-                }
-                if( !placed && !vehicle_only ) {
-                    item_location ground = here.add_item_or_charges_ret_loc( dest_bub, copy_thisitem,
-                                           false );
-                    placed = ground.get_item() != nullptr;
-                }
-                if( !placed ) {
-                    continue;
-                }
-                you.mod_moves( -you.item_handling_cost( copy_thisitem ) );
-                if( it->second ) {
-                    vp->vehicle().remove_item( vp->part(), &thisitem );
-                } else {
-                    here.i_rem( src_bub, &thisitem );
-                }
-                num_processed--;
-                delivered = true;
-                break;
+        if( try_adjacent_delivery( you, thisitem, zt_id, dest_set, src_bub, it ) ) {
+            if( you.get_moves() <= 0 || *move_and_reset ) {
+                return;
             }
-            if( delivered ) {
-                if( you.get_moves() <= 0 || *move_and_reset ) {
-                    return;
-                }
-                continue;
-            }
+            continue;
         }
 
         // Picking up
@@ -14780,174 +15593,25 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
 
         // For first item: build dropoff_coords with route probing before pickup.
         // Always rebuild - previous item may have failed pickup and left stale coords.
-        // Sort by Chebyshev distance first so nearby destinations are probed
-        // first (populates route cache for later route_to_destination calls).
         if( picked_up_stuff.empty() ) {
-            dropoff_coords.clear();
-            std::vector<std::pair<int, tripoint_abs_ms>> dest_candidates;
-            dest_candidates.reserve( dest_set.size() );
-            for( const tripoint_abs_ms &possible_dest : dest_set ) {
-                const tripoint_bub_ms dest_bub = here.get_bub( possible_dest );
-                if( !here.inbounds( dest_bub ) || here.is_open_air( dest_bub ) ) {
-                    continue;
-                }
-                dest_candidates.emplace_back( square_dist( abspos, possible_dest ), possible_dest );
-            }
-            std::sort( dest_candidates.begin(), dest_candidates.end(),
-            []( const std::pair<int, tripoint_abs_ms> &a, const std::pair<int, tripoint_abs_ms> &b ) {
-                return a.first < b.first;
-            } );
-            for( const auto &[cheb, possible_dest] : dest_candidates ) {
-                if( cheb <= 1 ) {
-                    // Adjacent - always reachable, skip A* probe
-                    dropoff_coords.emplace_back( possible_dest );
-                    continue;
-                }
-                const tripoint_bub_ms dest_bub = here.get_bub( possible_dest );
-                const int dist = zone_sorting::route_length( you, dest_bub );
-                if( dist == INT_MAX ) {
-                    continue;
-                }
-                dropoff_coords.emplace_back( possible_dest );
-            }
-            if( dropoff_coords.empty() ) {
+            if( !rebuild_dropoff_coords( you, dest_set, zt_id, abspos ) ) {
                 add_msg_debug( debugmode::DF_ACTIVITY,
                                "zone_sort DO: item '%s' has no routable dests (%zu checked), skip",
                                thisitem.tname(), dest_set.size() );
                 continue;
             }
-            if( !drag_worst_tile ) {
-                drag_worst_tile = zone_sorting::worst_drag_tile_on_route( you, dropoff_coords );
-            }
-            // Expand viewport bbox to include newly discovered destinations.
-            if( you.is_avatar() && you.as_avatar()->zone_sort_viewport.active ) {
-                avatar::zone_sort_viewport_t &vp = you.as_avatar()->zone_sort_viewport;
-                bool grew = false;
-                for( const tripoint_abs_ms &d : dropoff_coords ) {
-                    grew |= zone_sorting::expand_bbox_raw( vp.bbox_min, vp.bbox_max, d );
-                }
-                if( grew ) {
-                    const int bbox_w = vp.bbox_max.x() - vp.bbox_min.x();
-                    const int bbox_h = vp.bbox_max.y() - vp.bbox_min.y();
-                    vp.center.x() = ( vp.bbox_min.x() + vp.bbox_max.x() ) / 2;
-                    vp.center.y() = ( vp.bbox_min.y() + vp.bbox_max.y() ) / 2;
-                    vp.target_zoom = zone_sorting::calc_target_zoom(
-                                         bbox_w, bbox_h,
-                                         TERRAIN_WINDOW_WIDTH, TERRAIN_WINDOW_HEIGHT,
-                                         g->get_zoom(), viewport_saved_zoom );
-                    if( !test_mode ) {
-                        g->set_zoom( vp.target_zoom );
-                        g->mark_main_ui_adaptor_resize();
-                    }
-                }
-            }
         }
 
-        item_location thisitem_loc;
-        bool cart_at_source = false;
-        if( you.is_avatar() && you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
-            const tripoint_bub_ms cart_position = you.pos_bub() + you.as_avatar()->grab_point;
-            cart_at_source = ( cart_position == src_bub );
+        std::optional<item_location> maybe_picked = pick_up_item( you, thisitem, it, src_bub,
+                cart_or_carry_blocked, drag_gate_fired, knockdown_gate_fired );
+        if( !maybe_picked ) {
+            continue;
         }
-
-        if( cart_at_source && it->second ) {
-            // Virtual pickup: cart IS the transport. Leave item in cart cargo,
-            // just create an item_location pointing at the original.
-            thisitem_loc = item_location( vehicle_cursor( vp->vehicle(), vp->part_index() ),
-                                          &thisitem );
-            virtual_pickup_active = true;
-            you.mod_moves( -you.item_handling_cost( thisitem ) );
-        } else {
-            // Physical pickup: copy item to cart or inventory, remove from source.
-            item copy_thisitem( thisitem );
-            if( you.is_avatar() && you.as_avatar()->get_grab_type() == object_type::VEHICLE ) {
-                const tripoint_bub_ms cart_position = you.pos_bub() + you.as_avatar()->grab_point;
-                if( std::optional<vpart_reference> ovp = get_map().veh_at( cart_position ).cargo() ) {
-                    vehicle &veh = ovp->vehicle();
-                    bool drag_ok = true;
-                    if( drag_worst_tile ) {
-                        units::mass projected = veh.total_mass( here ) + copy_thisitem.weight();
-                        if( veh.drag_str_req_at( here, *drag_worst_tile, projected ) >
-                            you.get_arm_str() ) {
-                            drag_ok = false;
-                        }
-                    }
-                    if( !drag_ok ) {
-                        // Cart would be too heavy to drag - stop loading.
-                        cart_or_carry_blocked = true;
-                        drag_gate_fired = true;
-                        continue;
-                    }
-                    std::optional<vehicle_stack::iterator> vehstack = veh.add_item( here, ovp->part(),
-                            copy_thisitem );
-                    if( vehstack ) {
-                        thisitem_loc = item_location( vehicle_cursor( veh, ovp->part_index() ),
-                                                      &*vehstack.value() );
-                    }
-                }
-            }
-            if( !thisitem_loc ) {
-                if( !you.is_avatar() || you.as_avatar()->get_grab_type() != object_type::VEHICLE ) {
-                    // Knock-down gate: never pick up items so heavy they would
-                    // cause the character to collapse (exceed max_pickup_capacity).
-                    // TODO: handle these items via hauling instead of skipping them.
-                    if( you.weight_carried() + copy_thisitem.weight() > you.max_pickup_capacity() ) {
-                        cart_or_carry_blocked = true;
-                        knockdown_gate_fired = true;
-                        continue;
-                    }
-                    // No-grab weight gate: stop picking up when over capacity.
-                    // Always allow at least one item so heavy things like corpses
-                    // can be sorted one at a time.
-                    if( !picked_up_stuff.empty() &&
-                        you.weight_carried() + copy_thisitem.weight() > you.weight_capacity() ) {
-                        cart_or_carry_blocked = true;
-                        continue;
-                    }
-                }
-                thisitem_loc = you.try_add( copy_thisitem );
-            }
-            if( !thisitem_loc ) {
-                cart_or_carry_blocked = true;
-                continue;
-            }
-            you.mod_moves( -you.item_handling_cost( copy_thisitem ) );
-            // Remove the item we just copy-teleported
-            if( it->second ) {
-                vp->vehicle().remove_item( vp->part(), &thisitem );
-            } else {
-                here.i_rem( src_bub, &thisitem );
-            }
-            num_processed--;
-        }
+        item_location thisitem_loc = *maybe_picked;
 
         if( dropoff_coords.empty() ) {
             // Defensive fallback - 4a normally handles this. Probe fresh.
-            // Sort by Chebyshev so nearby destinations are probed first.
-            std::vector<std::pair<int, tripoint_abs_ms>> fallback_dests;
-            for( const tripoint_abs_ms &possible_dest : dest_set ) {
-                const tripoint_bub_ms dest_bub = here.get_bub( possible_dest );
-                if( !here.inbounds( dest_bub ) || here.is_open_air( dest_bub ) ) {
-                    continue;
-                }
-                fallback_dests.emplace_back( square_dist( abspos, possible_dest ), possible_dest );
-            }
-            std::sort( fallback_dests.begin(), fallback_dests.end(),
-            []( const std::pair<int, tripoint_abs_ms> &a, const std::pair<int, tripoint_abs_ms> &b ) {
-                return a.first < b.first;
-            } );
-            for( const auto &[cheb, possible_dest] : fallback_dests ) {
-                if( cheb <= 1 ) {
-                    dropoff_coords.emplace_back( possible_dest );
-                    continue;
-                }
-                const tripoint_bub_ms dest_bub = here.get_bub( possible_dest );
-                const int dist = zone_sorting::route_length( you, dest_bub );
-                if( dist == INT_MAX ) {
-                    continue;
-                }
-                dropoff_coords.emplace_back( possible_dest );
-            }
+            rebuild_dropoff_coords( you, dest_set, zt_id, abspos );
         }
 
         if( dropoff_coords.empty() ) {
@@ -15021,59 +15685,8 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
 
         picked_up_this_pass = false;
 
-        bool match = false;
         tripoint_abs_ms destination;
-
-        // Non-destructive capacity check. The old probe-and-undo approach
-        // (place items then remove them) destroyed count_by_charges items at
-        // the destination via merge_charges. This volume check is conservative
-        // but safe; the actual dropoff loop handles edge cases if we're wrong.
-        auto dest_free_volume = [&here]( const tripoint_bub_ms & dest_bub ) -> units::volume {
-            units::volume avail = 0_ml;
-            if( const std::optional<vpart_reference> vp_dest = here.veh_at( dest_bub ).cargo() )
-            {
-                avail += vp_dest->items().free_volume();
-            }
-            avail += here.free_volume( dest_bub );
-            return avail;
-        };
-
-        // Find a dropoff location that can take all the items picked up.
-        units::volume batch_volume = 0_ml;
-        for( const item_location &loc : picked_up_stuff ) {
-            if( loc.get_item() ) {
-                batch_volume += loc->volume();
-            }
-        }
-        for( const tripoint_abs_ms &dest : dropoff_coords ) {
-            if( batch_volume <= dest_free_volume( here.get_bub( dest ) ) ) {
-                match = true;
-                destination = dest;
-                break;
-            }
-        }
-
-        if( !match ) {
-            // No single destination can hold everything. Fallback: find one
-            // that can accept at least the first item. The dropoff loop handles
-            // partial delivery and tries remaining destinations for leftovers.
-            units::volume first_vol = 0_ml;
-            for( const item_location &loc : picked_up_stuff ) {
-                if( loc.get_item() ) {
-                    first_vol = loc->volume();
-                    break;
-                }
-            }
-            for( const tripoint_abs_ms &dest : dropoff_coords ) {
-                if( first_vol <= dest_free_volume( here.get_bub( dest ) ) ) {
-                    match = true;
-                    destination = dest;
-                    break;
-                }
-            }
-        }
-
-        if( !match ) {
+        if( !find_dropoff_destination( you, src_bub, destination ) ) {
             add_msg( m_bad, _( "None of the items picked up can be sorted because they won't fit anywhere." ) );
             return_items_to_source( you, src_bub );
             unreachable_sources.emplace( src );
@@ -15129,10 +15742,12 @@ void zone_sort_activity_actor::serialize( JsonOut &jsout ) const
     }
     jsout.member( "picked_up_stuff", valid_picked );
     jsout.member( "dropoff_coords", dropoff_coords );
+    jsout.member( "current_dropoff_zt_id", current_dropoff_zt_id );
     jsout.member( "pickup_failure_reported", pickup_failure_reported );
     jsout.member( "virtual_pickup_active", virtual_pickup_active );
     jsout.member( "viewport_was_active", viewport_was_active );
     jsout.member( "viewport_saved_zoom", viewport_saved_zoom );
+    jsout.member( "last_batch_itype", last_batch_itype );
 
     jsout.end_object();
 }
@@ -15151,6 +15766,9 @@ std::unique_ptr<activity_actor> zone_sort_activity_actor::deserialize( JsonValue
     data.read( "other_activity_items", actor.other_activity_items );
     data.read( "picked_up_stuff", actor.picked_up_stuff );
     data.read( "dropoff_coords", actor.dropoff_coords );
+    if( data.has_member( "current_dropoff_zt_id" ) ) {
+        data.read( "current_dropoff_zt_id", actor.current_dropoff_zt_id );
+    }
     // Element introduced 2026-01-26. Existence check to be removed when support for older saves is dropped.
     if( data.has_bool( "pickup_failure_reported" ) ) {
         data.read( "pickup_failure_reported", actor.pickup_failure_reported );
@@ -15163,6 +15781,9 @@ std::unique_ptr<activity_actor> zone_sort_activity_actor::deserialize( JsonValue
     }
     if( data.has_member( "viewport_saved_zoom" ) ) {
         data.read( "viewport_saved_zoom", actor.viewport_saved_zoom );
+    }
+    if( data.has_member( "last_batch_itype" ) ) {
+        data.read( "last_batch_itype", actor.last_batch_itype );
     }
     return actor.clone();
 }
@@ -15282,6 +15903,14 @@ deserialize_functions = {
     { ACT_VEHICLE, &vehicle_activity_actor::deserialize },
     { ACT_VEHICLE_DECONSTRUCTION, &multi_vehicle_deconstruct_activity_actor::deserialize },
     { ACT_VEHICLE_FOLD, &vehicle_folding_activity_actor::deserialize },
+    {
+        ACT_VEHICLE_PART_INSTALL_SERVICE,
+        &vehicle_part_install_service_activity_actor::deserialize
+    },
+    {
+        ACT_VEHICLE_PART_REMOVE_SERVICE,
+        &vehicle_part_remove_service_activity_actor::deserialize
+    },
     {
         ACT_VEHICLE_PART_REPAIR_SERVICE,
         &vehicle_part_repair_service_activity_actor::deserialize

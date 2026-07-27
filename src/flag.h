@@ -179,6 +179,7 @@ extern const flag_id flag_FIELD_DRESS_FAILED;
 extern const flag_id flag_FILTHY;
 extern const flag_id flag_FIN;
 extern const flag_id flag_FIRE;
+extern const flag_id flag_FIRING_EXT_POWER;
 extern const flag_id flag_FIRESTARTER;
 extern const flag_id flag_FIREWOOD;
 extern const flag_id flag_FIRE_100;

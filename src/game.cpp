@@ -50,6 +50,7 @@
 #include "activity_handlers.h"
 #include "activity_item_handling.h"
 #include "activity_type.h"
+#include "android_ui_mode.h"
 #include "ascii_art.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
@@ -268,6 +269,8 @@ static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
 static const damage_type_id damage_stab( "stab" );
 
+static const dimension_id dimension_world_default( "default" );
+
 static const efftype_id effect_adrenaline_mycus( "adrenaline_mycus" );
 static const efftype_id effect_bouldering( "bouldering" );
 static const efftype_id effect_contacts( "contacts" );
@@ -479,7 +482,8 @@ game::game() :
     next_mission_id( 1 ),
     next_item_uid( 1 ),
     remoteveh_cache_time( calendar::before_time_starts ),
-    last_mouse_edge_scroll( std::chrono::steady_clock::now() )
+    last_mouse_edge_scroll( std::chrono::steady_clock::now() ),
+    dimension_prefix( dimension_world_default )
 {
     current_map.set( &m );
     first_redraw_since_waiting_started = true;
@@ -506,7 +510,9 @@ game::~game()
 #if defined(__ANDROID__)
     // Invalidate gameplay state before the main menu can observe the previous
     // input context or scene controls.
-    android_hud::clear_snapshot();
+    if( android_ui_mode::is_new_ui_build() ) {
+        android_hud::clear_snapshot();
+    }
 #endif
     cata::lua_ui::shutdown();
     // event_bus_ptr about to die; let debug_capture drop its sticky
@@ -689,7 +695,7 @@ void game::reenter_fullscreen()
 /*
  * Initialize more stuff after mapbuffer is loaded.
  */
-void game::setup()
+bool game::setup()
 {
     new_game = true;
     {
@@ -707,7 +713,9 @@ void game::setup()
     // must be called before load_world_modfiles() #81904
     calendar::set_season_length( ::get_option<int>( "SEASON_LENGTH" ) );
 
-    world_generator->get_mod_manager().check_mods_list( world_generator->active_world );
+    if( !world_generator->get_mod_manager().check_mods_list( world_generator->active_world ) ) {
+        return false;
+    }
     load_world_modfiles();
     // Panel manager needs JSON data to be loaded before init
     panel_manager::get_manager().init();
@@ -716,6 +724,7 @@ void game::setup()
 
     reset_game_state();
     // back to menu for save loading, new game etc
+    return true;
 }
 
 // Reset all per-game runtime state to a clean slate, so a fresh load can
@@ -869,8 +878,9 @@ bool game::start_game()
     get_safemode().load_global();
 
     init_autosave();
-    //Needs to be explicitly cleared so a previously loaded world state doesn't leak into the new game
-    dimension_prefix.clear();
+    //Needs to be explicitly reset so a previously loaded world state doesn't leak into the new game
+    dimension_prefix = dimension_world_default;
+    overmap_buffer.init_region_layout();
 
     background_pane background;
     static_popup popup;
@@ -879,7 +889,6 @@ bool game::start_game()
     refresh_display();
 
     load_master();
-    overmap_buffer.current_region_type = "default";
     u.setID( assign_npc_id() ); // should be as soon as possible, but *after* load_master
 
     // Make sure the items are added after the calendar is started
@@ -921,6 +930,7 @@ bool game::start_game()
 
             MAPBUFFER.clear();
             overmap_buffer.clear();
+            overmap_buffer.init_region_layout();
 
             if( !query_yn(
                     _( "Try again?\n\nIt may require several attempts until the game finds a valid starting location." ) ) ) {
@@ -2641,7 +2651,10 @@ input_context get_default_mode_input_context()
     static input_context default_ctxt = [] {
         input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );
 #if defined(__ANDROID__)
-        ctxt.set_hud_scene( "gameplay.map", _( "Game map" ) );
+        if( android_ui_mode::is_new_ui_build() )
+        {
+            ctxt.set_hud_scene( "gameplay.map", _( "Game map" ) );
+        }
 #endif
         // Because those keys move the character, they don't pan, as their original name says
         ctxt.set_iso( true );
@@ -2944,88 +2957,90 @@ bool game::try_get_right_click_action( action_id &act, tripoint_bub_ms &mouse_ta
     }
 
 #if defined(__ANDROID__)
-    // A stationary long press arrives as a synthetic secondary click.  Use it
-    // only to seed a visible cursor: releasing the finger must never immediately
-    // execute an action on a possibly obscured or misidentified tile.
-    const int previous_zoom = get_zoom();
-    const int configured_min = get_option<int>( "ANDROID_ZOOM_MIN" );
-    const int configured_max = get_option<int>( "ANDROID_ZOOM_MAX" );
-    const int minimum_zoom = std::min( configured_min, configured_max );
-    const int maximum_zoom = std::max( configured_min, configured_max );
-    const int selection_zoom = std::clamp( get_option<int>( "ANDROID_CONTEXT_ZOOM" ),
-                                           minimum_zoom, maximum_zoom );
-    const int temporary_zoom = std::max( previous_zoom, selection_zoom );
-    if( temporary_zoom != previous_zoom ) {
-        set_zoom( temporary_zoom );
-        mark_main_ui_adaptor_resize();
-    }
-
-    tripoint_bub_ms center = mouse_target;
-    look_around_result selected = look_around( /*show_window=*/true, center, mouse_target,
-                                  /*has_first_point=*/false, /*select_zone=*/false,
-                                  /*peeking=*/false, /*is_moving_zone=*/false,
-                                  tripoint_bub_ms::zero, /*change_lv=*/false );
-
-    // Restore an automatic temporary zoom, but preserve an explicit pinch made
-    // while the selection cursor was open.
-    if( get_zoom() == temporary_zoom && previous_zoom != temporary_zoom ) {
-        set_zoom( previous_zoom );
-        mark_main_ui_adaptor_resize();
-    }
-    if( !selected.position ) {
-        return false;
-    }
-    mouse_target = *selected.position;
-
-    static constexpr std::array<action_id, 8> contextual_actions = {
-        ACTION_EXAMINE, ACTION_PICKUP, ACTION_OPEN, ACTION_CLOSE,
-        ACTION_BUTCHER, ACTION_CHAT, ACTION_MOVE_UP, ACTION_MOVE_DOWN
-    };
-    const auto has_contextual_action = [&]( const tripoint_bub_ms & pos ) {
-        return std::any_of( contextual_actions.begin(), contextual_actions.end(),
-        [&]( const action_id candidate ) {
-            return can_interact_at( candidate, here, pos );
-        } );
-    };
-
-    // If the finger landed on empty ground, snap to the nearest visible actionable
-    // tile in a one-tile halo.  The highlighted cursor still gives the player a
-    // chance to adjust before this point.
-    if( !has_contextual_action( mouse_target ) ) {
-        std::optional<tripoint_bub_ms> snapped;
-        int best_distance = INT_MAX;
-        for( const tripoint_bub_ms &candidate : here.points_in_radius( mouse_target, 1 ) ) {
-            if( candidate.z() != mouse_target.z() || !u.sees( here, candidate ) ||
-                !has_contextual_action( candidate ) ) {
-                continue;
-            }
-            const int distance = square_dist( mouse_target.xy(), candidate.xy() );
-            if( distance < best_distance ) {
-                best_distance = distance;
-                snapped = candidate;
-            }
+    if( android_ui_mode::is_new_ui_build() ) {
+        // A stationary long press arrives as a synthetic secondary click.  Use it
+        // only to seed a visible cursor: releasing the finger must never immediately
+        // execute an action on a possibly obscured or misidentified tile.
+        const int previous_zoom = get_zoom();
+        const int configured_min = get_option<int>( "ANDROID_ZOOM_MIN" );
+        const int configured_max = get_option<int>( "ANDROID_ZOOM_MAX" );
+        const int minimum_zoom = std::min( configured_min, configured_max );
+        const int maximum_zoom = std::max( configured_min, configured_max );
+        const int selection_zoom = std::clamp( get_option<int>( "ANDROID_CONTEXT_ZOOM" ),
+                                               minimum_zoom, maximum_zoom );
+        const int temporary_zoom = std::max( previous_zoom, selection_zoom );
+        if( temporary_zoom != previous_zoom ) {
+            set_zoom( temporary_zoom );
+            mark_main_ui_adaptor_resize();
         }
-        if( !snapped ) {
-            add_msg( _( "Nothing relevant near the selected tile." ) );
+
+        tripoint_bub_ms center = mouse_target;
+        look_around_result selected = look_around( /*show_window=*/true, center, mouse_target,
+                                      /*has_first_point=*/false, /*select_zone=*/false,
+                                      /*peeking=*/false, /*is_moving_zone=*/false,
+                                      tripoint_bub_ms::zero, /*change_lv=*/false );
+
+        // Restore an automatic temporary zoom, but preserve an explicit pinch made
+        // while the selection cursor was open.
+        if( get_zoom() == temporary_zoom && previous_zoom != temporary_zoom ) {
+            set_zoom( previous_zoom );
+            mark_main_ui_adaptor_resize();
+        }
+        if( !selected.position ) {
             return false;
         }
-        mouse_target = *snapped;
-    }
+        mouse_target = *selected.position;
 
-    std::vector<action_id> actions;
-    while( true ) {
-        const action_id selected_action = handle_interact( here, mouse_target );
-        if( selected_action == ACTION_NULL ) {
-            break;
-        }
-        actions.push_back( selected_action );
-        if( !query_yn( _( "Queue another action for this tile?" ) ) ) {
-            break;
-        }
-    }
+        static constexpr std::array<action_id, 8> contextual_actions = {
+            ACTION_EXAMINE, ACTION_PICKUP, ACTION_OPEN, ACTION_CLOSE,
+            ACTION_BUTCHER, ACTION_CHAT, ACTION_MOVE_UP, ACTION_MOVE_DOWN
+        };
+        const auto has_contextual_action = [&]( const tripoint_bub_ms & pos ) {
+            return std::any_of( contextual_actions.begin(), contextual_actions.end(),
+            [&]( const action_id candidate ) {
+                return can_interact_at( candidate, here, pos );
+            } );
+        };
 
-    queue_contextual_actions( mouse_target, actions );
-    return false;
+        // If the finger landed on empty ground, snap to the nearest visible actionable
+        // tile in a one-tile halo.  The highlighted cursor still gives the player a
+        // chance to adjust before this point.
+        if( !has_contextual_action( mouse_target ) ) {
+            std::optional<tripoint_bub_ms> snapped;
+            int best_distance = INT_MAX;
+            for( const tripoint_bub_ms &candidate : here.points_in_radius( mouse_target, 1 ) ) {
+                if( candidate.z() != mouse_target.z() || !u.sees( here, candidate ) ||
+                    !has_contextual_action( candidate ) ) {
+                    continue;
+                }
+                const int distance = square_dist( mouse_target.xy(), candidate.xy() );
+                if( distance < best_distance ) {
+                    best_distance = distance;
+                    snapped = candidate;
+                }
+            }
+            if( !snapped ) {
+                add_msg( _( "Nothing relevant near the selected tile." ) );
+                return false;
+            }
+            mouse_target = *snapped;
+        }
+
+        std::vector<action_id> actions;
+        while( true ) {
+            const action_id selected_action = handle_interact( here, mouse_target );
+            if( selected_action == ACTION_NULL ) {
+                break;
+            }
+            actions.push_back( selected_action );
+            if( !query_yn( _( "Queue another action for this tile?" ) ) ) {
+                break;
+            }
+        }
+
+        queue_contextual_actions( mouse_target, actions );
+        return false;
+    }
 #endif
 
     const bool is_adjacent = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 1;
@@ -3613,9 +3628,13 @@ void game::draw( ui_adaptor &ui )
     wnoutrefresh( w_terrain );
 
 #if defined(__ANDROID__)
-    // Android owns its HUD in a native View overlay.  Do not render or reserve
-    // the terminal sidebar underneath it.
-    android_hud::publish_snapshot( u, static_cast<int>( safe_mode ) );
+    if( android_ui_mode::is_new_ui_build() ) {
+        // The New UI package owns its HUD in a native View overlay.  Do not
+        // render the terminal sidebar underneath it.
+        android_hud::publish_snapshot( u, static_cast<int>( safe_mode ) );
+    } else {
+        draw_panels( true );
+    }
 #else
     draw_panels( true );
 #endif
@@ -4418,7 +4437,7 @@ void game::knockback( std::vector<tripoint_bub_ms> &traj, int stun, int dam_mult
                 break;
             }
             targ->setpos( here, traj[i] );
-            if( here.has_flag( ter_furn_flag::TFLAG_LIQUID, targ_pos ) && !targ->can_drown() &&
+            if( here.has_flag( ter_furn_flag::TFLAG_LIQUID, targ_pos ) && targ->can_drown() &&
                 !targ->is_dead() ) {
                 targ->die( &here, nullptr );
                 if( u.sees( here, *targ ) ) {
@@ -6398,7 +6417,9 @@ look_around_result game::look_around(
     std::string action;
     input_context ctxt( "LOOK" );
 #if defined(__ANDROID__)
-    ctxt.set_hud_scene( "gameplay.look", _( "Look around" ) );
+    if( android_ui_mode::is_new_ui_build() ) {
+        ctxt.set_hud_scene( "gameplay.look", _( "Look around" ) );
+    }
 #endif
     ctxt.set_iso( true );
     ctxt.register_directions();
@@ -6806,8 +6827,9 @@ void game::reset_zoom()
 void game::set_zoom( const int level )
 {
 #if defined(TILES)
-    if( uistate.tileset_zoom != level ) {
-        uistate.tileset_zoom = level;
+    const int safe_level = level > 0 ? level : DEFAULT_TILESET_ZOOM;
+    if( uistate.tileset_zoom != safe_level ) {
+        uistate.tileset_zoom = safe_level;
         rescale_tileset( uistate.tileset_zoom );
     }
 #else
@@ -6818,8 +6840,9 @@ void game::set_zoom( const int level )
 void game::set_overmap_zoom( const int level )
 {
 #if defined(TILES)
-    if( uistate.overmap_tileset_zoom != level ) {
-        uistate.overmap_tileset_zoom = level;
+    const int safe_level = level > 0 ? level : DEFAULT_TILESET_ZOOM;
+    if( uistate.overmap_tileset_zoom != safe_level ) {
+        uistate.overmap_tileset_zoom = safe_level;
         overmap_tilecontext->set_draw_scale( uistate.overmap_tileset_zoom );
     }
 #else
@@ -10114,8 +10137,7 @@ void game::vertical_move( int movez, bool force, bool peeking )
     cata_event_dispatch::avatar_moves( old_abs_pos, u, here );
 }
 
-bool game::travel_to_dimension( const std::string &new_prefix,
-                                const std::string &region_type,
+bool game::travel_to_dimension( dimension_id dimension_destination,
                                 const std::vector<npc *> &npc_travellers,
                                 const std::vector<item_location> &item_travellers,
                                 const std::optional<tripoint_bub_ms> item_travellers_location,
@@ -10185,19 +10207,11 @@ bool game::travel_to_dimension( const std::string &new_prefix,
     here.rebuild_vehicle_level_caches();
     // Inputting an empty string to the text input EOC fails
     // so i'm using 'default' as empty/main dimension
-    std::string old_prefix = dimension_prefix;
-    if( new_prefix != "default" ) {
-        dimension_prefix = new_prefix;
-    } else {
-        dimension_prefix.clear();
-    }
+    dimension_id previous_dimension = dimension_prefix;
+    dimension_prefix = dimension_destination;
     // Load in data specific to the dimension (like weather)
-    if( !load_dimension_data() ) {
-        // dimension data file not found/created yet
+    load_dimension_data();
 
-        // Only allow `region_type` input for new dimensions.
-        overmap_buffer.current_region_type = region_type;
-    }
     // Clear the immediate game area around the player
     MAPBUFFER.clear();
     // hack to prevent crashes from temperature checks
@@ -10205,6 +10219,7 @@ bool game::travel_to_dimension( const std::string &new_prefix,
     swapping_dimensions = true;
     // Clear the overmap
     overmap_buffer.clear();
+    overmap_buffer.init_region_layout();
     // load/create new overmap
     overmap &new_om = overmap_buffer.get( project_to<coords::om>( player.pos_abs().xy() ) );
     // insert travelled NPCs
@@ -10243,7 +10258,7 @@ bool game::travel_to_dimension( const std::string &new_prefix,
     weather.set_nextweather( calendar::turn );
     update_overmap_seen();
     if( undo_shift ) {
-        travel_to_dimension( old_prefix, region_type, npc_travellers, {}, std::nullopt, veh );
+        travel_to_dimension( previous_dimension, npc_travellers, {}, std::nullopt, veh );
         if( !place_items.empty() ) {
             tripoint_bub_ms item_center = item_travellers_location.value_or( player.pos_bub( here ) );
             for( const item &it : place_items ) {
@@ -10252,7 +10267,8 @@ bool game::travel_to_dimension( const std::string &new_prefix,
         }
     }
     game::mon_info_update();
-    get_event_bus().send<event_type::dimension_travel>( player.getID(), old_prefix, dimension_prefix );
+    get_event_bus().send<event_type::dimension_travel>( player.getID(), previous_dimension,
+            dimension_prefix );
     return true;
 }
 

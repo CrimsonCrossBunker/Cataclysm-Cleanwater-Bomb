@@ -20,7 +20,8 @@
     "volume": "31 ml",
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE" ],
     "vitamins": [ [ "iron", 5 ], [ "nut_allergen", 1 ] ],
-    "fun": 2
+    "fun": 2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -40,7 +41,8 @@
     "material": [ "fruit" ],
     "volume": "250 ml",
     "fun": -2,
-    "vitamins": [ [ "vitC", 12 ], [ "calcium", 1 ], [ "iron", 1 ], [ "fruit_allergen", 1 ] ]
+    "vitamins": [ [ "vitC", 12 ], [ "calcium", 1 ], [ "iron", 1 ], [ "fruit_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -66,7 +68,8 @@
     "vitamins": [ [ "vitC", 1 ], [ "calcium", 3 ], [ "iron", 7 ], [ "nut_allergen", 1 ] ],
     "fun": 1,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -106,7 +109,8 @@
     "vitamins": [ [ "calcium", 6 ], [ "iron", 6 ], [ "nut_allergen", 1 ] ],
     "fun": 1,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -128,7 +132,8 @@
     "vitamins": [ [ "nut_allergen", 1 ] ],
     "volume": "125 ml",
     "flags": [ "EDIBLE_FROZEN" ],
-    "fun": -8
+    "fun": -8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -168,7 +173,8 @@
     "vitamins": [ [ "calcium", 1 ], [ "iron", 12 ], [ "nut_allergen", 1 ] ],
     "fun": 3,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -194,7 +200,8 @@
     "vitamins": [ [ "calcium", 2 ], [ "iron", 4 ], [ "nut_allergen", 1 ] ],
     "fun": 1,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -233,7 +240,8 @@
     "vitamins": [ [ "calcium", 1 ], [ "iron", 3 ], [ "nut_allergen", 1 ] ],
     "fun": 3,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -256,7 +264,8 @@
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE", "RAW" ],
     "vitamins": [ [ "vitC", 5 ], [ "iron", 9 ], [ "nut_allergen", 1 ] ],
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -281,7 +290,8 @@
     "vitamins": [ [ "calcium", 2 ], [ "iron", 4 ], [ "nut_allergen", 1 ] ],
     "fun": -1,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -303,7 +313,8 @@
     "vitamins": [ [ "nut_allergen", 1 ] ],
     "volume": "125 ml",
     "flags": [ "EDIBLE_FROZEN" ],
-    "fun": -8
+    "fun": -8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -326,7 +337,8 @@
     "volume": "62 ml",
     "smoking_result": "butternut_roasted",
     "vitamins": [ [ "calcium", 2 ], [ "iron", 4 ], [ "nut_allergen", 1 ] ],
-    "fun": -1
+    "fun": -1,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -377,7 +389,8 @@
     "vitamins": [ [ "vitC", 13 ], [ "iron", 1 ], [ "nut_allergen", 1 ] ],
     "fun": -10,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -416,7 +429,8 @@
     "vitamins": [ [ "vitC", 2 ], [ "calcium", 3 ], [ "iron", 7 ], [ "nut_allergen", 1 ] ],
     "fun": -1,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -438,7 +452,8 @@
     "volume": "62 ml",
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE", "EATEN_HOT" ],
     "vitamins": [ [ "calcium", 8 ], [ "iron", 4 ], [ "nut_allergen", 1 ] ],
-    "fun": 4
+    "fun": 4,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -460,7 +475,8 @@
     "volume": "62 ml",
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE", "EATEN_HOT" ],
     "vitamins": [ [ "calcium", 8 ], [ "iron", 4 ], [ "nut_allergen", 1 ] ],
-    "fun": 4
+    "fun": 4,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -496,7 +512,8 @@
     "vitamins": [ [ "nut_allergen", 1 ] ],
     "volume": "125 ml",
     "flags": [ "EDIBLE_FROZEN" ],
-    "fun": -8
+    "fun": -8,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -521,7 +538,8 @@
     "vitamins": [ [ "calcium", 2 ], [ "iron", 8 ], [ "nut_allergen", 1 ] ],
     "fun": -10,
     "into": "paste_nut",
-    "recipe": "paste_nut_mill_10_1"
+    "recipe": "paste_nut_mill_10_1",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -640,7 +658,8 @@
     "calories": 190,
     "flags": [ "USE_EAT_VERB" ],
     "vitamins": [ [ "iron", 6 ], [ "junk_allergen", 1 ], [ "nut_allergen", 1 ] ],
-    "fun": 2
+    "fun": 2,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -662,7 +681,8 @@
     "volume": "62 ml",
     "flags": [ "EDIBLE_FROZEN", "NUTRIENT_OVERRIDE", "RAW" ],
     "vitamins": [ [ "calcium", 1 ], [ "iron", 2 ], [ "nut_allergen", 1 ] ],
-    "fun": -20
+    "fun": -20,
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -759,6 +779,7 @@
     "volume": "15 ml",
     "flags": [ "NO_AUTO_CONSUME" ],
     "fun": -1,
-    "vitamins": [ [ "nut_allergen", 1 ] ]
+    "vitamins": [ [ "nut_allergen", 1 ] ],
+    "stackable": true
   }
 ]

@@ -203,7 +203,7 @@
     "points": -4,
     "purifiable": true,
     "vitamin_cost": 240,
-    "enchantments": [ { "condition": { "current_dimension": "" }, "values": [ { "value": "ARTIFACT_RESONANCE", "add": 1250 } ] } ]
+    "enchantments": [ { "condition": { "current_dimension": "default" }, "values": [ { "value": "ARTIFACT_RESONANCE", "add": 1250 } ] } ]
   },
   {
     "type": "mutation",
@@ -1676,10 +1676,12 @@
   {
     "type": "mutation",
     "id": "PSYCHOPATH",
-    "name": { "str": "Uncaring" },
-    "description": "You don't feel any strong feelings for your fellow man.",
+    "name": { "str": "Morbid Unconcern" },
+    "description": "You don't feel any strong feelings for your fellow man.  You have no empathy.  The suffering of others doesn't bother you at all.  You don't mind if others are butchered or left unburied unless it affects yourself.  You also feel no mood boost from socializing.",
     "types": [ "HUMAN_EMPATHY" ],
+    "cancels": [ "SOCIAL1", "SOCIAL2" ],
     "points": 2,
+    "mixed_effect": true,
     "starting_trait": true,
     "chargen_allow_npc": false,
     "valid": false,
@@ -1695,6 +1697,18 @@
     "starting_trait": true,
     "chargen_allow_npc": false,
     "vitamin_cost": 160
+  },
+  {
+    "type": "mutation",
+    "id": "INSENSITIVITY",
+    "name": { "str": "Insensitivity" },
+    "description": "Perhaps from seeing too much, killing too much, or harvesting too much from those who used to look like you.  You have grown numb to what ordinary people call immoral.  Murder no longer burdens your conscience.  Harvesting resources from bloody corpses or even feeding on your own kind doesn't disgust you like it used to.  In normal times, this would be a tragic turn, but perhaps not after the Cataclysm.",
+    "points": 0,
+    "starting_trait": false,
+    "chargen_allow_npc": false,
+    "valid": false,
+    "purifiable": false,
+    "flags": [ "INSENSITIVITY" ]
   },
   {
     "type": "mutation",
@@ -4060,6 +4074,32 @@
     "kcal": true,
     "transform": { "target": "EATHEALTH", "msg_transform": "Your hyper-metabolism slows down.", "active": false, "moves": 0 },
     "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": 349 }, { "value": "REGEN_HP_AWAKE", "multiply": 0.85 } ] } ]
+  },
+  {
+    "type": "mutation",
+    "id": "EMOTIONALVOLATILITY",
+    "name": { "str": "Emotional Volatility" },
+    "description": "Your emotions fluctuate more than the average person; you cry more easily and laugh more easily.",
+    "types": [ "ATTITUDE" ],
+    "cancels": [ "EMOTIONALFLATNESS" ],
+    "points": 0,
+    "mixed_effect": true,
+    "starting_trait": true,
+    "chargen_allow_npc": false,
+    "valid": false
+  },
+  {
+    "type": "mutation",
+    "id": "EMOTIONALFLATNESS",
+    "name": { "str": "Emotional Flatness" },
+    "description": "Compared to others, you are less likely to experience significant emotional changes.  You feel that the intensity of your emotions is only about half that of others.",
+    "types": [ "ATTITUDE" ],
+    "cancels": [ "EMOTIONALVOLATILITY" ],
+    "points": 0,
+    "mixed_effect": true,
+    "starting_trait": true,
+    "chargen_allow_npc": false,
+    "valid": false
   },
   {
     "type": "mutation",

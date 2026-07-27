@@ -109,6 +109,8 @@ For example the tileset lookups for `seat_leather#windshield_left` are as follow
 
 * `vp_seat`
 
+`default_tint_color` may be set on a `vehicle_part` definition to tint that part's tiles sprite when it has no instance paint color from vehicle palettes or player painting.  It accepts the same color strings as vehicle color palettes, including named colors and hex colors.  Instance paint color takes priority.
+
 ### Items list
 The items list contains an arbitrary number of lines. Each line is of the form:
     { "x": X, "y": Y, TYPE: DATA },

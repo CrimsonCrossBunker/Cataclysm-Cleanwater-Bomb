@@ -18,7 +18,8 @@
     "volume": "250 ml",
     "fun": 1,
     "flags": [ "EDIBLE_FROZEN" ],
-    "consumption_effect_on_conditions": [ "EOC_ALIEN_MEADOW_BUSH_2_BERRIES" ]
+    "consumption_effect_on_conditions": [ "EOC_ALIEN_MEADOW_BUSH_2_BERRIES" ],
+    "stackable": true
   },
   {
     "type": "ITEM",

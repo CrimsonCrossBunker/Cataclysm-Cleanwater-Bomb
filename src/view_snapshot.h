@@ -9,7 +9,6 @@
 #include <variant>
 #include <vector>
 
-#include "cata_small_literal_vector.h"
 #include "character_id.h"
 #include "coords_fwd.h"
 #include "enums.h"
@@ -78,17 +77,6 @@ struct tile_render_info {
         // Accumulator for 3d tallness of sprites rendered here so far; also
         // used as a save/restore scratch variable during vehicle drawing.
         int height_3d = 0;
-        // Ortho tint overlay state, populated during the draw prepass and
-        // layer loop.  For tiles where needs_tint is true:
-        //   bounds       - union of all content sprite screen rects (opaque only)
-        //   tint_sprites - draw records for silhouette mask replay
-        //   tint_color   - precomputed RGBA tint from the colored light cache
-        sprite_screen_bounds bounds;
-        small_literal_vector<tint_sprite_record, 4> tint_sprites;
-        bool needs_tint = false;
-        struct {
-            uint8_t r, g, b, a;
-        } tint_color = { 0, 0, 0, 0 };
 
         explicit tile_render_scratch( int h3d = 0 ) : height_3d( h3d ) {}
     };
@@ -330,13 +318,13 @@ class draw_points_cache_t
 //    tile_render_scratch (L1-L2, per-frame mutable).  The layer loop no longer
 //    writes rendering state into the same struct that holds the semantic coordinate.
 //
-// 3. ✅ RESOLVED: RGBA tint, screen-space bounds, and sprite recordings are
-//    confined to tile_render_scratch; tile_view_data contains only the L3
-//    coordinate.  The false summit has been flattened.
+// 3. ✅ RESOLVED: transient RGBA tint, screen-space bounds, and sprite recordings
+//    live in a sparse per-row sidecar in cata_tiles::draw; tile_render_scratch
+//    retains only the height accumulator and tile_view_data only the L3 coordinate.
 //
 // 4. MISSING L3 DATA (not captured yet; live-read every frame):
 //    - creature data (CreatureView: type id, facing, mount/summoner flags)
-//    - light scalar (float from lm[][]) — currently only computed RGBA tint is stored
+//    - light scalar/color (currently read live from the level cache while drawing)
 //    - memorized tile content (for invisible/memory tiles)
 //    - per-tile version (for delta encoding)
 //

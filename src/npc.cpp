@@ -2444,9 +2444,8 @@ void npc::reconcile_schedule()
         }
         clear_committed_goal();
     } else if( !on_shift && !in_sleep_state() && !needs_food() ) {
-        if( get_sleepiness() < static_cast<int>( sleepiness_levels::TIRED ) ) {
-            set_sleepiness( sleepiness_levels::TIRED );
-        }
+        // NO_NPC_FOOD keeps NPCs perpetually rested; do not raise sleepiness to TIRED.
+        set_sleepiness( 0 );
     }
 }
 
@@ -2473,11 +2472,8 @@ void npc::reconcile_schedule_on_load()
                           : ( end_mins - start_mins );
 
     if( on_shift && shift_len > 0 ) {
-        int mins_in = wraps && now_mins < start_mins
-                      ? ( 24 * 60 - start_mins + now_mins )
-                      : ( now_mins - start_mins );
-        int expected = mins_in * static_cast<int>( sleepiness_levels::TIRED ) / shift_len;
-        set_sleepiness( expected );
+        // NO_NPC_FOOD keeps NPCs perpetually rested regardless of shift progress.
+        set_sleepiness( 0 );
     }
 }
 
@@ -3539,7 +3535,9 @@ void npc::on_load( map *here )
     // TODO: Sleeping, healing etc.
     last_updated = calendar::turn;
     time_point cur = calendar::turn - dt;
-    add_msg_debug( debugmode::DF_NPC, "on_load() by %s, %d turns", get_name(), to_turns<int>( dt ) );
+    add_msg_debug( debugmode::DF_NPC, "on_load() by %s, dt=%d turns, activity=%s, has_dest=%s",
+                   get_name(), to_turns<int>( dt ), activity ? "yes" : "no",
+                   has_destination() ? "yes" : "no" );
     // First update with 30 minute granularity, then 5 minutes, then turns
     for( ; cur < calendar::turn - 30_minutes; cur += 30_minutes + 1_turns ) {
         update_body( cur, cur + 30_minutes );
@@ -3570,7 +3568,13 @@ void npc::on_load( map *here )
         process_items( here );
         // give NPCs that are doing activities a pile of moves
         if( has_destination() || activity ) {
+            add_msg_debug( debugmode::DF_NPC, "on_load: adding %d moves to %s (cur=%d)",
+                           to_moves<int>( dt ), get_name(), get_moves() );
             mod_moves( to_moves<int>( dt ) );
+            add_msg_debug( debugmode::DF_NPC, "on_load: %s now has %d moves", get_name(), get_moves() );
+        } else {
+            add_msg_debug( debugmode::DF_NPC, "on_load: %s no activity/destination, no moves added",
+                           get_name() );
         }
     }
 

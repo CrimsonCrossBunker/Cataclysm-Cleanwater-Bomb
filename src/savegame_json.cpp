@@ -150,6 +150,8 @@ static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_bullet( "bullet" );
 static const damage_type_id damage_cut( "cut" );
 
+static const dimension_id dimension_world_default( "default" );
+
 static const efftype_id effect_riding( "riding" );
 
 static const itype_id fuel_type_battery( "battery" );
@@ -842,6 +844,14 @@ void Character::load( const JsonObject &data )
     //legacy value, maintained until kill_xp dependency removed from in-repo mods
     data.read( "kill_xp", kill_xp );
 
+    if( data.has_member( "mental_metrics" ) ) {
+        JsonObject mental_metrics = data.get_object( "mental_metrics" );
+        mental_metrics.allow_omitted_members();
+        mental_metrics.read( "guilt_kills", mental_metric_guilt_kills );
+        mental_metrics.read( "human_dissections", mental_metric_human_dissections );
+        mental_metrics.read( "cannibalism", mental_metric_cannibalism );
+    }
+
     data.read( "moncams", moncams );
 
     data.read( "magic", magic );
@@ -1486,6 +1496,13 @@ void Character::store( JsonOut &json ) const
 
     //legacy value, maintained until kill_xp dependency removed from in-repo mods
     json.member( "kill_xp", kill_xp );
+
+    json.member( "mental_metrics" );
+    json.start_object();
+    json.member( "guilt_kills", mental_metric_guilt_kills );
+    json.member( "human_dissections", mental_metric_human_dissections );
+    json.member( "cannibalism", mental_metric_cannibalism );
+    json.end_object();
 
     // breathing
     json.member( "underwater", underwater );
@@ -4152,11 +4169,12 @@ void mission::deserialize( const JsonObject &jo )
         target.y() = ja.get_int( 1 );
     }
 
+
     if( jo.has_string( "dimension" ) ) {
-        dimension = jo.get_string( "dimension" );
+        dimension = dimension_id( jo.get_string( "dimension" ) );
     } else {
         // dimension is set as the main one
-        dimension = "";
+        dimension = dimension_world_default;
     }
 
     if( jo.has_string( "follow_up" ) ) {
@@ -5358,6 +5376,17 @@ void submap::store( JsonOut &jsout ) const
     }
     jsout.end_array();
 
+    jsout.member( "terrain_growth" );
+    jsout.start_array();
+    for( const auto &entry : terrain_growth ) {
+        jsout.start_array();
+        jsout.write( entry.first.x() );
+        jsout.write( entry.first.y() );
+        jsout.write( entry.second.fertilized_at );
+        jsout.end_array();
+    }
+    jsout.end_array();
+
     // Write out the radiation array in a simple RLE scheme.
     // written in intensity, count pairs
     jsout.member( "radiation" );
@@ -5645,6 +5674,15 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                     rad_cell++;
                 }
             }
+        }
+    } else if( member_name == "terrain_growth" ) {
+        JsonArray growth_json = jv;
+        while( growth_json.has_more() ) {
+            JsonArray entry = growth_json.next_array();
+            const point_sm_ms p( entry.next_int(), entry.next_int() );
+            terrain_growth_state state;
+            state.fertilized_at = time_point( entry.next_int() );
+            terrain_growth[p] = state;
         }
     } else if( member_name == "furniture" ) {
         int_id<ter_t> iid_ter;

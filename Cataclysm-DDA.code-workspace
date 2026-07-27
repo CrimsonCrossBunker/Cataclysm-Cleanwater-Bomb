@@ -48,6 +48,14 @@
                 "problemMatcher": "$msCompile"
             },
             {
+                "label": "MSBuild: Tracy Release|x64",
+                "type": "shell",
+                "command": "${workspaceFolder}\\.vscode\\msbuild.ps1",
+                "args": ["-SolutionPath", "${workspaceFolder}\\msvc-full-features\\Cataclysm-vcpkg-static.sln", "-Configuration", "Release", "-EnableTracy"],
+                "group": "build",
+                "problemMatcher": "$msCompile"
+            },
+            {
                 "label": "MSBuild: Release|x86",
                 "type": "shell",
                 "command": "${workspaceFolder}\\.vscode\\msbuild.ps1",

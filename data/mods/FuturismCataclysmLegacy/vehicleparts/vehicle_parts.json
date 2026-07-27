@@ -6,7 +6,61 @@
     "description": "A table rig with a faucet for water tank access, fume hood, drawers and fixtures for storing tools, low power electric connectors and valves for fuel tank connections.",
     "item": "veh_tools_kitchen",
     "looks_like": "kitchen_unit",
-    "extend": { "allowed_tools": [ "fcl_atomic_coffeemaker" ] }
+    "extend": { "allowed_tools": [ "fcl_atomic_coffeemaker", "fcl_atompot" ] }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "solar_panel_v3",
+    "categories": [ "energy" ],
+    "copy-from": "solar_panel",
+    "name": "quantum solar panel",
+    "looks_like": "solar_panel_v2",
+    "proportional": { "epower": 6.0 },
+    "item": "solar_panel_v3",
+    "durability": 40,
+    "description": "An extremely high-performance solar panel.  Will recharge the vehicle's electrical power when exposed to the sun.  Clouds will slow the recharge speed.  Extremely fragile, and reinforcing or modifying it requires unusually careful, advanced work.",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 8 ] ], "time": "60 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 6 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] }
+    },
+    "extend": { "flags": [ "NO_REPAIR" ] },
+    "breaks_into": [
+      { "item": "lc_steel_lump", "count": [ 4, 4 ] },
+      { "item": "lc_steel_chunk", "count": [ 4, 4 ] },
+      { "item": "scrap", "count": [ 4, 4 ] },
+      { "item": "solar_cell_v3", "count": [ 2, 8 ] }
+    ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "reinforced_solar_panel_v3",
+    "categories": [ "energy" ],
+    "copy-from": "solar_panel",
+    "name": { "str": "reinforced quantum solar panel" },
+    "looks_like": "reinforced_solar_panel_v2",
+    "description": "A quantum solar panel that has been covered with a pane of reinforced glass.  The glass causes this panel to produce slightly less power than a normal quantum panel.",
+    "color": "light_blue",
+    "broken_color": "light_gray",
+    "proportional": { "epower": 5.4 },
+    "damage_modifier": 80,
+    "durability": 300,
+    "item": "reinforced_solar_panel_v3",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 8 ] ], "time": "60 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 6 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": {
+        "skills": [ [ "electronics", 8 ] ],
+        "time": "75 m",
+        "using": [ [ "vehicle_screw", 1 ], [ "solar_panel_v3", 1 ], [ "soldering_standard", 16 ], [ "repair_welding_standard", 1 ] ]
+      }
+    },
+    "breaks_into": [
+      { "item": "lc_steel_lump", "count": [ 4, 7 ] },
+      { "item": "lc_steel_chunk", "count": [ 4, 7 ] },
+      { "item": "scrap", "count": [ 4, 7 ] },
+      { "item": "solar_cell_v3", "count": [ 2, 8 ] }
+    ],
+    "damage_reduction": { "all": 10 }
   },
   {
     "type": "vehicle_part",
@@ -49,5 +103,95 @@
     ],
     "damage_reduction": { "all": 50 },
     "variants": [ { "symbols": "O", "symbols_broken": "#" } ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_control_station",
+    "name": { "str": "control station" },
+    "looks_like": "vehicle_dashboard",
+    "categories": [ "operations" ],
+    "color": "red",
+    "broken_color": "light_gray",
+    "damage_modifier": 10,
+    "durability": 400,
+    "description": "A large and complex dashboard mounted with steering controls and several LCD touch screens for controlling vehicle systems.",
+    "bonus": 10,
+    "item": "fcl_control_station",
+    "epower": "-125 W",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "60 m", "using": [ [ "welding_standard", 5 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "60 m", "using": [ [ "welding_standard", 5 ] ] }
+    },
+    "flags": [
+      "VISION",
+      "CAMERA",
+      "CONTROLS",
+      "CAMERA_CONTROL",
+      "REMOTE_CONTROLS",
+      "CTRL_ELECTRONIC",
+      "ENABLED_DRAINS_EPOWER",
+      "WATCH",
+      "ALARMCLOCK"
+    ],
+    "breaks_into": [
+      { "item": "lc_steel_lump", "count": [ 2, 4 ] },
+      { "item": "lc_steel_chunk", "count": [ 2, 4 ] },
+      { "item": "scrap", "count": [ 2, 4 ] },
+      { "item": "cable", "count": [ 2, 7 ] },
+      { "item": "RAM", "count": [ 1, 4 ] },
+      { "item": "e_scrap", "count": [ 3, 8 ] }
+    ],
+    "variants": [ { "symbols": "$", "symbols_broken": "$" } ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_smart_omnicamera",
+    "copy-from": "omnicam",
+    "categories": [ "operations" ],
+    "description": "A smart security camera you could connect to a display.  Not only is the field of vision great, but AI technology is also used for image prediction, which greatly improves the clarity of the image.  But its power consumption has also doubled.",
+    "durability": 200,
+    "bonus": 64,
+    "item": "fcl_smart_omnicamera",
+    "epower": "-20 W",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "60 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "60 m", "using": [ [ "adhesive", 1 ], [ "soldering_standard", 4 ] ] }
+    },
+    "flags": [ "VISION", "CAMERA", "ENABLED_DRAINS_EPOWER" ],
+    "breaks_into": [
+      { "item": "e_scrap", "count": [ 5, 15 ] },
+      { "item": "cable", "count": [ 1, 3 ] },
+      { "item": "plastic_chunk", "count": [ 4, 10 ] },
+      { "item": "lens", "prob": 35 },
+      { "item": "scrap", "count": [ 3, 5 ] },
+      { "item": "ai_module", "count": [ 0, 1 ] }
+    ],
+    "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_smart_omnicamera_reinforced",
+    "copy-from": "fcl_smart_omnicamera",
+    "categories": [ "operations" ],
+    "description": "A smart security camera with a cage built around it to protect it from damage without reducing its effectiveness.",
+    "durability": 500,
+    "item": "fcl_smart_omnicamera_reinforced",
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "60 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_screw", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "60 m", "using": [ [ "adhesive", 1 ], [ "soldering_standard", 4 ] ] }
+    },
+    "flags": [ "VISION", "CAMERA", "ENABLED_DRAINS_EPOWER" ],
+    "breaks_into": [
+      { "item": "e_scrap", "count": [ 5, 15 ] },
+      { "item": "cable", "count": [ 1, 3 ] },
+      { "item": "plastic_chunk", "count": [ 4, 10 ] },
+      { "item": "lens", "prob": 35 },
+      { "item": "scrap", "count": [ 3, 5 ] },
+      { "item": "ai_module", "count": [ 0, 1 ] }
+    ],
+    "variants": [ { "symbols": "o", "symbols_broken": "#" } ]
   }
 ]

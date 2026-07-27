@@ -15,6 +15,7 @@
 #include "coordinates.h"
 #include "cuboid_rectangle.h"
 #include "enums.h"
+#include "field_type.h"
 #include "game.h"
 #include "item.h"
 #include "item_contents.h"
@@ -106,6 +107,44 @@ TEST_CASE( "destroy_grabbed_furniture" )
             }
         }
     }
+}
+
+TEST_CASE( "cut_down_standard_tree_creates_stump" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms tree_pos( 60, 60, 0 );
+    here.ter_set( tree_pos, ter_id( "t_tree" ) );
+
+    here.cut_down_tree( tree_pos, point_rel_ms::east );
+
+    CHECK( here.ter( tree_pos ) == ter_id( "t_stump" ) );
+}
+
+TEST_CASE( "cut_down_no_stump_tree_uses_bash_result" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms tree_pos( 60, 60, 0 );
+    here.ter_set( tree_pos, ter_id( "t_bamboo_tall" ) );
+
+    here.cut_down_tree( tree_pos, point_rel_ms::east );
+
+    CHECK( here.ter( tree_pos ) == ter_id( "t_dirt" ) );
+}
+
+TEST_CASE( "cut_down_no_stump_tree_bashes_through_fields" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms tree_pos( 60, 60, 0 );
+    here.ter_set( tree_pos, ter_id( "t_bamboo_tall" ) );
+    REQUIRE( here.add_field( tree_pos, fd_web, 1 ) );
+
+    here.cut_down_tree( tree_pos, point_rel_ms::east );
+
+    CHECK( here.ter( tree_pos ) == ter_id( "t_dirt" ) );
+    CHECK( here.field_at( tree_pos ).find_field( fd_web ) == nullptr );
 }
 
 TEST_CASE( "map_bounds_checking" )

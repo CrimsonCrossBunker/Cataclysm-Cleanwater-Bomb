@@ -32,6 +32,7 @@
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
+#include "uilist.h"
 
 
 static furn_id f_null;
@@ -258,6 +259,7 @@ std::string enum_to_string<ter_furn_flag>( ter_furn_flag data )
         case ter_furn_flag::TFLAG_PLANT: return "PLANT";
         case ter_furn_flag::TFLAG_FISHABLE: return "FISHABLE";
         case ter_furn_flag::TFLAG_TREE: return "TREE";
+        case ter_furn_flag::TFLAG_NO_STUMP: return "NO_STUMP";
         case ter_furn_flag::TFLAG_PLOWABLE: return "PLOWABLE";
         case ter_furn_flag::TFLAG_ORGANIC: return "ORGANIC";
         case ter_furn_flag::TFLAG_CONSOLE: return "CONSOLE";
@@ -606,6 +608,38 @@ bool plant_data::load( const JsonObject &jsobj, std::string_view member,
     return true;
 }
 
+terrain_growth_data::terrain_growth_data() : transform( ter_str_id::NULL_ID() ) {}
+
+bool terrain_growth_data::load( const JsonObject &jsobj, std::string_view member )
+{
+    JsonObject j = jsobj.get_object( member );
+    optional( j, false, "transform", transform, ter_str_id::NULL_ID() );
+    mandatory( j, false, "growth_time", growth_time );
+    optional( j, false, "growth_multiplier", growth_multiplier, 1.0f );
+
+    fertilize_seasons.clear();
+    if( j.has_member( "fertilize_seasons" ) ) {
+        const std::set<std::string> season_strings = j.get_tags( "fertilize_seasons" );
+        std::transform( season_strings.begin(), season_strings.end(),
+                        std::inserter( fertilize_seasons, fertilize_seasons.begin() ),
+                        io::string_to_enum<season_type> );
+    }
+    return true;
+}
+
+void terrain_growth_data::check( const std::string &context ) const
+{
+    if( !transform.is_valid() ) {
+        debugmsg( "%s has invalid terrain_growth transform %s", context, transform.c_str() );
+    }
+    if( growth_time <= 0_seconds ) {
+        debugmsg( "%s has non-positive terrain_growth growth_time", context );
+    }
+    if( growth_multiplier <= 0.0f ) {
+        debugmsg( "%s has non-positive terrain_growth growth_multiplier", context );
+    }
+}
+
 furn_t null_furniture_t()
 {
     furn_t new_furniture;
@@ -618,7 +652,7 @@ furn_t null_furniture_t()
     new_furniture.move_str_req = -1;
     new_furniture.transparent = true;
     new_furniture.set_flag( ter_furn_flag::TFLAG_TRANSPARENT );
-    new_furniture.examine_func = iexamine_functions_from_string( "none" );
+    new_furniture.examine_func.emplace_back( iexamine_functions_from_string( "none" ) );
     new_furniture.max_volume = DEFAULT_TILE_VOLUME;
     return new_furniture;
 }
@@ -640,7 +674,7 @@ ter_t null_terrain_t()
     new_terrain.transparent = true;
     new_terrain.set_flag( ter_furn_flag::TFLAG_TRANSPARENT );
     new_terrain.set_flag( ter_furn_flag::TFLAG_DIGGABLE );
-    new_terrain.examine_func = iexamine_functions_from_string( "none" );
+    new_terrain.examine_func.emplace_back( iexamine_functions_from_string( "none" ) );
     new_terrain.max_volume = DEFAULT_TILE_VOLUME;
     return new_terrain;
 }
@@ -689,31 +723,95 @@ std::string map_data_common_t::name() const
 
 bool map_data_common_t::can_examine( const tripoint_bub_ms &examp ) const
 {
-    return examine_actor || examine_func.can_examine( examp );
+    if( !examine_actor.empty() ) {
+        return true;
+    }
+
+    for( const iexamine_functions &func : examine_func ) {
+        if( func.can_examine( examp ) ) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool map_data_common_t::has_examine( iexamine_examine_function func ) const
 {
-    return examine_func.examine == func;
+    return std::find_if( examine_func.begin(),
+    examine_func.end(), [func]( const iexamine_functions & f ) {
+        return f.examine == func;
+    } ) != examine_func.end();
 }
 
 bool map_data_common_t::has_examine( const std::string &action ) const
 {
-    return examine_actor && examine_actor->type == action;
+    return !examine_actor.empty() && std::find_if( examine_actor.begin(),
+    examine_actor.end(), [action]( const cata::clone_ptr<iexamine_actor> &a ) {
+        return a->type == action;
+    } ) != examine_actor.end();
 }
 
-void map_data_common_t::set_examine( iexamine_functions func )
+void map_data_common_t::set_examine( const iexamine_functions &func )
 {
-    examine_func = func;
+    examine_func.clear();
+    examine_func.emplace_back( func );
 }
 
 void map_data_common_t::examine( Character &you, const tripoint_bub_ms &examp ) const
 {
-    if( !examine_actor ) {
-        examine_func.examine( you, examp );
+
+    if( examine_actor.empty() && examine_func.empty() ) {
         return;
     }
-    examine_actor->call( you, examp );
+
+    // skip uilist query if only 1 option
+    if( examine_actor.size() + examine_func.size() == 1 ) {
+        if( examine_actor.size() == 1 ) {
+            examine_actor.front()->call( you, examp );
+        } else {
+            examine_func.front().examine( you, examp );
+        }
+        return;
+    }
+
+    // if NPC, pick the very first option
+    // TODO, but i have no idea how to approach it for generic use cases
+    if( you.is_npc() ) {
+        if( examine_actor.size() > 0 ) {
+            examine_actor.front()->call( you, examp );
+        } else {
+            examine_func.front().examine( you, examp );
+        }
+        return;
+    }
+
+    uilist selector;
+    selector.text = string_format( _( "What to do with the %s?" ), name() );
+
+    for( const iexamine_functions &func : examine_func ) {
+        uilist_entry e( func.get_name() );
+        e.enabled = func.can_examine( examp );
+        selector.addentry( e );
+    }
+
+    for( const cata::clone_ptr<iexamine_actor> &act : examine_actor ) {
+        uilist_entry e( act->get_name() );
+        selector.addentry( e );
+    }
+
+    selector.query();
+
+    if( selector.ret < 0 ) {
+        return;
+    }
+
+    if( selector.ret < static_cast<int>( examine_func.size() ) ) {
+        const int i = selector.ret;
+        examine_func[i].examine( you, examp );
+    } else {
+        const int i = selector.ret - examine_func.size();
+        examine_actor[i]->call( you, examp );
+    }
 }
 
 void map_data_common_t::load_symbol_color( const JsonObject &jo, const std::string &context )
@@ -1185,21 +1283,35 @@ void map_data_common_t::load( const JsonObject &jo, const std::string &src )
     } else if( was_loaded && has_any_harvest( harvest_by_season ) ) {
         // Explicitly don't inherit harvest_by_season so _harvested versions don't need to override it
         harvest_by_season.fill( harvest_id::NULL_ID() );
-        examine_actor = nullptr;
-        examine_func = iexamine_functions_from_string( "none" );
+    }
+
+    // this certainly need some cleanup, leverage it to generic factory or something
+    if( jo.has_member( "examine_action" ) ) {
+        examine_func.clear();
+        examine_actor.clear();
     }
 
     if( jo.has_string( "examine_action" ) ) {
-        examine_actor = nullptr;
-        examine_func = iexamine_functions_from_string( jo.get_string( "examine_action" ) );
+        examine_func.emplace_back( iexamine_functions_from_string( jo.get_string( "examine_action" ) ) );
     } else if( jo.has_object( "examine_action" ) ) {
         JsonObject data = jo.get_object( "examine_action" );
-        examine_actor = iexamine_actor_from_jsobj( data );
-        examine_actor->load( data, src );
-        examine_func = iexamine_functions_from_string( "invalid" );
-    } else if( !was_loaded ) {
-        examine_actor = nullptr;
-        examine_func = iexamine_functions_from_string( "none" );
+        cata::clone_ptr<iexamine_actor> a = iexamine_actor_from_jsobj( data );
+        optional( data, was_loaded, "name", a->name );
+        a->load( data, src );
+        examine_actor.emplace_back( a );
+    } else if( jo.has_array( "examine_action" ) ) {
+        for( JsonValue jov : jo.get_array( "examine_action" ) ) {
+            // if string, examine_func
+            if( jov.test_string() ) {
+                examine_func.emplace_back( iexamine_functions_from_string( jov.get_string() ) );
+            } else { // object, examine_actor
+                JsonObject data = jov.get_object();
+                cata::clone_ptr<iexamine_actor> a = iexamine_actor_from_jsobj( data );
+                optional( data, was_loaded, "name", a->name );
+                a->load( data, src );
+                examine_actor.emplace_back( a );
+            }
+        }
     }
 
     if( was_loaded && jo.has_member( "flags" ) ) {
@@ -1379,6 +1491,11 @@ void ter_t::load( const JsonObject &jo, const std::string &src )
         plant->load( jo, "plant_data", src );
     }
 
+    if( jo.has_object( "terrain_growth" ) ) {
+        terrain_growth = cata::make_value<terrain_growth_data>();
+        terrain_growth->load( jo, "terrain_growth" );
+    }
+
     if( jo.has_object( "bash" ) ) {
         bool bash_loaded = !!bash;
         if( !bash_loaded ) {
@@ -1469,6 +1586,9 @@ void ter_t::check() const
     map_data_common_t::check();
     if( bash ) {
         bash->check( id.c_str() );
+    }
+    if( terrain_growth ) {
+        terrain_growth->check( id.c_str() );
     }
     if( deconstruct ) {
         deconstruct->check( id.c_str() );

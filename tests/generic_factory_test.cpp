@@ -207,7 +207,7 @@ TEST_CASE( "string_ids_comparison", "[generic_factory][string_id]" )
 }
 
 // Benchmarks are skipped by default by using [.] tag
-TEST_CASE( "generic_factory_lookup_benchmark", "[.][generic_factory][benchmark]" )
+BENCHMARK_TEST_CASE( "generic_factory_lookup_benchmark", "[generic_factory]" )
 {
     test_obj_id id_200( "id_200" );
 
@@ -224,7 +224,7 @@ TEST_CASE( "generic_factory_lookup_benchmark", "[.][generic_factory][benchmark]"
     };
 }
 
-TEST_CASE( "string_id_compare_benchmark", "[.][generic_factory][string_id][benchmark]" )
+BENCHMARK_TEST_CASE( "string_id_compare_benchmark", "[generic_factory][string_id]" )
 {
     std::string prefix;
     SECTION( "short id" ) {
@@ -301,7 +301,7 @@ template<> struct string_id_params<dyn_test_obj> {
 };
 
 // compares the lookup performance of different flag container implementations
-TEST_CASE( "string_and_int_ids_benchmark", "[.][generic_factory][int_id][string_id][benchmark]" )
+BENCHMARK_TEST_CASE( "string_and_int_ids_benchmark", "[generic_factory][int_id][string_id]" )
 {
     stat_test_obj_factory.reset();
     for( int i = 0; i < 1000; i ++ ) {

@@ -68,14 +68,14 @@ TEST_CASE( "No_string_buffer_overlap_in_TranslationDocument", "[translations]" )
     }
 }
 
-TEST_CASE( "TranslationDocument_loading_benchmark", "[.][benchmark][translations]" )
+BENCHMARK_TEST_CASE( "TranslationDocument_loading_benchmark", "[translations]" )
 {
     BENCHMARK( "Load Russian" ) {
         return TranslationDocument( "./lang/mo/ru/LC_MESSAGES/cataclysm-dda.mo" );
     };
 }
 
-TEST_CASE( "TranslationManager_loading_benchmark", "[.][benchmark][translations]" )
+BENCHMARK_TEST_CASE( "TranslationManager_loading_benchmark", "[translations]" )
 {
     BENCHMARK( "Load Russian" ) {
         TranslationManager manager;
@@ -84,7 +84,7 @@ TEST_CASE( "TranslationManager_loading_benchmark", "[.][benchmark][translations]
     };
 }
 
-TEST_CASE( "TranslationManager_translate_benchmark", "[.][benchmark][translations]" )
+BENCHMARK_TEST_CASE( "TranslationManager_translate_benchmark", "[translations]" )
 {
     TranslationManager manager;
 
@@ -241,10 +241,14 @@ TEST_CASE( "TranslationManager_translates_plural_messages", "[translations]" )
     }
 }
 
-TEST_CASE( "TranslationPluralRulesEvaluatorPerformance", "[.][benchmark][translations]" )
+BENCHMARK_TEST_CASE( "TranslationPluralRulesEvaluatorPerformance", "[translations]" )
 {
     TranslationManager manager;
-    manager.LoadDocuments( std::vector<std::string> {"./lang/mo/ru/LC_MESSAGES/cataclysm-dda.mo"} );
+    // Use the test catalog: release translation catalogs evolve independently
+    // and are not guaranteed to keep this exact source string or translation.
+    manager.LoadDocuments( std::vector<std::string> {
+        "./data/mods/TEST_DATA/lang/mo/ru/LC_MESSAGES/TEST_DATA.mo"
+    } );
     REQUIRE( strcmp( manager.TranslatePlural( "battery", "batteries", 1 ),
                      "батарейка" ) == 0 );
     BENCHMARK( "Russian plural rules evaluation" ) {
