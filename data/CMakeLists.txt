@@ -20,6 +20,10 @@ if (USE_SDL3)
     list(APPEND CATACLYSM_DATA_DIRS shaders)
 endif ()
 
+if (CATA_ENABLE_LUA_UI)
+    list(APPEND CATACLYSM_DATA_DIRS lua)
+endif ()
+
 set(CATACLYSM_DATA_FILES
         changelog.txt
         cataicon.ico

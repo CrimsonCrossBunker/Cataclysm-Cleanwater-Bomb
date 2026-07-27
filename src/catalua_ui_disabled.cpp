@@ -33,6 +33,10 @@ bool reload_scripts( std::string &error )
     return false;
 }
 
+void on_turn()
+{
+}
+
 void on_world_ready()
 {
 }

@@ -48,6 +48,8 @@ struct script_ui_action_option {
     std::string id;
     std::string label;
     bool enabled = true;
+    bool dangerous = false;
+    std::function<void()> activate;
 };
 
 // Renderer-independent environment exposed to Lua UI API v3.  It describes

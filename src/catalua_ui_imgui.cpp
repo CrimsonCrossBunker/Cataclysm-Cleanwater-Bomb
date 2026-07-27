@@ -267,7 +267,12 @@ class imgui_script_ui_renderer final : public script_ui_renderer
             if( ImGui::Button( widget_label( id + "/trigger", current->label ).c_str(),
                                trigger_size ) &&
                 !cataimgui::interaction_suppressed() ) {
-                cata::input_context_actions::enqueue( current->id, context_revision );
+                if( current->activate ) {
+                    current->activate();
+                } else {
+                    cata::input_context_actions::enqueue(
+                        current->id, context_revision );
+                }
             }
 
             std::string result = current->id;
