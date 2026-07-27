@@ -57,6 +57,10 @@ struct spawn_point {
         mission_id( MIS ), friendly( F ), name( N ), data( SD ) {}
 };
 
+struct terrain_growth_state {
+    time_point fertilized_at = calendar::turn_zero;
+};
+
 // Suppression due to bug in clang-tidy 12
 // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 struct maptile_soa {
@@ -138,6 +142,20 @@ class submap
 
         void set_map_damage( const point_sm_ms &p, int dmg ) {
             ephemeral_data[p] = { dmg };
+        }
+
+        const terrain_growth_state *get_terrain_growth( const point_sm_ms &p ) const {
+            const auto it = terrain_growth.find( p );
+            return it == terrain_growth.end() ? nullptr : &it->second;
+        }
+
+        void set_terrain_growth( const point_sm_ms &p, const terrain_growth_state &state ) {
+            ensure_nonuniform();
+            terrain_growth[p] = state;
+        }
+
+        void clear_terrain_growth( const point_sm_ms &p ) {
+            terrain_growth.erase( p );
         }
 
         ter_id get_ter( const point_sm_ms &p ) const {
@@ -329,6 +347,7 @@ class submap
 
     private:
         std::map<point_sm_ms, tile_data> ephemeral_data;
+        std::map<point_sm_ms, terrain_growth_state> terrain_growth;
         std::map<point_sm_ms, computer> computers;
         std::unique_ptr<maptile_soa> m;
         ter_id uniform_ter = t_null;

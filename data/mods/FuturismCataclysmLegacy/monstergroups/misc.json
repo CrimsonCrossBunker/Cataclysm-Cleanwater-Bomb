@@ -13,5 +13,18 @@
       { "monster": "mon_prototype_cyborg", "weight": 100, "cost_multiplier": 2 },
       { "group": "FCL_GROUP_ROBOT_CIVIL_SECURITY", "weight": 50, "cost_multiplier": 2, "pack_size": [ 1, 2 ] }
     ]
+  },
+  {
+    "type": "monstergroup",
+    "id": "FCL_GROUP_MEALGRUB_FARM",
+    "default": "mon_zombie",
+    "monsters": [
+      { "monster": "mon_zombie", "weight": 450 },
+      { "monster": "mon_zombie_scientist", "weight": 120 },
+      { "group": "GROUP_ZOMBIE", "weight": 300 },
+      { "group": "FCL_GROUP_ROBOT_CIVIL_SECURITY", "weight": 65, "cost_multiplier": 2, "pack_size": [ 1, 2 ] },
+      { "monster": "mon_zombie_static", "weight": 3, "cost_multiplier": 5 },
+      { "monster": "mon_zombie_electric", "weight": 2, "cost_multiplier": 5 }
+    ]
   }
 ]

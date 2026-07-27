@@ -1,0 +1,31 @@
+[
+  {
+    "type": "item_group",
+    "id": "military_standard_assault_rifles",
+    "copy-from": "military_standard_assault_rifles",
+    "extend": { "items": [ { "item": "fcl_needlegun", "prob": 2, "charges": [ 0, 100 ] } ] }
+  },
+  {
+    "type": "item_group",
+    "id": "military_standard_pistols",
+    "copy-from": "military_standard_pistols",
+    "extend": { "items": [ { "item": "fcl_needlepistol", "prob": 2, "charges": [ 0, 50 ] } ] }
+  },
+  {
+    "type": "item_group",
+    "id": "helicopter",
+    "copy-from": "helicopter",
+    "extend": {
+      "items": [
+        { "item": "fcl_needlegun", "prob": 1, "charges": [ 0, 100 ] },
+        { "item": "fcl_needlepistol", "prob": 1, "charges": [ 0, 50 ] },
+        { "item": "fcl_5x50dart", "prob": 2 },
+        { "item": "fcl_5x50heavy", "prob": 1 },
+        { "item": "fcl_rm298", "prob": 1, "charges": [ 0, 250 ] },
+        { "item": "fcl_fusion_pellet", "charges": [ 0, 25 ] },
+        [ "solar_cell_v2", 1 ],
+        [ "solar_cell_v3", 1 ]
+      ]
+    }
+  }
+]

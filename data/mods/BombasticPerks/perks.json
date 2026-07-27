@@ -542,7 +542,7 @@
             }
           ]
         },
-        "values": [ { "value": "POWER_TRICKLE", "add": 250000 } ],
+        "values": [ { "value": "POWER_TRICKLE", "add": 500000 } ],
         "melee_damage_bonus": [ { "type": "electric", "add": 3 } ]
       }
     ]
@@ -1288,7 +1288,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Your blood has always been thicker than most, making you lose less of it when bleeding.",
-    "flags": [ "BLEEDSLOW" ]
+    "enchantments": [ { "values": [ { "value": "BLEEDING_RATE", "multiply": -0.333 } ] } ]
   },
   {
     "type": "mutation",

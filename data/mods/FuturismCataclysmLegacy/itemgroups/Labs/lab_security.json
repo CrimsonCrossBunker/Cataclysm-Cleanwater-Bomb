@@ -1,0 +1,60 @@
+[
+  {
+    "id": "SUS_electromagnetic_loot",
+    "type": "item_group",
+    "copy-from": "SUS_electromagnetic_loot",
+    "extend": { "items": [ { "group": "fcl_SUS_heavy_rail_rifle", "prob": 60 } ] }
+  },
+  {
+    "id": "fcl_SUS_heavy_rail_rifle",
+    "type": "item_group",
+    "subtype": "collection",
+    "entries": [ { "item": "fcl_heavy_rail_rifle" }, { "group": "UPS_power", "charges": 1000 } ]
+  },
+  {
+    "id": "SUS_rivtech_loot",
+    "type": "item_group",
+    "copy-from": "SUS_rivtech_loot",
+    "//": "This group is for rare spawns of rivetech matched sets.",
+    "extend": { "items": [ { "group": "SUS_rivtech_5x50", "prob": 30 } ] }
+  },
+  {
+    "id": "SUS_rivtech_5x50",
+    "type": "item_group",
+    "//": "This group is for rare spawns of Rivtech matched sets.",
+    "subtype": "collection",
+    "items": [
+      {
+        "distribution": [
+          { "item": "fcl_5x50dart", "prob": 80, "count": [ 1, 3 ] },
+          { "item": "fcl_5x50heavy", "prob": 20, "count": [ 1, 3 ] }
+        ]
+      },
+      {
+        "distribution": [
+          { "item": "fcl_needlegun", "prob": 50, "charges": [ 0, 100 ] },
+          { "item": "fcl_needlepistol", "prob": 50, "charges": [ 0, 50 ] }
+        ]
+      },
+      { "distribution": [ { "item": "fcl_5x50_50_mag", "prob": 80 }, { "item": "fcl_5x50_100_mag", "prob": 20 } ] }
+    ]
+  },
+  {
+    "id": "SUS_rivtech_40mm_rm",
+    "type": "item_group",
+    "copy-from": "SUS_rivtech_40mm_rm",
+    "extend": { "items": [ { "item": "fcl_rm802", "prob": 80, "charges": [ 0, 4 ] } ] }
+  },
+  {
+    "id": "SUS_rivtech_8x40_mag",
+    "type": "item_group",
+    "copy-from": "SUS_rivtech_8x40_mag",
+    "extend": { "items": [ { "item": "fcl_8x40_250_mag", "prob": 10 }, { "item": "fcl_8x40_500_mag", "prob": 10 } ] }
+  },
+  {
+    "id": "SUS_rivtech_8x40_rm",
+    "type": "item_group",
+    "copy-from": "SUS_rivtech_8x40_rm",
+    "extend": { "items": [ { "item": "fcl_rm298", "prob": 30 }, { "item": "fcl_rm614_lmg", "prob": 50 } ] }
+  }
+]

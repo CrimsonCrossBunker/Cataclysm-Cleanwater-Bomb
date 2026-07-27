@@ -40,6 +40,7 @@ class trade_selector : public inventory_drop_selector
         void execute();
         void on_toggle() override;
         select_t to_trade() const;
+        std::vector<item_location> get_item_locations() const;
         void resize( point const &size, point const &origin );
         shared_ptr_fast<ui_adaptor> get_ui() const;
         input_context const *get_ctxt() const;
@@ -87,9 +88,20 @@ class trade_ui
             select_t items_trader;
         };
 
+        struct item_locations_t {
+            std::vector<item_location> you;
+            std::vector<item_location> trader;
+        };
+
         enum class event { TRADECANCEL = 0, TRADEOK = 1, SWITCH = 2, NEVENTS = 3 };
 
         trade_ui( party_t &you, npc &trader, currency_t cost = 0, std::string title = _( "Trade" ) );
+
+        /**
+         * Collect the exact items shown as selectable in each side of the normal trade UI.
+         * This intentionally shares the trade panes' source and denial logic.
+         */
+        static item_locations_t get_item_locations( party_t &you, npc &trader );
 
         void pushevent( event const &ev );
 

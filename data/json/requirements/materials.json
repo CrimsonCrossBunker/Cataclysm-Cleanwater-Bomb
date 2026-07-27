@@ -1,5 +1,15 @@
 [
   {
+    "id": "bamboo_stick",
+    "type": "requirement",
+    "components": [ [ [ "stick", 1 ], [ "bamboo_stalk_dry", 1 ] ] ]
+  },
+  {
+    "id": "bamboo_stick_long",
+    "type": "requirement",
+    "components": [ [ [ "stick_long", 1 ], [ "bamboo_stalk_dry", 1 ] ] ]
+  },
+  {
     "id": "adhesive",
     "type": "requirement",
     "//": "Materials used for joining (typically non-metallic) parts",

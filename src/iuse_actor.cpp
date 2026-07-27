@@ -925,10 +925,12 @@ std::optional<int> explosion_iuse::use( Character *p, item &it, map *here,
         explosion_handler::flashbang( pos, flashbang_player_immune );
     }
     if( fields_radius >= 0 && fields_type.id() ) {
+        const effect_source field_source = source != nullptr
+                                           ? effect_source( source ) : effect_source::empty();
         std::vector<tripoint_bub_ms> gas_sources = points_for_gas_cloud( here, pos, fields_radius );
         for( tripoint_bub_ms &gas_source : gas_sources ) {
             const int field_intensity = rng( fields_min_intensity, fields_max_intensity );
-            here->add_field( gas_source, fields_type, field_intensity, 1_turns, true, effect_source( source ) );
+            here->add_field( gas_source, fields_type, field_intensity, 1_turns, true, field_source );
         }
     }
     if( scrambler_blast_radius >= 0 ) {
@@ -1466,7 +1468,11 @@ std::optional<int> deploy_furn_actor::use( Character *p, item &it,
 
     here->furn_set( suitable.value(), furn_type, false, false, true );
     it.spill_contents( suitable.value() );
-    form_loc( *p, here, pos, it ).remove_item();
+    if( it.count_by_charges() && it.count() > 1 ) {
+        it.split( 1 );
+    } else {
+        form_loc( *p, here, pos, it ).remove_item();
+    }
     p->mod_moves( -to_moves<int>( 2_seconds ) );
     return 0;
 }

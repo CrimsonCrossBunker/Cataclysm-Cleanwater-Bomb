@@ -262,7 +262,11 @@ class game
         /** Loads dynamic data from the folder if it is part of a subdirectory that is named after a currently loaded mod_id.  May throw. */
         void load_mod_interaction_data_from_dir( const cata_path &path, const std::string &src );
     public:
-        void setup();
+        /**
+         * Load the active world's core and mod data.
+         * @return false if the player cancels while resolving missing mods.
+         */
+        bool setup();
         /**
          * Reset all per-game runtime state (ID counters, weather, trackers,
          * EOC queues, global variables, etc.) to a clean slate. Called by
@@ -383,16 +387,15 @@ class game
          * @param npc_travellers vector of NPCs that should be brought along when travelling to another dimension
          * @param veh pointer to a vehicle to bring along.
          */
-        bool travel_to_dimension( const std::string &prefix, const std::string &region_type,
+        bool travel_to_dimension( dimension_id dimension_destination,
                                   const std::vector<npc *> &npc_travellers,
                                   const std::vector<item_location> &item_travellers,
                                   std::optional<tripoint_bub_ms> item_travellers_location,
                                   vehicle *veh = nullptr );
         /**
          * Retrieve the identifier of the current dimension.
-         * TODO: this should be a dereferencable id that gives properties of the dimension.
          */
-        std::string get_dimension_prefix() {
+        dimension_id get_dimension_prefix() {
             return dimension_prefix;
         }
 
@@ -1467,9 +1470,8 @@ class game
         //currently used as a hacky workaround for dimension swapping
         bool swapping_dimensions = false; // NOLINT (cata-serialize)
     private:
-        // Stores the currently occupied dimension.
-        // TODO: should be an id instead of a string.
-        std::string dimension_prefix;
+        // the currently occupied dimension
+        dimension_id dimension_prefix;
 };
 
 // Returns temperature modifier from direct heat radiation of nearby sources

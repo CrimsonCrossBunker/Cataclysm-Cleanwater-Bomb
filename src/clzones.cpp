@@ -112,6 +112,8 @@ void zone_manager::clear()
     // Reset personal zone counter, else it accumulates across in-place reloads
     // (quickload / snapshot restore) since deserialize() only ever increments it.
     num_personal_zones = 0;
+    // Reset shift freeze so a fresh game/test does not inherit stale state.
+    personal_shift_frozen = false;
     // Do not clear types since it is needed for the next games.
     area_cache.clear();
     vzone_cache.clear();
@@ -1018,7 +1020,8 @@ void zone_manager::cache_data( bool update_avatar )
 
         // update the current cached locations for each personal zone
         // if we are flagged to update the locations with this cache
-        if( elem.get_is_personal() && update_avatar ) {
+        // but do not update while a zone activity has frozen the shift
+        if( elem.get_is_personal() && update_avatar && !personal_shift_frozen ) {
             elem.update_cached_shift( cached_shift );
         }
 
@@ -1051,6 +1054,10 @@ void zone_manager::reset_disabled()
 
 void zone_manager::cache_avatar_location()
 {
+    if( personal_shift_frozen ) {
+        return;
+    }
+
     avatar &player_character = get_avatar();
     tripoint_abs_ms cached_shift = player_character.pos_abs();
     for( zone_data &elem : zones ) {
@@ -1059,6 +1066,16 @@ void zone_manager::cache_avatar_location()
             elem.update_cached_shift( cached_shift );
         }
     }
+}
+
+void zone_manager::freeze_personal_shift()
+{
+    personal_shift_frozen = true;
+}
+
+void zone_manager::unfreeze_personal_shift()
+{
+    personal_shift_frozen = false;
 }
 
 void zone_manager::cache_vzones( map *pmap )
@@ -1774,6 +1791,17 @@ bool zone_manager::has_nonpersonal( const zone_type_id &type,
             return true;
         }
     }
+
+    // Vehicle zones are never personal, but they must still count as non-personal
+    // destinations/sources when NPCs are filtering out personal zones.
+    map &here = get_map();
+    for( zone_data *z : here.get_vehicle_zones( where.z() ) ) {
+        if( z->get_enabled() && z->get_type() == type && z->get_faction() == fac &&
+            z->has_inside( where ) ) {
+            return true;
+        }
+    }
+
     return false;
 }
 

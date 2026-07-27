@@ -308,5 +308,46 @@
     "description": "Test terrain: utility light that emits blue-colored light.",
     "light_emitted": 10,
     "light_color": [ 0, 0, 255 ]
+  },
+  {
+    "type": "terrain",
+    "id": "test_t_terrain_growth_seed",
+    "name": "terrain growth test seed",
+    "description": "Test terrain for terrain growth.",
+    "symbol": "t",
+    "color": "green",
+    "move_cost": 2,
+    "examine_action": "fertilize_terrain",
+    "terrain_growth": {
+      "transform": "test_t_terrain_growth_middle",
+      "growth_time": "2 days",
+      "growth_multiplier": 1.0,
+      "fertilize_seasons": [ "spring" ]
+    }
+  },
+  {
+    "type": "terrain",
+    "id": "test_t_terrain_growth_middle",
+    "name": "terrain growth test middle",
+    "description": "Test terrain for terrain growth.",
+    "symbol": "t",
+    "color": "light_green",
+    "move_cost": 3,
+    "examine_action": "fertilize_terrain",
+    "terrain_growth": {
+      "transform": "test_t_terrain_growth_final",
+      "growth_time": "4 days",
+      "growth_multiplier": 1.0,
+      "fertilize_seasons": [ "spring", "summer" ]
+    }
+  },
+  {
+    "type": "terrain",
+    "id": "test_t_terrain_growth_final",
+    "name": "terrain growth test final",
+    "description": "Test terrain for terrain growth.",
+    "symbol": "t",
+    "color": "green",
+    "move_cost": 4
   }
 ]

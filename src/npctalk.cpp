@@ -4708,7 +4708,7 @@ talk_effect_fun_t::func f_dimension_name( const JsonObject &jo, std::string_view
     std::string var_name = var.name;
 
     return [var_name, type]( dialogue & d ) {
-        write_var_value( type, var_name, &d, g->get_dimension_prefix() );
+        write_var_value( type, var_name, &d, g->get_dimension_prefix().str() );
     };
 }
 
@@ -7023,16 +7023,20 @@ talk_effect_fun_t::func f_run_npc_eocs( const JsonObject &jo,
     } else {
         return [eocs, unique_ids]( dialogue const & d ) {
             for( const str_or_var &target : unique_ids ) {
-                if( g->unique_npc_exists( target.evaluate( d ) ) ) {
-                    for( const effect_on_condition_id &eoc : eocs ) {
-                        npc *npc = g->find_npc_by_unique_id( target.evaluate( d ) );
-                        if( npc ) {
-                            dialogue newDialog( get_talker_for( npc ), nullptr, d.get_conditionals(), d.get_context() );
-                            eoc->activate( newDialog );
-                        } else {
-                            debugmsg( "Tried to use invalid npc: %s. %s", target.evaluate( d ), d.get_callstack() );
-                        }
-                    }
+                const std::string target_id = target.evaluate( d );
+                if( !g->unique_npc_exists( target_id ) ) {
+                    continue;
+                }
+                // The unique NPC registry also prevents mapgen from respawning an NPC, so an
+                // entry can legitimately outlive an NPC that was killed or otherwise removed.
+                npc *target_npc = g->find_npc_by_unique_id( target_id );
+                if( target_npc == nullptr ) {
+                    continue;
+                }
+                for( const effect_on_condition_id &eoc : eocs ) {
+                    dialogue newDialog( get_talker_for( target_npc ), nullptr, d.get_conditionals(),
+                                        d.get_context() );
+                    eoc->activate( newDialog );
                 }
             }
         };
@@ -8405,13 +8409,11 @@ talk_effect_fun_t::func f_travel_to_dimension( const JsonObject &jo, std::string
 
 
     return [fail_message, success_message, dimension_prefix, npc_travel_filter, target_location,
-                  npc_travel_radius, item_travel_radius, region_type_var, take_vehicle]( dialogue const & d ) {
+                  npc_travel_radius, item_travel_radius, take_vehicle]( dialogue const & d ) {
         Creature *teleporter = d.actor( false )->get_creature();
         if( teleporter ) {
-            std::string region_type = region_type_var.evaluate( d );
-            std::string prefix = dimension_prefix.evaluate( d );
-            std::string temp_dimension_prefix = ( prefix == "default" ) ? "" : prefix;
-            if( temp_dimension_prefix != g->get_dimension_prefix() ) {
+            dimension_id prefix( dimension_prefix.evaluate( d ) );
+            if( prefix != g->get_dimension_prefix() && prefix.is_valid() ) {
                 std::vector<npc *> travellers;
                 std::string filter = npc_travel_filter.evaluate( d );
                 int radius = npc_travel_radius.evaluate( d );
@@ -8460,7 +8462,7 @@ talk_effect_fun_t::func f_travel_to_dimension( const JsonObject &jo, std::string
                     veh = &vp_here->vehicle();
                 }
                 // returns False if fail
-                if( g->travel_to_dimension( prefix, region_type, travellers, items, center, veh ) ) {
+                if( g->travel_to_dimension( prefix, travellers, items, center, veh ) ) {
                     teleporter->add_msg_if_player( success_message.evaluate( d ) );
                 } else {
                     teleporter->add_msg_if_player( fail_message.evaluate( d ) );
@@ -8790,8 +8792,9 @@ void talk_effect_t::parse_string_effect( const std::string &effect_id, const Jso
             WRAP( do_chop_plank ),
             WRAP( do_vehicle_deconstruct ),
             WRAP( do_vehicle_repair ),
-            WRAP( select_vehicle_part_repair ),
-            WRAP( start_vehicle_part_repair ),
+            WRAP( select_vehicle_part_service ),
+            WRAP( quote_vehicle_full_repair ),
+            WRAP( start_vehicle_full_repair ),
             WRAP( do_chop_trees ),
             WRAP( do_fishing ),
             WRAP( do_construction ),
@@ -9684,4 +9687,3 @@ std::vector<std::string> get_all_talk_topic_ids()
     }
     return dialogue_ids;
 }
-

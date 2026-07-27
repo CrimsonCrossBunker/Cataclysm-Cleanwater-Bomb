@@ -168,6 +168,7 @@ static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
 static const json_character_flag json_flag_BIONIC_SHOCKPROOF( "BIONIC_SHOCKPROOF" );
 static const json_character_flag json_flag_BLIND( "BLIND" );
 static const json_character_flag json_flag_CANNIBAL( "CANNIBAL" );
+static const json_character_flag json_flag_CANNOT_GAIN_WEARINESS( "CANNOT_GAIN_WEARINESS" );
 static const json_character_flag json_flag_CANNOT_TAKE_DAMAGE( "CANNOT_TAKE_DAMAGE" );
 static const json_character_flag json_flag_DEAF( "DEAF" );
 static const json_character_flag json_flag_GRAB( "GRAB" );
@@ -179,6 +180,7 @@ static const json_character_flag json_flag_NUMB( "NUMB" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB( "PARTIAL_BIONIC_LIMB" );
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
+static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 static const json_character_flag json_flag_SAPIOVORE( "SAPIOVORE" );
 static const json_character_flag json_flag_SPIRITUAL( "SPIRITUAL" );
 static const json_character_flag json_flag_STOP_SLEEP_DEPRIVATION( "STOP_SLEEP_DEPRIVATION" );
@@ -635,6 +637,9 @@ void Character::apply_murder_penalties( Creature *victim )
         player_character.add_morale( morale_killer_has_killed, -15, 0, 1_days, 1_hours );
     }
     if( victim->as_monster() || ( victim->as_npc() && victim->as_npc()->hit_by_player ) ) {
+        if( victim->as_npc() && victim->as_npc()->hit_by_player ) {
+            player_character.record_mental_metric_guilt_kill();
+        }
         int morale_effect = -90;
         // Just because you like eating people doesn't mean you love killing innocents
         if( player_character.has_flag( json_flag_CANNIBAL ) && morale_effect < 0 ) {
@@ -645,13 +650,15 @@ void Character::apply_murder_penalties( Creature *victim )
         }
         if( player_character.has_flag( json_flag_PSYCHOPATH ) ||
             player_character.has_flag( json_flag_SAPIOVORE ) ||
-            player_character.has_flag( json_flag_NUMB ) ) {
+            player_character.has_flag( json_flag_NUMB ) ||
+            player_character.has_flag( json_flag_INSENSITIVITY ) ) {
             morale_effect = 0;
         } // only god can juge me
         if( player_character.has_flag( json_flag_SPIRITUAL ) &&
             !player_character.has_flag( json_flag_PSYCHOPATH ) &&
             !player_character.has_flag( json_flag_SAPIOVORE ) &&
-            !player_character.has_flag( json_flag_NUMB ) ) {
+            !player_character.has_flag( json_flag_NUMB ) &&
+            !player_character.has_flag( json_flag_INSENSITIVITY ) ) {
             add_msg( _( "You feel ashamed of your actions." ) );
             morale_effect -= 10;
         }
@@ -1008,6 +1015,9 @@ void Character::set_thirst( int nthirst )
 
 void Character::mod_sleepiness( int nsleepiness )
 {
+    if( is_npc() && !needs_food() ) {
+        return;
+    }
     set_sleepiness( sleepiness + nsleepiness );
 }
 
@@ -1314,7 +1324,12 @@ void Character::update_health()
 
 int Character::weariness() const
 {
-    return activity_history.weariness();
+    // if we're magically inexhaustable or something, weariness is 0.
+    if( has_flag( json_flag_CANNOT_GAIN_WEARINESS ) ) {
+        return 0;
+    } else {
+        return activity_history.weariness();
+    }
 }
 
 int Character::weary_threshold() const
@@ -1454,8 +1469,18 @@ void Character::update_needs( int rate_multiplier )
     needs_rates rates = calc_needs_rates();
 
     const bool wasnt_sleepinessd = get_sleepiness() <= sleepiness_levels::DEAD_TIRED;
-    // Don't increase sleepiness if sleeping or trying to sleep or if we're at the cap.
-    if( get_sleepiness() < 1050 && !asleep && !debug_ls ) {
+    // NO_NPC_FOOD disables hunger, thirst, and sleep/fatigue for NPCs.
+    if( !needs_food() ) {
+        set_sleepiness( 0 );
+        set_sleep_deprivation( 0 );
+        if( asleep ) {
+            remove_effect( effect_sleep );
+        }
+        remove_effect( effect_lying_down );
+        if( activity.id() == ACT_TRY_SLEEP ) {
+            activity.set_to_null();
+        }
+    } else if( get_sleepiness() < 1050 && !asleep && !debug_ls ) {
         if( rates.sleepiness > 0.0f ) {
             int sleepiness_roll = roll_remainder( rates.sleepiness * rate_multiplier );
             mod_sleepiness( sleepiness_roll );
@@ -1468,11 +1493,6 @@ void Character::update_needs( int rate_multiplier )
                 // Note: Since needs are updated in 5-minute increments, we have to multiply the roll again by
                 // 5. If rate_multiplier is > 1, sleepiness_roll will be higher and this will work out.
                 mod_sleep_deprivation( sleepiness_roll * 5 );
-            }
-
-            if( !needs_food() && get_sleepiness() > sleepiness_levels::TIRED ) {
-                set_sleepiness( sleepiness_levels::TIRED );
-                set_sleep_deprivation( 0 );
             }
         }
     } else if( asleep ) {
@@ -2494,6 +2514,8 @@ void Character::wake_up()
         return;
     }
 
+    const bool was_sleeping = has_effect( effect_sleep );
+
     // Do not remove effect_sleep or effect_alarm_clock now otherwise it invalidates an effect
     // iterator in player::process_effects().
     // We just set it for later removal (also happening in player::process_effects(), so no side
@@ -2512,6 +2534,10 @@ void Character::wake_up()
 
     if( movement_mode_is( move_mode_prone ) ) {
         set_movement_mode( move_mode_walk );
+    }
+
+    if( was_sleeping && is_avatar() ) {
+        maybe_gain_insensitivity();
     }
 }
 

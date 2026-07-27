@@ -242,11 +242,20 @@ void player_activity::do_turn( Character &you )
     }
     const float activity_mult = you.exertion_adjusted_move_multiplier( exertion_level() );
     if( type->based_on() == based_on_type::TIME ) {
-        if( moves_left >= 100 ) {
-            moves_left -= 100 * activity_mult;
-            you.set_moves( 0 );
+        // NPCs that re-enter the reality bubble may have a large backlog of moves.
+        // Allow them to fast-forward time-based activities proportionally.
+        const int base_progress = 100;
+        const int npc_bonus = you.is_npc() ? std::max( 0, you.get_moves() - base_progress ) : 0;
+        const int progress = base_progress + npc_bonus;
+        if( moves_left >= progress ) {
+            moves_left -= progress * activity_mult;
+            if( you.is_npc() ) {
+                you.mod_moves( -progress );
+            } else {
+                you.set_moves( 0 );
+            }
         } else {
-            you.mod_moves( -you.get_moves() * moves_left / 100 );
+            you.mod_moves( -you.get_moves() * moves_left / progress );
             moves_left = 0;
         }
     } else if( type->based_on() == based_on_type::SPEED ) {

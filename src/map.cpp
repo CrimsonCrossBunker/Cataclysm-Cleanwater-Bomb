@@ -623,7 +623,7 @@ void memorize_vpart_at( map &here, avatar &you, const tripoint_bub_ms &p,
 
 void map::update_map_memory( avatar &you )
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     map &here = *this;
     const int z = you.posz();
 
@@ -1141,7 +1141,7 @@ void map::resolve_appliance_grid_power()
 
 void map::vehmove()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     // give vehicles movement points
     VehicleList vehicle_list;
     int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
@@ -2559,6 +2559,40 @@ void map::set_map_damage( const tripoint_bub_ms &p, int dmg )
     current_submap->set_map_damage( l, dmg );
 }
 
+const terrain_growth_state *map::get_terrain_growth( const tripoint_bub_ms &p ) const
+{
+    if( !inbounds( p ) ) {
+        return nullptr;
+    }
+    point_sm_ms l;
+    const submap *const current_submap = unsafe_get_submap_at( p, l );
+    return current_submap == nullptr ? nullptr : current_submap->get_terrain_growth( l );
+}
+
+void map::set_terrain_growth( const tripoint_bub_ms &p, const terrain_growth_state &state )
+{
+    if( !inbounds( p ) ) {
+        return;
+    }
+    point_sm_ms l;
+    submap *const current_submap = unsafe_get_submap_at( p, l );
+    if( current_submap != nullptr ) {
+        current_submap->set_terrain_growth( l, state );
+    }
+}
+
+void map::clear_terrain_growth( const tripoint_bub_ms &p )
+{
+    if( !inbounds( p ) ) {
+        return;
+    }
+    point_sm_ms l;
+    submap *const current_submap = unsafe_get_submap_at( p, l );
+    if( current_submap != nullptr ) {
+        current_submap->clear_terrain_growth( l );
+    }
+}
+
 uint8_t map::get_known_connections( const tripoint_bub_ms &p,
                                     const std::bitset<NUM_TERCONN> &connect_group,
                                     const std::map<tripoint_bub_ms, ter_id> &override ) const
@@ -3174,6 +3208,7 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
         current_submap->player_adjusted_map = true;
     }
     current_submap->set_ter( l, new_terrain );
+    current_submap->clear_terrain_growth( l );
     current_submap->set_map_damage( point_sm_ms( l ), 0 );
     // Clear any recorded original terrain when terrain is explicitly set here.
     clear_original_terrain_at( p );
@@ -3574,7 +3609,7 @@ double map::ranged_target_size( const tripoint_bub_ms &p ) const
         return 0.0;
     }
 
-    // TODO: Handle cases like shrubs, trees, furniture, sandbags...
+    // 0.1 strikes the floor. All other cases are handled by cover.
     return 0.1;
 }
 
@@ -3697,10 +3732,14 @@ std::optional<tripoint_bub_ms> map::vehicle_ladder_destination( const tripoint_b
     tripoint_bub_ms dest = from;
     for( int dist = 1; dist <= max_descent; ++dist ) {
         const tripoint_bub_ms candidate( from.xy(), from.z() - dist );
-        dest = candidate;
-        if( !is_open_air( candidate ) || veh_at( candidate ) ) {
-            break;
+        if( is_open_air( candidate ) && !veh_at( candidate ) ) {
+            dest = candidate;
+            continue;
         }
+        if( passable( candidate ) ) {
+            return candidate;
+        }
+        return std::nullopt;
     }
 
     return dest;
@@ -4111,7 +4150,7 @@ void map::support_dirty( const tripoint_bub_ms &p )
 
 void map::process_falling()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     if( !zlevels ) {
         support_cache_dirty.clear();
         return;
@@ -7218,7 +7257,7 @@ static void process_vehicle_items( vehicle &cur_veh, int part )
 
 void map::process_items()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
     const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
     for( int gz = minz; gz <= maxz; ++gz ) {
@@ -8391,7 +8430,7 @@ void map::update_submaps_with_active_items()
 
 void map::update_visibility_cache( const int zlev )
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     Character &player_character = get_player_character();
     const tripoint_bub_ms pos = player_character.pos_bub( *this );
 
@@ -10191,6 +10230,23 @@ void map::fill_funnels( const tripoint_bub_ms &p, const time_point &since )
     }
 }
 
+void map::grow_terrain_plant( const tripoint_bub_ms &p )
+{
+    const ter_t &terrain = ter( p ).obj();
+    const terrain_growth_state *const state = get_terrain_growth( p );
+    if( !terrain.terrain_growth || state == nullptr ) {
+        return;
+    }
+
+    const float crop_growth_speed = ::get_option<float>( "CROP_GROWTH_SPEED" );
+    const time_duration elapsed = calendar::turn - state->fertilized_at;
+    const time_duration effective_elapsed = elapsed * terrain.terrain_growth->growth_multiplier *
+                                            crop_growth_speed;
+    if( effective_elapsed >= terrain.terrain_growth->growth_time ) {
+        ter_set( p, terrain.terrain_growth->transform );
+    }
+}
+
 void map::grow_plant( const tripoint_bub_ms &p )
 {
     const furn_t &initial_furn = this->furn( p ).obj();
@@ -10409,7 +10465,8 @@ void map::grow_plant( const tripoint_bub_ms &p )
     const int mature_stage_idx = iexamine::get_plant_mature_stage_idx( *seed->type->seed );
     const int overgrown_stage_idx = iexamine::get_plant_overgrown_stage_idx( *seed->type->seed );
 
-    const bool overgrown_enabled = crop_overgrown_enabled;
+    const bool overgrown_enabled = crop_overgrown_enabled &&
+                                   !initial_furn.has_flag( "NO_CROP_OVERGROWTH" );
     // When overgrowth is disabled, clamp growth at the stage just before
     // overgrown (usually harvest), not at mature.  Mature is too early and
     // would prevent harvesting entirely.
@@ -10623,6 +10680,16 @@ void map::cut_down_tree( tripoint_bub_ms p, point_rel_ms dir )
         return;
     }
 
+    if( ter( p ).obj().has_flag( ter_furn_flag::TFLAG_NO_STUMP ) ) {
+        bash( p, 999, false, false, true );
+        // Bashable fields are handled before terrain and prevent the terrain
+        // from being bashed.  Retry if the tree survived the first bash.
+        if( ter( p ).obj().has_flag( ter_furn_flag::TFLAG_TREE ) ) {
+            bash( p, 999, false, false, true );
+        }
+        return;
+    }
+
     tripoint_bub_ms to = p + 3 * dir + point( rng( -1, 1 ), rng( -1, 1 ) );
 
     // TODO: make line_to type aware.
@@ -10782,6 +10849,7 @@ void map::actualize( const tripoint_rel_sm &grid )
             if( furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
                 grow_plant( pnt );
             }
+            grow_terrain_plant( pnt );
 
             restock_fruits( pnt, time_since_last_actualize );
 
@@ -11642,7 +11710,7 @@ bool map::build_floor_cache( const int zlev )
 
 void map::build_floor_caches()
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
     const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
     for( int z = minz; z <= maxz; z++ ) {
@@ -11718,7 +11786,7 @@ void map::do_vehicle_caching( int z )
 
 void map::build_map_cache( const int zlev, bool skip_lightmap )
 {
-    ZoneScoped;
+    CATA_PROFILE_SCOPE();
     const int minz = zlevels ? -OVERMAP_DEPTH : zlev;
     const int maxz = zlevels ? OVERMAP_HEIGHT : zlev;
     bool seen_cache_dirty = false;

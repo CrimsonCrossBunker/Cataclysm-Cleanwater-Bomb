@@ -1,0 +1,34 @@
+[
+  {
+    "id": "fcl_5x50_100_mag",
+    "copy-from": "stanag30",
+    "looks_like": "mp5mag",
+    "type": "ITEM",
+    "subtypes": [ "MAGAZINE" ],
+    "name": { "str": "5x50mm 100-round magazine" },
+    "description": "A 100-round box magazine for use with 5x50mm flechette firearms.  Designated as RMFB100.",
+    "weight": "360 g",
+    "volume": "630 ml",
+    "price": "150 USD",
+    "price_postapoc": "7 USD 50 cent",
+    "material": [ "superalloy", "plastic" ],
+    "color": "dark_gray",
+    "ammo_type": [ "fcl_5x50" ],
+    "reload_time": 60,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "fcl_5x50": 100 } } ]
+  },
+  {
+    "id": "fcl_5x50_50_mag",
+    "copy-from": "fcl_5x50_100_mag",
+    "type": "ITEM",
+    "subtypes": [ "MAGAZINE" ],
+    "name": { "str": "5x50mm 50-round magazine" },
+    "description": "A 50-round box magazine for use with 5x50mm flechette firearms.  Designated as RMFB50.",
+    "weight": "240 g",
+    "volume": "315 ml",
+    "price": "125 USD",
+    "price_postapoc": "5 USD",
+    "reload_time": 50,
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "fcl_5x50": 50 } } ]
+  }
+]

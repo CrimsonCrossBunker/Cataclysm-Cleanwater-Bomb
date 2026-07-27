@@ -14,7 +14,8 @@
     "symbol": ".",
     "color": "brown",
     "//": "Note that in most cases this item typically represents many seeds, enough to fill an entire tile with plants.",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "abstract": "seed_fruit",
@@ -1747,7 +1748,8 @@
     "flags": [ "HIDDEN_POISON", "RAW" ],
     "use_action": [ "POISON" ],
     "//": "USDA states that the pods of the Kentucky coffeetree contain a toxic alkaloid broken down in the roasting process, so they're poisonous",
-    "vitamins": [ [ "veggy_allergen", 1 ] ]
+    "vitamins": [ [ "veggy_allergen", 1 ] ],
+    "stackable": true
   },
   {
     "id": "coffee_bean",
@@ -1768,7 +1770,8 @@
     "addiction_type": "caffeine",
     "addiction_potential": 1,
     "flags": [ "EDIBLE_FROZEN", "RAW", "NO_AUTO_CONSUME", "INEDIBLE", "NUTRIENT_OVERRIDE" ],
-    "//": "You can technically eat 20 or 30 coffee beans before getting sick, but any more than that and you'll have a very bad time.  This is a negligible amount of calories so we either need to greatly reduce portion size here or find a way to simulate the agony someone would be in after eating an entire cup of the things."
+    "//": "You can technically eat 20 or 30 coffee beans before getting sick, but any more than that and you'll have a very bad time.  This is a negligible amount of calories so we either need to greatly reduce portion size here or find a way to simulate the agony someone would be in after eating an entire cup of the things.",
+    "stackable": true
   },
   {
     "type": "ITEM",

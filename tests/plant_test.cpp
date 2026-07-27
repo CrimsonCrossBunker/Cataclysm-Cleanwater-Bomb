@@ -1,6 +1,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -31,6 +32,7 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "ret_val.h"
+#include "submap.h"
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
@@ -44,6 +46,14 @@ static const furn_str_id furn_test_f_plant_mature( "test_f_plant_mature" );
 static const furn_str_id furn_test_f_plant_overgrown( "test_f_plant_overgrown" );
 static const furn_str_id furn_test_f_plant_seed( "test_f_plant_seed" );
 static const furn_str_id furn_test_f_plant_seedling( "test_f_plant_seedling" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_seed( "test_f_planter_no_overgrowth_seed" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_seedling( "test_f_planter_no_overgrowth_seedling" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_mature( "test_f_planter_no_overgrowth_mature" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_harvest( "test_f_planter_no_overgrowth_harvest" );
 static const furn_str_id
 furn_test_f_planter_high_water_mature( "test_f_planter_high_water_mature" );
 static const furn_str_id furn_test_f_planter_high_water_seed( "test_f_planter_high_water_seed" );
@@ -64,6 +74,10 @@ static const ter_furn_transform_id
 ter_furn_transform_ter_test_plant_seed_to_harvest( "ter_test_plant_seed_to_harvest" );
 static const ter_furn_transform_id
 ter_furn_transform_ter_test_plant_seedling_to_mature( "ter_test_plant_seedling_to_mature" );
+static const ter_str_id ter_test_t_terrain_growth_final( "test_t_terrain_growth_final" );
+static const ter_str_id ter_test_t_terrain_growth_middle( "test_t_terrain_growth_middle" );
+static const ter_str_id ter_test_t_terrain_growth_seed( "test_t_terrain_growth_seed" );
+static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
 static const vproto_id vehicle_prototype_oldtractor( "oldtractor" );
 
@@ -806,6 +820,44 @@ TEST_CASE( "crop_overgrown_enabled_world_option", "[plant][world_option]" )
     CHECK( iexamine::is_plant_harvestable( here, plot ) );
 }
 
+TEST_CASE( "planter_flag_prevents_crop_overgrowth", "[plant][furniture][flag]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+    reset_test_globals();
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_OVERGROWN_ENABLED"].setValue( "true" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope cleanup( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.add_item( plot, item( itype_test_seed_eoc ) );
+    here.furn_set( plot, furn_test_f_planter_no_overgrowth_seed );
+
+    for( const furn_str_id &expected : {
+             furn_test_f_planter_no_overgrowth_seedling,
+             furn_test_f_planter_no_overgrowth_mature,
+             furn_test_f_planter_no_overgrowth_harvest
+         } ) {
+        calendar::turn += 1_hours;
+        here.grow_plant( plot );
+        CHECK( here.furn( plot ) == expected );
+        CHECK( here.furn( plot ).obj().has_flag( "NO_CROP_OVERGROWTH" ) );
+    }
+
+    calendar::turn += 1_hours;
+    here.grow_plant( plot );
+
+    CHECK( here.furn( plot ) == furn_test_f_planter_no_overgrowth_harvest );
+    CHECK( !iexamine::is_plant_overgrown( here, plot ) );
+    CHECK( iexamine::is_plant_harvestable( here, plot ) );
+}
+
 TEST_CASE( "crop_growth_speed_does_not_boost_ter_transform",
            "[plant][world_option][magic][ter_transform]" )
 {
@@ -1143,6 +1195,218 @@ TEST_CASE( "can_fertilize_syncs_furniture_with_effective_time", "[plant][fertili
     CHECK( !result.success() );
     // grow_plant() should also have advanced the furniture to match effective time.
     CHECK( here.furn( plot ) == furn_test_f_plant_mature );
+}
+
+TEST_CASE( "terrain_growth_data_loads_from_json", "[terrain_growth][plant]" )
+{
+    REQUIRE( ter_test_t_terrain_growth_seed.is_valid() );
+    REQUIRE( ter_test_t_terrain_growth_middle.is_valid() );
+    REQUIRE( ter_test_t_terrain_growth_final.is_valid() );
+
+    const ter_t &seed = ter_test_t_terrain_growth_seed.obj();
+    REQUIRE( seed.terrain_growth );
+    CHECK( seed.has_examine( iexamine::fertilize_terrain ) );
+    CHECK( seed.terrain_growth->transform == ter_test_t_terrain_growth_middle );
+    CHECK( seed.terrain_growth->growth_time == 2_days );
+    CHECK( seed.terrain_growth->growth_multiplier == 1.0f );
+    CHECK( seed.terrain_growth->fertilize_seasons == std::set<season_type> { SPRING } );
+
+    const ter_t &middle = ter_test_t_terrain_growth_middle.obj();
+    REQUIRE( middle.terrain_growth );
+    CHECK( middle.has_examine( iexamine::fertilize_terrain ) );
+    CHECK( middle.terrain_growth->transform == ter_test_t_terrain_growth_final );
+    CHECK( middle.terrain_growth->growth_time == 4_days );
+    CHECK( middle.terrain_growth->growth_multiplier == 1.0f );
+    CHECK( middle.terrain_growth->fertilize_seasons == std::set<season_type> { SPRING, SUMMER } );
+
+    CHECK( !ter_test_t_terrain_growth_final->terrain_growth );
+}
+
+TEST_CASE( "terrain_growth_advances_after_fertilized_time", "[terrain_growth][plant]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    const time_point old_turn = calendar::turn;
+    on_out_of_scope restore_turn( [&]() {
+        calendar::turn = old_turn;
+    } );
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "1.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope restore_options( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    calendar::turn = calendar::turn_zero + 12_hours;
+    here.ter_set( plot, ter_test_t_terrain_growth_seed );
+
+    here.grow_terrain_plant( plot );
+    CHECK( here.ter( plot ).obj().id == ter_test_t_terrain_growth_seed );
+
+    terrain_growth_state state;
+    state.fertilized_at = calendar::turn - 2_days + 1_turns;
+    here.set_terrain_growth( plot, state );
+
+    here.grow_terrain_plant( plot );
+    CHECK( here.ter( plot ).obj().id == ter_test_t_terrain_growth_seed );
+    REQUIRE( here.get_terrain_growth( plot ) != nullptr );
+
+    calendar::turn += 1_turns;
+    here.grow_terrain_plant( plot );
+    CHECK( here.ter( plot ).obj().id == ter_test_t_terrain_growth_middle );
+    CHECK( here.get_terrain_growth( plot ) == nullptr );
+}
+
+TEST_CASE( "terrain_growth_respects_crop_growth_speed", "[terrain_growth][plant][world_option]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    const time_point old_turn = calendar::turn;
+    on_out_of_scope restore_turn( [&]() {
+        calendar::turn = old_turn;
+    } );
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "2.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope restore_options( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    calendar::turn = calendar::turn_zero + 12_hours;
+    here.ter_set( plot, ter_test_t_terrain_growth_seed );
+
+    terrain_growth_state state;
+    state.fertilized_at = calendar::turn - 2_days / 2;
+    here.set_terrain_growth( plot, state );
+
+    here.grow_terrain_plant( plot );
+    CHECK( here.ter( plot ).obj().id == ter_test_t_terrain_growth_middle );
+}
+
+TEST_CASE( "terrain_growth_state_is_cleared_when_terrain_changes", "[terrain_growth][plant]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.ter_set( plot, ter_test_t_terrain_growth_seed );
+
+    terrain_growth_state state;
+    state.fertilized_at = calendar::turn;
+    here.set_terrain_growth( plot, state );
+    REQUIRE( here.get_terrain_growth( plot ) != nullptr );
+
+    here.ter_set( plot, ter_t_dirt );
+    CHECK( here.get_terrain_growth( plot ) == nullptr );
+}
+
+TEST_CASE( "terrain_growth_fertilize_checks_season_and_existing_state",
+           "[terrain_growth][plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    const time_point old_turn = calendar::turn;
+    on_out_of_scope restore_turn( [&]() {
+        calendar::turn = old_turn;
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    here.ter_set( plot, ter_test_t_terrain_growth_seed );
+
+    calendar::turn = calendar::turn_zero + calendar::season_length();
+    ret_val<void> wrong_season = multi_farm_activity_actor::can_fertilize( u, plot );
+    CHECK( !wrong_season.success() );
+    CHECK( wrong_season.str().find( "correct season" ) != std::string::npos );
+
+    calendar::turn = calendar::turn_zero + 12_hours;
+    ret_val<void> correct_season = multi_farm_activity_actor::can_fertilize( u, plot );
+    CHECK( correct_season.success() );
+
+    terrain_growth_state state;
+    state.fertilized_at = calendar::turn;
+    here.set_terrain_growth( plot, state );
+
+    ret_val<void> already_fertilized = multi_farm_activity_actor::can_fertilize( u, plot );
+    CHECK( !already_fertilized.success() );
+    CHECK( already_fertilized.str().find( "already been fertilized" ) != std::string::npos );
+}
+
+TEST_CASE( "terrain_growth_can_fertilize_syncs_expired_growth",
+           "[terrain_growth][plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    const time_point old_turn = calendar::turn;
+    on_out_of_scope restore_turn( [&]() {
+        calendar::turn = old_turn;
+    } );
+
+    options_manager::options_container world_opts = get_options().get_world_defaults();
+    world_opts["CROP_GROWTH_SPEED"].setValue( "1.0" );
+    get_options().set_world_options( &world_opts );
+    on_out_of_scope restore_options( [&]() {
+        get_options().set_world_options( nullptr );
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    calendar::turn = calendar::turn_zero + 12_hours;
+    here.ter_set( plot, ter_test_t_terrain_growth_seed );
+
+    terrain_growth_state state;
+    state.fertilized_at = calendar::turn - 2_days;
+    here.set_terrain_growth( plot, state );
+    REQUIRE( here.get_terrain_growth( plot ) != nullptr );
+
+    ret_val<void> result = multi_farm_activity_actor::can_fertilize( u, plot );
+
+    CHECK( here.ter( plot ).obj().id == ter_test_t_terrain_growth_middle );
+    CHECK( here.get_terrain_growth( plot ) == nullptr );
+    CHECK( result.success() );
+}
+
+TEST_CASE( "terrain_growth_fertilize_ignores_loose_seed_items",
+           "[terrain_growth][plant][fertilize]" )
+{
+    map &here = get_map();
+    avatar &u = get_avatar();
+    clear_avatar();
+    clear_map_without_vision();
+
+    const time_point old_turn = calendar::turn;
+    on_out_of_scope restore_turn( [&]() {
+        calendar::turn = old_turn;
+    } );
+
+    const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
+    calendar::turn = calendar::turn_zero + 12_hours;
+    here.ter_set( plot, ter_test_t_terrain_growth_seed );
+    here.add_item( plot, item( itype_test_seed_simple ) );
+    u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
+
+    iexamine::fertilize_plant( u, plot, itype_fertilizer_commercial );
+    process_activity( u );
+
+    CHECK( here.ter( plot ).obj().id == ter_test_t_terrain_growth_seed );
+    CHECK( here.get_terrain_growth( plot ) != nullptr );
+    CHECK( !here.i_at( plot ).empty() );
 }
 
 namespace

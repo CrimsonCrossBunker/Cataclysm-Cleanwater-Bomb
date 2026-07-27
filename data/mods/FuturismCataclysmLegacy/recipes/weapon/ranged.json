@@ -1,0 +1,40 @@
+[
+  {
+    "type": "recipe",
+    "activity_level": "ACTIVE_EXERCISE",
+    "result": "fcl_rebar_rifle",
+    "category": "CC_WEAPON",
+    "subcategory": "CSC_WEAPON_RANGED",
+    "skill_used": "electronics",
+    "skills_required": [ "mechanics", 6 ],
+    "difficulty": 9,
+    "time": "6 h",
+    "book_learn": [ [ "advanced_electronics", 8 ], [ "textbook_electronics", 8 ] ],
+    "qualities": [
+      { "id": "SAW_M_FINE", "level": 1 },
+      { "id": "SCREW_FINE", "level": 1 },
+      { "id": "WRENCH_FINE", "level": 1 },
+      { "id": "GLARE", "level": 1 },
+      { "id": "DRILL", "level": 2 },
+      { "id": "SAW_W", "level": 1 }
+    ],
+    "proficiencies": [
+      { "proficiency": "prof_elec_soldering" },
+      { "proficiency": "prof_electromagnetics" },
+      { "proficiency": "prof_gunsmithing_improv" }
+    ],
+    "tools": [
+      [ [ "oxy_torch", 60 ], [ "welder", 300 ], [ "welder_crude", 450 ], [ "integrated_welder", 450 ] ],
+      [ [ "laptop", -1 ] ]
+    ],
+    "components": [
+      [ [ "cable", 80 ] ],
+      [ [ "2x4", 1 ] ],
+      [ [ "power_supply", 2 ] ],
+      [ [ "amplifier", 2 ] ],
+      [ [ "mixed_steel", 1, "LIST" ] ],
+      [ [ "pipe", 2 ] ],
+      [ [ "e_scrap", 20 ] ]
+    ]
+  }
+]

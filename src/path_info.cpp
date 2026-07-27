@@ -15,6 +15,10 @@
 #if defined(_WIN32)
     #include <windows.h>
 #endif
+#if defined(__ANDROID__)
+    #include <jni.h>
+    #include "sdl_wrappers.h" // for GetAndroidJNIEnv(), GetAndroidActivity()
+#endif
 
 /**
  * Return a locale specific path, or if there is no path for the current
@@ -46,7 +50,6 @@ static std::string options_value;
 static std::string memorialdir_value;
 static std::string achievementdir_value;
 static std::string langdir_value;
-
 static cata_path autonote_path_value;
 static cata_path autopickup_path_value;
 static cata_path base_path_path_value;
@@ -63,6 +66,7 @@ static cata_path savedir_path_value;
 static cata_path user_dir_path_value;
 
 // Get the given env var, or abort the program if it is not set
+#if !defined(__ANDROID__)
 static const char *getenv_or_abort( const char *name )
 {
     const char *result = getenv( name );
@@ -71,6 +75,7 @@ static const char *getenv_or_abort( const char *name )
     }
     return result;
 }
+#endif
 
 void PATH_INFO::init_base_path( const std::string &path )
 {
@@ -80,6 +85,20 @@ void PATH_INFO::init_base_path( const std::string &path )
 
 void PATH_INFO::init_user_dir( std::string dir )
 {
+#if defined(__ANDROID__)
+    JNIEnv *env = static_cast<JNIEnv *>( GetAndroidJNIEnv() );
+    jobject activity = static_cast<jobject>( GetAndroidActivity() );
+    jclass clazz = env->GetObjectClass( activity );
+    jmethodID method_id = env->GetMethodID( clazz, "getUserDirectory",
+                                            "()Ljava/lang/String;" );
+    jstring jpath = static_cast<jstring>( env->CallObjectMethod( activity, method_id ) );
+    const char *chars = env->GetStringUTFChars( jpath, nullptr );
+    dir = chars;
+    env->ReleaseStringUTFChars( jpath, chars );
+    env->DeleteLocalRef( jpath );
+    env->DeleteLocalRef( clazz );
+    env->DeleteLocalRef( activity );
+#else
     if( dir.empty() ) {
         const char *user_dir;
 #if defined(_WIN32)
@@ -101,6 +120,7 @@ void PATH_INFO::init_user_dir( std::string dir )
         dir = std::string( user_dir ) + "/.cataclysm-dda/";
 #endif
     }
+#endif
 
     user_dir_value = as_norm_dir( dir );
     user_dir_path_value = cata_path{ cata_path::root_path::user, std::filesystem::path{} };
