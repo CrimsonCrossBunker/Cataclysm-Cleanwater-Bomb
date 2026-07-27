@@ -30,7 +30,10 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Desktop SDL3 is temporarily paused. Set the repository variable
+  # CCB_DESKTOP_SDL3_ENABLED=true to restore this workflow without reverting it.
   skip-duplicates-code:
+    if: ${{ vars.CCB_DESKTOP_SDL3_ENABLED == 'true' }}
     continue-on-error: true
     runs-on: ubuntu-latest
     outputs:
@@ -47,7 +50,7 @@ jobs:
   # picks the format matching its GPU backend (Vulkan/D3D12/Metal).
   compile-shaders:
     needs: [ skip-duplicates-code ]
-    if: ${{ needs.skip-duplicates-code.outputs.should_skip_code != 'true' && github.event.pull_request.draft == false }}
+    if: ${{ vars.CCB_DESKTOP_SDL3_ENABLED == 'true' && needs.skip-duplicates-code.outputs.should_skip_code != 'true' && github.event.pull_request.draft == false }}
     name: Compile shaders
     runs-on: ubuntu-24.04
     steps:
@@ -129,7 +132,7 @@ jobs:
 
   build:
     needs: [ skip-duplicates-code, compile-shaders ]
-    if: ${{ needs.skip-duplicates-code.outputs.should_skip_code != 'true' && github.event.pull_request.draft == false }}
+    if: ${{ vars.CCB_DESKTOP_SDL3_ENABLED == 'true' && needs.skip-duplicates-code.outputs.should_skip_code != 'true' && github.event.pull_request.draft == false }}
     strategy:
       fail-fast: true
       max-parallel: 1
