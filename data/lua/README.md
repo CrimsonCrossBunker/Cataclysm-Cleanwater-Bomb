@@ -6,14 +6,13 @@ platform-neutral `script_ui_renderer` contract. Complete pages use the shared
 ImGui page host on Android and desktop Tiles; terminal builds use the ImTui
 fallback. Desktop keeps its established keyboard UI and Widget sidebar;
 Android applies a separate touch profile and owns the native schema-6 HUD.
-`ui.hud` uses the immediate host on non-Android builds only. Scripts do not
-import or depend on a renderer backend.
+Scripts do not import or depend on a renderer backend.
 
-The current platform policy is Android on SDL3, with Linux and Windows still
-using SDL2 while their SDL3 migration proceeds separately. API v3 code should
-use `ctx:environment()` for layout and interaction decisions. `ctx:platform()`
-is retained for API v2 diagnostics and must not be used to distinguish touch
-from desktop interaction.
+The current platform policy is Android on SDL3, with Linux, macOS, and Windows
+using SDL2 while their SDL3 migration is paused. API v3 code should use
+`ctx:environment()` for layout and interaction decisions. `ctx:platform()` is
+retained for API v2 diagnostics and must not be used to distinguish touch from
+desktop interaction.
 
 ## Bootstrap profiles
 
@@ -42,10 +41,10 @@ Scripts are loaded as one transaction in this order:
 2. `lua/main.lua` from each active world mod, in mod load order
 3. `config/lua/main.lua`
 
-The user entry point therefore has the final opportunity to replace a page or
-HUD by registering the same id. `require("foo.bar")` searches the user root,
-active mods in reverse load order, and the built-in root. Module names may only
-contain letters, digits, `_`, `-`, and `.` and cannot contain empty segments.
+The user entry point therefore has the final opportunity to replace a page by
+registering the same id. `require("foo.bar")` searches the user root, active mods
+in reverse load order, and the built-in root. Module names may only contain
+letters, digits, `_`, `-`, and `.` and cannot contain empty segments.
 
 The runtime loads automatically after a new game or save has initialized.
 Open a page from **Main menu → Other → Extensions**, the in-game
@@ -71,14 +70,13 @@ Each source may contain `lua/manifest.json`:
 
 API versions 2 and 3 are accepted. API v2 keeps its existing behavior while
 new code should target v3. Supported capabilities are `game.read`,
-`game.actions`, `ui.pages`, `ui.hud`, `events`, `state.character`,
-`state.world`, and `state.page`. Unknown capabilities, an incompatible API,
-duplicate ids, missing dependencies, or dependencies that load later reject
-the whole candidate transaction. The bundled manifest is mandatory. A local
-user script without a manifest keeps all capabilities for compatibility. An
-active game mod without a manifest receives all compatibility capabilities
-except `game.actions`; declare that capability explicitly before submitting
-queued game mutations.
+`game.actions`, `ui.pages`, `events`, `state.character`, `state.world`, and
+`state.page`. Unknown capabilities, an incompatible API, duplicate ids, missing
+dependencies, or dependencies that load later reject the whole candidate
+transaction. The bundled manifest is mandatory. A local user script without a
+manifest keeps all capabilities for compatibility. An active game mod without
+a manifest receives all compatibility capabilities except `game.actions`;
+declare that capability explicitly before submitting queued game mutations.
 
 Callbacks retain the manifest identity that registered them. Replacing a page
 id, loading a helper through `require`, or firing an event later never borrows
@@ -100,37 +98,21 @@ ui.page("my_mod_settings", {
     ctx:heading("My mod settings")
 end)
 
-ui.hud("stamina", {
-    title = "Stamina",
-    anchor = "top_right", -- top_left/top_right/bottom_left/bottom_right
-    x = 16,
-    y = 16,
-    alpha = 0.8,
-    interactive = false,
-    background = true,
-    title_bar = false,
-    contexts = { "DEFAULTMODE" } -- optional active input_context allow-list
-}, function(ctx)
-    local p = game.player_snapshot()
-    ctx:progress_bar(p.stamina / math.max(1, p.stamina_max), "Stamina")
-end)
-
 events.on("avatar_moves", function(event)
     print(event.type, event.turn, event.data.terrain)
 end)
 ```
 
-Registering the same page or HUD id again replaces the earlier definition.
-Event registrations are additive. An event payload contains `type`, `turn`,
-`data`, and `data_types`. Boolean and integer fields keep their Lua types;
-other game-specific ids and coordinates are exposed as strings.
+Registering the same page id again replaces the earlier definition. Event
+registrations are additive. An event payload contains `type`, `turn`, `data`,
+and `data_types`. Boolean and integer fields keep their Lua types; other
+game-specific ids and coordinates are exposed as strings.
 
-`ui.hud` is not consumed on Android. Android uses the native schema-6 layout
-for in-game information and controls. Cross-platform mods should expose common
-information through the original Widget system; PC renders the Widget in its
-sidebar and Android exposes the same Widget in the HUD information catalogue.
-The legacy immediate `ui.hud` remains available on desktop/terminal during the
-API v2 compatibility period.
+Lua has no `ui.hud` surface. Android uses the native schema-6 layout for
+in-game information and controls, while PC retains the original Widget sidebar.
+Cross-platform mods should expose common information through the original
+Widget system; PC renders the Widget in its sidebar and Android exposes the same
+Widget in the HUD information catalogue.
 
 The string-title form of `ui.page` remains compatible and registers in
 `main.extensions` and `ingame.extensions`. The descriptor form accepts:
@@ -151,8 +133,8 @@ during hot reload keeps the selected page when its stable id still exists.
 
 Every page callback receives `function(ctx, params)`. The second argument is an
 empty table when the page was opened from a navigation slot, so API v2
-one-argument callbacks remain valid. A page, HUD, or event callback may request
-safe navigation:
+one-argument callbacks remain valid. A page or event callback may request safe
+navigation:
 
 ```lua
 ui.page("quest_detail", "Quest detail", function(ctx, params)
@@ -299,7 +281,7 @@ name = ctx:input_text("Name", name)
 
 The forms above use the visible label as the widget id for compatibility.
 For translated labels, dynamic labels, or repeated labels, use an explicit
-stable id that is unique within the page or HUD callback:
+stable id that is unique within the page callback:
 
 ```lua
 if ctx:button_id("apply_changes", "Apply") then end
@@ -318,18 +300,18 @@ local selected = ctx:radial_select_id("movement", "行走", {
 })
 ```
 
-An action slot is a semantic HUD control whose selected action is validated
+An action slot is a semantic action control whose selected action is validated
 against the exact input-context revision that produced it:
 
 ```lua
 local input = game.actions.context_snapshot()
-local selected = game.state_get("hud.ground_action", "pickup")
+local selected = game.state_get("action.ground_action", "pickup")
 selected = ctx:action_slot_id("ground_action", selected, input.revision, {
     { id = "pickup", label = "拾取" },
     { id = "drop", label = "丢脚下" },
     { id = "drop_adj", label = "丢旁边" }
 })
-game.state_set("hud.ground_action", selected)
+game.state_set("action.ground_action", selected)
 ```
 
 Pass only candidates present in `input.available`. With no available candidate
@@ -388,14 +370,14 @@ sequence).
 
 ## Android HUD separation
 
-Android never consumes `ui.hud` registrations and has no Lua HUD renderer,
-retained Lua widget tree, or direct Java-to-Lua interaction bridge. Schema 6 is
-the only Android in-game HUD. It has no automatically injected layout.
+Android has no Lua HUD renderer, retained Lua widget tree, or direct
+Java-to-Lua interaction bridge. Schema 6 is the only Android in-game HUD. It
+has no automatically injected layout.
 The first time an input scene is observed, Android creates one empty layout.
 Future official templates must be explicitly chosen and copied once; they
 never merge into or overwrite a user layout.
 
-An HUD scene has a stable `hud_scene_id` and title independent of its keybinding
+A HUD scene has a stable `hud_scene_id` and title independent of its keybinding
 category. This lets two actual screens that both use `UILIST` opt into separate
 layouts. Every scene owns multiple named layouts and one active layout.
 Android is landscape-only and uses one 1920×1080 virtual canvas, so there is no
@@ -426,10 +408,9 @@ C++ owns the information-source catalogue and publishes only immutable values
 subscribed by the active layout. Sources include the semantic pieces of the
 mobile sidebar, formatted logs, the SDL pixel minimap, a 7×7 overmap grid, a
 local square-cell threat radar, and every raw widget as an advanced source.
-Lua pages and non-Android Lua HUDs are not information sources for schema 6.
-Original C++/JSON Widgets remain the shared information contract: PC keeps the
-original sidebar renderer while Android projects those Widgets into editable
-HUD information elements.
+Lua pages are not information sources for schema 6. Original C++/JSON Widgets
+remain the shared information contract: PC keeps the original sidebar renderer
+while Android projects those Widgets into editable HUD information elements.
 
 Controls carry the exact input-context revision they rendered. An imported
 action ID cannot execute unless it is registered by that current scene.
@@ -509,12 +490,11 @@ ordinary ImGui page host and are unrelated to this HUD snapshot.
 - `game.nearby_creatures_snapshot(radius, limit)` returns only creatures the
   avatar can currently see, with kind, attitude, distance, and hit points.
   Radius defaults to 20 and caps at 60; count defaults to 64 and caps at 256.
-- `game.runtime_status()` returns load state, generation, page/HUD/event/source
+- `game.runtime_status()` returns load state, generation, page/event/source
   counts, memory use and limit, latest runtime error, `callback_count`,
   `callback_time_total_us`, `callback_time_max_us`, `slow_callback_count`, and
   `last_slow_callback`. A callback taking at least 8 ms is recorded as slow;
-  use these cumulative fields to find HUD or event callbacks doing too much
-  per frame.
+  use these cumulative fields to find page or event callbacks doing too much.
 - `game.state_get(key, default)` and `game.state_set(key, value)` are the API v2
   compatibility state. They remain per-character and use their original,
   unnamespaced keys.
@@ -563,8 +543,8 @@ All snapshot calls are read-only and return ordinary Lua tables containing
 copied booleans, numbers, and strings. They never expose native `avatar`,
 `item`, weather, or time objects, so scripts cannot retain dangling game-object
 references across turns or reloads. Inventory results are bounded because page
-and HUD callbacks may run every frame; request only the number of entries the
-current UI needs.
+callbacks may run every frame; request only the number of entries the current
+UI needs.
 
 ## Queued game actions
 
@@ -591,12 +571,12 @@ Allowed directions are `north`, `north_east`, `east`, `south_east`, `south`,
 keeps the latest 128 results. Status entries are `queued`, `succeeded`,
 `failed`, or `canceled` and include request id, action type, turn, error, and
 whether the request consumed a normal action. Invalid ids/options are rejected
-before enqueue. Requests can only be submitted from an active page, HUD, or
-event callback—not while candidate entry scripts are loading—and are disabled
-in multiplayer sessions.
+before enqueue. Requests can only be submitted from an active page or event
+callback—not while candidate entry scripts are loading—and are disabled in
+multiplayer sessions.
 
 `game.actions.context_snapshot()` is the separate, low-latency input action
-catalogue used by HUD controls. It returns:
+catalogue used by Lua action controls. It returns:
 
 ```lua
 {
@@ -620,8 +600,8 @@ category, ids, or labels change. A UI trigger carries both action id and the
 rendered revision into a 16-entry platform-neutral queue. Consumption checks
 the revision again and confirms that the receiving context still registered
 the id. Context changes clear pending actions; debug, deletion, reset,
-quickload, and suicide actions are marked dangerous and cannot enter this HUD
-queue. This action-id path is intentionally separate from the turn-level
+quickload, and suicide actions are marked dangerous and cannot enter this
+action queue. This action-id path is intentionally separate from the turn-level
 `game.actions.enqueue(...)` mutation queue above.
 
 Repeated input in the same context takes an id/catalog-token/language-generation
@@ -631,11 +611,11 @@ the final trigger is still revision-checked again when it enters the queue.
 
 ## Isolation and limits
 
-Each runtime has a 32 MiB Lua memory limit. Entry scripts and every page, HUD,
-and event callback run under an instruction budget. A callback that errors or
+Each runtime has a 32 MiB Lua memory limit. Entry scripts and every page and
+event callback run under an instruction budget. A callback that errors or
 exceeds its budget is disabled independently and the error is recorded in
-`debug.log`; other callbacks continue. A failed entry script never replaces
-the current runtime.
+`debug.log`; other callbacks continue. A failed entry script never replaces the
+current runtime.
 
 Only the base, package, math, string, and table libraries are opened. File and
 dynamic-code entry points (`dofile`, `loadfile`, `load`, `loadstring`, and

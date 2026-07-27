@@ -43,7 +43,6 @@ const std::set<std::string> &supported_script_capabilities()
         "state.character",
         "state.page",
         "state.world",
-        "ui.hud",
         "ui.pages"
     };
     return capabilities;

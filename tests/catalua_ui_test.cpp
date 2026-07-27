@@ -628,6 +628,10 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "id": "bad", "version": "1", "api_version": 2,
         "capabilities": [ "native.pointers" ], "dependencies": []
     })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "removed-hud", "version": "1", "api_version": 3,
+        "capabilities": [ "ui.hud" ], "dependencies": []
+    })json" ) ) );
 }
 
 TEST_CASE( "lua_i18n_api_returns_owned_translations_and_validates_plural_counts",
@@ -861,10 +865,8 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v3", "[lua][ui][integration]" )
 
     const cata::lua_ui::runtime_status status = cata::lua_ui::status();
     CHECK( status.loaded );
-    CHECK_FALSE( status.hud_renderer_active );
     CHECK( status.generation > 0 );
     CHECK( status.page_count == 0 );
-    CHECK( status.hud_count == 0 );
     CHECK( status.event_handler_count == 0 );
     CHECK( status.memory_used > 0 );
     CHECK( status.memory_used <= status.memory_limit );
@@ -872,9 +874,7 @@ TEST_CASE( "bundled_lua_ui_script_registers_api_v3", "[lua][ui][integration]" )
     cata::lua_ui::shutdown();
     const cata::lua_ui::runtime_status stopped = cata::lua_ui::status();
     CHECK_FALSE( stopped.loaded );
-    CHECK_FALSE( stopped.hud_renderer_active );
     CHECK( stopped.page_count == 0 );
-    CHECK( stopped.hud_count == 0 );
     CHECK( stopped.event_handler_count == 0 );
     CHECK( stopped.memory_used == 0 );
     CHECK( stopped.last_error.empty() );
@@ -958,9 +958,7 @@ assert(pcall(function() game.state_set("forbidden", true) end) == false)
 assert(pcall(function() state.character.set("forbidden", true) end) == false)
 assert(pcall(function() state.world.set("forbidden", true) end) == false)
 assert(pcall(function() state.page.set("forbidden", true) end) == false)
-assert(pcall(function()
-    ui.hud("forbidden", {}, function(ctx) end)
-end) == false)
+assert(ui.hud == nil)
 
 events.on("game_begin", function(event)
     game.player_snapshot()
@@ -976,7 +974,7 @@ end)
            std::string::npos );
 }
 
-TEST_CASE( "lua_pages_and_huds_use_the_platform_neutral_registry",
+TEST_CASE( "lua_pages_use_the_platform_neutral_registry",
            "[lua][ui][renderer][integration]" )
 {
     scoped_lua_user_script script;
@@ -988,12 +986,6 @@ ui.page("registry_test", {
     slots = { "settings.mods", "ingame.extensions" }
 }, function(ctx)
     ctx:text("shared ImGui page")
-end)
-ui.hud("desktop_hud", {
-    title = "Desktop HUD",
-    anchor = "bottom_right"
-}, function(ctx)
-    ctx:text("platform-neutral HUD")
 end)
 )lua" );
 
@@ -1010,68 +1002,7 @@ end)
     CHECK( cata::lua_ui::has_registered_pages( "ingame.extensions" ) );
     const cata::lua_ui::runtime_status status = cata::lua_ui::status();
     CHECK( status.page_count == 1 );
-    CHECK( status.hud_count == 1 );
     CHECK( status.callback_count == 0 );
-}
-
-TEST_CASE( "lua_hud_renderer_follows_world_and_registration_lifecycle",
-           "[lua][ui][renderer][integration]" )
-{
-    using namespace cata::lua_ui;
-
-    scoped_lua_user_script script;
-    script.write( R"lua(
-ui.hud("lifecycle_hud", {
-    title = "Lifecycle HUD"
-}, function(ctx)
-    ctx:text("active")
-end)
-)lua" );
-
-    std::string error;
-    REQUIRE( reload_scripts( error ) );
-    CHECK( status().hud_count == 1 );
-    // Registry inspection and Lua pages are valid at the main menu, but an
-    // in-game HUD renderer must not exist before a world is ready.
-    CHECK_FALSE( status().hud_renderer_active );
-
-    on_world_ready();
-    REQUIRE( status().loaded );
-#if defined(__ANDROID__)
-    CHECK_FALSE( status().hud_renderer_active );
-#else
-    CHECK( status().hud_renderer_active );
-#endif
-
-    script.write( "-- no HUD registrations\n" );
-    REQUIRE( reload_scripts( error ) );
-    CHECK( status().hud_count == 0 );
-    CHECK_FALSE( status().hud_renderer_active );
-
-    script.write( R"lua(
-ui.hud("replacement_hud", {}, function(ctx)
-    ctx:text("restored")
-end)
-)lua" );
-    REQUIRE( reload_scripts( error ) );
-    CHECK( status().hud_count == 1 );
-#if defined(__ANDROID__)
-    CHECK_FALSE( status().hud_renderer_active );
-#else
-    CHECK( status().hud_renderer_active );
-#endif
-
-    script.write( "error('transaction must fail')\n" );
-    CHECK_FALSE( reload_scripts( error ) );
-    CHECK( status().hud_count == 1 );
-#if defined(__ANDROID__)
-    CHECK_FALSE( status().hud_renderer_active );
-#else
-    CHECK( status().hud_renderer_active );
-#endif
-
-    shutdown();
-    CHECK_FALSE( status().hud_renderer_active );
 }
 
 TEST_CASE( "lua_game_snapshots_are_bounded_read_only_values", "[lua][ui][game][integration]" )
@@ -1509,7 +1440,6 @@ error("expected candidate failure")
     CHECK( after_failure.loaded );
     CHECK( after_failure.generation == before.generation );
     CHECK( after_failure.page_count == before.page_count );
-    CHECK( after_failure.hud_count == before.hud_count );
     CHECK( after_failure.event_handler_count == before.event_handler_count );
 
     script.write( R"lua(

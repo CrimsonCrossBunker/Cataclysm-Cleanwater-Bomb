@@ -6,7 +6,6 @@
     "game.read",
     "game.actions",
     "ui.pages",
-    "ui.hud",
     "events",
     "state.character",
     "state.world",
