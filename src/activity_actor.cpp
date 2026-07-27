@@ -944,7 +944,7 @@ void contextual_action_activity_actor::serialize( JsonOut &jsout ) const
     jsout.start_object();
     jsout.member( "target", target );
     jsout.member( "actions", serialized_actions );
-    jsout.member( "next_action", next_action );
+    jsout.member( "next_action", static_cast<std::uint64_t>( next_action ) );
     jsout.end_object();
 }
 
@@ -952,18 +952,21 @@ std::unique_ptr<activity_actor> contextual_action_activity_actor::deserialize( J
 {
     tripoint_abs_ms target = tripoint_abs_ms::zero;
     std::vector<int> serialized_actions;
-    size_t next_action = 0;
+    std::uint64_t serialized_next_action = 0;
 
     JsonObject data = jsin.get_object();
     data.read( "target", target );
     data.read( "actions", serialized_actions );
-    data.read( "next_action", next_action );
+    data.read( "next_action", serialized_next_action );
 
     std::vector<action_id> actions;
     actions.reserve( serialized_actions.size() );
     for( const int action : serialized_actions ) {
         actions.push_back( static_cast<action_id>( action ) );
     }
+    const std::size_t next_action =
+        serialized_next_action < actions.size() ?
+        static_cast<std::size_t>( serialized_next_action ) : actions.size();
 
     return std::make_unique<contextual_action_activity_actor>( target, std::move( actions ),
             next_action );
