@@ -1,7 +1,10 @@
-# Lua UI API v3
+# Lua Mod API v4
 
 This directory contains the built-in Lua entry point and modules for the
-experimental, versioned UI runtime. The Lua drawing context targets the
+experimental, versioned Mod runtime. Its first complete extension surface is
+portable UI, but API v4 also provides isolated modules, services, events,
+deterministic scheduling, persistent state, definition registries, and queued
+game actions. The Lua drawing context targets the
 platform-neutral `script_ui_renderer` contract. Complete pages use the shared
 ImGui page host on Android and desktop Tiles; terminal builds use the ImTui
 fallback. Desktop keeps its established keyboard UI and Widget sidebar;
@@ -9,7 +12,7 @@ Android applies a separate touch profile and owns the native schema-6 HUD.
 Scripts do not import or depend on a renderer backend.
 
 The current platform policy is Android on SDL3, with Linux, macOS, and Windows
-using SDL2 while their SDL3 migration is paused. API v3 code should use
+using SDL2 while their SDL3 migration is paused. API v4 code should use
 `ctx:environment()` for layout and interaction decisions. `ctx:platform()` is
 retained for API v2 diagnostics and must not be used to distinguish touch from
 desktop interaction.
@@ -35,7 +38,7 @@ sidebar.
 
 ## Build availability
 
-Lua UI is a compile-time experimental feature and is disabled by default for
+The Lua Mod runtime is a compile-time experimental feature and is disabled by default for
 desktop, Stable Android, and Experimental Android builds. Enable it explicitly
 with `CATA_ENABLE_LUA_UI=1` when using Make, or
 `-DCATA_ENABLE_LUA_UI=ON` when configuring CMake. The Android `newUi` flavor
@@ -44,6 +47,27 @@ enables it automatically.
 When disabled, Lua, sol2, the script runtime, its action queue, and its tests
 are not compiled or linked. The game does not load scripts, create Lua state
 sidecars, or expose the Lua UI debug-menu entry.
+
+## Developer files
+
+- `manifest.schema.json` is the authoritative JSON Schema for
+  `lua/manifest.json`. Add a relative `$schema` property to receive editor
+  validation.
+- `types/ccb_api_v4.d.lua` is a LuaLS/EmmyLua declaration file for the complete
+  public v4 surface. Add this directory to the editor workspace library; never
+  `require` the declaration at runtime.
+- `examples/api_v4_mod/` is a complete source example covering modules,
+  services, events, scheduling, registry queries, state, pages, and named
+  actions.
+
+CCB takes the useful structural lessons from Cataclysm: Bright Nights—one
+environment per Mod, local modules, explicit lifecycle stages, hot reload, and
+developer documentation—but deliberately does not copy BN's unrestricted
+native-object binding model. API v4 returns detached snapshots and submits
+mutations through validated queues. It is currently a strong base for Mod
+pages, story/state orchestration, settings, and tools; native item-use,
+mapgen, creature, and arbitrary world-mutation bindings remain future
+capability modules rather than implicit access to C++ pointers.
 
 ## Loading and hot reload
 
@@ -54,9 +78,20 @@ Scripts are loaded as one transaction in this order:
 3. `config/lua/main.lua`
 
 The user entry point therefore has the final opportunity to replace a page by
-registering the same id. `require("foo.bar")` searches the user root, active mods
-in reverse load order, and the built-in root. Module names may only contain
-letters, digits, `_`, `-`, and `.` and cannot contain empty segments.
+registering the same id. In API v4, `require("foo.bar")` searches only the
+calling source's root and accepts both `foo/bar.lua` and
+`foo/bar/init.lua`. Cross-source source-code reuse must use
+`modules.import(provider_id, "foo.bar")`, and the provider must be `builtin`,
+the caller itself, or an earlier source listed in `dependencies`. API v2/v3
+retain their legacy reverse-load-order `require` lookup for compatibility.
+Module names may only contain letters, digits, `_`, `-`, and `.` and cannot
+contain empty segments.
+
+Every source executes in an independent environment. Module exports are cached
+per consumer, not globally: two Mods importing the same provider module never
+share its mutable export table. Imported source code executes with the
+consumer's capabilities. Use a versioned `services` contract, not
+`modules.import`, when the provider must retain its own capability identity.
 
 The runtime loads automatically after a new game or save has initialized.
 Open a page from **Main menu → Other → Extensions**, the in-game
@@ -72,23 +107,47 @@ Each source may contain `lua/manifest.json`:
 
 ```json
 {
+  "$schema": "./manifest.schema.json",
   "id": "my_mod_id",
   "version": "1.0.0",
-  "api_version": 3,
-  "capabilities": [ "game.read", "ui.pages", "events" ],
+  "api_version": 4,
+  "capabilities": [
+    "events",
+    "game.read",
+    "registry.read",
+    "scheduler",
+    "ui.pages"
+  ],
   "dependencies": [ "another_mod_id" ]
 }
 ```
 
-API versions 2 and 3 are accepted. API v2 keeps its existing behavior while
-new code should target v3. Supported capabilities are `game.read`,
-`game.actions`, `ui.pages`, `events`, `state.character`, `state.world`, and
-`state.page`. Unknown capabilities, an incompatible API, duplicate ids, missing
-dependencies, or dependencies that load later reject the whole candidate
-transaction. The bundled manifest is mandatory. A local user script without a
-manifest keeps all capabilities for compatibility. An active game mod without
-a manifest receives all compatibility capabilities except `game.actions`;
-declare that capability explicitly before submitting queued game mutations.
+API versions 2, 3, and 4 are accepted. New code should target v4. Supported
+capabilities are:
+
+- `events`
+- `game.actions`
+- `game.actions.dangerous`
+- `game.read`
+- `modules.import`
+- `registry.read`
+- `scheduler`
+- `services.consume`
+- `services.provide`
+- `state.character`
+- `state.page`
+- `state.world`
+- `ui.pages`
+
+The dangerous-action, module-import, registry, scheduler, and service
+capabilities require API v4. `game.actions.dangerous` also requires
+`game.actions`. Unknown capabilities, an incompatible API, duplicate ids,
+missing dependencies, or dependencies that load later reject the whole
+candidate transaction. The bundled manifest is mandatory. A local user script
+without a manifest keeps compatibility capabilities but never receives
+dangerous-action authorization. An active game Mod without a manifest receives
+all compatibility capabilities except game actions; declare mutation
+capabilities explicitly.
 
 Callbacks retain the manifest identity that registered them. Replacing a page
 id, loading a helper through `require`, or firing an event later never borrows
@@ -140,6 +199,132 @@ registers one page implementation and lets the page host place it correctly
 for touch, mouse/keyboard, or terminal input. Pages in `settings.mods` appear
 under the Mods entry in Android's touch options page. Re-registering a page
 during hot reload keeps the selected page when its stable id still exists.
+
+## Events, lifecycle, and scheduler
+
+`events.on(name, callback)` returns an owned subscription id.
+`events.off(id)` can remove only the current source's subscription. The options
+form adds stable priority ordering and one-shot delivery:
+
+```lua
+local subscription = events.on("avatar_moves", {
+    priority = 100,
+    once = true
+}, function(event)
+    print(event.type, event.turn)
+end)
+events.off(subscription)
+```
+
+Higher priorities run first; equal priorities retain registration order. A
+handler returning `false` stops propagation for that emission. A failing
+handler is removed without disabling unrelated callbacks.
+
+A plain, non-game event name is source-local. Emit only copied scalar data:
+
+```lua
+events.on("quest_updated", function(event)
+    print(event.data.quest_id, event.data.stage)
+end)
+events.emit("quest_updated", { quest_id = "intro", stage = 2 })
+```
+
+To observe a dependency's custom event, declare the dependency and call
+`events.on_from(provider_id, name, callback)`. Custom payloads accept at most 32
+string keys and only booleans, finite numbers, and strings; the complete copied
+map is limited to 16 KiB. Custom-event and service recursion are independently
+limited to 16 calls.
+
+Lifecycle event names are:
+
+- `ccb.lifecycle.reload`, delivered to the new successful hot-reload runtime;
+- `ccb.lifecycle.world_ready`, after a new game/save runtime has loaded;
+- `ccb.lifecycle.before_save`, before the Lua sidecars are written;
+- `ccb.lifecycle.after_save`, with `success` and `error` fields;
+- `ccb.lifecycle.shutdown`, before a world/runtime is discarded.
+
+The deterministic scheduler uses game turns, never wall-clock time:
+
+```lua
+local one_shot = scheduler.after(10, function(id, now, due)
+    print("ten turns elapsed", id, now, due)
+end)
+
+local repeating
+repeating = scheduler.every(60, function()
+    -- Returning false also cancels a repeating callback.
+    return state.character.get("enabled", true)
+end)
+
+scheduler.cancel(one_shot)
+print(scheduler.now())
+```
+
+Delays and intervals are 1..1,000,000,000 turns. A runtime may own at most 256
+tasks and executes at most 64 due callbacks in one turn. Ordering
+is by due turn and then registration order. Tasks and callbacks are replaced
+transactionally on hot reload.
+
+## Modules and services
+
+Use `require` for modules inside the current source. Use
+`modules.import(provider_id, module_name)` only for declared source-code
+dependencies. Both forms accept `foo.lua` and `foo/init.lua`; traversal,
+absolute paths, native searchers, dynamic libraries, and arbitrary file loads
+are unavailable.
+
+Services are the privilege-preserving cross-Mod boundary:
+
+```lua
+services.provide("quest.api", {
+    version = 2,
+    methods = {
+        get = function(arguments)
+            return {
+                id = arguments.id,
+                stage = state.world.get("stage." .. arguments.id, 0)
+            }
+        end
+    }
+})
+
+if services.available("story_mod", "quest.api", 2) then
+    local quest = services.call(
+        "story_mod", "quest.api", "get", { id = "intro" })
+end
+```
+
+`services.provide` replaces one service atomically. A service has 1..64 unique
+methods and a version in 1..1,000,000. `services.list()` returns only services
+owned by the caller, `builtin`, or declared dependencies. Calls execute under
+the provider's capability identity and instruction budget, then copy the
+result back to the consumer. Arguments and results accept at most 64 scalar
+entries, 8 KiB per string, and 64 KiB total; tables, functions, userdata, and
+native object references cannot cross the boundary.
+
+## Definition registry
+
+`registry` exposes read-only, detached definition snapshots for `item`,
+`monster`, `terrain`, `furniture`, `recipe`, `mutation`, `bionic`, and `skill`.
+It never returns a C++ pointer or a live mutable definition.
+
+```lua
+local page = registry.list("item", {
+    offset = 0,
+    limit = 64,
+    query = "water",
+    details = false
+})
+for _, entry in ipairs(page.entries) do
+    local detail = registry.get("item", entry.id)
+    print(detail.id, detail.name, detail.weight_grams)
+end
+```
+
+The default page size is 64 and the maximum is 256. Search matches stable ids
+and translated names. `registry.revision()` changes when the language-backed
+index is rebuilt; use it to invalidate cached labels. Returned tables are
+fresh snapshots and may be changed locally without altering game data.
 
 ## Page navigation
 
@@ -446,7 +631,7 @@ ordinary ImGui page host and are unrelated to this HUD snapshot.
 
 ## Game API and reload state
 
-- `game.api_version` is `3`. Manifests targeting API v2 remain accepted.
+- `game.api_version` is `4`. Manifests targeting API v2 and v3 remain accepted.
 - `game.add_msg(text)` writes to the game message log.
 - `game.player_name()` returns the current avatar name.
 - `game.player_snapshot()` returns copied character status: name, moves, stamina,
@@ -581,7 +766,7 @@ local queue = game.actions.status(32)
 Allowed directions are `north`, `north_east`, `east`, `south_east`, `south`,
 `south_west`, `west`, and `north_west`. The queue holds at most 64 requests and
 keeps the latest 128 results. Status entries are `queued`, `succeeded`,
-`failed`, or `canceled` and include request id, action type, turn, error, and
+`failed`, `canceled`, or `denied` and include request id, action type, turn, error, and
 whether the request consumed a normal action. Invalid ids/options are rejected
 before enqueue. Requests can only be submitted from an active page or event
 callback—not while candidate entry scripts are loading—and are disabled in
@@ -593,6 +778,8 @@ catalogue used by Lua action controls. It returns:
 ```lua
 {
     category = "DEFAULTMODE",
+    hud_scene_id = "gameplay",
+    hud_scene_title = "Gameplay",
     revision = 17,
     actions = {
         {
@@ -608,13 +795,21 @@ catalogue used by Lua action controls. It returns:
 ```
 
 The active `input_context` republishes this immutable catalogue only when its
-category, ids, or labels change. A UI trigger carries both action id and the
-rendered revision into a 16-entry platform-neutral queue. Consumption checks
-the revision again and confirms that the receiving context still registered
-the id. Context changes clear pending actions; debug, deletion, reset,
-quickload, and suicide actions are marked dangerous and cannot enter this
-action queue. This action-id path is intentionally separate from the turn-level
-`game.actions.enqueue(...)` mutation queue above.
+scene, category, ids, or labels change. A UI trigger carries both action id and
+the rendered revision into a 16-entry platform-neutral queue. Consumption
+checks the revision again and confirms that the receiving context still
+registered the id. Context changes clear pending actions.
+
+API v4 also exposes
+`game.actions.enqueue_context(action_id, context_revision)`. Ordinary named
+actions require `game.actions`. Debug, deletion, reset, quickload, and suicide
+actions additionally require the explicit `game.actions.dangerous` manifest
+capability. Without it, their `context.available` value is false and action
+slots are disabled. Even with the capability, a dangerous request is not
+injected until the player approves a one-time native confirmation naming the
+source and action. Revisions and registration are validated both before and
+after confirmation. This action-id path is intentionally separate from the
+turn-level `game.actions.enqueue(...)` mutation queue above.
 
 Repeated input in the same context takes an id/catalog-token/language-generation
 fast path, so normal movement does not rebuild or retranslate the complete
@@ -623,15 +818,22 @@ the final trigger is still revision-checked again when it enters the queue.
 
 ## Isolation and limits
 
-Each runtime has a 32 MiB Lua memory limit. Entry scripts and every page and
-event callback run under an instruction budget. A callback that errors or
-exceeds its budget is disabled independently and the error is recorded in
-`debug.log`; other callbacks continue. A failed entry script never replaces the
-current runtime.
+Each runtime has a 32 MiB Lua memory limit. Every source receives a strict
+environment with its own API and standard-library tables; there is no fallback
+to a shared `_G`. Local globals remain visible to that source's entry script
+and modules but cannot collide with another Mod.
 
-Only the base, package, math, string, and table libraries are opened. File and
-dynamic-code entry points (`dofile`, `loadfile`, `load`, `loadstring`, and
-`package.loadlib`) are unavailable. `io`, `os`, and `debug` are not opened.
+Entry scripts and every page, event, scheduler, and service callback run under
+an instruction budget. A callback that errors or exceeds its budget is removed
+or disabled independently and the error is recorded in `debug.log`; other
+callbacks continue. A failed entry script never replaces the current runtime.
+
+Only the safe base functions and isolated package, math, string, and table
+libraries are exposed. The package table has empty paths/searchers and exists
+only for compatibility with the custom `require`. File and dynamic-code entry
+points (`dofile`, `loadfile`, `load`, `loadstring`, `package.searchpath`, and
+`package.loadlib`) are unavailable. `io`, `os`, `debug`, and native C modules
+are not opened.
 
 This is an application scripting boundary, not a security boundary for running
 untrusted downloaded code. Keep installed Lua scripts under the same trust
