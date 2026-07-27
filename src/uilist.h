@@ -459,6 +459,12 @@ class uilist // NOLINT(cata-xy)
         std::vector<uilist_entry> entries;
 
         std::string input_category;
+#if defined(__ANDROID__)
+        // Optional stable Android HUD identity.  This lets two real screens
+        // that both use UILIST keep independent layouts.
+        std::string hud_scene_id;
+        std::string hud_scene_title;
+#endif
         std::vector<std::pair<std::string, translation>> additional_actions;
 
         nc_color border_color;

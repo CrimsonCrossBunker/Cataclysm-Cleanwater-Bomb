@@ -43,6 +43,9 @@
 
 #include "achievement.h"
 #include "action.h"
+#if defined(__ANDROID__)
+    #include "android_hud.h"
+#endif
 #include "activity_actor_definitions.h"
 #include "activity_handlers.h"
 #include "activity_item_handling.h"
@@ -503,6 +506,13 @@ game::game() :
 
 game::~game()
 {
+#if defined(__ANDROID__)
+    // Invalidate gameplay state before the main menu can observe the previous
+    // input context or scene controls.
+    if( android_ui_mode::is_new_ui_build() ) {
+        android_hud::clear_snapshot();
+    }
+#endif
     // event_bus_ptr about to die; let debug_capture drop its sticky
     // subscribe flag and release the JSONL file. Without this, a later
     // `game` instance would never resubscribe.
@@ -2637,6 +2647,12 @@ input_context get_default_mode_input_context()
 {
     static input_context default_ctxt = [] {
         input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );
+#if defined(__ANDROID__)
+        if( android_ui_mode::is_new_ui_build() )
+        {
+            ctxt.set_hud_scene( "gameplay.map", _( "Game map" ) );
+        }
+#endif
         // Because those keys move the character, they don't pan, as their original name says
         ctxt.set_iso( true );
         ctxt.register_action( "UP", to_translation( "Move north" ) );
@@ -3608,7 +3624,17 @@ void game::draw( ui_adaptor &ui )
     }
     wnoutrefresh( w_terrain );
 
+#if defined(__ANDROID__)
+    if( android_ui_mode::is_new_ui_build() ) {
+        // The New UI package owns its HUD in a native View overlay.  Do not
+        // render the terminal sidebar underneath it.
+        android_hud::publish_snapshot( u, static_cast<int>( safe_mode ) );
+    } else {
+        draw_panels( true );
+    }
+#else
     draw_panels( true );
+#endif
 
     // Ensure that the cursor lands on the character when everything is drawn.
     // This allows screen readers to describe the area around the player, making it
@@ -6387,6 +6413,11 @@ look_around_result game::look_around(
 
     std::string action;
     input_context ctxt( "LOOK" );
+#if defined(__ANDROID__)
+    if( android_ui_mode::is_new_ui_build() ) {
+        ctxt.set_hud_scene( "gameplay.look", _( "Look around" ) );
+    }
+#endif
     ctxt.set_iso( true );
     ctxt.register_directions();
     ctxt.register_action( "COORDINATE" );

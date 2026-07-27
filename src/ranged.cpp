@@ -3359,6 +3359,9 @@ void target_ui::init_window_and_input()
     w_target = catacurses::newwin( height, width, point( TERMX - width, top ) );
 
     ctxt = input_context( "TARGET" );
+#if defined(__ANDROID__)
+    ctxt.set_hud_scene( "gameplay.target", _( "Aiming" ) );
+#endif
     ctxt.set_iso( true );
     ctxt.register_directions();
     ctxt.register_action( "COORDINATE" );

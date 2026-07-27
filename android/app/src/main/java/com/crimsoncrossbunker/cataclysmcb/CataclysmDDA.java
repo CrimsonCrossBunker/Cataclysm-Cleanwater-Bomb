@@ -6,14 +6,17 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.Insets;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -43,6 +46,12 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -81,6 +90,8 @@ public class CataclysmDDA extends SDLActivity {
     public static final String SYSTEM_UI_MODE_SYSTEM_BARS = "system_bars";
     public static final String SYSTEM_UI_MODE_FULLSCREEN = "fullscreen";
     public static final String SYSTEM_UI_MODE_EDGE_TO_EDGE = "edge_to_edge";
+    private static final int REQUEST_IMPORT_HUD_LAYOUT = 4101;
+    private static final int REQUEST_EXPORT_HUD_LAYOUT = 4102;
 
     private NativeUI nativeUI = new NativeUI(CataclysmDDA.this);
     private int lastImeLeft = -1;
@@ -94,6 +105,8 @@ public class CataclysmDDA extends SDLActivity {
     private View buttonManageLayout;
     private FrameLayout buttonEditorContainer;
     private boolean deleteButtonMode = false;
+    private AndroidHudOverlay hudOverlay;
+    private String pendingHudExportJson;
 
     public String getUserDirectory() {
         return StoragePaths.getUserDirectory(getApplicationContext()).getAbsolutePath();
@@ -125,13 +138,28 @@ public class CataclysmDDA extends SDLActivity {
         }
         setImeInsetListener();
         applySystemUiMode();
-        loadExtraButtons(false);
+        if (AndroidUiMode.isNewUiBuild()) {
+            installAndroidHudOverlay();
+        } else {
+            loadExtraButtons(false);
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         applySystemUiMode();
+        if (AndroidUiMode.isNewUiBuild() && hudOverlay != null) {
+            hudOverlay.start();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        if (AndroidUiMode.isNewUiBuild() && hudOverlay != null) {
+            hudOverlay.stop();
+        }
+        super.onPause();
     }
 
     @Override
@@ -268,6 +296,165 @@ public class CataclysmDDA extends SDLActivity {
 
     private static native void nativeButtonClick(String text);
 
+    private static native boolean nativeEnqueueHudAction(String actionId, int contextRevision,
+        boolean dangerousAuthorized);
+    private static native String nativeGetHudSnapshot();
+    private static native void nativeSetHudMinimapRect(int x, int y, int width, int height,
+        boolean visible);
+    private static native void nativeSetHudSubscriptions(String encodedSources);
+
+    private void installAndroidHudOverlay() {
+        if (!AndroidUiMode.isNewUiBuild() || mLayout == null || hudOverlay != null) {
+            return;
+        }
+        hudOverlay = new AndroidHudOverlay(this);
+        mLayout.addView(hudOverlay, new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    boolean enqueueHudAction(String actionId, int contextRevision,
+            boolean dangerousAuthorized) {
+        try {
+            return nativeEnqueueHudAction(actionId, contextRevision, dangerousAuthorized);
+        } catch (UnsatisfiedLinkError e) {
+            return false;
+        }
+    }
+
+    String getHudSnapshot() {
+        try {
+            return nativeGetHudSnapshot();
+        } catch (UnsatisfiedLinkError e) {
+            return "";
+        }
+    }
+
+    void setHudMinimapRect(int x, int y, int width, int height, boolean visible) {
+        try {
+            nativeSetHudMinimapRect(x, y, width, height, visible);
+        } catch (UnsatisfiedLinkError ignored) {
+        }
+    }
+
+    void setHudSubscriptions(String encodedSources) {
+        try {
+            nativeSetHudSubscriptions(encodedSources == null ? "" : encodedSources);
+        } catch (UnsatisfiedLinkError ignored) {
+        }
+    }
+
+    /** Invoked by the C++ main-menu action; this does not block the game thread. */
+    public void showAndroidHudManager() {
+        if (!AndroidUiMode.isNewUiBuild()) {
+            return;
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                installAndroidHudOverlay();
+                if (hudOverlay != null) {
+                    hudOverlay.showManager();
+                }
+            }
+        });
+    }
+
+    void importHudLayout() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        startActivityForResult(intent, REQUEST_IMPORT_HUD_LAYOUT);
+    }
+
+    void exportHudLayout(String json) {
+        exportHudLayout(json, "cataclysm-android-hud-package.json");
+    }
+
+    void exportHudLayout(String json, String fileName) {
+        if (json == null || json.isEmpty()) {
+            toast("没有可导出的 HUD 布局");
+            return;
+        }
+        pendingHudExportJson = json;
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE, fileName);
+        startActivityForResult(intent, REQUEST_EXPORT_HUD_LAYOUT);
+    }
+
+    void shareHudLayout(String json) {
+        if (json == null || json.isEmpty()) {
+            toast("没有可分享的 HUD 布局");
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TEXT, json);
+        startActivity(Intent.createChooser(intent, "分享 HUD 布局"));
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            return;
+        }
+        Uri uri = data.getData();
+        if (requestCode == REQUEST_IMPORT_HUD_LAYOUT) {
+            try {
+                installAndroidHudOverlay();
+                if (hudOverlay != null) {
+                    hudOverlay.importPackage(readTextFromUri(uri));
+                }
+            } catch (IOException e) {
+                Log.w(TAG, "Could not import HUD layout", e);
+                toast("读取 HUD 布局失败");
+            }
+        } else if (requestCode == REQUEST_EXPORT_HUD_LAYOUT) {
+            try {
+                writeTextToUri(uri, pendingHudExportJson == null ? "" : pendingHudExportJson);
+                toast("HUD 布局已导出");
+            } catch (IOException e) {
+                Log.w(TAG, "Could not export HUD layout", e);
+                toast("导出 HUD 布局失败");
+            } finally {
+                pendingHudExportJson = null;
+            }
+        }
+    }
+
+    private String readTextFromUri(Uri uri) throws IOException {
+        StringBuilder content = new StringBuilder();
+        InputStream stream = getContentResolver().openInputStream(uri);
+        if (stream == null) {
+            throw new IOException("Unable to open input URI");
+        }
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream, "UTF-8"));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append('\n');
+            }
+            reader.close();
+        } finally {
+            stream.close();
+        }
+        return content.toString();
+    }
+
+    private void writeTextToUri(Uri uri, String text) throws IOException {
+        OutputStream stream = getContentResolver().openOutputStream(uri);
+        if (stream == null) {
+            throw new IOException("Unable to open output URI");
+        }
+        try {
+            stream.write(text.getBytes("UTF-8"));
+        } finally {
+            stream.close();
+        }
+    }
+
     public void setSystemUiMode(final String mode) {
         final String normalizedMode = normalizeSystemUiMode(mode);
         PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
@@ -321,7 +508,14 @@ public class CataclysmDDA extends SDLActivity {
                     if (mLayout != null) {
                         mLayout.setVisibility(View.VISIBLE);
                     }
-                    reloadPlayButtons();
+                    if (AndroidUiMode.isNewUiBuild()) {
+                        installAndroidHudOverlay();
+                        if (hudOverlay != null) {
+                            hudOverlay.start();
+                        }
+                    } else {
+                        reloadPlayButtons();
+                    }
                 }
             });
         } catch(Exception e) {
@@ -351,6 +545,10 @@ public class CataclysmDDA extends SDLActivity {
     }
 
     public void showButtonManage() {
+        if (AndroidUiMode.isNewUiBuild()) {
+            showAndroidHudManager();
+            return;
+        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -1027,4 +1225,27 @@ public class CataclysmDDA extends SDLActivity {
             nativeButtonClick(text);
         }
     }
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (hudOverlay != null) {
+            hudOverlay.observeGlobalTouchEvent(event);
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
+    /** Cancel SDL's pending touch when a blank long-press becomes HUD editing. */
+    void cancelActiveGameTouch() {
+        if (mLayout == null) {
+            return;
+        }
+        long now = SystemClock.uptimeMillis();
+        MotionEvent cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0);
+        try {
+            mLayout.dispatchTouchEvent(cancel);
+        } finally {
+            cancel.recycle();
+        }
+    }
+
+
 }

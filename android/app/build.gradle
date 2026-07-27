@@ -520,6 +520,7 @@ sourceSets {
 
 dependencies {
     api fileTree(include: ['*.jar'], dir: 'libs')
+    testImplementation 'junit:junit:4.13.2'
     implementation files(
         'libs/SDL3-3.4.10.aar',
         'libs/SDL3_image-3.4.4.aar',

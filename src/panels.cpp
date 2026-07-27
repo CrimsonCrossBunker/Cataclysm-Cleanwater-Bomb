@@ -11,6 +11,7 @@
 #include <tuple>
 #include <utility>
 
+#include "android_ui_mode.h"
 #include "avatar.h"
 #include "cached_options.h"
 #include "cata_imgui.h"  // IWYU pragma: keep
@@ -476,6 +477,15 @@ void panel_manager::init()
 {
     layouts = initialize_default_panel_layouts();
     load();
+#if defined(__ANDROID__)
+    if( android_ui_mode::is_new_ui_build() ) {
+        // The New UI HUD is rendered by a native View overlay.  Keep panel
+        // layouts available for shared game UI code, but do not reserve
+        // terminal columns underneath that overlay.
+        update_offsets( 0 );
+        return;
+    }
+#endif
     update_offsets( get_current_layout().panels().begin()->get_width() );
     if( get_current_sidebar() != nullptr ) {
         widget::finalize_inherited_fields_recursive( get_current_sidebar()->getId(),

@@ -37,6 +37,10 @@
 #include "cached_options.h"
 #include "cata_allocator.h"
 #include "cata_path.h"
+#if defined(__ANDROID__)
+    #include "android_hud.h"
+    #include "android_ui_mode.h"
+#endif
 #include "color.h"
 #include "compatibility.h"
 #include "crash.h"
@@ -1230,6 +1234,11 @@ int main( int argc, const char *argv[] )
         shared_ptr_fast<ui_adaptor> ui = g->create_or_get_main_ui_adaptor();
         get_event_bus().send<event_type::game_begin>( getVersionString() );
         while( !g->do_turn() ) {}
+#if defined(__ANDROID__)
+        if( android_ui_mode::is_new_ui_build() ) {
+            android_hud::clear_snapshot();
+        }
+#endif
         // do_turn returned true: the game ended (e.g. the recording's own
         // save/quit ran). Under replay there is no interactive user to drive the
         // main menu, so exit instead of looping back into opening_screen() and

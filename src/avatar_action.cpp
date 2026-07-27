@@ -543,6 +543,9 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
             g->mon_info_update();
             if( !g->check_safe_mode_allowed() && !you.is_hauling() ) {
                 input_context ctxt( "LOOK" );
+#if defined(__ANDROID__)
+                ctxt.set_hud_scene( "gameplay.look", _( "Look around" ) );
+#endif
                 static_popup popup;
                 popup.message( "%s " + colorize( _( "to go back." ), c_light_gray ) +
                                "\n%s " + colorize( _( "to move anyway." ), c_light_gray ),

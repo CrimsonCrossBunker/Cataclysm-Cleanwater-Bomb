@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 
+#include "android_ui_mode.h"
 #include "avatar.h"
 #include "cached_options.h" // IWYU pragma: keep
 #include "cata_utility.h"
@@ -1136,7 +1137,8 @@ action_id handle_main_menu()
     REGISTER_ACTION( ACTION_ACTIONMENU );
 #if defined(__ANDROID__)
     entries.emplace_back( ACTION_MANAGE_ANDROID_EXTRA_BUTTONS, true, std::nullopt,
-                          _( "Manage extra buttons" ) );
+                          android_ui_mode::is_new_ui_build() ?
+                          _( "Customize Android HUD" ) : _( "Manage extra buttons" ) );
 #endif
     REGISTER_ACTION( ACTION_QUICKSAVE );
     REGISTER_ACTION( ACTION_SAVE );

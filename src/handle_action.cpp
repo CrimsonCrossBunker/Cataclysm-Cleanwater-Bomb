@@ -15,6 +15,7 @@
 #include "action.h"
 #include "activity_actor_definitions.h"
 #include "advanced_inv.h"
+#include "android_ui_mode.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
 #include "avatar.h"
@@ -2581,7 +2582,7 @@ static const std::set<action_id> host_ui_actions = {
 #endif
 
 #if defined(__ANDROID__)
-static void manage_android_extra_buttons()
+static void manage_android_buttons()
 {
     JNIEnv *env = ( JNIEnv * )GetAndroidJNIEnv();
     jobject activity = ( jobject )GetAndroidActivity();
@@ -2610,11 +2611,11 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                               const std::optional<tripoint_bub_ms> &mouse_target )
 {
 #if defined(__ANDROID__)
-    // Extra-button management is a Java-side UI screen.  Handle it before
+    // Android button management is a Java-side screen.  Handle it before
     // touching map/terrain or movement-mode state; the main-menu path can be
     // entered while those world objects are not ready for a regular action.
     if( act == ACTION_MANAGE_ANDROID_EXTRA_BUTTONS ) {
-        manage_android_extra_buttons();
+        manage_android_buttons();
         return false;
     }
 #endif

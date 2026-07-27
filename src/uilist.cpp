@@ -483,12 +483,21 @@ void uilist::init()
     switch_to_category = current_category = 0;
 
     input_category = "UILIST";
+#if defined(__ANDROID__)
+    hud_scene_id.clear();
+    hud_scene_title.clear();
+#endif
     additional_actions.clear();
 }
 
 input_context uilist::create_main_input_context() const
 {
     input_context ctxt( input_category, keyboard_mode::keycode );
+#if defined(__ANDROID__)
+    ctxt.set_hud_scene( hud_scene_id.empty() ? input_category : hud_scene_id,
+                        hud_scene_title.empty() ?
+                        ( title.empty() ? input_category : title ) : hud_scene_title );
+#endif
     register_uilist_inputs( ctxt );
     return ctxt;
 }
