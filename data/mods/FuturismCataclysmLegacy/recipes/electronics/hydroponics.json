@@ -10,14 +10,8 @@
     "time": "4 h",
     "book_learn": [ [ "fcl_helixwirl_hydroponics_manual", 1 ] ],
     "skills_required": [ [ "fabrication", 4 ], [ "mechanics", 4 ] ],
-    "proficiencies": [
-      { "proficiency": "prof_carving" },
-      { "proficiency": "prof_elec_integrated_circuits" }
-    ],
-    "qualities": [
-      { "id": "SCREW", "level": 1 },
-      { "id": "SAW_M", "level": 1 }
-    ],
+    "proficiencies": [ { "proficiency": "prof_carving" }, { "proficiency": "prof_elec_integrated_circuits" } ],
+    "qualities": [ { "id": "SCREW", "level": 1 }, { "id": "SAW_M", "level": 1 } ],
     "components": [
       [ [ "power_supply", 1 ] ],
       [ [ "processor", 1 ] ],

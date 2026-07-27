@@ -3,11 +3,6 @@
     "type": "palette",
     "id": "fcl_hydroponics_lab_palette",
     "terrain": { "H": "t_thconc_floor" },
-    "sealed_item": {
-      "H": {
-        "items": { "item": "farming_seeds", "chance": 100 },
-        "furniture": "f_fcl_hydroponics_harvest"
-      }
-    }
+    "sealed_item": { "H": { "items": { "item": "farming_seeds", "chance": 100 }, "furniture": "f_fcl_hydroponics_harvest" } }
   }
 ]

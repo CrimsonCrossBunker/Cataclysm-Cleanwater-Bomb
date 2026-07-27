@@ -185,6 +185,11 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\a*.cpp;..\src\b*.cpp;..\src\c*.cpp;..\src\d*.cpp;..\src\e*.cpp;..\src\f*.cpp;..\src\g*.cpp;..\src\h*.cpp;..\src\i*.cpp;..\src\j*.cpp;..\src\k*.cpp;..\src\l*.cpp" />
+    <!-- The checked-in MSVC solution is a Lua-disabled desktop build.  Keep
+         the lightweight disabled facade and do not archive both implementations:
+         whichever duplicate symbol the librarian selects would otherwise make
+         the result dependent on object ordering. -->
+    <ClCompile Remove="..\src\catalua_ui.cpp;..\src\catalua_ui_actions.cpp;..\src\catalua_ui_game.cpp;..\src\catalua_ui_i18n.cpp;..\src\catalua_ui_imgui.cpp;..\src\catalua_ui_manifest.cpp;..\src\catalua_ui_navigation.cpp;..\src\catalua_ui_renderer.cpp;..\src\catalua_ui_state.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="flatbuffers.vcxproj">

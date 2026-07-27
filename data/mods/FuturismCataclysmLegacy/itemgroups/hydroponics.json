@@ -3,9 +3,7 @@
     "type": "item_group",
     "id": "fcl_hydroponics_lab_documents",
     "subtype": "collection",
-    "entries": [
-      { "item": "fcl_helixwirl_hydroponics_manual" }
-    ]
+    "entries": [ { "item": "fcl_helixwirl_hydroponics_manual" } ]
   },
   {
     "type": "item_group",

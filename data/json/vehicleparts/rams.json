@@ -38,10 +38,7 @@
     "broken_color": "dark_gray",
     "durability": 860,
     "bonus": 50,
-    "breaks_into": [
-      { "item": "scrap", "count": [ 6, 18 ] },
-      { "item": "alloy_sheet", "count": [ 4, 8 ] }
-    ],
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
     "requirements": {
       "install": {
         "skills": [ [ "mechanics", 4 ] ],
