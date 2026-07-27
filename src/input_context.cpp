@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "action.h"
+#include "android_ui_mode.h"
 #include "cata_imgui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -482,38 +483,40 @@ const std::string &input_context::handle_input( const int timeout )
     }
     next_action.type = input_event_t::error;
     const std::string *result = &CATA_ERROR;
-    const int label_revision = detail::get_current_language_version();
-    // Most contexts override only a handful of names.  Fingerprinting those
-    // translated labels is much cheaper than rebuilding every action
-    // descriptor, and keeps the cache independent of input_context's ABI.
-    std::uint64_t catalog_token = 1469598103934665603ULL;
-    const auto append_catalog_token = [&catalog_token]( const std::string & value ) {
-        for( const unsigned char byte : value ) {
-            catalog_token ^= byte;
+    if( android_ui_mode::is_new_ui_build() ) {
+        const int label_revision = detail::get_current_language_version();
+        // Most contexts override only a handful of names.  Fingerprinting those
+        // translated labels is much cheaper than rebuilding every action
+        // descriptor, and keeps the cache independent of input_context's ABI.
+        std::uint64_t catalog_token = 1469598103934665603ULL;
+        const auto append_catalog_token = [&catalog_token]( const std::string & value ) {
+            for( const unsigned char byte : value ) {
+                catalog_token ^= byte;
+                catalog_token *= 1099511628211ULL;
+            }
+            catalog_token ^= 0xFFU;
             catalog_token *= 1099511628211ULL;
+        };
+        for( const auto &entry : action_name_overrides ) {
+            append_catalog_token( entry.first );
+            append_catalog_token( entry.second.translated() );
         }
-        catalog_token ^= 0xFFU;
-        catalog_token *= 1099511628211ULL;
-    };
-    for( const auto &entry : action_name_overrides ) {
-        append_catalog_token( entry.first );
-        append_catalog_token( entry.second.translated() );
-    }
-    if( cata::input_context_actions::needs_publish(
-            category, hud_scene_id, hud_scene_title, registered_actions,
-            catalog_token, label_revision ) ) {
-        std::vector<cata::input_context_actions::action_descriptor> context_actions;
-        context_actions.reserve( registered_actions.size() );
-        for( const std::string &action : registered_actions ) {
-            context_actions.push_back( { action, get_action_name( action ), {}, false, false } );
+        if( cata::input_context_actions::needs_publish(
+                category, hud_scene_id, hud_scene_title, registered_actions,
+                catalog_token, label_revision ) ) {
+            std::vector<cata::input_context_actions::action_descriptor> context_actions;
+            context_actions.reserve( registered_actions.size() );
+            for( const std::string &action : registered_actions ) {
+                context_actions.push_back( { action, get_action_name( action ), {}, false, false } );
+            }
+            cata::input_context_actions::publish(
+                category, hud_scene_id, hud_scene_title, context_actions,
+                catalog_token, label_revision );
         }
-        cata::input_context_actions::publish(
-            category, hud_scene_id, hud_scene_title, context_actions,
-            catalog_token, label_revision );
-    }
-    if( cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
-        inp_mngr.set_timeout( old_timeout );
-        return context_direct_action;
+        if( cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
+            inp_mngr.set_timeout( old_timeout );
+            return context_direct_action;
+        }
     }
     while( true ) {
 
@@ -521,8 +524,8 @@ const std::string &input_context::handle_input( const int timeout )
         // A platform HUD tap can arrive while the backend is polling input.
         // Prefer it over the event that woke this loop without manufacturing a
         // keyboard event.
-        if( cata::input_context_actions::consume( registered_actions,
-                context_direct_action ) ) {
+        if( android_ui_mode::is_new_ui_build() &&
+            cata::input_context_actions::consume( registered_actions, context_direct_action ) ) {
             result = &context_direct_action;
             break;
         }

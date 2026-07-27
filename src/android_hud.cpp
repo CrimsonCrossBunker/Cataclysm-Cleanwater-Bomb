@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include "android_ui_mode.h"
+
 #if defined(__ANDROID__)
     #include "avatar.h"
     #include "color.h"
@@ -404,18 +406,27 @@ void append_hostiles( hud_snapshot &next, const avatar &player )
 
 void set_minimap_rect( const minimap_rect &rect )
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return;
+    }
     std::lock_guard<std::mutex> lock( hud_mutex );
     latest_minimap_rect = rect;
 }
 
 minimap_rect get_minimap_rect()
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return {};
+    }
     std::lock_guard<std::mutex> lock( hud_mutex );
     return latest_minimap_rect;
 }
 
 void set_subscriptions( const std::vector<std::string> &sources )
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return;
+    }
     std::unordered_set<std::string> accepted;
     accepted.reserve( std::min<std::size_t>( sources.size(), 512 ) );
     for( const std::string &source : sources ) {
@@ -433,6 +444,9 @@ void set_subscriptions( const std::vector<std::string> &sources )
 
 void publish_snapshot( const avatar &player, const int )
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return;
+    }
     const cata::input_context_actions::context_snapshot context =
         cata::input_context_actions::snapshot();
     const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
@@ -481,6 +495,9 @@ void publish_snapshot( const avatar &player, const int )
 
 void clear_snapshot()
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return;
+    }
     // A command queued immediately before leaving a world must never be
     // consumed by an equivalent input context in the next world.
     cata::input_context_actions::clear();
@@ -495,6 +512,9 @@ void clear_snapshot()
 
 std::string snapshot_json()
 {
+    if( !android_ui_mode::is_new_ui_build() ) {
+        return "{}";
+    }
     std::lock_guard<std::mutex> lock( hud_mutex );
     std::ostringstream out;
     JsonOut json( out );
