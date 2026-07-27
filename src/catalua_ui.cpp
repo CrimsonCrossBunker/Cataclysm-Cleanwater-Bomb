@@ -192,6 +192,7 @@ class runtime_state : public event_subscriber
 
 std::unique_ptr<runtime_state> active_state;
 std::unique_ptr<ui_adaptor> hud_adaptor;
+bool world_ready_for_huds = false;
 std::string last_runtime_error;
 std::size_t generation_counter = 0;
 
@@ -1179,22 +1180,41 @@ void draw_huds()
     }
 }
 
-void ensure_hud_adaptor()
+bool has_enabled_hud()
+{
+    return active_state && std::any_of(
+               active_state->huds.begin(), active_state->huds.end(),
+    []( const hud_definition & hud ) {
+        return hud.enabled;
+    } );
+}
+
+void sync_hud_adaptor()
 {
 #if defined(__ANDROID__)
     // Android HUD schema 6 is the only in-game HUD on this platform.  Lua
     // ui.hud registrations remain portable mod data but are not consumed here.
+    hud_adaptor.reset();
     return;
 #endif
-    if( hud_adaptor ) {
+    const bool should_render = world_ready_for_huds && has_enabled_hud();
+    if( !should_render ) {
+        hud_adaptor.reset();
         return;
     }
-    hud_adaptor = std::make_unique<ui_adaptor>();
+    if( !hud_adaptor ) {
+        hud_adaptor = std::make_unique<ui_adaptor>();
+        hud_adaptor->position_absolute( point::zero, point::zero );
+        hud_adaptor->on_redraw( []( ui_adaptor & adaptor ) {
+            draw_huds();
+            // A callback failure disables that HUD.  If it was the final
+            // enabled HUD, stop driving idle ImGui frames immediately without
+            // destroying the adaptor from inside its own redraw callback.
+            adaptor.is_imgui = has_enabled_hud();
+        } );
+    }
     hud_adaptor->is_imgui = true;
-    hud_adaptor->position_absolute( point::zero, point::zero );
-    hud_adaptor->on_redraw( []( ui_adaptor & ) {
-        draw_huds();
-    } );
+    hud_adaptor->invalidate_ui();
 }
 
 sol::table event_to_lua( runtime_state &state, const cata::event &event )
@@ -1687,6 +1707,7 @@ bool reload_scripts_with_state(
         }
         active_state = std::move( next );
         active_state->accept_actions = true;
+        sync_hud_adaptor();
         clear_navigation_requests();
         last_runtime_error.clear();
         error.clear();
@@ -1729,6 +1750,8 @@ void on_world_ready()
 {
     // A save/new-game transition is a runtime boundary, unlike an in-page hot
     // reload.  Never retain callbacks or state belonging to the previous world.
+    world_ready_for_huds = false;
+    hud_adaptor.reset();
     active_state.reset();
     clear_navigation_requests();
     script_persistent_state saved_character_state;
@@ -1760,7 +1783,8 @@ void on_world_ready()
                    _( "Lua world state could not be loaded; using defaults: %s" ),
                    world_state_error );
     }
-    ensure_hud_adaptor();
+    world_ready_for_huds = true;
+    sync_hud_adaptor();
 }
 
 bool save_persistent_state( std::string &error )
@@ -1801,6 +1825,7 @@ runtime_status status()
 {
     runtime_status result;
     result.loaded = active_state != nullptr;
+    result.hud_renderer_active = hud_adaptor && hud_adaptor->is_imgui;
     result.last_error = last_runtime_error;
     if( active_state ) {
         result.generation = active_state->generation;
@@ -1852,6 +1877,7 @@ bool validate_snippet( std::string_view source, int instruction_limit, std::stri
 
 void shutdown()
 {
+    world_ready_for_huds = false;
     hud_adaptor.reset();
     active_state.reset();
     clear_actions();
@@ -1907,7 +1933,6 @@ bool show_page( const std::string &page_id )
         popup( _( "Unable to load Lua UI scripts:\n%s" ), error );
         return false;
     }
-    ensure_hud_adaptor();
     page_definition *page = find_page( page_id );
     if( page == nullptr ) {
         return false;
@@ -1948,7 +1973,6 @@ void show_slot( const std::string_view slot )
         popup( _( "Unable to load Lua UI scripts:\n%s" ), error );
         return;
     }
-    ensure_hud_adaptor();
     std::vector<page_info> pages = registered_pages( slot );
     if( pages.empty() ) {
         popup( _( "Lua loaded successfully, but no UI pages were registered here." ) );

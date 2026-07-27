@@ -16,6 +16,7 @@ constexpr int api_version = 3;
 
 struct runtime_status {
     bool loaded = false;
+    bool hud_renderer_active = false;
     std::size_t generation = 0;
     std::size_t page_count = 0;
     std::size_t hud_count = 0;
