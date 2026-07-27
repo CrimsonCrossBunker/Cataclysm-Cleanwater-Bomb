@@ -86,6 +86,7 @@
 #include "iuse_actor.h"
 #include "json.h"
 #include "lightmap.h"
+#include "line.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
