@@ -1,0 +1,4 @@
+-- The bundled Lua UI entry point intentionally registers no pages.
+--
+-- Lua ui.page remains available through the shared page host. Android HUD
+-- schema 4 is an independent native subsystem configured through JSON.

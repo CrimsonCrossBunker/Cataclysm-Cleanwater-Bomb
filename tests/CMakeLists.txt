@@ -4,6 +4,11 @@ if (BUILD_TESTING)
     file(GLOB CATACLYSM_DDA_TEST_SOURCES
             ${CMAKE_SOURCE_DIR}/tests/*.cpp)
 
+    if (NOT CATA_ENABLE_LUA_UI)
+        list(REMOVE_ITEM CATACLYSM_DDA_TEST_SOURCES
+            ${CMAKE_SOURCE_DIR}/tests/catalua_ui_test.cpp)
+    endif()
+
     # Enabling benchmarks
     add_definitions(-DCATCH_CONFIG_ENABLE_BENCHMARKING)
 

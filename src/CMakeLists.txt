@@ -1,4 +1,16 @@
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third-party)
+if (CATA_ENABLE_LUA_UI)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lua)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sol)
+endif()
+
+function(configure_lua_ui target)
+    target_compile_definitions(${target} PUBLIC
+        CATA_ENABLE_LUA_UI=$<BOOL:${CATA_ENABLE_LUA_UI}>)
+    if (CATA_ENABLE_LUA_UI)
+        target_link_libraries(${target} PUBLIC libsol)
+    endif()
+endfunction()
 
 # Tracy profiler interface.  When TRACY=ON (root CMakeLists.txt), this carries
 # the tracy include path and libTracyClient link to every -common object lib.
@@ -32,6 +44,21 @@ endif ()
 file(GLOB CATACLYSM_DDA_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cata_allocator_c.c)
+
+set(CATALUA_UI_ENABLED_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_actions.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_game.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_imgui.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_manifest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_renderer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_state.cpp)
+if (CATA_ENABLE_LUA_UI)
+    list(REMOVE_ITEM CATACLYSM_DDA_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_disabled.cpp)
+else()
+    list(REMOVE_ITEM CATACLYSM_DDA_SOURCES ${CATALUA_UI_ENABLED_SOURCES})
+endif()
 
 if (MSVC)
     set_source_files_properties(
@@ -72,6 +99,7 @@ if (TILES)
     target_include_directories(cataclysm-tiles-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
     target_link_libraries(cataclysm-tiles-common PUBLIC third-party)
+    configure_lua_ui(cataclysm-tiles-common)
 
     if (TARGET cata_tracy)
         target_link_libraries(cataclysm-tiles-common PUBLIC cata_tracy)
@@ -292,6 +320,7 @@ if (CURSES)
             ${CATACLYSM_DDA_HEADERS})
     target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(cataclysm-common PUBLIC third-party)
+    configure_lua_ui(cataclysm-common)
 
     if (TARGET cata_tracy)
         target_link_libraries(cataclysm-common PUBLIC cata_tracy)
@@ -381,6 +410,7 @@ if (HEADLESS)
             ${CATACLYSM_DDA_HEADERS})
     target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(cataclysm-common PUBLIC third-party)
+    configure_lua_ui(cataclysm-common)
     target_compile_definitions(cataclysm-common PUBLIC HEADLESS)
 
     if (TARGET cata_tracy)

@@ -69,6 +69,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
+#include "catalua_ui.h"
 #include "catacharset.h"
 #include "character.h"
 #include "character_attire.h"
@@ -513,6 +514,9 @@ game::~game()
         android_hud::clear_snapshot();
     }
 #endif
+    if constexpr( cata::lua_ui::is_enabled() ) {
+        cata::lua_ui::shutdown();
+    }
     // event_bus_ptr about to die; let debug_capture drop its sticky
     // subscribe flag and release the JSONL file. Without this, a later
     // `game` instance would never resubscribe.
@@ -1152,6 +1156,9 @@ bool game::start_game()
         }
     }
 
+    if constexpr( cata::lua_ui::is_enabled() ) {
+        cata::lua_ui::on_world_ready();
+    }
     get_event_bus().send<event_type::game_start>( getVersionString() );
     get_event_bus().send<event_type::game_avatar_new>( /*is_new_game=*/true, /*is_debug=*/false,
             u.getID(), u.name, u.custom_profession );

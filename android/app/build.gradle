@@ -379,7 +379,8 @@ android {
             resValue "string", "app_name", "Cataclysm: Cleanwater Bomb"
             externalNativeBuild {
                 cmake {
-                    arguments "-DCCB_ANDROID_NEW_UI=OFF"
+                    arguments "-DCCB_ANDROID_NEW_UI=OFF",
+                              "-DCATA_ENABLE_LUA_UI=OFF"
                 }
             }
         }
@@ -390,7 +391,8 @@ android {
             resValue "string", "app_name", "Cataclysm: Cleanwater Bomb (experimental)"
             externalNativeBuild {
                 cmake {
-                    arguments "-DCCB_ANDROID_NEW_UI=OFF"
+                    arguments "-DCCB_ANDROID_NEW_UI=OFF",
+                              "-DCATA_ENABLE_LUA_UI=OFF"
                 }
             }
         }
@@ -402,7 +404,8 @@ android {
             resValue "string", "app_name", "Cataclysm: Cleanwater Bomb (New UI)"
             externalNativeBuild {
                 cmake {
-                    arguments "-DCCB_ANDROID_NEW_UI=ON"
+                    arguments "-DCCB_ANDROID_NEW_UI=ON",
+                              "-DCATA_ENABLE_LUA_UI=ON"
                 }
             }
         }
