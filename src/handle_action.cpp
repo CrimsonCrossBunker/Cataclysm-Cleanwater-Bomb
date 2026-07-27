@@ -124,7 +124,10 @@
     #include "sdltiles.h"
 #endif
 #if defined(__ANDROID__)
+    #include <jni.h>
+
     #include "android_native_ui.h"
+    #include "sdl_wrappers.h"
 #endif
 
 static const activity_id ACT_PICKUP( "ACT_PICKUP" );
