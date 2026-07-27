@@ -89,7 +89,9 @@ sol::table script_value_map_to_lua( sol::state_view lua,
                                     const script_value_map &values )
 {
     sol::table result = lua.create_table();
-    for( const auto &[key, value] : values ) {
+    for( const auto &value_entry : values ) {
+        const std::string &key = value_entry.first;
+        const auto &value = value_entry.second;
         std::visit( [&result, &key]( const auto & entry ) {
             result[key] = entry;
         }, value );
