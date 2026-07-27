@@ -20,6 +20,7 @@ enum class kb_menu_status;
 
 class hotkey_queue;
 class keybindings_ui;
+struct renderer_recovery_test_support;
 namespace catacurses
 {
 class window;
@@ -56,6 +57,7 @@ class input_context_stack_impl
 class input_context
 {
         friend class keybindings_ui;
+        friend struct renderer_recovery_test_support;
 
         // We use a shared_ptr to an intermediate handle object to resolve lifecycle issues with the
         // input_context_stack. Each input_context will own a handle which holds a raw pointer back

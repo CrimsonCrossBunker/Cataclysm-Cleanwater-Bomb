@@ -63,6 +63,9 @@ window_dimensions get_window_dimensions( const catacurses::window &win );
 // Get dimensional info of an imaginary normal catacurses::window with the given
 // position and size. Unlike real catacurses::window, size can be zero.
 window_dimensions get_window_dimensions( const point &pos, const point &size );
+// Normalize a window's legacy physical-size fields to display_buffer pixels,
+// the coordinate domain used by input_event::mouse_pos.
+window_dimensions get_window_dimensions_for_input( const catacurses::window &win );
 
 const SDL_Renderer_Ptr &get_sdl_renderer();
 // Clears the SDL renderer to black. Returns false without clearing when a

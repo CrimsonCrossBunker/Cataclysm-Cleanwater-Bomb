@@ -2859,6 +2859,31 @@ void renderer_recovery_test_support::current_drawable_dims( int &w, int &h )
     h = DrawableHeight;
 }
 
+std::optional<point> renderer_recovery_test_support::text_cell_at_window_point(
+    const point &window_point, const catacurses::window &capture_win )
+{
+    const SDL_Point buffer_point = window_to_display_buffer_coords(
+                                       SDL_Point{ window_point.x, window_point.y } );
+    input_context context( "SCALED_POINTER_TEST" );
+    context.coordinate_input_received = true;
+    context.coordinate = point( buffer_point.x, buffer_point.y );
+    return context.get_coordinates_text( capture_win );
+}
+
+std::optional<point> renderer_recovery_test_support::map_cell_at_window_point(
+    const point &window_point, const catacurses::window &capture_win,
+    const point &center )
+{
+    const SDL_Point buffer_point = window_to_display_buffer_coords(
+                                       SDL_Point{ window_point.x, window_point.y } );
+    input_context context( "SCALED_POINTER_TEST" );
+    context.coordinate_input_received = true;
+    context.coordinate = point( buffer_point.x, buffer_point.y );
+    const std::optional<tripoint_bub_ms> mapped = context.get_coordinates(
+                capture_win, center, true );
+    return mapped ? std::optional<point>( mapped->xy().raw() ) : std::nullopt;
+}
+
 void renderer_recovery_test_support::override_drawable_pixels( const int w, const int h )
 {
     test_drawable_override_w = w;
@@ -7348,6 +7373,32 @@ window_dimensions get_window_dimensions( const point &pos, const point &size )
     return get_window_dimensions( {}, pos, size );
 }
 
+window_dimensions get_window_dimensions_for_input( const catacurses::window &win )
+{
+    window_dimensions dim = get_window_dimensions( win );
+    const int display_scale = get_scaling_factor();
+    if( display_scale <= 1 ) {
+        return dim;
+    }
+
+    // Mouse events are normalized to display_buffer coordinates before they
+    // reach input_context. Convert the legacy physical-size fields into that
+    // same domain, but never scale the input coordinate a second time.
+    dim.scaled_font_size.x /= display_scale;
+    dim.scaled_font_size.y /= display_scale;
+
+    // Terrain and tiled overmap sizes are already expressed in display-buffer
+    // pixels because their render paths use terminal dimensions directly.
+    const bool is_terrain_or_overmap =
+        ( use_tiles && g && win == g->w_terrain ) ||
+        ( use_tiles && use_tiles_overmap && g && win == g->w_overmap );
+    if( !is_terrain_or_overmap ) {
+        dim.window_size_pixel.x /= display_scale;
+        dim.window_size_pixel.y /= display_scale;
+    }
+    return dim;
+}
+
 std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses::window
         &capture_win_, const point &offset, const bool center_cursor ) const
 {
@@ -7359,63 +7410,26 @@ std::optional<tripoint_bub_ms> input_context::get_coordinates( const catacurses:
     }
 
     const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
-    const window_dimensions dim = get_window_dimensions( capture_win );
+    const window_dimensions dim = get_window_dimensions_for_input( capture_win );
 
     const point &win_min = dim.window_pos_pixel;
-    point win_size = dim.window_size_pixel;
-    point logical_coordinate = coordinate;
-    const int scaling_factor = get_scaling_factor();
-
-    // convert window size and coordinate to logical if UI is scaled
-    if( scaling_factor > 1 ) {
-        logical_coordinate.x /= scaling_factor;
-        logical_coordinate.y /= scaling_factor;
-
-        const bool is_terrain_or_overmap = ( use_tiles && g && capture_win == g->w_terrain ) ||
-                                           ( use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap );
-        if( !is_terrain_or_overmap ) {
-            win_size.x /= scaling_factor;
-            win_size.y /= scaling_factor;
-        }
-    }
-
+    const point &win_size = dim.window_size_pixel;
     const point win_max = win_min + win_size;
 
     // Translate mouse coordinates to map coordinates based on tile size
     // Check if click is within bounds of the window we care about
     const half_open_rectangle<point> win_bounds( win_min, win_max );
-    if( !win_bounds.contains( logical_coordinate ) ) {
+    if( !win_bounds.contains( coordinate ) ) {
         return std::nullopt;
     }
 
-    const point screen_pos = logical_coordinate - win_min;
+    const point screen_pos = coordinate - win_min;
 
     const bool use_isometric = g->w_overmap &&
                                capture_win == g->w_overmap ? false : g->is_tileset_isometric();
 
-    // convert tile size to logical if UI is scaled
-    point logical_tile_size;
-    if( scaling_factor > 1 ) {
-        const bool is_terrain = use_tiles && g && capture_win == g->w_terrain;
-        const bool is_overmap = use_tiles && use_tiles_overmap && g && capture_win == g->w_overmap;
-
-        if( is_terrain ) {
-            logical_tile_size.x = tilecontext->get_tile_width();
-            logical_tile_size.y = tilecontext->get_tile_height();
-        } else if( is_overmap ) {
-            logical_tile_size.x = overmap_tilecontext->get_tile_width();
-            logical_tile_size.y = overmap_tilecontext->get_tile_height();
-        } else {
-            logical_tile_size = dim.scaled_font_size;
-            logical_tile_size.x /= scaling_factor;
-            logical_tile_size.y /= scaling_factor;
-        }
-    } else {
-        logical_tile_size = dim.scaled_font_size;
-    }
-
     const point_bub_ms p = cata_tiles::screen_to_player(
-                               screen_pos, logical_tile_size, win_size,
+                               screen_pos, dim.scaled_font_size, win_size,
                                point_bub_ms( offset ), use_isometric );
 
     return tripoint_bub_ms( p, get_map().get_abs_sub().z() );

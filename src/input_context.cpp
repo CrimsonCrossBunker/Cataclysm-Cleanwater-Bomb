@@ -1613,24 +1613,11 @@ std::optional<point> input_context::get_coordinates_text( const catacurses::wind
     if( !coordinate_input_received ) {
         return std::nullopt;
     }
-    const window_dimensions dim = get_window_dimensions( capture_win );
-    const int scaling_factor = get_scaling_factor();
-    point logical_coordinate = coordinate;
-    int fw = dim.scaled_font_size.x;
-    int fh = dim.scaled_font_size.y;
-
-    // convert coordinate and font sizeto logical if UI is scaled
-    if( scaling_factor > 1 ) {
-        logical_coordinate.x /= scaling_factor;
-        logical_coordinate.y /= scaling_factor;
-        fw /= scaling_factor;
-        fh /= scaling_factor;
-    }
-
+    const window_dimensions dim = get_window_dimensions_for_input( capture_win );
     const point &win_min = dim.window_pos_pixel;
-    const point screen_pos = logical_coordinate - win_min;
-    const point selected( divide_round_down( screen_pos.x, fw ),
-                          divide_round_down( screen_pos.y, fh ) );
+    const point screen_pos = coordinate - win_min;
+    const point selected( divide_round_down( screen_pos.x, dim.scaled_font_size.x ),
+                          divide_round_down( screen_pos.y, dim.scaled_font_size.y ) );
     return selected;
 #endif
 }

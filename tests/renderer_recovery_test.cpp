@@ -9,6 +9,7 @@
 #include "cata_catch.h"
 #include "cata_imgui.h"
 #include "cata_tiles.h"
+#include "cursesdef.h"
 #include "options_helpers.h"
 #include "output.h"
 #include "point.h"
@@ -667,6 +668,84 @@ TEST_CASE( "renderer_coordinator_deferred_scaled_resize_rebuilds_buffer",
     const bool height_scaled = win_h / font_h / scaling > min_term_h;
     REQUIRE( height_scaled );
     CHECK( buf_h != win_h / scaling );
+}
+
+TEST_CASE( "scaled_pointer_coordinates_cover_the_complete_text_and_map_windows",
+           "[tiles][input][renderer_recovery]" )
+{
+    software_render_fixture fx;
+    if( !fx.available() ) {
+        WARN( "dummy SDL video backend unavailable; skipping" );
+        return;
+    }
+
+    int initial_window_w = 0;
+    int initial_window_h = 0;
+    int font_w = 0;
+    int font_h = 0;
+    int initial_scaling = 0;
+    int min_term_w = 0;
+    int min_term_h = 0;
+    renderer_recovery_test_support::current_window_metrics(
+        initial_window_w, initial_window_h, font_w, font_h, initial_scaling,
+        min_term_w, min_term_h );
+    REQUIRE( font_w > 0 );
+    REQUIRE( font_h > 0 );
+
+    const point window_origin_cells( 3, 4 );
+    const point window_size_cells( 20, 12 );
+    const point target_cell = window_size_cells - point( 1, 1 );
+    const point map_center( 100, 200 );
+    catacurses::window capture_win = catacurses::newwin(
+                                         window_size_cells.y, window_size_cells.x,
+                                         window_origin_cells );
+
+    for( const int display_scale : {
+             1, 2, 4
+         } ) {
+        const int terminal_w = std::max( min_term_w, 100 );
+        const int terminal_h = std::max( min_term_h, 60 );
+        renderer_recovery_test_support::set_scaling_and_resize_window(
+            display_scale, terminal_w * font_w * display_scale,
+            terminal_h * font_h * display_scale );
+        renderer_coordinator.drain_pending();
+        REQUIRE( renderer_coordinator.is_render_allowed() );
+
+        int window_w = 0;
+        int window_h = 0;
+        int current_font_w = 0;
+        int current_font_h = 0;
+        int current_scaling = 0;
+        renderer_recovery_test_support::current_window_metrics(
+            window_w, window_h, current_font_w, current_font_h, current_scaling,
+            min_term_w, min_term_h );
+        CAPTURE( display_scale, window_w, window_h, current_font_w,
+                 current_font_h, current_scaling );
+        REQUIRE( current_scaling == display_scale );
+
+        // Aim at the centre of the bottom-right cell. At 2x/4x this is far
+        // outside the upper-left fraction that a second scale division leaves
+        // reachable.
+        const point target_buffer_pixel(
+            ( window_origin_cells.x + target_cell.x ) * current_font_w +
+            current_font_w / 2,
+            ( window_origin_cells.y + target_cell.y ) * current_font_h +
+            current_font_h / 2 );
+        const point target_window_pixel = target_buffer_pixel * display_scale;
+
+        const std::optional<point> text_cell =
+            renderer_recovery_test_support::text_cell_at_window_point(
+                target_window_pixel, capture_win );
+        REQUIRE( text_cell );
+        CHECK( *text_cell == target_cell );
+
+        const std::optional<point> map_cell =
+            renderer_recovery_test_support::map_cell_at_window_point(
+                target_window_pixel, capture_win, map_center );
+        REQUIRE( map_cell );
+        CHECK( *map_cell == map_center + target_cell -
+               window_size_cells / 2 );
+    }
 }
 
 TEST_CASE( "renderer_coordinator_resize_without_buffer_change_keeps_generation",
