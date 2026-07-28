@@ -3650,7 +3650,7 @@ void item::deserialize( const JsonObject &data )
         data.read( "contents", read_contents );
         contents.read_mods( read_contents );
         update_modified_pockets();
-        contents.combine( read_contents, false, true, false, true );
+        contents.combine( std::move( read_contents ), false, true, false, true );
 
         //migrate SOFTWARE pocket
         auto pockets_e_legacy = []( item_pocket const & pocket ) {
