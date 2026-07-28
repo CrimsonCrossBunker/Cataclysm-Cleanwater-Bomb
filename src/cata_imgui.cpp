@@ -1,6 +1,7 @@
 #include "cata_imgui.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -798,11 +799,60 @@ bool cataimgui::client::want_text_input()
     return ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().WantTextInput;
 }
 
-void cataimgui::client::clear_text_focus()
+ImGuiID cataimgui::client::vertical_scroll_window_at( const float x, const float y )
+{
+    ImGuiContext *context = ImGui::GetCurrentContext();
+    if( context == nullptr ) {
+        return 0;
+    }
+
+    ImGuiWindow *hovered_window = nullptr;
+    ImGui::FindHoveredWindowEx( ImVec2( x, y ), false, &hovered_window, nullptr );
+    for( ImGuiWindow *window = hovered_window; window != nullptr;
+         window = window->ParentWindow ) {
+        const bool accepts_scroll = !( window->Flags & ImGuiWindowFlags_NoMouseInputs ) &&
+                                    !( window->Flags & ImGuiWindowFlags_NoScrollWithMouse );
+        if( accepts_scroll && window->ScrollMax.y > 0.0F ) {
+            return window->ID;
+        }
+    }
+    return 0;
+}
+
+bool cataimgui::client::scroll_window_y( const ImGuiID window_id, const float finger_delta_y )
+{
+    if( window_id == 0 || finger_delta_y == 0.0F ||
+        ImGui::GetCurrentContext() == nullptr ) {
+        return false;
+    }
+
+    ImGuiWindow *window = ImGui::FindWindowByID( window_id );
+    if( window == nullptr || window->ScrollMax.y <= 0.0F ) {
+        return false;
+    }
+
+    const float current_target = window->ScrollTarget.y < FLT_MAX ?
+                                 window->ScrollTarget.y : window->Scroll.y;
+    const float next_target = std::clamp(
+                                  current_target - finger_delta_y,
+                                  0.0F, window->ScrollMax.y );
+    if( next_target == current_target ) {
+        return false;
+    }
+    ImGui::SetScrollY( window, next_target );
+    return true;
+}
+
+void cataimgui::client::clear_active_item()
 {
     if( ImGui::GetCurrentContext() != nullptr ) {
         ImGui::ClearActiveID();
     }
+}
+
+void cataimgui::client::clear_text_focus()
+{
+    clear_active_item();
 }
 
 static ImGuiKey cata_key_to_imgui( int cata_key )

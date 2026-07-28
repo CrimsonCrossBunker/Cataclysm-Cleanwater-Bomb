@@ -112,6 +112,7 @@ std::unique_ptr<cataimgui::client> imclient;
 
     #include "action.h"
     #include "android_hud.h"
+    #include "android_imgui_touch.h"
     #include "input_context_actions.h"
     #include "inventory.h"
     #include "map.h"
@@ -902,7 +903,40 @@ void draw_quick_shortcuts();
 void draw_virtual_joystick();
 
 static bool quick_shortcuts_enabled = true;
-static bool android_imgui_touch_active = false;
+
+enum class android_imgui_tap_phase : int {
+    idle = 0,
+    press,
+    release
+};
+
+struct android_imgui_touch_runtime {
+    android_imgui_touch::gesture gesture;
+    bool captures_touch = false;
+    ImGuiID scroll_window = 0;
+    float pending_scroll_y = 0.0F;
+    float pointer_x = 0.0F;
+    float pointer_y = 0.0F;
+    float touch_slop = 12.0F;
+    std::uint32_t tap_time = 0;
+    std::uint32_t last_frame_time = 0;
+    android_imgui_tap_phase tap_phase = android_imgui_tap_phase::idle;
+    bool frame_pending = false;
+    bool wake_owner_after_frame = false;
+    bool completed_tap_after_frame = false;
+};
+
+static android_imgui_touch_runtime android_imgui_touch_state;
+static constexpr std::uint32_t android_imgui_frame_interval = 16;
+
+static bool android_imgui_fast_frames_requested()
+{
+    return android_ui_mode::is_new_ui_build() &&
+           ( android_imgui_touch_state.captures_touch ||
+             android_imgui_touch_state.frame_pending ||
+             android_imgui_touch_state.gesture.animating() ||
+             android_imgui_touch_state.tap_phase != android_imgui_tap_phase::idle );
+}
 
 static bool android_legacy_shortcuts_enabled()
 {
@@ -1489,7 +1523,13 @@ void refresh_display()
 static void try_sdl_update()
 {
     uint32_t now = GetTicks();
-    if( now - lastupdate >= interval ) {
+    uint32_t effective_interval = interval;
+#if defined(__ANDROID__)
+    if( android_imgui_fast_frames_requested() ) {
+        effective_interval = std::min( effective_interval, android_imgui_frame_interval );
+    }
+#endif
+    if( now - lastupdate >= effective_interval ) {
         refresh_display();
     } else {
         needupdate = true;
@@ -4817,6 +4857,17 @@ static int finger_slot_for( SDL_FingerID id, bool create_if_missing )
     return -1;
 }
 
+static std::uint32_t android_touch_event_time( const SDL_Event &event )
+{
+#if SDL_MAJOR_VERSION >= 3
+    const std::uint64_t timestamp_ms = event.tfinger.timestamp / 1000000ULL;
+#else
+    const std::uint64_t timestamp_ms = event.tfinger.timestamp;
+#endif
+    return timestamp_ms > 0 ? static_cast<std::uint32_t>( timestamp_ms ) :
+           GetTicks();
+}
+
 static void finger_slot_clear( SDL_FingerID id )
 {
     for( int i = 0; i < CATA_MAX_FINGERS; ++i ) {
@@ -4827,35 +4878,209 @@ static void finger_slot_clear( SDL_FingerID id )
     }
 }
 
-static void android_process_imgui_touch( const Uint32 event_type, const float raw_x,
-        const float raw_y )
+static ImVec2 android_imgui_touch_position( const float raw_x, const float raw_y )
+{
+    const SDL_Point position = window_to_display_buffer_coords( SDL_Point{
+        static_cast<int>( std::lround( raw_x ) ), static_cast<int>( std::lround( raw_y ) )
+    } );
+    return ImVec2( static_cast<float>( position.x ), static_cast<float>( position.y ) );
+}
+
+static void android_process_imgui_pointer( const Uint32 event_type, const float x,
+        const float y )
 {
     if( !android_ui_mode::is_new_ui_build() ||
         !imclient || !imclient->any_window_shown() ) {
         return;
     }
-    const SDL_Point position = window_to_display_buffer_coords( SDL_Point{
-        static_cast<int>( std::lround( raw_x ) ), static_cast<int>( std::lround( raw_y ) )
-    } );
     SDL_Event mouse_event{};
     mouse_event.type = event_type;
     if( event_type == CATA_MOUSEMOTION ) {
         mouse_event.motion.windowID = SDL_GetWindowID( ::window.get() );
         mouse_event.motion.which = SDL_TOUCH_MOUSEID;
-        mouse_event.motion.x = position.x;
-        mouse_event.motion.y = position.y;
+        mouse_event.motion.x = x;
+        mouse_event.motion.y = y;
     } else {
         mouse_event.button.windowID = SDL_GetWindowID( ::window.get() );
         mouse_event.button.which = SDL_TOUCH_MOUSEID;
         mouse_event.button.button = SDL_BUTTON_LEFT;
         mouse_event.button.clicks = 1;
-        mouse_event.button.x = position.x;
-        mouse_event.button.y = position.y;
+        mouse_event.button.x = x;
+        mouse_event.button.y = y;
     }
     int buffer_width = 0;
     int buffer_height = 0;
     get_display_buffer_dims( &buffer_width, &buffer_height );
     imclient->process_input( &mouse_event, buffer_width, buffer_height );
+}
+
+static float android_imgui_touch_slop()
+{
+    const float native_touch_slop = 8.0F *
+                                    std::max( 1.0F, android_get_display_density() );
+    if( ImGui::GetCurrentContext() == nullptr ) {
+        return native_touch_slop;
+    }
+    return std::max( native_touch_slop,
+                     ImGui::GetIO().MouseDragThreshold * 2.0F );
+}
+
+static void android_request_imgui_touch_frame()
+{
+    android_imgui_touch_state.frame_pending = true;
+    needupdate = true;
+}
+
+static void android_cancel_imgui_touch()
+{
+    const bool pointer_is_down = android_imgui_touch_state.gesture.pointer_is_down() ||
+                                 android_imgui_touch_state.tap_phase ==
+                                 android_imgui_tap_phase::release;
+    if( pointer_is_down ) {
+        cataimgui::client::clear_active_item();
+        android_process_imgui_pointer( CATA_MOUSEMOTION,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        android_process_imgui_pointer( CATA_MOUSEBUTTONUP,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        android_request_imgui_touch_frame();
+    }
+
+    android_imgui_touch_state.gesture.cancel();
+    android_imgui_touch_state.captures_touch = false;
+    android_imgui_touch_state.scroll_window = 0;
+    android_imgui_touch_state.pending_scroll_y = 0.0F;
+    android_imgui_touch_state.tap_phase = android_imgui_tap_phase::idle;
+    android_imgui_touch_state.frame_pending = pointer_is_down;
+    android_imgui_touch_state.wake_owner_after_frame = false;
+    android_imgui_touch_state.completed_tap_after_frame = false;
+}
+
+static void android_service_imgui_touch( const std::uint32_t now )
+{
+    if( !android_ui_mode::is_new_ui_build() || !imclient ||
+        !imclient->any_window_shown() ) {
+        android_imgui_touch_state.gesture.cancel();
+        android_imgui_touch_state.captures_touch = false;
+        android_imgui_touch_state.scroll_window = 0;
+        android_imgui_touch_state.pending_scroll_y = 0.0F;
+        android_imgui_touch_state.tap_phase = android_imgui_tap_phase::idle;
+        android_imgui_touch_state.frame_pending = false;
+        android_imgui_touch_state.wake_owner_after_frame = false;
+        android_imgui_touch_state.completed_tap_after_frame = false;
+        return;
+    }
+
+    const bool animation_pending = android_imgui_touch_state.gesture.animating();
+    const bool tap_pending = android_imgui_touch_state.tap_phase !=
+                             android_imgui_tap_phase::idle;
+    if( !android_imgui_touch_state.frame_pending && !animation_pending && !tap_pending ) {
+        return;
+    }
+    if( now - android_imgui_touch_state.last_frame_time <
+        android_imgui_frame_interval ) {
+        needupdate = true;
+        return;
+    }
+
+    android_imgui_touch_state.last_frame_time = now;
+    bool keep_animating = false;
+    if( animation_pending ) {
+        const android_imgui_touch::animation_result animation =
+            android_imgui_touch_state.gesture.animate( now );
+        android_imgui_touch_state.pending_scroll_y += animation.scroll_delta_y;
+        keep_animating = animation.active;
+    }
+
+    if( android_imgui_touch_state.pending_scroll_y != 0.0F ) {
+        const bool moved = cataimgui::client::scroll_window_y(
+                               android_imgui_touch_state.scroll_window,
+                               android_imgui_touch_state.pending_scroll_y );
+        android_imgui_touch_state.pending_scroll_y = 0.0F;
+        if( !moved && android_imgui_touch_state.gesture.animating() ) {
+            android_imgui_touch_state.gesture.stop_inertia();
+            keep_animating = false;
+        }
+    }
+
+    const android_imgui_tap_phase tap_phase = android_imgui_touch_state.tap_phase;
+    android_imgui_touch_state.frame_pending = false;
+    if( tap_phase == android_imgui_tap_phase::press ) {
+        android_process_imgui_pointer( CATA_MOUSEMOTION,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        android_process_imgui_pointer( CATA_MOUSEBUTTONDOWN,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        android_imgui_touch_state.tap_phase = android_imgui_tap_phase::release;
+        android_imgui_touch_state.frame_pending = true;
+    } else if( tap_phase == android_imgui_tap_phase::release ) {
+        android_process_imgui_pointer( CATA_MOUSEBUTTONUP,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        android_imgui_touch_state.tap_phase = android_imgui_tap_phase::idle;
+        android_imgui_touch_state.wake_owner_after_frame = true;
+        android_imgui_touch_state.completed_tap_after_frame = true;
+    }
+
+    ui_manager::redraw_invalidated();
+    needupdate = true;
+    android_imgui_touch_state.frame_pending |= keep_animating;
+
+    if( android_imgui_touch_state.wake_owner_after_frame &&
+        last_input.type == input_event_t::error ) {
+        android_imgui_touch_state.wake_owner_after_frame = false;
+        if( android_imgui_touch_state.completed_tap_after_frame &&
+            last_tap_time > 0 &&
+            android_imgui_touch_state.tap_time - last_tap_time <
+            static_cast<std::uint32_t>( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
+            last_input = input_event( KEY_ESCAPE, input_event_t::keyboard_char );
+            last_tap_time = 0;
+        } else {
+            last_input.type = input_event_t::timeout;
+            if( android_imgui_touch_state.completed_tap_after_frame ) {
+                last_tap_time = android_imgui_touch_state.tap_time;
+            }
+        }
+        android_imgui_touch_state.completed_tap_after_frame = false;
+    }
+}
+
+static void android_apply_imgui_motion(
+    const android_imgui_touch::motion_result &motion )
+{
+    bool pointer_event = false;
+    if( motion.cancel_pointer_drag ) {
+        cataimgui::client::clear_active_item();
+        android_process_imgui_pointer( CATA_MOUSEMOTION,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        android_process_imgui_pointer( CATA_MOUSEBUTTONUP,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        pointer_event = true;
+    } else if( motion.begin_pointer_drag ) {
+        android_process_imgui_pointer( CATA_MOUSEMOTION,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        android_process_imgui_pointer( CATA_MOUSEBUTTONDOWN,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        pointer_event = true;
+    } else if( android_imgui_touch_state.gesture.mode() ==
+               android_imgui_touch::gesture_mode::pointer_drag ) {
+        android_process_imgui_pointer( CATA_MOUSEMOTION,
+                                       android_imgui_touch_state.pointer_x,
+                                       android_imgui_touch_state.pointer_y );
+        pointer_event = true;
+    }
+
+    android_imgui_touch_state.pending_scroll_y += motion.scroll_delta_y;
+    if( pointer_event || motion.begin_vertical_scroll ||
+        motion.scroll_delta_y != 0.0F ) {
+        android_request_imgui_touch_frame();
+    }
 }
 
 // Quick shortcuts container: maps the touch input context category (std::string) to a std::list of input_events.
@@ -5845,6 +6070,9 @@ static void CheckMessages()
         touch_input_context = *new_input_context;
         touch_input_context_owner = new_input_context;
         if( owner_changed || category_changed ) {
+            if( android_ui_mode::is_new_ui_build() ) {
+                android_cancel_imgui_touch();
+            }
             // A tap that opened a new screen must not become the first half of a
             // double-tap gesture inside that new input context.
             last_tap_time = 0;
@@ -6069,7 +6297,7 @@ static void CheckMessages()
         }
 
         // Handle repeating inputs from touch + holds
-        if( !android_imgui_touch_active && !is_quick_shortcut_touch &&
+        if( !android_imgui_touch_state.captures_touch && !is_quick_shortcut_touch &&
             !is_two_finger_touch && !is_three_finger_touch &&
             finger_down_time > 0 &&
             ticks - finger_down_time > static_cast<uint32_t>
@@ -6137,6 +6365,10 @@ static void CheckMessages()
     last_input = input_event();
 #if defined(__ANDROID__)
     last_input_has_explicit_mouse_pos = false;
+    android_service_imgui_touch( ticks );
+    if( last_input.type != input_event_t::error ) {
+        return;
+    }
     if( android_legacy_shortcuts_enabled() && pop_extra_button_input( last_input ) ) {
         text_refresh = true;
         return;
@@ -6537,18 +6769,32 @@ static void CheckMessages()
                 case CATA_FINGERMOTION: {
                     const int slot = finger_slot_for( GetFingerID( ev ), false );
                     if( slot == 0 ) {
-                        if( !is_quick_shortcut_touch ) {
-                            update_finger_repeat_delay();
-                        }
-                        needupdate = true; // ensure virtual joystick and quick shortcuts redraw as we interact
-                        ui_manager::redraw_invalidated();
                         finger_curr_x = GetFingerX( ev, WindowWidth );
                         finger_curr_y = GetFingerY( ev, WindowHeight );
-                        if( android_imgui_touch_active ) {
-                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
+                        if( android_imgui_touch_state.captures_touch ) {
+                            const ImVec2 position = android_imgui_touch_position(
+                                                        finger_curr_x, finger_curr_y );
+                            android_imgui_touch_state.pointer_x = position.x;
+                            android_imgui_touch_state.pointer_y = position.y;
+                            const android_imgui_touch::motion_result motion =
+                                android_imgui_touch_state.gesture.move(
+                                    position.x, position.y,
+                                    android_touch_event_time( ev ),
+                                    android_imgui_touch_state.touch_slop,
+                                    android_imgui_touch_state.scroll_window != 0 );
+                            android_apply_imgui_motion( motion );
+                        } else {
+                            if( !is_quick_shortcut_touch ) {
+                                update_finger_repeat_delay();
+                            }
+                            // Legacy joystick and shortcut overlays still redraw while
+                            // moving. New UI ImGui touches are coalesced below instead.
+                            needupdate = true;
+                            ui_manager::redraw_invalidated();
                         }
 
-                        if( get_option<bool>( "ANDROID_VIRTUAL_JOYSTICK_FOLLOW" ) && !is_two_finger_touch &&
+                        if( !android_imgui_touch_state.captures_touch &&
+                            get_option<bool>( "ANDROID_VIRTUAL_JOYSTICK_FOLLOW" ) && !is_two_finger_touch &&
                             !is_three_finger_touch ) {
                             // If we've moved too far from joystick center, offset joystick center automatically
                             float delta_x = finger_curr_x - finger_down_x;
@@ -6579,8 +6825,9 @@ static void CheckMessages()
                     }
                     break;
                 }
-                case CATA_FINGERDOWN:
-                    if( finger_slot_for( GetFingerID( ev ), true ) == 0 ) {
+                case CATA_FINGERDOWN: {
+                    const int slot = finger_slot_for( GetFingerID( ev ), true );
+                    if( slot == 0 ) {
                         finger_down_x = finger_curr_x = GetFingerX( ev, WindowWidth );
                         finger_down_y = finger_curr_y = GetFingerY( ev, WindowHeight );
                         finger_down_time = ticks;
@@ -6590,20 +6837,35 @@ static void CheckMessages()
                         if( !is_quick_shortcut_touch ) {
                             update_finger_repeat_delay();
                         }
-                        android_imgui_touch_active = android_ui_mode::is_new_ui_build() &&
-                                                     imclient && imclient->any_window_shown();
-                        if( android_imgui_touch_active ) {
-                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
-                            android_process_imgui_touch( CATA_MOUSEBUTTONDOWN, finger_curr_x, finger_curr_y );
+                        const bool capture_imgui = android_ui_mode::is_new_ui_build() &&
+                                                   imclient && imclient->any_window_shown();
+                        if( capture_imgui ) {
+                            android_cancel_imgui_touch();
+                            const ImVec2 position = android_imgui_touch_position(
+                                                        finger_curr_x, finger_curr_y );
+                            android_imgui_touch_state.captures_touch = true;
+                            android_imgui_touch_state.pointer_x = position.x;
+                            android_imgui_touch_state.pointer_y = position.y;
+                            android_imgui_touch_state.touch_slop =
+                                android_imgui_touch_slop();
+                            android_imgui_touch_state.scroll_window =
+                                cataimgui::client::vertical_scroll_window_at(
+                                    position.x, position.y );
+                            android_imgui_touch_state.gesture.press(
+                                position.x, position.y,
+                                android_touch_event_time( ev ) );
+                            // Hit testing used the explicit touch position above.
+                            // Do not hover or press a widget until this gesture is
+                            // known to be a tap or a control drag.
+                        } else {
+                            ui_manager::redraw_invalidated();
+                            // Ensure virtual joystick and quick shortcuts redraw.
+                            needupdate = true;
                         }
-                        ui_manager::redraw_invalidated();
-                        needupdate = true; // ensure virtual joystick and quick shortcuts redraw as we interact
-                    } else if( finger_slot_for( GetFingerID( ev ), true ) == 1 ) {
+                    } else if( slot == 1 ) {
                         if( !is_quick_shortcut_touch ) {
-                            if( android_imgui_touch_active ) {
-                                android_process_imgui_touch( CATA_MOUSEBUTTONUP, finger_curr_x,
-                                                             finger_curr_y );
-                                android_imgui_touch_active = false;
+                            if( android_imgui_touch_state.captures_touch ) {
+                                android_cancel_imgui_touch();
                             }
                             second_finger_down_x = second_finger_curr_x = GetFingerX( ev, WindowWidth );
                             second_finger_down_y = second_finger_curr_y = GetFingerY( ev, WindowHeight );
@@ -6612,7 +6874,7 @@ static void CheckMessages()
                                 android_begin_pinch_zoom();
                             }
                         }
-                    } else if( finger_slot_for( GetFingerID( ev ), true ) == 2 ) {
+                    } else if( slot == 2 ) {
                         if( !is_quick_shortcut_touch ) {
                             third_finger_down_x = third_finger_curr_x = GetFingerX( ev, WindowWidth );
                             third_finger_down_y = third_finger_curr_y = GetFingerY( ev, WindowHeight );
@@ -6624,28 +6886,51 @@ static void CheckMessages()
                         }
                     }
                     break;
+                }
                 case CATA_FINGERUP: {
                     const int slot = finger_slot_for( GetFingerID( ev ), false );
                     if( slot == 0 ) {
                         finger_curr_x = GetFingerX( ev, WindowWidth );
                         finger_curr_y = GetFingerY( ev, WindowHeight );
-                        if( android_imgui_touch_active ) {
-                            android_process_imgui_touch( CATA_MOUSEMOTION, finger_curr_x, finger_curr_y );
-                            android_process_imgui_touch( CATA_MOUSEBUTTONUP, finger_curr_x, finger_curr_y );
-                            if( last_tap_time > 0 &&
-                                ticks - last_tap_time < static_cast<uint32_t>(
-                                    get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-                                // ImGui windows consume touch as synthetic mouse events and
-                                // bypass the regular menu gesture branch below.  Preserve the
-                                // same double-tap Back gesture for dialogs such as keybindings.
-                                last_input = input_event( KEY_ESCAPE,
-                                                          input_event_t::keyboard_char );
-                                last_tap_time = 0;
-                            } else {
-                                // Wake the owning ImGui loop so it can draw the click result.
-                                last_input.type = input_event_t::timeout;
-                                last_tap_time = ticks;
+                        const bool imgui_touch = android_imgui_touch_state.captures_touch;
+                        if( imgui_touch ) {
+                            const ImVec2 position = android_imgui_touch_position(
+                                                        finger_curr_x, finger_curr_y );
+                            android_imgui_touch_state.pointer_x = position.x;
+                            android_imgui_touch_state.pointer_y = position.y;
+                            const android_imgui_touch::release_result released =
+                                android_imgui_touch_state.gesture.release(
+                                    position.x, position.y,
+                                    android_touch_event_time( ev ),
+                                    android_imgui_touch_state.touch_slop,
+                                    android_imgui_touch_state.scroll_window != 0 );
+
+                            // A drag first detected by the release event has no
+                            // useful down frame and must not turn into a click.
+                            android_imgui_touch::motion_result final_motion =
+                                released.motion;
+                            const bool pointer_started_on_release =
+                                final_motion.begin_pointer_drag;
+                            final_motion.begin_pointer_drag = false;
+                            android_apply_imgui_motion( final_motion );
+
+                            if( released.tap ) {
+                                android_imgui_touch_state.tap_time = ticks;
+                                android_imgui_touch_state.tap_phase =
+                                    android_imgui_tap_phase::press;
+                                android_imgui_touch_state.completed_tap_after_frame = false;
+                                android_request_imgui_touch_frame();
+                            } else if( released.release_pointer &&
+                                       !pointer_started_on_release ) {
+                                android_process_imgui_pointer( CATA_MOUSEMOTION,
+                                                               position.x, position.y );
+                                android_process_imgui_pointer( CATA_MOUSEBUTTONUP,
+                                                               position.x, position.y );
+                                android_imgui_touch_state.wake_owner_after_frame = true;
+                                android_imgui_touch_state.completed_tap_after_frame = false;
+                                android_request_imgui_touch_frame();
                             }
+                            android_imgui_touch_state.captures_touch = false;
                         } else if( is_quick_shortcut_touch ) {
                             input_event *quick_shortcut = get_quick_shortcut_under_finger();
                             if( quick_shortcut ) {
@@ -6856,10 +7141,14 @@ static void CheckMessages()
                         pinch_zoom_handled = false;
                         finger_down_time = 0;
                         finger_repeat_time = 0;
-                        android_imgui_touch_active = false;
-                        // ensure virtual joystick and quick shortcuts are updated properly
-                        android_request_repaint();
-                        refresh_display(); // as above, but actually redraw it now as well
+                        if( imgui_touch ) {
+                            android_request_imgui_touch_frame();
+                        } else {
+                            // Ensure legacy virtual joystick and shortcuts are
+                            // updated and presented immediately.
+                            android_request_repaint();
+                            refresh_display();
+                        }
                     } else if( slot == 1 ) {
                         if( is_two_finger_touch ) {
                             // on second finger release, just remember the x/y position so we can calculate delta once first finger is done
@@ -6898,6 +7187,9 @@ static void CheckMessages()
             break;
         }
     }
+#if defined(__ANDROID__)
+    android_service_imgui_touch( GetTicks() );
+#endif
     if( needupdate ) {
         try_sdl_update();
     }
