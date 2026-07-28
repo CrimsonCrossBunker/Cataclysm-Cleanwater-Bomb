@@ -803,27 +803,29 @@ Creature *Creature::auto_find_hostile_target( int range, int &boo_hoo, int area 
             // can't see nor sense it
             if( is_fake() && in_veh ) {
                 // If turret in the vehicle then
-                // Hack: trying yo avoid turret LOS blocking by frames bug by trying to see target from vehicle boundary
-                // Or turret wallhack for turret's car
-                // TODO: to visibility checking another way, probably using 3D FOV
-                std::vector<tripoint_bub_ms> path_to_target = line_to( pos_bub( here ), m->pos_bub( here ) );
-                path_to_target.insert( path_to_target.begin(), pos_bub( here ) );
+                // Hack: avoid the turret's own deck and frames blocking its
+                // targeting NPC by checking visibility from the vehicle edge.
+                // TODO: replace this workaround with 3D FOV.
+                const tripoint_bub_ms turret_pos = pos_bub( here );
+                std::vector<tripoint_bub_ms> path_to_target =
+                    line_to( turret_pos, m->pos_bub( here ) );
+                path_to_target.insert( path_to_target.begin(), turret_pos );
 
-                // Getting point on vehicle boundaries and on line between target and turret
-                bool continueFlag = true;
-                do {
+                while( !path_to_target.empty() ) {
                     const optional_vpart_position vp = here.veh_at( path_to_target.back() );
                     vehicle *const veh = vp ? &vp->vehicle() : nullptr;
                     if( in_veh == veh ) {
-                        continueFlag = false;
-                    } else {
-                        path_to_target.pop_back();
+                        break;
                     }
-                } while( continueFlag );
+                    path_to_target.pop_back();
+                }
+                if( path_to_target.empty() ) {
+                    continue;
+                }
 
-                tripoint_bub_ms oldPos = pos_bub( here );
+                const tripoint_bub_ms oldPos = turret_pos;
                 setpos( here, path_to_target.back() ); //Temporary moving targeting npc on vehicle boundary position
-                bool seesFromVehBound = sees( here, *m ); // And look from there
+                const bool seesFromVehBound = sees( here, *m ); // And look from there
                 setpos( here, oldPos );
                 if( !seesFromVehBound ) {
                     continue;
