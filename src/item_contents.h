@@ -275,6 +275,8 @@ class item_contents
          * Called when adding an item as pockets to a molle item.
          */
         void add_pocket( const item &pocket );
+        /** Loading-only counterpart which preserves the incorporated item's serialized UID. */
+        void add_pocket( item &&pocket );
 
         /*
          * Called when removing a molle pocket.
@@ -340,6 +342,12 @@ class item_contents
          */
         ret_val<item *> insert_item( const item &it, pocket_type pk_type,
                                      bool ignore_contents = false, bool unseal_pockets = false );
+        /**
+         * Loading-only counterpart which transfers an existing item and preserves its UID.
+         */
+        ret_val<item *> insert_item( item &&it, pocket_type pk_type,
+                                     bool ignore_contents = false, bool unseal_pockets = false,
+                                     bool restack_charges = true );
         void force_insert_item( const item &it, pocket_type pk_type );
         bool can_unload_liquid() const;
 

@@ -12,6 +12,7 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "avatar.h"
 #include "cata_imgui.h"
@@ -912,6 +913,31 @@ ret_val<item *> item_contents::insert_item( const item &it,
     }
 
     ret_val<item *> inserted = pocket.value()->insert_item( it, false, true, ignore_contents );
+    if( inserted.success() ) {
+        if( unseal_pockets ) {
+            pocket.value()->unseal();
+        }
+        return inserted;
+    }
+    return ret_val<item *>::make_failure( nullptr, inserted.str() );
+}
+
+ret_val<item *> item_contents::insert_item( item &&it,
+        pocket_type pk_type, bool ignore_contents, const bool unseal_pockets,
+        bool restack_charges )
+{
+    if( pk_type == pocket_type::LAST ) {
+        // LAST is invalid, so we assume it will be a regular container
+        pk_type = pocket_type::CONTAINER;
+    }
+
+    ret_val<item_pocket *> pocket = find_pocket_for( it, pk_type );
+    if( !pocket.success() ) {
+        return ret_val<item *>::make_failure( nullptr, pocket.str() );
+    }
+
+    ret_val<item *> inserted = pocket.value()->insert_item( std::move( it ), false, restack_charges,
+                               ignore_contents );
     if( inserted.success() ) {
         if( unseal_pockets ) {
             pocket.value()->unseal();
@@ -2412,6 +2438,12 @@ std::vector<item *> item_contents::get_added_pockets_mutable()
 
 void item_contents::add_pocket( const item &pocket_item )
 {
+    item copied_pocket( pocket_item );
+    add_pocket( std::move( copied_pocket ) );
+}
+
+void item_contents::add_pocket( item &&pocket_item )
+{
     units::volume total_nonrigid_volume = 0_ml;
     units::volume effective_nonrigid_volume = 0_ml;
     for( const item_pocket *i_pocket : pocket_item.get_container_pockets() ) {
@@ -2428,7 +2460,7 @@ void item_contents::add_pocket( const item &pocket_item )
     additional_pockets_volume += total_nonrigid_volume;
     additional_pockets_effective_volume += effective_nonrigid_volume;
     additional_pockets_space_used += pocket_item.get_pocket_size();
-    additional_pockets.push_back( pocket_item );
+    additional_pockets.push_back( std::move( pocket_item ) );
     additional_pockets.back().clear_items();
 
 }
