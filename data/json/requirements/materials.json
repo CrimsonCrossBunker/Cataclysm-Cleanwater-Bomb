@@ -262,6 +262,12 @@
     "components": [ [ [ "string_6", 1 ] ] ]
   },
   {
+    "id": "superalloy_forge",
+    "type": "requirement",
+    "//": "Materials required to print one superalloy sheet",
+    "components": [ [ [ "sheet_metal", 1 ] ], [ [ "nanomaterial", 5 ] ] ]
+  },
+  {
     "id": "autoclave",
     "type": "requirement",
     "//": "Materials required to run one cycle of the furniture autoclave",
