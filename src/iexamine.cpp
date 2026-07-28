@@ -259,6 +259,7 @@ static const quality_id qual_TREE_TAP( "TREE_TAP" );
 
 static const requirement_id requirement_data_anesthetic( "anesthetic" );
 static const requirement_id requirement_data_autoclave( "autoclave" );
+static const requirement_id requirement_data_superalloy_forge( "superalloy_forge" );
 
 static const skill_id skill_chemistry( "chemistry" );
 static const skill_id skill_cooking( "cooking" );
@@ -690,6 +691,65 @@ void iexamine::nanofab( Character &you, const tripoint_bub_ms &examp )
     if( nanofab_template && nanofab_template->has_flag( flag_NANOFAB_TEMPLATE_SINGLE_USE ) ) {
         nanofab_template.remove_item();
     }
+}
+
+/**
+ * UI FOR LAB_FINALE SUPERALLOY FORGE.
+ */
+void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
+{
+    if( !query_yn(
+            _( "Use the superalloy forge?  Requires 4 any small steel sheets and 5 nanomaterial canisters." ) ) ) {
+        none( you, examp );
+        return;
+    }
+
+    bool table_exists = false;
+    tripoint_bub_ms spawn_point;
+    map &here = get_map();
+    for( const auto &valid_location : here.points_in_radius( examp, 1 ) ) {
+        if( here.has_flag( ter_furn_flag::TFLAG_NANOFORGE_TABLE, valid_location ) ) {
+            spawn_point = valid_location;
+            table_exists = true;
+            break;
+        }
+    }
+    if( !table_exists ) {
+        return;
+    }
+
+    std::vector<std::string> recipe_ids;
+    recipe_ids.emplace_back( "alloy_sheet" );
+
+    if( recipe_ids.empty() ) {
+        return;
+    }
+
+    std::string chosen_recipe = recipe_ids.front();
+
+    if( chosen_recipe.empty() ) {
+        return;
+    }
+
+    item new_item( itype_id( chosen_recipe ), calendar::turn );
+
+    const int qty = 1;
+    requirement_data reqs = *requirement_data_superalloy_forge * qty;
+
+    if( !reqs.can_make_with_inventory( you.crafting_inventory(), is_crafting_component ) ) {
+        popup( "%s", reqs.list_missing() );
+        return;
+    }
+
+    for( const auto &e : reqs.get_components() ) {
+        you.consume_items( e, 1, is_crafting_component );
+    }
+    for( const auto &e : reqs.get_tools() ) {
+        you.consume_tools( e );
+    }
+    you.invalidate_crafting_inventory();
+
+    here.add_item_or_charges( spawn_point, new_item );
 }
 
 /// @brief Use "gas pump."
@@ -8067,6 +8127,7 @@ iexamine_functions iexamine_functions_from_string( const std::string &function_n
             { "change_appearance", { to_translation( "Change your appearance" ), &iexamine::change_appearance } },
             { "genemill", { to_translation( "Use genemill" ), &iexamine::genemill } },
             { "nanofab", { to_translation( "Use nanofab" ), &iexamine::nanofab } },
+            { "nanoforge", { to_translation( "Use nanoforge" ), &iexamine::nanoforge } },
             { "gaspump", { to_translation( "Use gas pump" ), &iexamine::gaspump } },
             { "atm", { to_translation( "Use ATM" ), &iexamine::atm } },
             { "vending", { to_translation( "Use vending machine" ), &iexamine::vending } },
