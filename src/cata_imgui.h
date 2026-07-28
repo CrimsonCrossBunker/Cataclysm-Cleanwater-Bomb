@@ -130,6 +130,12 @@ class client
         static bool want_capture_keyboard();
         // True if an ImGui text-entry widget is focused and wants character input.
         static bool want_text_input();
+        // Return the nearest vertically scrollable ImGui window at a display-buffer position.
+        static ImGuiID vertical_scroll_window_at( float x, float y );
+        // Move a captured scroll window by a finger-space delta.
+        static bool scroll_window_y( ImGuiID window_id, float finger_delta_y );
+        // Cancel the active widget without changing the hovered window.
+        static void clear_active_item();
         // Drop the active ImGui item so a focused text widget releases input.
         static void clear_text_focus();
 };
