@@ -707,7 +707,7 @@ void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
     tripoint_bub_ms spawn_point;
     map &here = get_map();
     for( const auto &valid_location : here.points_in_radius( examp, 1 ) ) {
-        if( here.ter( valid_location ) == ter_str_id( "t_nanoforge_body" ) ) {
+        if( here.ter( valid_location ) == ter_str_id( "t_nanoforge_body" ).id() ) {
             spawn_point = valid_location;
             table_exists = true;
             break;
