@@ -1978,6 +1978,11 @@ void item_pocket::clear_items()
     contents.clear();
 }
 
+void item_pocket::move_contents_to( item_pocket &destination )
+{
+    destination.contents.splice( destination.contents.end(), contents );
+}
+
 bool item_pocket::has_item( const item &it ) const
 {
     return contents.end() !=

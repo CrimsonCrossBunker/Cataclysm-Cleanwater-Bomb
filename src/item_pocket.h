@@ -311,6 +311,8 @@ class item_pocket
         void on_contents_changed();
         void handle_liquid_or_spill( Character &guy, const item *avoid = nullptr );
         void clear_items();
+        /** Transfer all contained item nodes without copying them or changing their UIDs. */
+        void move_contents_to( item_pocket &destination );
         bool has_item( const item &it ) const;
         item *get_item_with( const std::function<bool( const item & )> &filter );
         const item *get_item_with( const std::function<bool( const item & )> &filter ) const;
