@@ -2,6 +2,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "catalua_bindings.h"
+#include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
@@ -1141,6 +1142,90 @@ end)
     calendar::turn = turn.original() + 1_turns;
     cata::lua_ui::on_turn();
     CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
+           "[lua][bindings][values][ids]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<std::string> &kinds = supported_game_id_kinds();
+    REQUIRE( kinds.size() == 37 );
+    CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
+    CHECK( std::adjacent_find( kinds.begin(), kinds.end() ) == kinds.end() );
+    CHECK( is_supported_game_id_kind( "item" ) );
+    CHECK_FALSE( is_supported_game_id_kind( "missing" ) );
+
+    const script_game_id rock( "item", "rock" );
+    CHECK( rock.kind() == "item" );
+    CHECK( rock.value() == "rock" );
+    CHECK_FALSE( rock.is_null() );
+    CHECK( rock.is_valid() );
+    CHECK( rock == script_game_id( "item", "rock" ) );
+    CHECK_FALSE( rock == script_game_id( "item", "stick" ) );
+    CHECK_FALSE( rock == script_game_id( "monster", "rock" ) );
+    CHECK( rock.to_string() == "GameId<item>(rock)" );
+
+    const script_game_id null_id( "item", "" );
+    CHECK( null_id.is_null() );
+    CHECK_FALSE( null_id.is_valid() );
+    CHECK_THROWS_AS( script_game_id( "missing", "value" ), std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_game_id( "item", std::string( 257, 'x' ) ), std::invalid_argument );
+    CHECK_THROWS_AS( script_game_id( "item", "bad\nid" ), std::invalid_argument );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    bool authorized = false;
+    install_value_type_api( lua, game, [&authorized]() {
+        if( !authorized ) {
+            throw std::runtime_error( "value capability denied" );
+        }
+    } );
+    CHECK_THROWS( lua.safe_script( "return game.types.id('item', 'rock')" ) );
+
+    authorized = true;
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local id = game.types.id("item", "rock")
+assert(id.kind == "item")
+assert(id.value == "rock")
+assert(id:is_null() == false)
+assert(id:is_valid() == true)
+assert(tostring(id) == "GameId<item>(rock)")
+assert(id == game.types.id("item", "rock"))
+assert(id ~= game.types.id("monster", "rock"))
+assert(pcall(function() id.value = "stick" end) == false)
+local kinds = game.types.id_kinds()
+assert(#kinds == 37)
+kinds[1] = "mutated"
+assert(game.types.id_kinds()[1] == "activity")
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_value_factories_reject_older_source_contracts",
+           "[lua][bindings][values][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local ok, error = pcall(function()
+    game.types.id("item", "rock")
+end)
+assert(ok == false)
+assert(string.find(error, "requires Lua API 5", 1, true) ~= nil)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
