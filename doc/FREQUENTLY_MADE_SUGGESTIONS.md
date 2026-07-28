@@ -28,19 +28,15 @@ Debate sidesteps all the nasty problems around deciding who gets to vote and enf
 
 A good **reason** to make a change has more impact than any number of votes. A lot of the issues in this thread are good examples of this
 
-The project is run by Kevin Granade (“owns” the project, final say on features), a small group of core developers who review and merge changes, and a much larger group of contributors who make pull requests on GitHub. There are also translators who are effectively independent and a handful of people with moderation rights on the forums and Discord. Mod authors who host their own mods are also independent.
+The project is created first by lapp2333xhj and run by LYHGLYTX (“owns” the project's Organization), a small group of core developers who review and merge changes, and a much larger group of contributors who make pull requests on GitHub. There are also translators who are effectively independent and a handful of people with moderation rights on the forums and Discord. Mod authors who host their own mods are also independent.
 
 While we (the core contributors) ask for feedback and discuss issues on the forums pretty regularly, we aren’t asking for a vote or community consensus, just feedback and discussion.
 
-Places where votes and popular support are important are which parts of the game are in most need of bugfixes or new features, sometimes a dev (Kevin included) finds themselves between projects and is just looking for something to improve, that’s when making it clear what needs improvement the most can make things happen.
+Places where votes and popular support are important are which parts of the game are in most need of bugfixes or new features, sometimes a dev finds themselves between projects and is just looking for something to improve, that’s when making it clear what needs improvement the most can make things happen.
 
 **Steam, other app stores: not opposed, but we aren’t doing it or endorsing it either.**
 
-Regarding Steam, this [Steam Store page](https://store.steampowered.com/app/2330750/Cataclysm_Dark_Days_Ahead/) respects the project license.
-
-The game is also available from the [Play Store](https://play.google.com/store/apps/details?id=com.cleverraven.cataclysmdda) for Android.
-
-In general, it’s just a ton of work for not that much benefit from the project’s point of view. If someone wants to integrate with some packaging system, they can feel free to PR it, but we're not generally going to be pursuing app store inclusion as a project priority.
+We are still in the early stages of development and are not currently considering other distribution methods.
 
 **You should add a: Yes, in general, if someone is willing to do the work**
 
