@@ -724,13 +724,13 @@ void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
         return;
     }
 
-    std::string chosen_recipe = recipe_ids.front();;
+    std::string chosen_recipe = recipe_ids.front();
 
     if( chosen_recipe.empty() ) {
         return;
     }
 
-    detached_ptr<item> new_item = item::spawn( itype_id( chosen_recipe ), calendar::turn );
+    item new_item( itype_id( chosen_recipe ), calendar::turn );
 
     auto qty = 1;
     auto reqs = *requirement_id( "superalloy_forge" ) * qty;
@@ -748,7 +748,7 @@ void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
     }
     you.invalidate_crafting_inventory();
 
-    here.add_item_or_charges( spawn_point, std::move( new_item ) );
+    here.add_item_or_charges( spawn_point, new_item );
 }
 
 /// @brief Use "gas pump."
