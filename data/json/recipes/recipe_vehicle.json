@@ -1267,7 +1267,7 @@
     "category": "CC_OTHER",
     "subcategory": "CSC_OTHER_VEHICLE",
     "skill_used": "fabrication",
-    "difficulty": 8,
+    "difficulty": 9,
     "time": "10 h",
     "reversible": false,
     "book_learn": [ [ "textbook_fabrication", 5 ], [ "adv_chemistry", 6 ], [ "welding_book", 5 ] ],
