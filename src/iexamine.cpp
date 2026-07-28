@@ -229,6 +229,13 @@ static const json_character_flag json_flag_WING_GLIDE( "WING_GLIDE" );
 
 static const material_id material_bone( "bone" );
 static const material_id material_cac2powder( "cac2powder" );
+static const material_id material_ch_steel( "ch_steel" );
+static const material_id material_hc_steel( "hc_steel" );
+static const material_id material_iron( "iron" );
+static const material_id material_lc_steel( "lc_steel" );
+static const material_id material_mc_steel( "mc_steel" );
+static const material_id material_qt_steel( "qt_steel" );
+static const material_id material_steel( "steel" );
 static const material_id material_wood( "wood" );
 
 static const mtype_id mon_broken_cyborg( "mon_broken_cyborg" );
@@ -259,6 +266,7 @@ static const quality_id qual_TREE_TAP( "TREE_TAP" );
 
 static const requirement_id requirement_data_anesthetic( "anesthetic" );
 static const requirement_id requirement_data_autoclave( "autoclave" );
+static const requirement_id requirement_data_cvd_diamond( "cvd_diamond" );
 static const requirement_id requirement_data_superalloy_forge( "superalloy_forge" );
 
 static const skill_id skill_chemistry( "chemistry" );
@@ -360,6 +368,50 @@ bool iexamine::harvestable_now( const tripoint_bub_ms &examp )
 {
     const harvest_id hid = get_map().get_harvest( examp );
     return !hid->is_null() && !hid->empty();
+}
+
+/**
+ * Pick an appropriate item and apply diamond coating if possible.
+ */
+void iexamine::cvdmachine( Character &you, const tripoint_bub_ms & )
+{
+    // Select an item to which it is possible to apply a diamond coating
+    item_location loc = g->inv_map_splice( []( const item & e ) {
+        return e.has_edged_damage() &&
+               !e.has_flag( flag_DIAMOND ) && !e.has_flag( flag_NO_CVD ) &&
+               ( e.made_of( material_steel ) || e.made_of( material_ch_steel ) ||
+                 e.made_of( material_hc_steel ) || e.made_of( material_lc_steel ) ||
+                 e.made_of( material_mc_steel ) || e.made_of( material_qt_steel ) ||
+                 e.made_of( material_iron ) );
+    }, _( "Apply diamond coating" ), 1, _( "You don't have a suitable item to coat with diamond" ) );
+
+    if( !loc ) {
+        return;
+    }
+
+    // Require materials proportional to selected item volume
+    auto qty = loc->volume() / 250_ml;
+    qty = std::max( 1, qty );
+    requirement_data reqs = *requirement_data_cvd_diamond * qty;
+
+    if( !reqs.can_make_with_inventory( you.crafting_inventory(), is_crafting_component ) ) {
+        popup( "%s", reqs.list_missing() );
+        return;
+    }
+
+    // Consume materials
+    for( const auto &e : reqs.get_components() ) {
+        you.consume_items( e, 1, is_crafting_component );
+    }
+    for( const auto &e : reqs.get_tools() ) {
+        you.consume_tools( e );
+    }
+    you.invalidate_crafting_inventory();
+
+    // Apply flag to item
+    loc->set_flag( flag_DIAMOND );
+    add_msg( m_good, _( "You apply a diamond coating to your %s" ), loc->type_name() );
+    you.mod_moves( -to_moves<int>( 10_seconds ) );
 }
 
 /**
@@ -8124,6 +8176,7 @@ iexamine_functions iexamine_functions_from_string( const std::string &function_n
     static const std::map<std::string, function_data> function_map = {{
             { "none", { no_translation( "none" ), &iexamine::none } },
             { "deployed_furniture", { to_translation( "Take down or deploy furniture" ), &iexamine::deployed_furniture } },
+            { "cvdmachine", { to_translation( "Use CVD machine" ), &iexamine::cvdmachine } },
             { "change_appearance", { to_translation( "Change your appearance" ), &iexamine::change_appearance } },
             { "genemill", { to_translation( "Use genemill" ), &iexamine::genemill } },
             { "nanofab", { to_translation( "Use nanofab" ), &iexamine::nanofab } },
