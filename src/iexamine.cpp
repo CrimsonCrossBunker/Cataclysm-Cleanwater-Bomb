@@ -259,6 +259,7 @@ static const quality_id qual_TREE_TAP( "TREE_TAP" );
 
 static const requirement_id requirement_data_anesthetic( "anesthetic" );
 static const requirement_id requirement_data_autoclave( "autoclave" );
+static const requirement_id requirement_data_superalloy_forge( "superalloy_forge" );
 
 static const skill_id skill_chemistry( "chemistry" );
 static const skill_id skill_cooking( "cooking" );
@@ -732,8 +733,8 @@ void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
 
     item new_item( itype_id( chosen_recipe ), calendar::turn );
 
-    auto qty = 1;
-    auto reqs = *requirement_id( "superalloy_forge" ) * qty;
+    const int qty = 1;
+    requirement_data reqs = *requirement_data_superalloy_forge * qty;
 
     if( !reqs.can_make_with_inventory( you.crafting_inventory(), is_crafting_component ) ) {
         popup( "%s", reqs.list_missing() );
