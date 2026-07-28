@@ -8205,9 +8205,11 @@ int vehicle::damage_direct( map &here, vehicle_part &vp, int dmg, const damage_t
     }
     const vpart_info &vpi = vp.info();
     const tripoint_bub_ms vppos = bub_part_pos( here, vp );
-    // If auto-driving and damage happens, bail out
+    // Damage invalidates the current automated route, but a projectile impact
+    // should not apply the brakes and instantly stop a moving vehicle.
+    // Physical collisions still stop autodriving through the collision path.
     if( is_autodriving ) {
-        stop_autodriving();
+        stop_autodriving( false );
     }
     here.memory_cache_dec_set_dirty( vppos, true );
     if( vp.is_broken() ) {
