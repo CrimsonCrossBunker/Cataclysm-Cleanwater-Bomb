@@ -3463,6 +3463,15 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                 }
 
+                // Remote controls take priority over whatever the operator is
+                // standing on.  pldrive() already selects the remote vehicle
+                // first, so mirror that behavior for vertical movement.
+                if( vehicle *remote_veh = g->remoteveh();
+                    remote_veh && remote_veh->is_rotorcraft( here ) ) {
+                    pldrive( tripoint_rel_ms::below );
+                    break;
+                }
+
                 const tripoint_bub_ms pos = player_character.pos_bub();
                 const bool has_vehicle_ladder = here.has_vehicle_ladder_at( pos );
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
@@ -3482,7 +3491,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
                 if( has_vehicle_control( player_character ) ) {
                     const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                    if( vp->vehicle().is_rotorcraft( here ) ) {
+                    if( vp && vp->vehicle().is_rotorcraft( here ) ) {
                         pldrive( tripoint_rel_ms::below );
                         break;
                     }
@@ -3542,6 +3551,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     break;
                 }
             }
+            // As with horizontal remote driving, route vertical input to the
+            // remote aircraft before considering movement by the operator.
+            if( vehicle *remote_veh = g->remoteveh();
+                remote_veh && remote_veh->is_rotorcraft( here ) ) {
+                pldrive( tripoint_rel_ms::above );
+                break;
+            }
             if( !player_character.in_vehicle ) {
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
                         here.vehicle_ladder_destination( player_character.pos_bub(), 1 ) ) {
@@ -3555,7 +3571,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 vertical_move( 1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
             } else if( has_vehicle_control( player_character ) ) {
                 const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                if( vp->vehicle().is_rotorcraft( here ) ) {
+                if( vp && vp->vehicle().is_rotorcraft( here ) ) {
                     pldrive( tripoint_rel_ms::above );
                 }
             }
