@@ -5894,8 +5894,11 @@ void consume_activity_actor::start( player_activity &act, Character &guy )
     } else if( !consume_item.is_null() ) {
         player_will_eat( consume_item );
     } else {
-        debugmsg( "Item/location to be consumed should not be null." );
+        add_msg_debug( debugmode::DF_ACTIVITY,
+                       "consume activity target is no longer available at start" );
         was_canceled = true;
+        reprompt_consume_menu = false;
+        uistate.consume_uistate.clear();
     }
 
     act.moves_total = moves;
@@ -5918,7 +5921,11 @@ void consume_activity_actor::finish( player_activity &act, Character & )
         } else if( !consume_item.is_null() ) {
             player_character.consume( consume_item, /*force=*/true );
         } else {
-            debugmsg( "Item location/name to be consumed should not be null." );
+            add_msg_debug( debugmode::DF_ACTIVITY,
+                           "consume activity target is no longer available at finish" );
+            was_canceled = true;
+            reprompt_consume_menu = false;
+            uistate.consume_uistate.clear();
         }
     }
 
