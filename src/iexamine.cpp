@@ -698,7 +698,7 @@ void iexamine::nanofab( Character &you, const tripoint_bub_ms &examp )
 void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
 {
     if( !query_yn(
-            _( "Use the superalloy forge? Requires 1 sheet metal and 5 nanomaterial canisters." ) ) ) {
+            _( "Use the superalloy forge?  Requires 4 any small steel sheets and 5 nanomaterial canisters." ) ) ) {
         none( you, examp );
         return;
     }
