@@ -203,6 +203,28 @@ TEST_CASE( "item_uid_survives_serialization", "[item][item_uid]" )
     CHECK( loaded.uid().get_value() == original_uid );
 }
 
+TEST_CASE( "nested_item_uid_survives_parent_serialization", "[item][item_uid][save]" )
+{
+    item original( itype_backpack );
+    original.put_in( item( itype_tshirt ), pocket_type::CONTAINER );
+    const item *original_child = original.all_items_container_top().front();
+    REQUIRE( original_child != nullptr );
+    const int64_t original_child_uid = original_child->uid().get_value();
+
+    std::ostringstream os;
+    JsonOut jsout( os );
+    original.serialize( jsout );
+
+    item loaded;
+    JsonValue jv = json_loader::from_string( os.str() );
+    JsonObject jo = jv;
+    loaded.deserialize( jo );
+
+    const std::list<item *> loaded_children = loaded.all_items_container_top();
+    REQUIRE( loaded_children.size() == 1 );
+    CHECK( loaded_children.front()->uid().get_value() == original_child_uid );
+}
+
 TEST_CASE( "item_location_in_container_survives_restack", "[item][item_location][item_uid]" )
 {
     clear_map_without_vision();
