@@ -12,7 +12,6 @@
     "proficiencies": [ { "proficiency": "prof_blacksmithing", "time_multiplier": 10 } ],
     "reversible": true,
     "qualities": [ { "id": "GLARE", "level": 1 } ],
-    "using": [ [ "lc_steel_standard", 100 ] ],
     "components": [
       [ [ "alloy_plate", 2 ] ],
       [ [ "alloy_sheet", 8 ] ],
