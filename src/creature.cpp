@@ -805,10 +805,14 @@ Creature *Creature::auto_find_hostile_target( int range, int &boo_hoo, int area 
                 // If turret in the vehicle then
                 // Hack: avoid the turret's own deck and frames blocking its
                 // targeting NPC by checking visibility from the vehicle edge.
-                // TODO: replace this workaround with 3D FOV.
+                // Find that edge in the turret's horizontal plane.  A 3D ray
+                // can change z before leaving a wide vehicle, causing it to
+                // mistake an interior tile for the boundary when targeting
+                // creatures above or below the turret.
                 const tripoint_bub_ms turret_pos = pos_bub( here );
+                const tripoint_bub_ms projected_target( m->pos_bub( here ).xy(), turret_pos.z() );
                 std::vector<tripoint_bub_ms> path_to_target =
-                    line_to( turret_pos, m->pos_bub( here ) );
+                    line_to( turret_pos, projected_target );
                 path_to_target.insert( path_to_target.begin(), turret_pos );
 
                 while( !path_to_target.empty() ) {
