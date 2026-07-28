@@ -6109,16 +6109,18 @@ static void CheckMessages()
             last_tap_time > 0 &&
             ticks - last_tap_time >= static_cast<uint32_t>
             ( get_option<int>( "ANDROID_INITIAL_DELAY" ) ) ) {
-            // Gameplay keeps its configurable tap key.  Menus use the pointer
-            // coordinates emitted on finger-up and must not receive a second,
-            // delayed Enter/confirm for the same physical tap.
+            // New UI menus use pointer coordinates emitted on finger-up and
+            // must not receive a second, delayed confirmation.  Legacy Android
+            // menus still use the original single-tap Enter interaction.
             if( is_default_mode ) {
                 last_input = input_event( get_key_event_from_string(
                                               get_option<std::string>( "ANDROID_TAP_KEY" ) ),
                                           input_event_t::keyboard_char );
+            } else if( !android_ui_mode::is_new_ui_build() ) {
+                last_input = input_event( '\n', input_event_t::keyboard_char );
             }
             last_tap_time = 0;
-            if( is_default_mode ) {
+            if( is_default_mode || !android_ui_mode::is_new_ui_build() ) {
                 return;
             }
         }

@@ -479,6 +479,40 @@ static nc_color submenu_option_color( const nc_color base, const bool selected )
     return selected ? hilite( base ) : base;
 }
 
+static std::string aligned_submenu_shortcut_text( const nc_color shortcut_color,
+        const std::string &text )
+{
+#if !defined(__ANDROID__)
+    return shortcut_text( shortcut_color, text );
+#else
+    if( android_ui_mode::is_new_ui_build() ) {
+        return shortcut_text( shortcut_color, text );
+    }
+
+    const size_t shortcut_begin = text.find( '<' );
+    const size_t shortcut_end = text.find( '>', shortcut_begin );
+    if( shortcut_begin == std::string::npos || shortcut_end == std::string::npos ) {
+        return text;
+    }
+
+    const size_t separator = std::min( text.find( '|', shortcut_begin ), shortcut_end );
+    const std::string shortcut = text.substr( shortcut_begin + 1,
+                                 separator - shortcut_begin - 1 );
+    if( shortcut.empty() ) {
+        return text;
+    }
+
+    const std::string prefix = text.substr( 0, shortcut_begin );
+    const std::string suffix = text.substr( shortcut_end + 1 );
+    const bool shortcut_starts_word = shortcut_begin == 0 && !suffix.empty() &&
+                                      ( ( suffix.front() >= 'A' && suffix.front() <= 'Z' ) ||
+                                        ( suffix.front() >= 'a' && suffix.front() <= 'z' ) );
+    const std::string label = trim( shortcut_begin == 0 && !shortcut_starts_word ?
+                                    suffix : prefix + shortcut + suffix );
+    return colorize( shortcut, shortcut_color ) + "  " + label;
+#endif
+}
+
 void main_menu::on_move() const
 {
     sfx::play_variant_sound( "menu_move", "default", 100 );
@@ -623,8 +657,8 @@ void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_lin
         case main_menu_opts::NEWCHAR:
             for( int i = 0; static_cast<size_t>( i ) < vNewGameSubItems.size(); i++ ) {
                 nc_color clr = submenu_option_color( c_yellow, i == sel2 );
-                sub_opts.push_back( shortcut_text( clr, vNewGameSubItems[i] ) );
-                int len = utf8_width( shortcut_text( clr, vNewGameSubItems[i] ), true );
+                sub_opts.push_back( aligned_submenu_shortcut_text( clr, vNewGameSubItems[i] ) );
+                int len = utf8_width( sub_opts.back(), true );
                 if( len > xlen ) {
                     xlen = len;
                 }
@@ -805,7 +839,7 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
     if( !android_ui_mode::is_new_ui_build() ) {
         int menu_length = 0;
         for( size_t i = 0; i < vMenuItems.size(); ++i ) {
-            menu_length += utf8_width_notags( vMenuItems[i].c_str() ) + 2;
+            menu_length += utf8_width_notags( vMenuItems[i].c_str() ) + 4;
             if( !vMenuHotkeys[i].empty() ) {
                 menu_length += utf8_width( vMenuHotkeys[i][0] );
             }
