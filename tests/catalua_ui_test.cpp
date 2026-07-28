@@ -21,6 +21,7 @@
 #include "json_loader.h"
 #include "path_info.h"
 #include "ui_profile.h"
+#include "units.h"
 #include "weather.h"
 #include "worldfactory.h"
 
@@ -1226,6 +1227,84 @@ assert(string.find(error, "requires Lua API 5", 1, true) ~= nil)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_unit_values_are_exact_bounded_and_dimension_safe",
+           "[lua][bindings][values][units]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<std::string> &kinds = supported_script_unit_kinds();
+    REQUIRE( kinds.size() == 11 );
+    CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
+    CHECK( supported_units_for_kind( "mass" ) ==
+           std::vector<std::string>{ "gram", "kilogram", "milligram" } );
+    CHECK_THROWS_AS( supported_units_for_kind( "missing" ), std::invalid_argument );
+
+    const script_unit_value mass =
+        script_unit_value::from( "mass", 1.5, "kilogram" );
+    CHECK( mass.kind() == "mass" );
+    CHECK( mass.canonical_unit() == "milligram" );
+    CHECK( mass.is_integral() );
+    CHECK( mass.canonical_integer() == units::from_kilogram( 1.5 ).value() );
+    CHECK( mass.value_as( "gram" ) == Approx( 1500.0 ) );
+    CHECK( mass.value_as( "kilogram" ) == Approx( 1.5 ) );
+    CHECK( mass.add( mass ).value_as( "kilogram" ) == Approx( 3.0 ) );
+    CHECK( mass.subtract( script_unit_value::from(
+                              "mass", 500.0, "gram" ) ).value_as( "kilogram" ) ==
+           Approx( 1.0 ) );
+    CHECK( mass.scale( 2.0 ).value_as( "kilogram" ) == Approx( 3.0 ) );
+    CHECK( mass.compare( script_unit_value::from(
+                             "mass", 2.0, "kilogram" ) ) < 0 );
+
+    const script_unit_value freezing =
+        script_unit_value::from( "temperature", 32.0, "fahrenheit" );
+    CHECK_FALSE( freezing.is_integral() );
+    CHECK( freezing.value_as( "celsius" ) == Approx( 0.0 ).margin( 1.0e-9 ) );
+    CHECK( freezing.value_as( "kelvin" ) == Approx( 273.15 ).margin( 1.0e-9 ) );
+    CHECK( script_unit_value::from(
+               "angle", 180.0, "degree" ).value_as( "radian" ) ==
+           Approx( 3.14159265358979323846 ) );
+
+    CHECK_THROWS_AS(
+        mass.add( script_unit_value::from( "volume", 1.0, "liter" ) ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_unit_value::from( "mass", 0.0001, "milligram" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_unit_value::from( "mass", std::numeric_limits<double>::infinity(),
+                                 "gram" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_unit_value::from( "mass", 1.0, "missing" ),
+        std::invalid_argument );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local kg = game.units.new("mass", 1.5, "kilogram")
+local grams = game.units.new("mass", 500, "gram")
+assert(kg.kind == "mass")
+assert(kg.canonical_unit == "milligram")
+assert(kg:is_integral() == true)
+assert(kg:value("gram") == 1500)
+assert((kg + grams):value("kilogram") == 2)
+assert((kg - grams):value("kilogram") == 1)
+assert(grams < kg)
+assert(grams <= kg)
+assert(kg == game.units.new("mass", 1500, "gram"))
+assert(kg ~= game.units.new("volume", 1.5, "liter"))
+assert(kg:scale(2):value("kilogram") == 3)
+assert(kg:compare(grams) == 1)
+assert(pcall(function() return kg + game.units.new("volume", 1, "liter") end) == false)
+assert(pcall(function() kg.kind = "volume" end) == false)
+assert(#game.units.kinds() == 11)
+assert(game.units.units("energy")[1] == "joule")
+)lua" );
+    REQUIRE( result.valid() );
 }
 
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",

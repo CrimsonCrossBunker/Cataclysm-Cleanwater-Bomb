@@ -2,6 +2,10 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <iomanip>
+#include <limits>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -126,6 +130,199 @@ void validate_id_text( const std::string &value )
     }
 }
 
+struct unit_conversion {
+    std::string_view name;
+    long double factor;
+    long double offset;
+};
+
+struct unit_kind_definition {
+    std::string_view name;
+    std::string_view canonical_unit;
+    bool integral;
+    const unit_conversion *conversions;
+    std::size_t conversion_count;
+};
+
+constexpr std::array<unit_conversion, 2> angle_conversions = {{
+        { "degree", 0.017453292519943295769L, 0.0L },
+        { "radian", 1.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 3> energy_conversions = {{
+        { "joule", 1000.0L, 0.0L },
+        { "kilojoule", 1000000.0L, 0.0L },
+        { "millijoule", 1.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 3> length_conversions = {{
+        { "centimeter", 10.0L, 0.0L },
+        { "meter", 1000.0L, 0.0L },
+        { "millimeter", 1.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 3> mass_conversions = {{
+        { "gram", 1000.0L, 0.0L },
+        { "kilogram", 1000000.0L, 0.0L },
+        { "milligram", 1.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 2> memory_conversions = {{
+        { "kilobyte", 1.0L, 0.0L },
+        { "megabyte", 1000.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 2> money_conversions = {{
+        { "cent", 1.0L, 0.0L },
+        { "dollar", 100.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 3> power_conversions = {{
+        { "kilowatt", 1000000.0L, 0.0L },
+        { "milliwatt", 1.0L, 0.0L },
+        { "watt", 1000.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 1> sound_conversions = {{
+        { "decibel", 1.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 1> specific_energy_conversions = {{
+        { "joule_per_gram", 1.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 3> temperature_conversions = {{
+        { "celsius", 1.0L, 273.15L },
+        { "fahrenheit", 0.555555555555555555556L, 255.372222222222222222L },
+        { "kelvin", 1.0L, 0.0L }
+    }
+};
+constexpr std::array<unit_conversion, 2> volume_conversions = {{
+        { "liter", 1000.0L, 0.0L },
+        { "milliliter", 1.0L, 0.0L }
+    }
+};
+
+const std::array<unit_kind_definition, 11> &unit_kind_definitions()
+{
+    static const std::array<unit_kind_definition, 11> definitions = {{
+            {
+                "angle", "radian", false,
+                angle_conversions.data(), angle_conversions.size()
+            },
+            {
+                "energy", "millijoule", true,
+                energy_conversions.data(), energy_conversions.size()
+            },
+            {
+                "length", "millimeter", true,
+                length_conversions.data(), length_conversions.size()
+            },
+            {
+                "mass", "milligram", true,
+                mass_conversions.data(), mass_conversions.size()
+            },
+            {
+                "memory", "kilobyte", true,
+                memory_conversions.data(), memory_conversions.size()
+            },
+            {
+                "money", "cent", true,
+                money_conversions.data(), money_conversions.size()
+            },
+            {
+                "power", "milliwatt", true,
+                power_conversions.data(), power_conversions.size()
+            },
+            {
+                "sound", "decibel", false,
+                sound_conversions.data(), sound_conversions.size()
+            },
+            {
+                "specific_energy", "joule_per_gram", false,
+                specific_energy_conversions.data(), specific_energy_conversions.size()
+            },
+            {
+                "temperature", "kelvin", false,
+                temperature_conversions.data(), temperature_conversions.size()
+            },
+            {
+                "volume", "milliliter", true,
+                volume_conversions.data(), volume_conversions.size()
+            }
+        }
+    };
+    return definitions;
+}
+
+const unit_kind_definition *find_unit_kind( const std::string_view kind )
+{
+    const auto &definitions = unit_kind_definitions();
+    const auto found = std::lower_bound(
+                           definitions.begin(), definitions.end(), kind,
+    []( const unit_kind_definition & entry, const std::string_view key ) {
+        return entry.name < key;
+    } );
+    return found != definitions.end() && found->name == kind ? &*found : nullptr;
+}
+
+const unit_conversion *find_unit_conversion(
+    const unit_kind_definition &kind, const std::string_view unit )
+{
+    const unit_conversion *begin = kind.conversions;
+    const unit_conversion *end = begin + kind.conversion_count;
+    const auto found = std::lower_bound(
+                           begin, end, unit,
+    []( const unit_conversion & entry, const std::string_view key ) {
+        return entry.name < key;
+    } );
+    return found != end && found->name == unit ? &*found : nullptr;
+}
+
+std::variant<std::int64_t, double> checked_canonical_value(
+    const unit_kind_definition &kind, const long double value )
+{
+    if( !std::isfinite( value ) ) {
+        throw std::invalid_argument( "game.units values must be finite" );
+    }
+    if( kind.integral ) {
+        const long double rounded = std::round( value );
+        const long double tolerance =
+            std::max( 1.0L, std::fabs( value ) ) * 1.0e-12L;
+        if( std::fabs( value - rounded ) > tolerance ) {
+            throw std::invalid_argument(
+                "game.units value is not exactly representable in " +
+                std::string( kind.canonical_unit ) );
+        }
+        if( rounded < static_cast<long double>( std::numeric_limits<std::int64_t>::min() ) ||
+            rounded > static_cast<long double>( std::numeric_limits<std::int64_t>::max() ) ) {
+            throw std::overflow_error( "game.units integral value is out of range" );
+        }
+        return static_cast<std::int64_t>( rounded );
+    }
+    const double result = static_cast<double>( value );
+    if( !std::isfinite( result ) ) {
+        throw std::overflow_error( "game.units floating-point value is out of range" );
+    }
+    return result;
+}
+
+const unit_kind_definition &require_same_unit_kind(
+    const script_unit_value &lhs, const script_unit_value &rhs,
+    const std::string_view operation )
+{
+    if( lhs.kind() != rhs.kind() ) {
+        throw std::invalid_argument(
+            "game.units cannot " + std::string( operation ) + " '" + lhs.kind() +
+            "' and '" + rhs.kind() + "'" );
+    }
+    const unit_kind_definition *kind = find_unit_kind( lhs.kind() );
+    if( kind == nullptr ) {
+        throw std::runtime_error( "game.units value has an unknown kind" );
+    }
+    return *kind;
+}
+
 } // namespace
 
 script_game_id::script_game_id( std::string kind, std::string value )
@@ -182,6 +379,172 @@ bool is_supported_game_id_kind( const std::string_view kind )
     return find_id_kind( kind ) != nullptr;
 }
 
+script_unit_value::script_unit_value(
+    std::string kind, std::string canonical_unit,
+    std::variant<std::int64_t, double> canonical )
+    : kind_( std::move( kind ) ), canonical_unit_( std::move( canonical_unit ) ),
+      canonical_( std::move( canonical ) )
+{
+}
+
+script_unit_value script_unit_value::from(
+    const std::string_view kind_name, const double value,
+    const std::string_view unit_name )
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_name );
+    if( kind == nullptr ) {
+        throw std::invalid_argument(
+            "game.units.new received an unknown unit kind: " + std::string( kind_name ) );
+    }
+    const unit_conversion *conversion = find_unit_conversion( *kind, unit_name );
+    if( conversion == nullptr ) {
+        throw std::invalid_argument(
+            "game.units.new received an unknown " + std::string( kind_name ) +
+            " unit: " + std::string( unit_name ) );
+    }
+    const long double canonical =
+        static_cast<long double>( value ) * conversion->factor + conversion->offset;
+    return script_unit_value(
+               std::string( kind->name ), std::string( kind->canonical_unit ),
+               checked_canonical_value( *kind, canonical ) );
+}
+
+const std::string &script_unit_value::kind() const noexcept
+{
+    return kind_;
+}
+
+const std::string &script_unit_value::canonical_unit() const noexcept
+{
+    return canonical_unit_;
+}
+
+bool script_unit_value::is_integral() const noexcept
+{
+    return std::holds_alternative<std::int64_t>( canonical_ );
+}
+
+std::int64_t script_unit_value::canonical_integer() const
+{
+    if( !is_integral() ) {
+        throw std::logic_error( "game.units value does not use an integral canonical unit" );
+    }
+    return std::get<std::int64_t>( canonical_ );
+}
+
+double script_unit_value::canonical_number() const
+{
+    return static_cast<double>( canonical_wide() );
+}
+
+long double script_unit_value::canonical_wide() const
+{
+    return std::visit( []( const auto value ) {
+        return static_cast<long double>( value );
+    }, canonical_ );
+}
+
+double script_unit_value::value_as( const std::string_view unit_name ) const
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_ );
+    if( kind == nullptr ) {
+        throw std::runtime_error( "game.units value has an unknown kind" );
+    }
+    const unit_conversion *conversion = find_unit_conversion( *kind, unit_name );
+    if( conversion == nullptr ) {
+        throw std::invalid_argument(
+            "game.units.value received an unknown " + kind_ +
+            " unit: " + std::string( unit_name ) );
+    }
+    return static_cast<double>(
+               ( canonical_wide() - conversion->offset ) /
+               conversion->factor );
+}
+
+script_unit_value script_unit_value::add( const script_unit_value &rhs ) const
+{
+    const unit_kind_definition &kind = require_same_unit_kind( *this, rhs, "add" );
+    const long double sum =
+        canonical_wide() + rhs.canonical_wide();
+    return script_unit_value(
+               kind_, canonical_unit_, checked_canonical_value( kind, sum ) );
+}
+
+script_unit_value script_unit_value::subtract( const script_unit_value &rhs ) const
+{
+    const unit_kind_definition &kind = require_same_unit_kind( *this, rhs, "subtract" );
+    const long double difference =
+        canonical_wide() - rhs.canonical_wide();
+    return script_unit_value(
+               kind_, canonical_unit_, checked_canonical_value( kind, difference ) );
+}
+
+script_unit_value script_unit_value::scale( const double factor ) const
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_ );
+    if( kind == nullptr ) {
+        throw std::runtime_error( "game.units value has an unknown kind" );
+    }
+    if( !std::isfinite( factor ) ) {
+        throw std::invalid_argument( "game.units scale factor must be finite" );
+    }
+    const long double product =
+        canonical_wide() * factor;
+    return script_unit_value(
+               kind_, canonical_unit_, checked_canonical_value( *kind, product ) );
+}
+
+int script_unit_value::compare( const script_unit_value &rhs ) const
+{
+    require_same_unit_kind( *this, rhs, "compare" );
+    if( canonical_ == rhs.canonical_ ) {
+        return 0;
+    }
+    return canonical_wide() < rhs.canonical_wide() ? -1 : 1;
+}
+
+std::string script_unit_value::to_string() const
+{
+    std::ostringstream output;
+    output << "Unit<" << kind_ << ">(";
+    if( is_integral() ) {
+        output << canonical_integer();
+    } else {
+        output << std::setprecision( 12 ) << canonical_number();
+    }
+    output << ' ' << canonical_unit_ << ')';
+    return output.str();
+}
+
+const std::vector<std::string> &supported_script_unit_kinds()
+{
+    static const std::vector<std::string> result = [] {
+        std::vector<std::string> values;
+        values.reserve( unit_kind_definitions().size() );
+        for( const unit_kind_definition &definition : unit_kind_definitions() )
+        {
+            values.emplace_back( definition.name );
+        }
+        return values;
+    }();
+    return result;
+}
+
+std::vector<std::string> supported_units_for_kind( const std::string_view kind_name )
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_name );
+    if( kind == nullptr ) {
+        throw std::invalid_argument(
+            "game.units.units received an unknown unit kind: " + std::string( kind_name ) );
+    }
+    std::vector<std::string> result;
+    result.reserve( kind->conversion_count );
+    for( std::size_t index = 0; index < kind->conversion_count; ++index ) {
+        result.emplace_back( kind->conversions[index].name );
+    }
+    return result;
+}
+
 void install_value_type_api(
     sol::state &lua, sol::table &game, std::function<void()> require_values )
 {
@@ -195,6 +558,32 @@ void install_value_type_api(
         sol::meta_function::equal_to,
     []( const script_game_id & lhs, const script_game_id & rhs ) {
         return lhs == rhs;
+    } );
+
+    lua.new_usertype<script_unit_value>(
+        "UnitValue", sol::no_constructor,
+        "kind", sol::property( &script_unit_value::kind ),
+        "canonical_unit", sol::property( &script_unit_value::canonical_unit ),
+        "is_integral", &script_unit_value::is_integral,
+        "value", &script_unit_value::value_as,
+        "add", &script_unit_value::add,
+        "subtract", &script_unit_value::subtract,
+        "scale", &script_unit_value::scale,
+        "compare", &script_unit_value::compare,
+        sol::meta_function::to_string, &script_unit_value::to_string,
+        sol::meta_function::equal_to,
+    []( const script_unit_value & lhs, const script_unit_value & rhs ) {
+        return lhs == rhs;
+    },
+    sol::meta_function::addition, &script_unit_value::add,
+    sol::meta_function::subtraction, &script_unit_value::subtract,
+    sol::meta_function::less_than,
+    []( const script_unit_value & lhs, const script_unit_value & rhs ) {
+        return lhs.compare( rhs ) < 0;
+    },
+    sol::meta_function::less_than_or_equal_to,
+    []( const script_unit_value & lhs, const script_unit_value & rhs ) {
+        return lhs.compare( rhs ) <= 0;
     } );
 
     sol::table types = lua.create_table();
@@ -215,6 +604,38 @@ void install_value_type_api(
         return result;
     } );
     game["types"] = std::move( types );
+
+    sol::table units = lua.create_table();
+    units.set_function(
+        "new",
+        [require_values]( const std::string & kind, const double value,
+    const std::string & unit ) {
+        require_values();
+        return script_unit_value::from( kind, value, unit );
+    } );
+    units.set_function( "kinds", [require_values]( sol::this_state lua_state ) {
+        require_values();
+        sol::state_view state( lua_state );
+        sol::table result = state.create_table();
+        const std::vector<std::string> &kinds = supported_script_unit_kinds();
+        for( std::size_t index = 0; index < kinds.size(); ++index ) {
+            result[index + 1] = kinds[index];
+        }
+        return result;
+    } );
+    units.set_function(
+        "units",
+    [require_values]( sol::this_state lua_state, const std::string & kind ) {
+        require_values();
+        sol::state_view state( lua_state );
+        sol::table result = state.create_table();
+        const std::vector<std::string> names = supported_units_for_kind( kind );
+        for( std::size_t index = 0; index < names.size(); ++index ) {
+            result[index + 1] = names[index];
+        }
+        return result;
+    } );
+    game["units"] = std::move( units );
 }
 
 } // namespace cata::lua_ui
