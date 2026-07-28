@@ -521,6 +521,18 @@ void melee_actor::load_internal( const JsonObject &obj, const std::string & )
     }
 }
 
+static bool target_is_on_airborne_vehicle_or_ladder( const map &here,
+        const tripoint_bub_ms &target_pos )
+{
+    if( const optional_vpart_position vp = here.veh_at( target_pos ) ) {
+        return vp->vehicle().is_flying_in_air();
+    }
+    if( const std::optional<vpart_reference> ladder = here.vehicle_ladder_at( target_pos ) ) {
+        return ladder->vehicle().is_flying_in_air();
+    }
+    return false;
+}
+
 Creature *melee_actor::find_target( monster &z ) const
 {
     const map &here = get_map();
@@ -532,6 +544,17 @@ Creature *melee_actor::find_target( monster &z ) const
     Creature *target = z.attack_target();
 
     if( target == nullptr || ( no_adjacent && z.is_adjacent( target, false ) ) ) {
+        return nullptr;
+    }
+
+    // Pulling a target laterally from another z-level can move them off an
+    // airborne deck or its hanging ladder, after which gravity drops them to
+    // the attacker.  Ground creatures must not be able to pull occupants or
+    // climbers out of a flying vehicle this way.
+    const bool repositions_target = is_grab &&
+                                    ( grab_data.pull_chance > -1 || grab_data.drag_distance > 0 );
+    if( repositions_target && z.posz() != target->posz() &&
+        target_is_on_airborne_vehicle_or_ladder( here, target->pos_bub( here ) ) ) {
         return nullptr;
     }
 
