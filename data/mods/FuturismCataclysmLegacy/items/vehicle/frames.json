@@ -1,0 +1,11 @@
+[
+  {
+    "type": "ITEM",
+    "id": "fcl_superalloy_frame",
+    "copy-from": "hdframe",
+    "name": { "str": "superalloy frame" },
+    "description": "A large, reinforced superalloy frame, used in advanced vehicle construction.  Other vehicle components can be mounted on it, and it can be attached to other frames to increase the vehicle's size.",
+    "weight": "36800 g",
+    "material": [ "superalloy" ]
+  }
+]
