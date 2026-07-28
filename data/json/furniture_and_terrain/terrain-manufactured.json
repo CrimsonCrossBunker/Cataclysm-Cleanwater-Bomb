@@ -672,7 +672,7 @@
         { "item": "motor_small", "count": 4 },
         { "item": "power_supply", "count": [ 4, 16 ] },
         { "item": "amplifier", "count": [ 4, 16 ] },
-        { "item": "cable", "charges": [ 250, 500 ] },
+        { "item": "cable", "count": [ 250, 500 ] },
         { "item": "circuit", "count": [ 1, 6 ] },
         { "item": "scrap", "count": [ 12, 18 ] }
       ]
@@ -702,7 +702,7 @@
       "items": [
         { "item": "processor", "prob": 25 },
         { "item": "RAM", "count": [ 0, 2 ], "prob": 50 },
-        { "item": "cable", "charges": [ 1, 2 ], "prob": 50 },
+        { "item": "cable", "count": [ 1, 2 ], "prob": 50 },
         { "item": "small_lcd_screen", "prob": 25 },
         { "item": "e_scrap", "count": [ 1, 4 ], "prob": 50 },
         { "item": "circuit", "count": [ 0, 2 ], "prob": 50 },
