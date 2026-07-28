@@ -3482,7 +3482,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
                 if( has_vehicle_control( player_character ) ) {
                     const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                    if( vp->vehicle().is_rotorcraft( here ) ) {
+                    if( vp && vp->vehicle().is_rotorcraft( here ) ) {
                         pldrive( tripoint_rel_ms::below );
                         break;
                     }
@@ -3555,7 +3555,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 vertical_move( 1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
             } else if( has_vehicle_control( player_character ) ) {
                 const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                if( vp->vehicle().is_rotorcraft( here ) ) {
+                if( vp && vp->vehicle().is_rotorcraft( here ) ) {
                     pldrive( tripoint_rel_ms::above );
                 }
             }
