@@ -462,9 +462,17 @@ class item_contents
 
         void info( std::vector<iteminfo> &info, const iteminfo_query *parts ) const;
 
-        /** Read the items in the MOD pocket only. */
-        void read_mods( const item_contents &read_input );
+        /**
+         * Read and remove the items in the MOD pocket.  This is destructive so loaded item
+         * identities can be transferred without generating new UIDs.
+         */
+        void read_mods( item_contents &read_input );
         void combine( const item_contents &read_input, bool convert = false, bool into_bottom = false,
+                      bool restack_charges = true, bool ignore_contents = false );
+        /**
+         * Loading-only counterpart which consumes read_input and preserves serialized UIDs.
+         */
+        void combine( item_contents &&read_input, bool convert = false, bool into_bottom = false,
                       bool restack_charges = true, bool ignore_contents = false );
 
         void serialize( JsonOut &json ) const;
