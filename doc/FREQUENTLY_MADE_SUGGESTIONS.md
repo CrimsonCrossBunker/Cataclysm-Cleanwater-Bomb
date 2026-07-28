@@ -5,9 +5,8 @@ Broad categories are “This is already implemented”, “Someone is working on
 - [Frequently Made Suggestions](#Frequently-Made-Suggestions)
   - [Project Management](#Project-Management)
   - [Game Features](#Game-Features)
-    - [Performance](#Performance)
+    - [Options](#Options)
     - [Multiplayer](#Multiplayer)
-    - [Rogue Like](#Rogue-Like)
     - [Player abilities](#Player-abilities)
     - [Electrical power transmission](#Electrical-power-transmission)
     - [User interface](#User-interface)
@@ -289,7 +288,7 @@ Assuming a willing donor, this would require someone with medical knowhow, match
 
 A slightly inferior but much more accessible and safer alternative is saline infusions to partially substitute for missing blood volume. This is currently in the game.
 
-#### Add 3D printers and have them print guns and armor and car parts: Yes but no.
+#### Add 3D printers and have them print guns and armor and car parts: Yes but may no, only mod.
 
 This breaks down into two possibilities, which tl;dr, neither really works.
 
@@ -299,20 +298,24 @@ The second option is creating new designs from scratch or existing designs. This
 
 Finally, even if one were to overcome these issues and make 3D printed items, the quality of these items is generally going to be inferior to those crafted from metal, wood, or fabric. The resources and effort required to produce items with a 3D printer outweigh the benefits, making it impractical for a post-apocalyptic world. 
 
+However, the built-in warehouse mods are unaffected by this; perhaps one day we’ll add magical 3D printing to the mods, or introduce nanotechnology-based printing in *Futurism Cataclysm: Legacy* or *Aftershock: Exoplanet*.  But that remains just a possibility.
+
 ### Electrical power transmission
 This covers several sub-suggestions that do or do not work for various reasons.
 
-#### Bring back a municipal power grid: not feasible to implement
+#### Bring back a municipal power grid: not feasible to implement, unless it is the distant future
 
 This isn’t feasible for several reasons. First, the assumption is that the grid is wrecked. After a disaster of this scale, it frequently takes dedicated teams of technicians working overtime days to weeks of work to restore the grid to working function, and that’s with near-unlimited resources, no additional disasters happening, and specific restoration plans in place. For a survivor it would be simply impossible, and even for teams of survivors it would take a prohibitive amount of time to do, and it would be much easier to simply cobble together a rough point-to-point power transmission system.
 
 Second, this would be extremely difficult to support in the game engine because once you surpass a certain scale you need to keep every connected electrical device loaded and periodically processed in order to keep track of power usage. The only way I could see this working is if you ran through a series of missions to reclaim a town, and as part of the missions some power generation plant was assembled, and the town was wired up for it. At that point we could hand-wave the power usage tracking because the faction would be running the plant, not the player.
 
+All in all, this is definitely not something the game can achieve in the short term.
+
 #### Short-range power transmission (scale of a single building): Largely implemented
 
 Currently you can hook up multiple vehicles with jumper cables so they can transmit power, and this even works if some of the vehicles aren’t in the immediate area.
 
-As of the 0.G "Gaiman" release there exists "appliances" which can be placed and interacted with using the construction and menus brought up with 'e’xamine instead of going through the vehicle menus. These "appliances" automatically form power grids and can be connected through special wire connections which can run through existing walls (if those walls would already have wiring provisions). There are "appliances" for most objects you would expect to encounter, including backup generators, household lighting, fridges, common power tools, etc. There are also a variety of cables (jumper cables, extension cords, etc.) which can be used to connect appliances to vehicles or other appliances, allowing power flow in either direction.
+As of the upstream branch's 0.G "Gaiman" release there exists "appliances" which can be placed and interacted with using the construction and menus brought up with 'e’xamine instead of going through the vehicle menus. These "appliances" automatically form power grids and can be connected through special wire connections which can run through existing walls (if those walls would already have wiring provisions). There are "appliances" for most objects you would expect to encounter, including backup generators, household lighting, fridges, common power tools, etc. There are also a variety of cables (jumper cables, extension cords, etc.) which can be used to connect appliances to vehicles or other appliances, allowing power flow in either direction.
 
 In addition to "appliances", there may also be "facilities".  Again, under the hood, facilities are going to be related to vehicles (admittedly, stationary vehicles) but are going to be built via the construction menu and interacted with as collections of terrain and furniture.  Facilities will hopefully allow for medium sized, powered buildings. As of this writing, there is not yet any support for "facilities".
 
