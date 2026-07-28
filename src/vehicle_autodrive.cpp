@@ -1327,17 +1327,17 @@ std::optional<navigation_step> vehicle::autodrive_controller::compute_next_step(
     precompute_data( here );
     const tripoint_abs_ms veh_pos = driven_veh.pos_abs();
     const bool had_cached_path = !data.path.empty();
-    const bool two_steps = data.path.size() > 2;
-    const navigation_step first_step = two_steps ? data.path.back() : navigation_step();
-    const navigation_step second_step = two_steps ? data.path.at( data.path.size() - 2 ) :
-                                        navigation_step();
+    const bool has_next_step = data.path.size() >= 2;
+    const navigation_step first_step = has_next_step ? data.path.back() : navigation_step();
+    const navigation_step second_step = has_next_step ?
+                                        data.path.at( data.path.size() - 2 ) : navigation_step();
     bool maintain_speed = false;
     // If vehicle did not move as far as planned and direction is the same
     // then it is still accelerating. If the vehicle moved more than expected
     // then we likely underestimated the acceleration when planning the path.
     // If either of these happen, we should maintain speed but compute a new path.
     if( !in_greedy_mode ) {
-        if( two_steps &&
+        if( has_next_step &&
             square_dist( first_step.pos.xy().raw(), second_step.pos.xy().raw() ) !=
             square_dist( first_step.pos.xy().raw(), veh_pos.xy().raw() ) &&
             first_step.steering_dir == second_step.steering_dir ) {
@@ -1564,11 +1564,14 @@ autodrive_result vehicle::do_autodrive( map &here, Character &driver )
 
 void vehicle::stop_autodriving( bool apply_brakes )
 {
-    if( !is_autodriving && !is_patrolling && !is_following ) {
-        return;
-    }
+    // Braking is an explicit safety request and must still take effect if a
+    // preceding event (such as collision damage) already cleared the
+    // autodriving state.
     if( apply_brakes ) {
         cruise_velocity = 0;
+    }
+    if( !is_autodriving && !is_patrolling && !is_following ) {
+        return;
     }
     is_autodriving = false;
     is_patrolling = false;
