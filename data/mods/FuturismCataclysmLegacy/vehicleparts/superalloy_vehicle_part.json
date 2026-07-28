@@ -24,6 +24,7 @@
     "item": "alloy_plate",
     "durability": 480,
     "bonus": 50,
+    "proportional": { "size": 1.4 },
     "damage_reduction": { "all": 30 },
     "extend": { "flags": [ "SHOCK_RESISTANT" ] },
     "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
