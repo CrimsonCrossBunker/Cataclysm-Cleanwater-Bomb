@@ -1,0 +1,231 @@
+[
+  {
+    "type": "vehicle_part",
+    "id": "plating_superalloy",
+    "categories": [ "warfare" ],
+    "copy-from": "plating_superalloy",
+    "delete": { "flags": [ "SHOCK_RESISTANT" ] },
+    "extend": { "flags": [ "SHOCK_IMMUNE" ] }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "ram_alloy",
+    "categories": [ "warfare" ],
+    "copy-from": "ram_alloy",
+    "delete": { "flags": [ "SHOCK_RESISTANT" ] },
+    "extend": { "flags": [ "SHOCK_IMMUNE" ] }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_stowboard",
+    "copy-from": "hdstowboard",
+    "name": { "str": "superalloy stow board" },
+    "default_tint_color": "Traffic white",
+    "item": "alloy_plate",
+    "durability": 480,
+    "bonus": 50,
+    "proportional": { "size": 1.4 },
+    "damage_reduction": { "all": 30 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "100 m",
+        "using": [ [ "welding_standard", 40 ], [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 4 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_board",
+    "copy-from": "hdboard",
+    "name": { "str": "superalloy board" },
+    "default_tint_color": "Traffic white",
+    "item": "alloy_plate",
+    "durability": 640,
+    "bonus": 50,
+    "damage_reduction": { "all": 30 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "100 m",
+        "using": [ [ "welding_standard", 40 ], [ "vehicle_bolt_install", 2 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "24 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 4 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_quarterpanel",
+    "copy-from": "hdhalfboard",
+    "name": { "str": "superalloy quarterpanel" },
+    "default_tint_color": "Traffic white",
+    "item": "alloy_plate",
+    "durability": 640,
+    "bonus": 50,
+    "damage_reduction": { "all": 30 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "100 m",
+        "using": [ [ "welding_standard", 40 ], [ "vehicle_bolt_install", 2 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "24 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 4 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_roof",
+    "copy-from": "hdroof",
+    "name": { "str": "superalloy roof" },
+    "default_tint_color": "Traffic white",
+    "item": "alloy_plate",
+    "durability": 1400,
+    "bonus": 50,
+    "damage_reduction": { "all": 45 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "50 m",
+        "using": [ [ "welding_standard", 300 ], [ "vehicle_bolt_install", 3 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ] },
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 5 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_door",
+    "copy-from": "hddoor",
+    "name": { "str": "superalloy door" },
+    "default_tint_color": "Traffic white",
+    "item": "fcl_superalloy_frame",
+    "durability": 840,
+    "bonus": 50,
+    "damage_reduction": { "all": 45 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "60 m", "using": [ [ "vehicle_bolt_install", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "8 m", "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 3 ] ] }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_opaque_door",
+    "copy-from": "hddoor_opaque",
+    "name": { "str": "superalloy opaque door" },
+    "default_tint_color": "Traffic white",
+    "item": "fcl_superalloy_frame",
+    "durability": 924,
+    "bonus": 50,
+    "damage_reduction": { "all": 45 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "60 m", "using": [ [ "vehicle_bolt_install", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "8 m", "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 3 ] ] }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_hatch",
+    "copy-from": "hdhatch",
+    "name": { "str": "superalloy hatch" },
+    "default_tint_color": "Traffic white",
+    "item": "fcl_superalloy_frame",
+    "durability": 1260,
+    "bonus": 50,
+    "damage_reduction": { "all": 45 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "80 m", "using": [ [ "welding_standard", 160 ], [ "vehicle_bolt_install", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "50 m", "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "8 m", "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 3 ] ] }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_opaque_hatch",
+    "copy-from": "hdhatch_opaque",
+    "name": { "str": "superalloy opaque hatch" },
+    "default_tint_color": "Traffic white",
+    "item": "fcl_superalloy_frame",
+    "durability": 1400,
+    "bonus": 50,
+    "damage_reduction": { "all": 45 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "80 m", "using": [ [ "welding_standard", 160 ], [ "vehicle_bolt_install", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "50 m", "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "8 m", "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 3 ] ] }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_trunk_door",
+    "copy-from": "hddoor_trunk",
+    "name": { "str": "superalloy trunk door" },
+    "default_tint_color": "Traffic white",
+    "item": "fcl_superalloy_frame",
+    "durability": 1050,
+    "bonus": 50,
+    "damage_reduction": { "all": 45 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "60 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_wrench_2", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "8 m", "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 3 ] ] }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_frame",
+    "copy-from": "hdframe",
+    "name": { "str": "superalloy frame" },
+    "default_tint_color": "Traffic white",
+    "item": "fcl_superalloy_frame",
+    "durability": 1080,
+    "bonus": 50,
+    "damage_reduction": { "all": 45 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": { "skills": [ [ "mechanics", 4 ] ], "time": "120 m", "using": [ [ "welding_standard", 400 ], [ "vehicle_bolt_install", 4 ] ] },
+      "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ] },
+      "repair": { "skills": [ [ "mechanics", 5 ] ], "time": "18 m", "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 9 ] ] }
+    }
+  }
+]
