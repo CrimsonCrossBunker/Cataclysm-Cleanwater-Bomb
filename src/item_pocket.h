@@ -345,6 +345,12 @@ class item_pocket
         ret_val<item *> insert_item( const item &it, bool into_bottom = false,
                                      bool restack_charges = true, bool ignore_contents = false );
         /**
+         * Loading-only counterpart to insert_item( const item & ).  Moving preserves the
+         * serialized item UID instead of creating the fresh UID required for a game-world copy.
+         */
+        ret_val<item *> insert_item( item &&it, bool into_bottom = false,
+                                     bool restack_charges = true, bool ignore_contents = false );
+        /**
           * adds an item to the pocket with no checks
           * may create a new pocket
           */
