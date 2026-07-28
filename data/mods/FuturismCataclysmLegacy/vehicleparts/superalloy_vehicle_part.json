@@ -23,7 +23,6 @@
     "default_tint_color": "Traffic white",
     "item": "alloy_plate",
     "durability": 480,
-    "proportional": { "size": 0.76 },
     "bonus": 50,
     "damage_reduction": { "all": 30 },
     "extend": { "flags": [ "SHOCK_RESISTANT" ] },
