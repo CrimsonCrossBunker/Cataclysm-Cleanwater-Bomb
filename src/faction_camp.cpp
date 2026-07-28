@@ -3771,8 +3771,11 @@ void basecamp::finish_return( npc &comp, const bool fixed_time, const std::strin
     g->reload_npcs();
     validate_assignees();
 
-    // Missions that are not fixed_time can try to draw more food than is in the food supply
-    feed_workers( comp, camp_food_supply( -need_food ) );
+    // Missions that are not fixed_time can try to draw more food than is in the food supply.
+    // Fixed-time missions paid up front and have no food to deduct here.
+    if( need_food > 0 ) {
+        feed_workers( comp, camp_food_supply( -need_food ) );
+    }
     if( has_water() ) {
         comp.set_thirst( 0 );
     }

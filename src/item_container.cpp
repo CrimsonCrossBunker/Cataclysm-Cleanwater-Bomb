@@ -40,6 +40,7 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "messages.h"
 #include "pocket_type.h"
 #include "ret_val.h"
 #include "string_formatter.h"
@@ -905,8 +906,10 @@ int item::fill_with( const item &contained, const int amount,
         }
     }
     if( num_contained == 0 ) {
-        debugmsg( "tried to put an item (%s, amount %d) in a container (%s) that cannot contain it",
-                  contained_item.typeId().str(), contained_item.charges, typeId().str() );
+        // Capacity can change between scheduling and executing an insert activity.
+        add_msg_debug( debugmode::DF_ACTIVITY,
+                       "could not put item %s (amount %d) in container %s",
+                       contained_item.typeId().str(), contained_item.charges, typeId().str() );
     }
     on_contents_changed();
     return num_contained;

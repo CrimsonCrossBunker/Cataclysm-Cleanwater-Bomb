@@ -92,11 +92,21 @@ bool copy_tree( const std::filesystem::path &src_dir,
                 return false;
             }
         } else if( iter->is_regular_file() ) {
+            // Atomic save writes use short-lived *.temp files which can be renamed between
+            // directory traversal and copy.  They are never part of a completed save.
+            if( entry.extension() == ".temp" ) {
+                continue;
+            }
             if( !assure_dir_exist( dst.parent_path() ) ) {
                 debugmsg( "snapshot: failed to create directory '%s'", dst.parent_path().u8string() );
                 return false;
             }
             if( !copy_file( entry.u8string(), dst.u8string() ) ) {
+                std::error_code exists_ec;
+                if( !std::filesystem::exists( entry, exists_ec ) && !exists_ec ) {
+                    // A temporary/atomic source can disappear after is_regular_file().
+                    continue;
+                }
                 debugmsg( "snapshot: failed to copy '%s'", entry.u8string() );
                 return false;
             }
