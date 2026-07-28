@@ -677,11 +677,7 @@
         { "item": "scrap", "count": [ 12, 18 ] }
       ]
     },
-    "shoot": {
-      "reduce_damage": [ 60, 120 ],
-      "reduce_damage_laser": [ 60, 120 ],
-      "destroy_damage": [ 150, 150 ]
-    }
+    "shoot": { "reduce_damage": [ 60, 120 ], "reduce_damage_laser": [ 60, 120 ], "destroy_damage": [ 150, 150 ] }
   },
   {
     "type": "terrain",
@@ -716,12 +712,7 @@
         { "item": "scrap", "count": [ 2, 6 ], "prob": 50 }
       ]
     },
-    "shoot": {
-      "chance_to_hit": 50,
-      "reduce_damage": [ 8, 16 ],
-      "reduce_damage_laser": [ 8, 16 ],
-      "destroy_damage": [ 8, 8 ]
-    }
+    "shoot": { "chance_to_hit": 50, "reduce_damage": [ 8, 16 ], "reduce_damage_laser": [ 8, 16 ], "destroy_damage": [ 8, 8 ] }
   },
   {
     "type": "terrain",
