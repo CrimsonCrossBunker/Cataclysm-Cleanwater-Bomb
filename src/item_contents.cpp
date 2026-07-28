@@ -2238,7 +2238,11 @@ void item_contents::update_modified_pockets(
                 ++pocket_iter;
             } else {
                 if( !pocket.empty() ) {
-                    debugmsg( "Oops!  deleted some items when updating pockets that were added via toolmods" );
+                    if( migration_pocket == contents.end() ) {
+                        ++pocket_iter;
+                        continue;
+                    }
+                    pocket.move_contents_to( *migration_pocket );
                 }
                 pocket_iter = contents.erase( pocket_iter );
             }
