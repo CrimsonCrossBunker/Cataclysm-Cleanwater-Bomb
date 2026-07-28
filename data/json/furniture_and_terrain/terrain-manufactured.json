@@ -656,7 +656,7 @@
     "looks_like": "t_nanofab_body",
     "move_cost": 0,
     "coverage": 65,
-    "flags": [ "PLACE_ITEM" ],
+    "flags": [ "PLACE_ITEM", "NANOFORGE_TABLE" ],
     "bash": {
       "str_min": 120,
       "str_max": 150,
