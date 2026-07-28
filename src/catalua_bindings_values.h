@@ -11,6 +11,9 @@
 
 #include "catalua_sol.h"
 
+class time_duration;
+class time_point;
+
 namespace cata::lua_ui
 {
 
@@ -74,6 +77,70 @@ class script_unit_value
 
 const std::vector<std::string> &supported_script_unit_kinds();
 std::vector<std::string> supported_units_for_kind( std::string_view kind );
+
+class script_time_duration
+{
+    public:
+        static script_time_duration from( std::int64_t value, std::string_view unit );
+        static script_time_duration from_native( const ::time_duration &value );
+
+        std::int64_t turns() const noexcept;
+        double value_as( std::string_view unit ) const;
+        script_time_duration add( const script_time_duration &rhs ) const;
+        script_time_duration subtract( const script_time_duration &rhs ) const;
+        script_time_duration scale( std::int64_t factor ) const;
+        script_time_duration divide( std::int64_t divisor ) const;
+        script_time_duration negate() const;
+        int compare( const script_time_duration &rhs ) const noexcept;
+        ::time_duration to_native() const;
+        std::string display() const;
+        std::string to_string() const;
+
+        friend bool operator==( const script_time_duration &lhs,
+                                const script_time_duration &rhs ) {
+            return lhs.turns_ == rhs.turns_;
+        }
+
+    private:
+        explicit script_time_duration( std::int64_t turns );
+        std::int64_t turns_ = 0;
+};
+
+class script_time_point
+{
+    public:
+        static script_time_point from_turn( std::int64_t turn );
+        static script_time_point from_native( const ::time_point &value );
+
+        std::int64_t turn() const noexcept;
+        script_time_point add( const script_time_duration &duration ) const;
+        script_time_point subtract( const script_time_duration &duration ) const;
+        script_time_duration difference( const script_time_point &rhs ) const;
+        int compare( const script_time_point &rhs ) const noexcept;
+        ::time_point to_native() const;
+        int second_of_minute() const;
+        int minute_of_hour() const;
+        int hour_of_day() const;
+        bool is_day() const;
+        bool is_night() const;
+        bool is_dawn() const;
+        bool is_dusk() const;
+        script_time_point sunrise() const;
+        script_time_point sunset() const;
+        std::string moon_phase() const;
+        std::string season() const;
+        std::string display() const;
+        std::string to_string() const;
+
+        friend bool operator==( const script_time_point &lhs,
+                                const script_time_point &rhs ) {
+            return lhs.turn_ == rhs.turn_;
+        }
+
+    private:
+        explicit script_time_point( std::int64_t turn );
+        std::int64_t turn_ = 0;
+};
 
 // Installs immutable v5 value factories under game.types.  The authorization
 // callback must enforce both game.read and the source API version.

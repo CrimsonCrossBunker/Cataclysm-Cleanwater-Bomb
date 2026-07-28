@@ -14,6 +14,7 @@
 #include "ammo_effect.h"
 #include "bionics.h"
 #include "bodypart.h"
+#include "calendar.h"
 #include "disease.h"
 #include "effect.h"
 #include "emit.h"
@@ -323,6 +324,81 @@ const unit_kind_definition &require_same_unit_kind(
     return *kind;
 }
 
+struct time_unit_definition {
+    std::string_view name;
+    std::int64_t turns;
+};
+
+constexpr std::array<time_unit_definition, 6> time_units = {{
+        { "day", 24LL * 60LL * 60LL },
+        { "hour", 60LL * 60LL },
+        { "minute", 60LL },
+        { "second", 1LL },
+        { "turn", 1LL },
+        { "week", 7LL * 24LL * 60LL * 60LL }
+    }
+};
+
+const time_unit_definition *find_time_unit( const std::string_view unit )
+{
+    const auto found = std::lower_bound(
+                           time_units.begin(), time_units.end(), unit,
+    []( const time_unit_definition & entry, const std::string_view key ) {
+        return entry.name < key;
+    } );
+    return found != time_units.end() && found->name == unit ? &*found : nullptr;
+}
+
+std::int64_t checked_turn_count( const long double turns, const std::string_view operation )
+{
+    constexpr std::int64_t minimum = std::numeric_limits<int>::min();
+    constexpr std::int64_t maximum = std::numeric_limits<int>::max();
+    if( !std::isfinite( turns ) || turns < static_cast<long double>( minimum ) ||
+        turns > static_cast<long double>( maximum ) ) {
+        throw std::overflow_error(
+            "game.time " + std::string( operation ) + " exceeds the engine time range" );
+    }
+    const long double rounded = std::round( turns );
+    if( turns != rounded ) {
+        throw std::invalid_argument(
+            "game.time " + std::string( operation ) + " must resolve to whole turns" );
+    }
+    return static_cast<std::int64_t>( rounded );
+}
+
+int positive_mod( const std::int64_t value, const int divisor )
+{
+    const int remainder = static_cast<int>( value % divisor );
+    return remainder < 0 ? remainder + divisor : remainder;
+}
+
+std::string moon_phase_id( const enum moon_phase phase )
+{
+    static constexpr std::array<std::string_view, MOON_PHASE_MAX> names = {
+        "new",
+        "waxing_crescent",
+        "waxing_half",
+        "waxing_gibbous",
+        "full",
+        "waning_gibbous",
+        "waning_half",
+        "waning_crescent"
+    };
+    const int index = static_cast<int>( phase );
+    return index >= 0 && index < static_cast<int>( names.size() ) ?
+           std::string( names[static_cast<std::size_t>( index )] ) : "unknown";
+}
+
+std::string season_id( const enum season_type season )
+{
+    static constexpr std::array<std::string_view, NUM_SEASONS> names = {
+        "spring", "summer", "autumn", "winter"
+    };
+    const int index = static_cast<int>( season );
+    return index >= 0 && index < static_cast<int>( names.size() ) ?
+           std::string( names[static_cast<std::size_t>( index )] ) : "unknown";
+}
+
 } // namespace
 
 script_game_id::script_game_id( std::string kind, std::string value )
@@ -545,6 +621,215 @@ std::vector<std::string> supported_units_for_kind( const std::string_view kind_n
     return result;
 }
 
+script_time_duration::script_time_duration( const std::int64_t turns )
+    : turns_( checked_turn_count( static_cast<long double>( turns ), "duration" ) )
+{
+}
+
+script_time_duration script_time_duration::from(
+    const std::int64_t value, const std::string_view unit )
+{
+    const time_unit_definition *definition = find_time_unit( unit );
+    if( definition == nullptr ) {
+        throw std::invalid_argument(
+            "game.time.duration received an unknown unit: " + std::string( unit ) );
+    }
+    return script_time_duration( checked_turn_count(
+                                     static_cast<long double>( value ) * definition->turns,
+                                     "duration" ) );
+}
+
+script_time_duration script_time_duration::from_native( const ::time_duration &value )
+{
+    return script_time_duration( to_turns<std::int64_t>( value ) );
+}
+
+std::int64_t script_time_duration::turns() const noexcept
+{
+    return turns_;
+}
+
+double script_time_duration::value_as( const std::string_view unit ) const
+{
+    const time_unit_definition *definition = find_time_unit( unit );
+    if( definition == nullptr ) {
+        throw std::invalid_argument(
+            "TimeDuration:value received an unknown unit: " + std::string( unit ) );
+    }
+    return static_cast<double>( turns_ ) / static_cast<double>( definition->turns );
+}
+
+script_time_duration script_time_duration::add( const script_time_duration &rhs ) const
+{
+    return script_time_duration( checked_turn_count(
+                                     static_cast<long double>( turns_ ) + rhs.turns_, "addition" ) );
+}
+
+script_time_duration script_time_duration::subtract( const script_time_duration &rhs ) const
+{
+    return script_time_duration( checked_turn_count(
+                                     static_cast<long double>( turns_ ) - rhs.turns_, "subtraction" ) );
+}
+
+script_time_duration script_time_duration::scale( const std::int64_t factor ) const
+{
+    return script_time_duration( checked_turn_count(
+                                     static_cast<long double>( turns_ ) * factor, "scaling" ) );
+}
+
+script_time_duration script_time_duration::divide( const std::int64_t divisor ) const
+{
+    if( divisor == 0 ) {
+        throw std::invalid_argument( "TimeDuration division by zero" );
+    }
+    if( turns_ % divisor != 0 ) {
+        throw std::invalid_argument(
+            "TimeDuration division must resolve to whole turns" );
+    }
+    return script_time_duration( turns_ / divisor );
+}
+
+script_time_duration script_time_duration::negate() const
+{
+    return script_time_duration( checked_turn_count(
+                                     -static_cast<long double>( turns_ ), "negation" ) );
+}
+
+int script_time_duration::compare( const script_time_duration &rhs ) const noexcept
+{
+    return turns_ == rhs.turns_ ? 0 : ( turns_ < rhs.turns_ ? -1 : 1 );
+}
+
+::time_duration script_time_duration::to_native() const
+{
+    return ::time_duration::from_turns( static_cast<int>( turns_ ) );
+}
+
+std::string script_time_duration::display() const
+{
+    return ::to_string( to_native() );
+}
+
+std::string script_time_duration::to_string() const
+{
+    return "TimeDuration(" + std::to_string( turns_ ) + " turns)";
+}
+
+script_time_point::script_time_point( const std::int64_t turn )
+    : turn_( checked_turn_count( static_cast<long double>( turn ), "point" ) )
+{
+}
+
+script_time_point script_time_point::from_turn( const std::int64_t turn )
+{
+    return script_time_point( turn );
+}
+
+script_time_point script_time_point::from_native( const ::time_point &value )
+{
+    return script_time_point( to_turn<std::int64_t>( value ) );
+}
+
+std::int64_t script_time_point::turn() const noexcept
+{
+    return turn_;
+}
+
+script_time_point script_time_point::add( const script_time_duration &duration ) const
+{
+    return script_time_point( checked_turn_count(
+                                  static_cast<long double>( turn_ ) + duration.turns(), "point addition" ) );
+}
+
+script_time_point script_time_point::subtract( const script_time_duration &duration ) const
+{
+    return script_time_point( checked_turn_count(
+                                  static_cast<long double>( turn_ ) - duration.turns(), "point subtraction" ) );
+}
+
+script_time_duration script_time_point::difference( const script_time_point &rhs ) const
+{
+    return script_time_duration::from(
+               checked_turn_count(
+                   static_cast<long double>( turn_ ) - rhs.turn_, "point difference" ),
+               "turn" );
+}
+
+int script_time_point::compare( const script_time_point &rhs ) const noexcept
+{
+    return turn_ == rhs.turn_ ? 0 : ( turn_ < rhs.turn_ ? -1 : 1 );
+}
+
+::time_point script_time_point::to_native() const
+{
+    return ::time_point::from_turn( static_cast<int>( turn_ ) );
+}
+
+int script_time_point::second_of_minute() const
+{
+    return positive_mod( turn_, 60 );
+}
+
+int script_time_point::minute_of_hour() const
+{
+    return ::minute_of_hour<int>( to_native() );
+}
+
+int script_time_point::hour_of_day() const
+{
+    return ::hour_of_day<int>( to_native() );
+}
+
+bool script_time_point::is_day() const
+{
+    return ::is_day( to_native() );
+}
+
+bool script_time_point::is_night() const
+{
+    return ::is_night( to_native() );
+}
+
+bool script_time_point::is_dawn() const
+{
+    return ::is_dawn( to_native() );
+}
+
+bool script_time_point::is_dusk() const
+{
+    return ::is_dusk( to_native() );
+}
+
+script_time_point script_time_point::sunrise() const
+{
+    return from_native( ::sunrise( to_native() ) );
+}
+
+script_time_point script_time_point::sunset() const
+{
+    return from_native( ::sunset( to_native() ) );
+}
+
+std::string script_time_point::moon_phase() const
+{
+    return moon_phase_id( get_moon_phase( to_native() ) );
+}
+
+std::string script_time_point::season() const
+{
+    return season_id( season_of_year( to_native() ) );
+}
+
+std::string script_time_point::display() const
+{
+    return ::to_string( to_native() );
+}
+
+std::string script_time_point::to_string() const
+{
+    return "TimePoint(" + std::to_string( turn_ ) + ")";
+}
+
 void install_value_type_api(
     sol::state &lua, sol::table &game, std::function<void()> require_values )
 {
@@ -636,6 +921,92 @@ void install_value_type_api(
         return result;
     } );
     game["units"] = std::move( units );
+
+    lua.new_usertype<script_time_duration>(
+        "TimeDuration", sol::no_constructor,
+        "turns", sol::property( &script_time_duration::turns ),
+        "value", &script_time_duration::value_as,
+        "display", &script_time_duration::display,
+        "compare", &script_time_duration::compare,
+        "scale", &script_time_duration::scale,
+        "divide", &script_time_duration::divide,
+        sol::meta_function::to_string, &script_time_duration::to_string,
+        sol::meta_function::equal_to,
+    []( const script_time_duration & lhs, const script_time_duration & rhs ) {
+        return lhs == rhs;
+    },
+    sol::meta_function::less_than,
+    []( const script_time_duration & lhs, const script_time_duration & rhs ) {
+        return lhs.compare( rhs ) < 0;
+    },
+    sol::meta_function::less_than_or_equal_to,
+    []( const script_time_duration & lhs, const script_time_duration & rhs ) {
+        return lhs.compare( rhs ) <= 0;
+    },
+    sol::meta_function::addition, &script_time_duration::add,
+    sol::meta_function::subtraction, &script_time_duration::subtract,
+    sol::meta_function::multiplication, &script_time_duration::scale,
+    sol::meta_function::division, &script_time_duration::divide,
+    sol::meta_function::unary_minus, &script_time_duration::negate );
+
+    lua.new_usertype<script_time_point>(
+        "TimePoint", sol::no_constructor,
+        "turn", sol::property( &script_time_point::turn ),
+        "second_of_minute", &script_time_point::second_of_minute,
+        "minute_of_hour", &script_time_point::minute_of_hour,
+        "hour_of_day", &script_time_point::hour_of_day,
+        "is_day", &script_time_point::is_day,
+        "is_night", &script_time_point::is_night,
+        "is_dawn", &script_time_point::is_dawn,
+        "is_dusk", &script_time_point::is_dusk,
+        "sunrise", &script_time_point::sunrise,
+        "sunset", &script_time_point::sunset,
+        "moon_phase", &script_time_point::moon_phase,
+        "season", &script_time_point::season,
+        "display", &script_time_point::display,
+        "compare", &script_time_point::compare,
+        sol::meta_function::to_string, &script_time_point::to_string,
+        sol::meta_function::equal_to,
+    []( const script_time_point & lhs, const script_time_point & rhs ) {
+        return lhs == rhs;
+    },
+    sol::meta_function::less_than,
+    []( const script_time_point & lhs, const script_time_point & rhs ) {
+        return lhs.compare( rhs ) < 0;
+    },
+    sol::meta_function::less_than_or_equal_to,
+    []( const script_time_point & lhs, const script_time_point & rhs ) {
+        return lhs.compare( rhs ) <= 0;
+    },
+    sol::meta_function::addition, &script_time_point::add,
+    sol::meta_function::subtraction,
+    sol::overload(
+    []( const script_time_point & lhs, const script_time_point & rhs ) {
+        return lhs.difference( rhs );
+    },
+    []( const script_time_point & lhs, const script_time_duration & rhs ) {
+        return lhs.subtract( rhs );
+    } ) );
+
+    sol::table time = lua.create_table();
+    time.set_function(
+        "duration",
+    [require_values]( const std::int64_t value, const std::string & unit ) {
+        require_values();
+        return script_time_duration::from( value, unit );
+    } );
+    time.set_function( "point", [require_values]( const std::int64_t turn ) {
+        require_values();
+        return script_time_point::from_turn( turn );
+    } );
+    time.set_function( "now", [require_values]() {
+        require_values();
+        return script_time_point::from_native( calendar::turn );
+    } );
+    time["turn_zero"] = script_time_point::from_native( calendar::turn_zero );
+    time["before_time_starts"] =
+        script_time_point::from_native( calendar::before_time_starts );
+    game["time"] = std::move( time );
 }
 
 } // namespace cata::lua_ui

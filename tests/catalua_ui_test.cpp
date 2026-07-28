@@ -1307,6 +1307,90 @@ assert(game.units.units("energy")[1] == "joule")
     REQUIRE( result.valid() );
 }
 
+TEST_CASE( "lua_v5_time_values_are_immutable_checked_and_calendar_aware",
+           "[lua][bindings][values][time]" )
+{
+    using namespace cata::lua_ui;
+    scoped_calendar_turn calendar_guard;
+
+    const script_time_duration ninety_minutes =
+        script_time_duration::from( 90, "minute" );
+    CHECK( ninety_minutes.turns() == 5400 );
+    CHECK( ninety_minutes.to_native() == 90_minutes );
+    CHECK( ninety_minutes.value_as( "hour" ) == Approx( 1.5 ) );
+    CHECK( ninety_minutes.add(
+               script_time_duration::from( 30, "minute" ) ).value_as( "hour" ) ==
+           Approx( 2.0 ) );
+    CHECK( ninety_minutes.subtract(
+               script_time_duration::from( 30, "minute" ) ).value_as( "hour" ) ==
+           Approx( 1.0 ) );
+    CHECK( ninety_minutes.scale( 2 ).value_as( "hour" ) == Approx( 3.0 ) );
+    CHECK( ninety_minutes.divide( 3 ).value_as( "minute" ) == Approx( 30.0 ) );
+    CHECK( ninety_minutes.negate().turns() == -5400 );
+    CHECK_FALSE( ninety_minutes.display().empty() );
+    CHECK( ninety_minutes.to_string() == "TimeDuration(5400 turns)" );
+
+    const script_time_point point = script_time_point::from_turn( 10000 );
+    CHECK( point.to_native() == time_point::from_turn( 10000 ) );
+    CHECK( point.add( ninety_minutes ).turn() == 15400 );
+    CHECK( point.add( ninety_minutes ).difference( point ) == ninety_minutes );
+    CHECK( point.second_of_minute() == 40 );
+    CHECK_FALSE( point.display().empty() );
+    CHECK( point.to_string() == "TimePoint(10000)" );
+    CHECK_FALSE( point.season().empty() );
+    CHECK_FALSE( point.moon_phase().empty() );
+
+    CHECK_THROWS_AS(
+        script_time_duration::from( std::numeric_limits<int>::max(), "week" ),
+        std::overflow_error );
+    CHECK_THROWS_AS(
+        script_time_duration::from( 1, "missing" ), std::invalid_argument );
+    CHECK_THROWS_AS(
+        ninety_minutes.divide( 0 ), std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_time_duration::from( 1, "second" ).divide( 2 ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_time_point::from_turn( std::numeric_limits<int>::max() ).add(
+            script_time_duration::from( 1, "turn" ) ),
+        std::overflow_error );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    calendar::turn = time_point::from_turn( 10000 );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local hour = game.time.duration(1, "hour")
+local half = game.time.duration(30, "minute")
+assert(hour.turns == 3600)
+assert(hour:value("minute") == 60)
+assert((hour + half):value("minute") == 90)
+assert((hour - half):value("minute") == 30)
+assert((hour * 2):value("hour") == 2)
+assert((hour / 2):value("minute") == 30)
+assert((-hour).turns == -3600)
+assert(half < hour and half <= hour)
+assert(game.time.now().turn == 10000)
+local later = game.time.now() + half
+assert(later.turn == 11800)
+assert((later - game.time.now()).turns == 1800)
+assert((later - half).turn == 10000)
+assert(type(later:is_day()) == "boolean")
+assert(type(later:is_night()) == "boolean")
+assert(type(later:is_dawn()) == "boolean")
+assert(type(later:is_dusk()) == "boolean")
+assert(type(later:moon_phase()) == "string")
+assert(type(later:season()) == "string")
+assert(type(later:sunrise().turn) == "number")
+assert(type(later:sunset().turn) == "number")
+assert(pcall(function() later.turn = 0 end) == false)
+assert(tostring(hour) == "TimeDuration(3600 turns)")
+assert(tostring(later) == "TimePoint(11800)")
+)lua" );
+    REQUIRE( result.valid() );
+}
+
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
            "[lua][ui][navigation]" )
 {
