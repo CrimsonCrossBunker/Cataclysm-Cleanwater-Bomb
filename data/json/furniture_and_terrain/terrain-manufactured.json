@@ -653,6 +653,7 @@
     "symbol": "%",
     "description": "A great column of advanced machinery.  Within this self-contained, miniaturized factory, several specialized 3d printers work in tandem with robotic forge units to efficiently manufacture superalloy sheets from steel sheets and nanomaterial.",
     "color": "dark_gray",
+    "looks_like": "t_nanofab_body",
     "move_cost": 0,
     "coverage": 65,
     "flags": [ "PLACE_ITEM" ],
