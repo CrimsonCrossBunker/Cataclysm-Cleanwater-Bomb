@@ -1,0 +1,123 @@
+[
+  {
+    "type": "vehicle_part",
+    "id": "plating_superalloy",
+    "categories": [ "warfare" ],
+    "copy-from": "plating_superalloy",
+    "delete": { "flags": [ "SHOCK_RESISTANT" ] },
+    "extend": { "flags": [ "SHOCK_IMMUNE" ] }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "ram_alloy",
+    "categories": [ "warfare" ],
+    "copy-from": "ram_alloy",
+    "delete": { "flags": [ "SHOCK_RESISTANT" ] },
+    "extend": { "flags": [ "SHOCK_IMMUNE" ] }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_stowboard",
+    "copy-from": "hdstowboard",
+    "name": { "str": "superalloy heavy-duty stow board" },
+    "default_tint_color": "Traffic white",
+    "item": "alloy_plate",
+    "durability": 480,
+    "proportional": { "size": 0.76 },
+    "bonus": 50,
+    "damage_reduction": { "all": 30 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "100 m",
+        "using": [ [ "welding_standard", 40 ], [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 4 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_board",
+    "copy-from": "hdboard",
+    "name": { "str": "superalloy heavy-duty board" },
+    "default_tint_color": "Traffic white",
+    "item": "alloy_plate",
+    "durability": 640,
+    "bonus": 50,
+    "damage_reduction": { "all": 30 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "100 m",
+        "using": [ [ "welding_standard", 40 ], [ "vehicle_bolt_install", 2 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "24 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 4 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_quarterpanel",
+    "copy-from": "hdhalfboard",
+    "name": { "str": "superalloy heavy-duty quarterpanel" },
+    "default_tint_color": "Traffic white",
+    "item": "alloy_plate",
+    "durability": 640,
+    "bonus": 50,
+    "damage_reduction": { "all": 30 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "100 m",
+        "using": [ [ "welding_standard", 40 ], [ "vehicle_bolt_install", 2 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "24 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 4 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "fcl_superalloy_roof",
+    "copy-from": "hdroof",
+    "name": { "str": "superalloy heavy-duty roof" },
+    "default_tint_color": "Traffic white",
+    "item": "alloy_plate",
+    "durability": 1400,
+    "bonus": 50,
+    "damage_reduction": { "all": 45 },
+    "extend": { "flags": [ "SHOCK_RESISTANT" ] },
+    "breaks_into": [ { "item": "scrap", "count": [ 6, 18 ] }, { "item": "alloy_sheet", "count": [ 4, 8 ] } ],
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "50 m",
+        "using": [ [ "welding_standard", 300 ], [ "vehicle_bolt_install", 3 ] ]
+      },
+      "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ], [ "vehicle_wrench_2", 1 ] ] },
+      "repair": {
+        "skills": [ [ "mechanics", 5 ] ],
+        "time": "10 m",
+        "using": [ [ "repair_welding_superalloy", 1 ], [ "repair_welding_standard", 5 ] ]
+      }
+    }
+  }
+]
