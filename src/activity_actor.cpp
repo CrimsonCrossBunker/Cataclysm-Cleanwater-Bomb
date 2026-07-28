@@ -1025,9 +1025,40 @@ void gunmod_remove_activity_actor::gunmod_remove( Character &who, item &gun, ite
 
     gun.gun_set_mode( gun_mode_DEFAULT );
     const itype *modtype = mod.type;
+    std::set<const item *> mod_pocket_items;
+    if( modtype->mod ) {
+        const auto supplied_by_removed_mod = [modtype]( const item_pocket & pocket ) {
+            return std::any_of( modtype->mod->add_pockets.begin(), modtype->mod->add_pockets.end(),
+            [&pocket]( const pocket_data & data ) {
+                return pocket.get_pocket_data() == &data;
+            } );
+        };
+        for( item_pocket *pocket : gun.get_pockets( supplied_by_removed_mod ) ) {
+            for( item *it : pocket->all_items_top() ) {
+                mod_pocket_items.insert( it );
+            }
+        }
+    }
 
     who.i_add_or_drop( mod );
     gun.remove_item( mod );
+
+    // update_modified_pockets moves contents only from pockets which actually disappeared into
+    // MIGRATION.  Return those items to the character; identical pockets supplied by another
+    // installed copy of the mod remain untouched.
+    std::set<const item *> displaced_items;
+    for( item *it : gun.all_items_top( pocket_type::MIGRATION ) ) {
+        if( mod_pocket_items.count( it ) > 0 ) {
+            displaced_items.insert( it );
+        }
+    }
+    std::list<item> recovered_items = gun.remove_items_with(
+    [&displaced_items]( const item & it ) {
+        return displaced_items.count( &it ) > 0;
+    }, static_cast<int>( displaced_items.size() ) );
+    for( item &it : recovered_items ) {
+        who.i_add_or_drop( it );
+    }
 
     //~ %1$s - gunmod, %2$s - gun.
     who.add_msg_if_player( _( "You remove your %1$s from your %2$s." ), modtype->nname( 1 ),

@@ -2227,6 +2227,11 @@ void item_contents::update_modified_pockets(
     std::vector<const pocket_data *> mag_or_mag_wells,
     std::vector<const pocket_data *> container_pockets )
 {
+    const auto migration_pocket = std::find_if( contents.begin(), contents.end(),
+    []( const item_pocket & pocket ) {
+        return pocket.is_type( pocket_type::MIGRATION );
+    } );
+
     for( auto pocket_iter = contents.begin(); pocket_iter != contents.end(); ) {
         item_pocket &pocket = *pocket_iter;
         if( pocket.is_type( pocket_type::CONTAINER ) ) {
@@ -2250,8 +2255,13 @@ void item_contents::update_modified_pockets(
 
             if( !found ) {
                 if( !pocket.empty() ) {
-                    // in case the debugmsg wasn't clear, this should never happen
-                    debugmsg( "Oops!  deleted some items when updating pockets that were added via toolmods" );
+                    // A removed mod can legitimately take away a non-empty pocket.  Preserve the
+                    // item nodes until the caller can unload or spill them.
+                    if( migration_pocket == contents.end() ) {
+                        ++pocket_iter;
+                        continue;
+                    }
+                    pocket.move_contents_to( *migration_pocket );
                 }
                 pocket_iter = contents.erase( pocket_iter );
             } else {
@@ -2273,7 +2283,11 @@ void item_contents::update_modified_pockets(
                 ++pocket_iter;
             } else {
                 if( !pocket.empty() ) {
-                    debugmsg( "Oops!  deleted some items when updating pockets that were added via toolmods" );
+                    if( migration_pocket == contents.end() ) {
+                        ++pocket_iter;
+                        continue;
+                    }
+                    pocket.move_contents_to( *migration_pocket );
                 }
                 pocket_iter = contents.erase( pocket_iter );
             }

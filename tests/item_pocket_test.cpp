@@ -77,6 +77,9 @@ static const itype_id itype_bag_plastic( "bag_plastic" ); //Purposefully nonsens
 static const itype_id itype_barrel_small( "barrel_small" );
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
 static const itype_id itype_debug_modular_m4_carbine( "debug_modular_m4_carbine" );
+static const itype_id itype_debug_gun_no_mag_well( "debug_gun_no_mag_well" );
+static const itype_id itype_debug_retool_mag_well( "debug_retool_mag_well" );
+static const itype_id itype_stanag30( "stanag30" );
 static const itype_id itype_ketchup( "ketchup" );
 static const itype_id itype_mustard( "mustard" );
 static const itype_id itype_paper( "paper" );
@@ -3029,6 +3032,26 @@ TEST_CASE( "pocket_mods", "[pocket][toolmod][gunmod]" )
     }
 }
 
+TEST_CASE( "removing_mod_preserves_contents_of_removed_pocket",
+           "[item][pocket][gunmod][item_uid]" )
+{
+    item gun( itype_debug_gun_no_mag_well );
+    REQUIRE( gun.put_in( item( itype_debug_retool_mag_well ), pocket_type::MOD ).success() );
+    REQUIRE( gun.put_in( item( itype_stanag30 ), pocket_type::MAGAZINE_WELL ).success() );
+
+    item *magazine = gun.all_items_top( pocket_type::MAGAZINE_WELL ).front();
+    REQUIRE( magazine != nullptr );
+    const int64_t magazine_uid = magazine->uid().get_value();
+
+    item *mod = gun.gunmods().front();
+    gun.remove_item( *mod );
+
+    const std::list<item *> preserved = gun.all_items_top( pocket_type::MIGRATION );
+    REQUIRE( preserved.size() == 1 );
+    CHECK( preserved.front()->typeId() == itype_stanag30 );
+    CHECK( preserved.front()->uid().get_value() == magazine_uid );
+}
+
 // Reproduce previous segfault from https://github.com/CleverRaven/Cataclysm-DDA/issues/75156
 TEST_CASE( "unload_from_spillable_container", "[item][pocket]" )
 {
@@ -3081,4 +3104,3 @@ TEST_CASE( "unload_from_spillable_container", "[item][pocket]" )
         }
     }
 }
-
