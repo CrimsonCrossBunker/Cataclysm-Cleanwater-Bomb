@@ -262,10 +262,15 @@
     "components": [ [ [ "string_6", 1 ] ] ]
   },
   {
+    "id": "any_sheet_metal_small",
+    "type": "requirement",
+    "components": [ [ [ "sheet_metal_small", 1 ], [ "hc_sheet_metal_small", 1 ], [ "mc_sheet_metal_small", 1 ], [ "qt_sheet_metal_small", 1 ], [ "ch_sheet_metal_small", 1 ] ] ]
+  },
+  {
     "id": "superalloy_forge",
     "type": "requirement",
     "//": "Materials required to print one superalloy sheet",
-    "components": [ [ [ "sheet_metal_small", 1 ] ], [ [ "nanomaterial", 5 ] ] ]
+    "components": [ [ [ "any_sheet_metal_small", 4, "LIST" ] ], [ [ "nanomaterial", 5 ] ] ]
   },
   {
     "id": "autoclave",
