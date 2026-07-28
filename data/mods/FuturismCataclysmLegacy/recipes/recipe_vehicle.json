@@ -6,11 +6,11 @@
     "category": "CC_*",
     "subcategory": "CSC_*_NESTED",
     "skill_used": "fabrication",
-    "difficulty": 1,
+    "difficulty": 8,
     "time": "1 h 30 m",
+    "book_learn": [ [ "textbook_fabrication", 5 ], [ "adv_chemistry", 6 ], [ "welding_book", 5 ] ],
     "proficiencies": [ { "proficiency": "prof_blacksmithing", "time_multiplier": 10 } ],
     "reversible": true,
-    "autolearn": true,
     "qualities": [ { "id": "GLARE", "level": 1 } ],
     "using": [ [ "lc_steel_standard", 100 ] ],
     "components": [
