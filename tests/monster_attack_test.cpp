@@ -29,6 +29,8 @@
 #include "test_statistics.h"
 #include "type_id.h"
 #include "units.h"
+#include "veh_type.h"
+#include "vehicle.h"
 #include "weather.h"
 #include "weather_type.h"
 
@@ -42,6 +44,10 @@ static const json_character_flag json_flag_TOUGH_FEET( "TOUGH_FEET" );
 static const matype_id style_brawling( "style_brawling" );
 static const skill_id skill_unarmed( "unarmed" );
 static const trait_id trait_TOUGH_FEET( "TOUGH_FEET" );
+
+static const vpart_id vpart_aisle( "aisle" );
+static const vpart_id vpart_ladder_3( "ladder_3" );
+static const vproto_id vehicle_prototype_test_turret_rig( "test_turret_rig" );
 
 static constexpr tripoint_bub_ms attacker_location{ 65, 65, 0 };
 
@@ -409,6 +415,62 @@ TEST_CASE( "Ranged_pull_tests", "[mattack][grab]" )
         }
         REQUIRE( counter < 100 );
     }
+}
+
+TEST_CASE( "ranged_pull_cannot_drag_targets_from_airborne_vehicle_ladders",
+           "[mattack][grab][vehicle][zlevel]" )
+{
+    clear_map_without_vision();
+    clear_creatures();
+    clear_avatar();
+    map &here = get_map();
+    build_test_map( ter_id( "t_pavement" ) );
+    for( const tripoint_bub_ms &p : here.points_on_zlevel( 1 ) ) {
+        here.ter_set( p, ter_id( "t_open_air" ) );
+    }
+    here.invalidate_map_cache( 1 );
+    here.build_map_cache( 1, true );
+
+    const tripoint_bub_ms vehicle_pos( 60, 60, 1 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_turret_rig, vehicle_pos,
+                                     0_degrees, 0, veh_spawn_status::PRISTINE,
+                                     false, true );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_aisle ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_ladder_3 ) >= 0 );
+    veh->refresh();
+    veh->set_flying( true );
+
+    Character &you = get_player_character();
+    // board_vehicle() keeps the avatar on the map's current z-level.  Make the
+    // airborne level current so the fixture cannot silently move the target
+    // back to ground level while boarding.
+    here.vertical_shift( vehicle_pos.z() );
+    you.setpos( here, vehicle_pos );
+    here.board_vehicle( vehicle_pos, &you );
+    REQUIRE( you.in_vehicle );
+    REQUIRE( you.pos_bub() == vehicle_pos );
+
+    const tripoint_bub_ms puller_pos = vehicle_pos + tripoint( -1, 0, -1 );
+    monster &puller = spawn_test_monster( "mon_debug_puller_strong", puller_pos );
+    puller.set_dest( you.pos_abs() );
+    reset_caches( puller_pos.z(), vehicle_pos.z() );
+    REQUIRE( you.pos_bub() == vehicle_pos );
+    REQUIRE( here.veh_at( you.pos_bub() ) );
+    REQUIRE( &here.veh_at( you.pos_bub() )->vehicle() == veh );
+    REQUIRE( veh->is_flying_in_air() );
+    REQUIRE( puller.sees( here, you ) );
+
+    const mattack_actor &attack =
+        *puller.type->special_attacks.at( "ranged_pull" );
+    CHECK_FALSE( attack.call( puller ) );
+    CHECK( you.pos_bub() == vehicle_pos );
+    CHECK( you.in_vehicle );
+
+    here.unboard_vehicle( you.pos_bub() );
+    here.destroy_vehicle( veh );
+    here.vertical_shift( 0 );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
 }
 
 TEST_CASE( "Grab_drag_tests", "[mattack][grab][drag]" )
