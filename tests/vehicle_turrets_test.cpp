@@ -9,12 +9,16 @@
 #include "character.h"
 #include "character_attire.h"
 #include "coordinates.h"
+#include "creature.h"
 #include "enums.h"
 #include "explosion.h"
+#include "game.h"
 #include "item.h"
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
+#include "monster.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -37,6 +41,7 @@ static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_glockmag( "glockmag" );
 
+static const vpart_id vpart_aisle( "aisle" );
 static const vpart_id vpart_frame( "frame" );
 static const vpart_id vpart_tank( "tank" );
 static const vpart_id vpart_turret_test_multimag_gun_consume( "turret_test_multimag_gun_consume" );
@@ -475,4 +480,67 @@ TEST_CASE( "vehicle_turret_multimag", "[vehicle][turret][multimag]" )
         explosion_handler::process_explosions();
         clear_avatar();
     }
+}
+
+TEST_CASE( "automatic_vehicle_turret_targets_across_z_levels",
+           "[vehicle][turret][zlevel]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    build_test_map( ter_id( "t_pavement" ) );
+    set_time_to_day();
+
+    for( const tripoint_bub_ms &p : here.points_on_zlevel( 1 ) ) {
+        here.ter_set( p, ter_id( "t_open_air" ) );
+    }
+    here.invalidate_map_cache( 1 );
+    here.build_map_cache( 1, true );
+
+    Character &player_character = get_player_character();
+    player_character.setpos( here, tripoint_bub_ms( 10, 10, 0 ) );
+
+    const tripoint_bub_ms veh_pos( 65, 65, 1 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_turret_rig, veh_pos,
+                                     0_degrees, 0, veh_spawn_status::PRISTINE,
+                                     false, true );
+    REQUIRE( veh != nullptr );
+
+    // Model a turret near the middle of a wide airship deck.  A 3D line from
+    // the turret to the ground drops below the deck before reaching its edge,
+    // which is the case that the old same-Z boundary workaround missed.
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_aisle ) >= 0 );
+    for( int x = 1; x <= 8; ++x ) {
+        const point_rel_ms mount( -x, 0 );
+        REQUIRE( veh->install_part( here, mount, vpart_frame ) >= 0 );
+        REQUIRE( veh->install_part( here, mount, vpart_aisle ) >= 0 );
+    }
+    veh->refresh();
+
+    const int turret_index = veh->install_part( here, point_rel_ms::zero,
+                             vpart_turret_test_multimag_turret_gun );
+    REQUIRE( turret_index >= 0 );
+    vehicle_part &turret = veh->part( turret_index );
+
+    const auto &[battery_current, battery_capacity] = veh->battery_power_level();
+    REQUIRE( battery_capacity > 0 );
+    veh->charge_battery( here, battery_capacity, /* apply_loss = */ false );
+
+    item magazine( itype_glockmag );
+    magazine.put_in( item( itype_9mm, calendar::turn, 15 ), pocket_type::MAGAZINE );
+    item gun( turret.get_base() );
+    REQUIRE( gun.put_in( magazine, pocket_type::MAGAZINE_WELL ).success() );
+    turret.set_base( std::move( gun ) );
+    turret.enabled = true;
+    turret.reset_target( veh->abs_part_pos( turret ) );
+
+    const tripoint_bub_ms target_pos( veh_pos.x() - 12, veh_pos.y(), 0 );
+    monster &target = spawn_test_monster( "mon_zombie", target_pos, false );
+    REQUIRE( target.attitude_to( player_character ) == Creature::Attitude::HOSTILE );
+
+    CHECK( veh->automatic_fire_turret( turret ) > 0 );
+
+    here.destroy_vehicle( veh );
+    explosion_handler::process_explosions();
+    clear_avatar();
 }
