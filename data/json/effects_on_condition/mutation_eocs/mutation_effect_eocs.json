@@ -805,9 +805,23 @@
         { "not": { "u_has_effect": "took_prozac" } },
         { "not": { "u_has_effect": "valium" } },
         { "not": { "u_has_effect": "took_xanax" } },
-        { "not": { "u_has_effect": "drunk" } },
-        { "math": [ "u_characters_nearby('radius': 30) > 0" ] },
-        { "not": { "u_has_effect": "narcosis" } }
+        { "not": { "u_has_effect": "narcosis" } },
+        {
+          "or": [
+            {
+              "and": [
+                { "or": [ { "u_has_effect": "sleep" }, { "u_has_effect": "drunk" } ] },
+                { "math": [ "u_characters_nearby('radius': 1) > 0" ] }
+              ]
+            },
+            {
+              "and": [
+                { "not": { "or": [ { "u_has_effect": "sleep" }, { "u_has_effect": "drunk" } ] } },
+                { "math": [ "u_characters_nearby('radius': 30) > 0" ] }
+              ]
+            }
+          ]
+        }
       ]
     },
     "effect": [
