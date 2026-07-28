@@ -418,7 +418,8 @@ bool Pickup::do_pickup( std::vector<item_location> &targets, std::vector<int> &q
         quantities.pop_back();
 
         if( !target ) {
-            debugmsg( "lost target item of ACT_PICKUP" );
+            // The item may legitimately burn up or otherwise disappear while pickup is queued.
+            add_msg_debug( debugmode::DF_ACTIVITY, "lost target item of ACT_PICKUP" );
             continue;
         }
         problem = !pick_one_up( target, quantity, got_water, got_gas, mapPickup, autopickup,
