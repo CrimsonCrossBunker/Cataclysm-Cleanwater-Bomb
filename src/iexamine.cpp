@@ -718,7 +718,7 @@ void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
     }
 
     std::vector<std::string> recipe_ids;
-    recipe_ids.push_back( "alloy_sheet" );
+    recipe_ids.emplace_back( "alloy_sheet" );
 
     if( recipe_ids.empty() ) {
         return;
