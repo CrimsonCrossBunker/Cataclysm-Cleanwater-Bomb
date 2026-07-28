@@ -275,6 +275,8 @@ class item_contents
          * Called when adding an item as pockets to a molle item.
          */
         void add_pocket( const item &pocket );
+        /** Loading-only counterpart which preserves the incorporated item's serialized UID. */
+        void add_pocket( item &&pocket );
 
         /*
          * Called when removing a molle pocket.
@@ -340,6 +342,12 @@ class item_contents
          */
         ret_val<item *> insert_item( const item &it, pocket_type pk_type,
                                      bool ignore_contents = false, bool unseal_pockets = false );
+        /**
+         * Loading-only counterpart which transfers an existing item and preserves its UID.
+         */
+        ret_val<item *> insert_item( item &&it, pocket_type pk_type,
+                                     bool ignore_contents = false, bool unseal_pockets = false,
+                                     bool restack_charges = true );
         void force_insert_item( const item &it, pocket_type pk_type );
         bool can_unload_liquid() const;
 
@@ -454,9 +462,17 @@ class item_contents
 
         void info( std::vector<iteminfo> &info, const iteminfo_query *parts ) const;
 
-        /** Read the items in the MOD pocket only. */
-        void read_mods( const item_contents &read_input );
+        /**
+         * Read and remove the items in the MOD pocket.  This is destructive so loaded item
+         * identities can be transferred without generating new UIDs.
+         */
+        void read_mods( item_contents &read_input );
         void combine( const item_contents &read_input, bool convert = false, bool into_bottom = false,
+                      bool restack_charges = true, bool ignore_contents = false );
+        /**
+         * Loading-only counterpart which consumes read_input and preserves serialized UIDs.
+         */
+        void combine( item_contents &&read_input, bool convert = false, bool into_bottom = false,
                       bool restack_charges = true, bool ignore_contents = false );
 
         void serialize( JsonOut &json ) const;

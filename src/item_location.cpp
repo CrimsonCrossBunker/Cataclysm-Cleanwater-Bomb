@@ -799,6 +799,8 @@ class item_location::impl::item_in_container : public item_location::impl
 
         item_in_container( const item_location &container, item *which ) :
             impl( which ), container( container ) {}
+        item_in_container( const item_location &container, int idx, int64_t uid ) :
+            impl( idx, uid ), container( container ) {}
 
         void serialize( JsonOut &js ) const override {
             if( !target() ) {
@@ -821,17 +823,31 @@ class item_location::impl::item_in_container : public item_location::impl
         }
 
         item *unpack( int idx ) const override {
-            if( idx < 0 || static_cast<size_t>( idx ) >= target()->num_item_stacks() ) {
+            if( !container ) {
                 return nullptr;
             }
-            std::list<const item *> all_items = container->all_items_ptr();
+            std::list<const item *> all_items = container->all_items_container_top();
+            if( idx < 0 || static_cast<size_t>( idx ) >= all_items.size() ) {
+                return nullptr;
+            }
             auto iter = all_items.begin();
             std::advance( iter, idx );
             if( iter != all_items.end() ) {
                 return const_cast<item *>( *iter );
-            } else {
+            }
+            return nullptr;
+        }
+
+        item *unpack_by_uid( int64_t uid ) const override {
+            if( !container || uid <= 0 ) {
                 return nullptr;
             }
+            for( const item *it : container->all_items_container_top() ) {
+                if( it->uid().get_value() == uid ) {
+                    return const_cast<item *>( it );
+                }
+            }
+            return nullptr;
         }
 
         Character *carrier() const override {
@@ -1073,44 +1089,9 @@ void item_location::deserialize( const JsonObject &obj )
     } else if( type == "in_container" ) {
         item_location parent;
         obj.read( "parent", parent );
-        if( !parent.ptr->valid() ) {
-            if( parent == nowhere ) {
-                debugmsg( "parent location doesn't exist.  Item_location has lost its target over a save/load cycle." );
-                ptr = std::make_shared<impl::nowhere>();
-                return;
-            }
-            debugmsg( "parent location does not point to valid item" );
-            ptr = std::make_shared<impl::item_on_map>( map_cursor( parent.pos_abs() ), idx ); // drop on ground
-            return;
-        }
-        const std::list<item *> parent_contents = parent->all_items_container_top();
-
-        item *found = nullptr;
-        if( uid > 0 ) {
-            for( item *it : parent_contents ) {
-                if( it->uid().get_value() == uid ) {
-                    found = it;
-                    break;
-                }
-            }
-            if( !found ) {
-                debugmsg( "item_location UID not found in container contents" );
-                ptr = std::make_shared<impl::nowhere>();
-                return;
-            }
-        } else if( idx > -1 && idx < static_cast<int>( parent_contents.size() ) ) {
-            // Legacy save: no UID, use index
-            auto iter = parent_contents.begin();
-            std::advance( iter, idx );
-            found = *iter;
-        }
-
-        if( found ) {
-            ptr = std::make_shared<impl::item_in_container>( parent, found );
-        } else {
-            debugmsg( "contents index greater than contents size" );
-            ptr = std::make_shared<impl::nowhere>();
-        }
+        // The parent can belong to an NPC which has not yet been registered with the game
+        // while its activities are being deserialized.  Resolve both parent and child lazily.
+        ptr = std::make_shared<impl::item_in_container>( parent, idx, uid );
     }
 }
 

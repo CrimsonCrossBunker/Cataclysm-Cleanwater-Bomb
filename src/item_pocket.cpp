@@ -2309,6 +2309,41 @@ ret_val<item *> item_pocket::insert_item( const item &it,
     return ret_val<item *>::make_success( inserted );
 }
 
+ret_val<item *> item_pocket::insert_item( item &&it,
+        const bool into_bottom, bool restack_charges, bool ignore_contents )
+{
+    if( is_invalid_stackable_container_payload( it ) ) {
+        return ret_val<item *>::make_failure( nullptr,
+                                              _( "can't put a stackable container stack with contents in a pocket" ) );
+    }
+    ret_val<item_pocket::contain_code> containable = can_contain( it, ignore_contents );
+
+    if( !containable.success() ) {
+        return ret_val<item *>::make_failure( nullptr, containable.str() );
+    }
+
+    const units::volume inserted_volume = it.volume();
+    const units::mass inserted_weight = it.weight();
+    item *inserted = nullptr;
+    if( !into_bottom ) {
+        contents.push_front( std::move( it ) );
+        inserted = &contents.front();
+    } else {
+        contents.push_back( std::move( it ) );
+        inserted = &contents.back();
+    }
+    if( restack_charges && inserted->count_by_charges() ) {
+        inserted = restack( inserted );
+    }
+    if( bulk_fill_volume ) {
+        // restack conserves total volume/weight, so the inserted item's own
+        // contribution is the delta regardless of any merge.
+        *bulk_fill_volume += inserted_volume;
+        *bulk_fill_weight += inserted_weight;
+    }
+    return ret_val<item *>::make_success( inserted );
+}
+
 std::pair<item_location, item_pocket *> item_pocket::best_pocket_in_contents(
     item_location &this_loc, const item &it, const item *avoid,
     const bool allow_sealed, const bool ignore_settings )
