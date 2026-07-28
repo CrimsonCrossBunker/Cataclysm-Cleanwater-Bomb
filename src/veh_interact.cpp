@@ -2832,6 +2832,16 @@ void veh_interact::display_stats( map &here ) const
                     _( "Mass: <color_light_blue>%5.0f</color> %s" ),
                     convert_weight( veh->total_mass( here ) ), weight_units() );
     i += 1;
+    if( !veh->balloons.empty() ) {
+        // total_balloon_lift() is expressed in newtons.  Convert it back to the
+        // equivalent supported mass so it can use the player's weight units.
+        const units::mass maximum_lift =
+            units::from_kilogram( veh->total_balloon_lift() / 9.8 );
+        fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
+                        _( "Maximum Lift: <color_light_blue>%5.0f</color> %s" ),
+                        convert_weight( maximum_lift ), weight_units() );
+        i += 1;
+    }
     fold_and_print( *win[i], point( 0, row[i] ), getmaxx( *win[i] ), c_light_gray,
                     disp_w > 35 ? _( "Cargo volume: <color_light_blue>%s</color> / <color_light_blue>%s</color> %s" ) :
                     _( "Cargo: <color_light_blue>%s</color> / <color_light_blue>%s</color> %s" ),
