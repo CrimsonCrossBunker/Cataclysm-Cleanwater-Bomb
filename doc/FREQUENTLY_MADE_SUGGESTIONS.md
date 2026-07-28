@@ -46,103 +46,25 @@ The FMS list is here because some ideas have complicated reasons why they're not
 
 ## Game Features
 
-### Performance
-
-#### Improving Performance via Multithreading: Not just no, but hell no.
-
-Several key developers (including Kevin) already have horror stories about debugging threadlock races that have a 3+ hour run time to reproduce for their day jobs and are extremely insistent that they do not want to take on that kind of debugging for their free time hobby. So adding multithreading is a non-starter, because it will substantially shrink the pool of talented developers who will contribute code changes.
-
-Multithreading massively increases the overhead of maintaining the game. That's an ongoing overhead that just never goes away, it worms its way into every part of the system. For example, if anything but thread #1 wants to touch a data structure, that data structure must now be threading-safe and/or protected by locks
-
-~~Also, we use mingw for windows builds, it turns out mingw does not have working POSIX locking primitives. (If you do multithreaded on mingw, you abandon linux portability and use windows locking primitives). This is another huge maintenance burden.~~
-
-Problem #3 is that multithreading doesn't get you performance improvements as fast as almost anyone thinks it will. To break that down, threading is relatively good for throughput, but it's hard to use it to improve latency.  As it turns out, user-facing programs almost never care about throughput, they only care about latency, so that kind of sucks.  So for example, one of the expensive things we do is calculating FoV, it turns out it's what's called embarrassingly paralleizable, if a little tricky (i.e. you can break it up into 8 almost entirely independent jobs).  The catch is, that task is actually dominated by cache misses instead of computation, and multithreading makes that worse, because you have to ship the input and output data around to the various CPUs. So splitting that task up is relatively easy, but I'm not at all certain that doing so would make it any faster.
-
-We had some mystery regressions and some not-so-mystery regressions since 0.E, subsequent improvements have clawed all that performance back and more.  So we're in pretty good shape now.
-
-Which brings me to the "soft" problems with multithreading. Say we do get good multithreaded optimizations and performance increases linearly with cores (so much lolnope, performance almost always increases with diminishing returns). I develop on two systems, one has 8 functional cores and the other has 12 functional cores. In the perfect multithreading case, there's a 50% performance difference between the two systems, so a code change with performance that is barely tolerable on the 12 core system is untenable on the 8 core system.
-
-Keeping DDA single threaded helps keep me (and the other developers) honest, because it narrows the gap between the best and worst systems available. It also narrows the gap within the userbase, including extreme cases where people are still on single or dual core CPUs.
-
-Finally there's the opportunity cost issue. For the effort of multithreading key parts of the game, we can put a hell of a lot of investment into more generally applicable optimization.  There's a hell of a lot of cache coherency and algorithmic optimization we have planned that we haven't gotten around to yet. Optimizing the code would result in some sophisticated and finely tuned code we have to maintain, but we don't have to worry about the rest of the code being hard to maintain. One very large optimization performed since this entry was added was [creature reachability zones](https://github.com/CleverRaven/Cataclysm-DDA/pull/69574). This is one sort of always-applicable optimization that does not require specific software or hardware support for multithreading.
-
-That's the worst thing about multithreading IMO, as soon as you have multiple threads, you have to start worrying about thread safety throughout your code.
-
-#### Bringing charges back: No.
-
-We are in the process of removing charges, that's a fact that won't be changed.  We should have made this decision much earlier or never started implementing them in the first place, but it is what it is.
-
-The main reason we are doing this, contrary to popular belief, is to resolve technical debt. To handle both items and charges, every function of the code that interacts with them in any way needs to be effectively duplicated - each function in the code works by their own rules, each interacts with items in their own way, and usually have to be maintained separately. It introduces a tremendous amount of difficulty for any contributor, for even the most basic of tasks.
-
-Some examples:
-If you define an item without charges, its weight and volume would be equal according to the `weight` and `volume` fields:
-
-```
-"weight": "800 g", "volume": "200ml" = 1 item weight 800 g and has volume of 200 ml
-```
-
-But if you add charges, the volume would be divided by it's `count`:
-
-```
-"weight": "800 g", "volume": "200ml", "count": 50 = 1 item has weight 800g, and volume of 4 ml
-```
-(The same applies to the price, by the way)
-
-
-> Wolfram Alpha tells me that the current density of bean seeds is greater than that of our sun. I do not think beans are denser than a star. (1L beans = 77.6kg) - RenechCDDA
-
-
-It sounds like an issue that is easy to fix, but it is very difficult to properly fix if you don't know about this "feature".
-
-Next, when you use charges in item definitions, you can't properly use `count` in item group spawns, instead you should stick to the `charges` field, that is there only and specifically for charges. Trying to use `charges` to spawn item? Only `count` of it would be spawned.  Trying to not use `count` to spawn charged items? nothing will spawn, because `count` is zero, therefore no item will spawn. Do you remember that the game spawns an amount of `charges` by default, if nothing else is specified? There are many, many instances of bugs, too many to count, that occurred simply because someone forgot to specify amount of charges in item groups.
-
-Crafting is also one of the mechanics that has more issues than it should because of this: By default the game crafts `count` amount of item, which is trivial to miss when you edit a lot of recipes at once.
-
-In the end, it's just odd to be able to hold 10000 rounds in your hands at once.
-
-Again, we do not want to make the game worse with this - there are some unavoidable problems caused by this migration, but after it is done, not only it would be easier to contribute for everyone, but the game would work better, and maybe even faster.
-
 ### Options
 
-#### I should be able to disable features I don't want (fungals, portal storms, etc.): No.
+#### I should be able to disable features I don't want (fungals, portal storms, etc.): No Everything.
 
 Every option has a maintenance cost, and the more options we have the more each of them individually costs in time, effort, and sanity for our dear contributors.
 
 At the time of this writing, despite our best efforts there are *two thousand, one hundred, and fourty-three*(2143) open issues on the repository. The vast majority of them are bug reports, either confirmed or waiting to be confirmed. This does not include bugs which have been reported but were not confirmed before being closed due to a lack of activity. (Confirmed bugs are immune to such closures)
 
-Can we afford the massive maintenance costs these options would bring? No. It would introduce many more bugs and greatly increase the workload even to fix existing ones, since the configuration of these options may be a cause.
+We cannot indefinitely shoulder the burden of unlimited expansions of optional features; please do not expect us to necessarily add anything you feel "should" be included. 
 
-Can we afford the massive development costs these options would bring? No. All new development would have to take into account increasing numbers of possible code paths based on whether or not major features were disabled.
+Core developers provide optional configuration modules for content areas where they deem it necessary or appropriate to allow gameplay flexibility; however, this depends on whether key contributors consider such options necessary and are able to maintain them.
 
-Do we WANT these options to disable features? No! Features which make it into the game are desired features which contribute to the game's intended direction. We don't want to turn off the game we're making.
+This means that the developers have full control over what is optional and which features players are allowed to disable.  Consider a few questions: Can we afford the massive maintenance costs that such limitless options would entail?  Can we afford the massive development costs associated with them?  Do we WANT to offer options to disable every single feature?  The answer is NO.  We can only do what is within our capabilities; do not expect us to provide a choice for every feature you dislike.  Our team dislikes development philosophies that pit creators against players, but that does not mean developers are the players' slaves—that would be utterly absurd!
 
-There are some existing "toggle/disable feature" options which are legacy leftovers (e.g. wandering hordes, no NPC needs, railways mod). Experience has shown that making these options are a mistake, despite the intention in making these optional being to avoid major issues with their implementations. 
-
-The presence of those major issues precludes removing the option, and the fact it's an option precludes people from working on it ("oh I heard it has issues, I'll disable it" --> nobody actually uses it --> resolved issues or not, nobody would see their changes). This is a catch-22 for development, and the solution is simply not to make desired features optional.
-
+However, contributions are certainly welcome; if you can demonstrate to the core developers that you are capable of maintaining the options you’ve added, we will incorporate your code into the game.  That said, features accepted into the game must align with its intended direction.  We do not wish to dismantle the game we are building.  For instance, we will never provide a way within the core repository to remove content that is deeply integrated with the core lore (such as fungaloids, portal storms, etc.).  If you strongly desire such changes, please use third-party mod repositories.
 
 ### Multiplayer
-This has come up [many times](https://discourse.cataclysmdda.org/search?q=multiplayer), and it simply can not be added to DDA.
 
-The game loop of DDA includes a large number of activities that pass a large amount of time with no or minimal player input.
-
-Some have proposed requiring coop mode, but that doesn't change the fact that there are huge number of scenarios where a player gets stuck with nothing to do for an extended amount of time.
-
-This isn't just the obvious things like crafting and sleeping, but simply moving around tactically and examining the inventory and examining surroundings and menu interaction are not streamlined for short turn times.  This has implications for every part of the game, and I am not interested in making those adjustments.
-
-The synchronization issues go much deeper than you seem to think they do, and resolving them would require overhauling most of the core game code.
-
-I'm not interested in dealing with the security issues inherent in multiplayer network support.
-
-### Rogue Like
-
-#### ‘Fixing’ savescumming (in either direction): no.
-
-People periodically point out places where savescumming breaks some part of the game, and likewise people point out “savescumming features” they want in the game. The answer to both is no.
-
-If you encounter a bug while savescumming, you need to reproduce it without the savescumming.
-
-Savescumming is not a normal part of the game, and there is no intention of ever adding features that facilitate it, like auto-backup of saves, tracking multiple saves, or the like.
+Multiplayer is a purely experimental feature; it may suffer from numerous issues or even render the game unplayable.  Please do not submit reports regarding this during the early stages of developmen, our developers have limited bandwidth, unless you are able to help us refine this highly experimental option.
 
 ### Player abilities
 
@@ -194,7 +116,7 @@ This combined, the only way I can see someone wanting to remove skill rust is pu
 - To further clarify, if someone uses a mod to remove skill rust their character will level skills slower than a character experiencing skill rust.
 
 #### Poop and related bodily functions: NO
-No, just no, not even in a mod.
+No, the function is too far away.
 
 Hygiene facilities may become an issue with larger faction bases, and there may be some kind of *optional* furniture to allow collecting urine and manure for use in crafting and farming.
 
@@ -247,7 +169,9 @@ The damage melee weapons cause is a complex combination of dynamic leverage as t
 
 #### Mining and smelting: Not a Minecraft
 
-People lived in New England for about 15000 years.  People mined here for about 8000 years.  When some territory is mined for this long, almost any exposed, easy-to-reach ores and minerals tend to exhaust, so the only option for mining companies is to dig deeper, harder, and use more and more complex tools, machines, and reagents in order to transform rocks into useful materials.  Tools, machines, and reagents that character has no way to obtain and use, but also, **because character has no point to use it**.
+People lived in New England for about 15000 years.  People mined here for about 8000 years.  When some territory is mined for this long, almost any exposed, easy-to-reach ores and minerals tend to exhaust, so the only option for mining companies is to dig deeper, harder, and use more and more complex tools, machines, and reagents in order to transform rocks into useful materials.
+
+You might think it's absurd to reject any "mining" elements in the game for this reason, but from a realistic standpoint, it's something that needs to be considered.  So theoretically, if we were to include this, we'd need to climb a very high tech tree to "enter deep veins" and get any output, or it might be limited to extremely rare remnants that only generate at the very bottom level.  Such mining requires a long period of accumulation in automated content development, and cannot be achieved in the short term.
 
 Why would anyone sapient bother digging rocks and trying to convert them into steel, if they can just, you know, break a vehicle or some machine apart and get steel more pure than they would ever be able to reach otherwise? Why would anyone try to smelt stone to get some lead if they can just cut open the battery? Copper? Break into the substation, there is no electricity anyway.
 
