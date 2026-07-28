@@ -788,12 +788,47 @@
     "condition": {
       "and": [
         { "u_has_flag": "ASOCIAL2" },
-        { "math": [ "u_characters_nearby('radius': 30) == 0" ] },
+        { "not": { "u_has_effect": "valium" } },
+        { "not": { "u_has_effect": "took_xanax" } },
         { "not": { "u_has_effect": "took_prozac" } },
-        { "not": { "u_has_effect": "narcosis" } }
+        { "not": { "u_has_effect": "narcosis" } },
+        { "not": { "u_has_effect": "sleep" } },
+        { "not": { "u_has_effect": "drunk" } },
+        { "math": [ "u_characters_nearby('radius': 30) == 0" ] }
       ]
     },
     "effect": [ { "u_lose_effect": "asocial_dissatisfied" }, { "u_add_effect": "asocial_satisfied", "duration": "6 hours" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_asocial2_penalty_reset",
+    "recurrence": [ "10 minutes", "30 minutes" ],
+    "condition": {
+      "and": [
+        { "u_has_flag": "ASOCIAL2" },
+        {
+          "or": [
+            { "u_has_effect": "took_prozac" },
+            { "u_has_effect": "valium" },
+            { "u_has_effect": "took_xanax" },
+            { "u_has_effect": "narcosis" },
+            {
+              "and": [
+                { "or": [ { "u_has_effect": "sleep" }, { "u_has_effect": "drunk" } ] },
+                { "math": [ "u_characters_nearby('radius': 1) == 0" ] }
+              ]
+            },
+            {
+              "and": [
+                { "not": { "or": [ { "u_has_effect": "sleep" }, { "u_has_effect": "drunk" } ] } },
+                { "math": [ "u_characters_nearby('radius': 30) == 0" ] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "effect": [ { "u_lose_effect": "asocial_dissatisfied" } ]
   },
   {
     "type": "effect_on_condition",
@@ -805,9 +840,23 @@
         { "not": { "u_has_effect": "took_prozac" } },
         { "not": { "u_has_effect": "valium" } },
         { "not": { "u_has_effect": "took_xanax" } },
-        { "not": { "u_has_effect": "drunk" } },
-        { "math": [ "u_characters_nearby('radius': 30) > 0" ] },
-        { "not": { "u_has_effect": "narcosis" } }
+        { "not": { "u_has_effect": "narcosis" } },
+        {
+          "or": [
+            {
+              "and": [
+                { "or": [ { "u_has_effect": "sleep" }, { "u_has_effect": "drunk" } ] },
+                { "math": [ "u_characters_nearby('radius': 1) > 0" ] }
+              ]
+            },
+            {
+              "and": [
+                { "not": { "or": [ { "u_has_effect": "sleep" }, { "u_has_effect": "drunk" } ] } },
+                { "math": [ "u_characters_nearby('radius': 30) > 0" ] }
+              ]
+            }
+          ]
+        }
       ]
     },
     "effect": [
