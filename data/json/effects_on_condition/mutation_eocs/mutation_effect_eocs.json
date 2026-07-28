@@ -797,7 +797,7 @@
         { "math": [ "u_characters_nearby('radius': 30) == 0" ] }
       ]
     },
-    "effect": [ { "u_add_effect": "asocial_satisfied", "duration": "6 hours" } ]
+    "effect": [ { "u_lose_effect": "asocial_dissatisfied" }, { "u_add_effect": "asocial_satisfied", "duration": "6 hours" } ]
   },
   {
     "type": "effect_on_condition",
