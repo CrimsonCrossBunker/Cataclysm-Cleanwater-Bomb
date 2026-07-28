@@ -3551,6 +3551,13 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     break;
                 }
             }
+            // As with horizontal remote driving, route vertical input to the
+            // remote aircraft before considering movement by the operator.
+            if( vehicle *remote_veh = g->remoteveh();
+                remote_veh && remote_veh->is_rotorcraft( here ) ) {
+                pldrive( tripoint_rel_ms::above );
+                break;
+            }
             if( !player_character.in_vehicle ) {
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
                         here.vehicle_ladder_destination( player_character.pos_bub(), 1 ) ) {
