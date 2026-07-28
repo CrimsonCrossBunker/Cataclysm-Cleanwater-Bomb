@@ -2,6 +2,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "catalua_bindings.h"
+#include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "catalua_ui.h"
@@ -1387,6 +1388,83 @@ assert(type(later:sunset().turn) == "number")
 assert(pcall(function() later.turn = 0 end) == false)
 assert(tostring(hour) == "TimeDuration(3600 turns)")
 assert(tostring(later) == "TimePoint(11800)")
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_coordinates_are_immutable_typed_and_checked",
+           "[lua][bindings][values][coordinates]" )
+{
+    using namespace cata::lua_ui;
+
+    const script_point_coord absolute =
+        script_point_coord::from( "absolute", "map_square", 10, 20 );
+    const script_point_coord offset =
+        script_point_coord::from( "relative", "ms", -3, 5 );
+    CHECK( absolute.add( offset ).to_native() == point( 7, 25 ) );
+    CHECK( absolute.add( offset ).origin() == "abs" );
+    CHECK( absolute.subtract(
+               script_point_coord::from( "abs", "ms", 4, 8 ) ).origin() == "rel" );
+    CHECK( offset.scale_by( 3 ).to_native() == point( -9, 15 ) );
+    CHECK( absolute.manhattan_distance(
+               script_point_coord::from( "abs", "ms", 13, 24 ) ) == 7 );
+    CHECK( absolute.square_distance(
+               script_point_coord::from( "abs", "ms", 13, 24 ) ) == 4 );
+    CHECK( absolute.euclidean_distance(
+               script_point_coord::from( "abs", "ms", 13, 24 ) ) == Approx( 5.0 ) );
+    CHECK_THROWS_AS(
+        absolute.add( script_point_coord::from( "abs", "ms", 1, 1 ) ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        absolute.add( script_point_coord::from( "rel", "sm", 1, 1 ) ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_point_coord::from( "sm", "sm", 1, 1 ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_point_coord::from(
+            "abs", "ms", std::numeric_limits<std::int64_t>::max(), 0 ),
+        std::overflow_error );
+
+    const script_tripoint_coord position =
+        script_tripoint_coord::from( "bub", "ms", 10, 20, 3 );
+    const script_tripoint_coord delta =
+        script_tripoint_coord::from( "rel", "ms", -2, 4, 1 );
+    CHECK( position.add( delta ).to_native() == tripoint( 8, 24, 4 ) );
+    CHECK( position.add_xy( offset ).to_native() == tripoint( 7, 25, 3 ) );
+    CHECK( position.xy().to_native() == point( 10, 20 ) );
+    CHECK( position.subtract(
+               script_tripoint_coord::from( "bub", "ms", 7, 15, 1 ) ).origin() ==
+           "rel" );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local pos = game.coords.point_abs_ms(10, 20)
+local off = game.coords.point_rel_ms(-3, 5)
+local moved = pos + off
+assert(moved.x == 7 and moved.y == 25)
+assert(moved.origin == "abs" and moved.scale == "ms")
+assert(moved.type == "Point_abs_ms")
+assert((pos - game.coords.point_abs_ms(4, 8)).origin == "rel")
+assert((off * 3) == game.coords.point_rel_ms(-9, 15))
+assert((-off) == game.coords.point_rel_ms(3, -5))
+assert(pos:manhattan_distance(game.coords.point_abs_ms(13, 24)) == 7)
+assert(pos:square_distance(game.coords.point_abs_ms(13, 24)) == 4)
+assert(pos:euclidean_distance(game.coords.point_abs_ms(13, 24)) == 5)
+local tri = game.coords.tripoint_bub_ms(10, 20, 3)
+local tri_moved = tri + game.coords.tripoint_rel_ms(-2, 4, 1)
+assert(tri_moved == game.coords.tripoint_bub_ms(8, 24, 4))
+assert((tri + off) == game.coords.tripoint_bub_ms(7, 25, 3))
+assert(tri:xy() == game.coords.point_bub_ms(10, 20))
+assert(#game.coords.kinds() == 18)
+assert(pcall(function() pos.x = 0 end) == false)
+assert(pcall(function() return pos + game.coords.point_abs_ms(1, 1) end) == false)
+assert(pcall(function() return pos + game.coords.point_rel_sm(1, 1) end) == false)
+assert(pcall(function() return pos < game.coords.point_bub_ms(10, 20) end) == false)
+assert(tostring(pos) == "Point_abs_ms(10,20)")
 )lua" );
     REQUIRE( result.valid() );
 }

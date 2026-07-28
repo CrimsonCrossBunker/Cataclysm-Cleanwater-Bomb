@@ -1152,6 +1152,7 @@ LUA_C_SOURCE_NAMES := \
 LUA_C_SOURCES := $(addprefix $(SRC_DIR)/lua/,$(LUA_C_SOURCE_NAMES))
 LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_bindings.cpp \
+  $(SRC_DIR)/catalua_bindings_coords.cpp \
   $(SRC_DIR)/catalua_bindings_values.cpp \
   $(SRC_DIR)/catalua_game_handle.cpp \
   $(SRC_DIR)/catalua_ui.cpp \

@@ -15,6 +15,7 @@
 #include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "catalua_bindings_coords.h"
 #include "disease.h"
 #include "effect.h"
 #include "emit.h"
@@ -1007,6 +1008,8 @@ void install_value_type_api(
     time["before_time_starts"] =
         script_time_point::from_native( calendar::before_time_starts );
     game["time"] = std::move( time );
+
+    install_coordinate_value_api( lua, game, std::move( require_values ) );
 }
 
 } // namespace cata::lua_ui
