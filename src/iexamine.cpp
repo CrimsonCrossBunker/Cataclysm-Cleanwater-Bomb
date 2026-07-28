@@ -695,11 +695,11 @@ void iexamine::nanofab( Character &you, const tripoint_bub_ms &examp )
 /**
  * UI FOR LAB_FINALE SUPERALLOY FORGE.
  */
-void iexamine::nanoforge( player &p, const tripoint &examp )
+void iexamine::nanoforge( Character &you, const tripoint_bub_ms &examp )
 {
     if( !query_yn(
             _( "Use the superalloy forge? Requires 1 sheet metal and 5 nanomaterial canisters." ) ) ) {
-        none( p, examp );
+        none( you, examp );
         return;
     }
 
@@ -730,25 +730,23 @@ void iexamine::nanoforge( player &p, const tripoint &examp )
         return;
     }
 
-    int item_count = 1;
-
     detached_ptr<item> new_item = item::spawn( itype_id( chosen_recipe ), calendar::turn );
 
     auto qty = 1;
     auto reqs = *requirement_id( "superalloy_forge" ) * qty;
 
-    if( !reqs.can_make_with_inventory( p.crafting_inventory(), is_crafting_component ) ) {
+    if( !reqs.can_make_with_inventory( you.crafting_inventory(), is_crafting_component ) ) {
         popup( "%s", reqs.list_missing() );
         return;
     }
 
     for( const auto &e : reqs.get_components() ) {
-        p.consume_items( e, 1, is_crafting_component );
+        you.consume_items( e, 1, is_crafting_component );
     }
     for( const auto &e : reqs.get_tools() ) {
-        p.consume_tools( e );
+        you.consume_tools( e );
     }
-    p.invalidate_crafting_inventory();
+    you.invalidate_crafting_inventory();
 
     here.add_item_or_charges( spawn_point, std::move( new_item ) );
 }
