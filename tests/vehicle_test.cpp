@@ -21,6 +21,7 @@
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "map_scale_constants.h"
 #include "player_activity.h"
 #include "player_helpers.h"
@@ -833,6 +834,108 @@ TEST_CASE( "autopilot_tests", "[vehicle][autopilot]" )
     // checks if it moves, most of the test is a cutout from vehicle_efficiency_test.cpp
     CHECK( test_autopilot_moving( vehicle_prototype_car, vpart_id::NULL_ID() ) == 0 );
     CHECK( test_autopilot_moving( vehicle_prototype_car, vpart_programmable_autopilot ) == 9 );
+}
+
+TEST_CASE( "vehicle_damage_cancels_autodrive_without_braking", "[vehicle][autodrive][damage]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms vehicle_origin( 60, 60, 0 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_car, vehicle_origin, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->part_count() > 0 );
+
+    constexpr int cruising_speed = 7000;
+    veh->cruise_velocity = cruising_speed;
+    veh->is_autodriving = true;
+
+    veh->damage_direct( here, veh->part( 0 ), 1, damage_pure );
+
+    CHECK_FALSE( veh->is_autodriving );
+    CHECK( veh->cruise_velocity == cruising_speed );
+
+    // Collision handling can run after damage handling.  Its explicit stop
+    // request must still apply the brakes even though damage already cleared
+    // the autodriving flag.
+    veh->stop_autodriving();
+    CHECK( veh->cruise_velocity == 0 );
+}
+
+TEST_CASE( "autodrive_replanning_a_two_step_path_maintains_speed",
+           "[vehicle][autodrive]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    build_test_map( ter_id( "t_pavement" ) );
+    map &here = get_map();
+
+    constexpr int omt_size = coords::map_squares_per( coords::omt );
+    const tripoint_bub_ms probe( 60, 60, 0 );
+    const tripoint_abs_omt current_omt =
+        project_to<coords::omt>( here.get_abs( probe ) );
+    const tripoint_abs_ms omt_origin = project_to<coords::ms>( current_omt );
+    // At the cautious road speed of three tiles per turn, starting twelve
+    // tiles from the next OMT produces four straight cached steps.  Following
+    // two of them leaves exactly the current and next nodes in the cache.
+    const tripoint_abs_ms start_abs =
+        omt_origin + tripoint( omt_size - 12, omt_size / 2, 0 );
+    const tripoint_bub_ms start = here.get_bub( start_abs );
+    REQUIRE( here.inbounds( start ) );
+
+    avatar &driver = get_avatar();
+    driver.clear_map_memory();
+    const tripoint_abs_ms omt_end =
+        omt_origin + tripoint( omt_size - 1, omt_size - 1, 0 );
+    driver.prepare_map_memory_region( omt_origin, omt_end );
+    for( int x = 0; x < omt_size; ++x ) {
+        for( int y = 0; y < omt_size; ++y ) {
+            driver.memorize_terrain( omt_origin + tripoint( x, y, 0 ),
+                                     "t_pavement", 0, 0 );
+        }
+    }
+    REQUIRE( driver.is_map_memory_valid() );
+
+    vehicle *veh = here.add_vehicle( vehicle_prototype_car, start, 0_degrees, 100,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    veh->add_tag( "IN_CONTROL_OVERRIDE" );
+    driver.setpos( here, start + tripoint::south * 8 );
+    set_time_to_day();
+
+    constexpr int cautious_speed =
+        3 * static_cast<int>( vehicles::vmiph_per_tile );
+    veh->engine_on = true;
+    REQUIRE( veh->safe_velocity( here ) >= cautious_speed );
+    veh->velocity = cautious_speed;
+    veh->cruise_velocity = cautious_speed;
+    veh->is_autodriving = true;
+    driver.omt_path = { current_omt + tripoint::east };
+    driver.set_moves( 1000 );
+
+    REQUIRE( veh->do_autodrive( here, driver ) == autodrive_result::ok );
+    const int planned_speed = veh->cruise_velocity;
+    REQUIRE( planned_speed > static_cast<int>( vehicles::vmiph_per_tile ) );
+
+    // Follow two complete cached steps, leaving exactly two nodes.
+    for( int step = 0; step < 2; ++step ) {
+        REQUIRE( here.displace_vehicle( *veh, tripoint_rel_ms( 3, 0, 0 ) ) );
+        veh->skidding = false;
+        driver.set_moves( 1000 );
+        REQUIRE( veh->do_autodrive( here, driver ) == autodrive_result::ok );
+    }
+
+    // Move less than the final cached step predicted.  This is normal while a
+    // vehicle is accelerating and must trigger a same-speed replan even with
+    // only the current and next cached nodes remaining.
+    REQUIRE( here.displace_vehicle( *veh, tripoint_rel_ms::east ) );
+    veh->skidding = false;
+    driver.set_moves( 1000 );
+    REQUIRE( veh->do_autodrive( here, driver ) == autodrive_result::ok );
+    CHECK( veh->cruise_velocity == planned_speed );
+
+    driver.omt_path.clear();
+    here.destroy_vehicle( veh );
 }
 
 TEST_CASE( "vehicle_enchantments", "[vehicle][enchantments]" )
