@@ -7226,6 +7226,99 @@ assert(state.character.get("native_missions.success", 0) == 1)
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_weather_hooks_run_only_at_initialized_refresh_boundaries",
+           "[lua][bindings][hooks][weather][integration]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    weather_manager &weather = get_weather();
+    const weather_type_id weather_id_before = weather.weather_id;
+    const weather_type_id weather_override_before =
+        weather.weather_override;
+    const time_point nextweather_before = weather.nextweather;
+    const units::temperature temperature_before =
+        weather.temperature;
+    const int winddirection_before = weather.winddirection;
+    const int windspeed_before = weather.windspeed;
+    const std::optional<int> wind_direction_override_before =
+        weather.wind_direction_override;
+    const std::optional<int> windspeed_override_before =
+        weather.windspeed_override;
+    const w_point precise_before = *weather.weather_precise;
+    on_out_of_scope restore_weather( [
+        &weather, weather_id_before, weather_override_before,
+        nextweather_before, temperature_before,
+        winddirection_before, windspeed_before,
+        wind_direction_override_before,
+        windspeed_override_before, precise_before
+    ]() {
+        weather.weather_id = weather_id_before;
+        weather.weather_override = weather_override_before;
+        weather.nextweather = nextweather_before;
+        weather.temperature = temperature_before;
+        weather.winddirection = winddirection_before;
+        weather.windspeed = windspeed_before;
+        weather.wind_direction_override =
+            wind_direction_override_before;
+        weather.windspeed_override = windspeed_override_before;
+        *weather.weather_precise = precise_before;
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_weather_changed", function(payload)
+    assert(payload.before == "clear")
+    assert(payload.after == "drizzle")
+    state.character.set(
+        "native_weather.changed",
+        state.character.get("native_weather.changed", 0) + 1)
+end)
+
+game.hooks.on("on_weather_updated", function(payload)
+    assert(payload.weather == "drizzle")
+    assert(type(payload.temperature) == "number")
+    assert(math.type(payload.windpower) == "integer")
+    state.character.set(
+        "native_weather.updated",
+        state.character.get("native_weather.updated", 0) + 1)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+
+    weather.weather_id = WEATHER_NULL;
+    weather.weather_override = WEATHER_CLEAR;
+    weather.nextweather = calendar::turn;
+    weather.update_weather();
+
+    weather.weather_override = weather_type_id( "drizzle" );
+    weather.nextweather = calendar::turn;
+    weather.update_weather();
+
+    weather.nextweather = calendar::turn + 1_hours;
+    weather.update_weather();
+
+    weather.nextweather = calendar::turn;
+    weather.update_weather();
+
+    script.write( R"lua(
+assert(state.character.get("native_weather.changed", 0) == 1)
+assert(state.character.get("native_weather.updated", 0) == 2)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
            "[lua][bindings][callbacks][integration]" )
 {
