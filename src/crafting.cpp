@@ -3379,10 +3379,13 @@ std::optional<item_components> Character::preview_crafting_components(
                 map &here = get_map();
                 const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
                             pos_bub(), PICKUP_RANGE, 1, 100 );
+                const bool vehicle_first = !by_charges;
                 for( const tripoint_bub_ms &point : reachable ) {
                     for( item_location &location : map_candidates ) {
+                        const bool vehicle_location = location.where_recursive() ==
+                                                      item_location::type::vehicle;
                         if( location.pos_bub( here ) == point &&
-                            location.where_recursive() != item_location::type::vehicle ) {
+                            vehicle_location == vehicle_first ) {
                             add_candidate( location );
                         }
                     }
@@ -3391,8 +3394,10 @@ std::optional<item_components> Character::preview_crafting_components(
                                                     sources );
                     }
                     for( item_location &location : map_candidates ) {
+                        const bool vehicle_location = location.where_recursive() ==
+                                                      item_location::type::vehicle;
                         if( location.pos_bub( here ) == point &&
-                            location.where_recursive() == item_location::type::vehicle ) {
+                            vehicle_location != vehicle_first ) {
                             add_candidate( location );
                         }
                     }
