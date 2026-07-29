@@ -6,6 +6,7 @@
 #include "coordinates.h"
 #include "debug.h"
 #include "item.h"
+#include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "type_id.h"
@@ -13,9 +14,13 @@
 static const itype_id itype_arrow_field_point_fletched( "arrow_field_point_fletched" );
 static const itype_id itype_arrow_flamming( "arrow_flamming" );
 static const itype_id itype_cheese_hard( "cheese_hard" );
+static const itype_id itype_dehydrated_cured_meat( "dehydrated_cured_meat" );
 static const itype_id itype_grenade_act( "grenade_act" );
+static const itype_id itype_meat( "meat" );
 static const itype_id itype_migo_plate( "migo_plate" );
 static const itype_id itype_migo_plate_undergrown( "migo_plate_undergrown" );
+static const itype_id itype_raw_cured_meat( "raw_cured_meat" );
+static const itype_id itype_raw_curing_meat_active( "raw_curing_meat_active" );
 static const itype_id itype_tear_gas_payload_act( "tear_gas_payload_act" );
 static const itype_id itype_test_rock_cheese( "test_rock_cheese" );
 
@@ -115,4 +120,33 @@ TEST_CASE( "countdown_action_revert_to", "[item]" )
         // Timer is gone
         CHECK( test_item.countdown_point == calendar::turn_max );
     }
+}
+
+TEST_CASE( "curing_meat_countdown_preserves_food_provenance", "[item][food][curing]" )
+{
+    item source_meat( itype_meat );
+    source_meat.set_relative_rot( 0.25 );
+
+    item curing_meat( itype_raw_curing_meat_active );
+    curing_meat.set_relative_rot( source_meat.get_relative_rot() );
+    curing_meat.components.add( source_meat );
+
+    REQUIRE( curing_meat.active );
+    CHECK( curing_meat.countdown_point == calendar::turn + 7_days );
+
+    curing_meat.countdown_point = calendar::turn;
+    CHECK_FALSE( curing_meat.process( get_map(), nullptr, tripoint_bub_ms::zero ) );
+
+    CHECK( curing_meat.typeId() == itype_raw_cured_meat );
+    CHECK( curing_meat.active );
+    CHECK( curing_meat.countdown_point == calendar::turn_max );
+    CHECK( curing_meat.get_relative_rot() == Approx( 0.25 ) );
+
+    REQUIRE( curing_meat.components.size() == 1 );
+    const item preserved_component = curing_meat.components.only_item();
+    CHECK( preserved_component.typeId() == itype_meat );
+    CHECK( preserved_component.get_relative_rot() == Approx( 0.25 ) );
+
+    REQUIRE( curing_meat.is_smokable() );
+    CHECK( curing_meat.get_comestible()->smoking_result == itype_dehydrated_cured_meat );
 }
