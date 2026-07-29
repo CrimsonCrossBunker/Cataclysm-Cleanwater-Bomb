@@ -36,6 +36,7 @@ struct runtime_status {
     std::size_t generation = 0;
     std::size_t world_generation = 0;
     std::size_t page_count = 0;
+    std::size_t action_menu_entry_count = 0;
     std::size_t event_handler_count = 0;
     std::size_t mapgen_handler_count = 0;
     std::size_t source_count = 0;
@@ -55,6 +56,16 @@ struct page_info {
     std::string category;
     std::vector<std::string> slots;
     int order = 100;
+};
+
+struct action_menu_entry_info {
+    std::uint64_t registration_id = 0;
+    std::string id;
+    std::string name;
+    std::string category;
+    std::string source;
+    int hotkey = -1;
+    bool enabled = true;
 };
 
 enum class world_ready_kind : int {
@@ -200,6 +211,12 @@ std::vector<page_info> registered_pages( std::string_view slot = {} );
 bool has_registered_pages( std::string_view slot = {} );
 bool show_page( std::string_view page_id );
 void show_slot( std::string_view slot );
+
+// Source-owned action-menu entries are replaced transactionally with the Lua
+// runtime.  Invocation restores the registering source's capabilities and
+// applies the normal callback instruction budget.
+std::vector<action_menu_entry_info> registered_action_menu_entries();
+bool invoke_action_menu_entry( std::uint64_t registration_id );
 
 // Open one page requested by a Lua event callback at the next safe game-input
 // boundary.  Returns true when a request was handled.

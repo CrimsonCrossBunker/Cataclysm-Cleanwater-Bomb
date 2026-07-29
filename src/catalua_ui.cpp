@@ -72,6 +72,7 @@
 #include "game.h"
 #include "game_constants.h"
 #include "imgui/imgui.h"
+#include "input.h"
 #include "input_context.h"
 #include "input_context_actions.h"
 #include "item.h"
@@ -106,6 +107,9 @@ constexpr int callback_instruction_limit = 250000;
 constexpr int instruction_hook_quantum = 1000;
 constexpr std::uint64_t slow_callback_threshold_us = 8000;
 constexpr std::size_t maximum_page_stack_depth = 32;
+constexpr std::size_t maximum_action_menu_entries = 128;
+constexpr std::size_t maximum_action_menu_entries_per_source = 32;
+constexpr std::size_t maximum_action_menu_name_bytes = 256;
 constexpr std::size_t maximum_diagnostic_records = 64;
 constexpr std::size_t maximum_diagnostic_context_bytes = 512;
 constexpr std::size_t maximum_diagnostic_message_bytes = 8192;
@@ -279,6 +283,18 @@ struct page_definition {
     std::size_t source_index = 0;
 };
 
+struct action_menu_definition {
+    std::uint64_t registration_id = 0;
+    std::string id;
+    std::string name;
+    std::string category = "misc";
+    int hotkey = -1;
+    sol::protected_function callback;
+    bool enabled = true;
+    std::string error;
+    std::size_t source_index = 0;
+};
+
 struct script_source {
     script_manifest manifest;
     fs::path root;
@@ -323,6 +339,8 @@ class runtime_state : public event_subscriber
         std::unordered_map<std::string, sol::protected_function> service_methods;
         int service_call_depth = 0;
         std::vector<page_definition> pages;
+        std::vector<action_menu_definition> action_menu_entries;
+        std::uint64_t next_action_menu_registration_id = 1;
         script_event_registry event_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
         script_event_registry hook_registry;
@@ -837,6 +855,184 @@ void register_page( runtime_state &state, const std::string &id, const sol::obje
     } else {
         *existing = std::move( replacement );
     }
+}
+
+int action_menu_hotkey( const sol::table &descriptor )
+{
+    const sol::object raw_hotkey = descriptor["hotkey"];
+    if( !raw_hotkey.valid() || raw_hotkey.get_type() == sol::type::nil ) {
+        return -1;
+    }
+    if( raw_hotkey.get_type() != sol::type::string ) {
+        throw std::invalid_argument(
+            "game.action_menu.register hotkey must be a string" );
+    }
+    const std::string hotkey = raw_hotkey.as<std::string>();
+    if( hotkey.empty() ) {
+        return -1;
+    }
+    if( hotkey.size() > 64 ) {
+        throw std::invalid_argument(
+            "game.action_menu.register hotkey exceeds 64 bytes" );
+    }
+    if( hotkey.size() == 1 ) {
+        return static_cast<unsigned char>( hotkey.front() );
+    }
+    int keycode = inp_mngr.get_keycode(
+                      input_event_t::keyboard_char, hotkey );
+    if( keycode == 0 ) {
+        keycode = inp_mngr.get_keycode(
+                      input_event_t::keyboard_code, hotkey );
+    }
+    if( keycode == 0 ) {
+        throw std::invalid_argument(
+            "game.action_menu.register received an unknown hotkey name" );
+    }
+    return keycode;
+}
+
+std::uint64_t register_action_menu_entry(
+    runtime_state &state, const sol::table &descriptor,
+    sol::protected_function callback )
+{
+    require_api_version( state, 5, "game.action_menu.register" );
+    require_capability( state, "ui.pages" );
+    if( !callback.valid() ) {
+        throw std::invalid_argument(
+            "game.action_menu.register requires a callback" );
+    }
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.action_menu.register option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "id" && key != "name" &&
+            key != "category" && key != "hotkey" ) {
+            throw std::invalid_argument(
+                "game.action_menu.register received unknown option '" +
+                key + "'" );
+        }
+    }
+
+    action_menu_definition replacement;
+    replacement.id = descriptor.get_or(
+                         "id", std::string() );
+    replacement.name = descriptor.get_or(
+                           "name", replacement.id );
+    replacement.category = descriptor.get_or(
+                               "category", std::string( "misc" ) );
+    replacement.hotkey = action_menu_hotkey( descriptor );
+    replacement.callback = std::move( callback );
+    replacement.source_index = *state.current_source;
+    if( !is_safe_service_identifier( replacement.id ) ) {
+        throw std::invalid_argument(
+            "game.action_menu.register id must be a safe 1..128 byte identifier" );
+    }
+    if( replacement.name.empty() ||
+        replacement.name.size() > maximum_action_menu_name_bytes ) {
+        throw std::invalid_argument(
+            "game.action_menu.register name must contain 1..256 bytes" );
+    }
+    if( !is_safe_service_identifier( replacement.category ) ) {
+        throw std::invalid_argument(
+            "game.action_menu.register category must be a safe 1..128 byte identifier" );
+    }
+
+    const auto existing = std::find_if(
+                              state.action_menu_entries.begin(),
+                              state.action_menu_entries.end(),
+    [&replacement]( const action_menu_definition & entry ) {
+        return entry.source_index == replacement.source_index &&
+               entry.id == replacement.id;
+    } );
+    if( existing != state.action_menu_entries.end() ) {
+        replacement.registration_id = existing->registration_id;
+        *existing = std::move( replacement );
+        return existing->registration_id;
+    }
+
+    const std::size_t source_count = std::count_if(
+                                         state.action_menu_entries.begin(),
+                                         state.action_menu_entries.end(),
+    [&replacement]( const action_menu_definition & entry ) {
+        return entry.source_index == replacement.source_index;
+    } );
+    if( state.action_menu_entries.size() >=
+        maximum_action_menu_entries ) {
+        throw std::runtime_error(
+            "game.action_menu runtime entry limit reached" );
+    }
+    if( source_count >= maximum_action_menu_entries_per_source ) {
+        throw std::runtime_error(
+            "game.action_menu source entry limit reached" );
+    }
+
+    replacement.registration_id =
+        state.next_action_menu_registration_id++;
+    const std::uint64_t result = replacement.registration_id;
+    state.action_menu_entries.emplace_back(
+        std::move( replacement ) );
+    return result;
+}
+
+bool unregister_action_menu_entry(
+    runtime_state &state, const std::uint64_t registration_id )
+{
+    require_api_version( state, 5, "game.action_menu.off" );
+    require_capability( state, "ui.pages" );
+    const auto found = std::find_if(
+                           state.action_menu_entries.begin(),
+                           state.action_menu_entries.end(),
+    [registration_id]( const action_menu_definition & entry ) {
+        return entry.registration_id == registration_id;
+    } );
+    if( found == state.action_menu_entries.end() ||
+        found->source_index != *state.current_source ) {
+        return false;
+    }
+    state.action_menu_entries.erase( found );
+    return true;
+}
+
+sol::table action_menu_entries_to_lua(
+    runtime_state &state, sol::this_state lua )
+{
+    require_api_version( state, 5, "game.action_menu.list" );
+    require_capability( state, "ui.pages" );
+    sol::state_view lua_state( lua );
+    sol::table result = lua_state.create_table(
+                            static_cast<int>(
+                                state.action_menu_entries.size() ), 0 );
+    for( std::size_t index = 0;
+         index < state.action_menu_entries.size(); ++index ) {
+        const action_menu_definition &definition =
+            state.action_menu_entries[index];
+        sol::table entry = lua_state.create_table();
+        entry["registration_id"] = definition.registration_id;
+        entry["id"] = definition.id;
+        entry["name"] = definition.name;
+        entry["category"] = definition.category;
+        entry["source"] =
+            state.sources[definition.source_index].manifest.id;
+        entry["enabled"] = definition.enabled;
+        result[index + 1] = std::move( entry );
+    }
+    return result;
+}
+
+sol::table action_menu_limits_to_lua(
+    runtime_state &state, sol::this_state lua )
+{
+    require_api_version( state, 5, "game.action_menu.limits" );
+    require_capability( state, "ui.pages" );
+    sol::state_view lua_state( lua );
+    return lua_state.create_table_with(
+               "entries", maximum_action_menu_entries,
+               "entries_per_source",
+               maximum_action_menu_entries_per_source,
+               "name_bytes", maximum_action_menu_name_bytes,
+               "callback_instructions", callback_instruction_limit );
 }
 
 std::string local_custom_event_name( const runtime_state &state,
@@ -1681,6 +1877,8 @@ sol::table lua_runtime_status( sol::this_state lua, const runtime_state &runtime
     result["generation"] = runtime.generation;
     result["world_generation"] = runtime.world_generation;
     result["pages"] = runtime.pages.size();
+    result["action_menu_entries"] =
+        runtime.action_menu_entries.size();
     result["event_handlers"] = runtime.event_registry.size();
     result["mapgen_handlers"] = runtime.mapgen_registry.size();
     result["sources"] = runtime.sources.size();
@@ -1720,6 +1918,7 @@ sol::table diagnostic_string_array(
 
 struct source_resource_counts {
     std::size_t pages = 0;
+    std::size_t action_menu_entries = 0;
     std::size_t event_handlers = 0;
     std::size_t mapgen_handlers = 0;
     std::size_t scheduled_tasks = 0;
@@ -1734,6 +1933,12 @@ std::vector<source_resource_counts> count_source_resources(
     for( const page_definition &page : runtime.pages ) {
         if( page.source_index < result.size() ) {
             ++result[page.source_index].pages;
+        }
+    }
+    for( const action_menu_definition &entry :
+         runtime.action_menu_entries ) {
+        if( entry.source_index < result.size() ) {
+            ++result[entry.source_index].action_menu_entries;
         }
     }
     for( const script_event_subscription &event :
@@ -1827,6 +2032,8 @@ sol::table lua_runtime_diagnostics(
 
     sol::table resources = state.create_table();
     resources["pages"] = runtime.pages.size();
+    resources["action_menu_entries"] =
+        runtime.action_menu_entries.size();
     resources["event_handlers"] = runtime.event_registry.size();
     resources["mapgen_handlers"] = runtime.mapgen_registry.size();
     resources["scheduled_tasks"] = runtime.scheduler.size();
@@ -1858,6 +2065,10 @@ sol::table lua_runtime_diagnostics(
     limits["service_methods"] =
         script_service_registry::maximum_methods_per_service;
     limits["page_stack_depth"] = maximum_page_stack_depth;
+    limits["action_menu_entries"] =
+        maximum_action_menu_entries;
+    limits["action_menu_entries_per_source"] =
+        maximum_action_menu_entries_per_source;
     limits["diagnostic_records"] = maximum_diagnostic_records;
     limits["module_name_bytes"] = maximum_module_name_bytes;
     limits["module_source_bytes"] = maximum_module_source_bytes;
@@ -1882,6 +2093,8 @@ sol::table lua_runtime_diagnostics(
         source["dependencies"] =
             diagnostic_string_array( state, manifest.dependencies );
         source["pages"] = counts.pages;
+        source["action_menu_entries"] =
+            counts.action_menu_entries;
         source["event_handlers"] = counts.event_handlers;
         source["mapgen_handlers"] = counts.mapgen_handlers;
         source["scheduled_tasks"] = counts.scheduled_tasks;
@@ -2291,6 +2504,29 @@ void initialize_state( runtime_state &state )
 
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
+    sol::table action_menu = state.lua.create_table();
+    action_menu.set_function(
+        "register",
+        [&state]( const sol::table & descriptor,
+    sol::protected_function callback ) {
+        return register_action_menu_entry(
+                   state, descriptor, std::move( callback ) );
+    } );
+    action_menu.set_function(
+    "off", [&state]( const std::uint64_t id ) {
+        return unregister_action_menu_entry( state, id );
+    } );
+    action_menu.set_function(
+        "list",
+    [&state]( sol::this_state lua ) {
+        return action_menu_entries_to_lua( state, lua );
+    } );
+    action_menu.set_function(
+        "limits",
+    [&state]( sol::this_state lua ) {
+        return action_menu_limits_to_lua( state, lua );
+    } );
+    game["action_menu"] = std::move( action_menu );
     install_value_type_api( state.lua, game, [&state]() {
         require_api_version( state, 5, "game.types" );
         require_capability( state, "game.read" );
@@ -5087,6 +5323,8 @@ runtime_status status()
         result.generation = active_state->generation;
         result.world_generation = active_state->world_generation;
         result.page_count = active_state->pages.size();
+        result.action_menu_entry_count =
+            active_state->action_menu_entries.size();
         result.event_handler_count = active_state->event_registry.size();
         result.mapgen_handler_count =
             active_state->mapgen_registry.size();
@@ -5187,6 +5425,85 @@ bool has_registered_pages( const std::string_view slot )
         return slot.empty() || std::find( page.slots.begin(), page.slots.end(), slot ) !=
                page.slots.end();
     } );
+}
+
+std::vector<action_menu_entry_info>
+registered_action_menu_entries()
+{
+    std::vector<action_menu_entry_info> result;
+    if( !active_state ) {
+        return result;
+    }
+    result.reserve( active_state->action_menu_entries.size() );
+    for( const action_menu_definition &definition :
+         active_state->action_menu_entries ) {
+        if( definition.source_index >=
+            active_state->sources.size() ) {
+            continue;
+        }
+        result.push_back( {
+            definition.registration_id,
+            definition.id,
+            definition.name,
+            definition.category,
+            active_state->sources[
+            definition.source_index].manifest.id,
+            definition.hotkey,
+            definition.enabled
+        } );
+    }
+    return result;
+}
+
+bool invoke_action_menu_entry(
+    const std::uint64_t registration_id )
+{
+    if( !active_state || !active_state->accept_actions ) {
+        return false;
+    }
+    const auto found = std::find_if(
+                           active_state->action_menu_entries.begin(),
+                           active_state->action_menu_entries.end(),
+    [registration_id]( const action_menu_definition & definition ) {
+        return definition.registration_id == registration_id;
+    } );
+    if( found == active_state->action_menu_entries.end() ||
+        !found->enabled ||
+        found->source_index >= active_state->sources.size() ) {
+        return false;
+    }
+
+    const std::string entry_id = found->id;
+    const std::size_t source_index = found->source_index;
+    sol::protected_function callback = found->callback;
+    source_scope source( *active_state, source_index );
+    instruction_guard guard(
+        active_state->lua.lua_state(),
+        callback_instruction_limit );
+    const auto started = std::chrono::steady_clock::now();
+    const sol::protected_function_result result = callback();
+    record_callback_timing(
+        *active_state,
+        "action menu entry '" + entry_id + "'", started );
+    if( !result.valid() ) {
+        const sol::error error = result;
+        const std::string message = error.what();
+        const auto current = std::find_if(
+                                 active_state->action_menu_entries.begin(),
+                                 active_state->action_menu_entries.end(),
+        [registration_id]( const action_menu_definition & definition ) {
+            return definition.registration_id == registration_id;
+        } );
+        if( current != active_state->action_menu_entries.end() ) {
+            current->enabled = false;
+            current->error = message;
+        }
+        record_runtime_error(
+            "Lua action menu entry '" + entry_id + "'",
+            message );
+        return false;
+    }
+    return true;
 }
 
 bool show_page( const std::string_view page_id )

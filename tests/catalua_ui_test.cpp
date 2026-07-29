@@ -5501,6 +5501,103 @@ end)
     CHECK( status.callback_count == 0 );
 }
 
+TEST_CASE( "lua_action_menu_entries_are_owned_bounded_and_callback_scoped",
+           "[lua][ui][action_menu][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.read", "state.character", "ui.pages"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+state.character.set("action_menu.invocations", 0)
+local top_level_random = pcall(function()
+    game.random.int(1, 1)
+end)
+assert(top_level_random == false)
+
+local removed = game.action_menu.register({
+    id = "removed", name = "Removed"
+}, function()
+    error("removed action ran")
+end)
+assert(game.action_menu.off(removed) == true)
+assert(game.action_menu.off(removed) == false)
+
+local action = game.action_menu.register({
+    id = "inspect_status",
+    name = "Inspect status",
+    category = "info",
+    hotkey = "i"
+}, function()
+    assert(game.random.int(1, 1) == 1)
+    state.character.set(
+        "action_menu.invocations",
+        state.character.get("action_menu.invocations", 0) + 1)
+end)
+local replacement = game.action_menu.register({
+    id = "inspect_status",
+    name = "Inspect status",
+    category = "info",
+    hotkey = "i"
+}, function()
+    assert(game.random.int(1, 1) == 1)
+    state.character.set(
+        "action_menu.invocations",
+        state.character.get("action_menu.invocations", 0) + 1)
+end)
+assert(action == replacement)
+
+local entries = game.action_menu.list()
+assert(#entries == 1)
+assert(entries[1].registration_id == action)
+assert(entries[1].id == "inspect_status")
+assert(entries[1].name == "Inspect status")
+assert(entries[1].category == "info")
+assert(entries[1].source == "user")
+assert(entries[1].enabled == true)
+local limits = game.action_menu.limits()
+assert(limits.entries == 128)
+assert(limits.entries_per_source == 32)
+assert(limits.callback_instructions > 0)
+assert(pcall(function()
+    game.action_menu.register({
+        id = "../invalid", name = "Invalid"
+    }, function() end)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    const runtime_status before = status();
+    CHECK( before.action_menu_entry_count == 1 );
+
+    const std::vector<action_menu_entry_info> entries =
+        registered_action_menu_entries();
+    REQUIRE( entries.size() == 1 );
+    CHECK( entries.front().id == "inspect_status" );
+    CHECK( entries.front().name == "Inspect status" );
+    CHECK( entries.front().category == "info" );
+    CHECK( entries.front().source == "user" );
+    CHECK( entries.front().hotkey == 'i' );
+    CHECK( entries.front().enabled );
+    REQUIRE( invoke_action_menu_entry(
+                 entries.front().registration_id ) );
+
+    script.write( R"lua(
+assert(state.character.get("action_menu.invocations", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    CHECK( status().action_menu_entry_count == 0 );
+}
+
 TEST_CASE( "lua_game_snapshots_are_bounded_read_only_values", "[lua][ui][game][integration]" )
 {
     scoped_lua_user_script script;

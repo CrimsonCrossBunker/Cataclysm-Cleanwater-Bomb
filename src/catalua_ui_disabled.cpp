@@ -179,6 +179,17 @@ bool has_registered_pages( std::string_view )
     return false;
 }
 
+std::vector<action_menu_entry_info>
+registered_action_menu_entries()
+{
+    return {};
+}
+
+bool invoke_action_menu_entry( std::uint64_t )
+{
+    return false;
+}
+
 bool show_page( std::string_view )
 {
     return false;
