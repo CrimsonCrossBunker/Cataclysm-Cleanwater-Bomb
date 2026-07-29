@@ -190,6 +190,22 @@ bool invoke_action_menu_entry( std::uint64_t )
     return false;
 }
 
+std::vector<sidebar_widget_info> registered_sidebar_widgets()
+{
+    return {};
+}
+
+bool sidebar_widget_visible( std::string_view )
+{
+    return false;
+}
+
+std::vector<sidebar_widget_line> render_sidebar_widget(
+    std::string_view, int, int )
+{
+    return {};
+}
+
 bool show_page( std::string_view )
 {
     return false;

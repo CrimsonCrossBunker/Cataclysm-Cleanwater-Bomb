@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <deque>
 #include <filesystem>
@@ -82,6 +83,7 @@
 #include "mapgendata.h"
 #include "mod_manager.h"
 #include "output.h"
+#include "panels.h"
 #include "path_info.h"
 #include "talker.h"
 #include "translations.h"
@@ -110,6 +112,14 @@ constexpr std::size_t maximum_page_stack_depth = 32;
 constexpr std::size_t maximum_action_menu_entries = 128;
 constexpr std::size_t maximum_action_menu_entries_per_source = 32;
 constexpr std::size_t maximum_action_menu_name_bytes = 256;
+constexpr std::size_t maximum_sidebar_widgets = 64;
+constexpr std::size_t maximum_sidebar_widgets_per_source = 16;
+constexpr std::size_t maximum_sidebar_widget_name_bytes = 256;
+constexpr std::size_t maximum_sidebar_widget_lines = 64;
+constexpr std::size_t maximum_sidebar_widget_line_bytes = 4096;
+constexpr std::size_t maximum_sidebar_widget_output_bytes = 32768;
+constexpr std::size_t maximum_sidebar_widget_color_bytes = 64;
+constexpr int maximum_sidebar_widget_height = 64;
 constexpr std::size_t maximum_diagnostic_records = 64;
 constexpr std::size_t maximum_diagnostic_context_bytes = 512;
 constexpr std::size_t maximum_diagnostic_message_bytes = 8192;
@@ -295,6 +305,23 @@ struct action_menu_definition {
     std::size_t source_index = 0;
 };
 
+struct sidebar_widget_definition {
+    std::uint64_t registration_id = 0;
+    std::string id;
+    std::string name;
+    int height = 1;
+    std::optional<int> order;
+    bool default_toggle = true;
+    bool redraw_every_frame = false;
+    std::optional<bool> panel_visible_value;
+    std::optional<sol::protected_function> panel_visible;
+    std::optional<sol::protected_function> render;
+    sol::protected_function draw;
+    bool enabled = true;
+    std::string error;
+    std::size_t source_index = 0;
+};
+
 struct script_source {
     script_manifest manifest;
     fs::path root;
@@ -341,6 +368,8 @@ class runtime_state : public event_subscriber
         std::vector<page_definition> pages;
         std::vector<action_menu_definition> action_menu_entries;
         std::uint64_t next_action_menu_registration_id = 1;
+        std::vector<sidebar_widget_definition> sidebar_widgets;
+        std::uint64_t next_sidebar_widget_registration_id = 1;
         script_event_registry event_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
         script_event_registry hook_registry;
@@ -729,9 +758,9 @@ sol::table clone_api_table( sol::state_view lua, const sol::table &source, const
 
 void create_source_environments( runtime_state &state )
 {
-    static const std::array<std::string_view, 12> isolated_tables = {
+    static const std::array<std::string_view, 13> isolated_tables = {
         "ui", "events", "game", "state", "i18n", "modules", "registry", "scheduler",
-        "services", "math", "string", "table"
+        "services", "sidebar", "math", "string", "table"
     };
     static const std::array<std::string_view, 21> safe_globals = {
         "_VERSION", "assert", "error", "getmetatable", "ipairs", "next", "pairs",
@@ -1033,6 +1062,299 @@ sol::table action_menu_limits_to_lua(
                maximum_action_menu_entries_per_source,
                "name_bytes", maximum_action_menu_name_bytes,
                "callback_instructions", callback_instruction_limit );
+}
+
+std::optional<int> sidebar_integer_option(
+    const sol::table &descriptor, const char *name )
+{
+    const sol::object value = descriptor[name];
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::number ) {
+        throw std::invalid_argument(
+            std::string( "sidebar.register_widget " ) + name +
+            " must be an integer" );
+    }
+    const double number = value.as<double>();
+    if( !std::isfinite( number ) || std::floor( number ) != number ||
+        number < static_cast<double>( std::numeric_limits<int>::min() ) ||
+        number > static_cast<double>( std::numeric_limits<int>::max() ) ) {
+        throw std::invalid_argument(
+            std::string( "sidebar.register_widget " ) + name +
+            " must be an integer" );
+    }
+    return static_cast<int>( number );
+}
+
+bool sidebar_boolean_option(
+    const sol::table &descriptor, const char *name,
+    const bool fallback )
+{
+    const sol::object value = descriptor[name];
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return fallback;
+    }
+    if( value.get_type() != sol::type::boolean ) {
+        throw std::invalid_argument(
+            std::string( "sidebar.register_widget " ) + name +
+            " must be a boolean" );
+    }
+    return value.as<bool>();
+}
+
+std::string sidebar_string_option(
+    const sol::table &descriptor, const char *name,
+    const std::string &fallback )
+{
+    const sol::object value = descriptor[name];
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return fallback;
+    }
+    if( value.get_type() != sol::type::string ) {
+        throw std::invalid_argument(
+            std::string( "sidebar.register_widget " ) + name +
+            " must be a string" );
+    }
+    return value.as<std::string>();
+}
+
+std::uint64_t register_sidebar_widget(
+    runtime_state &state, const sol::table &descriptor )
+{
+    require_api_version( state, 5, "sidebar.register_widget" );
+    require_capability( state, "ui.pages" );
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "sidebar.register_widget option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "id" && key != "name" && key != "height" &&
+            key != "order" && key != "default_toggle" &&
+            key != "redraw_every_frame" && key != "panel_visible" &&
+            key != "draw" && key != "render" ) {
+            throw std::invalid_argument(
+                "sidebar.register_widget received unknown option '" +
+                key + "'" );
+        }
+    }
+
+    sidebar_widget_definition replacement;
+    replacement.id = sidebar_string_option(
+                         descriptor, "id", std::string() );
+    replacement.name = sidebar_string_option(
+                           descriptor, "name", replacement.id );
+    replacement.height =
+        sidebar_integer_option( descriptor, "height" ).value_or( 1 );
+    replacement.order =
+        sidebar_integer_option( descriptor, "order" );
+    replacement.default_toggle = sidebar_boolean_option(
+                                     descriptor, "default_toggle", true );
+    replacement.redraw_every_frame = sidebar_boolean_option(
+                                         descriptor, "redraw_every_frame", false );
+    replacement.source_index = *state.current_source;
+
+    const sol::object draw = descriptor["draw"];
+    if( !draw.valid() || draw.get_type() != sol::type::function ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget requires a draw function" );
+    }
+    replacement.draw = draw.as<sol::protected_function>();
+
+    const sol::object panel_visible = descriptor["panel_visible"];
+    if( panel_visible.valid() &&
+        panel_visible.get_type() != sol::type::nil ) {
+        if( panel_visible.get_type() == sol::type::boolean ) {
+            replacement.panel_visible_value =
+                panel_visible.as<bool>();
+        } else if( panel_visible.get_type() ==
+                   sol::type::function ) {
+            replacement.panel_visible =
+                panel_visible.as<sol::protected_function>();
+        } else {
+            throw std::invalid_argument(
+                "sidebar.register_widget panel_visible must be a boolean or function" );
+        }
+    }
+
+    const sol::object render = descriptor["render"];
+    if( render.valid() && render.get_type() != sol::type::nil ) {
+        if( render.get_type() != sol::type::function ) {
+            throw std::invalid_argument(
+                "sidebar.register_widget render must be a function" );
+        }
+        replacement.render =
+            render.as<sol::protected_function>();
+    }
+
+    if( !is_safe_service_identifier( replacement.id ) ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget id must be a safe 1..128 byte identifier" );
+    }
+    if( replacement.name.empty() ||
+        replacement.name.size() >
+        maximum_sidebar_widget_name_bytes ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget name must contain 1..256 bytes" );
+    }
+    if( replacement.height != -2 &&
+        ( replacement.height < 1 ||
+          replacement.height > maximum_sidebar_widget_height ) ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget height must be -2 or within 1..64" );
+    }
+    if( replacement.order &&
+        ( *replacement.order < 1 || *replacement.order > 512 ) ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget order must be within 1..512" );
+    }
+
+    const auto existing = std::find_if(
+                              state.sidebar_widgets.begin(),
+                              state.sidebar_widgets.end(),
+    [&replacement]( const sidebar_widget_definition & entry ) {
+        return entry.source_index == replacement.source_index &&
+               entry.id == replacement.id;
+    } );
+    if( existing != state.sidebar_widgets.end() ) {
+        replacement.registration_id =
+            existing->registration_id;
+        *existing = std::move( replacement );
+        return existing->registration_id;
+    }
+
+    const std::size_t source_count = std::count_if(
+                                         state.sidebar_widgets.begin(),
+                                         state.sidebar_widgets.end(),
+    [&replacement]( const sidebar_widget_definition & entry ) {
+        return entry.source_index == replacement.source_index;
+    } );
+    if( state.sidebar_widgets.size() >=
+        maximum_sidebar_widgets ) {
+        throw std::runtime_error(
+            "sidebar runtime widget limit reached" );
+    }
+    if( source_count >=
+        maximum_sidebar_widgets_per_source ) {
+        throw std::runtime_error(
+            "sidebar source widget limit reached" );
+    }
+
+    replacement.registration_id =
+        state.next_sidebar_widget_registration_id++;
+    const std::uint64_t result =
+        replacement.registration_id;
+    state.sidebar_widgets.emplace_back(
+        std::move( replacement ) );
+    return result;
+}
+
+bool unregister_sidebar_widget(
+    runtime_state &state, const std::uint64_t registration_id )
+{
+    require_api_version( state, 5, "sidebar.off" );
+    require_capability( state, "ui.pages" );
+    const auto found = std::find_if(
+                           state.sidebar_widgets.begin(),
+                           state.sidebar_widgets.end(),
+    [registration_id]( const sidebar_widget_definition & entry ) {
+        return entry.registration_id == registration_id;
+    } );
+    if( found == state.sidebar_widgets.end() ||
+        found->source_index != *state.current_source ) {
+        return false;
+    }
+    state.sidebar_widgets.erase( found );
+    return true;
+}
+
+std::size_t clear_sidebar_widgets( runtime_state &state )
+{
+    require_api_version( state, 5, "sidebar.clear_widgets" );
+    require_capability( state, "ui.pages" );
+    const std::size_t before = state.sidebar_widgets.size();
+    const std::size_t source_index = *state.current_source;
+    state.sidebar_widgets.erase(
+        std::remove_if(
+            state.sidebar_widgets.begin(),
+            state.sidebar_widgets.end(),
+    [source_index]( const sidebar_widget_definition & entry ) {
+        return entry.source_index == source_index;
+    } ),
+    state.sidebar_widgets.end() );
+    return before - state.sidebar_widgets.size();
+}
+
+std::string sidebar_widget_key(
+    const runtime_state &state,
+    const sidebar_widget_definition &definition )
+{
+    if( definition.source_index >= state.sources.size() ) {
+        return {};
+    }
+    return "lua:" +
+           state.sources[definition.source_index].manifest.id +
+           ":" + definition.id;
+}
+
+sol::table sidebar_widgets_to_lua(
+    runtime_state &state, sol::this_state lua )
+{
+    require_api_version( state, 5, "sidebar.list" );
+    require_capability( state, "ui.pages" );
+    sol::state_view lua_state( lua );
+    sol::table result = lua_state.create_table(
+                            static_cast<int>(
+                                state.sidebar_widgets.size() ), 0 );
+    for( std::size_t index = 0;
+         index < state.sidebar_widgets.size(); ++index ) {
+        const sidebar_widget_definition &definition =
+            state.sidebar_widgets[index];
+        if( definition.source_index >=
+            state.sources.size() ) {
+            continue;
+        }
+        sol::table entry = lua_state.create_table();
+        entry["registration_id"] =
+            definition.registration_id;
+        entry["key"] =
+            sidebar_widget_key( state, definition );
+        entry["id"] = definition.id;
+        entry["name"] = definition.name;
+        entry["source"] =
+            state.sources[definition.source_index].manifest.id;
+        entry["height"] = definition.height;
+        if( definition.order ) {
+            entry["order"] = *definition.order;
+        }
+        entry["default_toggle"] =
+            definition.default_toggle;
+        entry["redraw_every_frame"] =
+            definition.redraw_every_frame;
+        entry["enabled"] = definition.enabled;
+        result[index + 1] = std::move( entry );
+    }
+    return result;
+}
+
+sol::table sidebar_limits_to_lua(
+    runtime_state &state, sol::this_state lua )
+{
+    require_api_version( state, 5, "sidebar.limits" );
+    require_capability( state, "ui.pages" );
+    sol::state_view lua_state( lua );
+    return lua_state.create_table_with(
+               "widgets", maximum_sidebar_widgets,
+               "widgets_per_source",
+               maximum_sidebar_widgets_per_source,
+               "height", maximum_sidebar_widget_height,
+               "lines", maximum_sidebar_widget_lines,
+               "line_bytes", maximum_sidebar_widget_line_bytes,
+               "output_bytes",
+               maximum_sidebar_widget_output_bytes,
+               "callback_instructions",
+               callback_instruction_limit );
 }
 
 std::string local_custom_event_name( const runtime_state &state,
@@ -1879,6 +2201,8 @@ sol::table lua_runtime_status( sol::this_state lua, const runtime_state &runtime
     result["pages"] = runtime.pages.size();
     result["action_menu_entries"] =
         runtime.action_menu_entries.size();
+    result["sidebar_widgets"] =
+        runtime.sidebar_widgets.size();
     result["event_handlers"] = runtime.event_registry.size();
     result["mapgen_handlers"] = runtime.mapgen_registry.size();
     result["sources"] = runtime.sources.size();
@@ -1919,6 +2243,7 @@ sol::table diagnostic_string_array(
 struct source_resource_counts {
     std::size_t pages = 0;
     std::size_t action_menu_entries = 0;
+    std::size_t sidebar_widgets = 0;
     std::size_t event_handlers = 0;
     std::size_t mapgen_handlers = 0;
     std::size_t scheduled_tasks = 0;
@@ -1939,6 +2264,12 @@ std::vector<source_resource_counts> count_source_resources(
          runtime.action_menu_entries ) {
         if( entry.source_index < result.size() ) {
             ++result[entry.source_index].action_menu_entries;
+        }
+    }
+    for( const sidebar_widget_definition &entry :
+         runtime.sidebar_widgets ) {
+        if( entry.source_index < result.size() ) {
+            ++result[entry.source_index].sidebar_widgets;
         }
     }
     for( const script_event_subscription &event :
@@ -2034,6 +2365,8 @@ sol::table lua_runtime_diagnostics(
     resources["pages"] = runtime.pages.size();
     resources["action_menu_entries"] =
         runtime.action_menu_entries.size();
+    resources["sidebar_widgets"] =
+        runtime.sidebar_widgets.size();
     resources["event_handlers"] = runtime.event_registry.size();
     resources["mapgen_handlers"] = runtime.mapgen_registry.size();
     resources["scheduled_tasks"] = runtime.scheduler.size();
@@ -2069,6 +2402,14 @@ sol::table lua_runtime_diagnostics(
         maximum_action_menu_entries;
     limits["action_menu_entries_per_source"] =
         maximum_action_menu_entries_per_source;
+    limits["sidebar_widgets"] =
+        maximum_sidebar_widgets;
+    limits["sidebar_widgets_per_source"] =
+        maximum_sidebar_widgets_per_source;
+    limits["sidebar_widget_lines"] =
+        maximum_sidebar_widget_lines;
+    limits["sidebar_widget_output_bytes"] =
+        maximum_sidebar_widget_output_bytes;
     limits["diagnostic_records"] = maximum_diagnostic_records;
     limits["module_name_bytes"] = maximum_module_name_bytes;
     limits["module_source_bytes"] = maximum_module_source_bytes;
@@ -2095,6 +2436,8 @@ sol::table lua_runtime_diagnostics(
         source["pages"] = counts.pages;
         source["action_menu_entries"] =
             counts.action_menu_entries;
+        source["sidebar_widgets"] =
+            counts.sidebar_widgets;
         source["event_handlers"] = counts.event_handlers;
         source["mapgen_handlers"] = counts.mapgen_handlers;
         source["scheduled_tasks"] = counts.scheduled_tasks;
@@ -2527,6 +2870,45 @@ void initialize_state( runtime_state &state )
         return action_menu_limits_to_lua( state, lua );
     } );
     game["action_menu"] = std::move( action_menu );
+    sol::table sidebar =
+        state.lua.create_named_table( "sidebar" );
+    sidebar.set_function(
+        "register_widget",
+    [&state]( const sol::table & descriptor ) {
+        return register_sidebar_widget( state, descriptor );
+    } );
+    sidebar.set_function(
+        "register",
+    [&state]( const sol::table & descriptor ) {
+        return register_sidebar_widget( state, descriptor );
+    } );
+    sidebar.set_function(
+    "off", [&state]( const std::uint64_t id ) {
+        return unregister_sidebar_widget( state, id );
+    } );
+    sidebar.set_function(
+    "clear_widgets", [&state]() {
+        return clear_sidebar_widgets( state );
+    } );
+    sidebar.set_function(
+        "list",
+    [&state]( sol::this_state lua ) {
+        return sidebar_widgets_to_lua( state, lua );
+    } );
+    sidebar.set_function(
+        "limits",
+    [&state]( sol::this_state lua ) {
+        return sidebar_limits_to_lua( state, lua );
+    } );
+    sidebar.set_function(
+    "get_layout_id", [&state]() {
+        require_api_version(
+            state, 5, "sidebar.get_layout_id" );
+        require_capability( state, "ui.pages" );
+        return panel_manager::get_manager().
+               get_current_layout_id();
+    } );
+    game["sidebar"] = sidebar;
     install_value_type_api( state.lua, game, [&state]() {
         require_api_version( state, 5, "game.types" );
         require_capability( state, "game.read" );
@@ -5325,6 +5707,8 @@ runtime_status status()
         result.page_count = active_state->pages.size();
         result.action_menu_entry_count =
             active_state->action_menu_entries.size();
+        result.sidebar_widget_count =
+            active_state->sidebar_widgets.size();
         result.event_handler_count = active_state->event_registry.size();
         result.mapgen_handler_count =
             active_state->mapgen_registry.size();
@@ -5504,6 +5888,346 @@ bool invoke_action_menu_entry(
         return false;
     }
     return true;
+}
+
+namespace
+{
+
+sidebar_widget_definition *find_sidebar_widget(
+    runtime_state &state, const std::string_view key )
+{
+    const auto found = std::find_if(
+                           state.sidebar_widgets.begin(),
+                           state.sidebar_widgets.end(),
+    [&state, key]( const sidebar_widget_definition & definition ) {
+        return sidebar_widget_key( state, definition ) == key;
+    } );
+    return found == state.sidebar_widgets.end() ?
+           nullptr : &*found;
+}
+
+void disable_sidebar_widget(
+    runtime_state &state, const std::uint64_t registration_id,
+    const std::size_t source_index, const std::string &key,
+    const std::string &phase, const std::string &message )
+{
+    const auto current = std::find_if(
+                             state.sidebar_widgets.begin(),
+                             state.sidebar_widgets.end(),
+    [registration_id]( const sidebar_widget_definition & definition ) {
+        return definition.registration_id == registration_id;
+    } );
+    if( current != state.sidebar_widgets.end() ) {
+        current->enabled = false;
+        current->error = message;
+    }
+    source_scope source( state, source_index );
+    record_runtime_error(
+        "Lua sidebar widget '" + key + "' " + phase,
+        message );
+}
+
+void append_sidebar_widget_text(
+    std::vector<sidebar_widget_line> &lines,
+    const std::string &text, const std::string &color,
+    std::size_t &output_bytes )
+{
+    if( text.find( '\0' ) != std::string::npos ) {
+        throw std::runtime_error(
+            "sidebar widget output contains a NUL byte" );
+    }
+    if( color.size() > maximum_sidebar_widget_color_bytes ) {
+        throw std::runtime_error(
+            "sidebar widget color exceeds 64 bytes" );
+    }
+    if( text.size() >
+        maximum_sidebar_widget_output_bytes - output_bytes ) {
+        throw std::runtime_error(
+            "sidebar widget output exceeds 32768 bytes" );
+    }
+    output_bytes += text.size();
+
+    std::size_t start = 0;
+    while( true ) {
+        const std::size_t newline = text.find( '\n', start );
+        const std::size_t length =
+            newline == std::string::npos ?
+            text.size() - start : newline - start;
+        if( length > maximum_sidebar_widget_line_bytes ) {
+            throw std::runtime_error(
+                "sidebar widget line exceeds 4096 bytes" );
+        }
+        if( lines.size() >= maximum_sidebar_widget_lines ) {
+            throw std::runtime_error(
+                "sidebar widget output exceeds 64 lines" );
+        }
+        lines.push_back( {
+            text.substr( start, length ), color
+        } );
+        if( newline == std::string::npos ) {
+            break;
+        }
+        start = newline + 1;
+    }
+}
+
+void append_sidebar_widget_value(
+    std::vector<sidebar_widget_line> &lines,
+    const sol::object &value, std::size_t &output_bytes )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return;
+    }
+    if( value.get_type() == sol::type::string ) {
+        append_sidebar_widget_text(
+            lines, value.as<std::string>(),
+            "light_gray", output_bytes );
+        return;
+    }
+    if( value.get_type() != sol::type::table ) {
+        throw std::runtime_error(
+            "sidebar widget draw results must be strings or arrays" );
+    }
+
+    const sol::table entries = value.as<sol::table>();
+    const std::size_t count = entries.size();
+    if( count > maximum_sidebar_widget_lines ) {
+        throw std::runtime_error(
+            "sidebar widget output exceeds 64 entries" );
+    }
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object entry = entries[index];
+        if( entry.get_type() == sol::type::string ) {
+            append_sidebar_widget_text(
+                lines, entry.as<std::string>(),
+                "light_gray", output_bytes );
+            continue;
+        }
+        if( entry.get_type() != sol::type::table ) {
+            throw std::runtime_error(
+                "sidebar widget array entries must be strings or tables" );
+        }
+        const sol::table fields = entry.as<sol::table>();
+        std::size_t field_count = 0;
+        for( const auto &field : fields ) {
+            ++field_count;
+            if( field_count > 2 ||
+                field.first.get_type() != sol::type::string ) {
+                throw std::runtime_error(
+                    "sidebar widget line tables only accept text and color" );
+            }
+            const std::string name =
+                field.first.as<std::string>();
+            if( name != "text" && name != "color" ) {
+                throw std::runtime_error(
+                    "sidebar widget line received unknown field '" +
+                    name + "'" );
+            }
+        }
+        const sol::object text = fields["text"];
+        if( !text.valid() ||
+            text.get_type() != sol::type::string ) {
+            throw std::runtime_error(
+                "sidebar widget line text must be a string" );
+        }
+        std::string color = "light_gray";
+        const sol::object raw_color = fields["color"];
+        if( raw_color.valid() &&
+            raw_color.get_type() != sol::type::nil ) {
+            if( raw_color.get_type() != sol::type::string ) {
+                throw std::runtime_error(
+                    "sidebar widget line color must be a string" );
+            }
+            color = raw_color.as<std::string>();
+        }
+        append_sidebar_widget_text(
+            lines, text.as<std::string>(), color,
+            output_bytes );
+    }
+}
+
+} // namespace
+
+std::vector<sidebar_widget_info> registered_sidebar_widgets()
+{
+    std::vector<sidebar_widget_info> result;
+    if( !active_state ) {
+        return result;
+    }
+    result.reserve( active_state->sidebar_widgets.size() );
+    for( const sidebar_widget_definition &definition :
+         active_state->sidebar_widgets ) {
+        if( definition.source_index >=
+            active_state->sources.size() ) {
+            continue;
+        }
+        result.push_back( {
+            definition.registration_id,
+            sidebar_widget_key( *active_state, definition ),
+            definition.id,
+            definition.name,
+            active_state->sources[
+            definition.source_index].manifest.id,
+            definition.height,
+            definition.order,
+            definition.default_toggle,
+            definition.redraw_every_frame,
+            definition.enabled
+        } );
+    }
+    return result;
+}
+
+bool sidebar_widget_visible( const std::string_view key )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return false;
+    }
+    sidebar_widget_definition *definition =
+        find_sidebar_widget( *active_state, key );
+    if( definition == nullptr || !definition->enabled ||
+        definition->source_index >=
+        active_state->sources.size() ) {
+        return false;
+    }
+
+    const std::uint64_t registration_id =
+        definition->registration_id;
+    const std::size_t source_index =
+        definition->source_index;
+    const std::optional<bool> visible_value =
+        definition->panel_visible_value;
+    const std::optional<sol::protected_function>
+    visible_callback = definition->panel_visible;
+    const std::optional<sol::protected_function>
+    render_callback = definition->render;
+    const std::string stable_key( key );
+
+    if( !visible_callback &&
+        visible_value && !*visible_value ) {
+        return false;
+    }
+    const std::optional<sol::protected_function> callback =
+        visible_callback ? visible_callback : render_callback;
+    if( !callback ) {
+        return true;
+    }
+
+    const auto started =
+        std::chrono::steady_clock::now();
+    bool timing_recorded = false;
+    try {
+        source_scope source( *active_state, source_index );
+        instruction_guard guard(
+            active_state->lua.lua_state(),
+            callback_instruction_limit );
+        const sol::protected_function_result result =
+            ( *callback )();
+        record_callback_timing(
+            *active_state,
+            "sidebar widget '" + stable_key +
+            "' visibility", started );
+        timing_recorded = true;
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.return_count() == 0 ||
+            result.get_type() == sol::type::nil ) {
+            return true;
+        }
+        if( result.return_count() != 1 ||
+            result.get_type() != sol::type::boolean ) {
+            throw std::runtime_error(
+                "visibility callback must return a boolean or nil" );
+        }
+        return result.get<bool>();
+    } catch( const std::exception &exception ) {
+        if( !timing_recorded ) {
+            record_callback_timing(
+                *active_state,
+                "sidebar widget '" + stable_key +
+                "' visibility", started );
+        }
+        disable_sidebar_widget(
+            *active_state, registration_id, source_index,
+            stable_key, "visibility failed",
+            exception.what() );
+        return false;
+    }
+}
+
+std::vector<sidebar_widget_line> render_sidebar_widget(
+    const std::string_view key, const int width,
+    const int height )
+{
+    std::vector<sidebar_widget_line> lines;
+    if( !active_state || is_pool_worker_thread() ) {
+        return lines;
+    }
+    sidebar_widget_definition *definition =
+        find_sidebar_widget( *active_state, key );
+    if( definition == nullptr || !definition->enabled ||
+        definition->source_index >=
+        active_state->sources.size() ) {
+        return lines;
+    }
+
+    const std::uint64_t registration_id =
+        definition->registration_id;
+    const std::size_t source_index =
+        definition->source_index;
+    const sol::protected_function callback =
+        definition->draw;
+    const std::string stable_key( key );
+    const int bounded_width = clamp( width, 1, 512 );
+    const int bounded_height = clamp(
+                                   height, 1,
+                                   maximum_sidebar_widget_height );
+    const auto started =
+        std::chrono::steady_clock::now();
+    bool timing_recorded = false;
+    try {
+        source_scope source( *active_state, source_index );
+        instruction_guard guard(
+            active_state->lua.lua_state(),
+            callback_instruction_limit );
+        const sol::protected_function_result result =
+            callback( bounded_width, bounded_height );
+        record_callback_timing(
+            *active_state,
+            "sidebar widget '" + stable_key +
+            "' draw", started );
+        timing_recorded = true;
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.return_count() >
+            static_cast<int>( maximum_sidebar_widget_lines ) ) {
+            throw std::runtime_error(
+                "sidebar widget draw returned more than 64 values" );
+        }
+        std::size_t output_bytes = 0;
+        for( int index = 0;
+             index < result.return_count(); ++index ) {
+            append_sidebar_widget_value(
+                lines, result.get<sol::object>( index ),
+                output_bytes );
+        }
+        return lines;
+    } catch( const std::exception &exception ) {
+        if( !timing_recorded ) {
+            record_callback_timing(
+                *active_state,
+                "sidebar widget '" + stable_key +
+                "' draw", started );
+        }
+        disable_sidebar_widget(
+            *active_state, registration_id, source_index,
+            stable_key, "draw failed", exception.what() );
+        return {};
+    }
 }
 
 bool show_page( const std::string_view page_id )

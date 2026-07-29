@@ -37,6 +37,7 @@ struct runtime_status {
     std::size_t world_generation = 0;
     std::size_t page_count = 0;
     std::size_t action_menu_entry_count = 0;
+    std::size_t sidebar_widget_count = 0;
     std::size_t event_handler_count = 0;
     std::size_t mapgen_handler_count = 0;
     std::size_t source_count = 0;
@@ -66,6 +67,24 @@ struct action_menu_entry_info {
     std::string source;
     int hotkey = -1;
     bool enabled = true;
+};
+
+struct sidebar_widget_info {
+    std::uint64_t registration_id = 0;
+    std::string key;
+    std::string id;
+    std::string name;
+    std::string source;
+    int height = 1;
+    std::optional<int> order;
+    bool default_toggle = true;
+    bool redraw_every_frame = false;
+    bool enabled = true;
+};
+
+struct sidebar_widget_line {
+    std::string text;
+    std::string color;
 };
 
 enum class world_ready_kind : int {
@@ -217,6 +236,15 @@ void show_slot( std::string_view slot );
 // applies the normal callback instruction budget.
 std::vector<action_menu_entry_info> registered_action_menu_entries();
 bool invoke_action_menu_entry( std::uint64_t registration_id );
+
+// Source-owned PC sidebar widgets are replaced transactionally with the Lua
+// runtime.  Android's schema-6 native HUD remains an independent consumer.
+// Draw and visibility callbacks restore source capabilities, are instruction
+// bounded, and disable only the failing widget.
+std::vector<sidebar_widget_info> registered_sidebar_widgets();
+bool sidebar_widget_visible( std::string_view key );
+std::vector<sidebar_widget_line> render_sidebar_widget(
+    std::string_view key, int width, int height );
 
 // Open one page requested by a Lua event callback at the next safe game-input
 // boundary.  Returns true when a request was handled.
