@@ -1,6 +1,8 @@
 #include "cata_catch.h"
 #include "avatar.h"
+#include "bodypart.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "catalua_bindings.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_enums.h"
@@ -18,6 +20,7 @@
 #include "catalua_ui_scheduler.h"
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
+#include "effect.h"
 #include "event_bus.h"
 #include "input_context_actions.h"
 #include "json_loader.h"
@@ -1498,6 +1501,62 @@ game.effects.add(
     CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
 }
 
+TEST_CASE( "lua_v5_effect_updates_notify_the_owning_creature",
+           "[lua][bindings][effects][integration][regression]" )
+{
+    avatar &player = get_avatar();
+    const efftype_id cold( "cold" );
+    const bodypart_id torso = bodypart_str_id( "torso" ).id();
+    player.remove_effect( cold, torso );
+    player.clear_morale();
+    on_out_of_scope cleanup( [&player, &cold, &torso]() {
+        player.remove_effect( cold, torso );
+        player.clear_morale();
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local cold = game.types.id("effect", "cold")
+local torso = game.types.id("body_part", "torso")
+local duration = game.time.duration(10, "minute")
+assert(game.effects.add(avatar, cold, duration, {
+    body_part = torso,
+    intensity = 1,
+    force = true
+}).ok)
+local updated = game.effects.update(avatar, cold, {
+    body_part = torso,
+    intensity = 2
+})
+assert(updated.ok)
+assert(updated.value.before.intensity == 1)
+assert(updated.value.after.intensity == 2)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    REQUIRE( player.has_effect( cold, torso ) );
+    CHECK( player.get_effect( cold, torso ).get_intensity() == 2 );
+    player.update_morale();
+    const int lua_updated_morale = player.get_morale_level();
+
+    player.remove_effect( cold, torso );
+    player.clear_morale();
+    player.add_effect(
+        cold, 10_minutes, torso, false, 2, true );
+    player.update_morale();
+    CHECK( lua_updated_morale == player.get_morale_level() );
+}
+
 TEST_CASE( "lua_v5_bionics_use_detached_definitions_and_uid_operations",
            "[lua][bindings][bionics][integration]" )
 {
@@ -1515,6 +1574,7 @@ TEST_CASE( "lua_v5_bionics_use_detached_definitions_and_uid_operations",
     script.write( R"lua(
 local avatar = game.characters.avatar()
 local earplugs = game.types.id("bionic", "bio_earplugs")
+local ears = game.types.id("bionic", "bio_ears")
 
 local definitions = game.bionics.definitions({
     offset = 0,
@@ -1538,6 +1598,26 @@ assert(definition.occupied_body_parts.returned ==
     #definition.occupied_body_parts.items)
 assert(definition.damage_protection.returned ==
     #definition.damage_protection.items)
+
+local bundle = game.bionics.install(avatar, ears)
+assert(bundle.ok == true)
+local bundled_instances = game.bionics.list(avatar, 256)
+assert(bundled_instances.ok == true)
+local included_uid = nil
+for _, instance in ipairs(bundled_instances.value.items) do
+    if instance.id == earplugs and instance.included then
+        included_uid = instance.uid
+    end
+end
+assert(included_uid ~= nil)
+local included_removal = game.bionics.remove(avatar, included_uid)
+assert(included_removal.ok == false)
+assert(included_removal.error.code == "included_bionic")
+assert(game.bionics.get(avatar, included_uid).ok == true)
+local bundle_removal = game.bionics.remove(avatar, bundle.value.uid)
+assert(bundle_removal.ok == true)
+assert(game.bionics.has(avatar, ears).value == false)
+assert(game.bionics.has(avatar, earplugs).value == false)
 
 local before = game.bionics.list(avatar, 1000000)
 assert(before.ok == true and before.value.limit == 256)

@@ -710,6 +710,13 @@ sol::table remove_instance(
             "The character does not have a bionic with that uid"
         } );
     }
+    if( ( *installed )->is_included() ) {
+        return make_game_error_result(
+        state, {
+            "included_bionic",
+            "Included bionics cannot be removed directly; remove their parent bionic instead"
+        } );
+    }
     sol::table removed = snapshot_instance(
                              state, **installed );
     character->remove_bionic( **installed );

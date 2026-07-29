@@ -551,6 +551,7 @@ sol::table update_effect(
         } );
     }
     sol::table before = snapshot_effect( state, *entry );
+    const int previous_intensity = entry->get_intensity();
     if( options.duration ) {
         entry->set_duration( options.duration->to_native() );
     }
@@ -563,6 +564,10 @@ sol::table update_effect(
         } else {
             entry->unpause_effect();
         }
+    }
+    if( entry->get_intensity() != previous_intensity ) {
+        creature->notify_effect_int_change(
+            entry->get_id(), entry->get_intensity(), entry->get_bp() );
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
