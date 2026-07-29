@@ -1154,6 +1154,7 @@ LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_bindings.cpp \
   $(SRC_DIR)/catalua_bindings_coords.cpp \
   $(SRC_DIR)/catalua_bindings_enums.cpp \
+  $(SRC_DIR)/catalua_bindings_serde.cpp \
   $(SRC_DIR)/catalua_bindings_values.cpp \
   $(SRC_DIR)/catalua_game_handle.cpp \
   $(SRC_DIR)/catalua_ui.cpp \

@@ -19,6 +19,7 @@
 #include "calendar.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_enums.h"
+#include "catalua_bindings_serde.h"
 #include "damage.h"
 #include "disease.h"
 #include "effect.h"
@@ -578,6 +579,36 @@ script_unit_value script_unit_value::from_integer(
                checked_canonical_value( *kind, canonical ) );
 }
 
+script_unit_value script_unit_value::from_canonical_integer(
+    const std::string_view kind_name, const std::string_view unit_name,
+    const std::int64_t value )
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_name );
+    if( kind == nullptr || !kind->integral ||
+        kind->canonical_unit != unit_name ) {
+        throw std::invalid_argument(
+            "game.serde received an invalid integral unit descriptor" );
+    }
+    return script_unit_value(
+               std::string( kind->name ), std::string( kind->canonical_unit ),
+               value );
+}
+
+script_unit_value script_unit_value::from_canonical_number(
+    const std::string_view kind_name, const std::string_view unit_name,
+    const double value )
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_name );
+    if( kind == nullptr || kind->integral ||
+        kind->canonical_unit != unit_name ) {
+        throw std::invalid_argument(
+            "game.serde received an invalid floating-point unit descriptor" );
+    }
+    return script_unit_value(
+               std::string( kind->name ), std::string( kind->canonical_unit ),
+               checked_canonical_value( *kind, value ) );
+}
+
 const std::string &script_unit_value::kind() const noexcept
 {
     return kind_;
@@ -1120,7 +1151,8 @@ void install_value_type_api(
     game["time"] = std::move( time );
 
     install_enum_value_api( lua, game, require_values );
-    install_coordinate_value_api( lua, game, std::move( require_values ) );
+    install_coordinate_value_api( lua, game, require_values );
+    install_serde_api( lua, game, std::move( require_values ) );
 }
 
 } // namespace cata::lua_ui

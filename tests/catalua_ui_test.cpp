@@ -1655,6 +1655,74 @@ end) == false)
     REQUIRE( result.valid() );
 }
 
+TEST_CASE( "lua_v5_serde_is_deterministic_typed_and_strictly_bounded",
+           "[lua][bindings][values][serde]" )
+{
+    using namespace cata::lua_ui;
+
+    sol::state lua;
+    lua.open_libraries(
+        sol::lib::base, sol::lib::string, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local original = {
+    answer = 42,
+    precise = 9007199254740993,
+    fraction = 1.25,
+    enabled = true,
+    text = "cleanwater",
+    nested = { "a", "b", false },
+    id = game.types.id("item", "rock"),
+    enum = game.enums.value("Attitude", "friendly"),
+    unit = game.units.new("mass", 1, "kilogram"),
+    duration = game.time.duration(5, "minute"),
+    moment = game.time.point(12345),
+    point = game.coords.point("absolute", "map_square", -4, 7),
+    tripoint = game.coords.tripoint(
+        "relative", "overmap_terrain", 1, 2, -3)
+}
+
+local encoded = game.serde.encode(original)
+assert(type(encoded) == "string")
+assert(#encoded <= game.serde.max_bytes)
+local copy = game.serde.decode(encoded)
+assert(copy.answer == 42)
+assert(copy.precise == 9007199254740993)
+assert(copy.fraction == 1.25)
+assert(copy.enabled == true)
+assert(copy.text == "cleanwater")
+assert(copy.nested[1] == "a" and copy.nested[3] == false)
+assert(copy.id == original.id)
+assert(copy.enum == original.enum)
+assert(copy.unit == original.unit)
+assert(copy.duration == original.duration)
+assert(copy.moment == original.moment)
+assert(copy.point == original.point)
+assert(copy.tripoint == original.tripoint)
+
+local first = { z = 3, a = 1, middle = 2 }
+local second = { middle = 2, z = 3, a = 1 }
+assert(game.serde.encode(first) == game.serde.encode(second))
+assert(#game.serde.types() == 13)
+
+local recursive = {}
+recursive.self = recursive
+assert(pcall(function() game.serde.encode(recursive) end) == false)
+assert(pcall(function()
+    game.serde.encode(function() return 1 end)
+end) == false)
+assert(pcall(function()
+    game.serde.decode('{"format":"ccb_lua_value","version":1,' ..
+        '"value":{"type":"native_pointer"}}')
+end) == false)
+assert(pcall(function()
+    game.serde.decode(string.rep("[", 65))
+end) == false)
+)lua" );
+    REQUIRE( result.valid() );
+}
+
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
            "[lua][ui][navigation]" )
 {
