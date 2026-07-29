@@ -985,7 +985,7 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK( std::adjacent_find( ids.begin(), ids.end() ) == ids.end() );
     CHECK( find_binding_domain( "coordinates" ) != nullptr );
     CHECK( find_binding_domain( "missing" ) == nullptr );
-    CHECK_FALSE( binding_domain_is_covered( "coordinates" ) );
+    CHECK( binding_domain_is_covered( "coordinates" ) );
 
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::table );
@@ -1019,7 +1019,7 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK( second_entry.get<std::string>( "status" ) != "covered" );
 
     sol::protected_function api_supports = game["api_supports"];
-    CHECK_FALSE( api_supports( "coordinates" ).get<bool>() );
+    CHECK( api_supports( "coordinates" ).get<bool>() );
     CHECK_FALSE( api_supports( "missing" ).get<bool>() );
 }
 
@@ -1465,6 +1465,113 @@ assert(pcall(function() return pos + game.coords.point_abs_ms(1, 1) end) == fals
 assert(pcall(function() return pos + game.coords.point_rel_sm(1, 1) end) == false)
 assert(pcall(function() return pos < game.coords.point_bub_ms(10, 20) end) == false)
 assert(tostring(pos) == "Point_abs_ms(10,20)")
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_coordinate_projections_and_ranges_are_checked_and_bounded",
+           "[lua][bindings][values][coordinates][projection]" )
+{
+    using namespace cata::lua_ui;
+
+    const script_point_coord absolute =
+        script_point_coord::from( "abs", "ms", -1, 25 );
+    const script_point_coord submap = absolute.project_to( "sm" );
+    CHECK( submap == script_point_coord::from( "abs", "sm", -1, 2 ) );
+    CHECK( submap.project_to( "ms" ) ==
+           script_point_coord::from( "abs", "ms", -12, 24 ) );
+
+    const auto [coarse, remainder] = absolute.project_remain( "sm" );
+    CHECK( coarse == submap );
+    CHECK( remainder == script_point_coord::from( "sm", "ms", 11, 1 ) );
+    CHECK( coarse.project_combine( remainder ) == absolute );
+
+    const script_point_coord minimum =
+        script_point_coord::from(
+            "abs", "ms", std::numeric_limits<int>::min(), 0 );
+    const auto [minimum_coarse, minimum_remainder] =
+        minimum.project_remain( "sm" );
+    CHECK( minimum_coarse.project_combine( minimum_remainder ) == minimum );
+
+    const script_tripoint_coord tripoint_value =
+        script_tripoint_coord::from( "abs", "ms", -1, 25, 4 );
+    const auto [tripoint_coarse, tripoint_remainder] =
+        tripoint_value.project_remain( "sm" );
+    CHECK( tripoint_coarse ==
+           script_tripoint_coord::from( "abs", "sm", -1, 2, 4 ) );
+    CHECK( tripoint_coarse.project_combine( tripoint_remainder ) ==
+           tripoint_value );
+
+    CHECK_THROWS_AS(
+        script_point_coord::from( "abs", "om", 1, 1 ).project_to( "seg" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_point_coord::from(
+            "abs", "om", std::numeric_limits<int>::max(), 0 ).project_to( "ms" ),
+        std::overflow_error );
+    CHECK_THROWS_AS( submap.project_remain( "ms" ), std::invalid_argument );
+    CHECK_THROWS_AS(
+        coarse.project_combine(
+            script_point_coord::from( "sm", "ms", 12, 0 ) ),
+        std::invalid_argument );
+
+    const std::vector<script_point_coord> line =
+        script_point_coord::from( "bub", "ms", 0, 0 ).line_to(
+            script_point_coord::from( "bub", "ms", 3, 2 ), 4 );
+    REQUIRE( line.size() == 4 );
+    CHECK( line.front() == script_point_coord::from( "bub", "ms", 0, 0 ) );
+    CHECK( line.back() == script_point_coord::from( "bub", "ms", 3, 2 ) );
+    CHECK_THROWS_AS(
+        script_point_coord::from( "bub", "ms", 0, 0 ).line_to(
+            script_point_coord::from( "bub", "ms", 100, 0 ), 10 ),
+        std::length_error );
+    CHECK( script_coordinate_rectangle(
+               script_point_coord::from( "bub", "ms", 0, 0 ),
+               script_point_coord::from( "bub", "ms", 2, 1 ), 6 ).size() == 6 );
+    CHECK_THROWS_AS(
+        script_coordinate_box(
+            script_tripoint_coord::from( "bub", "ms", 0, 0, 0 ),
+            script_tripoint_coord::from( "bub", "ms", 2, 2, 2 ), 20 ),
+        std::length_error );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local value = game.coords.point_abs_ms(-1, 25)
+local coarse, remainder = value:project_remain("sm")
+assert(coarse == game.coords.point_abs_sm(-1, 2))
+assert(remainder == game.coords.point_sm_ms(11, 1))
+assert(coarse:project_combine(remainder) == value)
+assert(game.coords.project_to(value, "sm") == coarse)
+local api_coarse, api_remainder = game.coords.project_remain(value, "sm")
+assert(game.coords.project_combine(api_coarse, api_remainder) == value)
+local line = game.coords.line(
+    game.coords.point_bub_ms(0, 0),
+    game.coords.point_bub_ms(3, 2), 4)
+assert(#line == 4)
+assert(line[1] == game.coords.point_bub_ms(0, 0))
+assert(line[4] == game.coords.point_bub_ms(3, 2))
+local rectangle = game.coords.rectangle(
+    game.coords.point_bub_ms(0, 0),
+    game.coords.point_bub_ms(2, 1), 6)
+assert(#rectangle == 6)
+local box = game.coords.box(
+    game.coords.tripoint_bub_ms(0, 0, 0),
+    game.coords.tripoint_bub_ms(1, 1, 1), 8)
+assert(#box == 8)
+assert(game.coords.max_range_points == 4096)
+assert(pcall(function()
+    return game.coords.line(
+        game.coords.point_bub_ms(0, 0),
+        game.coords.point_bub_ms(100, 0), 10)
+end) == false)
+assert(pcall(function()
+    return game.coords.rectangle(
+        game.coords.point_bub_ms(0, 0),
+        game.coords.point_bub_ms(100, 100), 4097)
+end) == false)
 )lua" );
     REQUIRE( result.valid() );
 }

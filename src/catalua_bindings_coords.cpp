@@ -8,7 +8,10 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
+#include "coordinates.h"
+#include "line.h"
 #include "point.h"
 
 namespace cata::lua_ui
@@ -44,6 +47,8 @@ constexpr std::array<coordinate_kind_definition, 18> coordinate_kinds = {{
         { "bub_sm", coords::origin::reality_bubble, coords::scale::submap }
     }
 };
+
+constexpr std::int64_t maximum_coordinate_range_points = 4096;
 
 coords::origin parse_origin( const std::string_view name )
 {
@@ -237,6 +242,157 @@ void require_relative( const coords::origin origin, const std::string_view opera
     }
 }
 
+int scale_size( const coords::scale scale )
+{
+    return coords::map_squares_per( scale );
+}
+
+std::int64_t exact_projection_factor(
+    const coords::scale source, const coords::scale result )
+{
+    const std::int64_t source_size = scale_size( source );
+    const std::int64_t result_size = scale_size( result );
+    const std::int64_t larger = std::max( source_size, result_size );
+    const std::int64_t smaller = std::min( source_size, result_size );
+    if( larger % smaller != 0 ) {
+        throw std::invalid_argument(
+            "game.coords projection requires exactly divisible coordinate scales" );
+    }
+    return larger / smaller;
+}
+
+int floor_divide_axis( const int value, const std::int64_t divisor )
+{
+    std::int64_t quotient = static_cast<std::int64_t>( value ) / divisor;
+    const std::int64_t remainder =
+        static_cast<std::int64_t>( value ) % divisor;
+    if( remainder < 0 ) {
+        --quotient;
+    }
+    return checked_axis( quotient );
+}
+
+int projected_axis(
+    const int value, const coords::scale source, const coords::scale result )
+{
+    if( source == result ) {
+        return value;
+    }
+    const std::int64_t factor = exact_projection_factor( source, result );
+    if( scale_size( source ) > scale_size( result ) ) {
+        return checked_axis_product( value, factor );
+    }
+    return floor_divide_axis( value, factor );
+}
+
+coords::origin remainder_origin( const coords::scale coarse_scale )
+{
+    switch( coarse_scale ) {
+        case coords::scale::submap:
+            return coords::origin::submap;
+        case coords::scale::overmap_terrain:
+            return coords::origin::overmap_terrain;
+        case coords::scale::overmap:
+            return coords::origin::overmap;
+        case coords::scale::map_square:
+        case coords::scale::segment:
+        case coords::scale::vehicle:
+            break;
+    }
+    throw std::invalid_argument(
+        "game.coords cannot produce a remainder for the requested scale" );
+}
+
+std::int64_t projection_down_factor(
+    const coords::scale source, const coords::scale coarse )
+{
+    const std::int64_t source_size = scale_size( source );
+    const std::int64_t coarse_size = scale_size( coarse );
+    if( coarse_size <= source_size || coarse_size % source_size != 0 ) {
+        throw std::invalid_argument(
+            "game.coords project_remain requires an exactly divisible coarser scale" );
+    }
+    remainder_origin( coarse );
+    return coarse_size / source_size;
+}
+
+void require_valid_remainder_axis(
+    const int value, const std::int64_t factor )
+{
+    if( value < 0 || static_cast<std::int64_t>( value ) >= factor ) {
+        throw std::invalid_argument(
+            "game.coords project_combine requires a bounded non-negative remainder" );
+    }
+}
+
+std::size_t checked_output_limit( const std::int64_t max_points )
+{
+    if( max_points <= 0 || max_points > maximum_coordinate_range_points ) {
+        throw std::invalid_argument(
+            "game.coords max_points must be between 1 and " +
+            std::to_string( maximum_coordinate_range_points ) );
+    }
+    return static_cast<std::size_t>( max_points );
+}
+
+void require_output_count(
+    const std::uint64_t count, const std::size_t limit )
+{
+    if( count > limit ) {
+        throw std::length_error(
+            "game.coords result exceeds the requested max_points limit" );
+    }
+}
+
+std::uint64_t inclusive_axis_count( const int from, const int to )
+{
+    return static_cast<std::uint64_t>(
+               axis_distance( from, to ) ) + 1U;
+}
+
+std::size_t checked_rectangle_count(
+    const int from_x, const int to_x, const int from_y, const int to_y,
+    const std::size_t limit )
+{
+    const std::uint64_t width = inclusive_axis_count( from_x, to_x );
+    const std::uint64_t height = inclusive_axis_count( from_y, to_y );
+    require_output_count( width, limit );
+    require_output_count( height, limit );
+    if( width > limit / height ) {
+        throw std::length_error(
+            "game.coords result exceeds the requested max_points limit" );
+    }
+    return static_cast<std::size_t>( width * height );
+}
+
+std::size_t checked_box_count(
+    const int from_x, const int to_x, const int from_y, const int to_y,
+    const int from_z, const int to_z, const std::size_t limit )
+{
+    const std::uint64_t depth = inclusive_axis_count( from_z, to_z );
+    require_output_count( depth, limit );
+    const std::size_t area =
+        checked_rectangle_count( from_x, to_x, from_y, to_y, limit );
+    if( area > limit / depth ) {
+        throw std::length_error(
+            "game.coords result exceeds the requested max_points limit" );
+    }
+    return static_cast<std::size_t>( area * depth );
+}
+
+template<typename Coordinate>
+sol::table coordinate_vector_table(
+    sol::this_state lua_state, const std::vector<Coordinate> &values )
+{
+    sol::state_view state( lua_state );
+    sol::table result = state.create_table(
+                            static_cast<int>( values.size() ), 0 );
+    for( std::size_t index = 0; index < values.size(); ++index ) {
+        result[index + 1] = values[index];
+    }
+    return result;
+}
+
 } // namespace
 
 script_point_coord::script_point_coord(
@@ -321,6 +477,86 @@ script_point_coord script_point_coord::scale_by( const std::int64_t factor ) con
 script_point_coord script_point_coord::negate() const
 {
     return scale_by( -1 );
+}
+
+script_point_coord script_point_coord::project_to(
+    const std::string_view result_scale ) const
+{
+    const coords::scale target = parse_scale( result_scale );
+    require_supported_kind( origin_, target );
+    exact_projection_factor( scale_, target );
+    return script_point_coord(
+               origin_, target,
+               projected_axis( x_, scale_, target ),
+               projected_axis( y_, scale_, target ) );
+}
+
+std::tuple<script_point_coord, script_point_coord>
+script_point_coord::project_remain(
+    const std::string_view result_scale ) const
+{
+    const coords::scale coarse_scale = parse_scale( result_scale );
+    const std::int64_t factor =
+        projection_down_factor( scale_, coarse_scale );
+    const coords::origin fine_origin = remainder_origin( coarse_scale );
+    require_supported_kind( origin_, coarse_scale );
+    require_supported_kind( fine_origin, scale_ );
+
+    const int coarse_x = floor_divide_axis( x_, factor );
+    const int coarse_y = floor_divide_axis( y_, factor );
+    const int remainder_x = checked_axis(
+                                static_cast<std::int64_t>( x_ ) -
+                                static_cast<std::int64_t>( coarse_x ) * factor );
+    const int remainder_y = checked_axis(
+                                static_cast<std::int64_t>( y_ ) -
+                                static_cast<std::int64_t>( coarse_y ) * factor );
+    return {
+        script_point_coord( origin_, coarse_scale, coarse_x, coarse_y ),
+        script_point_coord(
+            fine_origin, scale_, remainder_x, remainder_y )
+    };
+}
+
+script_point_coord script_point_coord::project_combine(
+    const script_point_coord &remainder ) const
+{
+    const std::int64_t factor =
+        projection_down_factor( remainder.scale_, scale_ );
+    if( remainder.origin_ != remainder_origin( scale_ ) ) {
+        throw std::invalid_argument(
+            "game.coords project_combine received the wrong remainder origin" );
+    }
+    require_supported_kind( origin_, remainder.scale_ );
+    require_valid_remainder_axis( remainder.x_, factor );
+    require_valid_remainder_axis( remainder.y_, factor );
+    return script_point_coord(
+               origin_, remainder.scale_,
+               checked_axis(
+                   static_cast<std::int64_t>( x_ ) * factor + remainder.x_ ),
+               checked_axis(
+                   static_cast<std::int64_t>( y_ ) * factor + remainder.y_ ) );
+}
+
+std::vector<script_point_coord> script_point_coord::line_to(
+    const script_point_coord &rhs, const std::int64_t max_points ) const
+{
+    require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "trace a line between" );
+    const std::size_t limit = checked_output_limit( max_points );
+    const std::uint64_t count =
+        static_cast<std::uint64_t>( square_distance( rhs ) ) + 1U;
+    require_output_count( count, limit );
+
+    std::vector<script_point_coord> result;
+    result.reserve( static_cast<std::size_t>( count ) );
+    result.push_back( *this );
+    if( !( *this == rhs ) ) {
+        const std::vector<point> native_line =
+            ::line_to( to_native(), rhs.to_native() );
+        for( const point &value : native_line ) {
+            result.push_back( from_native( origin_, scale_, value ) );
+        }
+    }
+    return result;
 }
 
 std::int64_t script_point_coord::manhattan_distance(
@@ -496,6 +732,88 @@ script_tripoint_coord script_tripoint_coord::negate() const
     return scale_by( -1 );
 }
 
+script_tripoint_coord script_tripoint_coord::project_to(
+    const std::string_view result_scale ) const
+{
+    const coords::scale target = parse_scale( result_scale );
+    require_supported_kind( origin_, target );
+    exact_projection_factor( scale_, target );
+    return script_tripoint_coord(
+               origin_, target,
+               projected_axis( x_, scale_, target ),
+               projected_axis( y_, scale_, target ), z_ );
+}
+
+std::tuple<script_tripoint_coord, script_point_coord>
+script_tripoint_coord::project_remain(
+    const std::string_view result_scale ) const
+{
+    const coords::scale coarse_scale = parse_scale( result_scale );
+    const std::int64_t factor =
+        projection_down_factor( scale_, coarse_scale );
+    const coords::origin fine_origin = remainder_origin( coarse_scale );
+    require_supported_kind( origin_, coarse_scale );
+    require_supported_kind( fine_origin, scale_ );
+
+    const int coarse_x = floor_divide_axis( x_, factor );
+    const int coarse_y = floor_divide_axis( y_, factor );
+    const int remainder_x = checked_axis(
+                                static_cast<std::int64_t>( x_ ) -
+                                static_cast<std::int64_t>( coarse_x ) * factor );
+    const int remainder_y = checked_axis(
+                                static_cast<std::int64_t>( y_ ) -
+                                static_cast<std::int64_t>( coarse_y ) * factor );
+    return {
+        script_tripoint_coord(
+            origin_, coarse_scale, coarse_x, coarse_y, z_ ),
+        script_point_coord::from_native(
+            fine_origin, scale_, point( remainder_x, remainder_y ) )
+    };
+}
+
+script_tripoint_coord script_tripoint_coord::project_combine(
+    const script_point_coord &remainder ) const
+{
+    const std::int64_t factor =
+        projection_down_factor( remainder.native_scale(), scale_ );
+    if( remainder.native_origin() != remainder_origin( scale_ ) ) {
+        throw std::invalid_argument(
+            "game.coords project_combine received the wrong remainder origin" );
+    }
+    require_supported_kind( origin_, remainder.native_scale() );
+    require_valid_remainder_axis( remainder.x(), factor );
+    require_valid_remainder_axis( remainder.y(), factor );
+    return script_tripoint_coord(
+               origin_, remainder.native_scale(),
+               checked_axis(
+                   static_cast<std::int64_t>( x_ ) * factor + remainder.x() ),
+               checked_axis(
+                   static_cast<std::int64_t>( y_ ) * factor + remainder.y() ),
+               z_ );
+}
+
+std::vector<script_tripoint_coord> script_tripoint_coord::line_to(
+    const script_tripoint_coord &rhs, const std::int64_t max_points ) const
+{
+    require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "trace a line between" );
+    const std::size_t limit = checked_output_limit( max_points );
+    const std::uint64_t count =
+        static_cast<std::uint64_t>( square_distance( rhs ) ) + 1U;
+    require_output_count( count, limit );
+
+    std::vector<script_tripoint_coord> result;
+    result.reserve( static_cast<std::size_t>( count ) );
+    result.push_back( *this );
+    if( !( *this == rhs ) ) {
+        const std::vector<tripoint> native_line =
+            ::line_to( to_native(), rhs.to_native() );
+        for( const tripoint &value : native_line ) {
+            result.push_back( from_native( origin_, scale_, value ) );
+        }
+    }
+    return result;
+}
+
 std::int64_t script_tripoint_coord::manhattan_distance(
     const script_tripoint_coord &rhs ) const
 {
@@ -560,6 +878,67 @@ std::vector<std::string> supported_script_coordinate_kinds()
     return result;
 }
 
+std::vector<script_point_coord> script_coordinate_rectangle(
+    const script_point_coord &from, const script_point_coord &to,
+    const std::int64_t max_points )
+{
+    require_matching_kind(
+        from.native_origin(), from.native_scale(),
+        to.native_origin(), to.native_scale(), "iterate" );
+    const std::size_t limit = checked_output_limit( max_points );
+    const std::size_t count =
+        checked_rectangle_count( from.x(), to.x(), from.y(), to.y(), limit );
+    const std::int64_t minimum_x = std::min( from.x(), to.x() );
+    const std::int64_t maximum_x = std::max( from.x(), to.x() );
+    const std::int64_t minimum_y = std::min( from.y(), to.y() );
+    const std::int64_t maximum_y = std::max( from.y(), to.y() );
+
+    std::vector<script_point_coord> result;
+    result.reserve( count );
+    for( std::int64_t y = minimum_y; y <= maximum_y; ++y ) {
+        for( std::int64_t x = minimum_x; x <= maximum_x; ++x ) {
+            result.push_back( script_point_coord::from_native(
+                                  from.native_origin(), from.native_scale(),
+                                  point( checked_axis( x ), checked_axis( y ) ) ) );
+        }
+    }
+    return result;
+}
+
+std::vector<script_tripoint_coord> script_coordinate_box(
+    const script_tripoint_coord &from, const script_tripoint_coord &to,
+    const std::int64_t max_points )
+{
+    require_matching_kind(
+        from.native_origin(), from.native_scale(),
+        to.native_origin(), to.native_scale(), "iterate" );
+    const std::size_t limit = checked_output_limit( max_points );
+    const std::size_t count =
+        checked_box_count(
+            from.x(), to.x(), from.y(), to.y(), from.z(), to.z(), limit );
+    const std::int64_t minimum_x = std::min( from.x(), to.x() );
+    const std::int64_t maximum_x = std::max( from.x(), to.x() );
+    const std::int64_t minimum_y = std::min( from.y(), to.y() );
+    const std::int64_t maximum_y = std::max( from.y(), to.y() );
+    const std::int64_t minimum_z = std::min( from.z(), to.z() );
+    const std::int64_t maximum_z = std::max( from.z(), to.z() );
+
+    std::vector<script_tripoint_coord> result;
+    result.reserve( count );
+    for( std::int64_t z = minimum_z; z <= maximum_z; ++z ) {
+        for( std::int64_t y = minimum_y; y <= maximum_y; ++y ) {
+            for( std::int64_t x = minimum_x; x <= maximum_x; ++x ) {
+                result.push_back( script_tripoint_coord::from_native(
+                                      from.native_origin(), from.native_scale(),
+                                      tripoint(
+                                          checked_axis( x ), checked_axis( y ),
+                                          checked_axis( z ) ) ) );
+            }
+        }
+    }
+    return result;
+}
+
 void install_coordinate_value_api(
     sol::state &lua, sol::table &game, std::function<void()> require_values )
 {
@@ -573,6 +952,10 @@ void install_coordinate_value_api(
         "add", &script_point_coord::add,
         "subtract", &script_point_coord::subtract,
         "scale_by", &script_point_coord::scale_by,
+        "to", &script_point_coord::project_to,
+        "project_to", &script_point_coord::project_to,
+        "project_remain", &script_point_coord::project_remain,
+        "project_combine", &script_point_coord::project_combine,
         "manhattan_distance", &script_point_coord::manhattan_distance,
         "square_distance", &script_point_coord::square_distance,
         "euclidean_distance", &script_point_coord::euclidean_distance,
@@ -611,6 +994,10 @@ void install_coordinate_value_api(
             &script_tripoint_coord::subtract,
             &script_tripoint_coord::subtract_xy ),
         "scale_by", &script_tripoint_coord::scale_by,
+        "to", &script_tripoint_coord::project_to,
+        "project_to", &script_tripoint_coord::project_to,
+        "project_remain", &script_tripoint_coord::project_remain,
+        "project_combine", &script_tripoint_coord::project_combine,
         "manhattan_distance", &script_tripoint_coord::manhattan_distance,
         "square_distance", &script_tripoint_coord::square_distance,
         "euclidean_distance", &script_tripoint_coord::euclidean_distance,
@@ -667,6 +1054,85 @@ void install_coordinate_value_api(
         }
         return result;
     } );
+    coord_api.set_function(
+        "project_to",
+        sol::overload(
+            [require_values](
+    const script_point_coord & value, const std::string & scale ) {
+        require_values();
+        return value.project_to( scale );
+    },
+    [require_values](
+        const script_tripoint_coord & value, const std::string & scale ) {
+        require_values();
+        return value.project_to( scale );
+    } ) );
+    coord_api.set_function(
+        "project_remain",
+        sol::overload(
+            [require_values](
+    const script_point_coord & value, const std::string & scale ) {
+        require_values();
+        return value.project_remain( scale );
+    },
+    [require_values](
+        const script_tripoint_coord & value, const std::string & scale ) {
+        require_values();
+        return value.project_remain( scale );
+    } ) );
+    coord_api.set_function(
+        "project_combine",
+        sol::overload(
+            [require_values](
+                const script_point_coord & coarse,
+    const script_point_coord & remainder ) {
+        require_values();
+        return coarse.project_combine( remainder );
+    },
+    [require_values](
+        const script_tripoint_coord & coarse,
+        const script_point_coord & remainder ) {
+        require_values();
+        return coarse.project_combine( remainder );
+    } ) );
+    coord_api.set_function(
+        "line",
+        sol::overload(
+            [require_values](
+                sol::this_state lua_state, const script_point_coord & from,
+    const script_point_coord & to, const std::int64_t max_points ) {
+        require_values();
+        return coordinate_vector_table(
+                   lua_state, from.line_to( to, max_points ) );
+    },
+    [require_values](
+        sol::this_state lua_state, const script_tripoint_coord & from,
+        const script_tripoint_coord & to, const std::int64_t max_points ) {
+        require_values();
+        return coordinate_vector_table(
+                   lua_state, from.line_to( to, max_points ) );
+    } ) );
+    coord_api.set_function(
+        "rectangle",
+        [require_values](
+            sol::this_state lua_state, const script_point_coord & from,
+    const script_point_coord & to, const std::int64_t max_points ) {
+        require_values();
+        return coordinate_vector_table(
+                   lua_state,
+                   script_coordinate_rectangle( from, to, max_points ) );
+    } );
+    coord_api.set_function(
+        "box",
+        [require_values](
+            sol::this_state lua_state, const script_tripoint_coord & from,
+    const script_tripoint_coord & to, const std::int64_t max_points ) {
+        require_values();
+        return coordinate_vector_table(
+                   lua_state,
+                   script_coordinate_box( from, to, max_points ) );
+    } );
+    coord_api["max_range_points"] = maximum_coordinate_range_points;
 
     for( const coordinate_kind_definition &definition : coordinate_kinds ) {
         const std::string point_name = "point_" + std::string( definition.name );

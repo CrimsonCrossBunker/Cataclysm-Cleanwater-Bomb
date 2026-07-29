@@ -16,7 +16,7 @@ const std::vector<binding_domain> &binding_catalog()
         },
         {
             "coordinates", "game.coords", "game.read", 5,
-            binding_implementation_status::planned
+            binding_implementation_status::covered
         },
         {
             "bionics", "game.bionics", "game.read", 5,

@@ -6,6 +6,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <vector>
 
 #include "catalua_sol.h"
@@ -36,6 +37,13 @@ class script_point_coord
         script_point_coord subtract( const script_point_coord &rhs ) const;
         script_point_coord scale_by( std::int64_t factor ) const;
         script_point_coord negate() const;
+        script_point_coord project_to( std::string_view result_scale ) const;
+        std::tuple<script_point_coord, script_point_coord> project_remain(
+            std::string_view result_scale ) const;
+        script_point_coord project_combine(
+            const script_point_coord &remainder ) const;
+        std::vector<script_point_coord> line_to(
+            const script_point_coord &rhs, std::int64_t max_points ) const;
         std::int64_t manhattan_distance( const script_point_coord &rhs ) const;
         std::int64_t square_distance( const script_point_coord &rhs ) const;
         double euclidean_distance( const script_point_coord &rhs ) const;
@@ -84,6 +92,13 @@ class script_tripoint_coord
         script_tripoint_coord subtract_xy( const script_point_coord &rhs ) const;
         script_tripoint_coord scale_by( std::int64_t factor ) const;
         script_tripoint_coord negate() const;
+        script_tripoint_coord project_to( std::string_view result_scale ) const;
+        std::tuple<script_tripoint_coord, script_point_coord> project_remain(
+            std::string_view result_scale ) const;
+        script_tripoint_coord project_combine(
+            const script_point_coord &remainder ) const;
+        std::vector<script_tripoint_coord> line_to(
+            const script_tripoint_coord &rhs, std::int64_t max_points ) const;
         std::int64_t manhattan_distance( const script_tripoint_coord &rhs ) const;
         std::int64_t square_distance( const script_tripoint_coord &rhs ) const;
         double euclidean_distance( const script_tripoint_coord &rhs ) const;
@@ -111,6 +126,12 @@ class script_tripoint_coord
 };
 
 std::vector<std::string> supported_script_coordinate_kinds();
+std::vector<script_point_coord> script_coordinate_rectangle(
+    const script_point_coord &from, const script_point_coord &to,
+    std::int64_t max_points );
+std::vector<script_tripoint_coord> script_coordinate_box(
+    const script_tripoint_coord &from, const script_tripoint_coord &to,
+    std::int64_t max_points );
 
 // Installs immutable, coordinate-space-aware v5 values under game.coords.
 void install_coordinate_value_api(
