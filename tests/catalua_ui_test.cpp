@@ -23,6 +23,7 @@
 #include "catalua_ui_scheduler.h"
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
+#include "creature_tracker.h"
 #include "effect.h"
 #include "event_bus.h"
 #include "explosion.h"
@@ -5964,6 +5965,232 @@ end)
     CHECK( error.empty() );
     get_event_bus().send<event_type::game_begin>(
         "lua-game-interaction-services" );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_world_services_use_handles_and_guard_dangerous_relocation",
+           "[lua][bindings][game_services][world][integration]" )
+{
+    clear_creatures();
+    map &here = get_map();
+    avatar &player = get_avatar();
+    const tripoint_abs_ms player_before = player.pos_abs();
+
+    std::vector<tripoint_bub_ms> available;
+    for( const tripoint_bub_ms &candidate :
+         here.points_in_radius( player.pos_bub( here ), 8 ) ) {
+        if( candidate == player.pos_bub( here ) ||
+            candidate.z() != player.pos_bub( here ).z() ||
+            !here.passable( candidate ) ||
+            g->is_dangerous_tile( candidate ) ||
+            get_creature_tracker().creature_at<Creature>(
+                candidate, true ) != nullptr ) {
+            continue;
+        }
+        available.push_back( candidate );
+        if( available.size() == 3 ) {
+            break;
+        }
+    }
+    REQUIRE( available.size() == 3 );
+
+    const tripoint_bub_ms monster_position = available[0];
+    const tripoint_bub_ms hallucination_position = available[1];
+    npc &test_npc = spawn_npc(
+                        available[2].xy(), "test_talker" );
+    const character_id test_npc_id = test_npc.getID();
+    const tripoint_abs_ms monster_absolute =
+        here.get_abs( monster_position );
+    const tripoint_abs_ms hallucination_absolute =
+        here.get_abs( hallucination_position );
+    const tripoint_abs_ms npc_absolute = test_npc.pos_abs();
+
+    on_out_of_scope cleanup( [
+                                monster_position,
+                                hallucination_position,
+                                test_npc_id
+                              ]() {
+        if( monster *placed =
+                get_creature_tracker().creature_at<monster>(
+                    monster_position, true ) ) {
+            g->remove_zombie( *placed );
+        }
+        if( monster *hallucination =
+                get_creature_tracker().creature_at<monster>(
+                    hallucination_position, true ) ) {
+            g->remove_zombie( *hallucination );
+        }
+        g->remove_npc_follower( test_npc_id );
+        g->remove_npc( test_npc_id );
+        overmap_buffer.remove_npc( test_npc_id );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events",
+            "game.actions",
+            "game.actions.dangerous",
+            "game.read",
+            "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+
+    std::ostringstream lua;
+    lua << "local monster_position = game.coords.tripoint_abs_ms("
+        << monster_absolute.x() << ","
+        << monster_absolute.y() << ","
+        << monster_absolute.z() << ")\n";
+    lua << "local hallucination_position = game.coords.tripoint_abs_ms("
+        << hallucination_absolute.x() << ","
+        << hallucination_absolute.y() << ","
+        << hallucination_absolute.z() << ")\n";
+    lua << "local npc_position = game.coords.tripoint_abs_ms("
+        << npc_absolute.x() << ","
+        << npc_absolute.y() << ","
+        << npc_absolute.z() << ")\n";
+    lua << R"lua(
+local zombie = game.types.id("monster", "mon_zombie")
+local npc_lookup = game.creatures.at(npc_position)
+assert(npc_lookup.ok == true)
+local npc_handle = npc_lookup.value
+assert(game.creatures.snapshot(npc_handle).value.kind == "npc")
+
+local spawn_ok, spawn_error = pcall(function()
+    game.spawns.monster(zombie, monster_position)
+end)
+assert(spawn_ok == false)
+assert(string.find(spawn_error, "active callback", 1, true) ~= nil)
+local relocation_ok, relocation_error = pcall(function()
+    game.relocation.local_at(
+        game.creatures.snapshot(game.creatures.avatar()).value.position)
+end)
+assert(relocation_ok == false)
+assert(string.find(relocation_error, "active callback", 1, true) ~= nil)
+
+events.on("game_begin", function()
+    local placed = game.spawns.monster(
+        zombie, monster_position, 0)
+    assert(placed.ok == true)
+    assert(placed.value.handle.kind == "creature")
+    assert(placed.value.handle:is_valid() == true)
+    assert(placed.value.position == monster_position)
+    local placed_snapshot =
+        game.creatures.snapshot(placed.value.handle)
+    assert(placed_snapshot.ok == true)
+    assert(placed_snapshot.value.kind == "monster")
+    assert(placed_snapshot.value.type_id ==
+           placed.value.monster.value)
+    assert(placed_snapshot.value.hallucination == false)
+
+    local hallucination = game.spawns.hallucination(
+        hallucination_position, {
+            monster = zombie,
+            lifespan = game.time.duration(1, "minute")
+        })
+    assert(hallucination.ok == true)
+    assert(hallucination.value.spawned == true)
+    assert(hallucination.value.handle:is_valid() == true)
+    local hallucination_snapshot =
+        game.creatures.snapshot(hallucination.value.handle)
+    assert(hallucination_snapshot.ok == true)
+    assert(hallucination_snapshot.value.hallucination == true)
+
+    assert(pcall(function()
+        game.spawns.monster(
+            game.types.id("item", "rock"),
+            monster_position)
+    end) == false)
+    assert(pcall(function()
+        game.spawns.monster(zombie, monster_position, 61)
+    end) == false)
+    assert(pcall(function()
+        game.spawns.hallucination(
+            hallucination_position, {
+                lifespan = game.time.duration(1, "turn")
+            })
+    end) == false)
+
+    local added = game.followers.add(npc_handle)
+    assert(added.ok == true)
+    assert(added.value.before == false)
+    assert(added.value.after == true)
+    assert(added.value.changed == true)
+    assert(game.followers.add(
+        npc_handle).value.changed == false)
+
+    local followers = game.followers.list()
+    assert(followers.ok == true)
+    local found = false
+    for _, entry in ipairs(followers.value.items) do
+        if entry.id == added.value.id then
+            found = true
+            assert(entry.available == true)
+            assert(entry.handle:is_valid() == true)
+        end
+    end
+    assert(found == true)
+
+    local removed = game.followers.remove(npc_handle)
+    assert(removed.ok == true)
+    assert(removed.value.before == true)
+    assert(removed.value.after == false)
+    assert(removed.value.changed == true)
+    assert(game.followers.remove(
+        npc_handle).value.changed == false)
+    local wrong_follower =
+        game.followers.add(game.creatures.avatar())
+    assert(wrong_follower.ok == false)
+    assert(wrong_follower.error.code == "wrong_subtype")
+
+    local avatar_handle = game.creatures.avatar()
+    local avatar_position =
+        game.creatures.snapshot(avatar_handle).value.position
+    local same_local =
+        game.relocation.local_at(avatar_position)
+    assert(same_local.ok == true)
+    assert(same_local.value.changed == false)
+    assert(same_local.value.position == avatar_position)
+
+    local avatar_omt =
+        avatar_position:project_to("overmap_terrain")
+    local same_overmap =
+        game.relocation.overmap_at(avatar_omt)
+    assert(same_overmap.ok == true)
+    assert(same_overmap.value.changed == false)
+    assert(same_overmap.value.overmap_terrain == avatar_omt)
+    assert(pcall(function()
+        game.relocation.local_at(avatar_omt)
+    end) == false)
+    assert(pcall(function()
+        game.relocation.overmap_at(avatar_position)
+    end) == false)
+end)
+)lua";
+    script.write( lua.str() );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    get_event_bus().send<event_type::game_begin>(
+        "lua-game-world-services" );
+
+    CHECK( player.pos_abs() == player_before );
+    CHECK( g->get_follower_list().count( test_npc_id ) == 0 );
+    monster *placed =
+        get_creature_tracker().creature_at<monster>(
+            monster_position, true );
+    REQUIRE( placed != nullptr );
+    CHECK_FALSE( placed->is_hallucination() );
+    monster *hallucination =
+        get_creature_tracker().creature_at<monster>(
+            hallucination_position, true );
+    REQUIRE( hallucination != nullptr );
+    CHECK( hallucination->is_hallucination() );
     CHECK( cata::lua_ui::status().last_error.empty() );
 }
 

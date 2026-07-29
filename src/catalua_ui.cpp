@@ -62,6 +62,7 @@
 #include "catalua_ui_state.h"
 #include "catalua_ui_values.h"
 #include "catalua_ui_world.h"
+#include "catalua_ui_world_services.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "event.h"
@@ -2585,6 +2586,31 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game interaction services" );
         require_capability( state, "game.actions" );
+    },
+    [&state]() {
+        return state.accept_actions &&
+               state.current_source.has_value();
+    } );
+    install_game_world_service_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game follower services" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game world services" );
+        require_capability( state, "game.write" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game relocation services" );
+        require_capability( state, "game.write" );
+        require_capability( state, "game.actions.dangerous" );
     },
     [&state]() {
         return state.accept_actions &&
