@@ -6683,6 +6683,74 @@ assert(state.character.get("native_movement.monster", 0) == 1)
     REQUIRE( reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_creature_turn_hooks_run_once_per_native_ai_turn",
+           "[lua][bindings][hooks][turns][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    monster &test_monster = spawn_test_monster(
+                                "mon_zombie",
+                                player.pos_bub( here ) +
+                                tripoint_rel_ms::east * 3 );
+    npc &test_npc = spawn_npc(
+                        ( player.pos_bub( here ) +
+                          tripoint_rel_ms::west * 3 ).xy(),
+                        "test_talker" );
+    test_monster.add_effect(
+        efftype_id( "controlled" ), 1_hours );
+    test_npc.add_effect(
+        efftype_id( "npc_suspend" ), 1_hours );
+    test_npc.set_moves( 0 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_turns." .. name,
+        state.character.get("native_turns." .. name, 0) + 1)
+end
+
+game.hooks.on("on_creature_do_turn", function(payload)
+    assert(payload.creature ~= nil)
+    count("creature")
+end)
+game.hooks.on("on_monster_do_turn", function(payload)
+    assert(payload.monster ~= nil)
+    count("monster")
+end)
+game.hooks.on("on_npc_do_turn", function(payload)
+    assert(payload.npc ~= nil)
+    count("npc")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    g->simulate_turn_suffix();
+
+    script.write( R"lua(
+assert(state.character.get("native_turns.creature", 0) == 2)
+assert(state.character.get("native_turns.monster", 0) == 1)
+assert(state.character.get("native_turns.npc", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
            "[lua][bindings][callbacks][integration]" )
 {
