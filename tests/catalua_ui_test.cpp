@@ -23,6 +23,7 @@
 #include "effect.h"
 #include "event_bus.h"
 #include "input_context_actions.h"
+#include "item.h"
 #include "json_loader.h"
 #include "path_info.h"
 #include "ui_profile.h"
@@ -1695,6 +1696,90 @@ game.bionics.install(
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK( player.num_bionics() == original_count );
     CHECK( player.get_power_level() == original_power );
+}
+
+TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
+           "[lua][bindings][items][inventory][integration]" )
+{
+    avatar &player = get_avatar();
+    item_location added = player.i_add( item( itype_id( "rock" ) ) );
+    REQUIRE( added );
+    const std::int64_t added_uid = added->uid().get_value();
+    on_out_of_scope cleanup( [&player, added_uid]() {
+        player.remove_items_with(
+        [added_uid]( const item & entry ) {
+            return entry.uid().get_value() == added_uid;
+        }, 1 );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local listed = game.inventory.list(avatar, {
+    limit = 1000000,
+    max_depth = 1000000
+})
+assert(listed.ok == true)
+local page = listed.value
+assert(page.limit == 512)
+assert(page.max_depth == 16)
+assert(page.returned == #page.items)
+assert(page.returned <= page.total)
+assert(type(page.total_exact) == "boolean")
+assert(type(page.node_truncated) == "boolean")
+assert(type(page.depth_truncated) == "boolean")
+
+local rock = nil
+for _, entry in ipairs(page.items) do
+    assert(entry.handle.kind == "item")
+    assert(math.type(entry.uid) == "integer")
+    assert(entry.id.kind == "item")
+    assert(type(entry.name) == "string")
+    assert(entry.location == "wielded" or
+        entry.location == "worn" or
+        entry.location == "carried" or
+        entry.location == "contained")
+    assert(math.type(entry.depth) == "integer")
+    if entry.id.value == "rock" then
+        rock = entry
+    end
+end
+assert(rock ~= nil)
+
+local found = game.inventory.find(avatar, rock.uid)
+assert(found.ok == true)
+assert(found.value.uid == rock.uid)
+assert(found.value.handle.kind == "item")
+assert(found.value.id == rock.id)
+
+local roots = game.inventory.list(avatar, {
+    recursive = false,
+    limit = 1000000
+})
+assert(roots.ok == true)
+for _, entry in ipairs(roots.value.items) do
+    assert(entry.depth == 0)
+    assert(entry.location ~= "contained")
+end
+
+assert(pcall(function()
+    game.inventory.list(avatar, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.inventory.list(avatar, { offset = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
