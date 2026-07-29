@@ -1471,7 +1471,10 @@ void initialize_state( runtime_state &state )
         return lua_runtime_status( lua, state );
     } );
     install_i18n_api( state.lua );
-    install_registry_api( state.lua, [&state]() {
+    install_registry_api( state.lua, game, [&state]() {
+        require_capability( state, "registry.read" );
+    }, [&state]() {
+        require_api_version( state, 5, "game.definitions" );
         require_capability( state, "registry.read" );
     } );
 

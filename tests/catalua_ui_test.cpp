@@ -2000,6 +2000,72 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_definition_registry_uses_typed_ids_without_native_references",
+           "[lua][bindings][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "registry.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local kinds = game.definitions.kinds()
+assert(#kinds == 41)
+assert(type(game.definitions.revision()) == "number")
+
+local item = game.definitions.describe("item")
+assert(item.typed == true)
+assert(item.enumerable == true)
+assert(item.detail_level == "snapshot")
+assert(type(item.fields) == "table")
+assert(type(item.count) == "number")
+
+local damage = game.definitions.describe("damage_type")
+assert(damage.enumerable == false)
+assert(damage.detail_level == "identity")
+assert(damage.count == nil)
+local bash = game.types.id("damage_type", "bash")
+assert(game.definitions.exists(bash) == true)
+local bash_definition = game.definitions.get(bash)
+assert(bash_definition.id == bash)
+assert(bash_definition.value == "bash")
+assert(bash_definition.valid == true)
+assert(bash_definition.detail_level == "identity")
+
+local page = game.definitions.list("item", { offset = 0, limit = 2 })
+assert(page.returned <= 2)
+if page.returned > 0 then
+    local id = page.entries[1].id
+    assert(id.kind == "item")
+    assert(id.value == page.entries[1].value)
+    local first = game.definitions.get(id)
+    assert(first.id == id)
+    assert(first.kind == "item")
+    assert(first.detail_level == "snapshot")
+    local original_name = first.name
+    first.name = "detached mutation"
+    assert(game.definitions.get(id).name == original_name)
+end
+
+local missing = game.types.id("item", "__missing_lua_definition_id__")
+assert(game.definitions.exists(missing) == false)
+assert(game.definitions.get(missing) == nil)
+assert(pcall(function()
+    game.definitions.list("damage_type")
+end) == false)
+assert(pcall(function()
+    game.definitions.describe("unknown")
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v4_modules_use_strict_source_environments_and_consumer_caches",
            "[lua][modules][sandbox][integration]" )
 {
