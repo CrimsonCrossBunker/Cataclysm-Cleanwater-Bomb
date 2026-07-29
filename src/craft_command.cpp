@@ -53,7 +53,7 @@ namespace {
 struct craft_material_source {
     item_location location;
     item snapshot;
-    item_uid source_uid;
+    int64_t source_uid = 0;
     int quantity = 0;
     bool by_charges = false;
 };
@@ -141,7 +141,7 @@ bool build_craft_material_plan( Character &crafter,
             if( by_charges && quantity < snapshot.charges ) {
                 snapshot.mod_charges( quantity - snapshot.charges );
             }
-            plan.sources.push_back( { location, snapshot, location->uid(), quantity, by_charges } );
+            plan.sources.push_back( { location, snapshot, location->uid().get_value(), quantity, by_charges } );
             remaining -= quantity;
         }
         if( remaining > 0 ) {
@@ -168,7 +168,7 @@ bool build_craft_material_plan( Character &crafter,
 bool validate_craft_material_plan( const craft_material_plan &plan )
 {
     for( const craft_material_source &source : plan.sources ) {
-        if( !source.location || source.location->uid() != source.source_uid ||
+        if( !source.location || source.location->uid().get_value() != source.source_uid ||
             source.location->typeId() != source.snapshot.typeId() ) {
             return false;
         }
