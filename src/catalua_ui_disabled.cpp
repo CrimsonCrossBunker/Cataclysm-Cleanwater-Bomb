@@ -64,6 +64,18 @@ void dispatch_native_npc_spawn(
 {
 }
 
+std::string dispatch_character_display_skill_info(
+    const Character &, std::string_view )
+{
+    return {};
+}
+
+bool dispatch_character_display_skill_action(
+    const Character &, std::string_view, std::string_view )
+{
+    return false;
+}
+
 bool dispatch_native_callback(
     std::string_view, std::string_view, std::string_view,
     const native_callback_arguments & )

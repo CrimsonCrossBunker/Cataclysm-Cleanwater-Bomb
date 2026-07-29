@@ -20,6 +20,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_modifier.h"
 #include "color.h"
@@ -954,6 +955,12 @@ static void draw_skills_info( const catacurses::window &w_info, const Character 
                                            learning_bonus );
             }
         }
+        const std::string lua_text =
+            cata::lua_ui::dispatch_character_display_skill_info(
+                you, selectedSkill->ident().str() );
+        if( !lua_text.empty() ) {
+            info_text += "\n\n" + lua_text;
+        }
         draw_x_info( w_info, info_text, info_line );
     }
 
@@ -1414,6 +1421,15 @@ static bool handle_player_display_action( Character &you, unsigned int &line,
                     display_bodygraph( you );
                 }
 
+                invalidate_tab( curtab );
+                break;
+            case player_display_tab::skills:
+                if( line < skillslist.size() &&
+                    !skillslist[line].is_header ) {
+                    cata::lua_ui::dispatch_character_display_skill_action(
+                        you, skillslist[line].skill->ident().str(),
+                        action );
+                }
                 invalidate_tab( curtab );
                 break;
             case player_display_tab::proficiencies:

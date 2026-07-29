@@ -4518,6 +4518,42 @@ void dispatch_native_npc_spawn(
     }
 }
 
+std::string dispatch_character_display_skill_info(
+    const Character &character, const std::string_view skill )
+{
+    if( !has_native_hook(
+            "on_character_display_skill_info" ) ) {
+        return {};
+    }
+    return dispatch_native_hook_result(
+    "on_character_display_skill_info", {
+        { "character", &character },
+        {
+            "skill",
+            native_callback_id { "skill", std::string( skill ) }
+        }
+    } ).text;
+}
+
+bool dispatch_character_display_skill_action(
+    const Character &character, const std::string_view skill,
+    const std::string_view action )
+{
+    if( !has_native_hook(
+            "on_character_display_skill_action" ) ) {
+        return false;
+    }
+    return dispatch_native_hook_result(
+    "on_character_display_skill_action", {
+        { "character", &character },
+        {
+            "skill",
+            native_callback_id { "skill", std::string( skill ) }
+        },
+        { "action", std::string( action ) }
+    } ).handled;
+}
+
 bool dispatch_native_callback(
     const std::string_view kind, const std::string_view target,
     const std::string_view method,

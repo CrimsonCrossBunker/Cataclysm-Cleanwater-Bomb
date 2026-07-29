@@ -6884,6 +6884,58 @@ assert(state.character.get(
     REQUIRE( reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_skill_display_hooks_run_from_native_ui_bridge",
+           "[lua][bindings][hooks][skill-display][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    avatar &player = get_avatar();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_character_display_skill_info", function(payload)
+    assert(payload.character ~= nil)
+    assert(payload.skill ==
+        game.types.id("skill", "fabrication"))
+    state.character.set("native_skill.info", true)
+    return { text = "Lua skill details" }
+end)
+game.hooks.on("on_character_display_skill_action", function(payload)
+    assert(payload.character ~= nil)
+    assert(payload.skill ==
+        game.types.id("skill", "fabrication"))
+    assert(payload.action == "CONFIRM")
+    state.character.set("native_skill.action", true)
+    return { handled = true }
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    CHECK( dispatch_character_display_skill_info(
+               player, "fabrication" ) == "Lua skill details" );
+    CHECK( dispatch_character_display_skill_action(
+               player, "fabrication", "CONFIRM" ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_skill.info", false) == true)
+assert(state.character.get("native_skill.action", false) == true)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
            "[lua][bindings][callbacks][integration]" )
 {

@@ -114,6 +114,11 @@ void dispatch_native_monster_spawn(
     const Creature &monster, std::string_view source );
 void dispatch_native_npc_spawn(
     const Character &npc, std::string_view source );
+std::string dispatch_character_display_skill_info(
+    const Character &character, std::string_view skill );
+bool dispatch_character_display_skill_action(
+    const Character &character, std::string_view skill,
+    std::string_view action );
 bool dispatch_native_callback(
     std::string_view kind, std::string_view target,
     std::string_view method,
