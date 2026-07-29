@@ -60,7 +60,7 @@ struct craft_material_source {
 
 struct craft_material_plan {
     std::vector<craft_material_source> sources;
-    item_components preview_components;
+    std::vector<item_comp> preview_components;
 };
 
 std::vector<item_location> craft_source_locations( Character &crafter,
@@ -726,7 +726,8 @@ item craft_command::create_in_progress_craft()
     // consumed, so cancelling leaves every source unchanged.
     item_components preview_used;
     for( const craft_material_source &source : material_plan.sources ) {
-        preview_used.add( source.snapshot );
+        item preview_component = source.snapshot;
+        preview_used.add( preview_component );
     }
     item preview( rec, batch_size, preview_used, material_plan.preview_components, false );
     const time_duration expected_duration = time_duration::from_moves(
