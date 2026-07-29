@@ -26,6 +26,7 @@
 #include "input_context_actions.h"
 #include "item.h"
 #include "json_loader.h"
+#include "magic.h"
 #include "path_info.h"
 #include "pocket_type.h"
 #include "ui_profile.h"
@@ -1871,6 +1872,105 @@ game.mutations.grant(
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK_FALSE( player.has_permanent_trait( debug_speed ) );
+}
+
+TEST_CASE( "lua_v5_spell_definitions_and_known_spells_are_detached_and_bounded",
+           "[lua][bindings][spells][definitions][integration]" )
+{
+    avatar &player = get_avatar();
+    const spell_id test_spell( "test_spell_pew" );
+    const bool originally_known =
+        player.magic->knows_spell( test_spell );
+    if( !originally_known ) {
+        player.magic->learn_spell(
+            test_spell, player, true );
+    }
+    on_out_of_scope cleanup( [&player, test_spell,
+    originally_known]() {
+        if( !originally_known &&
+            player.magic->knows_spell( test_spell ) ) {
+            player.magic->forget_spell( test_spell );
+        }
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local pew = game.types.id("spell", "test_spell_pew")
+
+local definitions = game.spells.definitions({
+    offset = 0,
+    limit = 1000000
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.has_more ==
+    (definitions.offset + definitions.returned < definitions.total))
+
+local definition = game.spells.definition(pew)
+assert(definition.id == pew)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.effect) == "string")
+assert(type(definition.shape) == "string")
+assert(type(definition.energy_source) == "string")
+assert(type(definition.formulas.minimum_damage.dynamic) == "boolean")
+assert(definition.formulas.minimum_damage.minimum ~= nil)
+assert(definition.valid_targets.returned ==
+    #definition.valid_targets.items)
+assert(definition.flags.returned == #definition.flags.items)
+assert(definition.additional_spells.returned ==
+    #definition.additional_spells.items)
+
+local known = game.spells.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(known.ok == true)
+assert(known.value.limit == 256)
+assert(known.value.returned == #known.value.items)
+assert(known.value.has_more ==
+    (known.value.offset + known.value.returned < known.value.total))
+assert(game.spells.knows(avatar, pew).value == true)
+local fetched = game.spells.get(avatar, pew)
+assert(fetched.ok == true)
+assert(fetched.value.id == pew)
+assert(math.type(fetched.value.experience) == "integer")
+assert(math.type(fetched.value.level) == "integer")
+assert(math.type(fetched.value.maximum_level) == "integer")
+assert(type(fetched.value.can_cast) == "boolean")
+assert(type(fetched.value.has_enough_energy) == "boolean")
+assert(type(fetched.value.failure_probability) == "number")
+assert(math.type(fetched.value.casting_time_moves) == "integer")
+assert(fetched.value.duration.turns >= 0)
+local learn = game.spells.can_learn(avatar, pew)
+assert(learn.ok == true)
+assert(learn.value.known == true)
+assert(type(learn.value.can_learn) == "boolean")
+assert(learn.value.time.turns >= 0)
+
+assert(pcall(function()
+    game.spells.definitions({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.spells.list(avatar, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.spells.get(avatar, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",

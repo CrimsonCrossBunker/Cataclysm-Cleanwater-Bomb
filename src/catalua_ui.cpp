@@ -38,6 +38,7 @@
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_imgui.h"
 #include "catalua_ui_items.h"
+#include "catalua_ui_magic.h"
 #include "catalua_ui_manifest.h"
 #include "catalua_ui_modules.h"
 #include "catalua_ui_mutations.h"
@@ -1835,6 +1836,18 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.mutations" );
         require_capability( state, "game.write" );
+    } );
+    install_magic_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.spells" );
+        require_capability( state, "game.read" );
     } );
     install_item_api(
         game,

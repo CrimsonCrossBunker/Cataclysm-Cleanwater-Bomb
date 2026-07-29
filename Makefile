@@ -1167,6 +1167,7 @@ LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_ui_i18n.cpp \
   $(SRC_DIR)/catalua_ui_imgui.cpp \
   $(SRC_DIR)/catalua_ui_items.cpp \
+  $(SRC_DIR)/catalua_ui_magic.cpp \
   $(SRC_DIR)/catalua_ui_manifest.cpp \
   $(SRC_DIR)/catalua_ui_modules.cpp \
   $(SRC_DIR)/catalua_ui_mutations.cpp \
