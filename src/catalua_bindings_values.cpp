@@ -13,10 +13,13 @@
 
 #include "ammo.h"
 #include "ammo_effect.h"
+#include "addiction.h"
 #include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "catalua_bindings_coords.h"
+#include "catalua_bindings_enums.h"
+#include "damage.h"
 #include "disease.h"
 #include "effect.h"
 #include "emit.h"
@@ -33,6 +36,7 @@
 #include "mongroup.h"
 #include "monstergenerator.h"
 #include "morale_types.h"
+#include "move_mode.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "omdata.h"
@@ -63,14 +67,16 @@ struct id_kind_definition {
     id_validator validate;
 };
 
-const std::array<id_kind_definition, 37> &id_kind_definitions()
+const std::array<id_kind_definition, 41> &id_kind_definitions()
 {
-    static const std::array<id_kind_definition, 37> definitions = {{
+    static const std::array<id_kind_definition, 41> definitions = {{
             { "activity", &valid_id<activity_type> },
+            { "addiction", &valid_id<add_type> },
             { "ammo_effect", &valid_id<ammo_effect> },
             { "ammunition", &valid_id<ammunition_type> },
             { "bionic", &valid_id<bionic_data> },
             { "body_part", &valid_id<body_part_type> },
+            { "damage_type", &valid_id<damage_type> },
             { "disease", &valid_id<disease_type> },
             { "effect", &valid_id<effect_type> },
             { "emit", &valid_id<emit> },
@@ -88,8 +94,10 @@ const std::array<id_kind_definition, 37> &id_kind_definitions()
             { "mod", &valid_id<MOD_INFORMATION> },
             { "monster", &valid_id<mtype> },
             { "monster_faction", &valid_id<monfaction> },
+            { "monster_flag", &valid_id<mon_flag> },
             { "monster_group", &valid_id<MonsterGroup> },
             { "morale", &valid_id<morale_type_data> },
+            { "move_mode", &valid_id<move_mode> },
             { "mutation", &valid_id<mutation_branch> },
             { "mutation_category", &valid_id<mutation_category_trait> },
             { "overmap_terrain", &valid_id<oter_t> },
@@ -1111,6 +1119,7 @@ void install_value_type_api(
     } );
     game["time"] = std::move( time );
 
+    install_enum_value_api( lua, game, require_values );
     install_coordinate_value_api( lua, game, std::move( require_values ) );
 }
 

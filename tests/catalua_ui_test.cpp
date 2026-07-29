@@ -3,6 +3,7 @@
 #include "calendar.h"
 #include "catalua_bindings.h"
 #include "catalua_bindings_coords.h"
+#include "catalua_bindings_enums.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "catalua_ui.h"
@@ -1152,7 +1153,7 @@ TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
     using namespace cata::lua_ui;
 
     const std::vector<std::string> &kinds = supported_game_id_kinds();
-    REQUIRE( kinds.size() == 37 );
+    REQUIRE( kinds.size() == 41 );
     CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
     CHECK( std::adjacent_find( kinds.begin(), kinds.end() ) == kinds.end() );
     CHECK( is_supported_game_id_kind( "item" ) );
@@ -1202,7 +1203,7 @@ assert(id == game.types.id("item", "rock"))
 assert(id ~= game.types.id("monster", "rock"))
 assert(pcall(function() id.value = "stick" end) == false)
 local kinds = game.types.id_kinds()
-assert(#kinds == 37)
+assert(#kinds == 41)
 kinds[1] = "mutated"
 assert(game.types.id_kinds()[1] == "activity")
 )lua" );
@@ -1588,6 +1589,67 @@ assert(pcall(function()
     return game.coords.rectangle(
         game.coords.point_bub_ms(0, 0),
         game.coords.point_bub_ms(100, 100), 4097)
+end) == false)
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_enums_are_typed_discoverable_and_bounded",
+           "[lua][bindings][values][enums]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<std::string> kinds = supported_script_enum_kinds();
+    CHECK( kinds.size() == 25 );
+    CHECK( std::find( kinds.begin(), kinds.end(), "DamageType" ) != kinds.end() );
+    CHECK( script_enum_kind_is_available( "DamageType" ) );
+    CHECK_FALSE( script_enum_kind_is_available( "ArtifactCharge" ) );
+
+    const script_enum_value hostile =
+        script_enum_value::from( "Attitude", "hostile" );
+    CHECK( hostile.kind() == "Attitude" );
+    CHECK( hostile.name() == "hostile" );
+    CHECK( hostile.ordinal() == 0 );
+    CHECK( hostile.to_string() == "Attitude.hostile" );
+    CHECK_THROWS_AS(
+        script_enum_value::from( "Attitude", "missing" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_enum_value::from( "ArtifactCharge", "anything" ),
+        std::invalid_argument );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+assert(#game.enums.kinds() == 25)
+local hostile = game.enums.value("Attitude", "hostile")
+assert(hostile.kind == "Attitude")
+assert(hostile.name == "hostile")
+assert(hostile.ordinal == 0)
+assert(tostring(hostile) == "Attitude.hostile")
+assert(hostile == game.enums.value("Attitude", "hostile"))
+assert(hostile ~= game.enums.value("Attitude", "friendly"))
+local directions = game.enums.values("Direction", 0, 4)
+assert(#directions == 4)
+assert(directions[1].kind == "Direction")
+local damage = game.enums.describe("DamageType")
+assert(damage.status == "dynamic_id")
+assert(damage.available == true)
+assert(damage.replacement == "GameId<damage_type>")
+local removed = game.enums.describe("ArtifactCharge")
+assert(removed.status == "not_applicable")
+assert(removed.available == false)
+assert(#removed.reason > 0)
+assert(game.enums.has("Attitude", "friendly") == true)
+assert(game.enums.has("ArtifactCharge", "anything") == false)
+assert(pcall(function() hostile.name = "neutral" end) == false)
+assert(pcall(function()
+    return game.enums.values("ActionId", 0, 513)
+end) == false)
+assert(pcall(function()
+    return game.enums.value("ArtifactCharge", "anything")
 end) == false)
 )lua" );
     REQUIRE( result.valid() );
