@@ -106,6 +106,9 @@ bool build_craft_material_plan( Character &crafter,
         for( int pass = 0; pass < 2 && remaining > 0; ++pass ) {
             const bool preferred = pass == 0;
             for( usage_from source : { usage_from::map, usage_from::player } ) {
+                if( ( selection.use_from & source ) == usage_from::none ) {
+                    continue;
+                }
                 comp_selection<item_comp> source_selection = selection;
                 source_selection.use_from = source;
                 const std::vector<item_location> pass_candidates = craft_source_locations(
@@ -484,6 +487,9 @@ bool craft_command::continue_prompt_liquids( const std::function<bool( const ite
         std::vector<item_location> candidates;
         for( bool preferred : { true, false } ) {
             for( usage_from source : { usage_from::map, usage_from::player } ) {
+                if( ( it.use_from & source ) == usage_from::none ) {
+                    continue;
+                }
                 comp_selection<item_comp> source_selection = it;
                 source_selection.use_from = source;
                 const std::vector<item_location> pass_candidates = craft_source_locations(
