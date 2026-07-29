@@ -8,6 +8,8 @@
 #include <string_view>
 #include <vector>
 
+class mapgendata;
+
 namespace cata::lua_ui
 {
 
@@ -29,6 +31,7 @@ struct runtime_status {
     std::size_t world_generation = 0;
     std::size_t page_count = 0;
     std::size_t event_handler_count = 0;
+    std::size_t mapgen_handler_count = 0;
     std::size_t source_count = 0;
     std::size_t memory_used = 0;
     std::size_t memory_limit = 0;
@@ -58,6 +61,10 @@ bool reload_scripts( std::string &error );
 
 // Run deterministic due callbacks once after the game turn advances.
 void on_turn();
+
+// Invoke final, bounded Lua mapgen handlers for one newly generated OMT.
+// Worker threads never enter Lua, and builds without Lua provide a no-op.
+void dispatch_mapgen_postprocess( mapgendata &data );
 
 // Load scripts after a new game or save has finished initializing.  Errors are
 // logged and reported through status(), without aborting game startup.

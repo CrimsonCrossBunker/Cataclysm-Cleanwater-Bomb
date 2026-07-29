@@ -34,6 +34,7 @@
 #include "path_info.h"
 #include "player_activity.h"
 #include "pocket_type.h"
+#include "trap.h"
 #include "ui_profile.h"
 #include "units.h"
 #include "weather.h"
@@ -6430,6 +6431,17 @@ TEST_CASE( "lua_v5_mapgen_context_is_bounded_deterministic_and_scoped",
     CHECK_THROWS( random_a.random_int( 2, 1 ) );
     CHECK_THROWS( random_a.random_chance( 2, 1 ) );
 
+    cata::lua_ui::script_mapgen_context budgeted(
+        data, false, UINT64_C( 0x777788889999aaaa ) );
+    for( std::size_t operation = 0;
+         operation <
+         cata::lua_ui::script_mapgen_context::maximum_operations;
+         ++operation ) {
+        static_cast<void>( budgeted.random_int( 0, 1 ) );
+    }
+    CHECK( budgeted.operations_remaining() == 0 );
+    CHECK_THROWS( budgeted.random_int( 0, 1 ) );
+
     cata::lua_ui::script_mapgen_context writable(
         data, true, UINT64_C( 0x5555666677778888 ) );
     const cata::lua_ui::script_game_id grass(
@@ -6460,4 +6472,195 @@ TEST_CASE( "lua_v5_mapgen_context_is_bounded_deterministic_and_scoped",
     CHECK_FALSE( writable.valid() );
     CHECK_THROWS( writable.id() );
     CHECK_THROWS( writable.operations_used() );
+}
+
+TEST_CASE( "lua_v5_mapgen_hooks_are_filtered_ordered_and_read_only",
+           "[lua][bindings][mapgen][hooks][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "events", "game.hooks", "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local calls = 0
+local retained = nil
+local limits = game.mapgen.limits()
+assert(limits.map_width == 24 and limits.map_height == 24)
+assert(limits.operations == 8192)
+assert(limits.nested_generators == 32)
+assert(limits.full_generators == 4)
+assert(limits.handlers == 1024)
+assert(limits.registered == 0)
+assert(limits.terrain_ids == 64)
+
+assert(pcall(function()
+    game.mapgen.on_postprocess({
+        terrain_ids = { "__unknown_lua_oter__" }
+    }, function() end)
+end) == false)
+assert(pcall(function()
+    game.mapgen.on_postprocess({
+        z_min = 1, z_max = 0
+    }, function() end)
+end) == false)
+
+local removed = game.mapgen.on_postprocess(function()
+    error("removed mapgen handler ran")
+end)
+assert(game.mapgen.off(removed) == true)
+assert(game.mapgen.off(removed) == false)
+
+game.mapgen.on_postprocess({
+    priority = 100,
+    once = true,
+    terrain_ids = { "field", "field" },
+    z_min = 0,
+    z_max = 0
+}, function(ctx)
+    calls = calls + 1
+    assert(calls == 1)
+    assert(ctx:valid())
+    assert(ctx:id().kind == "overmap_terrain")
+    assert(ctx:id().value == "field")
+    assert(ctx:zlevel() == 0)
+    assert(ctx:get_rot_suffix() == "_north")
+    assert(ctx:north().kind == "overmap_terrain")
+    assert(ctx:operations_used() > 0)
+    retained = ctx
+    local grass = game.types.id("terrain", "t_grass")
+    assert(pcall(function()
+        ctx:set_terrain(0, 0, grass)
+    end) == false)
+end)
+
+game.mapgen.on_postprocess({ priority = -100 }, function(ctx)
+    calls = calls + 1
+    if calls == 2 then
+        assert(retained ~= nil)
+        assert(retained:valid() == false)
+        assert(pcall(function() retained:id() end) == false)
+    else
+        assert(calls == 3)
+    end
+    assert(ctx:valid())
+end)
+
+game.mapgen.on_postprocess({
+    terrain_ids = { "forest" }
+}, function()
+    error("terrain-filtered mapgen handler ran")
+end)
+game.mapgen.on_postprocess({
+    z_min = 1,
+    z_max = 1
+}, function()
+    error("z-filtered mapgen handler ran")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    small_fake_map scratch( ter_str_id( "t_dirt" ).id() );
+    mapgendata data(
+        *scratch.cast_to_map(), mapgendata::dummy_settings );
+    cata::lua_ui::dispatch_mapgen_postprocess( data );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+    cata::lua_ui::dispatch_mapgen_postprocess( data );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_mapgen_hooks_mutate_with_scoped_deterministic_contexts",
+           "[lua][bindings][mapgen][hooks][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local calls = 0
+local retained = nil
+local first_sequence = nil
+
+game.mapgen.on_postprocess({
+    priority = 100,
+    once = true,
+    terrain_ids = { "field" },
+    z_min = 0,
+    z_max = 0
+}, function(ctx)
+    calls = calls + 1
+    assert(calls == 1)
+    retained = ctx
+    assert(pcall(function() ctx:terrain_at(-1, 0) end) == false)
+    assert(pcall(function()
+        ctx:set_terrain(
+            0, 0,
+            game.types.id("terrain", "__unknown_lua_terrain__"))
+    end) == false)
+    assert(pcall(function()
+        ctx:nest("__unknown_lua_nested_mapgen__", 0, 0)
+    end) == false)
+
+    assert(ctx:set_terrain(
+        1, 1, game.types.id("terrain", "t_grass")))
+    assert(ctx:set_furniture(
+        2, 2, game.types.id("furniture", "f_armchair")))
+    assert(ctx:set_trap(
+        3, 3, game.types.id("trap", "tr_bubblewrap")))
+    ctx:nest("mapgen_test_nested", 4, 4)
+end)
+
+game.mapgen.on_postprocess({ priority = 0 }, function(ctx)
+    calls = calls + 1
+    assert(retained ~= nil and retained:valid() == false)
+    assert(ctx:terrain_at(1, 1).value == "t_grass")
+    assert(ctx:furniture_at(2, 2).value == "f_armchair")
+    assert(ctx:trap_at(3, 3).value == "tr_bubblewrap")
+
+    local sequence = {
+        ctx:random_int(-1000, 1000),
+        ctx:random_int(-1000, 1000),
+        ctx:random_int(-1000, 1000)
+    }
+    if first_sequence == nil then
+        assert(calls == 2)
+        first_sequence = sequence
+    else
+        assert(calls == 3)
+        for index = 1, #sequence do
+            assert(sequence[index] == first_sequence[index])
+        end
+    end
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    small_fake_map scratch( ter_str_id( "t_dirt" ).id() );
+    mapgendata data(
+        *scratch.cast_to_map(), mapgendata::dummy_settings );
+    cata::lua_ui::dispatch_mapgen_postprocess( data );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+    CHECK( scratch.cast_to_map()->ter(
+               tripoint_bub_ms( 1, 1, 0 ) ) ==
+           ter_str_id( "t_grass" ).id() );
+    CHECK( scratch.cast_to_map()->furn(
+               tripoint_bub_ms( 2, 2, 0 ) ) ==
+           furn_str_id( "f_armchair" ).id() );
+    CHECK( scratch.cast_to_map()->tr_at(
+               tripoint_bub_ms( 3, 3, 0 ) ).id ==
+           trap_str_id( "tr_bubblewrap" ) );
+
+    cata::lua_ui::dispatch_mapgen_postprocess( data );
+    CHECK( cata::lua_ui::status().last_error.empty() );
 }
