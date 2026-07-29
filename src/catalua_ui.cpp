@@ -4537,6 +4537,22 @@ bool has_native_hook( const std::string_view name )
                "hook:" + std::string( name ) );
 }
 
+std::vector<std::string> collect_native_mapgen_factory_usages(
+    const std::vector<std::string> &candidates )
+{
+    if( is_pool_worker_thread() ) {
+        return {};
+    }
+    bootstrap_mapgen_runtime_if_needed();
+    if( !active_state ) {
+        return {};
+    }
+    return dispatch_native_hook_result(
+    "on_make_mapgen_factory_list", {
+        { "candidates", candidates }
+    } ).results;
+}
+
 void dispatch_native_monster_spawn(
     const Creature &monster, const std::string_view source )
 {

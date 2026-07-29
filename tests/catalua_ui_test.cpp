@@ -36,6 +36,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "mapgen.h"
 #include "mapgendata.h"
 #include "mission.h"
 #include "monster.h"
@@ -7315,6 +7316,41 @@ end)
     script.write( R"lua(
 assert(state.character.get("native_weather.changed", 0) == 1)
 assert(state.character.get("native_weather.updated", 0) == 2)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_mapgen_factory_hook_runs_from_definition_audit",
+           "[lua][bindings][hooks][mapgen][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_make_mapgen_factory_list", function(payload)
+    assert(#payload.candidates > 0)
+    assert(type(payload.candidates[1]) == "string")
+    state.character.set(
+        "native_mapgen.factory_audits",
+        state.character.get("native_mapgen.factory_audits", 0) + 1)
+    return { results = { "lua_only_mapgen_usage" } }
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    check_mapgen_definitions();
+
+    script.write( R"lua(
+assert(state.character.get("native_mapgen.factory_audits", 0) == 1)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 }

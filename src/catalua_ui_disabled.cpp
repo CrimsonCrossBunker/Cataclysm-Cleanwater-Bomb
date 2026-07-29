@@ -54,6 +54,12 @@ bool has_native_hook( std::string_view )
     return false;
 }
 
+std::vector<std::string> collect_native_mapgen_factory_usages(
+    const std::vector<std::string> & )
+{
+    return {};
+}
+
 void dispatch_native_monster_spawn(
     const Creature &, std::string_view )
 {

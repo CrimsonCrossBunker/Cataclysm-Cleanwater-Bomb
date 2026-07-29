@@ -116,6 +116,8 @@ native_hook_result dispatch_native_hook_result(
 bool dispatch_native_hook(
     std::string_view name, const native_callback_arguments &arguments = {} );
 bool has_native_hook( std::string_view name );
+std::vector<std::string> collect_native_mapgen_factory_usages(
+    const std::vector<std::string> &candidates );
 void dispatch_native_monster_spawn(
     const Creature &monster, std::string_view source );
 void dispatch_native_npc_spawn(
