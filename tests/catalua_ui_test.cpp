@@ -5805,6 +5805,85 @@ assert(negative_ok == false)
     CHECK( get_weather_const().weather_id == weather_before );
 }
 
+TEST_CASE( "lua_v5_game_info_services_are_bounded_and_callback_scoped",
+           "[lua][bindings][game_services][info]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "events", "game.actions", "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local constants = game.constants.snapshot()
+assert(type(constants) == "table")
+assert(type(constants.body_temperature) == "table")
+assert(type(constants.body_temperature.cold_c) == "number")
+assert(type(constants.body_temperature.normal_c) == "number")
+assert(type(constants.body_temperature.hot_c) == "number")
+assert(constants.body_temperature.cold_c <
+       constants.body_temperature.normal_c)
+assert(constants.body_temperature.normal_c <
+       constants.body_temperature.hot_c)
+assert(type(constants.lighting.ambient_lit) == "number")
+
+local empty = game.messages.recent(0)
+assert(empty.returned == 0)
+assert(empty.limit == 0)
+assert(#empty.items == 0)
+assert(math.type(empty.total) == "integer")
+assert(pcall(function() game.messages.recent(-1) end) == false)
+assert(pcall(function() game.messages.recent(257) end) == false)
+
+local random_ok, random_error = pcall(function()
+    game.random.int(1, 1)
+end)
+assert(random_ok == false)
+assert(string.find(random_error, "active callback", 1, true) ~= nil)
+local message_ok, message_error = pcall(function()
+    game.messages.add("outside callback")
+end)
+assert(message_ok == false)
+assert(string.find(message_error, "active callback", 1, true) ~= nil)
+
+events.on("game_begin", function()
+    assert(game.random.int(37, 37) == 37)
+    assert(game.random.chance(0, 1) == false)
+    assert(game.random.chance(1, 1) == true)
+    assert(pcall(function() game.random.int(2, 1) end) == false)
+    assert(pcall(function() game.random.chance(-1, 1) end) == false)
+    assert(pcall(function()
+        game.messages.add("bad type", "unknown")
+    end) == false)
+
+    game.messages.add("ccb-lua-v5-message-service", "info")
+    local recent = game.messages.recent(1)
+    assert(recent.returned == 1)
+    assert(#recent.items == 1)
+    assert(string.find(
+        recent.items[1].text,
+        "ccb-lua-v5-message-service",
+        1,
+        true) ~= nil)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    get_event_bus().send<event_type::game_begin>(
+        "lua-game-info-services" );
+
+    const std::vector<std::pair<std::string, std::string>> recent =
+        Messages::recent_messages( 1 );
+    REQUIRE( recent.size() == 1 );
+    CHECK( recent.front().second.find(
+               "ccb-lua-v5-message-service" ) != std::string::npos );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
 TEST_CASE( "lua_game_actions_are_queued_validated_and_isolated",
            "[lua][ui][game][actions][integration]" )
 {

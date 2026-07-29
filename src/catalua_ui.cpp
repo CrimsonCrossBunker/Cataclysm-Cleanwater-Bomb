@@ -40,6 +40,7 @@
 #include "catalua_ui_effects.h"
 #include "catalua_ui_events.h"
 #include "catalua_ui_game.h"
+#include "catalua_ui_game_info.h"
 #include "catalua_ui_hordes.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_imgui.h"
@@ -2563,6 +2564,20 @@ void initialize_state( runtime_state &state )
     } );
     install_game_snapshot_api( game, [&state]() {
         require_capability( state, "game.read" );
+    } );
+    install_game_info_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game information services" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game message services" );
+        require_capability( state, "game.actions" );
+    },
+    [&state]() {
+        return state.accept_actions &&
+               state.current_source.has_value();
     } );
     install_action_api( game, [&state]() {
         require_capability( state, "game.actions" );
