@@ -1,3 +1,5 @@
+#include <functional>
+#include <memory>
 #include <string>
 
 #include "avatar.h"
@@ -5,11 +7,14 @@
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "debug.h"
+#include "field_type.h"
 #include "item.h"
+#include "item_components.h"
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "type_id.h"
+#include "value_ptr.h"
 
 static const itype_id itype_arrow_field_point_fletched( "arrow_field_point_fletched" );
 static const itype_id itype_arrow_flamming( "arrow_flamming" );

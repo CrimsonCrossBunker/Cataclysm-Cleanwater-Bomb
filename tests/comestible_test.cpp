@@ -13,6 +13,7 @@
 #include "cata_catch.h"
 #include "character.h"
 #include "item.h"
+#include "item_components.h"
 #include "item_factory.h"
 #include "itype.h"
 #include "output.h"
@@ -28,6 +29,7 @@
 #include "value_ptr.h"
 
 static const flag_id json_flag_NUTRIENT_OVERRIDE( "NUTRIENT_OVERRIDE" );
+static const flag_id json_flag_COOKED( "COOKED" );
 
 static const item_category_id item_category_drugs( "drugs" );
 static const item_category_id item_category_mutagen( "mutagen" );
@@ -35,10 +37,22 @@ static const item_category_id item_category_mutagen( "mutagen" );
 static const itype_id itype_marloss_berry( "marloss_berry" );
 static const itype_id itype_marloss_gel( "marloss_gel" );
 static const itype_id itype_marloss_seed( "marloss_seed" );
+static const itype_id itype_cooked_cured_meat( "cooked_cured_meat" );
+static const itype_id itype_dehydrated_cured_meat( "dehydrated_cured_meat" );
+static const itype_id itype_dry_meat( "dry_meat" );
+static const itype_id itype_dry_poultry( "dry_poultry" );
+static const itype_id itype_meat( "meat" );
+static const itype_id itype_meat_mutant_tainted_smoked( "meat_mutant_tainted_smoked" );
+static const itype_id itype_meat_salted( "meat_salted" );
+static const itype_id itype_meat_smoked( "meat_smoked" );
+static const itype_id itype_poultry_smoked( "poultry_smoked" );
+static const itype_id itype_raw_cured_meat( "raw_cured_meat" );
+static const itype_id itype_raw_curing_meat_active( "raw_curing_meat_active" );
 static const itype_id itype_test_apple( "test_apple" );
 static const itype_id itype_test_egg( "test_egg" );
 static const itype_id itype_test_pine_nuts( "test_pine_nuts" );
 static const itype_id itype_veggy_wild_cooked( "veggy_wild_cooked" );
+static const itype_id itype_washed_cured_meat( "washed_cured_meat" );
 
 static const recipe_id recipe_veggy_wild_cooked( "veggy_wild_cooked" );
 
@@ -272,6 +286,56 @@ TEST_CASE( "cooked_veggies_get_correct_calorie_prediction", "[recipe]" )
 
     CHECK( default_nutrition.kcal() == predicted_nutrition.first.kcal() );
     CHECK( default_nutrition.kcal() == predicted_nutrition.second.kcal() );
+}
+
+TEST_CASE( "red_meat_preservation_data_contract", "[comestible][food][curing]" )
+{
+    Character &u = get_player_character();
+
+    item source_meat( itype_meat );
+    REQUIRE( source_meat.type->comestible->default_nutrition_read_only().kcal() == 402 );
+    const int raw_meat_kcal = u.compute_effective_nutrients( source_meat ).kcal();
+
+    item curing_meat( itype_raw_curing_meat_active );
+    curing_meat.components.add( source_meat );
+    CHECK( curing_meat.get_comestible()->quench == -15 );
+    CHECK( u.compute_effective_nutrients( curing_meat ).kcal() == raw_meat_kcal );
+
+    item cured_meat( itype_raw_cured_meat );
+    cured_meat.components.add( source_meat );
+    CHECK( cured_meat.get_comestible()->quench == -15 );
+    CHECK( u.compute_effective_nutrients( cured_meat ).kcal() == raw_meat_kcal );
+    REQUIRE( cured_meat.is_smokable() );
+    CHECK( cured_meat.get_comestible()->smoking_result == itype_dehydrated_cured_meat );
+
+    item dehydrated_cured_meat( itype_dehydrated_cured_meat );
+    dehydrated_cured_meat.components.add( cured_meat );
+    CHECK( dehydrated_cured_meat.get_comestible()->quench == -15 );
+    CHECK( u.compute_effective_nutrients( dehydrated_cured_meat ).kcal() == raw_meat_kcal );
+
+    item washed_cured_meat( itype_washed_cured_meat );
+    washed_cured_meat.components.add( cured_meat );
+    CHECK( washed_cured_meat.get_comestible()->quench == 0 );
+    CHECK( u.compute_effective_nutrients( washed_cured_meat ).kcal() == raw_meat_kcal );
+
+    item cooked_cured_meat( itype_cooked_cured_meat );
+    cooked_cured_meat.components.add( washed_cured_meat );
+    cooked_cured_meat.set_flag_recursive( json_flag_COOKED );
+    CHECK_FALSE( cooked_cured_meat.has_flag( json_flag_NUTRIENT_OVERRIDE ) );
+    CHECK( cooked_cured_meat.get_shelf_life() == 3_days );
+    CHECK( cooked_cured_meat.get_comestible()->get_fun() == 6 );
+    CHECK( u.compute_effective_nutrients( cooked_cured_meat ).kcal() == 402 );
+
+    const item vacuum_packed_meat( itype_meat_salted );
+    CHECK_FALSE( vacuum_packed_meat.has_flag( json_flag_NUTRIENT_OVERRIDE ) );
+    CHECK( vacuum_packed_meat.get_shelf_life() == 42_days );
+    CHECK( vacuum_packed_meat.get_comestible()->quench == 0 );
+
+    CHECK( item( itype_meat_smoked ).get_shelf_life() == 28_days );
+    CHECK( item( itype_poultry_smoked ).get_shelf_life() == 42_days );
+    CHECK( item( itype_meat_mutant_tainted_smoked ).get_shelf_life() == 42_days );
+    CHECK( item( itype_dry_meat ).get_comestible()->get_fun() == -2 );
+    CHECK( item( itype_dry_poultry ).get_comestible()->get_fun() == 0 );
 }
 
 // The Character::compute_effective_food_volume_ratio function returns a floating-point ratio
