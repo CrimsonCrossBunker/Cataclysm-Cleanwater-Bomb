@@ -46,7 +46,10 @@ const std::set<std::string> &supported_script_capabilities()
         "events",
         "game.actions",
         "game.actions.dangerous",
+        "game.callbacks",
+        "game.hooks",
         "game.read",
+        "game.write",
         "modules.import",
         "registry.read",
         "scheduler",
@@ -70,7 +73,16 @@ int capability_minimum_api_version( const std::string_view capability )
         "services.consume",
         "services.provide"
     };
-    return version_four.count( std::string( capability ) ) != 0 ? 4 : minimum_api_version;
+    static const std::set<std::string> version_five = {
+        "game.callbacks",
+        "game.hooks",
+        "game.write"
+    };
+    const std::string value( capability );
+    if( version_five.count( value ) != 0 ) {
+        return 5;
+    }
+    return version_four.count( value ) != 0 ? 4 : minimum_api_version;
 }
 
 script_manifest read_script_manifest( const JsonValue &input )
@@ -139,6 +151,24 @@ script_manifest read_script_manifest( const JsonValue &input )
             "Lua manifest '" + result.id +
             "' capability 'game.actions.dangerous' requires 'game.actions'" );
     }
+    if( result.has_capability( "game.write" ) &&
+        !result.has_capability( "game.read" ) ) {
+        throw std::invalid_argument(
+            "Lua manifest '" + result.id +
+            "' capability 'game.write' requires 'game.read'" );
+    }
+    if( result.has_capability( "game.hooks" ) &&
+        !result.has_capability( "events" ) ) {
+        throw std::invalid_argument(
+            "Lua manifest '" + result.id +
+            "' capability 'game.hooks' requires 'events'" );
+    }
+    if( result.has_capability( "game.callbacks" ) &&
+        !result.has_capability( "game.read" ) ) {
+        throw std::invalid_argument(
+            "Lua manifest '" + result.id +
+            "' capability 'game.callbacks' requires 'game.read'" );
+    }
     root.allow_omitted_members();
     return result;
 }
@@ -154,6 +184,9 @@ script_manifest default_script_manifest( const std::string &id, bool allow_actio
     result.capabilities.erase( "game.actions.dangerous" );
     if( !allow_actions ) {
         result.capabilities.erase( "game.actions" );
+        result.capabilities.erase( "game.callbacks" );
+        result.capabilities.erase( "game.hooks" );
+        result.capabilities.erase( "game.write" );
     }
     return result;
 }

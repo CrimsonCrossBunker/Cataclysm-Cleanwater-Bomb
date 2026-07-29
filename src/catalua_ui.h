@@ -12,7 +12,7 @@ namespace cata::lua_ui
 {
 
 constexpr int minimum_api_version = 2;
-constexpr int api_version = 4;
+constexpr int api_version = 5;
 
 constexpr bool is_enabled() noexcept
 {
