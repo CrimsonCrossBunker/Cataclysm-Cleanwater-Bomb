@@ -496,8 +496,8 @@ namespace overmap_ui
 static bool create_note( const tripoint_abs_omt &curs,
                          std::optional<std::string> context = std::nullopt );
 
-// returns true if a point of interest was created, false otherwise
-static bool create_point_of_interest( const tripoint_abs_omt &curs );
+// returns true if a point of interest was created or deleted, false otherwise
+static bool toggle_point_of_interest( const tripoint_abs_omt &curs );
 
 // {note symbol, note color, offset to text}
 std::tuple<char, nc_color, size_t> get_note_display_info( std::string_view note )
@@ -1432,8 +1432,19 @@ static bool create_note( const tripoint_abs_omt &curs, std::optional<std::string
     return false;
 }
 
-static bool create_point_of_interest( const tripoint_abs_omt &curs )
+static bool toggle_point_of_interest( const tripoint_abs_omt &curs )
 {
+    avatar &player_character = get_avatar();
+    for( const point_of_interest &point : player_character.get_points_of_interest() ) {
+        if( point.pos == curs ) {
+            if( query_yn( _( "Really delete point of interest \"%s\"?" ), point.text ) ) {
+                player_character.delete_point_of_interest( curs );
+                return true;
+            }
+            return false;
+        }
+    }
+
     std::string context = _( "Add a Point of Interest entry to the Mission UI" );
     std::string title = _( "Description:" );
     std::string new_note;
@@ -1483,7 +1494,7 @@ static bool create_point_of_interest( const tripoint_abs_omt &curs )
     } while( true );
 
     if( !esc_pressed && !new_note.empty() ) {
-        get_avatar().add_point_of_interest( {curs, new_note} );
+        player_character.add_point_of_interest( {curs, new_note} );
         return true;
     }
     return false;
@@ -2293,7 +2304,7 @@ static tripoint_abs_omt display()
                 curs.y() = p.y();
             }
         } else if( action == "CREATE_POINT_OF_INTEREST" ) {
-            create_point_of_interest( curs );
+            toggle_point_of_interest( curs );
         } else if( action == "GO_TO_DESTINATION" ) {
             avatar &player_character = get_avatar();
             if( !player_character.omt_path.empty() ) {
