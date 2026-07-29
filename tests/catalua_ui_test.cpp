@@ -1390,6 +1390,114 @@ game.characters.adjust(game.characters.avatar(), { moves = 1 })
     CHECK( player.get_moves() == original_moves );
 }
 
+TEST_CASE( "lua_v5_effects_are_detached_bounded_and_write_gated",
+           "[lua][bindings][effects][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.avatar()
+local downed = game.types.id("effect", "downed")
+local one_turn = game.time.duration(1, "turn")
+local two_turns = game.time.duration(2, "turn")
+
+game.effects.remove(avatar, downed)
+local absent = game.effects.has(avatar, downed)
+assert(absent.ok == true and absent.value == false)
+assert(game.effects.get(avatar, downed).ok == false)
+
+local added = game.effects.add(avatar, downed, one_turn, {
+    intensity = 1,
+    permanent = false,
+    force = true
+})
+assert(added.ok == true)
+assert(added.value.id == downed)
+assert(added.value.duration == one_turn)
+assert(added.value.body_part == nil)
+assert(math.type(added.value.intensity) == "integer")
+assert(type(added.value.name) == "string")
+assert(type(added.value.description) == "string")
+assert(type(added.value.permanent) == "boolean")
+assert(added.value.resisted_by.effects.returned ==
+    #added.value.resisted_by.effects.items)
+assert(added.value.blocks_effects.returned ==
+    #added.value.blocks_effects.items)
+
+local present = game.effects.has(avatar, downed)
+assert(present.ok == true and present.value == true)
+local fetched = game.effects.get(avatar, downed)
+assert(fetched.ok == true and fetched.value.id == downed)
+
+local listed = game.effects.list(avatar, 1000000)
+assert(listed.ok == true)
+assert(listed.value.limit == 256)
+assert(listed.value.returned == #listed.value.items)
+assert(listed.value.returned <= listed.value.total)
+assert(listed.value.truncated ==
+    (listed.value.returned < listed.value.total))
+
+local updated = game.effects.update(avatar, downed, {
+    duration = two_turns,
+    intensity = 1,
+    permanent = true
+})
+assert(updated.ok == true)
+assert(updated.value.before.id == downed)
+assert(updated.value.after.duration == two_turns)
+assert(updated.value.after.permanent == true)
+
+assert(pcall(function()
+    game.effects.add(avatar, downed,
+        game.time.duration(0, "turn"))
+end) == false)
+assert(pcall(function()
+    game.effects.add(avatar, downed, one_turn,
+        { intensity = 1001 })
+end) == false)
+assert(pcall(function()
+    game.effects.add(avatar, downed, one_turn,
+        { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.effects.has(avatar,
+        game.types.id("item", "rock"))
+end) == false)
+
+local removed = game.effects.remove(avatar, downed)
+assert(removed.ok == true and removed.value == true)
+assert(game.effects.has(avatar, downed).value == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.effects.add(
+    game.creatures.avatar(),
+    game.types.id("effect", "downed"),
+    game.time.duration(1, "turn"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
+}
+
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
            "[lua][bindings][values][ids]" )
 {
