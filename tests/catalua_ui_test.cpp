@@ -6192,6 +6192,94 @@ assert(game.state_get("test.bad_event_count", 0) == 1)
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_hooks_are_described_ordered_owned_and_error_isolated",
+           "[lua][bindings][hooks][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.hooks.limits()
+assert(limits.hooks == 48)
+assert(limits.handlers == 1024)
+assert(limits.registered == 0)
+assert(limits.priority_min == -10000)
+assert(limits.priority_max == 10000)
+assert(limits.dispatch_depth == 16)
+assert(limits.instruction_budget > 0)
+
+local catalog = game.hooks.list()
+assert(#catalog == 48)
+local observed = game.hooks.describe("on_game_started")
+assert(observed.name == "on_game_started")
+assert(observed.mode == "observe")
+assert(observed.cancellable == false)
+assert(observed.requires_write == false)
+local intercept = game.hooks.describe("on_try_npc_interaction")
+assert(intercept.mode == "intercept")
+assert(intercept.cancellable == true)
+assert(intercept.requires_write == true)
+assert(pcall(function()
+    game.hooks.on("on_try_npc_interaction", function() end)
+end) == false)
+assert(pcall(function()
+    game.hooks.on("not_a_hook", function() end)
+end) == false)
+
+local removed = game.hooks.on("on_game_started", function()
+    error("removed hook ran")
+end)
+assert(game.hooks.off(removed) == true)
+assert(game.hooks.off(removed) == false)
+
+game.hooks.on("on_game_started", {
+    priority = 100, once = true
+}, function(payload)
+    assert(payload.hook == "on_game_started")
+    assert(payload.mode == "observe")
+    assert(payload.cancellable == false)
+    assert(payload.type == "game_begin")
+    local order = state.character.get("hooks.order", "")
+    state.character.set("hooks.order", order .. "H")
+end)
+
+game.hooks.on("on_game_started", {
+    priority = 50
+}, function()
+    local count = state.character.get("hooks.bad", 0)
+    state.character.set("hooks.bad", count + 1)
+    error("expected isolated hook failure")
+end)
+
+game.hooks.on("on_game_started", {
+    priority = -100
+}, function()
+    local order = state.character.get("hooks.order", "")
+    state.character.set("hooks.order", order .. "L")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "lua-hook-test" );
+    CHECK( cata::lua_ui::status().last_error.find(
+               "expected isolated hook failure" ) != std::string::npos );
+    get_event_bus().send<event_type::game_begin>( "lua-hook-test" );
+
+    script.write( R"lua(
+assert(state.character.get("hooks.order", "") == "HLL")
+assert(state.character.get("hooks.bad", 0) == 1)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_recipe_catalog_is_detached_filtered_and_bounded",
            "[lua][bindings][recipes][crafting][integration]" )
 {

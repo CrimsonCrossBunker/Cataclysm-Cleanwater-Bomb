@@ -32,6 +32,7 @@
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_bionics.h"
+#include "catalua_ui_callbacks.h"
 #include "catalua_ui_crafting.h"
 #include "catalua_ui_creatures.h"
 #include "catalua_ui_effects.h"
@@ -306,10 +307,13 @@ class runtime_state : public event_subscriber
         std::vector<page_definition> pages;
         script_event_registry event_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
+        script_event_registry hook_registry;
+        std::unordered_map<std::uint64_t, sol::protected_function> hook_callbacks;
         script_event_registry mapgen_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> mapgen_callbacks;
         std::unordered_map<std::uint64_t, mapgen_handler_filter> mapgen_filters;
         int event_dispatch_depth = 0;
+        int hook_dispatch_depth = 0;
         int mapgen_dispatch_depth = 0;
         std::size_t generation = 0;
         std::size_t world_generation = 0;
@@ -899,6 +903,114 @@ bool unregister_event_handler( runtime_state &state, const std::uint64_t id )
     }
     state.event_callbacks.erase( id );
     return true;
+}
+
+void require_hook_capabilities(
+    const runtime_state &state, const script_hook_spec *spec = nullptr )
+{
+    require_api_version( state, 5, "game.hooks" );
+    require_capability( state, "events" );
+    require_capability( state, "game.hooks" );
+    if( spec != nullptr && spec->mode == script_hook_mode::intercept ) {
+        require_capability( state, "game.write" );
+    }
+}
+
+std::uint64_t register_hook_handler(
+    runtime_state &state, const std::string &name,
+    const sol::optional<sol::table> &options,
+    sol::protected_function callback )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    if( spec == nullptr ) {
+        throw std::invalid_argument(
+            "game.hooks.on received an unknown hook name: " + name );
+    }
+    require_hook_capabilities( state, spec );
+    if( !state.current_source || !callback.valid() ) {
+        throw std::runtime_error(
+            "game.hooks.on requires an active source and callback function" );
+    }
+    const auto [priority, once] = event_options( options );
+    const std::uint64_t id = state.hook_registry.subscribe(
+                                 "hook:" + name, priority,
+                                 *state.current_source, once );
+    try {
+        state.hook_callbacks.emplace( id, std::move( callback ) );
+    } catch( ... ) {
+        state.hook_registry.unsubscribe_unchecked( id );
+        throw;
+    }
+    return id;
+}
+
+bool unregister_hook_handler( runtime_state &state, const std::uint64_t id )
+{
+    require_hook_capabilities( state );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.hooks.off is outside a Lua source context" );
+    }
+    if( !state.hook_registry.unsubscribe( id, *state.current_source ) ) {
+        return false;
+    }
+    state.hook_callbacks.erase( id );
+    return true;
+}
+
+sol::table hook_spec_to_lua(
+    sol::state_view lua, const script_hook_spec &spec )
+{
+    sol::table result = lua.create_table();
+    result["name"] = std::string( spec.name );
+    result["mode"] = std::string( script_hook_mode_name( spec.mode ) );
+    result["cancellable"] = spec.mode == script_hook_mode::intercept;
+    result["requires_write"] = spec.mode == script_hook_mode::intercept;
+    sol::table fields = lua.create_table();
+    for( std::size_t index = 0; index < spec.payload_fields.size(); ++index ) {
+        fields[index + 1] = std::string( spec.payload_fields[index] );
+    }
+    result["payload_fields"] = std::move( fields );
+    return result;
+}
+
+sol::table describe_hook(
+    runtime_state &state, sol::this_state lua, const std::string &name )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    if( spec == nullptr ) {
+        throw std::invalid_argument(
+            "game.hooks.describe received an unknown hook name: " + name );
+    }
+    require_hook_capabilities( state );
+    return hook_spec_to_lua( sol::state_view( lua ), *spec );
+}
+
+sol::table list_hooks( runtime_state &state, sol::this_state lua )
+{
+    require_hook_capabilities( state );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    const std::vector<script_hook_spec> &specs = script_hook_specs();
+    for( std::size_t index = 0; index < specs.size(); ++index ) {
+        result[index + 1] = hook_spec_to_lua( view, specs[index] );
+    }
+    return result;
+}
+
+sol::table hook_limits( runtime_state &state, sol::this_state lua )
+{
+    require_hook_capabilities( state );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    result["hooks"] = script_hook_specs().size();
+    result["handlers"] = script_event_registry::maximum_subscriptions;
+    result["registered"] = state.hook_registry.size();
+    result["priority_min"] = script_event_registry::minimum_priority;
+    result["priority_max"] = script_event_registry::maximum_priority;
+    result["dispatch_depth"] = 16;
+    result["instruction_budget"] = callback_instruction_limit;
+    return result;
 }
 
 void require_mapgen_hook_capabilities( const runtime_state &state )
@@ -1976,6 +2088,36 @@ void initialize_state( runtime_state &state )
         require_api_version( state, 5, "game.types" );
         require_capability( state, "game.read" );
     } );
+    sol::table hooks = state.lua.create_table();
+    hooks.set_function(
+        "on",
+        sol::overload(
+            [&state]( const std::string & name,
+    sol::protected_function callback ) {
+        return register_hook_handler(
+                   state, name, std::nullopt, std::move( callback ) );
+    },
+    [&state]( const std::string & name,
+              const sol::table & options,
+              sol::protected_function callback ) {
+        return register_hook_handler(
+                   state, name, options, std::move( callback ) );
+    } ) );
+    hooks.set_function( "off", [&state]( const std::uint64_t id ) {
+        return unregister_hook_handler( state, id );
+    } );
+    hooks.set_function(
+        "describe",
+    [&state]( sol::this_state lua, const std::string & name ) {
+        return describe_hook( state, lua, name );
+    } );
+    hooks.set_function( "list", [&state]( sol::this_state lua ) {
+        return list_hooks( state, lua );
+    } );
+    hooks.set_function( "limits", [&state]( sol::this_state lua ) {
+        return hook_limits( state, lua );
+    } );
+    game["hooks"] = std::move( hooks );
     sol::table mapgen = state.lua.create_table();
     mapgen.set_function(
         "on_postprocess",
@@ -2653,12 +2795,172 @@ bool dispatch_lifecycle_event( runtime_state &state, const std::string &name,
     return dispatch_custom_event( state, name, name, data );
 }
 
+class hook_dispatch_scope
+{
+    public:
+        explicit hook_dispatch_scope( runtime_state &state ) : state_( state ) {
+            if( state_.hook_dispatch_depth >= 16 ) {
+                throw std::runtime_error(
+                    "Lua hook callback recursion limit reached" );
+            }
+            ++state_.hook_dispatch_depth;
+        }
+
+        hook_dispatch_scope( const hook_dispatch_scope & ) = delete;
+        hook_dispatch_scope &operator=( const hook_dispatch_scope & ) = delete;
+
+        ~hook_dispatch_scope() {
+            --state_.hook_dispatch_depth;
+        }
+
+    private:
+        runtime_state &state_;
+};
+
+bool dispatch_script_hook(
+    runtime_state &state, const std::string_view name,
+    const std::function<sol::table()> &make_payload )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    if( spec == nullptr ) {
+        record_runtime_error(
+            "Lua hook dispatch",
+            "native code requested unknown Lua hook '" +
+            std::string( name ) + "'" );
+        return true;
+    }
+
+    hook_dispatch_scope dispatch_scope( state );
+    const std::string registry_name = "hook:" + std::string( name );
+    const std::vector<script_event_subscription> handlers =
+        state.hook_registry.matching( registry_name );
+    bool allowed = true;
+    for( const script_event_subscription &handler : handlers ) {
+        if( !state.hook_registry.contains( handler.id ) ) {
+            continue;
+        }
+        const auto callback_entry = state.hook_callbacks.find( handler.id );
+        if( callback_entry == state.hook_callbacks.end() ||
+            handler.source_index >= state.sources.size() ) {
+            state.hook_registry.unsubscribe_unchecked( handler.id );
+            state.hook_callbacks.erase( handler.id );
+            continue;
+        }
+
+        bool stop = false;
+        const auto started = std::chrono::steady_clock::now();
+        try {
+            sol::protected_function callback = callback_entry->second;
+            source_scope source( state, handler.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            sol::table payload = make_payload();
+            payload["hook"] = std::string( name );
+            payload["mode"] =
+                std::string( script_hook_mode_name( spec->mode ) );
+            payload["cancellable"] =
+                spec->mode == script_hook_mode::intercept;
+            const sol::protected_function_result result =
+                callback( std::move( payload ) );
+            record_callback_timing(
+                state, "hook '" + std::string( name ) + "'", started );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                record_runtime_error(
+                    "Lua hook handler '" + std::string( name ) + "'",
+                    error.what() );
+                state.hook_registry.unsubscribe_unchecked( handler.id );
+                state.hook_callbacks.erase( handler.id );
+                continue;
+            }
+
+            if( result.return_count() > 0 ) {
+                const sol::type type = result.get_type();
+                if( type == sol::type::boolean ) {
+                    const bool decision = result.get<bool>();
+                    if( spec->mode == script_hook_mode::intercept ) {
+                        allowed = decision;
+                    }
+                    stop = !decision;
+                } else if( type == sol::type::table ) {
+                    const sol::table decision = result.get<sol::table>();
+                    const sol::optional<bool> requested_allow =
+                        decision["allow"];
+                    if( requested_allow &&
+                        spec->mode == script_hook_mode::intercept ) {
+                        allowed = *requested_allow;
+                    }
+                    stop = decision.get_or( "stop", false ) || !allowed;
+                } else if( type != sol::type::nil ) {
+                    record_runtime_error(
+                        "Lua hook handler '" + std::string( name ) + "'",
+                        "hook callbacks must return nil, boolean, or a "
+                        "decision table" );
+                    state.hook_registry.unsubscribe_unchecked( handler.id );
+                    state.hook_callbacks.erase( handler.id );
+                    continue;
+                }
+            }
+            if( handler.once ) {
+                state.hook_registry.unsubscribe_unchecked( handler.id );
+                state.hook_callbacks.erase( handler.id );
+            }
+        } catch( const std::exception &exception ) {
+            record_callback_timing(
+                state, "hook '" + std::string( name ) + "'", started );
+            record_runtime_error(
+                "Lua hook handler '" + std::string( name ) + "'",
+                exception.what() );
+            state.hook_registry.unsubscribe_unchecked( handler.id );
+            state.hook_callbacks.erase( handler.id );
+        }
+        if( stop ) {
+            break;
+        }
+    }
+    return allowed;
+}
+
+std::vector<std::string_view> hooks_for_event( const event_type type )
+{
+    switch( type ) {
+        case event_type::avatar_dies:
+        case event_type::character_dies:
+        case event_type::game_avatar_death:
+            return { "on_character_death" };
+        case event_type::character_gains_effect:
+            return { "on_character_effect_added" };
+        case event_type::character_loses_effect:
+            return { "on_character_effect_removed" };
+        case event_type::character_melee_attacks_character:
+        case event_type::character_melee_attacks_monster:
+            return { "on_creature_melee_attacked" };
+        case event_type::character_ranged_attacks_character:
+        case event_type::character_ranged_attacks_monster:
+            return { "on_shoot" };
+        case event_type::game_load:
+            return { "on_game_load" };
+        case event_type::game_save:
+            return { "on_game_save" };
+        case event_type::game_begin:
+        case event_type::game_start:
+            return { "on_game_started" };
+        default:
+            return {};
+    }
+}
+
 void runtime_state::notify( const cata::event &event )
 {
     const std::string name = io::enum_to_string( event.type() );
     dispatch_script_event( *this, "game:" + name, [this, &event]() {
         return event_to_lua( *this, event );
     } );
+    for( const std::string_view hook : hooks_for_event( event.type() ) ) {
+        dispatch_script_hook( *this, hook, [this, &event]() {
+            return event_to_lua( *this, event );
+        } );
+    }
 }
 
 struct page_stack_entry {
