@@ -74,11 +74,16 @@ struct native_callback_id {
     std::string value;
 };
 
+struct native_callback_mission {
+    int uid = 0;
+};
+
 using native_callback_value = std::variant <
                               bool, std::int64_t, double, std::string,
                               const Character *, const Creature *, const item *,
                               native_callback_point, native_callback_id,
-                              std::vector<std::string>, const const_talker * >;
+                              std::vector<std::string>, const const_talker *,
+                              native_callback_mission >;
 
 struct native_callback_argument {
     std::string name;

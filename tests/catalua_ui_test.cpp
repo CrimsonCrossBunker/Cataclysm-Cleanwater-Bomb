@@ -7141,6 +7141,91 @@ assert(state.character.get("native_result.explosion", 0) == 1)
     REQUIRE( reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_mission_hooks_emit_generation_bound_instance_tokens",
+           "[lua][bindings][hooks][missions][integration]" )
+{
+    clear_avatar();
+    avatar &player = get_avatar();
+    player.reset_all_missions();
+    mission::clear_all();
+    on_out_of_scope cleanup( [&player]() {
+        player.reset_all_missions();
+        mission::clear_all();
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local expected =
+    game.types.id("mission", "TEST_MISSION_GOAL_CONDITION1")
+
+game.hooks.on("on_mission_start", function(payload)
+    assert(math.type(payload.mission.uid) == "integer")
+    assert(payload.mission:is_valid() == true)
+    local current = game.missions.get(payload.mission)
+    assert(current.ok == true)
+    assert(current.value.id == expected)
+    assert(current.value.status == "active")
+    state.character.set(
+        "native_missions.started",
+        state.character.get("native_missions.started", 0) + 1)
+end)
+
+game.hooks.on("on_mission_end", function(payload)
+    assert(type(payload.success) == "boolean")
+    assert(payload.mission:is_valid() == true)
+    local current = game.missions.get(payload.mission)
+    assert(current.ok == true)
+    assert(current.value.id == expected)
+    assert(current.value.status ==
+        (payload.success and "success" or "failure"))
+    local suffix = payload.success and "success" or "failure"
+    state.character.set(
+        "native_missions." .. suffix,
+        state.character.get("native_missions." .. suffix, 0) + 1)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+
+    const mission_type_id test_mission(
+        "TEST_MISSION_GOAL_CONDITION1" );
+    mission *failed = mission::reserve_new(
+                          test_mission, character_id() );
+    REQUIRE( failed != nullptr );
+    if( failed->get_assigned_player_id() == player.getID() ) {
+        failed->set_assigned_player_id( character_id( -2 ) );
+    }
+    failed->assign( player );
+    failed->fail();
+
+    mission *succeeded = mission::reserve_new(
+                             test_mission, character_id() );
+    REQUIRE( succeeded != nullptr );
+    if( succeeded->get_assigned_player_id() == player.getID() ) {
+        succeeded->set_assigned_player_id( character_id( -2 ) );
+    }
+    succeeded->assign( player );
+    succeeded->wrap_up();
+
+    script.write( R"lua(
+assert(state.character.get("native_missions.started", 0) == 2)
+assert(state.character.get("native_missions.failure", 0) == 1)
+assert(state.character.get("native_missions.success", 0) == 1)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
            "[lua][bindings][callbacks][integration]" )
 {

@@ -3204,6 +3204,13 @@ sol::object native_callback_value_to_lua(
                 return sol::make_object( lua, sol::lua_nil );
             }
             return native_talker_to_lua( state, *entry );
+        } else if constexpr( std::is_same_v <
+                             value_type, native_callback_mission > )
+        {
+            return sol::make_object(
+                       lua, mission_token(
+                           entry.uid, state.generation,
+                           state.world_generation ) );
         } else
         {
             return sol::make_object( lua, entry );
