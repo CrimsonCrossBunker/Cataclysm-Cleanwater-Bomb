@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "bodypart.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -316,10 +317,7 @@ bool trap::can_see( const tripoint_bub_ms &pos, const Character &p ) const
 
 void trap::trigger( const tripoint_bub_ms &pos ) const
 {
-    if( is_null() ) {
-        return;
-    }
-    act( pos, nullptr, nullptr );
+    trigger( pos, nullptr, nullptr );
 }
 
 void trap::trigger( const tripoint_bub_ms &pos, Creature &creature ) const
@@ -332,20 +330,49 @@ void trap::trigger( const tripoint_bub_ms &pos, item &item ) const
     trigger( pos, nullptr, &item );
 }
 
-void trap::trigger( const tripoint_bub_ms &pos, Creature *creature, item *item ) const
+void trap::trigger( const tripoint_bub_ms &pos, Creature *creature,
+                    item *triggering_item ) const
 {
     if( is_null() ) {
         return;
     }
     const bool is_real_creature = creature != nullptr && !creature->is_hallucination();
-    if( is_real_creature || item != nullptr ) {
-        bool triggered = act( pos, creature, item );
-        if( triggered && is_real_creature ) {
-            if( Character *ch = creature->as_character() ) {
-                get_event_bus().send<event_type::character_triggers_trap>( ch->getID(), id );
+    if( creature != nullptr && !is_real_creature ) {
+        return;
+    }
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "creature", static_cast<const Creature *>( creature ) },
+        { "item", static_cast<const item *>( triggering_item ) },
+        {
+            "trap", cata::lua_ui::native_callback_id {
+                "trap", id.str()
+            }
+        },
+        {
+            "position", cata::lua_ui::native_callback_point {
+                "bub_ms", pos.x(), pos.y(), pos.z()
             }
         }
+    };
+    if( !cata::lua_ui::dispatch_native_callback(
+            "trap", id.str(), "can_trigger", payload ) ) {
+        return;
     }
+    cata::lua_ui::dispatch_native_callback(
+        "trap", id.str(), "on_trigger", payload );
+
+    const bool triggered = act( pos, creature, triggering_item );
+    if( !triggered ) {
+        return;
+    }
+    if( is_real_creature ) {
+        if( Character *ch = creature->as_character() ) {
+            get_event_bus().send<event_type::character_triggers_trap>(
+                ch->getID(), id );
+        }
+    }
+    cata::lua_ui::dispatch_native_callback(
+        "trap", id.str(), "on_trigger_aftermath", payload );
 }
 
 bool trap::is_null() const

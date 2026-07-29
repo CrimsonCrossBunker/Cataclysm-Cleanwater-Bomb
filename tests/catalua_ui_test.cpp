@@ -6756,6 +6756,74 @@ assert(state.character.get("native_character.mutation_loss", 0) == 1)
     REQUIRE( reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_trap_callbacks_run_from_central_trigger_lifecycle",
+           "[lua][bindings][callbacks][traps][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms trap_position( 31, 30, 0 );
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    here.trap_set( trap_position, trap_str_id( "tr_bubblewrap" ) );
+    const trap &bubblewrap = trap_str_id( "tr_bubblewrap" ).obj();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local bubblewrap = game.types.id("trap", "tr_bubblewrap")
+local function count(name)
+    local value = state.character.get("native_trap." .. name, 0) + 1
+    state.character.set("native_trap." .. name, value)
+    return value
+end
+game.callbacks.register("trap", bubblewrap, {
+    can_trigger = function(payload)
+        assert(payload.creature ~= nil)
+        assert(payload.item == nil)
+        assert(payload.trap == bubblewrap)
+        assert(payload.position.coordinate_space == "bub_ms")
+        return count("can_trigger") > 1
+    end,
+    on_trigger = function(payload)
+        assert(payload.trap == bubblewrap)
+        count("on_trigger")
+    end,
+    on_trigger_aftermath = function(payload)
+        assert(payload.trap == bubblewrap)
+        count("on_trigger_aftermath")
+    end
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    bubblewrap.trigger( trap_position, player );
+    CHECK( here.tr_at( trap_position ).id ==
+           trap_str_id( "tr_bubblewrap" ) );
+    bubblewrap.trigger( trap_position, player );
+    CHECK( here.tr_at( trap_position ).is_null() );
+
+    script.write( R"lua(
+assert(state.character.get("native_trap.can_trigger", 0) == 2)
+assert(state.character.get("native_trap.on_trigger", 0) == 1)
+assert(state.character.get("native_trap.on_trigger_aftermath", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_recipe_catalog_is_detached_filtered_and_bounded",
            "[lua][bindings][recipes][crafting][integration]" )
 {
