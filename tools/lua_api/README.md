@@ -19,3 +19,12 @@ Validate the committed snapshot without requiring a CBN checkout:
 python3 tools/lua_api/generate_cbn_inventory.py \
   --check-snapshot data/lua/reference/cbn_api_inventory.json
 ```
+
+`check_coverage.py` classifies every recorded entry into one CCB capability
+domain.  A domain can become `covered` only when it names both public API and
+test evidence.  Planned entries continue to count as incomplete:
+
+```sh
+python3 tools/lua_api/check_coverage.py
+python3 tools/lua_api/check_coverage.py --require-complete
+```
