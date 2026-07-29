@@ -10,6 +10,7 @@
 #include "catalua_game_handle.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
+#include "catalua_ui_callbacks.h"
 #include "catalua_ui_events.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_manifest.h"
@@ -910,6 +911,93 @@ TEST_CASE( "lua_event_subscriptions_are_priority_stable_and_source_owned",
     CHECK_FALSE( cata::lua_ui::is_safe_custom_event_segment( "../escape" ) );
     CHECK( cata::lua_ui::is_lifecycle_event_name(
                "ccb.lifecycle.world_ready" ) );
+}
+
+TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
+           "[lua][bindings][hooks][callbacks]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<script_hook_spec> &hooks = script_hook_specs();
+    REQUIRE( hooks.size() == 48 );
+    std::vector<std::string_view> hook_names;
+    hook_names.reserve( hooks.size() );
+    for( const script_hook_spec &hook : hooks ) {
+        CHECK_FALSE( hook.name.empty() );
+        CHECK_FALSE( script_hook_mode_name( hook.mode ).empty() );
+        hook_names.push_back( hook.name );
+    }
+    std::sort( hook_names.begin(), hook_names.end() );
+    CHECK( std::adjacent_find( hook_names.begin(), hook_names.end() ) ==
+           hook_names.end() );
+    REQUIRE( find_script_hook_spec( "on_try_npc_interaction" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_try_npc_interaction" )->mode ==
+           script_hook_mode::intercept );
+    CHECK( find_script_hook_spec( "on_weather_updated" )->mode ==
+           script_hook_mode::observe );
+    CHECK( find_script_hook_spec( "not_a_hook" ) == nullptr );
+
+    const std::vector<script_callback_kind_spec> &kinds =
+        script_callback_kind_specs();
+    REQUIRE( kinds.size() == 11 );
+    std::size_t method_count = 0;
+    for( const script_callback_kind_spec &kind : kinds ) {
+        CHECK_FALSE( kind.kind.empty() );
+        CHECK_FALSE( kind.target_id_kind.empty() );
+        CHECK_FALSE( kind.methods.empty() );
+        method_count += kind.methods.size();
+        for( const script_callback_method_spec &method : kind.methods ) {
+            CHECK_FALSE( method.name.empty() );
+            CHECK( find_script_callback_method_spec( kind, method.name ) !=
+                   nullptr );
+        }
+    }
+    CHECK( method_count == 38 );
+    REQUIRE( find_script_callback_kind_spec( "iranged" ) != nullptr );
+    CHECK( find_script_callback_method_spec(
+               *find_script_callback_kind_spec( "iranged" ),
+               "can_fire" )->decision );
+    CHECK( find_script_callback_kind_spec( "not_an_actor" ) == nullptr );
+
+    script_callback_registry registry;
+    const std::uint64_t low = registry.subscribe(
+                                  "iwieldable", "cudgel", { "on_wield" },
+                                  -10, 1, false );
+    const std::uint64_t high_first = registry.subscribe(
+                                         "iwieldable", "cudgel",
+    { "can_wield", "on_wield" },
+    100, 1, false );
+    const std::uint64_t high_second = registry.subscribe(
+                                          "iwieldable", "cudgel",
+    { "on_wield" }, 100, 2, true );
+    registry.subscribe(
+        "iwieldable", "rock", { "on_wield" }, 1000, 2, false );
+
+    const std::vector<script_callback_registration> matching =
+        registry.matching( "iwieldable", "cudgel", "on_wield" );
+    REQUIRE( matching.size() == 3 );
+    CHECK( matching[0].id == high_first );
+    CHECK( matching[1].id == high_second );
+    CHECK( matching[2].id == low );
+    CHECK( matching[1].once );
+    CHECK( registry.matching(
+               "iwieldable", "cudgel", "can_wield" ).size() == 1 );
+    CHECK_FALSE( registry.unsubscribe( high_second, 1 ) );
+    CHECK( registry.unsubscribe( high_second, 2 ) );
+    CHECK( registry.unsubscribe_unchecked( low ) );
+    CHECK_THROWS_AS(
+        registry.subscribe(
+            "missing", "cudgel", { "on_wield" }, 0, 1, false ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        registry.subscribe(
+            "iwieldable", "cudgel", { "missing" }, 0, 1, false ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        registry.subscribe(
+            "iwieldable", "cudgel", { "on_wield" },
+            script_callback_registry::maximum_priority + 1, 1, false ),
+        std::invalid_argument );
 }
 
 TEST_CASE( "lua_service_registry_is_bounded_versioned_and_provider_safe",
