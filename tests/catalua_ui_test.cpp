@@ -2134,6 +2134,77 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_runtime_diagnostics_are_bounded_structured_and_path_free",
+           "[lua][bindings][diagnostics][integration]" )
+{
+    scoped_calendar_turn turn;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "scheduler" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local first_id = scheduler.after(1, function()
+    error("expected diagnostic marker")
+end)
+local second_id = scheduler.after(2, function()
+    local snapshot = game.diagnostics.snapshot()
+    assert(snapshot.schema_version == 1)
+    assert(snapshot.health.ok == false)
+    assert(string.find(snapshot.health.last_error,
+        "expected diagnostic marker", 1, true) ~= nil)
+    assert(snapshot.callbacks.count >= 1)
+    assert(snapshot.resources.scheduled_tasks <=
+        snapshot.limits.scheduler_tasks)
+    local recent = game.diagnostics.recent()
+    assert(#recent >= 1 and #recent <=
+        snapshot.limits.diagnostic_records)
+    assert(recent[1].severity == "error")
+    assert(recent[1].source == "user")
+    assert(string.find(recent[1].message,
+        "expected diagnostic marker", 1, true) ~= nil)
+end)
+
+local snapshot = game.diagnostics.snapshot()
+assert(snapshot.health.ok == true)
+assert(snapshot.runtime.generation > 0)
+assert(snapshot.memory.used <= snapshot.memory.limit)
+assert(snapshot.memory.remaining <= snapshot.memory.limit)
+assert(snapshot.resources.scheduled_tasks == 2)
+assert(snapshot.limits.script_instructions > 0)
+assert(snapshot.limits.callback_instructions > 0)
+assert(#snapshot.sources >= 2)
+local found_user = false
+for _, source in ipairs(snapshot.sources) do
+    assert(source.root == nil and source.entry == nil)
+    if source.id == "user" then
+        found_user = true
+        assert(source.api_version == 5)
+        assert(source.scheduled_tasks == 2)
+    end
+end
+assert(found_user)
+assert(#game.diagnostics.recent(0) == 0)
+assert(pcall(function()
+    game.diagnostics.recent(65)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    calendar::turn = turn.original() + 1_turns;
+    cata::lua_ui::on_turn();
+    CHECK( cata::lua_ui::status().last_error.find(
+               "expected diagnostic marker" ) != std::string::npos );
+    calendar::turn = turn.original() + 2_turns;
+    cata::lua_ui::on_turn();
+    cata::lua_ui::shutdown();
+}
+
 TEST_CASE( "lua_v4_modules_use_strict_source_environments_and_consumer_caches",
            "[lua][modules][sandbox][integration]" )
 {

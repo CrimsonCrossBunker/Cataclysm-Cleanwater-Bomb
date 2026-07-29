@@ -36,6 +36,7 @@ class deterministic_turn_scheduler
         std::vector<scheduled_script_task> take_due( std::int64_t now );
         bool contains( std::uint64_t id ) const;
         std::size_t size() const;
+        const std::vector<scheduled_script_task> &all() const;
         void clear();
 
     private:

@@ -4,6 +4,7 @@
 #include <array>
 #include <chrono>
 #include <cstdlib>
+#include <deque>
 #include <filesystem>
 #include <functional>
 #include <limits>
@@ -76,6 +77,9 @@ constexpr int callback_instruction_limit = 250000;
 constexpr int instruction_hook_quantum = 1000;
 constexpr std::uint64_t slow_callback_threshold_us = 8000;
 constexpr std::size_t maximum_page_stack_depth = 32;
+constexpr std::size_t maximum_diagnostic_records = 64;
+constexpr std::size_t maximum_diagnostic_context_bytes = 512;
+constexpr std::size_t maximum_diagnostic_message_bytes = 8192;
 
 struct memory_tracker {
     std::size_t used = 0;
@@ -282,10 +286,21 @@ class runtime_state : public event_subscriber
         std::string last_slow_callback;
 };
 
+struct runtime_diagnostic_record {
+    std::uint64_t sequence = 0;
+    std::size_t generation = 0;
+    std::size_t world_generation = 0;
+    std::string source;
+    std::string context;
+    std::string message;
+};
+
 std::unique_ptr<runtime_state> active_state;
 std::string last_runtime_error;
 std::size_t generation_counter = 0;
 std::size_t world_generation_counter = 0;
+std::deque<runtime_diagnostic_record> diagnostic_history;
+std::uint64_t diagnostic_sequence = 0;
 
 bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
                             const std::string &display_name,
@@ -421,7 +436,35 @@ void record_callback_timing( runtime_state &state, const std::string &name,
 
 void record_runtime_error( const std::string &context, const std::string &error )
 {
-    last_runtime_error = context + ": " + error;
+    const std::string stored_context =
+        context.substr( 0, maximum_diagnostic_context_bytes );
+    const std::string stored_error =
+        error.substr( 0, maximum_diagnostic_message_bytes );
+    last_runtime_error = stored_context + ": " + stored_error;
+
+    if( diagnostic_sequence == std::numeric_limits<std::uint64_t>::max() ) {
+        diagnostic_history.clear();
+        diagnostic_sequence = 0;
+    }
+    runtime_diagnostic_record record;
+    record.sequence = ++diagnostic_sequence;
+    record.generation = active_state ?
+                        active_state->generation : generation_counter;
+    record.world_generation = active_state ?
+                              active_state->world_generation :
+                              world_generation_counter;
+    if( active_state && active_state->current_source &&
+        *active_state->current_source < active_state->sources.size() ) {
+        record.source =
+            active_state->sources[*active_state->current_source].manifest.id;
+    }
+    record.context = stored_context;
+    record.message = stored_error;
+    diagnostic_history.push_back( std::move( record ) );
+    while( diagnostic_history.size() > maximum_diagnostic_records ) {
+        diagnostic_history.pop_front();
+    }
+
     // Script failures are isolated and recoverable.  Logging them as D_ERROR
     // emits an expensive native backtrace, which can stall hot reload for many
     // seconds without adding useful context beyond the Lua stack trace.
@@ -1085,6 +1128,216 @@ sol::table lua_runtime_status( sol::this_state lua, const runtime_state &runtime
     return result;
 }
 
+sol::table diagnostic_string_array(
+    sol::state_view lua, const std::set<std::string> &values )
+{
+    sol::table result = lua.create_table(
+                            static_cast<int>( values.size() ), 0 );
+    std::size_t index = 1;
+    for( const std::string &value : values ) {
+        result[index++] = value;
+    }
+    return result;
+}
+
+sol::table diagnostic_string_array(
+    sol::state_view lua, const std::vector<std::string> &values )
+{
+    sol::table result = lua.create_table(
+                            static_cast<int>( values.size() ), 0 );
+    for( std::size_t index = 0; index < values.size(); ++index ) {
+        result[index + 1] = values[index];
+    }
+    return result;
+}
+
+struct source_resource_counts {
+    std::size_t pages = 0;
+    std::size_t event_handlers = 0;
+    std::size_t scheduled_tasks = 0;
+    std::size_t services = 0;
+    std::size_t modules = 0;
+};
+
+std::vector<source_resource_counts> count_source_resources(
+    const runtime_state &runtime )
+{
+    std::vector<source_resource_counts> result( runtime.sources.size() );
+    for( const page_definition &page : runtime.pages ) {
+        if( page.source_index < result.size() ) {
+            ++result[page.source_index].pages;
+        }
+    }
+    for( const script_event_subscription &event :
+         runtime.event_registry.all() ) {
+        if( event.source_index < result.size() ) {
+            ++result[event.source_index].event_handlers;
+        }
+    }
+    for( const scheduled_script_task &task : runtime.scheduler.all() ) {
+        if( task.source_index < result.size() ) {
+            ++result[task.source_index].scheduled_tasks;
+        }
+    }
+    for( const script_service_definition &service :
+         runtime.service_registry.all() ) {
+        if( service.source_index < result.size() ) {
+            ++result[service.source_index].services;
+        }
+    }
+    for( std::size_t source_index = 0;
+         source_index < runtime.sources.size(); ++source_index ) {
+        const std::string prefix =
+            runtime.sources[source_index].manifest.id + "->";
+        for( const auto &entry : runtime.module_cache ) {
+            if( entry.first.compare( 0, prefix.size(), prefix ) == 0 ) {
+                ++result[source_index].modules;
+            }
+        }
+    }
+    return result;
+}
+
+sol::table lua_runtime_diagnostics(
+    sol::this_state lua, const runtime_state &runtime )
+{
+    sol::state_view state( lua );
+    sol::table snapshot = state.create_table();
+    snapshot["schema_version"] = 1;
+
+    sol::table health = state.create_table();
+    health["ok"] = last_runtime_error.empty();
+    health["last_error"] = last_runtime_error;
+    health["memory_pressure"] = runtime.memory.limit == 0 ? 0.0 :
+                                static_cast<double>( runtime.memory.used ) /
+                                static_cast<double>( runtime.memory.limit );
+    health["diagnostic_records"] = diagnostic_history.size();
+    health["latest_diagnostic_sequence"] = diagnostic_sequence;
+    snapshot["health"] = std::move( health );
+
+    sol::table identity = state.create_table();
+    identity["generation"] = runtime.generation;
+    identity["world_generation"] = runtime.world_generation;
+    identity["source_count"] = runtime.sources.size();
+    const bool has_current_source =
+        runtime.current_source &&
+        *runtime.current_source < runtime.sources.size();
+    identity["current_source"] = has_current_source ?
+                                 runtime.sources[*runtime.current_source].manifest.id :
+                                 std::string();
+    identity["accepting_actions"] = runtime.accept_actions;
+    snapshot["runtime"] = std::move( identity );
+
+    sol::table memory = state.create_table();
+    memory["used"] = runtime.memory.used;
+    memory["limit"] = runtime.memory.limit;
+    memory["remaining"] =
+        runtime.memory.used >= runtime.memory.limit ?
+        0 : runtime.memory.limit - runtime.memory.used;
+    snapshot["memory"] = std::move( memory );
+
+    sol::table callbacks = state.create_table();
+    callbacks["count"] = runtime.callback_count;
+    callbacks["total_us"] = runtime.callback_time_total_us;
+    callbacks["max_us"] = runtime.callback_time_max_us;
+    callbacks["average_us"] = runtime.callback_count == 0 ? 0.0 :
+                              static_cast<double>( runtime.callback_time_total_us ) /
+                              static_cast<double>( runtime.callback_count );
+    callbacks["slow_count"] = runtime.slow_callback_count;
+    callbacks["slow_threshold_us"] = slow_callback_threshold_us;
+    callbacks["last_slow"] = runtime.last_slow_callback;
+    callbacks["event_dispatch_depth"] = runtime.event_dispatch_depth;
+    callbacks["service_call_depth"] = runtime.service_call_depth;
+    snapshot["callbacks"] = std::move( callbacks );
+
+    sol::table resources = state.create_table();
+    resources["pages"] = runtime.pages.size();
+    resources["event_handlers"] = runtime.event_registry.size();
+    resources["scheduled_tasks"] = runtime.scheduler.size();
+    resources["scheduled_callbacks"] = runtime.scheduled_callbacks.size();
+    resources["services"] = runtime.service_registry.size();
+    resources["service_methods"] = runtime.service_methods.size();
+    resources["module_cache"] = runtime.module_cache.size();
+    resources["modules_loading"] = runtime.loading_modules.size();
+    resources["character_state_entries"] = runtime.persistent_state.size();
+    resources["world_state_entries"] = runtime.world_state.size();
+    resources["page_state_entries"] = runtime.page_state.size();
+    snapshot["resources"] = std::move( resources );
+
+    sol::table limits = state.create_table();
+    limits["memory_bytes"] = runtime.memory.limit;
+    limits["script_instructions"] = script_instruction_limit;
+    limits["callback_instructions"] = callback_instruction_limit;
+    limits["instruction_hook_quantum"] = instruction_hook_quantum;
+    limits["scheduler_tasks"] =
+        deterministic_turn_scheduler::maximum_tasks;
+    limits["scheduler_callbacks_per_turn"] =
+        deterministic_turn_scheduler::maximum_callbacks_per_turn;
+    limits["event_handlers"] =
+        script_event_registry::maximum_subscriptions;
+    limits["services"] = script_service_registry::maximum_services;
+    limits["service_methods"] =
+        script_service_registry::maximum_methods_per_service;
+    limits["page_stack_depth"] = maximum_page_stack_depth;
+    limits["diagnostic_records"] = maximum_diagnostic_records;
+    snapshot["limits"] = std::move( limits );
+
+    const std::vector<source_resource_counts> source_counts =
+        count_source_resources( runtime );
+    sol::table sources = state.create_table(
+                             static_cast<int>( runtime.sources.size() ), 0 );
+    for( std::size_t index = 0; index < runtime.sources.size(); ++index ) {
+        const script_manifest &manifest = runtime.sources[index].manifest;
+        const source_resource_counts &counts = source_counts[index];
+        sol::table source = state.create_table();
+        source["id"] = manifest.id;
+        source["version"] = manifest.version;
+        source["api_version"] = manifest.api_version;
+        source["capabilities"] =
+            diagnostic_string_array( state, manifest.capabilities );
+        source["dependencies"] =
+            diagnostic_string_array( state, manifest.dependencies );
+        source["pages"] = counts.pages;
+        source["event_handlers"] = counts.event_handlers;
+        source["scheduled_tasks"] = counts.scheduled_tasks;
+        source["services"] = counts.services;
+        source["modules"] = counts.modules;
+        source["current"] =
+            has_current_source && *runtime.current_source == index;
+        sources[index + 1] = std::move( source );
+    }
+    snapshot["sources"] = std::move( sources );
+    return snapshot;
+}
+
+sol::table lua_recent_diagnostics(
+    sol::this_state lua, const std::int64_t raw_limit )
+{
+    if( raw_limit < 0 ||
+        raw_limit > static_cast<std::int64_t>( maximum_diagnostic_records ) ) {
+        throw std::invalid_argument(
+            "game.diagnostics.recent limit must be within 0..64" );
+    }
+    sol::state_view state( lua );
+    const std::size_t limit = static_cast<std::size_t>( raw_limit );
+    const std::size_t count = std::min( limit, diagnostic_history.size() );
+    sol::table result = state.create_table(
+                            static_cast<int>( count ), 0 );
+    auto record = diagnostic_history.rbegin();
+    for( std::size_t index = 0; index < count; ++index, ++record ) {
+        sol::table entry = state.create_table();
+        entry["sequence"] = record->sequence;
+        entry["severity"] = "error";
+        entry["generation"] = record->generation;
+        entry["world_generation"] = record->world_generation;
+        entry["source"] = record->source;
+        entry["context"] = record->context;
+        entry["message"] = record->message;
+        result[index + 1] = std::move( entry );
+    }
+    return result;
+}
+
 std::string lua_radial_select( script_ui_context &context, const std::string &id,
                                const std::string &center_label, const sol::table &lua_options )
 {
@@ -1470,6 +1723,24 @@ void initialize_state( runtime_state &state )
     game.set_function( "runtime_status", [&state]( sol::this_state lua ) {
         return lua_runtime_status( lua, state );
     } );
+    sol::table diagnostics = state.lua.create_table();
+    diagnostics.set_function(
+        "snapshot",
+    [&state]( sol::this_state lua ) {
+        require_api_version( state, 5, "game.diagnostics" );
+        require_capability( state, "game.read" );
+        return lua_runtime_diagnostics( lua, state );
+    } );
+    diagnostics.set_function(
+        "recent",
+        [&state](
+            sol::this_state lua,
+    const sol::optional<std::int64_t> &limit ) {
+        require_api_version( state, 5, "game.diagnostics" );
+        require_capability( state, "game.read" );
+        return lua_recent_diagnostics( lua, limit.value_or( 16 ) );
+    } );
+    game["diagnostics"] = std::move( diagnostics );
     install_i18n_api( state.lua );
     install_registry_api( state.lua, game, [&state]() {
         require_capability( state, "registry.read" );
@@ -2585,6 +2856,7 @@ void shutdown()
     clear_actions();
     clear_navigation_requests();
     last_runtime_error.clear();
+    diagnostic_history.clear();
 }
 
 std::vector<page_info> registered_pages( const std::string_view slot )

@@ -34,6 +34,7 @@ class script_event_registry
         std::vector<script_event_subscription> matching( std::string_view event_name ) const;
         bool contains( std::uint64_t id ) const;
         std::size_t size() const;
+        const std::vector<script_event_subscription> &all() const;
         void clear();
 
     private:
