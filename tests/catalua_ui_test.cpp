@@ -1186,6 +1186,9 @@ TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
         }
     } );
     CHECK_THROWS( lua.safe_script( "return game.types.id('item', 'rock')" ) );
+    CHECK_THROWS( lua.safe_script( "return game.time.turn_zero()" ) );
+    CHECK_THROWS( lua.safe_script(
+                      "return game.time.before_time_starts()" ) );
 
     authorized = true;
     sol::protected_function_result result = lua.safe_script( R"lua(
@@ -1274,6 +1277,10 @@ TEST_CASE( "lua_v5_unit_values_are_exact_bounded_and_dimension_safe",
         script_unit_value::from( "mass", 0.0001, "milligram" ),
         std::invalid_argument );
     CHECK_THROWS_AS(
+        script_unit_value::from(
+            "mass", 1000000.0000005, "kilogram" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
         script_unit_value::from( "mass", std::numeric_limits<double>::infinity(),
                                  "gram" ),
         std::invalid_argument );
@@ -1304,6 +1311,14 @@ assert(pcall(function() return kg + game.units.new("volume", 1, "liter") end) ==
 assert(pcall(function() kg.kind = "volume" end) == false)
 assert(#game.units.kinds() == 11)
 assert(game.units.units("energy")[1] == "joule")
+local exact = game.units.new("money", 9007199254740993, "cent")
+local preceding = game.units.new("money", 9007199254740992, "cent")
+assert(tostring(exact) == "Unit<money>(9007199254740993 cent)")
+assert(exact ~= preceding)
+assert(exact:compare(preceding) == 1)
+assert(pcall(function()
+    game.units.new("mass", 1000000.0000005, "kilogram")
+end) == false)
 )lua" );
     REQUIRE( result.valid() );
 }
@@ -1373,6 +1388,8 @@ assert((hour / 2):value("minute") == 30)
 assert((-hour).turns == -3600)
 assert(half < hour and half <= hour)
 assert(game.time.now().turn == 10000)
+assert(type(game.time.turn_zero().turn) == "number")
+assert(type(game.time.before_time_starts().turn) == "number")
 local later = game.time.now() + half
 assert(later.turn == 11800)
 assert((later - game.time.now()).turns == 1800)

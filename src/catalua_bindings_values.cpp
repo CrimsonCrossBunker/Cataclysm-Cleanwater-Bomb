@@ -5,6 +5,7 @@
 #include <cmath>
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -282,16 +283,29 @@ const unit_conversion *find_unit_conversion(
 }
 
 std::variant<std::int64_t, double> checked_canonical_value(
-    const unit_kind_definition &kind, const long double value )
+    const unit_kind_definition &kind, const long double value,
+    const std::optional<std::pair<long double, long double>> &floating_error_bounds =
+        std::nullopt )
 {
     if( !std::isfinite( value ) ) {
         throw std::invalid_argument( "game.units values must be finite" );
     }
     if( kind.integral ) {
         const long double rounded = std::round( value );
-        const long double tolerance =
-            std::max( 1.0L, std::fabs( value ) ) * 1.0e-12L;
-        if( std::fabs( value - rounded ) > tolerance ) {
+        bool exactly_representable = value == rounded;
+        if( floating_error_bounds ) {
+            const long double lower =
+                std::min( floating_error_bounds->first,
+                          floating_error_bounds->second );
+            const long double upper =
+                std::max( floating_error_bounds->first,
+                          floating_error_bounds->second );
+            const long double first_integer = std::ceil( lower );
+            const long double last_integer = std::floor( upper );
+            exactly_representable =
+                first_integer == last_integer && first_integer == rounded;
+        }
+        if( !exactly_representable ) {
             throw std::invalid_argument(
                 "game.units value is not exactly representable in " +
                 std::string( kind.canonical_unit ) );
@@ -307,6 +321,33 @@ std::variant<std::int64_t, double> checked_canonical_value(
         throw std::overflow_error( "game.units floating-point value is out of range" );
     }
     return result;
+}
+
+std::int64_t checked_integral_conversion(
+    const unit_conversion &conversion, const std::int64_t value )
+{
+    const std::int64_t factor =
+        static_cast<std::int64_t>( conversion.factor );
+    const std::int64_t offset =
+        static_cast<std::int64_t>( conversion.offset );
+    if( factor <= 0 ||
+        static_cast<long double>( factor ) != conversion.factor ||
+        static_cast<long double>( offset ) != conversion.offset ) {
+        throw std::logic_error(
+            "game.units integral conversion is not an integer transform" );
+    }
+    if( value > std::numeric_limits<std::int64_t>::max() / factor ||
+        value < std::numeric_limits<std::int64_t>::min() / factor ) {
+        throw std::overflow_error( "game.units integral value is out of range" );
+    }
+    const std::int64_t product = value * factor;
+    if( ( offset > 0 &&
+          product > std::numeric_limits<std::int64_t>::max() - offset ) ||
+        ( offset < 0 &&
+          product < std::numeric_limits<std::int64_t>::min() - offset ) ) {
+        throw std::overflow_error( "game.units integral value is out of range" );
+    }
+    return product + offset;
 }
 
 const unit_kind_definition &require_same_unit_kind(
@@ -479,10 +520,53 @@ script_unit_value script_unit_value::from(
             "game.units.new received an unknown " + std::string( kind_name ) +
             " unit: " + std::string( unit_name ) );
     }
-    const long double canonical =
-        static_cast<long double>( value ) * conversion->factor + conversion->offset;
+    const auto convert = [conversion]( const double input ) {
+        return static_cast<long double>( input ) * conversion->factor +
+               conversion->offset;
+    };
+    const long double canonical = convert( value );
+    const std::pair<long double, long double> floating_error_bounds = {
+        convert( std::nextafter(
+                     value, -std::numeric_limits<double>::infinity() ) ),
+        convert( std::nextafter(
+                     value, std::numeric_limits<double>::infinity() ) )
+    };
     return script_unit_value(
                std::string( kind->name ), std::string( kind->canonical_unit ),
+               checked_canonical_value(
+                   *kind, canonical, floating_error_bounds ) );
+}
+
+script_unit_value script_unit_value::from_integer(
+    const std::string_view kind_name, const std::int64_t value,
+    const std::string_view unit_name )
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_name );
+    if( kind == nullptr ) {
+        throw std::invalid_argument(
+            "game.units.new received an unknown unit kind: " +
+            std::string( kind_name ) );
+    }
+    const unit_conversion *conversion =
+        find_unit_conversion( *kind, unit_name );
+    if( conversion == nullptr ) {
+        throw std::invalid_argument(
+            "game.units.new received an unknown " +
+            std::string( kind_name ) + " unit: " +
+            std::string( unit_name ) );
+    }
+    if( kind->integral ) {
+        return script_unit_value(
+                   std::string( kind->name ),
+                   std::string( kind->canonical_unit ),
+                   checked_integral_conversion( *conversion, value ) );
+    }
+    const long double canonical =
+        static_cast<long double>( value ) * conversion->factor +
+        conversion->offset;
+    return script_unit_value(
+               std::string( kind->name ),
+               std::string( kind->canonical_unit ),
                checked_canonical_value( *kind, canonical ) );
 }
 
@@ -894,10 +978,22 @@ void install_value_type_api(
     sol::table units = lua.create_table();
     units.set_function(
         "new",
-        [require_values]( const std::string & kind, const double value,
+        [require_values]( const std::string & kind, const sol::object & value,
     const std::string & unit ) {
         require_values();
-        return script_unit_value::from( kind, value, unit );
+        if( value.get_type() != sol::type::number ) {
+            throw std::invalid_argument(
+                "game.units.new value must be a number" );
+        }
+        if( value.is<lua_Integer>() ) {
+            return script_unit_value::from_integer(
+                       kind,
+                       static_cast<std::int64_t>(
+                           value.as<lua_Integer>() ),
+                       unit );
+        }
+        return script_unit_value::from(
+                   kind, value.as<double>(), unit );
     } );
     units.set_function( "kinds", [require_values]( sol::this_state lua_state ) {
         require_values();
@@ -1004,9 +1100,15 @@ void install_value_type_api(
         require_values();
         return script_time_point::from_native( calendar::turn );
     } );
-    time["turn_zero"] = script_time_point::from_native( calendar::turn_zero );
-    time["before_time_starts"] =
-        script_time_point::from_native( calendar::before_time_starts );
+    time.set_function( "turn_zero", [require_values]() {
+        require_values();
+        return script_time_point::from_native( calendar::turn_zero );
+    } );
+    time.set_function( "before_time_starts", [require_values]() {
+        require_values();
+        return script_time_point::from_native(
+                   calendar::before_time_starts );
+    } );
     game["time"] = std::move( time );
 
     install_coordinate_value_api( lua, game, std::move( require_values ) );

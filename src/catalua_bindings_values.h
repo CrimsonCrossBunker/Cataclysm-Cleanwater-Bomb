@@ -46,6 +46,9 @@ class script_unit_value
     public:
         static script_unit_value from(
             std::string_view kind, double value, std::string_view unit );
+        static script_unit_value from_integer(
+            std::string_view kind, std::int64_t value,
+            std::string_view unit );
 
         const std::string &kind() const noexcept;
         const std::string &canonical_unit() const noexcept;
