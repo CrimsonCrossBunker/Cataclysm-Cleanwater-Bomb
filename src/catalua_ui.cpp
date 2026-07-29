@@ -22,6 +22,7 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catalua_sol.h"
+#include "catalua_bindings.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_events.h"
@@ -1399,6 +1400,9 @@ void initialize_state( runtime_state &state )
 
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
+    install_binding_catalog_api( game, [&state]() {
+        require_capability( state, "game.read" );
+    } );
     game.set_function( "add_msg", [&state]( const std::string & message ) {
         require_capability( state, "game.actions" );
         ::add_msg( message );
