@@ -14,6 +14,7 @@
 
 #include "avatar.h"
 #include "catalua_bindings_values.h"
+#include "catalua_ui_actions_internal.h"
 #include "inventory.h"
 #include "item.h"
 #include "itype.h"
@@ -885,6 +886,49 @@ sol::table requirement_limits( sol::this_state lua )
     return result;
 }
 
+struct craft_action_options {
+    int batch = 1;
+    bool long_craft = false;
+};
+
+craft_action_options read_craft_action_options(
+    const sol::optional<sol::table> &requested )
+{
+    craft_action_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.crafting.queue_start option keys "
+                "must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        if( key == "batch" ) {
+            result.batch = require_integer(
+                               entry.second,
+                               "game.crafting.queue_start", key );
+            if( result.batch < 1 ||
+                result.batch > maximum_recipe_batch ) {
+                throw std::invalid_argument(
+                    "game.crafting.queue_start option 'batch' "
+                    "must be within 1..1000" );
+            }
+        } else if( key == "long" ) {
+            result.long_craft = require_boolean(
+                                    entry.second,
+                                    "game.crafting.queue_start", key );
+        } else {
+            throw std::invalid_argument(
+                "game.crafting.queue_start received unknown "
+                "option '" + key + "'" );
+        }
+    }
+    return result;
+}
+
 } // namespace
 
 void install_crafting_api(
@@ -894,9 +938,6 @@ void install_crafting_api(
     std::function<bool()> can_mutate,
     std::function<std::string()> source_id )
 {
-    static_cast<void>( require_write );
-    static_cast<void>( can_mutate );
-    static_cast<void>( source_id );
     sol::state_view state( game.lua_state() );
     sol::table recipes = state.create_table();
     recipes.set_function(
@@ -1020,6 +1061,28 @@ void install_crafting_api(
                    lua, id, batch.value_or( 1 ) );
     } );
     game["requirements"] = std::move( requirements );
+
+    sol::table crafting = state.create_table();
+    crafting.set_function(
+        "queue_start",
+        [require_write, can_mutate, source_id](
+            const script_game_id & id,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        if( !can_mutate() ) {
+            throw std::runtime_error(
+                "game.crafting.queue_start is only available "
+                "from an active callback" );
+        }
+        require_id(
+            id, "recipe", "game.crafting.queue_start" );
+        const craft_action_options parsed =
+            read_craft_action_options( options );
+        return enqueue_craft_action(
+                   id.value(), parsed.batch,
+                   parsed.long_craft, source_id() );
+    } );
+    game["crafting"] = std::move( crafting );
 }
 
 } // namespace cata::lua_ui

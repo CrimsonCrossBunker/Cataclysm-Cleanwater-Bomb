@@ -29,6 +29,7 @@
 #include "magic.h"
 #include "mission.h"
 #include "path_info.h"
+#include "player_activity.h"
 #include "pocket_type.h"
 #include "ui_profile.h"
 #include "units.h"
@@ -6281,4 +6282,95 @@ end) == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_crafting_starts_only_through_the_safe_action_queue",
+           "[lua][bindings][crafting][actions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events",
+            "game.actions",
+            "game.read",
+            "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local recipe = game.types.id(
+    "recipe", "cudgel_test_no_tools")
+
+assert(pcall(function()
+    game.crafting.queue_start(recipe)
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(recipe, { batch = 0 })
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(recipe, { batch = 1001 })
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(recipe, { long = 1 })
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(recipe, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(
+        game.types.id("item", "rock"))
+end) == false)
+
+events.on("game_begin", function()
+    local request = game.crafting.queue_start(
+        recipe, { batch = 1, long = false })
+    assert(math.type(request) == "integer")
+    local status = game.actions.status(0)
+    assert(status.pending_count == 1)
+    assert(#status.pending == 1)
+    assert(status.pending[1].request_id == request)
+    assert(status.pending[1].type == "craft")
+    assert(status.pending[1].recipe ==
+        "cudgel_test_no_tools")
+    assert(status.pending[1].batch == 1)
+    assert(status.pending[1].long == false)
+    assert(status.pending[1].source == "user")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    avatar &player = get_avatar();
+    if( player.activity ) {
+        player.cancel_activity();
+    }
+    get_event_bus().send<event_type::game_begin>(
+        "lua-crafting-action-test" );
+    player.activity = player_activity(
+                          activity_id( "ACT_AIM" ), 100 );
+    const std::optional<bool> dispatched =
+        cata::lua_ui::process_next_action();
+    REQUIRE( dispatched );
+    CHECK_FALSE( *dispatched );
+    CHECK_FALSE( cata::lua_ui::process_next_action() );
+
+    script.write( R"lua(
+local status = game.actions.status()
+assert(status.pending_count == 0)
+assert(status.result_count == 1)
+assert(#status.results == 1)
+assert(status.results[1].type == "craft")
+assert(status.results[1].status == "failed")
+assert(status.results[1].action_taken == false)
+assert(string.find(status.results[1].error,
+    "activity", 1, true) ~= nil)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+
+    if( player.activity ) {
+        player.cancel_activity();
+    }
 }

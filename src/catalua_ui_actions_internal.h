@@ -26,6 +26,14 @@ std::uint64_t enqueue_context_action( const std::string &action,
                                       int context_revision,
                                       const std::string &source_id );
 
+// Queue a recipe start for the next safe game-input boundary.  The recipe is
+// resolved again at dispatch so a data reload or changed character state
+// cannot turn a previously validated request into an unchecked mutation.
+std::uint64_t enqueue_craft_action( const std::string &recipe,
+                                    int batch,
+                                    bool long_craft,
+                                    const std::string &source_id );
+
 } // namespace cata::lua_ui
 
 #endif // CATA_SRC_CATALUA_UI_ACTIONS_INTERNAL_H
