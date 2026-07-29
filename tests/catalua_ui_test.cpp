@@ -25,6 +25,7 @@
 #include "catalua_ui_state.h"
 #include "effect.h"
 #include "event_bus.h"
+#include "explosion.h"
 #include "flag.h"
 #include "game.h"
 #include "input_context_actions.h"
@@ -7066,6 +7067,76 @@ assert(state.character.get(
     "native_interaction.monster", 0) == 1)
 assert(state.character.get(
     "native_interaction.elevator", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_craft_and_explosion_hooks_run_at_native_boundaries",
+           "[lua][bindings][hooks][craft][explosion][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.remove_weapon();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_craft_result", function(payload)
+    assert(payload.character.kind == "creature")
+    assert(payload.recipe ==
+        game.types.id("recipe", "cudgel_test_no_tools"))
+    assert(payload.result.kind == "item")
+    assert(math.type(payload.batch) == "integer")
+    assert(payload.batch == 1)
+    state.character.set(
+        "native_result.craft",
+        state.character.get("native_result.craft", 0) + 1)
+end)
+game.hooks.on("on_explosion_start", function(payload)
+    assert(payload.position.coordinate_space == "abs_ms")
+    assert(math.type(payload.position.x) == "integer")
+    assert(payload.power == 0)
+    assert(payload.source.kind == "creature")
+    state.character.set(
+        "native_result.explosion",
+        state.character.get("native_result.explosion", 0) + 1)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    const recipe &craft_recipe =
+        recipe_id( "cudgel_test_no_tools" ).obj();
+    item_components no_components;
+    item craft( &craft_recipe, 1, no_components, {} );
+    player.complete_craft( craft, std::nullopt );
+
+    explosion_data harmless_explosion;
+    harmless_explosion.power = 0.0f;
+    explosion_handler::explosion(
+        &player,
+        player.pos_bub( here ) + tripoint_rel_ms::north,
+        harmless_explosion );
+    explosion_handler::process_explosions();
+
+    script.write( R"lua(
+assert(state.character.get("native_result.craft", 0) == 1)
+assert(state.character.get("native_result.explosion", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
 }

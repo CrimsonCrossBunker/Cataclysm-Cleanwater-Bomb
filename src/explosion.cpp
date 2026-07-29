@@ -19,6 +19,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -576,6 +577,22 @@ void explosion( const Creature *source, map *here, const tripoint_bub_ms &p,
 void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
                       const explosion_data &ex )
 {
+    if( cata::lua_ui::has_native_hook(
+            "on_explosion_start" ) ) {
+        const tripoint_abs_ms position = m->get_abs( p );
+        cata::lua_ui::dispatch_native_hook(
+        "on_explosion_start", {
+            {
+                "position",
+                cata::lua_ui::native_callback_point {
+                    "abs_ms", position.x(), position.y(), position.z()
+                }
+            },
+            { "power", static_cast<double>( ex.power ) },
+            { "source", source }
+        } );
+    }
+
     map &bubble_map = reality_bubble();
 
     if( bubble_map.inbounds( m->get_abs( p ) ) ) {
