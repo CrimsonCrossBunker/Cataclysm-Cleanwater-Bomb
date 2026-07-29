@@ -708,19 +708,17 @@ item craft_command::create_in_progress_craft()
     if( preview.goes_bad() ) {
         const time_duration predicted_remaining = preview.get_shelf_life() -
                 preview.get_shelf_life() * predicted_rot;
-        if( predicted_rot >= 1.0 && crafter->is_avatar() ) {
-            const bool continue_craft = crafter->query_yn(
-                                            _( "The selected ingredients may be rotten before this craft finishes.\n"
-                                               "Start crafting anyway?" ) );
-            if( !continue_craft ) {
+        if( ( predicted_rot >= 1.0 || predicted_remaining <= 1_hours ) &&
+            crafter->is_avatar() ) {
+            const char *warning = predicted_rot >= 1.0
+                                  ? _( "The selected ingredients may be rotten before this craft finishes.\n"
+                                       "Start crafting anyway?" )
+                                  : _( "The finished item may have less than an hour of shelf life left.\n"
+                                       "Start crafting anyway?" );
+            if( !crafter->query_yn( warning ) ) {
                 restore_crafting_components( *crafter, used );
                 return item();
             }
-        } else if( predicted_rot < 1.0 && predicted_remaining <= 1_hours &&
-                   crafter->is_avatar() ) {
-            crafter->add_msg_if_player( m_warning,
-                                        _( "The finished %s will have very little shelf life left." ),
-                                        rec->result_name() );
         }
     }
 
