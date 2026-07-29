@@ -23,6 +23,7 @@
 #endif
 #include "android_ui_mode.h"
 #include "cata_imgui.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "catalua_ui.h"
@@ -1281,12 +1282,21 @@ bool input_context::action_remove( const std::string &name, const std::string &a
 bool input_context::action_add( const std::string &name, const std::string &action_id,
                                 bool is_local, kb_menu_status status )
 {
-    const input_event new_event = query_popup()
-                                  .preferred_keyboard_mode( preferred_keyboard_mode )
-                                  .message( _( "New key for %s" ), name )
-                                  .allow_anykey( true )
-                                  .query()
-                                  .evt;
+    const input_event new_event = [&]() {
+#if defined(TILES)
+        gamepad::set_raw_input_mode( true );
+        on_out_of_scope restore_gamepad_input_mode( []() {
+            gamepad::set_raw_input_mode( false );
+        } );
+#endif
+        return query_popup()
+               .preferred_keyboard_mode( preferred_keyboard_mode )
+               .message( _( "New key for %s" ), name )
+               .allow_anykey( true )
+               .query()
+               .evt;
+    }
+    ();
 
     if( action_uses_input( action_id, new_event )
         // Allow adding keys already used globally to local bindings

@@ -134,6 +134,7 @@ static direction radial_right_last_dir = direction::NONE;
 static bool radial_left_open = false;
 static bool radial_right_open = false;
 static bool alt_modifier_held = false;
+static bool raw_input_mode = false;
 
 // SDL3: callback signature changes to (void *userdata, SDL_TimerID timerID, Uint32 interval)
 #if SDL_MAJOR_VERSION >= 3
@@ -450,6 +451,16 @@ static bool handle_axis_event( SDL_Event &event )
         bool trigger_pressed = value > triggers_threshold + error_margin;
         bool trigger_released = value < triggers_threshold - error_margin;
 
+        if( raw_input_mode ) {
+            if( !state && trigger_pressed ) {
+                triggers_state[idx] = 1;
+                send_input( idx == 0 ? JOY_LT : JOY_RT );
+            } else if( state && trigger_released ) {
+                triggers_state[idx] = 0;
+            }
+            return false;
+        }
+
         if( idx == 1 ) {
             // Right trigger (RT)
             if( !state && trigger_pressed ) {
@@ -536,6 +547,15 @@ static bool handle_axis_event( SDL_Event &event )
                 left_stick_dir = dir;
             } else {
                 right_stick_dir = dir;
+            }
+
+            if( raw_input_mode && i == 0 ) {
+                if( dir == direction::NONE ) {
+                    cancel_task( stick_task );
+                } else if( dir != old_dir ) {
+                    send_direction_movement();
+                }
+                continue;
             }
 
             if( alt_modifier_held ) {
@@ -856,12 +876,17 @@ bool is_in_menu()
 {
     // If the UI stack has more than 1 element, it usually means a menu is open
     // on top of the main game UI.
-    return ui_adaptor::ui_stack_size() > 1;
+    return !raw_input_mode && ui_adaptor::ui_stack_size() > 1;
 }
 
 bool is_active()
 {
     return controller != nullptr;
+}
+
+void set_raw_input_mode( bool enabled )
+{
+    raw_input_mode = enabled;
 }
 
 tripoint direction_to_offset( direction dir )
