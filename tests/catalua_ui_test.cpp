@@ -27,6 +27,7 @@
 #include "flag.h"
 #include "input_context_actions.h"
 #include "item.h"
+#include "itype.h"
 #include "json_loader.h"
 #include "magic.h"
 #include "map.h"
@@ -6430,6 +6431,104 @@ end)
     script.write( R"lua(
 assert(state.character.get("callbacks.order", "") == "HBLL")
 assert(state.character.get("callbacks.native_hook", false) == true)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_item_callback_actors_run_from_native_item_lifecycle",
+           "[lua][bindings][callbacks][items][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local rock = game.types.id("item", "rock")
+local shirt = game.types.id("item", "tshirt")
+local function observe(name)
+    return function(payload)
+        assert(payload.item ~= nil)
+        local key = "native_items." .. name
+        state.character.set(
+            key, state.character.get(key, 0) + 1)
+    end
+end
+local function decide(name)
+    return function(payload)
+        observe(name)(payload)
+        return true
+    end
+end
+
+game.callbacks.register("iuse", rock, {
+    can_use = decide("can_use"),
+    on_use = decide("on_use")
+})
+game.callbacks.register("iwieldable", rock, {
+    on_wield = observe("on_wield")
+})
+game.callbacks.register("iwearable", rock, {
+    on_wear = observe("on_wear"),
+    on_takeoff = observe("on_takeoff")
+})
+game.callbacks.register("istate", rock, {
+    on_pickup = observe("on_pickup"),
+    on_tick = observe("on_tick"),
+    on_drop = decide("on_drop")
+})
+game.callbacks.register("iequippable", shirt, {
+    on_durability_change = observe("on_durability_change"),
+    on_repair = observe("on_repair"),
+    on_break = observe("on_break")
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    CHECK( has_native_callback( "iuse", "rock", "on_use" ) );
+
+    avatar &player = get_avatar();
+    item rock( itype_id( "rock" ) );
+    const tripoint_bub_ms position( 4, 5, 0 );
+
+    rock.on_pickup( player );
+    rock.type->tick( &player, rock, position );
+    CHECK( player.invoke_item(
+               &rock, position, player.get_moves() ) );
+    CHECK_FALSE( rock.on_drop( position ) );
+    rock.on_wield( player, false );
+    rock.on_wear( player );
+    rock.on_takeoff( player );
+
+    item shirt( itype_id( "tshirt" ) );
+    REQUIRE( shirt.max_damage() > 0 );
+    CHECK_FALSE( shirt.mod_damage( itype::damage_scale, &player ) );
+    CHECK_FALSE( shirt.mod_damage( -itype::damage_scale, &player ) );
+    shirt.force_set_damage( shirt.max_damage() );
+    CHECK( shirt.mod_damage( itype::damage_scale, &player ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_items.can_use", 0) == 1)
+assert(state.character.get("native_items.on_use", 0) == 1)
+assert(state.character.get("native_items.on_wield", 0) == 1)
+assert(state.character.get("native_items.on_wear", 0) == 1)
+assert(state.character.get("native_items.on_takeoff", 0) == 1)
+assert(state.character.get("native_items.on_pickup", 0) == 1)
+assert(state.character.get("native_items.on_tick", 0) == 1)
+assert(state.character.get("native_items.on_drop", 0) == 1)
+assert(state.character.get(
+    "native_items.on_durability_change", 0) == 2)
+assert(state.character.get("native_items.on_repair", 0) == 1)
+assert(state.character.get("native_items.on_break", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
 }

@@ -50,6 +50,12 @@ bool dispatch_native_callback(
     return true;
 }
 
+bool has_native_callback(
+    std::string_view, std::string_view, std::string_view )
+{
+    return false;
+}
+
 void dispatch_mapgen_postprocess( mapgendata & )
 {
 }

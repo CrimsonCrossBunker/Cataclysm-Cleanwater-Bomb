@@ -4056,6 +4056,15 @@ bool dispatch_native_callback(
     }
 }
 
+bool has_native_callback(
+    const std::string_view kind, const std::string_view target,
+    const std::string_view method )
+{
+    return active_state && !is_pool_worker_thread() &&
+           !active_state->callback_registry.matching(
+               kind, target, method ).empty();
+}
+
 bool reload_scripts( std::string &error )
 {
     // The profile loader is an independent, early Lua sandbox.  A bad profile

@@ -88,6 +88,9 @@ bool dispatch_native_callback(
     std::string_view kind, std::string_view target,
     std::string_view method,
     const native_callback_arguments &arguments = {} );
+bool has_native_callback(
+    std::string_view kind, std::string_view target,
+    std::string_view method );
 
 // Lua module names are converted from dotted names to paths below data/lua or
 // config/lua.  Exposed for focused tests of the sandbox boundary.

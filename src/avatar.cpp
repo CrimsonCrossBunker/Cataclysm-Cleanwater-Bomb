@@ -26,6 +26,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -1445,8 +1446,13 @@ bool avatar::invoke_item( item *used, const tripoint_bub_ms &pt, int pre_obtain_
     const int num_methods = use_methods.size();
 
     const bool has_relic = used->has_relic_activation() && used->can_use_relic( *this );
-    if( use_methods.empty() && !has_relic ) {
+    const bool has_lua_use = cata::lua_ui::has_native_callback(
+                                 "iuse", used->typeId().str(), "on_use" );
+    const bool lua_only = use_methods.empty() && has_lua_use;
+    if( use_methods.empty() && !has_relic && !has_lua_use ) {
         return false;
+    } else if( lua_only && !has_relic ) {
+        return Character::invoke_item( used, pt, pre_obtain_moves );
     } else if( num_methods == 1 && !has_relic ) {
         return invoke_item( used, use_methods.begin()->first, pt, pre_obtain_moves );
     } else if( num_methods == 0 && has_relic ) {
@@ -1463,6 +1469,12 @@ bool avatar::invoke_item( item *used, const tripoint_bub_ms &pt, int pre_obtain_
         umenu.addentry_desc( MENU_AUTOASSIGN, res.success(), MENU_AUTOASSIGN, e.second.get_name(),
                              res.str() );
     }
+    if( lua_only ) {
+        umenu.addentry_desc(
+            MENU_AUTOASSIGN, true, MENU_AUTOASSIGN,
+            _( "Use scripted action" ),
+            _( "Run the Lua action registered for this item." ) );
+    }
     if( has_relic ) {
         umenu.addentry_desc( MENU_AUTOASSIGN, true, MENU_AUTOASSIGN, _( "Use relic" ),
                              _( "Activate this relic." ) );
@@ -1477,8 +1489,11 @@ bool avatar::invoke_item( item *used, const tripoint_bub_ms &pt, int pre_obtain_
 
     int choice = umenu.ret;
     // Use the relic
-    if( choice == num_methods ) {
+    if( choice == num_methods + ( lua_only ? 1 : 0 ) ) {
         return used->use_relic( *this, pt );
+    }
+    if( lua_only && choice == num_methods ) {
+        return Character::invoke_item( used, pt, pre_obtain_moves );
     }
     if( choice < 0 || choice >= num_methods ) {
         return false;

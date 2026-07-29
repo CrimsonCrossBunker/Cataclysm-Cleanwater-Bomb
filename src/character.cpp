@@ -27,6 +27,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "city.h"
@@ -4526,9 +4527,35 @@ bool Character::invoke_item( item *used )
     return invoke_item( used, pos_bub() );
 }
 
-bool Character::invoke_item( item *, const tripoint_bub_ms &, int )
+bool Character::invoke_item( item *used, const tripoint_bub_ms &pt,
+                             int pre_obtain_moves )
 {
-    return false;
+    if( used == nullptr ||
+        !cata::lua_ui::has_native_callback(
+            "iuse", used->typeId().str(), "on_use" ) ) {
+        return false;
+    }
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( this ) },
+        { "item", static_cast<const item *>( used ) },
+        { "action", std::string( "lua" ) },
+        { "tick", false },
+        {
+            "position", cata::lua_ui::native_callback_point {
+                "bub_ms", pt.x(), pt.y(), pt.z()
+            }
+        }
+    };
+    if( !cata::lua_ui::dispatch_native_callback(
+            "iuse", used->typeId().str(), "can_use", payload ) ||
+        !cata::lua_ui::dispatch_native_callback(
+            "iuse", used->typeId().str(), "on_use", payload ) ) {
+        if( pre_obtain_moves >= 0 ) {
+            set_moves( pre_obtain_moves );
+        }
+        return false;
+    }
+    return true;
 }
 
 bool Character::invoke_item( item *used, const std::string &method )
@@ -4583,6 +4610,26 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
     if( actually_used == nullptr ) {
         debugmsg( "Tried to invoke a method %s on item %s, which doesn't have this method",
                   method.c_str(), used->tname() );
+        set_moves( pre_obtain_moves );
+        return false;
+    }
+    const cata::lua_ui::native_callback_arguments callback_payload = {
+        { "character", static_cast<const Character *>( this ) },
+        { "item", static_cast<const item *>( actually_used ) },
+        { "action", method },
+        { "tick", false },
+        {
+            "position", cata::lua_ui::native_callback_point {
+                "bub_ms", pt.x(), pt.y(), pt.z()
+            }
+        }
+    };
+    if( !cata::lua_ui::dispatch_native_callback(
+            "iuse", actually_used->typeId().str(),
+            "can_use", callback_payload ) ||
+        !cata::lua_ui::dispatch_native_callback(
+            "iuse", actually_used->typeId().str(),
+            "on_use", callback_payload ) ) {
         set_moves( pre_obtain_moves );
         return false;
     }
