@@ -16,7 +16,8 @@ void install_magic_api(
     sol::table &game,
     std::function<std::size_t()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read );
+    std::function<void()> require_read,
+    std::function<void()> require_write );
 
 } // namespace cata::lua_ui
 

@@ -1848,6 +1848,10 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.spells" );
         require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.spells" );
+        require_capability( state, "game.write" );
     } );
     install_item_api(
         game,

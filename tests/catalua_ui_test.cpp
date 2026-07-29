@@ -1973,6 +1973,192 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_spellbook_mana_and_casting_operations_are_controlled",
+           "[lua][bindings][spells][write][integration]" )
+{
+    avatar &player = get_avatar();
+    const spell_id kiss( "test_spell_kiss" );
+    const spell_id primer( "ink_gland_spray_primer" );
+    const bool kiss_known = player.magic->knows_spell( kiss );
+    const bool primer_known =
+        player.magic->knows_spell( primer );
+    const int kiss_experience = kiss_known ?
+                                player.magic->get_spell( kiss ).xp() : 0;
+    const int primer_experience = primer_known ?
+                                  player.magic->get_spell( primer ).xp() : 0;
+    const int original_mana = player.magic->available_mana();
+    const bool original_ignore = player.magic->casting_ignore;
+    const spell_id original_last = player.magic->last_spell;
+    const bool kiss_favorite =
+        player.magic->is_favorite( kiss );
+    const bool primer_favorite =
+        player.magic->is_favorite( primer );
+    REQUIRE( player.activity.is_null() );
+    if( kiss_known ) {
+        player.magic->set_spell_level( kiss, -1, &player );
+    }
+    if( primer_known ) {
+        player.magic->set_spell_level(
+            primer, -1, &player );
+    }
+    on_out_of_scope cleanup( [&player, kiss, primer, kiss_known,
+    primer_known, kiss_experience, primer_experience,
+    original_mana, original_ignore, original_last,
+    kiss_favorite, primer_favorite]() {
+        if( !player.activity.is_null() ) {
+            player.cancel_activity();
+        }
+        const auto restore_spell =
+        [&player]( const spell_id & id, const bool known,
+                   const int experience, const bool favorite ) {
+            if( player.magic->knows_spell( id ) ) {
+                player.magic->set_spell_level(
+                    id, -1, &player );
+            }
+            if( known ) {
+                player.magic->learn_spell(
+                    id, player, true );
+                player.magic->set_spell_exp(
+                    id, experience, &player );
+            }
+            if( player.magic->is_favorite( id ) !=
+                favorite ) {
+                player.magic->toggle_favorite( id );
+            }
+        };
+        restore_spell(
+            kiss, kiss_known, kiss_experience,
+            kiss_favorite );
+        restore_spell(
+            primer, primer_known, primer_experience,
+            primer_favorite );
+        player.magic->set_mana( original_mana );
+        player.magic->casting_ignore = original_ignore;
+        player.magic->last_spell = original_last;
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local kiss = game.types.id("spell", "test_spell_kiss")
+local primer = game.types.id("spell", "ink_gland_spray_primer")
+
+local learned = game.spells.learn(avatar, kiss, {
+    force = true,
+    experience = 100
+})
+assert(learned.ok == true)
+assert(learned.value.id == kiss)
+assert(learned.value.experience == 100)
+assert(game.spells.learn(avatar, kiss, { force = true }).error.code ==
+    "already_known")
+
+local gained = game.spells.gain_experience(avatar, kiss, 50)
+assert(gained.ok == true)
+assert(gained.value.after.experience >=
+    gained.value.before.experience)
+local leveled = game.spells.set_level(avatar, kiss, 2)
+assert(leveled.ok == true)
+assert(leveled.value.after.level == 2)
+local more_levels = game.spells.gain_levels(avatar, kiss, 1)
+assert(more_levels.ok == true)
+assert(more_levels.value.after.level >=
+    more_levels.value.before.level)
+local reset_exp = game.spells.set_experience(avatar, kiss, 200)
+assert(reset_exp.ok == true)
+assert(reset_exp.value.after.experience == 200)
+
+local mana = game.spells.mana(avatar)
+assert(mana.ok == true)
+assert(math.type(mana.value.current) == "integer")
+assert(math.type(mana.value.maximum) == "integer")
+assert(type(mana.value.regeneration_per_turn) == "number")
+local full = game.spells.set_mana(avatar, mana.value.maximum)
+assert(full.ok == true)
+assert(full.value.after.current == mana.value.maximum)
+local spent = game.spells.modify_mana(avatar, -1)
+assert(spent.ok == true)
+assert(spent.value.after.current ==
+    math.max(0, spent.value.before.current - 1))
+local ignore = game.spells.set_casting_ignore(
+    avatar, not mana.value.casting_ignore)
+assert(ignore.ok == true)
+assert(ignore.value.after == not mana.value.casting_ignore)
+local favorite = game.spells.set_favorite(avatar, kiss, true)
+assert(favorite.ok == true and favorite.value.after == true)
+
+local learned_primer = game.spells.learn(avatar, primer, {
+    force = true
+})
+assert(learned_primer.ok == true)
+local current = game.spells.mana(avatar).value
+game.spells.set_mana(avatar, current.maximum)
+local position = game.creatures.snapshot(avatar).value.position
+local queued = game.spells.queue_cast(avatar, primer, position)
+assert(queued.ok == true)
+assert(queued.value.accepted == true)
+assert(queued.value.spell.id == primer)
+assert(queued.value.target == position)
+assert(queued.value.activity.kind == "activity")
+
+assert(pcall(function()
+    game.spells.learn(avatar, kiss, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.spells.set_experience(avatar, kiss, -1)
+end) == false)
+assert(pcall(function()
+    game.spells.gain_levels(avatar, kiss, 0)
+end) == false)
+assert(pcall(function()
+    game.spells.set_mana(avatar, -1)
+end) == false)
+assert(pcall(function()
+    game.spells.queue_cast(
+        avatar, primer, game.coords.tripoint_rel_ms(0, 0, 0))
+end) == false)
+
+local forgotten = game.spells.forget(avatar, kiss)
+assert(forgotten.ok == true)
+assert(forgotten.value.forgotten.id == kiss)
+assert(forgotten.value.known == false)
+assert(game.spells.knows(avatar, kiss).value == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.activity.is_null() );
+    player.cancel_activity();
+    if( player.magic->knows_spell( kiss ) ) {
+        player.magic->set_spell_level( kiss, -1, &player );
+    }
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.spells.learn(
+    game.characters.avatar(),
+    game.types.id("spell", "test_spell_kiss"),
+    { force = true })
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK_FALSE( player.magic->knows_spell( kiss ) );
+}
+
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
            "[lua][bindings][items][inventory][integration]" )
 {

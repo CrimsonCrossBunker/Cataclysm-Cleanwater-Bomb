@@ -11,12 +11,17 @@
 #include <utility>
 #include <vector>
 
+#include "calendar.h"
+#include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "character.h"
 #include "creature.h"
 #include "enum_conversions.h"
 #include "magic.h"
+#include "magic_enchantment.h"
+#include "map.h"
+#include "player_activity.h"
 #include "type_id.h"
 
 namespace cata::lua_ui
@@ -31,6 +36,11 @@ constexpr int default_known_limit = 64;
 constexpr int maximum_known_limit = 256;
 constexpr std::size_t maximum_offset = 1000000;
 constexpr std::size_t maximum_relation_values = 128;
+constexpr int maximum_spell_experience = 1000000000;
+constexpr int maximum_spell_level = 10000;
+constexpr int maximum_spell_gain = 1000000;
+constexpr int maximum_mana_value = 1000000000;
+const trait_id trait_none( "NONE" );
 
 void require_spell_id(
     const script_game_id &id, const std::string &api_name )
@@ -778,13 +788,517 @@ sol::table can_learn_spell(
                sol::make_object( state, std::move( value ) ) );
 }
 
+struct learn_options {
+    bool force = false;
+    std::optional<int> level;
+    std::optional<int> experience;
+};
+
+learn_options read_learn_options(
+    const sol::optional<sol::table> &requested )
+{
+    learn_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.spells.learn option keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        const sol::object value = entry.second;
+        if( key == "force" ) {
+            if( value.get_type() != sol::type::boolean ) {
+                throw std::invalid_argument(
+                    "game.spells.learn force must be a boolean" );
+            }
+            result.force = value.as<bool>();
+        } else if( key == "level" ||
+                   key == "experience" ) {
+            if( !value.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    "game.spells.learn level and experience must be integers" );
+            }
+            const lua_Integer number =
+                value.as<lua_Integer>();
+            const int maximum = key == "level" ?
+                                maximum_spell_level :
+                                maximum_spell_experience;
+            if( number < 0 || number > maximum ) {
+                throw std::invalid_argument(
+                    "game.spells.learn " + key +
+                    " is outside its limit" );
+            }
+            if( key == "level" ) {
+                result.level = static_cast<int>( number );
+            } else {
+                result.experience =
+                    static_cast<int>( number );
+            }
+        } else {
+            throw std::invalid_argument(
+                "game.spells.learn received unknown option '" +
+                key + "'" );
+        }
+    }
+    if( result.level && result.experience ) {
+        throw std::invalid_argument(
+            "game.spells.learn accepts either level or experience, not both" );
+    }
+    return result;
+}
+
+sol::table learn_spell(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const sol::optional<sol::table> &requested_options,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_spell_id(
+        requested_id, "game.spells.learn" );
+    const learn_options options =
+        read_learn_options( requested_options );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const spell_id id( requested_id.value() );
+    known_magic &magic = *character->magic;
+    if( magic.knows_spell( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "already_known",
+            "The character already knows spell '" +
+            id.str() + "'"
+        } );
+    }
+    const trait_id spell_class = id->spell_class;
+    if( !options.force && spell_class != trait_none &&
+        !character->has_trait( spell_class ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "confirmation_required",
+            "Learning this spell can change the character's spell class; "
+            "use force=true for a non-interactive decision"
+        } );
+    }
+    magic.learn_spell( id, *character, options.force );
+    if( !magic.knows_spell( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "rejected",
+            "The engine rejected learning spell '" +
+            id.str() + "'"
+        } );
+    }
+    if( options.level ) {
+        magic.set_spell_level(
+            id, *options.level, character );
+    } else if( options.experience ) {
+        magic.set_spell_exp(
+            id, *options.experience, character );
+    }
+    sol::table value = snapshot_known_spell(
+                           state, *character, id );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table forget_spell(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_spell_id(
+        requested_id, "game.spells.forget" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const spell_id id( requested_id.value() );
+    known_magic &magic = *character->magic;
+    if( !magic.knows_spell( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_known",
+            "The character does not know spell '" +
+            id.str() + "'"
+        } );
+    }
+    sol::table before = snapshot_known_spell(
+                            state, *character, id );
+    magic.set_spell_level( id, -1, character );
+    sol::table value = state.create_table();
+    value["forgotten"] = std::move( before );
+    value["known"] = magic.knows_spell( id );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+enum class spell_adjustment : int {
+    set_experience,
+    gain_experience,
+    set_level,
+    gain_levels
+};
+
+sol::table adjust_spell(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const int amount,
+    const spell_adjustment adjustment,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::string api_name =
+        adjustment == spell_adjustment::set_experience ?
+        "game.spells.set_experience" :
+        adjustment == spell_adjustment::gain_experience ?
+        "game.spells.gain_experience" :
+        adjustment == spell_adjustment::set_level ?
+        "game.spells.set_level" :
+        "game.spells.gain_levels";
+    require_spell_id( requested_id, api_name );
+    const bool setting_experience =
+        adjustment == spell_adjustment::set_experience;
+    const bool setting_level =
+        adjustment == spell_adjustment::set_level;
+    const int maximum =
+        setting_experience ? maximum_spell_experience :
+        setting_level ? maximum_spell_level :
+        maximum_spell_gain;
+    const int minimum =
+        setting_experience || setting_level ? 0 : 1;
+    if( amount < minimum || amount > maximum ) {
+        throw std::invalid_argument(
+            api_name + " amount is outside its limit" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const spell_id id( requested_id.value() );
+    known_magic &magic = *character->magic;
+    if( !magic.knows_spell( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_known",
+            "The character does not know spell '" +
+            id.str() + "'"
+        } );
+    }
+    sol::table before = snapshot_known_spell(
+                            state, *character, id );
+    spell &known = magic.get_spell( id );
+    switch( adjustment ) {
+        case spell_adjustment::set_experience:
+            magic.set_spell_exp( id, amount, character );
+            break;
+        case spell_adjustment::gain_experience:
+            known.gain_exp( *character, amount );
+            break;
+        case spell_adjustment::set_level:
+            magic.set_spell_level( id, amount, character );
+            break;
+        case spell_adjustment::gain_levels:
+            known.gain_levels( *character, amount );
+            break;
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] = snapshot_known_spell(
+                         state, *character, id );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table mana_snapshot(
+    sol::state_view state, Character &character )
+{
+    known_magic &magic = *character.magic;
+    const int maximum = magic.max_mana( character );
+    const double regenerated_pool =
+        std::max(
+            0.0,
+            character.calculate_by_enchantment(
+                static_cast<double>( maximum ),
+                enchant_vals::mod::REGEN_MANA ) );
+    sol::table value = state.create_table();
+    value["current"] = magic.available_mana();
+    value["maximum"] = maximum;
+    value["regeneration_per_turn"] =
+        regenerated_pool /
+        to_turns<double>( 8_hours );
+    value["casting_ignore"] = magic.casting_ignore;
+    if( magic.last_spell.is_null() ) {
+        value["last_spell"] = sol::nil;
+    } else {
+        value["last_spell"] = script_game_id(
+                                  "spell",
+                                  magic.last_spell.str() );
+    }
+    return value;
+}
+
+sol::table get_mana(
+    sol::this_state lua, const game_handle &handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    sol::table value = mana_snapshot(
+                           state, *character );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table change_mana(
+    sol::this_state lua, const game_handle &handle,
+    const int amount, const bool relative,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::string api_name = relative ?
+                                 "game.spells.modify_mana" :
+                                 "game.spells.set_mana";
+    if( amount < ( relative ? -maximum_mana_value : 0 ) ||
+        amount > maximum_mana_value ) {
+        throw std::invalid_argument(
+            api_name + " amount is outside its limit" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    known_magic &magic = *character->magic;
+    sol::table before = mana_snapshot(
+                            state, *character );
+    if( relative ) {
+        magic.mod_mana( *character, amount );
+    } else {
+        magic.set_mana(
+            std::clamp(
+                amount, 0, magic.max_mana( *character ) ) );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] = mana_snapshot(
+                         state, *character );
+    value["requested"] = amount;
+    value["relative"] = relative;
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_casting_ignore(
+    sol::this_state lua, const game_handle &handle,
+    const bool enabled,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool before =
+        character->magic->casting_ignore;
+    character->magic->casting_ignore = enabled;
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] =
+        character->magic->casting_ignore;
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_favorite(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const bool favorite,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_spell_id(
+        requested_id, "game.spells.set_favorite" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const spell_id id( requested_id.value() );
+    known_magic &magic = *character->magic;
+    if( !magic.knows_spell( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_known",
+            "The character does not know spell '" +
+            id.str() + "'"
+        } );
+    }
+    const bool before = magic.is_favorite( id );
+    if( before != favorite ) {
+        magic.toggle_favorite( id );
+    }
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = magic.is_favorite( id );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+void require_absolute_map_square(
+    const script_tripoint_coord &target,
+    const std::string &api_name )
+{
+    if( target.native_origin() != coords::origin::abs ||
+        target.native_scale() != coords::scale::map_square ) {
+        throw std::invalid_argument(
+            api_name +
+            " requires an absolute map-square Tripoint" );
+    }
+}
+
+sol::table queue_cast(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const script_tripoint_coord &requested_target,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_spell_id(
+        requested_id, "game.spells.queue_cast" );
+    require_absolute_map_square(
+        requested_target, "game.spells.queue_cast" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const spell_id id( requested_id.value() );
+    known_magic &magic = *character->magic;
+    if( !magic.knows_spell( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_known",
+            "The character does not know spell '" +
+            id.str() + "'"
+        } );
+    }
+    if( !character->activity.is_null() ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "busy",
+            "The character already has an activity"
+        } );
+    }
+    spell &known = magic.get_spell( id );
+    if( known.energy_source() == magic_energy_type::hp ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "interactive_energy_source",
+            "Blood magic requires an interactive body-part choice "
+            "and cannot be queued by this API"
+        } );
+    }
+    map &here = get_map();
+    const tripoint_bub_ms target = here.get_bub(
+                                       tripoint_abs_ms(
+                                           requested_target.to_native() ) );
+    if( !here.inbounds( target ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "outside_active_map",
+            "The requested spell target is outside the active map"
+        } );
+    }
+    if( !known.is_target_in_range( *character, target ) ||
+        !known.is_valid_target( *character, target ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "invalid_target",
+            "The requested point is not a valid target for this spell"
+        } );
+    }
+    if( !known.can_cast( *character ) ||
+        !magic.has_enough_energy( *character, known ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "cannot_cast",
+            "The character cannot currently cast this spell"
+        } );
+    }
+    const bool accepted = character->cast_spell(
+                              known, false, target );
+    if( accepted ) {
+        magic.last_spell = id;
+    }
+    sol::table value = state.create_table();
+    value["accepted"] = accepted;
+    value["spell"] = snapshot_known_spell(
+                         state, *character, id );
+    value["target"] = requested_target;
+    if( accepted ) {
+        value["activity"] = script_game_id(
+                                "activity",
+                                character->activity.id().str() );
+    } else {
+        value["activity"] = sol::nil;
+    }
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_magic_api(
     sol::table &game,
     std::function<std::size_t()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read )
+    std::function<void()> require_read,
+    std::function<void()> require_write )
 {
     sol::state_view lua( game.lua_state() );
     sol::table spells = lua.create_table();
@@ -843,6 +1357,144 @@ void install_magic_api(
         require_read();
         return can_learn_spell(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "learn",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        return learn_spell(
+                   lua_state, handle, id, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "forget",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_write();
+        return forget_spell(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "set_experience",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int amount ) {
+        require_write();
+        return adjust_spell(
+                   lua_state, handle, id, amount,
+                   spell_adjustment::set_experience,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "gain_experience",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int amount ) {
+        require_write();
+        return adjust_spell(
+                   lua_state, handle, id, amount,
+                   spell_adjustment::gain_experience,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "set_level",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int amount ) {
+        require_write();
+        return adjust_spell(
+                   lua_state, handle, id, amount,
+                   spell_adjustment::set_level,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "gain_levels",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int amount ) {
+        require_write();
+        return adjust_spell(
+                   lua_state, handle, id, amount,
+                   spell_adjustment::gain_levels,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "mana",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        return get_mana(
+                   lua_state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "set_mana",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const int amount ) {
+        require_write();
+        return change_mana(
+                   lua_state, handle, amount, false,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "modify_mana",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const int amount ) {
+        require_write();
+        return change_mana(
+                   lua_state, handle, amount, true,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "set_casting_ignore",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const bool enabled ) {
+        require_write();
+        return set_casting_ignore(
+                   lua_state, handle, enabled,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "set_favorite",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const bool favorite ) {
+        require_write();
+        return set_favorite(
+                   lua_state, handle, id, favorite,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "queue_cast",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const script_tripoint_coord & target ) {
+        require_write();
+        return queue_cast(
+                   lua_state, handle, id, target,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
