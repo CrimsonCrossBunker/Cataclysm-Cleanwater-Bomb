@@ -39,6 +39,13 @@ const std::vector<script_hook_spec> &script_hook_specs()
             { "character" }
         },
         {
+            "on_character_try_move", script_hook_mode::intercept,
+            {
+                "character", "from", "to", "movement_mode",
+                "via_ramp", "mounted", "mount"
+            }, { "allow" }
+        },
+        {
             "on_control_npc", script_hook_mode::observe,
             { "avatar", "npc", "debug" }
         },
@@ -154,6 +161,10 @@ const std::vector<script_hook_spec> &script_hook_specs()
             { "character", "monster" }
         },
         {
+            "on_monster_try_move", script_hook_mode::intercept,
+            { "monster", "from", "to", "force" }, { "allow" }
+        },
+        {
             "on_npc_do_turn", script_hook_mode::observe,
             { "npc" }
         },
@@ -168,6 +179,20 @@ const std::vector<script_hook_spec> &script_hook_specs()
         {
             "on_npc_spawn", script_hook_mode::observe,
             { "npc", "source" }
+        },
+        {
+            "on_npc_try_move", script_hook_mode::intercept,
+            {
+                "npc", "from", "to", "movement_mode",
+                "via_ramp", "mounted", "mount"
+            }, { "allow" }
+        },
+        {
+            "on_player_try_move", script_hook_mode::intercept,
+            {
+                "player", "from", "to", "movement_mode",
+                "via_ramp", "mounted", "mount"
+            }, { "allow" }
         },
         {
             "on_shoot", script_hook_mode::observe,

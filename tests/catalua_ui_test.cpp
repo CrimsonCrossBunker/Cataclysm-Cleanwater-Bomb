@@ -926,7 +926,7 @@ TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
     using namespace cata::lua_ui;
 
     const std::vector<script_hook_spec> &hooks = script_hook_specs();
-    REQUIRE( hooks.size() == 48 );
+    REQUIRE( hooks.size() == 52 );
     std::vector<std::string_view> hook_names;
     hook_names.reserve( hooks.size() );
     for( const script_hook_spec &hook : hooks ) {
@@ -942,6 +942,21 @@ TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
            script_hook_mode::intercept );
     CHECK( find_script_hook_spec( "on_weather_updated" )->mode ==
            script_hook_mode::observe );
+    REQUIRE( find_script_hook_spec( "on_character_try_move" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_character_try_move" )->mode ==
+           script_hook_mode::intercept );
+    CHECK( script_hook_supports_result(
+               *find_script_hook_spec( "on_character_try_move" ),
+               "allow" ) );
+    REQUIRE( find_script_hook_spec( "on_monster_try_move" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_monster_try_move" )->mode ==
+           script_hook_mode::intercept );
+    REQUIRE( find_script_hook_spec( "on_npc_try_move" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_npc_try_move" )->mode ==
+           script_hook_mode::intercept );
+    REQUIRE( find_script_hook_spec( "on_player_try_move" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_player_try_move" )->mode ==
+           script_hook_mode::intercept );
     CHECK( find_script_hook_spec( "not_a_hook" ) == nullptr );
 
     const std::vector<script_callback_kind_spec> &kinds =
@@ -6214,7 +6229,7 @@ TEST_CASE( "lua_v5_hooks_are_described_ordered_owned_and_error_isolated",
     })json" );
     script.write( R"lua(
 local limits = game.hooks.limits()
-assert(limits.hooks == 48)
+assert(limits.hooks == 52)
 assert(limits.handlers == 1024)
 assert(limits.registered == 0)
 assert(limits.priority_min == -10000)
@@ -6223,7 +6238,7 @@ assert(limits.dispatch_depth == 16)
 assert(limits.instruction_budget > 0)
 
 local catalog = game.hooks.list()
-assert(#catalog == 48)
+assert(#catalog == 52)
 local observed = game.hooks.describe("on_game_started")
 assert(observed.name == "on_game_started")
 assert(observed.mode == "observe")
