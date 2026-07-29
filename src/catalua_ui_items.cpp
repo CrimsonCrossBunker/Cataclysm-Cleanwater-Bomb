@@ -1,6 +1,7 @@
 #include "catalua_ui_items.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <list>
@@ -11,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "catacharset.h"
@@ -22,6 +24,7 @@
 #include "item_contents.h"
 #include "item_pocket.h"
 #include "itype.h"
+#include "math_parser_diag_value.h"
 #include "units.h"
 
 namespace cata::lua_ui
@@ -47,6 +50,10 @@ constexpr int default_contents_depth = 8;
 constexpr int maximum_contents_depth = 16;
 constexpr std::size_t maximum_contents_nodes = 4096;
 constexpr std::size_t maximum_contents_offset = 1000000;
+constexpr int maximum_item_charges = 1000000000;
+constexpr std::size_t maximum_item_var_key_bytes = 128;
+constexpr std::size_t maximum_item_var_string_bytes = 4096;
+constexpr double maximum_item_var_number = 1.0e15;
 
 struct inventory_query_options {
     std::size_t offset = 0;
@@ -1192,6 +1199,427 @@ sol::table item_contents_result(
                    state, std::move( value ) ) );
 }
 
+void require_id_kind(
+    const script_game_id &id, const std::string &kind,
+    const std::string &api_name )
+{
+    if( id.kind() != kind ) {
+        throw std::invalid_argument(
+            api_name + " requires GameId<" + kind + ">" );
+    }
+    if( !id.is_valid() ) {
+        throw std::invalid_argument(
+            api_name + " requires a valid GameId<" + kind + ">" );
+    }
+}
+
+struct item_updates {
+    std::optional<int> charges;
+    std::optional<int> damage;
+    std::optional<bool> favorite;
+};
+
+item_updates read_item_updates(
+    const item &entry, const sol::table &requested )
+{
+    item_updates result;
+    bool found = false;
+    for( const auto &field : requested ) {
+        const sol::object key_object = field.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.items.update field names must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        const sol::object value = field.second;
+        if( key == "charges" ) {
+            const std::int64_t charges = integer_option(
+                                             value, key,
+                                             "game.items.update" );
+            if( charges < 0 ||
+                charges > maximum_item_charges ) {
+                throw std::invalid_argument(
+                    "game.items.update charges is outside its limit" );
+            }
+            if( !entry.type->can_have_charges() ) {
+                throw std::invalid_argument(
+                    "game.items.update cannot set charges on this item type" );
+            }
+            result.charges = static_cast<int>( charges );
+        } else if( key == "damage" ) {
+            const std::int64_t damage = integer_option(
+                                            value, key,
+                                            "game.items.update" );
+            if( damage < 0 ||
+                damage > entry.max_damage() ) {
+                throw std::invalid_argument(
+                    "game.items.update damage is outside this item's range" );
+            }
+            result.damage = static_cast<int>( damage );
+        } else if( key == "favorite" ) {
+            result.favorite = boolean_option(
+                                  value, key,
+                                  "game.items.update" );
+        } else {
+            throw std::invalid_argument(
+                "game.items.update received unknown field '" +
+                key + "'" );
+        }
+        found = true;
+    }
+    if( !found ) {
+        throw std::invalid_argument(
+            "game.items.update requires at least one field" );
+    }
+    return result;
+}
+
+sol::table mutable_item_state(
+    sol::state_view lua, const item &entry )
+{
+    sol::table result = lua.create_table();
+    result["uid"] = entry.uid().get_value();
+    result["id"] = script_game_id(
+                       "item", entry.typeId().str() );
+    result["charges"] = entry.charges;
+    result["damage"] = entry.damage();
+    result["damage_level"] = entry.damage_level();
+    result["max_damage"] = entry.max_damage();
+    result["favorite"] = entry.is_favorite;
+    result["active"] = entry.is_active();
+    return result;
+}
+
+sol::table update_item(
+    sol::this_state lua, const game_handle &handle,
+    const sol::table &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    item &entry = *resolved.value;
+    const item_updates updates =
+        read_item_updates( entry, requested );
+    sol::table value = state.create_table();
+    value["before"] =
+        mutable_item_state( state, entry );
+    if( updates.charges ) {
+        entry.charges = *updates.charges;
+    }
+    if( updates.damage ) {
+        entry.set_damage( *updates.damage );
+    }
+    if( updates.favorite ) {
+        entry.set_favorite( *updates.favorite );
+    }
+    value["after"] =
+        mutable_item_state( state, entry );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+void validate_item_var_key(
+    const std::string &key, const std::string &api_name )
+{
+    if( key.empty() ||
+        key.size() > maximum_item_var_key_bytes ) {
+        throw std::invalid_argument(
+            api_name + " key must contain 1 to 128 bytes" );
+    }
+    if( std::any_of(
+            key.begin(), key.end(),
+    []( const unsigned char ch ) {
+    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+} ) ) {
+        throw std::invalid_argument(
+            api_name + " key cannot contain control characters" );
+    }
+}
+
+sol::table item_var_to_lua(
+    sol::state_view lua, const diag_value &value )
+{
+    sol::table result = lua.create_table();
+    if( value.is_dbl() ) {
+        result["kind"] = "number";
+        result["value"] = value.dbl();
+    } else if( value.is_str() ) {
+        result["kind"] = "string";
+        result["value"] =
+            bounded_item_text( value.str() );
+    } else if( value.is_tripoint() ) {
+        result["kind"] = "coordinate";
+        result["value"] =
+            script_tripoint_coord::from_native(
+                coords::origin::abs,
+                coords::scale::map_square,
+                value.tripoint().raw() );
+    } else if( value.is_empty() ) {
+        result["kind"] = "empty";
+    } else {
+        result["kind"] = "unsupported";
+        result["display"] =
+            bounded_item_text( value.to_string() );
+    }
+    return result;
+}
+
+sol::table get_item_var(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &key,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_item_var_key( key, "game.items.get_var" );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    const diag_value *value =
+        resolved.value->maybe_get_value( key );
+    if( value == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The item does not define that variable"
+        } );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, item_var_to_lua(
+                       state, *value ) ) );
+}
+
+void set_item_var_value(
+    item &entry, const std::string &key,
+    const sol::object &requested )
+{
+    if( requested.is<std::string>() ) {
+        const std::string value =
+            requested.as<std::string>();
+        if( value.size() >
+            maximum_item_var_string_bytes ) {
+            throw std::invalid_argument(
+                "game.items.set_var string exceeds 4096 bytes" );
+        }
+        if( value.find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument(
+                "game.items.set_var string cannot contain NUL bytes" );
+        }
+        entry.set_var( key, value );
+        return;
+    }
+    if( requested.is<script_tripoint_coord>() ) {
+        const script_tripoint_coord value =
+            requested.as<script_tripoint_coord>();
+        if( value.native_origin() != coords::origin::abs ||
+            value.native_scale() !=
+            coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "game.items.set_var coordinate must use absolute map squares" );
+        }
+        entry.set_var(
+            key, tripoint_abs_ms( value.to_native() ) );
+        return;
+    }
+    if( requested.is<double>() ) {
+        const double value = requested.as<double>();
+        if( !std::isfinite( value ) ||
+            std::fabs( value ) >
+            maximum_item_var_number ) {
+            throw std::invalid_argument(
+                "game.items.set_var number is outside its limit" );
+        }
+        entry.set_var( key, value );
+        return;
+    }
+    throw std::invalid_argument(
+        "game.items.set_var value must be a string, number, or absolute map-square coordinate" );
+}
+
+sol::table set_item_var(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &key, const sol::object &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_item_var_key( key, "game.items.set_var" );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    sol::table value = state.create_table();
+    const diag_value *before =
+        resolved.value->maybe_get_value( key );
+    value["existed"] = before != nullptr;
+    if( before != nullptr ) {
+        value["before"] =
+            item_var_to_lua( state, *before );
+    }
+    set_item_var_value(
+        *resolved.value, key, requested );
+    value["after"] = item_var_to_lua(
+                         state,
+                         resolved.value->get_value( key ) );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table erase_item_var(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &key,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_item_var_key( key, "game.items.erase_var" );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    const bool existed =
+        resolved.value->has_var( key );
+    if( existed ) {
+        resolved.value->erase_var( key );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, existed ) );
+}
+
+sol::table item_has_flag(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &flag,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        flag, "json_flag", "game.items.has_flag" );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, resolved.value->has_flag(
+                       flag_id( flag.value() ) ) ) );
+}
+
+sol::table set_item_flag(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &flag, const bool enabled,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        flag, "json_flag", "game.items.set_flag" );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    const flag_id native( flag.value() );
+    sol::table value = state.create_table();
+    value["effective_before"] =
+        resolved.value->has_flag( native );
+    value["own_before"] =
+        resolved.value->has_own_flag( native );
+    if( enabled ) {
+        resolved.value->set_flag( native );
+    } else {
+        resolved.value->unset_flag( native );
+    }
+    value["effective_after"] =
+        resolved.value->has_flag( native );
+    value["own_after"] =
+        resolved.value->has_own_flag( native );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table item_has_technique(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &technique,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        technique, "martial_art_technique",
+        "game.items.has_technique" );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, resolved.value->has_technique(
+                       matec_id( technique.value() ) ) ) );
+}
+
+sol::table set_item_technique(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &technique, const bool enabled,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        technique, "martial_art_technique",
+        "game.items.set_technique" );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    const matec_id native( technique.value() );
+    sol::table value = state.create_table();
+    value["before"] =
+        resolved.value->has_technique( native );
+    if( enabled ) {
+        resolved.value->add_technique( native );
+    } else {
+        resolved.value->remove_technique( native );
+    }
+    value["after"] =
+        resolved.value->has_technique( native );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_item_api(
@@ -1199,7 +1627,7 @@ void install_item_api(
     std::function<std::size_t()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
-    std::function<void()> )
+    std::function<void()> require_write )
 {
     sol::state_view lua( game.lua_state() );
     sol::table items = lua.create_table();
@@ -1233,6 +1661,95 @@ void install_item_api(
         require_read();
         return item_contents_result(
                    lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "update",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & updates ) {
+        require_write();
+        return update_item(
+                   lua_state, handle, updates,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "get_var",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & key ) {
+        require_read();
+        return get_item_var(
+                   lua_state, handle, key,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "set_var",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string & key,
+    const sol::object & value ) {
+        require_write();
+        return set_item_var(
+                   lua_state, handle, key, value,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "erase_var",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & key ) {
+        require_write();
+        return erase_item_var(
+                   lua_state, handle, key,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "has_flag",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & flag ) {
+        require_read();
+        return item_has_flag(
+                   lua_state, handle, flag,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "set_flag",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & flag, const bool enabled ) {
+        require_write();
+        return set_item_flag(
+                   lua_state, handle, flag, enabled,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "has_technique",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & technique ) {
+        require_read();
+        return item_has_technique(
+                   lua_state, handle, technique,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "set_technique",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & technique, const bool enabled ) {
+        require_write();
+        return set_item_technique(
+                   lua_state, handle, technique, enabled,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

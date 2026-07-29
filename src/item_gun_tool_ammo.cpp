@@ -1008,6 +1008,11 @@ void item::add_technique( const matec_id &tech )
     techniques.insert( tech );
 }
 
+bool item::remove_technique( const matec_id &tech )
+{
+    return techniques.erase( tech ) > 0;
+}
+
 std::vector<item *> item::toolmods()
 {
     std::vector<item *> res;
