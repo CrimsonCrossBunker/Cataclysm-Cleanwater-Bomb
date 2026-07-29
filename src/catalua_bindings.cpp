@@ -31,8 +31,8 @@ const std::vector<binding_domain> &binding_catalog()
             binding_implementation_status::partial
         },
         {
-            "character_powers", "game.character", "game.read", 5,
-            binding_implementation_status::partial
+            "character_powers", "game.mutations + game.spells", "game.read", 5,
+            binding_implementation_status::covered
         },
         {
             "map_and_world", "game.world", "game.read", 5,
@@ -44,7 +44,7 @@ const std::vector<binding_domain> &binding_catalog()
         },
         {
             "missions", "game.missions", "game.read", 5,
-            binding_implementation_status::partial
+            binding_implementation_status::covered
         },
         {
             "crafting", "game.crafting", "game.read", 5,

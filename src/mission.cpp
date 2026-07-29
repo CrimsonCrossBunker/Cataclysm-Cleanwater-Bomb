@@ -99,6 +99,17 @@ mission *mission::find( int id, bool ok_missing )
     return nullptr;
 }
 
+bool mission::remove_unassigned( const int id )
+{
+    const auto iter = world_missions.find( id );
+    if( iter == world_missions.end() ||
+        iter->second.is_assigned() ) {
+        return false;
+    }
+    world_missions.erase( iter );
+    return true;
+}
+
 std::vector<mission *> mission::get_all_active()
 {
     std::vector<mission *> ret;

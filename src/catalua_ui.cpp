@@ -40,6 +40,7 @@
 #include "catalua_ui_items.h"
 #include "catalua_ui_magic.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_missions.h"
 #include "catalua_ui_modules.h"
 #include "catalua_ui_mutations.h"
 #include "catalua_ui_navigation.h"
@@ -1851,6 +1852,22 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.spells" );
+        require_capability( state, "game.write" );
+    } );
+    install_mission_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.missions" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.missions" );
         require_capability( state, "game.write" );
     } );
     install_item_api(

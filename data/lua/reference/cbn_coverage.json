@@ -17,6 +17,8 @@
       "id": "coordinates",
       "status": "covered",
       "target": "immutable typed coordinate construction, checked conversion, arithmetic and bounded ranges",
+      "evidence": [ "src/catalua_bindings_coords.cpp", "game.coords" ],
+      "tests": [ "tests/catalua_ui_test.cpp [lua][bindings][coords]" ],
       "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_coords*" ] } ]
     },
     {
@@ -49,8 +51,10 @@
     },
     {
       "id": "character_powers",
-      "status": "planned",
+      "status": "covered",
       "target": "magic, spells, mutations, traits and related character state",
+      "evidence": [ "src/catalua_ui_mutations.cpp", "src/catalua_ui_magic.cpp", "game.mutations", "game.spells" ],
+      "tests": [ "tests/catalua_ui_test.cpp [lua][bindings][mutations]", "tests/catalua_ui_test.cpp [lua][bindings][spells]" ],
       "rules": [
         {
           "sections": [ "functions", "members" ],
@@ -82,8 +86,10 @@
     },
     {
       "id": "missions",
-      "status": "planned",
+      "status": "covered",
       "target": "mission definitions, instances, targets and lifecycle",
+      "evidence": [ "src/catalua_ui_missions.cpp", "game.missions" ],
+      "tests": [ "tests/catalua_ui_test.cpp [lua][bindings][missions]" ],
       "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_mission.cpp" ] } ]
     },
     {

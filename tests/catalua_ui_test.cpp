@@ -27,6 +27,7 @@
 #include "item.h"
 #include "json_loader.h"
 #include "magic.h"
+#include "mission.h"
 #include "path_info.h"
 #include "pocket_type.h"
 #include "ui_profile.h"
@@ -2157,6 +2158,151 @@ game.spells.learn(
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK_FALSE( player.magic->knows_spell( kiss ) );
+}
+
+TEST_CASE( "lua_v5_missions_use_detached_definitions_and_generation_tokens",
+           "[lua][bindings][missions][lifecycle][integration]" )
+{
+    avatar &player = get_avatar();
+    const std::size_t world_count_before =
+        mission::get_all_active().size();
+    const std::size_t active_count_before =
+        player.get_active_missions().size();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local test_id = game.types.id(
+    "mission", "TEST_MISSION_GOAL_CONDITION1")
+local definitions = game.missions.definitions({
+    offset = 0,
+    limit = 1000000
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.has_more ==
+    (definitions.offset + definitions.returned < definitions.total))
+
+local definition = game.missions.definition(test_id)
+assert(definition.id == test_id)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(definition.goal.kind == "MissionGoal")
+assert(math.type(definition.difficulty) == "integer")
+assert(type(definition.deadline.dynamic) == "boolean")
+assert(definition.origins.returned == #definition.origins.items)
+assert(definition.likely_rewards.returned ==
+    #definition.likely_rewards.items)
+assert(definition.dialogue.returned == #definition.dialogue.items)
+
+local reserved = game.missions.reserve(test_id)
+assert(reserved.ok == true)
+assert(reserved.value.id == test_id)
+assert(reserved.value.status == "reserved")
+assert(reserved.value.assigned == false)
+local token = reserved.value.token
+assert(math.type(token.uid) == "integer")
+assert(token:is_valid() == true)
+assert(type(tostring(token)) == "string")
+assert(game.missions.get(token).value.uid == token.uid)
+
+local listed = game.missions.list({
+    offset = 0,
+    limit = 1000000,
+    scope = "all",
+    status = "reserved"
+})
+assert(listed.limit == 256)
+assert(listed.returned == #listed.items)
+local found = false
+for _, entry in ipairs(listed.items) do
+    if entry.uid == token.uid then
+        found = true
+    end
+end
+assert(found)
+
+local assigned = game.missions.assign(token)
+assert(assigned.ok == true)
+assert(assigned.value.status == "active")
+assert(assigned.value.assigned == true)
+assert(assigned.value.selected == true)
+local selected = game.missions.select(token)
+assert(selected.ok == true and selected.value.selected == true)
+assert(game.missions.current().value.uid == token.uid)
+assert(type(game.missions.is_complete(token).value) == "boolean")
+local stepped = game.missions.step_complete(token, 1)
+assert(stepped.ok == true and stepped.value.step == 1)
+
+local abandoned = game.missions.abandon(token)
+assert(abandoned.ok == true)
+assert(abandoned.value.removed == true)
+assert(token:is_valid() == false)
+assert(game.missions.get(token).error.code == "missing_mission")
+
+local second = game.missions.reserve(test_id)
+assert(second.ok == true)
+local second_token = second.value.token
+local cancelled = game.missions.cancel(second_token)
+assert(cancelled.ok == true)
+assert(cancelled.value.removed == true)
+assert(second_token:is_valid() == false)
+
+local origin = game.enums.value(
+    "MissionOrigin", "ORIGIN_GAME_START")
+local omt = game.coords.tripoint_abs_omt(0, 0, 0)
+local random = game.missions.random_definition(origin, omt)
+assert(random.ok == true)
+assert(random.value.kind == "mission")
+
+assert(pcall(function()
+    game.missions.definitions({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.missions.list({ scope = "unknown" })
+end) == false)
+assert(pcall(function()
+    game.missions.reserve(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.missions.random_definition(
+        origin, game.coords.tripoint_rel_ms(0, 0, 0))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( mission::get_all_active().size() ==
+           world_count_before );
+    CHECK( player.get_active_missions().size() ==
+           active_count_before );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.missions.reserve(
+    game.types.id(
+        "mission", "TEST_MISSION_GOAL_CONDITION1"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( mission::get_all_active().size() ==
+           world_count_before );
+    CHECK( player.get_active_missions().size() ==
+           active_count_before );
 }
 
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
