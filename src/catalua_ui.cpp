@@ -24,6 +24,7 @@
 #include "cata_variant.h"
 #include "catalua_sol.h"
 #include "catalua_bindings.h"
+#include "catalua_game_handle.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_events.h"
@@ -1403,6 +1404,17 @@ void initialize_state( runtime_state &state )
 
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
+    install_game_handle_api(
+        state.lua, game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_capability( state, "game.read" );
+    } );
     install_binding_catalog_api( game, [&state]() {
         require_capability( state, "game.read" );
     } );
