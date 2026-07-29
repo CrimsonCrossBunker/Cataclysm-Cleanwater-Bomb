@@ -1,5 +1,6 @@
 #include "cata_catch.h"
 #include "avatar.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
@@ -6663,6 +6664,94 @@ assert(state.character.get("native_combat.on_melee_attack", 0) == 1)
 assert(state.character.get("native_combat.on_miss", 0) == 1)
 assert(state.character.get(
     "native_combat.on_creature_melee_attacked", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_bionic_and_mutation_callbacks_run_from_native_lifecycles",
+           "[lua][bindings][callbacks][character][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local bio = game.types.id("bionic", "bio_flashlight")
+local mutation = game.types.id("mutation", "WEB_WEAVER")
+local function observe(name, id_field, expected)
+    return function(payload)
+        assert(payload.character ~= nil)
+        assert(payload[id_field] == expected)
+        state.character.set(
+            "native_character." .. name,
+            state.character.get("native_character." .. name, 0) + 1)
+    end
+end
+
+game.callbacks.register("bionic", bio, {
+    on_activate = observe("bionic_activate", "bionic", bio),
+    on_deactivate = observe("bionic_deactivate", "bionic", bio),
+    on_installed = observe("bionic_installed", "bionic", bio),
+    on_removed = observe("bionic_removed", "bionic", bio)
+})
+game.callbacks.register("mutation", mutation, {
+    on_activate = observe("mutation_activate", "mutation", mutation),
+    on_deactivate = observe(
+        "mutation_deactivate", "mutation", mutation),
+    on_gain = observe("mutation_gain", "mutation", mutation),
+    on_loss = observe("mutation_loss", "mutation", mutation)
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    player.set_max_power_level( 100_kJ );
+    player.set_power_level( 100_kJ );
+    const bionic_id flashlight( "bio_flashlight" );
+    const bionic_uid flashlight_uid =
+        player.add_bionic( flashlight );
+    REQUIRE( flashlight_uid != 0 );
+    std::optional<bionic *> installed =
+        player.find_bionic_by_uid( flashlight_uid );
+    REQUIRE( installed );
+    CHECK( player.activate_bionic( **installed ) );
+    CHECK( player.deactivate_bionic( **installed ) );
+    player.remove_bionic( **installed );
+    CHECK_FALSE( player.find_bionic_by_uid( flashlight_uid ) );
+
+    const trait_id web_weaver( "WEB_WEAVER" );
+    player.set_mutation( web_weaver );
+    REQUIRE( player.has_trait( web_weaver ) );
+    player.activate_mutation( web_weaver );
+    CHECK( player.has_active_mutation( web_weaver ) );
+    player.deactivate_mutation( web_weaver );
+    CHECK_FALSE( player.has_active_mutation( web_weaver ) );
+    player.unset_mutation( web_weaver );
+    CHECK_FALSE( player.has_trait( web_weaver ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_character.bionic_activate", 0) == 1)
+assert(state.character.get("native_character.bionic_deactivate", 0) == 1)
+assert(state.character.get("native_character.bionic_installed", 0) == 1)
+assert(state.character.get("native_character.bionic_removed", 0) == 1)
+assert(state.character.get("native_character.mutation_activate", 0) == 1)
+assert(state.character.get("native_character.mutation_deactivate", 0) == 1)
+assert(state.character.get("native_character.mutation_gain", 0) == 1)
+assert(state.character.get("native_character.mutation_loss", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
 }
