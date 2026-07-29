@@ -62,6 +62,7 @@
 #include <fstream>
 #include <functional>
 #include <iterator>
+#include <list>
 #include <limits>
 #include <list>
 #include <map>
@@ -8428,6 +8429,151 @@ assert(state.character.get("native_monster.hook_tame", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
     g->remove_zombie( target );
+}
+
+TEST_CASE( "lua_v5_equipment_and_reload_callbacks_gate_native_lifecycles",
+           "[lua][bindings][callbacks][items][equipment][reload][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    player.setpos( get_map(), tripoint_bub_ms( 30, 30, 0 ) );
+    on_out_of_scope cleanup( [&player]() {
+        player.clear_worn();
+        player.inv->clear();
+        player.remove_weapon();
+    } );
+
+    const itype_id shirt_id( "tshirt" );
+    const itype_id pipe_id( "test_pipe" );
+    const itype_id magazine_id( "glockmag" );
+    const itype_id ammunition_id( "9mm" );
+
+    const std::optional<std::list<item>::iterator> initially_worn =
+        player.worn.wear_item(
+            player, item( shirt_id ), false, false );
+    REQUIRE( initially_worn );
+    item pipe( pipe_id );
+    REQUIRE( player.wield( pipe ) );
+    item_location magazine =
+        player.i_add( item( magazine_id ) );
+    item_location ammunition =
+        player.i_add(
+            item( ammunition_id, calendar::turn, 10 ) );
+    REQUIRE( magazine );
+    REQUIRE( ammunition );
+    REQUIRE( magazine->ammo_remaining() == 0 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    const auto write_script = [&script]( const bool allow ) {
+        script.write(
+            std::string( "local allow = " ) +
+            ( allow ? "true\n" : "false\n" ) + R"lua(
+local shirt = game.types.id("item", "tshirt")
+local pipe = game.types.id("item", "test_pipe")
+local magazine = game.types.id("item", "glockmag")
+local function count(name)
+    local key = "native_remaining." .. name
+    state.character.set(
+        key, state.character.get(key, 0) + 1)
+end
+local function decide(name)
+    return function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.item ~= nil)
+        count(name)
+        return allow
+    end
+end
+local function observe(name)
+    return function(payload)
+        assert(payload.item ~= nil)
+        count(name)
+    end
+end
+
+game.callbacks.register("iwearable", shirt, {
+    can_wear = decide("can_wear"),
+    can_takeoff = decide("can_takeoff"),
+    on_wear = observe("on_wear"),
+    on_takeoff = observe("on_takeoff")
+})
+game.callbacks.register("iwieldable", pipe, {
+    can_unwield = decide("can_unwield"),
+    on_unwield = observe("on_unwield")
+})
+game.callbacks.register("iranged", magazine, {
+    can_reload = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.item ~= nil)
+        assert(payload.ammo ~= nil)
+        count("can_reload")
+        return allow
+    end,
+    on_reload = function(payload)
+        assert(payload.item ~= nil)
+        assert(payload.quantity == 1)
+        count("on_reload")
+    end
+})
+)lua" );
+    };
+
+    write_script( false );
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    std::list<item> removed;
+    CHECK_FALSE( player.takeoff(
+                     item_location(
+                         player, &**initially_worn ),
+                     &removed ) );
+    CHECK( removed.empty() );
+    CHECK_FALSE( player.wear_item(
+                     item( shirt_id ), false ).has_value() );
+    CHECK_FALSE( player.unwield() );
+    CHECK_FALSE( magazine->reload(
+                     player, ammunition, 1 ) );
+    CHECK( magazine->ammo_remaining() == 0 );
+
+    write_script( true );
+    REQUIRE( reload_scripts( error ) );
+
+    CHECK( player.takeoff(
+               item_location(
+                   player, &**initially_worn ),
+               &removed ) );
+    REQUIRE( removed.size() == 1 );
+    REQUIRE( player.wear_item(
+                 item( shirt_id ), false ).has_value() );
+    player.unwield();
+    CHECK( magazine->reload(
+               player, ammunition, 1 ) );
+    CHECK( magazine->ammo_remaining() == 1 );
+
+    script.write( R"lua(
+assert(state.character.get("native_remaining.can_wear", 0) == 2)
+assert(state.character.get("native_remaining.can_takeoff", 0) == 2)
+assert(state.character.get("native_remaining.on_wear", 0) == 1)
+assert(state.character.get("native_remaining.on_takeoff", 0) == 1)
+assert(state.character.get("native_remaining.can_unwield", 0) == 2)
+assert(state.character.get("native_remaining.on_unwield", 0) == 1)
+assert(state.character.get("native_remaining.can_reload", 0) == 2)
+assert(state.character.get("native_remaining.on_reload", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
 }
 
 TEST_CASE( "lua_v5_recipe_catalog_is_detached_filtered_and_bounded",
