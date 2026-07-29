@@ -10477,7 +10477,8 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
         terrain_growth_state growth_state;
         growth_state.fertilized_at = calendar::turn - real_reduction;
         here.set_terrain_growth( plant_position, growth_state );
-        add_msg( m_info, _( "You fertilize the %s with the %s." ), terrain.name(),
+    //~ %1$s: plant name, %2$s: fertilizer name
+        add_msg( m_info, _( "You fertilize the %1s with the %2s." ), terrain.name(),
                  planted.front().tname() );
         act.set_to_null();
         return;
