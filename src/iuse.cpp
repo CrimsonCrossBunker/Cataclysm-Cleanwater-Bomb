@@ -3238,8 +3238,9 @@ std::optional<int> iuse::geiger_active( Character *, item *it, const tripoint_bu
     std::string description = rads > 50 ? _( "buzzing" ) :
                               rads > 25 ? _( "rapid clicking" ) : _( "clicking" );
 
-    std::string sound_var = rads > 50 ? _( "geiger_high" ) :
-                            rads > 25 ? _( "geiger_medium" ) : _( "geiger_low" );
+    // Soundpack variants are stable internal identifiers and must not be translated.
+    const std::string sound_var = rads > 50 ? "geiger_high" :
+                                  rads > 25 ? "geiger_medium" : "geiger_low";
 
     if( !activation_success ) {
         sounds::sound( pos, 6, sounds::sound_t::alarm, _( "distorted buzz-clicking" ), true, "tool",

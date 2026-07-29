@@ -3188,6 +3188,19 @@ target_handler::trajectory target_ui::run()
             action = ctxt.handle_input( timeout );
         }
 
+        const bool attempted_shot = action == "FIRE" || action == "AIMED_SHOT" ||
+                                    action == "CAREFUL_SHOT" || action == "PRECISE_SHOT";
+        if( mode == TargetMode::Fire && status == Status::OutOfAmmo && attempted_shot ) {
+            const gun_mode gun = relevant->gun_current_mode();
+            if( !gun->ammo_sufficient( you ) &&
+                !gun->has_flag( flag_RELOAD_AND_SHOOT ) &&
+                !gun->ammo_remaining() ) {
+                sfx::play_variant_sound( "fire_gun", "empty",
+                                         sfx::get_heard_volume( you->pos_bub() ) );
+            }
+            continue;
+        }
+
         // If an aiming mode is selected, use "*_SHOT" instead of "FIRE"
         if( mode == TargetMode::Fire && action == "FIRE" && aim_mode->has_threshold ) {
             action = aim_mode->action;
