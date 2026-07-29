@@ -5598,6 +5598,171 @@ assert(state.character.get("action_menu.invocations", 0) == 1)
     CHECK( status().action_menu_entry_count == 0 );
 }
 
+TEST_CASE( "lua_sidebar_widgets_are_owned_bounded_and_callback_scoped",
+           "[lua][ui][sidebar][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.read", "state.character", "ui.pages"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+assert(type(sidebar) == "table")
+assert(type(game.sidebar) == "table")
+assert(#sidebar.get_layout_id() > 0)
+state.character.set("sidebar.draws", 0)
+
+sidebar.register_widget({
+    id = "temporary",
+    draw = function() return "temporary" end
+})
+assert(sidebar.clear_widgets() == 1)
+
+local removed = sidebar.register_widget({
+    id = "removed",
+    draw = function() error("removed widget ran") end
+})
+assert(sidebar.off(removed) == true)
+assert(sidebar.off(removed) == false)
+
+local widget = sidebar.register_widget({
+    id = "status",
+    name = "Lua status",
+    height = 4,
+    order = 2,
+    default_toggle = false,
+    redraw_every_frame = true,
+    panel_visible = function()
+        return game.random.int(1, 1) == 1
+    end,
+    draw = function(width, height)
+        assert(width == 40)
+        assert(height == 4)
+        assert(game.random.int(1, 1) == 1)
+        state.character.set(
+            "sidebar.draws",
+            state.character.get("sidebar.draws", 0) + 1)
+        return "first", {
+            { text = "second", color = "light_green" },
+            "third\nfourth"
+        }
+    end
+})
+local replacement = sidebar.register({
+    id = "status",
+    name = "Lua status",
+    height = 4,
+    order = 2,
+    default_toggle = false,
+    redraw_every_frame = true,
+    panel_visible = function()
+        return game.random.int(1, 1) == 1
+    end,
+    draw = function(width, height)
+        assert(width == 40)
+        assert(height == 4)
+        assert(game.random.int(1, 1) == 1)
+        state.character.set(
+            "sidebar.draws",
+            state.character.get("sidebar.draws", 0) + 1)
+        return "first", {
+            { text = "second", color = "light_green" },
+            "third\nfourth"
+        }
+    end
+})
+assert(widget == replacement)
+
+sidebar.register_widget({
+    id = "broken",
+    name = "Broken widget",
+    draw = function()
+        return string.rep("x", 32769)
+    end
+})
+
+local entries = sidebar.list()
+assert(#entries == 2)
+assert(entries[1].id == "status")
+assert(entries[1].key == "lua:user:status")
+assert(entries[1].source == "user")
+assert(entries[1].height == 4)
+assert(entries[1].order == 2)
+assert(entries[1].default_toggle == false)
+assert(entries[1].redraw_every_frame == true)
+assert(entries[1].enabled == true)
+local limits = sidebar.limits()
+assert(limits.widgets == 64)
+assert(limits.widgets_per_source == 16)
+assert(limits.lines == 64)
+assert(limits.output_bytes == 32768)
+assert(limits.callback_instructions > 0)
+assert(pcall(function()
+    sidebar.register_widget({
+        id = "bad_height",
+        height = 0,
+        draw = function() return "" end
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    CHECK( status().sidebar_widget_count == 2 );
+
+    std::vector<sidebar_widget_info> widgets =
+        registered_sidebar_widgets();
+    REQUIRE( widgets.size() == 2 );
+    CHECK( widgets[0].key == "lua:user:status" );
+    CHECK( widgets[0].name == "Lua status" );
+    CHECK( widgets[0].source == "user" );
+    CHECK( widgets[0].height == 4 );
+    REQUIRE( widgets[0].order );
+    CHECK( *widgets[0].order == 2 );
+    CHECK_FALSE( widgets[0].default_toggle );
+    CHECK( widgets[0].redraw_every_frame );
+    CHECK( widgets[0].enabled );
+
+    REQUIRE( sidebar_widget_visible(
+                 "lua:user:status" ) );
+    const std::vector<sidebar_widget_line> lines =
+        render_sidebar_widget(
+            "lua:user:status", 40, 4 );
+    REQUIRE( lines.size() == 4 );
+    CHECK( lines[0].text == "first" );
+    CHECK( lines[0].color == "light_gray" );
+    CHECK( lines[1].text == "second" );
+    CHECK( lines[1].color == "light_green" );
+    CHECK( lines[2].text == "third" );
+    CHECK( lines[3].text == "fourth" );
+
+    CHECK( render_sidebar_widget(
+               "lua:user:broken", 40, 1 ).empty() );
+    widgets = registered_sidebar_widgets();
+    REQUIRE( widgets.size() == 2 );
+    CHECK( widgets[0].enabled );
+    CHECK_FALSE( widgets[1].enabled );
+
+    script.write( "this is not valid Lua(" );
+    CHECK_FALSE( reload_scripts( error ) );
+    CHECK( registered_sidebar_widgets().size() == 2 );
+
+    script.write( R"lua(
+assert(state.character.get("sidebar.draws", 0) == 1)
+assert(sidebar.clear_widgets() == 0)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    CHECK( registered_sidebar_widgets().empty() );
+    CHECK( status().sidebar_widget_count == 0 );
+}
+
 TEST_CASE( "lua_game_snapshots_are_bounded_read_only_values", "[lua][ui][game][integration]" )
 {
     scoped_lua_user_script script;
