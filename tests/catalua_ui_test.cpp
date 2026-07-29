@@ -2,6 +2,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "catalua_bindings.h"
+#include "catalua_game_handle.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_events.h"
@@ -29,6 +30,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -1016,6 +1018,93 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     sol::protected_function api_supports = game["api_supports"];
     CHECK_FALSE( api_supports( "coordinates" ).get<bool>() );
     CHECK_FALSE( api_supports( "missing" ).get<bool>() );
+}
+
+TEST_CASE( "lua_game_handles_reject_stale_destroyed_and_wrong_kind_references",
+           "[lua][bindings][handles]" )
+{
+    using namespace cata::lua_ui;
+
+    constexpr std::size_t runtime_generation = 17;
+    constexpr std::size_t world_generation = 23;
+    game_handle_locator locator{ "test", 42, 1, 2, 3, { 4, 5 } };
+    auto value = std::make_unique<item>();
+    game_handle handle = game_handle::from_item(
+                             *value, locator, runtime_generation, world_generation );
+
+    native_handle_result<item> resolved =
+        handle.resolve_item( runtime_generation, world_generation );
+    REQUIRE( resolved );
+    CHECK( resolved.value == value.get() );
+    CHECK_FALSE( resolved.error );
+
+    const native_handle_result<Creature> wrong =
+        handle.resolve_creature( runtime_generation, world_generation );
+    REQUIRE_FALSE( wrong );
+    REQUIRE( wrong.error );
+    CHECK( wrong.error->code == "wrong_kind" );
+
+    resolved = handle.resolve_item( runtime_generation + 1, world_generation );
+    REQUIRE_FALSE( resolved );
+    REQUIRE( resolved.error );
+    CHECK( resolved.error->code == "stale_runtime" );
+
+    resolved = handle.resolve_item( runtime_generation, world_generation + 1 );
+    REQUIRE_FALSE( resolved );
+    REQUIRE( resolved.error );
+    CHECK( resolved.error->code == "stale_world" );
+
+    value.reset();
+    resolved = handle.resolve_item( runtime_generation, world_generation );
+    REQUIRE_FALSE( resolved );
+    REQUIRE( resolved.error );
+    CHECK( resolved.error->code == "destroyed" );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    std::size_t current_runtime = runtime_generation;
+    std::size_t current_world = world_generation;
+    install_game_handle_api(
+        lua, game,
+    [&current_runtime]() {
+        return current_runtime;
+    },
+    [&current_world]() {
+        return current_world;
+    },
+    []() {} );
+
+    auto live_value = std::make_unique<item>();
+    lua["test_handle"] = game_handle::from_item(
+                             *live_value, locator, runtime_generation, world_generation );
+    sol::protected_function_result script = lua.safe_script( R"lua(
+assert(test_handle.kind == "item")
+local locator = test_handle:locator()
+assert(locator.scope == "test")
+assert(locator.stable_id == 42)
+assert(locator.position.x == 1)
+assert(locator.position.y == 2)
+assert(locator.position.z == 3)
+assert(locator.path[1] == 4 and locator.path[2] == 5)
+locator.scope = "mutated"
+assert(test_handle:locator().scope == "test")
+local status = test_handle:status()
+assert(status.ok == true)
+assert(status.value.kind == "item")
+)lua" );
+    REQUIRE( script.valid() );
+
+    ++current_runtime;
+    script = lua.safe_script( R"lua(
+assert(test_handle:is_valid() == false)
+local status = test_handle:status()
+assert(status.ok == false)
+assert(status.value == nil)
+assert(status.error.code == "stale_runtime")
+assert(type(status.error.message) == "string")
+)lua" );
+    REQUIRE( script.valid() );
 }
 
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
