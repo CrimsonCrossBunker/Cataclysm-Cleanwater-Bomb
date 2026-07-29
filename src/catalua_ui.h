@@ -105,6 +105,10 @@ native_hook_result dispatch_native_hook_result(
 bool dispatch_native_hook(
     std::string_view name, const native_callback_arguments &arguments = {} );
 bool has_native_hook( std::string_view name );
+void dispatch_native_monster_spawn(
+    const Creature &monster, std::string_view source );
+void dispatch_native_npc_spawn(
+    const Character &npc, std::string_view source );
 bool dispatch_native_callback(
     std::string_view kind, std::string_view target,
     std::string_view method,

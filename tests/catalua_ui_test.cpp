@@ -6751,6 +6751,75 @@ assert(state.character.get("native_turns.npc", 0) == 1)
     REQUIRE( reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_creature_spawn_hooks_run_after_native_placement",
+           "[lua][bindings][hooks][spawn][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_spawn." .. name,
+        state.character.get("native_spawn." .. name, 0) + 1)
+end
+
+game.hooks.on("on_creature_spawn", function(payload)
+    assert(payload.creature ~= nil)
+    assert(payload.source == "placement" or
+        payload.source == "summon")
+    count("creature")
+end)
+game.hooks.on("on_monster_spawn", function(payload)
+    assert(payload.monster ~= nil)
+    assert(payload.source == "placement")
+    count("monster")
+end)
+game.hooks.on("on_npc_spawn", function(payload)
+    assert(payload.npc ~= nil)
+    assert(payload.source == "summon")
+    count("npc")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    REQUIRE( g->place_critter_at(
+                 mtype_id( "mon_zombie" ),
+                 player.pos_bub( here ) +
+                 tripoint_rel_ms::east * 3 ) != nullptr );
+    std::string unique_id;
+    std::vector<trait_id> traits;
+    REQUIRE( g->spawn_npc(
+                 player.pos_bub( here ) +
+                 tripoint_rel_ms::west * 3,
+                 npc_template_id( "test_talker" ),
+                 unique_id, traits, std::nullopt ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_spawn.creature", 0) == 2)
+assert(state.character.get("native_spawn.monster", 0) == 1)
+assert(state.character.get("native_spawn.npc", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
            "[lua][bindings][callbacks][integration]" )
 {

@@ -1434,6 +1434,7 @@ void game::create_starting_npcs()
     //One random starting NPC mission
     tmp->add_new_mission( mission::reserve_random( ORIGIN_OPENER_NPC, tmp->pos_abs_omt(),
                           tmp->getID() ) );
+    cata::lua_ui::dispatch_native_npc_spawn( *tmp, "starting" );
 }
 
 static int veh_lumi( vehicle &veh )
@@ -4785,7 +4786,13 @@ monster *game::place_critter_around( const mtype_id &id, const tripoint_bub_ms &
     }
     shared_ptr_fast<monster> mon = make_shared_fast<monster>( id );
     mon->ammo = mon->type->starting_ammo;
-    return place_critter_around( mon, center, radius );
+    monster *const placed =
+        place_critter_around( mon, center, radius );
+    if( placed != nullptr ) {
+        cata::lua_ui::dispatch_native_monster_spawn(
+            *placed, "placement" );
+    }
+    return placed;
 }
 
 monster *game::place_critter_around( const shared_ptr_fast<monster> &mon,
@@ -4826,7 +4833,12 @@ monster *game::place_critter_within( const mtype_id &id,
     }
     shared_ptr_fast<monster> mon = make_shared_fast<monster>( id );
     mon->ammo = mon->type->starting_ammo;
-    return place_critter_within( mon, range );
+    monster *const placed = place_critter_within( mon, range );
+    if( placed != nullptr ) {
+        cata::lua_ui::dispatch_native_monster_spawn(
+            *placed, "placement" );
+    }
+    return placed;
 }
 
 monster *game::place_critter_within( const shared_ptr_fast<monster> &mon,
@@ -4861,6 +4873,8 @@ monster *game::place_critter_at_or_within( const shared_ptr_fast<monster> &mon, 
     mon->spawn( here->get_abs( where.value() ) );
     if( critter_tracker->add( mon ) ) {
         mon->gravity_check();
+        cata::lua_ui::dispatch_native_monster_spawn(
+            *mon, "mapgen" );
         return mon.get();
     }
     return nullptr;
@@ -4958,6 +4972,8 @@ bool game::spawn_hallucination( const tripoint_bub_ms &p )
         if( !get_creature_tracker().creature_at( p, true ) ) {
             overmap_buffer.insert_npc( tmp );
             load_npcs();
+            cata::lua_ui::dispatch_native_npc_spawn(
+                *tmp, "hallucination" );
             return true;
         } else {
             return false;
@@ -4999,7 +5015,12 @@ bool game::spawn_hallucination( const tripoint_bub_ms &p, const mtype_id &mt,
     }
     //Don't attempt to place phantasms inside of other creatures
     if( !get_creature_tracker().creature_at( phantasm->pos_bub(), true ) ) {
-        return critter_tracker->add( phantasm );
+        if( critter_tracker->add( phantasm ) ) {
+            cata::lua_ui::dispatch_native_monster_spawn(
+                *phantasm, "hallucination" );
+            return true;
+        }
+        return false;
     } else {
         return false;
     }
@@ -5029,6 +5050,8 @@ bool game::spawn_npc( const tripoint_bub_ms &p, const string_id<npc_template> &n
             tmp->set_summon_time( lifespan.value() );
         }
         load_npcs();
+        cata::lua_ui::dispatch_native_npc_spawn(
+            *tmp, "summon" );
         return true;
     } else {
         return false;
@@ -5317,6 +5340,8 @@ void game::save_cyborg( item *cyborg, const tripoint_bub_ms &couch_pos, Characte
         tmp->hurtall( dmg_lvl * 10, nullptr );
         tmp->add_effect( effect_downed, rng( 1_turns, 4_turns ), false, 0, true );
         load_npcs();
+        cata::lua_ui::dispatch_native_npc_spawn(
+            *tmp, "cyborg" );
 
     } else {
         const int failure_level = static_cast<int>( std::sqrt( std::abs( success ) * 4.0 * difficulty /
@@ -11026,6 +11051,7 @@ void game::perhaps_add_random_npc( bool ignore_spawn_timers_and_rates )
                           tmp->getID() ) );
     // This will make the new NPC active- if its nearby to the player
     load_npcs();
+    cata::lua_ui::dispatch_native_npc_spawn( *tmp, "random" );
 }
 
 // Redraw window and show spinner, so cata window doesn't look frozen while pathfinding on overmap

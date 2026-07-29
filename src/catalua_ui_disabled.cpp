@@ -54,6 +54,16 @@ bool has_native_hook( std::string_view )
     return false;
 }
 
+void dispatch_native_monster_spawn(
+    const Creature &, std::string_view )
+{
+}
+
+void dispatch_native_npc_spawn(
+    const Character &, std::string_view )
+{
+}
+
 bool dispatch_native_callback(
     std::string_view, std::string_view, std::string_view,
     const native_callback_arguments & )

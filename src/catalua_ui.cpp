@@ -4468,6 +4468,56 @@ bool has_native_hook( const std::string_view name )
                "hook:" + std::string( name ) );
 }
 
+void dispatch_native_monster_spawn(
+    const Creature &monster, const std::string_view source )
+{
+    const bool has_creature_spawn =
+        has_native_hook( "on_creature_spawn" );
+    const bool has_monster_spawn =
+        has_native_hook( "on_monster_spawn" );
+    if( !has_creature_spawn && !has_monster_spawn ) {
+        return;
+    }
+    native_callback_arguments payload = {
+        { "creature", &monster },
+        { "source", std::string( source ) }
+    };
+    if( has_creature_spawn ) {
+        dispatch_native_hook( "on_creature_spawn", payload );
+    }
+    if( has_monster_spawn ) {
+        payload.front().name = "monster";
+        dispatch_native_hook( "on_monster_spawn", payload );
+    }
+}
+
+void dispatch_native_npc_spawn(
+    const Character &npc, const std::string_view source )
+{
+    const bool has_creature_spawn =
+        has_native_hook( "on_creature_spawn" );
+    const bool has_npc_spawn =
+        has_native_hook( "on_npc_spawn" );
+    if( !has_creature_spawn && !has_npc_spawn ) {
+        return;
+    }
+    native_callback_arguments payload = {
+        {
+            "creature",
+            static_cast<const Creature *>( &npc )
+        },
+        { "source", std::string( source ) }
+    };
+    if( has_creature_spawn ) {
+        dispatch_native_hook( "on_creature_spawn", payload );
+    }
+    if( has_npc_spawn ) {
+        payload.front().name = "npc";
+        payload.front().value = &npc;
+        dispatch_native_hook( "on_npc_spawn", payload );
+    }
+}
+
 bool dispatch_native_callback(
     const std::string_view kind, const std::string_view target,
     const std::string_view method,
