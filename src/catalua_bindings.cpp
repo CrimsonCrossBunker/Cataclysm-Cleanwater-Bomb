@@ -39,16 +39,16 @@ const std::vector<binding_domain> &binding_catalog()
             binding_implementation_status::covered
         },
         {
-            "mapgen", "game.mapgen", "game.write", 5,
-            binding_implementation_status::planned
+            "mapgen", "game.mapgen", "game.hooks", 5,
+            binding_implementation_status::covered
         },
         {
             "missions", "game.missions", "game.read", 5,
             binding_implementation_status::covered
         },
         {
-            "crafting", "game.crafting", "game.read", 5,
-            binding_implementation_status::partial
+            "crafting", "game.recipes + game.crafting", "game.read", 5,
+            binding_implementation_status::covered
         },
         {
             "game_services", "game", "game.read", 2,

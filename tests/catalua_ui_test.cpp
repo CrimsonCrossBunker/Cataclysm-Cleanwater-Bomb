@@ -1006,6 +1006,8 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK( find_binding_domain( "coordinates" ) != nullptr );
     CHECK( find_binding_domain( "missing" ) == nullptr );
     CHECK( binding_domain_is_covered( "coordinates" ) );
+    CHECK( binding_domain_is_covered( "crafting" ) );
+    CHECK( binding_domain_is_covered( "mapgen" ) );
 
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::table );
