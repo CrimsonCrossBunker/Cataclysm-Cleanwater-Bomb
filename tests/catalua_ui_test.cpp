@@ -24,6 +24,7 @@
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
 #include "creature_tracker.h"
+#include "damage.h"
 #include "effect.h"
 #include "event_bus.h"
 #include "explosion.h"
@@ -39,6 +40,7 @@
 #include "map_helpers_tests.h"
 #include "mapgen.h"
 #include "mapgendata.h"
+#include "martialarts.h"
 #include "mission.h"
 #include "monster.h"
 #include "npc.h"
@@ -8572,6 +8574,187 @@ assert(state.character.get("native_remaining.can_unwield", 0) == 2)
 assert(state.character.get("native_remaining.on_unwield", 0) == 1)
 assert(state.character.get("native_remaining.can_reload", 0) == 2)
 assert(state.character.get("native_remaining.on_reload", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_remaining_combat_and_control_hooks_run_from_native_lifecycles",
+           "[lua][bindings][callbacks][hooks][combat][npc][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    clear_creatures();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.set_moves( 10000 );
+    player.set_stamina( player.get_stamina_max() );
+    player.set_skill_level( skill_id( "melee" ), 20 );
+    player.set_skill_level( skill_id( "unarmed" ), 20 );
+    const character_id original_avatar_id = player.getID();
+
+    on_out_of_scope player_cleanup( [&player]() {
+        player.clear_worn();
+        player.inv->clear();
+        player.remove_weapon();
+    } );
+
+    item pipe( itype_id( "test_pipe" ) );
+    REQUIRE( player.wield( pipe ) );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read",
+            "state.world"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local pipe = game.types.id("item", "test_pipe")
+local punch = game.types.id(
+    "martial_art_technique", "tech_base_punch")
+local names = {
+    "on_block", "on_hit", "on_control_npc",
+    "on_creature_blocked", "on_creature_dodged",
+    "on_creature_performed_technique",
+    "control_debug", "control_normal"
+}
+for _, name in ipairs(names) do
+    state.world.set("native_remaining." .. name, 0)
+end
+local function count(name)
+    local key = "native_remaining." .. name
+    state.world.set(key, state.world.get(key, 0) + 1)
+end
+
+game.callbacks.register("imelee", pipe, {
+    on_block = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.source ~= nil)
+        assert(payload.item ~= nil)
+        assert(type(payload.damage_blocked) == "number")
+        count("on_block")
+    end,
+    on_hit = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.target ~= nil)
+        assert(payload.item ~= nil)
+        assert(math.type(payload.damage) == "integer")
+        assert(type(payload.critical) == "boolean")
+        count("on_hit")
+    end
+})
+game.hooks.on("on_control_npc", function(payload)
+    assert(payload.avatar ~= nil)
+    assert(payload.npc ~= nil)
+    assert(type(payload.debug) == "boolean")
+    count("on_control_npc")
+    count(payload.debug and "control_debug" or "control_normal")
+end)
+game.hooks.on("on_creature_blocked", function(payload)
+    assert(payload.creature ~= nil)
+    assert(payload.source ~= nil)
+    assert(type(payload.damage_blocked) == "number")
+    count("on_creature_blocked")
+end)
+game.hooks.on("on_creature_dodged", function(payload)
+    assert(payload.creature ~= nil)
+    assert(payload.source ~= nil)
+    assert(type(payload.difficulty) == "number")
+    count("on_creature_dodged")
+end)
+game.hooks.on("on_creature_performed_technique", function(payload)
+    assert(payload.creature ~= nil)
+    assert(payload.target ~= nil)
+    assert(payload.technique == punch)
+    assert(payload.weapon ~= nil)
+    assert(type(payload.damage) == "number")
+    assert(math.type(payload.move_cost) == "integer")
+    count("on_creature_performed_technique")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    monster &target = spawn_test_monster(
+                          "mon_zombie",
+                          player.pos_bub( here ) + tripoint_rel_ms::east );
+    target.set_hp( 1000000 );
+    bool target_is_placed = true;
+    on_out_of_scope monster_cleanup( [&target, &target_is_placed]() {
+        if( target_is_placed ) {
+            g->remove_zombie( target );
+        }
+    } );
+
+    player.on_dodge( &target, 1.0f );
+
+    player.blocks_left = 1;
+    bodypart_id blocked_part( "torso" );
+    damage_instance incoming(
+        damage_type_id( "bash" ), 20.0f );
+    REQUIRE( player.block_hit(
+                 &target, blocked_part, incoming ) );
+
+    bool landed_technique = false;
+    for( int attempt = 0; attempt < 20; ++attempt ) {
+        const int hp_before = target.get_hp();
+        REQUIRE( player.melee_attack_abstract(
+                     target, false,
+                     matec_id( "tech_base_punch" ) ) );
+        if( target.get_hp() < hp_before ) {
+            landed_technique = true;
+            break;
+        }
+    }
+    REQUIRE( landed_technique );
+    g->remove_zombie( target );
+    target_is_placed = false;
+
+    npc &controlled = spawn_npc(
+                          ( player.pos_bub( here ) +
+                            tripoint_rel_ms::west ).xy(),
+                          "test_talker" );
+    const character_id controlled_id = controlled.getID();
+    controlled.set_attitude( NPCATT_FOLLOW );
+    controlled.set_fac( faction_id( "your_followers" ) );
+    g->add_npc_follower( controlled_id );
+    REQUIRE( controlled.is_player_ally() );
+    on_out_of_scope npc_cleanup( [
+                                  &player,
+                                  &controlled,
+                                  original_avatar_id,
+                                  controlled_id
+                                ]() {
+        if( player.getID() != original_avatar_id ) {
+            player.control_npc( controlled, false );
+        }
+        g->remove_npc_follower( controlled_id );
+        g->remove_npc( controlled_id );
+        overmap_buffer.remove_npc( controlled_id );
+    } );
+
+    player.control_npc( controlled, true );
+    player.control_npc( controlled, false );
+    REQUIRE( player.getID() == original_avatar_id );
+
+    script.write( R"lua(
+assert(state.world.get("native_remaining.on_block", 0) == 1)
+assert(state.world.get("native_remaining.on_hit", 0) >= 1)
+assert(state.world.get("native_remaining.on_control_npc", 0) == 2)
+assert(state.world.get("native_remaining.on_creature_blocked", 0) == 1)
+assert(state.world.get("native_remaining.on_creature_dodged", 0) == 1)
+assert(state.world.get(
+    "native_remaining.on_creature_performed_technique", 0) >= 1)
+assert(state.world.get("native_remaining.control_debug", 0) == 1)
+assert(state.world.get("native_remaining.control_normal", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
 }
