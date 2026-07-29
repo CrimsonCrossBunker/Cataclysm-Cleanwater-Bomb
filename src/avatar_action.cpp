@@ -55,6 +55,7 @@
 #include "ranged.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "sounds.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -802,16 +803,26 @@ bool avatar_action::can_fire_weapon( avatar &you, const map &m, const item &weap
     }
 
     std::vector<std::string> messages;
+    bool selected_mode_is_empty = false;
 
     for( const std::pair<const gun_mode_id, gun_mode> &mode_map : weapon.gun_all_modes() ) {
         bool check_common = gunmode_checks_common( you, m, messages, mode_map.second );
         bool check_weapon = gunmode_checks_weapon( you, m, messages, mode_map.second );
+        if( mode_map.first == weapon.gun_get_mode_id() ) {
+            selected_mode_is_empty = check_common &&
+                                     !mode_map.second->ammo_sufficient( &you ) &&
+                                     !mode_map.second->has_flag( flag_RELOAD_AND_SHOOT ) &&
+                                     !mode_map.second->ammo_remaining();
+        }
         bool can_use_mode = check_common && check_weapon;
         if( can_use_mode ) {
             return true;
         }
     }
 
+    if( selected_mode_is_empty ) {
+        sfx::play_variant_sound( "fire_gun", "empty", sfx::get_heard_volume( you.pos_bub() ) );
+    }
     for( const std::string &message : messages ) {
         add_msg( m_info, message );
     }
