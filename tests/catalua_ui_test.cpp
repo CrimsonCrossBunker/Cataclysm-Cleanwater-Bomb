@@ -697,7 +697,15 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "capabilities": [ "modules.import", "scheduler", "services.consume" ],
         "dependencies": []
     })json" ) );
-    CHECK( v4.api_version == api_version );
+    CHECK( v4.api_version == 4 );
+    const script_manifest v5 = read_script_manifest( json_loader::from_string( R"json({
+        "id": "v5", "version": "5", "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read", "game.write"
+        ],
+        "dependencies": []
+    })json" ) );
+    CHECK( v5.api_version == api_version );
 
     extension.dependencies = { "missing" };
     CHECK_THROWS( validate_script_manifests( { base, extension } ) );
@@ -721,7 +729,24 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "id": "dangerous-without-actions", "version": "1", "api_version": 4,
         "capabilities": [ "game.actions.dangerous" ], "dependencies": []
     })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "write-without-read", "version": "1", "api_version": 5,
+        "capabilities": [ "game.write" ], "dependencies": []
+    })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "hooks-without-events", "version": "1", "api_version": 5,
+        "capabilities": [ "game.hooks" ], "dependencies": []
+    })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "callbacks-without-read", "version": "1", "api_version": 5,
+        "capabilities": [ "game.callbacks" ], "dependencies": []
+    })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "old-writer", "version": "1", "api_version": 4,
+        "capabilities": [ "game.read", "game.write" ], "dependencies": []
+    })json" ) ) );
     CHECK( capability_minimum_api_version( "scheduler" ) == 4 );
+    CHECK( capability_minimum_api_version( "game.write" ) == 5 );
     CHECK( capability_minimum_api_version( "game.read" ) == minimum_api_version );
 }
 
