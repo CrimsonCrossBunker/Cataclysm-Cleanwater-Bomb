@@ -125,7 +125,14 @@ bool build_craft_material_plan( Character &crafter,
             if( !location ) {
                 continue;
             }
-            const int available = by_charges ? location->charges : 1;
+            int already_planned = 0;
+            for( const craft_material_source &planned : plan.sources ) {
+                if( planned.location == location ) {
+                    already_planned += planned.quantity;
+                }
+            }
+            const int available = by_charges ? location->charges - already_planned :
+                              ( already_planned == 0 ? 1 : 0 );
             const int quantity = by_charges ? std::min( remaining, available ) : 1;
             if( quantity <= 0 ) {
                 continue;
@@ -727,11 +734,24 @@ item craft_command::create_in_progress_craft()
     const double predicted_rot = preview.get_relative_rot_after(
                                      get_weather().get_temperature( crafter->pos_bub() ), 1.0f,
                                      expected_duration );
-    if( preview.goes_bad() && predicted_rot >= 1.0 && crafter->is_avatar() ) {
-        if( !crafter->query_yn( _( "The selected ingredients may be rotten before this craft finishes.\n"
-                                   "Start crafting anyway?" ) ) ) {
-            return item();
+    if( preview.goes_bad() && crafter->is_avatar() ) {
+        const time_duration predicted_remaining = preview.get_shelf_life() -
+                preview.get_shelf_life() * predicted_rot;
+        if( predicted_rot >= 1.0 || predicted_remaining <= 3_hours ) {
+            const char *warning = predicted_rot >= 1.0
+                                  ? _( "The selected ingredients may be rotten before this craft finishes.\n"
+                                       "Start crafting anyway?" )
+                                  : _( "The finished item may have one hour or less of shelf life left.\n"
+                                       "Start crafting anyway?" );
+            if( !crafter->query_yn( warning ) ) {
+                return item();
+            }
         }
+    }
+
+    if( !validate_craft_material_plan( material_plan ) ) {
+        debugmsg( "Aborting crafting: planned material sources changed before tool validation" );
+        return item();
     }
 
     // Run the start (bucket-0) tool debit on a probe before consuming components
