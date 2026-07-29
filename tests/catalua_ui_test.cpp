@@ -6191,3 +6191,94 @@ end) == false)
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.read" ) != std::string::npos );
 }
+
+TEST_CASE( "lua_v5_requirements_are_structured_bounded_and_inventory_aware",
+           "[lua][bindings][requirements][crafting][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.requirements.limits()
+assert(limits.default_limit == 64)
+assert(limits.maximum_limit == 256)
+assert(limits.maximum_batch == 1000)
+assert(limits.maximum_groups == 128)
+assert(limits.maximum_alternatives_per_group == 64)
+
+local eggs = game.requirements.get("test_eggs", 2)
+assert(eggs ~= nil)
+assert(eggs.id == "test_eggs")
+assert(eggs.batch == 2)
+assert(type(eggs.null) == "boolean")
+assert(type(eggs.empty) == "boolean")
+assert(type(eggs.blacklisted) == "boolean")
+assert(type(eggs.can_make) == "boolean")
+assert(type(eggs.all_text) == "string")
+assert(type(eggs.missing_text) == "string")
+assert(eggs.tools.returned == #eggs.tools.items)
+assert(eggs.qualities.returned == #eggs.qualities.items)
+assert(eggs.components.returned == #eggs.components.items)
+assert(eggs.components.total == 1)
+local group = eggs.components.items[1]
+assert(group.total == 1)
+assert(group.returned == #group.items)
+assert(type(group.satisfied) == "boolean")
+local component = group.items[1]
+assert(component.id ==
+    game.types.id("item", "test_egg"))
+assert(component.count == 2)
+assert(component.count_for_batch == 4)
+assert(type(component.by_charges) == "boolean")
+assert(type(component.available) == "boolean")
+
+assert(game.requirements.get(
+    "this_requirement_does_not_exist") == nil)
+
+local page = game.requirements.list({
+    offset = 0,
+    limit = 2,
+    batch = 1
+})
+assert(page.limit == 2)
+assert(page.returned == #page.items)
+assert(page.has_more ==
+    (page.offset + page.returned < page.total))
+
+local recipe = game.types.id(
+    "recipe", "cudgel_test_no_tools")
+local needs = game.requirements.for_recipe(recipe, 3)
+assert(needs.recipe == recipe)
+assert(needs.batch == 3)
+assert(math.type(needs.deduped_alternative_count) ==
+    "integer")
+assert(type(needs.deduped_too_complex) == "boolean")
+assert(type(needs.has_required_skills) == "boolean")
+assert(type(needs.has_required_proficiencies) == "boolean")
+assert(needs.components.returned ==
+    #needs.components.items)
+
+assert(pcall(function()
+    game.requirements.get("", 1)
+end) == false)
+assert(pcall(function()
+    game.requirements.get("test_eggs", 0)
+end) == false)
+assert(pcall(function()
+    game.requirements.for_recipe(
+        game.types.id("item", "rock"), 1)
+end) == false)
+assert(pcall(function()
+    game.requirements.list({ unknown = true })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}

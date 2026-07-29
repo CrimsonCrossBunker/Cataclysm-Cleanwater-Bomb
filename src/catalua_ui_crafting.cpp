@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <stdexcept>
@@ -13,6 +15,8 @@
 #include "avatar.h"
 #include "catalua_bindings_values.h"
 #include "inventory.h"
+#include "item.h"
+#include "itype.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "requirements.h"
@@ -30,6 +34,12 @@ constexpr std::size_t maximum_recipe_offset = 1000000;
 constexpr int maximum_recipe_batch = 1000;
 constexpr std::size_t maximum_recipe_relations = 128;
 constexpr std::size_t maximum_filter_bytes = 128;
+constexpr int default_requirement_limit = 64;
+constexpr int maximum_requirement_limit = 256;
+constexpr std::size_t maximum_requirement_offset = 1000000;
+constexpr std::size_t maximum_requirement_groups = 128;
+constexpr std::size_t maximum_requirement_alternatives = 64;
+constexpr std::size_t maximum_requirement_text_bytes = 32768;
 
 struct recipe_options {
     std::size_t offset = 0;
@@ -527,6 +537,354 @@ sol::table recipe_limits( sol::this_state lua )
     return result;
 }
 
+struct requirement_options {
+    std::size_t offset = 0;
+    int limit = default_requirement_limit;
+    int batch = 1;
+};
+
+requirement_options read_requirement_options(
+    const sol::optional<sol::table> &requested,
+    const std::string &api_name )
+{
+    requirement_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                api_name + " option keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        if( key == "offset" ) {
+            result.offset = static_cast<std::size_t>(
+                                std::min(
+                                    require_integer(
+                                        entry.second,
+                                        api_name, key ),
+                                    static_cast<int>(
+                                        maximum_requirement_offset ) ) );
+        } else if( key == "limit" ) {
+            result.limit = std::min(
+                               require_integer(
+                                   entry.second, api_name, key ),
+                               maximum_requirement_limit );
+        } else if( key == "batch" ) {
+            result.batch = require_integer(
+                               entry.second, api_name, key );
+            if( result.batch < 1 ||
+                result.batch > maximum_recipe_batch ) {
+                throw std::invalid_argument(
+                    api_name +
+                    " option 'batch' must be within 1..1000" );
+            }
+        } else {
+            throw std::invalid_argument(
+                api_name + " received unknown option '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
+std::string bounded_requirement_text( std::string value )
+{
+    if( value.size() <= maximum_requirement_text_bytes ) {
+        return value;
+    }
+    value.resize( maximum_requirement_text_bytes );
+    return value;
+}
+
+std::int64_t item_count_for_batch(
+    const int count, const int batch )
+{
+    return static_cast<std::int64_t>( std::abs( count ) ) *
+           static_cast<std::int64_t>( batch );
+}
+
+std::int64_t tool_count_for_batch(
+    const tool_comp &value, const int batch )
+{
+    if( !value.by_charges() ) {
+        return std::abs( value.count );
+    }
+    return static_cast<std::int64_t>( value.count ) *
+           static_cast<std::int64_t>( batch ) *
+           static_cast<std::int64_t>(
+               item::find_type( value.type )->charge_factor() );
+}
+
+template<typename Group>
+sol::table requirement_group_page(
+    sol::state_view lua, const Group &groups,
+    const std::function<sol::table(
+        const typename Group::value_type::value_type & )> &snapshot )
+{
+    const std::size_t total = groups.size();
+    const std::size_t returned = std::min(
+                                     total, maximum_requirement_groups );
+    sol::table group_items = lua.create_table(
+                                 static_cast<int>( returned ), 0 );
+    for( std::size_t group_index = 0;
+         group_index < returned; ++group_index ) {
+        const auto &group = groups[group_index];
+        const std::size_t alternative_count = group.size();
+        const std::size_t alternative_returned = std::min(
+                    alternative_count,
+                    maximum_requirement_alternatives );
+        sol::table alternatives = lua.create_table(
+                                      static_cast<int>(
+                                          alternative_returned ), 0 );
+        bool satisfied = false;
+        for( std::size_t alternative_index = 0;
+             alternative_index < alternative_returned;
+             ++alternative_index ) {
+            sol::table entry = snapshot(
+                                   group[alternative_index] );
+            satisfied =
+                satisfied ||
+                entry.get_or( "available", false );
+            alternatives[alternative_index + 1] =
+                std::move( entry );
+        }
+        sol::table group_result = lua.create_table();
+        group_result["items"] = std::move( alternatives );
+        group_result["total"] = alternative_count;
+        group_result["returned"] = alternative_returned;
+        group_result["truncated"] =
+            alternative_returned < alternative_count;
+        group_result["satisfied"] = satisfied;
+        group_items[group_index + 1] =
+            std::move( group_result );
+    }
+    sol::table page = lua.create_table();
+    page["items"] = std::move( group_items );
+    page["total"] = total;
+    page["returned"] = returned;
+    page["truncated"] = returned < total;
+    return page;
+}
+
+sol::table snapshot_requirement(
+    sol::state_view lua, const requirement_data &value,
+    const int batch,
+    const read_only_visitable &crafting_inventory,
+    const std::function<bool( const item & )> &filter )
+{
+    const bool can_make = value.can_make_with_inventory(
+                              crafting_inventory, filter, batch );
+    sol::table result = lua.create_table();
+    result["id"] = value.id().is_null() ?
+                   std::string() : value.id().str();
+    result["name"] = value.display_name();
+    result["null"] = value.is_null();
+    result["empty"] = value.is_empty();
+    result["blacklisted"] = value.is_blacklisted();
+    result["batch"] = batch;
+    result["can_make"] = can_make;
+    result["all_text"] = bounded_requirement_text(
+                             value.list_all() );
+    result["missing_text"] = bounded_requirement_text(
+                                 value.list_missing() );
+
+    result["tools"] = requirement_group_page <
+                      requirement_data::alter_tool_comp_vector > (
+                          lua, value.get_tools(),
+                          [&lua, &crafting_inventory, &filter, batch](
+    const tool_comp & entry ) {
+        sol::table item_result = lua.create_table();
+        item_result["id"] =
+            script_game_id( "item", entry.type.str() );
+        item_result["name"] =
+            item::nname( entry.type );
+        item_result["count"] = entry.count;
+        item_result["count_for_batch"] =
+            tool_count_for_batch( entry, batch );
+        item_result["by_charges"] =
+            entry.by_charges();
+        item_result["recoverable"] = entry.recoverable;
+        item_result["nested_requirement"] =
+            entry.requirement;
+        item_result["available"] = entry.has(
+                                       crafting_inventory,
+                                       filter, batch );
+        return item_result;
+    } );
+
+    result["qualities"] = requirement_group_page <
+                          requirement_data::alter_quali_req_vector > (
+                              lua, value.get_qualities(),
+                              [&lua, &crafting_inventory, &filter](
+    const quality_requirement & entry ) {
+        sol::table item_result = lua.create_table();
+        item_result["id"] =
+            script_game_id( "quality", entry.type.str() );
+        item_result["name"] =
+            entry.type->name.translated();
+        item_result["count"] = entry.count;
+        item_result["level"] = entry.level;
+        item_result["nested_requirement"] =
+            entry.requirement;
+        item_result["available"] = entry.has(
+                                       crafting_inventory,
+                                       filter );
+        return item_result;
+    } );
+
+    result["components"] = requirement_group_page <
+                           requirement_data::alter_item_comp_vector > (
+                               lua, value.get_components(),
+                               [&lua, &crafting_inventory, &filter, batch](
+    const item_comp & entry ) {
+        sol::table item_result = lua.create_table();
+        item_result["id"] =
+            script_game_id( "item", entry.type.str() );
+        item_result["name"] =
+            item::nname( entry.type );
+        item_result["count"] = entry.count;
+        item_result["count_for_batch"] =
+            item_count_for_batch(
+                entry.count, batch );
+        item_result["by_charges"] =
+            item::count_by_charges( entry.type );
+        item_result["recoverable"] = entry.recoverable;
+        item_result["nested_requirement"] =
+            entry.requirement;
+        item_result["available"] = entry.has(
+                                       crafting_inventory,
+                                       filter, batch );
+        return item_result;
+    } );
+    return result;
+}
+
+sol::object get_requirement(
+    sol::this_state lua, const std::string &id_text,
+    const int batch )
+{
+    if( id_text.empty() || id_text.size() > 256 ||
+        id_text.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "game.requirements.get id must contain "
+            "1 to 256 non-NUL bytes" );
+    }
+    if( batch < 1 || batch > maximum_recipe_batch ) {
+        throw std::invalid_argument(
+            "game.requirements.get batch must be within 1..1000" );
+    }
+    sol::state_view state( lua );
+    const requirement_id id( id_text );
+    if( !id.is_valid() ) {
+        return sol::make_object( state, sol::nil );
+    }
+    const inventory &crafting_inventory =
+        get_avatar().crafting_inventory();
+    const std::function<bool( const item & )> filter =
+    []( const item & ) {
+        return true;
+    };
+    return sol::make_object(
+               state,
+               snapshot_requirement(
+                   state, id.obj(), batch,
+                   crafting_inventory, filter ) );
+}
+
+sol::table requirements_for_recipe(
+    sol::this_state lua, const script_game_id &id,
+    const int batch )
+{
+    require_id(
+        id, "recipe", "game.requirements.for_recipe" );
+    if( batch < 1 || batch > maximum_recipe_batch ) {
+        throw std::invalid_argument(
+            "game.requirements.for_recipe batch must be "
+            "within 1..1000" );
+    }
+    sol::state_view state( lua );
+    const recipe &value = recipe_id( id.value() ).obj();
+    avatar &player = get_avatar();
+    const inventory &crafting_inventory =
+        player.crafting_inventory();
+    sol::table result = snapshot_requirement(
+                            state, value.simple_requirements(),
+                            batch, crafting_inventory,
+                            value.get_component_filter() );
+    result["recipe"] = id;
+    result["deduped_alternative_count"] =
+        value.deduped_requirements().alternatives().size();
+    result["deduped_too_complex"] =
+        value.deduped_requirements().is_too_complex();
+    result["has_required_skills"] =
+        player.has_recipe_requirements( value );
+    result["has_required_proficiencies"] =
+        value.character_has_required_proficiencies(
+            player );
+    return result;
+}
+
+sol::table requirement_page(
+    sol::this_state lua, const requirement_options &options )
+{
+    sol::state_view state( lua );
+    const auto &all = requirement_data::all();
+    const inventory &crafting_inventory =
+        get_avatar().crafting_inventory();
+    const std::function<bool( const item & )> filter =
+    []( const item & ) {
+        return true;
+    };
+    const std::size_t total = all.size();
+    const std::size_t first = std::min(
+                                  options.offset, total );
+    const std::size_t returned = std::min(
+                                     total - first,
+                                     static_cast<std::size_t>(
+                                         options.limit ) );
+    sol::table items = state.create_table(
+                           static_cast<int>( returned ), 0 );
+    auto iterator = all.begin();
+    std::advance(
+        iterator,
+        static_cast<std::ptrdiff_t>( first ) );
+    for( std::size_t index = 0;
+         index < returned; ++index, ++iterator ) {
+        items[index + 1] = snapshot_requirement(
+                               state, iterator->second,
+                               options.batch,
+                               crafting_inventory, filter );
+    }
+    sol::table result = state.create_table();
+    result["items"] = std::move( items );
+    result["total"] = total;
+    result["offset"] = first;
+    result["limit"] = options.limit;
+    result["returned"] = returned;
+    result["has_more"] = first + returned < total;
+    result["batch"] = options.batch;
+    return result;
+}
+
+sol::table requirement_limits( sol::this_state lua )
+{
+    sol::state_view state( lua );
+    sol::table result = state.create_table();
+    result["default_limit"] = default_requirement_limit;
+    result["maximum_limit"] = maximum_requirement_limit;
+    result["maximum_offset"] = maximum_requirement_offset;
+    result["maximum_batch"] = maximum_recipe_batch;
+    result["maximum_groups"] =
+        maximum_requirement_groups;
+    result["maximum_alternatives_per_group"] =
+        maximum_requirement_alternatives;
+    result["maximum_text_bytes"] =
+        maximum_requirement_text_bytes;
+    return result;
+}
+
 } // namespace
 
 void install_crafting_api(
@@ -625,6 +983,43 @@ void install_crafting_api(
         return recipe_id( id.value() )->has_flag( flag );
     } );
     game["recipes"] = std::move( recipes );
+
+    sol::table requirements = state.create_table();
+    requirements.set_function(
+        "limits",
+    [require_read]( sol::this_state lua ) {
+        require_read();
+        return requirement_limits( lua );
+    } );
+    requirements.set_function(
+        "list",
+        [require_read](
+            sol::this_state lua,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return requirement_page(
+                   lua, read_requirement_options(
+                       options, "game.requirements.list" ) );
+    } );
+    requirements.set_function(
+        "get",
+        [require_read](
+            sol::this_state lua, const std::string & id,
+    const sol::optional<int> &batch ) {
+        require_read();
+        return get_requirement(
+                   lua, id, batch.value_or( 1 ) );
+    } );
+    requirements.set_function(
+        "for_recipe",
+        [require_read](
+            sol::this_state lua, const script_game_id & id,
+    const sol::optional<int> &batch ) {
+        require_read();
+        return requirements_for_recipe(
+                   lua, id, batch.value_or( 1 ) );
+    } );
+    game["requirements"] = std::move( requirements );
 }
 
 } // namespace cata::lua_ui
