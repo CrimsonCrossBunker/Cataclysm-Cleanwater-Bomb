@@ -46,306 +46,8 @@
 #include "weather.h"
 
 static const itype_id itype_candle( "candle" );
-static const itype_id itype_water_faucet( "water_faucet" );
 
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
-
-namespace {
-
-struct craft_material_source {
-    item_location location;
-    item snapshot;
-    int64_t source_uid = 0;
-    int quantity = 0;
-    bool by_charges = false;
-    bool infinite_map_source = false;
-    vehicle *vehicle_source = nullptr;
-    itype_id vehicle_fuel_type;
-};
-
-struct craft_material_plan {
-    std::vector<craft_material_source> sources;
-    std::vector<item_comp> preview_components;
-};
-
-void append_craft_source_locations( item_location location,
-                                    const std::function<bool( const item & )> &filter,
-                                    std::vector<item_location> &locations )
-{
-    if( filter( *location ) ) {
-        locations.push_back( location );
-    }
-    for( item *contained : location->all_items_top( pocket_type::CONTAINER ) ) {
-        append_craft_source_locations( item_location( location, contained ), filter, locations );
-    }
-}
-
-std::vector<item_location> craft_source_locations( Character &crafter,
-        const comp_selection<item_comp> &selection,
-        const std::function<bool( const item & )> &filter, bool preferred )
-{
-    const itype_id type = selection.comp.type;
-    const std::function<bool( const item & )> source_filter =
-        [&filter, &type, preferred]( const item &candidate ) {
-            return candidate.typeId() == type && filter( candidate ) &&
-                   ( !preferred || is_preferred_component( candidate ) );
-        };
-    std::vector<item_location> locations;
-    map &here = get_map();
-
-    if( selection.use_from & usage_from::map ) {
-        const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                    crafter.pos_bub(), PICKUP_RANGE, 1, 100 );
-        for( const tripoint_bub_ms &point : reachable ) {
-            if( !here.accessible_items( point ) ) {
-                continue;
-            }
-            std::list<item_location> at_point = here.items_with( point, []( const item & ) {
-                return true;
-            } );
-            for( item_location &location : at_point ) {
-                append_craft_source_locations( location, source_filter, locations );
-            }
-        }
-    }
-    if( selection.use_from & usage_from::player ) {
-        for( item *candidate : crafter.items_with( source_filter ) ) {
-            locations.emplace_back( crafter, candidate );
-        }
-    }
-    return locations;
-}
-
-std::optional<item> infinite_map_charge_source( Character &crafter, const itype_id &type )
-{
-    map &here = get_map();
-    const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                crafter.pos_bub(), PICKUP_RANGE, 1, 100 );
-    for( const tripoint_bub_ms &point : reachable ) {
-        item source = here.liquid_from( point );
-        if( source.typeId() == type && source.charges == item::INFINITE_CHARGES ) {
-            return source;
-        }
-    }
-    return std::nullopt;
-}
-
-void add_vehicle_charge_sources( Character &crafter, const itype_id &type, int &remaining,
-                                 craft_material_plan &plan )
-{
-    map &here = get_map();
-    const itype_id vehicle_tool_type = type.obj().phase > phase_id::SOLID ?
-                                       itype_water_faucet : type;
-    const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                crafter.pos_bub(), PICKUP_RANGE, 1, 100 );
-    for( const tripoint_bub_ms &point : reachable ) {
-        if( remaining <= 0 ) {
-            break;
-        }
-        const optional_vpart_position vehicle_position = here.veh_at( point );
-        if( !vehicle_position ) {
-            continue;
-        }
-        const std::optional<vpart_reference> tool_part = vehicle_position->part_with_tool( here,
-                vehicle_tool_type );
-        if( !tool_part ) {
-            continue;
-        }
-        const itype_id &tool_fuel_type = type->tool_slot_first_ammo();
-        const itype_id &fuel_type = tool_fuel_type.is_null() ? type : tool_fuel_type;
-        vehicle &source_vehicle = tool_part->vehicle();
-        int already_planned = 0;
-        for( const craft_material_source &source : plan.sources ) {
-            if( source.vehicle_source == &source_vehicle &&
-                source.vehicle_fuel_type == fuel_type ) {
-                already_planned += source.quantity;
-            }
-        }
-        const int available = static_cast<int>( source_vehicle.fuel_left( here, fuel_type ) ) -
-                              already_planned;
-        const int quantity = std::min( remaining, available );
-        if( quantity <= 0 ) {
-            continue;
-        }
-        item snapshot( type, calendar::turn_zero );
-        snapshot.charges = quantity;
-        plan.sources.push_back( { item_location::nowhere, snapshot, 0, quantity, true, false,
-                                  &source_vehicle, fuel_type } );
-        remaining -= quantity;
-    }
-}
-
-bool build_craft_material_plan( Character &crafter,
-                                const std::vector<comp_selection<item_comp>> &selections,
-                                int batch, const std::function<bool( const item & )> &filter,
-                                craft_material_plan &plan )
-{
-    for( const comp_selection<item_comp> &selection : selections ) {
-        const bool by_charges = item::count_by_charges( selection.comp.type ) &&
-                                selection.comp.count > 0;
-        int remaining = selection.comp.count > 0 ? selection.comp.count * batch :
-                        std::abs( selection.comp.count );
-        if( by_charges && ( selection.use_from & usage_from::map ) ) {
-            std::optional<item> infinite_source = infinite_map_charge_source(
-                    crafter, selection.comp.type );
-            if( infinite_source ) {
-                infinite_source->charges = remaining;
-                plan.sources.push_back( { item_location::nowhere, *infinite_source, 0, remaining,
-                                          true, true } );
-                remaining = 0;
-            }
-        }
-        std::vector<item_location> candidates;
-        for( int pass = 0; pass < 2 && remaining > 0; ++pass ) {
-            const bool preferred = pass == 0;
-            for( usage_from source : { usage_from::map, usage_from::player } ) {
-                if( ( selection.use_from & source ) == usage_from::none ) {
-                    continue;
-                }
-                comp_selection<item_comp> source_selection = selection;
-                source_selection.use_from = source;
-                const std::vector<item_location> pass_candidates = craft_source_locations(
-                            crafter, source_selection, filter, preferred );
-                for( const item_location &candidate : pass_candidates ) {
-                    if( std::find( candidates.begin(), candidates.end(),
-                                  candidate ) == candidates.end() ) {
-                        candidates.push_back( candidate );
-                    }
-                }
-            }
-        }
-
-        for( item_location &location : candidates ) {
-            if( remaining <= 0 ) {
-                break;
-            }
-            if( !location ) {
-                continue;
-            }
-            int already_planned = 0;
-            for( const craft_material_source &planned : plan.sources ) {
-                if( planned.location == location ) {
-                    already_planned += planned.quantity;
-                }
-            }
-            const int available = by_charges ? location->charges - already_planned :
-                              ( already_planned == 0 ? 1 : 0 );
-            const int quantity = by_charges ? std::min( remaining, available ) : 1;
-            if( quantity <= 0 ) {
-                continue;
-            }
-            item snapshot = *location;
-            if( by_charges && quantity < snapshot.charges ) {
-                snapshot.mod_charges( quantity - snapshot.charges );
-            }
-            plan.sources.push_back( { location, snapshot, location->uid().get_value(), quantity,
-                                      by_charges } );
-            remaining -= quantity;
-        }
-        if( by_charges && remaining > 0 && ( selection.use_from & usage_from::map ) ) {
-            add_vehicle_charge_sources( crafter, selection.comp.type, remaining, plan );
-        }
-        if( remaining > 0 ) {
-            return false;
-        }
-    }
-
-    for( const comp_selection<item_comp> &selection : selections ) {
-        item_comp used = selection.comp;
-        used.count *= batch;
-        std::vector<item_comp>::iterator found = std::find_if( plan.preview_components.begin(),
-                plan.preview_components.end(), [&used]( const item_comp &existing ) {
-            return existing.type == used.type;
-        } );
-        if( found == plan.preview_components.end() ) {
-            plan.preview_components.push_back( used );
-        } else {
-            found->count += used.count;
-        }
-    }
-    return true;
-}
-
-bool validate_craft_material_plan( const craft_material_plan &plan )
-{
-    for( const craft_material_source &source : plan.sources ) {
-        if( source.infinite_map_source ) {
-            continue;
-        }
-        if( source.vehicle_source != nullptr ) {
-            if( source.vehicle_source->fuel_left( get_map(), source.vehicle_fuel_type ) <
-                source.quantity ) {
-                return false;
-            }
-            continue;
-        }
-        if( !source.location || source.location->uid().get_value() != source.source_uid ||
-            source.location->typeId() != source.snapshot.typeId() ) {
-            return false;
-        }
-        if( source.by_charges && source.location->charges < source.quantity ) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool consume_craft_material_plan( Character &crafter, craft_material_plan &plan,
-                                  item_components &used )
-{
-    if( !validate_craft_material_plan( plan ) ) {
-        return false;
-    }
-
-    map &here = get_map();
-    for( craft_material_source &source : plan.sources ) {
-        item consumed = source.infinite_map_source || source.vehicle_source != nullptr ?
-                        source.snapshot : *source.location;
-        if( source.infinite_map_source ) {
-            used.add( consumed );
-            continue;
-        }
-        if( source.vehicle_source != nullptr ) {
-            if( source.vehicle_source->drain( here, source.vehicle_fuel_type,
-                                              source.quantity ) != source.quantity ) {
-                return false;
-            }
-            used.add( consumed );
-            continue;
-        }
-        if( source.location.has_parent() ) {
-            item_pocket *parent_pocket = source.location.parent_pocket();
-            if( parent_pocket != nullptr ) {
-                parent_pocket->unseal();
-            }
-        }
-        if( source.by_charges ) {
-            consumed.mod_charges( source.quantity - consumed.charges );
-            if( source.location->charges == source.quantity ) {
-                source.location.remove_item();
-            } else {
-                source.location->mod_charges( -source.quantity );
-                source.location.on_contents_changed();
-            }
-        } else {
-            source.location.remove_item();
-            remove_ammo( consumed, crafter );
-        }
-        if( !consumed.contains_no_solids() ) {
-            consumed.spill_contents( crafter );
-        }
-        consumed.overflow( here, crafter.pos_bub( here ) );
-        if( !source.by_charges && craft_command::safe_to_unload_comp( consumed ) ) {
-            item_location consumed_location( crafter, &consumed );
-            unload_activity_actor::unload( crafter, consumed_location );
-        }
-        used.add( consumed );
-    }
-    empty_buckets( crafter );
-    return true;
-}
-
-} // namespace
 
 template<typename CompType>
 std::string comp_selection<CompType>::nname() const
@@ -942,22 +644,16 @@ item craft_command::create_in_progress_craft()
         start_allocs = { step0 };
     }
 
-    craft_material_plan material_plan;
-    if( !build_craft_material_plan( *crafter, item_selections, batch_size, filter,
-                                     material_plan ) ) {
-        debugmsg( "Aborting crafting: couldn't build a non-destructive material plan" );
+    std::optional<item_components> preview_used = crafter->preview_crafting_components(
+                item_selections, batch_size, filter );
+    if( !preview_used ) {
+        debugmsg( "Aborting crafting: couldn't preview selected components" );
         return item();
     }
 
-    // Build the same temporary craft used by the real craft path from the planned
-    // snapshots.  This warning must happen before either materials or tools are
-    // consumed, so cancelling leaves every source unchanged.
-    item_components preview_used;
-    for( const craft_material_source &source : material_plan.sources ) {
-        item preview_component = source.snapshot;
-        preview_used.add( preview_component );
-    }
-    item preview( rec, batch_size, preview_used, material_plan.preview_components, false );
+    // The preview uses copies of the selected components and follows the same
+    // inheritance path as the craft that will be created below.
+    item preview( rec, batch_size, *preview_used, std::vector<item_comp> {}, false );
     const time_duration expected_duration = time_duration::from_moves(
                 crafter->expected_time_to_craft( *rec, batch_size ) );
     const double predicted_rot = preview.get_relative_rot_after(
@@ -978,11 +674,6 @@ item craft_command::create_in_progress_craft()
         }
     }
 
-    if( !validate_craft_material_plan( material_plan ) ) {
-        debugmsg( "Aborting crafting: planned material sources changed before tool validation" );
-        return item();
-    }
-
     // Run the start (bucket-0) tool debit on a probe before consuming components
     // so a charge shortfall aborts without losing them; the debited allocations
     // carry over to the real craft.
@@ -996,9 +687,17 @@ item craft_command::create_in_progress_craft()
         start_allocs = probe.get_step_tool_allocs();
     }
 
-    if( !consume_craft_material_plan( *crafter, material_plan, used ) ) {
-        debugmsg( "Aborting crafting: planned material sources changed before consumption" );
-        return item();
+    for( const auto &it : item_selections ) {
+        std::list<item> tmp = sane_consume_items( it, crafter, batch_size, filter );
+        for( item &tmp_it : tmp ) {
+            if( safe_to_unload_comp( tmp_it ) ) {
+                item_location tmp_loc( *crafter, &tmp_it );
+                unload_activity_actor::unload( *crafter, tmp_loc );
+            }
+        }
+        for( item &it : tmp ) {
+            used.add( it );
+        }
     }
 
     for( const comp_selection<item_comp> &selection : item_selections ) {
