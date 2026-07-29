@@ -55,7 +55,7 @@ const std::vector<binding_domain> &binding_catalog()
             binding_implementation_status::partial
         },
         {
-            "runtime_and_definitions", "registry", "registry.read", 2,
+            "runtime_and_definitions", "registry", "registry.read", 4,
             binding_implementation_status::partial
         },
         {
