@@ -18,6 +18,7 @@
 #include "cached_options.h"
 #include "cata_imgui.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
@@ -3770,6 +3771,30 @@ void monster::make_ally( const monster &z )
 {
     friendly = z.friendly;
     faction = z.faction;
+}
+
+void monster::make_pet()
+{
+    friendly = -1;
+    add_effect( effect_pet, 1_turns, true );
+}
+
+void monster::make_pet( Character &actor )
+{
+    make_pet();
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( &actor ) },
+        { "monster", static_cast<const Creature *>( this ) },
+        {
+            "monster_type", cata::lua_ui::native_callback_id {
+                "monster", type->id.str()
+            }
+        }
+    };
+    cata::lua_ui::dispatch_native_callback(
+        "monster", type->id.str(), "on_tame", payload );
+    cata::lua_ui::dispatch_native_hook(
+        "on_monster_tame", payload );
 }
 
 void monster::add_item( const item &it )

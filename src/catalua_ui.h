@@ -79,6 +79,12 @@ struct native_callback_argument {
 
 using native_callback_arguments = std::vector<native_callback_argument>;
 
+struct native_menu_entry {
+    std::string id;
+    std::string label;
+    bool enabled = true;
+};
+
 // Dispatch detached native payloads to API-v5 hooks and callback actors.
 // Missing runtimes or handlers are fail-open.  A false result is only
 // meaningful for a documented intercept/decision callback.
@@ -91,6 +97,13 @@ bool dispatch_native_callback(
 bool has_native_callback(
     std::string_view kind, std::string_view target,
     std::string_view method );
+std::vector<native_menu_entry> collect_native_callback_menu_entries(
+    std::string_view kind, std::string_view target,
+    std::string_view method,
+    const native_callback_arguments &arguments = {} );
+std::vector<native_menu_entry> collect_native_hook_menu_entries(
+    std::string_view name,
+    const native_callback_arguments &arguments = {} );
 
 // Lua module names are converted from dotted names to paths below data/lua or
 // config/lua.  Exposed for focused tests of the sandbox boundary.

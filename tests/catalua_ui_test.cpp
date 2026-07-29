@@ -6627,6 +6627,7 @@ end)
     REQUIRE( reload_scripts( error ) );
 
     item gun( itype_id( "glock_19" ) );
+    gun.set_flag( flag_NEVER_JAMS );
     gun.ammo_set( gun.ammo_default(), 2 );
     REQUIRE( gun.ammo_remaining() == 2 );
     const tripoint_bub_ms ranged_target =
@@ -6822,6 +6823,153 @@ assert(state.character.get("native_trap.on_trigger", 0) == 1)
 assert(state.character.get("native_trap.on_trigger_aftermath", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_monster_callbacks_collect_menus_and_observe_taming",
+           "[lua][bindings][callbacks][monsters][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    const std::string monster_type = "mon_zombie";
+    monster &target = spawn_test_monster(
+                          monster_type,
+                          player.pos_bub( here ) + tripoint_rel_ms::east );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read",
+            "game.write", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local zombie = game.types.id("monster", "mon_zombie")
+local function count(name)
+    state.character.set(
+        "native_monster." .. name,
+        state.character.get("native_monster." .. name, 0) + 1)
+end
+game.callbacks.register("monster", zombie, {
+    priority = 100,
+    get_examine_menu_entries = function()
+        count("bad_actor_get_menu")
+        return { entries = "not a table" }
+    end
+})
+game.callbacks.register("monster", zombie, {
+    get_examine_menu_entries = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.monster ~= nil)
+        count("actor_get_menu")
+        return {
+            { menu_id = "actor_entry", menu_label = "Actor entry" },
+            { id = "shared_entry", label = "Actor wins" }
+        }
+    end,
+    on_examine_menu_entry = function(payload)
+        assert(payload.entry == "actor_entry")
+        count("actor_select")
+    end,
+    on_tame = function(payload)
+        assert(payload.monster_type == zombie)
+        count("actor_tame")
+    end
+})
+game.hooks.on("on_monster_get_examine_menu_entries",
+    { priority = 100 }, function()
+        count("bad_hook_get_menu")
+        return { entries = "not a table" }
+    end)
+game.hooks.on("on_monster_get_examine_menu_entries", function(payload)
+    assert(payload.monster ~= nil)
+    count("hook_get_menu")
+    return {
+        entries = {
+            { id = "hook_entry", label = "Hook entry", enabled = false },
+            { id = "shared_entry", label = "Hook duplicate" }
+        }
+    }
+end)
+game.hooks.on("on_monster_examine_menu_entry", function(payload)
+    assert(payload.entry == "actor_entry")
+    count("hook_select")
+end)
+game.hooks.on("on_monster_tame", function(payload)
+    assert(payload.monster_type == zombie)
+    count("hook_tame")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    const std::uint64_t initial_callback_count =
+        status().callback_count;
+
+    const native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( &player ) },
+        { "monster", static_cast<const Creature *>( &target ) },
+        {
+            "monster_type", native_callback_id {
+                "monster", monster_type
+            }
+        }
+    };
+    const std::vector<native_menu_entry> actor_entries =
+        collect_native_callback_menu_entries(
+            "monster", monster_type,
+            "get_examine_menu_entries", payload );
+    REQUIRE( actor_entries.size() == 2 );
+    CHECK( actor_entries[0].id == "actor_entry" );
+    CHECK( actor_entries[0].label == "Actor entry" );
+    CHECK( actor_entries[0].enabled );
+    CHECK( status().callback_count == initial_callback_count + 2 );
+
+    const std::vector<native_menu_entry> hook_entries =
+        collect_native_hook_menu_entries(
+            "on_monster_get_examine_menu_entries", payload );
+    REQUIRE( hook_entries.size() == 2 );
+    CHECK( hook_entries[0].id == "hook_entry" );
+    CHECK( hook_entries[0].label == "Hook entry" );
+    CHECK_FALSE( hook_entries[0].enabled );
+    CHECK( status().callback_count == initial_callback_count + 4 );
+    CHECK( status().last_error.find(
+               "'entries' must be a table" ) != std::string::npos );
+
+    native_callback_arguments selection_payload = payload;
+    selection_payload.push_back( {
+        "entry", std::string( "actor_entry" )
+    } );
+    CHECK( dispatch_native_callback(
+               "monster", monster_type,
+               "on_examine_menu_entry", selection_payload ) );
+    CHECK( dispatch_native_hook(
+               "on_monster_examine_menu_entry", selection_payload ) );
+
+    target.make_pet( player );
+    CHECK( target.is_pet() );
+    CHECK( status().callback_count == initial_callback_count + 8 );
+
+    script.write( R"lua(
+assert(state.character.get("native_monster.bad_actor_get_menu", 0) == 1)
+assert(state.character.get("native_monster.bad_hook_get_menu", 0) == 1)
+assert(state.character.get("native_monster.actor_get_menu", 0) == 1)
+assert(state.character.get("native_monster.hook_get_menu", 0) == 1)
+assert(state.character.get("native_monster.actor_select", 0) == 1)
+assert(state.character.get("native_monster.hook_select", 0) == 1)
+assert(state.character.get("native_monster.actor_tame", 0) == 1)
+assert(state.character.get("native_monster.hook_tame", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    g->remove_zombie( target );
 }
 
 TEST_CASE( "lua_v5_recipe_catalog_is_detached_filtered_and_bounded",

@@ -103,6 +103,10 @@ constexpr std::size_t maximum_page_stack_depth = 32;
 constexpr std::size_t maximum_diagnostic_records = 64;
 constexpr std::size_t maximum_diagnostic_context_bytes = 512;
 constexpr std::size_t maximum_diagnostic_message_bytes = 8192;
+constexpr std::size_t maximum_menu_entries_per_handler = 64;
+constexpr std::size_t maximum_menu_entries_per_collection = 128;
+constexpr std::size_t maximum_menu_entry_id_bytes = 96;
+constexpr std::size_t maximum_menu_entry_label_bytes = 512;
 
 struct memory_tracker {
     std::size_t used = 0;
@@ -3381,6 +3385,290 @@ bool dispatch_script_callback(
     return allowed;
 }
 
+void append_native_menu_entries(
+    const sol::table &result_table,
+    std::vector<native_menu_entry> &entries,
+    std::set<std::string> &entry_ids )
+{
+    const sol::object nested_entries =
+        result_table.raw_get<sol::object>( "entries" );
+    sol::table entries_table = result_table;
+    if( nested_entries.valid() &&
+        nested_entries.get_type() != sol::type::nil ) {
+        if( nested_entries.get_type() != sol::type::table ) {
+            throw std::invalid_argument(
+                "Lua menu callback 'entries' must be a table" );
+        }
+        entries_table = nested_entries.as<sol::table>();
+    }
+    const std::size_t count = entries_table.size();
+    if( count > maximum_menu_entries_per_handler ) {
+        throw std::invalid_argument(
+            "Lua menu callback returned more than 64 entries" );
+    }
+    if( entries.size() + count >
+        maximum_menu_entries_per_collection ) {
+        throw std::invalid_argument(
+            "Lua menu callbacks returned more than 128 total entries" );
+    }
+
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object object =
+            entries_table.raw_get<sol::object>( index );
+        if( !object.valid() || object.get_type() != sol::type::table ) {
+            throw std::invalid_argument(
+                "Lua menu entries must be tables" );
+        }
+        const sol::table entry = object.as<sol::table>();
+        sol::optional<std::string> id = entry["id"];
+        if( !id ) {
+            id = entry["menu_id"];
+        }
+        sol::optional<std::string> label = entry["label"];
+        if( !label ) {
+            label = entry["menu_label"];
+        }
+        if( !id || id->empty() ||
+            id->size() > maximum_menu_entry_id_bytes ) {
+            throw std::invalid_argument(
+                "Lua menu entry id must contain 1 to 96 bytes" );
+        }
+        const auto valid_id_character = []( const char ch ) {
+            return ch == '_' || ch == '-' || ch == '.' || ch == ':' ||
+                   ( ch >= '0' && ch <= '9' ) ||
+                   ( ch >= 'A' && ch <= 'Z' ) ||
+                   ( ch >= 'a' && ch <= 'z' );
+        };
+        if( !std::all_of(
+                id->begin(), id->end(), valid_id_character ) ) {
+            throw std::invalid_argument(
+                "Lua menu entry ids may only contain ASCII letters, "
+                "digits, '_', '-', '.', and ':'" );
+        }
+        if( !label || label->empty() ||
+            label->size() > maximum_menu_entry_label_bytes ) {
+            throw std::invalid_argument(
+                "Lua menu entry label must contain 1 to 512 bytes" );
+        }
+        if( !entry_ids.insert( *id ).second ) {
+            continue;
+        }
+        entries.push_back( {
+            std::move( *id ), std::move( *label ),
+            entry.get_or( "enabled", true )
+        } );
+    }
+}
+
+std::vector<native_menu_entry> collect_script_callback_menu_entries(
+    runtime_state &state, const std::string_view kind_name,
+    const std::string_view target, const std::string_view method_name,
+    const std::function<sol::table()> &make_payload )
+{
+    const script_callback_kind_spec *kind =
+        find_script_callback_kind_spec( kind_name );
+    const script_callback_method_spec *method =
+        kind == nullptr ? nullptr :
+        find_script_callback_method_spec( *kind, method_name );
+    if( method == nullptr ) {
+        throw std::invalid_argument(
+            "native code requested unknown callback '" +
+            std::string( kind_name ) + "." +
+            std::string( method_name ) + "'" );
+    }
+
+    callback_dispatch_scope dispatch_scope( state );
+    const std::vector<script_callback_registration> registrations =
+        state.callback_registry.matching(
+            kind_name, target, method_name );
+    std::vector<native_menu_entry> entries;
+    std::set<std::string> entry_ids;
+    for( const script_callback_registration &registration : registrations ) {
+        if( !state.callback_registry.contains( registration.id ) ) {
+            continue;
+        }
+        const auto actor_entry =
+            state.callback_methods.find( registration.id );
+        if( actor_entry == state.callback_methods.end() ||
+            registration.source_index >= state.sources.size() ) {
+            state.callback_registry.unsubscribe_unchecked(
+                registration.id );
+            state.callback_methods.erase( registration.id );
+            continue;
+        }
+        const auto callback_entry =
+            actor_entry->second.find( std::string( method_name ) );
+        if( callback_entry == actor_entry->second.end() ) {
+            continue;
+        }
+
+        bool stop = false;
+        bool timing_recorded = false;
+        const auto started = std::chrono::steady_clock::now();
+        try {
+            sol::protected_function callback = callback_entry->second;
+            source_scope source( state, registration.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            sol::table payload = make_payload();
+            payload["actor_kind"] = std::string( kind_name );
+            payload["target_id"] = script_game_id(
+                                       std::string( kind->target_id_kind ),
+                                       std::string( target ) );
+            payload["method"] = std::string( method_name );
+            payload["decision"] = method->decision;
+            payload["turn"] = script_current_turn();
+            const sol::protected_function_result result =
+                callback( std::move( payload ) );
+            record_callback_timing(
+                state,
+                "callback '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'", started );
+            timing_recorded = true;
+            if( !result.valid() ) {
+                const sol::error error = result;
+                throw std::runtime_error( error.what() );
+            }
+            if( result.return_count() > 0 ) {
+                const sol::type type = result.get_type();
+                if( type == sol::type::boolean ) {
+                    stop = !result.get<bool>();
+                } else if( type == sol::type::table ) {
+                    const sol::table result_table =
+                        result.get<sol::table>();
+                    append_native_menu_entries(
+                        result_table, entries, entry_ids );
+                    const sol::optional<bool> allow =
+                        result_table["allow"];
+                    stop = result_table.get_or( "stop", false ) ||
+                           ( allow && !*allow );
+                } else if( type != sol::type::nil ) {
+                    throw std::invalid_argument(
+                        "menu callbacks must return nil, boolean, or an "
+                        "entry table" );
+                }
+            }
+            if( registration.once ) {
+                state.callback_registry.unsubscribe_unchecked(
+                    registration.id );
+                state.callback_methods.erase( registration.id );
+            }
+        } catch( const std::exception &exception ) {
+            if( !timing_recorded ) {
+                record_callback_timing(
+                    state,
+                    "callback '" + std::string( kind_name ) + "." +
+                    std::string( method_name ) + "'", started );
+            }
+            record_runtime_error(
+                "Lua callback actor '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'",
+                exception.what() );
+            state.callback_registry.unsubscribe_unchecked(
+                registration.id );
+            state.callback_methods.erase( registration.id );
+        }
+        if( stop ) {
+            break;
+        }
+    }
+    return entries;
+}
+
+std::vector<native_menu_entry> collect_script_hook_menu_entries(
+    runtime_state &state, const std::string_view name,
+    const std::function<sol::table()> &make_payload )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    if( spec == nullptr ) {
+        throw std::invalid_argument(
+            "native code requested unknown Lua hook '" +
+            std::string( name ) + "'" );
+    }
+
+    hook_dispatch_scope dispatch_scope( state );
+    const std::string registry_name = "hook:" + std::string( name );
+    const std::vector<script_event_subscription> handlers =
+        state.hook_registry.matching( registry_name );
+    std::vector<native_menu_entry> entries;
+    std::set<std::string> entry_ids;
+    for( const script_event_subscription &handler : handlers ) {
+        if( !state.hook_registry.contains( handler.id ) ) {
+            continue;
+        }
+        const auto callback_entry =
+            state.hook_callbacks.find( handler.id );
+        if( callback_entry == state.hook_callbacks.end() ||
+            handler.source_index >= state.sources.size() ) {
+            state.hook_registry.unsubscribe_unchecked( handler.id );
+            state.hook_callbacks.erase( handler.id );
+            continue;
+        }
+
+        bool stop = false;
+        bool timing_recorded = false;
+        const auto started = std::chrono::steady_clock::now();
+        try {
+            sol::protected_function callback = callback_entry->second;
+            source_scope source( state, handler.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            sol::table payload = make_payload();
+            payload["hook"] = std::string( name );
+            payload["mode"] =
+                std::string( script_hook_mode_name( spec->mode ) );
+            payload["cancellable"] =
+                spec->mode == script_hook_mode::intercept;
+            const sol::protected_function_result result =
+                callback( std::move( payload ) );
+            record_callback_timing(
+                state, "hook '" + std::string( name ) + "'", started );
+            timing_recorded = true;
+            if( !result.valid() ) {
+                const sol::error error = result;
+                throw std::runtime_error( error.what() );
+            }
+            if( result.return_count() > 0 ) {
+                const sol::type type = result.get_type();
+                if( type == sol::type::boolean ) {
+                    stop = !result.get<bool>();
+                } else if( type == sol::type::table ) {
+                    const sol::table result_table =
+                        result.get<sol::table>();
+                    append_native_menu_entries(
+                        result_table, entries, entry_ids );
+                    const sol::optional<bool> allow =
+                        result_table["allow"];
+                    stop = result_table.get_or( "stop", false ) ||
+                           ( allow && !*allow );
+                } else if( type != sol::type::nil ) {
+                    throw std::invalid_argument(
+                        "menu hooks must return nil, boolean, or an "
+                        "entry table" );
+                }
+            }
+            if( handler.once ) {
+                state.hook_registry.unsubscribe_unchecked( handler.id );
+                state.hook_callbacks.erase( handler.id );
+            }
+        } catch( const std::exception &exception ) {
+            if( !timing_recorded ) {
+                record_callback_timing(
+                    state, "hook '" + std::string( name ) + "'", started );
+            }
+            record_runtime_error(
+                "Lua hook handler '" + std::string( name ) + "'",
+                exception.what() );
+            state.hook_registry.unsubscribe_unchecked( handler.id );
+            state.hook_callbacks.erase( handler.id );
+        }
+        if( stop ) {
+            break;
+        }
+    }
+    return entries;
+}
+
 std::vector<std::string_view> hooks_for_event( const event_type type )
 {
     switch( type ) {
@@ -4057,6 +4345,50 @@ bool has_native_callback(
     return active_state && !is_pool_worker_thread() &&
            !active_state->callback_registry.matching(
                kind, target, method ).empty();
+}
+
+std::vector<native_menu_entry> collect_native_callback_menu_entries(
+    const std::string_view kind, const std::string_view target,
+    const std::string_view method,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return {};
+    }
+    try {
+        const auto make_payload = [&]() {
+            return native_callback_payload( *active_state, arguments );
+        };
+        return collect_script_callback_menu_entries(
+                   *active_state, kind, target, method, make_payload );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native callback menu collector '" +
+            std::string( kind ) + "." + std::string( method ) + "'",
+            exception.what() );
+        return {};
+    }
+}
+
+std::vector<native_menu_entry> collect_native_hook_menu_entries(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return {};
+    }
+    try {
+        const auto make_payload = [&]() {
+            return native_callback_payload( *active_state, arguments );
+        };
+        return collect_script_hook_menu_entries(
+                   *active_state, name, make_payload );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native hook menu collector '" + std::string( name ) + "'",
+            exception.what() );
+        return {};
+    }
 }
 
 bool reload_scripts( std::string &error )

@@ -145,7 +145,6 @@ static const efftype_id effect_gliding( "gliding" );
 static const efftype_id effect_haslight( "haslight" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_onfire( "onfire" );
-static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
 static const efftype_id effect_slow_descent( "slow_descent" );
 static const efftype_id effect_strengthened_gravity( "strengthened_gravity" );
@@ -11195,8 +11194,7 @@ void map::spawn_monsters_submap( const tripoint_rel_sm &gp, bool ignore_sight, b
                 tmp.unique_name = i.name.value();
             }
             if( i.friendly ) {
-                tmp.friendly = -1;
-                tmp.add_effect( effect_pet, 1_turns, true );
+                tmp.make_pet();
             }
             if( !i.data.ammo.empty() ) {
                 for( std::pair<itype_id, jmapgen_int> ap : i.data.ammo ) {

@@ -56,6 +56,19 @@ bool has_native_callback(
     return false;
 }
 
+std::vector<native_menu_entry> collect_native_callback_menu_entries(
+    std::string_view, std::string_view, std::string_view,
+    const native_callback_arguments & )
+{
+    return {};
+}
+
+std::vector<native_menu_entry> collect_native_hook_menu_entries(
+    std::string_view, const native_callback_arguments & )
+{
+    return {};
+}
+
 void dispatch_mapgen_postprocess( mapgendata & )
 {
 }
