@@ -6063,6 +6063,29 @@ assert(npc_lookup.ok == true)
 local npc_handle = npc_lookup.value
 assert(game.creatures.snapshot(npc_handle).value.kind == "npc")
 
+local monster_bubble = game.world.to_bubble(monster_position)
+assert(monster_bubble.origin == "bub")
+assert(monster_bubble.scale == "ms")
+assert(game.world.to_absolute(monster_bubble) == monster_position)
+local monster_absolute_submap =
+    monster_position:project_to("submap")
+local monster_bubble_submap =
+    game.world.to_bubble(monster_absolute_submap)
+assert(monster_bubble_submap.origin == "bub")
+assert(monster_bubble_submap.scale == "sm")
+assert(game.world.to_absolute(monster_bubble_submap) ==
+       monster_absolute_submap)
+assert(pcall(function()
+    game.world.to_absolute(monster_position)
+end) == false)
+assert(pcall(function()
+    game.world.to_bubble(monster_bubble)
+end) == false)
+assert(pcall(function()
+    game.world.to_bubble(
+        monster_position:project_to("overmap_terrain"))
+end) == false)
+
 local spawn_ok, spawn_error = pcall(function()
     game.spawns.monster(zombie, monster_position)
 end)
