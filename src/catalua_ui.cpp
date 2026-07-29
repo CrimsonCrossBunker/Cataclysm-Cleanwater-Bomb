@@ -31,6 +31,7 @@
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_bionics.h"
+#include "catalua_ui_crafting.h"
 #include "catalua_ui_creatures.h"
 #include "catalua_ui_effects.h"
 #include "catalua_ui_events.h"
@@ -1872,6 +1873,22 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.missions" );
         require_capability( state, "game.write" );
+    } );
+    install_crafting_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game.recipes" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.crafting" );
+        require_capability( state, "game.write" );
+    },
+    [&state]() {
+        return state.accept_actions;
+    },
+    [&state]() {
+        return current_manifest( state ).id;
     } );
     install_world_api(
         game,

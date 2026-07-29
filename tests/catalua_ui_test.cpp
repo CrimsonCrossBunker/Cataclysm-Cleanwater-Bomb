@@ -6091,3 +6091,103 @@ assert(game.state_get("test.bad_event_count", 0) == 1)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 }
+
+TEST_CASE( "lua_v5_recipe_catalog_is_detached_filtered_and_bounded",
+           "[lua][bindings][recipes][crafting][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.recipes.limits()
+assert(limits.default_limit == 64)
+assert(limits.maximum_limit == 256)
+assert(limits.maximum_batch == 1000)
+
+local page = game.recipes.list({
+    offset = 0,
+    limit = 3,
+    include_obsolete = false
+})
+assert(page.limit == 3)
+assert(page.returned == #page.items)
+assert(page.returned <= page.total)
+assert(page.has_more ==
+    (page.offset + page.returned < page.total))
+for _, entry in ipairs(page.items) do
+    assert(entry.id.kind == "recipe")
+    assert(type(entry.result_name) == "string")
+    assert(type(entry.category) == "string")
+    assert(type(entry.subcategory) == "string")
+    assert(math.type(entry.difficulty) == "integer")
+    assert(entry.time.turns >= 0)
+    assert(entry.required_skills.returned ==
+        #entry.required_skills.items)
+    assert(entry.books.returned == #entry.books.items)
+    assert(entry.proficiencies.returned ==
+        #entry.proficiencies.items)
+    assert(type(entry.availability.known) == "boolean")
+    assert(type(entry.availability.craftable) == "boolean")
+end
+
+local cudgel = game.types.id(
+    "recipe", "cudgel_test_no_tools")
+local detail = game.recipes.get(cudgel, 2)
+assert(detail.id == cudgel)
+assert(detail.result.kind == "item")
+assert(detail.result.value == "cudgel")
+assert(detail.batch == 2)
+assert(detail.time.turns >= 0)
+assert(type(detail.description) == "string")
+
+local fabrication = game.types.id("skill", "fabrication")
+local skill_page = game.recipes.by_skill(
+    fabrication, { limit = 8 })
+assert(skill_page.returned == #skill_page.items)
+for _, entry in ipairs(skill_page.items) do
+    assert(entry.primary_skill == fabrication)
+end
+
+local baseball = game.types.id("recipe", "test_baseball")
+assert(game.recipes.has_flag(baseball, "BLIND_EASY") == true)
+local flag_page = game.recipes.by_flag(
+    "BLIND_EASY", { limit = 8 })
+assert(flag_page.returned == #flag_page.items)
+for _, entry in ipairs(flag_page.items) do
+    assert(game.recipes.has_flag(entry.id, "BLIND_EASY"))
+end
+
+assert(pcall(function()
+    game.recipes.list({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.recipes.list({ batch = 1001 })
+end) == false)
+assert(pcall(function()
+    game.recipes.list({ skill = cudgel })
+end) == false)
+assert(pcall(function()
+    game.recipes.list({ unknown = true })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( "game.recipes.list({ limit = 1 })" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.read" ) != std::string::npos );
+}
