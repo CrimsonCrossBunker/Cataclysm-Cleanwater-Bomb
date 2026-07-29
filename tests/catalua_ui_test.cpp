@@ -1498,6 +1498,125 @@ game.effects.add(
     CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
 }
 
+TEST_CASE( "lua_v5_bionics_use_detached_definitions_and_uid_operations",
+           "[lua][bindings][bionics][integration]" )
+{
+    avatar &player = get_avatar();
+    const int original_count = player.num_bionics();
+    const units::energy original_power = player.get_power_level();
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local earplugs = game.types.id("bionic", "bio_earplugs")
+
+local definitions = game.bionics.definitions({
+    offset = 0,
+    limit = 1000000
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.has_more ==
+    (definitions.offset + definitions.returned < definitions.total))
+
+local definition = game.bionics.definition(earplugs)
+assert(definition.id == earplugs)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(definition.power.activation.kind == "energy")
+assert(definition.power.charge_time.turns >= 0)
+assert(type(definition.activated) == "boolean")
+assert(definition.flags.returned == #definition.flags.items)
+assert(definition.occupied_body_parts.returned ==
+    #definition.occupied_body_parts.items)
+assert(definition.damage_protection.returned ==
+    #definition.damage_protection.items)
+
+local before = game.bionics.list(avatar, 1000000)
+assert(before.ok == true and before.value.limit == 256)
+local installed = game.bionics.install(avatar, earplugs)
+assert(installed.ok == true)
+assert(installed.value.id == earplugs)
+assert(math.type(installed.value.uid) == "integer")
+local uid = installed.value.uid
+assert(game.bionics.has(avatar, earplugs).value == true)
+assert(game.bionics.get(avatar, uid).value.id == earplugs)
+
+local configured = game.bionics.configure(avatar, uid, {
+    auto_shutdown = false,
+    show_sprite = false,
+    safe_fuel_threshold = -1
+})
+assert(configured.ok == true)
+assert(configured.value.after.auto_shutdown == false)
+assert(configured.value.after.show_sprite == false)
+assert(configured.value.after.safe_fuel_threshold == -1)
+
+local activated = game.bionics.activate(avatar, uid)
+assert(activated.ok == true)
+assert(activated.value.accepted == true)
+assert(activated.value.after.powered == true)
+local deactivated = game.bionics.deactivate(avatar, uid)
+assert(deactivated.ok == true)
+assert(deactivated.value.accepted == true)
+assert(deactivated.value.after.powered == false)
+
+local zero = game.units.new("energy", 0, "kilojoule")
+local power = game.bionics.set_power(avatar, zero)
+assert(power.ok == true)
+assert(power.value.after == zero)
+assert(type(power.value.clamped) == "boolean")
+
+assert(pcall(function()
+    game.bionics.configure(avatar, uid,
+        { safe_fuel_threshold = 1.1 })
+end) == false)
+assert(pcall(function()
+    game.bionics.configure(avatar, uid, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.bionics.has(avatar, game.types.id("item", "rock"))
+end) == false)
+assert(game.bionics.get(avatar, 0).ok == false)
+
+local removed = game.bionics.remove(avatar, uid)
+assert(removed.ok == true)
+assert(removed.value.removed.id == earplugs)
+assert(game.bionics.has(avatar, earplugs).value == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.num_bionics() == original_count );
+    CHECK( player.get_power_level() == units::from_kilojoule( 0 ) );
+    player.set_power_level( original_power );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.bionics.install(
+    game.characters.avatar(),
+    game.types.id("bionic", "bio_earplugs"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.num_bionics() == original_count );
+    CHECK( player.get_power_level() == original_power );
+}
+
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
            "[lua][bindings][values][ids]" )
 {

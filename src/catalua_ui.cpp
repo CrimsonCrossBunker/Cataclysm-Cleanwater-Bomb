@@ -30,6 +30,7 @@
 #include "catalua_game_handle.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
+#include "catalua_ui_bionics.h"
 #include "catalua_ui_creatures.h"
 #include "catalua_ui_effects.h"
 #include "catalua_ui_events.h"
@@ -1799,6 +1800,22 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.effects" );
+        require_capability( state, "game.write" );
+    } );
+    install_bionic_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.bionics" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.bionics" );
         require_capability( state, "game.write" );
     } );
     install_binding_catalog_api( game, [&state]() {
