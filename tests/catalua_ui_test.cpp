@@ -13,6 +13,7 @@
 #include "catalua_ui_events.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_mapgen.h"
 #include "catalua_ui_modules.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
@@ -27,6 +28,8 @@
 #include "item.h"
 #include "json_loader.h"
 #include "magic.h"
+#include "map.h"
+#include "mapgendata.h"
 #include "mission.h"
 #include "path_info.h"
 #include "player_activity.h"
@@ -6373,4 +6376,88 @@ assert(string.find(status.results[1].error,
     if( player.activity ) {
         player.cancel_activity();
     }
+}
+
+TEST_CASE( "lua_v5_mapgen_context_is_bounded_deterministic_and_scoped",
+           "[lua][bindings][mapgen][context]" )
+{
+    small_fake_map scratch( ter_str_id( "t_dirt" ).id() );
+    mapgendata data(
+        *scratch.cast_to_map(), mapgendata::dummy_settings );
+
+    cata::lua_ui::script_mapgen_context read_only(
+        data, false, UINT64_C( 0x123456789abcdef0 ) );
+    CHECK( read_only.valid() );
+    CHECK( read_only.id() ==
+           cata::lua_ui::script_game_id(
+               "overmap_terrain", "field" ) );
+    CHECK( read_only.north() == read_only.get_nesw( 0 ) );
+    CHECK( read_only.east() == read_only.get_nesw( 1 ) );
+    CHECK( read_only.south() == read_only.get_nesw( 2 ) );
+    CHECK( read_only.west() == read_only.get_nesw( 3 ) );
+    CHECK( read_only.neast() == read_only.get_nesw( 4 ) );
+    CHECK( read_only.seast() == read_only.get_nesw( 5 ) );
+    CHECK( read_only.swest() == read_only.get_nesw( 6 ) );
+    CHECK( read_only.nwest() == read_only.get_nesw( 7 ) );
+    CHECK( read_only.above().value() == "field" );
+    CHECK( read_only.below().value() == "field" );
+    CHECK( read_only.zlevel() == 0 );
+    CHECK( read_only.get_rotation() == 0 );
+    CHECK( read_only.get_rot_suffix() == "_north" );
+    CHECK( read_only.terrain_at( 0, 0 ).value() == "t_dirt" );
+    CHECK_FALSE( read_only.furniture_at( 0, 0 ) );
+    CHECK_FALSE( read_only.trap_at( 0, 0 ) );
+    CHECK_THROWS( read_only.get_nesw( -1 ) );
+    CHECK_THROWS( read_only.get_nesw( 8 ) );
+    CHECK_THROWS( read_only.terrain_at( -1, 0 ) );
+    CHECK_THROWS( read_only.terrain_at( 24, 0 ) );
+    CHECK_THROWS(
+        read_only.set_terrain(
+            0, 0,
+            cata::lua_ui::script_game_id(
+                "terrain", "t_grass" ) ) );
+
+    cata::lua_ui::script_mapgen_context random_a(
+        data, false, UINT64_C( 0x1111222233334444 ) );
+    cata::lua_ui::script_mapgen_context random_b(
+        data, false, UINT64_C( 0x1111222233334444 ) );
+    for( int index = 0; index < 32; ++index ) {
+        CHECK( random_a.random_int( -1000, 1000 ) ==
+               random_b.random_int( -1000, 1000 ) );
+    }
+    CHECK_FALSE( random_a.random_chance( 0, 1 ) );
+    CHECK( random_a.random_chance( 1, 1 ) );
+    CHECK_THROWS( random_a.random_int( 2, 1 ) );
+    CHECK_THROWS( random_a.random_chance( 2, 1 ) );
+
+    cata::lua_ui::script_mapgen_context writable(
+        data, true, UINT64_C( 0x5555666677778888 ) );
+    const cata::lua_ui::script_game_id grass(
+        "terrain", "t_grass" );
+    const cata::lua_ui::script_game_id armchair(
+        "furniture", "f_armchair" );
+    const cata::lua_ui::script_game_id bubblewrap(
+        "trap", "tr_bubblewrap" );
+    CHECK( writable.set_terrain( 0, 0, grass ) );
+    CHECK( writable.terrain_at( 0, 0 ) == grass );
+    CHECK( writable.set_furniture( 0, 0, armchair ) );
+    REQUIRE( writable.furniture_at( 0, 0 ) );
+    CHECK( *writable.furniture_at( 0, 0 ) == armchair );
+    CHECK( writable.set_trap( 0, 0, bubblewrap ) );
+    REQUIRE( writable.trap_at( 0, 0 ) );
+    CHECK( *writable.trap_at( 0, 0 ) == bubblewrap );
+    writable.set_dir( 3, 42 );
+    CHECK( writable.get_direction( 3 ) == 42 );
+    CHECK_THROWS( writable.set_dir( 8, 0 ) );
+    CHECK_THROWS(
+        writable.nest( "unknown_lua_nested_mapgen", 0, 0 ) );
+    writable.nest( "mapgen_test_nested", 2, 2 );
+    CHECK( writable.operations_used() > 0 );
+    CHECK( writable.operations_remaining() <
+           cata::lua_ui::script_mapgen_context::maximum_operations );
+
+    writable.invalidate();
+    CHECK_FALSE( writable.valid() );
+    CHECK_THROWS( writable.id() );
+    CHECK_THROWS( writable.operations_used() );
 }
