@@ -1782,6 +1782,107 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_item_snapshots_are_detailed_detached_and_bounded",
+           "[lua][bindings][items][snapshot][integration]" )
+{
+    avatar &player = get_avatar();
+    item_location added = player.i_add( item( itype_id( "rock" ) ) );
+    REQUIRE( added );
+    const std::int64_t added_uid = added->uid().get_value();
+    on_out_of_scope cleanup( [&player, added_uid]() {
+        player.remove_items_with(
+        [added_uid]( const item & entry ) {
+            return entry.uid().get_value() == added_uid;
+        }, 1 );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local listed = game.inventory.list(avatar, {
+    limit = 512,
+    max_depth = 16
+})
+assert(listed.ok == true)
+local rock = nil
+for _, entry in ipairs(listed.value.items) do
+    if entry.id.value == "rock" then
+        rock = entry
+    end
+end
+assert(rock ~= nil)
+
+local fetched = game.items.snapshot(rock.handle, 1000000)
+assert(fetched.ok == true)
+local value = fetched.value
+assert(value.uid == rock.uid)
+assert(value.id == rock.id)
+assert(type(value.name) == "string")
+assert(type(value.display_name) == "string")
+assert(type(value.type_name) == "string")
+assert(type(value.description) == "string")
+assert(type(value.category.id) == "string")
+assert(type(value.category.name) == "string")
+assert(math.type(value.charges) == "integer")
+assert(type(value.count_by_charges) == "boolean")
+assert(type(value.stackable) == "boolean")
+assert(type(value.active) == "boolean")
+assert(type(value.favorite) == "boolean")
+assert(value.weight.kind == "mass")
+assert(value.weight_without_contents.kind == "mass")
+assert(value.volume.kind == "volume")
+assert(value.price_pre_cataclysm.kind == "money")
+assert(value.price_post_cataclysm.kind == "money")
+assert(type(value.birthday) == "userdata")
+assert(math.type(value.birthday.turn) == "integer")
+assert(type(value.rot) == "userdata")
+assert(math.type(value.rot.turns) == "integer")
+assert(math.type(value.condition.damage) == "integer")
+assert(math.type(value.condition.degradation) == "integer")
+assert(math.type(value.condition.damage_level) == "integer")
+assert(math.type(value.condition.max_damage) == "integer")
+assert(type(value.condition.relative_health) == "number")
+assert(type(value.classification.gun) == "boolean")
+assert(type(value.classification.container) == "boolean")
+assert(type(value.resources.ammo_remaining) == "number")
+assert(type(value.resources.uses_energy) == "boolean")
+assert(math.type(value.contents_count) == "integer")
+assert(math.type(value.pocket_count) == "integer")
+assert(value.relation_limit == 256)
+
+for _, page in ipairs({
+    value.materials,
+    value.type_flags,
+    value.own_flags,
+    value.faults,
+    value.techniques
+}) do
+    assert(page.limit == 256)
+    assert(page.returned == #page.items)
+    assert(page.returned <= page.total)
+    assert(page.truncated == (page.returned < page.total))
+end
+
+local wrong_kind = game.items.snapshot(avatar)
+assert(wrong_kind.ok == false)
+assert(wrong_kind.error.code == "wrong_kind")
+assert(pcall(function()
+    game.items.snapshot(rock.handle, -1)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
            "[lua][bindings][values][ids]" )
 {
