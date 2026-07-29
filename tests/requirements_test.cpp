@@ -23,6 +23,20 @@ static const itype_id itype_yarn( "yarn" );
 static const requirement_id requirement_data_eggs_bird( "eggs_bird" );
 static const requirement_id
 requirement_data_explosives_casting_standard( "explosives_casting_standard" );
+static const requirement_id requirement_meat_red_raw( "meat_red_raw" );
+static const requirement_id requirement_meat_red_raw_curable( "meat_red_raw_curable" );
+static const requirement_id requirement_meat_vacuum_packable( "meat_vacuum_packable" );
+
+static std::map<itype_id, int> component_counts( const requirement_data &requirement )
+{
+    std::map<itype_id, int> counts;
+    for( const std::vector<item_comp> &group : requirement.get_components() ) {
+        for( const item_comp &component : group ) {
+            counts[component.type] = component.count;
+        }
+    }
+    return counts;
+}
 
 static void test_requirement_deduplication(
     const requirement_data::alter_item_comp_vector &before,
@@ -187,4 +201,43 @@ TEST_CASE( "requirement_extension", "[requirement]" )
             }
         }
     }
+}
+
+TEST_CASE( "red_meat_preservation_requirements", "[requirement][curing]" )
+{
+    const std::map<itype_id, int> expected_curable = {
+        { itype_id( "demihuman_flesh" ), 1 },
+        { itype_id( "demihuman_meat_scrap" ), 10 },
+        { itype_id( "human_flesh" ), 1 },
+        { itype_id( "human_meat_scrap" ), 10 },
+        { itype_id( "meat" ), 1 },
+        { itype_id( "meat_scrap" ), 10 },
+        { itype_id( "mutant_human_flesh" ), 1 },
+        { itype_id( "mutant_meat" ), 1 },
+        { itype_id( "mutant_meat_scrap" ), 10 },
+        { itype_id( "porkbelly" ), 1 }
+    };
+    CHECK( component_counts( requirement_meat_red_raw_curable.obj() ) == expected_curable );
+
+    std::map<itype_id, int> expected_raw = expected_curable;
+    expected_raw.emplace( itype_id( "washed_cured_meat" ), 1 );
+    CHECK( component_counts( requirement_meat_red_raw.obj() ) == expected_raw );
+
+    const std::map<itype_id, int> expected_vacuum_packable = {
+        { itype_id( "cooked_cured_meat" ), 1 },
+        { itype_id( "demihuman_cooked" ), 1 },
+        { itype_id( "human_cooked" ), 1 },
+        { itype_id( "meat_cooked" ), 1 },
+        { itype_id( "meat_fatty_cooked" ), 1 },
+        { itype_id( "meat_fried" ), 1 },
+        { itype_id( "meat_pickled" ), 1 },
+        { itype_id( "meat_scrap_cooked" ), 10 },
+        { itype_id( "meat_smoked" ), 1 },
+        { itype_id( "mutant_human_cooked" ), 1 },
+        { itype_id( "mutant_meat_cooked" ), 1 },
+        { itype_id( "mutant_meat_scrap_cooked" ), 10 },
+        { itype_id( "rehydrated_meat" ), 1 }
+    };
+    CHECK( component_counts( requirement_meat_vacuum_packable.obj() ) ==
+           expected_vacuum_packable );
 }

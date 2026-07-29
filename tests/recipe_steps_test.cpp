@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -68,6 +69,8 @@ static const recipe_id recipe_cudgel_test_steps_required_prof(
     "cudgel_test_steps_required_prof" );
 static const recipe_id recipe_cudgel_test_steps_shared_prof(
     "cudgel_test_steps_shared_prof" );
+static const recipe_id recipe_dehydrated_cured_meat( "dehydrated_cured_meat" );
+static const recipe_id recipe_dry_meat( "dry_meat" );
 static const recipe_id recipe_flatbread( "flatbread" );
 
 static const skill_id skill_cooking( "cooking" );
@@ -103,6 +106,21 @@ TEST_CASE( "step_recipe_aggregate_time", "[recipe][steps]" )
 
     const int64_t expected = to_moves<int64_t>( 20_minutes );
     CHECK( r.time_to_craft_moves( guy, {}, recipe_time_flag::ignore_proficiencies ) == expected );
+}
+
+TEST_CASE( "dehydrated_red_meat_recipe_time", "[recipe][steps][curing]" )
+{
+    for( const recipe_id &rid : {
+             recipe_dry_meat, recipe_dehydrated_cured_meat
+         } ) {
+        CAPTURE( rid );
+        const recipe &r = rid.obj();
+        REQUIRE( r.has_steps() );
+        REQUIRE( r.steps().size() == 2 );
+        CHECK( r.steps()[0].time == to_moves<int64_t>( 3_minutes ) );
+        CHECK( r.steps()[1].time == to_moves<int64_t>( 12_minutes ) );
+        CHECK( r.steps()[0].time + r.steps()[1].time == to_moves<int64_t>( 15_minutes ) );
+    }
 }
 
 TEST_CASE( "step_recipe_root_components_preserved", "[recipe][steps]" )

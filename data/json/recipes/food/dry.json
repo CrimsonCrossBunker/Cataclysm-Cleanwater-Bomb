@@ -241,11 +241,40 @@
       },
       {
         "name": "Dehydrate the strips",
-        "time": "15 m",
+        "time": "12 m",
         "activity_level": "NO_EXERCISE",
         "attention": "unattended",
         "batch_time_factors": [ 67, 5 ],
         "tools": [ [ [ "dehydrating_heat", 30, "LIST" ] ] ]
+      }
+    ]
+  },
+  {
+    "type": "recipe",
+    "result": "dehydrated_cured_meat",
+    "category": "CC_FOOD",
+    "subcategory": "CSC_FOOD_DRY",
+    "delete_flags": [ "BAD_TASTE" ],
+    "skill_used": "cooking",
+    "difficulty": 2,
+    "autolearn": true,
+    "//": "The cured meat has already lost some moisture. Slicing is hands-on; dehydration runs unattended and drains the heat source over the wait.",
+    "components": [ [ [ "raw_cured_meat", 1 ] ] ],
+    "steps": [
+      {
+        "name": "Slice the cured meat into thin strips",
+        "time": "3 m",
+        "activity_level": "LIGHT_EXERCISE",
+        "batch_time_factors": [ 67, 5 ],
+        "qualities": [ { "id": "CUT", "level": 1 } ]
+      },
+      {
+        "name": "Dehydrate the cured strips",
+        "time": "12 m",
+        "activity_level": "NO_EXERCISE",
+        "attention": "unattended",
+        "batch_time_factors": [ 67, 5 ],
+        "tools": [ [ [ "dehydrating_heat", 25, "LIST" ] ] ]
       }
     ]
   },
