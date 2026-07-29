@@ -480,7 +480,6 @@ static bool should_add_crafting_faults( Character *who, const recipe *rec )
     }
     return false;
 }
-
 std::vector<std::vector<step_tool_alloc>> select_step_tool_allocs(
         Character &crafter, const recipe &rec, int batch, read_only_visitable &map_inv,
         bool &cancelled, int reselect_step )

@@ -35,9 +35,6 @@ void remove_ammo( std::list<item> &dis_items, Character &p );
 
 void drop_or_handle( const item &newit, Character &p );
 
-// Prompts the player to empty any newly-unsealed containers in their inventory.
-void empty_buckets( Character &p );
-
 // Per-choice data for the timer sub-menu when the modal is shown on an
 // in-flight unattended step.  All offsets are step-start anchored
 // (`alarm_at = passive_started_at + offset`), so the resulting
