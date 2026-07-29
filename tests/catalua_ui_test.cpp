@@ -8516,12 +8516,15 @@ TEST_CASE( "lua_v5_mapgen_hooks_are_filtered_ordered_and_read_only",
         "id": "user",
         "version": "5.0.0",
         "api_version": 5,
-        "capabilities": [ "events", "game.hooks", "game.read" ],
+        "capabilities": [
+            "events", "game.hooks", "game.read", "state.character"
+        ],
         "dependencies": [ "builtin" ]
     })json" );
     script.write( R"lua(
 local calls = 0
 local retained = nil
+local retained_compatibility = nil
 local limits = game.mapgen.limits()
 assert(limits.map_width == 24 and limits.map_height == 24)
 assert(limits.operations == 8192)
@@ -8547,6 +8550,23 @@ local removed = game.mapgen.on_postprocess(function()
 end)
 assert(game.mapgen.off(removed) == true)
 assert(game.mapgen.off(removed) == false)
+
+game.hooks.on("on_mapgen_postprocess", function(payload)
+    local count = state.character.get(
+        "native_mapgen.compatibility_calls", 0) + 1
+    if retained_compatibility ~= nil then
+        assert(retained_compatibility:valid() == false)
+    end
+    assert(payload.context:valid())
+    assert(payload.context:id().value == "field")
+    assert(pcall(function()
+        payload.context:set_terrain(
+            0, 0, game.types.id("terrain", "t_grass"))
+    end) == false)
+    retained_compatibility = payload.context
+    state.character.set(
+        "native_mapgen.compatibility_calls", count)
+end)
 
 game.mapgen.on_postprocess({
     priority = 100,
@@ -8605,6 +8625,12 @@ end)
     CHECK( cata::lua_ui::status().last_error.empty() );
     cata::lua_ui::dispatch_mapgen_postprocess( data );
     CHECK( cata::lua_ui::status().last_error.empty() );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native_mapgen.compatibility_calls", 0) == 2)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
 }
 
 TEST_CASE( "lua_v5_mapgen_hooks_mutate_with_scoped_deterministic_contexts",

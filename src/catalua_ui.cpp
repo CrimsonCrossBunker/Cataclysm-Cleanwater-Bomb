@@ -3048,7 +3048,8 @@ class hook_dispatch_scope
 
 native_hook_result dispatch_script_hook(
     runtime_state &state, const std::string_view name,
-    const std::function<sol::table()> &make_payload );
+    const std::function<sol::table( std::size_t )> &make_payload,
+    const std::function<void( std::size_t )> &after_handler = {} );
 
 class callback_dispatch_scope
 {
@@ -3772,7 +3773,8 @@ bool apply_hook_result_table(
 
 native_hook_result dispatch_script_hook(
     runtime_state &state, const std::string_view name,
-    const std::function<sol::table()> &make_payload )
+    const std::function<sol::table( std::size_t )> &make_payload,
+    const std::function<void( std::size_t )> &after_handler )
 {
     const script_hook_spec *spec = find_script_hook_spec( name );
     if( spec == nullptr ) {
@@ -3805,12 +3807,20 @@ native_hook_result dispatch_script_hook(
         bool stop = false;
         bool timing_recorded = false;
         const auto started = std::chrono::steady_clock::now();
+        on_out_of_scope finish_handler( [
+                                            &after_handler, &handler
+        ]() {
+            if( after_handler ) {
+                after_handler( handler.source_index );
+            }
+        } );
         try {
             sol::protected_function callback = callback_entry->second;
             source_scope source( state, handler.source_index );
             instruction_guard guard(
                 state.lua.lua_state(), callback_instruction_limit );
-            sol::table payload = make_payload();
+            sol::table payload =
+                make_payload( handler.source_index );
             payload["hook"] = std::string( name );
             payload["mode"] =
                 std::string( script_hook_mode_name( spec->mode ) );
@@ -4512,7 +4522,7 @@ native_hook_result dispatch_native_hook_result(
     }
     try {
         return dispatch_script_hook(
-        *active_state, name, [&]() {
+        *active_state, name, [&]( const std::size_t ) {
             return native_callback_payload( *active_state, arguments );
         } );
     } catch( const std::exception &exception ) {
@@ -4756,7 +4766,7 @@ std::vector<native_menu_entry> collect_native_hook_menu_entries(
     }
     try {
         return dispatch_script_hook(
-        *active_state, name, [&]() {
+        *active_state, name, [&]( const std::size_t ) {
             return native_callback_payload(
                        *active_state, arguments );
         } ).menu_entries;
@@ -4813,6 +4823,39 @@ void dispatch_mapgen_postprocess( mapgendata &data )
     on_out_of_scope restore_depth( [&state]() {
         --state.mapgen_dispatch_depth;
     } );
+
+    std::shared_ptr<script_mapgen_context>
+    compatibility_context;
+    try {
+        dispatch_script_hook(
+            state, "on_mapgen_postprocess",
+        [&]( const std::size_t source_index ) {
+            const script_manifest &manifest =
+                state.sources[source_index].manifest;
+            const std::shared_ptr<script_mapgen_context> context =
+                std::make_shared<script_mapgen_context>(
+                    data,
+                    manifest.has_capability( "game.write" ),
+                    deterministic_mapgen_seed(
+                        data, manifest.id ) );
+            compatibility_context = context;
+            sol::table payload = state.lua.create_table();
+            payload["context"] = context;
+            return payload;
+        }, [&]( const std::size_t ) {
+            if( compatibility_context ) {
+                compatibility_context->invalidate();
+                compatibility_context.reset();
+            }
+        } );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua on_mapgen_postprocess hook",
+            exception.what() );
+    }
+    if( compatibility_context ) {
+        compatibility_context->invalidate();
+    }
 
     const std::vector<script_event_subscription> handlers =
         state.mapgen_registry.matching( "mapgen.postprocess" );
