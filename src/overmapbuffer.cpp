@@ -801,6 +801,44 @@ std::vector<mongroup *> overmapbuffer::groups_at( const tripoint_abs_sm &p )
     return result;
 }
 
+mongroup *overmapbuffer::add_mongroup_existing( const mongroup &group )
+{
+    point_abs_om overmap_position;
+    tripoint_om_sm local_position;
+    std::tie( overmap_position, local_position ) =
+        project_remain<coords::om>( group.abs_pos );
+    overmap *existing = get_existing( overmap_position );
+    if( existing == nullptr ) {
+        return nullptr;
+    }
+    const auto inserted = existing->zg.emplace( local_position, group );
+    return &inserted->second;
+}
+
+bool overmapbuffer::remove_mongroup_existing( const tripoint_abs_sm &p,
+        const mongroup *expected )
+{
+    if( expected == nullptr ) {
+        return false;
+    }
+    point_abs_om overmap_position;
+    tripoint_om_sm local_position;
+    std::tie( overmap_position, local_position ) =
+        project_remain<coords::om>( p );
+    overmap *existing = get_existing( overmap_position );
+    if( existing == nullptr ) {
+        return false;
+    }
+    const auto range = existing->zg.equal_range( local_position );
+    for( auto entry = range.first; entry != range.second; ++entry ) {
+        if( &entry->second == expected ) {
+            existing->zg.erase( entry );
+            return true;
+        }
+    }
+    return false;
+}
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 std::array<std::array<scent_trace, 3>, 3> overmapbuffer::scents_near( const tripoint_abs_omt

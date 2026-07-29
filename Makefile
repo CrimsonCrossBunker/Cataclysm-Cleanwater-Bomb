@@ -1164,6 +1164,7 @@ LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_ui_effects.cpp \
   $(SRC_DIR)/catalua_ui_events.cpp \
   $(SRC_DIR)/catalua_ui_game.cpp \
+  $(SRC_DIR)/catalua_ui_hordes.cpp \
   $(SRC_DIR)/catalua_ui_i18n.cpp \
   $(SRC_DIR)/catalua_ui_imgui.cpp \
   $(SRC_DIR)/catalua_ui_items.cpp \
