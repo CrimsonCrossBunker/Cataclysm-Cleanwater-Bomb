@@ -1050,24 +1050,24 @@ void scoped_state_set( runtime_state &runtime, script_persistent_state &store,
                      "state." + scope + ".set" );
 }
 
-sol::table lua_runtime_status( sol::this_state lua )
+sol::table lua_runtime_status( sol::this_state lua, const runtime_state &runtime )
 {
-    const runtime_status snapshot = status();
     sol::state_view state( lua );
     sol::table result = state.create_table();
-    result["loaded"] = snapshot.loaded;
-    result["generation"] = snapshot.generation;
-    result["pages"] = snapshot.page_count;
-    result["event_handlers"] = snapshot.event_handler_count;
-    result["sources"] = snapshot.source_count;
-    result["memory_used"] = snapshot.memory_used;
-    result["memory_limit"] = snapshot.memory_limit;
-    result["callback_count"] = snapshot.callback_count;
-    result["callback_time_total_us"] = snapshot.callback_time_total_us;
-    result["callback_time_max_us"] = snapshot.callback_time_max_us;
-    result["slow_callback_count"] = snapshot.slow_callback_count;
-    result["last_slow_callback"] = snapshot.last_slow_callback;
-    result["last_error"] = snapshot.last_error;
+    result["loaded"] = true;
+    result["generation"] = runtime.generation;
+    result["world_generation"] = runtime.world_generation;
+    result["pages"] = runtime.pages.size();
+    result["event_handlers"] = runtime.event_registry.size();
+    result["sources"] = runtime.sources.size();
+    result["memory_used"] = runtime.memory.used;
+    result["memory_limit"] = runtime.memory.limit;
+    result["callback_count"] = runtime.callback_count;
+    result["callback_time_total_us"] = runtime.callback_time_total_us;
+    result["callback_time_max_us"] = runtime.callback_time_max_us;
+    result["slow_callback_count"] = runtime.slow_callback_count;
+    result["last_slow_callback"] = runtime.last_slow_callback;
+    result["last_error"] = last_runtime_error;
     return result;
 }
 
@@ -1436,7 +1436,9 @@ void initialize_state( runtime_state &state )
     game.set_function( "state_set", [&state]( const std::string & key, const sol::object & value ) {
         persistent_set( state, key, value );
     } );
-    game.set_function( "runtime_status", lua_runtime_status );
+    game.set_function( "runtime_status", [&state]( sol::this_state lua ) {
+        return lua_runtime_status( lua, state );
+    } );
     install_i18n_api( state.lua );
     install_registry_api( state.lua, [&state]() {
         require_capability( state, "registry.read" );
