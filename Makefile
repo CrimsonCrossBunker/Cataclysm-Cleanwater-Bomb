@@ -1178,7 +1178,8 @@ LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_ui_scheduler.cpp \
   $(SRC_DIR)/catalua_ui_services.cpp \
   $(SRC_DIR)/catalua_ui_state.cpp \
-  $(SRC_DIR)/catalua_ui_values.cpp
+  $(SRC_DIR)/catalua_ui_values.cpp \
+  $(SRC_DIR)/catalua_ui_world.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
 HEADERS := $(wildcard $(SRC_DIR)/*.h)

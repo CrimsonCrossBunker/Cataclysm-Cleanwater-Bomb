@@ -51,6 +51,7 @@
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
 #include "catalua_ui_values.h"
+#include "catalua_ui_world.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "event.h"
@@ -1868,6 +1869,22 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.missions" );
+        require_capability( state, "game.write" );
+    } );
+    install_world_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.world" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.world" );
         require_capability( state, "game.write" );
     } );
     install_item_api(

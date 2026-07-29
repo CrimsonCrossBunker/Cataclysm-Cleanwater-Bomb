@@ -2305,6 +2305,109 @@ game.missions.reserve(
            active_count_before );
 }
 
+TEST_CASE( "lua_v5_world_reads_bounded_active_map_snapshots",
+           "[lua][bindings][world][map][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.snapshot(
+    game.creatures.avatar()).value
+local position = avatar.position
+local bounds = game.world.bounds()
+assert(bounds.minimum.origin == "abs")
+assert(bounds.minimum.scale == "ms")
+assert(bounds.maximum.origin == "abs")
+assert(bounds.map_squares > 0)
+assert(bounds.submaps > 0)
+
+local tile = game.world.tile(position, {
+    item_limit = 1000000,
+    field_limit = 1000000
+})
+assert(tile.position == position)
+assert(tile.terrain.kind == "terrain")
+assert(tile.terrain:is_valid())
+assert(type(tile.terrain_name) == "string")
+assert(type(tile.outside) == "boolean")
+assert(type(tile.passable) == "boolean")
+assert(math.type(tile.move_cost) == "integer")
+assert(type(tile.ambient_light) == "number")
+assert(tile.items.limit == 128)
+assert(tile.items.returned == #tile.items.items)
+assert(tile.items.returned <= tile.items.total)
+assert(tile.fields.limit == 128)
+assert(tile.fields.returned == #tile.fields.items)
+assert(tile.vehicle.present == false or
+    tile.vehicle.handle:is_valid())
+
+for _, entry in ipairs(tile.items.items) do
+    assert(entry.handle:is_valid())
+    assert(entry.id.kind == "item")
+    assert(math.type(entry.uid) == "integer")
+end
+for _, entry in ipairs(tile.fields.items) do
+    assert(entry.id.kind == "field")
+    assert(entry.age.turns ~= nil)
+end
+
+local region = game.world.region(position, {
+    radius = 1000000,
+    radius_z = 1000000,
+    offset = 0,
+    limit = 1,
+    item_limit = 0,
+    field_limit = 0
+})
+assert(region.radius == 30)
+assert(region.radius_z == 5)
+assert(region.limit == 1)
+assert(region.returned == #region.items)
+assert(region.returned <= region.total)
+assert(region.has_more ==
+    (region.offset + region.returned < region.total))
+
+local vehicles = game.world.vehicles({
+    offset = 0,
+    limit = 1000000
+})
+assert(vehicles.limit == 256)
+assert(vehicles.returned == #vehicles.items)
+assert(vehicles.returned <= vehicles.total)
+
+assert(pcall(function()
+    game.world.tile(game.coords.tripoint_rel_ms(0, 0, 0))
+end) == false)
+assert(pcall(function()
+    game.world.tile(position, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.world.region(position, { radius = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( "game.world.bounds()" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.read" ) != std::string::npos );
+}
+
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
            "[lua][bindings][items][inventory][integration]" )
 {
