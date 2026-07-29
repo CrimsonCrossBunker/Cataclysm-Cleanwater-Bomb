@@ -4709,7 +4709,7 @@ void dispatch_mapgen_postprocess( mapgendata &data )
     }
 }
 
-void on_world_ready()
+void on_world_ready( const world_ready_kind kind )
 {
     mapgen_bootstrap_attempted = true;
     // A save/new-game transition is a runtime boundary, unlike an in-page hot
@@ -4742,6 +4742,9 @@ void on_world_ready()
         ::add_msg( m_bad, _( "Lua initialization failed: %s" ), script_error );
     } else if( active_state ) {
         dispatch_lifecycle_event( *active_state, "ccb.lifecycle.world_ready" );
+        dispatch_native_hook(
+            kind == world_ready_kind::new_game ?
+            "on_game_started" : "on_game_load" );
     }
     if( !character_state_error.empty() ) {
         record_runtime_error( "Lua character state load failed",
@@ -4756,6 +4759,11 @@ void on_world_ready()
                    _( "Lua world state could not be loaded; using defaults: %s" ),
                    world_state_error );
     }
+}
+
+void on_game_save()
+{
+    dispatch_native_hook( "on_game_save" );
 }
 
 bool save_persistent_state( std::string &error )

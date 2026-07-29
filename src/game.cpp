@@ -1157,7 +1157,8 @@ bool game::start_game()
     }
 
     if constexpr( cata::lua_ui::is_enabled() ) {
-        cata::lua_ui::on_world_ready();
+        cata::lua_ui::on_world_ready(
+            cata::lua_ui::world_ready_kind::new_game );
     }
     get_event_bus().send<event_type::game_start>( getVersionString() );
     get_event_bus().send<event_type::game_avatar_new>( /*is_new_game=*/true, /*is_debug=*/false,

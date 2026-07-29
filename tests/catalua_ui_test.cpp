@@ -6820,6 +6820,70 @@ assert(state.character.get("native_spawn.npc", 0) == 1)
     REQUIRE( reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_game_lifecycle_hooks_run_once_at_exact_boundaries",
+           "[lua][bindings][hooks][game-lifecycle][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    const std::string handlers = R"lua(
+local function count(name)
+    state.character.set(
+        "native_game_lifecycle." .. name,
+        state.character.get(
+            "native_game_lifecycle." .. name, 0) + 1)
+end
+game.hooks.on("on_game_started", function()
+    count("started")
+end)
+game.hooks.on("on_game_load", function()
+    count("loaded")
+end)
+game.hooks.on("on_game_save", function()
+    count("saved")
+end)
+)lua";
+    script.write( handlers );
+
+    on_world_ready( world_ready_kind::new_game );
+    REQUIRE( status().loaded );
+    on_game_save();
+
+    std::string error;
+    script.write( R"lua(
+assert(state.character.get(
+    "native_game_lifecycle.started", 0) == 1)
+assert(state.character.get(
+    "native_game_lifecycle.loaded", 0) == 0)
+assert(state.character.get(
+    "native_game_lifecycle.saved", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+
+    script.write( handlers );
+    on_world_ready( world_ready_kind::loaded_game );
+    REQUIRE( status().loaded );
+    script.write( R"lua(
+assert(state.character.get(
+    "native_game_lifecycle.started", 0) == 0)
+assert(state.character.get(
+    "native_game_lifecycle.loaded", 0) == 1)
+assert(state.character.get(
+    "native_game_lifecycle.saved", 0) == 0)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
            "[lua][bindings][callbacks][integration]" )
 {

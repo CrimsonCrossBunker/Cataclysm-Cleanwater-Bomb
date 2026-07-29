@@ -56,6 +56,11 @@ struct page_info {
     int order = 100;
 };
 
+enum class world_ready_kind : int {
+    new_game,
+    loaded_game
+};
+
 struct native_callback_point {
     std::string coordinate_space;
     int x = 0;
@@ -141,7 +146,12 @@ void dispatch_mapgen_postprocess( mapgendata &data );
 
 // Load scripts after a new game or save has finished initializing.  Errors are
 // logged and reported through status(), without aborting game startup.
-void on_world_ready();
+void on_world_ready(
+    world_ready_kind kind = world_ready_kind::loaded_game );
+
+// Dispatch the exact pre-save game hook once.  Persistent sidecars are written
+// later by save_persistent_state().
+void on_game_save();
 
 // Save small typed character and world state to independent sidecars.  Page
 // state is session-only.  A sidecar failure is reported but must never

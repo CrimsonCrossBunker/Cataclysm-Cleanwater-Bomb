@@ -94,7 +94,11 @@ void dispatch_mapgen_postprocess( mapgendata & )
 {
 }
 
-void on_world_ready()
+void on_world_ready( world_ready_kind )
+{
+}
+
+void on_game_save()
 {
 }
 
