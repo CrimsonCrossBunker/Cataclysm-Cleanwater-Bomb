@@ -652,19 +652,6 @@ item craft_command::create_in_progress_craft()
         start_allocs = { step0 };
     }
 
-    // Run the start (bucket-0) tool debit on a probe before consuming components
-    // so a charge shortfall aborts without losing them; the debited allocations
-    // carry over to the real craft.
-    {
-        item probe( rec, batch_size, item_components{}, std::vector<item_comp> {} );
-        probe.set_step_tool_allocs( start_allocs );
-        if( !crafter->craft_consume_step_tools( probe ) ) {
-            debugmsg( "start tool debit failed for craft %s", rec->ident().str() );
-            return item();
-        }
-        start_allocs = probe.get_step_tool_allocs();
-    }
-
     for( const auto &it : item_selections ) {
         std::list<item> tmp = sane_consume_items( it, crafter, batch_size, filter );
         for( item &tmp_it : tmp ) {
@@ -720,6 +707,19 @@ item craft_command::create_in_progress_craft()
                 return item();
             }
         }
+    }
+
+    // Run the start (bucket-0) tool debit on a probe before consuming components
+    // so a charge shortfall aborts without losing them; the debited allocations
+    // carry over to the real craft.
+    {
+        item probe( rec, batch_size, item_components{}, std::vector<item_comp> {} );
+        probe.set_step_tool_allocs( start_allocs );
+        if( !crafter->craft_consume_step_tools( probe ) ) {
+            debugmsg( "start tool debit failed for craft %s", rec->ident().str() );
+            return item();
+        }
+        start_allocs = probe.get_step_tool_allocs();
     }
 
     item new_craft( rec, batch_size, used, comps_used, should_add_crafting_faults( crafter, rec ) );
