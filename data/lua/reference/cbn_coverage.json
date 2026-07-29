@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "source_inventory": "cbn_api_inventory.json",
+  "completion_policy": {
+    "covered": "The CCB API provides equivalent or stronger behavior with tests.",
+    "not_applicable": "Only valid for a CBN-only engine feature absent from CCB, with a reason.",
+    "planned": "The capability remains required and blocks 100% completion."
+  },
+  "domains": [
+    {
+      "id": "value_types_and_ids",
+      "status": "planned",
+      "target": "coords, units, time, ids, enums and safe value serialization",
+      "rules": [ { "sections": [ "types", "ids" ], "file_globs": [ "*" ] } ]
+    },
+    {
+      "id": "coordinates",
+      "status": "planned",
+      "target": "typed coordinate construction, conversion, arithmetic and ranges",
+      "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_coords*" ] } ]
+    },
+    {
+      "id": "bionics",
+      "status": "planned",
+      "target": "bionic definitions, instances, activation, fuel and callbacks",
+      "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_bionics.cpp" ] } ]
+    },
+    {
+      "id": "creatures_and_effects",
+      "status": "planned",
+      "target": "Creature, Character, avatar, NPC, monster and effect handles",
+      "rules": [
+        {
+          "sections": [ "functions", "members" ],
+          "file_globs": [ "src/catalua_bindings_creature.cpp", "src/catalua_bindings_effect.cpp", "src/catalua_bindings_game_creatures.cpp" ]
+        }
+      ]
+    },
+    {
+      "id": "items_and_inventory",
+      "status": "planned",
+      "target": "safe item locations, pockets, inventory and item behavior",
+      "rules": [
+        {
+          "sections": [ "functions", "members" ],
+          "file_globs": [ "src/catalua_bindings_inventory.cpp", "src/catalua_bindings_item.cpp" ]
+        }
+      ]
+    },
+    {
+      "id": "character_powers",
+      "status": "planned",
+      "target": "magic, spells, mutations, traits and related character state",
+      "rules": [
+        {
+          "sections": [ "functions", "members" ],
+          "file_globs": [ "src/catalua_bindings_magic.cpp", "src/catalua_bindings_mutation.cpp" ]
+        }
+      ]
+    },
+    {
+      "id": "map_and_world",
+      "status": "planned",
+      "target": "active map, off-bubble regions, overmap, hordes and world mutation",
+      "rules": [
+        {
+          "sections": [ "functions", "members" ],
+          "file_globs": [
+            "src/catalua_bindings_game_world.cpp",
+            "src/catalua_bindings_map.cpp",
+            "src/catalua_bindings_mongroup.cpp",
+            "src/catalua_bindings_overmap.cpp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mapgen",
+      "status": "planned",
+      "target": "deterministic Lua mapgen and scoped mapgen context",
+      "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_mapgen.cpp" ] } ]
+    },
+    {
+      "id": "missions",
+      "status": "planned",
+      "target": "mission definitions, instances, targets and lifecycle",
+      "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_mission.cpp" ] } ]
+    },
+    {
+      "id": "crafting",
+      "status": "planned",
+      "target": "recipes, requirements, crafting queries and execution",
+      "rules": [
+        {
+          "sections": [ "functions", "members" ],
+          "file_globs": [ "src/catalua_bindings_recipe.cpp", "src/catalua_bindings_requirement.cpp" ]
+        }
+      ]
+    },
+    {
+      "id": "game_services",
+      "status": "planned",
+      "target": "game, weather, messages, sound, targeting and world services",
+      "rules": [
+        {
+          "sections": [ "functions", "members" ],
+          "file_globs": [ "src/catalua_bindings_game.cpp", "src/catalua_bindings_ui.cpp" ]
+        }
+      ]
+    },
+    {
+      "id": "runtime_and_definitions",
+      "status": "planned",
+      "target": "runtime lifecycle, serialization, definition access and shared helpers",
+      "rules": [
+        {
+          "sections": [ "functions", "members" ],
+          "file_globs": [
+            "src/catalua.cpp",
+            "src/catalua.h",
+            "src/catalua_bindings.cpp",
+            "src/catalua_bindings_ids*",
+            "src/catalua_bindings_type_defs.cpp",
+            "src/catalua_bindings_utils.h",
+            "src/catalua_console.cpp",
+            "src/catalua_impl.cpp",
+            "src/catalua_input.cpp",
+            "src/catalua_luna*",
+            "src/catalua_readonly.cpp",
+            "src/catalua_serde.cpp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hooks",
+      "status": "planned",
+      "target": "typed observation and intercept hooks with priority and cancellation",
+      "rules": [ { "sections": [ "hooks" ], "file_globs": [ "*" ] } ]
+    },
+    {
+      "id": "callback_actors",
+      "status": "planned",
+      "target": "item, bionic, mutation, trap, monster and engine callback actors",
+      "rules": [ { "sections": [ "callback_actors", "callbacks" ], "file_globs": [ "*" ] } ]
+    }
+  ]
+}
