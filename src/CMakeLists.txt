@@ -48,6 +48,7 @@ file(GLOB CATACLYSM_DDA_SOURCES
 
 set(CATALUA_UI_ENABLED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_bindings.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_game_handle.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_actions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_events.cpp
