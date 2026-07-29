@@ -2564,6 +2564,8 @@ assert(limits.maximum_radius == 60)
 assert(limits.maximum_radius_z == 5)
 assert(limits.maximum_limit == 256)
 assert(limits.maximum_selectors == 16)
+assert(limits.maximum_note_bytes == 4096)
+assert(limits.maximum_reveal_radius == 30)
 assert(limits.existing_only == true)
 
 local tile = game.overmap.tile(origin)
@@ -2662,6 +2664,152 @@ end) == false)
     script.write( "game.overmap.limits()" );
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.read" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v5_overmap_applies_existing_only_controlled_mutations",
+           "[lua][bindings][world][overmap][write][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.snapshot(
+    game.creatures.avatar()).value
+local position = avatar.position:project_to("overmap_terrain")
+local before = game.overmap.tile(position)
+assert(before.exists == true)
+
+local ok, failure = pcall(function()
+    local terrain = game.overmap.set_terrain(
+        position, before.terrain)
+    assert(terrain.ok == true)
+    assert(terrain.value.accepted == true)
+    assert(terrain.value.changed == false)
+    assert(terrain.value.after == before.terrain)
+
+    local alternate_name = "full"
+    if before.vision.name == "full" then
+        alternate_name = "details"
+    end
+    local alternate = game.enums.value(
+        "OmVisionLevel", alternate_name)
+    local seen = game.overmap.set_seen(position, alternate)
+    assert(seen.ok == true)
+    assert(seen.value.accepted == true)
+    assert(seen.value.changed == true)
+    assert(seen.value.after == alternate)
+
+    local explored = game.overmap.set_explored(
+        position, not before.explored)
+    assert(explored.ok == true)
+    assert(explored.value.accepted == true)
+    assert(explored.value.changed == true)
+    assert(explored.value.after == not before.explored)
+
+    local note_text = "Lua v5 overmap integration 测试"
+    local note = game.overmap.set_note(position, note_text)
+    assert(note.ok == true)
+    assert(note.value.accepted == true)
+    assert(note.value.after_present == true)
+    assert(game.overmap.tile(position).note == note_text)
+
+    local danger = game.overmap.set_note_danger(
+        position, 3, true)
+    assert(danger.ok == true)
+    assert(danger.value.accepted == true)
+    assert(danger.value.after_dangerous == true)
+    assert(danger.value.after_radius == 3)
+    local safe = game.overmap.set_note_danger(
+        position, 0, false)
+    assert(safe.ok == true)
+    assert(safe.value.accepted == true)
+    assert(safe.value.after_dangerous == false)
+    assert(safe.value.after_radius == -1)
+
+    local cleared = game.overmap.set_note(position, nil)
+    assert(cleared.ok == true)
+    assert(cleared.value.accepted == true)
+    assert(cleared.value.after_present == false)
+    local missing_note = game.overmap.set_note_danger(
+        position, 1, true)
+    assert(missing_note.ok == false)
+    assert(missing_note.error.code == "not_found")
+
+    local unseen = game.enums.value(
+        "OmVisionLevel", "unseen")
+    assert(game.overmap.set_seen(position, unseen).ok == true)
+    local revealed = game.overmap.reveal(position, 0)
+    assert(revealed.ok == true)
+    assert(revealed.value.scanned == 1)
+    assert(revealed.value.existing == 1)
+    assert(revealed.value.changed == 1)
+    assert(revealed.value.vision.name == "full")
+    assert(game.overmap.reveal(position, 0).value.changed == 0)
+
+    assert(pcall(function()
+        game.overmap.set_terrain(
+            position, game.types.id("item", "rock"))
+    end) == false)
+    assert(pcall(function()
+        game.overmap.set_seen(
+            position,
+            game.enums.values("Direction", 0, 1)[1])
+    end) == false)
+    assert(pcall(function()
+        game.overmap.set_note(
+            position, string.rep("x", 4097))
+    end) == false)
+    assert(pcall(function()
+        game.overmap.set_note(position, "a\0b")
+    end) == false)
+    assert(pcall(function()
+        game.overmap.set_note_danger(position, 101, true)
+    end) == false)
+    assert(pcall(function()
+        game.overmap.reveal(position, 31)
+    end) == false)
+end)
+
+game.overmap.set_seen(position, before.vision)
+game.overmap.set_explored(position, before.explored)
+game.overmap.set_note(position, before.note)
+if before.note ~= nil then
+    local restore_radius = 0
+    if before.note_dangerous then
+        restore_radius = before.note_danger_radius
+    end
+    game.overmap.set_note_danger(
+        position, restore_radius,
+        before.note_dangerous)
+end
+assert(ok, failure)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local position = game.creatures.snapshot(
+    game.creatures.avatar()).value.position
+    :project_to("overmap_terrain")
+local vision = game.overmap.tile(position).vision
+game.overmap.set_seen(position, vision)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
 }
 
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",

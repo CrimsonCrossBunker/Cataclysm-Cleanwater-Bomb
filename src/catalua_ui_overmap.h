@@ -9,11 +9,12 @@
 namespace cata::lua_ui
 {
 
-// Install bounded, existing-overmap-only observation and search APIs.
-// Read calls may load saved overmaps, but never generate new overmaps.
+// Install bounded, existing-overmap-only observation, search and mutation
+// APIs. Calls may load saved overmaps, but never generate new overmaps.
 void install_overmap_api(
     sol::table &game,
-    std::function<void()> require_read );
+    std::function<void()> require_read,
+    std::function<void()> require_write );
 
 } // namespace cata::lua_ui
 

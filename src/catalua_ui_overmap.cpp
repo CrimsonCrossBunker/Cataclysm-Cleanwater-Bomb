@@ -41,6 +41,9 @@ constexpr std::size_t maximum_search_offset = 1000000;
 constexpr std::size_t maximum_search_selectors = 16;
 constexpr std::size_t maximum_selector_bytes = 256;
 constexpr std::size_t maximum_note_width = 1024;
+constexpr std::size_t maximum_note_bytes = 4096;
+constexpr int maximum_note_danger_radius = 100;
+constexpr int maximum_reveal_radius = 30;
 
 struct terrain_selector {
     std::string terrain;
@@ -553,6 +556,22 @@ script_enum_value vision_value(
         "unknown overmap vision level" );
 }
 
+om_vision_level require_vision_level(
+    const script_enum_value &vision,
+    const std::string &api_name )
+{
+    if( vision.kind() != "OmVisionLevel" ||
+        vision.ordinal() >=
+        static_cast<std::size_t>(
+            om_vision_level::last ) ) {
+        throw std::invalid_argument(
+            api_name +
+            " requires GameEnum<OmVisionLevel>" );
+    }
+    return static_cast<om_vision_level>(
+               vision.ordinal() );
+}
+
 sol::table snapshot_overmap_tile(
     sol::state_view lua,
     const tripoint_abs_omt &position )
@@ -616,12 +635,13 @@ sol::table snapshot_overmap_tile(
                          note;
         result["note_truncated"] = truncated;
     }
-    result["note_dangerous"] =
-        located.om->is_marked_dangerous(
-            located.local );
-    result["note_danger_radius"] =
+    const int note_danger_radius =
         located.om->note_danger_radius(
             located.local );
+    result["note_dangerous"] =
+        note_danger_radius >= 0;
+    result["note_danger_radius"] =
+        note_danger_radius;
     result["has_extra"] =
         located.om->has_extra( located.local );
     if( located.om->has_extra( located.local ) ) {
@@ -662,6 +682,14 @@ sol::table overmap_limits( sol::this_state lua )
         maximum_search_offset;
     result["maximum_selectors"] =
         maximum_search_selectors;
+    result["maximum_note_width"] =
+        maximum_note_width;
+    result["maximum_note_bytes"] =
+        maximum_note_bytes;
+    result["maximum_note_danger_radius"] =
+        maximum_note_danger_radius;
+    result["maximum_reveal_radius"] =
+        maximum_reveal_radius;
     result["existing_only"] = true;
     return result;
 }
@@ -819,11 +847,388 @@ bool overmap_matches(
                selector.match );
 }
 
+sol::table set_overmap_terrain(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const script_game_id &requested )
+{
+    constexpr std::string_view api_name =
+        "game.overmap.set_terrain";
+    if( requested.kind() != "overmap_terrain" ||
+        !requested.is_valid() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " requires GameId<overmap_terrain>" );
+    }
+    const tripoint_abs_omt native_position =
+        require_absolute_omt(
+            position, std::string( api_name ) );
+    const overmap_with_local_coords located =
+        overmap_buffer.get_existing_om_global(
+            native_position );
+    sol::state_view state( lua );
+    if( !located ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_found",
+            "The requested overmap does not already exist"
+        } );
+    }
+    const oter_id before =
+        located.om->ter( located.local );
+    const oter_id target =
+        oter_str_id( requested.value() ).id();
+    if( before != target &&
+        located.om->is_omt_generated(
+            located.local ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "already_generated",
+            "Cannot change terrain after the OMT has been map-generated"
+        } );
+    }
+    if( before != target ) {
+        located.om->ter_set(
+            located.local, target );
+    }
+    const oter_id after =
+        located.om->ter( located.local );
+    sol::table value = state.create_table();
+    value["accepted"] = after == target;
+    value["changed"] = before != after;
+    value["before"] = script_game_id(
+                          "overmap_terrain",
+                          before.id().str() );
+    value["after"] = script_game_id(
+                         "overmap_terrain",
+                         after.id().str() );
+    value["generated"] =
+        located.om->is_omt_generated(
+            located.local );
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_overmap_seen(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const script_enum_value &requested )
+{
+    constexpr std::string_view api_name =
+        "game.overmap.set_seen";
+    const om_vision_level target =
+        require_vision_level(
+            requested, std::string( api_name ) );
+    const tripoint_abs_omt native_position =
+        require_absolute_omt(
+            position, std::string( api_name ) );
+    const overmap_with_local_coords located =
+        overmap_buffer.get_existing_om_global(
+            native_position );
+    sol::state_view state( lua );
+    if( !located ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_found",
+            "The requested overmap does not already exist"
+        } );
+    }
+    const om_vision_level before =
+        located.om->seen( located.local );
+    if( before != target ) {
+        located.om->set_seen(
+            located.local, target, true );
+    }
+    const om_vision_level after =
+        located.om->seen( located.local );
+    sol::table value = state.create_table();
+    value["accepted"] = after == target;
+    value["changed"] = before != after;
+    value["before"] = vision_value( before );
+    value["after"] = vision_value( after );
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_overmap_explored(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const bool requested )
+{
+    constexpr std::string_view api_name =
+        "game.overmap.set_explored";
+    const tripoint_abs_omt native_position =
+        require_absolute_omt(
+            position, std::string( api_name ) );
+    const overmap_with_local_coords located =
+        overmap_buffer.get_existing_om_global(
+            native_position );
+    sol::state_view state( lua );
+    if( !located ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_found",
+            "The requested overmap does not already exist"
+        } );
+    }
+    const bool before =
+        located.om->is_explored( located.local );
+    if( before != requested ) {
+        located.om->explored( located.local ) =
+            requested;
+    }
+    const bool after =
+        located.om->is_explored( located.local );
+    sol::table value = state.create_table();
+    value["accepted"] = after == requested;
+    value["changed"] = before != after;
+    value["before"] = before;
+    value["after"] = after;
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+void validate_note(
+    const std::string &note,
+    const std::string &api_name )
+{
+    if( note.size() > maximum_note_bytes ) {
+        throw std::invalid_argument(
+            api_name +
+            " note cannot exceed 4096 bytes" );
+    }
+    if( note.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            api_name +
+            " note cannot contain NUL bytes" );
+    }
+}
+
+sol::table set_overmap_note(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const sol::optional<std::string> &requested )
+{
+    constexpr std::string_view api_name =
+        "game.overmap.set_note";
+    const std::string target =
+        requested.value_or( std::string() );
+    validate_note(
+        target, std::string( api_name ) );
+    const tripoint_abs_omt native_position =
+        require_absolute_omt(
+            position, std::string( api_name ) );
+    const overmap_with_local_coords located =
+        overmap_buffer.get_existing_om_global(
+            native_position );
+    sol::state_view state( lua );
+    if( !located ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_found",
+            "The requested overmap does not already exist"
+        } );
+    }
+    const bool before_present =
+        located.om->has_note( located.local );
+    const std::string before =
+        located.om->note( located.local );
+    if( target.empty() ) {
+        if( before_present ) {
+            located.om->delete_note(
+                located.local );
+        }
+    } else if( !before_present ||
+               before != target ) {
+        located.om->add_note(
+            located.local, target );
+    }
+    const bool after_present =
+        located.om->has_note( located.local );
+    const std::string after =
+        located.om->note( located.local );
+    sol::table value = state.create_table();
+    value["accepted"] =
+        target.empty() ?
+        !after_present : after == target;
+    value["changed"] =
+        before_present != after_present ||
+        before != after;
+    value["before_present"] =
+        before_present;
+    value["after_present"] =
+        after_present;
+    value["before_bytes"] =
+        before.size();
+    value["after_bytes"] =
+        after.size();
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_overmap_note_danger(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const int radius,
+    const bool dangerous )
+{
+    constexpr std::string_view api_name =
+        "game.overmap.set_note_danger";
+    if( radius < 0 ||
+        radius > maximum_note_danger_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " radius must be within 0..100" );
+    }
+    const tripoint_abs_omt native_position =
+        require_absolute_omt(
+            position, std::string( api_name ) );
+    const overmap_with_local_coords located =
+        overmap_buffer.get_existing_om_global(
+            native_position );
+    sol::state_view state( lua );
+    if( !located ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_found",
+            "The requested overmap does not already exist"
+        } );
+    }
+    if( !located.om->has_note( located.local ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_found",
+            "The requested overmap tile has no note"
+        } );
+    }
+    const int before_radius =
+        located.om->note_danger_radius(
+            located.local );
+    const bool before_dangerous =
+        before_radius >= 0;
+    located.om->mark_note_dangerous(
+        located.local,
+        dangerous ? radius : 0,
+        dangerous );
+    const int after_radius =
+        located.om->note_danger_radius(
+            located.local );
+    const bool after_dangerous =
+        after_radius >= 0;
+    sol::table value = state.create_table();
+    value["accepted"] =
+        after_dangerous == dangerous &&
+        ( !dangerous || after_radius == radius );
+    value["changed"] =
+        before_dangerous != after_dangerous ||
+        before_radius != after_radius;
+    value["before_dangerous"] =
+        before_dangerous;
+    value["before_radius"] =
+        before_radius;
+    value["after_dangerous"] =
+        after_dangerous;
+    value["after_radius"] =
+        after_radius;
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table reveal_existing_overmap(
+    sol::this_state lua,
+    const script_tripoint_coord &center,
+    const int radius )
+{
+    constexpr std::string_view api_name =
+        "game.overmap.reveal";
+    if( radius < 0 ||
+        radius > maximum_reveal_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " radius must be within 0..30" );
+    }
+    const tripoint_abs_omt native_center =
+        require_absolute_omt(
+            center, std::string( api_name ) );
+    std::size_t scanned = 0;
+    std::size_t existing = 0;
+    std::size_t changed = 0;
+    for( int dy = -radius;
+         dy <= radius; ++dy ) {
+        for( int dx = -radius;
+             dx <= radius; ++dx ) {
+            const std::int64_t raw_x =
+                static_cast<std::int64_t>(
+                    native_center.x() ) + dx;
+            const std::int64_t raw_y =
+                static_cast<std::int64_t>(
+                    native_center.y() ) + dy;
+            if( raw_x <
+                std::numeric_limits<int>::min() ||
+                raw_x >
+                std::numeric_limits<int>::max() ||
+                raw_y <
+                std::numeric_limits<int>::min() ||
+                raw_y >
+                std::numeric_limits<int>::max() ) {
+                continue;
+            }
+            ++scanned;
+            const tripoint_abs_omt position(
+                static_cast<int>( raw_x ),
+                static_cast<int>( raw_y ),
+                native_center.z() );
+            const overmap_with_local_coords located =
+                overmap_buffer.get_existing_om_global(
+                    position );
+            if( !located ) {
+                continue;
+            }
+            ++existing;
+            const om_vision_level before =
+                located.om->seen( located.local );
+            if( before < om_vision_level::full ) {
+                located.om->set_seen(
+                    located.local,
+                    om_vision_level::full );
+                if( located.om->seen( located.local ) !=
+                    before ) {
+                    ++changed;
+                }
+            }
+        }
+    }
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["scanned"] = scanned;
+    value["existing"] = existing;
+    value["changed"] = changed;
+    value["radius"] = radius;
+    value["vision"] =
+        vision_value( om_vision_level::full );
+    value["existing_only"] = true;
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_overmap_api(
     sol::table &game,
-    std::function<void()> require_read )
+    std::function<void()> require_read,
+    std::function<void()> require_write )
 {
     sol::state_view lua( game.lua_state() );
     sol::table overmap = lua.create_table();
@@ -881,6 +1286,68 @@ void install_overmap_api(
         require_read();
         return overmap_matches(
                    position, selector, match );
+    } );
+    overmap.set_function(
+        "set_terrain",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const script_game_id & terrain ) {
+        require_write();
+        return set_overmap_terrain(
+                   lua_state, position, terrain );
+    } );
+    overmap.set_function(
+        "set_seen",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const script_enum_value & vision ) {
+        require_write();
+        return set_overmap_seen(
+                   lua_state, position, vision );
+    } );
+    overmap.set_function(
+        "set_explored",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const bool explored ) {
+        require_write();
+        return set_overmap_explored(
+                   lua_state, position, explored );
+    } );
+    overmap.set_function(
+        "set_note",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const sol::optional<std::string> &note ) {
+        require_write();
+        return set_overmap_note(
+                   lua_state, position, note );
+    } );
+    overmap.set_function(
+        "set_note_danger",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+            const int radius,
+    const bool dangerous ) {
+        require_write();
+        return set_overmap_note_danger(
+                   lua_state, position,
+                   radius, dangerous );
+    } );
+    overmap.set_function(
+        "reveal",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & center,
+    const int radius ) {
+        require_write();
+        return reveal_existing_overmap(
+                   lua_state, center, radius );
     } );
     game["overmap"] = std::move( overmap );
 }
