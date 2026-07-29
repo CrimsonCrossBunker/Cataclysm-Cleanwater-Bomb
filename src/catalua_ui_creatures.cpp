@@ -11,6 +11,7 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "catalua_bindings_coords.h"
+#include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "character.h"
 #include "coordinates.h"
@@ -37,6 +38,8 @@ constexpr int default_creature_query_limit = 64;
 constexpr int maximum_creature_query_limit = 256;
 constexpr int default_body_part_snapshot_limit = 32;
 constexpr int maximum_body_part_snapshot_limit = 64;
+constexpr int maximum_character_adjustment = 1000000;
+constexpr int maximum_character_healing = 10000;
 
 struct creature_query_options {
     int radius = default_creature_query_radius;
@@ -319,6 +322,276 @@ const Character *character_from_handle(
         };
     }
     return character;
+}
+
+Character *mutable_character_from_handle(
+    const game_handle &handle, const std::size_t runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature( runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    Character *character = resolved.value->as_character();
+    if( character == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype",
+            "The creature referenced by this GameHandle is not a character"
+        };
+    }
+    return character;
+}
+
+void require_id_kind( const script_game_id &id, const std::string &kind,
+                      const std::string &api_name )
+{
+    if( id.kind() != kind ) {
+        throw std::invalid_argument(
+            api_name + " requires GameId<" + kind + ">" );
+    }
+    if( !id.is_valid() ) {
+        throw std::invalid_argument(
+            api_name + " requires a valid GameId<" + kind + ">" );
+    }
+}
+
+bodypart_id character_body_part(
+    const Character &character, const script_game_id &requested,
+    const std::string &api_name )
+{
+    require_id_kind( requested, "body_part", api_name );
+    const bodypart_id result =
+        bodypart_str_id( requested.value() ).id();
+    const std::vector<bodypart_id> available =
+        character.get_all_body_parts();
+    if( std::find( available.begin(), available.end(), result ) ==
+        available.end() ) {
+        throw std::invalid_argument(
+            api_name + " body part is not present on this character" );
+    }
+    return result;
+}
+
+struct character_adjustments {
+    int moves = 0;
+    int pain = 0;
+    int stamina = 0;
+    int hunger = 0;
+    int thirst = 0;
+    int sleepiness = 0;
+    int focus = 0;
+    int radiation = 0;
+    int painkiller = 0;
+    int stored_kcal = 0;
+};
+
+int bounded_adjustment( const sol::object &value,
+                        const std::string &field )
+{
+    if( !value.is<lua_Integer>() ) {
+        throw std::invalid_argument(
+            "game.characters.adjust field '" + field +
+            "' must be an integer" );
+    }
+    const lua_Integer requested = value.as<lua_Integer>();
+    if( requested < -maximum_character_adjustment ||
+        requested > maximum_character_adjustment ) {
+        throw std::invalid_argument(
+            "game.characters.adjust field '" + field +
+            "' exceeds the per-call limit" );
+    }
+    return static_cast<int>( requested );
+}
+
+character_adjustments read_character_adjustments(
+    const sol::table &requested )
+{
+    character_adjustments result;
+    for( const auto &entry : requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.characters.adjust keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        const int value = bounded_adjustment( entry.second, key );
+        if( key == "moves" ) {
+            result.moves = value;
+        } else if( key == "pain" ) {
+            result.pain = value;
+        } else if( key == "stamina" ) {
+            result.stamina = value;
+        } else if( key == "hunger" ) {
+            result.hunger = value;
+        } else if( key == "thirst" ) {
+            result.thirst = value;
+        } else if( key == "sleepiness" ) {
+            result.sleepiness = value;
+        } else if( key == "focus" ) {
+            result.focus = value;
+        } else if( key == "radiation" ) {
+            result.radiation = value;
+        } else if( key == "painkiller" ) {
+            result.painkiller = value;
+        } else if( key == "stored_kcal" ) {
+            result.stored_kcal = value;
+        } else {
+            throw std::invalid_argument(
+                "game.characters.adjust received unknown field '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
+sol::table character_mutable_state(
+    sol::state_view lua, const Character &character )
+{
+    sol::table result = lua.create_table();
+    result["moves"] = character.get_moves();
+    result["pain"] = character.get_pain();
+    result["stamina"] = character.get_stamina();
+    result["hunger"] = character.get_hunger();
+    result["thirst"] = character.get_thirst();
+    result["sleepiness"] = character.get_sleepiness();
+    result["focus"] = character.get_focus();
+    result["radiation"] = character.get_rad();
+    result["painkiller"] = character.get_painkiller();
+    result["stored_kcal"] = character.get_stored_kcal();
+    return result;
+}
+
+sol::table adjust_character(
+    sol::this_state lua, const game_handle &handle,
+    const sol::table &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const character_adjustments adjustments =
+        read_character_adjustments( requested );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = mutable_character_from_handle(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table before = character_mutable_state( state, *character );
+    if( adjustments.moves != 0 ) {
+        character->mod_moves( adjustments.moves );
+    }
+    if( adjustments.pain != 0 ) {
+        character->mod_pain( adjustments.pain );
+    }
+    if( adjustments.stamina != 0 ) {
+        character->mod_stamina( adjustments.stamina );
+    }
+    if( adjustments.hunger != 0 ) {
+        character->mod_hunger( adjustments.hunger );
+    }
+    if( adjustments.thirst != 0 ) {
+        character->mod_thirst( adjustments.thirst );
+    }
+    if( adjustments.sleepiness != 0 ) {
+        character->mod_sleepiness( adjustments.sleepiness );
+    }
+    if( adjustments.focus != 0 ) {
+        character->mod_focus( adjustments.focus );
+    }
+    if( adjustments.radiation != 0 ) {
+        character->mod_rad( adjustments.radiation );
+    }
+    if( adjustments.painkiller != 0 ) {
+        character->mod_painkiller( adjustments.painkiller );
+    }
+    if( adjustments.stored_kcal != 0 ) {
+        character->mod_stored_kcal( adjustments.stored_kcal, true );
+    }
+
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] = character_mutable_state( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table heal_character(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &body_part, const int amount,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    if( amount <= 0 || amount > maximum_character_healing ) {
+        throw std::invalid_argument(
+            "game.characters.heal amount must be between 1 and 10000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = mutable_character_from_handle(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bodypart_id part = character_body_part(
+                                 *character, body_part,
+                                 "game.characters.heal" );
+    const int before = character->get_part_hp_cur( part );
+    character->heal( part, amount );
+    const int after = character->get_part_hp_cur( part );
+
+    sol::table value = state.create_table();
+    value["body_part"] = body_part;
+    value["requested"] = amount;
+    value["before"] = before;
+    value["after"] = after;
+    value["maximum"] = character->get_part_hp_max( part );
+    value["healed"] = after - before;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_character_movement_mode(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_mode,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        requested_mode, "move_mode",
+        "game.characters.set_movement_mode" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = mutable_character_from_handle(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const move_mode_id mode( requested_mode.value() );
+    if( !character->can_switch_to( mode ) ) {
+        return make_game_error_result(
+        state, {
+            "unavailable",
+            "The requested movement mode is unavailable to this character"
+        } );
+    }
+    const move_mode_id before = character->current_movement_mode();
+    character->set_movement_mode( mode );
+
+    sol::table value = state.create_table();
+    value["before"] = script_game_id( "move_mode", before.str() );
+    value["after"] = script_game_id(
+                         "move_mode",
+                         character->current_movement_mode().str() );
+    value["changed"] = before != character->current_movement_mode();
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
 }
 
 int body_part_limit( const sol::optional<int> &requested )
@@ -683,11 +956,40 @@ void install_creature_api(
                    lua_state, options, current_runtime_generation(),
                    current_world_generation() );
     } );
+    characters.set_function(
+        "adjust",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & adjustments ) {
+        require_write();
+        return adjust_character(
+                   lua_state, handle, adjustments,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    characters.set_function(
+        "heal",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & body_part, const int amount ) {
+        require_write();
+        return heal_character(
+                   lua_state, handle, body_part, amount,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    characters.set_function(
+        "set_movement_mode",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & mode ) {
+        require_write();
+        return set_character_movement_mode(
+                   lua_state, handle, mode,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     game["characters"] = std::move( characters );
-
-    // Kept in the installer signature so later capability-gated creature
-    // mutations use the same immutable authorization closure.
-    ( void )require_write;
 }
 
 } // namespace cata::lua_ui

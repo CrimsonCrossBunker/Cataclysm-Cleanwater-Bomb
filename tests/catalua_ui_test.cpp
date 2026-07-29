@@ -1315,6 +1315,81 @@ assert(math.type(nearby.items[1].id) == "integer")
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_character_mutations_are_bounded_and_write_gated",
+           "[lua][bindings][characters][write][integration]" )
+{
+    avatar &player = get_avatar();
+    const int original_moves = player.get_moves();
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local adjusted = game.characters.adjust(avatar, { moves = 7 })
+assert(adjusted.ok == true)
+assert(adjusted.value.after.moves == adjusted.value.before.moves + 7)
+local restored = game.characters.adjust(avatar, { moves = -7 })
+assert(restored.ok == true)
+assert(restored.value.after.moves == adjusted.value.before.moves)
+
+local torso = game.types.id("body_part", "torso")
+local healed = game.characters.heal(avatar, torso, 1)
+assert(healed.ok == true)
+assert(healed.value.body_part == torso)
+assert(healed.value.requested == 1)
+assert(healed.value.after >= healed.value.before)
+assert(healed.value.after <= healed.value.maximum)
+
+local snapshot = game.characters.snapshot(avatar, 0).value
+local current_mode = game.types.id("move_mode", snapshot.movement.id)
+local movement = game.characters.set_movement_mode(avatar, current_mode)
+assert(movement.ok == true)
+assert(movement.value.before == current_mode)
+assert(movement.value.after == current_mode)
+
+assert(pcall(function()
+    game.characters.adjust(avatar, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.characters.adjust(avatar, { moves = 1.5 })
+end) == false)
+assert(pcall(function()
+    game.characters.adjust(avatar, { moves = 1000001 })
+end) == false)
+assert(pcall(function()
+    game.characters.heal(avatar, torso, 0)
+end) == false)
+assert(pcall(function()
+    game.characters.heal(
+        avatar, game.types.id("effect", "downed"), 1)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_moves() == original_moves );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.characters.adjust(game.characters.avatar(), { moves = 1 })
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.get_moves() == original_moves );
+}
+
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
            "[lua][bindings][values][ids]" )
 {
