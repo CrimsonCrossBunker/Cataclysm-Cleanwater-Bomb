@@ -1230,6 +1230,91 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_character_queries_return_detailed_bounded_snapshots",
+           "[lua][bindings][characters][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local result = game.characters.snapshot(avatar)
+assert(result.ok == true)
+local character = result.value
+assert(math.type(character.id) == "integer")
+assert(type(character.name) == "string")
+assert(character.avatar == true)
+assert(character.npc == false)
+assert(type(character.male) == "boolean")
+assert(type(character.faction_id) == "string")
+
+assert(math.type(character.stats.strength) == "integer")
+assert(math.type(character.stats.dexterity_base) == "integer")
+assert(math.type(character.stats.perception_bonus) == "integer")
+assert(math.type(character.needs.stamina) == "integer")
+assert(math.type(character.needs.stamina_max) == "integer")
+assert(type(character.needs.kcal_percent) == "number")
+assert(math.type(character.needs.focus) == "integer")
+assert(type(character.senses.blind) == "boolean")
+assert(type(character.senses.deaf) == "boolean")
+assert(type(character.senses.stealthy) == "boolean")
+assert(type(character.combat.dodge) == "number")
+assert(math.type(character.combat.working_arms) == "integer")
+assert(type(character.carrying.weight_grams) == "number")
+assert(type(character.carrying.volume_ml) == "number")
+assert(type(character.movement.id) == "string")
+assert(type(character.movement.name) == "string")
+assert(character.npc_state.present == false)
+
+local body = character.body_parts
+assert(body.returned == #body.items)
+assert(body.returned <= body.total)
+assert(body.limit == 32)
+assert(body.truncated == (body.returned < body.total))
+for _, part in ipairs(body.items) do
+    assert(type(part.id) == "string")
+    assert(type(part.name) == "string")
+    assert(math.type(part.hp) == "integer")
+    assert(math.type(part.hp_max) == "integer")
+    assert(type(part.hp_percent) == "number")
+    assert(math.type(part.encumbrance) == "integer")
+    assert(type(part.temperature_c) == "number")
+    assert(type(part.broken) == "boolean")
+end
+
+local zero = game.characters.snapshot(avatar, 0).value.body_parts
+assert(zero.limit == 0 and zero.returned == 0)
+local capped = game.characters.snapshot(avatar, 1000000).value.body_parts
+assert(capped.limit == 64 and capped.returned <= 64)
+
+local by_id = game.characters.by_id(character.id)
+assert(by_id.ok == true)
+assert(by_id.value:is_valid())
+assert(game.characters.snapshot(by_id.value).value.id == character.id)
+assert(game.characters.by_id(-9223372036854775807).ok == false)
+
+local nearby = game.characters.nearby({
+    radius = 0,
+    limit = 4,
+    visible_only = false,
+    include_avatar = true
+})
+assert(nearby.total >= 1)
+assert(nearby.returned == #nearby.items)
+assert(nearby.items[1].handle:is_valid())
+assert(math.type(nearby.items[1].id) == "integer")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
            "[lua][bindings][values][ids]" )
 {
