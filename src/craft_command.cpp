@@ -65,6 +65,18 @@ struct craft_material_plan {
     std::vector<item_comp> preview_components;
 };
 
+void append_craft_source_locations( item_location location,
+                                    const std::function<bool( const item & )> &filter,
+                                    std::vector<item_location> &locations )
+{
+    if( filter( *location ) ) {
+        locations.push_back( location );
+    }
+    for( item *contained : location->all_items_top( pocket_type::CONTAINER ) ) {
+        append_craft_source_locations( item_location( location, contained ), filter, locations );
+    }
+}
+
 std::vector<item_location> craft_source_locations( Character &crafter,
         const comp_selection<item_comp> &selection,
         const std::function<bool( const item & )> &filter, bool preferred )
@@ -82,8 +94,15 @@ std::vector<item_location> craft_source_locations( Character &crafter,
         const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
                     crafter.pos_bub(), PICKUP_RANGE, 1, 100 );
         for( const tripoint_bub_ms &point : reachable ) {
-            std::list<item_location> at_point = here.items_with( point, source_filter );
-            locations.insert( locations.end(), at_point.begin(), at_point.end() );
+            if( !here.accessible_items( point ) ) {
+                continue;
+            }
+            std::list<item_location> at_point = here.items_with( point, []( const item & ) {
+                return true;
+            } );
+            for( item_location &location : at_point ) {
+                append_craft_source_locations( location, source_filter, locations );
+            }
         }
     }
     if( selection.use_from & usage_from::player ) {
