@@ -665,7 +665,7 @@ item craft_command::create_in_progress_craft()
             const char *warning = predicted_rot >= 1.0
                                   ? _( "The selected ingredients may be rotten before this craft "
                                        "finishes.\nStart crafting anyway?" )
-                                  : _( "The finished item may have one hour or less of shelf life "
+                                  : _( "The finished item may only have one to three hour or less of shelf life "
                                        "left.\nStart crafting anyway?" );
             if( !crafter->query_yn( warning ) ) {
                 return item();
