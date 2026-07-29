@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <deque>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -264,6 +265,8 @@ class runtime_state : public event_subscriber
         std::unique_ptr<script_module_resolver> module_resolver;
         std::unordered_map<std::string, sol::object> module_cache;
         std::set<std::string> loading_modules;
+        std::vector<std::size_t> loaded_module_counts;
+        std::size_t module_load_depth = 0;
         std::vector<sol::environment> source_environments;
         deterministic_turn_scheduler scheduler;
         std::unordered_map<std::uint64_t, sol::protected_function> scheduled_callbacks;
@@ -486,6 +489,50 @@ void disable_native_module_searchers( runtime_state &state )
     lua_pop( lua, 1 );
 }
 
+std::string module_display_name(
+    const std::optional<std::string_view> provider_id,
+    const std::string_view module_name )
+{
+    return provider_id ?
+           std::string( *provider_id ) + ":" + std::string( module_name ) :
+           std::string( module_name );
+}
+
+std::string read_bounded_module_source(
+    const fs::path &path, const std::string_view display_name )
+{
+    std::error_code error;
+    const std::uintmax_t size = fs::file_size( path, error );
+    if( error ) {
+        throw std::runtime_error(
+            "Lua module '" + std::string( display_name ) +
+            "' could not be inspected" );
+    }
+    if( size > maximum_module_source_bytes ) {
+        throw std::runtime_error(
+            "Lua module '" + std::string( display_name ) +
+            "' exceeds the 1 MiB source size limit" );
+    }
+
+    std::ifstream input( path, std::ios::binary );
+    if( !input ) {
+        throw std::runtime_error(
+            "Lua module '" + std::string( display_name ) +
+            "' could not be opened" );
+    }
+    std::string source( static_cast<std::size_t>( size ), '\0' );
+    if( size > 0 ) {
+        input.read( source.data(), static_cast<std::streamsize>( size ) );
+    }
+    if( input.gcount() != static_cast<std::streamsize>( size ) ||
+        input.peek() != std::char_traits<char>::eof() ) {
+        throw std::runtime_error(
+            "Lua module '" + std::string( display_name ) +
+            "' changed while it was being read" );
+    }
+    return source;
+}
+
 sol::object load_module( runtime_state &state, const std::size_t caller_index,
                          const std::optional<std::string_view> provider_id,
                          const std::string_view module_name )
@@ -506,7 +553,8 @@ sol::object load_module( runtime_state &state, const std::size_t caller_index,
     }
 
     if( caller_index >= state.sources.size() ||
-        caller_index >= state.source_environments.size() ) {
+        caller_index >= state.source_environments.size() ||
+        caller_index >= state.loaded_module_counts.size() ) {
         throw std::runtime_error( "Lua module caller has an invalid source environment" );
     }
     // Modules are source code dependencies, not capability-bearing services.
@@ -519,19 +567,43 @@ sol::object load_module( runtime_state &state, const std::size_t caller_index,
         return cached->second;
     }
 
+    const std::string display_name =
+        module_display_name( provider_id, module_name );
+    if( state.module_load_depth >= maximum_module_load_depth ) {
+        throw std::runtime_error(
+            "Lua module '" + display_name +
+            "' exceeds the module nesting limit" );
+    }
+    if( state.loaded_module_counts[caller_index] >=
+        maximum_modules_per_source ) {
+        throw std::runtime_error(
+            "Lua source '" + state.sources[caller_index].manifest.id +
+            "' exceeds the loaded module limit" );
+    }
+    if( state.module_cache.size() >= maximum_modules_per_runtime ) {
+        throw std::runtime_error(
+            "Lua runtime exceeds the loaded module limit" );
+    }
+
     // Match Lua require's cycle behavior: a recursive request observes true
     // until the first evaluation supplies its final exported value.
     sol::object provisional = sol::make_object( state.lua, true );
-    state.module_cache.emplace( cache_key, provisional );
-    if( !state.loading_modules.insert( cache_key ).second ) {
-        return provisional;
-    }
-
+    ++state.module_load_depth;
+    on_out_of_scope restore_depth( [&state]() {
+        --state.module_load_depth;
+    } );
+    ++state.loaded_module_counts[caller_index];
     try {
-        sol::load_result loaded = state.lua.load_file( resolution->path.string() );
+        state.module_cache.emplace( cache_key, provisional );
+        state.loading_modules.insert( cache_key );
+        const std::string module_source =
+            read_bounded_module_source( resolution->path, display_name );
+        sol::load_result loaded =
+            state.lua.load( module_source, "@" + display_name );
         if( !loaded.valid() ) {
             const sol::error error = loaded;
-            throw std::runtime_error( resolution->path.string() + ": " + error.what() );
+            throw std::runtime_error(
+                "Lua module '" + display_name + "': " + error.what() );
         }
         sol::protected_function module = loaded;
         sol::set_environment( state.source_environments[caller_index], module );
@@ -540,7 +612,8 @@ sol::object load_module( runtime_state &state, const std::size_t caller_index,
         sol::protected_function_result result = module();
         if( !result.valid() ) {
             const sol::error error = result;
-            throw std::runtime_error( resolution->path.string() + ": " + error.what() );
+            throw std::runtime_error(
+                "Lua module '" + display_name + "': " + error.what() );
         }
 
         sol::object exported = provisional;
@@ -553,6 +626,7 @@ sol::object load_module( runtime_state &state, const std::size_t caller_index,
     } catch( ... ) {
         state.loading_modules.erase( cache_key );
         state.module_cache.erase( cache_key );
+        --state.loaded_module_counts[caller_index];
         throw;
     }
 }
@@ -1259,6 +1333,7 @@ sol::table lua_runtime_diagnostics(
     resources["service_methods"] = runtime.service_methods.size();
     resources["module_cache"] = runtime.module_cache.size();
     resources["modules_loading"] = runtime.loading_modules.size();
+    resources["module_load_depth"] = runtime.module_load_depth;
     resources["character_state_entries"] = runtime.persistent_state.size();
     resources["world_state_entries"] = runtime.world_state.size();
     resources["page_state_entries"] = runtime.page_state.size();
@@ -1280,6 +1355,11 @@ sol::table lua_runtime_diagnostics(
         script_service_registry::maximum_methods_per_service;
     limits["page_stack_depth"] = maximum_page_stack_depth;
     limits["diagnostic_records"] = maximum_diagnostic_records;
+    limits["module_name_bytes"] = maximum_module_name_bytes;
+    limits["module_source_bytes"] = maximum_module_source_bytes;
+    limits["module_load_depth"] = maximum_module_load_depth;
+    limits["modules_per_source"] = maximum_modules_per_source;
+    limits["modules_per_runtime"] = maximum_modules_per_runtime;
     snapshot["limits"] = std::move( limits );
 
     const std::vector<source_resource_counts> source_counts =
@@ -1443,6 +1523,7 @@ void initialize_state( runtime_state &state )
     }
     state.module_resolver =
         std::make_unique<script_module_resolver>( std::move( module_sources ) );
+    state.loaded_module_counts.assign( state.sources.size(), 0 );
 
     state.lua.open_libraries( sol::lib::base, sol::lib::package, sol::lib::math,
                               sol::lib::string, sol::lib::table );

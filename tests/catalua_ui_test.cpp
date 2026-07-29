@@ -659,6 +659,7 @@ TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive
 TEST_CASE( "lua_module_names_stay_inside_script_roots", "[lua][ui][sandbox]" )
 {
     using cata::lua_ui::is_safe_module_name;
+    using cata::lua_ui::maximum_module_name_bytes;
 
     CHECK( is_safe_module_name( "widgets" ) );
     CHECK( is_safe_module_name( "lib.widgets.hud-v2" ) );
@@ -670,6 +671,10 @@ TEST_CASE( "lua_module_names_stay_inside_script_roots", "[lua][ui][sandbox]" )
     CHECK_FALSE( is_safe_module_name( "lib..outside" ) );
     CHECK_FALSE( is_safe_module_name( "lib/widgets" ) );
     CHECK_FALSE( is_safe_module_name( "C:\\outside" ) );
+    CHECK( is_safe_module_name(
+               std::string( maximum_module_name_bytes, 'm' ) ) );
+    CHECK_FALSE( is_safe_module_name(
+                     std::string( maximum_module_name_bytes + 1, 'm' ) ) );
 }
 
 TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies",
@@ -2257,6 +2262,90 @@ end) == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_module_loading_enforces_source_depth_and_cache_limits",
+           "[lua][modules][sandbox][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    const auto reload = []() {
+        std::string error;
+        REQUIRE( reload_scripts( error ) );
+        CHECK( error.empty() );
+    };
+
+    SECTION( "module source size" ) {
+        scoped_lua_user_module module(
+            fs::path( "test_limits" ) / "oversized.lua" );
+        module.write( std::string(
+                          maximum_module_source_bytes + 1, ' ' ) );
+        script.write( R"lua(
+local ok, error = pcall(require, "test_limits.oversized")
+assert(ok == false)
+assert(string.find(error, "source size limit", 1, true) ~= nil)
+)lua" );
+        reload();
+    }
+
+    SECTION( "nested module depth" ) {
+        std::vector<std::unique_ptr<scoped_lua_user_module>> modules;
+        for( std::size_t index = 0;
+             index <= maximum_module_load_depth; ++index ) {
+            const std::string name = "depth_" + std::to_string( index );
+            auto module = std::make_unique<scoped_lua_user_module>(
+                              fs::path( "test_limits" ) / ( name + ".lua" ) );
+            if( index == maximum_module_load_depth ) {
+                module->write( "return true\n" );
+            } else {
+                module->write(
+                    "return require(\"test_limits.depth_" +
+                    std::to_string( index + 1 ) + "\")\n" );
+            }
+            modules.push_back( std::move( module ) );
+        }
+        script.write( R"lua(
+local ok, error = pcall(require, "test_limits.depth_0")
+assert(ok == false)
+assert(string.find(error, "nesting limit", 1, true) ~= nil)
+)lua" );
+        reload();
+    }
+
+    SECTION( "modules per source" ) {
+        std::vector<std::unique_ptr<scoped_lua_user_module>> modules;
+        for( std::size_t index = 0;
+             index <= maximum_modules_per_source; ++index ) {
+            const std::string name = "budget_" + std::to_string( index );
+            auto module = std::make_unique<scoped_lua_user_module>(
+                              fs::path( "test_limits" ) / ( name + ".lua" ) );
+            module->write( "return true\n" );
+            modules.push_back( std::move( module ) );
+        }
+        script.write(
+            "for index = 0, " +
+            std::to_string( maximum_modules_per_source ) + R"lua( do
+    local ok, error = pcall(
+        require, "test_limits.budget_" .. tostring(index))
+    if index < )lua" +
+                                            std::to_string( maximum_modules_per_source ) + R"lua( then
+        assert(ok)
+    else
+        assert(ok == false)
+        assert(string.find(error, "loaded module limit", 1, true) ~= nil)
+    end
+end
+)lua" );
+        reload();
+    }
 }
 
 TEST_CASE( "lua_v4_scheduler_is_live_and_can_add_the_first_game_event_handler",

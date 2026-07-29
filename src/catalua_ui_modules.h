@@ -3,6 +3,7 @@
 #define CATA_SRC_CATALUA_UI_MODULES_H
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -13,6 +14,13 @@
 
 namespace cata::lua_ui
 {
+
+inline constexpr std::size_t maximum_module_name_bytes = 192;
+inline constexpr std::uintmax_t maximum_module_source_bytes =
+    1024U * 1024U;
+inline constexpr std::size_t maximum_module_load_depth = 32;
+inline constexpr std::size_t maximum_modules_per_source = 128;
+inline constexpr std::size_t maximum_modules_per_runtime = 512;
 
 struct script_module_source {
     script_manifest manifest;
