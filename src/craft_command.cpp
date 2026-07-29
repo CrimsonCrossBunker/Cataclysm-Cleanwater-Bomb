@@ -119,10 +119,12 @@ bool build_craft_material_plan( Character &crafter,
         int remaining = selection.comp.count > 0 ? selection.comp.count * batch :
                         std::abs( selection.comp.count );
         if( by_charges && ( selection.use_from & usage_from::map ) ) {
-            std::optional<item> infinite_source = infinite_map_charge_source( crafter, selection.comp.type );
+            const std::optional<item> infinite_source = infinite_map_charge_source(
+                    crafter, selection.comp.type );
             if( infinite_source ) {
                 infinite_source->charges = remaining;
-                plan.sources.push_back( { item_location::nowhere, *infinite_source, 0, remaining, true, true } );
+                plan.sources.push_back( { item_location::nowhere, *infinite_source, 0, remaining,
+                                          true, true } );
                 remaining = 0;
             }
         }
@@ -138,7 +140,8 @@ bool build_craft_material_plan( Character &crafter,
                 const std::vector<item_location> pass_candidates = craft_source_locations(
                             crafter, source_selection, filter, preferred );
                 for( const item_location &candidate : pass_candidates ) {
-                    if( std::find( candidates.begin(), candidates.end(), candidate ) == candidates.end() ) {
+                    if( std::find( candidates.begin(), candidates.end(),
+                                  candidate ) == candidates.end() ) {
                         candidates.push_back( candidate );
                     }
                 }
@@ -168,7 +171,8 @@ bool build_craft_material_plan( Character &crafter,
             if( by_charges && quantity < snapshot.charges ) {
                 snapshot.mod_charges( quantity - snapshot.charges );
             }
-            plan.sources.push_back( { location, snapshot, location->uid().get_value(), quantity, by_charges } );
+            plan.sources.push_back( { location, snapshot, location->uid().get_value(), quantity,
+                                      by_charges } );
             remaining -= quantity;
         }
         if( remaining > 0 ) {
@@ -179,8 +183,8 @@ bool build_craft_material_plan( Character &crafter,
     for( const comp_selection<item_comp> &selection : selections ) {
         item_comp used = selection.comp;
         used.count *= batch;
-        auto found = std::find_if( plan.preview_components.begin(), plan.preview_components.end(),
-        [&used]( const item_comp &existing ) {
+        std::vector<item_comp>::iterator found = std::find_if( plan.preview_components.begin(),
+                plan.preview_components.end(), [&used]( const item_comp &existing ) {
             return existing.type == used.type;
         } );
         if( found == plan.preview_components.end() ) {
@@ -530,7 +534,8 @@ bool craft_command::continue_prompt_liquids( const std::function<bool( const ite
                 const std::vector<item_location> pass_candidates = craft_source_locations(
                             *crafter, source_selection, filter, preferred );
                 for( const item_location &candidate : pass_candidates ) {
-                    if( std::find( candidates.begin(), candidates.end(), candidate ) == candidates.end() ) {
+                    if( std::find( candidates.begin(), candidates.end(),
+                                  candidate ) == candidates.end() ) {
                         candidates.push_back( candidate );
                     }
                 }
@@ -781,10 +786,10 @@ item craft_command::create_in_progress_craft()
                 preview.get_shelf_life() * predicted_rot;
         if( predicted_rot >= 1.0 || predicted_remaining <= 3_hours ) {
             const char *warning = predicted_rot >= 1.0
-                                  ? _( "The selected ingredients may be rotten before this craft finishes.\n"
-                                       "Start crafting anyway?" )
-                                  : _( "The finished item may have one hour or less of shelf life left.\n"
-                                       "Start crafting anyway?" );
+                                  ? _( "The selected ingredients may be rotten before this craft "
+                                       "finishes.\nStart crafting anyway?" )
+                                  : _( "The finished item may have one hour or less of shelf life "
+                                       "left.\nStart crafting anyway?" );
             if( !crafter->query_yn( warning ) ) {
                 return item();
             }
