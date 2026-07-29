@@ -6280,6 +6280,160 @@ assert(state.character.get("hooks.bad", 0) == 1)
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
+           "[lua][bindings][callbacks][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read",
+            "game.write", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.callbacks.limits()
+assert(limits.kinds == 11)
+assert(limits.registrations == 1024)
+assert(limits.registrations_per_target == 64)
+assert(limits.registered == 0)
+assert(limits.priority_min == -10000)
+assert(limits.priority_max == 10000)
+assert(limits.dispatch_depth == 16)
+assert(limits.instruction_budget > 0)
+
+local catalog = game.callbacks.list()
+assert(#catalog == 11)
+local wieldable = game.callbacks.describe("iwieldable")
+assert(wieldable.kind == "iwieldable")
+assert(wieldable.target_id_kind == "item")
+assert(#wieldable.methods == 4)
+assert(pcall(function()
+    game.callbacks.describe("not_an_actor")
+end) == false)
+
+local rock = game.types.id("item", "rock")
+assert(pcall(function()
+    game.callbacks.register("iwieldable",
+        game.types.id("monster", "mon_zombie"), {
+            on_wield = function() end
+        })
+end) == false)
+assert(pcall(function()
+    game.callbacks.register("iwieldable", rock, {
+        unknown = function() end
+    })
+end) == false)
+
+local removed = game.callbacks.register("iwieldable", rock, {
+    on_wield = function()
+        error("removed callback ran")
+    end
+})
+assert(game.callbacks.off(removed) == true)
+assert(game.callbacks.off(removed) == false)
+
+game.callbacks.register("iwieldable", rock, {
+    priority = 100,
+    once = true,
+    on_wield = function(payload)
+        assert(payload.actor_kind == "iwieldable")
+        assert(payload.method == "on_wield")
+        assert(payload.decision == false)
+        assert(payload.target_id == rock)
+        assert(payload.character ~= nil)
+        assert(payload.item ~= nil)
+        assert(payload.position.coordinate_space == "abs_ms")
+        assert(payload.position.x == 11)
+        assert(payload.position.y == 22)
+        assert(payload.position.z == 1)
+        assert(payload.skill ==
+            game.types.id("skill", "fabrication"))
+        assert(math.type(payload.count) == "integer")
+        assert(payload.count == 2)
+        assert(payload.ratio == 0.5)
+        assert(payload.label == "typed")
+        assert(payload.flag == true)
+        local order = state.character.get("callbacks.order", "")
+        state.character.set("callbacks.order", order .. "H")
+    end
+})
+
+game.callbacks.register("iwieldable", rock, {
+    priority = 50,
+    on_wield = function()
+        local order = state.character.get("callbacks.order", "")
+        state.character.set("callbacks.order", order .. "B")
+        error("expected isolated callback actor failure")
+    end
+})
+
+game.callbacks.register("iwieldable", rock, {
+    priority = -100,
+    on_wield = function()
+        local order = state.character.get("callbacks.order", "")
+        state.character.set("callbacks.order", order .. "L")
+    end,
+    can_wield = function(payload)
+        assert(payload.decision == true)
+        return false
+    end
+})
+
+game.hooks.on("on_weather_changed", function(payload)
+    assert(payload.before == "clear")
+    assert(payload.after == "rain")
+    state.character.set("callbacks.native_hook", true)
+end)
+game.hooks.on("on_try_npc_interaction", function()
+    return { allow = false, stop = true }
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    item rock( itype_id( "rock" ) );
+    const native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( &get_avatar() ) },
+        { "item", static_cast<const item *>( &rock ) },
+        { "position", native_callback_point { "abs_ms", 11, 22, 1 } },
+        { "skill", native_callback_id { "skill", "fabrication" } },
+        { "count", std::int64_t { 2 } },
+        { "ratio", 0.5 },
+        { "label", std::string( "typed" ) },
+        { "flag", true }
+    };
+    CHECK( dispatch_native_callback(
+               "iwieldable", "rock", "on_wield", payload ) );
+    CHECK( status().last_error.find(
+               "expected isolated callback actor failure" ) !=
+           std::string::npos );
+    CHECK( dispatch_native_callback(
+               "iwieldable", "rock", "on_wield", payload ) );
+    CHECK_FALSE( dispatch_native_callback(
+                     "iwieldable", "rock", "can_wield", payload ) );
+
+    CHECK( dispatch_native_hook(
+               "on_weather_changed", {
+        { "before", std::string( "clear" ) },
+        { "after", std::string( "rain" ) }
+    } ) );
+    CHECK_FALSE( dispatch_native_hook(
+                     "on_try_npc_interaction" ) );
+
+    script.write( R"lua(
+assert(state.character.get("callbacks.order", "") == "HBLL")
+assert(state.character.get("callbacks.native_hook", false) == true)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_recipe_catalog_is_detached_filtered_and_bounded",
            "[lua][bindings][recipes][crafting][integration]" )
 {

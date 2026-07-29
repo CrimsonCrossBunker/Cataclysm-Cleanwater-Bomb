@@ -14,6 +14,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -25,6 +26,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
+#include "character.h"
 #include "catalua_sol.h"
 #include "catalua_bindings.h"
 #include "catalua_bindings_values.h"
@@ -69,6 +71,7 @@
 #include "imgui/imgui.h"
 #include "input_context.h"
 #include "input_context_actions.h"
+#include "item.h"
 #include "json_loader.h"
 #include "messages.h"
 #include "mapgendata.h"
@@ -309,11 +312,17 @@ class runtime_state : public event_subscriber
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
         script_event_registry hook_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> hook_callbacks;
+        script_callback_registry callback_registry;
+        std::unordered_map <
+        std::uint64_t,
+            std::unordered_map<std::string, sol::protected_function>
+            > callback_methods;
         script_event_registry mapgen_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> mapgen_callbacks;
         std::unordered_map<std::uint64_t, mapgen_handler_filter> mapgen_filters;
         int event_dispatch_depth = 0;
         int hook_dispatch_depth = 0;
+        int callback_dispatch_depth = 0;
         int mapgen_dispatch_depth = 0;
         std::size_t generation = 0;
         std::size_t world_generation = 0;
@@ -1008,6 +1017,182 @@ sol::table hook_limits( runtime_state &state, sol::this_state lua )
     result["registered"] = state.hook_registry.size();
     result["priority_min"] = script_event_registry::minimum_priority;
     result["priority_max"] = script_event_registry::maximum_priority;
+    result["dispatch_depth"] = 16;
+    result["instruction_budget"] = callback_instruction_limit;
+    return result;
+}
+
+void require_callback_capabilities(
+    const runtime_state &state, const bool require_write )
+{
+    require_api_version( state, 5, "game.callbacks" );
+    require_capability( state, "game.read" );
+    require_capability( state, "game.callbacks" );
+    if( require_write ) {
+        require_capability( state, "game.write" );
+    }
+}
+
+std::uint64_t register_callback_actor(
+    runtime_state &state, const std::string &kind_name,
+    const script_game_id &target, const sol::table &descriptor )
+{
+    const script_callback_kind_spec *kind =
+        find_script_callback_kind_spec( kind_name );
+    if( kind == nullptr ) {
+        throw std::invalid_argument(
+            "game.callbacks.register received an unknown actor kind: " +
+            kind_name );
+    }
+    if( target.kind() != kind->target_id_kind ) {
+        throw std::invalid_argument(
+            "game.callbacks.register kind '" + kind_name +
+            "' requires GameId<" + std::string( kind->target_id_kind ) +
+            ">, received GameId<" + target.kind() + ">" );
+    }
+    if( !target.is_valid() ) {
+        throw std::invalid_argument(
+            "game.callbacks.register received an unknown " +
+            target.to_string() );
+    }
+
+    std::unordered_map<std::string, sol::protected_function> methods;
+    std::vector<std::string> method_names;
+    bool has_decision_method = false;
+    for( const script_callback_method_spec &method : kind->methods ) {
+        const sol::object raw = descriptor[method.name];
+        if( !raw.valid() || raw.get_type() == sol::type::nil ) {
+            continue;
+        }
+        if( raw.get_type() != sol::type::function ) {
+            throw std::invalid_argument(
+                "game.callbacks.register method '" +
+                std::string( method.name ) + "' must be a function" );
+        }
+        methods.emplace(
+            std::string( method.name ),
+            raw.as<sol::protected_function>() );
+        method_names.emplace_back( method.name );
+        has_decision_method = has_decision_method || method.decision;
+    }
+    if( method_names.empty() ) {
+        throw std::invalid_argument(
+            "game.callbacks.register requires at least one callback method" );
+    }
+
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.callbacks.register descriptor keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key == "priority" || key == "once" ||
+            find_script_callback_method_spec( *kind, key ) != nullptr ) {
+            continue;
+        }
+        throw std::invalid_argument(
+            "game.callbacks.register received unknown descriptor field '" +
+            key + "'" );
+    }
+
+    require_callback_capabilities( state, has_decision_method );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.callbacks.register is outside a Lua source context" );
+    }
+    const int priority = descriptor.get_or( "priority", 0 );
+    const bool once = descriptor.get_or( "once", false );
+    const std::uint64_t id = state.callback_registry.subscribe(
+                                 kind_name, target.value(),
+                                 std::move( method_names ), priority,
+                                 *state.current_source, once );
+    try {
+        state.callback_methods.emplace( id, std::move( methods ) );
+    } catch( ... ) {
+        state.callback_registry.unsubscribe_unchecked( id );
+        throw;
+    }
+    return id;
+}
+
+bool unregister_callback_actor(
+    runtime_state &state, const std::uint64_t id )
+{
+    require_callback_capabilities( state, false );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.callbacks.off is outside a Lua source context" );
+    }
+    if( !state.callback_registry.unsubscribe(
+            id, *state.current_source ) ) {
+        return false;
+    }
+    state.callback_methods.erase( id );
+    return true;
+}
+
+sol::table callback_kind_to_lua(
+    sol::state_view lua, const script_callback_kind_spec &kind )
+{
+    sol::table result = lua.create_table();
+    result["kind"] = std::string( kind.kind );
+    result["target_id_kind"] = std::string( kind.target_id_kind );
+    sol::table methods = lua.create_table();
+    for( std::size_t index = 0; index < kind.methods.size(); ++index ) {
+        const script_callback_method_spec &method = kind.methods[index];
+        sol::table entry = lua.create_table();
+        entry["name"] = std::string( method.name );
+        entry["decision"] = method.decision;
+        entry["requires_write"] = method.decision;
+        methods[index + 1] = std::move( entry );
+    }
+    result["methods"] = std::move( methods );
+    return result;
+}
+
+sol::table describe_callback_kind(
+    runtime_state &state, sol::this_state lua, const std::string &kind_name )
+{
+    require_callback_capabilities( state, false );
+    const script_callback_kind_spec *kind =
+        find_script_callback_kind_spec( kind_name );
+    if( kind == nullptr ) {
+        throw std::invalid_argument(
+            "game.callbacks.describe received an unknown actor kind: " +
+            kind_name );
+    }
+    return callback_kind_to_lua( sol::state_view( lua ), *kind );
+}
+
+sol::table list_callback_kinds(
+    runtime_state &state, sol::this_state lua )
+{
+    require_callback_capabilities( state, false );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    const std::vector<script_callback_kind_spec> &kinds =
+        script_callback_kind_specs();
+    for( std::size_t index = 0; index < kinds.size(); ++index ) {
+        result[index + 1] = callback_kind_to_lua( view, kinds[index] );
+    }
+    return result;
+}
+
+sol::table callback_limits( runtime_state &state, sol::this_state lua )
+{
+    require_callback_capabilities( state, false );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    result["kinds"] = script_callback_kind_specs().size();
+    result["registrations"] =
+        script_callback_registry::maximum_registrations;
+    result["registrations_per_target"] =
+        script_callback_registry::maximum_registrations_per_target;
+    result["registered"] = state.callback_registry.size();
+    result["priority_min"] =
+        script_callback_registry::minimum_priority;
+    result["priority_max"] =
+        script_callback_registry::maximum_priority;
     result["dispatch_depth"] = 16;
     result["instruction_budget"] = callback_instruction_limit;
     return result;
@@ -2118,6 +2303,31 @@ void initialize_state( runtime_state &state )
         return hook_limits( state, lua );
     } );
     game["hooks"] = std::move( hooks );
+    sol::table callbacks = state.lua.create_table();
+    callbacks.set_function(
+        "register",
+        [&state]( const std::string & kind,
+                  const script_game_id & target,
+    const sol::table & descriptor ) {
+        return register_callback_actor(
+                   state, kind, target, descriptor );
+    } );
+    callbacks.set_function(
+    "off", [&state]( const std::uint64_t id ) {
+        return unregister_callback_actor( state, id );
+    } );
+    callbacks.set_function(
+        "describe",
+    [&state]( sol::this_state lua, const std::string & kind ) {
+        return describe_callback_kind( state, lua, kind );
+    } );
+    callbacks.set_function( "list", [&state]( sol::this_state lua ) {
+        return list_callback_kinds( state, lua );
+    } );
+    callbacks.set_function( "limits", [&state]( sol::this_state lua ) {
+        return callback_limits( state, lua );
+    } );
+    game["callbacks"] = std::move( callbacks );
     sol::table mapgen = state.lua.create_table();
     mapgen.set_function(
         "on_postprocess",
@@ -2921,6 +3131,256 @@ bool dispatch_script_hook(
     return allowed;
 }
 
+class callback_dispatch_scope
+{
+    public:
+        explicit callback_dispatch_scope( runtime_state &state ) :
+            state_( state ) {
+            if( state_.callback_dispatch_depth >= 16 ) {
+                throw std::runtime_error(
+                    "Lua callback actor recursion limit reached" );
+            }
+            ++state_.callback_dispatch_depth;
+        }
+
+        callback_dispatch_scope( const callback_dispatch_scope & ) = delete;
+        callback_dispatch_scope &operator=(
+            const callback_dispatch_scope & ) = delete;
+
+        ~callback_dispatch_scope() {
+            --state_.callback_dispatch_depth;
+        }
+
+    private:
+        runtime_state &state_;
+};
+
+game_handle native_creature_handle(
+    runtime_state &state, const Creature &creature )
+{
+    Creature &mutable_creature = const_cast<Creature &>( creature );
+    const tripoint_abs_ms position = creature.pos_abs();
+    game_handle_locator locator;
+    locator.scope = creature.as_character() != nullptr ?
+                    "callback_character" : "callback_monster";
+    locator.x = position.x();
+    locator.y = position.y();
+    locator.z = position.z();
+    if( const Character *character = creature.as_character() ) {
+        locator.stable_id = character->getID().get_value();
+    }
+    return game_handle::from_creature(
+               mutable_creature, std::move( locator ),
+               state.generation, state.world_generation );
+}
+
+sol::object native_callback_value_to_lua(
+    runtime_state &state, const native_callback_value &value )
+{
+    sol::state_view lua( state.lua );
+    return std::visit( [&state, lua]( const auto & entry ) -> sol::object {
+        using value_type = std::decay_t<decltype( entry )>;
+        if constexpr( std::is_same_v<value_type, const Character *> )
+        {
+            if( entry == nullptr ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            return sol::make_object(
+                       lua, native_creature_handle( state, *entry ) );
+        } else if constexpr( std::is_same_v<value_type, const Creature *> )
+        {
+            if( entry == nullptr ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            return sol::make_object(
+                       lua, native_creature_handle( state, *entry ) );
+        } else if constexpr( std::is_same_v<value_type, const item *> )
+        {
+            if( entry == nullptr ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            item &mutable_item = const_cast<item &>( *entry );
+            return sol::make_object(
+                       lua, game_handle::from_item(
+            mutable_item, {
+                "callback_item",
+                entry->uid().get_value(), 0, 0, 0, {}
+            }, state.generation, state.world_generation ) );
+        } else if constexpr( std::is_same_v<value_type, native_callback_point> )
+        {
+            sol::table point = state.lua.create_table();
+            point["coordinate_space"] = entry.coordinate_space;
+            point["x"] = entry.x;
+            point["y"] = entry.y;
+            point["z"] = entry.z;
+            return sol::make_object( lua, std::move( point ) );
+        } else if constexpr( std::is_same_v<value_type, native_callback_id> )
+        {
+            return sol::make_object(
+                       lua, script_game_id( entry.kind, entry.value ) );
+        } else
+        {
+            return sol::make_object( lua, entry );
+        }
+    }, value );
+}
+
+sol::table native_callback_payload(
+    runtime_state &state, const native_callback_arguments &arguments )
+{
+    if( arguments.size() > 64 ) {
+        throw std::invalid_argument(
+            "Lua native callback payload exceeds 64 fields" );
+    }
+    sol::table result = state.lua.create_table();
+    std::set<std::string> names;
+    for( const native_callback_argument &argument : arguments ) {
+        if( argument.name.empty() || argument.name.size() > 128 ) {
+            throw std::invalid_argument(
+                "Lua native callback payload field names must contain "
+                "1 to 128 bytes" );
+        }
+        if( !names.insert( argument.name ).second ) {
+            throw std::invalid_argument(
+                "Lua native callback payload repeats field '" +
+                argument.name + "'" );
+        }
+        result[argument.name] =
+            native_callback_value_to_lua( state, argument.value );
+    }
+    return result;
+}
+
+bool dispatch_script_callback(
+    runtime_state &state, const std::string_view kind_name,
+    const std::string_view target, const std::string_view method_name,
+    const std::function<sol::table()> &make_payload )
+{
+    const script_callback_kind_spec *kind =
+        find_script_callback_kind_spec( kind_name );
+    const script_callback_method_spec *method =
+        kind == nullptr ? nullptr :
+        find_script_callback_method_spec( *kind, method_name );
+    if( method == nullptr ) {
+        record_runtime_error(
+            "Lua callback actor dispatch",
+            "native code requested unknown callback '" +
+            std::string( kind_name ) + "." +
+            std::string( method_name ) + "'" );
+        return true;
+    }
+
+    callback_dispatch_scope dispatch_scope( state );
+    const std::vector<script_callback_registration> registrations =
+        state.callback_registry.matching(
+            kind_name, target, method_name );
+    bool allowed = true;
+    for( const script_callback_registration &registration : registrations ) {
+        if( !state.callback_registry.contains( registration.id ) ) {
+            continue;
+        }
+        const auto actor_entry =
+            state.callback_methods.find( registration.id );
+        if( actor_entry == state.callback_methods.end() ||
+            registration.source_index >= state.sources.size() ) {
+            state.callback_registry.unsubscribe_unchecked(
+                registration.id );
+            state.callback_methods.erase( registration.id );
+            continue;
+        }
+        const auto callback_entry =
+            actor_entry->second.find( std::string( method_name ) );
+        if( callback_entry == actor_entry->second.end() ) {
+            continue;
+        }
+
+        bool stop = false;
+        const auto started = std::chrono::steady_clock::now();
+        try {
+            sol::protected_function callback = callback_entry->second;
+            source_scope source( state, registration.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            sol::table payload = make_payload();
+            payload["actor_kind"] = std::string( kind_name );
+            payload["target_id"] = script_game_id(
+                                       std::string( kind->target_id_kind ),
+                                       std::string( target ) );
+            payload["method"] = std::string( method_name );
+            payload["decision"] = method->decision;
+            payload["turn"] = script_current_turn();
+            const sol::protected_function_result result =
+                callback( std::move( payload ) );
+            record_callback_timing(
+                state,
+                "callback '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'", started );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                record_runtime_error(
+                    "Lua callback actor '" + std::string( kind_name ) +
+                    "." + std::string( method_name ) + "'",
+                    error.what() );
+                state.callback_registry.unsubscribe_unchecked(
+                    registration.id );
+                state.callback_methods.erase( registration.id );
+                continue;
+            }
+
+            if( result.return_count() > 0 ) {
+                const sol::type type = result.get_type();
+                if( type == sol::type::boolean ) {
+                    const bool decision = result.get<bool>();
+                    if( method->decision ) {
+                        allowed = decision;
+                    }
+                    stop = !decision;
+                } else if( type == sol::type::table ) {
+                    const sol::table decision = result.get<sol::table>();
+                    const sol::optional<bool> requested_allow =
+                        decision["allow"];
+                    if( requested_allow && method->decision ) {
+                        allowed = *requested_allow;
+                    }
+                    stop = decision.get_or( "stop", false ) || !allowed;
+                } else if( type != sol::type::nil ) {
+                    record_runtime_error(
+                        "Lua callback actor '" +
+                        std::string( kind_name ) + "." +
+                        std::string( method_name ) + "'",
+                        "callback methods must return nil, boolean, or a "
+                        "decision table" );
+                    state.callback_registry.unsubscribe_unchecked(
+                        registration.id );
+                    state.callback_methods.erase( registration.id );
+                    continue;
+                }
+            }
+            if( registration.once ) {
+                state.callback_registry.unsubscribe_unchecked(
+                    registration.id );
+                state.callback_methods.erase( registration.id );
+            }
+        } catch( const std::exception &exception ) {
+            record_callback_timing(
+                state,
+                "callback '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'", started );
+            record_runtime_error(
+                "Lua callback actor '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'",
+                exception.what() );
+            state.callback_registry.unsubscribe_unchecked(
+                registration.id );
+            state.callback_methods.erase( registration.id );
+        }
+        if( stop ) {
+            break;
+        }
+    }
+    return allowed;
+}
+
 std::vector<std::string_view> hooks_for_event( const event_type type )
 {
     switch( type ) {
@@ -3554,6 +4014,47 @@ void bootstrap_mapgen_runtime_if_needed()
 }
 
 } // namespace
+
+bool dispatch_native_hook(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return true;
+    }
+    try {
+        return dispatch_script_hook(
+        *active_state, name, [&]() {
+            return native_callback_payload( *active_state, arguments );
+        } );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native hook '" + std::string( name ) + "'",
+            exception.what() );
+        return true;
+    }
+}
+
+bool dispatch_native_callback(
+    const std::string_view kind, const std::string_view target,
+    const std::string_view method,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return true;
+    }
+    try {
+        return dispatch_script_callback(
+        *active_state, kind, target, method, [&]() {
+            return native_callback_payload( *active_state, arguments );
+        } );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native callback '" + std::string( kind ) + "." +
+            std::string( method ) + "'", exception.what() );
+        return true;
+    }
+}
 
 bool reload_scripts( std::string &error )
 {

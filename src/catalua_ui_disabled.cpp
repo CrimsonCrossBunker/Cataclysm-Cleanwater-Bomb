@@ -37,6 +37,19 @@ void on_turn()
 {
 }
 
+bool dispatch_native_hook(
+    std::string_view, const native_callback_arguments & )
+{
+    return true;
+}
+
+bool dispatch_native_callback(
+    std::string_view, std::string_view, std::string_view,
+    const native_callback_arguments & )
+{
+    return true;
+}
+
 void dispatch_mapgen_postprocess( mapgendata & )
 {
 }

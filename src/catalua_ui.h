@@ -6,8 +6,12 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
+class Character;
+class Creature;
+class item;
 class mapgendata;
 
 namespace cata::lua_ui
@@ -50,6 +54,40 @@ struct page_info {
     std::vector<std::string> slots;
     int order = 100;
 };
+
+struct native_callback_point {
+    std::string coordinate_space;
+    int x = 0;
+    int y = 0;
+    int z = 0;
+};
+
+struct native_callback_id {
+    std::string kind;
+    std::string value;
+};
+
+using native_callback_value = std::variant <
+                              bool, std::int64_t, double, std::string,
+                              const Character *, const Creature *, const item *,
+                              native_callback_point, native_callback_id >;
+
+struct native_callback_argument {
+    std::string name;
+    native_callback_value value;
+};
+
+using native_callback_arguments = std::vector<native_callback_argument>;
+
+// Dispatch detached native payloads to API-v5 hooks and callback actors.
+// Missing runtimes or handlers are fail-open.  A false result is only
+// meaningful for a documented intercept/decision callback.
+bool dispatch_native_hook(
+    std::string_view name, const native_callback_arguments &arguments = {} );
+bool dispatch_native_callback(
+    std::string_view kind, std::string_view target,
+    std::string_view method,
+    const native_callback_arguments &arguments = {} );
 
 // Lua module names are converted from dotted names to paths below data/lua or
 // config/lua.  Exposed for focused tests of the sandbox boundary.
