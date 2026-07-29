@@ -2408,6 +2408,142 @@ end) == false)
     CHECK( error.find( "game.read" ) != std::string::npos );
 }
 
+TEST_CASE( "lua_v5_world_applies_controlled_active_map_mutations",
+           "[lua][bindings][world][map][write][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local position = game.creatures.snapshot(
+    game.creatures.avatar()).value.position
+local before = game.world.tile(position)
+local web = game.types.id("field", "fd_web")
+local original_web = nil
+for _, entry in ipairs(before.fields.items) do
+    if entry.id == web then
+        original_web = entry
+    end
+end
+local spawned_handle = nil
+
+local ok, failure = pcall(function()
+    local terrain = game.world.set_terrain(
+        position, before.terrain)
+    assert(terrain.ok == true)
+    assert(terrain.value.accepted == true)
+    assert(terrain.value.after.kind == before.terrain.kind)
+    assert(terrain.value.after.value == before.terrain.value)
+
+    local furniture = game.world.set_furniture(
+        position, before.furniture)
+    assert(furniture.ok == true)
+    assert(furniture.value.accepted == true)
+    assert(furniture.value.changed == false)
+
+    local trap = game.world.set_trap(
+        position, before.trap)
+    assert(trap.ok == true)
+    assert(trap.value.accepted == true)
+    assert(trap.value.changed == false)
+
+    if original_web ~= nil then
+        local cleared = game.world.remove_field(position, web)
+        assert(cleared.ok == true)
+        assert(cleared.value.removed == true)
+    end
+    local placed = game.world.put_field(
+        position, web, 1, game.time.duration(0, "turn"))
+    assert(placed.ok == true)
+    assert(placed.value.id == web)
+    assert(placed.value.after_intensity == 1)
+    assert(placed.value.after_age.turns == 0)
+
+    local removed_field = game.world.remove_field(position, web)
+    assert(removed_field.ok == true)
+    assert(removed_field.value.removed == true)
+    assert(game.world.remove_field(position, web).value.removed == false)
+
+    local backpack = game.types.id("item", "backpack")
+    local spawned = game.world.spawn_item(position, backpack, 1)
+    assert(spawned.ok == true)
+    if spawned.value.items[1] ~= nil then
+        spawned_handle = spawned.value.items[1].handle
+    end
+    assert(spawned.value.added == 1)
+    assert(spawned.value.count_by_charges == false)
+    assert(spawned.value.instances == 1)
+    assert(#spawned.value.items == 1)
+    assert(spawned_handle:is_valid())
+
+    local wrong_kind = game.world.remove_item(
+        position, game.creatures.avatar())
+    assert(wrong_kind.ok == false)
+    assert(wrong_kind.error.code == "wrong_kind")
+    local removed_item = game.world.remove_item(
+        position, spawned_handle)
+    assert(removed_item.ok == true)
+    assert(removed_item.value.removed == true)
+    assert(spawned_handle:is_valid() == false)
+    spawned_handle = nil
+
+    assert(pcall(function()
+        game.world.set_terrain(
+            position, backpack)
+    end) == false)
+    assert(pcall(function()
+        game.world.put_field(
+            position, web, 1000000,
+            game.time.duration(0, "turn"))
+    end) == false)
+    assert(pcall(function()
+        game.world.put_field(
+            position, web, 1,
+            game.time.duration(366, "day"))
+    end) == false)
+    assert(pcall(function()
+        game.world.spawn_item(position, backpack, 101)
+    end) == false)
+end)
+
+if spawned_handle ~= nil and spawned_handle:is_valid() then
+    game.world.remove_item(position, spawned_handle)
+end
+game.world.remove_field(position, web)
+if original_web ~= nil then
+    game.world.put_field(
+        position, web, original_web.intensity,
+        original_web.age)
+end
+assert(ok, failure)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local position = game.creatures.snapshot(
+    game.creatures.avatar()).value.position
+local terrain = game.world.tile(position).terrain
+game.world.set_terrain(position, terrain)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+}
+
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
            "[lua][bindings][items][inventory][integration]" )
 {

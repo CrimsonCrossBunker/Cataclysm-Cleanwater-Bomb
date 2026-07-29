@@ -12,14 +12,18 @@
 #include <vector>
 
 #include "avatar.h"
+#include "calendar.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "field.h"
+#include "field_type.h"
 #include "item.h"
+#include "item_location.h"
 #include "map.h"
 #include "point.h"
 #include "trap.h"
+#include "type_id.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 
@@ -40,6 +44,9 @@ constexpr int default_region_limit = 128;
 constexpr int maximum_region_limit = 1024;
 constexpr int default_vehicle_limit = 64;
 constexpr int maximum_vehicle_limit = 256;
+constexpr std::int64_t maximum_spawn_quantity = 1000000;
+constexpr int maximum_spawn_instances = 100;
+constexpr time_duration maximum_field_age = 365_days;
 constexpr std::size_t maximum_offset = 1000000;
 
 struct tile_options {
@@ -83,6 +90,20 @@ tripoint_bub_ms require_loaded_position(
             api_name + " position is outside the active map" );
     }
     return here.get_bub( absolute );
+}
+
+void require_id_kind(
+    const script_game_id &id, const std::string &kind,
+    const std::string &api_name )
+{
+    if( id.kind() != kind ) {
+        throw std::invalid_argument(
+            api_name + " requires GameId<" + kind + ">" );
+    }
+    if( !id.is_valid() ) {
+        throw std::invalid_argument(
+            api_name + " requires a valid GameId<" + kind + ">" );
+    }
 }
 
 int require_integer_option(
@@ -646,6 +667,372 @@ sol::table world_vehicles(
     return result;
 }
 
+void set_optional_id(
+    sol::table &table, const std::string &field,
+    const std::string &kind, const std::string &value,
+    const bool present )
+{
+    if( present ) {
+        table[field] = script_game_id( kind, value );
+    } else {
+        table[field] = sol::nil;
+    }
+}
+
+sol::table set_terrain(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const script_game_id &requested )
+{
+    constexpr std::string_view api_name =
+        "game.world.set_terrain";
+    require_id_kind(
+        requested, "terrain", std::string( api_name ) );
+    map &here = get_map();
+    const tripoint_bub_ms local =
+        require_loaded_position(
+            here, position, std::string( api_name ) );
+    const ter_str_id before =
+        here.ter( local ).id();
+    const ter_id target =
+        ter_str_id( requested.value() ).id();
+    here.ter_set( local, target );
+    const ter_str_id after =
+        here.ter( local ).id();
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["accepted"] = after.id() == target;
+    value["changed"] = before != after;
+    value["before"] = script_game_id(
+                          "terrain", before.str() );
+    value["after"] = script_game_id(
+                         "terrain", after.str() );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_furniture(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const sol::object &requested )
+{
+    constexpr std::string_view api_name =
+        "game.world.set_furniture";
+    furn_id target =
+        furn_str_id::NULL_ID().id();
+    if( requested != sol::nil ) {
+        if( !requested.is<script_game_id>() ) {
+            throw std::invalid_argument(
+                std::string( api_name ) +
+                " requires GameId<furniture> or nil" );
+        }
+        const script_game_id &id =
+            requested.as<const script_game_id &>();
+        require_id_kind(
+            id, "furniture", std::string( api_name ) );
+        target = furn_str_id( id.value() ).id();
+    }
+    map &here = get_map();
+    const tripoint_bub_ms local =
+        require_loaded_position(
+            here, position, std::string( api_name ) );
+    const furn_str_id before =
+        here.furn( local ).id();
+    here.furn_set( local, target );
+    const furn_str_id after =
+        here.furn( local ).id();
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["accepted"] = after.id() == target;
+    value["changed"] = before != after;
+    set_optional_id(
+        value, "before", "furniture", before.str(),
+        !before.is_null() );
+    set_optional_id(
+        value, "after", "furniture", after.str(),
+        !after.is_null() );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_trap(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const sol::object &requested )
+{
+    constexpr std::string_view api_name =
+        "game.world.set_trap";
+    trap_id target = tr_null;
+    if( requested != sol::nil ) {
+        if( !requested.is<script_game_id>() ) {
+            throw std::invalid_argument(
+                std::string( api_name ) +
+                " requires GameId<trap> or nil" );
+        }
+        const script_game_id &id =
+            requested.as<const script_game_id &>();
+        require_id_kind(
+            id, "trap", std::string( api_name ) );
+        target = trap_str_id( id.value() ).id();
+    }
+    map &here = get_map();
+    const tripoint_bub_ms local =
+        require_loaded_position(
+            here, position, std::string( api_name ) );
+    const trap_str_id before =
+        here.tr_at( local ).id;
+    here.trap_set( local, target );
+    const trap_str_id after =
+        here.tr_at( local ).id;
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["accepted"] = after.id() == target;
+    value["changed"] = before != after;
+    set_optional_id(
+        value, "before", "trap", before.str(),
+        !before.is_null() );
+    set_optional_id(
+        value, "after", "trap", after.str(),
+        !after.is_null() );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table put_field(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const script_game_id &requested,
+    const int intensity,
+    const script_time_duration &age )
+{
+    constexpr std::string_view api_name =
+        "game.world.put_field";
+    require_id_kind(
+        requested, "field", std::string( api_name ) );
+    const field_type_id native =
+        field_type_str_id( requested.value() ).id();
+    const int maximum_intensity =
+        native->get_max_intensity();
+    if( intensity < 1 ||
+        intensity > maximum_intensity ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " intensity is outside the field definition limit" );
+    }
+    const time_duration native_age =
+        age.to_native();
+    if( native_age < 0_turns ||
+        native_age > maximum_field_age ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " age must be between zero turns and 365 days" );
+    }
+    map &here = get_map();
+    const tripoint_bub_ms local =
+        require_loaded_position(
+            here, position, std::string( api_name ) );
+    const field_entry *before =
+        here.get_field( local, native );
+    const bool existed = before != nullptr;
+    const int before_intensity =
+        existed ? before->get_field_intensity() : 0;
+    const time_duration before_age =
+        existed ? before->get_field_age() : 0_turns;
+    const bool accepted = here.add_field(
+                              local, native, intensity,
+                              native_age, false );
+    const field_entry *after =
+        here.get_field( local, native );
+    sol::state_view state( lua );
+    if( !accepted || after == nullptr ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "rejected",
+            "The engine rejected field placement"
+        } );
+    }
+    sol::table value = state.create_table();
+    value["id"] = requested;
+    value["existed"] = existed;
+    value["before_intensity"] = before_intensity;
+    value["before_age"] =
+        script_time_duration::from_native(
+            before_age );
+    value["after_intensity"] =
+        after->get_field_intensity();
+    value["after_age"] =
+        script_time_duration::from_native(
+            after->get_field_age() );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table remove_field(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const script_game_id &requested )
+{
+    constexpr std::string_view api_name =
+        "game.world.remove_field";
+    require_id_kind(
+        requested, "field", std::string( api_name ) );
+    const field_type_id native =
+        field_type_str_id( requested.value() ).id();
+    map &here = get_map();
+    const tripoint_bub_ms local =
+        require_loaded_position(
+            here, position, std::string( api_name ) );
+    const field_entry *before =
+        here.get_field( local, native );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["id"] = requested;
+    value["removed"] = before != nullptr;
+    if( before != nullptr ) {
+        value["intensity"] =
+            before->get_field_intensity();
+        value["age"] =
+            script_time_duration::from_native(
+                before->get_field_age() );
+        here.remove_field( local, native );
+    }
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table spawn_item(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const script_game_id &requested,
+    const std::int64_t quantity,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name =
+        "game.world.spawn_item";
+    require_id_kind(
+        requested, "item", std::string( api_name ) );
+    if( quantity <= 0 ||
+        quantity > maximum_spawn_quantity ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " quantity is outside its limit" );
+    }
+    map &here = get_map();
+    const tripoint_bub_ms local =
+        require_loaded_position(
+            here, position, std::string( api_name ) );
+    const tripoint_abs_ms absolute =
+        here.get_abs( local );
+    const itype_id native( requested.value() );
+    const item prototype( native, calendar::turn );
+    const bool count_by_charges =
+        prototype.count_by_charges();
+    if( !count_by_charges &&
+        quantity > maximum_spawn_instances ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " cannot create more than 100 item instances at once" );
+    }
+    const int attempts = count_by_charges ? 1 :
+                         static_cast<int>( quantity );
+    sol::state_view state( lua );
+    sol::table items = state.create_table( attempts, 0 );
+    int returned = 0;
+    std::int64_t added_quantity = 0;
+    for( int index = 0; index < attempts; ++index ) {
+        item created(
+            native, calendar::turn,
+            count_by_charges ?
+            static_cast<int>( quantity ) : -1 );
+        item_location added =
+            here.add_item_or_charges_ret_loc(
+                local, std::move( created ), false );
+        if( !added ) {
+            break;
+        }
+        ++returned;
+        added_quantity += count_by_charges ?
+                          quantity : 1;
+        sol::table value = state.create_table();
+        value["handle"] = make_map_item_handle(
+                              *added, absolute,
+                              runtime_generation,
+                              world_generation );
+        value["uid"] = added->uid().get_value();
+        value["id"] = requested;
+        value["name"] = added->tname();
+        value["charges"] = added->charges;
+        items[returned] = std::move( value );
+    }
+    sol::table value = state.create_table();
+    value["id"] = requested;
+    value["requested"] = quantity;
+    value["added"] = added_quantity;
+    value["rejected"] =
+        quantity - added_quantity;
+    value["count_by_charges"] =
+        count_by_charges;
+    value["instances"] = returned;
+    value["items"] = std::move( items );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table remove_item(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const game_handle &handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name =
+        "game.world.remove_item";
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    map &here = get_map();
+    const tripoint_bub_ms local =
+        require_loaded_position(
+            here, position, std::string( api_name ) );
+    map_stack entries = here.i_at( local );
+    const auto found = std::find_if(
+                           entries.begin(), entries.end(),
+    [&resolved]( const item & entry ) {
+        return &entry == resolved.value;
+    } );
+    if( found == entries.end() ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "wrong_location",
+            "The item is not a top-level item at the requested map tile"
+        } );
+    }
+    sol::table value = state.create_table();
+    value["uid"] =
+        resolved.value->uid().get_value();
+    value["id"] = script_game_id(
+                      "item",
+                      resolved.value->typeId().str() );
+    value["name"] = resolved.value->tname();
+    here.i_rem( local, resolved.value );
+    value["removed"] = true;
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_world_api(
@@ -704,8 +1091,89 @@ void install_world_api(
                    current_runtime_generation(),
                    current_world_generation() );
     } );
+    world.set_function(
+        "set_terrain",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const script_game_id & id ) {
+        require_write();
+        return set_terrain(
+                   lua_state, position, id );
+    } );
+    world.set_function(
+        "set_furniture",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const sol::object & id ) {
+        require_write();
+        return set_furniture(
+                   lua_state, position, id );
+    } );
+    world.set_function(
+        "set_trap",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const sol::object & id ) {
+        require_write();
+        return set_trap(
+                   lua_state, position, id );
+    } );
+    world.set_function(
+        "put_field",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+            const script_game_id & id,
+            const int intensity,
+    const script_time_duration & age ) {
+        require_write();
+        return put_field(
+                   lua_state, position, id,
+                   intensity, age );
+    } );
+    world.set_function(
+        "remove_field",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const script_game_id & id ) {
+        require_write();
+        return remove_field(
+                   lua_state, position, id );
+    } );
+    world.set_function(
+        "spawn_item",
+        [current_runtime_generation,
+         current_world_generation,
+         require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+            const script_game_id & id,
+    const std::int64_t quantity ) {
+        require_write();
+        return spawn_item(
+                   lua_state, position, id, quantity,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    world.set_function(
+        "remove_item",
+        [current_runtime_generation,
+         current_world_generation,
+         require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & position,
+    const game_handle & handle ) {
+        require_write();
+        return remove_item(
+                   lua_state, position, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     game["world"] = std::move( world );
-    static_cast<void>( require_write );
 }
 
 } // namespace cata::lua_ui
