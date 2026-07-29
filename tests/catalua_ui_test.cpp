@@ -1107,6 +1107,42 @@ assert(type(status.error.message) == "string")
     REQUIRE( script.valid() );
 }
 
+TEST_CASE( "lua_top_level_handles_use_the_committed_runtime_generation",
+           "[lua][bindings][handles][integration]" )
+{
+    scoped_calendar_turn turn;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "scheduler" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local runtime = game.runtime_status()
+assert(runtime.generation > 0)
+assert(math.type(runtime.world_generation) == "integer")
+local player = game.handles.avatar()
+assert(player.kind == "creature")
+assert(player:is_valid() == true)
+scheduler.after(1, function()
+    assert(player:is_valid() == true)
+    local status = player:status()
+    assert(status.ok == true)
+    assert(status.value.kind == "creature")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    const cata::lua_ui::runtime_status loaded = cata::lua_ui::status();
+    CHECK( loaded.generation > 0 );
+    calendar::turn = turn.original() + 1_turns;
+    cata::lua_ui::on_turn();
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
            "[lua][ui][navigation]" )
 {
