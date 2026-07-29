@@ -708,7 +708,7 @@ item craft_command::create_in_progress_craft()
     if( preview.goes_bad() ) {
         const time_duration predicted_remaining = preview.get_shelf_life() -
                 preview.get_shelf_life() * predicted_rot;
-        if( ( predicted_rot >= 1.0 || predicted_remaining <= 1_hours ) &&
+        if( ( predicted_rot >= 1.0 || predicted_remaining <= 3_hours ) &&
             crafter->is_avatar() ) {
             const char *warning = predicted_rot >= 1.0
                                   ? _( "The selected ingredients may be rotten before this craft finishes.\n"
