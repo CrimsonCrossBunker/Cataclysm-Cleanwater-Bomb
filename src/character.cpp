@@ -7008,6 +7008,42 @@ void Character::process_one_effect( effect &it, bool is_new )
     }
 
     // Speed and stats are handled in recalc_speed_bonus and reset_stats respectively
+    if( !is_new ) {
+        return;
+    }
+
+    const std::string body_part =
+        it.get_bp() == bodypart_str_id::NULL_ID() ?
+        std::string() : it.get_bp().id().str();
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( this ) },
+        {
+            "effect", cata::lua_ui::native_callback_id {
+                "effect", it.get_id().str()
+            }
+        },
+        {
+            "body_part", cata::lua_ui::native_callback_id {
+                "body_part", body_part
+            }
+        },
+        { "intensity", std::int64_t { it.get_intensity() } }
+    };
+    const bool dispatch_added =
+        it.has_flag( flag_EFFECT_LUA_ON_ADDED ) &&
+        cata::lua_ui::has_native_hook(
+            "on_character_effect_added" );
+    const bool dispatch_tick =
+        it.has_flag( flag_EFFECT_LUA_ON_TICK ) &&
+        cata::lua_ui::has_native_hook( "on_character_effect" );
+    if( dispatch_added ) {
+        cata::lua_ui::dispatch_native_hook(
+            "on_character_effect_added", payload );
+    }
+    if( dispatch_tick ) {
+        cata::lua_ui::dispatch_native_hook(
+            "on_character_effect", payload );
+    }
 }
 
 void Character::process_effects()
@@ -7063,11 +7099,51 @@ void Character::process_effects()
     dex_bonus_hardcoded = 0;
     int_bonus_hardcoded = 0;
     per_bonus_hardcoded = 0;
+    struct lua_effect_tick {
+        std::string effect;
+        std::string body_part;
+        int intensity;
+    };
+    const bool has_lua_effect_hook =
+        cata::lua_ui::has_native_hook( "on_character_effect" );
+    std::vector<lua_effect_tick> lua_effect_ticks;
     //Human only effects
     for( std::pair<const efftype_id, std::map<bodypart_id, effect>> &elem : *effects ) {
         for( std::pair<const bodypart_id, effect> &_effect_it : elem.second ) {
             process_one_effect( _effect_it.second, false );
+            if( has_lua_effect_hook &&
+                _effect_it.second.has_flag(
+                    flag_EFFECT_LUA_ON_TICK ) ) {
+                const bodypart_id body_part =
+                    _effect_it.second.get_bp();
+                lua_effect_ticks.push_back( {
+                    _effect_it.second.get_id().str(),
+                    body_part == bodypart_str_id::NULL_ID() ?
+                    std::string() : body_part.id().str(),
+                    _effect_it.second.get_intensity()
+                } );
+            }
         }
+    }
+    for( const lua_effect_tick &tick : lua_effect_ticks ) {
+        cata::lua_ui::dispatch_native_hook(
+        "on_character_effect", {
+            {
+                "character",
+                static_cast<const Character *>( this )
+            },
+            {
+                "effect", cata::lua_ui::native_callback_id {
+                    "effect", tick.effect
+                }
+            },
+            {
+                "body_part", cata::lua_ui::native_callback_id {
+                    "body_part", tick.body_part
+                }
+            },
+            { "intensity", std::int64_t { tick.intensity } }
+        } );
     }
 
     // Apply new effects from effect->effect chains

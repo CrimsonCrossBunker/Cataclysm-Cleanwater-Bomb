@@ -128,5 +128,14 @@
     "blocks_effects": [ "staggered_character", "bouldering" ],
     "rating": "good",
     "max_duration": 99999999
+  },
+  {
+    "type": "effect_type",
+    "id": "test_lua_lifecycle",
+    "name": [ "Lua lifecycle test" ],
+    "desc": [ "Exercises bounded Lua effect lifecycle hooks." ],
+    "flags": [ "EFFECT_LUA_ON_ADDED", "EFFECT_LUA_ON_TICK", "EFFECT_LUA_ON_REMOVED" ],
+    "max_duration": "1 h",
+    "max_intensity": 10
   }
 ]

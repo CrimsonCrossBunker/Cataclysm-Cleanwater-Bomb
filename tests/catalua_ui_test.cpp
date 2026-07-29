@@ -6380,6 +6380,99 @@ end)
     } );
 }
 
+TEST_CASE( "lua_v5_effect_hooks_run_from_opt_in_native_lifecycles",
+           "[lua][bindings][hooks][effects][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    avatar &player = get_avatar();
+    const efftype_id lifecycle_effect( "test_lua_lifecycle" );
+    player.remove_effect( lifecycle_effect );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local expected = game.types.id("effect", "test_lua_lifecycle")
+
+local function observe(name, creature_field, remove_on_second_tick)
+    return function(payload)
+        assert(payload.effect == expected)
+        assert(payload.body_part.kind == "body_part")
+        assert(payload.body_part:is_null())
+        assert(payload[creature_field] ~= nil)
+        if payload.intensity ~= nil then
+            assert(payload.intensity == 2)
+        end
+        local key = "native_effects." .. name
+        local count = state.character.get(key, 0) + 1
+        state.character.set(key, count)
+        if remove_on_second_tick and count == 2 then
+            local removed = game.effects.remove(
+                payload[creature_field], payload.effect)
+            assert(removed.ok and removed.value)
+        end
+    end
+end
+
+game.hooks.on("on_character_effect_added",
+    observe("character_added", "character", false))
+game.hooks.on("on_character_effect",
+    observe("character_tick", "character", true))
+game.hooks.on("on_character_effect_removed",
+    observe("character_removed", "character", false))
+game.hooks.on("on_mon_effect_added",
+    observe("monster_added", "monster", false))
+game.hooks.on("on_mon_effect",
+    observe("monster_tick", "monster", true))
+game.hooks.on("on_mon_effect_removed",
+    observe("monster_removed", "monster", false))
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    player.add_effect(
+        lifecycle_effect, 5_minutes,
+        bodypart_str_id::NULL_ID(), false, 2, true );
+    REQUIRE( player.has_effect( lifecycle_effect ) );
+    player.process_effects();
+    CHECK_FALSE( player.has_effect( lifecycle_effect ) );
+
+    monster test_monster( mtype_id( "mon_zombie" ) );
+    test_monster.add_effect(
+        lifecycle_effect, 5_minutes,
+        bodypart_str_id::NULL_ID(), false, 2, true );
+    REQUIRE( test_monster.has_effect( lifecycle_effect ) );
+    test_monster.process_effects();
+    CHECK_FALSE( test_monster.has_effect( lifecycle_effect ) );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native_effects.character_added", 0) == 1)
+assert(state.character.get(
+    "native_effects.character_tick", 0) == 2)
+assert(state.character.get(
+    "native_effects.character_removed", 0) == 1)
+assert(state.character.get(
+    "native_effects.monster_added", 0) == 1)
+assert(state.character.get(
+    "native_effects.monster_tick", 0) == 2)
+assert(state.character.get(
+    "native_effects.monster_removed", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
            "[lua][bindings][callbacks][integration]" )
 {
