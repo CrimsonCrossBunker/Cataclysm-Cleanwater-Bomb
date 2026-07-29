@@ -225,8 +225,12 @@ bool consume_craft_material_plan( Character &crafter, craft_material_plan &plan,
         }
         if( source.by_charges ) {
             consumed.mod_charges( source.quantity - consumed.charges );
-            source.location->mod_charges( -source.quantity );
-            source.location.on_contents_changed();
+            if( source.location->charges == source.quantity ) {
+                source.location.remove_item();
+            } else {
+                source.location->mod_charges( -source.quantity );
+                source.location.on_contents_changed();
+            }
         } else {
             source.location.remove_item();
             remove_ammo( consumed, crafter );
