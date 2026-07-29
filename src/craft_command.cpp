@@ -7,6 +7,7 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -56,6 +57,7 @@ struct craft_material_source {
     int64_t source_uid = 0;
     int quantity = 0;
     bool by_charges = false;
+    bool infinite_map_source = false;
 };
 
 struct craft_material_plan {
@@ -92,6 +94,20 @@ std::vector<item_location> craft_source_locations( Character &crafter,
     return locations;
 }
 
+std::optional<item> infinite_map_charge_source( Character &crafter, const itype_id &type )
+{
+    map &here = get_map();
+    const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
+                crafter.pos_bub(), PICKUP_RANGE, 1, 100 );
+    for( const tripoint_bub_ms &point : reachable ) {
+        item source = here.liquid_from( point );
+        if( source.typeId() == type && source.charges == item::INFINITE_CHARGES ) {
+            return source;
+        }
+    }
+    return std::nullopt;
+}
+
 bool build_craft_material_plan( Character &crafter,
                                 const std::vector<comp_selection<item_comp>> &selections,
                                 int batch, const std::function<bool( const item & )> &filter,
@@ -102,6 +118,14 @@ bool build_craft_material_plan( Character &crafter,
                                 selection.comp.count > 0;
         int remaining = selection.comp.count > 0 ? selection.comp.count * batch :
                         std::abs( selection.comp.count );
+        if( by_charges && ( selection.use_from & usage_from::map ) ) {
+            std::optional<item> infinite_source = infinite_map_charge_source( crafter, selection.comp.type );
+            if( infinite_source ) {
+                infinite_source->charges = remaining;
+                plan.sources.push_back( { item_location::nowhere, *infinite_source, 0, remaining, true, true } );
+                remaining = 0;
+            }
+        }
         std::vector<item_location> candidates;
         for( int pass = 0; pass < 2 && remaining > 0; ++pass ) {
             const bool preferred = pass == 0;
@@ -171,6 +195,9 @@ bool build_craft_material_plan( Character &crafter,
 bool validate_craft_material_plan( const craft_material_plan &plan )
 {
     for( const craft_material_source &source : plan.sources ) {
+        if( source.infinite_map_source ) {
+            continue;
+        }
         if( !source.location || source.location->uid().get_value() != source.source_uid ||
             source.location->typeId() != source.snapshot.typeId() ) {
             return false;
@@ -191,7 +218,11 @@ bool consume_craft_material_plan( Character &crafter, craft_material_plan &plan,
 
     map &here = get_map();
     for( craft_material_source &source : plan.sources ) {
-        item consumed = *source.location;
+        item consumed = source.infinite_map_source ? source.snapshot : *source.location;
+        if( source.infinite_map_source ) {
+            used.add( consumed );
+            continue;
+        }
         if( source.by_charges ) {
             consumed.mod_charges( source.quantity - consumed.charges );
             source.location->mod_charges( -source.quantity );
