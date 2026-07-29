@@ -2544,6 +2544,126 @@ game.world.set_terrain(position, terrain)
     CHECK( error.find( "game.write" ) != std::string::npos );
 }
 
+TEST_CASE( "lua_v5_overmap_reads_existing_tiles_with_bounded_search",
+           "[lua][bindings][world][overmap][read][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.snapshot(
+    game.creatures.avatar()).value
+local origin = avatar.position:project_to("overmap_terrain")
+local limits = game.overmap.limits()
+assert(limits.maximum_radius == 60)
+assert(limits.maximum_radius_z == 5)
+assert(limits.maximum_limit == 256)
+assert(limits.maximum_selectors == 16)
+assert(limits.existing_only == true)
+
+local tile = game.overmap.tile(origin)
+assert(tile.exists == true)
+assert(tile.position == origin)
+assert(tile.terrain.kind == "overmap_terrain")
+assert(tile.terrain:is_valid())
+assert(type(tile.name) == "string")
+assert(type(tile.visible_name) == "string")
+assert(tile.vision.kind == "OmVisionLevel")
+assert(type(tile.seen) == "boolean")
+assert(type(tile.explored) == "boolean")
+assert(type(tile.generated) == "boolean")
+
+local exact = game.enums.value("OtMatchType", "exact")
+local selector = { terrain = tile.terrain, match = exact }
+assert(game.overmap.matches(origin, tile.terrain) == true)
+assert(game.overmap.matches(origin, tile.terrain, exact) == true)
+assert(game.overmap.matches(origin, {
+    terrain = tile.terrain,
+    match = game.enums.value("OtMatchType", "contains"),
+}) == true)
+
+local options = {
+    types = { selector },
+    radius = 0,
+    radius_z = 0,
+    seen = tile.seen,
+    explored = tile.explored,
+    limit = 1,
+}
+local found = game.overmap.search(origin, options)
+assert(found.total == 1)
+assert(found.returned == 1)
+assert(found.scanned == 1)
+assert(found.existing == 1)
+assert(found.items[1].position == origin)
+assert(found.items[1].terrain == tile.terrain)
+assert(found.existing_only == true)
+
+local closest = game.overmap.closest(origin, options)
+assert(closest.ok == true)
+assert(closest.value.position == origin)
+local sampled = game.overmap.random(origin, options)
+assert(sampled.ok == true)
+assert(sampled.value.position == origin)
+
+local excluded = game.overmap.search(origin, {
+    exclude_types = { tile.terrain },
+    radius = 0,
+})
+assert(excluded.total == 0)
+local missing = game.overmap.closest(origin, {
+    exclude_types = { tile.terrain },
+    radius = 0,
+})
+assert(missing.ok == false)
+assert(missing.error.code == "not_found")
+
+assert(pcall(function()
+    game.overmap.tile(avatar.position)
+end) == false)
+assert(pcall(function()
+    game.overmap.search(origin, { radius = 61 })
+end) == false)
+assert(pcall(function()
+    game.overmap.search(origin, { radius_z = 6 })
+end) == false)
+assert(pcall(function()
+    game.overmap.search(origin, { limit = 257 })
+end) == false)
+assert(pcall(function()
+    game.overmap.search(origin, {
+        types = { [2] = tile.terrain },
+        radius = 0,
+    })
+end) == false)
+assert(pcall(function()
+    game.overmap.matches(
+        origin, tile.terrain,
+        game.enums.values("Direction", 0, 1)[1])
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( "game.overmap.limits()" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.read" ) != std::string::npos );
+}
+
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
            "[lua][bindings][items][inventory][integration]" )
 {
@@ -3777,8 +3897,9 @@ TEST_CASE( "lua_v5_enums_are_typed_discoverable_and_bounded",
     using namespace cata::lua_ui;
 
     const std::vector<std::string> kinds = supported_script_enum_kinds();
-    CHECK( kinds.size() == 25 );
+    CHECK( kinds.size() == 26 );
     CHECK( std::find( kinds.begin(), kinds.end(), "DamageType" ) != kinds.end() );
+    CHECK( std::find( kinds.begin(), kinds.end(), "OmVisionLevel" ) != kinds.end() );
     CHECK( script_enum_kind_is_available( "DamageType" ) );
     CHECK( script_enum_kind_is_available( "ArtifactEffectActive" ) );
     CHECK_FALSE( script_enum_kind_is_available( "ArtifactEffectPassive" ) );
@@ -3802,7 +3923,7 @@ TEST_CASE( "lua_v5_enums_are_typed_discoverable_and_bounded",
     sol::table game = lua.create_named_table( "game" );
     install_value_type_api( lua, game, []() {} );
     sol::protected_function_result result = lua.safe_script( R"lua(
-assert(#game.enums.kinds() == 25)
+assert(#game.enums.kinds() == 26)
 local hostile = game.enums.value("Attitude", "hostile")
 assert(hostile.kind == "Attitude")
 assert(hostile.name == "hostile")

@@ -1173,6 +1173,7 @@ LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_ui_modules.cpp \
   $(SRC_DIR)/catalua_ui_mutations.cpp \
   $(SRC_DIR)/catalua_ui_navigation.cpp \
+  $(SRC_DIR)/catalua_ui_overmap.cpp \
   $(SRC_DIR)/catalua_ui_renderer.cpp \
   $(SRC_DIR)/catalua_ui_registry.cpp \
   $(SRC_DIR)/catalua_ui_scheduler.cpp \

@@ -45,6 +45,7 @@
 #include "catalua_ui_mutations.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
+#include "catalua_ui_overmap.h"
 #include "catalua_ui_renderer.h"
 #include "catalua_ui_registry.h"
 #include "catalua_ui_scheduler.h"
@@ -1886,6 +1887,12 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.world" );
         require_capability( state, "game.write" );
+    } );
+    install_overmap_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game.overmap" );
+        require_capability( state, "game.read" );
     } );
     install_item_api(
         game,
