@@ -46,6 +46,7 @@
 #include "weather.h"
 
 static const itype_id itype_candle( "candle" );
+static const itype_id itype_water_faucet( "water_faucet" );
 
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 
@@ -58,6 +59,8 @@ struct craft_material_source {
     int quantity = 0;
     bool by_charges = false;
     bool infinite_map_source = false;
+    vehicle *vehicle_source = nullptr;
+    itype_id vehicle_fuel_type;
 };
 
 struct craft_material_plan {
@@ -127,6 +130,51 @@ std::optional<item> infinite_map_charge_source( Character &crafter, const itype_
     return std::nullopt;
 }
 
+void add_vehicle_charge_sources( Character &crafter, const itype_id &type, int &remaining,
+                                 craft_material_plan &plan )
+{
+    map &here = get_map();
+    const itype_id vehicle_tool_type = type.obj().phase > phase_id::SOLID ?
+                                       itype_water_faucet : type;
+    const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
+                crafter.pos_bub(), PICKUP_RANGE, 1, 100 );
+    for( const tripoint_bub_ms &point : reachable ) {
+        if( remaining <= 0 ) {
+            break;
+        }
+        const optional_vpart_position vehicle_position = here.veh_at( point );
+        if( !vehicle_position ) {
+            continue;
+        }
+        const std::optional<vpart_reference> tool_part = vehicle_position->part_with_tool( here,
+                vehicle_tool_type );
+        if( !tool_part ) {
+            continue;
+        }
+        const itype_id &tool_fuel_type = type->tool_slot_first_ammo();
+        const itype_id &fuel_type = tool_fuel_type.is_null() ? type : tool_fuel_type;
+        vehicle &source_vehicle = tool_part->vehicle();
+        int already_planned = 0;
+        for( const craft_material_source &source : plan.sources ) {
+            if( source.vehicle_source == &source_vehicle &&
+                source.vehicle_fuel_type == fuel_type ) {
+                already_planned += source.quantity;
+            }
+        }
+        const int available = static_cast<int>( source_vehicle.fuel_left( here, fuel_type ) ) -
+                              already_planned;
+        const int quantity = std::min( remaining, available );
+        if( quantity <= 0 ) {
+            continue;
+        }
+        item snapshot( type, calendar::turn_zero );
+        snapshot.charges = quantity;
+        plan.sources.push_back( { item_location::nowhere, snapshot, 0, quantity, true, false,
+                                  &source_vehicle, fuel_type } );
+        remaining -= quantity;
+    }
+}
+
 bool build_craft_material_plan( Character &crafter,
                                 const std::vector<comp_selection<item_comp>> &selections,
                                 int batch, const std::function<bool( const item & )> &filter,
@@ -194,6 +242,9 @@ bool build_craft_material_plan( Character &crafter,
                                       by_charges } );
             remaining -= quantity;
         }
+        if( by_charges && remaining > 0 && ( selection.use_from & usage_from::map ) ) {
+            add_vehicle_charge_sources( crafter, selection.comp.type, remaining, plan );
+        }
         if( remaining > 0 ) {
             return false;
         }
@@ -221,6 +272,13 @@ bool validate_craft_material_plan( const craft_material_plan &plan )
         if( source.infinite_map_source ) {
             continue;
         }
+        if( source.vehicle_source != nullptr ) {
+            if( source.vehicle_source->fuel_left( get_map(), source.vehicle_fuel_type ) <
+                source.quantity ) {
+                return false;
+            }
+            continue;
+        }
         if( !source.location || source.location->uid().get_value() != source.source_uid ||
             source.location->typeId() != source.snapshot.typeId() ) {
             return false;
@@ -241,8 +299,17 @@ bool consume_craft_material_plan( Character &crafter, craft_material_plan &plan,
 
     map &here = get_map();
     for( craft_material_source &source : plan.sources ) {
-        item consumed = source.infinite_map_source ? source.snapshot : *source.location;
+        item consumed = source.infinite_map_source || source.vehicle_source != nullptr ?
+                        source.snapshot : *source.location;
         if( source.infinite_map_source ) {
+            used.add( consumed );
+            continue;
+        }
+        if( source.vehicle_source != nullptr ) {
+            if( source.vehicle_source->drain( here, source.vehicle_fuel_type,
+                                              source.quantity ) != source.quantity ) {
+                return false;
+            }
             used.add( consumed );
             continue;
         }
