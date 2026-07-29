@@ -3401,7 +3401,7 @@ std::optional<item_components> Character::preview_crafting_components(
     }
 
     item_components preview;
-    for( const crafting_component_preview &source : sources ) {
+    for( crafting_component_preview &source : sources ) {
         preview.add( source.snapshot );
     }
     return preview;
