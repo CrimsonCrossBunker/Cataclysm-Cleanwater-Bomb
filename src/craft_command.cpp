@@ -119,7 +119,7 @@ bool build_craft_material_plan( Character &crafter,
         int remaining = selection.comp.count > 0 ? selection.comp.count * batch :
                         std::abs( selection.comp.count );
         if( by_charges && ( selection.use_from & usage_from::map ) ) {
-            const std::optional<item> infinite_source = infinite_map_charge_source(
+            std::optional<item> infinite_source = infinite_map_charge_source(
                     crafter, selection.comp.type );
             if( infinite_source ) {
                 infinite_source->charges = remaining;
