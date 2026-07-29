@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <set>
@@ -268,6 +269,7 @@ class runtime_state : public event_subscriber
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
         int event_dispatch_depth = 0;
         std::size_t generation = 0;
+        std::size_t world_generation = 0;
         bool accept_actions = false;
         std::optional<std::size_t> current_source;
         std::optional<std::string> current_page;
@@ -281,6 +283,7 @@ class runtime_state : public event_subscriber
 std::unique_ptr<runtime_state> active_state;
 std::string last_runtime_error;
 std::size_t generation_counter = 0;
+std::size_t world_generation_counter = 0;
 
 bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
                             const std::string &display_name,
@@ -2394,6 +2397,11 @@ void on_world_ready()
         dispatch_lifecycle_event( *active_state, "ccb.lifecycle.shutdown" );
         active_state.reset();
     }
+    if( world_generation_counter == std::numeric_limits<std::size_t>::max() ) {
+        world_generation_counter = 1;
+    } else {
+        ++world_generation_counter;
+    }
     clear_navigation_requests();
     script_persistent_state saved_character_state;
     std::string character_state_error;
@@ -2476,6 +2484,7 @@ runtime_status status()
     result.last_error = last_runtime_error;
     if( active_state ) {
         result.generation = active_state->generation;
+        result.world_generation = active_state->world_generation;
         result.page_count = active_state->pages.size();
         result.event_handler_count = active_state->event_registry.size();
         result.source_count = active_state->sources.size();

@@ -26,6 +26,7 @@ constexpr bool is_enabled() noexcept
 struct runtime_status {
     bool loaded = false;
     std::size_t generation = 0;
+    std::size_t world_generation = 0;
     std::size_t page_count = 0;
     std::size_t event_handler_count = 0;
     std::size_t source_count = 0;
