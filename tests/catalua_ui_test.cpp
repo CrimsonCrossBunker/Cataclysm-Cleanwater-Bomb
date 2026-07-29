@@ -6584,6 +6584,105 @@ assert(state.character.get(
     REQUIRE( reload_scripts( error ) );
 }
 
+TEST_CASE( "lua_v5_movement_hooks_veto_native_creature_moves",
+           "[lua][bindings][hooks][movement][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms player_from( 30, 30, 0 );
+    const tripoint_bub_ms npc_from( 35, 35, 0 );
+    const tripoint_bub_ms monster_from( 40, 40, 0 );
+    player.setpos( here, player_from );
+    standard_npc test_npc( "Lua movement NPC", npc_from );
+    monster test_monster( mtype_id( "mon_zombie" ), monster_from );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_movement." .. name,
+        state.character.get("native_movement." .. name, 0) + 1)
+end
+
+local function check_character_move(payload)
+    assert(payload.from.coordinate_space == "bub_ms")
+    assert(payload.to.coordinate_space == "bub_ms")
+    assert(type(payload.movement_mode) == "string")
+    assert(payload.via_ramp == false)
+    assert(payload.mounted == false)
+    assert(payload.mount == nil)
+end
+
+game.hooks.on("on_player_try_move", function(payload)
+    assert(payload.player ~= nil)
+    check_character_move(payload)
+    assert(payload.from.x == 30 and payload.from.y == 30)
+    assert(payload.to.x == 31 and payload.to.y == 30)
+    count("player")
+    return { allow = false }
+end)
+game.hooks.on("on_character_try_move", function(payload)
+    assert(payload.character ~= nil)
+    check_character_move(payload)
+    count("character")
+    return { allow = false }
+end)
+game.hooks.on("on_npc_try_move", function(payload)
+    assert(payload.npc ~= nil)
+    check_character_move(payload)
+    assert(payload.from.x == 35 and payload.from.y == 35)
+    assert(payload.to.x == 36 and payload.to.y == 35)
+    count("npc")
+    return { allow = false }
+end)
+game.hooks.on("on_monster_try_move", function(payload)
+    assert(payload.monster ~= nil)
+    assert(payload.from.coordinate_space == "bub_ms")
+    assert(payload.to.coordinate_space == "bub_ms")
+    assert(payload.from.x == 40 and payload.from.y == 40)
+    assert(payload.to.x == 41 and payload.to.y == 40)
+    assert(payload.force == false)
+    count("monster")
+    return { allow = false }
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    CHECK_FALSE( g->walk_move(
+                     player_from + tripoint_rel_ms::east,
+                     false, false ) );
+    CHECK( player.pos_bub( here ) == player_from );
+    test_npc.move_to( npc_from + tripoint_rel_ms::east );
+    CHECK( test_npc.pos_bub( here ) == npc_from );
+    CHECK_FALSE( test_monster.move_to(
+                     monster_from + tripoint_rel_ms::east ) );
+    CHECK( test_monster.pos_bub( here ) == monster_from );
+
+    script.write( R"lua(
+assert(state.character.get("native_movement.player", 0) == 1)
+assert(state.character.get("native_movement.character", 0) == 2)
+assert(state.character.get("native_movement.npc", 0) == 1)
+assert(state.character.get("native_movement.monster", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
            "[lua][bindings][callbacks][integration]" )
 {

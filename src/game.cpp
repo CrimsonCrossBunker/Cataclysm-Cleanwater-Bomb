@@ -8132,6 +8132,49 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
     }
     u.set_underwater( false );
 
+    const bool has_player_try_move =
+        cata::lua_ui::has_native_hook( "on_player_try_move" );
+    const bool has_character_try_move =
+        cata::lua_ui::has_native_hook( "on_character_try_move" );
+    if( has_player_try_move || has_character_try_move ) {
+        const monster *const mount =
+            u.is_mounted() ? u.mounted_creature.get() : nullptr;
+        cata::lua_ui::native_callback_arguments payload = {
+            { "player", static_cast<const Character *>( &u ) },
+            {
+                "from", cata::lua_ui::native_callback_point {
+                    "bub_ms", pos.x(), pos.y(), pos.z()
+                }
+            },
+            {
+                "to", cata::lua_ui::native_callback_point {
+                    "bub_ms", dest_loc.x(), dest_loc.y(), dest_loc.z()
+                }
+            },
+            { "movement_mode", u.current_movement_mode().str() },
+            { "via_ramp", via_ramp },
+            { "mounted", mount != nullptr },
+            { "mount", static_cast<const Creature *>( mount ) }
+        };
+        bool allowed = true;
+        if( has_player_try_move ) {
+            const bool player_allowed =
+                cata::lua_ui::dispatch_native_hook(
+                    "on_player_try_move", payload );
+            allowed = player_allowed && allowed;
+        }
+        if( has_character_try_move ) {
+            payload.front().name = "character";
+            const bool character_allowed =
+                cata::lua_ui::dispatch_native_hook(
+                    "on_character_try_move", payload );
+            allowed = character_allowed && allowed;
+        }
+        if( !allowed ) {
+            return false;
+        }
+    }
+
     std::vector<std::string> harmful_stuff = get_dangerous_tile( dest_loc );
     if( !shifting_furniture && !pushing && !harmful_stuff.empty() ) {
         if( harmful_stuff.size() == 1 && harmful_stuff[0] == "ledge" ) {
