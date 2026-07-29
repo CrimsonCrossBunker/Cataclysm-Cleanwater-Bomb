@@ -1316,23 +1316,22 @@
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "meat_salted",
-    "name": { "str_sp": "salted meat slice" },
+    "name": { "str_sp": "vacuum-packed meat" },
     "conditional_names": [
-      { "type": "VITAMIN", "condition": "human_flesh_vitamin", "name": { "str_sp": "salted simpleton slice" } },
-      { "type": "FLAG", "condition": "STRICT_HUMANITARIANISM", "name": { "str_sp": "salted sapient slice" } },
+      { "type": "VITAMIN", "condition": "human_flesh_vitamin", "name": { "str_sp": "vacuum-packed human meat" } },
+      { "type": "FLAG", "condition": "STRICT_HUMANITARIANISM", "name": { "str_sp": "vacuum-packed demihuman meat" } },
       { "type": "COMPONENT_ID_SUBSTRING", "condition": "mutant", "name": { "str_sp": "%s, mutant" } }
     ],
     "copy-from": "meat_cooked",
     "color": "red",
     "spoils_in": "42 days",
     "container": "plastic_bag_vac",
-    "quench": -5,
-    "description": "Meat slices cured in brine.  Salty but tasty in a pinch.",
+    "description": "Cooked meat sealed in a vacuum bag to slow spoilage.  Its listed shelf life applies once exposed to air; an intact vacuum seal slows decay by half again.",
     "display_type": "BY_WEIGHT",
     "price": "5 USD",
     "price_postapoc": "3 USD",
     "delete": { "flags": [ "NUTRIENT_OVERRIDE" ] },
-    "material": [ { "type": "cured_meat" } ],
+    "material": [ { "type": "flesh" } ],
     "fun": 2,
     "vitamins": [ [ "meat_allergen", 1 ] ]
   },
@@ -1629,6 +1628,85 @@
   {
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
+    "id": "dehydrated_cured_meat",
+    "name": { "str_sp": "dehydrated cured meat" },
+    "conditional_names": [
+      { "type": "VITAMIN", "condition": "human_flesh_vitamin", "name": { "str_sp": "dehydrated cured human meat" } },
+      {
+        "type": "FLAG",
+        "condition": "STRICT_HUMANITARIANISM",
+        "name": { "str_sp": "dehydrated cured demihuman meat" }
+      },
+      { "type": "COMPONENT_ID_SUBSTRING", "condition": "mutant", "name": { "str_sp": "%s, mutant" } }
+    ],
+    "copy-from": "raw_cured_meat",
+    "weight": "85 g",
+    "volume": "125 ml",
+    "color": "brown",
+    "spoils_in": 0,
+    "quench": -15,
+    "fun": -6,
+    "description": "Raw cured meat dried until nearly all moisture is gone.  It will keep indefinitely, but is extremely salty and must be washed before normal cooking.",
+    "display_type": "BY_WEIGHT",
+    "price": "9 USD",
+    "price_postapoc": "4 USD",
+    "material": [ { "type": "cured_meat", "portion": 10 }, { "type": "flesh", "portion": 1 } ],
+    "flags": [ "RAW", "EDIBLE_FROZEN" ],
+    "smoking_result": "null",
+    "vitamins": [ [ "meat_allergen", 1 ] ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "washed_cured_meat",
+    "name": { "str_sp": "washed cured meat" },
+    "conditional_names": [
+      { "type": "VITAMIN", "condition": "human_flesh_vitamin", "name": { "str_sp": "washed cured human meat" } },
+      { "type": "FLAG", "condition": "STRICT_HUMANITARIANISM", "name": { "str_sp": "washed cured demihuman meat" } },
+      { "type": "COMPONENT_ID_SUBSTRING", "condition": "mutant", "name": { "str_sp": "%s, mutant" } }
+    ],
+    "copy-from": "raw_cured_meat",
+    "weight": "275 g",
+    "volume": "250 ml",
+    "color": "light_red",
+    "spoils_in": "3 days",
+    "quench": 0,
+    "fun": -6,
+    "description": "Raw cured meat soaked and rinsed to remove its excess salt.  It spoils quickly again, but can now be used anywhere ordinary raw red meat is called for.",
+    "display_type": "BY_WEIGHT",
+    "price": "7 USD",
+    "price_postapoc": "2 USD",
+    "material": [ { "type": "flesh" } ],
+    "flags": [ "RAW" ],
+    "cook_result": "cooked_cured_meat",
+    "cook_cost_energy": "300 kJ",
+    "smoking_result": "null",
+    "vitamins": [ [ "meat_allergen", 1 ] ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
+    "id": "cooked_cured_meat",
+    "name": { "str_sp": "cooked cured meat" },
+    "conditional_names": [
+      { "type": "VITAMIN", "condition": "human_flesh_vitamin", "name": { "str_sp": "cooked cured human meat" } },
+      { "type": "FLAG", "condition": "STRICT_HUMANITARIANISM", "name": { "str_sp": "cooked cured demihuman meat" } },
+      { "type": "COMPONENT_ID_SUBSTRING", "condition": "mutant", "name": { "str_sp": "%s, mutant" } }
+    ],
+    "copy-from": "meat_cooked",
+    "spoils_in": "3 days",
+    "description": "Cured meat that has been rinsed of excess salt and cooked.  It is savory and ready to eat, but no longer keeps like its heavily salted form.",
+    "display_type": "BY_WEIGHT",
+    "price": "9 USD",
+    "price_postapoc": "3 USD",
+    "delete": { "flags": [ "NUTRIENT_OVERRIDE" ] },
+    "material": [ { "type": "cured_meat", "portion": 1 }, { "type": "flesh", "portion": 3 } ],
+    "fun": 6,
+    "vitamins": [ [ "meat_allergen", 1 ] ]
+  },
+  {
+    "type": "ITEM",
+    "subtypes": [ "COMESTIBLE" ],
     "id": "dry_meat",
     "name": { "str_sp": "dehydrated meat" },
     "conditional_names": [
@@ -1641,6 +1719,7 @@
     "color": "red",
     "spoils_in": "360 days",
     "quench": -3,
+    "fun": -2,
     "description": "Dehydrated meat flakes.  With proper storage, this dried food will remain edible for an incredibly long time.",
     "display_type": "BY_WEIGHT",
     "price": "9 USD",
@@ -1678,7 +1757,8 @@
     "color": "white",
     "description": "Dehydrated flakes of bird meat.  With proper storage, this dried food will remain edible for an incredibly long time.",
     "display_type": "BY_WEIGHT",
-    "calories": 220
+    "calories": 220,
+    "fun": 0
   },
   {
     "type": "ITEM",
