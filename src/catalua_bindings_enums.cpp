@@ -303,12 +303,12 @@ const std::vector<enum_family_definition> &enum_families()
             "CCB removed the legacy artifact charge requirement enum.", &no_values
         },
         {
-            "ArtifactEffectActive", enum_family_status::not_applicable, "",
-            "CCB no longer models active artifact effects with this legacy enum.", &no_values
+            "ArtifactEffectActive", enum_family_status::native, "", "",
+            &artifact_passive_values
         },
         {
-            "ArtifactEffectPassive", enum_family_status::native, "", "",
-            &artifact_passive_values
+            "ArtifactEffectPassive", enum_family_status::not_applicable, "",
+            "CCB no longer models active artifact effects with this legacy enum.", &no_values
         },
         {
             "Attitude", enum_family_status::native, "", "", &attitude_values

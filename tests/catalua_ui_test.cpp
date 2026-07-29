@@ -1608,6 +1608,8 @@ TEST_CASE( "lua_v5_enums_are_typed_discoverable_and_bounded",
     CHECK( kinds.size() == 25 );
     CHECK( std::find( kinds.begin(), kinds.end(), "DamageType" ) != kinds.end() );
     CHECK( script_enum_kind_is_available( "DamageType" ) );
+    CHECK( script_enum_kind_is_available( "ArtifactEffectActive" ) );
+    CHECK_FALSE( script_enum_kind_is_available( "ArtifactEffectPassive" ) );
     CHECK_FALSE( script_enum_kind_is_available( "ArtifactCharge" ) );
 
     const script_enum_value hostile =
@@ -1649,6 +1651,9 @@ assert(removed.available == false)
 assert(#removed.reason > 0)
 assert(game.enums.has("Attitude", "friendly") == true)
 assert(game.enums.has("ArtifactCharge", "anything") == false)
+assert(game.enums.has("ArtifactEffectActive", "str_up") == true)
+assert(game.enums.describe("ArtifactEffectPassive").status == "not_applicable")
+assert(game.enums.value("ArtifactEffectActive", "str_up").name == "str_up")
 assert(pcall(function() hostile.name = "neutral" end) == false)
 assert(pcall(function()
     return game.enums.values("ActionId", 0, 513)
