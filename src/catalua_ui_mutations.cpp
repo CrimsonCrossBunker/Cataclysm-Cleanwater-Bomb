@@ -12,6 +12,9 @@
 #include <vector>
 
 #include "catalua_bindings_values.h"
+#include "catalua_game_handle.h"
+#include "character.h"
+#include "creature.h"
 #include "mutation.h"
 #include "type_id.h"
 #include "units.h"
@@ -26,6 +29,8 @@ constexpr int default_definition_limit = 64;
 constexpr int maximum_definition_limit = 256;
 constexpr std::size_t maximum_definition_offset = 1000000;
 constexpr std::size_t maximum_relation_values = 128;
+constexpr int default_state_limit = 128;
+constexpr int maximum_state_limit = 256;
 
 void require_mutation_id(
     const script_game_id &id, const std::string &api_name )
@@ -38,6 +43,28 @@ void require_mutation_id(
         throw std::invalid_argument(
             api_name + " requires a valid GameId<mutation>" );
     }
+}
+
+Character *resolve_character(
+    const game_handle &handle, const std::size_t runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    Character *character = resolved.value->as_character();
+    if( character == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype",
+            "The creature referenced by this GameHandle is not a character"
+        };
+    }
+    return character;
 }
 
 template<typename Range>
@@ -443,11 +470,463 @@ sol::table get_definition(
                state, trait_id( requested_id.value() ).obj() );
 }
 
+struct state_options {
+    std::size_t offset = 0;
+    int limit = default_state_limit;
+    bool include_hidden = true;
+    bool include_enchantment = true;
+};
+
+state_options read_state_options(
+    const sol::optional<sol::table> &requested )
+{
+    state_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.mutations.list option keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        const sol::object value = entry.second;
+        if( key == "offset" || key == "limit" ) {
+            if( !value.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    "game.mutations.list pagination options must be integers" );
+            }
+            const lua_Integer number = value.as<lua_Integer>();
+            if( number < 0 ) {
+                throw std::invalid_argument(
+                    "game.mutations.list pagination options cannot be negative" );
+            }
+            if( key == "offset" ) {
+                result.offset = static_cast<std::size_t>(
+                                    std::min<lua_Integer>(
+                                        number,
+                                        maximum_definition_offset ) );
+            } else {
+                result.limit = static_cast<int>(
+                                   std::min<lua_Integer>(
+                                       number,
+                                       maximum_state_limit ) );
+            }
+        } else if( key == "include_hidden" ||
+                   key == "include_enchantment" ) {
+            if( value.get_type() != sol::type::boolean ) {
+                throw std::invalid_argument(
+                    "game.mutations.list filter options must be booleans" );
+            }
+            if( key == "include_hidden" ) {
+                result.include_hidden = value.as<bool>();
+            } else {
+                result.include_enchantment = value.as<bool>();
+            }
+        } else {
+            throw std::invalid_argument(
+                "game.mutations.list received unknown option '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
+std::string mutation_variant_id(
+    const Character &character, const trait_id &id,
+    const bool include_enchantment )
+{
+    const std::vector<trait_and_var> mutations =
+        character.get_mutations_variants(
+            true, !include_enchantment );
+    const auto found = std::find_if(
+                           mutations.begin(), mutations.end(),
+    [&id]( const trait_and_var & entry ) {
+        return entry.trait == id;
+    } );
+    return found == mutations.end() ?
+           std::string() : found->variant;
+}
+
+sol::table snapshot_state(
+    sol::state_view lua, const Character &character,
+    const trait_id &id, const std::string &variant )
+{
+    const mutation_branch &definition = id.obj();
+    sol::table result = lua.create_table();
+    result["id"] = script_game_id(
+                       "mutation", id.str() );
+    result["name"] = definition.name( variant );
+    result["description"] =
+        character.mutation_desc( id );
+    result["functioning"] = character.has_trait( id );
+    result["permanent"] =
+        character.has_permanent_trait( id );
+    result["base_trait"] = character.has_base_trait( id );
+    result["activatable"] = definition.activated;
+    result["active"] =
+        character.has_active_mutation( id );
+    result["can_activate"] =
+        definition.activated &&
+        character.can_power_mutation( id );
+    result["cost_timer"] =
+        script_time_duration::from_native(
+            character.get_cost_timer( id ) );
+    if( variant.empty() ) {
+        result["variant"] = sol::nil;
+    } else {
+        result["variant"] = variant;
+    }
+    return result;
+}
+
+sol::table list_states(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested_options,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const state_options options =
+        read_state_options( requested_options );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    std::vector<trait_and_var> mutations =
+        character->get_mutations_variants(
+            options.include_hidden,
+            !options.include_enchantment );
+    std::sort(
+        mutations.begin(), mutations.end(),
+        []( const trait_and_var & lhs,
+    const trait_and_var & rhs ) {
+        return lhs.trait.str() < rhs.trait.str();
+    } );
+    const std::size_t offset = std::min(
+                                   options.offset,
+                                   mutations.size() );
+    const std::size_t returned = std::min(
+                                     mutations.size() - offset,
+                                     static_cast<std::size_t>(
+                                         options.limit ) );
+    sol::table items = state.create_table(
+                           static_cast<int>( returned ), 0 );
+    for( std::size_t index = 0; index < returned; ++index ) {
+        const trait_and_var &entry =
+            mutations[offset + index];
+        items[index + 1] = snapshot_state(
+                               state, *character,
+                               entry.trait, entry.variant );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["total"] = mutations.size();
+    value["offset"] = offset;
+    value["limit"] = options.limit;
+    value["returned"] = returned;
+    value["has_more"] =
+        offset + returned < mutations.size();
+    value["include_hidden"] = options.include_hidden;
+    value["include_enchantment"] =
+        options.include_enchantment;
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table has_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.has" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool present = character->has_trait(
+                             trait_id( requested_id.value() ) );
+    return make_game_value_result(
+               state, sol::make_object( state, present ) );
+}
+
+sol::table get_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.get" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    if( !character->has_trait( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_found",
+            "The character does not have a functioning mutation '" +
+            id.str() + "'"
+        } );
+    }
+    const std::string variant = mutation_variant_id(
+                                    *character, id, true );
+    sol::table value = snapshot_state(
+                           state, *character, id, variant );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+const mutation_variant *requested_variant(
+    const mutation_branch &definition,
+    const sol::optional<std::string> &requested,
+    const std::string &api_name )
+{
+    if( definition.variants.empty() ) {
+        if( requested ) {
+            throw std::invalid_argument(
+                api_name + " received a variant for a mutation without variants" );
+        }
+        return nullptr;
+    }
+    if( !requested || requested->empty() ) {
+        throw std::invalid_argument(
+            api_name + " requires an explicit variant for deterministic mutation changes" );
+    }
+    const mutation_variant *variant =
+        definition.variant( *requested );
+    if( variant == nullptr ) {
+        throw std::invalid_argument(
+            api_name + " received an unknown mutation variant '" +
+            *requested + "'" );
+    }
+    return variant;
+}
+
+sol::table grant_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const sol::optional<std::string> &requested_variant_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.grant" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    if( character->has_trait( id ) ||
+        character->has_permanent_trait( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "already_present",
+            "The character already has mutation '" +
+            id.str() + "'"
+        } );
+    }
+    const mutation_variant *variant = requested_variant(
+                                          id.obj(), requested_variant_id,
+                                          "game.mutations.grant" );
+    character->set_mutation( id, variant );
+    if( !character->has_permanent_trait( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "rejected",
+            "The engine rejected mutation '" + id.str() + "'"
+        } );
+    }
+    const std::string variant_id =
+        variant == nullptr ? std::string() : variant->id;
+    sol::table value = snapshot_state(
+                           state, *character, id, variant_id );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table remove_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.remove" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    if( !character->has_permanent_trait( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_permanent",
+            "The character does not own permanent mutation '" +
+            id.str() + "'"
+        } );
+    }
+    const std::string variant =
+        mutation_variant_id( *character, id, false );
+    sol::table before = snapshot_state(
+                            state, *character, id, variant );
+    if( character->has_base_trait( id ) ) {
+        character->toggle_trait( id, variant );
+    } else {
+        character->unset_mutation( id );
+    }
+    sol::table value = state.create_table();
+    value["removed"] = std::move( before );
+    value["present"] =
+        character->has_permanent_trait( id );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_active_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const bool desired,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.set_active" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    if( !character->has_permanent_trait( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_permanent",
+            "Only permanent character mutations can be activated"
+        } );
+    }
+    if( !id->activated ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_activatable",
+            "Mutation '" + id.str() + "' is not activatable"
+        } );
+    }
+    const std::string variant =
+        mutation_variant_id( *character, id, false );
+    sol::table before = snapshot_state(
+                            state, *character, id, variant );
+    if( desired ) {
+        if( !character->has_active_mutation( id ) ) {
+            character->activate_mutation( id );
+        }
+    } else if( character->has_active_mutation( id ) ) {
+        character->deactivate_mutation( id );
+    }
+    const bool present =
+        character->has_permanent_trait( id );
+    const bool active = present &&
+                        character->has_active_mutation( id );
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["requested"] = desired;
+    value["accepted"] = active == desired;
+    value["present"] = present;
+    if( present ) {
+        value["after"] = snapshot_state(
+                             state, *character, id,
+                             mutation_variant_id(
+                                 *character, id, false ) );
+    } else {
+        value["after"] = sol::nil;
+    }
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_variant_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::string &requested_variant_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.set_variant" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    if( !character->has_permanent_trait( id ) ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_permanent",
+            "Only permanent character mutations can change variants"
+        } );
+    }
+    const mutation_variant *variant = requested_variant(
+                                          id.obj(),
+                                          sol::optional<std::string>(
+                                                  requested_variant_id ),
+                                          "game.mutations.set_variant" );
+    const std::string before_id =
+        mutation_variant_id( *character, id, false );
+    sol::table before = snapshot_state(
+                            state, *character, id, before_id );
+    character->set_mut_variant( id, variant );
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] = snapshot_state(
+                         state, *character, id, variant->id );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_mutation_api(
     sol::table &game,
-    std::function<void()> require_read )
+    std::function<std::size_t()> current_runtime_generation,
+    std::function<std::size_t()> current_world_generation,
+    std::function<void()> require_read,
+    std::function<void()> require_write )
 {
     sol::state_view lua( game.lua_state() );
     sol::table mutations = lua.create_table();
@@ -464,6 +943,85 @@ void install_mutation_api(
     const script_game_id & id ) {
         require_read();
         return get_definition( lua_state, id );
+    } );
+    mutations.set_function(
+        "list",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_states(
+                   lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "has",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_read();
+        return has_state(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "get",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_read();
+        return get_state(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "grant",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const sol::optional<std::string> &variant ) {
+        require_write();
+        return grant_state(
+                   lua_state, handle, id, variant,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "remove",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_write();
+        return remove_state(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "set_active",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const bool active ) {
+        require_write();
+        return set_active_state(
+                   lua_state, handle, id, active,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "set_variant",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const std::string & variant ) {
+        require_write();
+        return set_variant_state(
+                   lua_state, handle, id, variant,
+                   current_runtime_generation(),
+                   current_world_generation() );
     } );
     game["mutations"] = std::move( mutations );
 }

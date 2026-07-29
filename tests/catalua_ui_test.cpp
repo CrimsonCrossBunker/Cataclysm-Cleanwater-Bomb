@@ -1762,6 +1762,117 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_character_mutations_are_generation_safe_and_write_gated",
+           "[lua][bindings][mutations][state][write][integration]" )
+{
+    avatar &player = get_avatar();
+    const trait_id debug_speed( "DEBUG_SPEED" );
+    const bool originally_present =
+        player.has_permanent_trait( debug_speed );
+    if( originally_present ) {
+        player.unset_mutation( debug_speed );
+    }
+    on_out_of_scope cleanup( [&player, debug_speed,
+    originally_present]() {
+        if( player.has_permanent_trait( debug_speed ) ) {
+            player.unset_mutation( debug_speed );
+        }
+        if( originally_present ) {
+            player.set_mutation( debug_speed );
+        }
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local speed = game.types.id("mutation", "DEBUG_SPEED")
+
+local initial = game.mutations.list(avatar, {
+    offset = 0,
+    limit = 1000000,
+    include_hidden = true,
+    include_enchantment = true
+})
+assert(initial.ok == true)
+assert(initial.value.limit == 256)
+assert(initial.value.returned == #initial.value.items)
+assert(initial.value.has_more ==
+    (initial.value.offset + initial.value.returned < initial.value.total))
+assert(game.mutations.has(avatar, speed).value == false)
+assert(game.mutations.get(avatar, speed).ok == false)
+
+local granted = game.mutations.grant(avatar, speed)
+assert(granted.ok == true)
+assert(granted.value.id == speed)
+assert(granted.value.permanent == true)
+assert(granted.value.activatable == true)
+assert(granted.value.active == false)
+assert(game.mutations.has(avatar, speed).value == true)
+assert(game.mutations.get(avatar, speed).value.id == speed)
+assert(game.mutations.grant(avatar, speed).error.code ==
+    "already_present")
+
+local activated = game.mutations.set_active(avatar, speed, true)
+assert(activated.ok == true)
+assert(activated.value.accepted == true)
+assert(activated.value.after.active == true)
+local deactivated = game.mutations.set_active(avatar, speed, false)
+assert(deactivated.ok == true)
+assert(deactivated.value.accepted == true)
+assert(deactivated.value.after.active == false)
+
+assert(pcall(function()
+    game.mutations.list(avatar, { limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.mutations.list(avatar, { include_hidden = 1 })
+end) == false)
+assert(pcall(function()
+    game.mutations.list(avatar, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.mutations.set_variant(avatar, speed, "unknown")
+end) == false)
+assert(pcall(function()
+    game.mutations.has(avatar, game.types.id("item", "rock"))
+end) == false)
+
+local removed = game.mutations.remove(avatar, speed)
+assert(removed.ok == true)
+assert(removed.value.removed.id == speed)
+assert(removed.value.present == false)
+assert(game.mutations.has(avatar, speed).value == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.has_permanent_trait( debug_speed ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.mutations.grant(
+    game.characters.avatar(),
+    game.types.id("mutation", "DEBUG_SPEED"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK_FALSE( player.has_permanent_trait( debug_speed ) );
+}
+
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
            "[lua][bindings][items][inventory][integration]" )
 {
