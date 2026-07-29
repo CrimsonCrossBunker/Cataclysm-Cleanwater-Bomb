@@ -1,6 +1,7 @@
 #include "cata_catch.h"
 #include "avatar.h"
 #include "calendar.h"
+#include "catalua_bindings.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_events.h"
@@ -955,6 +956,66 @@ TEST_CASE( "lua_i18n_api_returns_owned_translations_and_validates_plural_counts"
     const sol::protected_function_result revision = language_revision();
     REQUIRE( revision.valid() );
     CHECK( revision.get<int>() >= 0 );
+}
+
+TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
+           "[lua][ui][bindings]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<binding_domain> &catalog = binding_catalog();
+    REQUIRE( catalog.size() == 14 );
+    std::vector<std::string_view> ids;
+    ids.reserve( catalog.size() );
+    for( const binding_domain &domain : catalog ) {
+        CHECK_FALSE( domain.id.empty() );
+        CHECK_FALSE( domain.lua_namespace.empty() );
+        CHECK( supported_script_capabilities().count( std::string( domain.capability ) ) == 1 );
+        CHECK( domain.minimum_api_version >=
+               capability_minimum_api_version( domain.capability ) );
+        CHECK_FALSE( binding_status_name( domain.status ).empty() );
+        ids.push_back( domain.id );
+    }
+    std::sort( ids.begin(), ids.end() );
+    CHECK( std::adjacent_find( ids.begin(), ids.end() ) == ids.end() );
+    CHECK( find_binding_domain( "coordinates" ) != nullptr );
+    CHECK( find_binding_domain( "missing" ) == nullptr );
+    CHECK_FALSE( binding_domain_is_covered( "coordinates" ) );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    bool authorized = false;
+    install_binding_catalog_api( game, [&authorized]() {
+        if( !authorized ) {
+            throw std::runtime_error( "catalog capability denied" );
+        }
+    } );
+
+    sol::protected_function api_catalog = game["api_catalog"];
+    sol::protected_function_result denied = api_catalog();
+    CHECK_FALSE( denied.valid() );
+
+    authorized = true;
+    sol::protected_function_result first_result = api_catalog();
+    REQUIRE( first_result.valid() );
+    sol::table first = first_result;
+    REQUIRE( first.size() == catalog.size() );
+    sol::table first_entry = first[1];
+    const std::string original_id = first_entry["id"];
+    first_entry["id"] = "mutated";
+    first_entry["status"] = "covered";
+
+    sol::protected_function_result second_result = api_catalog();
+    REQUIRE( second_result.valid() );
+    sol::table second = second_result;
+    sol::table second_entry = second[1];
+    CHECK( second_entry.get<std::string>( "id" ) == original_id );
+    CHECK( second_entry.get<std::string>( "status" ) != "covered" );
+
+    sol::protected_function api_supports = game["api_supports"];
+    CHECK_FALSE( api_supports( "coordinates" ).get<bool>() );
+    CHECK_FALSE( api_supports( "missing" ).get<bool>() );
 }
 
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
