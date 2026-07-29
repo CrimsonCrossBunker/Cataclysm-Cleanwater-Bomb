@@ -1164,6 +1164,10 @@ class item : public visitable
          */
         void calc_rot( units::temperature temp, float spoil_modifier, const time_duration &time_delta );
 
+        /** Return relative rot after a hypothetical, non-mutating rot period. */
+        double get_relative_rot_after( units::temperature temp, float spoil_modifier,
+                                       const time_duration &time_delta ) const;
+
         /**
          * This is part of a workaround so that items don't rot away to nothing if the smoking rack
          * is outside the reality bubble.

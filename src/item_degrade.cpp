@@ -630,6 +630,15 @@ void item::calc_rot( units::temperature temp, const float spoil_modifier,
            ( 1_hours / 1_seconds );
 }
 
+double item::get_relative_rot_after( const units::temperature temp,
+                                     const float spoil_modifier,
+                                     const time_duration &time_delta ) const
+{
+    item simulated = *this;
+    simulated.calc_rot( temp, spoil_modifier, time_delta );
+    return simulated.get_relative_rot();
+}
+
 void item::calc_rot_while_processing( time_duration processing_duration )
 {
     if( !has_own_flag( flag_PROCESSING ) ) {
