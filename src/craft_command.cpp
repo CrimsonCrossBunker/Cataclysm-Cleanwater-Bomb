@@ -246,6 +246,12 @@ bool consume_craft_material_plan( Character &crafter, craft_material_plan &plan,
             used.add( consumed );
             continue;
         }
+        if( source.location.has_parent() ) {
+            item_pocket *parent_pocket = source.location.parent_pocket();
+            if( parent_pocket != nullptr ) {
+                parent_pocket->unseal();
+            }
+        }
         if( source.by_charges ) {
             consumed.mod_charges( source.quantity - consumed.charges );
             if( source.location->charges == source.quantity ) {
@@ -268,6 +274,7 @@ bool consume_craft_material_plan( Character &crafter, craft_material_plan &plan,
         }
         used.add( consumed );
     }
+    empty_buckets( crafter );
     return true;
 }
 
