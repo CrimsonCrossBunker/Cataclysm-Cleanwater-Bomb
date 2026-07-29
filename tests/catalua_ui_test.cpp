@@ -2181,6 +2181,178 @@ end
     CHECK( rock->is_favorite == favorite_after_write );
 }
 
+TEST_CASE( "lua_v5_inventory_operations_are_bounded_transactional_and_write_gated",
+           "[lua][bindings][items][inventory][operations][integration]" )
+{
+    avatar &player = get_avatar();
+    const auto backpack = player.worn.wear_item(
+                              player, item( itype_id( "debug_backpack" ) ),
+                              false, false );
+    REQUIRE( backpack );
+    const std::int64_t backpack_uid =
+        ( **backpack ).uid().get_value();
+    on_out_of_scope cleanup(
+    [&player, backpack_uid]() {
+        player.remove_items_with(
+        [backpack_uid]( const item & entry ) {
+            return entry.uid().get_value() == backpack_uid ||
+                   entry.get_var(
+                       "ccb_lua_inventory_ops", "" ) == "owned";
+        } );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local hammer_id = game.types.id("item", "hammer")
+local battery_id = game.types.id("item", "battery")
+local shirt_id = game.types.id("item", "tshirt")
+
+local hammer_before = game.inventory.resources(
+    avatar, hammer_id, 2)
+assert(hammer_before.ok == true)
+assert(hammer_before.value.id == hammer_id)
+assert(type(hammer_before.value.has_amount) == "boolean")
+assert(type(hammer_before.value.has_charges) == "boolean")
+assert(type(hammer_before.value.has_tools) == "boolean")
+assert(type(hammer_before.value.has_components) == "boolean")
+
+local hammers = game.inventory.give(
+    avatar, hammer_id, 2)
+assert(hammers.ok == true)
+assert(hammers.value.requested == 2)
+assert(hammers.value.added == 2)
+assert(hammers.value.rejected == 0)
+assert(hammers.value.count_by_charges == false)
+assert(hammers.value.instances == 2)
+assert(#hammers.value.items == 2)
+for _, entry in ipairs(hammers.value.items) do
+    assert(entry.id == hammer_id)
+    assert(game.items.set_var(
+        entry.handle, "ccb_lua_inventory_ops", "owned").ok)
+end
+local hammer_after = game.inventory.resources(
+    avatar, hammer_id, 2)
+assert(hammer_after.value.amount >=
+    hammer_before.value.amount + 2)
+assert(hammer_after.value.has_amount == true)
+assert(hammer_after.value.has_tools == true)
+
+local wielded = game.inventory.wield(
+    avatar, hammers.value.items[1].handle)
+assert(wielded.ok == true)
+assert(wielded.value.accepted == true)
+assert(wielded.value.item.location == "wielded")
+local occupied = game.inventory.wield(
+    avatar, hammers.value.items[2].handle)
+assert(occupied.ok == true)
+assert(occupied.value.accepted == false)
+assert(occupied.value.reason == "wielded_slot_occupied")
+local stashed = game.inventory.stash_wielded(avatar)
+assert(stashed.ok == true)
+assert(stashed.value.accepted == true)
+assert(stashed.value.item.location ~= "wielded")
+
+local shirt = game.inventory.give(
+    avatar, shirt_id, 1)
+assert(shirt.ok == true)
+assert(shirt.value.added == 1)
+assert(game.items.set_var(
+    shirt.value.items[1].handle,
+    "ccb_lua_inventory_ops", "owned").ok)
+local worn = game.inventory.wear(
+    avatar, shirt.value.items[1].handle)
+assert(worn.ok == true)
+assert(worn.value.accepted == true)
+assert(worn.value.item.location == "worn")
+
+local battery_before = game.inventory.resources(
+    avatar, battery_id, 1).value
+local battery = game.inventory.give(
+    avatar, battery_id, 10)
+assert(battery.ok == true)
+assert(battery.value.added == 10)
+assert(battery.value.count_by_charges == true)
+assert(battery.value.instances == 1)
+assert(game.items.set_var(
+    battery.value.items[1].handle,
+    "ccb_lua_inventory_ops", "owned").ok)
+local battery_snapshot = game.items.snapshot(
+    battery.value.items[1].handle).value
+local partial = game.inventory.remove(
+    avatar, battery.value.items[1].handle, 3)
+assert(partial.ok == true)
+assert(partial.value.removed == 3)
+assert(partial.value.fully_removed == false)
+assert(partial.value.remaining ==
+    battery_snapshot.charges - 3)
+assert(partial.value.item.handle:is_valid() == true)
+local battery_after_partial = game.inventory.resources(
+    avatar, battery_id, 1).value
+assert(battery_after_partial.charges ==
+    battery_before.charges + 7)
+local battery_removed = game.inventory.remove(
+    avatar, partial.value.item.handle)
+assert(battery_removed.ok == true)
+assert(battery_removed.value.fully_removed == true)
+assert(battery_removed.value.remaining == 0)
+
+assert(game.inventory.remove(
+    avatar, worn.value.item.handle).value.fully_removed == true)
+assert(game.inventory.remove(
+    avatar, stashed.value.item.handle).value.fully_removed == true)
+local second = game.inventory.find(
+    avatar, hammers.value.items[2].uid)
+assert(second.ok == true)
+assert(game.inventory.remove(
+    avatar, second.value.handle).value.fully_removed == true)
+local hammer_final = game.inventory.resources(
+    avatar, hammer_id, 2).value
+assert(hammer_final.amount == hammer_before.value.amount)
+local battery_final = game.inventory.resources(
+    avatar, battery_id, 1).value
+assert(battery_final.charges == battery_before.charges)
+
+assert(pcall(function()
+    game.inventory.give(avatar, hammer_id, 101)
+end) == false)
+assert(pcall(function()
+    game.inventory.give(avatar, hammer_id, 1,
+        { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.inventory.resources(
+        avatar, game.types.id("effect", "onfire"), 1)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.inventory.give(
+    game.characters.avatar(),
+    game.types.id("item", "hammer"), 1)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+}
+
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
            "[lua][bindings][values][ids]" )
 {

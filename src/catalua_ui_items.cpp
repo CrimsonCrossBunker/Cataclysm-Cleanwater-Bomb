@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "calendar.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
@@ -54,6 +55,8 @@ constexpr int maximum_item_charges = 1000000000;
 constexpr std::size_t maximum_item_var_key_bytes = 128;
 constexpr std::size_t maximum_item_var_string_bytes = 4096;
 constexpr double maximum_item_var_number = 1.0e15;
+constexpr int maximum_inventory_give_instances = 100;
+constexpr int maximum_inventory_resource_quantity = 1000000000;
 
 struct inventory_query_options {
     std::size_t offset = 0;
@@ -1620,6 +1623,543 @@ sol::table set_item_technique(
                    state, std::move( value ) ) );
 }
 
+struct inventory_give_options {
+    bool allow_wield = false;
+};
+
+inventory_give_options read_inventory_give_options(
+    const sol::optional<sol::table> &requested )
+{
+    inventory_give_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.inventory.give option keys must be strings" );
+        }
+        const std::string key =
+            key_object.as<std::string>();
+        if( key == "allow_wield" ) {
+            result.allow_wield = boolean_option(
+                                     entry.second, key,
+                                     "game.inventory.give" );
+        } else {
+            throw std::invalid_argument(
+                "game.inventory.give received unknown option '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
+sol::table character_item_to_lua(
+    sol::state_view lua, Character &character, item &entry,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::vector<item *> parents =
+        character.parents( entry );
+    std::string location = "carried";
+    if( character.is_wielding( entry ) ) {
+        location = "wielded";
+    } else if( character.is_worn( entry ) ) {
+        location = "worn";
+    } else if( !parents.empty() ) {
+        location = "contained";
+    }
+
+    game_handle_locator locator;
+    locator.scope = "character_" + location;
+    locator.stable_id = entry.uid().get_value();
+    const tripoint_abs_ms position = character.pos_abs();
+    locator.x = position.x();
+    locator.y = position.y();
+    locator.z = position.z();
+
+    sol::table result = lua.create_table();
+    result["handle"] = game_handle::from_item(
+                           entry, std::move( locator ),
+                           runtime_generation, world_generation );
+    result["uid"] = entry.uid().get_value();
+    result["id"] = script_game_id(
+                       "item", entry.typeId().str() );
+    result["name"] = bounded_item_text(
+                         entry.display_name() );
+    result["location"] = location;
+    result["depth"] =
+        static_cast<int>( parents.size() );
+    if( !parents.empty() ) {
+        result["parent_uid"] =
+            parents.front()->uid().get_value();
+    }
+    return result;
+}
+
+bool resolve_owned_item(
+    const game_handle &character_handle,
+    const game_handle &item_handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation,
+    Character *&character, item *&entry,
+    std::optional<game_handle_error> &error )
+{
+    character = resolve_character(
+                    character_handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return false;
+    }
+    const native_handle_result<item> resolved =
+        item_handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return false;
+    }
+    if( !character->has_item( *resolved.value ) ) {
+        error = game_handle_error{
+            "not_owned",
+            "The item referenced by this GameHandle is not carried by that character"
+        };
+        return false;
+    }
+    entry = resolved.value;
+    return true;
+}
+
+sol::table inventory_resources(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type, const std::int64_t quantity,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        type, "item", "game.inventory.resources" );
+    if( quantity < 0 ||
+        quantity > maximum_inventory_resource_quantity ) {
+        throw std::invalid_argument(
+            "game.inventory.resources quantity is outside its limit" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const itype_id native( type.value() );
+    const int requested = static_cast<int>( quantity );
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["quantity"] = requested;
+    value["amount"] = character->amount_of(
+                          native, false,
+                          maximum_inventory_resource_quantity );
+    value["charges"] = character->charges_of(
+                           native,
+                           maximum_inventory_resource_quantity );
+    value["has_amount"] = character->has_amount(
+                              native, requested, false );
+    value["has_charges"] = character->has_charges(
+                               native, requested );
+    value["has_tools"] = character->has_tools(
+                             native, requested );
+    value["has_components"] =
+        character->has_components(
+            native, requested );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table give_inventory_items(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type, const std::int64_t quantity,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        type, "item", "game.inventory.give" );
+    if( quantity <= 0 ||
+        quantity > maximum_inventory_resource_quantity ) {
+        throw std::invalid_argument(
+            "game.inventory.give quantity is outside its limit" );
+    }
+    const inventory_give_options options =
+        read_inventory_give_options( requested );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const itype_id native( type.value() );
+    const item prototype( native, calendar::turn );
+    const bool counted_by_charges =
+        prototype.count_by_charges();
+    if( !counted_by_charges &&
+        quantity > maximum_inventory_give_instances ) {
+        throw std::invalid_argument(
+            "game.inventory.give cannot create more than 100 item instances at once" );
+    }
+
+    const int attempts = counted_by_charges ? 1 :
+                         static_cast<int>( quantity );
+    sol::table items = state.create_table( attempts, 0 );
+    int returned = 0;
+    std::int64_t added_quantity = 0;
+    for( int index = 0; index < attempts; ++index ) {
+        item created(
+            native, calendar::turn,
+            counted_by_charges ?
+            static_cast<int>( quantity ) : -1 );
+        item_location added = character->i_add(
+                                  created, true, nullptr, nullptr,
+                                  false, options.allow_wield );
+        if( !added || !added.held_by( *character ) ) {
+            break;
+        }
+        ++returned;
+        added_quantity += counted_by_charges ?
+                          quantity : 1;
+        items[returned] = character_item_to_lua(
+                              state, *character, *added,
+                              runtime_generation,
+                              world_generation );
+    }
+    character->invalidate_crafting_inventory();
+
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["requested"] = quantity;
+    value["added"] = added_quantity;
+    value["rejected"] =
+        quantity - added_quantity;
+    value["count_by_charges"] =
+        counted_by_charges;
+    value["instances"] = returned;
+    value["items"] = std::move( items );
+    value["allow_wield"] = options.allow_wield;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table remove_inventory_item(
+    sol::this_state lua, const game_handle &character_handle,
+    const game_handle &item_handle,
+    const sol::optional<std::int64_t> &requested_quantity,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    Character *character = nullptr;
+    item *entry = nullptr;
+    std::optional<game_handle_error> error;
+    if( !resolve_owned_item(
+            character_handle, item_handle,
+            runtime_generation, world_generation,
+            character, entry, error ) ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const bool counted_by_charges =
+        entry->count_by_charges();
+    const std::int64_t available =
+        counted_by_charges ? entry->charges : 1;
+    const std::int64_t quantity =
+        requested_quantity.value_or( available );
+    if( quantity <= 0 ||
+        quantity > maximum_inventory_resource_quantity ) {
+        throw std::invalid_argument(
+            "game.inventory.remove quantity is outside its limit" );
+    }
+    if( !counted_by_charges && quantity != 1 ) {
+        throw std::invalid_argument(
+            "game.inventory.remove quantity must be 1 for an item that is not counted by charges" );
+    }
+    if( quantity > available ) {
+        throw std::invalid_argument(
+            "game.inventory.remove quantity exceeds the available item amount" );
+    }
+
+    const std::int64_t uid =
+        entry->uid().get_value();
+    sol::table value = state.create_table();
+    value["removed"] = quantity;
+    value["fully_removed"] = quantity == available;
+    value["before"] =
+        mutable_item_state( state, *entry );
+    if( quantity < available ) {
+        entry->charges -= static_cast<int>( quantity );
+        value["remaining"] = entry->charges;
+        value["after"] =
+            mutable_item_state( state, *entry );
+        value["item"] = character_item_to_lua(
+                            state, *character, *entry,
+                            runtime_generation,
+                            world_generation );
+    } else {
+        item removed = character->i_rem( entry );
+        if( removed.is_null() ) {
+            return make_game_error_result(
+            state, {
+                "operation_failed",
+                "The character could not remove that item"
+            } );
+        }
+        value["remaining"] = 0;
+        sol::table removed_state =
+            mutable_item_state( state, removed );
+        removed_state["uid"] = uid;
+        value["removed_item"] =
+            std::move( removed_state );
+        value["uid"] = uid;
+    }
+    character->invalidate_crafting_inventory();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table wield_inventory_item(
+    sol::this_state lua, const game_handle &character_handle,
+    const game_handle &item_handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    Character *character = nullptr;
+    item *entry = nullptr;
+    std::optional<game_handle_error> error;
+    if( !resolve_owned_item(
+            character_handle, item_handle,
+            runtime_generation, world_generation,
+            character, entry, error ) ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table value = state.create_table();
+    value["accepted"] = false;
+    const std::int64_t input_uid =
+        entry->uid().get_value();
+    value["uid"] = input_uid;
+    if( character->is_wielding( *entry ) ) {
+        value["reason"] = "already_wielded";
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+    if( character->has_weapon() ) {
+        value["reason"] = "wielded_slot_occupied";
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+    const auto permitted = character->can_wield( *entry );
+    if( !permitted.success() ) {
+        value["reason"] = "cannot_wield";
+        value["message"] = std::string( permitted.c_str() );
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+
+    const bool accepted = character->wield(
+                              item_location( *character, entry ),
+                              false );
+    value["accepted"] = accepted;
+    if( !accepted ) {
+        value["reason"] = "operation_failed";
+    } else if( item_location after =
+                   character->get_wielded_item() ) {
+        value["uid"] = after->uid().get_value();
+        if( after->uid().get_value() != input_uid ) {
+            value["previous_uid"] = input_uid;
+        }
+        value["item"] = character_item_to_lua(
+                            state, *character, *after,
+                            runtime_generation,
+                            world_generation );
+    }
+    character->invalidate_crafting_inventory();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table wear_inventory_item(
+    sol::this_state lua, const game_handle &character_handle,
+    const game_handle &item_handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    Character *character = nullptr;
+    item *entry = nullptr;
+    std::optional<game_handle_error> error;
+    if( !resolve_owned_item(
+            character_handle, item_handle,
+            runtime_generation, world_generation,
+            character, entry, error ) ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table value = state.create_table();
+    value["accepted"] = false;
+    const std::int64_t input_uid =
+        entry->uid().get_value();
+    value["uid"] = input_uid;
+    if( character->is_worn( *entry ) ) {
+        value["reason"] = "already_worn";
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+    const auto permitted = character->can_wear( *entry );
+    if( !permitted.success() ) {
+        value["reason"] = "cannot_wear";
+        value["message"] = std::string( permitted.c_str() );
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+
+    const bool was_wielded =
+        character->is_wielding( *entry );
+    item moved = character->i_rem( entry );
+    if( moved.is_null() ) {
+        value["reason"] = "operation_failed";
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+    character->worn.check_rigid_sidedness( moved );
+    character->worn.one_per_layer_sidedness( moved );
+    const auto worn = character->wear_item(
+                          moved, false );
+    value["accepted"] = static_cast<bool>( worn );
+    if( !worn ) {
+        value["reason"] = "operation_failed";
+        item_location restored;
+        if( was_wielded && !character->has_weapon() ) {
+            character->set_wielded_item( moved );
+            restored = character->get_wielded_item();
+        } else {
+            restored = character->i_add(
+                           moved, true, nullptr, nullptr,
+                           false, false );
+        }
+        if( restored ) {
+            value["rolled_back"] = true;
+            value["uid"] =
+                restored->uid().get_value();
+            if( restored->uid().get_value() !=
+                input_uid ) {
+                value["previous_uid"] = input_uid;
+            }
+            value["item"] = character_item_to_lua(
+                                state, *character, *restored,
+                                runtime_generation,
+                                world_generation );
+        }
+    } else {
+        value["uid"] =
+            ( **worn ).uid().get_value();
+        if( ( **worn ).uid().get_value() !=
+            input_uid ) {
+            value["previous_uid"] = input_uid;
+        }
+        value["item"] = character_item_to_lua(
+                            state, *character, **worn,
+                            runtime_generation,
+                            world_generation );
+    }
+    character->invalidate_crafting_inventory();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table stash_wielded_item(
+    sol::this_state lua, const game_handle &character_handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table value = state.create_table();
+    value["accepted"] = false;
+    item_location wielded =
+        character->get_wielded_item();
+    if( !wielded ) {
+        value["reason"] = "unarmed";
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+    const auto permitted =
+        character->can_unwield( *wielded );
+    if( !permitted.success() ) {
+        value["reason"] = "cannot_unwield";
+        value["message"] = std::string( permitted.c_str() );
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+    if( !character->can_add(
+            *wielded, wielded.get_item(), false ) ) {
+        value["reason"] = "no_storage";
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, std::move( value ) ) );
+    }
+
+    item moved = character->remove_weapon();
+    item_location stored = character->i_add(
+                               moved, true, nullptr, nullptr,
+                               false, false );
+    if( !stored || !stored.held_by( *character ) ) {
+        character->set_wielded_item( moved );
+        value["reason"] = "operation_failed";
+        value["rolled_back"] = true;
+        if( item_location restored =
+                character->get_wielded_item() ) {
+            value["item"] = character_item_to_lua(
+                                state, *character, *restored,
+                                runtime_generation,
+                                world_generation );
+        }
+    } else {
+        value["accepted"] = true;
+        value["uid"] = stored->uid().get_value();
+        value["item"] = character_item_to_lua(
+                            state, *character, *stored,
+                            runtime_generation,
+                            world_generation );
+    }
+    character->invalidate_crafting_inventory();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_item_api(
@@ -1776,6 +2316,81 @@ void install_item_api(
         require_read();
         return find_inventory_item(
                    lua_state, character, uid,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "resources",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state,
+            const game_handle & character,
+            const script_game_id & type,
+    const std::int64_t quantity ) {
+        require_read();
+        return inventory_resources(
+                   lua_state, character, type, quantity,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "give",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const game_handle & character,
+            const script_game_id & type,
+            const std::int64_t quantity,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        return give_inventory_items(
+                   lua_state, character, type, quantity, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "remove",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const game_handle & character,
+            const game_handle & item_handle,
+    const sol::optional<std::int64_t> &quantity ) {
+        require_write();
+        return remove_inventory_item(
+                   lua_state, character, item_handle, quantity,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "wield",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const game_handle & character,
+    const game_handle & item_handle ) {
+        require_write();
+        return wield_inventory_item(
+                   lua_state, character, item_handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "wear",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const game_handle & character,
+    const game_handle & item_handle ) {
+        require_write();
+        return wear_inventory_item(
+                   lua_state, character, item_handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "stash_wielded",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+    const game_handle & character ) {
+        require_write();
+        return stash_wielded_item(
+                   lua_state, character,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
