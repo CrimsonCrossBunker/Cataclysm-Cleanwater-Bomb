@@ -41,6 +41,7 @@
 #include "vehicle.h"
 #include "visitable.h"
 #include "vpart_position.h"
+#include "weather.h"
 
 static const itype_id itype_candle( "candle" );
 
@@ -478,6 +479,15 @@ static bool should_add_crafting_faults( Character *who, const recipe *rec )
     return false;
 }
 
+static void restore_crafting_components( Character &crafter, item_components &components )
+{
+    for( item_components::type_vector_pair &tvp : components ) {
+        for( item &component : tvp.second ) {
+            crafter.i_add_or_drop( component );
+        }
+    }
+}
+
 
 std::vector<std::vector<step_tool_alloc>> select_step_tool_allocs(
         Character &crafter, const recipe &rec, int batch, read_only_visitable &map_inv,
@@ -642,19 +652,6 @@ item craft_command::create_in_progress_craft()
         start_allocs = { step0 };
     }
 
-    // Run the start (bucket-0) tool debit on a probe before consuming components
-    // so a charge shortfall aborts without losing them; the debited allocations
-    // carry over to the real craft.
-    {
-        item probe( rec, batch_size, item_components{}, std::vector<item_comp> {} );
-        probe.set_step_tool_allocs( start_allocs );
-        if( !crafter->craft_consume_step_tools( probe ) ) {
-            debugmsg( "start tool debit failed for craft %s", rec->ident().str() );
-            return item();
-        }
-        start_allocs = probe.get_step_tool_allocs();
-    }
-
     for( const auto &it : item_selections ) {
         std::list<item> tmp = sane_consume_items( it, crafter, batch_size, filter );
         for( item &tmp_it : tmp ) {
@@ -683,6 +680,49 @@ item craft_command::create_in_progress_craft()
         } else {
             comps_used.emplace_back( comp_used );
         }
+    }
+
+    // Build the same temporary craft used by the real craft path, but without
+    // consuming the components from `used`.  This makes the warning follow the
+    // actual component inheritance logic instead of maintaining a second model.
+    std::vector<item_comp> preview_comps = comps_used;
+    item preview( rec, batch_size, used, preview_comps, false );
+    const time_duration expected_duration = time_duration::from_moves(
+                crafter->expected_time_to_craft( *rec, batch_size ) );
+    const double predicted_rot = preview.get_relative_rot_after(
+                                     get_weather().get_temperature( crafter->pos_bub() ), 1.0f,
+                                     expected_duration );
+    if( preview.goes_bad() ) {
+        const time_duration predicted_remaining = preview.get_shelf_life() -
+                preview.get_shelf_life() * predicted_rot;
+        if( predicted_rot >= 1.0 && crafter->is_avatar() ) {
+            const bool continue_craft = crafter->query_yn(
+                                            _( "The selected ingredients may be rotten before this craft finishes.\n"
+                                               "Start crafting anyway?" ) );
+            if( !continue_craft ) {
+                restore_crafting_components( *crafter, used );
+                return item();
+            }
+        } else if( predicted_rot < 1.0 && predicted_remaining <= 1_hours &&
+                   crafter->is_avatar() ) {
+            crafter->add_msg( m_warning,
+                              _( "The finished %s will have very little shelf life left." ),
+                              rec->result_name() );
+        }
+    }
+
+    // Run the start (bucket-0) tool debit on a probe after the rot warning so a
+    // cancelled warning does not consume tool charges; the debited allocations
+    // carry over to the real craft.
+    {
+        item probe( rec, batch_size, item_components{}, std::vector<item_comp> {} );
+        probe.set_step_tool_allocs( start_allocs );
+        if( !crafter->craft_consume_step_tools( probe ) ) {
+            debugmsg( "start tool debit failed for craft %s", rec->ident().str() );
+            restore_crafting_components( *crafter, used );
+            return item();
+        }
+        start_allocs = probe.get_step_tool_allocs();
     }
 
     item new_craft( rec, batch_size, used, comps_used, should_add_crafting_faults( crafter, rec ) );
