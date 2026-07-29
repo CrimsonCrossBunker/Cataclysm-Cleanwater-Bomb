@@ -5884,6 +5884,89 @@ end)
     CHECK( cata::lua_ui::status().last_error.empty() );
 }
 
+TEST_CASE( "lua_v5_sound_and_targeting_services_validate_interactions",
+           "[lua][bindings][game_services][interaction]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "events", "game.actions" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local channels = game.sound.channels()
+assert(type(channels) == "table")
+assert(#channels == 31)
+assert(channels[1] == "any")
+
+local sound_ok, sound_error = pcall(function()
+    game.sound.play("menu_move", "default", 0)
+end)
+assert(sound_ok == false)
+assert(string.find(sound_error, "active callback", 1, true) ~= nil)
+local target_ok, target_error = pcall(function()
+    game.targeting.look_around()
+end)
+assert(target_ok == false)
+assert(string.find(target_error, "active callback", 1, true) ~= nil)
+
+events.on("game_begin", function()
+    game.sound.play("menu_move", "default", 0)
+    game.sound.play("menu_move", "default", 0, {
+        angle_degrees = 0,
+        pitch_min = -1,
+        pitch_max = -1
+    })
+    game.sound.play_ambient("environment", "daytime", 0, {
+        channel = "any",
+        fade_in_ms = 0,
+        pitch = -1,
+        loops = 0
+    })
+
+    assert(pcall(function()
+        game.sound.play("", "default", 0)
+    end) == false)
+    assert(pcall(function()
+        game.sound.play("menu_move", "default", 129)
+    end) == false)
+    assert(pcall(function()
+        game.sound.play("menu_move", "default", 0, {
+            pitch_min = 1
+        })
+    end) == false)
+    assert(pcall(function()
+        game.sound.play_ambient("environment", "daytime", 0, {
+            channel = "unknown"
+        })
+    end) == false)
+    assert(pcall(function()
+        game.sound.play_ambient("environment", "daytime", 0, {
+            loops = 101
+        })
+    end) == false)
+
+    assert(pcall(function()
+        game.targeting.choose_adjacent_for_action(
+            "Choose", "Nothing", "__missing_action__")
+    end) == false)
+    assert(pcall(function()
+        game.targeting.choose_adjacent_where(
+            "Choose", "Nothing", { 123 })
+    end) == false)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    get_event_bus().send<event_type::game_begin>(
+        "lua-game-interaction-services" );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
 TEST_CASE( "lua_game_actions_are_queued_validated_and_isolated",
            "[lua][ui][game][actions][integration]" )
 {

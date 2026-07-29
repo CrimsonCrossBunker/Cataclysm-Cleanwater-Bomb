@@ -44,6 +44,7 @@
 #include "catalua_ui_hordes.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_imgui.h"
+#include "catalua_ui_interaction.h"
 #include "catalua_ui_items.h"
 #include "catalua_ui_magic.h"
 #include "catalua_ui_manifest.h"
@@ -2573,6 +2574,16 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game message services" );
+        require_capability( state, "game.actions" );
+    },
+    [&state]() {
+        return state.accept_actions &&
+               state.current_source.has_value();
+    } );
+    install_game_interaction_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game interaction services" );
         require_capability( state, "game.actions" );
     },
     [&state]() {
