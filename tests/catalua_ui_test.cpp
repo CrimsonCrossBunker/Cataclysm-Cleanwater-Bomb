@@ -26,6 +26,7 @@
 #include "item.h"
 #include "json_loader.h"
 #include "path_info.h"
+#include "pocket_type.h"
 #include "ui_profile.h"
 #include "units.h"
 #include "weather.h"
@@ -1875,6 +1876,133 @@ assert(wrong_kind.ok == false)
 assert(wrong_kind.error.code == "wrong_kind")
 assert(pcall(function()
     game.items.snapshot(rock.handle, -1)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_item_pockets_and_contents_are_recursive_and_bounded",
+           "[lua][bindings][items][pockets][contents][integration]" )
+{
+    avatar &player = get_avatar();
+    item backpack( itype_id( "debug_backpack" ) );
+    REQUIRE( backpack.put_in(
+                 item( itype_id( "rock" ) ),
+                 pocket_type::CONTAINER ).success() );
+    item_location added = player.i_add( backpack );
+    REQUIRE( added );
+    const std::int64_t added_uid = added->uid().get_value();
+    on_out_of_scope cleanup( [&player, added_uid]() {
+        player.remove_items_with(
+        [added_uid]( const item & entry ) {
+            return entry.uid().get_value() == added_uid;
+        }, 1 );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local listed = game.inventory.list(avatar, {
+    limit = 512,
+    max_depth = 16
+})
+assert(listed.ok == true)
+local backpack = nil
+for _, entry in ipairs(listed.value.items) do
+    if entry.id.value == "debug_backpack" then
+        backpack = entry
+    end
+end
+assert(backpack ~= nil)
+
+local pockets = game.items.pockets(backpack.handle, {
+    offset = 0,
+    limit = 1000000
+})
+assert(pockets.ok == true)
+local pocket_page = pockets.value
+assert(pocket_page.limit == 256)
+assert(pocket_page.returned == #pocket_page.items)
+assert(pocket_page.returned <= pocket_page.total)
+local container_pocket = nil
+for _, pocket in ipairs(pocket_page.items) do
+    assert(math.type(pocket.index) == "integer")
+    assert(pocket.ordinal == pocket.index + 1)
+    assert(type(pocket.type) == "string")
+    assert(type(pocket.name) == "string")
+    assert(type(pocket.description) == "string")
+    assert(math.type(pocket.items) == "integer")
+    assert(type(pocket.empty) == "boolean")
+    assert(type(pocket.rigid) == "boolean")
+    assert(type(pocket.watertight) == "boolean")
+    assert(type(pocket.sealed) == "boolean")
+    assert(pocket.capacity.volume.kind == "volume")
+    assert(pocket.capacity.volume_used.kind == "volume")
+    assert(pocket.capacity.volume_remaining.kind == "volume")
+    assert(pocket.capacity.weight.kind == "mass")
+    assert(pocket.capacity.weight_used.kind == "mass")
+    assert(pocket.capacity.weight_remaining.kind == "mass")
+    assert(pocket.capacity.length_max.kind == "length")
+    assert(pocket.capacity.length_min.kind == "length")
+    if pocket.type == "container" and pocket.items > 0 then
+        container_pocket = pocket
+    end
+end
+assert(container_pocket ~= nil)
+
+local contents = game.items.contents(backpack.handle, {
+    recursive = true,
+    limit = 1000000,
+    max_depth = 1000000
+})
+assert(contents.ok == true)
+local content_page = contents.value
+assert(content_page.limit == 512)
+assert(content_page.max_depth == 16)
+assert(content_page.returned == #content_page.items)
+assert(content_page.returned <= content_page.total)
+assert(type(content_page.total_exact) == "boolean")
+local rock = nil
+for _, entry in ipairs(content_page.items) do
+    assert(entry.handle.kind == "item")
+    assert(entry.handle:locator().scope == "item_contained")
+    assert(math.type(entry.parent_uid) == "integer")
+    assert(math.type(entry.pocket_index) == "integer")
+    assert(type(entry.pocket_type) == "string")
+    assert(entry.depth >= 1)
+    if entry.id.value == "rock" then
+        rock = entry
+    end
+end
+assert(rock ~= nil)
+assert(game.items.snapshot(rock.handle).value.id == rock.id)
+
+local direct = game.items.contents(backpack.handle, {
+    recursive = false,
+    limit = 512
+})
+assert(direct.ok == true)
+for _, entry in ipairs(direct.value.items) do
+    assert(entry.depth == 1)
+end
+
+assert(game.items.pockets(avatar).error.code == "wrong_kind")
+assert(game.items.contents(avatar).error.code == "wrong_kind")
+assert(pcall(function()
+    game.items.pockets(backpack.handle, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.items.contents(backpack.handle, { max_depth = -1 })
 end) == false)
 )lua" );
 

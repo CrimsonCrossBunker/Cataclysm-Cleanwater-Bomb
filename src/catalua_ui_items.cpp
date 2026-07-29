@@ -39,6 +39,14 @@ constexpr std::size_t maximum_inventory_offset = 1000000;
 constexpr int default_item_relation_limit = 64;
 constexpr int maximum_item_relation_limit = 256;
 constexpr int maximum_item_text_width = 8192;
+constexpr int default_pocket_limit = 64;
+constexpr int maximum_pocket_limit = 256;
+constexpr int default_contents_limit = 128;
+constexpr int maximum_contents_limit = 512;
+constexpr int default_contents_depth = 8;
+constexpr int maximum_contents_depth = 16;
+constexpr std::size_t maximum_contents_nodes = 4096;
+constexpr std::size_t maximum_contents_offset = 1000000;
 
 struct inventory_query_options {
     std::size_t offset = 0;
@@ -59,22 +67,24 @@ struct inventory_item_entry {
 };
 
 std::int64_t integer_option(
-    const sol::object &value, const std::string &name )
+    const sol::object &value, const std::string &name,
+    const std::string &api_name )
 {
     if( !value.is<lua_Integer>() ) {
         throw std::invalid_argument(
-            "game.inventory.list option '" + name +
+            api_name + " option '" + name +
             "' must be an integer" );
     }
     return value.as<lua_Integer>();
 }
 
 bool boolean_option(
-    const sol::object &value, const std::string &name )
+    const sol::object &value, const std::string &name,
+    const std::string &api_name )
 {
     if( !value.is<bool>() ) {
         throw std::invalid_argument(
-            "game.inventory.list option '" + name +
+            api_name + " option '" + name +
             "' must be a boolean" );
     }
     return value.as<bool>();
@@ -96,7 +106,9 @@ inventory_query_options read_inventory_options(
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "offset" ) {
-            const std::int64_t offset = integer_option( value, key );
+            const std::int64_t offset = integer_option(
+                                            value, key,
+                                            "game.inventory.list" );
             if( offset < 0 ||
                 static_cast<std::uint64_t>( offset ) >
                 maximum_inventory_offset ) {
@@ -105,7 +117,9 @@ inventory_query_options read_inventory_options(
             }
             result.offset = static_cast<std::size_t>( offset );
         } else if( key == "limit" ) {
-            const std::int64_t limit = integer_option( value, key );
+            const std::int64_t limit = integer_option(
+                                           value, key,
+                                           "game.inventory.list" );
             if( limit < 0 ) {
                 throw std::invalid_argument(
                     "game.inventory.list limit cannot be negative" );
@@ -114,7 +128,9 @@ inventory_query_options read_inventory_options(
                                std::min<std::int64_t>(
                                    limit, maximum_inventory_limit ) );
         } else if( key == "max_depth" ) {
-            const std::int64_t depth = integer_option( value, key );
+            const std::int64_t depth = integer_option(
+                                           value, key,
+                                           "game.inventory.list" );
             if( depth < 0 ) {
                 throw std::invalid_argument(
                     "game.inventory.list max_depth cannot be negative" );
@@ -123,13 +139,21 @@ inventory_query_options read_inventory_options(
                                    std::min<std::int64_t>(
                                        depth, maximum_inventory_depth ) );
         } else if( key == "recursive" ) {
-            result.recursive = boolean_option( value, key );
+            result.recursive = boolean_option(
+                                   value, key,
+                                   "game.inventory.list" );
         } else if( key == "include_wielded" ) {
-            result.include_wielded = boolean_option( value, key );
+            result.include_wielded = boolean_option(
+                                         value, key,
+                                         "game.inventory.list" );
         } else if( key == "include_worn" ) {
-            result.include_worn = boolean_option( value, key );
+            result.include_worn = boolean_option(
+                                      value, key,
+                                      "game.inventory.list" );
         } else if( key == "include_carried" ) {
-            result.include_carried = boolean_option( value, key );
+            result.include_carried = boolean_option(
+                                         value, key,
+                                         "game.inventory.list" );
         } else {
             throw std::invalid_argument(
                 "game.inventory.list received unknown option '" +
@@ -473,6 +497,12 @@ script_unit_value volume_value( const units::volume &value )
                units::to_milliliter( value ) );
 }
 
+script_unit_value length_value( const units::length &value )
+{
+    return script_unit_value::from_canonical_integer(
+               "length", "millimeter", value.value() );
+}
+
 script_unit_value money_value( const int cents )
 {
     return script_unit_value::from_canonical_integer(
@@ -731,6 +761,437 @@ sol::table item_snapshot_result(
                        relation_limit ) ) );
 }
 
+std::string pocket_type_name( const pocket_type type )
+{
+    switch( type ) {
+        case pocket_type::CONTAINER:
+            return "container";
+        case pocket_type::MAGAZINE:
+            return "magazine";
+        case pocket_type::MAGAZINE_WELL:
+            return "magazine_well";
+        case pocket_type::MOD:
+            return "mod";
+        case pocket_type::CORPSE:
+            return "corpse";
+        case pocket_type::SOFTWARE:
+            return "software";
+        case pocket_type::E_FILE_STORAGE:
+            return "e_file_storage";
+        case pocket_type::CABLE:
+            return "cable";
+        case pocket_type::MIGRATION:
+            return "migration";
+        case pocket_type::EBOOK:
+            return "ebook";
+        case pocket_type::LAST:
+            return "unknown";
+    }
+    return "unknown";
+}
+
+pocket_type native_pocket_type( const item_pocket &pocket )
+{
+    const pocket_data *data = pocket.get_pocket_data();
+    return data == nullptr ? pocket.saved_type() : data->type;
+}
+
+struct pocket_query_options {
+    std::size_t offset = 0;
+    int limit = default_pocket_limit;
+};
+
+pocket_query_options read_pocket_options(
+    const sol::optional<sol::table> &requested )
+{
+    pocket_query_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.items.pockets option keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        const sol::object value = entry.second;
+        if( key == "offset" ) {
+            const std::int64_t offset = integer_option(
+                                            value, key,
+                                            "game.items.pockets" );
+            if( offset < 0 ||
+                static_cast<std::uint64_t>( offset ) >
+                maximum_contents_offset ) {
+                throw std::invalid_argument(
+                    "game.items.pockets offset is outside its limit" );
+            }
+            result.offset = static_cast<std::size_t>( offset );
+        } else if( key == "limit" ) {
+            const std::int64_t limit = integer_option(
+                                           value, key,
+                                           "game.items.pockets" );
+            if( limit < 0 ) {
+                throw std::invalid_argument(
+                    "game.items.pockets limit cannot be negative" );
+            }
+            result.limit = static_cast<int>(
+                               std::min<std::int64_t>(
+                                   limit, maximum_pocket_limit ) );
+        } else {
+            throw std::invalid_argument(
+                "game.items.pockets received unknown option '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
+sol::table snapshot_pocket(
+    sol::state_view lua, const item_pocket &pocket,
+    const std::size_t index )
+{
+    sol::table result = lua.create_table();
+    result["index"] = index;
+    result["ordinal"] = index + 1;
+    result["type"] =
+        pocket_type_name( native_pocket_type( pocket ) );
+    result["name"] = bounded_item_text(
+                         pocket.get_name().translated() );
+    result["description"] = bounded_item_text(
+                                pocket.get_description().translated() );
+    result["items"] = pocket.size();
+    result["empty"] = pocket.empty();
+    result["full"] = pocket.full( false );
+    result["rigid"] = pocket.rigid();
+    result["watertight"] = pocket.watertight();
+    result["airtight"] = pocket.airtight();
+    result["transparent"] = pocket.transparent();
+    result["restricted"] = pocket.is_restricted();
+    result["forbidden"] = pocket.is_forbidden();
+    result["standard"] = pocket.is_standard_type();
+    result["container_like"] =
+        pocket.is_container_like_type();
+    result["ablative"] = pocket.is_ablative();
+    result["holster"] = pocket.is_holster();
+    result["sealable"] = pocket.sealable();
+    result["sealed"] = pocket.sealed();
+    result["will_spill"] = pocket.will_spill();
+    result["moves"] = pocket.moves();
+    result["spoil_multiplier"] =
+        pocket.spoil_multiplier();
+
+    sol::table capacity = lua.create_table();
+    capacity["volume"] =
+        volume_value( pocket.volume_capacity() );
+    capacity["volume_used"] =
+        volume_value( pocket.contents_volume() );
+    capacity["volume_remaining"] =
+        volume_value( pocket.remaining_volume() );
+    capacity["weight"] =
+        mass_value( pocket.weight_capacity() );
+    capacity["weight_used"] =
+        mass_value( pocket.contains_weight() );
+    capacity["weight_remaining"] =
+        mass_value( pocket.remaining_weight() );
+    capacity["length_max"] =
+        length_value( pocket.max_containable_length() );
+    capacity["length_min"] =
+        length_value( pocket.min_containable_length() );
+    result["capacity"] = std::move( capacity );
+    return result;
+}
+
+sol::table item_pockets_result(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const pocket_query_options options =
+        read_pocket_options( requested );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+    const std::vector<item_pocket *> pockets =
+        resolved.value->get_contents().get_pockets(
+    []( const item_pocket & ) {
+        return true;
+    } );
+    const std::size_t start =
+        std::min( options.offset, pockets.size() );
+    const std::size_t returned = std::min(
+                                     pockets.size() - start,
+                                     static_cast<std::size_t>(
+                                         options.limit ) );
+    sol::table items = state.create_table(
+                           static_cast<int>( returned ), 0 );
+    for( std::size_t index = 0; index < returned; ++index ) {
+        const item_pocket *pocket = pockets[start + index];
+        if( pocket != nullptr ) {
+            items[index + 1] = snapshot_pocket(
+                                   state, *pocket,
+                                   start + index );
+        }
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["total"] = pockets.size();
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["returned"] = returned;
+    value["has_more"] =
+        start + returned < pockets.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+struct contents_query_options {
+    std::size_t offset = 0;
+    int limit = default_contents_limit;
+    int max_depth = default_contents_depth;
+    bool recursive = true;
+};
+
+struct contained_item_entry {
+    item *value = nullptr;
+    int depth = 0;
+    std::int64_t parent_uid = 0;
+    std::size_t pocket_index = 0;
+    std::string pocket_type;
+    std::vector<int> path;
+};
+
+contents_query_options read_contents_options(
+    const sol::optional<sol::table> &requested )
+{
+    contents_query_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.items.contents option keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        const sol::object value = entry.second;
+        if( key == "offset" ) {
+            const std::int64_t offset = integer_option(
+                                            value, key,
+                                            "game.items.contents" );
+            if( offset < 0 ||
+                static_cast<std::uint64_t>( offset ) >
+                maximum_contents_offset ) {
+                throw std::invalid_argument(
+                    "game.items.contents offset is outside its limit" );
+            }
+            result.offset = static_cast<std::size_t>( offset );
+        } else if( key == "limit" ) {
+            const std::int64_t limit = integer_option(
+                                           value, key,
+                                           "game.items.contents" );
+            if( limit < 0 ) {
+                throw std::invalid_argument(
+                    "game.items.contents limit cannot be negative" );
+            }
+            result.limit = static_cast<int>(
+                               std::min<std::int64_t>(
+                                   limit, maximum_contents_limit ) );
+        } else if( key == "max_depth" ) {
+            const std::int64_t depth = integer_option(
+                                           value, key,
+                                           "game.items.contents" );
+            if( depth < 0 ) {
+                throw std::invalid_argument(
+                    "game.items.contents max_depth cannot be negative" );
+            }
+            result.max_depth = static_cast<int>(
+                                   std::min<std::int64_t>(
+                                       depth, maximum_contents_depth ) );
+        } else if( key == "recursive" ) {
+            result.recursive = boolean_option(
+                                   value, key,
+                                   "game.items.contents" );
+        } else {
+            throw std::invalid_argument(
+                "game.items.contents received unknown option '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
+void collect_item_contents(
+    item &parent, const std::vector<int> &parent_path,
+    const int parent_depth,
+    const contents_query_options &options,
+    std::vector<contained_item_entry> &result,
+    bool &node_truncated, bool &depth_truncated )
+{
+    const std::vector<item_pocket *> pockets =
+        parent.get_contents().get_pockets(
+    []( const item_pocket & ) {
+        return true;
+    } );
+    if( parent_depth >= options.max_depth ) {
+        depth_truncated = depth_truncated ||
+                          std::any_of(
+                              pockets.begin(), pockets.end(),
+        []( const item_pocket * pocket ) {
+            return pocket != nullptr && !pocket->empty();
+        } );
+        return;
+    }
+    for( std::size_t pocket_index = 0;
+         pocket_index < pockets.size(); ++pocket_index ) {
+        item_pocket *pocket = pockets[pocket_index];
+        if( pocket == nullptr ) {
+            continue;
+        }
+        const std::list<item *> children =
+            pocket->all_items_top();
+        std::size_t child_index = 0;
+        for( item *child : children ) {
+            if( result.size() >= maximum_contents_nodes ) {
+                node_truncated = true;
+                return;
+            }
+            if( child == nullptr ) {
+                ++child_index;
+                continue;
+            }
+            std::vector<int> child_path = parent_path;
+            child_path.push_back(
+                static_cast<int>( pocket_index ) );
+            child_path.push_back(
+                static_cast<int>( child_index ) );
+            const int depth = parent_depth + 1;
+            result.push_back( {
+                child, depth, parent.uid().get_value(),
+                pocket_index,
+                pocket_type_name(
+                    native_pocket_type( *pocket ) ),
+                child_path
+            } );
+            if( options.recursive ) {
+                collect_item_contents(
+                    *child, child_path, depth, options,
+                    result, node_truncated,
+                    depth_truncated );
+                if( node_truncated ) {
+                    return;
+                }
+            }
+            ++child_index;
+        }
+    }
+}
+
+game_handle make_contained_item_handle(
+    const game_handle &root,
+    const contained_item_entry &entry,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    game_handle_locator locator = root.locator();
+    locator.scope = "item_contained";
+    locator.stable_id =
+        entry.value->uid().get_value();
+    locator.path = entry.path;
+    return game_handle::from_item(
+               *entry.value, std::move( locator ),
+               runtime_generation, world_generation );
+}
+
+sol::table contained_item_to_lua(
+    sol::state_view lua, const game_handle &root,
+    const contained_item_entry &entry,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::table result = lua.create_table();
+    result["handle"] = make_contained_item_handle(
+                           root, entry, runtime_generation,
+                           world_generation );
+    result["uid"] = entry.value->uid().get_value();
+    result["id"] = script_game_id(
+                       "item", entry.value->typeId().str() );
+    result["name"] =
+        bounded_item_text( entry.value->display_name() );
+    result["depth"] = entry.depth;
+    result["parent_uid"] = entry.parent_uid;
+    result["pocket_index"] = entry.pocket_index;
+    result["pocket_type"] = entry.pocket_type;
+    return result;
+}
+
+sol::table item_contents_result(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const contents_query_options options =
+        read_contents_options( requested );
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result(
+                   state, *resolved.error );
+    }
+
+    bool node_truncated = false;
+    bool depth_truncated = false;
+    std::vector<contained_item_entry> contents;
+    collect_item_contents(
+        *resolved.value, handle.locator().path, 0,
+        options, contents, node_truncated,
+        depth_truncated );
+    const std::size_t start =
+        std::min( options.offset, contents.size() );
+    const std::size_t returned = std::min(
+                                     contents.size() - start,
+                                     static_cast<std::size_t>(
+                                         options.limit ) );
+    sol::table items = state.create_table(
+                           static_cast<int>( returned ), 0 );
+    for( std::size_t index = 0; index < returned; ++index ) {
+        items[index + 1] = contained_item_to_lua(
+                               state, handle,
+                               contents[start + index],
+                               runtime_generation,
+                               world_generation );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["total"] = contents.size();
+    value["total_exact"] =
+        !node_truncated && !depth_truncated;
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["max_depth"] = options.max_depth;
+    value["recursive"] = options.recursive;
+    value["returned"] = returned;
+    value["has_more"] =
+        start + returned < contents.size() ||
+        node_truncated;
+    value["node_truncated"] = node_truncated;
+    value["depth_truncated"] = depth_truncated;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_item_api(
@@ -750,6 +1211,28 @@ void install_item_api(
         require_read();
         return item_snapshot_result(
                    lua_state, handle, relation_limit,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "pockets",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return item_pockets_result(
+                   lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
+        "contents",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return item_contents_result(
+                   lua_state, handle, options,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
