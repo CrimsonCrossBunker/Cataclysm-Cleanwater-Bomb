@@ -1152,6 +1152,84 @@ end)
     CHECK( cata::lua_ui::status().last_error.empty() );
 }
 
+TEST_CASE( "lua_v5_creature_queries_return_bounded_handles_and_snapshots",
+           "[lua][bindings][creatures][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.avatar()
+assert(avatar.kind == "creature")
+assert(avatar:is_valid())
+
+local result = game.creatures.snapshot(avatar)
+assert(result.ok == true)
+local snapshot = result.value
+assert(snapshot.kind == "avatar")
+assert(type(snapshot.name) == "string")
+assert(type(snapshot.display_name) == "string")
+assert(snapshot.position.origin == "abs")
+assert(snapshot.position.scale == "ms")
+assert(math.type(snapshot.position.x) == "integer")
+assert(type(snapshot.visible) == "boolean")
+assert(math.type(snapshot.distance) == "integer")
+assert(type(snapshot.attitude) == "string")
+assert(type(snapshot.dead) == "boolean")
+assert(type(snapshot.hallucination) == "boolean")
+assert(math.type(snapshot.hp) == "integer")
+assert(math.type(snapshot.hp_max) == "integer")
+assert(math.type(snapshot.hp_percent) == "integer")
+assert(math.type(snapshot.moves) == "integer")
+assert(math.type(snapshot.effect_count) == "integer")
+assert(type(snapshot.size) == "string")
+
+local nearby = game.creatures.nearby({
+    radius = 0,
+    limit = 4,
+    visible_only = false,
+    include_avatar = true
+})
+assert(nearby.radius == 0)
+assert(nearby.limit == 4)
+assert(nearby.returned == #nearby.items)
+assert(nearby.total >= 1)
+assert(nearby.truncated == (nearby.returned < nearby.total))
+assert(nearby.items[1].handle:is_valid())
+assert(type(nearby.items[1].snapshot.kind) == "string")
+
+local capped = game.creatures.nearby({
+    radius = 1000000,
+    limit = 1000000,
+    visible_only = false
+})
+assert(capped.radius == 60)
+assert(capped.limit == 256)
+
+local at_position = game.creatures.at(snapshot.position)
+assert(at_position.ok == true)
+assert(at_position.value:is_valid())
+assert(game.creatures.snapshot(at_position.value).value.kind == "avatar")
+
+local relative = game.coords.tripoint_rel_ms(0, 0, 0)
+assert(pcall(function()
+    game.creatures.at(relative)
+end) == false)
+assert(pcall(function()
+    game.creatures.nearby({ radius = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
            "[lua][bindings][values][ids]" )
 {

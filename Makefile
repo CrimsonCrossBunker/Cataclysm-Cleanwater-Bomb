@@ -1159,6 +1159,7 @@ LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_game_handle.cpp \
   $(SRC_DIR)/catalua_ui.cpp \
   $(SRC_DIR)/catalua_ui_actions.cpp \
+  $(SRC_DIR)/catalua_ui_creatures.cpp \
   $(SRC_DIR)/catalua_ui_events.cpp \
   $(SRC_DIR)/catalua_ui_game.cpp \
   $(SRC_DIR)/catalua_ui_i18n.cpp \
