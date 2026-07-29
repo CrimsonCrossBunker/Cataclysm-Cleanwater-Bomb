@@ -107,6 +107,11 @@ constexpr std::size_t maximum_menu_entries_per_handler = 64;
 constexpr std::size_t maximum_menu_entries_per_collection = 128;
 constexpr std::size_t maximum_menu_entry_id_bytes = 96;
 constexpr std::size_t maximum_menu_entry_label_bytes = 512;
+constexpr std::size_t maximum_hook_text_bytes = 32768;
+constexpr std::size_t maximum_hook_result_bytes = 512;
+constexpr std::size_t maximum_hook_results_per_handler = 64;
+constexpr std::size_t maximum_hook_results_per_dispatch = 256;
+constexpr std::size_t maximum_hook_result_entry_bytes = 512;
 
 struct memory_tracker {
     std::size_t used = 0;
@@ -977,13 +982,20 @@ sol::table hook_spec_to_lua(
     sol::table result = lua.create_table();
     result["name"] = std::string( spec.name );
     result["mode"] = std::string( script_hook_mode_name( spec.mode ) );
-    result["cancellable"] = spec.mode == script_hook_mode::intercept;
+    result["cancellable"] =
+        script_hook_supports_result( spec, "allow" );
     result["requires_write"] = spec.mode == script_hook_mode::intercept;
     sol::table fields = lua.create_table();
     for( std::size_t index = 0; index < spec.payload_fields.size(); ++index ) {
         fields[index + 1] = std::string( spec.payload_fields[index] );
     }
     result["payload_fields"] = std::move( fields );
+    sol::table result_fields = lua.create_table();
+    for( std::size_t index = 0; index < spec.result_fields.size(); ++index ) {
+        result_fields[index + 1] =
+            std::string( spec.result_fields[index] );
+    }
+    result["result_fields"] = std::move( result_fields );
     return result;
 }
 
@@ -3031,109 +3043,9 @@ class hook_dispatch_scope
         runtime_state &state_;
 };
 
-bool dispatch_script_hook(
+native_hook_result dispatch_script_hook(
     runtime_state &state, const std::string_view name,
-    const std::function<sol::table()> &make_payload )
-{
-    const script_hook_spec *spec = find_script_hook_spec( name );
-    if( spec == nullptr ) {
-        record_runtime_error(
-            "Lua hook dispatch",
-            "native code requested unknown Lua hook '" +
-            std::string( name ) + "'" );
-        return true;
-    }
-
-    hook_dispatch_scope dispatch_scope( state );
-    const std::string registry_name = "hook:" + std::string( name );
-    const std::vector<script_event_subscription> handlers =
-        state.hook_registry.matching( registry_name );
-    bool allowed = true;
-    for( const script_event_subscription &handler : handlers ) {
-        if( !state.hook_registry.contains( handler.id ) ) {
-            continue;
-        }
-        const auto callback_entry = state.hook_callbacks.find( handler.id );
-        if( callback_entry == state.hook_callbacks.end() ||
-            handler.source_index >= state.sources.size() ) {
-            state.hook_registry.unsubscribe_unchecked( handler.id );
-            state.hook_callbacks.erase( handler.id );
-            continue;
-        }
-
-        bool stop = false;
-        const auto started = std::chrono::steady_clock::now();
-        try {
-            sol::protected_function callback = callback_entry->second;
-            source_scope source( state, handler.source_index );
-            instruction_guard guard(
-                state.lua.lua_state(), callback_instruction_limit );
-            sol::table payload = make_payload();
-            payload["hook"] = std::string( name );
-            payload["mode"] =
-                std::string( script_hook_mode_name( spec->mode ) );
-            payload["cancellable"] =
-                spec->mode == script_hook_mode::intercept;
-            const sol::protected_function_result result =
-                callback( std::move( payload ) );
-            record_callback_timing(
-                state, "hook '" + std::string( name ) + "'", started );
-            if( !result.valid() ) {
-                const sol::error error = result;
-                record_runtime_error(
-                    "Lua hook handler '" + std::string( name ) + "'",
-                    error.what() );
-                state.hook_registry.unsubscribe_unchecked( handler.id );
-                state.hook_callbacks.erase( handler.id );
-                continue;
-            }
-
-            if( result.return_count() > 0 ) {
-                const sol::type type = result.get_type();
-                if( type == sol::type::boolean ) {
-                    const bool decision = result.get<bool>();
-                    if( spec->mode == script_hook_mode::intercept ) {
-                        allowed = decision;
-                    }
-                    stop = !decision;
-                } else if( type == sol::type::table ) {
-                    const sol::table decision = result.get<sol::table>();
-                    const sol::optional<bool> requested_allow =
-                        decision["allow"];
-                    if( requested_allow &&
-                        spec->mode == script_hook_mode::intercept ) {
-                        allowed = *requested_allow;
-                    }
-                    stop = decision.get_or( "stop", false ) || !allowed;
-                } else if( type != sol::type::nil ) {
-                    record_runtime_error(
-                        "Lua hook handler '" + std::string( name ) + "'",
-                        "hook callbacks must return nil, boolean, or a "
-                        "decision table" );
-                    state.hook_registry.unsubscribe_unchecked( handler.id );
-                    state.hook_callbacks.erase( handler.id );
-                    continue;
-                }
-            }
-            if( handler.once ) {
-                state.hook_registry.unsubscribe_unchecked( handler.id );
-                state.hook_callbacks.erase( handler.id );
-            }
-        } catch( const std::exception &exception ) {
-            record_callback_timing(
-                state, "hook '" + std::string( name ) + "'", started );
-            record_runtime_error(
-                "Lua hook handler '" + std::string( name ) + "'",
-                exception.what() );
-            state.hook_registry.unsubscribe_unchecked( handler.id );
-            state.hook_callbacks.erase( handler.id );
-        }
-        if( stop ) {
-            break;
-        }
-    }
-    return allowed;
-}
+    const std::function<sol::table()> &make_payload );
 
 class callback_dispatch_scope
 {
@@ -3222,6 +3134,14 @@ sol::object native_callback_value_to_lua(
         {
             return sol::make_object(
                        lua, script_game_id( entry.kind, entry.value ) );
+        } else if constexpr( std::is_same_v <
+                             value_type, std::vector<std::string >> )
+        {
+            sol::table strings = state.lua.create_table();
+            for( std::size_t index = 0; index < entry.size(); ++index ) {
+                strings[index + 1] = entry[index];
+            }
+            return sol::make_object( lua, std::move( strings ) );
         } else
         {
             return sol::make_object( lua, entry );
@@ -3575,7 +3495,213 @@ std::vector<native_menu_entry> collect_script_callback_menu_entries(
     return entries;
 }
 
-std::vector<native_menu_entry> collect_script_hook_menu_entries(
+std::optional<bool> hook_result_bool(
+    const sol::table &table, const std::string_view field )
+{
+    const sol::object value =
+        table.raw_get<sol::object>( std::string( field ) );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::boolean ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' must be a boolean" );
+    }
+    return value.as<bool>();
+}
+
+std::optional<std::string> hook_result_string(
+    const sol::table &table, const std::string_view field,
+    const std::size_t maximum_bytes, const bool allow_empty,
+    const bool allow_text_controls )
+{
+    const sol::object value =
+        table.raw_get<sol::object>( std::string( field ) );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::string ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' must be a string" );
+    }
+    std::string result = value.as<std::string>();
+    if( ( !allow_empty && result.empty() ) ||
+        result.size() > maximum_bytes ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' has an invalid length" );
+    }
+    const bool invalid_character = std::any_of(
+                                       result.begin(), result.end(),
+    [allow_text_controls]( const unsigned char ch ) {
+        if( ch == 0 ) {
+            return true;
+        }
+        return !allow_text_controls &&
+               ( ch < 0x20 || ch == 0x7f );
+    } );
+    if( invalid_character ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' contains control characters" );
+    }
+    return result;
+}
+
+std::optional<std::vector<std::string>> hook_result_strings(
+        const sol::table &table, const std::string_view field,
+        const std::size_t maximum_entries )
+{
+    const sol::object value =
+        table.raw_get<sol::object>( std::string( field ) );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::table ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' must be a table" );
+    }
+    const sol::table values = value.as<sol::table>();
+    const std::size_t count = values.size();
+    if( count > maximum_entries ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' contains too many entries" );
+    }
+    std::vector<std::string> result;
+    result.reserve( count );
+    std::set<std::string> seen;
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object entry =
+            values.raw_get<sol::object>( index );
+        if( !entry.valid() || entry.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "Lua hook result string lists may only contain strings" );
+        }
+        std::string text = entry.as<std::string>();
+        if( text.empty() ||
+            text.size() > maximum_hook_result_entry_bytes ||
+            std::any_of(
+        text.begin(), text.end(), []( const unsigned char ch ) {
+        return ch == 0 || ch < 0x20 || ch == 0x7f;
+    } ) ) {
+            throw std::invalid_argument(
+                "Lua hook result string-list entry is invalid" );
+        }
+        if( seen.insert( text ).second ) {
+            result.push_back( std::move( text ) );
+        }
+    }
+    return result;
+}
+
+sol::table make_hook_results_table(
+    runtime_state &state, const native_hook_result &result )
+{
+    sol::table table = state.lua.create_table();
+    table["allowed"] = result.allowed;
+    table["handled"] = result.handled;
+    if( !result.text.empty() ) {
+        table["text"] = result.text;
+    }
+    if( result.result ) {
+        table["result"] = *result.result;
+    }
+    sol::table strings = state.lua.create_table();
+    for( std::size_t index = 0; index < result.results.size(); ++index ) {
+        strings[index + 1] = result.results[index];
+    }
+    table["results"] = std::move( strings );
+    return table;
+}
+
+bool apply_hook_result_table(
+    const script_hook_spec &spec, const sol::table &table,
+    native_hook_result &result, std::set<std::string> &menu_entry_ids,
+    const bool shared_results )
+{
+    if( script_hook_supports_result( spec, "allow" ) ) {
+        std::optional<bool> allow = hook_result_bool( table, "allow" );
+        if( !allow ) {
+            allow = hook_result_bool( table, "allowed" );
+        }
+        if( allow ) {
+            result.allowed = result.allowed && *allow;
+        }
+    }
+    if( script_hook_supports_result( spec, "handled" ) ) {
+        if( const std::optional<bool> handled =
+                hook_result_bool( table, "handled" ) ) {
+            result.handled = result.handled || *handled;
+        }
+    }
+    if( script_hook_supports_result( spec, "text" ) ) {
+        if( std::optional<std::string> text = hook_result_string(
+                table, "text", maximum_hook_text_bytes, true, true ) ) {
+            if( shared_results ) {
+                result.text = std::move( *text );
+            } else if( !text->empty() ) {
+                const std::size_t separator =
+                    result.text.empty() ? 0 : 1;
+                if( result.text.size() + separator + text->size() >
+                    maximum_hook_text_bytes ) {
+                    throw std::invalid_argument(
+                        "Lua hook text exceeds the 32768-byte limit" );
+                }
+                if( separator != 0 ) {
+                    result.text.push_back( '\n' );
+                }
+                result.text += *text;
+            }
+        }
+    }
+    if( script_hook_supports_result( spec, "result" ) ) {
+        if( std::optional<std::string> replacement =
+                hook_result_string(
+                    table, "result", maximum_hook_result_bytes,
+                    false, false ) ) {
+            result.result = std::move( *replacement );
+        }
+    }
+    if( script_hook_supports_result( spec, "results" ) ) {
+        const std::size_t limit = shared_results ?
+                                  maximum_hook_results_per_dispatch :
+                                  maximum_hook_results_per_handler;
+        if( std::optional<std::vector<std::string>> strings =
+                hook_result_strings( table, "results", limit ) ) {
+            if( shared_results ) {
+                result.results = std::move( *strings );
+            } else {
+                std::set<std::string> seen(
+                    result.results.begin(), result.results.end() );
+                for( std::string &entry : *strings ) {
+                    if( seen.insert( entry ).second ) {
+                        result.results.push_back( std::move( entry ) );
+                    }
+                }
+                if( result.results.size() >
+                    maximum_hook_results_per_dispatch ) {
+                    throw std::invalid_argument(
+                        "Lua hook results exceed the 256-entry limit" );
+                }
+            }
+        }
+    }
+    if( script_hook_supports_result( spec, "entries" ) ) {
+        const sol::object entries =
+            table.raw_get<sol::object>( "entries" );
+        if( entries.valid() && entries.get_type() != sol::type::nil ) {
+            append_native_menu_entries(
+                table, result.menu_entries, menu_entry_ids );
+        }
+    }
+    return hook_result_bool( table, "stop" ).value_or( false );
+}
+
+native_hook_result dispatch_script_hook(
     runtime_state &state, const std::string_view name,
     const std::function<sol::table()> &make_payload )
 {
@@ -3587,11 +3713,13 @@ std::vector<native_menu_entry> collect_script_hook_menu_entries(
     }
 
     hook_dispatch_scope dispatch_scope( state );
-    const std::string registry_name = "hook:" + std::string( name );
     const std::vector<script_event_subscription> handlers =
-        state.hook_registry.matching( registry_name );
-    std::vector<native_menu_entry> entries;
-    std::set<std::string> entry_ids;
+        state.hook_registry.matching(
+            "hook:" + std::string( name ) );
+    native_hook_result aggregate;
+    sol::state_view lua( state.lua );
+    sol::object previous =
+        sol::make_object( lua, sol::lua_nil );
     for( const script_event_subscription &handler : handlers ) {
         if( !state.hook_registry.contains( handler.id ) ) {
             continue;
@@ -3618,35 +3746,71 @@ std::vector<native_menu_entry> collect_script_hook_menu_entries(
             payload["mode"] =
                 std::string( script_hook_mode_name( spec->mode ) );
             payload["cancellable"] =
-                spec->mode == script_hook_mode::intercept;
-            const sol::protected_function_result result =
+                script_hook_supports_result( *spec, "allow" );
+            sol::table shared_results =
+                make_hook_results_table( state, aggregate );
+            payload["results"] = shared_results;
+            payload["prev"] = previous;
+            const sol::protected_function_result callback_result =
                 callback( std::move( payload ) );
             record_callback_timing(
                 state, "hook '" + std::string( name ) + "'", started );
             timing_recorded = true;
-            if( !result.valid() ) {
-                const sol::error error = result;
+            if( !callback_result.valid() ) {
+                const sol::error error = callback_result;
                 throw std::runtime_error( error.what() );
             }
-            if( result.return_count() > 0 ) {
-                const sol::type type = result.get_type();
+
+            native_hook_result candidate = aggregate;
+            std::set<std::string> menu_entry_ids;
+            for( const native_menu_entry &entry :
+                 candidate.menu_entries ) {
+                menu_entry_ids.insert( entry.id );
+            }
+            stop = apply_hook_result_table(
+                       *spec, shared_results, candidate,
+                       menu_entry_ids, true );
+
+            sol::object returned =
+                sol::make_object( lua, sol::lua_nil );
+            if( callback_result.return_count() > 0 ) {
+                returned = callback_result.get<sol::object>();
+                const sol::type type = returned.get_type();
                 if( type == sol::type::boolean ) {
-                    stop = !result.get<bool>();
+                    const bool decision = returned.as<bool>();
+                    if( script_hook_supports_result(
+                            *spec, "allow" ) ) {
+                        candidate.allowed =
+                            candidate.allowed && decision;
+                    }
+                    stop = stop || !decision;
+                } else if( type == sol::type::string &&
+                           script_hook_supports_result(
+                               *spec, "result" ) ) {
+                    const std::string replacement =
+                        returned.as<std::string>();
+                    sol::table wrapper = state.lua.create_table();
+                    wrapper["result"] = replacement;
+                    stop = apply_hook_result_table(
+                               *spec, wrapper, candidate,
+                               menu_entry_ids, false ) || stop;
                 } else if( type == sol::type::table ) {
-                    const sol::table result_table =
-                        result.get<sol::table>();
-                    append_native_menu_entries(
-                        result_table, entries, entry_ids );
-                    const sol::optional<bool> allow =
-                        result_table["allow"];
-                    stop = result_table.get_or( "stop", false ) ||
-                           ( allow && !*allow );
+                    stop = apply_hook_result_table(
+                               *spec, returned.as<sol::table>(),
+                               candidate, menu_entry_ids, false ) ||
+                           stop;
                 } else if( type != sol::type::nil ) {
                     throw std::invalid_argument(
-                        "menu hooks must return nil, boolean, or an "
-                        "entry table" );
+                        "hook callbacks must return nil, boolean, "
+                        "string, or a result table" );
                 }
             }
+
+            aggregate = std::move( candidate );
+            previous = std::move( returned );
+            stop = stop ||
+                   ( script_hook_supports_result( *spec, "allow" ) &&
+                     !aggregate.allowed );
             if( handler.once ) {
                 state.hook_registry.unsubscribe_unchecked( handler.id );
                 state.hook_callbacks.erase( handler.id );
@@ -3654,7 +3818,8 @@ std::vector<native_menu_entry> collect_script_hook_menu_entries(
         } catch( const std::exception &exception ) {
             if( !timing_recorded ) {
                 record_callback_timing(
-                    state, "hook '" + std::string( name ) + "'", started );
+                    state, "hook '" + std::string( name ) + "'",
+                    started );
             }
             record_runtime_error(
                 "Lua hook handler '" + std::string( name ) + "'",
@@ -3666,30 +3831,7 @@ std::vector<native_menu_entry> collect_script_hook_menu_entries(
             break;
         }
     }
-    return entries;
-}
-
-std::vector<std::string_view> hooks_for_event( const event_type type )
-{
-    switch( type ) {
-        case event_type::avatar_dies:
-        case event_type::character_dies:
-        case event_type::game_avatar_death:
-            return { "on_character_death" };
-        case event_type::character_gains_effect:
-            return { "on_character_effect_added" };
-        case event_type::character_loses_effect:
-            return { "on_character_effect_removed" };
-        case event_type::game_load:
-            return { "on_game_load" };
-        case event_type::game_save:
-            return { "on_game_save" };
-        case event_type::game_begin:
-        case event_type::game_start:
-            return { "on_game_started" };
-        default:
-            return {};
-    }
+    return aggregate;
 }
 
 void runtime_state::notify( const cata::event &event )
@@ -3698,11 +3840,6 @@ void runtime_state::notify( const cata::event &event )
     dispatch_script_event( *this, "game:" + name, [this, &event]() {
         return event_to_lua( *this, event );
     } );
-    for( const std::string_view hook : hooks_for_event( event.type() ) ) {
-        dispatch_script_hook( *this, hook, [this, &event]() {
-            return event_to_lua( *this, event );
-        } );
-    }
 }
 
 struct page_stack_entry {
@@ -4297,12 +4434,12 @@ void bootstrap_mapgen_runtime_if_needed()
 
 } // namespace
 
-bool dispatch_native_hook(
+native_hook_result dispatch_native_hook_result(
     const std::string_view name,
     const native_callback_arguments &arguments )
 {
     if( !active_state || is_pool_worker_thread() ) {
-        return true;
+        return {};
     }
     try {
         return dispatch_script_hook(
@@ -4313,8 +4450,22 @@ bool dispatch_native_hook(
         record_runtime_error(
             "Lua native hook '" + std::string( name ) + "'",
             exception.what() );
-        return true;
+        return {};
     }
+}
+
+bool dispatch_native_hook(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    return dispatch_native_hook_result( name, arguments ).allowed;
+}
+
+bool has_native_hook( const std::string_view name )
+{
+    return active_state && !is_pool_worker_thread() &&
+           active_state->hook_registry.has_matching(
+               "hook:" + std::string( name ) );
 }
 
 bool dispatch_native_callback(
@@ -4378,11 +4529,11 @@ std::vector<native_menu_entry> collect_native_hook_menu_entries(
         return {};
     }
     try {
-        const auto make_payload = [&]() {
-            return native_callback_payload( *active_state, arguments );
-        };
-        return collect_script_hook_menu_entries(
-                   *active_state, name, make_payload );
+        return dispatch_script_hook(
+        *active_state, name, [&]() {
+            return native_callback_payload(
+                       *active_state, arguments );
+        } ).menu_entries;
     } catch( const std::exception &exception ) {
         record_runtime_error(
             "Lua native hook menu collector '" + std::string( name ) + "'",

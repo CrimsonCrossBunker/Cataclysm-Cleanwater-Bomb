@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace cata::lua_ui
@@ -17,13 +18,24 @@ enum class script_hook_mode : int {
 };
 
 struct script_hook_spec {
+    script_hook_spec( std::string_view name_in, script_hook_mode mode_in,
+                      std::vector<std::string_view> payload_fields_in,
+                      std::vector<std::string_view> result_fields_in = {} ) :
+        name( name_in ),
+        mode( mode_in ),
+        payload_fields( std::move( payload_fields_in ) ),
+        result_fields( std::move( result_fields_in ) ) {}
+
     std::string_view name;
     script_hook_mode mode = script_hook_mode::observe;
     std::vector<std::string_view> payload_fields;
+    std::vector<std::string_view> result_fields;
 };
 
 const std::vector<script_hook_spec> &script_hook_specs();
 const script_hook_spec *find_script_hook_spec( std::string_view name );
+bool script_hook_supports_result( const script_hook_spec &spec,
+                                  std::string_view field );
 std::string_view script_hook_mode_name( script_hook_mode mode );
 
 struct script_callback_method_spec {

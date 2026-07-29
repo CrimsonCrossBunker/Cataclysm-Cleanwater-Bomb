@@ -6232,6 +6232,13 @@ local intercept = game.hooks.describe("on_try_npc_interaction")
 assert(intercept.mode == "intercept")
 assert(intercept.cancellable == true)
 assert(intercept.requires_write == true)
+assert(#intercept.result_fields == 1)
+assert(intercept.result_fields[1] == "allow")
+local skill_info =
+    game.hooks.describe("on_character_display_skill_info")
+assert(skill_info.mode == "intercept")
+assert(skill_info.cancellable == false)
+assert(skill_info.result_fields[1] == "text")
 assert(pcall(function()
     game.hooks.on("on_try_npc_interaction", function() end)
 end) == false)
@@ -6251,7 +6258,6 @@ game.hooks.on("on_game_started", {
     assert(payload.hook == "on_game_started")
     assert(payload.mode == "observe")
     assert(payload.cancellable == false)
-    assert(payload.type == "game_begin")
     local order = state.character.get("hooks.order", "")
     state.character.set("hooks.order", order .. "H")
 end)
@@ -6274,16 +6280,104 @@ end)
 
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
-    get_event_bus().send<event_type::game_begin>( "lua-hook-test" );
+    CHECK( cata::lua_ui::has_native_hook( "on_game_started" ) );
+    CHECK_FALSE( cata::lua_ui::has_native_hook(
+                     "on_weather_updated" ) );
+    CHECK( cata::lua_ui::dispatch_native_hook(
+               "on_game_started" ) );
     CHECK( cata::lua_ui::status().last_error.find(
                "expected isolated hook failure" ) != std::string::npos );
-    get_event_bus().send<event_type::game_begin>( "lua-hook-test" );
+    CHECK( cata::lua_ui::dispatch_native_hook(
+               "on_game_started" ) );
 
     script.write( R"lua(
 assert(state.character.get("hooks.order", "") == "HLL")
 assert(state.character.get("hooks.bad", 0) == 1)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_hook_results_are_typed_bounded_and_transactional",
+           "[lua][bindings][hooks][results][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_character_display_skill_info",
+    { priority = 100 }, function(payload)
+        payload.results.text = "shared"
+        return { text = "returned" }
+    end)
+game.hooks.on("on_character_display_skill_info", function(payload)
+    assert(payload.prev.text == "returned")
+    assert(payload.results.text == "shared\nreturned")
+    return { text = "tail" }
+end)
+
+game.hooks.on("on_character_display_skill_action", function(payload)
+    payload.results.handled = true
+end)
+
+game.hooks.on("on_dialogue_start",
+    { priority = 100 }, function()
+        return { result = string.rep("x", 513) }
+    end)
+game.hooks.on("on_dialogue_start", function()
+    return "TALK_LUA_TEST"
+end)
+
+game.hooks.on("on_make_mapgen_factory_list",
+    { priority = 100 }, function(payload)
+        assert(#payload.candidates == 2)
+        assert(payload.candidates[1] == "house")
+        return { results = { "lua_one", "lua_two", "lua_one" } }
+    end)
+game.hooks.on("on_make_mapgen_factory_list", function(payload)
+    assert(#payload.results.results == 2)
+    table.insert(payload.results.results, "lua_three")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    const native_hook_result info = dispatch_native_hook_result(
+                                        "on_character_display_skill_info" );
+    CHECK( info.allowed );
+    CHECK( info.text == "shared\nreturned\ntail" );
+
+    const native_hook_result action = dispatch_native_hook_result(
+                                          "on_character_display_skill_action" );
+    CHECK( action.handled );
+
+    const native_hook_result dialogue = dispatch_native_hook_result(
+                                            "on_dialogue_start" );
+    REQUIRE( dialogue.result );
+    CHECK( *dialogue.result == "TALK_LUA_TEST" );
+    CHECK( status().last_error.find(
+               "invalid length" ) != std::string::npos );
+
+    const native_hook_result mapgen = dispatch_native_hook_result(
+                                        "on_make_mapgen_factory_list", {
+        {
+            "candidates",
+            std::vector<std::string> { "house", "field" }
+        }
+    } );
+    CHECK( mapgen.results ==
+           std::vector<std::string> {
+        "lua_one", "lua_two", "lua_three"
+    } );
 }
 
 TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",

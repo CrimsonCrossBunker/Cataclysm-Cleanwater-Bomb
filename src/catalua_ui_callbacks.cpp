@@ -16,11 +16,11 @@ const std::vector<script_hook_spec> &script_hook_specs()
         },
         {
             "on_character_display_skill_action", script_hook_mode::intercept,
-            { "character", "skill", "action" }
+            { "character", "skill", "action" }, { "handled" }
         },
         {
             "on_character_display_skill_info", script_hook_mode::intercept,
-            { "character", "skill" }
+            { "character", "skill" }, { "text" }
         },
         {
             "on_character_effect", script_hook_mode::observe,
@@ -80,15 +80,15 @@ const std::vector<script_hook_spec> &script_hook_specs()
         },
         {
             "on_dialogue_option", script_hook_mode::intercept,
-            { "alpha", "beta", "topic", "option" }
+            { "alpha", "beta", "topic", "option" }, { "result" }
         },
         {
             "on_dialogue_start", script_hook_mode::intercept,
-            { "alpha", "beta", "topic" }
+            { "alpha", "beta", "topic" }, { "result" }
         },
         {
             "on_elevator_try_use", script_hook_mode::intercept,
-            { "character", "position", "destination" }
+            { "character", "position", "destination" }, { "allow" }
         },
         {
             "on_explosion_start", script_hook_mode::observe,
@@ -99,7 +99,7 @@ const std::vector<script_hook_spec> &script_hook_specs()
         { "on_game_started", script_hook_mode::observe, {} },
         {
             "on_make_mapgen_factory_list", script_hook_mode::intercept,
-            { "terrain", "z", "candidate_count" }
+            { "candidates" }, { "results" }
         },
         {
             "on_mapgen_postprocess", script_hook_mode::observe,
@@ -134,12 +134,12 @@ const std::vector<script_hook_spec> &script_hook_specs()
             { "monster" }
         },
         {
-            "on_monster_examine_menu_entry", script_hook_mode::intercept,
+            "on_monster_examine_menu_entry", script_hook_mode::observe,
             { "character", "monster", "entry" }
         },
         {
             "on_monster_get_examine_menu_entries", script_hook_mode::intercept,
-            { "character", "monster" }
+            { "character", "monster" }, { "entries" }
         },
         {
             "on_monster_loaded", script_hook_mode::observe,
@@ -179,11 +179,11 @@ const std::vector<script_hook_spec> &script_hook_specs()
         },
         {
             "on_try_monster_interaction", script_hook_mode::intercept,
-            { "avatar", "monster" }
+            { "avatar", "monster" }, { "allow" }
         },
         {
             "on_try_npc_interaction", script_hook_mode::intercept,
-            { "avatar", "npc" }
+            { "avatar", "npc" }, { "allow" }
         },
         {
             "on_weather_changed", script_hook_mode::observe,
@@ -206,6 +206,14 @@ const script_hook_spec *find_script_hook_spec( const std::string_view name )
         return spec.name == name;
     } );
     return found == specs.end() ? nullptr : &*found;
+}
+
+bool script_hook_supports_result(
+    const script_hook_spec &spec, const std::string_view field )
+{
+    return std::find(
+               spec.result_fields.begin(), spec.result_fields.end(),
+               field ) != spec.result_fields.end();
 }
 
 std::string_view script_hook_mode_name( const script_hook_mode mode )

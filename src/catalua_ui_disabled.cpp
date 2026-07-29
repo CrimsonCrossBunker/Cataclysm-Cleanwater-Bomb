@@ -37,10 +37,21 @@ void on_turn()
 {
 }
 
+native_hook_result dispatch_native_hook_result(
+    std::string_view, const native_callback_arguments & )
+{
+    return {};
+}
+
 bool dispatch_native_hook(
     std::string_view, const native_callback_arguments & )
 {
     return true;
+}
+
+bool has_native_hook( std::string_view )
+{
+    return false;
 }
 
 bool dispatch_native_callback(
