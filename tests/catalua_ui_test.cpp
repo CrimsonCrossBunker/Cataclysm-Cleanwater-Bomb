@@ -1701,6 +1701,67 @@ game.bionics.install(
     CHECK( player.get_power_level() == original_power );
 }
 
+TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
+           "[lua][bindings][mutations][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local definitions = game.mutations.definitions({
+    offset = 0,
+    limit = 1000000
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.has_more ==
+    (definitions.offset + definitions.returned < definitions.total))
+
+local speed = game.types.id("mutation", "DEBUG_SPEED")
+local definition = game.mutations.definition(speed)
+assert(definition.id == speed)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.availability.valid) == "boolean")
+assert(type(definition.availability.debug) == "boolean")
+assert(definition.activation.activated == true)
+assert(definition.activation.cooldown.turns >= 0)
+assert(math.type(definition.statistics.points) == "integer")
+assert(type(definition.statistics.body_temperature_minimum_celsius_delta) ==
+    "number")
+assert(type(definition.equipment.destroys_gear) == "boolean")
+assert(definition.relations.prerequisites.returned ==
+    #definition.relations.prerequisites.items)
+assert(definition.relations.conflicts_with.returned ==
+    #definition.relations.conflicts_with.items)
+assert(definition.relations.categories.returned ==
+    #definition.relations.categories.items)
+assert(definition.variants.returned == #definition.variants.items)
+assert(definition.learned_spells.returned ==
+    #definition.learned_spells.items)
+
+assert(pcall(function()
+    game.mutations.definitions({ offset = -1 })
+end) == false)
+assert(pcall(function()
+    game.mutations.definitions({ unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.mutations.definition(game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
            "[lua][bindings][items][inventory][integration]" )
 {

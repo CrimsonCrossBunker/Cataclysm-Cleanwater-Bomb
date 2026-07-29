@@ -40,6 +40,7 @@
 #include "catalua_ui_items.h"
 #include "catalua_ui_manifest.h"
 #include "catalua_ui_modules.h"
+#include "catalua_ui_mutations.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
 #include "catalua_ui_renderer.h"
@@ -1818,6 +1819,10 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.bionics" );
         require_capability( state, "game.write" );
+    } );
+    install_mutation_api( game, [&state]() {
+        require_api_version( state, 5, "game.mutations" );
+        require_capability( state, "game.read" );
     } );
     install_item_api(
         game,
