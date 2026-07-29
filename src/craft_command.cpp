@@ -718,9 +718,9 @@ item craft_command::create_in_progress_craft()
             }
         } else if( predicted_rot < 1.0 && predicted_remaining <= 1_hours &&
                    crafter->is_avatar() ) {
-            crafter->add_msg( m_warning,
-                              _( "The finished %s will have very little shelf life left." ),
-                              rec->result_name() );
+            crafter->add_msg_if_player( m_warning,
+                                        _( "The finished %s will have very little shelf life left." ),
+                                        rec->result_name() );
         }
     }
 
