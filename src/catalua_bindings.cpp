@@ -12,7 +12,7 @@ const std::vector<binding_domain> &binding_catalog()
     static const std::vector<binding_domain> catalog = {
         {
             "value_types_and_ids", "game.types", "game.read", 5,
-            binding_implementation_status::partial
+            binding_implementation_status::covered
         },
         {
             "coordinates", "game.coords", "game.read", 5,
@@ -20,23 +20,23 @@ const std::vector<binding_domain> &binding_catalog()
         },
         {
             "bionics", "game.bionics", "game.read", 5,
-            binding_implementation_status::partial
+            binding_implementation_status::covered
         },
         {
             "creatures_and_effects", "game.creatures", "game.read", 5,
-            binding_implementation_status::partial
+            binding_implementation_status::covered
         },
         {
             "items_and_inventory", "game.items", "game.read", 5,
-            binding_implementation_status::partial
+            binding_implementation_status::covered
         },
         {
             "character_powers", "game.mutations + game.spells", "game.read", 5,
             binding_implementation_status::covered
         },
         {
-            "map_and_world", "game.world", "game.read", 5,
-            binding_implementation_status::partial
+            "map_and_world", "game.world + game.overmap + game.hordes", "game.read", 5,
+            binding_implementation_status::covered
         },
         {
             "mapgen", "game.mapgen", "game.write", 5,
@@ -55,8 +55,8 @@ const std::vector<binding_domain> &binding_catalog()
             binding_implementation_status::partial
         },
         {
-            "runtime_and_definitions", "registry", "registry.read", 4,
-            binding_implementation_status::partial
+            "runtime_and_definitions", "game.definitions + runtime", "game.read", 5,
+            binding_implementation_status::covered
         },
         {
             "hooks", "game.hooks", "game.hooks", 5,

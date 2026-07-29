@@ -1023,15 +1023,16 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     REQUIRE( first.size() == catalog.size() );
     sol::table first_entry = first[1];
     const std::string original_id = first_entry["id"];
+    const std::string original_status = first_entry["status"];
     first_entry["id"] = "mutated";
-    first_entry["status"] = "covered";
+    first_entry["status"] = "mutated";
 
     sol::protected_function_result second_result = api_catalog();
     REQUIRE( second_result.valid() );
     sol::table second = second_result;
     sol::table second_entry = second[1];
     CHECK( second_entry.get<std::string>( "id" ) == original_id );
-    CHECK( second_entry.get<std::string>( "status" ) != "covered" );
+    CHECK( second_entry.get<std::string>( "status" ) == original_status );
 
     sol::protected_function api_supports = game["api_supports"];
     CHECK( api_supports( "coordinates" ).get<bool>() );
