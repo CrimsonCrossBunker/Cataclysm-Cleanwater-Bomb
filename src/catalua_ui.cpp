@@ -2286,7 +2286,15 @@ bool reload_scripts_with_state(
     std::string &error )
 {
     try {
+        if( generation_counter == std::numeric_limits<std::size_t>::max() ) {
+            throw std::runtime_error( "Lua runtime generation counter exhausted" );
+        }
+        const std::size_t candidate_generation = generation_counter + 1;
         auto next = std::make_unique<runtime_state>();
+        // Handles created by top-level scripts must carry the generation that
+        // this candidate will have after the transactional reload commits.
+        next->generation = candidate_generation;
+        next->world_generation = world_generation_counter;
         if( active_state ) {
             next->persistent_state = active_state->persistent_state;
             next->world_state = active_state->world_state;
@@ -2306,12 +2314,12 @@ bool reload_scripts_with_state(
             run_script( *next, next->sources[index].entry, index );
         }
 
-        next->generation = ++generation_counter;
         // Subscribe even when no entry script registered a game event yet.
         // A page, service, scheduler, or lifecycle callback may add its first
         // game-event handler later in the lifetime of this runtime.
         get_event_bus().subscribe( next.get() );
         active_state = std::move( next );
+        generation_counter = candidate_generation;
         active_state->accept_actions = true;
         clear_navigation_requests();
         last_runtime_error.clear();
