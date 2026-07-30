@@ -469,7 +469,17 @@ sol::table remove_state(
     sol::table before =
         snapshot_state( state, *character, id );
     if( known_before ) {
+        const bool was_selected =
+            character->martial_arts_data->selected_style() == id;
+        if( was_selected ) {
+            character->martial_arts_data->
+            clear_all_effects( *character );
+        }
         character->martial_arts_data->clear_style( id );
+        if( was_selected ) {
+            character->martial_arts_data->
+            ma_static_effects( *character );
+        }
     }
     sol::table value = state.create_table();
     value["changed"] =
