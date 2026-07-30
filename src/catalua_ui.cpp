@@ -3392,12 +3392,6 @@ std::vector<std::string_view> hooks_for_event( const event_type type )
             return { "on_character_effect_added" };
         case event_type::character_loses_effect:
             return { "on_character_effect_removed" };
-        case event_type::character_melee_attacks_character:
-        case event_type::character_melee_attacks_monster:
-            return { "on_creature_melee_attacked" };
-        case event_type::character_ranged_attacks_character:
-        case event_type::character_ranged_attacks_monster:
-            return { "on_shoot" };
         case event_type::game_load:
             return { "on_game_load" };
         case event_type::game_save:

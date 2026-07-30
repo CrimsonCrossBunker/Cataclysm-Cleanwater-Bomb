@@ -1917,6 +1917,12 @@ void Character::on_dodge( Creature *source, float difficulty, float training_lev
             }
         }
     }
+    cata::lua_ui::dispatch_native_hook(
+    "on_creature_dodged", {
+        { "creature", static_cast<const Character *>( this ) },
+        { "source", static_cast<const Creature *>( source ) },
+        { "difficulty", static_cast<double>( difficulty ) }
+    } );
 }
 
 float Character::get_melee() const

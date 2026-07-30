@@ -25,6 +25,7 @@
 #include "effect.h"
 #include "event_bus.h"
 #include "flag.h"
+#include "game.h"
 #include "input_context_actions.h"
 #include "item.h"
 #include "itype.h"
@@ -32,13 +33,16 @@
 #include "magic.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "mapgendata.h"
 #include "mission.h"
+#include "monster.h"
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
+#include "projectile.h"
 #include "requirements.h"
 #include "trap.h"
 #include "ui_profile.h"
@@ -6529,6 +6533,136 @@ assert(state.character.get(
     "native_items.on_durability_change", 0) == 2)
 assert(state.character.get("native_items.on_repair", 0) == 1)
 assert(state.character.get("native_items.on_break", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_combat_callbacks_and_hooks_run_from_native_lifecycles",
+           "[lua][bindings][callbacks][combat][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.set_moves( 10000 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read",
+            "game.write", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    const auto write_combat_script = [&]( const bool allow_fire ) {
+        script.write( std::string( R"lua(
+state.character.set("native_combat.allow_fire", )lua" ) +
+                                            ( allow_fire ? "true" : "false" ) + R"lua()
+local gun = game.types.id("item", "glock_19")
+local rock = game.types.id("item", "rock")
+local function count(name)
+    state.character.set(
+        "native_combat." .. name,
+        state.character.get("native_combat." .. name, 0) + 1)
+end
+
+game.callbacks.register("iranged", gun, {
+    can_fire = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.item ~= nil)
+        assert(payload.target.coordinate_space == "bub_ms")
+        assert(payload.shots == 1)
+        count("can_fire")
+        return true
+    end,
+    on_fire = function(payload)
+        assert(payload.item ~= nil)
+        count("on_fire")
+        return state.character.get("native_combat.allow_fire", false)
+    end
+})
+game.callbacks.register("imelee", rock, {
+    on_melee_attack = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.target ~= nil)
+        assert(payload.item ~= nil)
+        count("on_melee_attack")
+        return false
+    end,
+    on_miss = function(payload)
+        assert(payload.target ~= nil)
+        count("on_miss")
+    end
+})
+game.hooks.on("on_shoot", function(payload)
+    assert(payload.weapon ~= nil)
+    assert(payload.target.coordinate_space == "bub_ms")
+    assert(payload.shots == 1)
+    count("on_shoot")
+end)
+game.hooks.on("on_throw", function(payload)
+    assert(payload.item ~= nil)
+    assert(payload.target.coordinate_space == "bub_ms")
+    assert(payload.origin.coordinate_space == "bub_ms")
+    count("on_throw")
+end)
+game.hooks.on("on_creature_melee_attacked", function(payload)
+    assert(payload.attacker ~= nil)
+    assert(payload.target ~= nil)
+    assert(payload.success == false)
+    count("on_creature_melee_attacked")
+end)
+)lua" );
+    };
+
+    write_combat_script( false );
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    item gun( itype_id( "glock_19" ) );
+    gun.ammo_set( gun.ammo_default(), 2 );
+    REQUIRE( gun.ammo_remaining() == 2 );
+    const tripoint_bub_ms ranged_target =
+        player.pos_bub( here ) + tripoint_rel_ms::east * 5;
+    const int moves_before_veto = player.get_moves();
+    CHECK( player.fire_gun( here, ranged_target, 1, gun ) == 0 );
+    CHECK( gun.ammo_remaining() == 2 );
+    CHECK( player.get_moves() == moves_before_veto );
+
+    write_combat_script( true );
+    REQUIRE( reload_scripts( error ) );
+    CHECK( player.fire_gun( here, ranged_target, 1, gun ) == 1 );
+    CHECK( gun.ammo_remaining() == 1 );
+
+    item thrown_rock( itype_id( "rock" ) );
+    player.throw_item(
+        player.pos_bub( here ) + tripoint_rel_ms::south * 2,
+        thrown_rock );
+
+    item melee_rock( itype_id( "rock" ) );
+    REQUIRE( player.wield( melee_rock ) );
+    monster &target = spawn_test_monster(
+                          "mon_zombie",
+                          player.pos_bub( here ) + tripoint_rel_ms::east );
+    CHECK( player.melee_attack_abstract(
+               target, false, matec_id( "" ) ) );
+    g->remove_zombie( target );
+
+    script.write( R"lua(
+assert(state.character.get("native_combat.can_fire", 0) == 2)
+assert(state.character.get("native_combat.on_fire", 0) == 2)
+assert(state.character.get("native_combat.on_shoot", 0) == 1)
+assert(state.character.get("native_combat.on_throw", 0) == 1)
+assert(state.character.get("native_combat.on_melee_attack", 0) == 1)
+assert(state.character.get("native_combat.on_miss", 0) == 1)
+assert(state.character.get(
+    "native_combat.on_creature_melee_attacked", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
 }
