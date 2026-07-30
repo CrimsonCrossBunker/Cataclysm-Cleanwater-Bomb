@@ -2268,6 +2268,8 @@ class vehicle
         // for destroying any terrain around vehicle part. Automated mining tool.
         void crash_terrain_around( map &here );
         void transform_terrain( map &here );
+        // Main method for the control of individual reactors.
+        void control_reactors( map &here );
         //main method for the control of individual engines
         void control_engines( map &here );
         //returns whether the engine is enabled or not, and has fueltype

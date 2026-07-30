@@ -338,8 +338,13 @@ void vehicle::build_electronics_menu( map &here, veh_menu &menu )
     const std::string & flag ) {
         add_electronic_toggle( here, *this, menu, name, action, flag );
     };
-    add_toggle( pgettext( "electronics menu option", "reactor" ),
-                "TOGGLE_REACTOR", "REACTOR" );
+    if( !reactors.empty() ) {
+        menu.add( _( "Control reactors" ) )
+        .hotkey( "TOGGLE_REACTOR" )
+        .on_submit( [this, &here] {
+            control_reactors( here );
+        } );
+    }
     add_toggle( pgettext( "electronics menu option", "headlights" ),
                 "TOGGLE_HEADLIGHT", "CONE_LIGHT" );
     add_toggle( pgettext( "electronics menu option", "wide angle headlights" ),
@@ -400,6 +405,24 @@ void vehicle::build_electronics_menu( map &here, veh_menu &menu )
             break;
         }
     }
+}
+
+void vehicle::control_reactors( map &here )
+{
+    veh_menu menu( this, _( "Toggle which?" ) );
+    do {
+        menu.reset();
+        for( const int reactor_idx : reactors ) {
+            const vehicle_part &vp = parts[reactor_idx];
+            menu.add( string_format( "[%s] %s", vp.enabled ? "x" : " ", vp.name() ) )
+            .enable( vp.enabled || can_enable( here, vp ) )
+            .keep_menu_open()
+            .on_submit( [this, reactor_idx] {
+                vehicle_part &vp = parts[reactor_idx];
+                vp.enabled = !vp.enabled;
+            } );
+        }
+    } while( menu.query() );
 }
 
 void vehicle::control_engines( map &here )
