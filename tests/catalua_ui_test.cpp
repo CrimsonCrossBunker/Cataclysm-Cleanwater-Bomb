@@ -3141,6 +3141,166 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_vehicle_controls_preserve_native_invariants",
+           "[lua][bindings][vehicles][write][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    vehicle *native_vehicle = here.add_vehicle(
+                                  vproto_id( "bicycle" ),
+                                  tripoint_bub_ms( 60, 60, 0 ),
+                                  0_degrees, 100,
+                                  veh_spawn_status::UNDAMAGED );
+    REQUIRE( native_vehicle != nullptr );
+    native_vehicle->name = "Lua control bicycle";
+    native_vehicle->velocity = 500;
+    native_vehicle->cruise_velocity = 500;
+    native_vehicle->engine_on = true;
+    native_vehicle->autopilot_on = true;
+    native_vehicle->is_autodriving = true;
+    native_vehicle->is_following = true;
+    native_vehicle->is_patrolling = true;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local world = game.world.vehicles({
+    offset = 0,
+    limit = 256
+})
+local handle = nil
+for _, candidate in ipairs(world.items) do
+    if candidate.prototype == "bicycle" then
+        handle = candidate.handle
+        break
+    end
+end
+assert(handle ~= nil)
+
+local renamed = game.vehicles.rename(
+    handle, "Lua renamed bicycle")
+assert(renamed.ok == true)
+assert(renamed.value.before == "Lua control bicycle")
+assert(renamed.value.after == "Lua renamed bicycle")
+
+local cruise = game.vehicles.set_cruise_velocity(
+    handle, 1000000)
+assert(cruise.ok == true)
+assert(cruise.value.requested == 1000000)
+assert(cruise.value.after <= cruise.value.maximum)
+assert(cruise.value.after >= cruise.value.minimum)
+assert(cruise.value.clamped == true)
+
+local tracked = game.vehicles.set_tracking(handle, true)
+assert(tracked.ok == true)
+assert(tracked.value.after == true)
+local untracked = game.vehicles.set_tracking(handle, false)
+assert(untracked.ok == true)
+assert(untracked.value.after == false)
+
+local parts = game.vehicles.parts(handle, {
+    offset = 0,
+    limit = 256
+})
+assert(parts.ok == true)
+local toggled_part = nil
+for _, part in ipairs(parts.value.items) do
+    if not part.capabilities.engine and
+            part.available then
+        toggled_part = part
+        break
+    end
+end
+assert(toggled_part ~= nil)
+local toggled = game.vehicles.set_part_enabled(
+    handle, toggled_part.index,
+    not toggled_part.enabled)
+assert(toggled.ok == true)
+assert(toggled.value.changed == true)
+assert(toggled.value.after.enabled ~=
+    toggled_part.enabled)
+local restored = game.vehicles.set_part_enabled(
+    handle, toggled_part.index,
+    toggled_part.enabled)
+assert(restored.ok == true)
+assert(restored.value.after.enabled ==
+    toggled_part.enabled)
+
+local stopped = game.vehicles.stop(handle, {
+    motion = true,
+    engines = true,
+    autopilot = true
+})
+assert(stopped.ok == true)
+assert(stopped.value.after.motion.velocity == 0)
+assert(stopped.value.after.motion.cruise_velocity == 0)
+assert(stopped.value.after.state.engine_on == false)
+assert(stopped.value.after.state.autopilot_on == false)
+assert(stopped.value.after.state.autodriving == false)
+assert(stopped.value.after.state.following == false)
+assert(stopped.value.after.state.patrolling == false)
+
+assert(pcall(function()
+    game.vehicles.rename(handle, string.rep("x", 257))
+end) == false)
+assert(pcall(function()
+    game.vehicles.set_cruise_velocity(handle, 1000001)
+end) == false)
+assert(pcall(function()
+    game.vehicles.set_part_enabled(handle, -1, true)
+end) == false)
+assert(pcall(function()
+    game.vehicles.stop(handle, {
+        motion = false,
+        engines = false,
+        autopilot = false
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_vehicle->name ==
+           "Lua renamed bicycle" );
+    CHECK( native_vehicle->velocity == 0 );
+    CHECK( native_vehicle->cruise_velocity == 0 );
+    CHECK_FALSE( native_vehicle->engine_on );
+    CHECK_FALSE( native_vehicle->autopilot_on );
+    CHECK_FALSE( native_vehicle->is_autodriving );
+    CHECK_FALSE( native_vehicle->is_following );
+    CHECK_FALSE( native_vehicle->is_patrolling );
+    CHECK_FALSE( native_vehicle->tracking_on );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local handle = game.world.vehicles({
+    offset = 0,
+    limit = 1
+}).items[1].handle
+game.vehicles.rename(handle, "unauthorized")
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( native_vehicle->name ==
+           "Lua renamed bicycle" );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
