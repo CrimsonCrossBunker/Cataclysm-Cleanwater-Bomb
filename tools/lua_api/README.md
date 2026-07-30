@@ -20,11 +20,47 @@ python3 tools/lua_api/generate_cbn_inventory.py \
   --check-snapshot data/lua/reference/cbn_api_inventory.json
 ```
 
-`check_coverage.py` classifies every recorded entry into one CCB capability
-domain.  A domain can become `covered` only when it names both public API and
-test evidence.  Planned entries continue to count as incomplete:
+`generate_cbn_coverage.py` expands the pinned inventory into the checked-in
+schema-2, entry-level audit:
+
+```sh
+python3 tools/lua_api/generate_cbn_coverage.py
+python3 tools/lua_api/generate_cbn_coverage.py --check-snapshot
+```
+
+Every one of the 2,398 inventory entries has:
+
+- a canonical key and an exact copy of its inventory selector;
+- a completion status and CCB capability domain;
+- the CCB API that replaces the CBN binding;
+- repository-relative `path#needle` implementation and test evidence; and
+- a reason when, and only when, the status is `not_applicable`.
+
+The generator contains the reviewed architectural mappings.  Hooks map to
+their exact `game.hooks.on("<name>", handler)` registration, callback actors
+map to their exact CCB callback kind, and callback methods map to the matching
+descriptor field.  Most native-object functions map at capability-domain
+level because CCB deliberately replaces CBN's borrowed native objects with
+bounded snapshots, typed handles, and controlled operations.
+
+`check_coverage.py` joins the audit back to the inventory by canonical key.
+It rejects missing, duplicate, stale, or inexact selectors, invalid status
+transitions, empty mappings, missing evidence, and stale evidence anchors.
+`planned` entries continue to count as incomplete:
 
 ```sh
 python3 tools/lua_api/check_coverage.py
 python3 tools/lua_api/check_coverage.py --require-complete
 ```
+
+Run the validator regression suite with:
+
+```sh
+python3 -m unittest tools.lua_api.test_check_coverage
+```
+
+The only accepted `not_applicable` entry is
+`get_distribution_grid_tracker`: it exposes CBN's power-distribution engine
+subsystem, which CCB does not contain.  Coordinate conversion, action-menu
+entries, native sidebar widgets, and bounded diagnostics all have CCB
+equivalents and must not be classified as exceptions.
