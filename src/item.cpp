@@ -2118,8 +2118,11 @@ void item::mark_internal_plutonium_fuel()
 
 bool item::normalize_plutonium_fuel( const bool allow_legacy_representation )
 {
+    // A running legacy reactor can leave fewer than one cell's worth of
+    // internal charges behind, so any positive charge in a compatible host
+    // must be treated as an incomplete internal cell.
     const bool legacy_representation = allow_legacy_representation &&
-                                       ammo_type() == ammo_plutonium && charges >= PLUTONIUM_CHARGES;
+                                       ammo_type() == ammo_plutonium && charges > 0;
     if( !is_internal_plutonium_fuel() && !legacy_representation ) {
         return false;
     }
