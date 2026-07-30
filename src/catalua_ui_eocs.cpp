@@ -23,6 +23,7 @@
 #include "enum_conversions.h"
 #include "event.h"
 #include "math_parser_diag_value.h"
+#include "vehicle.h"
 
 namespace cata::lua_ui
 {
@@ -523,6 +524,74 @@ sol::table queue_eoc(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+struct resolved_variable_talker {
+    std::unique_ptr<talker> value;
+    std::optional<game_handle_error> error;
+};
+
+resolved_variable_talker resolve_variable_talker(
+    const game_handle &handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    resolved_variable_talker result;
+    if( handle.kind() == game_handle_kind::creature ) {
+        const native_handle_result<Creature> creature =
+            handle.resolve_creature(
+                runtime_generation, world_generation );
+        if( !creature ) {
+            result.error = creature.error;
+            return result;
+        }
+        result.value = get_talker_for( *creature.value );
+        return result;
+    }
+    if( handle.kind() == game_handle_kind::vehicle ) {
+        const native_handle_result<vehicle> target =
+            handle.resolve_vehicle(
+                runtime_generation, world_generation );
+        if( !target ) {
+            result.error = target.error;
+            return result;
+        }
+        result.value = get_talker_for( *target.value );
+        return result;
+    }
+    result.error = game_handle_error{
+        "wrong_kind",
+        "game.variables requires a creature or vehicle GameHandle"
+    };
+    return result;
+}
+
+sol::table get_variable(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &key,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_context_key( key );
+    sol::state_view state( lua );
+    resolved_variable_talker resolved = resolve_variable_talker(
+                                            handle, runtime_generation,
+                                            world_generation );
+    if( resolved.error ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    sol::table value = state.create_table();
+    const diag_value *stored = resolved.value->maybe_get_value( key );
+    value["exists"] = stored != nullptr;
+    if( stored != nullptr ) {
+        std::size_t nodes = 0;
+        value["value"] = context_value_to_lua(
+                             state, *stored, 0, nodes );
+    } else {
+        value["value"] = sol::nil;
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_eoc_api(
@@ -602,6 +671,21 @@ void install_eoc_api(
                    "context_string_bytes", 8192 );
     } );
     game["eocs"] = std::move( eocs );
+
+    sol::table variables = lua.create_table();
+    variables.set_function(
+        "get",
+        [current_runtime_generation, current_world_generation,
+         require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & key ) {
+        require_read();
+        return get_variable(
+                   lua_state, handle, key,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    game["variables"] = std::move( variables );
 }
 
 } // namespace cata::lua_ui
