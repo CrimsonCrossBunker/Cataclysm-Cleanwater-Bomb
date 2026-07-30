@@ -302,6 +302,12 @@ class scoped_lua_user_script
                 }
                 previous_manifest_ = std::string( std::istreambuf_iterator<char>( input ),
                                                   std::istreambuf_iterator<char>() );
+                input.close();
+                fs::remove( manifest_path_, error );
+                if( error ) {
+                    throw std::runtime_error(
+                        "Unable to isolate existing user Lua manifest: " + error.message() );
+                }
             }
             cata::lua_ui::shutdown();
         }
