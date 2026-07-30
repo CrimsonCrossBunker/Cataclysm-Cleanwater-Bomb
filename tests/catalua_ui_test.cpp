@@ -59,6 +59,7 @@
 #include "pocket_type.h"
 #include "projectile.h"
 #include "requirements.h"
+#include "rng.h"
 #include "skill.h"
 #include "stats_tracker.h"
 #include "talker.h"
@@ -6983,9 +6984,18 @@ assert(pcall(function()
 end) == false)
 )lua" );
 
+    // A read-only Lua query must not perturb combat, spawning, or any other
+    // simulation randomness.
+    // NOLINTNEXTLINE(cata-determinism)
+    const cata_default_random_engine saved_engine = rng_get_engine();
+    on_out_of_scope restore_rng( [saved_engine]() {
+        rng_get_engine() = saved_engine;
+    } );
+
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
+    CHECK( rng_get_engine() == saved_engine );
 
     script.write_manifest( R"json({
         "id": "user",

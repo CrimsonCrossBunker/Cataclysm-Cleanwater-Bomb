@@ -13,6 +13,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <random>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -376,6 +377,7 @@ class runtime_state : public event_subscriber
         std::set<std::string> loading_modules;
         std::vector<std::size_t> loaded_module_counts;
         std::size_t module_load_depth = 0;
+        std::vector<std::mt19937_64> source_random_engines;
         std::vector<sol::environment> source_environments;
         deterministic_turn_scheduler scheduler;
         std::unordered_map<std::uint64_t, sol::protected_function> scheduled_callbacks;
@@ -433,6 +435,65 @@ std::uint64_t diagnostic_sequence = 0;
 bool mapgen_bootstrap_attempted = false;
 bool sidebar_panels_dirty = false;
 
+void stable_hash_byte( std::uint64_t &hash, const std::uint8_t value )
+{
+    hash ^= value;
+    hash *= UINT64_C( 1099511628211 );
+}
+
+void stable_hash_integer( std::uint64_t &hash, const std::uint64_t value )
+{
+    for( unsigned int shift = 0; shift < 64; shift += 8 ) {
+        stable_hash_byte(
+            hash, static_cast<std::uint8_t>( value >> shift ) );
+    }
+}
+
+void stable_hash_string(
+    std::uint64_t &hash, const std::string_view value )
+{
+    stable_hash_integer( hash, value.size() );
+    for( const unsigned char ch : value ) {
+        stable_hash_byte( hash, ch );
+    }
+}
+
+std::uint64_t finalize_stable_hash( std::uint64_t hash )
+{
+    hash ^= hash >> 30;
+    hash *= UINT64_C( 0xbf58476d1ce4e5b9 );
+    hash ^= hash >> 27;
+    hash *= UINT64_C( 0x94d049bb133111eb );
+    return hash ^ ( hash >> 31 );
+}
+
+std::uint64_t source_random_seed(
+    const runtime_state &state, const std::string_view source_id )
+{
+    std::uint64_t hash = UINT64_C( 1469598103934665603 );
+    stable_hash_string( hash, "ccb.lua.runtime.random.v1" );
+    stable_hash_integer( hash, g ? g->get_seed() : 0 );
+    stable_hash_integer(
+        hash, static_cast<std::uint64_t>( state.generation ) );
+    stable_hash_integer(
+        hash, static_cast<std::uint64_t>( state.world_generation ) );
+    stable_hash_string( hash, source_id );
+    return finalize_stable_hash( hash );
+}
+
+void initialize_source_random_engines( runtime_state &state )
+{
+    state.source_random_engines.clear();
+    state.source_random_engines.reserve( state.sources.size() );
+    for( const script_source &source : state.sources ) {
+        // This deterministic per-source engine intentionally stays separate
+        // from the simulation RNG.
+        // NOLINTNEXTLINE(cata-determinism)
+        state.source_random_engines.emplace_back(
+            source_random_seed( state, source.manifest.id ) );
+    }
+}
+
 bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
                             const std::string &display_name,
                             const script_value_map &data );
@@ -489,6 +550,25 @@ const script_manifest &current_manifest( const runtime_state &state )
         throw std::runtime_error( "Lua API call is outside a script source context" );
     }
     return state.sources[*state.current_source].manifest;
+}
+
+std::size_t source_random_index(
+    runtime_state &state, const std::size_t count )
+{
+    if( count == 0 ) {
+        throw std::invalid_argument(
+            "Lua random selection requires a non-empty range" );
+    }
+    current_manifest( state );
+    const std::size_t source_index = *state.current_source;
+    if( source_index >= state.source_random_engines.size() ) {
+        throw std::runtime_error(
+            "Lua source random state is unavailable" );
+    }
+    std::uniform_int_distribution<std::size_t> distribution(
+        0, count - 1 );
+    return distribution(
+               state.source_random_engines[source_index] );
 }
 
 void require_capability( const runtime_state &state, const std::string &capability )
@@ -2951,6 +3031,7 @@ std::string lua_action_slot( runtime_state &state, script_ui_context &context,
 
 void initialize_state( runtime_state &state )
 {
+    initialize_source_random_engines( state );
     std::vector<script_module_source> module_sources;
     module_sources.reserve( state.sources.size() );
     for( const script_source &source : state.sources ) {
@@ -3814,6 +3895,9 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.overmap" );
         require_capability( state, "game.write" );
+    },
+    [&state]( const std::size_t count ) {
+        return source_random_index( state, count );
     } );
     install_horde_api(
         game,
@@ -5837,50 +5921,23 @@ bool mapgen_filter_matches( const mapgen_handler_filter &filter,
                terrain_id );
 }
 
-void hash_mapgen_byte( std::uint64_t &hash, const std::uint8_t value )
-{
-    hash ^= value;
-    hash *= UINT64_C( 1099511628211 );
-}
-
-void hash_mapgen_integer( std::uint64_t &hash, const std::uint64_t value )
-{
-    for( unsigned int shift = 0; shift < 64; shift += 8 ) {
-        hash_mapgen_byte(
-            hash, static_cast<std::uint8_t>( value >> shift ) );
-    }
-}
-
-void hash_mapgen_string(
-    std::uint64_t &hash, const std::string_view value )
-{
-    hash_mapgen_integer( hash, value.size() );
-    for( const unsigned char ch : value ) {
-        hash_mapgen_byte( hash, ch );
-    }
-}
-
 std::uint64_t deterministic_mapgen_seed(
     const mapgendata &data, const std::string_view source_id )
 {
     std::uint64_t hash = UINT64_C( 1469598103934665603 );
-    hash_mapgen_integer( hash, g ? g->get_seed() : 0 );
-    hash_mapgen_integer(
+    stable_hash_integer( hash, g ? g->get_seed() : 0 );
+    stable_hash_integer(
         hash, static_cast<std::uint64_t>(
             static_cast<std::int64_t>( data.pos().x() ) ) );
-    hash_mapgen_integer(
+    stable_hash_integer(
         hash, static_cast<std::uint64_t>(
             static_cast<std::int64_t>( data.pos().y() ) ) );
-    hash_mapgen_integer(
+    stable_hash_integer(
         hash, static_cast<std::uint64_t>(
             static_cast<std::int64_t>( data.pos().z() ) ) );
-    hash_mapgen_string( hash, data.terrain_type().id().str() );
-    hash_mapgen_string( hash, source_id );
-    hash ^= hash >> 30;
-    hash *= UINT64_C( 0xbf58476d1ce4e5b9 );
-    hash ^= hash >> 27;
-    hash *= UINT64_C( 0x94d049bb133111eb );
-    return hash ^ ( hash >> 31 );
+    stable_hash_string( hash, data.terrain_type().id().str() );
+    stable_hash_string( hash, source_id );
+    return finalize_stable_hash( hash );
 }
 
 void remove_mapgen_handler(
