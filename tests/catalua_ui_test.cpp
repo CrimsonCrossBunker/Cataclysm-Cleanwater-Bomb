@@ -5198,6 +5198,125 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_native_calendar_is_snapshot_based_and_checked",
+           "[lua][bindings][time][integration]" )
+{
+    scoped_calendar_turn turn;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local original = game.time.now()
+local snapshot = game.time.snapshot()
+assert(snapshot.point == original)
+assert(snapshot.turn == original.turn)
+assert(type(snapshot.display) == "string")
+assert(type(snapshot.time_of_day) == "string")
+assert(math.type(snapshot.year) == "integer")
+assert(math.type(snapshot.day_of_year) == "integer")
+assert(math.type(snapshot.hour) == "integer")
+assert(math.type(snapshot.minute) == "integer")
+assert(math.type(snapshot.second) == "integer")
+assert(type(snapshot.season.id) == "string")
+assert(math.type(snapshot.season.index) == "integer")
+assert(type(snapshot.season.name) == "string")
+assert(math.type(snapshot.season.day) == "integer")
+assert(type(snapshot.moon_phase) == "string")
+assert(type(snapshot.is_day) == "boolean")
+assert(type(snapshot.is_night) == "boolean")
+assert(type(snapshot.is_dawn) == "boolean")
+assert(type(snapshot.is_dusk) == "boolean")
+assert(type(snapshot.is_twilight) == "boolean")
+assert(snapshot.sunrise.turn <= snapshot.sunset.turn)
+assert(type(snapshot.daylight.turn) == "number")
+assert(type(snapshot.nightfall.turn) == "number")
+assert(type(snapshot.noon.turn) == "number")
+
+local detached_season = snapshot.season.id
+snapshot.season.id = "detached"
+assert(game.time.snapshot().season.id ==
+    detached_season)
+
+local calendar = game.time.calendar()
+assert(calendar.now.point == original)
+assert(calendar.turn_zero.turn == 0)
+assert(type(calendar.start_of_cataclysm.turn) ==
+    "number")
+assert(type(calendar.start_of_game.turn) ==
+    "number")
+assert(calendar.season_length.turns > 0)
+assert(calendar.year_length.turns ==
+    calendar.season_length.turns * 4)
+assert(calendar.turn_zero_offset.turns >= 0)
+assert(type(calendar.initial_season.id) == "string")
+assert(type(calendar.eternal_season) == "boolean")
+assert(type(calendar.eternal_day) == "boolean")
+assert(type(calendar.eternal_night) == "boolean")
+
+local limits = game.time.limits()
+assert(limits.minimum.turn == limits.minimum_turn)
+assert(limits.maximum.turn == limits.maximum_turn)
+assert(limits.minimum_turn == 0)
+assert(limits.maximum_turn > limits.minimum_turn)
+assert(limits.set_now_simulates_turns == false)
+
+local minute = game.time.duration(1, "minute")
+local target = original + minute
+local conflict = game.time.set_now(
+    target, original + game.time.duration(1, "turn"))
+assert(conflict.ok == false)
+assert(conflict.error.code == "conflict")
+assert(game.time.now() == original)
+
+local changed = game.time.set_now(target, original)
+assert(changed.ok == true)
+assert(changed.value.previous.point == original)
+assert(changed.value.current.point == target)
+assert(changed.value.delta.turns == 60)
+assert(changed.value.simulated_turns == false)
+assert(game.time.now() == target)
+
+local advanced = game.time.advance(
+    game.time.duration(-30, "second"), target)
+assert(advanced.ok == true)
+local halfway = original +
+    game.time.duration(30, "second")
+assert(game.time.now() == halfway)
+assert(advanced.value.delta.turns == -30)
+
+local restored = game.time.set_now(
+    original, halfway)
+assert(restored.ok == true)
+assert(game.time.now() == original)
+
+assert(pcall(function()
+    game.time.snapshot(game.time.point(-1))
+end) == false)
+local at_zero = game.time.set_now(
+    game.time.turn_zero(), original)
+assert(at_zero.ok == true)
+assert(pcall(function()
+    game.time.advance(
+        game.time.duration(-1, "turn"),
+        game.time.turn_zero())
+end) == false)
+assert(game.time.set_now(
+    original, game.time.turn_zero()).ok == true)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+    CHECK( calendar::turn ==
+           turn.original() );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
