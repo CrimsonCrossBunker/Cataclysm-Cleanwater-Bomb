@@ -3743,6 +3743,277 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_faction_controls_preserve_permissions_and_bounds",
+           "[lua][bindings][factions][write][integration]" )
+{
+    g->faction_manager_ptr->create_if_needed();
+    faction *native_faction =
+        g->faction_manager_ptr->get(
+            faction_id( "your_followers" ), false );
+    faction *target_faction =
+        g->faction_manager_ptr->get(
+            faction_id( "free_merchants" ), false );
+    REQUIRE( native_faction != nullptr );
+    REQUIRE( target_faction != nullptr );
+
+    const std::string original_name =
+        native_faction->get_name();
+    const bool original_known =
+        native_faction->known_by_u;
+    const int original_likes =
+        native_faction->likes_u;
+    const int original_respects =
+        native_faction->respects_u;
+    const int original_trusts =
+        native_faction->trusts_u;
+    const int original_size =
+        native_faction->size;
+    const int original_power =
+        native_faction->power;
+    const int original_wealth =
+        native_faction->wealth;
+    const bool original_consumes_food =
+        native_faction->consumes_food;
+    const std::optional<bool> original_stealing =
+        native_faction->steal_persist;
+    const nutrients original_food =
+        native_faction->food_supply();
+    const auto original_relations =
+        native_faction->relations;
+    on_out_of_scope restore_faction( [
+                                      native_faction,
+                                      original_name,
+                                      original_known,
+                                      original_likes,
+                                      original_respects,
+                                      original_trusts,
+                                      original_size,
+                                      original_power,
+                                      original_wealth,
+                                      original_consumes_food,
+                                      original_stealing,
+                                      original_food,
+                                      original_relations
+                                    ]() {
+        native_faction->set_name(
+            original_name );
+        native_faction->known_by_u =
+            original_known;
+        native_faction->likes_u =
+            original_likes;
+        native_faction->respects_u =
+            original_respects;
+        native_faction->trusts_u =
+            original_trusts;
+        native_faction->size =
+            original_size;
+        native_faction->power =
+            original_power;
+        native_faction->wealth =
+            original_wealth;
+        native_faction->consumes_food =
+            original_consumes_food;
+        native_faction->steal_persist =
+            original_stealing;
+        native_faction->empty_food_supply();
+        native_faction->add_to_food_supply( {
+            { calendar::turn_zero, original_food }
+        } );
+        native_faction->relations =
+            original_relations;
+    } );
+
+    native_faction->set_name(
+        "Lua control faction" );
+    native_faction->known_by_u = true;
+    native_faction->likes_u =
+        std::numeric_limits<int>::max() - 5;
+    native_faction->respects_u = -10;
+    native_faction->trusts_u = 2;
+    native_faction->size = 10;
+    native_faction->power = 20;
+    native_faction->wealth = 30;
+    native_faction->consumes_food = true;
+    native_faction->steal_persist =
+        std::nullopt;
+    native_faction->empty_food_supply();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local yours = game.types.id(
+    "faction", "your_followers")
+local merchants = game.types.id(
+    "faction", "free_merchants")
+
+local renamed = game.factions.rename(
+    yours, "Lua renamed faction")
+assert(renamed.ok == true)
+assert(renamed.value.before == "Lua control faction")
+assert(renamed.value.after == "Lua renamed faction")
+
+local known = game.factions.set_known(yours, false)
+assert(known.ok == true)
+assert(known.value.before == true)
+assert(known.value.after == false)
+assert(known.value.changed == true)
+
+local reputation = game.factions.modify_reputation(
+    yours, {
+        likes = 100,
+        respects = -5,
+        trusts = 7
+    })
+assert(reputation.ok == true)
+assert(reputation.value.before.likes == 2147483642)
+assert(reputation.value.after.likes == 2147483647)
+assert(reputation.value.after.respects == -15)
+assert(reputation.value.after.trusts == 9)
+
+local resources = game.factions.modify_resources(
+    yours, {
+        size = -100,
+        power = 5,
+        wealth = 7
+    })
+assert(resources.ok == true)
+assert(resources.value.before.size == 10)
+assert(resources.value.after.size == 0)
+assert(resources.value.after.power == 25)
+assert(resources.value.after.wealth == 37)
+assert(resources.value.after.wealth_description == "")
+
+local added = game.factions.modify_food(yours, 100)
+assert(added.ok == true)
+assert(added.value.before == 0)
+assert(added.value.after == 100)
+assert(added.value.applied == 100)
+assert(added.value.clamped == false)
+local removed = game.factions.modify_food(yours, -150)
+assert(removed.ok == true)
+assert(removed.value.before == 100)
+assert(removed.value.after == 0)
+assert(removed.value.applied == -100)
+assert(removed.value.clamped == true)
+
+local policy = game.factions.set_policy(yours, {
+    consumes_food = false,
+    stealing = "always"
+})
+assert(policy.ok == true)
+assert(policy.value.before.consumes_food == true)
+assert(policy.value.before.stealing == "ask")
+assert(policy.value.after.consumes_food == false)
+assert(policy.value.after.stealing == "always")
+
+local relationship = game.factions.set_relationship(
+    yours, merchants, {
+        kill_on_sight = true,
+        share_public_goods = false
+    })
+assert(relationship.ok == true)
+assert(relationship.value.after.defined == true)
+assert(relationship.value.after.kill_on_sight == true)
+assert(relationship.value.after.share_public_goods == false)
+
+assert(pcall(function()
+    game.factions.rename(yours, "")
+end) == false)
+assert(pcall(function()
+    game.factions.rename(yours, string.rep("x", 41))
+end) == false)
+assert(pcall(function()
+    game.factions.modify_reputation(yours, {})
+end) == false)
+assert(pcall(function()
+    game.factions.modify_reputation(yours, {
+        likes = 1000001
+    })
+end) == false)
+assert(pcall(function()
+    game.factions.modify_resources(yours, {
+        size = 0.5
+    })
+end) == false)
+assert(pcall(function()
+    game.factions.modify_food(yours, 0)
+end) == false)
+assert(pcall(function()
+    game.factions.modify_food(yours, 1000000001)
+end) == false)
+assert(pcall(function()
+    game.factions.set_policy(yours, {
+        stealing = "sometimes"
+    })
+end) == false)
+assert(pcall(function()
+    game.factions.set_relationship(
+        yours, merchants, {})
+end) == false)
+assert(pcall(function()
+    game.factions.set_relationship(
+        yours, merchants, {
+            kill_on_sight = 1
+        })
+end) == false)
+local missing_target = game.factions.set_relationship(
+    yours,
+    game.types.id("faction",
+        "__missing_lua_faction__"),
+    { kill_on_sight = true })
+assert(missing_target.ok == false)
+assert(missing_target.error.code == "target_not_found")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_faction->get_name() ==
+           "Lua renamed faction" );
+    CHECK_FALSE( native_faction->known_by_u );
+    CHECK( native_faction->likes_u ==
+           std::numeric_limits<int>::max() );
+    CHECK( native_faction->respects_u == -15 );
+    CHECK( native_faction->trusts_u == 9 );
+    CHECK( native_faction->size == 0 );
+    CHECK( native_faction->power == 25 );
+    CHECK( native_faction->wealth == 37 );
+    CHECK( native_faction->food_supply().kcal() == 0 );
+    CHECK_FALSE( native_faction->consumes_food );
+    REQUIRE( native_faction->steal_persist.has_value() );
+    CHECK( *native_faction->steal_persist );
+    CHECK( native_faction->has_relationship(
+               target_faction->id,
+               npc_factions::relationship::
+               kill_on_sight ) );
+    CHECK_FALSE( native_faction->has_relationship(
+                     target_faction->id,
+                     npc_factions::relationship::
+                     share_public_goods ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.factions.set_known(
+    game.types.id("faction", "your_followers"),
+    true)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK_FALSE( native_faction->known_by_u );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
