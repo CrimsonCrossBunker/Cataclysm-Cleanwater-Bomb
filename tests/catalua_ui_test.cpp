@@ -59,6 +59,7 @@
 #include "projectile.h"
 #include "requirements.h"
 #include "skill.h"
+#include "stats_tracker.h"
 #include "talker.h"
 #include "trap.h"
 #include "ui_profile.h"
@@ -5025,6 +5026,176 @@ game.achievements.set_enabled(false)
     CHECK( error.find( "game.write" ) !=
            std::string::npos );
     CHECK( tracker.is_enabled() );
+}
+
+TEST_CASE( "lua_v5_statistics_and_event_history_are_bounded",
+           "[lua][bindings][statistics][read][integration]" )
+{
+    if( get_stats().valid_scores().
+        empty() &&
+        get_achievements().
+        valid_achievements().empty() ) {
+        get_event_bus().send<
+        event_type::game_start>(
+            "lua-statistics-test" );
+    }
+    get_event_bus().send<
+    event_type::game_begin>(
+        "lua-statistics-event" );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local stat_id = game.types.id(
+    "event_statistic",
+    "num_avatar_enters_oter_test")
+local definitions = game.statistics.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "NUM_AVATAR_ENTERS_OTER_TEST"
+})
+assert(definitions.limit == 256)
+assert(definitions.total == 1)
+assert(definitions.returned == 1)
+local definition =
+    game.statistics.definition(stat_id)
+assert(definition.id == stat_id)
+assert(type(definition.description) ==
+    "string")
+assert(type(definition.type) == "string")
+assert(type(definition.monotonicity) ==
+    "string")
+assert(definition.sources.returned ==
+    #definition.sources.items)
+
+local current = game.statistics.value(stat_id)
+assert(current.ok == true)
+assert(current.value.id == stat_id)
+assert(current.value.value.type == "int")
+assert(math.type(
+    current.value.value.value) == "integer")
+assert(current.value.value.value >= 0)
+assert(type(current.value.value.raw) == "string")
+assert(current.value.value.valid == true)
+
+local values = game.statistics.values({
+    query = "num_avatar_enters_oter_test",
+    limit = 1
+})
+assert(values.ok == true)
+assert(values.value.returned == 1)
+assert(values.value.items[1].id == stat_id)
+
+local transform_id = game.types.id(
+    "event_transformation",
+    "avatar_enters_oter_test")
+assert(transform_id:is_valid() == true)
+local transformations =
+    game.statistics.transformations({
+        query = "avatar_enters_oter_test",
+        limit = 1
+    })
+assert(transformations.total == 1)
+assert(transformations.items[1].id ==
+    transform_id)
+assert(transformations.items[1].fields.returned ==
+    #transformations.items[1].fields.items)
+local transformed =
+    game.statistics.transformation(
+        transform_id, { limit = 1 })
+assert(transformed.ok == true)
+assert(transformed.value.id == transform_id)
+assert(transformed.value.events.event_count >= 0)
+assert(transformed.value.events.returned ==
+    #transformed.value.events.items)
+
+local event_types = game.statistics.event_types({
+    query = "GAME_BEGIN",
+    limit = 1000000
+})
+assert(event_types.limit == 256)
+assert(event_types.total == 1)
+local event_type = event_types.items[1]
+assert(event_type.name == "game_begin")
+assert(event_type.count >= 1)
+assert(#event_type.fields == 1)
+assert(event_type.fields[1].name ==
+    "cdda_version")
+assert(event_type.fields[1].type ==
+    "string")
+
+local history = game.statistics.event(
+    "game_begin", { limit = 1000000 })
+assert(history.ok == true)
+assert(history.value.name == "game_begin")
+assert(history.value.events.limit == 256)
+assert(history.value.events.event_count >= 1)
+assert(history.value.events.returned ==
+    #history.value.events.items)
+local partition =
+    history.value.events.items[1]
+assert(partition.count >= 1)
+assert(partition.first.turn <=
+    partition.last.turn)
+assert(partition.data.cdda_version.type ==
+    "string")
+assert(partition.data.cdda_version.value ==
+    "lua-statistics-event")
+
+local scores = game.statistics.scores({
+    offset = 0,
+    limit = 1
+})
+assert(scores.ok == true)
+assert(scores.value.returned == 1)
+local score = scores.value.items[1]
+assert(score.id.kind == "score")
+assert(type(score.description) == "string")
+assert(type(score.valid) == "boolean")
+assert(type(score.value.type) == "string")
+local exact_score =
+    game.statistics.score(score.id)
+assert(exact_score.ok == true)
+assert(exact_score.value.id == score.id)
+
+assert(pcall(function()
+    game.statistics.definitions({
+        offset = -1
+    })
+end) == false)
+assert(pcall(function()
+    game.statistics.values({
+        unknown = true
+    })
+end) == false)
+assert(pcall(function()
+    game.statistics.value(
+        game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.statistics.event(
+        "__unknown_event__", {})
+end) == false)
+assert(pcall(function()
+    game.statistics.event(
+        "game_begin", { query = "bad" })
+end) == false)
+assert(pcall(function()
+    game.statistics.transformation(
+        game.types.id("item", "rock"), {})
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
