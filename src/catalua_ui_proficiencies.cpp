@@ -659,6 +659,58 @@ sol::table practice_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table set_progress_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const script_time_duration &requested_progress,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_proficiency_id(
+        requested_id, "game.proficiencies.set_progress" );
+    if( requested_progress.turns() < 0 ) {
+        throw std::invalid_argument(
+            "game.proficiencies.set_progress progress "
+            "cannot be negative" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const proficiency_id id( requested_id.value() );
+    const proficiency &definition = id.obj();
+    const time_duration progress =
+        requested_progress.to_native();
+    const time_duration total = definition.time_to_learn();
+    if( progress > total ) {
+        throw std::invalid_argument(
+            "game.proficiencies.set_progress progress "
+            "cannot exceed time_to_learn" );
+    }
+    if( progress == total &&
+        !character->has_prof_prereqs( id ) ) {
+        throw std::invalid_argument(
+            "game.proficiencies.set_progress cannot complete "
+            "a proficiency with unmet prerequisites" );
+    }
+
+    sol::table before =
+        snapshot_state( state, *character, definition );
+    character->set_proficiency_practiced_time(
+        id, to_turns<int>( progress ) );
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, definition );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_proficiency_api(
@@ -752,6 +804,18 @@ void install_proficiency_api(
         require_write();
         return practice_state(
                    lua_state, handle, id, amount,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    proficiencies.set_function(
+        "set_progress",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const script_time_duration & progress ) {
+        require_write();
+        return set_progress_state(
+                   lua_state, handle, id, progress,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
