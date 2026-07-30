@@ -388,32 +388,34 @@ void validate_eoc_options(
     }
 }
 
-sol::table test_eoc(
-    sol::this_state lua, const script_game_id &id,
+struct prepared_eoc_dialogue {
+    std::unique_ptr<dialogue> conversation;
+    std::optional<game_handle_error> error;
+};
+
+prepared_eoc_dialogue prepare_eoc_dialogue(
     const sol::optional<sol::table> &options,
     const std::size_t runtime_generation,
     const std::size_t world_generation )
 {
-    require_eoc_id( id, "game.eocs.test" );
     validate_eoc_options( options );
-    sol::state_view state( lua );
-    std::optional<game_handle_error> error;
+    prepared_eoc_dialogue result;
     std::unique_ptr<talker> alpha = resolve_talker_option(
                                         options, "alpha", true,
                                         runtime_generation, world_generation,
-                                        error );
-    if( error ) {
-        return make_game_error_result( state, *error );
+                                        result.error );
+    if( result.error ) {
+        return result;
     }
     std::unique_ptr<talker> beta = resolve_talker_option(
                                        options, "beta", false,
                                        runtime_generation, world_generation,
-                                       error );
-    if( error ) {
-        return make_game_error_result( state, *error );
+                                       result.error );
+    if( result.error ) {
+        return result;
     }
-    dialogue conversation(
-        std::move( alpha ), std::move( beta ) );
+    result.conversation = std::make_unique<dialogue>(
+                              std::move( alpha ), std::move( beta ) );
     if( options ) {
         const sol::object context =
             options->get<sol::object>( "context" );
@@ -424,15 +426,33 @@ sol::table test_eoc(
                     "game.eocs option 'context' must be a table" );
             }
             apply_context(
-                conversation, context.as<sol::table>() );
+                *result.conversation, context.as<sol::table>() );
         }
+    }
+    return result;
+}
+
+sol::table test_eoc(
+    sol::this_state lua, const script_game_id &id,
+    const sol::optional<sol::table> &options,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_eoc_id( id, "game.eocs.test" );
+    sol::state_view state( lua );
+    prepared_eoc_dialogue prepared = prepare_eoc_dialogue(
+                                         options, runtime_generation,
+                                         world_generation );
+    if( prepared.error ) {
+        return make_game_error_result( state, *prepared.error );
     }
     const bool matched =
         effect_on_condition_id( id.value() )->test_condition(
-            conversation );
+            *prepared.conversation );
     sol::table value = state.create_table();
     value["matched"] = matched;
-    value["context"] = context_snapshot( state, conversation );
+    value["context"] = context_snapshot(
+                           state, *prepared.conversation );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
