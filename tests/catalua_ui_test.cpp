@@ -2113,6 +2113,77 @@ game.skills.set(
            original_level.knowledgeLevel() );
 }
 
+TEST_CASE( "lua_v5_proficiency_catalogs_are_typed_bounded_and_detached",
+           "[lua][bindings][proficiencies][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local knapping = game.types.id("proficiency", "prof_knapping")
+local definitions = game.proficiencies.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "KNAPPING"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "proficiency")
+
+local definition = game.proficiencies.definition(knapping)
+assert(definition.id == knapping)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.can_learn) == "boolean")
+assert(type(definition.ignore_focus) == "boolean")
+assert(type(definition.teachable) == "boolean")
+assert(definition.time_to_learn.turns > 0)
+assert(type(definition.time_multiplier) == "number")
+assert(type(definition.skill_penalty) == "number")
+assert(type(definition.required.items) == "table")
+assert(definition.required.returned == #definition.required.items)
+
+local category_id = definition.category
+assert(category_id.kind == "proficiency_category")
+local category = game.proficiencies.category(category_id)
+assert(category.id == category_id)
+assert(type(category.name) == "string")
+assert(type(category.description) == "string")
+
+local categories = game.proficiencies.categories({
+    offset = 0,
+    limit = 1000000,
+    query = "PROF_SURVIVAL"
+})
+assert(categories.limit == 256)
+assert(categories.total >= 1)
+assert(categories.returned == #categories.items)
+assert(categories.items[1].id.kind == "proficiency_category")
+
+definition.name = "detached"
+assert(game.proficiencies.definition(knapping).name ~= "detached")
+assert(pcall(function()
+    game.proficiencies.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.proficiencies.categories({ query = string.rep("x", 129) })
+end) == false)
+assert(pcall(function()
+    game.proficiencies.definitions({ limit = 257 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
