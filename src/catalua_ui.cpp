@@ -35,6 +35,7 @@
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_addictions.h"
+#include "catalua_ui_achievements.h"
 #include "catalua_ui_bionics.h"
 #include "catalua_ui_callbacks.h"
 #include "catalua_ui_camps.h"
@@ -1441,7 +1442,7 @@ sol::table describe_native_event(
                                 name, "events.describe_native" );
     const cata::event::fields_type fields = cata::event::get_fields( type );
     std::vector<std::pair<std::string, cata_variant_type>> ordered(
-        fields.begin(), fields.end() );
+                fields.begin(), fields.end() );
     std::sort(
         ordered.begin(), ordered.end(),
     []( const auto & lhs, const auto & rhs ) {
@@ -2888,7 +2889,7 @@ void initialize_state( runtime_state &state )
     } );
     events.set_function(
         "describe_native",
-        [&state]( sol::this_state lua, const std::string & name ) {
+    [&state]( sol::this_state lua, const std::string & name ) {
         return describe_native_event( state, lua, name );
     } );
     events.set_function(
@@ -2969,19 +2970,19 @@ void initialize_state( runtime_state &state )
                    std::move( callback ) );
     } ) );
     native_events.set_function(
-        "off", [&state, require_native_events]( const std::uint64_t id ) {
+    "off", [&state, require_native_events]( const std::uint64_t id ) {
         require_native_events();
         return unregister_event_handler( state, id );
     } );
     native_events.set_function(
-        "list", [&state, require_native_events]( sol::this_state lua ) {
+    "list", [&state, require_native_events]( sol::this_state lua ) {
         require_native_events();
         return native_event_types( state, lua );
     } );
     native_events.set_function(
         "describe",
         [&state, require_native_events](
-            sol::this_state lua, const std::string & name ) {
+    sol::this_state lua, const std::string & name ) {
         require_native_events();
         return describe_native_event( state, lua, name );
     } );
@@ -3286,6 +3287,22 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.addictions" );
         require_capability( state, "game.write" );
+    } );
+    install_achievement_api(
+        game,
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.achievements" );
+        require_capability(
+            state, "game.read" );
+    },
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.achievements" );
+        require_capability(
+            state, "game.write" );
     } );
     install_need_api(
         game,
