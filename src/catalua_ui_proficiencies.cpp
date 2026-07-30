@@ -722,7 +722,7 @@ void install_proficiency_api(
     std::function<std::size_t()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
-    std::function<void()> )
+    std::function<void()> require_write )
 {
     sol::state_view lua( game.lua_state() );
     sol::table proficiencies = lua.create_table();
