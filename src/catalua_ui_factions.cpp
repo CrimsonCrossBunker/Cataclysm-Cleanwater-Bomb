@@ -36,6 +36,8 @@ constexpr int maximum_detail_offset = 1000000;
 constexpr std::size_t maximum_faction_name_bytes =
     MAX_FAC_NAME_SIZE;
 constexpr int maximum_reputation_delta = 1000000;
+constexpr int maximum_resource_delta = 1000000000;
+constexpr int maximum_food_delta_kcal = 1000000000;
 
 struct faction_options {
     int offset = 0;
@@ -155,6 +157,26 @@ sol::table snapshot_reputation(
     return result;
 }
 
+sol::table snapshot_resources(
+    sol::state_view lua, const faction &entry )
+{
+    sol::table result = lua.create_table();
+    result["size"] = entry.size;
+    result["power"] = entry.power;
+    result["wealth"] = entry.wealth;
+    result["food_kcal"] =
+        entry.food_supply().kcal();
+    result["wealth_description"] =
+        entry.size > 0 ?
+        fac_wealth_text(
+            entry.wealth, entry.size ) :
+        std::string();
+    result["combat_ability"] =
+        fac_combat_ability_text(
+            entry.power );
+    return result;
+}
+
 sol::table snapshot_faction(
     sol::state_view lua, const faction &entry )
 {
@@ -170,22 +192,8 @@ sol::table snapshot_faction(
         entry.known_by_u;
     result["reputation"] =
         snapshot_reputation( lua, entry );
-    sol::table resources = lua.create_table();
-    resources["size"] = entry.size;
-    resources["power"] = entry.power;
-    resources["wealth"] = entry.wealth;
-    resources["food_kcal"] =
-        entry.food_supply().kcal();
-    resources["wealth_description"] =
-        entry.size > 0 ?
-        fac_wealth_text(
-            entry.wealth, entry.size ) :
-        std::string();
-    resources["combat_ability"] =
-        fac_combat_ability_text(
-            entry.power );
     result["resources"] =
-        std::move( resources );
+        snapshot_resources( lua, entry );
     sol::table policy = lua.create_table();
     policy["consumes_food"] =
         entry.consumes_food;
@@ -775,6 +783,182 @@ sol::table modify_faction_reputation(
                    state, std::move( value ) ) );
 }
 
+struct resource_deltas {
+    std::optional<int> size;
+    std::optional<int> power;
+    std::optional<int> wealth;
+};
+
+resource_deltas read_resource_deltas(
+    const sol::table &requested )
+{
+    resource_deltas result;
+    for( const auto &pair : requested ) {
+        if( pair.first.get_type() !=
+            sol::type::string ) {
+            throw std::invalid_argument(
+                "game.factions.modify_resources option keys must be strings" );
+        }
+        const std::string key =
+            pair.first.as<std::string>();
+        if( key != "size" &&
+            key != "power" &&
+            key != "wealth" ) {
+            throw std::invalid_argument(
+                "game.factions.modify_resources received unknown option '" +
+                key + "'" );
+        }
+        if( !pair.second.is<int>() ) {
+            throw std::invalid_argument(
+                "game.factions.modify_resources option '" +
+                key + "' must be an integer" );
+        }
+        const int delta =
+            pair.second.as<int>();
+        if( delta < -maximum_resource_delta ||
+            delta > maximum_resource_delta ) {
+            throw std::invalid_argument(
+                "game.factions.modify_resources option '" +
+                key +
+                "' must be within -1000000000..1000000000" );
+        }
+        if( key == "size" ) {
+            result.size = delta;
+        } else if( key == "power" ) {
+            result.power = delta;
+        } else {
+            result.wealth = delta;
+        }
+    }
+    if( !result.size &&
+        !result.power &&
+        !result.wealth ) {
+        throw std::invalid_argument(
+            "game.factions.modify_resources requires at least one delta" );
+    }
+    return result;
+}
+
+sol::table modify_faction_resources(
+    sol::this_state lua, const script_game_id &id,
+    const sol::table &requested )
+{
+    const resource_deltas deltas =
+        read_resource_deltas( requested );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    sol::table before =
+        snapshot_resources(
+            state, *entry );
+    if( deltas.size ) {
+        entry->size =
+            adjusted_integer(
+                entry->size,
+                *deltas.size, 0 );
+    }
+    if( deltas.power ) {
+        entry->power =
+            adjusted_integer(
+                entry->power,
+                *deltas.power, 0 );
+    }
+    if( deltas.wealth ) {
+        entry->wealth =
+            adjusted_integer(
+                entry->wealth,
+                *deltas.wealth, 0 );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_resources(
+            state, *entry );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table modify_faction_food(
+    sol::this_state lua, const script_game_id &id,
+    const int requested_kcal )
+{
+    if( requested_kcal <
+        -maximum_food_delta_kcal ||
+        requested_kcal >
+        maximum_food_delta_kcal ) {
+        throw std::invalid_argument(
+            "game.factions.modify_food kcal must be within "
+            "-1000000000..1000000000" );
+    }
+    if( requested_kcal == 0 ) {
+        throw std::invalid_argument(
+            "game.factions.modify_food kcal cannot be zero" );
+    }
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    const int before =
+        entry->food_supply().kcal();
+    if( requested_kcal > 0 ) {
+        nutrients added;
+        added.calories =
+            static_cast<std::int64_t>(
+                requested_kcal ) * 1000;
+        entry->add_to_food_supply( {
+            { calendar::turn_zero, added }
+        } );
+    } else {
+        const int removable =
+            std::min(
+                before, -requested_kcal );
+        if( removable > 0 ) {
+            nutrients consumed;
+            consumed.calories =
+                static_cast<std::int64_t>(
+                    removable ) * 1000;
+            entry->consume_food_supply(
+                consumed );
+        }
+    }
+    const int after =
+        entry->food_supply().kcal();
+    sol::table value = state.create_table();
+    value["requested"] = requested_kcal;
+    value["applied"] = after - before;
+    value["before"] = before;
+    value["after"] = after;
+    value["clamped"] =
+        after - before != requested_kcal;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table player_faction( sol::this_state lua )
 {
     sol::state_view state( lua );
@@ -891,6 +1075,23 @@ void install_faction_api(
         require_write();
         return modify_faction_reputation(
                    lua_state, id, deltas );
+    } );
+    factions.set_function(
+        "modify_resources",
+        [require_write]( sol::this_state lua_state,
+    const script_game_id & id,
+    const sol::table &deltas ) {
+        require_write();
+        return modify_faction_resources(
+                   lua_state, id, deltas );
+    } );
+    factions.set_function(
+        "modify_food",
+        [require_write]( sol::this_state lua_state,
+    const script_game_id & id, const int kcal ) {
+        require_write();
+        return modify_faction_food(
+                   lua_state, id, kcal );
     } );
     game["factions"] = std::move( factions );
 }
