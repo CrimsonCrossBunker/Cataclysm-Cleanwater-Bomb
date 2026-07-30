@@ -1040,9 +1040,11 @@ assert(types[#types] == "character_butchered_corpse")
 local description = game.native_events.describe("game_begin")
 assert(description.type == "game_begin")
 assert(description.subscribable == true)
+assert(description.emittable == true)
 assert(#description.fields == 1)
 assert(description.fields[1].name == "cdda_version")
 assert(description.fields[1].type == "string")
+assert(description.fields[1].lua_type == "string")
 assert(#events.native_types() == 113)
 assert(events.describe_native("game_begin").type == "game_begin")
 assert(pcall(function()
@@ -1065,6 +1067,154 @@ assert(state.character.get(
     "native.event.version", "missing") == "native-event-test")
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_native_event_emission_is_typed_complete_and_callback_only",
+           "[lua][events][native][emit][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local save_description =
+    game.native_events.describe("game_save")
+assert(save_description.emittable == true)
+assert(#save_description.fields == 2)
+assert(save_description.fields[1].lua_type ==
+    "integer")
+assert(save_description.fields[2].lua_type ==
+    "integer")
+local avatar_description =
+    game.native_events.describe("game_avatar_new")
+local avatar_fields = {}
+for _, field in ipairs(avatar_description.fields) do
+    avatar_fields[field.name] = field.lua_type
+end
+assert(avatar_fields.avatar_id == "integer")
+assert(avatar_fields.is_debug == "boolean")
+assert(avatar_fields.avatar_name == "string")
+
+assert(pcall(function()
+    game.native_events.emit("u_var_changed", {
+        var = "top_level",
+        value = "rejected"
+    })
+end) == false)
+
+game.native_events.on(
+    "u_var_changed", { once = true },
+    function(event)
+        assert(event.type == "u_var_changed")
+        assert(event.data.var == "lua_native_emit")
+        assert(event.data.value == "strict")
+        assert(event.data_types.var == "string")
+        state.character.set(
+            "native.emit.uvar", event.data.value)
+    end)
+
+game.native_events.on(
+    "game_save", { once = true },
+    function(event)
+        assert(event.type == "game_save")
+        assert(event.data.time_since_load == 12)
+        assert(event.data.total_time_played == 34)
+        assert(event.data_types.time_since_load ==
+            "chrono_seconds")
+        state.character.set(
+            "native.emit.seconds",
+            event.data.total_time_played)
+    end)
+
+game.native_events.on(
+    "game_begin", { once = true },
+    function()
+        assert(pcall(function()
+            game.native_events.emit(
+                "missing_event", {})
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "u_var_changed", {
+                    var = "missing"
+                })
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "u_var_changed", {
+                    var = "extra",
+                    value = "field",
+                    unknown = true
+                })
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "u_var_changed", {
+                    var = 1,
+                    value = "wrong_type"
+                })
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "character_consumes_item", {
+                    character = "not_an_integer",
+                    itype = "rock"
+                })
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "character_consumes_item", {
+                    character = 0,
+                    itype =
+                        "__missing_native_event_item__"
+                })
+        end) == false)
+
+        local emitted =
+            game.native_events.emit(
+                "u_var_changed", {
+                    var = "lua_native_emit",
+                    value = "strict"
+                })
+        assert(emitted.type == "u_var_changed")
+        assert(emitted.turn == game.time.now().turn)
+        assert(emitted.data.var == "lua_native_emit")
+        assert(emitted.data.value == "strict")
+
+        local saved =
+            game.native_events.emit(
+                "game_save", {
+                    time_since_load = 12,
+                    total_time_played = 34
+                })
+        assert(saved.data.time_since_load == 12)
+        assert(saved.data.total_time_played == 34)
+    end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    get_event_bus().send<
+    event_type::game_begin>(
+        "native-emitter-trigger" );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native.emit.uvar", "missing") == "strict")
+assert(state.character.get(
+    "native.emit.seconds", 0) == 34)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
     CHECK( error.empty() );
 }
 
