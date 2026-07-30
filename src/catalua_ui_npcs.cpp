@@ -34,6 +34,7 @@ constexpr std::size_t maximum_nested_ids = 128;
 constexpr int default_state_limit = 64;
 constexpr int maximum_state_limit = 256;
 constexpr int maximum_state_offset = 1000000;
+constexpr std::size_t maximum_npc_name_bytes = 256;
 
 struct definition_options {
     int offset = 0;
@@ -525,6 +526,115 @@ sol::table get_npc(
                        world_generation ) ) );
 }
 
+void validate_npc_name( const std::string &name )
+{
+    if( name.empty() ) {
+        throw std::invalid_argument(
+            "game.npcs.rename name cannot be empty" );
+    }
+    if( name.size() > maximum_npc_name_bytes ) {
+        throw std::invalid_argument(
+            "game.npcs.rename name exceeds 256 bytes" );
+    }
+    if( std::any_of(
+    name.begin(), name.end(), []( const unsigned char ch ) {
+    return ch < 0x20U || ch == 0x7fU;
+    } ) ) {
+        throw std::invalid_argument(
+            "game.npcs.rename name cannot contain control characters" );
+    }
+}
+
+sol::table rename_npc(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &requested_name,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_npc_name( requested_name );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::string before = entry->name;
+    entry->name = requested_name;
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = entry->name;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+std::optional<npc_attitude> parse_attitude(
+    const std::string_view requested )
+{
+    static const std::vector<std::pair<std::string_view, npc_attitude>>
+    values = {
+        { "NPCATT_NULL", NPCATT_NULL },
+        { "NPCATT_TALK", NPCATT_TALK },
+        { "NPCATT_FOLLOW", NPCATT_FOLLOW },
+        { "NPCATT_LEAD", NPCATT_LEAD },
+        { "NPCATT_WAIT", NPCATT_WAIT },
+        { "NPCATT_MUG", NPCATT_MUG },
+        { "NPCATT_WAIT_FOR_LEAVE", NPCATT_WAIT_FOR_LEAVE },
+        { "NPCATT_KILL", NPCATT_KILL },
+        { "NPCATT_FLEE", NPCATT_FLEE },
+        { "NPCATT_HEAL", NPCATT_HEAL },
+        { "NPCATT_ACTIVITY", NPCATT_ACTIVITY },
+        { "NPCATT_FLEE_TEMP", NPCATT_FLEE_TEMP },
+        { "NPCATT_RECOVER_GOODS", NPCATT_RECOVER_GOODS }
+    };
+    const auto found = std::find_if(
+                           values.begin(), values.end(),
+    [requested]( const auto & entry ) {
+        return entry.first == requested;
+    } );
+    if( found == values.end() ) {
+        return std::nullopt;
+    }
+    return found->second;
+}
+
+sol::table set_npc_attitude(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &requested_attitude,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::optional<npc_attitude> attitude =
+        parse_attitude( requested_attitude );
+    if( !attitude ) {
+        throw std::invalid_argument(
+            "game.npcs.set_attitude received an unknown attitude" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const npc_attitude before =
+        entry->get_attitude();
+    entry->set_attitude( *attitude );
+    sol::table value = state.create_table();
+    value["before"] = npc_attitude_id( before );
+    value["after"] =
+        npc_attitude_id(
+            entry->get_attitude() );
+    value["changed"] =
+        before != entry->get_attitude();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_npc_api(
@@ -571,6 +681,28 @@ void install_npc_api(
         require_read();
         return get_npc(
                    lua_state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    npcs.set_function(
+        "rename",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string &name ) {
+        require_write();
+        return rename_npc(
+                   lua_state, handle, name,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    npcs.set_function(
+        "set_attitude",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string &attitude ) {
+        require_write();
+        return set_npc_attitude(
+                   lua_state, handle, attitude,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
