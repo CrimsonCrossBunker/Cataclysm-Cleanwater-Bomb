@@ -259,6 +259,19 @@ const addiction *find_addiction(
            nullptr : &*found;
 }
 
+addiction *find_addiction(
+    Character &character, const addiction_id &id )
+{
+    const auto found = std::find_if(
+                           character.addictions.begin(),
+                           character.addictions.end(),
+    [&id]( const addiction & entry ) {
+        return entry.type == id;
+    } );
+    return found == character.addictions.end() ?
+           nullptr : &*found;
+}
+
 struct state_list_options {
     int offset = 0;
     int limit = default_state_limit;
@@ -452,6 +465,117 @@ sol::table remove_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+struct state_adjustments {
+    std::optional<int> intensity;
+    std::optional<script_time_duration> sated;
+};
+
+state_adjustments read_state_adjustments(
+    const sol::table &requested )
+{
+    state_adjustments result;
+    for( const auto &entry : requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.addictions.set option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key == "intensity" ) {
+            if( !entry.second.is<int>() ) {
+                throw std::invalid_argument(
+                    "game.addictions.set intensity "
+                    "must be an integer" );
+            }
+            const int value = entry.second.as<int>();
+            if( value < 0 || value > MAX_ADDICTION_LEVEL ) {
+                throw std::invalid_argument(
+                    "game.addictions.set intensity "
+                    "must be within 0..20" );
+            }
+            result.intensity = value;
+        } else if( key == "sated" ) {
+            if( !entry.second.is<script_time_duration>() ) {
+                throw std::invalid_argument(
+                    "game.addictions.set sated "
+                    "must be a TimeDuration" );
+            }
+            result.sated =
+                entry.second.as<script_time_duration>();
+        } else {
+            throw std::invalid_argument(
+                "game.addictions.set received unknown option '" +
+                key + "'" );
+        }
+    }
+    if( !result.intensity && !result.sated ) {
+        throw std::invalid_argument(
+            "game.addictions.set requires at least one adjustment" );
+    }
+    return result;
+}
+
+sol::table set_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const sol::table &requested_adjustments,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_addiction_id(
+        requested_id, "game.addictions.set" );
+    const state_adjustments adjustments =
+        read_state_adjustments( requested_adjustments );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const addiction_id id( requested_id.value() );
+    addiction *entry =
+        find_addiction( *character, id );
+    sol::table before =
+        snapshot_state( state, id, entry );
+    if( adjustments.intensity &&
+        *adjustments.intensity == 0 ) {
+        if( entry != nullptr ) {
+            character->rem_addiction( id );
+        }
+        entry = nullptr;
+    } else {
+        if( entry == nullptr ) {
+            if( !adjustments.intensity ) {
+                throw std::invalid_argument(
+                    "game.addictions.set cannot set sated "
+                    "for an absent addiction" );
+            }
+            character->add_addiction(
+                id, maximum_exposure_strength );
+            entry = find_addiction( *character, id );
+        }
+        if( entry == nullptr ) {
+            throw std::runtime_error(
+                "game.addictions.set failed to create addiction" );
+        }
+        if( adjustments.intensity ) {
+            entry->intensity = *adjustments.intensity;
+        }
+        if( adjustments.sated ) {
+            entry->sated = adjustments.sated->to_native();
+        }
+    }
+
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, id, entry );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_addiction_api(
@@ -518,6 +642,18 @@ void install_addiction_api(
         require_write();
         return remove_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    addictions.set_function(
+        "set",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const sol::table & adjustments ) {
+        require_write();
+        return set_state(
+                   lua_state, handle, id, adjustments,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
