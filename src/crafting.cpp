@@ -3338,7 +3338,7 @@ std::optional<item_components> Character::preview_crafting_components(
             if( infinite_source ) {
                 infinite_source->charges = remaining;
                 sources.push_back( { item_location::nowhere, *infinite_source, remaining, true,
-                                     true } );
+                                     true, nullptr, itype_id() } );
                 remaining = 0;
             }
         }
@@ -3365,7 +3365,8 @@ std::optional<item_components> Character::preview_crafting_components(
             if( by_charges && quantity < snapshot.charges ) {
                 snapshot.mod_charges( quantity - snapshot.charges );
             }
-            sources.push_back( { location, snapshot, quantity, by_charges } );
+            sources.push_back( { location, snapshot, quantity, by_charges, false, nullptr,
+                                 itype_id() } );
             planned_locations.push_back( location );
             remaining -= quantity;
         };
