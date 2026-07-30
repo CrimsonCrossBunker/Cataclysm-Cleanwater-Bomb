@@ -557,6 +557,60 @@ sol::table set_hands_free_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table trigger_state(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &trigger,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    character_martial_arts &arts =
+        *character->martial_arts_data;
+    if( trigger == "static" ) {
+        arts.ma_static_effects( *character );
+    } else if( trigger == "move" ) {
+        arts.ma_onmove_effects( *character );
+    } else if( trigger == "pause" ) {
+        arts.ma_onpause_effects( *character );
+    } else if( trigger == "hit" ) {
+        arts.ma_onhit_effects( *character );
+    } else if( trigger == "attack" ) {
+        arts.ma_onattack_effects( *character );
+    } else if( trigger == "dodge" ) {
+        arts.ma_ondodge_effects( *character );
+    } else if( trigger == "block" ) {
+        arts.ma_onblock_effects( *character );
+    } else if( trigger == "get_hit" ) {
+        arts.ma_ongethit_effects( *character );
+    } else if( trigger == "miss" ) {
+        arts.ma_onmiss_effects( *character );
+    } else if( trigger == "crit" ) {
+        arts.ma_oncrit_effects( *character );
+    } else if( trigger == "kill" ) {
+        arts.ma_onkill_effects( *character );
+    } else {
+        throw std::invalid_argument(
+            "game.martial_arts.trigger received "
+            "an unknown trigger" );
+    }
+
+    sol::table value = state.create_table();
+    value["trigger"] = trigger;
+    value["current"] =
+        snapshot_state(
+            state, *character, arts.selected_style() );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_martial_art_api(
@@ -655,6 +709,17 @@ void install_martial_art_api(
         require_write();
         return set_hands_free_state(
                    lua_state, handle, keep_hands_free,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    martial_arts.set_function(
+        "trigger",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & trigger ) {
+        require_write();
+        return trigger_state(
+                   lua_state, handle, trigger,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
