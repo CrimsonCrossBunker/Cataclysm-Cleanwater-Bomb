@@ -29,6 +29,7 @@
 #include "weather.h"
 
 static const ammotype ammo_battery( "battery" );
+static const ammotype ammo_plutonium( "plutonium" );
 
 static const itype_id fuel_type_battery( "battery" );
 static const itype_id fuel_type_none( "null" );
