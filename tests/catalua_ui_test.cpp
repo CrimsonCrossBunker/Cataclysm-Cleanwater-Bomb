@@ -1131,6 +1131,9 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK( binding_domain_is_covered( "coordinates" ) );
     CHECK( binding_domain_is_covered( "crafting" ) );
     CHECK( binding_domain_is_covered( "mapgen" ) );
+    CHECK( binding_domain_is_covered( "game_services" ) );
+    CHECK( binding_domain_is_covered( "hooks" ) );
+    CHECK( binding_domain_is_covered( "callback_actors" ) );
 
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::table );
