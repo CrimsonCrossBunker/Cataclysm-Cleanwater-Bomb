@@ -515,10 +515,16 @@
   },
   {
     "type": "item_group",
+    "id": "alloy_sheet_storage",
+    "subtype": "distribution",
+    "entries": [ { "item": "alloy_sheet", "prob": 50, "count": [ 5, 10 ] }, { "item": "alloy_plate", "prob": 50 } ]
+  },
+  {
+    "type": "item_group",
     "id": "steel_mill_storage",
     "subtype": "collection",
     "entries": [
-      { "distribution": [ { "item": "alloy_sheet", "prob": 50, "count": [ 5, 10 ] }, { "item": "alloy_plate", "prob": 50 } ] },
+      { "group": "alloy_sheet_storage", "prob": 100, "count": [ 1, 2 ] },
       {
         "distribution": [
           { "item": "hard_steel_armor", "prob": 50, "count": [ 10, 30 ] },
