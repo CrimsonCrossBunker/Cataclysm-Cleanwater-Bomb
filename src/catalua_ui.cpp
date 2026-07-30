@@ -65,6 +65,7 @@
 #include "catalua_ui_skills.h"
 #include "catalua_ui_state.h"
 #include "catalua_ui_values.h"
+#include "catalua_ui_vitamins.h"
 #include "catalua_ui_world.h"
 #include "catalua_ui_world_services.h"
 #include "debug.h"
@@ -3244,6 +3245,22 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.proficiencies" );
+        require_capability( state, "game.write" );
+    } );
+    install_vitamin_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.vitamins" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.vitamins" );
         require_capability( state, "game.write" );
     } );
     install_magic_api(
