@@ -24,6 +24,7 @@
 #include "catalua_ui_scheduler.h"
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
+#include "character_martial_arts.h"
 #include "creature_tracker.h"
 #include "damage.h"
 #include "effect.h"
@@ -2884,6 +2885,124 @@ end) == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_martial_arts_use_native_style_state",
+           "[lua][bindings][martial_arts][state][integration]" )
+{
+    avatar &player = get_avatar();
+    const matype_id karate( "style_karate" );
+    REQUIRE( karate.is_valid() );
+    const std::vector<matype_id> original_styles =
+        player.known_styles( false );
+    const matype_id original_selected =
+        player.martial_arts_data->selected_style();
+    const bool original_hands_free =
+        player.martial_arts_data->keep_hands_free;
+    if( player.has_martialart( karate ) ) {
+        player.martial_arts_data->clear_style( karate );
+    }
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local karate = game.types.id("martial_art", "style_karate")
+local none = game.types.id("martial_art", "style_none")
+
+local before = game.martial_arts.get(avatar, karate)
+assert(before.ok == true)
+assert(before.value.id == karate)
+assert(before.value.known == false)
+assert(before.value.selected == false)
+assert(type(before.value.keep_hands_free) == "boolean")
+local current = game.martial_arts.current(avatar)
+assert(current.ok == true)
+assert(current.value.selected == true)
+
+local learned = game.martial_arts.learn(avatar, karate)
+assert(learned.ok == true)
+assert(learned.value.changed == true)
+assert(learned.value.after.known == true)
+local selected = game.martial_arts.select(avatar, karate)
+assert(selected.ok == true)
+assert(selected.value.after.selected == true)
+assert(game.martial_arts.current(avatar).value.id == karate)
+
+local hands = game.martial_arts.set_hands_free(avatar, true)
+assert(hands.ok == true)
+assert(hands.value.after == true)
+assert(game.martial_arts.current(avatar).value.keep_hands_free == true)
+
+local styles = game.martial_arts.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(styles.ok == true)
+assert(styles.value.limit == 256)
+assert(styles.value.returned == #styles.value.items)
+assert(styles.value.total >= 3)
+
+local removed = game.martial_arts.remove(avatar, karate)
+assert(removed.ok == true)
+assert(removed.value.changed == true)
+assert(removed.value.after.known == false)
+assert(removed.value.current.id == none)
+
+assert(pcall(function()
+    game.martial_arts.remove(avatar, none)
+end) == false)
+assert(pcall(function()
+    game.martial_arts.select(avatar, karate)
+end) == false)
+assert(pcall(function()
+    game.martial_arts.trigger(avatar, "missing")
+end) == false)
+assert(pcall(function()
+    game.martial_arts.get(
+        avatar, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.has_martialart( karate ) );
+
+    player.martial_arts_data->clear_styles();
+    for( const matype_id &style : original_styles ) {
+        player.martial_arts_data->add_martialart( style );
+    }
+    player.martial_arts_data->set_style(
+        original_selected, true );
+    player.martial_arts_data->keep_hands_free =
+        original_hands_free;
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.martial_arts.learn(
+    game.characters.avatar(),
+    game.types.id("martial_art", "style_karate"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.has_martialart( karate ) ==
+           ( std::find(
+                 original_styles.begin(),
+                 original_styles.end(), karate ) !=
+             original_styles.end() ) );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
