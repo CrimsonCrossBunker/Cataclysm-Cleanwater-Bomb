@@ -417,6 +417,41 @@ sol::table expose_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table remove_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_addiction_id(
+        requested_id, "game.addictions.remove" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const addiction_id id( requested_id.value() );
+    const addiction *before_entry =
+        find_addiction( *character, id );
+    const bool changed = before_entry != nullptr;
+    sol::table before =
+        snapshot_state( state, id, before_entry );
+    if( changed ) {
+        character->rem_addiction( id );
+    }
+    sol::table value = state.create_table();
+    value["changed"] = changed;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, id, nullptr );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_addiction_api(
@@ -472,6 +507,17 @@ void install_addiction_api(
         require_write();
         return expose_state(
                    lua_state, handle, id, strength,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    addictions.set_function(
+        "remove",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_write();
+        return remove_state(
+                   lua_state, handle, id,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
