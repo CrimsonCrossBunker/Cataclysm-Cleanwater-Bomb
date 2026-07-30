@@ -59,6 +59,7 @@
 #include "trap.h"
 #include "ui_profile.h"
 #include "units.h"
+#include "vitamin.h"
 #include "weather.h"
 #include "worldfactory.h"
 
@@ -2402,6 +2403,8 @@ TEST_CASE( "lua_v5_character_vitamins_follow_native_pool_rules",
     script.write( R"lua(
 local avatar = game.characters.avatar()
 local vitamin_c = game.types.id("vitamin", "vitC")
+local definition = game.vitamins.definition(vitamin_c)
+assert(definition.minimum < definition.maximum)
 
 local before = game.vitamins.get(avatar, vitamin_c)
 assert(before.ok == true)
@@ -2422,16 +2425,20 @@ assert(states.value.returned == #states.value.items)
 assert(states.value.returned <= states.value.total)
 
 local assigned = game.vitamins.set(avatar, vitamin_c, 10)
+local expected = math.max(
+    definition.minimum,
+    math.min(definition.maximum, 10))
 assert(assigned.ok == true)
 assert(assigned.value.requested == 10)
-assert(assigned.value.after.amount == 10)
-assert(type(assigned.value.clamped) == "boolean")
+assert(assigned.value.after.amount == expected)
+assert(assigned.value.clamped == (expected ~= 10))
 
-local modified = game.vitamins.modify(avatar, vitamin_c, 5)
+local delta = expected < definition.maximum and 1 or -1
+local modified = game.vitamins.modify(avatar, vitamin_c, delta)
 assert(modified.ok == true)
-assert(modified.value.requested_delta == 5)
-assert(modified.value.applied_delta == 5)
-assert(modified.value.after.amount == 15)
+assert(modified.value.requested_delta == delta)
+assert(modified.value.applied_delta == delta)
+assert(modified.value.after.amount == expected + delta)
 
 local reset = game.vitamins.reset_daily(avatar, vitamin_c)
 assert(reset.ok == true)
@@ -2450,7 +2457,14 @@ end) == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
-    CHECK( player.vitamin_get( vitamin_c ) == 15 );
+    const int assigned_amount = std::clamp(
+                                    10, vitamin_c->min(),
+                                    vitamin_c->max() );
+    const int modified_amount =
+        assigned_amount +
+        ( assigned_amount < vitamin_c->max() ? 1 : -1 );
+    CHECK( player.vitamin_get( vitamin_c ) ==
+           modified_amount );
     player.vitamin_set( vitamin_c, original_amount );
     player.reset_daily_vitamin( vitamin_c );
 
