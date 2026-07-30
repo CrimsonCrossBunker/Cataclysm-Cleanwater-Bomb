@@ -2470,6 +2470,58 @@ game.vitamins.modify(
            original_amount );
 }
 
+TEST_CASE( "lua_v5_addiction_definitions_are_typed_bounded_snapshots",
+           "[lua][bindings][addictions][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local caffeine = game.types.id("addiction", "caffeine")
+local definitions = game.addictions.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "CAFFEINE"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "addiction")
+
+local definition = game.addictions.definition(caffeine)
+assert(definition.id == caffeine)
+assert(type(definition.name) == "string")
+assert(type(definition.type_name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.builtin) == "string")
+assert(definition.craving_morale == nil or
+    definition.craving_morale.kind == "morale")
+assert(definition.effect == nil or
+    definition.effect.kind == "effect_on_condition")
+
+definition.name = "detached"
+assert(game.addictions.definition(caffeine).name ~= "detached")
+assert(pcall(function()
+    game.addictions.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.addictions.definitions({ query = string.rep("x", 129) })
+end) == false)
+assert(pcall(function()
+    game.addictions.definitions({ limit = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
