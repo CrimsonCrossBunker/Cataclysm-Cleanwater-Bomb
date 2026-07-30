@@ -377,9 +377,9 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
                     }
                 }
             }
-        }
-        if( any_missing || !save_results ) {
-            cata::lua_ui::dispatch_mapgen_postprocess( dat );
+            if( any_missing || !save_results ) {
+                cata::lua_ui::dispatch_mapgen_postprocess( dat );
+            }
         }
     }
 

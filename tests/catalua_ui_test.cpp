@@ -6684,3 +6684,69 @@ end)
     cata::lua_ui::dispatch_mapgen_postprocess( data );
     CHECK( cata::lua_ui::status().last_error.empty() );
 }
+
+TEST_CASE( "lua_v5_mapgen_hooks_respect_the_native_postprocess_gate",
+           "[lua][bindings][mapgen][hooks][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.read", "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.mapgen.on_postprocess({
+    once = true,
+    terrain_ids = { "field" },
+    z_min = 0,
+    z_max = 0
+}, function(ctx)
+    ctx:set_furniture(
+        0, 0,
+        game.types.id("furniture", "f_armchair"))
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+
+    const tripoint_abs_omt position( 77, 77, 0 );
+    std::vector<std::pair<tripoint_abs_omt, oter_id>>
+            original_terrain;
+    for( int dx = -1; dx <= 1; ++dx ) {
+        for( int dy = -1; dy <= 1; ++dy ) {
+            const tripoint_abs_omt nearby =
+                position + tripoint( dx, dy, 0 );
+            original_terrain.emplace_back(
+                nearby, overmap_buffer.ter( nearby ) );
+            overmap_buffer.ter_set(
+                nearby, oter_str_id( "field" ).id() );
+        }
+    }
+    on_out_of_scope restore_terrain( [&original_terrain]() {
+        for( const auto &[where, terrain] : original_terrain ) {
+            overmap_buffer.ter_set( where, terrain );
+        }
+    } );
+
+    const auto generated_furniture =
+    [&position]( const bool run_post_process ) {
+        smallmap generated;
+        generated.generate(
+            position, calendar::turn, false,
+            run_post_process );
+        const furn_id result = generated.cast_to_map()->furn(
+                                   tripoint_bub_ms( 0, 0, 0 ) );
+        generated.delete_unmerged_submaps();
+        return result;
+    };
+
+    const furn_id marker = furn_str_id( "f_armchair" ).id();
+    CHECK( generated_furniture( false ) != marker );
+    CHECK( generated_furniture( true ) == marker );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
