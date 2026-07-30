@@ -1396,6 +1396,62 @@ std::string subscription_event_name( const runtime_state &state,
     return local_custom_event_name( state, name );
 }
 
+event_type require_native_event_type( const std::string &name,
+                                      const std::string_view api_name )
+{
+    if( !io::enum_is_valid<event_type>( name ) ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " received an unknown native event type: " + name );
+    }
+    return io::string_to_enum<event_type>( name );
+}
+
+sol::table native_event_types( runtime_state &state, sol::this_state lua )
+{
+    require_capability( state, "events" );
+    sol::state_view lua_state( lua );
+    sol::table result = lua_state.create_table(
+                            static_cast<int>( event_type::num_event_types ), 0 );
+    for( int raw = 0;
+         raw < static_cast<int>( event_type::num_event_types ); ++raw ) {
+        result[raw + 1] = io::enum_to_string(
+                              static_cast<event_type>( raw ) );
+    }
+    return result;
+}
+
+sol::table describe_native_event(
+    runtime_state &state, sol::this_state lua, const std::string &name )
+{
+    require_capability( state, "events" );
+    const event_type type = require_native_event_type(
+                                name, "events.describe_native" );
+    const cata::event::fields_type fields = cata::event::get_fields( type );
+    std::vector<std::pair<std::string, cata_variant_type>> ordered(
+        fields.begin(), fields.end() );
+    std::sort(
+        ordered.begin(), ordered.end(),
+    []( const auto & lhs, const auto & rhs ) {
+        return lhs.first < rhs.first;
+    } );
+
+    sol::state_view lua_state( lua );
+    sol::table field_values = lua_state.create_table(
+                                  static_cast<int>( ordered.size() ), 0 );
+    for( std::size_t index = 0; index < ordered.size(); ++index ) {
+        sol::table field = lua_state.create_table();
+        field["name"] = ordered[index].first;
+        field["type"] = io::enum_to_string( ordered[index].second );
+        field_values[index + 1] = std::move( field );
+    }
+    sol::table result = lua_state.create_table();
+    result["type"] = name;
+    result["fields"] = std::move( field_values );
+    result["subscribable"] = true;
+    return result;
+}
+
 std::string dependency_custom_event_name( const runtime_state &state,
         const std::string &provider_id, const std::string &name )
 {
@@ -2814,6 +2870,14 @@ void initialize_state( runtime_state &state )
     } ) );
     events.set_function( "off", [&state]( const std::uint64_t id ) {
         return unregister_event_handler( state, id );
+    } );
+    events.set_function( "native_types", [&state]( sol::this_state lua ) {
+        return native_event_types( state, lua );
+    } );
+    events.set_function(
+        "describe_native",
+        [&state]( sol::this_state lua, const std::string & name ) {
+        return describe_native_event( state, lua, name );
     } );
     events.set_function(
         "emit",
