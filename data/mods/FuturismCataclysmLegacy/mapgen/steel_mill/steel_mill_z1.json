@@ -136,7 +136,7 @@
       "terrain": {  },
       "furniture": {  },
       "palettes": [ "steel_mill_palette" ],
-      "items": { "C": { "item": "steel_mill_storage", "chance": 50, "repeat": [ 1, 2 ] } },
+      "place_loot": [ { "group": "steel_mill_storage", "x": [ 33, 45 ], "y": 27, "chance": 25, "repeat": [ 3, 12 ] } ],
       "place_monsters": [
         { "monster": "GROUP_STEEL_MILL", "x": [ 1, 22 ], "y": [ 1, 22 ], "chance": 4 },
         { "monster": "GROUP_STEEL_MILL", "x": [ 25, 46 ], "y": [ 1, 22 ], "chance": 4 },
