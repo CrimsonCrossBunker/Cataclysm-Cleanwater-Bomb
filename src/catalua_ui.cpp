@@ -57,6 +57,7 @@
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
 #include "catalua_ui_overmap.h"
+#include "catalua_ui_proficiencies.h"
 #include "catalua_ui_renderer.h"
 #include "catalua_ui_registry.h"
 #include "catalua_ui_scheduler.h"
@@ -3227,6 +3228,22 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.skills" );
+        require_capability( state, "game.write" );
+    } );
+    install_proficiency_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.proficiencies" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.proficiencies" );
         require_capability( state, "game.write" );
     } );
     install_magic_api(
