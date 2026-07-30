@@ -2830,6 +2830,62 @@ game.needs.set_calories(game.characters.avatar(), 40000)
     CHECK( player.get_stored_kcal() == original_kcal );
 }
 
+TEST_CASE( "lua_v5_martial_art_definitions_are_typed_bounded_snapshots",
+           "[lua][bindings][martial_arts][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local karate = game.types.id("martial_art", "style_karate")
+local definitions = game.martial_arts.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "KARATE"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "martial_art")
+
+local definition = game.martial_arts.definition(karate)
+assert(definition.id == karate)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(math.type(definition.priority) == "integer")
+assert(type(definition.teachable) == "boolean")
+assert(type(definition.strictly_unarmed) == "boolean")
+assert(type(definition.strictly_melee) == "boolean")
+assert(type(definition.allow_all_weapons) == "boolean")
+assert(type(definition.force_unarmed) == "boolean")
+assert(type(definition.techniques.items) == "table")
+assert(definition.techniques.returned == #definition.techniques.items)
+assert(type(definition.weapons.items) == "table")
+assert(type(definition.weapon_categories.items) == "table")
+
+definition.name = "detached"
+assert(game.martial_arts.definition(karate).name ~= "detached")
+assert(pcall(function()
+    game.martial_arts.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.martial_arts.definitions({ query = string.rep("x", 129) })
+end) == false)
+assert(pcall(function()
+    game.martial_arts.definitions({ limit = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
