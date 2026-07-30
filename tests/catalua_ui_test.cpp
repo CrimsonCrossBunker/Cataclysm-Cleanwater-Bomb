@@ -30,6 +30,7 @@
 #include "effect.h"
 #include "event_bus.h"
 #include "explosion.h"
+#include "faction.h"
 #include "flag.h"
 #include "game.h"
 #include "input_context_actions.h"
@@ -3573,6 +3574,173 @@ game.npcs.rename(handle, "unauthorized")
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK( native_npc.name == "Lua renamed NPC" );
+}
+
+TEST_CASE( "lua_v5_faction_state_members_and_relations_are_bounded",
+           "[lua][bindings][factions][read][integration]" )
+{
+    g->faction_manager_ptr->create_if_needed();
+    faction *native_faction =
+        g->faction_manager_ptr->get(
+            faction_id( "your_followers" ), false );
+    faction *target_faction =
+        g->faction_manager_ptr->get(
+            faction_id( "free_merchants" ), false );
+    REQUIRE( native_faction != nullptr );
+    REQUIRE( target_faction != nullptr );
+
+    const auto original_members =
+        native_faction->members;
+    const auto original_relations =
+        native_faction->relations;
+    on_out_of_scope restore_faction( [
+                                      native_faction,
+                                      original_members,
+                                      original_relations
+                                    ]() {
+        native_faction->members =
+            original_members;
+        native_faction->relations =
+            original_relations;
+    } );
+    const character_id player_id =
+        get_avatar().getID();
+    native_faction->add_to_membership(
+        player_id, "Lua faction member", true );
+    native_faction->relations[
+        target_faction->id.str()
+    ].set( static_cast<std::size_t>(
+               npc_factions::relationship::
+               share_public_goods ), true );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local yours = game.types.id(
+    "faction", "your_followers")
+local merchants = game.types.id(
+    "faction", "free_merchants")
+
+local page = game.factions.list({
+    offset = 0,
+    limit = 1000000,
+    query = "YOUR_FOLLOWERS"
+})
+assert(page.ok == true)
+assert(page.value.limit == 256)
+assert(page.value.returned == #page.value.items)
+assert(page.value.total == 1)
+assert(page.value.items[1].id == yours)
+
+local current = game.factions.get(yours)
+assert(current.ok == true)
+assert(current.value.id == yours)
+assert(type(current.value.name) == "string")
+assert(type(current.value.description) == "string")
+assert(type(current.value.summary) == "string")
+assert(type(current.value.known_by_player) == "boolean")
+assert(math.type(current.value.reputation.likes) ==
+    "integer")
+assert(type(current.value.reputation.ranking) ==
+    "string")
+assert(math.type(current.value.resources.size) ==
+    "integer")
+assert(math.type(current.value.resources.food_kcal) ==
+    "integer")
+assert(type(current.value.resources.combat_ability) ==
+    "string")
+assert(type(current.value.policy.consumes_food) ==
+    "boolean")
+assert(type(current.value.policy.stealing) == "string")
+if current.value.currency ~= nil then
+    assert(current.value.currency.kind == "item")
+end
+if current.value.monster_faction ~= nil then
+    assert(current.value.monster_faction.kind ==
+        "monster_faction")
+end
+
+local player = game.factions.player()
+assert(player.ok == true)
+assert(player.value.id == yours)
+
+local members = game.factions.members(yours, {
+    offset = 0,
+    limit = 1000000
+})
+assert(members.ok == true)
+assert(members.value.limit == 256)
+assert(members.value.returned ==
+    #members.value.items)
+local member_found = false
+for _, member in ipairs(members.value.items) do
+    if member.name == "Lua faction member" then
+        assert(math.type(member.id) == "integer")
+        assert(member.known_by_player == true)
+        member_found = true
+    end
+end
+assert(member_found)
+
+local relations = game.factions.relationships(yours, {
+    offset = 0,
+    limit = 1000000
+})
+assert(relations.ok == true)
+assert(relations.value.limit == 256)
+assert(relations.value.returned ==
+    #relations.value.items)
+local relation = game.factions.relationship(
+    yours, merchants)
+assert(relation.ok == true)
+assert(relation.value.defined == true)
+assert(relation.value.target == merchants)
+assert(relation.value.share_public_goods == true)
+assert(type(relation.value.kill_on_sight) == "boolean")
+
+local food = game.factions.food(yours, {
+    offset = 0,
+    limit = 1000000
+})
+assert(food.ok == true)
+assert(math.type(food.value.kcal) == "integer")
+assert(food.value.vitamins.limit == 256)
+assert(food.value.vitamins.returned ==
+    #food.value.vitamins.items)
+for _, vitamin in ipairs(food.value.vitamins.items) do
+    assert(vitamin.id.kind == "vitamin")
+    assert(math.type(vitamin.amount) == "integer")
+end
+
+local missing = game.factions.get(
+    game.types.id("faction",
+        "__missing_lua_faction__"))
+assert(missing.ok == false)
+assert(missing.error.code == "not_found")
+assert(pcall(function()
+    game.factions.get(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.factions.list({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.factions.members(yours, { offset = -1 })
+end) == false)
+assert(pcall(function()
+    game.factions.relationship(
+        yours, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
