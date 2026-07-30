@@ -2577,6 +2577,18 @@ local CcbCraftingApi = {}
 ---@return integer request_id
 function CcbCraftingApi.queue_start(recipe, options) end
 
+---@class CcbWorldTileOptions
+---@field item_limit? integer
+---@field field_limit? integer
+
+---@class CcbWorldRegionOptions: CcbWorldTileOptions
+---@field radius? integer
+---@field radius_z? integer
+---@field offset? integer
+---@field limit? integer
+
+---@class CcbWorldVehicleOptions: CcbPageOptions
+
 ---@class CcbWorldApi
 local CcbWorldApi = {}
 
@@ -2592,16 +2604,16 @@ function CcbWorldApi.to_bubble(position) end
 function CcbWorldApi.bounds() end
 
 ---@param position TripointCoord
----@param options? table
+---@param options? CcbWorldTileOptions
 ---@return CcbResult
 function CcbWorldApi.tile(position, options) end
 
 ---@param center TripointCoord
----@param options? table
+---@param options? CcbWorldRegionOptions
 ---@return CcbResult
 function CcbWorldApi.region(center, options) end
 
----@param options? table
+---@param options? CcbWorldVehicleOptions
 ---@return CcbResult
 function CcbWorldApi.vehicles(options) end
 
@@ -2643,14 +2655,20 @@ function CcbWorldApi.spawn_item(position, item, quantity) end
 ---@return CcbResult
 function CcbWorldApi.remove_item(position, item) end
 
----@class CcbOvermapSearchOptions: CcbListOptions
+---@class CcbOvermapSelectorTable
+---@field terrain GameId|string
+---@field match? GameEnum
+
+---@alias CcbOvermapSelector GameId|string|CcbOvermapSelectorTable
+
+---@class CcbOvermapSearchOptions: CcbPageOptions
+---@field types? CcbOvermapSelector[]
+---@field exclude_types? CcbOvermapSelector[]
+---@field minimum_radius? integer
 ---@field radius? integer
 ---@field radius_z? integer
----@field terrain? GameId|string
----@field match? GameEnum
----@field seen? GameEnum
+---@field seen? boolean
 ---@field explored? boolean
----@field has_note? boolean
 
 ---@class CcbOvermapApi
 local CcbOvermapApi = {}
@@ -2678,7 +2696,7 @@ function CcbOvermapApi.closest(origin, options) end
 function CcbOvermapApi.random(origin, options) end
 
 ---@param position TripointCoord
----@param selector GameId|string|table
+---@param selector CcbOvermapSelector
 ---@param match? GameEnum
 ---@return boolean
 function CcbOvermapApi.matches(position, selector, match) end
@@ -2736,24 +2754,50 @@ local LegacyHordeToken = {}
 ---@return boolean
 function LegacyHordeToken:is_valid() end
 
+---@alias CcbHordeFlavor "active"|"idle"|"dormant"|"immobile"
+
+---@class CcbHordeEntityQueryOptions: CcbPageOptions
+---@field radius? integer
+---@field radius_z? integer
+---@field flavors? CcbHordeFlavor[]
+---@field monster? GameId
+
+---@class CcbLegacyHordeQueryOptions: CcbPageOptions
+---@field radius? integer
+---@field radius_z? integer
+---@field horde_only? boolean
+
+---@class CcbLegacyHordeSettings
+---@field population? integer
+---@field interest? integer
+---@field dying? boolean
+---@field horde? boolean
+---@field behavior? "none"|"city"|"roam"|"nemesis"
+---@field target? TripointCoord
+---@field nemesis_target? TripointCoord
+
+---@class CcbLegacyHordeSpawnOptions: CcbLegacyHordeSettings
+---@field group GameId
+---@field position TripointCoord
+
 ---@class CcbHordesApi
 local CcbHordesApi = {}
 
 ---@return table
 function CcbHordesApi.limits() end
 
----@param options? CcbListOptions
+---@param options? CcbPageOptions
 ---@return table
 function CcbHordesApi.definitions(options) end
 
 ---@param id GameId
----@param options? table
+---@param options? CcbPageOptions
 ---@return table?
 function CcbHordesApi.definition(id, options) end
 
 ---@param id GameId
 ---@param recursive? boolean
----@param options? CcbListOptions
+---@param options? CcbPageOptions
 ---@return table
 function CcbHordesApi.monsters(id, recursive, options) end
 
@@ -2763,7 +2807,7 @@ function CcbHordesApi.monsters(id, recursive, options) end
 function CcbHordesApi.contains(group, monster) end
 
 ---@param center TripointCoord
----@param options? table
+---@param options? CcbHordeEntityQueryOptions
 ---@return table
 function CcbHordesApi.entities(center, options) end
 
@@ -2772,7 +2816,7 @@ function CcbHordesApi.entities(center, options) end
 function CcbHordesApi.entity(token) end
 
 ---@param center TripointCoord
----@param options? table
+---@param options? CcbLegacyHordeQueryOptions
 ---@return table
 function CcbHordesApi.legacy_groups(center, options) end
 
@@ -2799,12 +2843,12 @@ function CcbHordesApi.alert_entity(token, destination, intensity) end
 ---@return CcbResult
 function CcbHordesApi.remove_entity(token) end
 
----@param options table
+---@param options CcbLegacyHordeSpawnOptions
 ---@return CcbResult
 function CcbHordesApi.spawn_legacy_group(options) end
 
 ---@param token LegacyHordeToken
----@param options table
+---@param options CcbLegacyHordeSettings
 ---@return CcbResult
 function CcbHordesApi.update_legacy_group(token, options) end
 
