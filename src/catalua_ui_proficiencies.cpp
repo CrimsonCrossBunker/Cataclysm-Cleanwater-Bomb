@@ -40,7 +40,8 @@ std::string lowercase_ascii( std::string value )
 }
 
 definition_options read_definition_options(
-    const sol::optional<sol::table> &requested )
+    const sol::optional<sol::table> &requested,
+    const std::string_view api_name )
 {
     definition_options result;
     if( requested ) {
@@ -50,17 +51,18 @@ definition_options read_definition_options(
     }
     if( result.offset < 0 || result.offset > maximum_definition_offset ) {
         throw std::invalid_argument(
-            "game.proficiencies.definitions offset "
-            "must be within 0..1000000" );
+            std::string( api_name ) +
+            " offset must be within 0..1000000" );
     }
     if( result.limit < 0 || result.limit > maximum_definition_limit ) {
         throw std::invalid_argument(
-            "game.proficiencies.definitions limit "
-            "must be within 0..256" );
+            std::string( api_name ) +
+            " limit must be within 0..256" );
     }
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.proficiencies.definitions query exceeds 128 bytes" );
+            std::string( api_name ) +
+            " query exceeds 128 bytes" );
     }
     return result;
 }
@@ -78,6 +80,98 @@ void require_proficiency_id(
             std::string( api_name ) +
             " requires a valid GameId<proficiency>" );
     }
+}
+
+void require_category_id(
+    const script_game_id &id, const std::string_view api_name )
+{
+    if( id.kind() != "proficiency_category" ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " requires GameId<proficiency_category>" );
+    }
+    if( !id.is_valid() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " requires a valid GameId<proficiency_category>" );
+    }
+}
+
+sol::table snapshot_category(
+    sol::state_view lua, const proficiency_category &category )
+{
+    sol::table result = lua.create_table();
+    result["id"] = script_game_id(
+                       "proficiency_category", category.id.str() );
+    result["name"] = category._name.translated();
+    result["description"] = category._description.translated();
+    return result;
+}
+
+std::vector<const proficiency_category *> matching_categories(
+    const std::string &requested_query )
+{
+    const std::string query = lowercase_ascii( requested_query );
+    const std::vector<proficiency_category> &all =
+        proficiency_category::get_all();
+    std::vector<const proficiency_category *> result;
+    result.reserve( all.size() );
+    for( const proficiency_category &category : all ) {
+        if( query.empty() ||
+            lowercase_ascii( category.id.str() ).find( query ) !=
+            std::string::npos ||
+            lowercase_ascii(
+                category._name.translated() ).find( query ) !=
+            std::string::npos ) {
+            result.push_back( &category );
+        }
+    }
+    std::sort(
+        result.begin(), result.end(),
+    []( const proficiency_category * lhs,
+    const proficiency_category * rhs ) {
+        return lhs->id.str() < rhs->id.str();
+    } );
+    return result;
+}
+
+sol::table list_categories(
+    sol::this_state lua, const sol::optional<sol::table> &requested )
+{
+    const definition_options options =
+        read_definition_options(
+            requested, "game.proficiencies.categories" );
+    const std::vector<const proficiency_category *> categories =
+        matching_categories( options.query );
+    const std::size_t first = std::min<std::size_t>(
+                                  options.offset, categories.size() );
+    const std::size_t last = std::min<std::size_t>(
+                                 first + options.limit, categories.size() );
+    sol::state_view state( lua );
+    sol::table items = state.create_table(
+                           static_cast<int>( last - first ), 0 );
+    for( std::size_t index = first; index < last; ++index ) {
+        items[index - first + 1] =
+            snapshot_category( state, *categories[index] );
+    }
+    sol::table result = state.create_table();
+    result["items"] = std::move( items );
+    result["offset"] = options.offset;
+    result["limit"] = options.limit;
+    result["total"] = categories.size();
+    result["returned"] = last - first;
+    result["has_more"] = last < categories.size();
+    return result;
+}
+
+sol::table get_category(
+    sol::this_state lua, const script_game_id &id )
+{
+    require_category_id(
+        id, "game.proficiencies.category" );
+    return snapshot_category(
+               sol::state_view( lua ),
+               proficiency_category_id( id.value() ).obj() );
 }
 
 sol::table required_page(
@@ -173,7 +267,8 @@ sol::table list_definitions(
     sol::this_state lua, const sol::optional<sol::table> &requested )
 {
     const definition_options options =
-        read_definition_options( requested );
+        read_definition_options(
+            requested, "game.proficiencies.definitions" );
     const std::vector<const proficiency *> definitions =
         matching_definitions( options.query );
     const std::size_t first = std::min<std::size_t>(
@@ -231,6 +326,20 @@ void install_proficiency_api(
     const script_game_id & id ) {
         require_read();
         return get_definition( lua_state, id );
+    } );
+    proficiencies.set_function(
+        "categories",
+        [require_read]( sol::this_state lua_state,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_categories( lua_state, options );
+    } );
+    proficiencies.set_function(
+        "category",
+        [require_read]( sol::this_state lua_state,
+    const script_game_id & id ) {
+        require_read();
+        return get_category( lua_state, id );
     } );
     game["proficiencies"] = std::move( proficiencies );
 }
