@@ -2175,7 +2175,7 @@ assert(pcall(function()
     game.proficiencies.categories({ query = string.rep("x", 129) })
 end) == false)
 assert(pcall(function()
-    game.proficiencies.definitions({ limit = 257 })
+    game.proficiencies.definitions({ limit = -1 })
 end) == false)
 )lua" );
 
