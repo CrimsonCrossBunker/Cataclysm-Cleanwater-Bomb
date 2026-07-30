@@ -11,10 +11,8 @@
         "shakes",
         "stunned",
         "winded",
-        "winded_leg_l",
-        "winded_leg_r",
-        "winded_arm_l",
-        "winded_arm_r",
+        "winded_leg",
+        "winded_arm",
         "hypocalcemia",
         "anemia",
         "scurvy"
