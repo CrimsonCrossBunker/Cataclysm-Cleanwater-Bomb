@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -10,6 +11,9 @@
 #include <vector>
 
 #include "catalua_bindings_values.h"
+#include "catalua_game_handle.h"
+#include "character.h"
+#include "creature.h"
 #include "enum_conversions.h"
 #include "vitamin.h"
 
@@ -24,6 +28,9 @@ constexpr int maximum_definition_limit = 256;
 constexpr int maximum_definition_offset = 1000000;
 constexpr std::size_t maximum_query_bytes = 128;
 constexpr std::size_t maximum_decay_values = 128;
+constexpr int default_state_limit = 128;
+constexpr int maximum_state_limit = 256;
+constexpr int maximum_state_offset = 1000000;
 
 struct definition_options {
     int offset = 0;
@@ -214,12 +221,161 @@ sol::table get_definition(
                vitamin_id( id.value() ).obj() );
 }
 
+Character *resolve_character(
+    const game_handle &handle, const std::size_t runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    Character *character = resolved.value->as_character();
+    if( character == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype",
+            "The creature referenced by this GameHandle is not a character"
+        };
+    }
+    return character;
+}
+
+sol::table snapshot_state(
+    sol::state_view lua, const Character &character,
+    const vitamin &definition )
+{
+    const vitamin_id id = definition.get_id();
+    const int amount = character.vitamin_get( id );
+    sol::table result = lua.create_table();
+    result["id"] = script_game_id(
+                       "vitamin", id.str() );
+    result["name"] = definition.name();
+    result["amount"] = amount;
+    result["minimum"] = definition.min();
+    result["maximum"] = definition.max();
+    result["severity"] = definition.severity( amount );
+    result["rate"] =
+        script_time_duration::from_native(
+            character.vitamin_rate( id ) );
+    return result;
+}
+
+struct state_list_options {
+    int offset = 0;
+    int limit = default_state_limit;
+};
+
+state_list_options read_state_list_options(
+    const sol::optional<sol::table> &requested )
+{
+    state_list_options result;
+    if( requested ) {
+        result.offset = requested->get_or(
+                            "offset", result.offset );
+        result.limit = requested->get_or(
+                           "limit", result.limit );
+    }
+    if( result.offset < 0 || result.offset > maximum_state_offset ) {
+        throw std::invalid_argument(
+            "game.vitamins.list offset must be within 0..1000000" );
+    }
+    if( result.limit < 0 || result.limit > maximum_state_limit ) {
+        throw std::invalid_argument(
+            "game.vitamins.list limit must be within 0..256" );
+    }
+    return result;
+}
+
+std::vector<const vitamin *> sorted_vitamins()
+{
+    const std::vector<vitamin> &all = vitamin::all();
+    std::vector<const vitamin *> result;
+    result.reserve( all.size() );
+    for( const vitamin &definition : all ) {
+        result.push_back( &definition );
+    }
+    std::sort(
+        result.begin(), result.end(),
+    []( const vitamin * lhs, const vitamin * rhs ) {
+        return lhs->get_id().str() < rhs->get_id().str();
+    } );
+    return result;
+}
+
+sol::table list_states(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const state_list_options options =
+        read_state_list_options( requested );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const std::vector<const vitamin *> definitions =
+        sorted_vitamins();
+    const std::size_t first = std::min<std::size_t>(
+                                  options.offset, definitions.size() );
+    const std::size_t last = std::min<std::size_t>(
+                                 first + options.limit, definitions.size() );
+    sol::table items = state.create_table(
+                           static_cast<int>( last - first ), 0 );
+    for( std::size_t index = first; index < last; ++index ) {
+        items[index - first + 1] =
+            snapshot_state(
+                state, *character, *definitions[index] );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["total"] = definitions.size();
+    value["returned"] = last - first;
+    value["has_more"] = last < definitions.size();
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_vitamin_id(
+        requested_id, "game.vitamins.get" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, snapshot_state(
+                       state, *character,
+                       vitamin_id(
+                           requested_id.value() ).obj() ) ) );
+}
+
 } // namespace
 
 void install_vitamin_api(
     sol::table &game,
-    std::function<std::size_t()>,
-    std::function<std::size_t()>,
+    std::function<std::size_t()> current_runtime_generation,
+    std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> )
 {
@@ -238,6 +394,28 @@ void install_vitamin_api(
     const script_game_id & id ) {
         require_read();
         return get_definition( lua_state, id );
+    } );
+    vitamins.set_function(
+        "list",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_states(
+                   lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vitamins.set_function(
+        "get",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_read();
+        return get_state(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
     } );
     game["vitamins"] = std::move( vitamins );
 }
