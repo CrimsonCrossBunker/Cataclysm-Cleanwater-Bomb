@@ -1,5 +1,6 @@
 #include "cata_catch.h"
 #include "addiction.h"
+#include "achievement.h"
 #include "avatar.h"
 #include "basecamp.h"
 #include "bionics.h"
@@ -4784,6 +4785,246 @@ game.zones.rename(
            std::string::npos );
     CHECK( native_zone->get_name() ==
            "Lua renamed zone" );
+}
+
+TEST_CASE( "lua_v5_achievement_catalog_and_progress_are_bounded",
+           "[lua][bindings][achievements][read][integration]" )
+{
+    const achievement_id test_id(
+        "lua_test_manual_achievement" );
+    REQUIRE( test_id.is_valid() );
+    achievements_tracker &tracker =
+        get_achievements();
+    if( tracker.valid_achievements().
+        empty() ) {
+        get_event_bus().send<
+        event_type::game_start>(
+            "lua-achievement-test" );
+    }
+    REQUIRE( tracker.reset_manual_achievement(
+                 test_id.obj() ) );
+    on_out_of_scope cleanup( [
+                              &tracker, test_id
+                            ]() {
+        tracker.reset_manual_achievement(
+            test_id.obj() );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local id = game.types.id(
+    "achievement",
+    "lua_test_manual_achievement")
+local definitions = game.achievements.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "LUA TEST ACHIEVEMENT",
+    conduct = false,
+    manually_given = true
+})
+assert(definitions.limit == 256)
+assert(definitions.returned ==
+    #definitions.items)
+assert(definitions.total == 1)
+local definition =
+    game.achievements.definition(id)
+assert(definition.id == id)
+assert(definition.name ==
+    "Lua test achievement")
+assert(type(definition.description) ==
+    "string")
+assert(definition.conduct == false)
+assert(definition.manually_given == true)
+assert(definition.requirements == 0)
+assert(definition.hidden_by.returned ==
+    #definition.hidden_by.items)
+assert(definition.sources.returned ==
+    #definition.sources.items)
+assert(definition.time_constraint == nil)
+
+local page = game.achievements.list({
+    query = "lua_test_manual",
+    completion = "pending",
+    manually_given = true,
+    valid = true,
+    limit = 1
+})
+assert(page.ok == true)
+assert(page.value.enabled ==
+    true or page.value.enabled == false)
+assert(page.value.total == 1)
+assert(page.value.returned == 1)
+local progress = page.value.items[1]
+assert(progress.id == id)
+assert(progress.valid == true)
+assert(progress.completion == "pending")
+assert(progress.pending == true)
+assert(progress.completed == false)
+assert(progress.failed == false)
+assert(type(progress.hidden) == "boolean")
+assert(type(progress.ui_text) == "string")
+
+local current = game.achievements.get(id)
+assert(current.ok == true)
+assert(current.value.id == id)
+assert(current.value.pending == true)
+
+assert(pcall(function()
+    game.achievements.definitions({
+        completion = "pending"
+    })
+end) == false)
+assert(pcall(function()
+    game.achievements.list({
+        completion = "unknown"
+    })
+end) == false)
+assert(pcall(function()
+    game.achievements.list({
+        offset = -1
+    })
+end) == false)
+assert(pcall(function()
+    game.achievements.list({
+        unknown = true
+    })
+end) == false)
+assert(pcall(function()
+    game.achievements.definition(
+        game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_manual_achievement_controls_are_write_gated",
+           "[lua][bindings][achievements][write][integration]" )
+{
+    const achievement_id test_id(
+        "lua_test_manual_achievement" );
+    REQUIRE( test_id.is_valid() );
+    achievements_tracker &tracker =
+        get_achievements();
+    if( tracker.valid_achievements().
+        empty() ) {
+        get_event_bus().send<
+        event_type::game_start>(
+            "lua-achievement-test" );
+    }
+    const bool enabled_before =
+        tracker.is_enabled();
+    REQUIRE( tracker.reset_manual_achievement(
+                 test_id.obj() ) );
+    on_out_of_scope cleanup( [
+                              &tracker, test_id,
+                              enabled_before
+                            ]() {
+        tracker.reset_manual_achievement(
+            test_id.obj() );
+        tracker.set_enabled(
+            enabled_before );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local id = game.types.id(
+    "achievement",
+    "lua_test_manual_achievement")
+local disabled =
+    game.achievements.set_enabled(false)
+assert(disabled.ok == true)
+assert(disabled.value.after == false)
+local enabled =
+    game.achievements.set_enabled(true)
+assert(enabled.ok == true)
+assert(enabled.value.after == true)
+
+local completed = game.achievements.report(
+    id, "completed")
+assert(completed.ok == true)
+assert(completed.value.completion ==
+    "completed")
+assert(completed.value.completed == true)
+local duplicate = game.achievements.report(
+    id, "failed")
+assert(duplicate.ok == false)
+assert(duplicate.error.code == "not_pending")
+
+local reset = game.achievements.reset(id)
+assert(reset.ok == true)
+assert(reset.value.before == "completed")
+assert(reset.value.after == "pending")
+assert(reset.value.achievement.pending == true)
+
+local failed = game.achievements.report(
+    id, "failed")
+assert(failed.ok == true)
+assert(failed.value.completion == "failed")
+assert(failed.value.failed == true)
+local reset_failed = game.achievements.reset(id)
+assert(reset_failed.ok == true)
+assert(reset_failed.value.before == "failed")
+assert(reset_failed.value.after == "pending")
+
+local automatic = game.achievements.list({
+    manually_given = false,
+    valid = true,
+    limit = 1
+})
+assert(automatic.ok == true)
+assert(automatic.value.returned == 1)
+local rejected = game.achievements.report(
+    automatic.value.items[1].id,
+    "completed")
+assert(rejected.ok == false)
+assert(rejected.error.code == "not_manual")
+assert(pcall(function()
+    game.achievements.report(id, "pending")
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+    CHECK( tracker.is_completed(
+               test_id ) ==
+           achievement_completion::pending );
+    CHECK( tracker.is_enabled() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.achievements.set_enabled(false)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts(
+                     error ) );
+    CHECK( error.find( "game.write" ) !=
+           std::string::npos );
+    CHECK( tracker.is_enabled() );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
