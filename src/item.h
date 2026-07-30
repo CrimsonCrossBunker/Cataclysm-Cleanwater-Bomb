@@ -729,6 +729,12 @@ class item : public visitable
          */
         units::mass weight( bool include_contents = true, bool integral = false ) const;
 
+        // Plutonium fuel is stored in vehicle/tool magazines as an energy
+        // charge count, rather than as the physical item's normal charges.
+        bool is_internal_plutonium_fuel() const;
+        void mark_internal_plutonium_fuel();
+        bool normalize_plutonium_fuel( bool allow_legacy_representation = false );
+
         /**
          * Total volume of an item accounting for all contained/integrated items
          * NOTE: Result is rounded up to next nearest milliliter when working with stackable (@ref count_by_charges) items that have fractional volume per charge.

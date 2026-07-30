@@ -92,6 +92,11 @@
 #include "weather_type.h"
 #include "weighted_list.h"
 
+namespace
+{
+constexpr std::string_view internal_plutonium_fuel_var = "internal_plutonium_fuel";
+}
+
 static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_money( "money" );
 
@@ -2024,7 +2029,15 @@ units::mass item::weight( bool include_contents, bool integral ) const
     }
 
     if( count_by_charges() ) {
-        ret_mul *= charges;
+        if( is_internal_plutonium_fuel() ) {
+            // Internally, one plutonium cell is represented by
+            // PLUTONIUM_CHARGES energy charges.  Keep the physical item's
+            // mass proportional to the number of cells, not the raw charge
+            // count.
+            ret_mul *= static_cast<double>( charges ) / PLUTONIUM_CHARGES;
+        } else {
+            ret_mul *= charges;
+        }
 
     } else if( ( hot & static_cast<uint64_t>( hot_flag_bit::CORPSE ) ) && corpse != nullptr ) {
         ret = corpse->weight;
@@ -2091,6 +2104,32 @@ units::mass item::weight( bool include_contents, bool integral ) const
     }
 
     return ret;
+}
+
+bool item::is_internal_plutonium_fuel() const
+{
+    return ammo_type() == ammo_plutonium && has_var( internal_plutonium_fuel_var );
+}
+
+void item::mark_internal_plutonium_fuel()
+{
+    set_var( std::string( internal_plutonium_fuel_var ), true );
+}
+
+bool item::normalize_plutonium_fuel( const bool allow_legacy_representation )
+{
+    // A running legacy reactor can leave fewer than one cell's worth of
+    // internal charges behind, so any positive charge in a compatible host
+    // must be treated as an incomplete internal cell.
+    const bool legacy_representation = allow_legacy_representation &&
+                                       ammo_type() == ammo_plutonium && charges > 0;
+    if( !is_internal_plutonium_fuel() && !legacy_representation ) {
+        return false;
+    }
+
+    charges /= PLUTONIUM_CHARGES;
+    erase_var( std::string( internal_plutonium_fuel_var ) );
+    return true;
 }
 
 units::length item::length() const
