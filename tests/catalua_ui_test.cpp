@@ -7399,6 +7399,40 @@ local ok, failure = pcall(function()
     assert(game.hordes.legacy_group(
         legacy_token).value.population == 19)
 
+    local removed_legacy =
+        game.hordes.remove_legacy_group(legacy_token)
+    assert(removed_legacy.ok == true)
+    assert(removed_legacy.value.removed == true)
+    local replacement_legacy =
+        game.hordes.spawn_legacy_group({
+            group = group_id,
+            position = sm,
+            population = 19,
+            interest = 45,
+            horde = true,
+            behavior = "city",
+            target = sm,
+        })
+    assert(replacement_legacy.ok == true)
+    assert(replacement_legacy.value.token ~= legacy_token)
+    assert(legacy_token:is_valid() == false)
+    assert(game.hordes.legacy_group(
+        legacy_token).error.code == "missing_legacy_horde")
+    legacy_token = replacement_legacy.value.token
+
+    local removed_entity =
+        game.hordes.remove_entity(entity_token)
+    assert(removed_entity.ok == true)
+    assert(removed_entity.value.removed == true)
+    local replacement_entity =
+        game.hordes.spawn_entity(position, zombie)
+    assert(replacement_entity.ok == true)
+    assert(replacement_entity.value.token ~= entity_token)
+    assert(entity_token:is_valid() == false)
+    assert(game.hordes.entity(
+        entity_token).error.code == "missing_horde_entity")
+    entity_token = replacement_entity.value.token
+
     assert(pcall(function()
         game.hordes.spawn_entity(
             position, game.types.id("item", "rock"))

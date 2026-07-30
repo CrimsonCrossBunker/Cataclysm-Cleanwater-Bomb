@@ -16,6 +16,10 @@
 #include "point.h"
 #include "type_id.h"
 
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#include "catalua_ui_identity.h"
+#endif
+
 class JsonObject;
 class JsonOut;
 // from overmap.h
@@ -171,6 +175,11 @@ struct mongroup {
         type( ptype ), abs_pos( ppos ), population( ppop ), target( ptarget ),
         interest( pint ), dying( pdie ), horde( phorde ) { }
     mongroup() = default;
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+    std::uint64_t lua_identity() const noexcept {
+        return lua_identity_.value();
+    }
+#endif
     bool is_safe() const;
     bool empty() const;
     void clear();
@@ -228,6 +237,10 @@ struct mongroup {
     void deserialize( const JsonObject &jo );
     void deserialize_legacy( const JsonObject &jo );
     void serialize( JsonOut &json ) const;
+
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+    cata::lua_ui::native_object_identity lua_identity_;
+#endif
 };
 
 template<>
