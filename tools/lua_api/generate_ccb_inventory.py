@@ -21,6 +21,11 @@ ID_DEFINITION_PATTERN = re.compile(
 JSON_LOADER_PATTERN = re.compile(
     r'\badd\(\s*"(?P<json_type>[^"]+)"\s*,'
 )
+EVENT_ENUM_PATTERN = re.compile(
+    r"enum class event_type\s*:\s*int\s*\{(?P<body>.*?)"
+    r"num_event_types\s*// last\s*\n\};",
+    re.DOTALL,
+)
 
 
 def source_text(relative_path: str) -> str:
@@ -62,6 +67,29 @@ def parse_json_types(contents: str) -> list[dict[str, object]]:
     ]
 
 
+def parse_event_types(contents: str) -> list[dict[str, str]]:
+    """Extract every concrete native event bus event."""
+    enum_match = EVENT_ENUM_PATTERN.search(contents)
+    if enum_match is None:
+        raise RuntimeError("the event_type enum was not found")
+    body = re.sub(r"/\*.*?\*/", "", enum_match.group("body"), flags=re.DOTALL)
+    body = re.sub(r"//[^\n]*", "", body)
+    names: list[str] = []
+    for candidate in body.split(","):
+        token = candidate.strip()
+        if not token:
+            continue
+        name = token.split("=", 1)[0].strip()
+        if not re.fullmatch(r"[a-z][a-z0-9_]*", name):
+            raise RuntimeError(f"invalid event_type enumerator {name!r}")
+        names.append(name)
+    if not names:
+        raise RuntimeError("no native event types were found")
+    if len(names) != len(set(names)):
+        raise RuntimeError("duplicate native event types were found")
+    return [{"type": name} for name in names]
+
+
 def build_inventory() -> dict[str, object]:
     return {
         "schema_version": 1,
@@ -69,11 +97,13 @@ def build_inventory() -> dict[str, object]:
             "project": "Cataclysm-Cleanwater-Bomb",
             "id_registry": "src/catalua_bindings_values.cpp",
             "json_registry": "src/init.cpp",
+            "event_registry": "src/event.h",
         },
         "id_kinds": parse_id_kinds(
             source_text("src/catalua_bindings_values.cpp")
         ),
         "json_types": parse_json_types(source_text("src/init.cpp")),
+        "event_types": parse_event_types(source_text("src/event.h")),
     }
 
 
