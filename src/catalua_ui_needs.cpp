@@ -18,6 +18,7 @@ namespace
 {
 
 constexpr int maximum_need_magnitude = 1000000;
+constexpr int maximum_stored_kcal = 2000000;
 
 Character *resolve_character(
     const game_handle &handle, const std::size_t runtime_generation,
@@ -227,6 +228,39 @@ sol::table modify_needs(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table set_calories(
+    sol::this_state lua, const game_handle &handle,
+    const int requested_kcal,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_kcal < 0 ||
+        requested_kcal > maximum_stored_kcal ) {
+        throw std::invalid_argument(
+            "game.needs.set_calories kcal "
+            "must be within 0..2000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table before =
+        snapshot_needs( state, *character );
+    character->set_stored_kcal( requested_kcal );
+    sol::table value = state.create_table();
+    value["requested"] = requested_kcal;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_needs( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_need_api(
@@ -267,6 +301,17 @@ void install_need_api(
         require_write();
         return modify_needs(
                    lua_state, handle, deltas,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "set_calories",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const int kcal ) {
+        require_write();
+        return set_calories(
+                   lua_state, handle, kcal,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
