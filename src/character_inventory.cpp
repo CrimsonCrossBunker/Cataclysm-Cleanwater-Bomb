@@ -1548,26 +1548,27 @@ bool Character::unwield()
     } ) ) {
         return false;
     }
-    cata::lua_ui::dispatch_native_callback(
-    "iwieldable", weapon.typeId().str(), "on_unwield", {
-        { "character", static_cast<const Character *>( this ) },
-        { "item", static_cast<const item *>( &weapon ) }
-    } );
+    item callback_item = weapon;
 
     // currently the only way to unwield NO_UNWIELD weapon is if it's a bionic that can be deactivated
     if( weapon.has_flag( flag_NO_UNWIELD ) ) {
         std::optional<bionic *> bio_opt = find_bionic_by_uid( get_weapon_bionic_uid() );
-        return bio_opt ? deactivate_bionic( **bio_opt ) : false;
+        if( !bio_opt || !deactivate_bionic( **bio_opt ) ) {
+            return false;
+        }
+    } else {
+        const std::string query = string_format( _( "Stop wielding %s?" ), weapon.tname() );
+        if( !dispose_item( item_location( *this, &weapon ), query ) ) {
+            return false;
+        }
+        inv->unsort();
     }
 
-    const std::string query = string_format( _( "Stop wielding %s?" ), weapon.tname() );
-
-    if( !dispose_item( item_location( *this, &weapon ), query ) ) {
-        return false;
-    }
-
-    inv->unsort();
-
+    cata::lua_ui::dispatch_native_callback(
+    "iwieldable", callback_item.typeId().str(), "on_unwield", {
+        { "character", static_cast<const Character *>( this ) },
+        { "item", static_cast<const item *>( &callback_item ) }
+    } );
     return true;
 }
 

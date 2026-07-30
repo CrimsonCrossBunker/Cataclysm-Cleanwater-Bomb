@@ -8872,6 +8872,7 @@ TEST_CASE( "lua_v5_equipment_and_reload_callbacks_gate_native_lifecycles",
         player.clear_worn();
         player.inv->clear();
         player.remove_weapon();
+        player.clear_bionics();
     } );
 
     const itype_id shirt_id( "tshirt" );
@@ -8912,6 +8913,7 @@ TEST_CASE( "lua_v5_equipment_and_reload_callbacks_gate_native_lifecycles",
 local shirt = game.types.id("item", "tshirt")
 local pipe = game.types.id("item", "test_pipe")
 local magazine = game.types.id("item", "glockmag")
+local blade = game.types.id("item", "bio_blade_weapon")
 local function count(name)
     local key = "native_remaining." .. name
     state.character.set(
@@ -8941,6 +8943,15 @@ game.callbacks.register("iwearable", shirt, {
 game.callbacks.register("iwieldable", pipe, {
     can_unwield = decide("can_unwield"),
     on_unwield = observe("on_unwield")
+})
+game.callbacks.register("iwieldable", blade, {
+    can_unwield = decide("bionic_can_unwield"),
+    on_unwield = function(payload)
+        local snapshot = game.items.snapshot(payload.item)
+        assert(snapshot.ok == true)
+        assert(snapshot.value.id == blade)
+        count("bionic_on_unwield")
+    end
 })
 game.callbacks.register("iranged", magazine, {
     can_reload = function(payload)
@@ -8986,10 +8997,26 @@ game.callbacks.register("iranged", magazine, {
     REQUIRE( removed.size() == 1 );
     REQUIRE( player.wear_item(
                  item( shirt_id ), false ).has_value() );
-    player.unwield();
+    CHECK_FALSE( player.unwield() );
+    CHECK( player.is_armed() );
     CHECK( magazine->reload(
                player, ammunition, 1 ) );
     CHECK( magazine->ammo_remaining() == 1 );
+
+    player.remove_weapon();
+    const bionic_id power_storage( "bio_power_storage" );
+    const bionic_id blade( "bio_blade" );
+    player.add_bionic( power_storage );
+    player.add_bionic( power_storage );
+    player.add_bionic( blade );
+    player.set_power_level( player.get_max_power_level() );
+    bionic &blade_bionic =
+        player.bionic_at_index(
+            player.get_bionics().size() - 1 );
+    REQUIRE( player.activate_bionic( blade_bionic ) );
+    REQUIRE( player.is_armed() );
+    CHECK( player.unwield() );
+    CHECK_FALSE( player.is_armed() );
 
     script.write( R"lua(
 assert(state.character.get("native_remaining.can_wear", 0) == 2)
@@ -8997,7 +9024,11 @@ assert(state.character.get("native_remaining.can_takeoff", 0) == 2)
 assert(state.character.get("native_remaining.on_wear", 0) == 1)
 assert(state.character.get("native_remaining.on_takeoff", 0) == 1)
 assert(state.character.get("native_remaining.can_unwield", 0) == 2)
-assert(state.character.get("native_remaining.on_unwield", 0) == 1)
+assert(state.character.get("native_remaining.on_unwield", 0) == 0)
+assert(state.character.get(
+    "native_remaining.bionic_can_unwield", 0) == 1)
+assert(state.character.get(
+    "native_remaining.bionic_on_unwield", 0) == 1)
 assert(state.character.get("native_remaining.can_reload", 0) == 2)
 assert(state.character.get("native_remaining.on_reload", 0) == 1)
 )lua" );
