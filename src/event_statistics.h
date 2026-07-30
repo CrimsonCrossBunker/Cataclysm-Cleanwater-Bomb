@@ -49,6 +49,7 @@ class event_transformation
         static void load_transformation( const JsonObject &, const std::string & );
         static void finalize_all();
         static void check_consistency();
+        static const std::vector<event_transformation> &get_all();
         static void reset();
 
         string_id<event_transformation> id;
@@ -76,6 +77,7 @@ class event_statistic
         static void load_statistic( const JsonObject &, const std::string & );
         static void finalize_all();
         static void check_consistency();
+        static const std::vector<event_statistic> &get_all();
         static void reset();
 
         string_id<event_statistic> id;

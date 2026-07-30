@@ -24,6 +24,7 @@
 #include "disease.h"
 #include "effect.h"
 #include "emit.h"
+#include "event_statistics.h"
 #include "faction.h"
 #include "fault.h"
 #include "field_type.h"
@@ -68,9 +69,9 @@ struct id_kind_definition {
     id_validator validate;
 };
 
-const std::array<id_kind_definition, 131> &id_kind_definitions()
+const std::array<id_kind_definition, 132> &id_kind_definitions()
 {
-    static const std::array<id_kind_definition, 131> definitions = {{
+    static const std::array<id_kind_definition, 132> definitions = {{
             { "achievement", &valid_id<achievement> },
             { "activity", &valid_id<activity_type> },
             { "addiction", &valid_id<add_type> },
@@ -102,6 +103,7 @@ const std::array<id_kind_definition, 131> &id_kind_definitions()
             { "enchantment", &valid_id<enchantment> },
             { "end_screen", &valid_id<end_screen> },
             { "event_statistic", &valid_id<event_statistic> },
+            { "event_transformation", &valid_id<event_transformation> },
             { "faction", &valid_id<faction> },
             { "faction_mission", &valid_id<faction_mission> },
             { "fault", &valid_id<fault> },
