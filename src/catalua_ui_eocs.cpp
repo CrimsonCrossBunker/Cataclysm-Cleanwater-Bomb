@@ -659,11 +659,11 @@ sol::table remove_variable(
 
 void install_eoc_api(
     sol::table &game,
-    std::function<std::size_t()>,
-    std::function<std::size_t()>,
+    std::function<std::size_t()> current_runtime_generation,
+    std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
-    std::function<void()>,
-    std::function<bool()> )
+    std::function<void()> require_write,
+    std::function<bool()> has_active_callback )
 {
     sol::state_view lua( game.lua_state() );
     sol::table eocs = lua.create_table();
