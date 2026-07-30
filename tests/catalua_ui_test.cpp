@@ -6584,6 +6584,60 @@ game.missions.reserve(
            active_count_before );
 }
 
+TEST_CASE( "lua_v5_mission_completion_uses_the_reserved_giver",
+           "[lua][bindings][missions][lifecycle][integration]" )
+{
+    clear_avatar();
+    avatar &player = get_avatar();
+    mission::clear_all();
+    on_out_of_scope cleanup( [&player]() {
+        player.reset_all_missions();
+        mission::clear_all();
+    } );
+    player.i_add( item( itype_id( "test_rock" ) ) );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local giver_id = 424242
+local mission_id = game.types.id(
+    "mission", "TEST_MISSION_FIND_ITEM_GIVER")
+local reserved = game.missions.reserve(
+    mission_id, giver_id)
+assert(reserved.ok == true)
+assert(reserved.value.npc_id == giver_id)
+local token = reserved.value.token
+
+local assigned = game.missions.assign(token)
+assert(assigned.ok == true)
+assert(game.missions.is_complete(
+    token, giver_id).value == true)
+
+local completed = game.missions.complete(token)
+assert(completed.ok == true)
+assert(completed.value.forced == false)
+assert(completed.value.after.status == "success")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_active_missions().empty() );
+    REQUIRE( player.get_completed_missions().size() == 1 );
+    CHECK( player.get_completed_missions().front()->
+           mission_id() ==
+           mission_type_id(
+               "TEST_MISSION_FIND_ITEM_GIVER" ) );
+    CHECK( player.amount_of(
+               itype_id( "test_rock" ) ) == 0 );
+}
+
 TEST_CASE( "lua_v5_world_reads_bounded_active_map_snapshots",
            "[lua][bindings][world][map][integration]" )
 {
