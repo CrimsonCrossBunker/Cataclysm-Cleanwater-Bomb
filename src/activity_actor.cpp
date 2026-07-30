@@ -6258,6 +6258,7 @@ void unload_activity_actor::unload( Character &who, item_location &target )
 
             for( item *contained : it.all_items_top( ptype, true ) ) {
                 int old_charges = contained->charges;
+                contained->normalize_plutonium_fuel( true );
                 const bool consumed = who.add_or_drop_with_msg( *contained, true, &it, contained );
                 if( consumed || contained->charges != old_charges ) {
                     changed = true;
@@ -6286,9 +6287,7 @@ void unload_activity_actor::unload( Character &who, item_location &target )
 
     std::vector<item *> remove_contained;
     for( item *contained : it.all_items_top() ) {
-        if( contained->ammo_type() == ammo_plutonium ) {
-            contained->charges /= PLUTONIUM_CHARGES;
-        }
+        contained->normalize_plutonium_fuel( true );
         if( who.add_or_drop_with_msg( *contained, true, &it, contained ) ) {
             qty += contained->charges;
             remove_contained.push_back( contained );
