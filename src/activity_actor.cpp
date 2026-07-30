@@ -418,6 +418,7 @@ static const skill_id skill_computer( "computer" );
 static const skill_id skill_electronics( "electronics" );
 static const skill_id skill_fabrication( "fabrication" );
 static const skill_id skill_firstaid( "firstaid" );
+static const skill_id skill_speech( "speech" );
 static const skill_id skill_gun( "gun" );
 static const skill_id skill_mechanics( "mechanics" );
 static const skill_id skill_survival( "survival" );
@@ -13037,7 +13038,19 @@ void training_activity_actor::train_skill( Character &who, skill_id trained_skil
     const Skill &skill = trained_skill.obj();
     std::string skill_name = skill.name();
     int old_skill_level = who.get_knowledge_level( trained_skill );
-    who.practice( trained_skill, 100, old_skill_level + 2 );
+    Character *teacher_valid = g->critter_by_id<Character>( teacher );
+    int teacher_quality = 0;
+    if( teacher_valid ) {
+        // Teacher intelligence, subject matter knowledge, and social skill matters most.
+        teacher_quality = ( teacher_valid->get_int() +
+                            ( teacher_valid->get_skill_level( skill_speech ) +
+                              teacher_valid->get_knowledge_level( trained_skill ) ) ) * 4;
+    }
+    // Student intelligence and social skill is secondary.
+    int student_quality = ( who.get_int() + ( who.get_skill_level( skill_speech ) * 2 ) ) * 4;
+    int teaching_effectiveness = std::min( 200, std::max( 10,
+                                     ( teacher_quality * 2 + student_quality ) / 2 ) );
+    who.practice( trained_skill, teaching_effectiveness, old_skill_level + 2 );
     int new_skill_level = who.get_knowledge_level( trained_skill );
     if( old_skill_level != new_skill_level ) {
         if( who.is_avatar() ) {
