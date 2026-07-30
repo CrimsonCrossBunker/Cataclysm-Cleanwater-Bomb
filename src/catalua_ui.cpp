@@ -37,6 +37,7 @@
 #include "catalua_ui_addictions.h"
 #include "catalua_ui_bionics.h"
 #include "catalua_ui_callbacks.h"
+#include "catalua_ui_camps.h"
 #include "catalua_ui_crafting.h"
 #include "catalua_ui_creatures.h"
 #include "catalua_ui_effects.h"
@@ -3357,6 +3358,16 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.factions" );
+        require_capability( state, "game.write" );
+    } );
+    install_camp_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game.camps" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.camps" );
         require_capability( state, "game.write" );
     } );
     install_magic_api(
