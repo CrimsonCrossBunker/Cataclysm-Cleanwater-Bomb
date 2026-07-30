@@ -59,6 +59,7 @@
 #include "trap.h"
 #include "ui_profile.h"
 #include "units.h"
+#include "vehicle.h"
 #include "vitamin.h"
 #include "weather.h"
 #include "worldfactory.h"
@@ -3017,6 +3018,127 @@ game.martial_arts.learn(
                  original_styles.begin(),
                  original_styles.end(), karate ) !=
              original_styles.end() ) );
+}
+
+TEST_CASE( "lua_v5_vehicle_catalogs_and_live_state_are_bounded",
+           "[lua][bindings][vehicles][read][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    vehicle *native_vehicle = here.add_vehicle(
+                                  vproto_id( "bicycle" ),
+                                  tripoint_bub_ms( 60, 60, 0 ),
+                                  0_degrees, 100,
+                                  veh_spawn_status::UNDAMAGED );
+    REQUIRE( native_vehicle != nullptr );
+    native_vehicle->name =
+        "Lua inspection bicycle";
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local bicycle = game.types.id(
+    "vehicle_prototype", "bicycle")
+local definitions = game.vehicles.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "BICYCLE"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind ==
+    "vehicle_prototype")
+
+local definition = game.vehicles.definition(bicycle)
+assert(definition.id == bicycle)
+assert(type(definition.name) == "string")
+assert(definition.parts.returned ==
+    #definition.parts.items)
+assert(definition.parts.total >= 1)
+assert(type(definition.has_blueprint) == "boolean")
+
+local world = game.world.vehicles({
+    offset = 0,
+    limit = 256
+})
+local handle = nil
+for _, candidate in ipairs(world.items) do
+    if candidate.prototype == "bicycle" then
+        handle = candidate.handle
+        break
+    end
+end
+assert(handle ~= nil)
+assert(handle:is_valid())
+
+local current = game.vehicles.get(handle)
+assert(current.ok == true)
+assert(current.value.name == "Lua inspection bicycle")
+assert(current.value.prototype == bicycle)
+assert(current.value.position.origin == "abs")
+assert(current.value.position.scale == "ms")
+assert(math.type(current.value.parts) == "integer")
+assert(current.value.motion.facing.kind == "angle")
+assert(math.type(current.value.motion.velocity) == "integer")
+assert(current.value.lift.mass.kind == "mass")
+assert(type(current.value.lift.weight_newtons) == "number")
+assert(type(current.value.lift.maximum_lift_newtons) == "number")
+assert(type(current.value.lift.lift_margin_newtons) == "number")
+assert(type(current.value.lift.sufficient_balloon_lift) ==
+    "boolean")
+assert(type(current.value.state.engine_on) == "boolean")
+assert(math.type(
+    current.value.power.battery_kilojoules) == "integer")
+
+local parts = game.vehicles.parts(handle, {
+    offset = 0,
+    limit = 1000000
+})
+assert(parts.ok == true)
+assert(parts.value.limit == 256)
+assert(parts.value.returned == #parts.value.items)
+assert(parts.value.total >= 1)
+assert(parts.value.items[1].id.kind == "vehicle_part")
+assert(parts.value.items[1].position.origin == "abs")
+assert(type(parts.value.items[1].capabilities.engine) ==
+    "boolean")
+
+local fuels = game.vehicles.fuels(handle)
+assert(fuels.ok == true)
+assert(fuels.value.returned == #fuels.value.items)
+assert(fuels.value.returned <= fuels.value.total)
+for _, fuel in ipairs(fuels.value.items) do
+    assert(fuel.id.kind == "item")
+    assert(math.type(fuel.remaining) == "integer")
+end
+
+local wrong = game.vehicles.get(game.characters.avatar())
+assert(wrong.ok == false)
+assert(wrong.error.code == "wrong_kind")
+assert(pcall(function()
+    game.vehicles.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.vehicles.definitions({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.vehicles.parts(handle, { offset = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
