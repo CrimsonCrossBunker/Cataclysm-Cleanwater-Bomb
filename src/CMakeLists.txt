@@ -46,24 +46,10 @@ file(GLOB CATACLYSM_DDA_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cata_allocator_c.c)
 
-set(CATALUA_UI_ENABLED_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_bindings.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_game_handle.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_actions.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_events.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_game.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_i18n.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_imgui.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_manifest.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_modules.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_navigation.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_renderer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_registry.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_scheduler.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_services.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_state.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_values.cpp)
+file(GLOB CATALUA_UI_ENABLED_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/catalua*.cpp")
+list(REMOVE_ITEM CATALUA_UI_ENABLED_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_disabled.cpp")
 if (CATA_ENABLE_LUA_UI)
     list(REMOVE_ITEM CATACLYSM_DDA_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_disabled.cpp)
