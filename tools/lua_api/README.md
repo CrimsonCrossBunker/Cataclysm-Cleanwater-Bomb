@@ -64,3 +64,12 @@ The only accepted `not_applicable` entry is
 subsystem, which CCB does not contain.  Coordinate conversion, action-menu
 entries, native sidebar widgets, and bounded diagnostics all have CCB
 equivalents and must not be classified as exceptions.
+
+`check_luals_declarations.py` compares the API v5 LuaLS file to the native
+`set_function` registrations, every native usertype, and all 36 generated
+coordinate factories. It also rejects a stale v4 declaration:
+
+```sh
+python3 tools/lua_api/check_luals_declarations.py
+python3 -m unittest tools.lua_api.test_check_luals_declarations
+```
