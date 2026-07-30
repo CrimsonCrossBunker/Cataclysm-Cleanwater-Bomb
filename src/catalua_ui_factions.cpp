@@ -1066,6 +1066,141 @@ sol::table set_faction_policy(
                    state, std::move( value ) ) );
 }
 
+std::optional<npc_factions::relationship>
+parse_relationship_flag( const std::string &key )
+{
+    if( key == "kill_on_sight" ) {
+        return npc_factions::relationship::kill_on_sight;
+    }
+    if( key == "watch_your_back" ) {
+        return npc_factions::relationship::watch_your_back;
+    }
+    if( key == "share_my_stuff" ) {
+        return npc_factions::relationship::share_my_stuff;
+    }
+    if( key == "share_public_goods" ) {
+        return npc_factions::relationship::share_public_goods;
+    }
+    if( key == "guard_your_stuff" ) {
+        return npc_factions::relationship::guard_your_stuff;
+    }
+    if( key == "lets_you_in" ) {
+        return npc_factions::relationship::lets_you_in;
+    }
+    if( key == "defend_your_space" ) {
+        return npc_factions::relationship::defend_your_space;
+    }
+    if( key == "knows_your_voice" ) {
+        return npc_factions::relationship::knows_your_voice;
+    }
+    return std::nullopt;
+}
+
+using relationship_updates =
+    std::vector<std::pair<
+        npc_factions::relationship, bool>>;
+
+relationship_updates read_relationship_updates(
+    const sol::table &requested )
+{
+    relationship_updates result;
+    for( const auto &pair : requested ) {
+        if( pair.first.get_type() !=
+            sol::type::string ) {
+            throw std::invalid_argument(
+                "game.factions.set_relationship option keys must be strings" );
+        }
+        const std::string key =
+            pair.first.as<std::string>();
+        const std::optional<
+        npc_factions::relationship> flag =
+            parse_relationship_flag( key );
+        if( !flag ) {
+            throw std::invalid_argument(
+                "game.factions.set_relationship received unknown option '" +
+                key + "'" );
+        }
+        if( !pair.second.is<bool>() ) {
+            throw std::invalid_argument(
+                "game.factions.set_relationship option '" +
+                key + "' must be a boolean" );
+        }
+        result.emplace_back(
+            *flag, pair.second.as<bool>() );
+    }
+    if( result.empty() ) {
+        throw std::invalid_argument(
+            "game.factions.set_relationship requires at least one option" );
+    }
+    return result;
+}
+
+sol::table set_faction_relationship(
+    sol::this_state lua, const script_game_id &id,
+    const script_game_id &target,
+    const sol::table &requested )
+{
+    require_faction_id( target );
+    const relationship_updates updates =
+        read_relationship_updates( requested );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    if( resolve_faction( target ) == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "target_not_found",
+            "The target faction does not exist"
+        } );
+    }
+    const auto found =
+        entry->relations.find( target.value() );
+    const bool was_defined =
+        found != entry->relations.end();
+    relationship_bits before;
+    if( was_defined ) {
+        before = found->second;
+    }
+    relationship_bits after = before;
+    for( const auto &update : updates ) {
+        after.set(
+            static_cast<std::size_t>(
+                update.first ),
+            update.second );
+    }
+    entry->relations[target.value()] = after;
+    sol::table before_value =
+        snapshot_relationship(
+            state, target.value(), before );
+    before_value["defined"] = was_defined;
+    sol::table after_value =
+        snapshot_relationship(
+            state, target.value(), after );
+    after_value["defined"] = true;
+    sol::table value = state.create_table();
+    value["before"] =
+        std::move( before_value );
+    value["after"] =
+        std::move( after_value );
+    value["changed"] =
+        !was_defined || before != after;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table player_faction( sol::this_state lua )
 {
     sol::state_view state( lua );
@@ -1208,6 +1343,16 @@ void install_faction_api(
         require_write();
         return set_faction_policy(
                    lua_state, id, options );
+    } );
+    factions.set_function(
+        "set_relationship",
+        [require_write]( sol::this_state lua_state,
+    const script_game_id & id,
+    const script_game_id & target,
+    const sol::table &options ) {
+        require_write();
+        return set_faction_relationship(
+                   lua_state, id, target, options );
     } );
     game["factions"] = std::move( factions );
 }
