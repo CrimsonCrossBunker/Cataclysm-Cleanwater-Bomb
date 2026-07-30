@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cstddef>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -144,12 +145,18 @@ sol::table snapshot_faction(
     result["name"] = entry.get_name();
     result["description"] =
         entry.desc.translated();
+    result["summary"] =
+        entry.describe();
     result["known_by_player"] =
         entry.known_by_u;
     sol::table reputation = lua.create_table();
     reputation["likes"] = entry.likes_u;
     reputation["respects"] = entry.respects_u;
     reputation["trusts"] = entry.trusts_u;
+    reputation["ranking"] =
+        fac_ranking_text( entry.likes_u );
+    reputation["respect"] =
+        fac_respect_text( entry.respects_u );
     result["reputation"] =
         std::move( reputation );
     sol::table resources = lua.create_table();
@@ -158,6 +165,12 @@ sol::table snapshot_faction(
     resources["wealth"] = entry.wealth;
     resources["food_kcal"] =
         entry.food_supply().kcal();
+    resources["wealth_description"] =
+        fac_wealth_text(
+            entry.wealth, entry.size );
+    resources["combat_ability"] =
+        fac_combat_ability_text(
+            entry.power );
     result["resources"] =
         std::move( resources );
     sol::table policy = lua.create_table();
@@ -477,6 +490,73 @@ sol::table faction_relationship(
                    state, std::move( value ) ) );
 }
 
+sol::table faction_food(
+    sol::this_state lua, const script_game_id &id,
+    const sol::optional<sol::table> &requested )
+{
+    const detail_options options =
+        read_detail_options(
+            requested, "game.factions.food" );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    const nutrients supply =
+        entry->food_supply();
+    const std::map<vitamin_id, int> vitamins =
+        supply.vitamins();
+    const std::size_t first =
+        std::min<std::size_t>(
+            options.offset, vitamins.size() );
+    const std::size_t last =
+        std::min<std::size_t>(
+            first + options.limit,
+            vitamins.size() );
+    sol::table items = state.create_table(
+                           static_cast<int>(
+                               last - first ), 0 );
+    auto iterator = vitamins.cbegin();
+    std::advance(
+        iterator,
+        static_cast<std::ptrdiff_t>( first ) );
+    for( std::size_t index = first;
+         index < last; ++index, ++iterator ) {
+        sol::table vitamin = state.create_table();
+        vitamin["id"] = script_game_id(
+                            "vitamin",
+                            iterator->first.str() );
+        vitamin["amount"] =
+            iterator->second;
+        items[index - first + 1] =
+            std::move( vitamin );
+    }
+    sol::table page = state.create_table();
+    page["items"] = std::move( items );
+    page["offset"] = options.offset;
+    page["limit"] = options.limit;
+    page["total"] = vitamins.size();
+    page["returned"] = last - first;
+    page["has_more"] =
+        last < vitamins.size();
+    sol::table value = state.create_table();
+    value["kcal"] = supply.kcal();
+    value["vitamins"] = std::move( page );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table player_faction( sol::this_state lua )
 {
     sol::state_view state( lua );
@@ -558,6 +638,15 @@ void install_faction_api(
         require_read();
         return faction_relationship(
                    lua_state, id, target );
+    } );
+    factions.set_function(
+        "food",
+        [require_read]( sol::this_state lua_state,
+    const script_game_id & id,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return faction_food(
+                   lua_state, id, options );
     } );
     game["factions"] = std::move( factions );
 }
