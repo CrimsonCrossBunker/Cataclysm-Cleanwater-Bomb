@@ -866,6 +866,86 @@ sol::table set_vehicle_tracking(
                    state, std::move( value ) ) );
 }
 
+sol::table set_vehicle_part_enabled(
+    sol::this_state lua, const game_handle &handle,
+    const int part_index, const bool enabled,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( part_index < 0 ||
+        part_index >= entry->part_count() ) {
+        throw std::invalid_argument(
+            "game.vehicles.set_part_enabled part index "
+            "is outside this vehicle" );
+    }
+    vehicle_part &part =
+        entry->part( part_index );
+    if( part.removed || part.is_fake ) {
+        return make_game_error_result(
+                   state, game_handle_error{
+            "invalid_part",
+            "The requested vehicle part is removed or synthetic"
+        } );
+    }
+    if( enabled && !part.is_available() ) {
+        return make_game_error_result(
+                   state, game_handle_error{
+            "unavailable",
+            "The requested vehicle part cannot be enabled"
+        } );
+    }
+    map &here = get_map();
+    sol::table before =
+        snapshot_live_part(
+            state, here, *entry,
+            part_index );
+    bool changed = false;
+    if( part.is_engine() ) {
+        changed = entry->start_engine(
+                      here, part, enabled );
+        if( changed && enabled ) {
+            entry->engine_on = true;
+        } else if( changed ) {
+            bool any_engine_enabled = false;
+            for( int index = 0;
+                 index < entry->part_count(); ++index ) {
+                const vehicle_part &candidate =
+                    entry->part( index );
+                if( candidate.is_engine() &&
+                    candidate.enabled &&
+                    candidate.is_available() ) {
+                    any_engine_enabled = true;
+                    break;
+                }
+            }
+            entry->engine_on =
+                any_engine_enabled;
+        }
+    } else if( part.enabled != enabled ) {
+        part.enabled = enabled;
+        changed = true;
+    }
+    entry->refresh();
+    sol::table value = state.create_table();
+    value["changed"] = changed;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_live_part(
+            state, here, *entry,
+            part_index );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vehicle_api(
@@ -966,6 +1046,17 @@ void install_vehicle_api(
         require_write();
         return set_vehicle_tracking(
                    lua_state, handle, enabled,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "set_part_enabled",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const int part_index, const bool enabled ) {
+        require_write();
+        return set_vehicle_part_enabled(
+                   lua_state, handle, part_index, enabled,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
