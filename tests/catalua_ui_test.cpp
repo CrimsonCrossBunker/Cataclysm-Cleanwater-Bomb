@@ -84,6 +84,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -412,6 +413,85 @@ class scoped_calendar_turn
 
     private:
         time_point previous_;
+};
+
+class scoped_weather_state
+{
+    public:
+        scoped_weather_state() :
+            weather_( get_weather() ),
+            temperature_( weather_.temperature ),
+            lightning_active_( weather_.lightning_active ),
+            weather_id_( weather_.weather_id ),
+            winddirection_( weather_.winddirection ),
+            windspeed_( weather_.windspeed ),
+            weather_changed_( weather_.weather_changed ),
+            forced_temperature_( weather_.forced_temperature ),
+            precise_( *weather_.weather_precise ),
+            wind_direction_override_(
+                weather_.wind_direction_override ),
+            windspeed_override_(
+                weather_.windspeed_override ),
+            weather_override_( weather_.weather_override ),
+            nextweather_( weather_.nextweather ),
+            temperature_cache_( weather_.temperature_cache ),
+            snow_depth_map_( weather_.snow_depth_map ) {}
+
+        scoped_weather_state(
+            const scoped_weather_state & ) = delete;
+        scoped_weather_state &operator=(
+            const scoped_weather_state & ) = delete;
+
+        ~scoped_weather_state() {
+            weather_.temperature = temperature_;
+            weather_.lightning_active =
+                lightning_active_;
+            weather_.weather_id = weather_id_;
+            weather_.winddirection = winddirection_;
+            weather_.windspeed = windspeed_;
+            weather_.weather_changed =
+                weather_changed_;
+            weather_.forced_temperature =
+                forced_temperature_;
+            *weather_.weather_precise = precise_;
+            weather_.wind_direction_override =
+                wind_direction_override_;
+            weather_.windspeed_override =
+                windspeed_override_;
+            weather_.weather_override =
+                weather_override_;
+            weather_.nextweather = nextweather_;
+            weather_.temperature_cache =
+                std::move( temperature_cache_ );
+            weather_.snow_depth_map =
+                std::move( snow_depth_map_ );
+        }
+
+    private:
+        weather_manager &weather_;
+        units::temperature temperature_;
+        bool lightning_active_;
+        weather_type_id weather_id_;
+        int winddirection_;
+        int windspeed_;
+        bool weather_changed_;
+        std::optional<units::temperature>
+        forced_temperature_;
+        w_point precise_;
+        std::optional<int>
+        wind_direction_override_;
+        std::optional<int>
+        windspeed_override_;
+        weather_type_id weather_override_;
+        time_point nextweather_;
+        std::unordered_map <
+        tripoint_bub_ms,
+        units::temperature >
+        temperature_cache_;
+        std::unordered_map <
+        tripoint_abs_omt,
+        omt_snow_state >
+        snow_depth_map_;
 };
 
 class scoped_lua_state_file
@@ -5315,6 +5395,317 @@ assert(game.time.set_now(
     CHECK( error.empty() );
     CHECK( calendar::turn ==
            turn.original() );
+}
+
+TEST_CASE( "lua_v5_native_weather_catalog_and_forecast_are_bounded",
+           "[lua][bindings][weather][read][integration]" )
+{
+    scoped_weather_state weather;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local clear_id = game.types.id(
+    "weather_type", "clear")
+local clear = game.weather.type(clear_id)
+assert(clear.id == clear_id)
+assert(type(clear.name) == "string")
+assert(type(clear.loaded) == "boolean")
+assert(type(clear.symbol) == "string")
+assert(type(clear.sun_symbol) == "string")
+assert(math.type(clear.ranged_penalty) == "integer")
+assert(type(clear.sight_penalty) == "number")
+assert(math.type(clear.light_modifier) == "integer")
+assert(type(clear.light_multiplier) == "number")
+assert(type(clear.sun_multiplier) == "number")
+assert(math.type(clear.sound_attenuation) == "integer")
+assert(type(clear.dangerous) == "boolean")
+assert(type(clear.precipitation) == "string")
+assert(type(clear.precipitation_mm_per_hour) ==
+    "number")
+assert(type(clear.rains) == "boolean")
+assert(type(clear.temperature_modifier_c) == "number")
+assert(math.type(clear.priority) == "integer")
+assert(type(clear.tiles_animation) == "string")
+assert(type(clear.sound_category) == "string")
+assert(type(clear.duration_min.turns) == "number")
+assert(clear.duration_max.turns >=
+    clear.duration_min.turns)
+assert(clear.required_weathers.returned ==
+    #clear.required_weathers.items)
+assert(clear.sources.returned ==
+    #clear.sources.items)
+
+local types = game.weather.types({
+    offset = 0,
+    limit = 1000000,
+    query = "clear",
+    dangerous = false,
+    rains = false
+})
+assert(types.limit == 256)
+assert(types.returned <= 256)
+assert(types.returned <= types.total)
+local found_clear = false
+for _, entry in ipairs(types.items) do
+    if entry.id == clear_id then
+        found_clear = true
+    end
+end
+assert(found_clear)
+
+local current = game.weather.current()
+assert(current.weather.kind == "weather_type")
+assert(current.weather:is_valid() == true)
+assert(current.type.id == current.weather)
+assert(current.temperature.kind == "temperature")
+assert(type(current.temperature_c) == "number")
+assert(math.type(current.wind_speed_mph) == "integer")
+assert(math.type(current.wind_direction_degrees) ==
+    "integer")
+assert(type(current.next_update.turn) == "number")
+assert(type(current.changed) == "boolean")
+assert(type(current.lightning_active) == "boolean")
+assert(current.precise.at == game.time.now())
+assert(current.precise.weather == current.weather)
+assert(current.precise.temperature.kind ==
+    "temperature")
+assert(type(current.precise.humidity) == "number")
+assert(type(current.precise.pressure) == "number")
+assert(type(current.precise.wind_speed_mph) ==
+    "number")
+assert(math.type(
+    current.precise.wind_direction_degrees) ==
+    "integer")
+assert(current.precise.position.origin == "abs")
+assert(current.precise.position.scale == "ms")
+
+local generator = game.weather.generator()
+assert(generator.id.kind == "weather_generator")
+assert(generator.id:is_valid() == true)
+assert(type(generator.loaded) == "boolean")
+assert(type(generator.base_temperature_c) ==
+    "number")
+assert(type(generator.base_humidity) == "number")
+assert(type(generator.base_pressure) == "number")
+assert(type(generator.base_wind_mph) == "number")
+assert(generator.blacklist.returned ==
+    #generator.blacklist.items)
+assert(generator.whitelist.returned ==
+    #generator.whitelist.items)
+assert(generator.sorted_weather.returned ==
+    #generator.sorted_weather.items)
+assert(type(generator.seasonal.spring) == "table")
+assert(type(generator.seasonal.winter) == "table")
+
+local forecast = game.weather.forecast({
+    start = game.time.now(),
+    position = current.precise.position,
+    step = game.time.duration(1, "minute"),
+    limit = 1000000,
+    respect_override = false
+})
+assert(forecast.limit == 168)
+assert(forecast.returned == 168)
+assert(#forecast.items == 168)
+assert(forecast.start == game.time.now())
+assert(forecast.step.turns == 60)
+assert(forecast.position ==
+    current.precise.position)
+assert(forecast.respected_override == false)
+for index, point in ipairs(forecast.items) do
+    assert(point.at.turn ==
+        forecast.start.turn + (index - 1) * 60)
+    assert(point.weather:is_valid() == true)
+    assert(point.temperature.kind == "temperature")
+    assert(type(point.temperature_c) == "number")
+    assert(type(point.humidity) == "number")
+    assert(type(point.pressure) == "number")
+    assert(type(point.precipitation_mm_per_hour) ==
+        "number")
+    assert(type(point.sunlight) == "number")
+    assert(type(point.sun_irradiance) == "number")
+    assert(type(point.moonlight) == "number")
+end
+local repeated = game.weather.forecast({
+    start = forecast.start,
+    position = forecast.position,
+    step = forecast.step,
+    limit = 1,
+    respect_override = false
+})
+assert(repeated.items[1].weather ==
+    forecast.items[1].weather)
+assert(repeated.items[1].temperature ==
+    forecast.items[1].temperature)
+assert(repeated.items[1].humidity ==
+    forecast.items[1].humidity)
+
+local limits = game.weather.limits()
+assert(limits.catalog_limit == 256)
+assert(limits.forecast_limit == 168)
+assert(limits.forecast_minimum_step.turns == 60)
+assert(limits.forecast_maximum_step.turns >
+    limits.forecast_minimum_step.turns)
+assert(limits.forecast_maximum_horizon.turns > 0)
+assert(limits.maximum_wind_speed_mph == 300)
+assert(limits.maximum_temperature_kelvin == 1000)
+
+assert(pcall(function()
+    game.weather.types({ unknown = true })
+end) == false)
+assert(pcall(function()
+    game.weather.type(
+        game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.weather.forecast({
+        step = game.time.duration(1, "second")
+    })
+end) == false)
+assert(pcall(function()
+    game.weather.forecast({
+        step = game.time.duration(24, "hour"),
+        limit = 168
+    })
+end) == false)
+assert(pcall(function()
+    game.weather.forecast({
+        position = game.coords.tripoint(
+            "rel", "ms", 0, 0, 0)
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_native_weather_overrides_are_checked_and_reversible",
+           "[lua][bindings][weather][write][integration]" )
+{
+    scoped_weather_state weather;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local clear_id = game.types.id(
+    "weather_type", "clear")
+local forced = game.weather.set_override(clear_id)
+assert(forced.ok == true)
+assert(forced.value.weather == clear_id)
+assert(forced.value.weather_override == clear_id)
+
+local temperature =
+    game.units.new("temperature", 21, "celsius")
+local heated =
+    game.weather.set_temperature_override(
+        temperature)
+assert(heated.ok == true)
+assert(heated.value.temperature_override.kind ==
+    "temperature")
+assert(heated.value.temperature_override:value(
+    "celsius") > 20.99)
+assert(heated.value.temperature_override:value(
+    "celsius") < 21.01)
+
+local wind = game.weather.set_wind({
+    speed_mph = 37,
+    direction_degrees = 91
+})
+assert(wind.ok == true)
+assert(wind.value.wind_speed_override_mph == 37)
+assert(wind.value.wind_direction_override_degrees ==
+    91)
+assert(wind.value.wind_speed_mph == 37)
+assert(wind.value.wind_direction_degrees == 91)
+
+local cleared_temperature =
+    game.weather.clear_temperature_override()
+assert(cleared_temperature.ok == true)
+assert(cleared_temperature.value.temperature_override ==
+    nil)
+local cleared_weather =
+    game.weather.clear_override()
+assert(cleared_weather.ok == true)
+assert(cleared_weather.value.weather_override == nil)
+local cleared_wind = game.weather.set_wind({
+    clear_speed = true,
+    clear_direction = true
+})
+assert(cleared_wind.ok == true)
+assert(cleared_wind.value.wind_speed_override_mph ==
+    nil)
+assert(cleared_wind.value.
+    wind_direction_override_degrees == nil)
+
+assert(game.weather.set_override(clear_id).ok == true)
+assert(game.weather.set_temperature_override(
+    game.units.new("temperature", 280, "kelvin")
+).ok == true)
+assert(game.weather.set_wind({
+    speed_mph = 12,
+    direction_degrees = 270
+}).ok == true)
+local cleared = game.weather.clear_overrides()
+assert(cleared.ok == true)
+assert(cleared.value.weather_override == nil)
+assert(cleared.value.temperature_override == nil)
+assert(cleared.value.wind_speed_override_mph == nil)
+assert(cleared.value.
+    wind_direction_override_degrees == nil)
+assert(game.weather.refresh().ok == true)
+
+assert(pcall(function()
+    game.weather.set_override(
+        game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.weather.set_temperature_override(
+        game.units.new("mass", 1, "gram"))
+end) == false)
+assert(pcall(function()
+    game.weather.set_temperature_override(
+        game.units.new(
+            "temperature", 1001, "kelvin"))
+end) == false)
+assert(pcall(function()
+    game.weather.set_wind({})
+end) == false)
+assert(pcall(function()
+    game.weather.set_wind({
+        speed_mph = 301
+    })
+end) == false)
+assert(pcall(function()
+    game.weather.set_wind({
+        direction_degrees = 360
+    })
+end) == false)
+assert(pcall(function()
+    game.weather.set_wind({
+        speed_mph = 1,
+        clear_speed = true
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
