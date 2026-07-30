@@ -2380,6 +2380,96 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_character_vitamins_follow_native_pool_rules",
+           "[lua][bindings][vitamins][pools][integration]" )
+{
+    avatar &player = get_avatar();
+    const vitamin_id vitamin_c( "vitC" );
+    REQUIRE( vitamin_c.is_valid() );
+    const int original_amount =
+        player.vitamin_get( vitamin_c );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local vitamin_c = game.types.id("vitamin", "vitC")
+
+local before = game.vitamins.get(avatar, vitamin_c)
+assert(before.ok == true)
+assert(before.value.id == vitamin_c)
+assert(math.type(before.value.amount) == "integer")
+assert(math.type(before.value.severity) == "integer")
+assert(math.type(before.value.daily_actual) == "integer")
+assert(math.type(before.value.daily_estimated) == "integer")
+assert(before.value.rate.turns >= 0)
+
+local states = game.vitamins.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(states.ok == true)
+assert(states.value.limit == 256)
+assert(states.value.returned == #states.value.items)
+assert(states.value.returned <= states.value.total)
+
+local assigned = game.vitamins.set(avatar, vitamin_c, 10)
+assert(assigned.ok == true)
+assert(assigned.value.requested == 10)
+assert(assigned.value.after.amount == 10)
+assert(type(assigned.value.clamped) == "boolean")
+
+local modified = game.vitamins.modify(avatar, vitamin_c, 5)
+assert(modified.ok == true)
+assert(modified.value.requested_delta == 5)
+assert(modified.value.applied_delta == 5)
+assert(modified.value.after.amount == 15)
+
+local reset = game.vitamins.reset_daily(avatar, vitamin_c)
+assert(reset.ok == true)
+assert(reset.value.after.daily_actual == 0)
+assert(reset.value.after.daily_estimated == 0)
+
+assert(pcall(function()
+    game.vitamins.get(
+        avatar, game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.vitamins.set(avatar, vitamin_c, 1000000001)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.vitamin_get( vitamin_c ) == 15 );
+    player.vitamin_set( vitamin_c, original_amount );
+    player.reset_daily_vitamin( vitamin_c );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.vitamins.modify(
+    game.characters.avatar(),
+    game.types.id("vitamin", "vitC"), 1)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.vitamin_get( vitamin_c ) ==
+           original_amount );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
