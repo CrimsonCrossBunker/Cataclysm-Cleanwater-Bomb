@@ -1,0 +1,28 @@
+[
+  {
+    "type": "effect_type",
+    "id": "fcl_cureall",
+    "max_duration": "10 s",
+    "removes_effects": [
+        "bite",
+        "bleed",
+        "redcells_anemia",
+        "hypovolemia",
+        "shakes",
+        "stunned",
+        "winded",
+        "winded_leg_l",
+        "winded_leg_r",
+        "winded_arm_l",
+        "winded_arm_r",
+        "hypocalcemia",
+        "anemia",
+        "scurvy"
+    ],
+    "base_mods": {
+      "hurt_amount": [ -10 ],
+      "h_mod_min": [ 25 ],
+      "health_min": [ 100 ]
+    }
+  }
+]
