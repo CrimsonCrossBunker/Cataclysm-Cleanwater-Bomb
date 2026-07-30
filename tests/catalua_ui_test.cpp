@@ -2714,6 +2714,122 @@ end) == false)
         original_sleep_deprivation );
 }
 
+TEST_CASE( "lua_v5_calorie_sleep_and_health_services_use_native_rules",
+           "[lua][bindings][needs][health][integration]" )
+{
+    avatar &player = get_avatar();
+    const int original_kcal = player.get_stored_kcal();
+    const time_duration original_daily_sleep =
+        player.get_daily_sleep();
+    const time_duration original_continuous_sleep =
+        player.get_continuous_sleep();
+    const int original_lifestyle = player.get_lifestyle();
+    const int original_daily_health =
+        player.get_daily_health();
+    const int original_health_tally =
+        player.get_health_tally();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local initial = game.needs.get(avatar).value
+
+local calories = game.needs.set_calories(avatar, 40000)
+assert(calories.ok == true)
+assert(calories.value.requested == 40000)
+assert(calories.value.after.stored_kcal == 40000)
+local calorie_delta = game.needs.modify_calories(
+    avatar, 100, true)
+assert(calorie_delta.ok == true)
+assert(calorie_delta.value.requested_delta == 100)
+assert(calorie_delta.value.after.stored_kcal == 40100)
+
+local sleep = game.needs.modify_sleep(avatar, {
+    daily = game.time.duration(1, "hour"),
+    continuous = game.time.duration(30, "minute")
+})
+assert(sleep.ok == true)
+assert(sleep.value.after.daily_sleep.turns ==
+    initial.daily_sleep.turns + 3600)
+assert(sleep.value.after.continuous_sleep.turns ==
+    initial.continuous_sleep.turns + 1800)
+local reset = game.needs.reset_sleep(avatar, "all")
+assert(reset.ok == true)
+assert(reset.value.after.daily_sleep.turns == 0)
+assert(reset.value.after.continuous_sleep.turns == 0)
+
+local health = game.needs.set_health(avatar, {
+    lifestyle = 10,
+    daily_health = 20
+})
+assert(health.ok == true)
+assert(health.value.after.daily_health == 20)
+local changed_health = game.needs.modify_health(avatar, {
+    lifestyle = 5,
+    daily_health = 5,
+    daily_health_cap = 25,
+    health_tally = 2
+})
+assert(changed_health.ok == true)
+assert(changed_health.value.after.daily_health == 25)
+assert(changed_health.value.after.health_tally ==
+    changed_health.value.before.health_tally + 2)
+
+assert(pcall(function()
+    game.needs.set_calories(avatar, -1)
+end) == false)
+assert(pcall(function()
+    game.needs.modify_sleep(avatar, {
+        daily = game.time.duration(367, "day")
+    })
+end) == false)
+assert(pcall(function()
+    game.needs.modify_health(avatar, { daily_health = 1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_stored_kcal() == 40100 );
+    CHECK( player.get_daily_sleep() == 0_turns );
+    CHECK( player.get_continuous_sleep() == 0_turns );
+    CHECK( player.get_daily_health() == 25 );
+
+    player.set_stored_kcal( original_kcal );
+    player.reset_daily_sleep();
+    player.mod_daily_sleep( original_daily_sleep );
+    player.reset_continuous_sleep();
+    player.mod_continuous_sleep(
+        original_continuous_sleep );
+    player.set_lifestyle( original_lifestyle );
+    player.set_daily_health( original_daily_health );
+    player.mod_health_tally(
+        original_health_tally -
+        player.get_health_tally() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.needs.set_calories(game.characters.avatar(), 40000)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.get_stored_kcal() == original_kcal );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
