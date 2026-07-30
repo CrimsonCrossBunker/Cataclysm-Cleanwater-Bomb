@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <map>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -33,6 +35,7 @@ constexpr std::size_t maximum_prototype_parts = 256;
 constexpr int default_part_limit = 128;
 constexpr int maximum_part_limit = 256;
 constexpr int maximum_part_offset = 1000000;
+constexpr std::size_t maximum_fuel_entries = 128;
 
 struct definition_options {
     int offset = 0;
@@ -347,6 +350,20 @@ sol::table snapshot_live_vehicle(
     result["parts"] = entry.part_count();
     result["real_parts"] =
         entry.part_count_real();
+    if( entry.owner.is_null() ) {
+        result["owner"] = sol::nil;
+    } else {
+        result["owner"] = script_game_id(
+                              "faction",
+                              entry.owner.str() );
+    }
+    if( entry.old_owner.is_null() ) {
+        result["old_owner"] = sol::nil;
+    } else {
+        result["old_owner"] = script_game_id(
+                                  "faction",
+                                  entry.old_owner.str() );
+    }
     result["motion"] =
         snapshot_motion( lua, here, entry );
     result["lift"] =
@@ -581,6 +598,66 @@ sol::table list_live_parts(
                    state, std::move( value ) ) );
 }
 
+sol::table list_vehicle_fuels(
+    sol::this_state lua, const game_handle &handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::map<itype_id, int> stored =
+        entry->fuels_left();
+    const std::map<itype_id, units::power> usage =
+        entry->fuel_usage();
+    std::set<itype_id> ids;
+    for( const auto &fuel : stored ) {
+        ids.insert( fuel.first );
+    }
+    for( const auto &fuel : usage ) {
+        ids.insert( fuel.first );
+    }
+    const std::size_t returned = std::min(
+                                     ids.size(),
+                                     maximum_fuel_entries );
+    map &here = get_map();
+    sol::table items = state.create_table(
+                           static_cast<int>( returned ), 0 );
+    std::size_t index = 0;
+    for( const itype_id &id : ids ) {
+        if( index >= returned ) {
+            break;
+        }
+        sol::table value = state.create_table();
+        value["id"] =
+            script_game_id( "item", id.str() );
+        value["remaining"] =
+            entry->fuel_left( here, id );
+        value["capacity"] =
+            entry->fuel_capacity( here, id );
+        const auto usage_entry = usage.find( id );
+        value["basic_consumption_milliwatts"] =
+            usage_entry == usage.end() ?
+            0 : units::to_milliwatt(
+                usage_entry->second );
+        items[index + 1] = std::move( value );
+        ++index;
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["total"] = ids.size();
+    value["returned"] = returned;
+    value["truncated"] = returned < ids.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vehicle_api(
@@ -627,6 +704,16 @@ void install_vehicle_api(
         require_read();
         return list_live_parts(
                    lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "fuels",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        return list_vehicle_fuels(
+                   lua_state, handle,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
