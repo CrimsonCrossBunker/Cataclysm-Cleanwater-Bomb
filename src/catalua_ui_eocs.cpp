@@ -482,6 +482,47 @@ sol::table activate_eoc(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table queue_eoc(
+    sol::this_state lua, const script_game_id &id,
+    const script_time_duration &delay,
+    const sol::optional<sol::table> &options,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_eoc_id( id, "game.eocs.queue" );
+    if( delay.turns() < 0 ) {
+        throw std::invalid_argument(
+            "game.eocs.queue delay cannot be negative" );
+    }
+    sol::state_view state( lua );
+    prepared_eoc_dialogue prepared = prepare_eoc_dialogue(
+                                         options, runtime_generation,
+                                         world_generation );
+    if( prepared.error ) {
+        return make_game_error_result( state, *prepared.error );
+    }
+    talker *alpha = prepared.conversation->actor( false );
+    Character *character =
+        alpha == nullptr ? nullptr : alpha->get_character();
+    if( character == nullptr ) {
+        return make_game_error_result(
+                   state, {
+            "wrong_subtype",
+            "game.eocs.queue alpha must reference a character"
+        } );
+    }
+    effect_on_conditions::queue_effect_on_condition(
+        delay.to_native(), effect_on_condition_id( id.value() ),
+        *character, prepared.conversation->get_context() );
+    sol::table value = state.create_table();
+    value["queued"] = true;
+    value["delay"] = delay;
+    value["eoc"] = id;
+    value["character_id"] = character->getID().get_value();
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_eoc_api(
@@ -533,6 +574,21 @@ void install_eoc_api(
             has_active_callback, "game.eocs.activate" );
         return activate_eoc(
                    lua_state, id, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    eocs.set_function(
+        "queue",
+        [current_runtime_generation, current_world_generation,
+         require_write, has_active_callback](
+            sol::this_state lua_state, const script_game_id & id,
+            const script_time_duration & delay,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        require_active_callback(
+            has_active_callback, "game.eocs.queue" );
+        return queue_eoc(
+                   lua_state, id, delay, options,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
