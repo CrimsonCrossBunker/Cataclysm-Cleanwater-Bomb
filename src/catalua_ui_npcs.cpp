@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -35,6 +37,7 @@ constexpr int default_state_limit = 64;
 constexpr int maximum_state_limit = 256;
 constexpr int maximum_state_offset = 1000000;
 constexpr std::size_t maximum_npc_name_bytes = 256;
+constexpr int maximum_opinion_delta = 1000000;
 
 struct definition_options {
     int offset = 0;
@@ -635,6 +638,153 @@ sol::table set_npc_attitude(
                    state, std::move( value ) ) );
 }
 
+struct opinion_deltas {
+    std::optional<int> trust;
+    std::optional<int> fear;
+    std::optional<int> value;
+    std::optional<int> anger;
+    std::optional<int> owed;
+    std::optional<int> sold;
+};
+
+opinion_deltas read_opinion_deltas(
+    const sol::table &requested )
+{
+    opinion_deltas result;
+    for( const auto &entry : requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.npcs.modify_opinion option keys must be strings" );
+        }
+        const std::string key =
+            entry.first.as<std::string>();
+        if( key != "trust" && key != "fear" &&
+            key != "value" && key != "anger" &&
+            key != "owed" && key != "sold" ) {
+            throw std::invalid_argument(
+                "game.npcs.modify_opinion received unknown option '" +
+                key + "'" );
+        }
+        if( !entry.second.is<int>() ) {
+            throw std::invalid_argument(
+                "game.npcs.modify_opinion option '" + key +
+                "' must be an integer" );
+        }
+        const int delta = entry.second.as<int>();
+        if( delta < -maximum_opinion_delta ||
+            delta > maximum_opinion_delta ) {
+            throw std::invalid_argument(
+                "game.npcs.modify_opinion option '" + key +
+                "' must be within -1000000..1000000" );
+        }
+        if( key == "trust" ) {
+            result.trust = delta;
+        } else if( key == "fear" ) {
+            result.fear = delta;
+        } else if( key == "value" ) {
+            result.value = delta;
+        } else if( key == "anger" ) {
+            result.anger = delta;
+        } else if( key == "owed" ) {
+            result.owed = delta;
+        } else {
+            result.sold = delta;
+        }
+    }
+    if( !result.trust && !result.fear &&
+        !result.value && !result.anger &&
+        !result.owed && !result.sold ) {
+        throw std::invalid_argument(
+            "game.npcs.modify_opinion requires at least one delta" );
+    }
+    return result;
+}
+
+int adjusted_opinion_value(
+    const int current, const int delta,
+    const bool nonnegative )
+{
+    const std::int64_t adjusted =
+        static_cast<std::int64_t>( current ) +
+        static_cast<std::int64_t>( delta );
+    const std::int64_t minimum =
+        nonnegative ? 0 :
+        std::numeric_limits<int>::min();
+    return static_cast<int>(
+               std::clamp<std::int64_t>(
+                   adjusted, minimum,
+                   std::numeric_limits<int>::max() ) );
+}
+
+sol::table modify_npc_opinion(
+    sol::this_state lua, const game_handle &handle,
+    const sol::table &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const opinion_deltas deltas =
+        read_opinion_deltas( requested );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    sol::table before =
+        snapshot_opinion(
+            state, entry->op_of_u );
+    if( deltas.trust ) {
+        entry->op_of_u.trust =
+            adjusted_opinion_value(
+                entry->op_of_u.trust,
+                *deltas.trust, false );
+    }
+    if( deltas.fear ) {
+        entry->op_of_u.fear =
+            adjusted_opinion_value(
+                entry->op_of_u.fear,
+                *deltas.fear, false );
+    }
+    if( deltas.value ) {
+        entry->op_of_u.value =
+            adjusted_opinion_value(
+                entry->op_of_u.value,
+                *deltas.value, false );
+    }
+    if( deltas.anger ) {
+        entry->op_of_u.anger =
+            adjusted_opinion_value(
+                entry->op_of_u.anger,
+                *deltas.anger, false );
+    }
+    if( deltas.owed ) {
+        entry->op_of_u.owed =
+            adjusted_opinion_value(
+                entry->op_of_u.owed,
+                *deltas.owed, false );
+    }
+    if( deltas.sold ) {
+        entry->op_of_u.sold =
+            adjusted_opinion_value(
+                entry->op_of_u.sold,
+                *deltas.sold, true );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_opinion(
+            state, entry->op_of_u );
+    value["effective"] =
+        snapshot_opinion(
+            state, entry->get_opinion_values(
+                get_avatar() ) );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_npc_api(
@@ -703,6 +853,17 @@ void install_npc_api(
         require_write();
         return set_npc_attitude(
                    lua_state, handle, attitude,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    npcs.set_function(
+        "modify_opinion",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table &deltas ) {
+        require_write();
+        return modify_npc_opinion(
+                   lua_state, handle, deltas,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
