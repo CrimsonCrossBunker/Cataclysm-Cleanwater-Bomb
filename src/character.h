@@ -3847,6 +3847,9 @@ class Character : public Creature, public visitable
                                        const std::function<bool( const item & )> &filter = return_true<item>,
                                        const std::vector<tripoint_bub_ms> &reachable_pts = {}, bool select_ind = false,
                                        bool disable_preference = false );
+        std::optional<item_components> preview_crafting_components(
+            const std::vector<comp_selection<item_comp>> &selections, int batch,
+            const std::function<bool( const item & )> &filter );
         // Selects one entry in components using select_item_component and consumes those items.
         std::list<item> consume_items( const std::vector<item_comp> &components, int batch = 1,
                                        const std::function<bool( const item & )> &filter = return_true<item>,

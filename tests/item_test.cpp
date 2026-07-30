@@ -1280,6 +1280,19 @@ TEST_CASE( "item_rotten_contents", "[item]" )
     CHECK( wrapper.get_category_of_contents().id == item_category_food );
 }
 
+TEST_CASE( "item_relative_rot_after_is_non_mutating", "[item][rot]" )
+{
+    item butter( itype_butter );
+    butter.set_relative_rot( 0.5 );
+    const double initial_rot = butter.get_relative_rot();
+
+    const double simulated_rot = butter.get_relative_rot_after( temperatures::normal, 1.0f,
+                                  1_hours );
+
+    CHECK( butter.get_relative_rot() == initial_rot );
+    CHECK( simulated_rot > initial_rot );
+}
+
 static bool uncraft_need_to_be_checked( const item &it )
 {
     // skip items that do not have uncraft

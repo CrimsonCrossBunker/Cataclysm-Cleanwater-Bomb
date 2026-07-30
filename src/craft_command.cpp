@@ -7,8 +7,10 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "activity_actor_definitions.h"
 #include "character.h"
@@ -41,6 +43,7 @@
 #include "vehicle.h"
 #include "visitable.h"
 #include "vpart_position.h"
+#include "weather.h"
 
 static const itype_id itype_candle( "candle" );
 
@@ -477,8 +480,6 @@ static bool should_add_crafting_faults( Character *who, const recipe *rec )
     }
     return false;
 }
-
-
 std::vector<std::vector<step_tool_alloc>> select_step_tool_allocs(
         Character &crafter, const recipe &rec, int batch, read_only_visitable &map_inv,
         bool &cancelled, int reselect_step )
@@ -640,6 +641,36 @@ item craft_command::create_in_progress_craft()
             step0.push_back( alloc );
         }
         start_allocs = { step0 };
+    }
+
+    std::optional<item_components> preview_used = crafter->preview_crafting_components(
+                item_selections, batch_size, filter );
+    if( !preview_used ) {
+        debugmsg( "Aborting crafting: couldn't preview selected components" );
+        return item();
+    }
+
+    // The preview uses copies of the selected components and follows the same
+    // inheritance path as the craft that will be created below.
+    item preview( rec, batch_size, *preview_used, std::vector<item_comp> {}, false );
+    const time_duration expected_duration = time_duration::from_moves(
+                crafter->expected_time_to_craft( *rec, batch_size ) );
+    const double predicted_rot = preview.get_relative_rot_after(
+                                     get_weather().get_temperature( crafter->pos_bub() ), 1.0f,
+                                     expected_duration );
+    if( preview.goes_bad() && crafter->is_avatar() ) {
+        const time_duration predicted_remaining = preview.get_shelf_life() -
+                preview.get_shelf_life() * predicted_rot;
+        if( predicted_rot >= 1.0 || predicted_remaining <= 3_hours ) {
+            const char *warning = predicted_rot >= 1.0
+                                  ? _( "The selected ingredients may be rotten before this craft "
+                                       "finishes.\nStart crafting anyway?" )
+                                  : _( "The finished item may only have one to three hour or less of shelf life "
+                                       "left.\nStart crafting anyway?" );
+            if( !crafter->query_yn( warning ) ) {
+                return item();
+            }
+        }
     }
 
     // Run the start (bucket-0) tool debit on a probe before consuming components

@@ -99,6 +99,8 @@ static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
 static const activity_id ACT_DISASSEMBLE( "ACT_DISASSEMBLE" );
 
+static const itype_id itype_water_faucet( "water_faucet" );
+
 static const efftype_id effect_contacts( "contacts" );
 static const efftype_id effect_transition_contacts( "transition_contacts" );
 
@@ -3205,6 +3207,223 @@ static void empty_buckets( Character &p )
         it.clear_items();
         drop_or_handle( it, p );
     }
+}
+
+namespace
+{
+
+struct crafting_component_preview {
+    item_location location;
+    item snapshot;
+    int quantity = 0;
+    bool by_charges = false;
+    bool infinite_map_source = false;
+    vehicle *vehicle_source = nullptr;
+    itype_id vehicle_fuel_type;
+};
+
+void append_preview_source_locations( item_location location,
+                                      const std::function<bool( const item & )> &filter,
+                                      std::vector<item_location> &locations )
+{
+    if( filter( *location ) ) {
+        locations.push_back( location );
+    }
+    for( item *contained : location->all_items_top( pocket_type::CONTAINER ) ) {
+        append_preview_source_locations( item_location( location, contained ), filter, locations );
+    }
+}
+
+std::vector<item_location> preview_source_locations( Character &crafter,
+        const comp_selection<item_comp> &selection,
+        const std::function<bool( const item & )> &filter, bool preferred )
+{
+    const itype_id type = selection.comp.type;
+    const std::function<bool( const item & )> source_filter =
+        [&filter, &type, preferred]( const item &candidate ) {
+            return candidate.typeId() == type && filter( candidate ) &&
+                   ( !preferred || is_preferred_component( candidate ) );
+        };
+    std::vector<item_location> locations;
+    map &here = get_map();
+    if( selection.use_from & usage_from::map ) {
+        const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
+                    crafter.pos_bub(), PICKUP_RANGE, 1, 100 );
+        for( const tripoint_bub_ms &point : reachable ) {
+            if( !here.accessible_items( point ) ) {
+                continue;
+            }
+            std::list<item_location> at_point = here.items_with( point, []( const item & ) {
+                return true;
+            } );
+            for( item_location &location : at_point ) {
+                append_preview_source_locations( location, source_filter, locations );
+            }
+        }
+    }
+    if( selection.use_from & usage_from::player ) {
+        for( item *candidate : crafter.items_with( source_filter ) ) {
+            locations.emplace_back( crafter, candidate );
+        }
+    }
+    return locations;
+}
+
+std::optional<item> preview_infinite_map_charge_source( Character &crafter, const itype_id &type )
+{
+    map &here = get_map();
+    const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
+                crafter.pos_bub(), PICKUP_RANGE, 1, 100 );
+    for( const tripoint_bub_ms &point : reachable ) {
+        item source = here.liquid_from( point );
+        if( source.typeId() == type && source.charges == item::INFINITE_CHARGES ) {
+            return source;
+        }
+    }
+    return std::nullopt;
+}
+
+void add_vehicle_preview_source( const tripoint_bub_ms &point, const itype_id &type,
+                                 int &remaining, std::vector<crafting_component_preview> &sources )
+{
+    map &here = get_map();
+    const itype_id vehicle_tool_type = type.obj().phase > phase_id::SOLID ?
+                                       itype_water_faucet : type;
+    const optional_vpart_position vehicle_position = here.veh_at( point );
+    if( !vehicle_position ) {
+        return;
+    }
+    const std::optional<vpart_reference> tool_part = vehicle_position->part_with_tool( here,
+            vehicle_tool_type );
+    if( !tool_part ) {
+        return;
+    }
+    const itype_id &tool_fuel_type = type->tool_slot_first_ammo();
+    const itype_id &fuel_type = tool_fuel_type.is_null() ? type : tool_fuel_type;
+    vehicle &source_vehicle = tool_part->vehicle();
+    int already_planned = 0;
+    for( const crafting_component_preview &source : sources ) {
+        if( source.vehicle_source == &source_vehicle && source.vehicle_fuel_type == fuel_type ) {
+            already_planned += source.quantity;
+        }
+    }
+    const int available = static_cast<int>( source_vehicle.fuel_left( here, fuel_type ) ) -
+                          already_planned;
+    const int quantity = std::min( remaining, available );
+    if( quantity <= 0 ) {
+        return;
+    }
+    item snapshot( type, calendar::turn_zero );
+    snapshot.charges = quantity;
+    sources.push_back( { item_location::nowhere, snapshot, quantity, true, false,
+                         &source_vehicle, fuel_type } );
+    remaining -= quantity;
+}
+
+} // namespace
+
+std::optional<item_components> Character::preview_crafting_components(
+    const std::vector<comp_selection<item_comp>> &selections, int batch,
+    const std::function<bool( const item & )> &filter )
+{
+    std::vector<crafting_component_preview> sources;
+    for( const comp_selection<item_comp> &selection : selections ) {
+        const bool by_charges = item::count_by_charges( selection.comp.type ) &&
+                                selection.comp.count > 0;
+        int remaining = selection.comp.count > 0 ? selection.comp.count * batch :
+                        std::abs( selection.comp.count );
+        if( by_charges && ( selection.use_from & usage_from::map ) ) {
+            std::optional<item> infinite_source = preview_infinite_map_charge_source( *this,
+                    selection.comp.type );
+            if( infinite_source ) {
+                infinite_source->charges = remaining;
+                sources.push_back( { item_location::nowhere, *infinite_source, remaining, true,
+                                     true, nullptr, itype_id() } );
+                remaining = 0;
+            }
+        }
+        std::vector<item_location> planned_locations;
+        const auto add_candidate = [&sources, &planned_locations, &remaining, by_charges](
+        item_location &location ) {
+            if( remaining <= 0 || std::find( planned_locations.begin(), planned_locations.end(),
+                                             location ) != planned_locations.end() ) {
+                return;
+            }
+            int already_planned = 0;
+            for( const crafting_component_preview &source : sources ) {
+                if( source.location == location ) {
+                    already_planned += source.quantity;
+                }
+            }
+            const int available = by_charges ? location->charges - already_planned :
+                                  ( already_planned == 0 ? 1 : 0 );
+            const int quantity = by_charges ? std::min( remaining, available ) : 1;
+            if( quantity <= 0 ) {
+                return;
+            }
+            item snapshot = *location;
+            if( by_charges && quantity < snapshot.charges ) {
+                snapshot.mod_charges( quantity - snapshot.charges );
+            }
+            sources.push_back( { location, snapshot, quantity, by_charges, false, nullptr,
+                                 itype_id() } );
+            planned_locations.push_back( location );
+            remaining -= quantity;
+        };
+        for( int pass = 0; pass < 2 && remaining > 0; ++pass ) {
+            const bool preferred = pass == 0;
+            if( selection.use_from & usage_from::map ) {
+                comp_selection<item_comp> map_selection = selection;
+                map_selection.use_from = usage_from::map;
+                std::vector<item_location> map_candidates = preview_source_locations(
+                            *this, map_selection, filter, preferred );
+                map &here = get_map();
+                const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
+                            pos_bub(), PICKUP_RANGE, 1, 100 );
+                const bool vehicle_first = !by_charges;
+                for( const tripoint_bub_ms &point : reachable ) {
+                    for( item_location &location : map_candidates ) {
+                        const bool vehicle_location = location.where_recursive() ==
+                                                      item_location::type::vehicle;
+                        if( location.pos_bub( here ) == point &&
+                            vehicle_location == vehicle_first ) {
+                            add_candidate( location );
+                        }
+                    }
+                    if( by_charges && remaining > 0 ) {
+                        add_vehicle_preview_source( point, selection.comp.type, remaining,
+                                                    sources );
+                    }
+                    for( item_location &location : map_candidates ) {
+                        const bool vehicle_location = location.where_recursive() ==
+                                                      item_location::type::vehicle;
+                        if( location.pos_bub( here ) == point &&
+                            vehicle_location != vehicle_first ) {
+                            add_candidate( location );
+                        }
+                    }
+                }
+            }
+            if( selection.use_from & usage_from::player && remaining > 0 ) {
+                comp_selection<item_comp> player_selection = selection;
+                player_selection.use_from = usage_from::player;
+                std::vector<item_location> player_candidates = preview_source_locations(
+                            *this, player_selection, filter, preferred );
+                for( item_location &location : player_candidates ) {
+                    add_candidate( location );
+                }
+            }
+        }
+        if( remaining > 0 ) {
+            return std::nullopt;
+        }
+    }
+
+    item_components preview;
+    for( crafting_component_preview &source : sources ) {
+        preview.add( source.snapshot );
+    }
+    return preview;
 }
 
 std::list<item> Character::consume_items( const comp_selection<item_comp> &is, int batch,
