@@ -1,9 +1,11 @@
 #include "catalua_ui_eocs.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -11,11 +13,16 @@
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
+#include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
+#include "creature.h"
+#include "dialogue.h"
 #include "effect_on_condition.h"
 #include "enum_conversions.h"
 #include "event.h"
+#include "math_parser_diag_value.h"
 
 namespace cata::lua_ui
 {
@@ -27,6 +34,11 @@ constexpr int default_page_limit = 64;
 constexpr int maximum_page_limit = 256;
 constexpr int maximum_page_offset = 1000000;
 constexpr std::size_t maximum_query_bytes = 128;
+constexpr std::size_t maximum_context_entries = 128;
+constexpr std::size_t maximum_context_key_bytes = 128;
+constexpr std::size_t maximum_context_string_bytes = 8192;
+constexpr std::size_t maximum_context_nodes = 512;
+constexpr int maximum_context_depth = 8;
 
 struct eoc_list_options {
     int offset = 0;
@@ -166,7 +178,263 @@ sol::table get_eoc(
     return make_game_value_result(
                state, sol::make_object(
                    state, snapshot_eoc(
-                       state, effect_on_condition_id( id.value() ).obj() ) ) );
+                   state, effect_on_condition_id( id.value() ).obj() ) ) );
+}
+
+void require_active_callback(
+    const std::function<bool()> &has_active_callback,
+    const std::string_view api_name )
+{
+    if( !has_active_callback() ) {
+        throw std::runtime_error(
+            std::string( api_name ) +
+            " is only available from an active callback" );
+    }
+}
+
+void validate_context_key( const std::string &key )
+{
+    if( key.empty() || key.size() > maximum_context_key_bytes ||
+        std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
+    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+} ) ) {
+        throw std::invalid_argument(
+            "game.eocs context keys must contain 1..128 printable bytes" );
+    }
+}
+
+diag_value context_value_from_lua(
+    const sol::object &value, const std::string &key )
+{
+    if( value.get_type() == sol::type::boolean ) {
+        return diag_value( value.as<bool>() ? 1.0 : 0.0 );
+    }
+    if( value.get_type() == sol::type::number ) {
+        const double number = value.as<double>();
+        if( !std::isfinite( number ) ) {
+            throw std::invalid_argument(
+                "game.eocs context value '" + key +
+                "' must be finite" );
+        }
+        return diag_value( number );
+    }
+    if( value.get_type() == sol::type::string ) {
+        const std::string text = value.as<std::string>();
+        if( text.size() > maximum_context_string_bytes ) {
+            throw std::invalid_argument(
+                "game.eocs context value '" + key +
+                "' exceeds 8192 bytes" );
+        }
+        return diag_value( text );
+    }
+    if( value.is<script_tripoint_coord>() ) {
+        const script_tripoint_coord position =
+            value.as<script_tripoint_coord>();
+        if( position.native_origin() != coords::origin::abs ||
+            position.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "game.eocs context coordinates must be absolute "
+                "map-square coordinates" );
+        }
+        return diag_value( tripoint_abs_ms( position.to_native() ) );
+    }
+    throw std::invalid_argument(
+        "game.eocs context value '" + key +
+        "' must be boolean, number, string, or TripointCoord" );
+}
+
+void apply_context(
+    dialogue &conversation, const sol::optional<sol::table> &context )
+{
+    if( !context ) {
+        return;
+    }
+    std::size_t count = 0;
+    for( const auto &entry : *context ) {
+        if( ++count > maximum_context_entries ) {
+            throw std::invalid_argument(
+                "game.eocs context exceeds 128 entries" );
+        }
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.eocs context keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        validate_context_key( key );
+        conversation.set_value(
+            key, context_value_from_lua( entry.second, key ) );
+    }
+}
+
+sol::object context_value_to_lua(
+    sol::state_view lua, const diag_value &value,
+    const int depth, std::size_t &nodes )
+{
+    if( ++nodes > maximum_context_nodes ||
+        depth > maximum_context_depth ) {
+        throw std::runtime_error(
+            "game.eocs returned context exceeds its structural limits" );
+    }
+    if( value.is_empty() ) {
+        return sol::make_object( lua, sol::nil );
+    }
+    if( value.is_dbl() ) {
+        return sol::make_object( lua, value.dbl() );
+    }
+    if( value.is_str() ) {
+        const std::string &text = value.str();
+        if( text.size() > maximum_context_string_bytes ) {
+            throw std::runtime_error(
+                "game.eocs returned context string exceeds 8192 bytes" );
+        }
+        return sol::make_object( lua, text );
+    }
+    if( value.is_tripoint() ) {
+        return sol::make_object(
+                   lua, script_tripoint_coord::from_native(
+                       coords::origin::abs, coords::scale::map_square,
+                       value.tripoint().raw() ) );
+    }
+    if( value.is_array() ) {
+        const diag_array &values = value.array();
+        sol::table result = lua.create_table(
+                                static_cast<int>( values.size() ), 0 );
+        for( std::size_t index = 0; index < values.size(); ++index ) {
+            result[index + 1] = context_value_to_lua(
+                                    lua, values[index], depth + 1, nodes );
+        }
+        return sol::make_object( lua, std::move( result ) );
+    }
+    return sol::make_object( lua, value.to_string() );
+}
+
+sol::table context_snapshot(
+    sol::state_view lua, const dialogue &conversation )
+{
+    const global_variables::impl_t &context =
+        conversation.get_context();
+    if( context.size() > maximum_context_entries ) {
+        throw std::runtime_error(
+            "game.eocs returned context exceeds 128 entries" );
+    }
+    std::vector<std::pair<std::string, const diag_value *>> ordered;
+    ordered.reserve( context.size() );
+    for( const auto &[key, value] : context ) {
+        ordered.emplace_back( key, &value );
+    }
+    std::sort(
+        ordered.begin(), ordered.end(),
+    []( const auto & lhs, const auto & rhs ) {
+        return lhs.first < rhs.first;
+    } );
+    sol::table result = lua.create_table();
+    std::size_t nodes = 0;
+    for( const auto &[key, value] : ordered ) {
+        result[key] = context_value_to_lua(
+                          lua, *value, 0, nodes );
+    }
+    return result;
+}
+
+std::unique_ptr<talker> resolve_talker_option(
+    const sol::optional<sol::table> &options,
+    const std::string &field,
+    const bool default_avatar,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    sol::object requested;
+    if( options ) {
+        requested = options->get<sol::object>( field );
+    }
+    if( !requested.valid() ||
+        requested.get_type() == sol::type::nil ) {
+        return default_avatar ?
+               get_talker_for( get_avatar() ) : nullptr;
+    }
+    if( !requested.is<game_handle>() ) {
+        throw std::invalid_argument(
+            "game.eocs option '" + field +
+            "' must be a creature GameHandle" );
+    }
+    const native_handle_result<Creature> resolved =
+        requested.as<game_handle>().resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    return get_talker_for( *resolved.value );
+}
+
+void validate_eoc_options(
+    const sol::optional<sol::table> &options )
+{
+    if( !options ) {
+        return;
+    }
+    for( const auto &entry : *options ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.eocs option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "alpha" && key != "beta" &&
+            key != "context" ) {
+            throw std::invalid_argument(
+                "game.eocs received unknown option '" + key + "'" );
+        }
+    }
+}
+
+sol::table test_eoc(
+    sol::this_state lua, const script_game_id &id,
+    const sol::optional<sol::table> &options,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_eoc_id( id, "game.eocs.test" );
+    validate_eoc_options( options );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    std::unique_ptr<talker> alpha = resolve_talker_option(
+                                        options, "alpha", true,
+                                        runtime_generation, world_generation,
+                                        error );
+    if( error ) {
+        return make_game_error_result( state, *error );
+    }
+    std::unique_ptr<talker> beta = resolve_talker_option(
+                                       options, "beta", false,
+                                       runtime_generation, world_generation,
+                                       error );
+    if( error ) {
+        return make_game_error_result( state, *error );
+    }
+    dialogue conversation(
+        std::move( alpha ), std::move( beta ) );
+    if( options ) {
+        const sol::object context =
+            options->get<sol::object>( "context" );
+        if( context.valid() &&
+            context.get_type() != sol::type::nil ) {
+            if( context.get_type() != sol::type::table ) {
+                throw std::invalid_argument(
+                    "game.eocs option 'context' must be a table" );
+            }
+            apply_context(
+                conversation, context.as<sol::table>() );
+        }
+    }
+    const bool matched =
+        effect_on_condition_id( id.value() )->test_condition(
+            conversation );
+    sol::table value = state.create_table();
+    value["matched"] = matched;
+    value["context"] = context_snapshot( state, conversation );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
 }
 
 } // namespace
@@ -194,6 +462,20 @@ void install_eoc_api(
     const script_game_id & id ) {
         require_read();
         return get_eoc( lua_state, id );
+    } );
+    eocs.set_function(
+        "test",
+        [current_runtime_generation, current_world_generation,
+         require_read, has_active_callback](
+            sol::this_state lua_state, const script_game_id & id,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        require_active_callback(
+            has_active_callback, "game.eocs.test" );
+        return test_eoc(
+                   lua_state, id, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
     } );
     eocs.set_function( "limits", [require_read]( sol::this_state lua_state ) {
         require_read();
