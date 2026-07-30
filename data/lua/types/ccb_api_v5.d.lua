@@ -2257,10 +2257,14 @@ function CcbInventoryApi.wear(character, item) end
 ---@return CcbResult
 function CcbInventoryApi.stash_wielded(character) end
 
+---@class CcbMutationListOptions: CcbPageOptions
+---@field include_hidden? boolean
+---@field include_enchantment? boolean
+
 ---@class CcbMutationsApi
 local CcbMutationsApi = {}
 
----@param options? CcbListOptions
+---@param options? CcbPageOptions
 ---@return table
 function CcbMutationsApi.definitions(options) end
 
@@ -2269,7 +2273,7 @@ function CcbMutationsApi.definitions(options) end
 function CcbMutationsApi.definition(id) end
 
 ---@param character GameHandle
----@param options? CcbListOptions
+---@param options? CcbMutationListOptions
 ---@return CcbResult
 function CcbMutationsApi.list(character, options) end
 
@@ -2307,14 +2311,14 @@ function CcbMutationsApi.set_active(character, id, active) end
 function CcbMutationsApi.set_variant(character, id, variant) end
 
 ---@class CcbLearnSpellOptions
+---@field force? boolean
 ---@field level? integer
 ---@field experience? integer
----@field favorite? boolean
 
 ---@class CcbSpellsApi
 local CcbSpellsApi = {}
 
----@param options? CcbListOptions
+---@param options? CcbPageOptions
 ---@return table
 function CcbSpellsApi.definitions(options) end
 
@@ -2323,7 +2327,7 @@ function CcbSpellsApi.definitions(options) end
 function CcbSpellsApi.definition(id) end
 
 ---@param character GameHandle
----@param options? CcbListOptions
+---@param options? CcbPageOptions
 ---@return CcbResult
 function CcbSpellsApi.list(character, options) end
 
@@ -2418,10 +2422,14 @@ local MissionToken = {}
 ---@return boolean
 function MissionToken:is_valid() end
 
+---@class CcbMissionListOptions: CcbPageOptions
+---@field scope? "all"|"avatar"
+---@field status? "all"|"reserved"|"active"|"success"|"failure"
+
 ---@class CcbMissionsApi
 local CcbMissionsApi = {}
 
----@param options? CcbListOptions
+---@param options? CcbPageOptions
 ---@return table
 function CcbMissionsApi.definitions(options) end
 
@@ -2429,7 +2437,7 @@ function CcbMissionsApi.definitions(options) end
 ---@return table?
 function CcbMissionsApi.definition(id) end
 
----@param options? CcbListOptions
+---@param options? CcbMissionListOptions
 ---@return table
 function CcbMissionsApi.list(options) end
 
@@ -2491,12 +2499,14 @@ function CcbMissionsApi.cancel(token) end
 ---@return CcbResult
 function CcbMissionsApi.abandon(token) end
 
----@class CcbRecipeListOptions: CcbListOptions
----@field skill? GameId
----@field flag? string
----@field difficulty_min? integer
----@field difficulty_max? integer
+---@class CcbRecipeListOptions: CcbPageOptions
+---@field batch? integer
+---@field include_obsolete? boolean
 ---@field known? boolean
+---@field craftable? boolean
+---@field skill? GameId
+---@field result? GameId
+---@field flag? string
 
 ---@class CcbRecipesApi
 local CcbRecipesApi = {}
@@ -2532,13 +2542,16 @@ function CcbRecipesApi.get(id, batch) end
 ---@return boolean
 function CcbRecipesApi.has_flag(id, flag) end
 
+---@class CcbRequirementListOptions: CcbPageOptions
+---@field batch? integer
+
 ---@class CcbRequirementsApi
 local CcbRequirementsApi = {}
 
 ---@return table
 function CcbRequirementsApi.limits() end
 
----@param options? CcbListOptions
+---@param options? CcbRequirementListOptions
 ---@return table
 function CcbRequirementsApi.list(options) end
 
