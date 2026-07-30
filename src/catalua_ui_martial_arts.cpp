@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -11,6 +12,10 @@
 #include <vector>
 
 #include "catalua_bindings_values.h"
+#include "catalua_game_handle.h"
+#include "character.h"
+#include "character_martial_arts.h"
+#include "creature.h"
 #include "martialarts.h"
 
 namespace cata::lua_ui
@@ -24,6 +29,9 @@ constexpr int maximum_definition_limit = 256;
 constexpr int maximum_definition_offset = 1000000;
 constexpr std::size_t maximum_query_bytes = 128;
 constexpr std::size_t maximum_nested_ids = 256;
+constexpr int default_state_limit = 64;
+constexpr int maximum_state_limit = 256;
+constexpr int maximum_state_offset = 1000000;
 
 struct definition_options {
     int offset = 0;
@@ -224,12 +232,182 @@ sol::table get_definition(
                matype_id( id.value() ).obj() );
 }
 
+Character *resolve_character(
+    const game_handle &handle, const std::size_t runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    Character *character = resolved.value->as_character();
+    if( character == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype",
+            "The creature referenced by this GameHandle is not a character"
+        };
+    }
+    return character;
+}
+
+sol::table snapshot_state(
+    sol::state_view lua, const Character &character,
+    const matype_id &id )
+{
+    const martialart &definition = id.obj();
+    sol::table result = lua.create_table();
+    result["id"] = script_game_id(
+                       "martial_art", id.str() );
+    result["name"] = definition.name.translated();
+    result["known"] = character.has_martialart( id );
+    result["selected"] =
+        character.martial_arts_data->selected_style() == id;
+    result["teachable"] = definition.teachable;
+    result["strictly_unarmed"] =
+        definition.strictly_unarmed;
+    result["strictly_melee"] =
+        definition.strictly_melee;
+    result["allow_all_weapons"] =
+        definition.allow_all_weapons;
+    result["force_unarmed"] =
+        definition.force_unarmed;
+    return result;
+}
+
+struct state_list_options {
+    int offset = 0;
+    int limit = default_state_limit;
+    bool teachable_only = false;
+};
+
+state_list_options read_state_list_options(
+    const sol::optional<sol::table> &requested )
+{
+    state_list_options result;
+    if( requested ) {
+        result.offset = requested->get_or(
+                            "offset", result.offset );
+        result.limit = requested->get_or(
+                           "limit", result.limit );
+        result.teachable_only = requested->get_or(
+                                    "teachable_only",
+                                    result.teachable_only );
+    }
+    if( result.offset < 0 || result.offset > maximum_state_offset ) {
+        throw std::invalid_argument(
+            "game.martial_arts.list offset "
+            "must be within 0..1000000" );
+    }
+    if( result.limit < 0 ) {
+        throw std::invalid_argument(
+            "game.martial_arts.list limit cannot be negative" );
+    }
+    result.limit = std::min(
+                       result.limit, maximum_state_limit );
+    return result;
+}
+
+sol::table list_states(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const state_list_options options =
+        read_state_list_options( requested );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    std::vector<matype_id> styles =
+        character->known_styles( options.teachable_only );
+    std::sort(
+        styles.begin(), styles.end(),
+    []( const matype_id & lhs, const matype_id & rhs ) {
+        return lhs.str() < rhs.str();
+    } );
+    const std::size_t first = std::min<std::size_t>(
+                                  options.offset, styles.size() );
+    const std::size_t last = std::min<std::size_t>(
+                                 first + options.limit, styles.size() );
+    sol::table items = state.create_table(
+                           static_cast<int>( last - first ), 0 );
+    for( std::size_t index = first; index < last; ++index ) {
+        items[index - first + 1] =
+            snapshot_state(
+                state, *character, styles[index] );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["total"] = styles.size();
+    value["returned"] = last - first;
+    value["has_more"] = last < styles.size();
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_style_id(
+        requested_id, "game.martial_arts.get" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, snapshot_state(
+                       state, *character,
+                       matype_id(
+                           requested_id.value() ) ) ) );
+}
+
+sol::table get_current_state(
+    sol::this_state lua, const game_handle &handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, snapshot_state(
+                       state, *character,
+                       character->martial_arts_data->
+                       selected_style() ) ) );
+}
+
 } // namespace
 
 void install_martial_art_api(
     sol::table &game,
-    std::function<std::size_t()>,
-    std::function<std::size_t()>,
+    std::function<std::size_t()> current_runtime_generation,
+    std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> )
 {
@@ -248,6 +426,38 @@ void install_martial_art_api(
     const script_game_id & id ) {
         require_read();
         return get_definition( lua_state, id );
+    } );
+    martial_arts.set_function(
+        "list",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_states(
+                   lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    martial_arts.set_function(
+        "get",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_read();
+        return get_state(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    martial_arts.set_function(
+        "current",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        return get_current_state(
+                   lua_state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
     } );
     game["martial_arts"] = std::move( martial_arts );
 }
