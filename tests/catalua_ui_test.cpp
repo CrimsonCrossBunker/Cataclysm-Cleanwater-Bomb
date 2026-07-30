@@ -52,6 +52,7 @@
 #include "pocket_type.h"
 #include "projectile.h"
 #include "requirements.h"
+#include "skill.h"
 #include "talker.h"
 #include "trap.h"
 #include "ui_profile.h"
