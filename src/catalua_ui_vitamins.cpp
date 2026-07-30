@@ -456,6 +456,36 @@ sol::table modify_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table reset_daily_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_vitamin_id(
+        requested_id, "game.vitamins.reset_daily" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const vitamin_id id( requested_id.value() );
+    const vitamin &definition = id.obj();
+    sol::table before =
+        snapshot_state( state, *character, definition );
+    character->reset_daily_vitamin( id );
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, definition );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vitamin_api(
@@ -522,6 +552,17 @@ void install_vitamin_api(
         require_write();
         return modify_state(
                    lua_state, handle, id, delta,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vitamins.set_function(
+        "reset_daily",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_write();
+        return reset_daily_state(
+                   lua_state, handle, id,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
