@@ -6245,6 +6245,8 @@ void unload_activity_actor::unload( Character &who, item_location &target )
     int qty = 0;
     item &it = *target.get_item();
     bool actually_unloaded = false;
+    const bool can_hold_legacy_plutonium = ( it.is_tool() || it.is_gun() || it.is_magazine() ) &&
+            it.ammo_capacity( ammo_plutonium ) > 0;
 
     if( it.is_container() ) {
         contents_change_handler handler;
@@ -6258,7 +6260,7 @@ void unload_activity_actor::unload( Character &who, item_location &target )
 
             for( item *contained : it.all_items_top( ptype, true ) ) {
                 int old_charges = contained->charges;
-                contained->normalize_plutonium_fuel( true );
+                contained->normalize_plutonium_fuel( can_hold_legacy_plutonium );
                 const bool consumed = who.add_or_drop_with_msg( *contained, true, &it, contained );
                 if( consumed || contained->charges != old_charges ) {
                     changed = true;
@@ -6287,7 +6289,7 @@ void unload_activity_actor::unload( Character &who, item_location &target )
 
     std::vector<item *> remove_contained;
     for( item *contained : it.all_items_top() ) {
-        contained->normalize_plutonium_fuel( true );
+        contained->normalize_plutonium_fuel( can_hold_legacy_plutonium );
         if( who.add_or_drop_with_msg( *contained, true, &it, contained ) ) {
             qty += contained->charges;
             remove_contained.push_back( contained );
