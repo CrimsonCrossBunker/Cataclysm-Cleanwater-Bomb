@@ -928,6 +928,56 @@ TEST_CASE( "lua_event_subscriptions_are_priority_stable_and_source_owned",
                "ccb.lifecycle.world_ready" ) );
 }
 
+TEST_CASE( "lua_v5_native_events_are_complete_described_and_dispatched",
+           "[lua][events][native][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.read", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local types = game.native_events.list()
+assert(#types == 113)
+assert(types[1] == "activates_artifact")
+assert(types[#types] == "character_butchered_corpse")
+
+local description = game.native_events.describe("game_begin")
+assert(description.type == "game_begin")
+assert(description.subscribable == true)
+assert(#description.fields == 1)
+assert(description.fields[1].name == "cdda_version")
+assert(description.fields[1].type == "string")
+assert(#events.native_types() == 113)
+assert(events.describe_native("game_begin").type == "game_begin")
+assert(pcall(function()
+    game.native_events.describe("missing_event")
+end) == false)
+
+game.native_events.on("game_begin", { once = true }, function(event)
+    assert(event.type == "game_begin")
+    assert(event.data_types.cdda_version == "string")
+    state.character.set("native.event.version", event.data.cdda_version)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "native-event-test" );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native.event.version", "missing") == "native-event-test")
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
            "[lua][bindings][hooks][callbacks]" )
 {
