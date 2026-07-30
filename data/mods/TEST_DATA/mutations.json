@@ -183,6 +183,17 @@
   },
   {
     "type": "mutation",
+    "id": "TEST_LUA_MUTATION_LIFECYCLE",
+    "name": "Test Lua mutation lifecycle",
+    "description": "Exercises mutation lifecycle side effects through the Lua API.",
+    "points": 0,
+    "active": true,
+    "starts_active": true,
+    "integrated_armor": [ "integrated_horns_small" ],
+    "spells_learned": [ [ "test_spell_kiss", 1 ] ]
+  },
+  {
+    "type": "mutation",
     "id": "TEST_GOOD1",
     "name": { "str": "Test good mutation" },
     "points": 1,

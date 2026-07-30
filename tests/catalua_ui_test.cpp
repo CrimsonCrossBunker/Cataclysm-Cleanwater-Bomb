@@ -32,6 +32,7 @@
 #include "damage.h"
 #include "effect.h"
 #include "event_bus.h"
+#include "event_subscriber.h"
 #include "explosion.h"
 #include "faction.h"
 #include "flag.h"
@@ -92,6 +93,27 @@ namespace
 {
 
 namespace fs = std::filesystem;
+
+class mutation_event_subscriber final : public event_subscriber
+{
+    public:
+        explicit mutation_event_subscriber( const trait_id &watched )
+            : watched_( watched ) {}
+
+        using event_subscriber::notify;
+        void notify( const cata::event &event ) override {
+            if( ( event.type() == event_type::gains_mutation ||
+                  event.type() == event_type::loses_mutation ) &&
+                event.get<trait_id>( "trait" ) == watched_ ) {
+                events.push_back( event.type() );
+            }
+        }
+
+        std::vector<event_type> events;
+
+    private:
+        trait_id watched_;
+};
 
 class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
 {
@@ -6034,6 +6056,102 @@ game.mutations.grant(
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK_FALSE( player.has_permanent_trait( debug_speed ) );
+}
+
+TEST_CASE( "lua_v5_mutation_writes_preserve_native_lifecycle_side_effects",
+           "[lua][bindings][mutations][state][write][integration]" )
+{
+    avatar &player = get_avatar();
+    const trait_id lifecycle_mutation(
+        "TEST_LUA_MUTATION_LIFECYCLE" );
+    const itype_id integrated_armor(
+        "integrated_horns_small" );
+    const spell_id learned_spell( "test_spell_kiss" );
+
+    if( player.has_permanent_trait(
+            lifecycle_mutation ) ) {
+        player.unset_mutation(
+            lifecycle_mutation );
+    }
+    if( player.magic->knows_spell(
+            learned_spell ) ) {
+        player.magic->forget_spell(
+            learned_spell );
+    }
+    REQUIRE_FALSE(
+        player.has_permanent_trait( lifecycle_mutation ) );
+    REQUIRE_FALSE(
+        player.is_wearing( integrated_armor ) );
+    REQUIRE_FALSE(
+        player.magic->knows_spell( learned_spell ) );
+
+    mutation_event_subscriber subscriber(
+        lifecycle_mutation );
+    event_bus &bus = get_event_bus();
+    bus.subscribe( &subscriber );
+    on_out_of_scope cleanup( [&]() {
+        bus.unsubscribe( &subscriber );
+        if( player.has_permanent_trait(
+                lifecycle_mutation ) ) {
+            player.unset_mutation(
+                lifecycle_mutation );
+        }
+        if( player.magic->knows_spell(
+                learned_spell ) ) {
+            player.magic->forget_spell(
+                learned_spell );
+        }
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local lifecycle = game.types.id(
+    "mutation", "TEST_LUA_MUTATION_LIFECYCLE")
+local granted = game.mutations.grant(avatar, lifecycle)
+assert(granted.ok == true)
+assert(granted.value.active == true)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.has_active_mutation(
+               lifecycle_mutation ) );
+    CHECK( player.is_wearing(
+               integrated_armor ) );
+    CHECK( player.magic->knows_spell(
+               learned_spell ) );
+    REQUIRE( subscriber.events.size() == 1 );
+    CHECK( subscriber.events[0] ==
+           event_type::gains_mutation );
+
+    script.write( R"lua(
+local removed = game.mutations.remove(
+    game.characters.avatar(),
+    game.types.id(
+        "mutation", "TEST_LUA_MUTATION_LIFECYCLE"))
+assert(removed.ok == true)
+assert(removed.value.present == false)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.has_permanent_trait(
+                     lifecycle_mutation ) );
+    CHECK_FALSE( player.is_wearing(
+                     integrated_armor ) );
+    CHECK_FALSE( player.magic->knows_spell(
+                     learned_spell ) );
+    REQUIRE( subscriber.events.size() == 2 );
+    CHECK( subscriber.events[1] ==
+           event_type::loses_mutation );
 }
 
 TEST_CASE( "lua_v5_spell_definitions_and_known_spells_are_detached_and_bounded",
