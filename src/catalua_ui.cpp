@@ -2929,6 +2929,51 @@ void initialize_state( runtime_state &state )
 
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
+    const auto require_native_events = [&state]() {
+        require_api_version( state, 5, "game.native_events" );
+        require_capability( state, "events" );
+        require_capability( state, "game.read" );
+    };
+    sol::table native_events = state.lua.create_table();
+    native_events.set_function(
+        "on",
+        sol::overload(
+            [&state, require_native_events](
+                const std::string & name,
+    sol::protected_function callback ) {
+        require_native_events();
+        require_native_event_type( name, "game.native_events.on" );
+        return register_event_handler(
+                   state, "game:" + name, std::nullopt,
+                   std::move( callback ) );
+    },
+    [&state, require_native_events](
+        const std::string & name, const sol::table & options,
+        sol::protected_function callback ) {
+        require_native_events();
+        require_native_event_type( name, "game.native_events.on" );
+        return register_event_handler(
+                   state, "game:" + name, options,
+                   std::move( callback ) );
+    } ) );
+    native_events.set_function(
+        "off", [&state, require_native_events]( const std::uint64_t id ) {
+        require_native_events();
+        return unregister_event_handler( state, id );
+    } );
+    native_events.set_function(
+        "list", [&state, require_native_events]( sol::this_state lua ) {
+        require_native_events();
+        return native_event_types( state, lua );
+    } );
+    native_events.set_function(
+        "describe",
+        [&state, require_native_events](
+            sol::this_state lua, const std::string & name ) {
+        require_native_events();
+        return describe_native_event( state, lua, name );
+    } );
+    game["native_events"] = std::move( native_events );
     sol::table action_menu = state.lua.create_table();
     action_menu.set_function(
         "register",
