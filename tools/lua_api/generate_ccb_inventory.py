@@ -23,7 +23,7 @@ JSON_LOADER_PATTERN = re.compile(
 )
 EVENT_ENUM_PATTERN = re.compile(
     r"enum class event_type\s*:\s*int\s*\{(?P<body>.*?)"
-    r"num_event_types\s*// last\s*\n\};",
+    r"num_event_types\b[^\n]*\n\s*\};",
     re.DOTALL,
 )
 
