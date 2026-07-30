@@ -98,6 +98,7 @@ constexpr std::string_view internal_plutonium_fuel_var = "internal_plutonium_fue
 }
 
 static const ammotype ammo_battery( "battery" );
+static const ammotype ammo_plutonium( "plutonium" );
 static const ammotype ammo_money( "money" );
 
 static const efftype_id effect_cig( "cig" );
