@@ -11465,6 +11465,9 @@ TEST_CASE( "lua_v5_creature_turn_hooks_run_once_per_native_ai_turn",
 {
     using namespace cata::lua_ui;
 
+    // This case exercises the entire native turn suffix.  Recreate its map
+    // instead of inheriting partially loaded z-levels from earlier hook cases.
+    clear_overmaps();
     clear_avatar();
     clear_map_without_vision();
     avatar &player = get_avatar();
