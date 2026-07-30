@@ -27,6 +27,48 @@ EVENT_ENUM_PATTERN = re.compile(
     re.DOTALL,
 )
 
+NATIVE_DOMAINS = (
+    ("achievements", "Inspect achievement definitions and world progress."),
+    ("actions", "Queue safe player and input-context actions."),
+    ("addictions", "Inspect and mutate character addictions."),
+    ("bionics", "Inspect definitions and mutate installed bionics."),
+    ("callbacks", "Attach Lua methods to native JSON callback actors."),
+    ("camps", "Inspect faction camps and their world locations."),
+    ("characters", "Query, snapshot, and mutate active characters."),
+    ("crafting", "Inspect requirements and start bounded crafting work."),
+    ("definitions", "Validate and inspect stable native definition ids."),
+    ("diagnostics", "Inspect bounded runtime health and errors."),
+    ("effects", "Inspect and mutate native creature effects."),
+    ("eocs", "Test and activate authored effect-on-condition programs."),
+    ("factions", "Inspect faction state and player relationships."),
+    ("handles", "Reference live creatures, items, and vehicles safely."),
+    ("hooks", "Observe and intercept documented native lifecycles."),
+    ("hordes", "Inspect and mutate persistent overmap hordes."),
+    ("inventory", "Traverse and mutate item inventories and pockets."),
+    ("mapgen", "Inspect and post-process native map generation."),
+    ("martial_arts", "Inspect and mutate known martial arts."),
+    ("missions", "Inspect definitions and control mission instances."),
+    ("modules", "Compose source-scoped Lua modules and services."),
+    ("mutations", "Inspect definitions and mutate character mutations."),
+    ("native_events", "Subscribe to every typed native event bus event."),
+    ("needs", "Inspect and adjust character physiological needs."),
+    ("npcs", "Query and mutate NPC identity and relationships."),
+    ("overmap", "Query and mutate existing overmap state."),
+    ("proficiencies", "Inspect definitions and mutate character learning."),
+    ("recipes", "Search recipes and evaluate native requirements."),
+    ("scheduler", "Run bounded source-owned deferred callbacks."),
+    ("skills", "Inspect definitions and mutate character skills."),
+    ("spells", "Inspect definitions and mutate character spellbooks."),
+    ("statistics", "Inspect native event statistics and score values."),
+    ("time", "Inspect calendar values and control world time."),
+    ("ui", "Build portable pages, menus, sidebars, and navigation."),
+    ("vehicles", "Query, snapshot, and control active vehicles."),
+    ("vitamins", "Inspect definitions and mutate character vitamins."),
+    ("weather", "Inspect forecasts and control weather overrides."),
+    ("world", "Query and mutate the active map and world services."),
+    ("zones", "Inspect and mutate loot and personal zones."),
+)
+
 
 def source_text(relative_path: str) -> str:
     return (REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8")
@@ -104,6 +146,10 @@ def build_inventory() -> dict[str, object]:
         ),
         "json_types": parse_json_types(source_text("src/init.cpp")),
         "event_types": parse_event_types(source_text("src/event.h")),
+        "native_domains": [
+            {"id": domain, "requirement": requirement}
+            for domain, requirement in NATIVE_DOMAINS
+        ],
     }
 
 
