@@ -413,7 +413,7 @@
   {
     "id": "ACT_TRAIN",
     "type": "activity_type",
-    "activity_level": "ACTIVE_EXERCISE",
+    "activity_level": "BRISK_EXERCISE",
     "verb": "training",
     "based_on": "speed"
   },
