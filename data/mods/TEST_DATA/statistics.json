@@ -11,5 +11,13 @@
     "stat_type": "count",
     "event_transformation": "avatar_enters_oter_test",
     "description": { "str": "test map entered", "str_pl": "test maps entered" }
+  },
+  {
+    "id": "lua_test_manual_achievement",
+    "type": "achievement",
+    "name": "Lua test achievement",
+    "description": "A manually controlled achievement reserved for Lua integration tests.",
+    "manually_given": true,
+    "requirements": []
   }
 ]
