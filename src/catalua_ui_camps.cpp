@@ -365,7 +365,12 @@ basecamp *resolve_camp(
     const std::optional<basecamp *> found =
         overmap_buffer.find_camp(
             position.xy() );
-    return found ? *found : nullptr;
+    if( !found || *found == nullptr ||
+        ( *found )->camp_omt_pos().z() !=
+        position.z() ) {
+        return nullptr;
+    }
+    return *found;
 }
 
 sol::table get_camp(
@@ -378,9 +383,7 @@ sol::table get_camp(
     sol::state_view state( lua );
     basecamp *entry =
         resolve_camp( native_position );
-    if( entry == nullptr ||
-        entry->camp_omt_pos().z() !=
-        native_position.z() ) {
+    if( entry == nullptr ) {
         return make_game_error_result(
         state, {
             "not_found",
