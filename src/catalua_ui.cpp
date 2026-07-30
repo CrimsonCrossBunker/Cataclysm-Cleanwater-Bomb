@@ -72,6 +72,7 @@
 #include "catalua_ui_skills.h"
 #include "catalua_ui_state.h"
 #include "catalua_ui_statistics.h"
+#include "catalua_ui_time.h"
 #include "catalua_ui_values.h"
 #include "catalua_ui_vehicles.h"
 #include "catalua_ui_vitamins.h"
@@ -3053,6 +3054,20 @@ void initialize_state( runtime_state &state )
     install_value_type_api( state.lua, game, [&state]() {
         require_api_version( state, 5, "game.types" );
         require_capability( state, "game.read" );
+    } );
+    install_time_api(
+        game,
+    [&state]() {
+        require_api_version(
+            state, 5, "game.time" );
+        require_capability(
+            state, "game.read" );
+    },
+    [&state]() {
+        require_api_version(
+            state, 5, "game.time" );
+        require_capability(
+            state, "game.write" );
     } );
     sol::table hooks = state.lua.create_table();
     hooks.set_function(
