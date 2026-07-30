@@ -68,9 +68,9 @@ struct id_kind_definition {
     id_validator validate;
 };
 
-const std::array<id_kind_definition, 72> &id_kind_definitions()
+const std::array<id_kind_definition, 101> &id_kind_definitions()
 {
-    static const std::array<id_kind_definition, 72> definitions = {{
+    static const std::array<id_kind_definition, 101> definitions = {{
             { "achievement", &valid_id<achievement> },
             { "activity", &valid_id<activity_type> },
             { "addiction", &valid_id<add_type> },
@@ -106,6 +106,8 @@ const std::array<id_kind_definition, 72> &id_kind_definitions()
             { "fault_fix", &valid_id<fault_fix> },
             { "fault_group", &valid_id<fault_group> },
             { "field", &valid_id<field_type> },
+            { "forest_biome_component", &valid_id<forest_biome_component> },
+            { "forest_biome_mapgen", &valid_id<forest_biome_mapgen> },
             { "furniture", &valid_id<furn_t> },
             { "harvest", &valid_id<harvest_list> },
             { "harvest_drop_type", &valid_id<harvest_drop_type> },
@@ -132,17 +134,45 @@ const std::array<id_kind_definition, 72> &id_kind_definitions()
             { "mutation", &valid_id<mutation_branch> },
             { "mutation_category", &valid_id<mutation_category_trait> },
             { "nested_mapgen", &valid_id<nested_mapgen> },
+            { "npc_class", &valid_id<npc_class> },
+            { "npc_template", &valid_id<npc_template> },
             { "option_slider", &valid_id<option_slider> },
+            { "overmap_connection", &valid_id<overmap_connection> },
+            { "overmap_location", &valid_id<overmap_location> },
+            { "overmap_special", &valid_id<overmap_special> },
             { "overmap_terrain", &valid_id<oter_t> },
+            { "overmap_terrain_type", &valid_id<oter_type_t> },
+            { "overmap_vision", &valid_id<oter_vision> },
+            { "postprocess_generator", &valid_id<pp_generator> },
+            { "profession", &valid_id<profession> },
+            { "profession_group", &valid_id<profession_group> },
             { "quality", &valid_id<quality> },
             { "recipe", &valid_id<recipe> },
+            { "region_settings", &valid_id<region_settings> },
+            { "region_settings_city", &valid_id<region_settings_city> },
+            { "region_settings_forest", &valid_id<region_settings_forest> },
+            { "region_settings_forest_mapgen", &valid_id<region_settings_forest_mapgen> },
+            { "region_settings_forest_trail", &valid_id<region_settings_forest_trail> },
+            { "region_settings_highway", &valid_id<region_settings_highway> },
+            { "region_settings_lake", &valid_id<region_settings_lake> },
+            { "region_settings_map_extras", &valid_id<region_settings_map_extras> },
+            { "region_settings_ocean", &valid_id<region_settings_ocean> },
+            { "region_settings_ravine", &valid_id<region_settings_ravine> },
+            { "region_settings_river", &valid_id<region_settings_river> },
+            { "region_settings_terrain_furniture", &valid_id<region_settings_terrain_furniture> },
+            { "region_terrain_furniture", &valid_id<region_terrain_furniture> },
+            { "relic_procgen", &valid_id<relic_procgen_data> },
+            { "requirement", &valid_id<requirement_data> },
+            { "score", &valid_id<score> },
             { "skill", &valid_id<Skill> },
             { "species", &valid_id<species_type> },
             { "spell", &valid_id<spell_type> },
+            { "start_location", &valid_id<start_location> },
             { "terrain", &valid_id<ter_t> },
             // CCB intentionally aliases character trait flags to json_flag.
             { "trait_flag", &valid_id<json_flag> },
             { "trap", &valid_id<trap> },
+            { "update_mapgen", &valid_id<update_mapgen> },
             { "vitamin", &valid_id<vitamin> },
             { "weapon_category", &valid_id<weapon_category> }
         }
