@@ -58,10 +58,12 @@ definition_options read_definition_options(
         throw std::invalid_argument(
             "game.skills.definitions offset must be within 0..1000000" );
     }
-    if( result.limit < 0 || result.limit > maximum_definition_limit ) {
+    if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.skills.definitions limit must be within 0..256" );
+            "game.skills.definitions limit cannot be negative" );
     }
+    result.limit = std::min(
+                       result.limit, maximum_definition_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
             "game.skills.definitions query exceeds 128 bytes" );
@@ -247,10 +249,12 @@ state_list_options read_state_list_options(
         throw std::invalid_argument(
             "game.skills.list offset must be within 0..1000000" );
     }
-    if( result.limit < 0 || result.limit > maximum_state_limit ) {
+    if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.skills.list limit must be within 0..256" );
+            "game.skills.list limit cannot be negative" );
     }
+    result.limit = std::min(
+                       result.limit, maximum_state_limit );
     return result;
 }
 
