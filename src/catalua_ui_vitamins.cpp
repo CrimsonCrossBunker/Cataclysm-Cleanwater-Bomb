@@ -410,6 +410,48 @@ sol::table set_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table modify_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const int requested_delta,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_vitamin_id(
+        requested_id, "game.vitamins.modify" );
+    if( requested_delta < -maximum_pool_adjustment ||
+        requested_delta > maximum_pool_adjustment ) {
+        throw std::invalid_argument(
+            "game.vitamins.modify delta must be within "
+            "-1000000000..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const vitamin_id id( requested_id.value() );
+    const vitamin &definition = id.obj();
+    const int before_amount = character->vitamin_get( id );
+    sol::table before =
+        snapshot_state( state, *character, definition );
+    const int stored = character->vitamin_mod(
+                           id, requested_delta );
+    sol::table value = state.create_table();
+    value["requested_delta"] = requested_delta;
+    value["applied_delta"] = stored - before_amount;
+    value["clamped"] =
+        stored - before_amount != requested_delta;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, definition );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vitamin_api(
@@ -465,6 +507,17 @@ void install_vitamin_api(
         require_write();
         return set_state(
                    lua_state, handle, id, amount,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vitamins.set_function(
+        "modify",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int delta ) {
+        require_write();
+        return modify_state(
+                   lua_state, handle, id, delta,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
