@@ -622,7 +622,10 @@ template<typename Group>
 sol::table requirement_group_page(
     sol::state_view lua, const Group &groups,
     const std::function<sol::table(
-        const typename Group::value_type::value_type & )> &snapshot )
+        const typename Group::value_type::value_type &,
+        bool )> &snapshot,
+    const std::function<bool(
+        const typename Group::value_type::value_type & )> &available )
 {
     const std::size_t total = groups.size();
     const std::size_t returned = std::min(
@@ -643,13 +646,19 @@ sol::table requirement_group_page(
         for( std::size_t alternative_index = 0;
              alternative_index < alternative_returned;
              ++alternative_index ) {
+            const bool alternative_available =
+                available( group[alternative_index] );
             sol::table entry = snapshot(
-                                   group[alternative_index] );
-            satisfied =
-                satisfied ||
-                entry.get_or( "available", false );
+                                   group[alternative_index],
+                                   alternative_available );
+            satisfied = satisfied || alternative_available;
             alternatives[alternative_index + 1] =
                 std::move( entry );
+        }
+        if( !satisfied ) {
+            satisfied = std::any_of(
+                            group.begin() + alternative_returned,
+                            group.end(), available );
         }
         sol::table group_result = lua.create_table();
         group_result["items"] = std::move( alternatives );
@@ -692,10 +701,10 @@ sol::table snapshot_requirement(
                                  value.list_missing() );
 
     result["tools"] = requirement_group_page <
-                      requirement_data::alter_tool_comp_vector > (
+                          requirement_data::alter_tool_comp_vector > (
                           lua, value.get_tools(),
-                          [&lua, &crafting_inventory, &filter, batch](
-    const tool_comp & entry ) {
+                          [&lua, batch](
+    const tool_comp & entry, const bool available ) {
         sol::table item_result = lua.create_table();
         item_result["id"] =
             script_game_id( "item", entry.type.str() );
@@ -709,17 +718,20 @@ sol::table snapshot_requirement(
         item_result["recoverable"] = entry.recoverable;
         item_result["nested_requirement"] =
             entry.requirement;
-        item_result["available"] = entry.has(
-                                       crafting_inventory,
-                                       filter, batch );
+        item_result["available"] = available;
         return item_result;
+    }, [&crafting_inventory, &filter, batch](
+        const tool_comp & entry ) {
+        return entry.has(
+                   crafting_inventory, filter, batch );
     } );
 
     result["qualities"] = requirement_group_page <
                           requirement_data::alter_quali_req_vector > (
                               lua, value.get_qualities(),
-                              [&lua, &crafting_inventory, &filter](
-    const quality_requirement & entry ) {
+                              [&lua](
+                                  const quality_requirement & entry,
+    const bool available ) {
         sol::table item_result = lua.create_table();
         item_result["id"] =
             script_game_id( "quality", entry.type.str() );
@@ -729,17 +741,18 @@ sol::table snapshot_requirement(
         item_result["level"] = entry.level;
         item_result["nested_requirement"] =
             entry.requirement;
-        item_result["available"] = entry.has(
-                                       crafting_inventory,
-                                       filter );
+        item_result["available"] = available;
         return item_result;
+    }, [&crafting_inventory, &filter](
+        const quality_requirement & entry ) {
+        return entry.has( crafting_inventory, filter );
     } );
 
     result["components"] = requirement_group_page <
                            requirement_data::alter_item_comp_vector > (
                                lua, value.get_components(),
-                               [&lua, &crafting_inventory, &filter, batch](
-    const item_comp & entry ) {
+                               [&lua, batch](
+    const item_comp & entry, const bool available ) {
         sol::table item_result = lua.create_table();
         item_result["id"] =
             script_game_id( "item", entry.type.str() );
@@ -754,10 +767,12 @@ sol::table snapshot_requirement(
         item_result["recoverable"] = entry.recoverable;
         item_result["nested_requirement"] =
             entry.requirement;
-        item_result["available"] = entry.has(
-                                       crafting_inventory,
-                                       filter, batch );
+        item_result["available"] = available;
         return item_result;
+    }, [&crafting_inventory, &filter, batch](
+        const item_comp & entry ) {
+        return entry.has(
+                   crafting_inventory, filter, batch );
     } );
     return result;
 }

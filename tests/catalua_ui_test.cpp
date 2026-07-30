@@ -29,11 +29,15 @@
 #include "json_loader.h"
 #include "magic.h"
 #include "map.h"
+#include "map_helpers.h"
 #include "mapgendata.h"
 #include "mission.h"
+#include "overmapbuffer.h"
 #include "path_info.h"
 #include "player_activity.h"
+#include "player_helpers.h"
 #include "pocket_type.h"
+#include "requirements.h"
 #include "trap.h"
 #include "ui_profile.h"
 #include "units.h"
@@ -48,6 +52,7 @@
 #include <iterator>
 #include <limits>
 #include <list>
+#include <map>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -6293,6 +6298,10 @@ end) == false)
 TEST_CASE( "lua_v5_crafting_starts_only_through_the_safe_action_queue",
            "[lua][bindings][crafting][actions][integration]" )
 {
+    clear_avatar();
+    on_out_of_scope reset_avatar( []() {
+        clear_avatar();
+    } );
     scoped_lua_user_script script;
     script.write_manifest( R"json({
         "id": "user",
@@ -6350,6 +6359,8 @@ end)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     avatar &player = get_avatar();
+    player.learn_recipe(
+        &recipe_id( "cudgel_test_no_tools" ).obj() );
     if( player.activity ) {
         player.cancel_activity();
     }
@@ -6397,6 +6408,72 @@ assert(string.find(status.results[2].error,
     if( player.activity ) {
         player.cancel_activity();
     }
+}
+
+TEST_CASE( "lua_v5_bounded_requirement_groups_check_every_alternative",
+           "[lua][bindings][requirements][crafting][integration]" )
+{
+    clear_avatar();
+    clear_map();
+    on_out_of_scope reset_world( []() {
+        clear_avatar();
+        clear_map();
+    } );
+
+    avatar &player = get_avatar();
+    player.i_add( item( itype_id( "rock" ) ) );
+
+    std::vector<item_comp> alternatives;
+    alternatives.reserve( 65 );
+    for( std::size_t index = 0; index < 64; ++index ) {
+        alternatives.emplace_back(
+            itype_id( "2x4" ), 1 );
+    }
+    alternatives.emplace_back( itype_id( "rock" ), 1 );
+
+    requirement_data::alter_item_comp_vector components;
+    components.emplace_back( std::move( alternatives ) );
+    const requirement_id requirement(
+        "lua_v5_bounded_alternatives" );
+    auto &all_requirements = const_cast<
+                             std::map<requirement_id,
+                             requirement_data> &>(
+                                 requirement_data::all() );
+    REQUIRE( all_requirements.count( requirement ) == 0 );
+    on_out_of_scope remove_requirement(
+    [&all_requirements, &requirement]() {
+        all_requirements.erase( requirement );
+    } );
+    requirement_data::save_requirement(
+        requirement_data( {}, {}, components ),
+        requirement );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local requirement =
+    game.requirements.get(
+        "lua_v5_bounded_alternatives")
+local group = requirement.components.items[1]
+assert(group.total == 65)
+assert(group.returned == 64)
+assert(#group.items == 64)
+assert(group.truncated == true)
+assert(group.satisfied == true)
+for index = 1, #group.items do
+    assert(group.items[index].available == false)
+end
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_mapgen_context_is_bounded_deterministic_and_scoped",
@@ -6694,7 +6771,8 @@ TEST_CASE( "lua_v5_mapgen_hooks_respect_the_native_postprocess_gate",
         "version": "5.0.0",
         "api_version": 5,
         "capabilities": [
-            "events", "game.read", "game.write"
+            "events", "game.hooks", "game.read",
+            "game.write"
         ],
         "dependencies": [ "builtin" ]
     })json" );
