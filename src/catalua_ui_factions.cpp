@@ -1,8 +1,10 @@
 #include "catalua_ui_factions.h"
 
 #include <algorithm>
+#include <bitset>
 #include <cctype>
 #include <cstddef>
+#include <iterator>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -25,6 +27,9 @@ constexpr int default_faction_limit = 64;
 constexpr int maximum_faction_limit = 256;
 constexpr int maximum_faction_offset = 1000000;
 constexpr std::size_t maximum_query_bytes = 128;
+constexpr int default_detail_limit = 64;
+constexpr int maximum_detail_limit = 256;
+constexpr int maximum_detail_offset = 1000000;
 
 struct faction_options {
     int offset = 0;
@@ -77,6 +82,49 @@ void require_faction_id( const script_game_id &id )
         throw std::invalid_argument(
             "game.factions.get requires GameId<faction>" );
     }
+}
+
+struct detail_options {
+    int offset = 0;
+    int limit = default_detail_limit;
+};
+
+detail_options read_detail_options(
+    const sol::optional<sol::table> &requested,
+    const std::string &api_name )
+{
+    detail_options result;
+    if( requested ) {
+        result.offset = requested->get_or(
+                            "offset", result.offset );
+        result.limit = requested->get_or(
+                           "limit", result.limit );
+    }
+    if( result.offset < 0 ||
+        result.offset > maximum_detail_offset ) {
+        throw std::invalid_argument(
+            api_name +
+            " offset must be within 0..1000000" );
+    }
+    if( result.limit < 0 ) {
+        throw std::invalid_argument(
+            api_name +
+            " limit cannot be negative" );
+    }
+    result.limit = std::min(
+                       result.limit,
+                       maximum_detail_limit );
+    return result;
+}
+
+faction *resolve_faction( const script_game_id &id )
+{
+    require_faction_id( id );
+    if( g == nullptr ) {
+        return nullptr;
+    }
+    return g->faction_manager_ptr->get(
+               faction_id( id.value() ), false );
 }
 
 std::string steal_policy( const faction &entry )
@@ -219,7 +267,6 @@ sol::table list_factions(
 sol::table get_faction(
     sol::this_state lua, const script_game_id &id )
 {
-    require_faction_id( id );
     sol::state_view state( lua );
     if( g == nullptr ) {
         return make_game_error_result(
@@ -227,9 +274,7 @@ sol::table get_faction(
             "unavailable", "No active game is available"
         } );
     }
-    faction *entry =
-        g->faction_manager_ptr->get(
-            faction_id( id.value() ), false );
+    faction *entry = resolve_faction( id );
     if( entry == nullptr ) {
         return make_game_error_result(
         state, {
@@ -241,6 +286,195 @@ sol::table get_faction(
                state, sol::make_object(
                    state, snapshot_faction(
                        state, *entry ) ) );
+}
+
+sol::table faction_members(
+    sol::this_state lua, const script_game_id &id,
+    const sol::optional<sol::table> &requested )
+{
+    const detail_options options =
+        read_detail_options(
+            requested, "game.factions.members" );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    const std::size_t first =
+        std::min<std::size_t>(
+            options.offset, entry->members.size() );
+    const std::size_t last =
+        std::min<std::size_t>(
+            first + options.limit,
+            entry->members.size() );
+    sol::table items = state.create_table(
+                           static_cast<int>(
+                               last - first ), 0 );
+    auto iterator = entry->members.cbegin();
+    std::advance(
+        iterator,
+        static_cast<std::ptrdiff_t>( first ) );
+    for( std::size_t index = first;
+         index < last; ++index, ++iterator ) {
+        sol::table member = state.create_table();
+        member["id"] =
+            iterator->first.get_value();
+        member["name"] =
+            iterator->second.first;
+        member["known_by_player"] =
+            iterator->second.second;
+        items[index - first + 1] =
+            std::move( member );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["total"] = entry->members.size();
+    value["returned"] = last - first;
+    value["has_more"] =
+        last < entry->members.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+using relationship_bits =
+    std::bitset<static_cast<std::size_t>(
+        npc_factions::relationship::rel_types )>;
+
+sol::table snapshot_relationship(
+    sol::state_view lua, const std::string &target,
+    const relationship_bits &bits )
+{
+    sol::table result = lua.create_table();
+    result["target"] =
+        script_game_id( "faction", target );
+    result["kill_on_sight"] =
+        bits.test( static_cast<std::size_t>(
+                       npc_factions::relationship::kill_on_sight ) );
+    result["watch_your_back"] =
+        bits.test( static_cast<std::size_t>(
+                       npc_factions::relationship::watch_your_back ) );
+    result["share_my_stuff"] =
+        bits.test( static_cast<std::size_t>(
+                       npc_factions::relationship::share_my_stuff ) );
+    result["share_public_goods"] =
+        bits.test( static_cast<std::size_t>(
+                       npc_factions::relationship::share_public_goods ) );
+    result["guard_your_stuff"] =
+        bits.test( static_cast<std::size_t>(
+                       npc_factions::relationship::guard_your_stuff ) );
+    result["lets_you_in"] =
+        bits.test( static_cast<std::size_t>(
+                       npc_factions::relationship::lets_you_in ) );
+    result["defend_your_space"] =
+        bits.test( static_cast<std::size_t>(
+                       npc_factions::relationship::defend_your_space ) );
+    result["knows_your_voice"] =
+        bits.test( static_cast<std::size_t>(
+                       npc_factions::relationship::knows_your_voice ) );
+    return result;
+}
+
+sol::table faction_relationships(
+    sol::this_state lua, const script_game_id &id,
+    const sol::optional<sol::table> &requested )
+{
+    const detail_options options =
+        read_detail_options(
+            requested, "game.factions.relationships" );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    const std::size_t first =
+        std::min<std::size_t>(
+            options.offset, entry->relations.size() );
+    const std::size_t last =
+        std::min<std::size_t>(
+            first + options.limit,
+            entry->relations.size() );
+    sol::table items = state.create_table(
+                           static_cast<int>(
+                               last - first ), 0 );
+    auto iterator = entry->relations.cbegin();
+    std::advance(
+        iterator,
+        static_cast<std::ptrdiff_t>( first ) );
+    for( std::size_t index = first;
+         index < last; ++index, ++iterator ) {
+        items[index - first + 1] =
+            snapshot_relationship(
+                state, iterator->first,
+                iterator->second );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["total"] = entry->relations.size();
+    value["returned"] = last - first;
+    value["has_more"] =
+        last < entry->relations.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table faction_relationship(
+    sol::this_state lua, const script_game_id &id,
+    const script_game_id &target )
+{
+    require_faction_id( target );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    const auto found =
+        entry->relations.find( target.value() );
+    const relationship_bits empty;
+    sol::table value = snapshot_relationship(
+                           state, target.value(),
+                           found == entry->relations.end() ?
+                           empty : found->second );
+    value["defined"] =
+        found != entry->relations.end();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
 }
 
 sol::table player_faction( sol::this_state lua )
@@ -297,6 +531,33 @@ void install_faction_api(
         [require_read]( sol::this_state lua_state ) {
         require_read();
         return player_faction( lua_state );
+    } );
+    factions.set_function(
+        "members",
+        [require_read]( sol::this_state lua_state,
+    const script_game_id & id,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return faction_members(
+                   lua_state, id, options );
+    } );
+    factions.set_function(
+        "relationships",
+        [require_read]( sol::this_state lua_state,
+    const script_game_id & id,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return faction_relationships(
+                   lua_state, id, options );
+    } );
+    factions.set_function(
+        "relationship",
+        [require_read]( sol::this_state lua_state,
+    const script_game_id & id,
+    const script_game_id & target ) {
+        require_read();
+        return faction_relationship(
+                   lua_state, id, target );
     } );
     game["factions"] = std::move( factions );
 }
