@@ -30,6 +30,7 @@
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "iuse_actor.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -643,12 +644,27 @@ bool can_butcher_at( map &here, const tripoint_bub_ms &p )
     bool has_corpse = false;
 
     const inventory &crafting_inv = player_character.crafting_inventory();
+
+    static const std::string salvage_string = "salvage";
+    const auto salvage_filter = []( const item &it ) {
+        return it.get_usable_item( salvage_string ) != nullptr;
+    };
+    const std::vector<item *> salvage_tools = player_character.items_with( salvage_filter );
+    const salvage_actor *salvage_iuse = nullptr;
+    if( !salvage_tools.empty() ) {
+        item *usable = salvage_tools.front()->get_usable_item( salvage_string );
+        salvage_iuse = dynamic_cast<const salvage_actor *>(
+                           usable->get_use( salvage_string )->get_actor_ptr() );
+    }
+
     for( item &items_it : items ) {
         if( items_it.is_corpse() ) {
             if( factor != INT_MIN  || factorD != INT_MIN ) {
                 has_corpse = true;
             }
         } else if( player_character.can_disassemble( items_it, crafting_inv ).success() ) {
+            has_item = true;
+        } else if( salvage_iuse && salvage_iuse->valid_to_cut_up( nullptr, items_it ) ) {
             has_item = true;
         }
     }
