@@ -71,6 +71,7 @@
 #include "catalua_ui_services.h"
 #include "catalua_ui_skills.h"
 #include "catalua_ui_state.h"
+#include "catalua_ui_statistics.h"
 #include "catalua_ui_values.h"
 #include "catalua_ui_vehicles.h"
 #include "catalua_ui_vitamins.h"
@@ -3303,6 +3304,15 @@ void initialize_state( runtime_state &state )
             "game.achievements" );
         require_capability(
             state, "game.write" );
+    } );
+    install_statistics_api(
+        game,
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.statistics" );
+        require_capability(
+            state, "game.read" );
     } );
     install_need_api(
         game,
