@@ -12,6 +12,7 @@
 
 class Character;
 class Creature;
+class const_talker;
 class item;
 class mapgendata;
 
@@ -77,7 +78,7 @@ using native_callback_value = std::variant <
                               bool, std::int64_t, double, std::string,
                               const Character *, const Creature *, const item *,
                               native_callback_point, native_callback_id,
-                              std::vector<std::string> >;
+                              std::vector<std::string>, const const_talker * >;
 
 struct native_callback_argument {
     std::string name;
@@ -119,6 +120,18 @@ std::string dispatch_character_display_skill_info(
 bool dispatch_character_display_skill_action(
     const Character &character, std::string_view skill,
     std::string_view action );
+native_hook_result dispatch_native_dialogue_hook(
+    std::string_view name, const const_talker &alpha,
+    const const_talker &beta, std::string_view topic,
+    std::optional<std::string_view> option = std::nullopt );
+bool begin_native_npc_interaction(
+    const Character &avatar, const Character &npc );
+bool allow_native_monster_interaction(
+    const Character &avatar, const Creature &monster );
+bool allow_native_elevator_use(
+    const Character &character,
+    const native_callback_point &position,
+    const native_callback_point &destination );
 bool dispatch_native_callback(
     std::string_view kind, std::string_view target,
     std::string_view method,

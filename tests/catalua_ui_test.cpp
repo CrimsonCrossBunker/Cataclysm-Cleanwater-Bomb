@@ -46,6 +46,7 @@
 #include "pocket_type.h"
 #include "projectile.h"
 #include "requirements.h"
+#include "talker.h"
 #include "trap.h"
 #include "ui_profile.h"
 #include "units.h"
@@ -6932,6 +6933,139 @@ end)
     script.write( R"lua(
 assert(state.character.get("native_skill.info", false) == true)
 assert(state.character.get("native_skill.action", false) == true)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_dialogue_and_interaction_hooks_run_from_native_bridges",
+           "[lua][bindings][hooks][dialogue][interactions][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    standard_npc test_npc(
+        "Lua dialogue NPC",
+        player.pos_bub( here ) + tripoint_rel_ms::east * 2 );
+    monster test_monster(
+        mtype_id( "mon_zombie" ),
+        player.pos_bub( here ) + tripoint_rel_ms::west * 2 );
+    std::unique_ptr<talker> alpha = get_talker_for( player );
+    std::unique_ptr<talker> beta = get_talker_for( test_npc );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_interaction." .. name,
+        state.character.get(
+            "native_interaction." .. name, 0) + 1)
+end
+
+game.hooks.on("on_dialogue_start", function(payload)
+    assert(payload.alpha.kind == "creature")
+    assert(payload.beta.kind == "creature")
+    assert(payload.topic == "TALK_TEST_START")
+    count("dialogue_start")
+    return "TALK_LUA_START"
+end)
+game.hooks.on("on_dialogue_option", function(payload)
+    assert(payload.alpha.kind == "creature")
+    assert(payload.beta.kind == "creature")
+    assert(payload.topic == "TALK_LUA_START")
+    assert(payload.option == "TALK_TEST_OPTION")
+    count("dialogue_option")
+    return { result = "TALK_LUA_OPTION" }
+end)
+game.hooks.on("on_dialogue_end", function(payload)
+    assert(payload.alpha.kind == "creature")
+    assert(payload.beta.kind == "creature")
+    assert(payload.topic == "TALK_LUA_OPTION")
+    count("dialogue_end")
+end)
+game.hooks.on("on_try_npc_interaction", function(payload)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.npc.kind == "creature")
+    count("try_npc")
+    return true
+end)
+game.hooks.on("on_npc_interaction", function(payload)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.npc.kind == "creature")
+    count("npc")
+end)
+game.hooks.on("on_try_monster_interaction", function(payload)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.monster.kind == "creature")
+    count("monster")
+    return false
+end)
+game.hooks.on("on_elevator_try_use", function(payload)
+    assert(payload.character.kind == "creature")
+    assert(payload.position.coordinate_space == "bub_ms")
+    assert(payload.position.x == 30)
+    assert(payload.position.y == 30)
+    assert(payload.destination.coordinate_space == "abs_omt")
+    assert(payload.destination.z == -1)
+    count("elevator")
+    return false
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    const native_hook_result start =
+        dispatch_native_dialogue_hook(
+            "on_dialogue_start", *alpha, *beta,
+            "TALK_TEST_START" );
+    REQUIRE( start.result );
+    CHECK( *start.result == "TALK_LUA_START" );
+
+    const native_hook_result option =
+        dispatch_native_dialogue_hook(
+            "on_dialogue_option", *alpha, *beta,
+            *start.result, "TALK_TEST_OPTION" );
+    REQUIRE( option.result );
+    CHECK( *option.result == "TALK_LUA_OPTION" );
+    dispatch_native_dialogue_hook(
+        "on_dialogue_end", *alpha, *beta, *option.result );
+
+    CHECK( begin_native_npc_interaction( player, test_npc ) );
+    CHECK_FALSE( allow_native_monster_interaction(
+                     player, test_monster ) );
+    CHECK_FALSE( allow_native_elevator_use(
+                     player, { "bub_ms", 30, 30, 0 },
+                     { "abs_omt", 1, 2, -1 } ) );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native_interaction.dialogue_start", 0) == 1)
+assert(state.character.get(
+    "native_interaction.dialogue_option", 0) == 1)
+assert(state.character.get(
+    "native_interaction.dialogue_end", 0) == 1)
+assert(state.character.get(
+    "native_interaction.try_npc", 0) == 1)
+assert(state.character.get(
+    "native_interaction.npc", 0) == 1)
+assert(state.character.get(
+    "native_interaction.monster", 0) == 1)
+assert(state.character.get(
+    "native_interaction.elevator", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
 }

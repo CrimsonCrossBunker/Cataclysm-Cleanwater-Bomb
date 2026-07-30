@@ -72,18 +72,21 @@
 #include "input_context.h"
 #include "input_context_actions.h"
 #include "item.h"
+#include "item_location.h"
 #include "json_loader.h"
 #include "messages.h"
 #include "mapgendata.h"
 #include "mod_manager.h"
 #include "output.h"
 #include "path_info.h"
+#include "talker.h"
 #include "translations.h"
 #include "thread_pool.h"
 #include "type_id.h"
 #include "ui_profile.h"
 #include "ui_manager.h"
 #include "uilist.h"
+#include "vehicle.h"
 #include "worldfactory.h"
 
 namespace cata::lua_ui
@@ -3090,6 +3093,58 @@ game_handle native_creature_handle(
                state.generation, state.world_generation );
 }
 
+sol::object native_talker_to_lua(
+    runtime_state &state, const const_talker &talker )
+{
+    sol::state_view lua( state.lua );
+    if( const Creature *creature = talker.get_const_creature() ) {
+        return sol::make_object(
+                   lua, native_creature_handle( state, *creature ) );
+    }
+    if( const item_location *location = talker.get_const_item() ) {
+        if( const item *value = location->get_item() ) {
+            item &mutable_item = const_cast<item &>( *value );
+            return sol::make_object(
+                       lua, game_handle::from_item(
+            mutable_item, {
+                "callback_talker_item",
+                value->uid().get_value(), 0, 0, 0, {}
+            }, state.generation, state.world_generation ) );
+        }
+    }
+    if( const vehicle *value = talker.get_const_vehicle() ) {
+        vehicle &mutable_vehicle =
+            const_cast<vehicle &>( *value );
+        const tripoint_abs_ms position = value->pos_abs();
+        return sol::make_object(
+                   lua, game_handle::from_vehicle(
+        mutable_vehicle, {
+            "callback_talker_vehicle", 0,
+            position.x(), position.y(), position.z(), {}
+        }, state.generation, state.world_generation ) );
+    }
+
+    sol::table snapshot = state.lua.create_table();
+    std::string kind = "talker";
+    if( talker.get_const_computer() != nullptr ) {
+        kind = "computer";
+    } else if( talker.get_const_zone() != nullptr ) {
+        kind = "zone";
+    } else if( talker.disp_name().empty() ) {
+        kind = "topic";
+    }
+    snapshot["kind"] = std::move( kind );
+    snapshot["name"] = talker.disp_name();
+    const tripoint_abs_ms position = talker.pos_abs();
+    sol::table position_value = state.lua.create_table();
+    position_value["coordinate_space"] = "abs_ms";
+    position_value["x"] = position.x();
+    position_value["y"] = position.y();
+    position_value["z"] = position.z();
+    snapshot["position"] = std::move( position_value );
+    return sol::make_object( lua, std::move( snapshot ) );
+}
+
 sol::object native_callback_value_to_lua(
     runtime_state &state, const native_callback_value &value )
 {
@@ -3142,6 +3197,13 @@ sol::object native_callback_value_to_lua(
                 strings[index + 1] = entry[index];
             }
             return sol::make_object( lua, std::move( strings ) );
+        } else if constexpr( std::is_same_v <
+                             value_type, const const_talker * > )
+        {
+            if( entry == nullptr ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            return native_talker_to_lua( state, *entry );
         } else
         {
             return sol::make_object( lua, entry );
@@ -4552,6 +4614,61 @@ bool dispatch_character_display_skill_action(
         },
         { "action", std::string( action ) }
     } ).handled;
+}
+
+native_hook_result dispatch_native_dialogue_hook(
+    const std::string_view name, const const_talker &alpha,
+    const const_talker &beta, const std::string_view topic,
+    const std::optional<std::string_view> option )
+{
+    native_callback_arguments payload = {
+        { "alpha", &alpha },
+        { "beta", &beta },
+        { "topic", std::string( topic ) }
+    };
+    if( option ) {
+        payload.push_back( {
+            "option", std::string( *option )
+        } );
+    }
+    return dispatch_native_hook_result( name, payload );
+}
+
+bool begin_native_npc_interaction(
+    const Character &avatar, const Character &npc )
+{
+    const native_callback_arguments payload = {
+        { "avatar", &avatar },
+        { "npc", &npc }
+    };
+    if( !dispatch_native_hook(
+            "on_try_npc_interaction", payload ) ) {
+        return false;
+    }
+    dispatch_native_hook( "on_npc_interaction", payload );
+    return true;
+}
+
+bool allow_native_monster_interaction(
+    const Character &avatar, const Creature &monster )
+{
+    return dispatch_native_hook(
+    "on_try_monster_interaction", {
+        { "avatar", &avatar },
+        { "monster", &monster }
+    } );
+}
+
+bool allow_native_elevator_use(
+    const Character &character,
+    const native_callback_point &position,
+    const native_callback_point &destination )
+{
+    return dispatch_native_hook( "on_elevator_try_use", {
+        { "character", &character },
+        { "position", position },
+        { "destination", destination }
+    } );
 }
 
 bool dispatch_native_callback(

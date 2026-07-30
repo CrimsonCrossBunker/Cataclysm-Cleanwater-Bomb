@@ -76,6 +76,32 @@ bool dispatch_character_display_skill_action(
     return false;
 }
 
+native_hook_result dispatch_native_dialogue_hook(
+    std::string_view, const const_talker &, const const_talker &,
+    std::string_view, std::optional<std::string_view> )
+{
+    return {};
+}
+
+bool begin_native_npc_interaction(
+    const Character &, const Character & )
+{
+    return true;
+}
+
+bool allow_native_monster_interaction(
+    const Character &, const Creature & )
+{
+    return true;
+}
+
+bool allow_native_elevator_use(
+    const Character &, const native_callback_point &,
+    const native_callback_point & )
+{
+    return true;
+}
+
 bool dispatch_native_callback(
     std::string_view, std::string_view, std::string_view,
     const native_callback_arguments & )

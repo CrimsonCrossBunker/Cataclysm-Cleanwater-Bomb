@@ -22,6 +22,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "color.h"
 #include "condition.h"
@@ -1393,6 +1394,16 @@ void iexamine::elevator( Character &you, const tripoint_bub_ms &examp )
     }
 
     tripoint_abs_omt const that_omt( this_omt.xy(), movez );
+    const cata::lua_ui::native_callback_point elevator_position = {
+        "bub_ms", examp.x(), examp.y(), examp.z()
+    };
+    const cata::lua_ui::native_callback_point elevator_destination = {
+        "abs_omt", that_omt.x(), that_omt.y(), that_omt.z()
+    };
+    if( !cata::lua_ui::allow_native_elevator_use(
+            you, elevator_position, elevator_destination ) ) {
+        return;
+    }
     int const erot = _get_rot_delta( this_omt, that_omt );
     std::vector<tripoint_bub_ms> that_elevator;
     std::transform( this_elevator.begin(), this_elevator.end(), std::back_inserter( that_elevator ),

@@ -33,6 +33,7 @@
 #include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_id.h"
 #include "city.h"
@@ -1700,6 +1701,14 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
     } else {
         d.add_topic( debug_topic );
     }
+    const cata::lua_ui::native_hook_result start_hook =
+        cata::lua_ui::dispatch_native_dialogue_hook(
+            "on_dialogue_start", *d.actor( false ),
+            *d.actor( true ), d.topic_stack.back().id );
+    if( start_hook.result &&
+        *start_hook.result != d.topic_stack.back().id ) {
+        d.add_topic( *start_hook.result );
+    }
     dialogue_window d_win;
     d_win.is_computer = is_computer;
     d_win.is_not_conversation = is_not_conversation;
@@ -1708,9 +1717,19 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
         d_win.remote_name = remote_name;
     }
     // Main dialogue loop
+    std::string last_topic = d.topic_stack.back().id;
     do {
         d.actor( true )->update_missions( d.missions_assigned );
-        const talk_topic next = d.opt( d_win, d.topic_stack.back() );
+        last_topic = d.topic_stack.back().id;
+        talk_topic next = d.opt( d_win, d.topic_stack.back() );
+        const cata::lua_ui::native_hook_result option_hook =
+            cata::lua_ui::dispatch_native_dialogue_hook(
+                "on_dialogue_option", *d.actor( false ),
+                *d.actor( true ), last_topic, next.id );
+        if( option_hook.result &&
+            *option_hook.result != next.id ) {
+            next = talk_topic( *option_hook.result );
+        }
         if( next.id == "TALK_NONE" ) {
             int cat = topic_category( d.topic_stack.back() );
             do {
@@ -1724,6 +1743,9 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
             d.add_topic( next );
         }
     } while( !d.done );
+    cata::lua_ui::dispatch_native_dialogue_hook(
+        "on_dialogue_end", *d.actor( false ),
+        *d.actor( true ), last_topic );
     dialogue_remote_name.clear();
 
     if( activity.id() == ACT_AIM && !has_weapon() ) {

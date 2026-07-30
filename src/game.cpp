@@ -5590,6 +5590,11 @@ void game::control_vehicle( const std::optional<tripoint_bub_ms> &p )
 
 bool game::npc_menu( npc &who )
 {
+    if( !cata::lua_ui::begin_native_npc_interaction(
+            u, who ) ) {
+        return false;
+    }
+
     enum choices : int {
         talk = 0,
         swap_pos,
@@ -5962,24 +5967,32 @@ void game::examine( const tripoint_bub_ms &examp, bool with_pickup )
         monster *mon = dynamic_cast<monster *>( c );
         if( mon != nullptr ) {
             add_msg( _( "There is a %s." ), mon->get_name() );
-            if( mon->has_effect( effect_pet ) && !u.is_mounted() ) {
-                if( monexamine::pet_menu( *mon ) ) {
-                    return;
+            if( cata::lua_ui::allow_native_monster_interaction(
+                    u, *mon ) ) {
+                if( mon->has_effect( effect_pet ) && !u.is_mounted() ) {
+                    if( monexamine::pet_menu( *mon ) ) {
+                        return;
+                    }
+                } else if( mon->has_flag( mon_flag_RIDEABLE_MECH ) &&
+                           !mon->has_effect( effect_pet ) ) {
+                    if( monexamine::mech_hack( *mon ) ) {
+                        return;
+                    }
+                } else if( mon->has_flag( mon_flag_PAY_BOT ) ) {
+                    if( monexamine::pay_bot( *mon ) ) {
+                        return;
+                    }
+                } else if( mon->attitude_to( u ) ==
+                           Creature::Attitude::FRIENDLY &&
+                           !u.is_mounted() ) {
+                    if( monexamine::mfriend_menu( *mon ) ) {
+                        return;
+                    }
+                } else if( mon->has_flag(
+                               mon_flag_CONVERSATION ) &&
+                           !mon->type->chat_topics.empty() ) {
+                    get_avatar().talk_to( get_talker_for( mon ) );
                 }
-            } else if( mon->has_flag( mon_flag_RIDEABLE_MECH ) && !mon->has_effect( effect_pet ) ) {
-                if( monexamine::mech_hack( *mon ) ) {
-                    return;
-                }
-            } else if( mon->has_flag( mon_flag_PAY_BOT ) ) {
-                if( monexamine::pay_bot( *mon ) ) {
-                    return;
-                }
-            } else if( mon->attitude_to( u ) == Creature::Attitude::FRIENDLY && !u.is_mounted() ) {
-                if( monexamine::mfriend_menu( *mon ) ) {
-                    return;
-                }
-            } else if( mon->has_flag( mon_flag_CONVERSATION ) && !mon->type->chat_topics.empty() ) {
-                get_avatar().talk_to( get_talker_for( mon ) );
             }
         } else {
             u.cant_do_mounted();
