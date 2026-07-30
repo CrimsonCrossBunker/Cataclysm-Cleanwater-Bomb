@@ -36,6 +36,8 @@ constexpr int default_part_limit = 128;
 constexpr int maximum_part_limit = 256;
 constexpr int maximum_part_offset = 1000000;
 constexpr std::size_t maximum_fuel_entries = 128;
+constexpr std::size_t maximum_vehicle_name_bytes = 256;
+constexpr int maximum_requested_velocity = 1000000;
 
 struct definition_options {
     int offset = 0;
@@ -658,6 +660,212 @@ sol::table list_vehicle_fuels(
                    state, std::move( value ) ) );
 }
 
+void validate_vehicle_name( const std::string &name )
+{
+    if( name.empty() ) {
+        throw std::invalid_argument(
+            "game.vehicles.rename name cannot be empty" );
+    }
+    if( name.size() > maximum_vehicle_name_bytes ) {
+        throw std::invalid_argument(
+            "game.vehicles.rename name exceeds 256 bytes" );
+    }
+    if( std::any_of(
+    name.begin(), name.end(), []( const unsigned char ch ) {
+    return ch < 0x20U || ch == 0x7fU;
+    } ) ) {
+        throw std::invalid_argument(
+            "game.vehicles.rename name cannot contain "
+            "control characters" );
+    }
+}
+
+sol::table rename_vehicle(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &requested_name,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_vehicle_name( requested_name );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::string before = entry->name;
+    entry->name = requested_name;
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = entry->name;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_cruise_velocity(
+    sol::this_state lua, const game_handle &handle,
+    const int requested_velocity,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_velocity < -maximum_requested_velocity ||
+        requested_velocity > maximum_requested_velocity ) {
+        throw std::invalid_argument(
+            "game.vehicles.set_cruise_velocity velocity "
+            "must be within -1000000..1000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    map &here = get_map();
+    const int minimum =
+        entry->max_reverse_velocity( here );
+    const int maximum =
+        entry->max_velocity( here );
+    const int assigned =
+        std::clamp(
+            requested_velocity, minimum, maximum );
+    const int before = entry->cruise_velocity;
+    entry->cruise_velocity = assigned;
+    sol::table value = state.create_table();
+    value["requested"] = requested_velocity;
+    value["minimum"] = minimum;
+    value["maximum"] = maximum;
+    value["clamped"] =
+        requested_velocity != assigned;
+    value["before"] = before;
+    value["after"] = assigned;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+struct stop_options {
+    bool motion = true;
+    bool engines = true;
+    bool autopilot = true;
+};
+
+stop_options read_stop_options(
+    const sol::optional<sol::table> &requested )
+{
+    stop_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.vehicles.stop option keys must be strings" );
+        }
+        const std::string key =
+            entry.first.as<std::string>();
+        if( key != "motion" && key != "engines" &&
+            key != "autopilot" ) {
+            throw std::invalid_argument(
+                "game.vehicles.stop received unknown option '" +
+                key + "'" );
+        }
+        if( !entry.second.is<bool>() ) {
+            throw std::invalid_argument(
+                "game.vehicles.stop option '" + key +
+                "' must be a boolean" );
+        }
+        const bool enabled = entry.second.as<bool>();
+        if( key == "motion" ) {
+            result.motion = enabled;
+        } else if( key == "engines" ) {
+            result.engines = enabled;
+        } else {
+            result.autopilot = enabled;
+        }
+    }
+    if( !result.motion && !result.engines &&
+        !result.autopilot ) {
+        throw std::invalid_argument(
+            "game.vehicles.stop requires at least one action" );
+    }
+    return result;
+}
+
+sol::table stop_vehicle(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const stop_options options =
+        read_stop_options( requested );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    map &here = get_map();
+    sol::table before =
+        snapshot_live_vehicle(
+            state, here, *entry );
+    if( options.motion ) {
+        entry->stop( here );
+        entry->cruise_velocity = 0;
+    }
+    if( options.engines ) {
+        entry->stop_engines( here );
+    }
+    if( options.autopilot ) {
+        entry->autopilot_on = false;
+        entry->is_autodriving = false;
+        entry->is_following = false;
+        entry->is_patrolling = false;
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_live_vehicle(
+            state, here, *entry );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_vehicle_tracking(
+    sol::this_state lua, const game_handle &handle,
+    const bool enabled,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool before = entry->tracking_on;
+    if( before != enabled ) {
+        entry->toggle_tracking();
+    }
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = entry->tracking_on;
+    value["changed"] = before != entry->tracking_on;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vehicle_api(
@@ -714,6 +922,50 @@ void install_vehicle_api(
         require_read();
         return list_vehicle_fuels(
                    lua_state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "rename",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string &name ) {
+        require_write();
+        return rename_vehicle(
+                   lua_state, handle, name,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "set_cruise_velocity",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const int velocity ) {
+        require_write();
+        return set_cruise_velocity(
+                   lua_state, handle, velocity,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "stop",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        return stop_vehicle(
+                   lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "set_tracking",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const bool enabled ) {
+        require_write();
+        return set_vehicle_tracking(
+                   lua_state, handle, enabled,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
