@@ -15,6 +15,7 @@
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "enum_conversions.h"
+#include "enums.h"
 #include "event.h"
 #include "event_statistics.h"
 #include "point.h"
@@ -39,6 +40,23 @@ std::string lowercase_ascii( std::string value )
         return static_cast<char>( std::tolower( ch ) );
     } );
     return value;
+}
+
+std::string monotonicity_name(
+    const monotonically value )
+{
+    switch( value ) {
+        case monotonically::constant:
+            return "constant";
+        case monotonically::increasing:
+            return "increasing";
+        case monotonically::decreasing:
+            return "decreasing";
+        case monotonically::unknown:
+            return "unknown";
+    }
+    throw std::invalid_argument(
+        "Unknown native statistic monotonicity" );
 }
 
 struct page_options {
@@ -347,7 +365,7 @@ sol::table snapshot_statistic_definition(
         io::enum_to_string(
             entry.type() );
     result["monotonicity"] =
-        io::enum_to_string(
+        monotonicity_name(
             entry.monotonicity() );
     result["loaded"] =
         entry.was_loaded;
@@ -565,7 +583,7 @@ sol::table snapshot_transformation_definition(
             "event_transformation",
             entry.id.str() );
     result["monotonicity"] =
-        io::enum_to_string(
+        monotonicity_name(
             entry.monotonicity() );
     result["loaded"] =
         entry.was_loaded;
