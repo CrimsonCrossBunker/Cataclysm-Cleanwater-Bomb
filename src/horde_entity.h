@@ -10,7 +10,7 @@
 #include "monster.h"
 
 #if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-#include "catalua_ui_identity.h"
+    #include "catalua_ui_identity.h"
 #endif
 
 struct mtype;
