@@ -1980,6 +1980,138 @@ game.bionics.install(
     CHECK( player.get_power_level() == original_power );
 }
 
+TEST_CASE( "lua_v5_skills_use_typed_definitions_and_native_progression",
+           "[lua][bindings][skills][integration]" )
+{
+    avatar &player = get_avatar();
+    const skill_id fabrication( "fabrication" );
+    REQUIRE( fabrication.is_valid() );
+    const SkillLevel original_level =
+        player.get_skill_level_object( fabrication );
+    const int original_focus = player.get_focus();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local fabrication = game.types.id("skill", "fabrication")
+
+local definitions = game.skills.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "FABRICATION"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "skill")
+
+local definition = game.skills.definition(fabrication)
+assert(definition.id == fabrication)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.teachable) == "boolean")
+assert(type(definition.combat) == "boolean")
+assert(type(definition.contextual) == "boolean")
+assert(type(definition.consumes_focus) == "boolean")
+
+local before = game.skills.get(avatar, fabrication)
+assert(before.ok == true)
+assert(before.value.id == fabrication)
+assert(math.type(before.value.practical) == "integer")
+assert(math.type(before.value.knowledge) == "integer")
+assert(type(before.value.practical_effective) == "number")
+assert(type(before.value.practical_description) == "string")
+assert(before.value.maximum_level == 10)
+
+local updated = game.skills.set(avatar, fabrication, {
+    practical = 1,
+    knowledge = 2,
+    exercise_percent = 25
+})
+assert(updated.ok == true)
+assert(updated.value.after.practical == 1)
+assert(updated.value.after.knowledge == 2)
+assert(updated.value.after.practical_exercise_percent == 25)
+
+local paused = game.skills.set_training(
+    avatar, fabrication, false)
+assert(paused.ok == true)
+assert(paused.value.after.training == false)
+local resumed = game.skills.set_training(
+    avatar, fabrication, true)
+assert(resumed.ok == true)
+assert(resumed.value.after.training == true)
+
+local practiced = game.skills.practice(
+    avatar, fabrication, 1, {
+        cap = 10,
+        allow_multilevel = false
+    })
+assert(practiced.ok == true)
+assert(type(practiced.value.level_up) == "boolean")
+assert(practiced.value.after.practical_exercise_raw >=
+    practiced.value.before.practical_exercise_raw)
+
+local states = game.skills.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(states.ok == true)
+assert(states.value.limit == 256)
+assert(states.value.returned == #states.value.items)
+assert(states.value.returned <= states.value.total)
+
+assert(pcall(function()
+    game.skills.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.skills.set(avatar, fabrication, { practical = 11 })
+end) == false)
+assert(pcall(function()
+    game.skills.set(avatar, fabrication, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.skills.practice(avatar, fabrication, 0)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_skill_level_object( fabrication ).level() == 1 );
+    CHECK( player.get_skill_level_object( fabrication ).knowledgeLevel() == 2 );
+
+    player.get_skill_level_object( fabrication ) = original_level;
+    player.set_focus( original_focus );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.skills.set(
+    game.characters.avatar(),
+    game.types.id("skill", "fabrication"),
+    { practical = 1 })
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.get_skill_level_object( fabrication ).level() ==
+           original_level.level() );
+    CHECK( player.get_skill_level_object( fabrication ).knowledgeLevel() ==
+           original_level.knowledgeLevel() );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
