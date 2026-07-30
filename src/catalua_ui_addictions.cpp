@@ -246,19 +246,6 @@ sol::table snapshot_state(
     return result;
 }
 
-const addiction *find_addiction(
-    const Character &character, const addiction_id &id )
-{
-    const auto found = std::find_if(
-                           character.addictions.begin(),
-                           character.addictions.end(),
-    [&id]( const addiction & entry ) {
-        return entry.type == id;
-    } );
-    return found == character.addictions.end() ?
-           nullptr : &*found;
-}
-
 addiction *find_addiction(
     Character &character, const addiction_id &id )
 {
