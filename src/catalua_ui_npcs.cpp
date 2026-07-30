@@ -3,13 +3,21 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
+#include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
+#include "catalua_game_handle.h"
+#include "coordinates.h"
+#include "enum_conversions.h"
+#include "game.h"
+#include "npc.h"
 #include "npc_class.h"
 
 namespace cata::lua_ui
@@ -23,6 +31,9 @@ constexpr int maximum_definition_limit = 256;
 constexpr int maximum_definition_offset = 1000000;
 constexpr std::size_t maximum_query_bytes = 128;
 constexpr std::size_t maximum_nested_ids = 128;
+constexpr int default_state_limit = 64;
+constexpr int maximum_state_limit = 256;
+constexpr int maximum_state_offset = 1000000;
 
 struct definition_options {
     int offset = 0;
@@ -249,6 +260,271 @@ sol::table get_class(
                npc_class_id( id.value() ).obj() );
 }
 
+game_handle make_npc_handle(
+    npc &entry, const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const tripoint_abs_ms position =
+        entry.pos_abs();
+    return game_handle::from_creature(
+    entry, {
+        "npc", entry.getID().get_value(),
+        position.x(), position.y(), position.z(), {}
+    },
+    runtime_generation, world_generation );
+}
+
+npc *resolve_npc(
+    const game_handle &handle, const std::size_t runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    npc *entry = resolved.value->as_npc();
+    if( entry == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype",
+            "The creature referenced by this GameHandle is not an NPC"
+        };
+    }
+    return entry;
+}
+
+sol::table snapshot_opinion(
+    sol::state_view lua, const npc_opinion &opinion )
+{
+    sol::table result = lua.create_table();
+    result["trust"] = opinion.trust;
+    result["fear"] = opinion.fear;
+    result["value"] = opinion.value;
+    result["anger"] = opinion.anger;
+    result["owed"] = opinion.owed;
+    result["sold"] = opinion.sold;
+    return result;
+}
+
+sol::table snapshot_npc(
+    sol::state_view lua, npc &entry,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const tripoint_abs_ms position =
+        entry.pos_abs();
+    sol::table result = lua.create_table();
+    result["handle"] = make_npc_handle(
+                           entry, runtime_generation,
+                           world_generation );
+    result["id"] = entry.getID().get_value();
+    result["unique_id"] = entry.get_unique_id();
+    result["name"] = entry.get_name();
+    result["display_name"] =
+        entry.display_name();
+    result["position"] =
+        script_tripoint_coord::from_native(
+            coords::origin::abs,
+            coords::scale::map_square,
+            position.raw() );
+    result["class"] = script_game_id(
+                          "npc_class",
+                          entry.myclass.str() );
+    if( entry.idz.is_null() ) {
+        result["template"] = sol::nil;
+    } else {
+        result["template"] = script_game_id(
+                                 "npc_template",
+                                 entry.idz.str() );
+    }
+    const faction_id faction = entry.get_fac_id();
+    if( faction.is_null() ) {
+        result["faction"] = sol::nil;
+    } else {
+        result["faction"] = script_game_id(
+                                "faction",
+                                faction.str() );
+    }
+    result["attitude"] =
+        npc_attitude_id(
+            entry.get_attitude() );
+    result["attitude_name"] =
+        npc_attitude_name(
+            entry.get_attitude() );
+    result["mission"] =
+        io::enum_to_string( entry.mission );
+    result["status"] =
+        entry.get_current_status();
+    result["activity"] =
+        entry.get_current_activity();
+    result["male"] = entry.male;
+    result["dead"] = entry.is_dead();
+    result["hallucination"] =
+        entry.is_hallucination();
+    result["enemy"] = entry.is_enemy();
+    result["following"] = entry.is_following();
+    result["player_ally"] =
+        entry.is_player_ally();
+    result["leader"] = entry.is_leader();
+    result["guarding"] = entry.is_guarding();
+    result["patrolling"] = entry.is_patrolling();
+    result["shopkeeper"] =
+        entry.is_shopkeeper();
+    result["faction_representative"] =
+        entry.faction_representative;
+    result["opinion"] =
+        snapshot_opinion(
+            lua, entry.get_opinion_values(
+                get_avatar() ) );
+    sol::table personality = lua.create_table();
+    personality["aggression"] =
+        entry.personality.aggression;
+    personality["bravery"] =
+        entry.personality.bravery;
+    personality["collector"] =
+        entry.personality.collector;
+    personality["altruism"] =
+        entry.personality.altruism;
+    result["personality"] =
+        std::move( personality );
+    return result;
+}
+
+struct state_options {
+    int offset = 0;
+    int limit = default_state_limit;
+    std::string query;
+};
+
+state_options read_state_options(
+    const sol::optional<sol::table> &requested )
+{
+    state_options result;
+    if( requested ) {
+        result.offset = requested->get_or(
+                            "offset", result.offset );
+        result.limit = requested->get_or(
+                           "limit", result.limit );
+        result.query = requested->get_or(
+                           "query", result.query );
+    }
+    if( result.offset < 0 ||
+        result.offset > maximum_state_offset ) {
+        throw std::invalid_argument(
+            "game.npcs.list offset must be within 0..1000000" );
+    }
+    if( result.limit < 0 ) {
+        throw std::invalid_argument(
+            "game.npcs.list limit cannot be negative" );
+    }
+    result.limit = std::min(
+                       result.limit, maximum_state_limit );
+    if( result.query.size() > maximum_query_bytes ) {
+        throw std::invalid_argument(
+            "game.npcs.list query exceeds 128 bytes" );
+    }
+    return result;
+}
+
+std::vector<npc *> matching_npcs(
+    const std::string &requested_query )
+{
+    std::vector<npc *> result;
+    if( g == nullptr ) {
+        return result;
+    }
+    const std::string query =
+        lowercase_ascii( requested_query );
+    for( npc &entry : g->all_npcs() ) {
+        if( query.empty() ||
+            lowercase_ascii(
+                entry.get_name() ).find( query ) !=
+            std::string::npos ||
+            lowercase_ascii(
+                entry.get_unique_id() ).find( query ) !=
+            std::string::npos ||
+            lowercase_ascii(
+                entry.myclass.str() ).find( query ) !=
+            std::string::npos ) {
+            result.push_back( &entry );
+        }
+    }
+    std::sort(
+        result.begin(), result.end(),
+    []( const npc * lhs, const npc * rhs ) {
+        return lhs->getID().get_value() <
+               rhs->getID().get_value();
+    } );
+    return result;
+}
+
+sol::table list_npcs(
+    sol::this_state lua,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const state_options options =
+        read_state_options( requested );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    const std::vector<npc *> entries =
+        matching_npcs( options.query );
+    const std::size_t first = std::min<std::size_t>(
+                                  options.offset, entries.size() );
+    const std::size_t last = std::min<std::size_t>(
+                                 first + options.limit,
+                                 entries.size() );
+    sol::table items = state.create_table(
+                           static_cast<int>( last - first ), 0 );
+    for( std::size_t index = first; index < last; ++index ) {
+        items[index - first + 1] =
+            snapshot_npc(
+                state, *entries[index],
+                runtime_generation,
+                world_generation );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["total"] = entries.size();
+    value["returned"] = last - first;
+    value["has_more"] = last < entries.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table get_npc(
+    sol::this_state lua, const game_handle &handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, snapshot_npc(
+                       state, *entry,
+                       runtime_generation,
+                       world_generation ) ) );
+}
+
 } // namespace
 
 void install_npc_api(
@@ -276,6 +552,27 @@ void install_npc_api(
     const script_game_id & id ) {
         require_read();
         return get_class( lua_state, id );
+    } );
+    npcs.set_function(
+        "list",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_npcs(
+                   lua_state, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    npcs.set_function(
+        "get",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        return get_npc(
+                   lua_state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
     } );
     game["npcs"] = std::move( npcs );
 }
