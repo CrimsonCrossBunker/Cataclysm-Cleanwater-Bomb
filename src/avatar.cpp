@@ -191,6 +191,13 @@ void avatar::control_npc( npc &np, const bool debug )
 
     get_event_bus().send<event_type::game_avatar_new>( /*is_new_game=*/false, debug, getID(), name,
             custom_profession );
+
+    cata::lua_ui::dispatch_native_hook(
+    "on_control_npc", {
+        { "avatar", static_cast<const Character *>( this ) },
+        { "npc", static_cast<const Character *>( &np ) },
+        { "debug", debug }
+    } );
 }
 
 void avatar::control_npc_menu( const bool debug )

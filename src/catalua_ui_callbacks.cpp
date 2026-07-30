@@ -12,7 +12,7 @@ const std::vector<script_hook_spec> &script_hook_specs()
     static const std::vector<script_hook_spec> specs = {
         {
             "on_character_death", script_hook_mode::observe,
-            { "character", "cause" }
+            { "character", "killer" }
         },
         {
             "on_character_display_skill_action", script_hook_mode::intercept,
@@ -40,7 +40,7 @@ const std::vector<script_hook_spec> &script_hook_specs()
         },
         {
             "on_control_npc", script_hook_mode::observe,
-            { "avatar", "npc" }
+            { "avatar", "npc", "debug" }
         },
         {
             "on_craft_result", script_hook_mode::observe,

@@ -3332,6 +3332,15 @@ void monster::die( map *here, Creature *nkiller )
             }
         }
     }
+
+    cata::lua_ui::dispatch_native_hook(
+    "on_mon_death", {
+        { "monster", static_cast<const Creature *>( this ) },
+        {
+            "killer",
+            static_cast<const Creature *>( get_killer() )
+        }
+    } );
 }
 
 units::energy monster::use_mech_power( units::energy amt )
@@ -4301,6 +4310,23 @@ void monster::on_unload()
 
 void monster::on_load()
 {
+    const auto dispatch_lua_loaded_hooks = [this]() {
+        const cata::lua_ui::native_callback_arguments payload = {
+            { "creature", static_cast<const Creature *>( this ) },
+            { "monster", static_cast<const Creature *>( this ) }
+        };
+        if( cata::lua_ui::has_native_hook(
+                "on_creature_loaded" ) ) {
+            cata::lua_ui::dispatch_native_hook(
+                "on_creature_loaded", payload );
+        }
+        if( cata::lua_ui::has_native_hook(
+                "on_monster_loaded" ) ) {
+            cata::lua_ui::dispatch_native_hook(
+                "on_monster_loaded", payload );
+        }
+    };
+
     try_upgrade( false );
     try_reproduce();
     try_biosignature();
@@ -4312,6 +4338,7 @@ void monster::on_load()
     const time_duration dt = calendar::turn - last_updated;
     last_updated = calendar::turn;
     if( dt <= 0_turns ) {
+        dispatch_lua_loaded_hooks();
         return;
     }
 
@@ -4410,6 +4437,7 @@ void monster::on_load()
 
     add_msg_debug( debugmode::DF_MONSTER, "on_load() by %s, %d turns, healed %d hp, %d speed",
                    name(), to_turns<int>( dt ), healed, healed_speed );
+    dispatch_lua_loaded_hooks();
 }
 
 const pathfinding_settings &monster::get_pathfinding_settings() const

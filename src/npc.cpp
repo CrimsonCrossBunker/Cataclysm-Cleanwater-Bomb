@@ -19,6 +19,7 @@
 #include "basecamp.h"
 #include "bodypart.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -3634,6 +3635,19 @@ void npc::on_load( map *here )
 
     reconcile_schedule_on_load();
     shop_restock();
+
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "creature", static_cast<const Creature *>( this ) },
+        { "npc", static_cast<const Character *>( this ) }
+    };
+    if( cata::lua_ui::has_native_hook( "on_creature_loaded" ) ) {
+        cata::lua_ui::dispatch_native_hook(
+            "on_creature_loaded", payload );
+    }
+    if( cata::lua_ui::has_native_hook( "on_npc_loaded" ) ) {
+        cata::lua_ui::dispatch_native_hook(
+            "on_npc_loaded", payload );
+    }
 }
 
 bool npc::query_yn( const std::string &msg ) const
@@ -4346,5 +4360,4 @@ std::unique_ptr<talker> get_talker_for( npc *guy )
 {
     return std::make_unique<talker_npc>( guy );
 }
-
 

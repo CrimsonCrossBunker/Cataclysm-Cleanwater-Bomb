@@ -3126,6 +3126,17 @@ void Character::reset_stats()
     else if( get_str_base() <= 5 ) {
         mod_dodge_bonus( 1 );   // Bonus if we're small
     }
+
+    if( cata::lua_ui::has_native_hook(
+            "on_character_reset_stats" ) ) {
+        cata::lua_ui::dispatch_native_hook(
+        "on_character_reset_stats", {
+            {
+                "character",
+                static_cast<const Character *>( this )
+            }
+        } );
+    }
 }
 
 void Character::reset()

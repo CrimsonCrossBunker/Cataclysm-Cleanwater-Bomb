@@ -38,6 +38,7 @@
 #include "mapgendata.h"
 #include "mission.h"
 #include "monster.h"
+#include "npc.h"
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "player_activity.h"
@@ -6469,6 +6470,101 @@ assert(state.character.get(
     "native_effects.monster_tick", 0) == 2)
 assert(state.character.get(
     "native_effects.monster_removed", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_creature_lifecycle_hooks_run_at_native_boundaries",
+           "[lua][bindings][hooks][lifecycle][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+
+    monster loaded_monster(
+        mtype_id( "mon_zombie" ),
+        player.pos_bub( here ) + tripoint_rel_ms::north * 3 );
+    standard_npc loaded_npc(
+        "Lua lifecycle NPC",
+        player.pos_bub( here ) + tripoint_rel_ms::south * 3 );
+    monster &dying_monster = spawn_test_monster(
+                                 "mon_zombie",
+                                 player.pos_bub( here ) +
+                                 tripoint_rel_ms::east * 3 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_lifecycle." .. name,
+        state.character.get("native_lifecycle." .. name, 0) + 1)
+end
+
+game.hooks.on("on_character_reset_stats", function(payload)
+    assert(payload.character ~= nil)
+    count("character_reset")
+end)
+game.hooks.on("on_creature_loaded", function(payload)
+    assert(payload.creature ~= nil)
+    count("creature_loaded")
+end)
+game.hooks.on("on_monster_loaded", function(payload)
+    assert(payload.monster ~= nil)
+    count("monster_loaded")
+end)
+game.hooks.on("on_npc_loaded", function(payload)
+    assert(payload.npc ~= nil)
+    count("npc_loaded")
+end)
+game.hooks.on("on_character_death", function(payload)
+    assert(payload.character ~= nil)
+    assert(payload.killer ~= nil)
+    count("character_death")
+end)
+game.hooks.on("on_mon_death", function(payload)
+    assert(payload.monster ~= nil)
+    assert(payload.killer ~= nil)
+    count("monster_death")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    player.reset_stats();
+    loaded_monster.on_load();
+    loaded_npc.on_load( &here );
+    loaded_npc.die( &here, &player );
+    dying_monster.die( &here, &player );
+    g->remove_zombie( dying_monster );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native_lifecycle.character_reset", 0) == 1)
+assert(state.character.get(
+    "native_lifecycle.creature_loaded", 0) == 2)
+assert(state.character.get(
+    "native_lifecycle.monster_loaded", 0) == 1)
+assert(state.character.get(
+    "native_lifecycle.npc_loaded", 0) == 1)
+assert(state.character.get(
+    "native_lifecycle.character_death", 0) == 1)
+assert(state.character.get(
+    "native_lifecycle.monster_death", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
 }
