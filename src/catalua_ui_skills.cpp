@@ -334,8 +334,116 @@ sol::table get_state(
     return make_game_value_result(
                state, sol::make_object(
                    state, snapshot_state(
-                       state, *character,
+                   state, *character,
                        skill_id( requested_id.value() ).obj() ) ) );
+}
+
+struct level_adjustments {
+    std::optional<int> practical;
+    std::optional<int> knowledge;
+    std::optional<int> exercise_percent;
+};
+
+level_adjustments read_level_adjustments( const sol::table &requested )
+{
+    level_adjustments result;
+    for( const auto &entry : requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.skills.set option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "practical" && key != "knowledge" &&
+            key != "exercise_percent" ) {
+            throw std::invalid_argument(
+                "game.skills.set received unknown option '" +
+                key + "'" );
+        }
+        if( !entry.second.is<int>() ) {
+            throw std::invalid_argument(
+                "game.skills.set option '" + key +
+                "' must be an integer" );
+        }
+        const int value = entry.second.as<int>();
+        if( key == "exercise_percent" ) {
+            if( value < 0 || value > 99 ) {
+                throw std::invalid_argument(
+                    "game.skills.set exercise_percent "
+                    "must be within 0..99" );
+            }
+            result.exercise_percent = value;
+        } else {
+            if( value < 0 || value > MAX_SKILL ) {
+                throw std::invalid_argument(
+                    "game.skills.set " + key +
+                    " must be within 0..10" );
+            }
+            if( key == "practical" ) {
+                result.practical = value;
+            } else {
+                result.knowledge = value;
+            }
+        }
+    }
+    if( !result.practical && !result.knowledge &&
+        !result.exercise_percent ) {
+        throw std::invalid_argument(
+            "game.skills.set requires at least one adjustment" );
+    }
+    return result;
+}
+
+sol::table set_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const sol::table &requested_adjustments,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_skill_id( requested_id, "game.skills.set" );
+    const level_adjustments adjustments =
+        read_level_adjustments( requested_adjustments );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const skill_id id( requested_id.value() );
+    const Skill &definition = id.obj();
+    const SkillLevel &current =
+        character->get_skill_level_object( id );
+    const int practical =
+        adjustments.practical.value_or( current.level() );
+    const int knowledge =
+        adjustments.knowledge.value_or(
+            std::max( current.knowledgeLevel(), practical ) );
+    if( knowledge < practical ) {
+        throw std::invalid_argument(
+            "game.skills.set knowledge cannot be below practical" );
+    }
+
+    sol::table before =
+        snapshot_state( state, *character, definition );
+    if( adjustments.practical ) {
+        character->set_skill_level( id, practical );
+    }
+    if( adjustments.knowledge ) {
+        character->set_knowledge_level( id, knowledge );
+    }
+    if( adjustments.exercise_percent ) {
+        character->get_skill_level_object( id ).set_exercise(
+            *adjustments.exercise_percent );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, definition );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
 }
 
 } // namespace
@@ -345,7 +453,7 @@ void install_skill_api(
     std::function<std::size_t()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
-    std::function<void()> )
+    std::function<void()> require_write )
 {
     sol::state_view lua( game.lua_state() );
     sol::table skills = lua.create_table();
@@ -382,6 +490,18 @@ void install_skill_api(
         require_read();
         return get_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    skills.set_function(
+        "set",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const sol::table & adjustments ) {
+        require_write();
+        return set_state(
+                   lua_state, handle, id, adjustments,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
