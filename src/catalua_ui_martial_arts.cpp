@@ -438,6 +438,51 @@ sol::table learn_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table remove_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_style_id(
+        requested_id, "game.martial_arts.remove" );
+    const matype_id id( requested_id.value() );
+    if( id == matype_id( "style_none" ) ||
+        id == matype_id( "style_kicks" ) ) {
+        throw std::invalid_argument(
+            "game.martial_arts.remove cannot remove "
+            "a built-in fallback style" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const bool known_before =
+        character->has_martialart( id );
+    sol::table before =
+        snapshot_state( state, *character, id );
+    if( known_before ) {
+        character->martial_arts_data->clear_style( id );
+    }
+    sol::table value = state.create_table();
+    value["changed"] =
+        known_before && !character->has_martialart( id );
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, id );
+    value["current"] =
+        snapshot_state(
+            state, *character,
+            character->martial_arts_data->selected_style() );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_martial_art_api(
@@ -502,6 +547,17 @@ void install_martial_art_api(
     const script_game_id & id ) {
         require_write();
         return learn_state(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    martial_arts.set_function(
+        "remove",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_write();
+        return remove_state(
                    lua_state, handle, id,
                    current_runtime_generation(),
                    current_world_generation() );
