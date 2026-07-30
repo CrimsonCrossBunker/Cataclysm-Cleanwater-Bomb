@@ -626,6 +626,35 @@ sol::table set_variable(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table remove_variable(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &key,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_context_key( key );
+    sol::state_view state( lua );
+    resolved_variable_talker resolved = resolve_variable_talker(
+                                            handle, runtime_generation,
+                                            world_generation );
+    if( resolved.error ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    sol::table value = state.create_table();
+    const diag_value *before = resolved.value->maybe_get_value( key );
+    value["removed"] = before != nullptr;
+    if( before != nullptr ) {
+        std::size_t nodes = 0;
+        value["before"] = context_value_to_lua(
+                              state, *before, 0, nodes );
+        resolved.value->remove_value( key );
+    } else {
+        value["before"] = sol::nil;
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_eoc_api(
@@ -730,6 +759,20 @@ void install_eoc_api(
             has_active_callback, "game.variables.set" );
         return set_variable(
                    lua_state, handle, key, value,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    variables.set_function(
+        "remove",
+        [current_runtime_generation, current_world_generation,
+         require_write, has_active_callback](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & key ) {
+        require_write();
+        require_active_callback(
+            has_active_callback, "game.variables.remove" );
+        return remove_variable(
+                   lua_state, handle, key,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
