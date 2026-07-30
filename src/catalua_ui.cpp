@@ -414,6 +414,7 @@ std::size_t world_generation_counter = 0;
 std::deque<runtime_diagnostic_record> diagnostic_history;
 std::uint64_t diagnostic_sequence = 0;
 bool mapgen_bootstrap_attempted = false;
+bool sidebar_panels_dirty = false;
 
 bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
                             const std::string &display_name,
@@ -1119,6 +1120,14 @@ std::string sidebar_string_option(
     return value.as<std::string>();
 }
 
+void mark_sidebar_panels_dirty( runtime_state &state )
+{
+    if( active_state.get() == &state &&
+        state.accept_actions ) {
+        sidebar_panels_dirty = true;
+    }
+}
+
 std::uint64_t register_sidebar_widget(
     runtime_state &state, const sol::table &descriptor )
 {
@@ -1221,6 +1230,7 @@ std::uint64_t register_sidebar_widget(
         replacement.registration_id =
             existing->registration_id;
         *existing = std::move( replacement );
+        mark_sidebar_panels_dirty( state );
         return existing->registration_id;
     }
 
@@ -1247,6 +1257,7 @@ std::uint64_t register_sidebar_widget(
         replacement.registration_id;
     state.sidebar_widgets.emplace_back(
         std::move( replacement ) );
+    mark_sidebar_panels_dirty( state );
     return result;
 }
 
@@ -1266,6 +1277,7 @@ bool unregister_sidebar_widget(
         return false;
     }
     state.sidebar_widgets.erase( found );
+    mark_sidebar_panels_dirty( state );
     return true;
 }
 
@@ -1283,7 +1295,12 @@ std::size_t clear_sidebar_widgets( runtime_state &state )
         return entry.source_index == source_index;
     } ),
     state.sidebar_widgets.end() );
-    return before - state.sidebar_widgets.size();
+    const std::size_t removed =
+        before - state.sidebar_widgets.size();
+    if( removed > 0 ) {
+        mark_sidebar_panels_dirty( state );
+    }
+    return removed;
 }
 
 std::string sidebar_widget_key(
@@ -5047,7 +5064,26 @@ bool reload_scripts_with_state(
         // A page, service, scheduler, or lifecycle callback may add its first
         // game-event handler later in the lifetime of this runtime.
         get_event_bus().subscribe( next.get() );
+        std::unique_ptr<runtime_state> previous =
+            std::move( active_state );
         active_state = std::move( next );
+        const bool sync_panels =
+            panel_manager::is_initialized();
+        try {
+            if( sync_panels ) {
+                panel_manager::get_manager().
+                sync_lua_panels();
+            }
+            sidebar_panels_dirty = false;
+        } catch( ... ) {
+            next = std::move( active_state );
+            active_state = std::move( previous );
+            if( sync_panels ) {
+                panel_manager::get_manager().
+                sync_lua_panels();
+            }
+            throw;
+        }
         generation_counter = candidate_generation;
         active_state->accept_actions = true;
         clear_navigation_requests();
@@ -5470,6 +5506,17 @@ void on_turn()
     if( active_state ) {
         run_scheduled_callbacks( *active_state, script_current_turn() );
     }
+    if( sidebar_panels_dirty &&
+        panel_manager::is_initialized() ) {
+        try {
+            panel_manager::get_manager().sync_lua_panels();
+            sidebar_panels_dirty = false;
+        } catch( const std::exception &exception ) {
+            record_runtime_error(
+                "Lua sidebar panel synchronization failed",
+                exception.what() );
+        }
+    }
 }
 
 void dispatch_mapgen_postprocess( mapgendata &data )
@@ -5607,6 +5654,17 @@ void on_world_ready( const world_ready_kind kind )
         active_state->accept_actions = false;
         dispatch_lifecycle_event( *active_state, "ccb.lifecycle.shutdown" );
         active_state.reset();
+        if( panel_manager::is_initialized() ) {
+            try {
+                panel_manager::get_manager().
+                sync_lua_panels();
+                sidebar_panels_dirty = false;
+            } catch( const std::exception &exception ) {
+                record_runtime_error(
+                    "Lua sidebar panel cleanup failed",
+                    exception.what() );
+            }
+        }
     }
     if( world_generation_counter == std::numeric_limits<std::size_t>::max() ) {
         world_generation_counter = 1;
@@ -5762,6 +5820,17 @@ void shutdown()
         active_state->accept_actions = false;
         dispatch_lifecycle_event( *active_state, "ccb.lifecycle.shutdown" );
         active_state.reset();
+    }
+    if( panel_manager::is_initialized() ) {
+        try {
+            panel_manager::get_manager().
+            sync_lua_panels();
+            sidebar_panels_dirty = false;
+        } catch( const std::exception &exception ) {
+            record_runtime_error(
+                "Lua sidebar panel cleanup failed",
+                exception.what() );
+        }
     }
     clear_actions();
     clear_navigation_requests();

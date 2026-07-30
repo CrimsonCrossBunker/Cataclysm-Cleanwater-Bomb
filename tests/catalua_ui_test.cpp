@@ -45,6 +45,7 @@
 #include "monster.h"
 #include "npc.h"
 #include "overmapbuffer.h"
+#include "panels.h"
 #include "path_info.h"
 #include "player_activity.h"
 #include "player_helpers.h"
@@ -5730,6 +5731,20 @@ end) == false)
     CHECK( widgets[0].redraw_every_frame );
     CHECK( widgets[0].enabled );
 
+    panel_manager::get_manager().init();
+    panel_layout &layout =
+        panel_manager::get_manager().get_current_layout();
+    auto panel = std::find_if(
+                     layout.panels().begin(), layout.panels().end(),
+    []( const window_panel & candidate ) {
+        return candidate.get_id() == "lua:user:status";
+    } );
+    REQUIRE( panel != layout.panels().end() );
+    CHECK( panel->get_name() == "Lua status" );
+    CHECK( panel->get_height() == 4 );
+    CHECK_FALSE( panel->toggle );
+    CHECK( panel->always_draw );
+
     REQUIRE( sidebar_widget_visible(
                  "lua:user:status" ) );
     const std::vector<sidebar_widget_line> lines =
@@ -5750,9 +5765,44 @@ end) == false)
     CHECK( widgets[0].enabled );
     CHECK_FALSE( widgets[1].enabled );
 
+    panel->toggle = true;
+    script.write( R"lua(
+assert(state.character.get("sidebar.draws", 0) == 1)
+sidebar.register_widget({
+    id = "status",
+    name = "Lua status reloaded",
+    height = 3,
+    draw = function()
+        return "reloaded"
+    end
+})
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    widgets = registered_sidebar_widgets();
+    REQUIRE( widgets.size() == 1 );
+    CHECK( widgets[0].key == "lua:user:status" );
+    panel_layout &hot_layout =
+        panel_manager::get_manager().get_current_layout();
+    panel = std::find_if(
+                hot_layout.panels().begin(),
+                hot_layout.panels().end(),
+    []( const window_panel & candidate ) {
+        return candidate.get_id() == "lua:user:status";
+    } );
+    REQUIRE( panel != hot_layout.panels().end() );
+    CHECK( panel->get_name() == "Lua status reloaded" );
+    CHECK( panel->get_height() == 3 );
+    CHECK( panel->toggle );
+
     script.write( "this is not valid Lua(" );
     CHECK_FALSE( reload_scripts( error ) );
-    CHECK( registered_sidebar_widgets().size() == 2 );
+    CHECK( registered_sidebar_widgets().size() == 1 );
+    CHECK( std::any_of(
+               hot_layout.panels().begin(),
+               hot_layout.panels().end(),
+    []( const window_panel & candidate ) {
+        return candidate.get_id() == "lua:user:status";
+    } ) );
 
     script.write( R"lua(
 assert(state.character.get("sidebar.draws", 0) == 1)
@@ -5761,6 +5811,15 @@ assert(sidebar.clear_widgets() == 0)
     REQUIRE( reload_scripts( error ) );
     CHECK( registered_sidebar_widgets().empty() );
     CHECK( status().sidebar_widget_count == 0 );
+    panel_layout &reloaded_layout =
+        panel_manager::get_manager().get_current_layout();
+    CHECK_FALSE( std::any_of(
+                     reloaded_layout.panels().begin(),
+                     reloaded_layout.panels().end(),
+    []( const window_panel & candidate ) {
+        return candidate.get_id().compare(
+                   0, 4, "lua:" ) == 0;
+    } ) );
 }
 
 TEST_CASE( "lua_game_snapshots_are_bounded_read_only_values", "[lua][ui][game][integration]" )
