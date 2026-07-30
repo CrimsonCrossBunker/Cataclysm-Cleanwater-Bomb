@@ -421,6 +421,85 @@ sol::table reset_sleep(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+struct health_adjustments {
+    std::optional<int> lifestyle;
+    std::optional<int> daily_health;
+};
+
+health_adjustments read_health_adjustments(
+    const sol::table &requested )
+{
+    health_adjustments result;
+    for( const auto &entry : requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.needs.set_health option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "lifestyle" && key != "daily_health" ) {
+            throw std::invalid_argument(
+                "game.needs.set_health received unknown option '" +
+                key + "'" );
+        }
+        if( !entry.second.is<int>() ) {
+            throw std::invalid_argument(
+                "game.needs.set_health option '" + key +
+                "' must be an integer" );
+        }
+        const int value = entry.second.as<int>();
+        if( value < -200 || value > 200 ) {
+            throw std::invalid_argument(
+                "game.needs.set_health option '" + key +
+                "' must be within -200..200" );
+        }
+        if( key == "lifestyle" ) {
+            result.lifestyle = value;
+        } else {
+            result.daily_health = value;
+        }
+    }
+    if( !result.lifestyle && !result.daily_health ) {
+        throw std::invalid_argument(
+            "game.needs.set_health requires "
+            "at least one adjustment" );
+    }
+    return result;
+}
+
+sol::table set_health(
+    sol::this_state lua, const game_handle &handle,
+    const sol::table &requested_adjustments,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const health_adjustments adjustments =
+        read_health_adjustments( requested_adjustments );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table before =
+        snapshot_needs( state, *character );
+    if( adjustments.lifestyle ) {
+        character->set_lifestyle( *adjustments.lifestyle );
+    }
+    if( adjustments.daily_health ) {
+        character->set_daily_health(
+            *adjustments.daily_health );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_needs( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_need_api(
@@ -507,6 +586,17 @@ void install_need_api(
         require_write();
         return reset_sleep(
                    lua_state, handle, scope,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "set_health",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & adjustments ) {
+        require_write();
+        return set_health(
+                   lua_state, handle, adjustments,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
