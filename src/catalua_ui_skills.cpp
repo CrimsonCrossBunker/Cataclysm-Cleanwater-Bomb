@@ -446,6 +446,40 @@ sol::table set_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table set_training_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const bool training,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_skill_id( requested_id, "game.skills.set_training" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const skill_id id( requested_id.value() );
+    const Skill &definition = id.obj();
+    sol::table before =
+        snapshot_state( state, *character, definition );
+    SkillLevel &level = character->get_skill_level_object( id );
+    const bool changed = level.isTraining() != training;
+    if( changed ) {
+        level.toggleTraining();
+    }
+    sol::table value = state.create_table();
+    value["changed"] = changed;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, definition );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_skill_api(
@@ -502,6 +536,17 @@ void install_skill_api(
         require_write();
         return set_state(
                    lua_state, handle, id, adjustments,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    skills.set_function(
+        "set_training",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const bool training ) {
+        require_write();
+        return set_training_state(
+                   lua_state, handle, id, training,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
