@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -11,6 +12,9 @@
 
 #include "addiction.h"
 #include "catalua_bindings_values.h"
+#include "catalua_game_handle.h"
+#include "character.h"
+#include "creature.h"
 
 namespace cata::lua_ui
 {
@@ -22,6 +26,9 @@ constexpr int default_definition_limit = 64;
 constexpr int maximum_definition_limit = 256;
 constexpr int maximum_definition_offset = 1000000;
 constexpr std::size_t maximum_query_bytes = 128;
+constexpr int default_state_limit = 64;
+constexpr int maximum_state_limit = 256;
+constexpr int maximum_state_offset = 1000000;
 
 struct definition_options {
     int offset = 0;
@@ -185,12 +192,187 @@ sol::table get_definition(
                addiction_id( id.value() ).obj() );
 }
 
+Character *resolve_character(
+    const game_handle &handle, const std::size_t runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    Character *character = resolved.value->as_character();
+    if( character == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype",
+            "The creature referenced by this GameHandle is not a character"
+        };
+    }
+    return character;
+}
+
+sol::table snapshot_state(
+    sol::state_view lua, const addiction_id &id,
+    const addiction *state )
+{
+    sol::table result = lua.create_table();
+    result["id"] = script_game_id(
+                       "addiction", id.str() );
+    result["name"] =
+        id.obj().get_name().translated();
+    result["present"] = state != nullptr;
+    result["intensity"] =
+        state == nullptr ? 0 : state->intensity;
+    result["active"] =
+        state != nullptr &&
+        state->intensity >= MIN_ADDICTION_LEVEL;
+    result["minimum_active_intensity"] =
+        MIN_ADDICTION_LEVEL;
+    result["maximum_intensity"] =
+        MAX_ADDICTION_LEVEL;
+    if( state == nullptr ) {
+        result["sated"] = sol::nil;
+        result["withdrawing"] = false;
+    } else {
+        result["sated"] =
+            script_time_duration::from_native(
+                state->sated );
+        result["withdrawing"] = state->sated < 0_turns;
+    }
+    return result;
+}
+
+const addiction *find_addiction(
+    const Character &character, const addiction_id &id )
+{
+    const auto found = std::find_if(
+                           character.addictions.begin(),
+                           character.addictions.end(),
+    [&id]( const addiction & entry ) {
+        return entry.type == id;
+    } );
+    return found == character.addictions.end() ?
+           nullptr : &*found;
+}
+
+struct state_list_options {
+    int offset = 0;
+    int limit = default_state_limit;
+};
+
+state_list_options read_state_list_options(
+    const sol::optional<sol::table> &requested )
+{
+    state_list_options result;
+    if( requested ) {
+        result.offset = requested->get_or(
+                            "offset", result.offset );
+        result.limit = requested->get_or(
+                           "limit", result.limit );
+    }
+    if( result.offset < 0 || result.offset > maximum_state_offset ) {
+        throw std::invalid_argument(
+            "game.addictions.list offset must be within 0..1000000" );
+    }
+    if( result.limit < 0 ) {
+        throw std::invalid_argument(
+            "game.addictions.list limit cannot be negative" );
+    }
+    result.limit = std::min(
+                       result.limit, maximum_state_limit );
+    return result;
+}
+
+std::vector<const addiction *> sorted_addictions(
+    const Character &character )
+{
+    std::vector<const addiction *> result;
+    result.reserve( character.addictions.size() );
+    for( const addiction &entry : character.addictions ) {
+        result.push_back( &entry );
+    }
+    std::sort(
+        result.begin(), result.end(),
+    []( const addiction * lhs, const addiction * rhs ) {
+        return lhs->type.str() < rhs->type.str();
+    } );
+    return result;
+}
+
+sol::table list_states(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const state_list_options options =
+        read_state_list_options( requested );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const std::vector<const addiction *> entries =
+        sorted_addictions( *character );
+    const std::size_t first = std::min<std::size_t>(
+                                  options.offset, entries.size() );
+    const std::size_t last = std::min<std::size_t>(
+                                 first + options.limit, entries.size() );
+    sol::table items = state.create_table(
+                           static_cast<int>( last - first ), 0 );
+    for( std::size_t index = first; index < last; ++index ) {
+        items[index - first + 1] =
+            snapshot_state(
+                state, entries[index]->type, entries[index] );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["total"] = entries.size();
+    value["returned"] = last - first;
+    value["has_more"] = last < entries.size();
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_addiction_id(
+        requested_id, "game.addictions.get" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const addiction_id id( requested_id.value() );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, snapshot_state(
+                       state, id,
+                       find_addiction( *character, id ) ) ) );
+}
+
 } // namespace
 
 void install_addiction_api(
     sol::table &game,
-    std::function<std::size_t()>,
-    std::function<std::size_t()>,
+    std::function<std::size_t()> current_runtime_generation,
+    std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> )
 {
@@ -209,6 +391,28 @@ void install_addiction_api(
     const script_game_id & id ) {
         require_read();
         return get_definition( lua_state, id );
+    } );
+    addictions.set_function(
+        "list",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_states(
+                   lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    addictions.set_function(
+        "get",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_read();
+        return get_state(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
     } );
     game["addictions"] = std::move( addictions );
 }
