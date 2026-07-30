@@ -334,10 +334,11 @@ endif
 # Appears that the default value of $LD is unsuitable on most systems
 
 # when preprocessor defines change, but the source doesn't
-ODIR = $(BUILD_PREFIX)obj
-ODIRTILES = $(BUILD_PREFIX)obj/tiles
-W32ODIR = $(BUILD_PREFIX)objwin
-W32ODIRTILES = $(W32ODIR)/tiles
+LUA_UI_OBJECT_SUFFIX = $(if $(filter 1,$(CATA_ENABLE_LUA_UI)),-lua)
+ODIR = $(BUILD_PREFIX)obj$(LUA_UI_OBJECT_SUFFIX)
+ODIRTILES = $(BUILD_PREFIX)obj$(LUA_UI_OBJECT_SUFFIX)/tiles
+W32ODIR = $(BUILD_PREFIX)objwin$(LUA_UI_OBJECT_SUFFIX)
+W32ODIRTILES = $(BUILD_PREFIX)objwin$(LUA_UI_OBJECT_SUFFIX)/tiles
 
 ifdef AUTO_BUILD_PREFIX
   BUILD_PREFIX = $(if $(RELEASE),release-)$(if $(DEBUG_SYMBOLS),symbol-)$(if $(TILES),tiles-)$(if $(SOUND),sound-)$(if $(LOCALIZE),local-)$(if $(BACKTRACE),back-$(if $(LIBBACKTRACE),libbacktrace-))$(if $(SANITIZE),sanitize-)$(if $(USE_XDG_DIR),xdg-)$(if $(USE_HOME_DIR),home-)$(if $(DYNAMIC_LINKING),dynamic-)$(if $(MSYS2),msys2-)
@@ -1150,41 +1151,8 @@ LUA_C_SOURCE_NAMES := \
   lvm.c \
   lzio.c
 LUA_C_SOURCES := $(addprefix $(SRC_DIR)/lua/,$(LUA_C_SOURCE_NAMES))
-LUA_UI_ENABLED_SOURCES := \
-  $(SRC_DIR)/catalua_bindings.cpp \
-  $(SRC_DIR)/catalua_bindings_coords.cpp \
-  $(SRC_DIR)/catalua_bindings_enums.cpp \
-  $(SRC_DIR)/catalua_bindings_serde.cpp \
-  $(SRC_DIR)/catalua_bindings_values.cpp \
-  $(SRC_DIR)/catalua_game_handle.cpp \
-  $(SRC_DIR)/catalua_ui.cpp \
-  $(SRC_DIR)/catalua_ui_actions.cpp \
-  $(SRC_DIR)/catalua_ui_bionics.cpp \
-  $(SRC_DIR)/catalua_ui_callbacks.cpp \
-  $(SRC_DIR)/catalua_ui_crafting.cpp \
-  $(SRC_DIR)/catalua_ui_creatures.cpp \
-  $(SRC_DIR)/catalua_ui_effects.cpp \
-  $(SRC_DIR)/catalua_ui_events.cpp \
-  $(SRC_DIR)/catalua_ui_game.cpp \
-  $(SRC_DIR)/catalua_ui_hordes.cpp \
-  $(SRC_DIR)/catalua_ui_i18n.cpp \
-  $(SRC_DIR)/catalua_ui_imgui.cpp \
-  $(SRC_DIR)/catalua_ui_items.cpp \
-  $(SRC_DIR)/catalua_ui_magic.cpp \
-  $(SRC_DIR)/catalua_ui_manifest.cpp \
-  $(SRC_DIR)/catalua_ui_mapgen.cpp \
-  $(SRC_DIR)/catalua_ui_missions.cpp \
-  $(SRC_DIR)/catalua_ui_modules.cpp \
-  $(SRC_DIR)/catalua_ui_mutations.cpp \
-  $(SRC_DIR)/catalua_ui_navigation.cpp \
-  $(SRC_DIR)/catalua_ui_overmap.cpp \
-  $(SRC_DIR)/catalua_ui_renderer.cpp \
-  $(SRC_DIR)/catalua_ui_registry.cpp \
-  $(SRC_DIR)/catalua_ui_scheduler.cpp \
-  $(SRC_DIR)/catalua_ui_services.cpp \
-  $(SRC_DIR)/catalua_ui_state.cpp \
-  $(SRC_DIR)/catalua_ui_values.cpp \
-  $(SRC_DIR)/catalua_ui_world.cpp
+LUA_UI_ENABLED_SOURCES := $(filter-out \
+  $(SRC_DIR)/catalua_ui_disabled.cpp,$(wildcard $(SRC_DIR)/catalua*.cpp))
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
 HEADERS := $(wildcard $(SRC_DIR)/*.h)
@@ -1361,6 +1329,7 @@ $(PCH_P): $(PCH_H)
 	-$(COMPILE.cc) $(OUTPUT_OPTION) -MMD -MP -Wno-error $<
 
 $(BUILD_PREFIX)$(TARGET_NAME).a: $(OBJS)
+	$(RM) $@
 	$(AR) rcs $(AR_FLAGS) $(BUILD_PREFIX)$(TARGET_NAME).a $(filter-out $(ODIR)/main.o $(ODIR)/messages.o,$(OBJS))
 
 .PHONY: version prefix
