@@ -2129,17 +2129,15 @@ function CcbBionicsApi.deactivate(character, uid) end
 ---@return CcbResult
 function CcbBionicsApi.configure(character, uid, options) end
 
----@class CcbItemTraversalOptions
----@field offset? integer
----@field limit? integer
----@field depth? integer
----@field include_pockets? boolean
----@field include_contents? boolean
+---@class CcbItemPocketOptions: CcbPageOptions
+
+---@class CcbItemContentsOptions: CcbPageOptions
+---@field max_depth? integer
+---@field recursive? boolean
 
 ---@class CcbItemUpdates
 ---@field charges? integer
 ---@field damage? integer
----@field active? boolean
 ---@field favorite? boolean
 
 ---@class CcbItemsApi
@@ -2151,12 +2149,12 @@ local CcbItemsApi = {}
 function CcbItemsApi.snapshot(handle, relation_limit) end
 
 ---@param handle GameHandle
----@param options? CcbItemTraversalOptions
+---@param options? CcbItemPocketOptions
 ---@return CcbResult
 function CcbItemsApi.pockets(handle, options) end
 
 ---@param handle GameHandle
----@param options? CcbItemTraversalOptions
+---@param options? CcbItemContentsOptions
 ---@return CcbResult
 function CcbItemsApi.contents(handle, options) end
 
@@ -2203,17 +2201,15 @@ function CcbItemsApi.has_technique(handle, technique) end
 ---@return CcbResult
 function CcbItemsApi.set_technique(handle, technique, enabled) end
 
----@class CcbInventoryOptions
----@field offset? integer
----@field limit? integer
+---@class CcbInventoryOptions: CcbPageOptions
+---@field max_depth? integer
 ---@field recursive? boolean
----@field worn? boolean
----@field wielded? boolean
+---@field include_wielded? boolean
+---@field include_worn? boolean
+---@field include_carried? boolean
 
 ---@class CcbGiveItemOptions
----@field charges? integer
----@field birthday? TimePoint
----@field container? boolean
+---@field allow_wield? boolean
 
 ---@class CcbInventoryApi
 local CcbInventoryApi = {}
