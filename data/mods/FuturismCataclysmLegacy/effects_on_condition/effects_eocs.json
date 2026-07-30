@@ -1,0 +1,16 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_EFFECT_GAINS_FCL_CUREALL",
+    "eoc_type": "EVENT",
+    "required_event": "character_gains_effect",
+    "condition": { "compare_string": [ "fcl_cureall", { "context_val": "effect" } ] },
+    "effect": [
+      { "math": [ "u_vitamin('calcium') = max(0,u_vitamin('calcium'))" ] },
+      { "math": [ "u_vitamin('iron') = max(0,u_vitamin('iron'))" ] },
+      { "math": [ "u_vitamin('vitC') = max(0,u_vitamin('vitC'))" ] },
+      { "math": [ "u_vitamin('redcells') = max(-5000,u_vitamin('redcells')+1000)" ] },
+      { "math": [ "u_vitamin('blood') = max(-2500,u_vitamin('blood')+1000)" ] }
+    ]
+  }
+]
