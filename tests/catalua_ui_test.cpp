@@ -11681,14 +11681,21 @@ TEST_CASE( "lua_v5_creature_turn_hooks_run_once_per_native_ai_turn",
 {
     using namespace cata::lua_ui;
 
-    // This case exercises the entire native turn suffix.  Recreate its map
-    // instead of inheriting partially loaded z-levels from earlier hook cases.
-    clear_overmaps();
     clear_avatar();
     clear_map_without_vision();
     avatar &player = get_avatar();
     map &here = get_map();
-    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.setpos( here, tripoint_bub_ms( MAPSIZE_X / 2, MAPSIZE_Y / 2, 0 ) );
+
+    // clear_map_without_vision dirties support caches across z-levels.  Drain
+    // those changes before installing the turn hooks so this case observes
+    // only the two creatures it creates, rather than testing the entire map
+    // falling simulation as an accidental prerequisite.
+    here.build_floor_caches();
+    here.process_falling();
+    clear_creatures();
+    clear_npcs();
+
     monster &test_monster = spawn_test_monster(
                                 "mon_zombie",
                                 player.pos_bub( here ) +
@@ -11697,6 +11704,22 @@ TEST_CASE( "lua_v5_creature_turn_hooks_run_once_per_native_ai_turn",
                         ( player.pos_bub( here ) +
                           tripoint_rel_ms::west * 3 ).xy(),
                         "test_talker" );
+
+    // spawn_npc reloads every nearby overmap NPC.  Mapgen may have placed
+    // unrelated static NPCs in the current test world, so remove those before
+    // asserting exact native-turn hook counts.
+    for( npc &candidate : g->all_npcs() ) {
+        if( &candidate != &test_npc ) {
+            candidate.die( &here, nullptr );
+        }
+    }
+    g->cleanup_dead();
+
+    on_out_of_scope cleanup_creatures( []() {
+        clear_creatures();
+        clear_npcs();
+    } );
+
     test_monster.add_effect(
         efftype_id( "controlled" ), 1_hours );
     test_npc.add_effect(
