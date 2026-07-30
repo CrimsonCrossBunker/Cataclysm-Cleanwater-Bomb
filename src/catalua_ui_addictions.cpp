@@ -29,6 +29,7 @@ constexpr std::size_t maximum_query_bytes = 128;
 constexpr int default_state_limit = 64;
 constexpr int maximum_state_limit = 256;
 constexpr int maximum_state_offset = 1000000;
+constexpr int maximum_exposure_strength = 100000;
 
 struct definition_options {
     int offset = 0;
@@ -367,6 +368,55 @@ sol::table get_state(
                        find_addiction( *character, id ) ) ) );
 }
 
+sol::table expose_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const int strength,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_addiction_id(
+        requested_id, "game.addictions.expose" );
+    if( strength < 0 || strength > maximum_exposure_strength ) {
+        throw std::invalid_argument(
+            "game.addictions.expose strength "
+            "must be within 0..100000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const addiction_id id( requested_id.value() );
+    const addiction *before_entry =
+        find_addiction( *character, id );
+    const int before_intensity =
+        before_entry == nullptr ? 0 : before_entry->intensity;
+    const time_duration before_sated =
+        before_entry == nullptr ? 0_turns : before_entry->sated;
+    sol::table before =
+        snapshot_state( state, id, before_entry );
+    character->add_addiction( id, strength );
+    const addiction *after_entry =
+        find_addiction( *character, id );
+    const int after_intensity =
+        after_entry == nullptr ? 0 : after_entry->intensity;
+    const time_duration after_sated =
+        after_entry == nullptr ? 0_turns : after_entry->sated;
+    sol::table value = state.create_table();
+    value["changed"] =
+        before_intensity != after_intensity ||
+        before_sated != after_sated;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, id, after_entry );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_addiction_api(
@@ -374,7 +424,7 @@ void install_addiction_api(
     std::function<std::size_t()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
-    std::function<void()> )
+    std::function<void()> require_write )
 {
     sol::state_view lua( game.lua_state() );
     sol::table addictions = lua.create_table();
@@ -411,6 +461,17 @@ void install_addiction_api(
         require_read();
         return get_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    addictions.set_function(
+        "expose",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int strength ) {
+        require_write();
+        return expose_state(
+                   lua_state, handle, id, strength,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
