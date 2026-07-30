@@ -1897,10 +1897,9 @@ function CcbTargetingApi.choose_adjacent_for_action(message, failure_message, ac
 ---@return TripointCoord?
 function CcbTargetingApi.choose_adjacent_where(message, failure_message, candidates, allow_vertical, allow_autoselect) end
 
----@class CcbSpawnOptions
----@field friendly? integer
----@field name? string
----@field hallucination? boolean
+---@class CcbHallucinationOptions
+---@field monster? GameId
+---@field lifespan? TimeDuration
 
 ---@class CcbSpawnsApi
 local CcbSpawnsApi = {}
@@ -1912,7 +1911,7 @@ local CcbSpawnsApi = {}
 function CcbSpawnsApi.monster(monster, position, radius) end
 
 ---@param position TripointCoord
----@param options? CcbSpawnOptions
+---@param options? CcbHallucinationOptions
 ---@return CcbResult
 function CcbSpawnsApi.hallucination(position, options) end
 
@@ -1944,8 +1943,9 @@ function CcbRelocationApi.overmap_at(position) end
 ---@class CcbNearbyOptions
 ---@field radius? integer
 ---@field limit? integer
+---@field visible_only? boolean
 ---@field include_avatar? boolean
----@field kinds? string[]
+---@field include_hallucinations? boolean
 
 ---@class CcbCharactersAdjustments
 ---@field moves? integer
@@ -1955,7 +1955,9 @@ function CcbRelocationApi.overmap_at(position) end
 ---@field hunger? integer
 ---@field thirst? integer
 ---@field sleepiness? integer
----@field morale? integer
+---@field radiation? integer
+---@field painkiller? integer
+---@field stored_kcal? integer
 
 ---@class CcbCreaturesApi
 local CcbCreaturesApi = {}
@@ -2010,11 +2012,16 @@ function CcbCharactersApi.heal(handle, body_part, amount) end
 ---@return CcbResult
 function CcbCharactersApi.set_movement_mode(handle, mode) end
 
----@class CcbEffectOptions
+---@class CcbEffectAddOptions
 ---@field body_part? GameId
 ---@field intensity? integer
 ---@field force? boolean
----@field deferred? boolean
+---@field permanent? boolean
+
+---@class CcbEffectUpdateOptions
+---@field body_part? GameId
+---@field duration? TimeDuration
+---@field intensity? integer
 ---@field permanent? boolean
 
 ---@class CcbEffectsApi
@@ -2040,7 +2047,7 @@ function CcbEffectsApi.get(handle, id, body_part) end
 ---@param handle GameHandle
 ---@param id GameId
 ---@param duration TimeDuration
----@param options? CcbEffectOptions
+---@param options? CcbEffectAddOptions
 ---@return CcbResult
 function CcbEffectsApi.add(handle, id, duration, options) end
 
@@ -2052,17 +2059,15 @@ function CcbEffectsApi.remove(handle, id, body_part) end
 
 ---@param handle GameHandle
 ---@param id GameId
----@param options CcbEffectOptions
+---@param options CcbEffectUpdateOptions
 ---@return CcbResult
 function CcbEffectsApi.update(handle, id, options) end
 
----@class CcbListOptions
+---@class CcbPageOptions
 ---@field offset? integer
 ---@field limit? integer
----@field query? string
 
 ---@class CcbBionicConfigureOptions
----@field auto_start? boolean
 ---@field auto_shutdown? boolean
 ---@field show_sprite? boolean
 ---@field safe_fuel_threshold? number
@@ -2070,7 +2075,7 @@ function CcbEffectsApi.update(handle, id, options) end
 ---@class CcbBionicsApi
 local CcbBionicsApi = {}
 
----@param options? CcbListOptions
+---@param options? CcbPageOptions
 ---@return table
 function CcbBionicsApi.definitions(options) end
 
