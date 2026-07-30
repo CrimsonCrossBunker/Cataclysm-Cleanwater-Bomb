@@ -32,7 +32,7 @@ class LuaLsDeclarationTest(unittest.TestCase):
 
     def test_committed_declarations_cover_the_native_surface(self) -> None:
         result = check(DECLARATIONS)
-        self.assertEqual(result["methods"], 285)
+        self.assertEqual(result["methods"], 287)
         self.assertEqual(result["usertypes"], 14)
         self.assertEqual(result["coordinate_factories"], 36)
 

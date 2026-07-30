@@ -353,9 +353,13 @@ function CcbUnitsApi.kinds() end
 function CcbUnitsApi.units(kind) end
 
 ---@class CcbTimeApi
----@field turn_zero TimePoint
----@field before_time_starts TimePoint
 local CcbTimeApi = {}
+
+---@return TimePoint
+function CcbTimeApi.turn_zero() end
+
+---@return TimePoint
+function CcbTimeApi.before_time_starts() end
 
 ---@param value integer
 ---@param unit string
