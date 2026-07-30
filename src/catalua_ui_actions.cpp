@@ -15,6 +15,7 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "calendar.h"
+#include "crafting.h"
 #include "item.h"
 #include "item_location.h"
 #include "input_context_actions.h"
@@ -487,6 +488,10 @@ bool dispatch_action( const action_request &request )
         if( !value.character_has_required_proficiencies( player ) ) {
             throw std::runtime_error(
                 "the avatar lacks a required proficiency" );
+        }
+        if( !crafting_allowed( player, value ) ) {
+            throw std::runtime_error(
+                "crafting is not currently allowed" );
         }
         if( !player.can_start_craft(
                 &value, recipe_filter_flags::none, batch ) ) {

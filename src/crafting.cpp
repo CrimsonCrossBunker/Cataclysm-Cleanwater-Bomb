@@ -140,7 +140,7 @@ static const std::string flag_NO_RESIZE( "NO_RESIZE" );
 
 class basecamp;
 
-static bool crafting_allowed( const Character &p, const recipe &rec )
+bool crafting_allowed( const Character &p, const recipe &rec )
 {
     if( p.morale_crafting_speed_multiplier( rec ) <= 0.0f ) {
         if( p.is_avatar() ) {

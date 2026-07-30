@@ -6363,16 +6363,34 @@ end)
     CHECK_FALSE( *dispatched );
     CHECK_FALSE( cata::lua_ui::process_next_action() );
 
+    if( player.activity ) {
+        player.cancel_activity();
+    }
+    player.controlling_vehicle = true;
+    get_event_bus().send<event_type::game_begin>(
+        "lua-crafting-driving-action-test" );
+    const std::optional<bool> driving_dispatch =
+        cata::lua_ui::process_next_action();
+    player.controlling_vehicle = false;
+    REQUIRE( driving_dispatch );
+    CHECK_FALSE( *driving_dispatch );
+    CHECK_FALSE( cata::lua_ui::process_next_action() );
+
     script.write( R"lua(
 local status = game.actions.status()
 assert(status.pending_count == 0)
-assert(status.result_count == 1)
-assert(#status.results == 1)
+assert(status.result_count == 2)
+assert(#status.results == 2)
 assert(status.results[1].type == "craft")
 assert(status.results[1].status == "failed")
 assert(status.results[1].action_taken == false)
 assert(string.find(status.results[1].error,
     "activity", 1, true) ~= nil)
+assert(status.results[2].type == "craft")
+assert(status.results[2].status == "failed")
+assert(status.results[2].action_taken == false)
+assert(string.find(status.results[2].error,
+    "crafting is not currently allowed", 1, true) ~= nil)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
 
