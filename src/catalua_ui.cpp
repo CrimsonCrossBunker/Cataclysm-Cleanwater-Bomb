@@ -42,6 +42,7 @@
 #include "catalua_ui_effects.h"
 #include "catalua_ui_eocs.h"
 #include "catalua_ui_events.h"
+#include "catalua_ui_factions.h"
 #include "catalua_ui_game.h"
 #include "catalua_ui_game_info.h"
 #include "catalua_ui_hordes.h"
@@ -3346,6 +3347,16 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.npcs" );
+        require_capability( state, "game.write" );
+    } );
+    install_faction_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game.factions" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.factions" );
         require_capability( state, "game.write" );
     } );
     install_magic_api(
