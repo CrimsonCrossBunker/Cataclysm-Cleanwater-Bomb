@@ -11373,8 +11373,9 @@ TEST_CASE( "lua_v5_movement_hooks_veto_native_creature_moves",
     const tripoint_bub_ms npc_from( 35, 35, 0 );
     const tripoint_bub_ms monster_from( 40, 40, 0 );
     player.setpos( here, player_from );
-    standard_npc test_npc( "Lua movement NPC", npc_from );
-    monster test_monster( mtype_id( "mon_zombie" ), monster_from );
+    npc &test_npc = spawn_npc( npc_from.xy(), "test_talker" );
+    monster &test_monster =
+        spawn_test_monster( "mon_zombie", monster_from );
 
     scoped_lua_user_script script;
     script.write_manifest( R"json({
