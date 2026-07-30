@@ -166,8 +166,10 @@ sol::table snapshot_faction(
     resources["food_kcal"] =
         entry.food_supply().kcal();
     resources["wealth_description"] =
+        entry.size > 0 ?
         fac_wealth_text(
-            entry.wealth, entry.size );
+            entry.wealth, entry.size ) :
+        std::string();
     resources["combat_ability"] =
         fac_combat_ability_text(
             entry.power );
