@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -29,6 +30,9 @@ constexpr int maximum_zone_limit = 256;
 constexpr int maximum_zone_offset = 1000000;
 constexpr std::size_t maximum_query_bytes = 128;
 constexpr std::size_t maximum_nested_values = 128;
+constexpr std::size_t maximum_zone_name_bytes = 55;
+constexpr std::int64_t maximum_zone_axis_length = 256;
+constexpr std::int64_t maximum_zone_volume = 65536;
 
 struct script_zone_token {
     std::size_t runtime_generation = 0;
@@ -38,6 +42,8 @@ struct script_zone_token {
     std::string name;
     tripoint_abs_ms start = tripoint_abs_ms::zero;
     tripoint_abs_ms end = tripoint_abs_ms::zero;
+    tripoint_rel_ms personal_start = tripoint_rel_ms::zero;
+    tripoint_rel_ms personal_end = tripoint_rel_ms::zero;
     bool personal = false;
     std::size_t ordinal = 0;
 };
@@ -67,6 +73,82 @@ tripoint_abs_ms require_absolute_ms(
                position.to_native() );
 }
 
+tripoint_rel_ms require_relative_ms(
+    const script_tripoint_coord &position,
+    const std::string &api_name )
+{
+    if( position.native_origin() !=
+        coords::origin::relative ||
+        position.native_scale() !=
+        coords::scale::map_square ) {
+        throw std::invalid_argument(
+            api_name +
+            " requires a relative map-square Tripoint for personal zones" );
+    }
+    return tripoint_rel_ms(
+               position.to_native() );
+}
+
+void validate_zone_name(
+    const std::string &name,
+    const std::string &api_name )
+{
+    if( name.empty() ) {
+        throw std::invalid_argument(
+            api_name +
+            " name cannot be empty" );
+    }
+    if( name.size() >
+        maximum_zone_name_bytes ) {
+        throw std::invalid_argument(
+            api_name +
+            " name exceeds 55 bytes" );
+    }
+}
+
+template<typename Point>
+std::pair<Point, Point> normalize_zone_bounds(
+    const Point &first, const Point &second,
+    const std::string &api_name )
+{
+    if( first.z() != second.z() ) {
+        throw std::invalid_argument(
+            api_name +
+            " zone corners must use the same z-level" );
+    }
+    const Point start(
+        std::min( first.x(), second.x() ),
+        std::min( first.y(), second.y() ),
+        first.z() );
+    const Point end(
+        std::max( first.x(), second.x() ),
+        std::max( first.y(), second.y() ),
+        first.z() );
+    const std::int64_t width =
+        static_cast<std::int64_t>(
+            end.x() ) -
+        static_cast<std::int64_t>(
+            start.x() ) + 1;
+    const std::int64_t height =
+        static_cast<std::int64_t>(
+            end.y() ) -
+        static_cast<std::int64_t>(
+            start.y() ) + 1;
+    if( width > maximum_zone_axis_length ||
+        height > maximum_zone_axis_length ) {
+        throw std::invalid_argument(
+            api_name +
+            " zone axes cannot exceed 256 map squares" );
+    }
+    if( width > maximum_zone_volume /
+        height ) {
+        throw std::invalid_argument(
+            api_name +
+            " zone cannot exceed 65536 map squares" );
+    }
+    return { start, end };
+}
+
 void require_id_kind(
     const script_game_id &id,
     const std::string &kind,
@@ -83,17 +165,25 @@ bool token_matches_zone(
     const script_zone_token &token,
     const zone_data &entry )
 {
-    return entry.get_faction().str() ==
-           token.faction &&
-           entry.get_type().str() ==
-           token.type &&
-           entry.get_name() == token.name &&
-           entry.get_start_point() ==
+    if( entry.get_faction().str() !=
+        token.faction ||
+        entry.get_type().str() !=
+        token.type ||
+        entry.get_name() != token.name ||
+        entry.get_is_personal() !=
+        token.personal ) {
+        return false;
+    }
+    if( token.personal ) {
+        return entry.get_personal_start_point() ==
+               token.personal_start &&
+               entry.get_personal_end_point() ==
+               token.personal_end;
+    }
+    return entry.get_start_point() ==
            token.start &&
            entry.get_end_point() ==
-           token.end &&
-           entry.get_is_personal() ==
-           token.personal;
+           token.end;
 }
 
 zone_data *resolve_zone(
@@ -161,6 +251,12 @@ script_zone_token make_zone_token(
         entry.get_end_point();
     result.personal =
         entry.get_is_personal();
+    if( result.personal ) {
+        result.personal_start =
+            entry.get_personal_start_point();
+        result.personal_end =
+            entry.get_personal_end_point();
+    }
     std::vector<zone_manager::ref_zone_data> zones =
         zone_manager::get_manager().get_zones(
             entry.get_faction() );
@@ -286,16 +382,16 @@ matching_zone_types(
         if( query.empty() ||
             lowercase_ascii(
                 definition.id.str() ).find(
-                    query ) != std::string::npos ||
+                query ) != std::string::npos ||
             lowercase_ascii(
                 definition.name() ).find(
-                    query ) != std::string::npos ) {
+                query ) != std::string::npos ) {
             result.push_back( &definition );
         }
     }
     std::sort(
         result.begin(), result.end(),
-    []( const zone_type * lhs,
+        []( const zone_type * lhs,
     const zone_type * rhs ) {
         return lhs->id.str() <
                rhs->id.str();
@@ -451,12 +547,171 @@ zone_list_options read_zone_list_options(
     return result;
 }
 
+bool require_boolean_option(
+    const sol::object &value,
+    const std::string &api_name,
+    const std::string &key )
+{
+    if( !value.is<bool>() ) {
+        throw std::invalid_argument(
+            api_name + " option '" + key +
+            "' must be a boolean" );
+    }
+    return value.as<bool>();
+}
+
+std::string require_string_option(
+    const sol::object &value,
+    const std::string &api_name,
+    const std::string &key )
+{
+    if( !value.is<std::string>() ) {
+        throw std::invalid_argument(
+            api_name + " option '" + key +
+            "' must be a string" );
+    }
+    return value.as<std::string>();
+}
+
+script_game_id require_id_option(
+    const sol::object &value,
+    const std::string &kind,
+    const std::string &api_name,
+    const std::string &key )
+{
+    if( !value.is<script_game_id>() ) {
+        throw std::invalid_argument(
+            api_name + " option '" + key +
+            "' requires GameId<" + kind + ">" );
+    }
+    const script_game_id result =
+        value.as<script_game_id>();
+    require_id_kind(
+        result, kind,
+        api_name + " option '" + key + "'" );
+    if( !result.is_valid() ) {
+        throw std::invalid_argument(
+            api_name + " option '" + key +
+            "' requires a valid GameId<" +
+            kind + ">" );
+    }
+    return result;
+}
+
+script_tripoint_coord require_coord_option(
+    const sol::object &value,
+    const std::string &api_name,
+    const std::string &key )
+{
+    if( !value.is<script_tripoint_coord>() ) {
+        throw std::invalid_argument(
+            api_name + " option '" + key +
+            "' requires a Tripoint" );
+    }
+    return value.as<script_tripoint_coord>();
+}
+
+struct zone_create_options {
+    std::string name;
+    std::optional<zone_type_id> type;
+    faction_id faction =
+        faction_id( "your_followers" );
+    std::optional<script_tripoint_coord> start;
+    std::optional<script_tripoint_coord> end;
+    bool invert = false;
+    bool enabled = true;
+    bool personal = false;
+};
+
+zone_create_options read_zone_create_options(
+    const sol::table &requested )
+{
+    const std::string api_name =
+        "game.zones.create";
+    zone_create_options result;
+    for( const auto &entry : requested ) {
+        const sol::object key_object =
+            entry.first;
+        if( key_object.get_type() !=
+            sol::type::string ) {
+            throw std::invalid_argument(
+                api_name +
+                " option keys must be strings" );
+        }
+        const std::string key =
+            key_object.as<std::string>();
+        const sol::object value =
+            entry.second;
+        if( key == "name" ) {
+            result.name =
+                require_string_option(
+                    value, api_name, key );
+        } else if( key == "type" ) {
+            result.type =
+                zone_type_id(
+                    require_id_option(
+                        value, "zone",
+                        api_name, key ).value() );
+        } else if( key == "faction" ) {
+            result.faction =
+                faction_id(
+                    require_id_option(
+                        value, "faction",
+                        api_name, key ).value() );
+        } else if( key == "start" ) {
+            result.start =
+                require_coord_option(
+                    value, api_name, key );
+        } else if( key == "end" ) {
+            result.end =
+                require_coord_option(
+                    value, api_name, key );
+        } else if( key == "invert" ) {
+            result.invert =
+                require_boolean_option(
+                    value, api_name, key );
+        } else if( key == "enabled" ) {
+            result.enabled =
+                require_boolean_option(
+                    value, api_name, key );
+        } else if( key == "personal" ) {
+            result.personal =
+                require_boolean_option(
+                    value, api_name, key );
+        } else {
+            throw std::invalid_argument(
+                api_name +
+                " received unknown option '" +
+                key + "'" );
+        }
+    }
+    validate_zone_name(
+        result.name, api_name );
+    if( !result.type ) {
+        throw std::invalid_argument(
+            api_name +
+            " requires option 'type'" );
+    }
+    if( !result.start || !result.end ) {
+        throw std::invalid_argument(
+            api_name +
+            " requires options 'start' and 'end'" );
+    }
+    if( result.personal &&
+        !result.type->obj().can_be_personal ) {
+        throw std::invalid_argument(
+            api_name +
+            " type does not support personal zones" );
+    }
+    return result;
+}
+
 sol::table snapshot_option_descriptions(
     sol::state_view lua, const zone_data &entry )
 {
-    const std::vector<
-    std::pair<std::string, std::string>> descriptions =
-        entry.get_options().get_descriptions();
+    const std::vector <
+    std::pair<std::string, std::string >> descriptions =
+                                           entry.get_options().get_descriptions();
     const std::size_t returned =
         std::min<std::size_t>(
             descriptions.size(),
@@ -540,6 +795,490 @@ sol::table snapshot_zone(
     return result;
 }
 
+sol::table create_zone(
+    sol::this_state lua,
+    const sol::table &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const zone_create_options options =
+        read_zone_create_options( requested );
+    script_zone_token identity;
+    identity.runtime_generation =
+        runtime_generation;
+    identity.world_generation =
+        world_generation;
+    identity.faction =
+        options.faction.str();
+    identity.type =
+        options.type->str();
+    identity.name =
+        options.name;
+    identity.personal =
+        options.personal;
+
+    std::optional<std::pair<
+    tripoint_abs_ms, tripoint_abs_ms>>
+                                    absolute_bounds;
+    std::optional<std::pair<
+    tripoint_rel_ms, tripoint_rel_ms>>
+                                    relative_bounds;
+    if( options.personal ) {
+        relative_bounds =
+            normalize_zone_bounds(
+                require_relative_ms(
+                    *options.start,
+                    "game.zones.create" ),
+                require_relative_ms(
+                    *options.end,
+                    "game.zones.create" ),
+                "game.zones.create" );
+        identity.personal_start =
+            relative_bounds->first;
+        identity.personal_end =
+            relative_bounds->second;
+    } else {
+        absolute_bounds =
+            normalize_zone_bounds(
+                require_absolute_ms(
+                    *options.start,
+                    "game.zones.create" ),
+                require_absolute_ms(
+                    *options.end,
+                    "game.zones.create" ),
+                "game.zones.create" );
+        identity.start =
+            absolute_bounds->first;
+        identity.end =
+            absolute_bounds->second;
+    }
+
+    zone_manager &manager =
+        zone_manager::get_manager();
+    for( zone_data &entry :
+         manager.get_zones(
+             options.faction ) ) {
+        if( token_matches_zone(
+                identity, entry ) ) {
+            return make_game_error_result(
+            sol::state_view( lua ), {
+                "duplicate_zone",
+                "An identical native zone already exists"
+            } );
+        }
+    }
+
+    if( relative_bounds ) {
+        manager.add(
+            options.name, *options.type,
+            options.faction, options.invert,
+            options.enabled,
+            relative_bounds->first,
+            relative_bounds->second );
+    } else {
+        manager.add(
+            options.name, *options.type,
+            options.faction, options.invert,
+            options.enabled,
+            absolute_bounds->first,
+            absolute_bounds->second,
+            nullptr, true );
+    }
+
+    zone_data *created = nullptr;
+    for( zone_data &entry :
+         manager.get_zones(
+             options.faction ) ) {
+        if( token_matches_zone(
+                identity, entry ) ) {
+            created = &entry;
+            break;
+        }
+    }
+    sol::state_view state( lua );
+    if( created == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "creation_failed",
+            "The native zone could not be resolved after creation"
+        } );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, snapshot_zone(
+                       state, *created,
+                       runtime_generation,
+                       world_generation ) ) );
+}
+
+bool duplicate_zone_exists(
+    const script_zone_token &identity,
+    const zone_data *excluded )
+{
+    for( zone_data &candidate :
+         zone_manager::get_manager().get_zones(
+             faction_id(
+                 identity.faction ) ) ) {
+        if( &candidate != excluded &&
+            token_matches_zone(
+                identity, candidate ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void recache_zone_state(
+    const bool vehicle )
+{
+    zone_manager &manager =
+        zone_manager::get_manager();
+    if( vehicle ) {
+        manager.cache_vzones();
+    } else {
+        manager.cache_data();
+    }
+}
+
+sol::table rename_zone(
+    sol::this_state lua,
+    const script_zone_token &token,
+    const std::string &requested_name,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_zone_name(
+        requested_name,
+        "game.zones.rename" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    zone_data *entry = resolve_zone(
+                           token,
+                           runtime_generation,
+                           world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+                   state, *error );
+    }
+    script_zone_token future = token;
+    future.name = requested_name;
+    if( duplicate_zone_exists(
+            future, entry ) ) {
+        return make_game_error_result(
+        state, {
+            "duplicate_zone",
+            "Renaming would duplicate another native zone"
+        } );
+    }
+    const std::string before =
+        entry->get_name();
+    const bool changed =
+        entry->set_name(
+            requested_name );
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] =
+        entry->get_name();
+    value["changed"] = changed;
+    value["zone"] =
+        snapshot_zone(
+            state, *entry,
+            runtime_generation,
+            world_generation );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_zone_enabled(
+    sol::this_state lua,
+    const script_zone_token &token,
+    const bool enabled,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    zone_data *entry = resolve_zone(
+                           token,
+                           runtime_generation,
+                           world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+                   state, *error );
+    }
+    const bool before_enabled =
+        entry->get_enabled();
+    const bool before_temporary =
+        entry->get_temporarily_disabled();
+    entry->set_enabled( enabled );
+    entry->set_temporary_disabled( false );
+    recache_zone_state(
+        entry->get_is_vehicle() );
+
+    sol::table value = state.create_table();
+    value["before"] = before_enabled;
+    value["after"] =
+        entry->get_enabled();
+    value["temporary_before"] =
+        before_temporary;
+    value["temporary_after"] =
+        entry->get_temporarily_disabled();
+    value["changed"] =
+        before_enabled !=
+        entry->get_enabled() ||
+        before_temporary !=
+        entry->get_temporarily_disabled();
+    value["zone"] =
+        snapshot_zone(
+            state, *entry,
+            runtime_generation,
+            world_generation );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_zone_temporary_disabled(
+    sol::this_state lua,
+    const script_zone_token &token,
+    const bool disabled,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    zone_data *entry = resolve_zone(
+                           token,
+                           runtime_generation,
+                           world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+                   state, *error );
+    }
+    const bool before_enabled =
+        entry->get_enabled();
+    const bool before_temporary =
+        entry->get_temporarily_disabled();
+    entry->set_enabled( !disabled );
+    entry->set_temporary_disabled(
+        disabled );
+    recache_zone_state(
+        entry->get_is_vehicle() );
+
+    sol::table value = state.create_table();
+    value["before"] =
+        before_temporary;
+    value["after"] =
+        entry->get_temporarily_disabled();
+    value["enabled_before"] =
+        before_enabled;
+    value["enabled_after"] =
+        entry->get_enabled();
+    value["changed"] =
+        before_enabled !=
+        entry->get_enabled() ||
+        before_temporary !=
+        entry->get_temporarily_disabled();
+    value["zone"] =
+        snapshot_zone(
+            state, *entry,
+            runtime_generation,
+            world_generation );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_zone_position(
+    sol::this_state lua,
+    const script_zone_token &token,
+    const script_tripoint_coord &requested_start,
+    const script_tripoint_coord &requested_end,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    zone_data *entry = resolve_zone(
+                           token,
+                           runtime_generation,
+                           world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+                   state, *error );
+    }
+    if( entry->get_is_vehicle() ) {
+        return make_game_error_result(
+        state, {
+            "vehicle_zone",
+            "Vehicle-bound zones cannot be moved independently"
+        } );
+    }
+
+    sol::table value = state.create_table();
+    script_zone_token future = token;
+    bool changed = false;
+    if( entry->get_is_personal() ) {
+        const std::pair <
+        tripoint_rel_ms, tripoint_rel_ms > bounds =
+            normalize_zone_bounds(
+                require_relative_ms(
+                    requested_start,
+                    "game.zones.set_position" ),
+                require_relative_ms(
+                    requested_end,
+                    "game.zones.set_position" ),
+                "game.zones.set_position" );
+        future.personal_start =
+            bounds.first;
+        future.personal_end =
+            bounds.second;
+        if( duplicate_zone_exists(
+                future, entry ) ) {
+            return make_game_error_result(
+            state, {
+                "duplicate_zone",
+                "Moving would duplicate another native zone"
+            } );
+        }
+        const tripoint_rel_ms before_start =
+            entry->get_personal_start_point();
+        const tripoint_rel_ms before_end =
+            entry->get_personal_end_point();
+        changed =
+            before_start != bounds.first ||
+            before_end != bounds.second;
+        entry->set_position(
+            bounds );
+        value["before_start"] =
+            script_tripoint_coord::from_native(
+                coords::origin::relative,
+                coords::scale::map_square,
+                before_start.raw() );
+        value["before_end"] =
+            script_tripoint_coord::from_native(
+                coords::origin::relative,
+                coords::scale::map_square,
+                before_end.raw() );
+        value["after_start"] =
+            script_tripoint_coord::from_native(
+                coords::origin::relative,
+                coords::scale::map_square,
+                entry->get_personal_start_point().raw() );
+        value["after_end"] =
+            script_tripoint_coord::from_native(
+                coords::origin::relative,
+                coords::scale::map_square,
+                entry->get_personal_end_point().raw() );
+    } else {
+        const std::pair <
+        tripoint_abs_ms, tripoint_abs_ms > bounds =
+            normalize_zone_bounds(
+                require_absolute_ms(
+                    requested_start,
+                    "game.zones.set_position" ),
+                require_absolute_ms(
+                    requested_end,
+                    "game.zones.set_position" ),
+                "game.zones.set_position" );
+        future.start =
+            bounds.first;
+        future.end =
+            bounds.second;
+        if( duplicate_zone_exists(
+                future, entry ) ) {
+            return make_game_error_result(
+            state, {
+                "duplicate_zone",
+                "Moving would duplicate another native zone"
+            } );
+        }
+        const tripoint_abs_ms before_start =
+            entry->get_start_point();
+        const tripoint_abs_ms before_end =
+            entry->get_end_point();
+        changed =
+            before_start != bounds.first ||
+            before_end != bounds.second;
+        entry->set_position(
+            bounds );
+        value["before_start"] =
+            script_tripoint_coord::from_native(
+                coords::origin::abs,
+                coords::scale::map_square,
+                before_start.raw() );
+        value["before_end"] =
+            script_tripoint_coord::from_native(
+                coords::origin::abs,
+                coords::scale::map_square,
+                before_end.raw() );
+        value["after_start"] =
+            script_tripoint_coord::from_native(
+                coords::origin::abs,
+                coords::scale::map_square,
+                entry->get_start_point().raw() );
+        value["after_end"] =
+            script_tripoint_coord::from_native(
+                coords::origin::abs,
+                coords::scale::map_square,
+                entry->get_end_point().raw() );
+    }
+    value["changed"] = changed;
+    value["zone"] =
+        snapshot_zone(
+            state, *entry,
+            runtime_generation,
+            world_generation );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table remove_zone(
+    sol::this_state lua,
+    const script_zone_token &token,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    zone_data *entry = resolve_zone(
+                           token,
+                           runtime_generation,
+                           world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+                   state, *error );
+    }
+    sol::table removed =
+        snapshot_zone(
+            state, *entry,
+            runtime_generation,
+            world_generation );
+    const bool vehicle =
+        entry->get_is_vehicle();
+    if( !zone_manager::get_manager().remove(
+            *entry ) ) {
+        return make_game_error_result(
+        state, {
+            "remove_failed",
+            "The native zone could not be removed"
+        } );
+    }
+    if( !vehicle ) {
+        zone_manager::get_manager().
+        cache_data();
+    }
+    sol::table value = state.create_table();
+    value["removed"] = true;
+    value["zone"] =
+        std::move( removed );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 struct zone_match {
     zone_data *zone = nullptr;
 };
@@ -568,10 +1307,10 @@ std::vector<zone_match> matching_zones(
         if( !query.empty() &&
             lowercase_ascii(
                 entry.get_name() ).find(
-                    query ) == std::string::npos &&
+                query ) == std::string::npos &&
             lowercase_ascii(
                 entry.get_type().str() ).find(
-                    query ) == std::string::npos ) {
+                query ) == std::string::npos ) {
             continue;
         }
         result.push_back( { &entry } );
@@ -723,7 +1462,6 @@ void install_zone_api(
     std::function<void()> require_read,
     std::function<void()> require_write )
 {
-    static_cast<void>( require_write );
     lua.new_usertype<script_zone_token>(
         "ZoneToken", sol::no_constructor,
         "faction",
@@ -828,7 +1566,7 @@ void install_zone_api(
         "at",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-    const script_tripoint_coord & position,
+            const script_tripoint_coord & position,
     const sol::optional<sol::table> &options ) {
         require_read();
         return zones_at(
@@ -851,11 +1589,82 @@ void install_zone_api(
         "contains",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-    const script_zone_token & token,
+            const script_zone_token & token,
     const script_tripoint_coord & position ) {
         require_read();
         return zone_contains(
                    lua_state, token, position,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    zones.set_function(
+        "create",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+    const sol::table & options ) {
+        require_write();
+        return create_zone(
+                   lua_state, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    zones.set_function(
+        "rename",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const script_zone_token & token,
+    const std::string & name ) {
+        require_write();
+        return rename_zone(
+                   lua_state, token, name,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    zones.set_function(
+        "set_enabled",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const script_zone_token & token,
+    const bool enabled ) {
+        require_write();
+        return set_zone_enabled(
+                   lua_state, token, enabled,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    zones.set_function(
+        "set_temporary_disabled",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const script_zone_token & token,
+    const bool disabled ) {
+        require_write();
+        return set_zone_temporary_disabled(
+                   lua_state, token, disabled,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    zones.set_function(
+        "set_position",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const script_zone_token & token,
+            const script_tripoint_coord & start,
+    const script_tripoint_coord & end ) {
+        require_write();
+        return set_zone_position(
+                   lua_state, token, start, end,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    zones.set_function(
+        "remove",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+    const script_zone_token & token ) {
+        require_write();
+        return remove_zone(
+                   lua_state, token,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

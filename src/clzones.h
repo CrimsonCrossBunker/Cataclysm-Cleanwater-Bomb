@@ -556,6 +556,12 @@ class zone_data
             }
             return end;
         }
+        tripoint_rel_ms get_personal_start_point() const {
+            return personal_start;
+        }
+        tripoint_rel_ms get_personal_end_point() const {
+            return personal_end;
+        }
         void update_cached_shift( const tripoint_abs_ms &player_loc ) {
             cached_shift = player_loc;
         }
