@@ -5222,7 +5222,7 @@ bool item::on_drop( const tripoint_bub_ms &pos )
 bool item::on_drop( const tripoint_bub_ms &pos, map &m )
 {
     avatar &player_character = get_avatar();
-    if( !cata::lua_ui::dispatch_native_callback(
+    if( cata::lua_ui::dispatch_native_consuming_callback(
     "istate", typeId().str(), "on_drop", {
     {
         "character",

@@ -41,6 +41,7 @@ std::string_view script_hook_mode_name( script_hook_mode mode );
 struct script_callback_method_spec {
     std::string_view name;
     bool decision = false;
+    bool consuming = false;
 };
 
 struct script_callback_kind_spec {

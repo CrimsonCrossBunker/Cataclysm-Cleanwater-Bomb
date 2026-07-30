@@ -1700,6 +1700,7 @@ sol::table callback_kind_to_lua(
         sol::table entry = lua.create_table();
         entry["name"] = std::string( method.name );
         entry["decision"] = method.decision;
+        entry["consuming"] = method.consuming;
         entry["requires_write"] = method.decision;
         methods[index + 1] = std::move( entry );
     }
@@ -3935,7 +3936,8 @@ sol::table native_callback_payload(
 bool dispatch_script_callback(
     runtime_state &state, const std::string_view kind_name,
     const std::string_view target, const std::string_view method_name,
-    const std::function<sol::table()> &make_payload )
+    const std::function<sol::table()> &make_payload,
+    const bool consuming = false )
 {
     const script_callback_kind_spec *kind =
         find_script_callback_kind_spec( kind_name );
@@ -3948,14 +3950,22 @@ bool dispatch_script_callback(
             "native code requested unknown callback '" +
             std::string( kind_name ) + "." +
             std::string( method_name ) + "'" );
-        return true;
+        return !consuming;
+    }
+    if( method->consuming != consuming ) {
+        record_runtime_error(
+            "Lua callback actor dispatch",
+            "native code used the wrong result policy for callback '" +
+            std::string( kind_name ) + "." +
+            std::string( method_name ) + "'" );
+        return !consuming;
     }
 
     callback_dispatch_scope dispatch_scope( state );
     const std::vector<script_callback_registration> registrations =
         state.callback_registry.matching(
             kind_name, target, method_name );
-    bool allowed = true;
+    bool outcome = !consuming;
     for( const script_callback_registration &registration : registrations ) {
         if( !state.callback_registry.contains( registration.id ) ) {
             continue;
@@ -3989,6 +3999,7 @@ bool dispatch_script_callback(
                                        std::string( target ) );
             payload["method"] = std::string( method_name );
             payload["decision"] = method->decision;
+            payload["consuming"] = method->consuming;
             payload["turn"] = script_current_turn();
             const sol::protected_function_result result =
                 callback( std::move( payload ) );
@@ -4013,17 +4024,22 @@ bool dispatch_script_callback(
                 if( type == sol::type::boolean ) {
                     const bool decision = result.get<bool>();
                     if( method->decision ) {
-                        allowed = decision;
+                        outcome = consuming ?
+                                  outcome || decision :
+                                  decision;
                     }
-                    stop = !decision;
+                    stop = consuming ? decision : !decision;
                 } else if( type == sol::type::table ) {
                     const sol::table decision = result.get<sol::table>();
-                    const sol::optional<bool> requested_allow =
-                        decision["allow"];
-                    if( requested_allow && method->decision ) {
-                        allowed = *requested_allow;
+                    const sol::optional<bool> requested_outcome =
+                        decision[consuming ? "consume" : "allow"];
+                    if( requested_outcome && method->decision ) {
+                        outcome = consuming ?
+                                  outcome || *requested_outcome :
+                                  *requested_outcome;
                     }
-                    stop = decision.get_or( "stop", false ) || !allowed;
+                    stop = decision.get_or( "stop", false ) ||
+                           ( consuming ? outcome : !outcome );
                 } else if( type != sol::type::nil ) {
                     record_runtime_error(
                         "Lua callback actor '" +
@@ -4059,7 +4075,7 @@ bool dispatch_script_callback(
             break;
         }
     }
-    return allowed;
+    return outcome;
 }
 
 void append_native_menu_entries(
@@ -5428,6 +5444,28 @@ bool dispatch_native_callback(
             "Lua native callback '" + std::string( kind ) + "." +
             std::string( method ) + "'", exception.what() );
         return true;
+    }
+}
+
+bool dispatch_native_consuming_callback(
+    const std::string_view kind, const std::string_view target,
+    const std::string_view method,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return false;
+    }
+    try {
+        return dispatch_script_callback(
+        *active_state, kind, target, method, [&]() {
+            return native_callback_payload( *active_state, arguments );
+        }, true );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native consuming callback '" +
+            std::string( kind ) + "." + std::string( method ) + "'",
+            exception.what() );
+        return false;
     }
 }
 

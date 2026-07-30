@@ -987,6 +987,14 @@ TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
     CHECK( find_script_callback_method_spec(
                *find_script_callback_kind_spec( "iranged" ),
                "can_fire" )->decision );
+    REQUIRE( find_script_callback_kind_spec( "istate" ) != nullptr );
+    const script_callback_method_spec *on_drop =
+        find_script_callback_method_spec(
+            *find_script_callback_kind_spec( "istate" ),
+            "on_drop" );
+    REQUIRE( on_drop != nullptr );
+    CHECK( on_drop->decision );
+    CHECK( on_drop->consuming );
     CHECK( find_script_callback_kind_spec( "not_an_actor" ) == nullptr );
 
     script_callback_registry registry;
@@ -8159,6 +8167,7 @@ game.callbacks.register("iwieldable", rock, {
         assert(payload.actor_kind == "iwieldable")
         assert(payload.method == "on_wield")
         assert(payload.decision == false)
+        assert(payload.consuming == false)
         assert(payload.target_id == rock)
         assert(payload.character ~= nil)
         assert(payload.item ~= nil)
@@ -8281,6 +8290,13 @@ local function decide(name)
         return true
     end
 end
+local function preserve(name)
+    return function(payload)
+        observe(name)(payload)
+        assert(payload.consuming == true)
+        return false
+    end
+end
 
 game.callbacks.register("iuse", rock, {
     can_use = decide("can_use"),
@@ -8296,7 +8312,7 @@ game.callbacks.register("iwearable", rock, {
 game.callbacks.register("istate", rock, {
     on_pickup = observe("on_pickup"),
     on_tick = observe("on_tick"),
-    on_drop = decide("on_drop")
+    on_drop = preserve("on_drop")
 })
 game.callbacks.register("iequippable", shirt, {
     on_durability_change = observe("on_durability_change"),
@@ -8342,6 +8358,69 @@ assert(state.character.get(
     "native_items.on_durability_change", 0) == 2)
 assert(state.character.get("native_items.on_repair", 0) == 1)
 assert(state.character.get("native_items.on_break", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_item_drop_callbacks_aggregate_consuming_results",
+           "[lua][bindings][callbacks][items][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local rock = game.types.id("item", "rock")
+local function count(name)
+    local key = "native_drop." .. name
+    state.character.set(
+        key, state.character.get(key, 0) + 1)
+end
+
+game.callbacks.register("istate", rock, {
+    priority = 300,
+    on_drop = function(payload)
+        assert(payload.decision == true)
+        assert(payload.consuming == true)
+        count("preserve")
+        return false
+    end
+})
+game.callbacks.register("istate", rock, {
+    priority = 200,
+    on_drop = function()
+        count("consume")
+        return { consume = true }
+    end
+})
+game.callbacks.register("istate", rock, {
+    priority = 100,
+    on_drop = function()
+        count("after_consume")
+        return true
+    end
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    item rock( itype_id( "rock" ) );
+    CHECK( rock.on_drop( tripoint_bub_ms( 4, 5, 0 ) ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_drop.preserve", 0) == 1)
+assert(state.character.get("native_drop.consume", 0) == 1)
+assert(state.character.get("native_drop.after_consume", 0) == 0)
 )lua" );
     REQUIRE( reload_scripts( error ) );
 }

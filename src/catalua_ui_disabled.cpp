@@ -115,6 +115,13 @@ bool dispatch_native_callback(
     return true;
 }
 
+bool dispatch_native_consuming_callback(
+    std::string_view, std::string_view, std::string_view,
+    const native_callback_arguments & )
+{
+    return false;
+}
+
 bool has_native_callback(
     std::string_view, std::string_view, std::string_view )
 {

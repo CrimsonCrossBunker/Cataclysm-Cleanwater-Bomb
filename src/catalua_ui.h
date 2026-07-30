@@ -173,6 +173,10 @@ bool dispatch_native_callback(
     std::string_view kind, std::string_view target,
     std::string_view method,
     const native_callback_arguments &arguments = {} );
+bool dispatch_native_consuming_callback(
+    std::string_view kind, std::string_view target,
+    std::string_view method,
+    const native_callback_arguments &arguments = {} );
 bool has_native_callback(
     std::string_view kind, std::string_view target,
     std::string_view method );

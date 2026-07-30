@@ -280,7 +280,7 @@ const std::vector<script_callback_kind_spec> &script_callback_kind_specs()
         },
         {
             "istate", "item", {
-                { "on_drop", true }, { "on_pickup", false },
+                { "on_drop", true, true }, { "on_pickup", false },
                 { "on_tick", false }
             }
         },
