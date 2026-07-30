@@ -68,19 +68,34 @@ struct id_kind_definition {
     id_validator validate;
 };
 
-const std::array<id_kind_definition, 41> &id_kind_definitions()
+const std::array<id_kind_definition, 55> &id_kind_definitions()
 {
-    static const std::array<id_kind_definition, 41> definitions = {{
+    static const std::array<id_kind_definition, 55> definitions = {{
+            { "achievement", &valid_id<achievement> },
             { "activity", &valid_id<activity_type> },
             { "addiction", &valid_id<add_type> },
             { "ammo_effect", &valid_id<ammo_effect> },
             { "ammunition", &valid_id<ammunition_type> },
+            { "anatomy", &valid_id<anatomy> },
+            { "ascii_art", &valid_id<ascii_art> },
+            { "attack_vector", &valid_id<attack_vector> },
+            { "bash_damage_profile", &valid_id<bash_damage_profile> },
             { "bionic", &valid_id<bionic_data> },
             { "body_part", &valid_id<body_part_type> },
+            { "bodygraph", &valid_id<bodygraph> },
+            { "character_modifier", &valid_id<character_modifier> },
+            { "clothing_mod", &valid_id<clothing_mod> },
+            { "construction_category", &valid_id<construction_category> },
+            { "construction_group", &valid_id<construction_group> },
+            { "crafting_category", &valid_id<crafting_category> },
             { "damage_type", &valid_id<damage_type> },
             { "disease", &valid_id<disease_type> },
             { "effect", &valid_id<effect_type> },
+            { "effect_on_condition", &valid_id<effect_on_condition> },
             { "emit", &valid_id<emit> },
+            { "enchantment", &valid_id<enchantment> },
+            { "end_screen", &valid_id<end_screen> },
+            { "event_statistic", &valid_id<event_statistic> },
             { "faction", &valid_id<faction> },
             { "fault", &valid_id<fault> },
             { "field", &valid_id<field_type> },
