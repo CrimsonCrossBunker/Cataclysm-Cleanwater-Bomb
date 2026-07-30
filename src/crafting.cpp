@@ -99,6 +99,8 @@ static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
 static const activity_id ACT_DISASSEMBLE( "ACT_DISASSEMBLE" );
 
+static const itype_id itype_water_faucet( "water_faucet" );
+
 static const efftype_id effect_contacts( "contacts" );
 static const efftype_id effect_transition_contacts( "transition_contacts" );
 
@@ -3209,8 +3211,6 @@ static void empty_buckets( Character &p )
 
 namespace
 {
-
-static const itype_id itype_water_faucet( "water_faucet" );
 
 struct crafting_component_preview {
     item_location location;
