@@ -261,6 +261,43 @@ sol::table set_calories(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table modify_calories(
+    sol::this_state lua, const game_handle &handle,
+    const int requested_delta, const bool ignore_weariness,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_delta < -maximum_need_magnitude ||
+        requested_delta > maximum_need_magnitude ) {
+        throw std::invalid_argument(
+            "game.needs.modify_calories delta "
+            "must be within -1000000..1000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const int before_kcal = character->get_stored_kcal();
+    sol::table before =
+        snapshot_needs( state, *character );
+    character->mod_stored_kcal(
+        requested_delta, ignore_weariness );
+    const int after_kcal = character->get_stored_kcal();
+    sol::table value = state.create_table();
+    value["requested_delta"] = requested_delta;
+    value["applied_delta"] = after_kcal - before_kcal;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_needs( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_need_api(
@@ -312,6 +349,19 @@ void install_need_api(
         require_write();
         return set_calories(
                    lua_state, handle, kcal,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "modify_calories",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const int delta,
+    const sol::optional<bool> &ignore_weariness ) {
+        require_write();
+        return modify_calories(
+                   lua_state, handle, delta,
+                   ignore_weariness.value_or( false ),
                    current_runtime_generation(),
                    current_world_generation() );
     } );
