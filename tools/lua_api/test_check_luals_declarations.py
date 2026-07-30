@@ -57,6 +57,52 @@ class LuaLsDeclarationTest(unittest.TestCase):
             "omit coordinate factories",
         )
 
+    def test_parameter_annotation_drift_is_rejected(self) -> None:
+        self.check_modified(
+            "---@param domain string\n"
+            "---@return boolean\n"
+            "function CcbGameApi.api_supports(domain) end",
+            "---@param wrong_name string\n"
+            "---@return boolean\n"
+            "function CcbGameApi.api_supports(domain) end",
+            "parameter annotations",
+        )
+
+    def test_duplicate_parameter_annotations_are_rejected(self) -> None:
+        self.check_modified(
+            "---@param key string\n"
+            "---@param default T\n"
+            "---@return T\n"
+            "function CcbGameApi.state_get(key, default) end",
+            "---@param key string\n"
+            "---@param key T\n"
+            "---@return T\n"
+            "function CcbGameApi.state_get(key, default) end",
+            "repeat a parameter annotation",
+        )
+
+    def test_duplicate_option_fields_are_rejected(self) -> None:
+        self.check_modified(
+            "---@field id? string Required by `toggle_mutation`",
+            "---@field uid? string Required by `toggle_mutation`",
+            "repeat a field",
+        )
+
+    def test_untyped_options_tables_are_rejected(self) -> None:
+        self.check_modified(
+            "---@param options? CcbActionEnqueueOptions",
+            "---@param options? table",
+            "untyped options table",
+        )
+
+    def test_duplicate_method_declarations_are_rejected(self) -> None:
+        self.check_modified(
+            "function CcbHordesApi.advance() end",
+            "function CcbHordesApi.advance() end\n"
+            "function CcbHordesApi.advance() end",
+            "repeat method",
+        )
+
     def test_stale_v4_file_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
