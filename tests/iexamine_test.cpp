@@ -10,6 +10,7 @@
 #include "map_helpers.h"
 #include "mapdata.h"
 #include "point.h"
+#include "stomach.h"
 #include "translation.h"
 #include "type_id.h"
 
