@@ -30,6 +30,9 @@ constexpr int maximum_definition_limit = 256;
 constexpr int maximum_definition_offset = 1000000;
 constexpr std::size_t maximum_query_bytes = 128;
 constexpr std::size_t maximum_prototype_parts = 256;
+constexpr int default_part_limit = 128;
+constexpr int maximum_part_limit = 256;
+constexpr int maximum_part_offset = 1000000;
 
 struct definition_options {
     int offset = 0;
@@ -402,6 +405,182 @@ sol::table get_live_vehicle(
                        state, here, *entry ) ) );
 }
 
+struct part_options {
+    int offset = 0;
+    int limit = default_part_limit;
+    bool include_fake = false;
+    bool include_removed = false;
+};
+
+part_options read_part_options(
+    const sol::optional<sol::table> &requested )
+{
+    part_options result;
+    if( requested ) {
+        result.offset = requested->get_or(
+                            "offset", result.offset );
+        result.limit = requested->get_or(
+                           "limit", result.limit );
+        result.include_fake = requested->get_or(
+                                  "include_fake",
+                                  result.include_fake );
+        result.include_removed = requested->get_or(
+                                     "include_removed",
+                                     result.include_removed );
+    }
+    if( result.offset < 0 ||
+        result.offset > maximum_part_offset ) {
+        throw std::invalid_argument(
+            "game.vehicles.parts offset "
+            "must be within 0..1000000" );
+    }
+    if( result.limit < 0 ) {
+        throw std::invalid_argument(
+            "game.vehicles.parts limit cannot be negative" );
+    }
+    result.limit = std::min(
+                       result.limit, maximum_part_limit );
+    return result;
+}
+
+sol::table snapshot_live_part(
+    sol::state_view lua, map &here, const vehicle &entry,
+    const int part_index )
+{
+    const vehicle_part &part =
+        entry.part( part_index );
+    const vpart_info &definition =
+        part.info();
+    const tripoint_abs_ms position =
+        here.get_abs(
+            entry.bub_part_pos(
+                here, part ) );
+    sol::table result = lua.create_table();
+    result["index"] = part_index;
+    result["id"] = script_game_id(
+                       "vehicle_part",
+                       definition.id.str() );
+    result["location"] = script_game_id(
+                             "vehicle_part_location",
+                             definition.location.str() );
+    result["name"] = part.name( false );
+    sol::table mount = lua.create_table();
+    mount["x"] = part.mount.x();
+    mount["y"] = part.mount.y();
+    result["mount"] = std::move( mount );
+    result["position"] =
+        script_tripoint_coord::from_native(
+            coords::origin::abs,
+            coords::scale::map_square,
+            position.raw() );
+    result["variant"] = part.variant;
+    result["hp"] = part.hp();
+    result["durability"] =
+        definition.durability;
+    result["damage_percent"] =
+        part.damage_percent();
+    result["broken"] = part.is_broken();
+    result["available"] =
+        part.is_available();
+    result["enabled"] = part.enabled;
+    result["power_disabled"] =
+        part.power_disabled;
+    result["open"] = part.open;
+    result["locked"] = part.locked;
+    result["inside"] = part.inside;
+    result["hidden"] = part.hidden;
+    result["removed"] = part.removed;
+    result["fake"] = part.is_fake;
+    sol::table capabilities = lua.create_table();
+    capabilities["engine"] = part.is_engine();
+    capabilities["light"] = part.is_light();
+    capabilities["fuel_store"] =
+        part.is_fuel_store( false );
+    capabilities["tank"] = part.is_tank();
+    capabilities["battery"] = part.is_battery();
+    capabilities["reactor"] = part.is_reactor();
+    capabilities["turret"] = part.is_turret();
+    capabilities["seat"] = part.is_seat();
+    capabilities["wheel"] = part.is_wheel();
+    result["capabilities"] =
+        std::move( capabilities );
+    const itype_id ammo = part.ammo_current();
+    if( ammo.is_null() ) {
+        result["ammo"] = sol::nil;
+    } else {
+        sol::table ammo_state = lua.create_table();
+        ammo_state["id"] =
+            script_game_id( "item", ammo.str() );
+        ammo_state["remaining"] =
+            part.ammo_remaining();
+        ammo_state["remaining_capacity"] =
+            part.remaining_ammo_capacity();
+        result["ammo"] =
+            std::move( ammo_state );
+    }
+    return result;
+}
+
+sol::table list_live_parts(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const part_options options =
+        read_part_options( requested );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    std::vector<int> indices;
+    indices.reserve(
+        static_cast<std::size_t>(
+            entry->part_count() ) );
+    for( int index = 0;
+         index < entry->part_count(); ++index ) {
+        const vehicle_part &part =
+            entry->part( index );
+        if( ( options.include_fake || !part.is_fake ) &&
+            ( options.include_removed || !part.removed ) ) {
+            indices.push_back( index );
+        }
+    }
+    const std::size_t first = std::min<std::size_t>(
+                                  options.offset, indices.size() );
+    const std::size_t last = std::min<std::size_t>(
+                                 first + options.limit,
+                                 indices.size() );
+    map &here = get_map();
+    sol::table items = state.create_table(
+                           static_cast<int>( last - first ), 0 );
+    for( std::size_t index = first;
+         index < last; ++index ) {
+        items[index - first + 1] =
+            snapshot_live_part(
+                state, here, *entry,
+                indices[index] );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["offset"] = options.offset;
+    value["limit"] = options.limit;
+    value["total"] = indices.size();
+    value["returned"] = last - first;
+    value["has_more"] = last < indices.size();
+    value["include_fake"] =
+        options.include_fake;
+    value["include_removed"] =
+        options.include_removed;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vehicle_api(
@@ -437,6 +616,17 @@ void install_vehicle_api(
         require_read();
         return get_live_vehicle(
                    lua_state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "parts",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_live_parts(
+                   lua_state, handle, options,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
