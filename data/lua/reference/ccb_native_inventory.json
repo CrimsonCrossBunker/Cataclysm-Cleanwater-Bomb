@@ -132,6 +132,10 @@
       "native_type": "event_statistic"
     },
     {
+      "kind": "event_transformation",
+      "native_type": "event_transformation"
+    },
+    {
       "kind": "faction",
       "native_type": "faction"
     },
