@@ -701,7 +701,7 @@ sol::table snapshot_requirement(
                                  value.list_missing() );
 
     result["tools"] = requirement_group_page <
-                          requirement_data::alter_tool_comp_vector > (
+                      requirement_data::alter_tool_comp_vector > (
                           lua, value.get_tools(),
                           [&lua, batch](
     const tool_comp & entry, const bool available ) {
