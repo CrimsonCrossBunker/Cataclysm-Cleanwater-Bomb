@@ -339,7 +339,7 @@
     "id": "TOGGLE_REACTOR",
     "type": "keybinding",
     "category": "VEHICLE",
-    "name": "Toggle reactor",
+    "name": "Control reactors",
     "bindings": [ { "input_method": "keyboard_any", "key": "k" } ]
   },
   {
