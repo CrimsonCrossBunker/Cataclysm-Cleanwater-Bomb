@@ -2184,6 +2184,148 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_character_proficiencies_use_native_progression",
+           "[lua][bindings][proficiencies][progression][integration]" )
+{
+    avatar &player = get_avatar();
+    const proficiency_id test_proficiency( "prof_test" );
+    REQUIRE( test_proficiency.is_valid() );
+    const bool original_known =
+        player.has_proficiency( test_proficiency );
+    const std::vector<proficiency_id> original_learning_ids =
+        player.learning_proficiencies();
+    const bool original_learning =
+        std::find(
+            original_learning_ids.begin(),
+            original_learning_ids.end(),
+            test_proficiency ) != original_learning_ids.end();
+    const time_duration original_practiced =
+        player.get_proficiency_practiced_time(
+            test_proficiency );
+    const int original_focus = player.get_focus();
+    player.lose_proficiency( test_proficiency );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local proficiency = game.types.id("proficiency", "prof_test")
+
+local before = game.proficiencies.get(avatar, proficiency)
+assert(before.ok == true)
+assert(before.value.id == proficiency)
+assert(before.value.known == false)
+assert(before.value.learning == false)
+assert(before.value.practice == 0)
+assert(before.value.practiced.turns == 0)
+assert(before.value.remaining.turns > 0)
+assert(type(before.value.prerequisites_met) == "boolean")
+assert(type(before.value.can_practice) == "boolean")
+
+local states = game.proficiencies.list(avatar, {
+    offset = 0,
+    limit = 1000000,
+    include_known = true,
+    include_learning = true,
+    include_unstarted = true
+})
+assert(states.ok == true)
+assert(states.value.limit == 256)
+assert(states.value.returned == #states.value.items)
+assert(states.value.returned <= states.value.total)
+
+local practiced = game.proficiencies.practice(
+    avatar, proficiency, game.time.duration(1, "hour"))
+assert(practiced.ok == true)
+assert(practiced.value.learned == false)
+assert(practiced.value.after.learning == true)
+assert(practiced.value.after.practice > 0)
+assert(practiced.value.after.practice < 1)
+assert(practiced.value.after.practiced.turns > 0)
+assert(math.type(practiced.value.focus_before) == "integer")
+assert(math.type(practiced.value.focus_after) == "integer")
+
+local adjusted = game.proficiencies.set_progress(
+    avatar, proficiency, game.time.duration(2, "hour"))
+assert(adjusted.ok == true)
+assert(adjusted.value.after.known == false)
+assert(adjusted.value.after.learning == true)
+assert(adjusted.value.after.practiced.turns == 7200)
+
+local granted = game.proficiencies.grant(avatar, proficiency)
+assert(granted.ok == true)
+assert(granted.value.changed == true)
+assert(granted.value.accepted == true)
+assert(granted.value.after.known == true)
+assert(granted.value.after.learning == false)
+assert(granted.value.after.remaining.turns == 0)
+
+local removed = game.proficiencies.remove(avatar, proficiency)
+assert(removed.ok == true)
+assert(removed.value.changed == true)
+assert(removed.value.after.known == false)
+assert(removed.value.after.learning == false)
+
+assert(pcall(function()
+    game.proficiencies.practice(
+        avatar, proficiency, game.time.duration(0, "turn"))
+end) == false)
+assert(pcall(function()
+    game.proficiencies.set_progress(
+        avatar, proficiency, game.time.duration(25, "hour"))
+end) == false)
+assert(pcall(function()
+    game.proficiencies.get(
+        avatar, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.has_proficiency( test_proficiency ) );
+    const std::vector<proficiency_id> final_learning_ids =
+        player.learning_proficiencies();
+    CHECK( std::find(
+               final_learning_ids.begin(),
+               final_learning_ids.end(),
+               test_proficiency ) ==
+           final_learning_ids.end() );
+
+    if( original_known ) {
+        player.add_proficiency(
+            test_proficiency, true );
+    } else if( original_learning ) {
+        player.set_proficiency_practiced_time(
+            test_proficiency,
+            to_turns<int>( original_practiced ) );
+    }
+    player.set_focus( original_focus );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.proficiencies.grant(
+    game.characters.avatar(),
+    game.types.id("proficiency", "prof_test"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.has_proficiency( test_proficiency ) ==
+           original_known );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
