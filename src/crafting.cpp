@@ -3240,10 +3240,10 @@ std::vector<item_location> preview_source_locations( Character &crafter,
 {
     const itype_id type = selection.comp.type;
     const std::function<bool( const item & )> source_filter =
-        [&filter, &type, preferred]( const item &candidate ) {
-            return candidate.typeId() == type && filter( candidate ) &&
-                   ( !preferred || is_preferred_component( candidate ) );
-        };
+    [&filter, &type, preferred]( const item & candidate ) {
+        return candidate.typeId() == type && filter( candidate ) &&
+               ( !preferred || is_preferred_component( candidate ) );
+    };
     std::vector<item_location> locations;
     map &here = get_map();
     if( selection.use_from & usage_from::map ) {
@@ -3334,7 +3334,7 @@ std::optional<item_components> Character::preview_crafting_components(
                         std::abs( selection.comp.count );
         if( by_charges && ( selection.use_from & usage_from::map ) ) {
             std::optional<item> infinite_source = preview_infinite_map_charge_source( *this,
-                    selection.comp.type );
+                                                  selection.comp.type );
             if( infinite_source ) {
                 infinite_source->charges = remaining;
                 sources.push_back( { item_location::nowhere, *infinite_source, remaining, true,
@@ -3344,7 +3344,7 @@ std::optional<item_components> Character::preview_crafting_components(
         }
         std::vector<item_location> planned_locations;
         const auto add_candidate = [&sources, &planned_locations, &remaining, by_charges](
-        item_location &location ) {
+        item_location & location ) {
             if( remaining <= 0 || std::find( planned_locations.begin(), planned_locations.end(),
                                              location ) != planned_locations.end() ) {
                 return;
