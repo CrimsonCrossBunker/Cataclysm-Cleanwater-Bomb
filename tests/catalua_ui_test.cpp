@@ -3301,6 +3301,124 @@ game.vehicles.rename(handle, "unauthorized")
            "Lua renamed bicycle" );
 }
 
+TEST_CASE( "lua_v5_npc_catalogs_and_live_state_are_bounded",
+           "[lua][bindings][npcs][read][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    avatar &player = get_avatar();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    npc &native_npc = spawn_npc(
+                          ( player.pos_bub( here ) +
+                            tripoint_rel_ms::east * 3 ).xy(),
+                          "test_talker" );
+    native_npc.name = "Lua inspection NPC";
+    const character_id native_npc_id =
+        native_npc.getID();
+    on_out_of_scope cleanup_npc( [native_npc_id]() {
+        g->remove_npc_follower( native_npc_id );
+        g->remove_npc( native_npc_id );
+        overmap_buffer.remove_npc( native_npc_id );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.npcs.list({
+    offset = 0,
+    limit = 1000000,
+    query = "LUA INSPECTION NPC"
+})
+assert(page.ok == true)
+assert(page.value.limit == 256)
+assert(page.value.returned == #page.value.items)
+assert(page.value.total == 1)
+assert(page.value.returned == 1)
+assert(page.value.has_more == false)
+
+local summary = page.value.items[1]
+assert(summary.name == "Lua inspection NPC")
+assert(summary.handle:is_valid())
+assert(math.type(summary.id) == "integer")
+assert(summary.position.origin == "abs")
+assert(summary.position.scale == "ms")
+assert(summary.class.kind == "npc_class")
+assert(type(summary.attitude) == "string")
+assert(type(summary.attitude_name) == "string")
+assert(type(summary.status) == "string")
+assert(type(summary.activity) == "string")
+assert(type(summary.dead) == "boolean")
+assert(type(summary.following) == "boolean")
+assert(math.type(summary.opinion.trust) == "integer")
+assert(math.type(summary.personality.bravery) == "integer")
+
+local current = game.npcs.get(summary.handle)
+assert(current.ok == true)
+assert(current.value.id == summary.id)
+assert(current.value.handle.kind == summary.handle.kind)
+assert(current.value.handle:locator().stable_id ==
+    summary.handle:locator().stable_id)
+assert(current.value.name == summary.name)
+assert(current.value.class == summary.class)
+
+local class = game.npcs.class(current.value.class)
+assert(class.id == current.value.class)
+assert(type(class.name) == "string")
+assert(type(class.job_description) == "string")
+assert(type(class.common) == "boolean")
+assert(class.starting_spells.returned ==
+    #class.starting_spells.items)
+assert(class.starting_bionics.returned ==
+    #class.starting_bionics.items)
+assert(class.starting_proficiencies.returned ==
+    #class.starting_proficiencies.items)
+
+local classes = game.npcs.classes({
+    offset = 0,
+    limit = 1000000,
+    query = current.value.class.value
+})
+assert(classes.limit == 256)
+assert(classes.returned == #classes.items)
+local found = false
+for _, candidate in ipairs(classes.items) do
+    if candidate.id == current.value.class then
+        found = true
+        break
+    end
+end
+assert(found)
+
+local wrong = game.npcs.get(
+    game.characters.avatar())
+assert(wrong.ok == false)
+assert(wrong.error.code == "wrong_subtype")
+assert(pcall(function()
+    game.npcs.class(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.npcs.classes({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.npcs.list({ offset = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
