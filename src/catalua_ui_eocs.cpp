@@ -457,6 +457,31 @@ sol::table test_eoc(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table activate_eoc(
+    sol::this_state lua, const script_game_id &id,
+    const sol::optional<sol::table> &options,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_eoc_id( id, "game.eocs.activate" );
+    sol::state_view state( lua );
+    prepared_eoc_dialogue prepared = prepare_eoc_dialogue(
+                                         options, runtime_generation,
+                                         world_generation );
+    if( prepared.error ) {
+        return make_game_error_result( state, *prepared.error );
+    }
+    const bool activated =
+        effect_on_condition_id( id.value() )->activate(
+            *prepared.conversation );
+    sol::table value = state.create_table();
+    value["activated"] = activated;
+    value["context"] = context_snapshot(
+                           state, *prepared.conversation );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_eoc_api(
@@ -493,6 +518,20 @@ void install_eoc_api(
         require_active_callback(
             has_active_callback, "game.eocs.test" );
         return test_eoc(
+                   lua_state, id, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    eocs.set_function(
+        "activate",
+        [current_runtime_generation, current_world_generation,
+         require_write, has_active_callback](
+            sol::this_state lua_state, const script_game_id & id,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        require_active_callback(
+            has_active_callback, "game.eocs.activate" );
+        return activate_eoc(
                    lua_state, id, options,
                    current_runtime_generation(),
                    current_world_generation() );
