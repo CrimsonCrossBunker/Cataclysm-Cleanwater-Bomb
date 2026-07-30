@@ -99,32 +99,32 @@ struct need_adjustments {
 };
 
 need_adjustments read_need_adjustments(
-    const sol::table &requested )
+    const sol::table &requested, const std::string &api_name )
 {
     need_adjustments result;
     for( const auto &entry : requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.needs.set option keys must be strings" );
+                api_name + " option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "hunger" && key != "thirst" &&
             key != "sleepiness" &&
             key != "sleep_deprivation" ) {
             throw std::invalid_argument(
-                "game.needs.set received unknown option '" +
+                api_name + " received unknown option '" +
                 key + "'" );
         }
         if( !entry.second.is<int>() ) {
             throw std::invalid_argument(
-                "game.needs.set option '" + key +
+                api_name + " option '" + key +
                 "' must be an integer" );
         }
         const int value = entry.second.as<int>();
         if( value < -maximum_need_magnitude ||
             value > maximum_need_magnitude ) {
             throw std::invalid_argument(
-                "game.needs.set option '" + key +
+                api_name + " option '" + key +
                 "' must be within -1000000..1000000" );
         }
         if( key == "hunger" ) {
@@ -140,7 +140,7 @@ need_adjustments read_need_adjustments(
     if( !result.hunger && !result.thirst &&
         !result.sleepiness && !result.sleep_deprivation ) {
         throw std::invalid_argument(
-            "game.needs.set requires at least one adjustment" );
+            api_name + " requires at least one adjustment" );
     }
     return result;
 }
@@ -152,7 +152,8 @@ sol::table set_needs(
     const std::size_t world_generation )
 {
     const need_adjustments adjustments =
-        read_need_adjustments( requested_adjustments );
+        read_need_adjustments(
+            requested_adjustments, "game.needs.set" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -176,6 +177,47 @@ sol::table set_needs(
     if( adjustments.sleep_deprivation ) {
         character->set_sleep_deprivation(
             *adjustments.sleep_deprivation );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_needs( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table modify_needs(
+    sol::this_state lua, const game_handle &handle,
+    const sol::table &requested_deltas,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const need_adjustments deltas =
+        read_need_adjustments(
+            requested_deltas, "game.needs.modify" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table before =
+        snapshot_needs( state, *character );
+    if( deltas.hunger ) {
+        character->mod_hunger( *deltas.hunger );
+    }
+    if( deltas.thirst ) {
+        character->mod_thirst( *deltas.thirst );
+    }
+    if( deltas.sleepiness ) {
+        character->mod_sleepiness( *deltas.sleepiness );
+    }
+    if( deltas.sleep_deprivation ) {
+        character->mod_sleep_deprivation(
+            *deltas.sleep_deprivation );
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
@@ -214,6 +256,17 @@ void install_need_api(
         require_write();
         return set_needs(
                    lua_state, handle, adjustments,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "modify",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & deltas ) {
+        require_write();
+        return modify_needs(
+                   lua_state, handle, deltas,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
