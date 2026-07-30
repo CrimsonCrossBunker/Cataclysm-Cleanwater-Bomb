@@ -476,6 +476,7 @@ class zone_data
 
         // returns true if name is changed
         bool set_name();
+        bool set_name( const std::string &new_name );
         // returns true if type is changed
         bool set_type();
         // We need to be able to suppress the display of zones when the movement is part of a map rotation, as the underlying

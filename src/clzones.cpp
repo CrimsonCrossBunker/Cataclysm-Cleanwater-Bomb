@@ -754,13 +754,19 @@ bool zone_data::set_name()
         if( new_name.empty() ) {
             new_name = _( "<no name>" );
         }
-        if( name != new_name ) {
-            zone_manager::get_manager().zone_edited( *this );
-            name = new_name;
-            return true;
-        }
+        return set_name( new_name );
     }
     return false;
+}
+
+bool zone_data::set_name( const std::string &new_name )
+{
+    if( name == new_name ) {
+        return false;
+    }
+    zone_manager::get_manager().zone_edited( *this );
+    name = new_name;
+    return true;
 }
 
 bool zone_data::set_type()
