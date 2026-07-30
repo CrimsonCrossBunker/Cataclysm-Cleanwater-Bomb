@@ -66,12 +66,12 @@ definition_options read_definition_options(
             "game.vitamins.definitions offset "
             "must be within 0..1000000" );
     }
-    if( result.limit < 0 ||
-        result.limit > maximum_definition_limit ) {
+    if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.vitamins.definitions limit "
-            "must be within 0..256" );
+            "game.vitamins.definitions limit cannot be negative" );
     }
+    result.limit = std::min(
+                       result.limit, maximum_definition_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
             "game.vitamins.definitions query exceeds 128 bytes" );
@@ -287,10 +287,12 @@ state_list_options read_state_list_options(
         throw std::invalid_argument(
             "game.vitamins.list offset must be within 0..1000000" );
     }
-    if( result.limit < 0 || result.limit > maximum_state_limit ) {
+    if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.vitamins.list limit must be within 0..256" );
+            "game.vitamins.list limit cannot be negative" );
     }
+    result.limit = std::min(
+                       result.limit, maximum_state_limit );
     return result;
 }
 
