@@ -412,6 +412,13 @@ int vehicle_part::ammo_set( const itype_id &ammo, int qty )
         const itype *ammo_itype = item::find_type( ammo );
         if( ammo_itype && ammo_itype->ammo ) {
             base.ammo_set( ammo, qty >= 0 ? qty : ammo_capacity( ammo_itype->ammo->type ) );
+            if( ammo_itype->ammo->type == ammo_plutonium ) {
+                for( item *fuel : base.all_items_top() ) {
+                    if( fuel->ammo_type() == ammo_plutonium ) {
+                        fuel->mark_internal_plutonium_fuel();
+                    }
+                }
+            }
             return base.ammo_remaining( );
         }
     }

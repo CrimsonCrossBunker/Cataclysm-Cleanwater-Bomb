@@ -3649,6 +3649,7 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
         if( ammo->ammo_type() == ammo_plutonium ) {
             // any excess is wasted rather than overfilling the item
             item_copy.charges = std::min( qty * PLUTONIUM_CHARGES, ammo_capacity( ammo_plutonium ) );
+            item_copy.mark_internal_plutonium_fuel();
         } else {
             item_copy.charges = qty;
         }
