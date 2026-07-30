@@ -4146,6 +4146,169 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_camp_controls_preserve_permissions_and_location",
+           "[lua][bindings][camps][write][integration]" )
+{
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    const tripoint_abs_omt camp_position =
+        player.pos_abs_omt() +
+        tripoint_rel_omt( 4, 0, 0 );
+    REQUIRE_FALSE( overmap_buffer.find_camp(
+                       camp_position.xy() ).has_value() );
+    here.add_camp(
+        camp_position, "Lua control camp", false );
+    std::optional<basecamp *> found =
+        overmap_buffer.find_camp(
+            camp_position.xy() );
+    REQUIRE( found.has_value() );
+    basecamp *native_camp = *found;
+    REQUIRE( native_camp != nullptr );
+    on_out_of_scope cleanup_camp( [
+                                   camp_position
+                                 ]() {
+        overmap_buffer.remove_camp(
+            camp_position.xy() );
+        get_avatar().camps.erase(
+            camp_position );
+    } );
+
+    const tripoint_abs_ms board_before =
+        project_to<coords::ms>(
+            camp_position ) +
+        tripoint_rel_ms( 1, 1, 0 );
+    const tripoint_abs_ms board_after =
+        project_to<coords::ms>(
+            camp_position ) +
+        tripoint_rel_ms( 2, 2, 0 );
+    native_camp->set_bb_pos(
+        board_before );
+    native_camp->set_owner(
+        faction_id( "your_followers" ) );
+    g->faction_manager_ptr->create_if_needed();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.camps.list({
+    offset = 0,
+    limit = 1,
+    radius_omt = 10,
+    query = "Lua control camp"
+})
+assert(page.ok == true)
+assert(page.value.returned == 1)
+local camp = page.value.items[1]
+
+local renamed = game.camps.rename(
+    camp.position, "Lua renamed camp")
+assert(renamed.ok == true)
+assert(renamed.value.before == "Lua control camp")
+assert(renamed.value.after == "Lua renamed camp")
+
+local merchants = game.types.id(
+    "faction", "free_merchants")
+local owner = game.camps.set_owner(
+    camp.position, merchants)
+assert(owner.ok == true)
+assert(owner.value.before == game.types.id(
+    "faction", "your_followers"))
+assert(owner.value.after == merchants)
+assert(owner.value.changed == true)
+
+local base = camp.position:project_to("ms")
+local board = game.coords.tripoint_abs_ms(
+    base.x + 2, base.y + 2, base.z)
+local moved = game.camps.set_board_position(
+    camp.position, board)
+assert(moved.ok == true)
+assert(moved.value.before == camp.board_position)
+assert(moved.value.after == board)
+assert(moved.value.changed == true)
+
+local current = game.camps.get(camp.position)
+assert(current.ok == true)
+assert(current.value.name == "Lua renamed camp")
+assert(current.value.owner == merchants)
+assert(current.value.board_position == board)
+
+assert(pcall(function()
+    game.camps.rename(camp.position, "")
+end) == false)
+assert(pcall(function()
+    game.camps.rename(
+        camp.position, string.rep("x", 26))
+end) == false)
+assert(pcall(function()
+    game.camps.set_owner(
+        camp.position, game.types.id("item", "rock"))
+end) == false)
+local missing_owner = game.camps.set_owner(
+    camp.position,
+    game.types.id("faction",
+        "__missing_lua_faction__"))
+assert(missing_owner.ok == false)
+assert(missing_owner.error.code == "owner_not_found")
+assert(pcall(function()
+    game.camps.set_board_position(
+        camp.position,
+        game.coords.tripoint_abs_ms(
+            base.x + 1000, base.y, base.z))
+end) == false)
+assert(pcall(function()
+    game.camps.set_board_position(
+        camp.position,
+        game.coords.tripoint_rel_ms(0, 0, 0))
+end) == false)
+
+local wrong_z = game.coords.tripoint_abs_omt(
+    camp.position.x, camp.position.y,
+    camp.position.z + 1)
+local wrong_level = game.camps.rename(
+    wrong_z, "wrong level")
+assert(wrong_level.ok == false)
+assert(wrong_level.error.code == "not_found")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_camp->camp_name() ==
+           "Lua renamed camp" );
+    CHECK( native_camp->get_owner() ==
+           faction_id( "free_merchants" ) );
+    CHECK( native_camp->get_bb_pos_abs() ==
+           board_after );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local camp = game.camps.list({
+    radius_omt = 10,
+    query = "Lua renamed camp"
+}).value.items[1]
+game.camps.rename(camp.position, "unauthorized")
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( native_camp->camp_name() ==
+           "Lua renamed camp" );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
