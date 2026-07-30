@@ -68,9 +68,9 @@ struct id_kind_definition {
     id_validator validate;
 };
 
-const std::array<id_kind_definition, 55> &id_kind_definitions()
+const std::array<id_kind_definition, 72> &id_kind_definitions()
 {
-    static const std::array<id_kind_definition, 55> definitions = {{
+    static const std::array<id_kind_definition, 72> definitions = {{
             { "achievement", &valid_id<achievement> },
             { "activity", &valid_id<activity_type> },
             { "addiction", &valid_id<add_type> },
@@ -84,11 +84,15 @@ const std::array<id_kind_definition, 55> &id_kind_definitions()
             { "body_part", &valid_id<body_part_type> },
             { "bodygraph", &valid_id<bodygraph> },
             { "character_modifier", &valid_id<character_modifier> },
+            { "climbing_aid", &valid_id<climbing_aid> },
             { "clothing_mod", &valid_id<clothing_mod> },
             { "construction_category", &valid_id<construction_category> },
             { "construction_group", &valid_id<construction_group> },
             { "crafting_category", &valid_id<crafting_category> },
+            { "damage_info_order", &valid_id<damage_info_order> },
             { "damage_type", &valid_id<damage_type> },
+            { "dimension", &valid_id<dimension_world> },
+            { "dimension_region_layout", &valid_id<dimension_region_layout> },
             { "disease", &valid_id<disease_type> },
             { "effect", &valid_id<effect_type> },
             { "effect_on_condition", &valid_id<effect_on_condition> },
@@ -97,11 +101,22 @@ const std::array<id_kind_definition, 55> &id_kind_definitions()
             { "end_screen", &valid_id<end_screen> },
             { "event_statistic", &valid_id<event_statistic> },
             { "faction", &valid_id<faction> },
+            { "faction_mission", &valid_id<faction_mission> },
             { "fault", &valid_id<fault> },
+            { "fault_fix", &valid_id<fault_fix> },
+            { "fault_group", &valid_id<fault_group> },
             { "field", &valid_id<field_type> },
             { "furniture", &valid_id<furn_t> },
+            { "harvest", &valid_id<harvest_list> },
+            { "harvest_drop_type", &valid_id<harvest_drop_type> },
             { "item", &valid_id<itype> },
+            { "item_category", &valid_id<item_category> },
+            { "item_group", &valid_id<Item_spawn_data> },
             { "json_flag", &valid_id<json_flag> },
+            { "limb_score", &valid_id<limb_score> },
+            { "map_extra", &valid_id<map_extra> },
+            { "map_extra_collection", &valid_id<map_extra_collection> },
+            { "mapgen_palette", &valid_id<mapgen_palette> },
             { "martial_art", &valid_id<martialart> },
             { "martial_art_buff", &valid_id<ma_buff> },
             { "martial_art_technique", &valid_id<ma_technique> },
@@ -116,6 +131,8 @@ const std::array<id_kind_definition, 55> &id_kind_definitions()
             { "move_mode", &valid_id<move_mode> },
             { "mutation", &valid_id<mutation_branch> },
             { "mutation_category", &valid_id<mutation_category_trait> },
+            { "nested_mapgen", &valid_id<nested_mapgen> },
+            { "option_slider", &valid_id<option_slider> },
             { "overmap_terrain", &valid_id<oter_t> },
             { "quality", &valid_id<quality> },
             { "recipe", &valid_id<recipe> },
