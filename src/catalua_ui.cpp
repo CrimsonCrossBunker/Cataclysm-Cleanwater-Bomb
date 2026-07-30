@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -435,6 +436,9 @@ bool sidebar_panels_dirty = false;
 bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
                             const std::string &display_name,
                             const script_value_map &data );
+sol::table event_to_lua(
+    runtime_state &state,
+    const cata::event &event );
 
 class source_scope
 {
@@ -1423,6 +1427,282 @@ event_type require_native_event_type( const std::string &name,
     return io::string_to_enum<event_type>( name );
 }
 
+std::string native_event_lua_type(
+    const cata_variant_type type )
+{
+    switch( type ) {
+        case cata_variant_type::bool_:
+            return "boolean";
+        case cata_variant_type::int_:
+        case cata_variant_type::character_id:
+        case cata_variant_type::chrono_seconds:
+            return "integer";
+        case cata_variant_type::string:
+            return "string";
+        case cata_variant_type::void_:
+            return "nil";
+        default:
+            return "string";
+    }
+}
+
+bool valid_coordinate_text(
+    const std::string_view value,
+    const int dimensions )
+{
+    if( value.size() < 5 ||
+        value.front() != '(' ||
+        value.back() != ')' ) {
+        return false;
+    }
+    std::size_t cursor = 1;
+    for( int component = 0;
+         component < dimensions;
+         ++component ) {
+        const char *begin =
+            value.data() + cursor;
+        const char *end =
+            value.data() +
+            value.size() - 1;
+        int parsed = 0;
+        const std::from_chars_result converted =
+            std::from_chars(
+                begin, end, parsed );
+        if( converted.ec !=
+            std::errc() ||
+            converted.ptr == begin ) {
+            return false;
+        }
+        cursor = static_cast<std::size_t>(
+                     converted.ptr -
+                     value.data() );
+        const char expected =
+            component + 1 == dimensions ?
+            ')' : ',';
+        if( cursor >= value.size() ||
+            value[cursor] != expected ) {
+            return false;
+        }
+        ++cursor;
+    }
+    return cursor == value.size();
+}
+
+cata_variant read_native_event_field(
+    const sol::object &value,
+    const cata_variant_type expected,
+    const std::string &event_name,
+    const std::string &field_name )
+{
+    const std::string context =
+        "game.native_events.emit field '" +
+        field_name + "' for '" +
+        event_name + "'";
+    switch( expected ) {
+        case cata_variant_type::bool_:
+            if( !value.is<bool>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be a boolean" );
+            }
+            return cata_variant(
+                       value.as<bool>() );
+        case cata_variant_type::int_: {
+            if( !value.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be an integer" );
+            }
+            const lua_Integer number =
+                value.as<lua_Integer>();
+            if( number <
+                std::numeric_limits<int>::min() ||
+                number >
+                std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument(
+                    context +
+                    " exceeds the native integer range" );
+            }
+            return cata_variant(
+                       static_cast<int>(
+                           number ) );
+        }
+        case cata_variant_type::character_id: {
+            if( !value.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be an integer character id" );
+            }
+            const lua_Integer number =
+                value.as<lua_Integer>();
+            if( number <
+                std::numeric_limits<int>::min() ||
+                number >
+                std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument(
+                    context +
+                    " exceeds the character id range" );
+            }
+            return cata_variant(
+                       character_id(
+                           static_cast<int>(
+                               number ) ) );
+        }
+        case cata_variant_type::chrono_seconds:
+            if( !value.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be an integer number of seconds" );
+            }
+            return cata_variant(
+                       std::chrono::seconds(
+                           value.as<lua_Integer>() ) );
+        case cata_variant_type::string: {
+            if( !value.is<std::string>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be a string" );
+            }
+            std::string text =
+                value.as<std::string>();
+            if( text.size() > 8192 ) {
+                throw std::invalid_argument(
+                    context +
+                    " exceeds 8192 bytes" );
+            }
+            return cata_variant(
+                       std::move( text ) );
+        }
+        case cata_variant_type::void_:
+            throw std::invalid_argument(
+                context +
+                " has unsupported void type" );
+        default:
+            break;
+    }
+
+    if( !value.is<std::string>() ) {
+        throw std::invalid_argument(
+            context + " must be a string for native type " +
+            io::enum_to_string( expected ) );
+    }
+    std::string text =
+        value.as<std::string>();
+    if( text.empty() ||
+        text.size() > 512 ) {
+        throw std::invalid_argument(
+            context +
+            " must contain 1..512 bytes" );
+    }
+    if( expected ==
+        cata_variant_type::point &&
+        !valid_coordinate_text(
+            text, 2 ) ) {
+        throw std::invalid_argument(
+            context +
+            " must use '(x,y)' point syntax" );
+    }
+    if( expected ==
+        cata_variant_type::tripoint &&
+        !valid_coordinate_text(
+            text, 3 ) ) {
+        throw std::invalid_argument(
+            context +
+            " must use '(x,y,z)' tripoint syntax" );
+    }
+    cata_variant converted =
+        cata_variant::from_string(
+            expected, std::move( text ) );
+    try {
+        if( !converted.is_valid() ) {
+            throw std::invalid_argument(
+                context +
+                " is not a valid " +
+                io::enum_to_string(
+                    expected ) );
+        }
+    } catch( const std::exception &error ) {
+        throw std::invalid_argument(
+            context +
+            " could not be parsed as " +
+            io::enum_to_string( expected ) +
+            ": " + error.what() );
+    }
+    return converted;
+}
+
+cata::event build_native_event(
+    const std::string &name,
+    const sol::table &requested )
+{
+    const event_type type =
+        require_native_event_type(
+            name,
+            "game.native_events.emit" );
+    const cata::event::fields_type fields =
+        cata::event::get_fields(
+            type );
+    cata::event::data_type data;
+    for( const auto &entry : requested ) {
+        const sol::object key_object =
+            entry.first;
+        if( key_object.get_type() !=
+            sol::type::string ) {
+            throw std::invalid_argument(
+                "game.native_events.emit field "
+                "names must be strings" );
+        }
+        const std::string key =
+            key_object.as<std::string>();
+        const auto expected =
+            fields.find( key );
+        if( expected == fields.end() ) {
+            throw std::invalid_argument(
+                "game.native_events.emit received "
+                "unknown field '" + key +
+                "' for '" + name + "'" );
+        }
+        data.emplace(
+            key,
+            read_native_event_field(
+                entry.second,
+                expected->second,
+                name, key ) );
+    }
+    for( const auto &[field, type] :
+         fields ) {
+        static_cast<void>( type );
+        if( data.count( field ) == 0 ) {
+            throw std::invalid_argument(
+                "game.native_events.emit is "
+                "missing field '" + field +
+                "' for '" + name + "'" );
+        }
+    }
+    return cata::event(
+               type, calendar::turn,
+               std::move( data ) );
+}
+
+sol::table emit_native_event(
+    runtime_state &state,
+    const std::string &name,
+    const sol::table &fields )
+{
+    if( !state.accept_actions ) {
+        throw std::runtime_error(
+            "game.native_events.emit is only "
+            "available from an active runtime callback" );
+    }
+    cata::event emitted =
+        build_native_event(
+            name, fields );
+    get_event_bus().send(
+        emitted );
+    return event_to_lua(
+               state, emitted );
+}
+
 sol::table native_event_types( runtime_state &state, sol::this_state lua )
 {
     require_capability( state, "events" );
@@ -1459,12 +1739,16 @@ sol::table describe_native_event(
         sol::table field = lua_state.create_table();
         field["name"] = ordered[index].first;
         field["type"] = io::enum_to_string( ordered[index].second );
+        field["lua_type"] =
+            native_event_lua_type(
+                ordered[index].second );
         field_values[index + 1] = std::move( field );
     }
     sol::table result = lua_state.create_table();
     result["type"] = name;
     result["fields"] = std::move( field_values );
     result["subscribable"] = true;
+    result["emittable"] = true;
     return result;
 }
 
@@ -2989,6 +3273,17 @@ void initialize_state( runtime_state &state )
         require_native_events();
         return describe_native_event( state, lua, name );
     } );
+    native_events.set_function(
+        "emit",
+        [&state, require_native_events](
+            const std::string & name,
+    const sol::table & fields ) {
+        require_native_events();
+        require_capability(
+            state, "game.write" );
+        return emit_native_event(
+                   state, name, fields );
+    } );
     game["native_events"] = std::move( native_events );
     sol::table action_menu = state.lua.create_table();
     action_menu.set_function(
@@ -3951,6 +4246,18 @@ sol::table event_to_lua( runtime_state &state, const cata::event &event )
                 break;
             case cata_variant_type::int_:
                 data[name] = value.get<cata_variant_type::int_>();
+                break;
+            case cata_variant_type::character_id:
+                data[name] =
+                    value.get <
+                    cata_variant_type::character_id > ().
+                    get_value();
+                break;
+            case cata_variant_type::chrono_seconds:
+                data[name] =
+                    value.get <
+                    cata_variant_type::chrono_seconds > ().
+                    count();
                 break;
             default:
                 data[name] = value.get_string();
