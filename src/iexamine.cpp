@@ -6863,6 +6863,50 @@ static bool is_non_rotten_crafting_component( const item &it )
     return is_crafting_component( it ) && !it.rotten();
 }
 
+static std::vector<item> extract_mill_items( map_stack &items, const itype_id &type,
+        int quantity )
+{
+    std::vector<item> extracted;
+
+    for( map_stack::iterator iter = items.begin(); iter != items.end() && quantity > 0; ) {
+        if( iter->typeId() != type ) {
+            ++iter;
+            continue;
+        }
+
+        const int item_count = iter->count();
+        if( iter->count_by_charges() && item_count > quantity ) {
+            item split = iter->split( quantity );
+            if( split.is_null() ) {
+                debugmsg( "Failed to split %d %s from a stack of %d while milling.",
+                          quantity, type.str(), item_count );
+                break;
+            }
+            extracted.emplace_back( std::move( split ) );
+            quantity = 0;
+        } else {
+            quantity -= item_count;
+            extracted.emplace_back( *iter );
+            iter = items.erase( iter );
+        }
+    }
+
+    if( quantity > 0 ) {
+        debugmsg( "Failed to extract %d %s from a mill.", quantity, type.str() );
+    }
+
+    return extracted;
+}
+
+static void move_mill_items_to_player( Character &you, map &here, map_stack &items,
+                                       const itype_id &type, int quantity )
+{
+    for( const item &it : extract_mill_items( items, type, quantity ) ) {
+        here.add_item_or_charges( you.pos_bub(), it );
+        you.mod_moves( -you.item_handling_cost( it ) );
+    }
+}
+
 static void mill_activate( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
@@ -6885,11 +6929,7 @@ static void mill_activate( Character &you, const tripoint_bub_ms &examp )
 
     for( const item &iter : items ) {
         if( iter.type->milling_data && !iter.type->milling_data->into_.is_null() ) {
-            if( millable_counts.find( iter.typeId() ) == millable_counts.end() ) {
-                millable_counts.emplace( iter.typeId(), 1 );
-            } else {
-                millable_counts[iter.typeId()]++;
-            }
+            millable_counts[iter.typeId()] += iter.count();
         }
     }
 
@@ -6904,16 +6944,8 @@ static void mill_activate( Character &you, const tripoint_bub_ms &examp )
             add_msg( m_bad, _( "This mill contains %s, which can't be milled!" ), source.tname( 1, false ) );
             add_msg( _( "You remove the %s from the mill." ), source.tname() );
 
-            for( int i = 0; i < mill_type_count.second; i++ ) {
-                here.add_item_or_charges( you.pos_bub(), source );
-                you.mod_moves( -you.item_handling_cost( source ) );
-                for( item &iter : items ) {
-                    if( iter.typeId() == source.typeId() ) {
-                        here.i_rem( examp, &iter );
-                        break;
-                    }
-                }
-            }
+            move_mill_items_to_player( you, here, items, source.typeId(),
+                                       mill_type_count.second );
 
         } else {
             const requirement_data::alter_item_comp_vector &components =
@@ -6941,16 +6973,8 @@ static void mill_activate( Character &you, const tripoint_bub_ms &examp )
                 add_msg( m_bad, _( "This mill contains %s, which can't be milled!" ), source.tname( 1, false ) );
                 add_msg( _( "You remove the %s from the mill." ), source.tname() );
 
-                for( int i = 0; i < mill_type_count.second; i++ ) {
-                    here.add_item_or_charges( you.pos_bub(), source );
-                    you.mod_moves( -you.item_handling_cost( source ) );
-                    for( item &iter : items ) {
-                        if( iter.typeId() == source.typeId() ) {
-                            here.i_rem( examp, &iter );
-                            break;
-                        }
-                    }
-                }
+                move_mill_items_to_player( you, here, items, source.typeId(),
+                                           mill_type_count.second );
             } else {
                 const int batches = mill_type_count.second / lot_size;
                 const int process_count = batches * lot_size;
@@ -6959,31 +6983,15 @@ static void mill_activate( Character &you, const tripoint_bub_ms &examp )
                     add_msg( m_bad, _( "This mill contains too little of %s, which requires a batch size of %d." ),
                              source.tname( 1, false ), lot_size );
                     add_msg( _( "You remove the %s from the mill." ), source.tname() );
-                    for( int i = 0; i < mill_type_count.second; i++ ) {
-                        here.add_item_or_charges( you.pos_bub(), source );
-                        you.mod_moves( -you.item_handling_cost( source ) );
-                        for( item &iter : items ) {
-                            if( iter.typeId() == source.typeId() ) {
-                                here.i_rem( examp, &iter );
-                                break;
-                            }
-                        }
-                    }
+                    move_mill_items_to_player( you, here, items, source.typeId(),
+                                               mill_type_count.second );
                 } else if( process_count != mill_type_count.second ) {
                     add_msg( m_bad,
                              _( "This mill doesn't contain a full last batch of %s, which requires a batch size of %d." ),
                              source.tname( 1, false ), lot_size );
                     add_msg( _( "You remove the excess %s from the mill." ), source.tname() );
-                    for( int i = 0; i < mill_type_count.second - process_count; i++ ) {
-                        here.add_item_or_charges( you.pos_bub(), source );
-                        you.mod_moves( -you.item_handling_cost( source ) );
-                        for( item &iter : items ) {
-                            if( iter.typeId() == source.typeId() ) {
-                                here.i_rem( examp, &iter );
-                                break;
-                            }
-                        }
-                    }
+                    move_mill_items_to_player( you, here, items, source.typeId(),
+                                               mill_type_count.second - process_count );
                 }
             }
         }
@@ -7202,11 +7210,7 @@ void iexamine::mill_finalize( Character &, map &here, const tripoint_bub_ms &exa
 
     for( const item &iter : items ) {
         if( iter.type->milling_data && !iter.type->milling_data->into_.is_null() ) {
-            if( millable_counts.find( iter.typeId() ) == millable_counts.end() ) {
-                millable_counts.emplace( iter.typeId(), 1 );
-            } else {
-                millable_counts[iter.typeId()]++;
-            }
+            millable_counts[iter.typeId()] += iter.count();
         }
     }
 
@@ -7255,36 +7259,17 @@ void iexamine::mill_finalize( Character &, map &here, const tripoint_bub_ms &exa
                              source.tname(), lot_size, mill_type_count.second - batches * lot_size );
                 }
 
-                mill_type_count.second = process_count;
-
                 item_components item_component_lot;
-                int count = 0;
-
-                for( item &iter : items ) {
-                    if( iter.typeId() == mill_type_count.first ) {
-                        item_component_lot.add( iter );
-                        count++;
-                        if( count == mill_type_count.second ) {
-                            break;
-                        }
-                    }
+                std::vector<item> used_items = extract_mill_items(
+                                                   items, mill_type_count.first, process_count );
+                for( item &used_item : used_items ) {
+                    item_component_lot.add( used_item );
                 }
 
                 std::vector<item> results = rec.create_results( batches, &item_component_lot );
 
                 for( const item &result : results ) {
                     here.add_item( examp, result );
-                }
-
-                for( map_stack::iterator iter = items.begin(); iter != items.end(); ) {
-                    item &it = *iter;
-
-                    if( it.typeId() == mill_type_count.first && mill_type_count.second > 0 ) {
-                        iter = items.erase( iter );
-                        mill_type_count.second--;
-                    } else {
-                        ++iter;
-                    }
                 }
             }
         }
