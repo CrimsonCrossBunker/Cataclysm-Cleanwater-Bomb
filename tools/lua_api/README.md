@@ -67,7 +67,10 @@ equivalents and must not be classified as exceptions.
 
 `check_luals_declarations.py` compares the API v5 LuaLS file to the native
 `set_function` registrations, every native usertype, and all 36 generated
-coordinate factories. It also rejects a stale v4 declaration:
+coordinate factories. It also verifies that each stub's parameter annotations
+match its callable signature, rejects duplicate methods and fields, requires
+named option records instead of opaque `table` parameters, and rejects a stale
+v4 declaration:
 
 ```sh
 python3 tools/lua_api/check_luals_declarations.py
