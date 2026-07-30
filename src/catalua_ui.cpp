@@ -75,6 +75,7 @@
 #include "catalua_ui_vitamins.h"
 #include "catalua_ui_world.h"
 #include "catalua_ui_world_services.h"
+#include "catalua_ui_zones.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "event.h"
@@ -3368,6 +3369,22 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.camps" );
+        require_capability( state, "game.write" );
+    } );
+    install_zone_api(
+        state.lua, game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.zones" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.zones" );
         require_capability( state, "game.write" );
     } );
     install_magic_api(
