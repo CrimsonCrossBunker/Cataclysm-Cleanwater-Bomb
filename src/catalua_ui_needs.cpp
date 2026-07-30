@@ -500,6 +500,109 @@ sol::table set_health(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+struct health_deltas {
+    std::optional<int> lifestyle;
+    std::optional<int> daily_health;
+    std::optional<int> daily_health_cap;
+    std::optional<int> health_tally;
+};
+
+health_deltas read_health_deltas(
+    const sol::table &requested )
+{
+    health_deltas result;
+    for( const auto &entry : requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.needs.modify_health option keys "
+                "must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "lifestyle" && key != "daily_health" &&
+            key != "daily_health_cap" &&
+            key != "health_tally" ) {
+            throw std::invalid_argument(
+                "game.needs.modify_health received unknown option '" +
+                key + "'" );
+        }
+        if( !entry.second.is<int>() ) {
+            throw std::invalid_argument(
+                "game.needs.modify_health option '" + key +
+                "' must be an integer" );
+        }
+        const int value = entry.second.as<int>();
+        const int maximum =
+            key == "health_tally" ?
+            maximum_need_magnitude : 200;
+        if( value < -maximum || value > maximum ) {
+            throw std::invalid_argument(
+                "game.needs.modify_health option '" + key +
+                "' exceeds its supported magnitude" );
+        }
+        if( key == "lifestyle" ) {
+            result.lifestyle = value;
+        } else if( key == "daily_health" ) {
+            result.daily_health = value;
+        } else if( key == "daily_health_cap" ) {
+            result.daily_health_cap = value;
+        } else {
+            result.health_tally = value;
+        }
+    }
+    if( !result.lifestyle && !result.daily_health &&
+        !result.daily_health_cap && !result.health_tally ) {
+        throw std::invalid_argument(
+            "game.needs.modify_health requires "
+            "at least one adjustment" );
+    }
+    if( result.daily_health.has_value() !=
+        result.daily_health_cap.has_value() ) {
+        throw std::invalid_argument(
+            "game.needs.modify_health daily_health and "
+            "daily_health_cap must be provided together" );
+    }
+    return result;
+}
+
+sol::table modify_health(
+    sol::this_state lua, const game_handle &handle,
+    const sol::table &requested_deltas,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const health_deltas deltas =
+        read_health_deltas( requested_deltas );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table before =
+        snapshot_needs( state, *character );
+    if( deltas.lifestyle ) {
+        character->mod_livestyle( *deltas.lifestyle );
+    }
+    if( deltas.daily_health ) {
+        character->mod_daily_health(
+            *deltas.daily_health,
+            *deltas.daily_health_cap );
+    }
+    if( deltas.health_tally ) {
+        character->mod_health_tally(
+            *deltas.health_tally );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_needs( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_need_api(
@@ -597,6 +700,17 @@ void install_need_api(
         require_write();
         return set_health(
                    lua_state, handle, adjustments,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "modify_health",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & deltas ) {
+        require_write();
+        return modify_health(
+                   lua_state, handle, deltas,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
