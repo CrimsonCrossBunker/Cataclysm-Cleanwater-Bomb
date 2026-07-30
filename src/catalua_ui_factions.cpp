@@ -177,6 +177,21 @@ sol::table snapshot_resources(
     return result;
 }
 
+sol::table snapshot_policy(
+    sol::state_view lua, const faction &entry )
+{
+    sol::table result = lua.create_table();
+    result["consumes_food"] =
+        entry.consumes_food;
+    result["lone_wolf"] =
+        entry.lone_wolf_faction;
+    result["limited_area_claim"] =
+        entry.limited_area_claim;
+    result["stealing"] =
+        steal_policy( entry );
+    return result;
+}
+
 sol::table snapshot_faction(
     sol::state_view lua, const faction &entry )
 {
@@ -194,16 +209,8 @@ sol::table snapshot_faction(
         snapshot_reputation( lua, entry );
     result["resources"] =
         snapshot_resources( lua, entry );
-    sol::table policy = lua.create_table();
-    policy["consumes_food"] =
-        entry.consumes_food;
-    policy["lone_wolf"] =
-        entry.lone_wolf_faction;
-    policy["limited_area_claim"] =
-        entry.limited_area_claim;
-    policy["stealing"] =
-        steal_policy( entry );
-    result["policy"] = std::move( policy );
+    result["policy"] =
+        snapshot_policy( lua, entry );
     if( entry.currency.is_empty() ) {
         result["currency"] = sol::nil;
     } else {
@@ -959,6 +966,106 @@ sol::table modify_faction_food(
                    state, std::move( value ) ) );
 }
 
+struct policy_update {
+    std::optional<bool> consumes_food;
+    std::optional<std::string> stealing;
+};
+
+policy_update read_policy_update(
+    const sol::table &requested )
+{
+    policy_update result;
+    for( const auto &pair : requested ) {
+        if( pair.first.get_type() !=
+            sol::type::string ) {
+            throw std::invalid_argument(
+                "game.factions.set_policy option keys must be strings" );
+        }
+        const std::string key =
+            pair.first.as<std::string>();
+        if( key == "consumes_food" ) {
+            if( !pair.second.is<bool>() ) {
+                throw std::invalid_argument(
+                    "game.factions.set_policy option "
+                    "'consumes_food' must be a boolean" );
+            }
+            result.consumes_food =
+                pair.second.as<bool>();
+        } else if( key == "stealing" ) {
+            if( !pair.second.is<std::string>() ) {
+                throw std::invalid_argument(
+                    "game.factions.set_policy option "
+                    "'stealing' must be a string" );
+            }
+            const std::string value =
+                pair.second.as<std::string>();
+            if( value != "ask" &&
+                value != "always" &&
+                value != "never" ) {
+                throw std::invalid_argument(
+                    "game.factions.set_policy option "
+                    "'stealing' must be ask, always, or never" );
+            }
+            result.stealing = value;
+        } else {
+            throw std::invalid_argument(
+                "game.factions.set_policy received unknown option '" +
+                key + "'" );
+        }
+    }
+    if( !result.consumes_food &&
+        !result.stealing ) {
+        throw std::invalid_argument(
+            "game.factions.set_policy requires at least one option" );
+    }
+    return result;
+}
+
+sol::table set_faction_policy(
+    sol::this_state lua, const script_game_id &id,
+    const sol::table &requested )
+{
+    const policy_update update =
+        read_policy_update( requested );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    sol::table before =
+        snapshot_policy( state, *entry );
+    if( update.consumes_food ) {
+        entry->consumes_food =
+            *update.consumes_food;
+    }
+    if( update.stealing ) {
+        if( *update.stealing == "ask" ) {
+            entry->steal_persist =
+                std::nullopt;
+        } else {
+            entry->steal_persist =
+                *update.stealing == "always";
+        }
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_policy( state, *entry );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table player_faction( sol::this_state lua )
 {
     sol::state_view state( lua );
@@ -1092,6 +1199,15 @@ void install_faction_api(
         require_write();
         return modify_faction_food(
                    lua_state, id, kcal );
+    } );
+    factions.set_function(
+        "set_policy",
+        [require_write]( sol::this_state lua_state,
+    const script_game_id & id,
+    const sol::table &options ) {
+        require_write();
+        return set_faction_policy(
+                   lua_state, id, options );
     } );
     game["factions"] = std::move( factions );
 }
