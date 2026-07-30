@@ -76,6 +76,7 @@
 #include "catalua_ui_values.h"
 #include "catalua_ui_vehicles.h"
 #include "catalua_ui_vitamins.h"
+#include "catalua_ui_weather.h"
 #include "catalua_ui_world.h"
 #include "catalua_ui_world_services.h"
 #include "catalua_ui_zones.h"
@@ -3066,6 +3067,22 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version(
             state, 5, "game.time" );
+        require_capability(
+            state, "game.write" );
+    } );
+    install_weather_api(
+        game,
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.weather" );
+        require_capability(
+            state, "game.read" );
+    },
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.weather" );
         require_capability(
             state, "game.write" );
     } );
