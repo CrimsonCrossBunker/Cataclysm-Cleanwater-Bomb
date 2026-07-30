@@ -4052,10 +4052,17 @@ TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
     using namespace cata::lua_ui;
 
     const std::vector<std::string> &kinds = supported_game_id_kinds();
-    REQUIRE( kinds.size() == 41 );
+    REQUIRE( kinds.size() == 131 );
     CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
     CHECK( std::adjacent_find( kinds.begin(), kinds.end() ) == kinds.end() );
+    CHECK( is_supported_game_id_kind( "achievement" ) );
+    CHECK( is_supported_game_id_kind( "effect_on_condition" ) );
     CHECK( is_supported_game_id_kind( "item" ) );
+    CHECK( is_supported_game_id_kind( "npc_template" ) );
+    CHECK( is_supported_game_id_kind( "proficiency" ) );
+    CHECK( is_supported_game_id_kind( "vehicle_prototype" ) );
+    CHECK( is_supported_game_id_kind( "weather_type" ) );
+    CHECK( is_supported_game_id_kind( "zone" ) );
     CHECK_FALSE( is_supported_game_id_kind( "missing" ) );
 
     const script_game_id rock( "item", "rock" );
@@ -4102,9 +4109,9 @@ assert(id == game.types.id("item", "rock"))
 assert(id ~= game.types.id("monster", "rock"))
 assert(pcall(function() id.value = "stick" end) == false)
 local kinds = game.types.id_kinds()
-assert(#kinds == 41)
+assert(#kinds == 131)
 kinds[1] = "mutated"
-assert(game.types.id_kinds()[1] == "activity")
+assert(game.types.id_kinds()[1] == "achievement")
 )lua" );
     REQUIRE( result.valid() );
 }

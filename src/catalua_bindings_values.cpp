@@ -68,9 +68,9 @@ struct id_kind_definition {
     id_validator validate;
 };
 
-const std::array<id_kind_definition, 129> &id_kind_definitions()
+const std::array<id_kind_definition, 131> &id_kind_definitions()
 {
-    static const std::array<id_kind_definition, 129> definitions = {{
+    static const std::array<id_kind_definition, 131> definitions = {{
             { "achievement", &valid_id<achievement> },
             { "activity", &valid_id<activity_type> },
             { "addiction", &valid_id<add_type> },
@@ -169,8 +169,8 @@ const std::array<id_kind_definition, 129> &id_kind_definitions()
             { "region_terrain_furniture", &valid_id<region_terrain_furniture> },
             { "relic_procgen", &valid_id<relic_procgen_data> },
             { "requirement", &valid_id<requirement_data> },
-            { "score", &valid_id<score> },
             { "scent", &valid_id<scent_type> },
+            { "score", &valid_id<score> },
             { "shopkeeper_blacklist", &valid_id<shopkeeper_blacklist> },
             { "shopkeeper_consumption_rates", &valid_id<shopkeeper_cons_rates> },
             { "shopkeeper_whitelist", &valid_id<shopkeeper_whitelist> },
