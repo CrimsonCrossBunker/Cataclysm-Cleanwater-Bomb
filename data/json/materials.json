@@ -2460,7 +2460,7 @@
     "dmg_adj": [ "marked", { "ctxt": "adjective", "str": "dented" }, "smashed", "shattered" ],
     "bash_dmg_verb": { "ctxt": "verb", "str": "dented" },
     "cut_dmg_verb": "scratched",
-    "resist": { "bash": 13, "cut": 13, "acid": 22, "heat": 14, "bullet": 7 },
+    "resist": { "bash": 13, "cut": 13, "acid": 22, "heat": 14, "bullet": 7.5 },
     "repair_difficulty": 7
   },
   {
