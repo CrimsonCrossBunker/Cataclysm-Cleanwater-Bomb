@@ -51,23 +51,10 @@ option(CCB_ANDROID_NEW_UI
        "Enable the opt-in Android touch UI and customizable HUD" OFF)
 option(CATA_ENABLE_LUA_UI "Enable the experimental Lua Mod API" OFF)
 
-set(
-  CATALUA_UI_ENABLED_SOURCES
-  ${CATA_REPO_ROOT}/src/catalua_ui.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_actions.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_events.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_game.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_i18n.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_imgui.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_manifest.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_modules.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_navigation.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_renderer.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_registry.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_scheduler.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_services.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_state.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_values.cpp)
+file(GLOB CATALUA_UI_ENABLED_SOURCES CONFIGURE_DEPENDS
+     "${CATA_REPO_ROOT}/src/catalua*.cpp")
+list(REMOVE_ITEM CATALUA_UI_ENABLED_SOURCES
+     "${CATA_REPO_ROOT}/src/catalua_ui_disabled.cpp")
 if(CATA_ENABLE_LUA_UI)
   add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
   add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
