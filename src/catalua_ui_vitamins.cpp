@@ -258,6 +258,10 @@ sol::table snapshot_state(
     result["minimum"] = definition.min();
     result["maximum"] = definition.max();
     result["severity"] = definition.severity( amount );
+    result["daily_actual"] =
+        character.get_daily_vitamin( id, true );
+    result["daily_estimated"] =
+        character.get_daily_vitamin( id, false );
     result["rate"] =
         script_time_duration::from_native(
             character.vitamin_rate( id ) );
