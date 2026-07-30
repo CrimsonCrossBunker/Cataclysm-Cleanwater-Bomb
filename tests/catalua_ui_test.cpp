@@ -3419,6 +3419,162 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_npc_controls_preserve_permissions_and_bounds",
+           "[lua][bindings][npcs][write][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    avatar &player = get_avatar();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    npc &native_npc = spawn_npc(
+                          ( player.pos_bub( here ) +
+                            tripoint_rel_ms::east * 3 ).xy(),
+                          "test_talker" );
+    native_npc.name = "Lua control NPC";
+    native_npc.set_attitude( NPCATT_TALK );
+    native_npc.op_of_u.trust =
+        std::numeric_limits<int>::max() - 5;
+    native_npc.op_of_u.fear = -10;
+    native_npc.op_of_u.value = 2;
+    native_npc.op_of_u.anger = 3;
+    native_npc.op_of_u.owed = 4;
+    native_npc.op_of_u.sold = 3;
+    const character_id native_npc_id =
+        native_npc.getID();
+    on_out_of_scope cleanup_npc( [native_npc_id]() {
+        g->remove_npc_follower( native_npc_id );
+        g->remove_npc( native_npc_id );
+        overmap_buffer.remove_npc( native_npc_id );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.npcs.list({
+    offset = 0,
+    limit = 1,
+    query = "Lua control NPC"
+})
+assert(page.ok == true)
+assert(page.value.returned == 1)
+local handle = page.value.items[1].handle
+
+local renamed = game.npcs.rename(
+    handle, "Lua renamed NPC")
+assert(renamed.ok == true)
+assert(renamed.value.before == "Lua control NPC")
+assert(renamed.value.after == "Lua renamed NPC")
+
+local attitude = game.npcs.set_attitude(
+    handle, "NPCATT_FOLLOW")
+assert(attitude.ok == true)
+assert(attitude.value.before == "NPCATT_TALK")
+assert(attitude.value.after == "NPCATT_FOLLOW")
+assert(attitude.value.changed == true)
+
+local changed = game.npcs.modify_opinion(handle, {
+    trust = 100,
+    fear = -5,
+    value = 7,
+    anger = -2,
+    owed = 9,
+    sold = -100
+})
+assert(changed.ok == true)
+assert(changed.value.before.trust ==
+    2147483642)
+assert(changed.value.after.trust ==
+    2147483647)
+assert(changed.value.after.fear ==
+    changed.value.before.fear - 5)
+assert(changed.value.after.value ==
+    changed.value.before.value + 7)
+assert(changed.value.after.anger ==
+    changed.value.before.anger - 2)
+assert(changed.value.after.owed ==
+    changed.value.before.owed + 9)
+assert(changed.value.before.sold == 3)
+assert(changed.value.after.sold == 0)
+assert(math.type(changed.value.effective.trust) ==
+    "integer")
+
+assert(pcall(function()
+    game.npcs.rename(handle, "")
+end) == false)
+assert(pcall(function()
+    game.npcs.rename(handle, "bad\nname")
+end) == false)
+assert(pcall(function()
+    game.npcs.set_attitude(handle, "missing")
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {})
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {
+        trust = 1000001
+    })
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {
+        trust = 0.5
+    })
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {
+        unknown = 1
+    })
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {
+        [1] = 1
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_npc.name == "Lua renamed NPC" );
+    CHECK( native_npc.get_attitude() == NPCATT_FOLLOW );
+    CHECK( native_npc.op_of_u.trust ==
+           std::numeric_limits<int>::max() );
+    CHECK( native_npc.op_of_u.fear == -15 );
+    CHECK( native_npc.op_of_u.value == 9 );
+    CHECK( native_npc.op_of_u.anger == 1 );
+    CHECK( native_npc.op_of_u.owed == 13 );
+    CHECK( native_npc.op_of_u.sold == 0 );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local handle = game.npcs.list({
+    offset = 0,
+    limit = 1,
+    query = "Lua renamed NPC"
+}).value.items[1].handle
+game.npcs.rename(handle, "unauthorized")
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( native_npc.name == "Lua renamed NPC" );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
