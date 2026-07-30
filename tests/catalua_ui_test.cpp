@@ -22,6 +22,7 @@
 #include "catalua_ui_state.h"
 #include "effect.h"
 #include "event_bus.h"
+#include "flag.h"
 #include "input_context_actions.h"
 #include "item.h"
 #include "json_loader.h"
@@ -39,6 +40,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <list>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -1776,6 +1778,132 @@ end) == false)
 assert(pcall(function()
     game.inventory.list(avatar, { offset = -1 })
 end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_inventory_traversal_includes_protected_equipment",
+           "[lua][bindings][items][inventory][equipment][integration]" )
+{
+    avatar &player = get_avatar();
+    std::optional<item> original_weapon;
+    if( item_location wielded = player.get_wielded_item() ) {
+        original_weapon = *wielded;
+    }
+
+    item protected_weapon( itype_id( "hammer" ) );
+    protected_weapon.set_flag( flag_NO_UNWIELD );
+    protected_weapon.set_var( "ccb_lua_protected_root", "wielded" );
+    player.set_wielded_item( protected_weapon );
+
+    item integrated_shirt( itype_id( "tshirt" ) );
+    integrated_shirt.set_flag( flag_INTEGRATED );
+    integrated_shirt.set_var( "ccb_lua_protected_root", "integrated" );
+    const auto integrated = player.worn.wear_item(
+                                player, integrated_shirt, false, false );
+    REQUIRE( integrated );
+    const std::int64_t integrated_uid =
+        ( **integrated ).uid().get_value();
+
+    item locked_shirt( itype_id( "tshirt" ) );
+    locked_shirt.set_flag( flag_NO_TAKEOFF );
+    locked_shirt.set_var( "ccb_lua_protected_root", "locked" );
+    const auto locked = player.worn.wear_item(
+                            player, locked_shirt, false, false );
+    REQUIRE( locked );
+    const std::int64_t locked_uid =
+        ( **locked ).uid().get_value();
+
+    on_out_of_scope cleanup(
+    [&player, original_weapon, integrated_uid, locked_uid]() {
+        const auto takeoff_test_item =
+        [&player]( const std::int64_t uid ) {
+            std::vector<item_location> worn =
+                player.worn.top_items_loc( player );
+            auto location = std::find_if(
+                                worn.begin(), worn.end(),
+            [uid]( const item_location & entry ) {
+                return entry &&
+                       entry->uid().get_value() == uid;
+            } );
+            if( location == worn.end() ) {
+                return;
+            }
+            ( **location ).unset_flag( flag_INTEGRATED );
+            ( **location ).unset_flag( flag_NO_TAKEOFF );
+            std::list<item> removed;
+            player.takeoff( *location, &removed );
+        };
+        takeoff_test_item( integrated_uid );
+        takeoff_test_item( locked_uid );
+        player.set_wielded_item(
+            original_weapon.value_or( item() ) );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+
+local function protected_entry(entries, marker)
+    for _, entry in ipairs(entries) do
+        local value = game.items.get_var(
+            entry.handle, "ccb_lua_protected_root")
+        if value.ok and value.value.value == marker then
+            return entry
+        end
+    end
+    return nil
+end
+
+local wielded_page = game.inventory.list(avatar, {
+    recursive = false,
+    include_wielded = true,
+    include_worn = false,
+    include_carried = false,
+    limit = 512
+})
+local wielded = protected_entry(
+    wielded_page.value.items, "wielded")
+assert(wielded ~= nil)
+assert(wielded.location == "wielded")
+assert(game.inventory.find(avatar, wielded.uid).ok == true)
+
+local worn_page = game.inventory.list(avatar, {
+    recursive = false,
+    include_wielded = false,
+    include_worn = true,
+    include_carried = false,
+    limit = 512
+})
+local integrated = protected_entry(
+    worn_page.value.items, "integrated")
+local locked = protected_entry(
+    worn_page.value.items, "locked")
+assert(integrated ~= nil and locked ~= nil)
+assert(integrated.location == "worn")
+assert(locked.location == "worn")
+
+local integrated_remove = game.inventory.remove(
+    avatar, integrated.handle)
+assert(integrated_remove.ok == false)
+assert(integrated_remove.error.code == "cannot_takeoff")
+assert(game.inventory.find(avatar, integrated.uid).ok == true)
+
+local locked_remove = game.inventory.remove(
+    avatar, locked.handle)
+assert(locked_remove.ok == false)
+assert(locked_remove.error.code == "cannot_takeoff")
+assert(game.inventory.find(avatar, locked.uid).ok == true)
 )lua" );
 
     std::string error;

@@ -20,6 +20,7 @@
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "inventory.h"
 #include "item.h"
 #include "item_category.h"
 #include "item_contents.h"
@@ -195,18 +196,6 @@ Character *resolve_character(
     return character;
 }
 
-std::string root_location(
-    const Character &character, const item &entry )
-{
-    if( character.is_wielding( entry ) ) {
-        return "wielded";
-    }
-    if( character.is_worn( entry ) ) {
-        return "worn";
-    }
-    return "carried";
-}
-
 bool includes_location(
     const inventory_query_options &options,
     const std::string &location )
@@ -303,23 +292,34 @@ std::vector<inventory_item_entry> collect_inventory(
     bool &node_truncated, bool &depth_truncated )
 {
     std::vector<inventory_item_entry> result;
-    const std::vector<item *> roots = character.inv_dump();
-    for( std::size_t index = 0; index < roots.size(); ++index ) {
-        item *root = roots[index];
-        if( root == nullptr ) {
-            continue;
-        }
-        const std::string location =
-            root_location( character, *root );
-        if( !includes_location( options, location ) ) {
-            continue;
+    std::size_t root_index = 0;
+    const auto collect_root = [&]( item & root, const std::string & location ) {
+        const std::size_t index = root_index++;
+        if( node_truncated || !includes_location( options, location ) ) {
+            return;
         }
         collect_item_branch(
-            *root, location, 0, 0,
+            root, location, 0, 0,
         { static_cast<int>( index ) }, options, result,
         node_truncated, depth_truncated );
-        if( node_truncated ) {
-            break;
+    };
+
+    item_location wielded = character.get_wielded_item();
+    if( wielded ) {
+        collect_root( *wielded, "wielded" );
+    }
+    for( item_location worn :
+         character.worn.top_items_loc( character ) ) {
+        if( worn ) {
+            collect_root( *worn, "worn" );
+        }
+    }
+    for( std::list<item> *stack : character.inv->slice() ) {
+        if( stack == nullptr ) {
+            continue;
+        }
+        for( item &carried : *stack ) {
+            collect_root( carried, "carried" );
         }
     }
     return result;
@@ -1909,7 +1909,35 @@ sol::table remove_inventory_item(
                             runtime_generation,
                             world_generation );
     } else {
-        item removed = character->i_rem( entry );
+        item removed;
+        if( character->is_worn( *entry ) ) {
+            const ret_val<void> can_takeoff =
+                character->can_takeoff( *entry );
+            if( !can_takeoff.success() ) {
+                return make_game_error_result(
+                state, {
+                    "cannot_takeoff",
+                    can_takeoff.str()
+                } );
+            }
+
+            item removed_fallback = *entry;
+            std::list<item> taken_off;
+            if( !character->takeoff(
+                    item_location( *character, entry ),
+                    &taken_off ) ) {
+                return make_game_error_result(
+                state, {
+                    "operation_failed",
+                    "The character could not take off that item"
+                } );
+            }
+            removed = taken_off.empty() ?
+                      std::move( removed_fallback ) :
+                      std::move( taken_off.front() );
+        } else {
+            removed = character->i_rem( entry );
+        }
         if( removed.is_null() ) {
             return make_game_error_result(
             state, {
