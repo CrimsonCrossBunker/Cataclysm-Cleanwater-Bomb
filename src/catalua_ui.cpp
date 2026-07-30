@@ -39,6 +39,7 @@
 #include "catalua_ui_crafting.h"
 #include "catalua_ui_creatures.h"
 #include "catalua_ui_effects.h"
+#include "catalua_ui_eocs.h"
 #include "catalua_ui_events.h"
 #include "catalua_ui_game.h"
 #include "catalua_ui_game_info.h"
@@ -3158,6 +3159,26 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.effects" );
         require_capability( state, "game.write" );
+    } );
+    install_eoc_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.eocs" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.eocs" );
+        require_capability( state, "game.write" );
+    },
+    [&state]() {
+        return state.accept_actions &&
+               state.current_source.has_value();
     } );
     install_bionic_api(
         game,
