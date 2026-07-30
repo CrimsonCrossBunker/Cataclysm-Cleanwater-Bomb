@@ -1,4 +1,5 @@
 #include "cata_catch.h"
+#include "addiction.h"
 #include "avatar.h"
 #include "bionics.h"
 #include "bodypart.h"
@@ -2520,6 +2521,117 @@ end) == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_addictions_use_native_state_and_events",
+           "[lua][bindings][addictions][state][integration]" )
+{
+    avatar &player = get_avatar();
+    const addiction_id caffeine( "caffeine" );
+    REQUIRE( caffeine.is_valid() );
+    std::optional<addiction> original;
+    const auto existing = std::find_if(
+                              player.addictions.begin(),
+                              player.addictions.end(),
+    [&caffeine]( const addiction & entry ) {
+        return entry.type == caffeine;
+    } );
+    if( existing != player.addictions.end() ) {
+        original = *existing;
+        player.rem_addiction( caffeine );
+    }
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local caffeine = game.types.id("addiction", "caffeine")
+
+local before = game.addictions.get(avatar, caffeine)
+assert(before.ok == true)
+assert(before.value.id == caffeine)
+assert(before.value.present == false)
+assert(before.value.intensity == 0)
+assert(before.value.active == false)
+assert(before.value.sated == nil)
+assert(before.value.minimum_active_intensity == 3)
+assert(before.value.maximum_intensity == 20)
+
+local assigned = game.addictions.set(avatar, caffeine, {
+    intensity = 5,
+    sated = game.time.duration(2, "hour")
+})
+assert(assigned.ok == true)
+assert(assigned.value.after.present == true)
+assert(assigned.value.after.intensity == 5)
+assert(assigned.value.after.active == true)
+assert(assigned.value.after.sated.turns == 7200)
+
+local states = game.addictions.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(states.ok == true)
+assert(states.value.limit == 256)
+assert(states.value.returned == #states.value.items)
+assert(states.value.total >= 1)
+
+local exposed = game.addictions.expose(avatar, caffeine, 100000)
+assert(exposed.ok == true)
+assert(exposed.value.changed == true)
+assert(exposed.value.after.present == true)
+assert(exposed.value.after.intensity >= 5)
+
+local removed = game.addictions.remove(avatar, caffeine)
+assert(removed.ok == true)
+assert(removed.value.changed == true)
+assert(removed.value.after.present == false)
+
+assert(pcall(function()
+    game.addictions.set(avatar, caffeine, {
+        sated = game.time.duration(1, "hour")
+    })
+end) == false)
+assert(pcall(function()
+    game.addictions.set(avatar, caffeine, { intensity = 21 })
+end) == false)
+assert(pcall(function()
+    game.addictions.get(
+        avatar, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.addiction_level( caffeine ) == 0 );
+    if( original ) {
+        player.addictions.push_back( *original );
+    }
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.addictions.set(
+    game.characters.avatar(),
+    game.types.id("addiction", "caffeine"),
+    { intensity = 5 })
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.addiction_level( caffeine ) ==
+           ( original ? original->intensity : 0 ) );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
