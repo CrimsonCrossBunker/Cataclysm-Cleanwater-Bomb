@@ -73,6 +73,17 @@ DECLARED_METHOD = re.compile(
     r"[:.]([A-Za-z_][A-Za-z0-9_]*)",
     re.MULTILINE,
 )
+FUNCTION_STUB = re.compile(
+    r"^function\s+([A-Za-z_][A-Za-z0-9_]*)"
+    r"[:.]([A-Za-z_][A-Za-z0-9_]*)"
+    r"\(([^)]*)\)\s+end$"
+)
+PARAM_ANNOTATION = re.compile(
+    r"^---@param\s+([A-Za-z_][A-Za-z0-9_]*)\??(?:\s|$)"
+)
+FIELD_ANNOTATION = re.compile(
+    r"^---@field\s+([A-Za-z_][A-Za-z0-9_]*)\??(?:\s|$)"
+)
 DECLARED_CLASS = re.compile(
     r"^---@class\s+([A-Za-z_][A-Za-z0-9_]*)",
     re.MULTILINE,
@@ -121,12 +132,91 @@ def coordinate_factories() -> set[str]:
     }
 
 
+def annotation_block(lines: list[str], function_index: int) -> list[str]:
+    result: list[str] = []
+    index = function_index - 1
+    while index >= 0 and lines[index].startswith("---"):
+        result.append(lines[index])
+        index -= 1
+    result.reverse()
+    return result
+
+
+def validate_annotation_contracts(contents: str) -> None:
+    lines = contents.splitlines()
+    declared_methods: set[tuple[str, str]] = set()
+    for index, line in enumerate(lines):
+        function = FUNCTION_STUB.match(line)
+        if function is None:
+            continue
+        class_name, method, raw_parameters = function.groups()
+        identity = (class_name, method)
+        if identity in declared_methods:
+            raise RuntimeError(
+                f"LuaLS declarations repeat method "
+                f"{class_name}.{method}"
+            )
+        declared_methods.add(identity)
+
+        parameters = [
+            value.strip()
+            for value in raw_parameters.split(",")
+            if value.strip()
+        ]
+        annotations = [
+            match.group(1)
+            for annotation in annotation_block(lines, index)
+            if (match := PARAM_ANNOTATION.match(annotation)) is not None
+        ]
+        if len(annotations) != len(set(annotations)):
+            raise RuntimeError(
+                f"LuaLS declarations repeat a parameter annotation for "
+                f"{class_name}.{method}"
+            )
+        if parameters != annotations:
+            raise RuntimeError(
+                f"LuaLS parameter annotations for {class_name}.{method} "
+                f"are {annotations}, expected {parameters}"
+            )
+
+    for index, line in enumerate(lines):
+        class_match = re.match(
+            r"^---@class\s+([A-Za-z_][A-Za-z0-9_]*)", line
+        )
+        if class_match is None:
+            continue
+        fields: list[str] = []
+        cursor = index + 1
+        while cursor < len(lines):
+            field = FIELD_ANNOTATION.match(lines[cursor])
+            if field is None:
+                break
+            fields.append(field.group(1))
+            cursor += 1
+        if len(fields) != len(set(fields)):
+            raise RuntimeError(
+                f"LuaLS declarations repeat a field in "
+                f"{class_match.group(1)}"
+            )
+
+    if re.search(
+        r"^---@param\s+options\??\s+table(?:\s|$)",
+        contents,
+        re.MULTILINE,
+    ):
+        raise RuntimeError(
+            "LuaLS declarations use an untyped options table"
+        )
+
+
 def check(path: Path) -> dict[str, int]:
     contents = path.read_text(encoding="utf-8")
     if "Lua Mod API v5" not in contents:
         raise RuntimeError("LuaLS declaration header is not API v5")
     if re.search(r"---@field api_version\s+5\b", contents) is None:
         raise RuntimeError("CcbGameApi.api_version is not declared as 5")
+
+    validate_annotation_contracts(contents)
 
     methods: dict[str, set[str]] = defaultdict(set)
     for class_name, method in DECLARED_METHOD.findall(contents):
