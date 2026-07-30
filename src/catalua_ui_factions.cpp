@@ -4,7 +4,9 @@
 #include <bitset>
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <optional>
 #include <stdexcept>
@@ -31,6 +33,9 @@ constexpr std::size_t maximum_query_bytes = 128;
 constexpr int default_detail_limit = 64;
 constexpr int maximum_detail_limit = 256;
 constexpr int maximum_detail_offset = 1000000;
+constexpr std::size_t maximum_faction_name_bytes =
+    MAX_FAC_NAME_SIZE;
+constexpr int maximum_reputation_delta = 1000000;
 
 struct faction_options {
     int offset = 0;
@@ -136,6 +141,20 @@ std::string steal_policy( const faction &entry )
     return *entry.steal_persist ? "always" : "never";
 }
 
+sol::table snapshot_reputation(
+    sol::state_view lua, const faction &entry )
+{
+    sol::table result = lua.create_table();
+    result["likes"] = entry.likes_u;
+    result["respects"] = entry.respects_u;
+    result["trusts"] = entry.trusts_u;
+    result["ranking"] =
+        fac_ranking_text( entry.likes_u );
+    result["respect"] =
+        fac_respect_text( entry.respects_u );
+    return result;
+}
+
 sol::table snapshot_faction(
     sol::state_view lua, const faction &entry )
 {
@@ -149,16 +168,8 @@ sol::table snapshot_faction(
         entry.describe();
     result["known_by_player"] =
         entry.known_by_u;
-    sol::table reputation = lua.create_table();
-    reputation["likes"] = entry.likes_u;
-    reputation["respects"] = entry.respects_u;
-    reputation["trusts"] = entry.trusts_u;
-    reputation["ranking"] =
-        fac_ranking_text( entry.likes_u );
-    reputation["respect"] =
-        fac_respect_text( entry.respects_u );
     result["reputation"] =
-        std::move( reputation );
+        snapshot_reputation( lua, entry );
     sol::table resources = lua.create_table();
     resources["size"] = entry.size;
     resources["power"] = entry.power;
@@ -559,6 +570,211 @@ sol::table faction_food(
                    state, std::move( value ) ) );
 }
 
+void validate_faction_name(
+    const std::string &name )
+{
+    if( name.empty() ) {
+        throw std::invalid_argument(
+            "game.factions.rename name cannot be empty" );
+    }
+    if( name.size() >
+        maximum_faction_name_bytes ) {
+        throw std::invalid_argument(
+            "game.factions.rename name exceeds 40 bytes" );
+    }
+    if( std::any_of(
+    name.begin(), name.end(), []( const unsigned char ch ) {
+    return ch < 0x20U || ch == 0x7fU;
+    } ) ) {
+        throw std::invalid_argument(
+            "game.factions.rename name cannot contain control characters" );
+    }
+}
+
+sol::table rename_faction(
+    sol::this_state lua, const script_game_id &id,
+    const std::string &requested_name )
+{
+    validate_faction_name( requested_name );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    const std::string before =
+        entry->get_name();
+    entry->set_name( requested_name );
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = entry->get_name();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table set_faction_known(
+    sol::this_state lua, const script_game_id &id,
+    const bool known )
+{
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    const bool before = entry->known_by_u;
+    entry->known_by_u = known;
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = entry->known_by_u;
+    value["changed"] =
+        before != entry->known_by_u;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+struct reputation_deltas {
+    std::optional<int> likes;
+    std::optional<int> respects;
+    std::optional<int> trusts;
+};
+
+reputation_deltas read_reputation_deltas(
+    const sol::table &requested )
+{
+    reputation_deltas result;
+    for( const auto &pair : requested ) {
+        if( pair.first.get_type() !=
+            sol::type::string ) {
+            throw std::invalid_argument(
+                "game.factions.modify_reputation option keys must be strings" );
+        }
+        const std::string key =
+            pair.first.as<std::string>();
+        if( key != "likes" &&
+            key != "respects" &&
+            key != "trusts" ) {
+            throw std::invalid_argument(
+                "game.factions.modify_reputation received unknown option '" +
+                key + "'" );
+        }
+        if( !pair.second.is<int>() ) {
+            throw std::invalid_argument(
+                "game.factions.modify_reputation option '" +
+                key + "' must be an integer" );
+        }
+        const int delta =
+            pair.second.as<int>();
+        if( delta < -maximum_reputation_delta ||
+            delta > maximum_reputation_delta ) {
+            throw std::invalid_argument(
+                "game.factions.modify_reputation option '" +
+                key +
+                "' must be within -1000000..1000000" );
+        }
+        if( key == "likes" ) {
+            result.likes = delta;
+        } else if( key == "respects" ) {
+            result.respects = delta;
+        } else {
+            result.trusts = delta;
+        }
+    }
+    if( !result.likes &&
+        !result.respects &&
+        !result.trusts ) {
+        throw std::invalid_argument(
+            "game.factions.modify_reputation requires at least one delta" );
+    }
+    return result;
+}
+
+int adjusted_integer(
+    const int current, const int delta,
+    const int minimum =
+        std::numeric_limits<int>::min() )
+{
+    const std::int64_t adjusted =
+        static_cast<std::int64_t>( current ) +
+        static_cast<std::int64_t>( delta );
+    return static_cast<int>(
+               std::clamp<std::int64_t>(
+                   adjusted, minimum,
+                   std::numeric_limits<int>::max() ) );
+}
+
+sol::table modify_faction_reputation(
+    sol::this_state lua, const script_game_id &id,
+    const sol::table &requested )
+{
+    const reputation_deltas deltas =
+        read_reputation_deltas( requested );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "unavailable", "No active game is available"
+        } );
+    }
+    faction *entry = resolve_faction( id );
+    if( entry == nullptr ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            "The requested faction does not exist"
+        } );
+    }
+    sol::table before =
+        snapshot_reputation(
+            state, *entry );
+    if( deltas.likes ) {
+        entry->likes_u =
+            adjusted_integer(
+                entry->likes_u,
+                *deltas.likes );
+    }
+    if( deltas.respects ) {
+        entry->respects_u =
+            adjusted_integer(
+                entry->respects_u,
+                *deltas.respects );
+    }
+    if( deltas.trusts ) {
+        entry->trusts_u =
+            adjusted_integer(
+                entry->trusts_u,
+                *deltas.trusts );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_reputation(
+            state, *entry );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table player_faction( sol::this_state lua )
 {
     sol::state_view state( lua );
@@ -649,6 +865,32 @@ void install_faction_api(
         require_read();
         return faction_food(
                    lua_state, id, options );
+    } );
+    factions.set_function(
+        "rename",
+        [require_write]( sol::this_state lua_state,
+    const script_game_id & id,
+    const std::string &name ) {
+        require_write();
+        return rename_faction(
+                   lua_state, id, name );
+    } );
+    factions.set_function(
+        "set_known",
+        [require_write]( sol::this_state lua_state,
+    const script_game_id & id, const bool known ) {
+        require_write();
+        return set_faction_known(
+                   lua_state, id, known );
+    } );
+    factions.set_function(
+        "modify_reputation",
+        [require_write]( sol::this_state lua_state,
+    const script_game_id & id,
+    const sol::table &deltas ) {
+        require_write();
+        return modify_faction_reputation(
+                   lua_state, id, deltas );
     } );
     game["factions"] = std::move( factions );
 }
