@@ -18,6 +18,9 @@ ID_DEFINITION_PATTERN = re.compile(
     r'\{\s*"(?P<kind>[a-z0-9_]+)",\s*&valid_id<'
     r'(?P<native_type>[^>]+)>\s*\}'
 )
+JSON_LOADER_PATTERN = re.compile(
+    r'\badd\(\s*"(?P<json_type>[^"]+)"\s*,'
+)
 
 
 def source_text(relative_path: str) -> str:
@@ -42,16 +45,35 @@ def parse_id_kinds(contents: str) -> list[dict[str, str]]:
     return entries
 
 
+def parse_json_types(contents: str) -> list[dict[str, object]]:
+    """Extract every unique DynamicDataLoader JSON registration."""
+    counts: dict[str, int] = {}
+    for match in JSON_LOADER_PATTERN.finditer(contents):
+        json_type = match.group("json_type")
+        counts[json_type] = counts.get(json_type, 0) + 1
+    if not counts:
+        raise RuntimeError("no DynamicDataLoader JSON types were found")
+    return [
+        {
+            "type": json_type,
+            "registration_count": counts[json_type],
+        }
+        for json_type in sorted(counts)
+    ]
+
+
 def build_inventory() -> dict[str, object]:
     return {
         "schema_version": 1,
         "source": {
             "project": "Cataclysm-Cleanwater-Bomb",
             "id_registry": "src/catalua_bindings_values.cpp",
+            "json_registry": "src/init.cpp",
         },
         "id_kinds": parse_id_kinds(
             source_text("src/catalua_bindings_values.cpp")
         ),
+        "json_types": parse_json_types(source_text("src/init.cpp")),
     }
 
 
