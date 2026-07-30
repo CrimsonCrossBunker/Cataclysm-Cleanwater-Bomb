@@ -1,6 +1,7 @@
 #include "catalua_ui_needs.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -19,6 +20,7 @@ namespace
 
 constexpr int maximum_need_magnitude = 1000000;
 constexpr int maximum_stored_kcal = 2000000;
+constexpr std::int64_t maximum_sleep_adjustment_turns = 31622400;
 
 Character *resolve_character(
     const game_handle &handle, const std::size_t runtime_generation,
@@ -298,6 +300,89 @@ sol::table modify_calories(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+struct sleep_adjustments {
+    std::optional<script_time_duration> daily;
+    std::optional<script_time_duration> continuous;
+};
+
+sleep_adjustments read_sleep_adjustments(
+    const sol::table &requested )
+{
+    sleep_adjustments result;
+    for( const auto &entry : requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.needs.modify_sleep option keys "
+                "must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "daily" && key != "continuous" ) {
+            throw std::invalid_argument(
+                "game.needs.modify_sleep received unknown option '" +
+                key + "'" );
+        }
+        if( !entry.second.is<script_time_duration>() ) {
+            throw std::invalid_argument(
+                "game.needs.modify_sleep option '" + key +
+                "' must be a TimeDuration" );
+        }
+        const script_time_duration value =
+            entry.second.as<script_time_duration>();
+        if( value.turns() < -maximum_sleep_adjustment_turns ||
+            value.turns() > maximum_sleep_adjustment_turns ) {
+            throw std::invalid_argument(
+                "game.needs.modify_sleep option '" + key +
+                "' cannot exceed 366 days in magnitude" );
+        }
+        if( key == "daily" ) {
+            result.daily = value;
+        } else {
+            result.continuous = value;
+        }
+    }
+    if( !result.daily && !result.continuous ) {
+        throw std::invalid_argument(
+            "game.needs.modify_sleep requires "
+            "at least one adjustment" );
+    }
+    return result;
+}
+
+sol::table modify_sleep(
+    sol::this_state lua, const game_handle &handle,
+    const sol::table &requested_adjustments,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    const sleep_adjustments adjustments =
+        read_sleep_adjustments( requested_adjustments );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table before =
+        snapshot_needs( state, *character );
+    if( adjustments.daily ) {
+        character->mod_daily_sleep(
+            adjustments.daily->to_native() );
+    }
+    if( adjustments.continuous ) {
+        character->mod_continuous_sleep(
+            adjustments.continuous->to_native() );
+    }
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_needs( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_need_api(
@@ -362,6 +447,17 @@ void install_need_api(
         return modify_calories(
                    lua_state, handle, delta,
                    ignore_weariness.value_or( false ),
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "modify_sleep",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & adjustments ) {
+        require_write();
+        return modify_sleep(
+                   lua_state, handle, adjustments,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
