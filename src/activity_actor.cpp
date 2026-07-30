@@ -6247,7 +6247,7 @@ void unload_activity_actor::unload( Character &who, item_location &target )
     item &it = *target.get_item();
     bool actually_unloaded = false;
     const bool can_hold_legacy_plutonium = ( it.is_tool() || it.is_gun() || it.is_magazine() ) &&
-            it.ammo_capacity( ammo_plutonium ) > 0;
+                                           it.ammo_capacity( ammo_plutonium ) > 0;
 
     if( it.is_container() ) {
         contents_change_handler handler;
@@ -13050,7 +13050,7 @@ void training_activity_actor::train_skill( Character &who, skill_id trained_skil
     // Student intelligence and social skill is secondary.
     int student_quality = ( who.get_int() + ( who.get_skill_level( skill_speech ) * 2 ) ) * 4;
     int teaching_effectiveness = std::min( 200, std::max( 10,
-                                     ( teacher_quality * 2 + student_quality ) / 2 ) );
+                                           ( teacher_quality * 2 + student_quality ) / 2 ) );
     who.practice( trained_skill, teaching_effectiveness, old_skill_level + 2 );
     int new_skill_level = who.get_knowledge_level( trained_skill );
     if( old_skill_level != new_skill_level ) {

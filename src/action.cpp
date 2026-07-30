@@ -646,7 +646,7 @@ bool can_butcher_at( map &here, const tripoint_bub_ms &p )
     const inventory &crafting_inv = player_character.crafting_inventory();
 
     static const std::string salvage_string = "salvage";
-    const auto salvage_filter = []( const item &it ) {
+    const auto salvage_filter = []( const item & it ) {
         return it.get_usable_item( salvage_string ) != nullptr;
     };
     const std::vector<item *> salvage_tools = player_character.items_with( salvage_filter );
