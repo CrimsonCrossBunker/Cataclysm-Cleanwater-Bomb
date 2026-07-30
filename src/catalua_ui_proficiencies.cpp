@@ -581,6 +581,43 @@ sol::table grant_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table remove_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_proficiency_id(
+        requested_id, "game.proficiencies.remove" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const proficiency_id id( requested_id.value() );
+    const proficiency &definition = id.obj();
+    sol::table before =
+        snapshot_state( state, *character, definition );
+    const bool known_before = character->has_proficiency( id );
+    const bool learning_before = is_learning( *character, id );
+    character->lose_proficiency( id );
+    const bool known_after = character->has_proficiency( id );
+    const bool learning_after = is_learning( *character, id );
+    sol::table value = state.create_table();
+    value["changed"] =
+        known_before != known_after ||
+        learning_before != learning_after;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, definition );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_proficiency_api(
@@ -651,6 +688,17 @@ void install_proficiency_api(
         require_write();
         return grant_state(
                    lua_state, handle, id, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    proficiencies.set_function(
+        "remove",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
+        require_write();
+        return remove_state(
+                   lua_state, handle, id,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
