@@ -569,6 +569,10 @@ sol::table grant_state(
     if( !known_before ) {
         character->add_proficiency(
             id, options.ignore_requirements, options.recursive );
+        if( character->has_proficiency( id ) ) {
+            character->set_proficiency_practiced_time(
+                id, to_turns<int>( definition.time_to_learn() ) );
+        }
     }
     const bool known_after = character->has_proficiency( id );
     sol::table value = state.create_table();
