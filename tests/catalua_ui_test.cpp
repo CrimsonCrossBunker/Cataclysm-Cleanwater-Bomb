@@ -1,6 +1,7 @@
 #include "cata_catch.h"
 #include "addiction.h"
 #include "avatar.h"
+#include "basecamp.h"
 #include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
@@ -4012,6 +4013,137 @@ game.factions.set_known(
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK_FALSE( native_faction->known_by_u );
+}
+
+TEST_CASE( "lua_v5_camp_discovery_and_state_are_bounded",
+           "[lua][bindings][camps][read][integration]" )
+{
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    const tripoint_abs_omt camp_position =
+        player.pos_abs_omt() +
+        tripoint_rel_omt( 3, 0, 0 );
+    REQUIRE_FALSE( overmap_buffer.find_camp(
+                       camp_position.xy() ).has_value() );
+    here.add_camp(
+        camp_position, "Lua inspection camp", false );
+    std::optional<basecamp *> found =
+        overmap_buffer.find_camp(
+            camp_position.xy() );
+    REQUIRE( found.has_value() );
+    basecamp *native_camp = *found;
+    REQUIRE( native_camp != nullptr );
+    on_out_of_scope cleanup_camp( [
+                                   camp_position
+                                 ]() {
+        overmap_buffer.remove_camp(
+            camp_position.xy() );
+        get_avatar().camps.erase(
+            camp_position );
+    } );
+
+    const tripoint_abs_ms board_position =
+        project_to<coords::ms>(
+            camp_position ) +
+        tripoint_rel_ms( 1, 1, 0 );
+    native_camp->set_bb_pos(
+        board_position );
+    native_camp->set_owner(
+        faction_id( "your_followers" ) );
+    native_camp->directions.push_back(
+        point_rel_omt( 1, 0 ) );
+    native_camp->fortifications.push_back(
+        camp_position );
+    native_camp->set_storage_tiles( {
+        board_position
+    } );
+    native_camp->set_dumping_spot(
+        board_position );
+    native_camp->set_liquid_dumping_spot( {
+        board_position
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.camps.list({
+    offset = 0,
+    limit = 1000000,
+    radius_omt = 10,
+    query = "LUA INSPECTION CAMP"
+})
+assert(page.ok == true)
+assert(page.value.limit == 256)
+assert(page.value.radius_omt == 10)
+assert(page.value.returned == #page.value.items)
+assert(page.value.total == 1)
+local camp = page.value.items[1]
+assert(camp.name == "Lua inspection camp")
+assert(camp.board_name ~= "")
+assert(camp.valid == true)
+assert(camp.position.origin == "abs")
+assert(camp.position.scale == "omt")
+assert(camp.board_position.origin == "abs")
+assert(camp.board_position.scale == "ms")
+assert(camp.owner == game.types.id(
+    "faction", "your_followers"))
+assert(math.type(camp.distance_submaps) == "integer")
+assert(type(camp.distance_omt) == "number")
+assert(camp.directions.returned ==
+    #camp.directions.items)
+assert(camp.directions.total == 1)
+assert(camp.directions.items[1].origin == "rel")
+assert(camp.directions.items[1].scale == "omt")
+assert(camp.fortifications.total == 1)
+assert(camp.storage_tiles.total == 1)
+assert(camp.dumping_spot == camp.board_position)
+assert(camp.liquid_dumping_spots.total == 1)
+
+local current = game.camps.get(camp.position)
+assert(current.ok == true)
+assert(current.value.name == camp.name)
+assert(current.value.position == camp.position)
+
+local near = game.camps.near(camp.position, {
+    offset = 0,
+    limit = 1,
+    radius_omt = 0
+})
+assert(near.ok == true)
+assert(near.value.returned == 1)
+assert(near.value.items[1].position == camp.position)
+
+local missing_position = game.coords.tripoint_abs_omt(
+    camp.position.x + 1000,
+    camp.position.y + 1000,
+    camp.position.z)
+local missing = game.camps.get(missing_position)
+assert(missing.ok == false)
+assert(missing.error.code == "not_found")
+assert(pcall(function()
+    game.camps.list({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.camps.list({ radius_omt = 361 })
+end) == false)
+assert(pcall(function()
+    game.camps.near(
+        game.coords.tripoint_rel_omt(0, 0, 0), {})
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
