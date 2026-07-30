@@ -2634,6 +2634,86 @@ game.addictions.set(
            ( original ? original->intensity : 0 ) );
 }
 
+TEST_CASE( "lua_v5_character_needs_are_generation_safe_and_bounded",
+           "[lua][bindings][needs][state][integration]" )
+{
+    avatar &player = get_avatar();
+    const int original_hunger = player.get_hunger();
+    const int original_thirst = player.get_thirst();
+    const int original_sleepiness = player.get_sleepiness();
+    const int original_sleep_deprivation =
+        player.get_sleep_deprivation();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local before = game.needs.get(avatar)
+assert(before.ok == true)
+assert(math.type(before.value.hunger) == "integer")
+assert(math.type(before.value.starvation) == "integer")
+assert(math.type(before.value.thirst) == "integer")
+assert(math.type(before.value.instant_thirst) == "integer")
+assert(math.type(before.value.sleepiness) == "integer")
+assert(math.type(before.value.sleep_deprivation) == "integer")
+assert(math.type(before.value.stored_kcal) == "integer")
+assert(math.type(before.value.healthy_kcal) == "integer")
+assert(type(before.value.kcal_fraction) == "number")
+assert(math.type(before.value.daily_sleep.turns) == "integer")
+assert(math.type(before.value.continuous_sleep.turns) == "integer")
+
+local assigned = game.needs.set(avatar, {
+    hunger = 10,
+    thirst = 20,
+    sleepiness = 30,
+    sleep_deprivation = 40
+})
+assert(assigned.ok == true)
+assert(assigned.value.after.hunger == 10)
+assert(assigned.value.after.thirst == 20)
+assert(assigned.value.after.sleepiness == 30)
+assert(assigned.value.after.sleep_deprivation == 40)
+
+local modified = game.needs.modify(avatar, {
+    hunger = 1,
+    thirst = 1,
+    sleepiness = 1,
+    sleep_deprivation = 1
+})
+assert(modified.ok == true)
+assert(modified.value.after.hunger == 11)
+assert(modified.value.after.thirst == 21)
+assert(modified.value.after.sleepiness == 31)
+assert(modified.value.after.sleep_deprivation == 41)
+
+assert(pcall(function()
+    game.needs.set(avatar, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.needs.modify(avatar, { hunger = 1000001 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_hunger() == 11 );
+    CHECK( player.get_thirst() == 21 );
+    CHECK( player.get_sleepiness() == 31 );
+    CHECK( player.get_sleep_deprivation() == 41 );
+    player.set_hunger( original_hunger );
+    player.set_thirst( original_thirst );
+    player.set_sleepiness( original_sleepiness );
+    player.set_sleep_deprivation(
+        original_sleep_deprivation );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
