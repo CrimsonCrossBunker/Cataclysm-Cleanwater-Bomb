@@ -978,6 +978,91 @@ assert(state.character.get(
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_eocs_and_dialogue_variables_bridge_authored_logic",
+           "[lua][eoc][variables][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.read", "game.write", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local eoc = game.types.id(
+    "effect_on_condition", "EOC_meta_test_message")
+assert(eoc:is_valid())
+assert(pcall(function()
+    game.eocs.activate(eoc)
+end) == false)
+
+game.native_events.on("game_begin", { once = true }, function()
+    local page = game.eocs.list({
+        query = "EOC_meta_test_message", limit = 8
+    })
+    assert(page.total >= 1)
+    assert(page.returned >= 1)
+    assert(page.items[1].value == "EOC_meta_test_message")
+    assert(page.items[1].type == "ACTIVATION")
+
+    local definition = game.eocs.get(eoc)
+    assert(definition.ok)
+    assert(definition.value.value == "EOC_meta_test_message")
+    assert(definition.value.has_condition == false)
+
+    local tested = game.eocs.test(eoc, {
+        context = {
+            lua_number = 12.5,
+            lua_string = "context",
+            lua_boolean = true
+        }
+    })
+    assert(tested.ok and tested.value.matched)
+    assert(tested.value.context.lua_number == 12.5)
+    assert(tested.value.context.lua_string == "context")
+    assert(tested.value.context.lua_boolean == 1)
+
+    local activated = game.eocs.activate(eoc)
+    assert(activated.ok and activated.value.activated)
+
+    local avatar = game.characters.avatar()
+    local missing = game.variables.get(avatar, "lua_native_bridge")
+    assert(missing.ok and missing.value.exists == false)
+    local written = game.variables.set(
+        avatar, "lua_native_bridge", "round_trip")
+    assert(written.ok and written.value.existed == false)
+    local stored = game.variables.get(avatar, "lua_native_bridge")
+    assert(stored.ok and stored.value.exists)
+    assert(stored.value.value == "round_trip")
+    local removed = game.variables.remove(
+        avatar, "lua_native_bridge")
+    assert(removed.ok and removed.value.removed)
+    assert(removed.value.before == "round_trip")
+    assert(game.variables.get(
+        avatar, "lua_native_bridge").value.exists == false)
+
+    local negative = game.time.duration(-1, "turn")
+    assert(pcall(function()
+        game.eocs.queue(eoc, negative)
+    end) == false)
+    state.character.set("native.eoc.complete", true)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "eoc-bridge-test" );
+
+    script.write( R"lua(
+assert(state.character.get("native.eoc.complete", false) == true)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
            "[lua][bindings][hooks][callbacks]" )
 {
