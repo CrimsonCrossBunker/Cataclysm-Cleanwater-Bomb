@@ -1233,11 +1233,19 @@ function CcbStateStore.set(key, value) end
 ---@field pending CcbQueuedAction[]
 ---@field results CcbActionResult[]
 
+---@alias CcbQueuedActionType "move"|"use_item"|"toggle_bionic"|"toggle_mutation"|"set_move_mode"|"wait"|"cancel_activity"|"cycle_move_mode"
+---@alias CcbMoveDirection "north"|"north_east"|"east"|"south_east"|"south"|"south_west"|"west"|"north_west"
+
+---@class CcbActionEnqueueOptions
+---@field direction? CcbMoveDirection Required by `move`.
+---@field uid? integer Required by `use_item` and `toggle_bionic`.
+---@field id? string Required by `toggle_mutation` and `set_move_mode`.
+
 ---@class CcbGameActionsApi
 local CcbGameActionsApi = {}
 
----@param action_type string
----@param options? table
+---@param action_type CcbQueuedActionType
+---@param options? CcbActionEnqueueOptions
 ---@return integer request_id
 function CcbGameActionsApi.enqueue(action_type, options) end
 
