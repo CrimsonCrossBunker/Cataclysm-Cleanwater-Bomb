@@ -26,6 +26,7 @@
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
 #include "character_martial_arts.h"
+#include "clzones.h"
 #include "creature_tracker.h"
 #include "damage.h"
 #include "effect.h"
@@ -4309,6 +4310,482 @@ game.camps.rename(camp.position, "unauthorized")
            "Lua renamed camp" );
 }
 
+TEST_CASE( "lua_v5_zone_catalog_and_state_are_bounded",
+           "[lua][bindings][zones][read][integration]" )
+{
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    zone_manager &manager =
+        zone_manager::get_manager();
+    const faction_id faction(
+        "your_followers" );
+    const zone_type_id type(
+        "LOOT_UNSORTED" );
+    REQUIRE( type.is_valid() );
+    const std::string zone_name =
+        "Lua inspection zone";
+    auto remove_test_zone = [
+        &manager, faction, zone_name
+    ]() {
+        while( true ) {
+            zone_data *found = nullptr;
+            for( zone_data &entry :
+                 manager.get_zones(
+                     faction ) ) {
+                if( entry.get_name() ==
+                    zone_name ) {
+                    found = &entry;
+                    break;
+                }
+            }
+            if( found == nullptr ) {
+                break;
+            }
+            const bool vehicle =
+                found->get_is_vehicle();
+            if( !manager.remove( *found ) ) {
+                break;
+            }
+            if( !vehicle ) {
+                manager.cache_data();
+            }
+        }
+    };
+    remove_test_zone();
+    on_out_of_scope cleanup_zone(
+        remove_test_zone );
+
+    const tripoint_abs_ms start =
+        player.pos_abs() +
+        tripoint_rel_ms( 2, 3, 0 );
+    const tripoint_abs_ms end =
+        start + tripoint_rel_ms( 2, 1, 0 );
+    manager.add(
+        zone_name, type, faction,
+        false, true, start, end,
+        nullptr, true );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local zone_id = game.types.id(
+    "zone", "LOOT_UNSORTED")
+local faction_id = game.types.id(
+    "faction", "your_followers")
+
+local types = game.zones.types({
+    offset = 0,
+    limit = 1000000,
+    query = "loot_unsorted"
+})
+assert(types.limit == 256)
+assert(types.returned == #types.items)
+assert(types.total >= 1)
+local definition = game.zones.type(zone_id)
+assert(definition.id == zone_id)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.can_be_personal) == "boolean")
+assert(type(definition.hidden) == "boolean")
+assert(definition.sources.returned ==
+    #definition.sources.items)
+
+local page = game.zones.list({
+    offset = 0,
+    limit = 1000000,
+    query = "LUA INSPECTION ZONE",
+    faction = faction_id,
+    type = zone_id
+})
+assert(page.ok == true)
+assert(page.value.limit == 256)
+assert(page.value.returned == #page.value.items)
+assert(page.value.total == 1)
+local zone = page.value.items[1]
+assert(zone.name == "Lua inspection zone")
+assert(zone.type == zone_id)
+assert(zone.faction == faction_id)
+assert(zone.type_name ~= "")
+assert(zone.start.origin == "abs")
+assert(zone.start.scale == "ms")
+assert(zone["end"].origin == "abs")
+assert(zone["end"].scale == "ms")
+assert(zone.center.origin == "abs")
+assert(zone.enabled == true)
+assert(zone.temporarily_disabled == false)
+assert(zone.vehicle == false)
+assert(zone.personal == false)
+assert(type(zone.has_options) == "boolean")
+assert(zone.options.returned ==
+    #zone.options.items)
+
+local token = zone.token
+assert(token:is_valid() == true)
+assert(token.name == zone.name)
+assert(token.type == zone.type)
+assert(token.faction == zone.faction)
+assert(token.start == zone.start)
+assert(token["end"] == zone["end"])
+local status = token:status()
+assert(status.ok == true)
+assert(status.value.name == zone.name)
+
+local current = game.zones.get(token)
+assert(current.ok == true)
+assert(current.value.name == zone.name)
+assert(game.zones.contains(
+    token, zone.start).value == true)
+local outside = game.coords.tripoint_abs_ms(
+    zone["end"].x + 1,
+    zone["end"].y,
+    zone["end"].z)
+assert(game.zones.contains(
+    token, outside).value == false)
+
+local at = game.zones.at(zone.start, {
+    faction = faction_id,
+    type = zone_id,
+    limit = 1
+})
+assert(at.ok == true)
+assert(at.value.returned == 1)
+assert(at.value.items[1].token.name ==
+    zone.name)
+
+assert(pcall(function()
+    game.zones.types({ offset = -1 })
+end) == false)
+assert(pcall(function()
+    game.zones.types({
+        query = string.rep("x", 129)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.type(
+        game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.zones.list({
+        limit = -1
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.list({
+        type = game.types.id("item", "rock")
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.at(
+        game.coords.tripoint_rel_ms(
+            0, 0, 0), {})
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_zone_controls_preserve_permissions_and_caches",
+           "[lua][bindings][zones][write][integration]" )
+{
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    zone_manager &manager =
+        zone_manager::get_manager();
+    const faction_id faction(
+        "your_followers" );
+    const std::vector<std::string> test_names = {
+        "Lua controlled zone",
+        "Lua renamed zone",
+        "Lua personal zone"
+    };
+    auto remove_test_zones = [
+        &manager, faction, test_names
+    ]() {
+        for( const std::string &name :
+             test_names ) {
+            while( true ) {
+                zone_data *found = nullptr;
+                for( zone_data &entry :
+                     manager.get_zones(
+                         faction ) ) {
+                    if( entry.get_name() ==
+                        name ) {
+                        found = &entry;
+                        break;
+                    }
+                }
+                if( found == nullptr ) {
+                    break;
+                }
+                const bool vehicle =
+                    found->get_is_vehicle();
+                if( !manager.remove(
+                        *found ) ) {
+                    break;
+                }
+                if( !vehicle ) {
+                    manager.cache_data();
+                }
+            }
+        }
+    };
+    remove_test_zones();
+    on_out_of_scope cleanup_zones(
+        remove_test_zones );
+
+    const tripoint_abs_ms base =
+        player.pos_abs() +
+        tripoint_rel_ms( 5, 5, 0 );
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    std::ostringstream source;
+    source << "local bx, by, bz = "
+           << base.x() << ", "
+           << base.y() << ", "
+           << base.z() << "\n";
+    source << R"lua(
+local function abs(dx, dy, dz)
+    return game.coords.tripoint_abs_ms(
+        bx + dx, by + dy, bz + (dz or 0))
+end
+local zone_id = game.types.id(
+    "zone", "LOOT_UNSORTED")
+local faction_id = game.types.id(
+    "faction", "your_followers")
+
+local created = game.zones.create({
+    name = "Lua controlled zone",
+    type = zone_id,
+    faction = faction_id,
+    start = abs(2, 1),
+    ["end"] = abs(0, 0),
+    invert = true,
+    enabled = true
+})
+assert(created.ok == true)
+local zone = created.value
+assert(zone.name == "Lua controlled zone")
+assert(zone.start == abs(0, 0))
+assert(zone["end"] == abs(2, 1))
+assert(zone.invert == true)
+assert(zone.enabled == true)
+local original_token = zone.token
+
+local duplicate = game.zones.create({
+    name = "Lua controlled zone",
+    type = zone_id,
+    start = abs(0, 0),
+    ["end"] = abs(2, 1)
+})
+assert(duplicate.ok == false)
+assert(duplicate.error.code ==
+    "duplicate_zone")
+
+local renamed = game.zones.rename(
+    original_token, "Lua renamed zone")
+assert(renamed.ok == true)
+assert(renamed.value.before ==
+    "Lua controlled zone")
+assert(renamed.value.after ==
+    "Lua renamed zone")
+assert(renamed.value.changed == true)
+assert(game.zones.get(
+    original_token).error.code == "not_found")
+local token = renamed.value.zone.token
+
+local disabled = game.zones.set_enabled(
+    token, false)
+assert(disabled.ok == true)
+assert(disabled.value.before == true)
+assert(disabled.value.after == false)
+assert(disabled.value.zone.enabled == false)
+token = disabled.value.zone.token
+
+local temporary = game.zones.set_temporary_disabled(
+    token, true)
+assert(temporary.ok == true)
+assert(temporary.value.after == true)
+assert(temporary.value.enabled_after == false)
+assert(temporary.value.zone.temporarily_disabled ==
+    true)
+token = temporary.value.zone.token
+
+local restored = game.zones.set_temporary_disabled(
+    token, false)
+assert(restored.ok == true)
+assert(restored.value.after == false)
+assert(restored.value.enabled_after == true)
+assert(restored.value.zone.enabled == true)
+token = restored.value.zone.token
+
+local moved = game.zones.set_position(
+    token, abs(8, 7), abs(6, 5))
+assert(moved.ok == true)
+assert(moved.value.changed == true)
+assert(moved.value.after_start == abs(6, 5))
+assert(moved.value.after_end == abs(8, 7))
+assert(game.zones.get(
+    token).error.code == "not_found")
+token = moved.value.zone.token
+assert(game.zones.contains(
+    token, abs(7, 6)).value == true)
+
+local personal = game.zones.create({
+    name = "Lua personal zone",
+    type = zone_id,
+    start = game.coords.tripoint_rel_ms(
+        1, 1, 0),
+    ["end"] = game.coords.tripoint_rel_ms(
+        -1, -1, 0),
+    personal = true
+})
+assert(personal.ok == true)
+assert(personal.value.personal == true)
+local personal_moved = game.zones.set_position(
+    personal.value.token,
+    game.coords.tripoint_rel_ms(-2, -1, 0),
+    game.coords.tripoint_rel_ms(2, 1, 0))
+assert(personal_moved.ok == true)
+assert(personal_moved.value.after_start ==
+    game.coords.tripoint_rel_ms(-2, -1, 0))
+assert(personal_moved.value.after_end ==
+    game.coords.tripoint_rel_ms(2, 1, 0))
+local personal_token =
+    personal_moved.value.zone.token
+local removed = game.zones.remove(
+    personal_token)
+assert(removed.ok == true)
+assert(removed.value.removed == true)
+assert(removed.value.zone.personal == true)
+assert(personal_token:is_valid() == false)
+assert(game.zones.get(
+    personal_token).error.code == "not_found")
+
+assert(pcall(function()
+    game.zones.create({
+        name = "", type = zone_id,
+        start = abs(0, 0), ["end"] = abs(0, 0)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = game.types.id(
+            "item", "rock"),
+        start = abs(0, 0), ["end"] = abs(0, 0)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = zone_id,
+        start = game.coords.tripoint_rel_ms(
+            0, 0, 0),
+        ["end"] = game.coords.tripoint_rel_ms(
+            1, 1, 0)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = zone_id,
+        start = abs(0, 0, 0),
+        ["end"] = abs(0, 0, 1)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = zone_id,
+        start = abs(0, 0),
+        ["end"] = abs(256, 0)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = zone_id,
+        start = abs(0, 0), ["end"] = abs(0, 0),
+        unknown = true
+    })
+end) == false)
+)lua";
+    script.write(
+        source.str() );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+
+    zone_data *native_zone = nullptr;
+    for( zone_data &entry :
+         manager.get_zones(
+             faction ) ) {
+        if( entry.get_name() ==
+            "Lua renamed zone" ) {
+            native_zone = &entry;
+            break;
+        }
+    }
+    REQUIRE( native_zone != nullptr );
+    CHECK( native_zone->get_enabled() );
+    CHECK_FALSE(
+        native_zone->
+        get_temporarily_disabled() );
+    CHECK( native_zone->get_start_point() ==
+           base +
+           tripoint_rel_ms( 6, 5, 0 ) );
+    CHECK( native_zone->get_end_point() ==
+           base +
+           tripoint_rel_ms( 8, 7, 0 ) );
+    CHECK( manager.has(
+               zone_type_id( "LOOT_UNSORTED" ),
+               base +
+               tripoint_rel_ms( 7, 6, 0 ),
+               faction ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.zones.list({
+    query = "Lua renamed zone"
+})
+assert(page.ok == true)
+assert(page.value.returned == 1)
+game.zones.rename(
+    page.value.items[1].token,
+    "unauthorized")
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts(
+                     error ) );
+    CHECK( error.find( "game.write" ) !=
+           std::string::npos );
+    CHECK( native_zone->get_name() ==
+           "Lua renamed zone" );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
@@ -7707,7 +8184,7 @@ assert(string.find(error, "nesting limit", 1, true) ~= nil)
     local ok, error = pcall(
         require, "test_limits.budget_" .. tostring(index))
     if index < )lua" +
-                                            std::to_string( maximum_modules_per_source ) + R"lua( then
+                  std::to_string( maximum_modules_per_source ) + R"lua( then
         assert(ok)
     else
         assert(ok == false)
@@ -10922,7 +11399,7 @@ TEST_CASE( "lua_v5_combat_callbacks_and_hooks_run_from_native_lifecycles",
     const auto write_combat_script = [&]( const bool allow_fire ) {
         script.write( std::string( R"lua(
 state.character.set("native_combat.allow_fire", )lua" ) +
-                                            ( allow_fire ? "true" : "false" ) + R"lua()
+    ( allow_fire ? "true" : "false" ) + R"lua()
 local gun = game.types.id("item", "glock_19")
 local rock = game.types.id("item", "rock")
 local function count(name)
