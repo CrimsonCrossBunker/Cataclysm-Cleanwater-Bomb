@@ -78,11 +78,13 @@ POLICIES = (
         ("src/catalua_bindings_coords*",),
         ("game.coords", "game.world.to_absolute", "game.world.to_bubble"),
         (
-            "src/catalua_bindings_coords.cpp#void install_coordinate_value_api",
+            "src/catalua_bindings_coords.cpp"
+            "#void install_coordinate_value_api",
         ),
         (
             "tests/catalua_ui_test.cpp#lua_v5_coordinates_are_immutable_typed",
-            "tests/catalua_ui_test.cpp#lua_v5_coordinate_projections_and_ranges",
+            "tests/catalua_ui_test.cpp"
+            "#lua_v5_coordinate_projections_and_ranges",
         ),
     ),
     policy(
@@ -92,7 +94,8 @@ POLICIES = (
         ("game.bionics",),
         ("src/catalua_ui_bionics.cpp#void install_bionic_api",),
         (
-            "tests/catalua_ui_test.cpp#lua_v5_bionics_use_detached_definitions",
+            "tests/catalua_ui_test.cpp"
+            "#lua_v5_bionics_use_detached_definitions",
         ),
     ),
     policy(
@@ -129,7 +132,8 @@ POLICIES = (
         ("src/catalua_ui_items.cpp#void install_item_api",),
         (
             "tests/catalua_ui_test.cpp#lua_v5_item_snapshots_are_detailed",
-            "tests/catalua_ui_test.cpp#lua_v5_inventory_operations_are_bounded",
+            "tests/catalua_ui_test.cpp"
+            "#lua_v5_inventory_operations_are_bounded",
         ),
     ),
     policy(
@@ -146,7 +150,8 @@ POLICIES = (
         ),
         (
             "tests/catalua_ui_test.cpp#lua_v5_spellbook_mana_and_casting",
-            "tests/catalua_ui_test.cpp#lua_v5_character_mutations_are_generation",
+            "tests/catalua_ui_test.cpp"
+            "#lua_v5_character_mutations_are_generation",
         ),
     ),
     policy(
@@ -167,7 +172,8 @@ POLICIES = (
         (
             "tests/catalua_ui_test.cpp#lua_v5_world_reads_bounded_active_map",
             "tests/catalua_ui_test.cpp#lua_v5_overmap_reads_existing_tiles",
-            "tests/catalua_ui_test.cpp#lua_v5_hordes_expose_bounded_definitions",
+            "tests/catalua_ui_test.cpp"
+            "#lua_v5_hordes_expose_bounded_definitions",
         ),
     ),
     policy(
@@ -188,7 +194,8 @@ POLICIES = (
         ("game.missions",),
         ("src/catalua_ui_missions.cpp#void install_mission_api",),
         (
-            "tests/catalua_ui_test.cpp#lua_v5_missions_use_detached_definitions",
+            "tests/catalua_ui_test.cpp"
+            "#lua_v5_missions_use_detached_definitions",
         ),
     ),
     policy(
@@ -229,7 +236,8 @@ POLICIES = (
         (
             "src/catalua_ui_game_info.cpp#void install_game_info_api",
             "src/catalua_ui_interaction.cpp#void install_game_interaction_api",
-            "src/catalua_ui_world_services.cpp#void install_game_world_service_api",
+            "src/catalua_ui_world_services.cpp"
+            "#void install_game_world_service_api",
             "src/catalua_ui.cpp#game[\"action_menu\"]",
             "src/catalua_ui.cpp#create_named_table( \"sidebar\" )",
         ),
@@ -270,7 +278,8 @@ POLICIES = (
             "src/catalua_ui_modules.cpp#script_module_resolver::resolve_local",
         ),
         (
-            "tests/catalua_ui_test.cpp#lua_v5_definition_registry_uses_typed",
+            "tests/catalua_ui_test.cpp"
+            "#lua_v5_definition_registry_uses_typed",
             "tests/catalua_ui_test.cpp#lua_v5_module_loading_enforces",
             "tests/catalua_ui_test.cpp#lua_v5_runtime_diagnostics_are_bounded",
         ),
@@ -287,7 +296,8 @@ POLICIES = (
         (
             "tests/catalua_ui_test.cpp#lua_v5_hook_and_callback_catalogs",
             "tests/catalua_ui_test.cpp#lua_v5_hooks_are_described_ordered",
-            "tests/catalua_ui_test.cpp#lua_v5_remaining_combat_and_control_hooks",
+            "tests/catalua_ui_test.cpp"
+            "#lua_v5_remaining_combat_and_control_hooks",
         ),
     ),
     policy(
@@ -571,7 +581,7 @@ def write_or_check(
     if check_snapshot:
         if not output.is_file():
             raise RuntimeError(f"coverage snapshot {output} is missing")
-        if output.read_text(encoding="utf-8") != serialized:
+        if load(output) != payload:
             raise RuntimeError(
                 f"coverage snapshot {output} is stale; regenerate it"
             )

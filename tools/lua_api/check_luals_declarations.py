@@ -229,9 +229,9 @@ def check(path: Path) -> dict[str, int]:
         for method in sorted(expected_methods - methods[class_name]):
             missing.append(f"{table}.{method} -> {class_name}.{method}")
     if missing:
+        details = "\n".join(missing)
         raise RuntimeError(
-            "LuaLS declarations omit registered methods:\n"
-            + "\n".join(missing)
+            f"LuaLS declarations omit registered methods:\n{details}"
         )
 
     classes = set(DECLARED_CLASS.findall(contents))

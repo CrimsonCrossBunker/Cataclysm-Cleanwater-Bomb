@@ -66,11 +66,14 @@ def string_list(
 ) -> list[str]:
     value = record.get(field)
     if (
-        not isinstance(value, list)
-        or (not value and not allow_empty)
-        or any(not isinstance(item, str) or not item for item in value)
+        not isinstance(value, list) or
+        (not value and not allow_empty) or
+        any(not isinstance(item, str) or not item for item in value)
     ):
-        qualifier = "a string list" if allow_empty else "a non-empty string list"
+        qualifier = (
+            "a string list" if allow_empty
+            else "a non-empty string list"
+        )
         raise RuntimeError(f"{key}: {field} must be {qualifier}")
     return value
 

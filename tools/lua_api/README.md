@@ -25,8 +25,12 @@ schema-2, entry-level audit:
 
 ```sh
 python3 tools/lua_api/generate_cbn_coverage.py
+tools/format/json_formatter.cgi data/lua/reference/cbn_coverage.json
 python3 tools/lua_api/generate_cbn_coverage.py --check-snapshot
 ```
+
+The snapshot check compares parsed JSON so the repository formatter may apply
+its canonical layout without making the generated coverage data appear stale.
 
 Every one of the 2,398 inventory entries has:
 

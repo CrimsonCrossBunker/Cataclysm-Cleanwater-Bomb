@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Callable
 
 from .check_coverage import check, load
+from .generate_cbn_coverage import write_or_check
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -83,6 +84,27 @@ class CoverageValidatorTest(unittest.TestCase):
             ]
 
         self.check_modified(replace_evidence, "evidence needle is stale")
+
+    def test_generator_accepts_repository_json_styling(self) -> None:
+        payload = {"schema_version": 2, "entries": [1, 2, 3]}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "coverage.json"
+            output.write_text(
+                '{ "schema_version": 2, "entries": [ 1, 2, 3 ] }\n',
+                encoding="utf-8",
+            )
+            write_or_check(payload, output, True)
+
+    def test_generator_rejects_semantically_stale_snapshot(self) -> None:
+        payload = {"schema_version": 2, "entries": [1, 2, 3]}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "coverage.json"
+            output.write_text(
+                '{ "schema_version": 2, "entries": [ 1, 2 ] }\n',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "stale"):
+                write_or_check(payload, output, True)
 
 
 if __name__ == "__main__":
