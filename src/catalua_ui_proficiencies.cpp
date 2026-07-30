@@ -61,11 +61,13 @@ definition_options read_definition_options(
             std::string( api_name ) +
             " offset must be within 0..1000000" );
     }
-    if( result.limit < 0 || result.limit > maximum_definition_limit ) {
+    if( result.limit < 0 ) {
         throw std::invalid_argument(
             std::string( api_name ) +
-            " limit must be within 0..256" );
+            " limit cannot be negative" );
     }
+    result.limit = std::min(
+                       result.limit, maximum_definition_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
             std::string( api_name ) +
@@ -404,11 +406,12 @@ state_list_options read_state_list_options(
             "game.proficiencies.list offset "
             "must be within 0..1000000" );
     }
-    if( result.limit < 0 || result.limit > maximum_state_limit ) {
+    if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.proficiencies.list limit "
-            "must be within 0..256" );
+            "game.proficiencies.list limit cannot be negative" );
     }
+    result.limit = std::min(
+                       result.limit, maximum_state_limit );
     return result;
 }
 
