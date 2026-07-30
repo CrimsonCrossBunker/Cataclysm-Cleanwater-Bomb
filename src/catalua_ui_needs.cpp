@@ -383,6 +383,44 @@ sol::table modify_sleep(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table reset_sleep(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &scope,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    if( scope != "daily" && scope != "continuous" &&
+        scope != "all" ) {
+        throw std::invalid_argument(
+            "game.needs.reset_sleep scope must be "
+            "'daily', 'continuous', or 'all'" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    sol::table before =
+        snapshot_needs( state, *character );
+    if( scope == "daily" || scope == "all" ) {
+        character->reset_daily_sleep();
+    }
+    if( scope == "continuous" || scope == "all" ) {
+        character->reset_continuous_sleep();
+    }
+    sol::table value = state.create_table();
+    value["scope"] = scope;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_needs( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_need_api(
@@ -458,6 +496,17 @@ void install_need_api(
         require_write();
         return modify_sleep(
                    lua_state, handle, adjustments,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "reset_sleep",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & scope ) {
+        require_write();
+        return reset_sleep(
+                   lua_state, handle, scope,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
