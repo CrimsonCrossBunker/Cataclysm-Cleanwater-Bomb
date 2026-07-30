@@ -68,6 +68,7 @@
 #include "catalua_ui_skills.h"
 #include "catalua_ui_state.h"
 #include "catalua_ui_values.h"
+#include "catalua_ui_vehicles.h"
 #include "catalua_ui_vitamins.h"
 #include "catalua_ui_world.h"
 #include "catalua_ui_world_services.h"
@@ -3312,6 +3313,22 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.martial_arts" );
+        require_capability( state, "game.write" );
+    } );
+    install_vehicle_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.vehicles" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.vehicles" );
         require_capability( state, "game.write" );
     } );
     install_magic_api(
