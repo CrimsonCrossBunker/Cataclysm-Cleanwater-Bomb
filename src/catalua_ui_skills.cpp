@@ -480,6 +480,92 @@ sol::table set_training_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+struct practice_options {
+    int cap = MAX_SKILL;
+    bool allow_multilevel = false;
+};
+
+practice_options read_practice_options(
+    const sol::optional<sol::table> &requested )
+{
+    practice_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.skills.practice option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key == "cap" ) {
+            if( !entry.second.is<int>() ) {
+                throw std::invalid_argument(
+                    "game.skills.practice cap must be an integer" );
+            }
+            result.cap = entry.second.as<int>();
+        } else if( key == "allow_multilevel" ) {
+            if( !entry.second.is<bool>() ) {
+                throw std::invalid_argument(
+                    "game.skills.practice allow_multilevel "
+                    "must be a boolean" );
+            }
+            result.allow_multilevel = entry.second.as<bool>();
+        } else {
+            throw std::invalid_argument(
+                "game.skills.practice received unknown option '" +
+                key + "'" );
+        }
+    }
+    if( result.cap < 0 || result.cap > MAX_SKILL ) {
+        throw std::invalid_argument(
+            "game.skills.practice cap must be within 0..10" );
+    }
+    return result;
+}
+
+sol::table practice_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const int amount,
+    const sol::optional<sol::table> &requested_options,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_skill_id( requested_id, "game.skills.practice" );
+    if( amount < 1 || amount > 1000 ) {
+        throw std::invalid_argument(
+            "game.skills.practice amount must be within 1..1000" );
+    }
+    const practice_options options =
+        read_practice_options( requested_options );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const skill_id id( requested_id.value() );
+    const Skill &definition = id.obj();
+    sol::table before =
+        snapshot_state( state, *character, definition );
+    const int focus_before = character->get_focus();
+    const bool level_up = character->practice(
+                              id, amount, options.cap, true,
+                              options.allow_multilevel );
+    sol::table value = state.create_table();
+    value["level_up"] = level_up;
+    value["focus_before"] = focus_before;
+    value["focus_after"] = character->get_focus();
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, definition );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_skill_api(
@@ -547,6 +633,18 @@ void install_skill_api(
         require_write();
         return set_training_state(
                    lua_state, handle, id, training,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    skills.set_function(
+        "practice",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id, const int amount,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        return practice_state(
+                   lua_state, handle, id, amount, options,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
