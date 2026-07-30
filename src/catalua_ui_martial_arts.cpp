@@ -275,6 +275,8 @@ sol::table snapshot_state(
         definition.allow_all_weapons;
     result["force_unarmed"] =
         definition.force_unarmed;
+    result["keep_hands_free"] =
+        character.martial_arts_data->keep_hands_free;
     return result;
 }
 
@@ -528,6 +530,33 @@ sol::table select_state(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table set_hands_free_state(
+    sol::this_state lua, const game_handle &handle,
+    const bool keep_hands_free,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const bool before =
+        character->martial_arts_data->keep_hands_free;
+    character->martial_arts_data->keep_hands_free =
+        keep_hands_free;
+    sol::table value = state.create_table();
+    value["changed"] = before != keep_hands_free;
+    value["before"] = before;
+    value["after"] = keep_hands_free;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_martial_art_api(
@@ -615,6 +644,17 @@ void install_martial_art_api(
         require_write();
         return select_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    martial_arts.set_function(
+        "set_hands_free",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const bool keep_hands_free ) {
+        require_write();
+        return set_hands_free_state(
+                   lua_state, handle, keep_hands_free,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
