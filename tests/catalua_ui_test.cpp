@@ -2326,6 +2326,60 @@ game.proficiencies.grant(
            original_known );
 }
 
+TEST_CASE( "lua_v5_vitamin_definitions_are_typed_bounded_snapshots",
+           "[lua][bindings][vitamins][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local vitamin_c = game.types.id("vitamin", "vitC")
+local definitions = game.vitamins.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "VITC"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "vitamin")
+
+local definition = game.vitamins.definition(vitamin_c)
+assert(definition.id == vitamin_c)
+assert(type(definition.name) == "string")
+assert(type(definition.type) == "string")
+assert(math.type(definition.minimum) == "integer")
+assert(math.type(definition.maximum) == "integer")
+assert(definition.rate.turns >= 0)
+assert(definition.absorption_per_day == nil or
+    math.type(definition.absorption_per_day) == "integer")
+assert(type(definition.decays_into.items) == "table")
+assert(definition.decays_into.returned ==
+    #definition.decays_into.items)
+
+definition.name = "detached"
+assert(game.vitamins.definition(vitamin_c).name ~= "detached")
+assert(pcall(function()
+    game.vitamins.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.vitamins.definitions({ query = string.rep("x", 129) })
+end) == false)
+assert(pcall(function()
+    game.vitamins.definitions({ limit = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
            "[lua][bindings][mutations][definitions][integration]" )
 {
