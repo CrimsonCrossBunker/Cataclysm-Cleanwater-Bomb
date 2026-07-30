@@ -1826,11 +1826,16 @@ function CcbRandomApi.int(minimum, maximum) end
 ---@return boolean
 function CcbRandomApi.chance(numerator, denominator) end
 
----@class CcbSoundOptions
----@field position? TripointCoord
+---@class CcbVariantSoundOptions
+---@field angle_degrees? number
+---@field pitch_min? number
+---@field pitch_max? number
+
+---@class CcbAmbientSoundOptions
 ---@field channel? string
----@field outdoors? boolean
+---@field fade_in_ms? integer
 ---@field pitch? number
+---@field loops? integer
 
 ---@class CcbSoundApi
 local CcbSoundApi = {}
@@ -1838,21 +1843,21 @@ local CcbSoundApi = {}
 ---@param id string
 ---@param variant string
 ---@param volume integer
----@param options? CcbSoundOptions
+---@param options? CcbVariantSoundOptions
 function CcbSoundApi.play(id, variant, volume, options) end
 
 ---@param id string
 ---@param variant string
 ---@param volume integer
----@param options? CcbSoundOptions
+---@param options? CcbAmbientSoundOptions
 function CcbSoundApi.play_ambient(id, variant, volume, options) end
 
 ---@return string[]
 function CcbSoundApi.channels() end
 
----@class CcbTargetCandidate
----@field position TripointCoord
----@field enabled? boolean
+---@class CcbTargetArea
+---@field first TripointCoord
+---@field second TripointCoord
 
 ---@class CcbTargetingApi
 local CcbTargetingApi = {}
@@ -1873,7 +1878,7 @@ function CcbTargetingApi.look_around() end
 ---@param message string
 ---@param start? TripointCoord
 ---@param allow_vertical? boolean
----@return table?
+---@return CcbTargetArea?
 function CcbTargetingApi.choose_area(message, start, allow_vertical) end
 
 ---@param message string
@@ -1886,7 +1891,7 @@ function CcbTargetingApi.choose_adjacent_for_action(message, failure_message, ac
 
 ---@param message string
 ---@param failure_message string
----@param candidates CcbTargetCandidate[]
+---@param candidates TripointCoord[]
 ---@param allow_vertical? boolean
 ---@param allow_autoselect? boolean
 ---@return TripointCoord?
