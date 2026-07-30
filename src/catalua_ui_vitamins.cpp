@@ -31,6 +31,7 @@ constexpr std::size_t maximum_decay_values = 128;
 constexpr int default_state_limit = 128;
 constexpr int maximum_state_limit = 256;
 constexpr int maximum_state_offset = 1000000;
+constexpr int maximum_pool_adjustment = 1000000000;
 
 struct definition_options {
     int offset = 0;
@@ -370,6 +371,45 @@ sol::table get_state(
                            requested_id.value() ).obj() ) ) );
 }
 
+sol::table set_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const int requested_amount,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_vitamin_id(
+        requested_id, "game.vitamins.set" );
+    if( requested_amount < -maximum_pool_adjustment ||
+        requested_amount > maximum_pool_adjustment ) {
+        throw std::invalid_argument(
+            "game.vitamins.set amount must be within "
+            "-1000000000..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const vitamin_id id( requested_id.value() );
+    const vitamin &definition = id.obj();
+    sol::table before =
+        snapshot_state( state, *character, definition );
+    character->vitamin_set( id, requested_amount );
+    const int stored = character->vitamin_get( id );
+    sol::table value = state.create_table();
+    value["requested"] = requested_amount;
+    value["clamped"] = stored != requested_amount;
+    value["before"] = std::move( before );
+    value["after"] =
+        snapshot_state( state, *character, definition );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vitamin_api(
@@ -377,7 +417,7 @@ void install_vitamin_api(
     std::function<std::size_t()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
-    std::function<void()> )
+    std::function<void()> require_write )
 {
     sol::state_view lua( game.lua_state() );
     sol::table vitamins = lua.create_table();
@@ -414,6 +454,17 @@ void install_vitamin_api(
         require_read();
         return get_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vitamins.set_function(
+        "set",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int amount ) {
+        require_write();
+        return set_state(
+                   lua_state, handle, id, amount,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
