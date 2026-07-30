@@ -68,9 +68,9 @@ struct id_kind_definition {
     id_validator validate;
 };
 
-const std::array<id_kind_definition, 101> &id_kind_definitions()
+const std::array<id_kind_definition, 129> &id_kind_definitions()
 {
-    static const std::array<id_kind_definition, 101> definitions = {{
+    static const std::array<id_kind_definition, 129> definitions = {{
             { "achievement", &valid_id<achievement> },
             { "activity", &valid_id<activity_type> },
             { "addiction", &valid_id<add_type> },
@@ -86,6 +86,8 @@ const std::array<id_kind_definition, 101> &id_kind_definitions()
             { "character_modifier", &valid_id<character_modifier> },
             { "climbing_aid", &valid_id<climbing_aid> },
             { "clothing_mod", &valid_id<clothing_mod> },
+            { "connect_group", &valid_id<connect_group> },
+            { "construction", &valid_id<construction> },
             { "construction_category", &valid_id<construction_category> },
             { "construction_group", &valid_id<construction_group> },
             { "crafting_category", &valid_id<crafting_category> },
@@ -116,6 +118,7 @@ const std::array<id_kind_definition, 101> &id_kind_definitions()
             { "item_group", &valid_id<Item_spawn_data> },
             { "json_flag", &valid_id<json_flag> },
             { "limb_score", &valid_id<limb_score> },
+            { "magic_type", &valid_id<magic_type> },
             { "map_extra", &valid_id<map_extra> },
             { "map_extra_collection", &valid_id<map_extra_collection> },
             { "mapgen_palette", &valid_id<mapgen_palette> },
@@ -129,6 +132,7 @@ const std::array<id_kind_definition, 101> &id_kind_definitions()
             { "monster_faction", &valid_id<monfaction> },
             { "monster_flag", &valid_id<mon_flag> },
             { "monster_group", &valid_id<MonsterGroup> },
+            { "mood_face", &valid_id<mood_face> },
             { "morale", &valid_id<morale_type_data> },
             { "move_mode", &valid_id<move_mode> },
             { "mutation", &valid_id<mutation_branch> },
@@ -146,6 +150,8 @@ const std::array<id_kind_definition, 101> &id_kind_definitions()
             { "postprocess_generator", &valid_id<pp_generator> },
             { "profession", &valid_id<profession> },
             { "profession_group", &valid_id<profession_group> },
+            { "proficiency", &valid_id<proficiency> },
+            { "proficiency_category", &valid_id<proficiency_category> },
             { "quality", &valid_id<quality> },
             { "recipe", &valid_id<recipe> },
             { "region_settings", &valid_id<region_settings> },
@@ -164,17 +170,39 @@ const std::array<id_kind_definition, 101> &id_kind_definitions()
             { "relic_procgen", &valid_id<relic_procgen_data> },
             { "requirement", &valid_id<requirement_data> },
             { "score", &valid_id<score> },
+            { "scent", &valid_id<scent_type> },
+            { "shopkeeper_blacklist", &valid_id<shopkeeper_blacklist> },
+            { "shopkeeper_consumption_rates", &valid_id<shopkeeper_cons_rates> },
+            { "shopkeeper_whitelist", &valid_id<shopkeeper_whitelist> },
             { "skill", &valid_id<Skill> },
+            { "skill_display_type", &valid_id<SkillDisplayType> },
+            { "snippet", &valid_id<translation> },
             { "species", &valid_id<species_type> },
+            { "speed_description", &valid_id<speed_description> },
             { "spell", &valid_id<spell_type> },
             { "start_location", &valid_id<start_location> },
+            { "sub_body_part", &valid_id<sub_body_part_type> },
             { "terrain", &valid_id<ter_t> },
+            { "terrain_furniture_transform", &valid_id<ter_furn_transform> },
             // CCB intentionally aliases character trait flags to json_flag.
             { "trait_flag", &valid_id<json_flag> },
+            { "trait_group", &valid_id<Trait_group> },
             { "trap", &valid_id<trap> },
             { "update_mapgen", &valid_id<update_mapgen> },
+            { "vehicle_group", &valid_id<VehicleGroup> },
+            { "vehicle_palette", &valid_id<VehiclePalette> },
+            { "vehicle_part", &valid_id<vpart_info> },
+            { "vehicle_part_location", &valid_id<vpart_location> },
+            { "vehicle_prototype", &valid_id<vehicle_prototype> },
             { "vitamin", &valid_id<vitamin> },
-            { "weapon_category", &valid_id<weapon_category> }
+            { "weakpoint_set", &valid_id<weakpoints> },
+            { "weapon_category", &valid_id<weapon_category> },
+            { "weather_generator", &valid_id<weather_generator> },
+            { "weather_type", &valid_id<weather_type> },
+            { "widget", &valid_id<widget> },
+            { "wound", &valid_id<wound_type> },
+            { "wound_fix", &valid_id<wound_fix> },
+            { "zone", &valid_id<zone_type> }
         }
     };
     return definitions;
