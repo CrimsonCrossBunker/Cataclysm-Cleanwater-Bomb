@@ -42,7 +42,6 @@
 #endif
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
