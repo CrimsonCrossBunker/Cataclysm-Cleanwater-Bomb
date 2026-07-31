@@ -5,7 +5,7 @@
     "object": {
       "fill_ter": "t_strconc_floor",
       "place_nested": [
-        { "chunks": [ "microlab_distorted_special_tile" ], "x": 0, "y": 0 },
+        { "chunks": [ "microlab_final_special_tile" ], "x": 0, "y": 0 },
         {
           "chunks": [
             {
@@ -39,7 +39,7 @@
   {
     "//": "distorted science lab nano_fabricator room",
     "type": "mapgen",
-    "nested_mapgen_id": "microlab_distorted_special_tile",
+    "nested_mapgen_id": "microlab_final_special_tile",
     "object": {
       "mapgensize": [ 24, 24 ],
       "rows": [
@@ -80,7 +80,7 @@
   {
     "//": "distorted science lab nano_forge room",
     "type": "mapgen",
-    "nested_mapgen_id": "microlab_distorted_special_tile",
+    "nested_mapgen_id": "microlab_final_special_tile",
     "object": {
       "mapgensize": [ 24, 24 ],
       "rows": [
@@ -122,7 +122,7 @@
   {
     "//": "distorted science lab cvdmachin room",
     "type": "mapgen",
-    "nested_mapgen_id": "microlab_distorted_special_tile",
+    "nested_mapgen_id": "microlab_final_special_tile",
     "object": {
       "mapgensize": [ 24, 24 ],
       "rows": [
