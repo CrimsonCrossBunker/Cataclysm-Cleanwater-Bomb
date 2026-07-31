@@ -2598,6 +2598,12 @@ class item : public visitable
          * the same type are not affected by this.
          */
         void add_technique( const matec_id &tech );
+        /**
+         * Remove a technique added to this item instance.  Techniques supplied
+         * by the item type are unaffected.
+         * @return true when an instance technique was removed.
+         */
+        bool remove_technique( const matec_id &tech );
         /*@}*/
 
         /** Returns all toolmods currently attached to this item (always empty if item not a tool) */

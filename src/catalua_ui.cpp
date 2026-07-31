@@ -37,6 +37,7 @@
 #include "catalua_ui_game.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_imgui.h"
+#include "catalua_ui_items.h"
 #include "catalua_ui_manifest.h"
 #include "catalua_ui_modules.h"
 #include "catalua_ui_navigation.h"
@@ -1816,6 +1817,22 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.bionics" );
+        require_capability( state, "game.write" );
+    } );
+    install_item_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.items" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.items" );
         require_capability( state, "game.write" );
     } );
     install_binding_catalog_api( game, [&state]() {

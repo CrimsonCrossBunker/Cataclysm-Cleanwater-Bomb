@@ -22,9 +22,12 @@
 #include "catalua_ui_state.h"
 #include "effect.h"
 #include "event_bus.h"
+#include "flag.h"
 #include "input_context_actions.h"
+#include "item.h"
 #include "json_loader.h"
 #include "path_info.h"
+#include "pocket_type.h"
 #include "ui_profile.h"
 #include "units.h"
 #include "weather.h"
@@ -37,6 +40,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <list>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -1695,6 +1699,786 @@ game.bionics.install(
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK( player.num_bionics() == original_count );
     CHECK( player.get_power_level() == original_power );
+}
+
+TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
+           "[lua][bindings][items][inventory][integration]" )
+{
+    avatar &player = get_avatar();
+    item_location added = player.i_add( item( itype_id( "rock" ) ) );
+    REQUIRE( added );
+    const std::int64_t added_uid = added->uid().get_value();
+    on_out_of_scope cleanup( [&player, added_uid]() {
+        player.remove_items_with(
+        [added_uid]( const item & entry ) {
+            return entry.uid().get_value() == added_uid;
+        }, 1 );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local listed = game.inventory.list(avatar, {
+    limit = 1000000,
+    max_depth = 1000000
+})
+assert(listed.ok == true)
+local page = listed.value
+assert(page.limit == 512)
+assert(page.max_depth == 16)
+assert(page.returned == #page.items)
+assert(page.returned <= page.total)
+assert(type(page.total_exact) == "boolean")
+assert(type(page.node_truncated) == "boolean")
+assert(type(page.depth_truncated) == "boolean")
+
+local rock = nil
+for _, entry in ipairs(page.items) do
+    assert(entry.handle.kind == "item")
+    assert(math.type(entry.uid) == "integer")
+    assert(entry.id.kind == "item")
+    assert(type(entry.name) == "string")
+    assert(entry.location == "wielded" or
+        entry.location == "worn" or
+        entry.location == "carried" or
+        entry.location == "contained")
+    assert(math.type(entry.depth) == "integer")
+    if entry.id.value == "rock" then
+        rock = entry
+    end
+end
+assert(rock ~= nil)
+
+local found = game.inventory.find(avatar, rock.uid)
+assert(found.ok == true)
+assert(found.value.uid == rock.uid)
+assert(found.value.handle.kind == "item")
+assert(found.value.id == rock.id)
+
+local roots = game.inventory.list(avatar, {
+    recursive = false,
+    limit = 1000000
+})
+assert(roots.ok == true)
+for _, entry in ipairs(roots.value.items) do
+    assert(entry.depth == 0)
+    assert(entry.location ~= "contained")
+end
+
+assert(pcall(function()
+    game.inventory.list(avatar, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.inventory.list(avatar, { offset = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_inventory_traversal_includes_protected_equipment",
+           "[lua][bindings][items][inventory][equipment][integration]" )
+{
+    avatar &player = get_avatar();
+    std::optional<item> original_weapon;
+    if( item_location wielded = player.get_wielded_item() ) {
+        original_weapon = *wielded;
+    }
+
+    item protected_weapon( itype_id( "hammer" ) );
+    protected_weapon.set_flag( flag_NO_UNWIELD );
+    protected_weapon.set_var( "ccb_lua_protected_root", "wielded" );
+    player.set_wielded_item( protected_weapon );
+
+    item integrated_shirt( itype_id( "tshirt" ) );
+    integrated_shirt.set_flag( flag_INTEGRATED );
+    integrated_shirt.set_var( "ccb_lua_protected_root", "integrated" );
+    const auto integrated = player.worn.wear_item(
+                                player, integrated_shirt, false, false );
+    REQUIRE( integrated );
+    const std::int64_t integrated_uid =
+        ( **integrated ).uid().get_value();
+
+    item locked_shirt( itype_id( "tshirt" ) );
+    locked_shirt.set_flag( flag_NO_TAKEOFF );
+    locked_shirt.set_var( "ccb_lua_protected_root", "locked" );
+    const auto locked = player.worn.wear_item(
+                            player, locked_shirt, false, false );
+    REQUIRE( locked );
+    const std::int64_t locked_uid =
+        ( **locked ).uid().get_value();
+
+    on_out_of_scope cleanup(
+    [&player, original_weapon, integrated_uid, locked_uid]() {
+        const auto takeoff_test_item =
+        [&player]( const std::int64_t uid ) {
+            std::vector<item_location> worn =
+                player.worn.top_items_loc( player );
+            auto location = std::find_if(
+                                worn.begin(), worn.end(),
+            [uid]( const item_location & entry ) {
+                return entry &&
+                       entry->uid().get_value() == uid;
+            } );
+            if( location == worn.end() ) {
+                return;
+            }
+            ( **location ).unset_flag( flag_INTEGRATED );
+            ( **location ).unset_flag( flag_NO_TAKEOFF );
+            std::list<item> removed;
+            player.takeoff( *location, &removed );
+        };
+        takeoff_test_item( integrated_uid );
+        takeoff_test_item( locked_uid );
+        player.set_wielded_item(
+            original_weapon.value_or( item() ) );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+
+local function protected_entry(entries, marker)
+    for _, entry in ipairs(entries) do
+        local value = game.items.get_var(
+            entry.handle, "ccb_lua_protected_root")
+        if value.ok and value.value.value == marker then
+            return entry
+        end
+    end
+    return nil
+end
+
+local wielded_page = game.inventory.list(avatar, {
+    recursive = false,
+    include_wielded = true,
+    include_worn = false,
+    include_carried = false,
+    limit = 512
+})
+local wielded = protected_entry(
+    wielded_page.value.items, "wielded")
+assert(wielded ~= nil)
+assert(wielded.location == "wielded")
+assert(game.inventory.find(avatar, wielded.uid).ok == true)
+
+local worn_page = game.inventory.list(avatar, {
+    recursive = false,
+    include_wielded = false,
+    include_worn = true,
+    include_carried = false,
+    limit = 512
+})
+local integrated = protected_entry(
+    worn_page.value.items, "integrated")
+local locked = protected_entry(
+    worn_page.value.items, "locked")
+assert(integrated ~= nil and locked ~= nil)
+assert(integrated.location == "worn")
+assert(locked.location == "worn")
+
+local integrated_remove = game.inventory.remove(
+    avatar, integrated.handle)
+assert(integrated_remove.ok == false)
+assert(integrated_remove.error.code == "cannot_takeoff")
+assert(game.inventory.find(avatar, integrated.uid).ok == true)
+
+local locked_remove = game.inventory.remove(
+    avatar, locked.handle)
+assert(locked_remove.ok == false)
+assert(locked_remove.error.code == "cannot_takeoff")
+assert(game.inventory.find(avatar, locked.uid).ok == true)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_item_snapshots_are_detailed_detached_and_bounded",
+           "[lua][bindings][items][snapshot][integration]" )
+{
+    avatar &player = get_avatar();
+    item_location added = player.i_add( item( itype_id( "rock" ) ) );
+    REQUIRE( added );
+    const std::int64_t added_uid = added->uid().get_value();
+    on_out_of_scope cleanup( [&player, added_uid]() {
+        player.remove_items_with(
+        [added_uid]( const item & entry ) {
+            return entry.uid().get_value() == added_uid;
+        }, 1 );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local listed = game.inventory.list(avatar, {
+    limit = 512,
+    max_depth = 16
+})
+assert(listed.ok == true)
+local rock = nil
+for _, entry in ipairs(listed.value.items) do
+    if entry.id.value == "rock" then
+        rock = entry
+    end
+end
+assert(rock ~= nil)
+
+local fetched = game.items.snapshot(rock.handle, 1000000)
+assert(fetched.ok == true)
+local value = fetched.value
+assert(value.uid == rock.uid)
+assert(value.id == rock.id)
+assert(type(value.name) == "string")
+assert(type(value.display_name) == "string")
+assert(type(value.type_name) == "string")
+assert(type(value.description) == "string")
+assert(type(value.category.id) == "string")
+assert(type(value.category.name) == "string")
+assert(math.type(value.charges) == "integer")
+assert(type(value.count_by_charges) == "boolean")
+assert(type(value.stackable) == "boolean")
+assert(type(value.active) == "boolean")
+assert(type(value.favorite) == "boolean")
+assert(value.weight.kind == "mass")
+assert(value.weight_without_contents.kind == "mass")
+assert(value.volume.kind == "volume")
+assert(value.price_pre_cataclysm.kind == "money")
+assert(value.price_post_cataclysm.kind == "money")
+assert(type(value.birthday) == "userdata")
+assert(math.type(value.birthday.turn) == "integer")
+assert(type(value.rot) == "userdata")
+assert(math.type(value.rot.turns) == "integer")
+assert(math.type(value.condition.damage) == "integer")
+assert(math.type(value.condition.degradation) == "integer")
+assert(math.type(value.condition.damage_level) == "integer")
+assert(math.type(value.condition.max_damage) == "integer")
+assert(type(value.condition.relative_health) == "number")
+assert(type(value.classification.gun) == "boolean")
+assert(type(value.classification.container) == "boolean")
+assert(type(value.resources.ammo_remaining) == "number")
+assert(type(value.resources.uses_energy) == "boolean")
+assert(math.type(value.contents_count) == "integer")
+assert(math.type(value.pocket_count) == "integer")
+assert(value.relation_limit == 256)
+
+for _, page in ipairs({
+    value.materials,
+    value.type_flags,
+    value.own_flags,
+    value.faults,
+    value.techniques
+}) do
+    assert(page.limit == 256)
+    assert(page.returned == #page.items)
+    assert(page.returned <= page.total)
+    assert(page.truncated == (page.returned < page.total))
+end
+
+local wrong_kind = game.items.snapshot(avatar)
+assert(wrong_kind.ok == false)
+assert(wrong_kind.error.code == "wrong_kind")
+assert(pcall(function()
+    game.items.snapshot(rock.handle, -1)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_item_pockets_and_contents_are_recursive_and_bounded",
+           "[lua][bindings][items][pockets][contents][integration]" )
+{
+    avatar &player = get_avatar();
+    item backpack( itype_id( "debug_backpack" ) );
+    REQUIRE( backpack.put_in(
+                 item( itype_id( "rock" ) ),
+                 pocket_type::CONTAINER ).success() );
+    item_location added = player.i_add( backpack );
+    REQUIRE( added );
+    const std::int64_t added_uid = added->uid().get_value();
+    on_out_of_scope cleanup( [&player, added_uid]() {
+        player.remove_items_with(
+        [added_uid]( const item & entry ) {
+            return entry.uid().get_value() == added_uid;
+        }, 1 );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local listed = game.inventory.list(avatar, {
+    limit = 512,
+    max_depth = 16
+})
+assert(listed.ok == true)
+local backpack = nil
+for _, entry in ipairs(listed.value.items) do
+    if entry.id.value == "debug_backpack" then
+        backpack = entry
+    end
+end
+assert(backpack ~= nil)
+
+local pockets = game.items.pockets(backpack.handle, {
+    offset = 0,
+    limit = 1000000
+})
+assert(pockets.ok == true)
+local pocket_page = pockets.value
+assert(pocket_page.limit == 256)
+assert(pocket_page.returned == #pocket_page.items)
+assert(pocket_page.returned <= pocket_page.total)
+local container_pocket = nil
+for _, pocket in ipairs(pocket_page.items) do
+    assert(math.type(pocket.index) == "integer")
+    assert(pocket.ordinal == pocket.index + 1)
+    assert(type(pocket.type) == "string")
+    assert(type(pocket.name) == "string")
+    assert(type(pocket.description) == "string")
+    assert(math.type(pocket.items) == "integer")
+    assert(type(pocket.empty) == "boolean")
+    assert(type(pocket.rigid) == "boolean")
+    assert(type(pocket.watertight) == "boolean")
+    assert(type(pocket.sealed) == "boolean")
+    assert(pocket.capacity.volume.kind == "volume")
+    assert(pocket.capacity.volume_used.kind == "volume")
+    assert(pocket.capacity.volume_remaining.kind == "volume")
+    assert(pocket.capacity.weight.kind == "mass")
+    assert(pocket.capacity.weight_used.kind == "mass")
+    assert(pocket.capacity.weight_remaining.kind == "mass")
+    assert(pocket.capacity.length_max.kind == "length")
+    assert(pocket.capacity.length_min.kind == "length")
+    if pocket.type == "container" and pocket.items > 0 then
+        container_pocket = pocket
+    end
+end
+assert(container_pocket ~= nil)
+
+local contents = game.items.contents(backpack.handle, {
+    recursive = true,
+    limit = 1000000,
+    max_depth = 1000000
+})
+assert(contents.ok == true)
+local content_page = contents.value
+assert(content_page.limit == 512)
+assert(content_page.max_depth == 16)
+assert(content_page.returned == #content_page.items)
+assert(content_page.returned <= content_page.total)
+assert(type(content_page.total_exact) == "boolean")
+local rock = nil
+for _, entry in ipairs(content_page.items) do
+    assert(entry.handle.kind == "item")
+    assert(entry.handle:locator().scope == "item_contained")
+    assert(math.type(entry.parent_uid) == "integer")
+    assert(math.type(entry.pocket_index) == "integer")
+    assert(type(entry.pocket_type) == "string")
+    assert(entry.depth >= 1)
+    if entry.id.value == "rock" then
+        rock = entry
+    end
+end
+assert(rock ~= nil)
+assert(game.items.snapshot(rock.handle).value.id == rock.id)
+
+local direct = game.items.contents(backpack.handle, {
+    recursive = false,
+    limit = 512
+})
+assert(direct.ok == true)
+for _, entry in ipairs(direct.value.items) do
+    assert(entry.depth == 1)
+end
+
+assert(game.items.pockets(avatar).error.code == "wrong_kind")
+assert(game.items.contents(avatar).error.code == "wrong_kind")
+assert(pcall(function()
+    game.items.pockets(backpack.handle, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.items.contents(backpack.handle, { max_depth = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_item_mutations_are_typed_bounded_and_write_gated",
+           "[lua][bindings][items][mutation][integration]" )
+{
+    avatar &player = get_avatar();
+    const auto backpack = player.worn.wear_item(
+                              player, item( itype_id( "debug_backpack" ) ),
+                              false, false );
+    REQUIRE( backpack );
+    const std::int64_t backpack_uid =
+        ( **backpack ).uid().get_value();
+    item_location rock = player.i_add( item( itype_id( "rock" ) ) );
+    REQUIRE( rock );
+    const std::int64_t rock_uid = rock->uid().get_value();
+    item battery( itype_id( "battery" ), calendar::turn, 10 );
+    battery.set_var( "ccb_lua_test_marker", "battery" );
+    item_location stored_battery = player.i_add( battery );
+    REQUIRE( stored_battery );
+    const std::int64_t battery_uid =
+        stored_battery->uid().get_value();
+    on_out_of_scope cleanup(
+    [&player, backpack_uid, rock_uid, battery_uid]() {
+        player.remove_items_with(
+        [backpack_uid, rock_uid, battery_uid]( const item & entry ) {
+            const std::int64_t uid =
+                entry.uid().get_value();
+            return uid == backpack_uid || uid == rock_uid ||
+                   uid == battery_uid;
+        }, 3 );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local listed = game.inventory.list(avatar, {
+    limit = 512,
+    max_depth = 16
+})
+assert(listed.ok == true)
+local rock = nil
+local battery = nil
+for _, entry in ipairs(listed.value.items) do
+    if entry.id.value == "rock" then
+        rock = entry
+    elseif entry.id.value == "battery" then
+        local marker = game.items.get_var(
+            entry.handle, "ccb_lua_test_marker")
+        if marker.ok and marker.value.value == "battery" then
+            battery = entry
+        end
+    end
+end
+assert(rock ~= nil and battery ~= nil)
+
+local original = game.items.snapshot(rock.handle).value
+local changed = game.items.update(rock.handle, {
+    damage = math.min(1, original.condition.max_damage),
+    favorite = not original.favorite
+})
+assert(changed.ok == true)
+assert(changed.value.before.uid == rock.uid)
+assert(changed.value.after.favorite == not original.favorite)
+assert(changed.value.after.damage ==
+    math.min(1, original.condition.max_damage))
+
+local charged = game.items.update(battery.handle, {
+    charges = 7
+})
+assert(charged.ok == true)
+assert(charged.value.after.charges == 7)
+
+local text_var = game.items.set_var(
+    rock.handle, "ccb_lua_text", "cleanwater")
+assert(text_var.ok == true)
+assert(text_var.value.existed == false)
+assert(text_var.value.after.kind == "string")
+assert(text_var.value.after.value == "cleanwater")
+local fetched_text = game.items.get_var(
+    rock.handle, "ccb_lua_text")
+assert(fetched_text.ok == true)
+assert(fetched_text.value.kind == "string")
+assert(fetched_text.value.value == "cleanwater")
+
+local number_var = game.items.set_var(
+    rock.handle, "ccb_lua_number", 12.5)
+assert(number_var.ok == true)
+assert(number_var.value.after.kind == "number")
+assert(number_var.value.after.value == 12.5)
+
+local point = game.coords.tripoint(
+    "absolute", "map_square", 1, 2, 3)
+local point_var = game.items.set_var(
+    rock.handle, "ccb_lua_point", point)
+assert(point_var.ok == true)
+assert(point_var.value.after.kind == "coordinate")
+assert(point_var.value.after.value == point)
+assert(game.items.erase_var(
+    rock.handle, "ccb_lua_text").value == true)
+assert(game.items.get_var(
+    rock.handle, "ccb_lua_text").error.code == "not_found")
+
+local pseudo = game.types.id("json_flag", "PSEUDO")
+assert(game.items.set_flag(
+    rock.handle, pseudo, true).value.own_after == true)
+assert(game.items.has_flag(
+    rock.handle, pseudo).value == true)
+assert(game.items.set_flag(
+    rock.handle, pseudo, false).value.own_after == false)
+
+local feint = game.types.id(
+    "martial_art_technique", "tec_feint")
+assert(game.items.set_technique(
+    rock.handle, feint, true).value.after == true)
+assert(game.items.has_technique(
+    rock.handle, feint).value == true)
+assert(game.items.set_technique(
+    rock.handle, feint, false).value.after == false)
+
+assert(pcall(function()
+    game.items.update(battery.handle, { charges = -1 })
+end) == false)
+assert(pcall(function()
+    game.items.update(rock.handle, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.items.set_var(rock.handle, "", "bad")
+end) == false)
+assert(pcall(function()
+    game.items.set_flag(
+        rock.handle, game.types.id("item", "rock"), true)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    const int damage_after_write = rock->damage();
+    const bool favorite_after_write = rock->is_favorite;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local listed = game.inventory.list(avatar, {
+    limit = 512,
+    max_depth = 16
+})
+for _, entry in ipairs(listed.value.items) do
+    if entry.id.value == "rock" then
+        game.items.update(entry.handle, { favorite = false })
+    end
+end
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( rock->damage() == damage_after_write );
+    CHECK( rock->is_favorite == favorite_after_write );
+}
+
+TEST_CASE( "lua_v5_inventory_operations_are_bounded_transactional_and_write_gated",
+           "[lua][bindings][items][inventory][operations][integration]" )
+{
+    avatar &player = get_avatar();
+    const auto backpack = player.worn.wear_item(
+                              player, item( itype_id( "debug_backpack" ) ),
+                              false, false );
+    REQUIRE( backpack );
+    const std::int64_t backpack_uid =
+        ( **backpack ).uid().get_value();
+    on_out_of_scope cleanup(
+    [&player, backpack_uid]() {
+        player.remove_items_with(
+        [backpack_uid]( const item & entry ) {
+            return entry.uid().get_value() == backpack_uid ||
+                   entry.get_var(
+                       "ccb_lua_inventory_ops", "" ) == "owned";
+        } );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local hammer_id = game.types.id("item", "hammer")
+local battery_id = game.types.id("item", "battery")
+local shirt_id = game.types.id("item", "tshirt")
+
+local hammer_before = game.inventory.resources(
+    avatar, hammer_id, 2)
+assert(hammer_before.ok == true)
+assert(hammer_before.value.id == hammer_id)
+assert(type(hammer_before.value.has_amount) == "boolean")
+assert(type(hammer_before.value.has_charges) == "boolean")
+assert(type(hammer_before.value.has_tools) == "boolean")
+assert(type(hammer_before.value.has_components) == "boolean")
+
+local hammers = game.inventory.give(
+    avatar, hammer_id, 2)
+assert(hammers.ok == true)
+assert(hammers.value.requested == 2)
+assert(hammers.value.added == 2)
+assert(hammers.value.rejected == 0)
+assert(hammers.value.count_by_charges == false)
+assert(hammers.value.instances == 2)
+assert(#hammers.value.items == 2)
+for _, entry in ipairs(hammers.value.items) do
+    assert(entry.id == hammer_id)
+    assert(game.items.set_var(
+        entry.handle, "ccb_lua_inventory_ops", "owned").ok)
+end
+local hammer_after = game.inventory.resources(
+    avatar, hammer_id, 2)
+assert(hammer_after.value.amount >=
+    hammer_before.value.amount + 2)
+assert(hammer_after.value.has_amount == true)
+assert(hammer_after.value.has_tools == true)
+
+local wielded = game.inventory.wield(
+    avatar, hammers.value.items[1].handle)
+assert(wielded.ok == true)
+assert(wielded.value.accepted == true)
+assert(wielded.value.item.location == "wielded")
+local occupied = game.inventory.wield(
+    avatar, hammers.value.items[2].handle)
+assert(occupied.ok == true)
+assert(occupied.value.accepted == false)
+assert(occupied.value.reason == "wielded_slot_occupied")
+local stashed = game.inventory.stash_wielded(avatar)
+assert(stashed.ok == true)
+assert(stashed.value.accepted == true)
+assert(stashed.value.item.location ~= "wielded")
+
+local shirt = game.inventory.give(
+    avatar, shirt_id, 1)
+assert(shirt.ok == true)
+assert(shirt.value.added == 1)
+assert(game.items.set_var(
+    shirt.value.items[1].handle,
+    "ccb_lua_inventory_ops", "owned").ok)
+local worn = game.inventory.wear(
+    avatar, shirt.value.items[1].handle)
+assert(worn.ok == true)
+assert(worn.value.accepted == true)
+assert(worn.value.item.location == "worn")
+
+local battery_before = game.inventory.resources(
+    avatar, battery_id, 1).value
+local battery = game.inventory.give(
+    avatar, battery_id, 10)
+assert(battery.ok == true)
+assert(battery.value.added == 10)
+assert(battery.value.count_by_charges == true)
+assert(battery.value.instances == 1)
+assert(game.items.set_var(
+    battery.value.items[1].handle,
+    "ccb_lua_inventory_ops", "owned").ok)
+local battery_snapshot = game.items.snapshot(
+    battery.value.items[1].handle).value
+local partial = game.inventory.remove(
+    avatar, battery.value.items[1].handle, 3)
+assert(partial.ok == true)
+assert(partial.value.removed == 3)
+assert(partial.value.fully_removed == false)
+assert(partial.value.remaining ==
+    battery_snapshot.charges - 3)
+assert(partial.value.item.handle:is_valid() == true)
+local battery_after_partial = game.inventory.resources(
+    avatar, battery_id, 1).value
+assert(battery_after_partial.charges ==
+    battery_before.charges + 7)
+local battery_removed = game.inventory.remove(
+    avatar, partial.value.item.handle)
+assert(battery_removed.ok == true)
+assert(battery_removed.value.fully_removed == true)
+assert(battery_removed.value.remaining == 0)
+
+assert(game.inventory.remove(
+    avatar, worn.value.item.handle).value.fully_removed == true)
+assert(game.inventory.remove(
+    avatar, stashed.value.item.handle).value.fully_removed == true)
+local second = game.inventory.find(
+    avatar, hammers.value.items[2].uid)
+assert(second.ok == true)
+assert(game.inventory.remove(
+    avatar, second.value.handle).value.fully_removed == true)
+local hammer_final = game.inventory.resources(
+    avatar, hammer_id, 2).value
+assert(hammer_final.amount == hammer_before.value.amount)
+local battery_final = game.inventory.resources(
+    avatar, battery_id, 1).value
+assert(battery_final.charges == battery_before.charges)
+
+assert(pcall(function()
+    game.inventory.give(avatar, hammer_id, 101)
+end) == false)
+assert(pcall(function()
+    game.inventory.give(avatar, hammer_id, 1,
+        { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.inventory.resources(
+        avatar, game.types.id("effect", "onfire"), 1)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.inventory.give(
+    game.characters.avatar(),
+    game.types.id("item", "hammer"), 1)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
 }
 
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
