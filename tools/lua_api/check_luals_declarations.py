@@ -124,6 +124,30 @@ NEW_USERTYPE = re.compile(
 COORDINATE_KIND = re.compile(
     r'\{\s*"([a-z]+_[a-z]+)"\s*,\s*coords::origin::'
 )
+LUA_RESERVED_WORDS = {
+    "and",
+    "break",
+    "do",
+    "else",
+    "elseif",
+    "end",
+    "false",
+    "for",
+    "function",
+    "goto",
+    "if",
+    "in",
+    "local",
+    "nil",
+    "not",
+    "or",
+    "repeat",
+    "return",
+    "then",
+    "true",
+    "until",
+    "while",
+}
 
 
 def catalua_sources() -> list[Path]:
@@ -240,6 +264,14 @@ def validate_annotation_contracts(contents: str) -> None:
             for value in raw_parameters.split(",")
             if value.strip()
         ]
+        reserved_parameters = sorted(
+            set(parameters) & LUA_RESERVED_WORDS
+        )
+        if reserved_parameters:
+            raise RuntimeError(
+                f"LuaLS declarations use reserved Lua parameter names for "
+                f"{class_name}.{method}: {reserved_parameters}"
+            )
         annotations = [
             match.group(1)
             for annotation in annotation_block(lines, index)

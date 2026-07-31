@@ -94,6 +94,17 @@ class LuaLsDeclarationTest(unittest.TestCase):
             "repeat a parameter annotation",
         )
 
+    def test_reserved_parameter_names_are_rejected(self) -> None:
+        self.check_modified(
+            "---@param domain string\n"
+            "---@return boolean\n"
+            "function CcbGameApi.api_supports(domain) end",
+            "---@param end string\n"
+            "---@return boolean\n"
+            "function CcbGameApi.api_supports(end) end",
+            "reserved Lua parameter names",
+        )
+
     def test_duplicate_option_fields_are_rejected(self) -> None:
         self.check_modified(
             "---@field id? string Required by `toggle_mutation`",

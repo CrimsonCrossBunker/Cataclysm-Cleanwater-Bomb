@@ -4230,9 +4230,9 @@ function CcbZonesApi.set_temporary_disabled(token, disabled) end
 
 ---@param token ZoneToken
 ---@param start TripointCoord
----@param end TripointCoord
+---@param end_pos TripointCoord
 ---@return CcbResult
-function CcbZonesApi.set_position(token, start, end) end
+function CcbZonesApi.set_position(token, start, end_pos) end
 
 ---@param token ZoneToken
 ---@return CcbResult
