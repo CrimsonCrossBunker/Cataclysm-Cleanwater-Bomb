@@ -854,12 +854,44 @@ TEST_CASE( "vehicle_damage_cancels_autodrive_without_braking", "[vehicle][autodr
 
     CHECK_FALSE( veh->is_autodriving );
     CHECK( veh->cruise_velocity == cruising_speed );
+}
 
-    // Collision handling can run after damage handling.  Its explicit stop
-    // request must still apply the brakes even though damage already cleared
-    // the autodriving flag.
-    veh->stop_autodriving();
-    CHECK( veh->cruise_velocity == 0 );
+TEST_CASE( "vehicle_collision_brakes_only_during_autodrive",
+           "[vehicle][autodrive][collision]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms vehicle_origin( 60, 60, 0 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_car, vehicle_origin, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->part_count() > 0 );
+
+    const tripoint_bub_ms target_pos = vehicle_origin + tripoint::east * 10;
+    spawn_test_monster( "mon_zombie", target_pos, false );
+    constexpr int cruising_speed = 7000;
+    veh->velocity = cruising_speed;
+    veh->cruise_velocity = cruising_speed;
+
+    SECTION( "manual driving keeps the requested speed" ) {
+        const veh_collision collision = veh->part_collision(
+                                            here, 0, here.get_abs( target_pos ), false, false );
+
+        REQUIRE( collision.type == veh_coll_body );
+        CHECK( veh->cruise_velocity == cruising_speed );
+    }
+
+    SECTION( "autodrive cancels and requests braking" ) {
+        veh->is_autodriving = true;
+
+        const veh_collision collision = veh->part_collision(
+                                            here, 0, here.get_abs( target_pos ), false, false );
+
+        REQUIRE( collision.type == veh_coll_body );
+        CHECK_FALSE( veh->is_autodriving );
+        CHECK( veh->cruise_velocity == 0 );
+    }
 }
 
 TEST_CASE( "autodrive_replanning_a_two_step_path_maintains_speed",

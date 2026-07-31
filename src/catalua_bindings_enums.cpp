@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_bindings_enums.h"
 
 #include <algorithm>
@@ -594,3 +596,5 @@ void install_enum_value_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

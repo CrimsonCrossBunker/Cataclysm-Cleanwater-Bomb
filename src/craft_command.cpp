@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "activity_actor_definitions.h"
+#include "calendar.h"
 #include "character.h"
 #include "crafting.h"
 #include "crafting_enums.h"
@@ -40,6 +41,7 @@
 #include "translations.h"
 #include "type_id.h"
 #include "uistate.h"
+#include "units.h"
 #include "vehicle.h"
 #include "visitable.h"
 #include "vpart_position.h"

@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_game_handle.h"
 
 #include <stdexcept>
@@ -302,3 +304,5 @@ void install_game_handle_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI
