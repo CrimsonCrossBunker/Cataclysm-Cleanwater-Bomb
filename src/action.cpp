@@ -12,7 +12,9 @@
 #if defined(TILES)
     #include "adaptive_imgui_dialog.h"
 #endif
-#include "android_ui_mode.h"
+#if defined(__ANDROID__)
+    #include "android_ui_mode.h"
+#endif
 #include "avatar.h"
 #include "cached_options.h" // IWYU pragma: keep
 #include "cata_utility.h"
@@ -30,6 +32,7 @@
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "iuse.h"
 #include "iuse_actor.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -45,8 +48,8 @@
 #include "ret_val.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 
