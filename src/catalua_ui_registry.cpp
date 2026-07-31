@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "bionics.h"
+#include "catalua_bindings_values.h"
 #include "item_factory.h"
 #include "itype.h"
 #include "mapdata.h"
@@ -44,6 +45,66 @@ const std::vector<std::string> &registry_kinds()
         "mutation", "recipe", "skill", "terrain"
     };
     return kinds;
+}
+
+const std::vector<std::string> &snapshot_fields( const std::string_view kind )
+{
+    static const std::vector<std::string> bionic = {
+        "activated", "description", "duplicates_allowed", "included", "name"
+    };
+    static const std::vector<std::string> furniture = {
+        "coverage", "description", "flags", "movable", "move_cost", "name",
+        "transparent"
+    };
+    static const std::vector<std::string> item = {
+        "count_by_charges", "description", "flags", "name", "stackable",
+        "volume_ml", "weight_grams"
+    };
+    static const std::vector<std::string> monster = {
+        "description", "difficulty", "hp", "name", "speed", "volume_ml",
+        "weight_grams"
+    };
+    static const std::vector<std::string> mutation = {
+        "activated", "description", "name", "points", "purifiable",
+        "starting_trait", "threshold"
+    };
+    static const std::vector<std::string> recipe = {
+        "category", "description", "difficulty", "name", "obsolete", "result",
+        "skill_used", "subcategory"
+    };
+    static const std::vector<std::string> skill = {
+        "combat", "description", "name", "obsolete", "teachable"
+    };
+    static const std::vector<std::string> terrain = {
+        "coverage", "description", "flags", "move_cost", "name", "transparent"
+    };
+    static const std::vector<std::string> identity;
+
+    if( kind == "bionic" ) {
+        return bionic;
+    }
+    if( kind == "furniture" ) {
+        return furniture;
+    }
+    if( kind == "item" ) {
+        return item;
+    }
+    if( kind == "monster" ) {
+        return monster;
+    }
+    if( kind == "mutation" ) {
+        return mutation;
+    }
+    if( kind == "recipe" ) {
+        return recipe;
+    }
+    if( kind == "skill" ) {
+        return skill;
+    }
+    if( kind == "terrain" ) {
+        return terrain;
+    }
+    return identity;
 }
 
 bool valid_kind( const std::string_view kind )
@@ -396,6 +457,30 @@ sol::object definition_snapshot( sol::state_view lua, const std::string &kind,
     return sol::make_object( lua, sol::nil );
 }
 
+sol::object typed_definition_snapshot(
+    sol::state_view lua, const script_game_id &id )
+{
+    if( !id.is_valid() ) {
+        return sol::make_object( lua, sol::nil );
+    }
+
+    sol::object raw = definition_snapshot( lua, id.kind(), id.value() );
+    sol::table result;
+    std::string detail_level = "identity";
+    if( raw.valid() && raw.get_type() == sol::type::table ) {
+        result = raw.as<sol::table>();
+        detail_level = "snapshot";
+    } else {
+        result = lua.create_table();
+    }
+    result["kind"] = id.kind();
+    result["id"] = id;
+    result["value"] = id.value();
+    result["valid"] = true;
+    result["detail_level"] = std::move( detail_level );
+    return sol::make_object( lua, std::move( result ) );
+}
+
 struct list_options {
     int offset = 0;
     int limit = default_page_limit;
@@ -426,7 +511,10 @@ list_options read_list_options( const sol::optional<sol::table> &options )
 
 } // namespace
 
-void install_registry_api( sol::state &lua, std::function<void()> require_read )
+void install_registry_api(
+    sol::state &lua, sol::table &game,
+    std::function<void()> require_read,
+    std::function<void()> require_typed_read )
 {
     auto catalog = std::make_shared<script_registry_catalog>();
     sol::table registry = lua.create_named_table( "registry" );
@@ -499,6 +587,113 @@ void install_registry_api( sol::state &lua, std::function<void()> require_read )
         require_read();
         return catalog->revision();
     } );
+
+    sol::table definitions = lua.create_table();
+    definitions.set_function(
+        "kinds",
+    [require_typed_read]( sol::this_state lua_state ) {
+        require_typed_read();
+        return string_array(
+                   sol::state_view( lua_state ), supported_game_id_kinds() );
+    } );
+    definitions.set_function(
+        "describe",
+        [catalog, require_typed_read](
+    sol::this_state lua_state, const std::string & kind ) {
+        require_typed_read();
+        if( !is_supported_game_id_kind( kind ) ) {
+            throw std::invalid_argument(
+                "game.definitions.describe received an unknown id kind" );
+        }
+        sol::state_view state( lua_state );
+        sol::table result = state.create_table();
+        const bool enumerable = valid_kind( kind );
+        result["kind"] = kind;
+        result["typed"] = true;
+        result["enumerable"] = enumerable;
+        result["detail_level"] = enumerable ? "snapshot" : "identity";
+        result["fields"] = string_array( state, snapshot_fields( kind ) );
+        result["revision"] = catalog->revision();
+        if( enumerable ) {
+            result["count"] = catalog->index( kind ).size();
+        }
+        return result;
+    } );
+    definitions.set_function(
+        "exists",
+    [require_typed_read]( const script_game_id & id ) {
+        require_typed_read();
+        return id.is_valid();
+    } );
+    definitions.set_function(
+        "get",
+        [require_typed_read](
+    sol::this_state lua_state, const script_game_id & id ) {
+        require_typed_read();
+        return typed_definition_snapshot(
+                   sol::state_view( lua_state ), id );
+    } );
+    definitions.set_function(
+        "list",
+        [catalog, require_typed_read](
+            sol::this_state lua_state, const std::string & kind,
+    const sol::optional<sol::table> &raw_options ) {
+        require_typed_read();
+        if( !is_supported_game_id_kind( kind ) ) {
+            throw std::invalid_argument(
+                "game.definitions.list received an unknown id kind" );
+        }
+        if( !valid_kind( kind ) ) {
+            throw std::invalid_argument(
+                "game.definitions.list cannot enumerate this id kind" );
+        }
+        const list_options options = read_list_options( raw_options );
+        sol::state_view state( lua_state );
+        const std::vector<registry_metadata> &index = catalog->index( kind );
+        std::vector<const registry_metadata *> matches;
+        matches.reserve( index.size() );
+        for( const registry_metadata &entry : index ) {
+            if( contains_query( entry.id, entry.name, options.query ) ) {
+                matches.push_back( &entry );
+            }
+        }
+
+        const std::size_t first = std::min<std::size_t>(
+                                      static_cast<std::size_t>( options.offset ), matches.size() );
+        const std::size_t last = std::min<std::size_t>(
+                                     first + static_cast<std::size_t>( options.limit ), matches.size() );
+        sol::table entries = state.create_table();
+        for( std::size_t index = first; index < last; ++index ) {
+            const registry_metadata &metadata = *matches[index];
+            const script_game_id typed_id( kind, metadata.id );
+            if( options.details ) {
+                entries[index - first + 1] =
+                    typed_definition_snapshot( state, typed_id );
+            } else {
+                sol::table entry = state.create_table();
+                entry["id"] = typed_id;
+                entry["value"] = metadata.id;
+                entry["name"] = metadata.name;
+                entries[index - first + 1] = std::move( entry );
+            }
+        }
+
+        sol::table result = state.create_table();
+        result["kind"] = kind;
+        result["revision"] = catalog->revision();
+        result["offset"] = options.offset;
+        result["limit"] = options.limit;
+        result["total"] = matches.size();
+        result["returned"] = last - first;
+        result["has_more"] = last < matches.size();
+        result["entries"] = std::move( entries );
+        return result;
+    } );
+    definitions.set_function( "revision", [catalog, require_typed_read]() {
+        require_typed_read();
+        return catalog->revision();
+    } );
+    game["definitions"] = std::move( definitions );
 }
 
 } // namespace cata::lua_ui

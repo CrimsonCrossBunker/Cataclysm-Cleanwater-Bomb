@@ -120,6 +120,12 @@ std::size_t deterministic_turn_scheduler::size() const
     return tasks_.size();
 }
 
+const std::vector<scheduled_script_task> &
+deterministic_turn_scheduler::all() const
+{
+    return tasks_;
+}
+
 void deterministic_turn_scheduler::clear()
 {
     tasks_.clear();

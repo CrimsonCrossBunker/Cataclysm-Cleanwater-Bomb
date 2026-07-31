@@ -15,10 +15,14 @@
 
 #include "ammo.h"
 #include "ammo_effect.h"
+#include "addiction.h"
 #include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "catalua_bindings_coords.h"
+#include "catalua_bindings_enums.h"
+#include "catalua_bindings_serde.h"
+#include "damage.h"
 #include "disease.h"
 #include "effect.h"
 #include "emit.h"
@@ -35,6 +39,7 @@
 #include "mongroup.h"
 #include "monstergenerator.h"
 #include "morale_types.h"
+#include "move_mode.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "omdata.h"
@@ -65,14 +70,16 @@ struct id_kind_definition {
     id_validator validate;
 };
 
-const std::array<id_kind_definition, 37> &id_kind_definitions()
+const std::array<id_kind_definition, 41> &id_kind_definitions()
 {
-    static const std::array<id_kind_definition, 37> definitions = {{
+    static const std::array<id_kind_definition, 41> definitions = {{
             { "activity", &valid_id<activity_type> },
+            { "addiction", &valid_id<add_type> },
             { "ammo_effect", &valid_id<ammo_effect> },
             { "ammunition", &valid_id<ammunition_type> },
             { "bionic", &valid_id<bionic_data> },
             { "body_part", &valid_id<body_part_type> },
+            { "damage_type", &valid_id<damage_type> },
             { "disease", &valid_id<disease_type> },
             { "effect", &valid_id<effect_type> },
             { "emit", &valid_id<emit> },
@@ -90,8 +97,10 @@ const std::array<id_kind_definition, 37> &id_kind_definitions()
             { "mod", &valid_id<MOD_INFORMATION> },
             { "monster", &valid_id<mtype> },
             { "monster_faction", &valid_id<monfaction> },
+            { "monster_flag", &valid_id<mon_flag> },
             { "monster_group", &valid_id<MonsterGroup> },
             { "morale", &valid_id<morale_type_data> },
+            { "move_mode", &valid_id<move_mode> },
             { "mutation", &valid_id<mutation_branch> },
             { "mutation_category", &valid_id<mutation_category_trait> },
             { "overmap_terrain", &valid_id<oter_t> },
@@ -570,6 +579,36 @@ script_unit_value script_unit_value::from_integer(
                std::string( kind->name ),
                std::string( kind->canonical_unit ),
                checked_canonical_value( *kind, canonical ) );
+}
+
+script_unit_value script_unit_value::from_canonical_integer(
+    const std::string_view kind_name, const std::string_view unit_name,
+    const std::int64_t value )
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_name );
+    if( kind == nullptr || !kind->integral ||
+        kind->canonical_unit != unit_name ) {
+        throw std::invalid_argument(
+            "game.serde received an invalid integral unit descriptor" );
+    }
+    return script_unit_value(
+               std::string( kind->name ), std::string( kind->canonical_unit ),
+               value );
+}
+
+script_unit_value script_unit_value::from_canonical_number(
+    const std::string_view kind_name, const std::string_view unit_name,
+    const double value )
+{
+    const unit_kind_definition *kind = find_unit_kind( kind_name );
+    if( kind == nullptr || kind->integral ||
+        kind->canonical_unit != unit_name ) {
+        throw std::invalid_argument(
+            "game.serde received an invalid floating-point unit descriptor" );
+    }
+    return script_unit_value(
+               std::string( kind->name ), std::string( kind->canonical_unit ),
+               checked_canonical_value( *kind, value ) );
 }
 
 const std::string &script_unit_value::kind() const noexcept
@@ -1113,7 +1152,9 @@ void install_value_type_api(
     } );
     game["time"] = std::move( time );
 
-    install_coordinate_value_api( lua, game, std::move( require_values ) );
+    install_enum_value_api( lua, game, require_values );
+    install_coordinate_value_api( lua, game, require_values );
+    install_serde_api( lua, game, std::move( require_values ) );
 }
 
 } // namespace cata::lua_ui

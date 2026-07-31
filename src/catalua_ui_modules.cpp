@@ -28,6 +28,30 @@ bool regular_file( const fs::path &path )
     return fs::is_regular_file( path, error ) && !error;
 }
 
+bool is_within( const fs::path &root, const fs::path &candidate )
+{
+    const auto mismatch = std::mismatch(
+                              root.begin(), root.end(),
+                              candidate.begin(), candidate.end() );
+    return mismatch.first == root.end();
+}
+
+std::optional<fs::path> contained_regular_file(
+    const fs::path &root, const fs::path &candidate )
+{
+    std::error_code error;
+    const fs::path canonical_root = fs::canonical( root, error );
+    if( error ) {
+        return std::nullopt;
+    }
+    const fs::path canonical_candidate = fs::canonical( candidate, error );
+    if( error || !regular_file( canonical_candidate ) ||
+        !is_within( canonical_root, canonical_candidate ) ) {
+        return std::nullopt;
+    }
+    return canonical_candidate;
+}
+
 } // namespace
 
 script_module_resolver::script_module_resolver(
@@ -48,19 +72,18 @@ std::optional<script_module_resolution> script_module_resolver::resolve_in_sourc
         ( sources_[source_index].root / ( relative + ".lua" ) ).lexically_normal();
     const fs::path package =
         ( sources_[source_index].root / relative / "init.lua" ).lexically_normal();
-    const fs::path *resolved = nullptr;
-    if( regular_file( direct ) ) {
-        resolved = &direct;
-    } else if( regular_file( package ) ) {
-        resolved = &package;
+    std::optional<fs::path> resolved =
+        contained_regular_file( sources_[source_index].root, direct );
+    if( !resolved ) {
+        resolved = contained_regular_file( sources_[source_index].root, package );
     }
-    if( resolved == nullptr ) {
+    if( !resolved ) {
         return std::nullopt;
     }
 
     return script_module_resolution{
         source_index,
-        *resolved,
+        std::move( *resolved ),
         sources_[source_index].manifest.id + ":" + std::string( module_name )
     };
 }
@@ -124,7 +147,8 @@ const std::vector<script_module_source> &script_module_resolver::sources() const
 
 bool is_safe_module_name( const std::string_view name )
 {
-    if( name.empty() || name.front() == '.' || name.back() == '.' ||
+    if( name.empty() || name.size() > maximum_module_name_bytes ||
+        name.front() == '.' || name.back() == '.' ||
         name.find( ".." ) != std::string_view::npos ) {
         return false;
     }

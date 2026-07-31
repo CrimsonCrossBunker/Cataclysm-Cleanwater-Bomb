@@ -3,6 +3,7 @@
 #include "calendar.h"
 #include "catalua_bindings.h"
 #include "catalua_bindings_coords.h"
+#include "catalua_bindings_enums.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "catalua_ui.h"
@@ -658,6 +659,7 @@ TEST_CASE( "input_context_actions_are_revision_bound_bounded_and_non_destructive
 TEST_CASE( "lua_module_names_stay_inside_script_roots", "[lua][ui][sandbox]" )
 {
     using cata::lua_ui::is_safe_module_name;
+    using cata::lua_ui::maximum_module_name_bytes;
 
     CHECK( is_safe_module_name( "widgets" ) );
     CHECK( is_safe_module_name( "lib.widgets.hud-v2" ) );
@@ -669,6 +671,10 @@ TEST_CASE( "lua_module_names_stay_inside_script_roots", "[lua][ui][sandbox]" )
     CHECK_FALSE( is_safe_module_name( "lib..outside" ) );
     CHECK_FALSE( is_safe_module_name( "lib/widgets" ) );
     CHECK_FALSE( is_safe_module_name( "C:\\outside" ) );
+    CHECK( is_safe_module_name(
+               std::string( maximum_module_name_bytes, 'm' ) ) );
+    CHECK_FALSE( is_safe_module_name(
+                     std::string( maximum_module_name_bytes + 1, 'm' ) ) );
 }
 
 TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies",
@@ -1152,7 +1158,7 @@ TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
     using namespace cata::lua_ui;
 
     const std::vector<std::string> &kinds = supported_game_id_kinds();
-    REQUIRE( kinds.size() == 37 );
+    REQUIRE( kinds.size() == 41 );
     CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
     CHECK( std::adjacent_find( kinds.begin(), kinds.end() ) == kinds.end() );
     CHECK( is_supported_game_id_kind( "item" ) );
@@ -1202,7 +1208,7 @@ assert(id == game.types.id("item", "rock"))
 assert(id ~= game.types.id("monster", "rock"))
 assert(pcall(function() id.value = "stick" end) == false)
 local kinds = game.types.id_kinds()
-assert(#kinds == 37)
+assert(#kinds == 41)
 kinds[1] = "mutated"
 assert(game.types.id_kinds()[1] == "activity")
 )lua" );
@@ -1593,6 +1599,140 @@ end) == false)
     REQUIRE( result.valid() );
 }
 
+TEST_CASE( "lua_v5_enums_are_typed_discoverable_and_bounded",
+           "[lua][bindings][values][enums]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<std::string> kinds = supported_script_enum_kinds();
+    CHECK( kinds.size() == 25 );
+    CHECK( std::find( kinds.begin(), kinds.end(), "DamageType" ) != kinds.end() );
+    CHECK( script_enum_kind_is_available( "DamageType" ) );
+    CHECK( script_enum_kind_is_available( "ArtifactEffectActive" ) );
+    CHECK_FALSE( script_enum_kind_is_available( "ArtifactEffectPassive" ) );
+    CHECK_FALSE( script_enum_kind_is_available( "ArtifactCharge" ) );
+
+    const script_enum_value hostile =
+        script_enum_value::from( "Attitude", "hostile" );
+    CHECK( hostile.kind() == "Attitude" );
+    CHECK( hostile.name() == "hostile" );
+    CHECK( hostile.ordinal() == 0 );
+    CHECK( hostile.to_string() == "Attitude.hostile" );
+    CHECK_THROWS_AS(
+        script_enum_value::from( "Attitude", "missing" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_enum_value::from( "ArtifactCharge", "anything" ),
+        std::invalid_argument );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+assert(#game.enums.kinds() == 25)
+local hostile = game.enums.value("Attitude", "hostile")
+assert(hostile.kind == "Attitude")
+assert(hostile.name == "hostile")
+assert(hostile.ordinal == 0)
+assert(tostring(hostile) == "Attitude.hostile")
+assert(hostile == game.enums.value("Attitude", "hostile"))
+assert(hostile ~= game.enums.value("Attitude", "friendly"))
+local directions = game.enums.values("Direction", 0, 4)
+assert(#directions == 4)
+assert(directions[1].kind == "Direction")
+local damage = game.enums.describe("DamageType")
+assert(damage.status == "dynamic_id")
+assert(damage.available == true)
+assert(damage.replacement == "GameId<damage_type>")
+local removed = game.enums.describe("ArtifactCharge")
+assert(removed.status == "not_applicable")
+assert(removed.available == false)
+assert(#removed.reason > 0)
+assert(game.enums.has("Attitude", "friendly") == true)
+assert(game.enums.has("ArtifactCharge", "anything") == false)
+assert(game.enums.has("ArtifactEffectActive", "str_up") == true)
+assert(game.enums.describe("ArtifactEffectPassive").status == "not_applicable")
+assert(game.enums.value("ArtifactEffectActive", "str_up").name == "str_up")
+assert(pcall(function() hostile.name = "neutral" end) == false)
+assert(pcall(function()
+    return game.enums.values("ActionId", 0, 513)
+end) == false)
+assert(pcall(function()
+    return game.enums.value("ArtifactCharge", "anything")
+end) == false)
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_serde_is_deterministic_typed_and_strictly_bounded",
+           "[lua][bindings][values][serde]" )
+{
+    using namespace cata::lua_ui;
+
+    sol::state lua;
+    lua.open_libraries(
+        sol::lib::base, sol::lib::string, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local original = {
+    answer = 42,
+    precise = 9007199254740993,
+    fraction = 1.25,
+    enabled = true,
+    text = "cleanwater",
+    nested = { "a", "b", false },
+    id = game.types.id("item", "rock"),
+    enum = game.enums.value("Attitude", "friendly"),
+    unit = game.units.new("mass", 1, "kilogram"),
+    duration = game.time.duration(5, "minute"),
+    moment = game.time.point(12345),
+    point = game.coords.point("absolute", "map_square", -4, 7),
+    tripoint = game.coords.tripoint(
+        "relative", "overmap_terrain", 1, 2, -3)
+}
+
+local encoded = game.serde.encode(original)
+assert(type(encoded) == "string")
+assert(#encoded <= game.serde.max_bytes)
+local copy = game.serde.decode(encoded)
+assert(copy.answer == 42)
+assert(copy.precise == 9007199254740993)
+assert(copy.fraction == 1.25)
+assert(copy.enabled == true)
+assert(copy.text == "cleanwater")
+assert(copy.nested[1] == "a" and copy.nested[3] == false)
+assert(copy.id == original.id)
+assert(copy.enum == original.enum)
+assert(copy.unit == original.unit)
+assert(copy.duration == original.duration)
+assert(copy.moment == original.moment)
+assert(copy.point == original.point)
+assert(copy.tripoint == original.tripoint)
+
+local first = { z = 3, a = 1, middle = 2 }
+local second = { middle = 2, z = 3, a = 1 }
+assert(game.serde.encode(first) == game.serde.encode(second))
+assert(#game.serde.types() == 13)
+
+local recursive = {}
+recursive.self = recursive
+assert(pcall(function() game.serde.encode(recursive) end) == false)
+assert(pcall(function()
+    game.serde.encode(function() return 1 end)
+end) == false)
+assert(pcall(function()
+    game.serde.decode('{"format":"ccb_lua_value","version":1,' ..
+        '"value":{"type":"native_pointer"}}')
+end) == false)
+assert(pcall(function()
+    game.serde.decode(string.rep("[", 65))
+end) == false)
+)lua" );
+    REQUIRE( result.valid() );
+}
+
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",
            "[lua][ui][navigation]" )
 {
@@ -1938,6 +2078,143 @@ end) == false)
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_definition_registry_uses_typed_ids_without_native_references",
+           "[lua][bindings][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "registry.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local kinds = game.definitions.kinds()
+assert(#kinds == 41)
+assert(type(game.definitions.revision()) == "number")
+
+local item = game.definitions.describe("item")
+assert(item.typed == true)
+assert(item.enumerable == true)
+assert(item.detail_level == "snapshot")
+assert(type(item.fields) == "table")
+assert(type(item.count) == "number")
+
+local damage = game.definitions.describe("damage_type")
+assert(damage.enumerable == false)
+assert(damage.detail_level == "identity")
+assert(damage.count == nil)
+local bash = game.types.id("damage_type", "bash")
+assert(game.definitions.exists(bash) == true)
+local bash_definition = game.definitions.get(bash)
+assert(bash_definition.id == bash)
+assert(bash_definition.value == "bash")
+assert(bash_definition.valid == true)
+assert(bash_definition.detail_level == "identity")
+
+local page = game.definitions.list("item", { offset = 0, limit = 2 })
+assert(page.returned <= 2)
+if page.returned > 0 then
+    local id = page.entries[1].id
+    assert(id.kind == "item")
+    assert(id.value == page.entries[1].value)
+    local first = game.definitions.get(id)
+    assert(first.id == id)
+    assert(first.kind == "item")
+    assert(first.detail_level == "snapshot")
+    local original_name = first.name
+    first.name = "detached mutation"
+    assert(game.definitions.get(id).name == original_name)
+end
+
+local missing = game.types.id("item", "__missing_lua_definition_id__")
+assert(game.definitions.exists(missing) == false)
+assert(game.definitions.get(missing) == nil)
+assert(pcall(function()
+    game.definitions.list("damage_type")
+end) == false)
+assert(pcall(function()
+    game.definitions.describe("unknown")
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_runtime_diagnostics_are_bounded_structured_and_path_free",
+           "[lua][bindings][diagnostics][integration]" )
+{
+    scoped_calendar_turn turn;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "scheduler" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local first_id = scheduler.after(1, function()
+    error("expected diagnostic marker")
+end)
+local second_id = scheduler.after(2, function()
+    local snapshot = game.diagnostics.snapshot()
+    assert(snapshot.schema_version == 1)
+    assert(snapshot.health.ok == false)
+    assert(string.find(snapshot.health.last_error,
+        "expected diagnostic marker", 1, true) ~= nil)
+    assert(snapshot.callbacks.count >= 1)
+    assert(snapshot.resources.scheduled_tasks <=
+        snapshot.limits.scheduler_tasks)
+    local recent = game.diagnostics.recent()
+    assert(#recent >= 1 and #recent <=
+        snapshot.limits.diagnostic_records)
+    assert(recent[1].severity == "error")
+    assert(recent[1].source == "user")
+    assert(string.find(recent[1].message,
+        "expected diagnostic marker", 1, true) ~= nil)
+end)
+
+local snapshot = game.diagnostics.snapshot()
+assert(snapshot.health.ok == true)
+assert(snapshot.runtime.generation > 0)
+assert(snapshot.memory.used <= snapshot.memory.limit)
+assert(snapshot.memory.remaining <= snapshot.memory.limit)
+assert(snapshot.resources.scheduled_tasks == 2)
+assert(snapshot.limits.script_instructions > 0)
+assert(snapshot.limits.callback_instructions > 0)
+assert(#snapshot.sources >= 2)
+local found_user = false
+for _, source in ipairs(snapshot.sources) do
+    assert(source.root == nil and source.entry == nil)
+    if source.id == "user" then
+        found_user = true
+        assert(source.api_version == 5)
+        assert(source.scheduled_tasks == 2)
+    end
+end
+assert(found_user)
+assert(#game.diagnostics.recent(0) == 0)
+assert(pcall(function()
+    game.diagnostics.recent(65)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    calendar::turn = turn.original() + 1_turns;
+    cata::lua_ui::on_turn();
+    CHECK( cata::lua_ui::status().last_error.find(
+               "expected diagnostic marker" ) != std::string::npos );
+    calendar::turn = turn.original() + 2_turns;
+    cata::lua_ui::on_turn();
+    cata::lua_ui::shutdown();
+}
+
 TEST_CASE( "lua_v4_modules_use_strict_source_environments_and_consumer_caches",
            "[lua][modules][sandbox][integration]" )
 {
@@ -1990,6 +2267,90 @@ end) == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_module_loading_enforces_source_depth_and_cache_limits",
+           "[lua][modules][sandbox][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    const auto reload = []() {
+        std::string error;
+        REQUIRE( reload_scripts( error ) );
+        CHECK( error.empty() );
+    };
+
+    SECTION( "module source size" ) {
+        scoped_lua_user_module module(
+            fs::path( "test_limits" ) / "oversized.lua" );
+        module.write( std::string(
+                          maximum_module_source_bytes + 1, ' ' ) );
+        script.write( R"lua(
+local ok, error = pcall(require, "test_limits.oversized")
+assert(ok == false)
+assert(string.find(error, "source size limit", 1, true) ~= nil)
+)lua" );
+        reload();
+    }
+
+    SECTION( "nested module depth" ) {
+        std::vector<std::unique_ptr<scoped_lua_user_module>> modules;
+        for( std::size_t index = 0;
+             index <= maximum_module_load_depth; ++index ) {
+            const std::string name = "depth_" + std::to_string( index );
+            auto module = std::make_unique<scoped_lua_user_module>(
+                              fs::path( "test_limits" ) / ( name + ".lua" ) );
+            if( index == maximum_module_load_depth ) {
+                module->write( "return true\n" );
+            } else {
+                module->write(
+                    "return require(\"test_limits.depth_" +
+                    std::to_string( index + 1 ) + "\")\n" );
+            }
+            modules.push_back( std::move( module ) );
+        }
+        script.write( R"lua(
+local ok, error = pcall(require, "test_limits.depth_0")
+assert(ok == false)
+assert(string.find(error, "nesting limit", 1, true) ~= nil)
+)lua" );
+        reload();
+    }
+
+    SECTION( "modules per source" ) {
+        std::vector<std::unique_ptr<scoped_lua_user_module>> modules;
+        for( std::size_t index = 0;
+             index <= maximum_modules_per_source; ++index ) {
+            const std::string name = "budget_" + std::to_string( index );
+            auto module = std::make_unique<scoped_lua_user_module>(
+                              fs::path( "test_limits" ) / ( name + ".lua" ) );
+            module->write( "return true\n" );
+            modules.push_back( std::move( module ) );
+        }
+        script.write(
+            "for index = 0, " +
+            std::to_string( maximum_modules_per_source ) + R"lua( do
+    local ok, error = pcall(
+        require, "test_limits.budget_" .. tostring(index))
+    if index < )lua" +
+                                            std::to_string( maximum_modules_per_source ) + R"lua( then
+        assert(ok)
+    else
+        assert(ok == false)
+        assert(string.find(error, "loaded module limit", 1, true) ~= nil)
+    end
+end
+)lua" );
+        reload();
+    }
 }
 
 TEST_CASE( "lua_v4_scheduler_is_live_and_can_add_the_first_game_event_handler",

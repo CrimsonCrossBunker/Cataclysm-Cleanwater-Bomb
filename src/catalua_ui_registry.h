@@ -11,7 +11,12 @@ namespace cata::lua_ui
 
 // Install bounded, detached snapshots of immutable game definition registries.
 // The Lua side never receives a pointer, userdata, or mutable game object.
-void install_registry_api( sol::state &lua, std::function<void()> require_read );
+// The global registry table preserves the API v4 string-id contract, while
+// game.definitions provides API v5 typed GameId lookup and discovery.
+void install_registry_api(
+    sol::state &lua, sol::table &game,
+    std::function<void()> require_read,
+    std::function<void()> require_typed_read );
 
 } // namespace cata::lua_ui
 

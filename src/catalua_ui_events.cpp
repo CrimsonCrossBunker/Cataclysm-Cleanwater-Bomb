@@ -92,6 +92,11 @@ std::size_t script_event_registry::size() const
     return subscriptions_.size();
 }
 
+const std::vector<script_event_subscription> &script_event_registry::all() const
+{
+    return subscriptions_;
+}
+
 void script_event_registry::clear()
 {
     subscriptions_.clear();
