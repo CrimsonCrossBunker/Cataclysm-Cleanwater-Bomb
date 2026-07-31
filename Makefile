@@ -339,6 +339,9 @@ ODIR = $(BUILD_PREFIX)obj$(LUA_UI_OBJECT_SUFFIX)
 ODIRTILES = $(BUILD_PREFIX)obj$(LUA_UI_OBJECT_SUFFIX)/tiles
 W32ODIR = $(BUILD_PREFIX)objwin$(LUA_UI_OBJECT_SUFFIX)
 W32ODIRTILES = $(BUILD_PREFIX)objwin$(LUA_UI_OBJECT_SUFFIX)/tiles
+# The final executable and test archive keep their conventional names, so
+# switching Lua modes must explicitly invalidate their link steps.
+LUA_UI_LINK_MODE_STAMP = $(BUILD_PREFIX)obj/.lua-ui-link-mode
 
 ifdef AUTO_BUILD_PREFIX
   BUILD_PREFIX = $(if $(RELEASE),release-)$(if $(DEBUG_SYMBOLS),symbol-)$(if $(TILES),tiles-)$(if $(SOUND),sound-)$(if $(LOCALIZE),local-)$(if $(BACKTRACE),back-$(if $(LIBBACKTRACE),libbacktrace-))$(if $(SANITIZE),sanitize-)$(if $(USE_XDG_DIR),xdg-)$(if $(USE_HOME_DIR),home-)$(if $(DYNAMIC_LINKING),dynamic-)$(if $(MSYS2),msys2-)
@@ -1313,7 +1316,7 @@ $(SHADERS_STAMP): $(SHADERS_SRC) tools/build_shaders.py
 	python3 tools/build_shaders.py --shader-dir $(SHADERS_DIR) --formats $(BUILD_SHADER_FORMATS) --stamp $@
 endif
 
-$(TARGET): $(OBJS) $(SHADERS_STAMP)
+$(TARGET): $(OBJS) $(SHADERS_STAMP) $(LUA_UI_LINK_MODE_STAMP)
 	+$(LD) $(W32FLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 ifeq ($(RELEASE), 1)
   ifndef DEBUG_SYMBOLS
@@ -1328,11 +1331,19 @@ endif
 $(PCH_P): $(PCH_H)
 	-$(COMPILE.cc) $(OUTPUT_OPTION) -MMD -MP -Wno-error $<
 
-$(BUILD_PREFIX)$(TARGET_NAME).a: $(OBJS)
+$(BUILD_PREFIX)$(TARGET_NAME).a: $(OBJS) $(LUA_UI_LINK_MODE_STAMP)
 	$(RM) $@
 	$(AR) rcs $(AR_FLAGS) $(BUILD_PREFIX)$(TARGET_NAME).a $(filter-out $(ODIR)/main.o $(ODIR)/messages.o,$(OBJS))
 
-.PHONY: version prefix
+.PHONY: FORCE_LUA_UI_LINK_MODE version prefix
+FORCE_LUA_UI_LINK_MODE:
+
+$(LUA_UI_LINK_MODE_STAMP): FORCE_LUA_UI_LINK_MODE
+	@mkdir -p $(@D)
+	@if [ ! -f "$@" ] || [ "$$(cat "$@")" != "$(CATA_ENABLE_LUA_UI)" ]; then \
+		printf '%s\n' "$(CATA_ENABLE_LUA_UI)" > "$@"; \
+	fi
+
 version:
 	@( BUILD_DATE=$$(date +%Y-%m-%d) ; \
 	   VERSION_STRING="$$BUILD_DATE-$(VERSION)" ; \
