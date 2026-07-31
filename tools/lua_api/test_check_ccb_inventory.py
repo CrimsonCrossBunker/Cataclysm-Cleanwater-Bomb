@@ -22,7 +22,7 @@ class CcbInventoryCheckTest(unittest.TestCase):
         self.assertEqual(
             summary,
             {
-                "id_kinds": 131,
+                "id_kinds": 132,
                 "json_types": 190,
                 "event_types": 113,
                 "native_domains": 39,
