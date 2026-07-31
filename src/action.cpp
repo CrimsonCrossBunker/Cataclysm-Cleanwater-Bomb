@@ -12,7 +12,9 @@
 #if defined(TILES)
     #include "adaptive_imgui_dialog.h"
 #endif
-#include "android_ui_mode.h"
+#if defined(__ANDROID__)
+    #include "android_ui_mode.h"
+#endif
 #include "avatar.h"
 #include "cached_options.h" // IWYU pragma: keep
 #include "cata_utility.h"
@@ -30,6 +32,7 @@
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "iuse.h"
 #include "iuse_actor.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -45,8 +48,8 @@
 #include "ret_val.h"
 #include "translations.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 
@@ -662,9 +665,8 @@ bool can_butcher_at( map &here, const tripoint_bub_ms &p )
             if( factor != INT_MIN  || factorD != INT_MIN ) {
                 has_corpse = true;
             }
-        } else if( player_character.can_disassemble( items_it, crafting_inv ).success() ) {
-            has_item = true;
-        } else if( salvage_iuse && salvage_iuse->valid_to_cut_up( nullptr, items_it ) ) {
+        } else if( player_character.can_disassemble( items_it, crafting_inv ).success() ||
+                   ( salvage_iuse && salvage_iuse->valid_to_cut_up( nullptr, items_it ) ) ) {
             has_item = true;
         }
     }

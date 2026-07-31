@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_bindings_coords.h"
 
 #include <algorithm>
@@ -1164,3 +1166,5 @@ void install_coordinate_value_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI
