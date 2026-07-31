@@ -9,3 +9,21 @@ ignore =
     # W503 and W504 require line breaks after or before binary operators; you
     # can only have one enabled
     W504
+
+# Keep new and maintained Python code strict while recording the fork's
+# pre-existing lint debt explicitly.  Remove entries as the legacy tools are
+# modernized.
+per-file-ignores =
+    tools/decompose.py:E201,E202,E225,E275,E302,E501,W291
+    tools/density_audit.py:E226,E302,E401,E501,F541,W391
+    tools/gen_excel_v3.py:E117,E128,E129,E225,E226,E231,E302,E305,E401,E501,E701,E702,E722,F401
+    tools/generate_changelog.py:F824
+    tools/generate_icons.py:E241,E401,E501,E702,F401,F601
+    tools/gfx_tools/tileset_coverage.py:E501
+    tools/gfx_tools/tileset_workbook.py:E501
+    tools/gfx_tools/tileset_workbook_test.py:E501
+    tools/json_tools/generate_overlay_ids.py:E501
+    tools/json_tools/table.py:E501
+    tools/json_tools/util.py:F824
+    tools/replay_ab.py:E501,F541
+    tools/sort_sprites.py:E221,E225,E226,E231,E241,E401,E501,E701,E702,F401,F841

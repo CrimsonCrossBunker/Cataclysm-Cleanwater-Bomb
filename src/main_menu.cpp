@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
+#include <deque> // IWYU pragma: keep
 #include <exception>
 #include <functional>
 #include <initializer_list>
@@ -76,7 +76,6 @@
 #include "ui_manager.h"
 #include "ui_style_picker.h"
 #include "uilist.h"
-#include "ui_profile.h"
 #include "wcwidth.h"
 #include "worldfactory.h"
 

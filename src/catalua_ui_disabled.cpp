@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cctype>
 #include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "catalua_ui_actions.h"
 

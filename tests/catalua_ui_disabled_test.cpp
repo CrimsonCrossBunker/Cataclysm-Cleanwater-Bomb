@@ -1,6 +1,8 @@
 #include "cata_catch.h"
 
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
