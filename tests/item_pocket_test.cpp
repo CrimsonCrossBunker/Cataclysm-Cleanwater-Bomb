@@ -3098,7 +3098,11 @@ TEST_CASE( "unload_from_spillable_container", "[item][pocket]" )
                 CHECK( backpack_items_vec[1]->typeId().str() == "bottle_plastic_small" );
                 CHECK( backpack_items_vec[1]->empty() );
                 CHECK( backpack_items_vec[2]->typeId().str() == "bottle_plastic_small" );
-                CHECK( backpack_items_vec[2]->all_items_top().size() == 5 );
+                const std::list<item *> merged_pills =
+                    backpack_items_vec[2]->all_items_top();
+                REQUIRE( merged_pills.size() == 1 );
+                CHECK( merged_pills.front()->typeId() == itype_tums );
+                CHECK( merged_pills.front()->count() == 5 );
                 CHECK_FALSE( static_cast<bool>( bottle1_loc ) );
             }
         }
