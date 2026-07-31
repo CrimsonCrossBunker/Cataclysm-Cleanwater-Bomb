@@ -45,11 +45,10 @@ sidebar.
 
 ## Build availability
 
-The Lua Mod runtime is a compile-time experimental feature and is disabled by default for
-desktop, Stable Android, and Experimental Android builds. Enable it explicitly
-with `CATA_ENABLE_LUA_UI=1` when using Make, or
-`-DCATA_ENABLE_LUA_UI=ON` when configuring CMake. The Android `newUi` flavor
-enables it automatically.
+The Lua Mod runtime is compiled into desktop and Android builds by default.
+Developers can still produce a Lua-free build explicitly with
+`CATA_ENABLE_LUA_UI=0` when using Make, or
+`-DCATA_ENABLE_LUA_UI=OFF` when configuring CMake.
 
 When disabled, Lua, sol2, the script runtime, its action queue, and its tests
 are not compiled or linked. The game does not load scripts, create Lua state
