@@ -17,6 +17,7 @@
     "material": [ "glass", "steel" ],
     "volume": "4500 ml",
     "price": "9 kUSD",
+    "price_postapoc": "90 USD",
     "copy-from": "solar_panel"
   },
   {
@@ -29,6 +30,7 @@
     "material": [ "glass", "lc_steel" ],
     "volume": "6500 ml",
     "price": "10 kUSD 200 USD",
+    "price_postapoc": "105 USD",
     "copy-from": "solar_panel"
   },
   {
@@ -38,7 +40,7 @@
     "name": { "str": "quantum solar panel array" },
     "description": "A collection of four quantum solar panels, ready to convert solar radiation into electric power with exotic photovoltaic materials.",
     "copy-from": "solar_panel_v3",
-    "proportional": { "price": 4, "weight": 4, "volume": 4, "longest_side": 2 }
+    "proportional": { "price": 4, "price_postapoc": 4, "weight": 4, "volume": 4, "longest_side": 2 }
   },
   {
     "//": "Four reinforced quantum solar panels stuck together for 1 m x 1 m area",
@@ -47,6 +49,6 @@
     "name": { "str": "reinforced quantum solar panel array" },
     "description": "A collection of four reinforced quantum solar panels, ready to provide static-grid power while better protected from impact damage.",
     "copy-from": "reinforced_solar_panel_v3",
-    "proportional": { "price": 4, "weight": 4, "volume": 4, "longest_side": 2 }
+    "proportional": { "price": 4, "price_postapoc": 4, "weight": 4, "volume": 4, "longest_side": 2 }
   }
 ]
