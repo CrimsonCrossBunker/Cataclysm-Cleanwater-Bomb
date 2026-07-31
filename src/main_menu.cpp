@@ -74,6 +74,7 @@
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
+#include "ui_profile.h" // IWYU pragma: keep
 #include "ui_style_picker.h"
 #include "uilist.h"
 #include "wcwidth.h"
