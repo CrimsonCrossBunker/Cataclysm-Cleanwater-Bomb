@@ -1,0 +1,163 @@
+[
+  {
+    "type": "mapgen",
+    "om_terrain": [ "microlab_generic_special_room" ],
+    "object": {
+      "fill_ter": "t_strconc_floor",
+      "place_nested": [
+        { "chunks": [ "microlab_distorted_special_tile" ], "x": 0, "y": 0 },
+        {
+          "chunks": [
+            {
+              "switch": { "param": "labtype", "fallback": "microlab_generic" },
+              "cases": { "microlab_meat": "micolab_meat_pools", "microlab_generic": "null" }
+            }
+          ],
+          "x": 0,
+          "y": 0
+        },
+        { "chunks": [ { "param": "unique_foe", "fallback": "nmn_more_density" } ], "x": 0, "y": 0 },
+        { "else_chunks": [ "concrete_corner" ], "x": 0, "y": 0, "neighbors": { "north_west": "microlab" } },
+        { "else_chunks": [ "concrete_corner" ], "x": 23, "y": 0, "neighbors": { "north_east": "microlab" } },
+        { "else_chunks": [ "concrete_corner" ], "x": 23, "y": 23, "neighbors": { "south_east": "microlab" } },
+        { "else_chunks": [ "concrete_corner" ], "x": 0, "y": 23, "neighbors": { "south_west": "microlab" } }
+      ],
+      "place_monster": [
+        {
+          "group": {
+            "switch": { "param": "labtype", "fallback": "microlab_generic" },
+            "cases": { "microlab_meat": "GROUP_MEATLAB", "microlab_generic": "GROUP_MICROLAB" }
+          },
+          "chance": 80,
+          "x": [ 0, 23 ],
+          "y": [ 0, 23 ],
+          "repeat": [ 2, 7 ]
+        }
+      ]
+    }
+  },
+  {
+    "//": "distorted science lab nano_fabricator room",
+    "type": "mapgen",
+    "nested_mapgen_id": "microlab_distorted_special_tile",
+    "object": {
+      "mapgensize": [ 24, 24 ],
+      "rows": [
+        "   hdh  dd|  |||||||||||",
+        "   hdh    2  2     hddh|",
+        "    Y     |  |cccc     |",
+        "cccccc  |||22||||||||22|",
+        "||||||  ||-  -------|  |",
+        " +  @|  ||-  --K rr-|  |",
+        " | D@|  ||-  -- Y  -|  |",
+        " |||||  ||-  --K rr-|  |",
+        " +  @|  ||-55G--2---|  |",
+        " | D@|  ||-       C-|  |",
+        "||||||  ||-  Y  Y C-|22|",
+        "   Y    c|-  T  T C-|YY2",
+        "   Y   cc|-(((22(((-|YY2",
+        "|||2||||||-   YY  A-|22|",
+        "|dh    cc|- hh    A-|  |",
+        "|dh     c|- dd   AA-|  |",
+        "|||||   c|- dd   //-|  |",
+        "|cc    cc|- hh  `//-|  |",
+        "|c   |||||-   YY //-|  |",
+        "|c   Y hd|----------|  |",
+        "|cc    hd||||||||||||22|",
+        "||||||2||||            |",
+        " dd    ccc|  |ccc   ccc|",
+        " hh      c|  |||||||||||"
+      ],
+      "palettes": [ "microlab" ],
+      "furniture": { "K": "f_rack", "C": "f_machinery_electronic", "A": "f_machinery_heavy" },
+      "terrain": { "G": "t_card_science", "`": "t_nanofab", "/": "t_nanofab_body" },
+      "item": { "r": { "item": "standard_template_construct" }, "K": { "item": "nanomaterial", "repeat": [ 25, 75 ] } },
+      "monster": { "T": { "monster": "mon_turret_rifle", "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 30, 90 ] } ] } } },
+      "place_monsters": [ { "monster": "GROUP_LAB", "chance": 2, "x": [ 2, 21 ], "y": [ 2, 21 ], "repeat": [ 1, 5 ] } ],
+      "place_monster": [ { "monster": "mon_mech_lifter", "x": 17, "y": 13, "chance": 75 } ]
+    }
+  },
+  {
+    "//": "distorted science lab nano_forge room",
+    "type": "mapgen",
+    "nested_mapgen_id": "microlab_distorted_special_tile",
+    "object": {
+      "mapgensize": [ 24, 24 ],
+      "rows": [
+        "   hdh  dd|  |||||||||||",
+        "   hdh    2  2     hddh|",
+        "    Y     |  |cccc     |",
+        "cccccc  |||22||||||||22|",
+        "||||||  ||-  -------|  |",
+        " +  @|  ||-  --K rr-|  |",
+        " | D@|  ||-  -- Y  -|  |",
+        " |||||  ||-  --K rr-|  |",
+        " +  @|  ||-55G--2---|  |",
+        " | D@|  ||-       C-|  |",
+        "||||||  ||-  Y  Y C-|22|",
+        "   Y    c|-  T  T C-|YY2",
+        "   Y   cc|-(((22(((-|YY2",
+        "|||2||||||-   YY  A-|22|",
+        "|dh    cc|- hh    A-|  |",
+        "|dh     c|- dd   AA-|  |",
+        "|||||   c|- dd   //-|  |",
+        "|cc    cc|- hh  `//-|  |",
+        "|c   |||||-   YY //-|  |",
+        "|c   Y hd|----------|  |",
+        "|cc    hd||||||||||||22|",
+        "||||||2||||            |",
+        " dd    ccc|  |ccc   ccc|",
+        " hh      c|  |||||||||||"
+      ],
+      "palettes": [ "microlab" ],
+      "furniture": { "K": "f_rack", "C": "f_machinery_electronic", "A": "f_machinery_heavy" },
+      "terrain": { "G": "t_card_science", "`": "t_nanoforge", "/": "t_nanoforge_body" },
+      "items": { "r": { "item": "alloy_sheet_storage", "chance": 100, "repeat": [ 1, 2 ] } },
+      "item": { "K": { "item": "nanomaterial", "repeat": [ 25, 75 ] } },
+      "monster": { "T": { "monster": "mon_turret_rifle", "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 30, 90 ] } ] } } },
+      "place_monsters": [ { "monster": "GROUP_LAB", "chance": 2, "x": [ 2, 21 ], "y": [ 2, 21 ], "repeat": [ 1, 5 ] } ],
+      "place_monster": [ { "monster": "mon_mech_lifter", "x": 17, "y": 13, "chance": 75 } ]
+    }
+  },
+  {
+    "//": "distorted science lab cvdmachin room",
+    "type": "mapgen",
+    "nested_mapgen_id": "microlab_distorted_special_tile",
+    "object": {
+      "mapgensize": [ 24, 24 ],
+      "rows": [
+        "   hdh  dd|  |||||||||||",
+        "   hdh    2  2     hddh|",
+        "    Y     |  |cccc     |",
+        "cccccc  |||22||||||||22|",
+        "||||||  ||-  -------|  |",
+        " +  @|  ||-  --K rr-|  |",
+        " | D@|  ||-  -- Y  -|  |",
+        " |||||  ||-  --K rr-|  |",
+        " +  @|  ||-55G--2---|  |",
+        " | D@|  ||-       C-|  |",
+        "||||||  ||-  Y  Y C-|22|",
+        "   Y    c|-  T  T C-|YY2",
+        "   Y   cc|-(((22(((-|YY2",
+        "|||2||||||-   YY  A-|22|",
+        "|dh    cc|- hh    A-|  |",
+        "|dh     c|- dd   AA-|  |",
+        "|||||   c|- dd   //-|  |",
+        "|cc    cc|- hh  `//-|  |",
+        "|c   |||||-   YY //-|  |",
+        "|c   Y hd|----------|  |",
+        "|cc    hd||||||||||||22|",
+        "||||||2||||            |",
+        " dd    ccc|  |ccc   ccc|",
+        " hh      c|  |||||||||||"
+      ],
+      "palettes": [ "microlab" ],
+      "furniture": { "K": "f_rack", "C": "f_machinery_electronic", "A": "f_machinery_heavy" },
+      "terrain": { "G": "t_card_science", "`": "t_cvdmachine", "/": "t_cvdbody" },
+      "item": { "r": { "item": "nanomaterial" }, "K": { "item": "plasma", "repeat": [ 25, 75 ] } },
+      "monster": { "T": { "monster": "mon_turret_rifle", "spawn_data": { "ammo": [ { "ammo_id": "556", "qty": [ 30, 90 ] } ] } } },
+      "place_monsters": [ { "monster": "GROUP_LAB", "chance": 2, "x": [ 2, 21 ], "y": [ 2, 21 ], "repeat": [ 1, 5 ] } ],
+      "place_monster": [ { "monster": "mon_mech_lifter", "x": 17, "y": 13, "chance": 75 } ]
+    }
+  }
+]
