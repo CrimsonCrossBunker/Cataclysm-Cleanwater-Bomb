@@ -1,5 +1,9 @@
 #include "cata_catch.h"
+#include "addiction.h"
+#include "achievement.h"
 #include "avatar.h"
+#include "basecamp.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
@@ -10,6 +14,7 @@
 #include "catalua_game_handle.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
+#include "catalua_ui_callbacks.h"
 #include "catalua_ui_events.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_manifest.h"
@@ -21,26 +26,46 @@
 #include "catalua_ui_scheduler.h"
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
+#include "character_martial_arts.h"
+#include "clzones.h"
+#include "creature_tracker.h"
+#include "damage.h"
 #include "effect.h"
 #include "event_bus.h"
+#include "explosion.h"
+#include "faction.h"
 #include "flag.h"
+#include "game.h"
 #include "input_context_actions.h"
 #include "item.h"
+#include "itype.h"
 #include "json_loader.h"
 #include "magic.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
+#include "mapgen.h"
 #include "mapgendata.h"
+#include "martialarts.h"
 #include "mission.h"
+#include "monster.h"
+#include "npc.h"
 #include "overmapbuffer.h"
+#include "panels.h"
 #include "path_info.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
+#include "projectile.h"
 #include "requirements.h"
+#include "skill.h"
+#include "stats_tracker.h"
+#include "talker.h"
 #include "trap.h"
 #include "ui_profile.h"
 #include "units.h"
+#include "vehicle.h"
+#include "vitamin.h"
 #include "weather.h"
 #include "worldfactory.h"
 
@@ -50,6 +75,7 @@
 #include <fstream>
 #include <functional>
 #include <iterator>
+#include <list>
 #include <limits>
 #include <list>
 #include <map>
@@ -58,6 +84,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -386,6 +413,85 @@ class scoped_calendar_turn
 
     private:
         time_point previous_;
+};
+
+class scoped_weather_state
+{
+    public:
+        scoped_weather_state() :
+            weather_( get_weather() ),
+            temperature_( weather_.temperature ),
+            lightning_active_( weather_.lightning_active ),
+            weather_id_( weather_.weather_id ),
+            winddirection_( weather_.winddirection ),
+            windspeed_( weather_.windspeed ),
+            weather_changed_( weather_.weather_changed ),
+            forced_temperature_( weather_.forced_temperature ),
+            precise_( *weather_.weather_precise ),
+            wind_direction_override_(
+                weather_.wind_direction_override ),
+            windspeed_override_(
+                weather_.windspeed_override ),
+            weather_override_( weather_.weather_override ),
+            nextweather_( weather_.nextweather ),
+            temperature_cache_( weather_.temperature_cache ),
+            snow_depth_map_( weather_.snow_depth_map ) {}
+
+        scoped_weather_state(
+            const scoped_weather_state & ) = delete;
+        scoped_weather_state &operator=(
+            const scoped_weather_state & ) = delete;
+
+        ~scoped_weather_state() {
+            weather_.temperature = temperature_;
+            weather_.lightning_active =
+                lightning_active_;
+            weather_.weather_id = weather_id_;
+            weather_.winddirection = winddirection_;
+            weather_.windspeed = windspeed_;
+            weather_.weather_changed =
+                weather_changed_;
+            weather_.forced_temperature =
+                forced_temperature_;
+            *weather_.weather_precise = precise_;
+            weather_.wind_direction_override =
+                wind_direction_override_;
+            weather_.windspeed_override =
+                windspeed_override_;
+            weather_.weather_override =
+                weather_override_;
+            weather_.nextweather = nextweather_;
+            weather_.temperature_cache =
+                std::move( temperature_cache_ );
+            weather_.snow_depth_map =
+                std::move( snow_depth_map_ );
+        }
+
+    private:
+        weather_manager &weather_;
+        units::temperature temperature_;
+        bool lightning_active_;
+        weather_type_id weather_id_;
+        int winddirection_;
+        int windspeed_;
+        bool weather_changed_;
+        std::optional<units::temperature>
+        forced_temperature_;
+        w_point precise_;
+        std::optional<int>
+        wind_direction_override_;
+        std::optional<int>
+        windspeed_override_;
+        weather_type_id weather_override_;
+        time_point nextweather_;
+        std::unordered_map <
+        tripoint_bub_ms,
+        units::temperature >
+        temperature_cache_;
+        std::unordered_map <
+        tripoint_abs_omt,
+        omt_snow_state >
+        snow_depth_map_;
 };
 
 class scoped_lua_state_file
@@ -912,6 +1018,401 @@ TEST_CASE( "lua_event_subscriptions_are_priority_stable_and_source_owned",
                "ccb.lifecycle.world_ready" ) );
 }
 
+TEST_CASE( "lua_v5_native_events_are_complete_described_and_dispatched",
+           "[lua][events][native][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.read", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local types = game.native_events.list()
+assert(#types == 113)
+assert(types[1] == "activates_artifact")
+assert(types[#types] == "character_butchered_corpse")
+
+local description = game.native_events.describe("game_begin")
+assert(description.type == "game_begin")
+assert(description.subscribable == true)
+assert(description.emittable == true)
+assert(#description.fields == 1)
+assert(description.fields[1].name == "cdda_version")
+assert(description.fields[1].type == "string")
+assert(description.fields[1].lua_type == "string")
+assert(#events.native_types() == 113)
+assert(events.describe_native("game_begin").type == "game_begin")
+assert(pcall(function()
+    game.native_events.describe("missing_event")
+end) == false)
+
+game.native_events.on("game_begin", { once = true }, function(event)
+    assert(event.type == "game_begin")
+    assert(event.data_types.cdda_version == "string")
+    state.character.set("native.event.version", event.data.cdda_version)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "native-event-test" );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native.event.version", "missing") == "native-event-test")
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_native_event_emission_is_typed_complete_and_callback_only",
+           "[lua][events][native][emit][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local save_description =
+    game.native_events.describe("game_save")
+assert(save_description.emittable == true)
+assert(#save_description.fields == 2)
+assert(save_description.fields[1].lua_type ==
+    "integer")
+assert(save_description.fields[2].lua_type ==
+    "integer")
+local avatar_description =
+    game.native_events.describe("game_avatar_new")
+local avatar_fields = {}
+for _, field in ipairs(avatar_description.fields) do
+    avatar_fields[field.name] = field.lua_type
+end
+assert(avatar_fields.avatar_id == "integer")
+assert(avatar_fields.is_debug == "boolean")
+assert(avatar_fields.avatar_name == "string")
+
+assert(pcall(function()
+    game.native_events.emit("u_var_changed", {
+        var = "top_level",
+        value = "rejected"
+    })
+end) == false)
+
+game.native_events.on(
+    "u_var_changed", { once = true },
+    function(event)
+        assert(event.type == "u_var_changed")
+        assert(event.data.var == "lua_native_emit")
+        assert(event.data.value == "strict")
+        assert(event.data_types.var == "string")
+        state.character.set(
+            "native.emit.uvar", event.data.value)
+    end)
+
+game.native_events.on(
+    "game_save", { once = true },
+    function(event)
+        assert(event.type == "game_save")
+        assert(event.data.time_since_load == 12)
+        assert(event.data.total_time_played == 34)
+        assert(event.data_types.time_since_load ==
+            "chrono_seconds")
+        state.character.set(
+            "native.emit.seconds",
+            event.data.total_time_played)
+    end)
+
+game.native_events.on(
+    "game_begin", { once = true },
+    function()
+        assert(pcall(function()
+            game.native_events.emit(
+                "missing_event", {})
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "u_var_changed", {
+                    var = "missing"
+                })
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "u_var_changed", {
+                    var = "extra",
+                    value = "field",
+                    unknown = true
+                })
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "u_var_changed", {
+                    var = 1,
+                    value = "wrong_type"
+                })
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "character_consumes_item", {
+                    character = "not_an_integer",
+                    itype = "rock"
+                })
+        end) == false)
+        assert(pcall(function()
+            game.native_events.emit(
+                "character_consumes_item", {
+                    character = 0,
+                    itype =
+                        "__missing_native_event_item__"
+                })
+        end) == false)
+
+        local emitted =
+            game.native_events.emit(
+                "u_var_changed", {
+                    var = "lua_native_emit",
+                    value = "strict"
+                })
+        assert(emitted.type == "u_var_changed")
+        assert(emitted.turn == game.time.now().turn)
+        assert(emitted.data.var == "lua_native_emit")
+        assert(emitted.data.value == "strict")
+
+        local saved =
+            game.native_events.emit(
+                "game_save", {
+                    time_since_load = 12,
+                    total_time_played = 34
+                })
+        assert(saved.data.time_since_load == 12)
+        assert(saved.data.total_time_played == 34)
+    end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    get_event_bus().send<
+    event_type::game_begin>(
+        "native-emitter-trigger" );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native.emit.uvar", "missing") == "strict")
+assert(state.character.get(
+    "native.emit.seconds", 0) == 34)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_eocs_and_dialogue_variables_bridge_authored_logic",
+           "[lua][eoc][variables][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.read", "game.write", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local eoc = game.types.id(
+    "effect_on_condition", "EOC_meta_test_message")
+assert(eoc:is_valid())
+assert(pcall(function()
+    game.eocs.activate(eoc)
+end) == false)
+
+game.native_events.on("game_begin", { once = true }, function()
+    local page = game.eocs.list({
+        query = "EOC_meta_test_message", limit = 8
+    })
+    assert(page.total >= 1)
+    assert(page.returned >= 1)
+    assert(page.items[1].value == "EOC_meta_test_message")
+    assert(page.items[1].type == "ACTIVATION")
+
+    local definition = game.eocs.get(eoc)
+    assert(definition.ok)
+    assert(definition.value.value == "EOC_meta_test_message")
+    assert(definition.value.has_condition == false)
+
+    local tested = game.eocs.test(eoc, {
+        context = {
+            lua_number = 12.5,
+            lua_string = "context",
+            lua_boolean = true
+        }
+    })
+    assert(tested.ok and tested.value.matched)
+    assert(tested.value.context.lua_number == 12.5)
+    assert(tested.value.context.lua_string == "context")
+    assert(tested.value.context.lua_boolean == 1)
+
+    local activated = game.eocs.activate(eoc)
+    assert(activated.ok and activated.value.activated)
+
+    local avatar = game.characters.avatar()
+    local missing = game.variables.get(avatar, "lua_native_bridge")
+    assert(missing.ok and missing.value.exists == false)
+    local written = game.variables.set(
+        avatar, "lua_native_bridge", "round_trip")
+    assert(written.ok and written.value.existed == false)
+    local stored = game.variables.get(avatar, "lua_native_bridge")
+    assert(stored.ok and stored.value.exists)
+    assert(stored.value.value == "round_trip")
+    local removed = game.variables.remove(
+        avatar, "lua_native_bridge")
+    assert(removed.ok and removed.value.removed)
+    assert(removed.value.before == "round_trip")
+    assert(game.variables.get(
+        avatar, "lua_native_bridge").value.exists == false)
+
+    local negative = game.time.duration(-1, "turn")
+    assert(pcall(function()
+        game.eocs.queue(eoc, negative)
+    end) == false)
+    state.character.set("native.eoc.complete", true)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    get_event_bus().send<event_type::game_begin>( "eoc-bridge-test" );
+
+    script.write( R"lua(
+assert(state.character.get("native.eoc.complete", false) == true)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
+           "[lua][bindings][hooks][callbacks]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<script_hook_spec> &hooks = script_hook_specs();
+    REQUIRE( hooks.size() == 52 );
+    std::vector<std::string_view> hook_names;
+    hook_names.reserve( hooks.size() );
+    for( const script_hook_spec &hook : hooks ) {
+        CHECK_FALSE( hook.name.empty() );
+        CHECK_FALSE( script_hook_mode_name( hook.mode ).empty() );
+        hook_names.push_back( hook.name );
+    }
+    std::sort( hook_names.begin(), hook_names.end() );
+    CHECK( std::adjacent_find( hook_names.begin(), hook_names.end() ) ==
+           hook_names.end() );
+    REQUIRE( find_script_hook_spec( "on_try_npc_interaction" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_try_npc_interaction" )->mode ==
+           script_hook_mode::intercept );
+    CHECK( find_script_hook_spec( "on_weather_updated" )->mode ==
+           script_hook_mode::observe );
+    REQUIRE( find_script_hook_spec( "on_character_try_move" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_character_try_move" )->mode ==
+           script_hook_mode::intercept );
+    CHECK( script_hook_supports_result(
+               *find_script_hook_spec( "on_character_try_move" ),
+               "allow" ) );
+    REQUIRE( find_script_hook_spec( "on_monster_try_move" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_monster_try_move" )->mode ==
+           script_hook_mode::intercept );
+    REQUIRE( find_script_hook_spec( "on_npc_try_move" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_npc_try_move" )->mode ==
+           script_hook_mode::intercept );
+    REQUIRE( find_script_hook_spec( "on_player_try_move" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_player_try_move" )->mode ==
+           script_hook_mode::intercept );
+    CHECK( find_script_hook_spec( "not_a_hook" ) == nullptr );
+
+    const std::vector<script_callback_kind_spec> &kinds =
+        script_callback_kind_specs();
+    REQUIRE( kinds.size() == 11 );
+    std::size_t method_count = 0;
+    for( const script_callback_kind_spec &kind : kinds ) {
+        CHECK_FALSE( kind.kind.empty() );
+        CHECK_FALSE( kind.target_id_kind.empty() );
+        CHECK_FALSE( kind.methods.empty() );
+        method_count += kind.methods.size();
+        for( const script_callback_method_spec &method : kind.methods ) {
+            CHECK_FALSE( method.name.empty() );
+            CHECK( find_script_callback_method_spec( kind, method.name ) !=
+                   nullptr );
+        }
+    }
+    CHECK( method_count == 38 );
+    REQUIRE( find_script_callback_kind_spec( "iranged" ) != nullptr );
+    CHECK( find_script_callback_method_spec(
+               *find_script_callback_kind_spec( "iranged" ),
+               "can_fire" )->decision );
+    REQUIRE( find_script_callback_kind_spec( "istate" ) != nullptr );
+    const script_callback_method_spec *on_drop =
+        find_script_callback_method_spec(
+            *find_script_callback_kind_spec( "istate" ),
+            "on_drop" );
+    REQUIRE( on_drop != nullptr );
+    CHECK( on_drop->decision );
+    CHECK( on_drop->consuming );
+    CHECK( find_script_callback_kind_spec( "not_an_actor" ) == nullptr );
+
+    script_callback_registry registry;
+    const std::uint64_t low = registry.subscribe(
+                                  "iwieldable", "cudgel", { "on_wield" },
+                                  -10, 1, false );
+    const std::uint64_t high_first = registry.subscribe(
+                                         "iwieldable", "cudgel",
+    { "can_wield", "on_wield" },
+    100, 1, false );
+    const std::uint64_t high_second = registry.subscribe(
+                                          "iwieldable", "cudgel",
+    { "on_wield" }, 100, 2, true );
+    registry.subscribe(
+        "iwieldable", "rock", { "on_wield" }, 1000, 2, false );
+
+    const std::vector<script_callback_registration> matching =
+        registry.matching( "iwieldable", "cudgel", "on_wield" );
+    REQUIRE( matching.size() == 3 );
+    CHECK( matching[0].id == high_first );
+    CHECK( matching[1].id == high_second );
+    CHECK( matching[2].id == low );
+    CHECK( matching[1].once );
+    CHECK( registry.matching(
+               "iwieldable", "cudgel", "can_wield" ).size() == 1 );
+    CHECK_FALSE( registry.unsubscribe( high_second, 1 ) );
+    CHECK( registry.unsubscribe( high_second, 2 ) );
+    CHECK( registry.unsubscribe_unchecked( low ) );
+    CHECK_THROWS_AS(
+        registry.subscribe(
+            "missing", "cudgel", { "on_wield" }, 0, 1, false ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        registry.subscribe(
+            "iwieldable", "cudgel", { "missing" }, 0, 1, false ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        registry.subscribe(
+            "iwieldable", "cudgel", { "on_wield" },
+            script_callback_registry::maximum_priority + 1, 1, false ),
+        std::invalid_argument );
+}
+
 TEST_CASE( "lua_service_registry_is_bounded_versioned_and_provider_safe",
            "[lua][services]" )
 {
@@ -1013,6 +1514,9 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK( binding_domain_is_covered( "coordinates" ) );
     CHECK( binding_domain_is_covered( "crafting" ) );
     CHECK( binding_domain_is_covered( "mapgen" ) );
+    CHECK( binding_domain_is_covered( "game_services" ) );
+    CHECK( binding_domain_is_covered( "hooks" ) );
+    CHECK( binding_domain_is_covered( "callback_actors" ) );
 
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::table );
@@ -1714,6 +2218,3644 @@ game.bionics.install(
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK( player.num_bionics() == original_count );
     CHECK( player.get_power_level() == original_power );
+}
+
+TEST_CASE( "lua_v5_skills_use_typed_definitions_and_native_progression",
+           "[lua][bindings][skills][integration]" )
+{
+    avatar &player = get_avatar();
+    const skill_id fabrication( "fabrication" );
+    REQUIRE( fabrication.is_valid() );
+    const SkillLevel original_level =
+        player.get_skill_level_object( fabrication );
+    const int original_focus = player.get_focus();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local fabrication = game.types.id("skill", "fabrication")
+
+local definitions = game.skills.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "FABRICATION"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "skill")
+
+local definition = game.skills.definition(fabrication)
+assert(definition.id == fabrication)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.teachable) == "boolean")
+assert(type(definition.combat) == "boolean")
+assert(type(definition.contextual) == "boolean")
+assert(type(definition.consumes_focus) == "boolean")
+
+local before = game.skills.get(avatar, fabrication)
+assert(before.ok == true)
+assert(before.value.id == fabrication)
+assert(math.type(before.value.practical) == "integer")
+assert(math.type(before.value.knowledge) == "integer")
+assert(type(before.value.practical_effective) == "number")
+assert(type(before.value.practical_description) == "string")
+assert(before.value.maximum_level == 10)
+
+local updated = game.skills.set(avatar, fabrication, {
+    practical = 1,
+    knowledge = 2,
+    exercise_percent = 25
+})
+assert(updated.ok == true)
+assert(updated.value.after.practical == 1)
+assert(updated.value.after.knowledge == 2)
+assert(updated.value.after.practical_exercise_percent == 25)
+
+local paused = game.skills.set_training(
+    avatar, fabrication, false)
+assert(paused.ok == true)
+assert(paused.value.after.training == false)
+local resumed = game.skills.set_training(
+    avatar, fabrication, true)
+assert(resumed.ok == true)
+assert(resumed.value.after.training == true)
+
+local practiced = game.skills.practice(
+    avatar, fabrication, 1, {
+        cap = 10,
+        allow_multilevel = false
+    })
+assert(practiced.ok == true)
+assert(type(practiced.value.level_up) == "boolean")
+assert(practiced.value.after.practical_exercise_raw >=
+    practiced.value.before.practical_exercise_raw)
+
+local states = game.skills.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(states.ok == true)
+assert(states.value.limit == 256)
+assert(states.value.returned == #states.value.items)
+assert(states.value.returned <= states.value.total)
+
+assert(pcall(function()
+    game.skills.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.skills.set(avatar, fabrication, { practical = 11 })
+end) == false)
+assert(pcall(function()
+    game.skills.set(avatar, fabrication, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.skills.practice(avatar, fabrication, 0)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_skill_level_object( fabrication ).level() == 1 );
+    CHECK( player.get_skill_level_object( fabrication ).knowledgeLevel() == 2 );
+
+    player.get_skill_level_object( fabrication ) = original_level;
+    player.set_focus( original_focus );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.skills.set(
+    game.characters.avatar(),
+    game.types.id("skill", "fabrication"),
+    { practical = 1 })
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.get_skill_level_object( fabrication ).level() ==
+           original_level.level() );
+    CHECK( player.get_skill_level_object( fabrication ).knowledgeLevel() ==
+           original_level.knowledgeLevel() );
+}
+
+TEST_CASE( "lua_v5_proficiency_catalogs_are_typed_bounded_and_detached",
+           "[lua][bindings][proficiencies][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local knapping = game.types.id("proficiency", "prof_knapping")
+local definitions = game.proficiencies.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "KNAPPING"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "proficiency")
+
+local definition = game.proficiencies.definition(knapping)
+assert(definition.id == knapping)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.can_learn) == "boolean")
+assert(type(definition.ignore_focus) == "boolean")
+assert(type(definition.teachable) == "boolean")
+assert(definition.time_to_learn.turns > 0)
+assert(type(definition.time_multiplier) == "number")
+assert(type(definition.skill_penalty) == "number")
+assert(type(definition.required.items) == "table")
+assert(definition.required.returned == #definition.required.items)
+
+local category_id = definition.category
+assert(category_id.kind == "proficiency_category")
+local category = game.proficiencies.category(category_id)
+assert(category.id == category_id)
+assert(type(category.name) == "string")
+assert(type(category.description) == "string")
+
+local categories = game.proficiencies.categories({
+    offset = 0,
+    limit = 1000000,
+    query = "PROF_SURVIVAL"
+})
+assert(categories.limit == 256)
+assert(categories.total >= 1)
+assert(categories.returned == #categories.items)
+assert(categories.items[1].id.kind == "proficiency_category")
+
+definition.name = "detached"
+assert(game.proficiencies.definition(knapping).name ~= "detached")
+assert(pcall(function()
+    game.proficiencies.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.proficiencies.categories({ query = string.rep("x", 129) })
+end) == false)
+assert(pcall(function()
+    game.proficiencies.definitions({ limit = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_proficiencies_use_native_progression",
+           "[lua][bindings][proficiencies][progression][integration]" )
+{
+    avatar &player = get_avatar();
+    const proficiency_id test_proficiency( "prof_test" );
+    REQUIRE( test_proficiency.is_valid() );
+    const bool original_known =
+        player.has_proficiency( test_proficiency );
+    const std::vector<proficiency_id> original_learning_ids =
+        player.learning_proficiencies();
+    const bool original_learning =
+        std::find(
+            original_learning_ids.begin(),
+            original_learning_ids.end(),
+            test_proficiency ) != original_learning_ids.end();
+    const time_duration original_practiced =
+        player.get_proficiency_practiced_time(
+            test_proficiency );
+    const int original_focus = player.get_focus();
+    player.lose_proficiency( test_proficiency );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local proficiency = game.types.id("proficiency", "prof_test")
+
+local before = game.proficiencies.get(avatar, proficiency)
+assert(before.ok == true)
+assert(before.value.id == proficiency)
+assert(before.value.known == false)
+assert(before.value.learning == false)
+assert(before.value.practice == 0)
+assert(before.value.practiced.turns == 0)
+assert(before.value.remaining.turns > 0)
+assert(type(before.value.prerequisites_met) == "boolean")
+assert(type(before.value.can_practice) == "boolean")
+
+local states = game.proficiencies.list(avatar, {
+    offset = 0,
+    limit = 1000000,
+    include_known = true,
+    include_learning = true,
+    include_unstarted = true
+})
+assert(states.ok == true)
+assert(states.value.limit == 256)
+assert(states.value.returned == #states.value.items)
+assert(states.value.returned <= states.value.total)
+
+local practiced = game.proficiencies.practice(
+    avatar, proficiency, game.time.duration(1, "hour"))
+assert(practiced.ok == true)
+assert(practiced.value.learned == false)
+assert(practiced.value.after.learning == true)
+assert(practiced.value.after.practice > 0)
+assert(practiced.value.after.practice < 1)
+assert(practiced.value.after.practiced.turns > 0)
+assert(math.type(practiced.value.focus_before) == "integer")
+assert(math.type(practiced.value.focus_after) == "integer")
+
+local adjusted = game.proficiencies.set_progress(
+    avatar, proficiency, game.time.duration(2, "hour"))
+assert(adjusted.ok == true)
+assert(adjusted.value.after.known == false)
+assert(adjusted.value.after.learning == true)
+assert(adjusted.value.after.practiced.turns == 7200)
+
+local granted = game.proficiencies.grant(avatar, proficiency)
+assert(granted.ok == true)
+assert(granted.value.changed == true)
+assert(granted.value.accepted == true)
+assert(granted.value.after.known == true)
+assert(granted.value.after.learning == false)
+assert(granted.value.after.remaining.turns == 0)
+
+local removed = game.proficiencies.remove(avatar, proficiency)
+assert(removed.ok == true)
+assert(removed.value.changed == true)
+assert(removed.value.after.known == false)
+assert(removed.value.after.learning == false)
+
+assert(pcall(function()
+    game.proficiencies.practice(
+        avatar, proficiency, game.time.duration(0, "turn"))
+end) == false)
+assert(pcall(function()
+    game.proficiencies.set_progress(
+        avatar, proficiency, game.time.duration(25, "hour"))
+end) == false)
+assert(pcall(function()
+    game.proficiencies.get(
+        avatar, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.has_proficiency( test_proficiency ) );
+    const std::vector<proficiency_id> final_learning_ids =
+        player.learning_proficiencies();
+    CHECK( std::find(
+               final_learning_ids.begin(),
+               final_learning_ids.end(),
+               test_proficiency ) ==
+           final_learning_ids.end() );
+
+    if( original_known ) {
+        player.add_proficiency(
+            test_proficiency, true );
+    } else if( original_learning ) {
+        player.set_proficiency_practiced_time(
+            test_proficiency,
+            to_turns<int>( original_practiced ) );
+    }
+    player.set_focus( original_focus );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.proficiencies.grant(
+    game.characters.avatar(),
+    game.types.id("proficiency", "prof_test"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.has_proficiency( test_proficiency ) ==
+           original_known );
+}
+
+TEST_CASE( "lua_v5_vitamin_definitions_are_typed_bounded_snapshots",
+           "[lua][bindings][vitamins][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local vitamin_c = game.types.id("vitamin", "vitC")
+local definitions = game.vitamins.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "VITC"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "vitamin")
+
+local definition = game.vitamins.definition(vitamin_c)
+assert(definition.id == vitamin_c)
+assert(type(definition.name) == "string")
+assert(type(definition.type) == "string")
+assert(math.type(definition.minimum) == "integer")
+assert(math.type(definition.maximum) == "integer")
+assert(definition.rate.turns >= 0)
+assert(definition.absorption_per_day == nil or
+    math.type(definition.absorption_per_day) == "integer")
+assert(type(definition.decays_into.items) == "table")
+assert(definition.decays_into.returned ==
+    #definition.decays_into.items)
+
+definition.name = "detached"
+assert(game.vitamins.definition(vitamin_c).name ~= "detached")
+assert(pcall(function()
+    game.vitamins.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.vitamins.definitions({ query = string.rep("x", 129) })
+end) == false)
+assert(pcall(function()
+    game.vitamins.definitions({ limit = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_vitamins_follow_native_pool_rules",
+           "[lua][bindings][vitamins][pools][integration]" )
+{
+    avatar &player = get_avatar();
+    const vitamin_id vitamin_c( "vitC" );
+    REQUIRE( vitamin_c.is_valid() );
+    const int original_amount =
+        player.vitamin_get( vitamin_c );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local vitamin_c = game.types.id("vitamin", "vitC")
+local definition = game.vitamins.definition(vitamin_c)
+assert(definition.minimum < definition.maximum)
+
+local before = game.vitamins.get(avatar, vitamin_c)
+assert(before.ok == true)
+assert(before.value.id == vitamin_c)
+assert(math.type(before.value.amount) == "integer")
+assert(math.type(before.value.severity) == "integer")
+assert(math.type(before.value.daily_actual) == "integer")
+assert(math.type(before.value.daily_estimated) == "integer")
+assert(before.value.rate.turns >= 0)
+
+local states = game.vitamins.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(states.ok == true)
+assert(states.value.limit == 256)
+assert(states.value.returned == #states.value.items)
+assert(states.value.returned <= states.value.total)
+
+local assigned = game.vitamins.set(avatar, vitamin_c, 10)
+local expected = math.max(
+    definition.minimum,
+    math.min(definition.maximum, 10))
+assert(assigned.ok == true)
+assert(assigned.value.requested == 10)
+assert(assigned.value.after.amount == expected)
+assert(assigned.value.clamped == (expected ~= 10))
+
+local delta = expected < definition.maximum and 1 or -1
+local modified = game.vitamins.modify(avatar, vitamin_c, delta)
+assert(modified.ok == true)
+assert(modified.value.requested_delta == delta)
+assert(modified.value.applied_delta == delta)
+assert(modified.value.after.amount == expected + delta)
+
+local reset = game.vitamins.reset_daily(avatar, vitamin_c)
+assert(reset.ok == true)
+assert(reset.value.after.daily_actual == 0)
+assert(reset.value.after.daily_estimated == 0)
+
+assert(pcall(function()
+    game.vitamins.get(
+        avatar, game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.vitamins.set(avatar, vitamin_c, 1000000001)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    const int assigned_amount = std::clamp(
+                                    10, vitamin_c->min(),
+                                    vitamin_c->max() );
+    const int modified_amount =
+        assigned_amount +
+        ( assigned_amount < vitamin_c->max() ? 1 : -1 );
+    CHECK( player.vitamin_get( vitamin_c ) ==
+           modified_amount );
+    player.vitamin_set( vitamin_c, original_amount );
+    player.reset_daily_vitamin( vitamin_c );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.vitamins.modify(
+    game.characters.avatar(),
+    game.types.id("vitamin", "vitC"), 1)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.vitamin_get( vitamin_c ) ==
+           original_amount );
+}
+
+TEST_CASE( "lua_v5_addiction_definitions_are_typed_bounded_snapshots",
+           "[lua][bindings][addictions][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local caffeine = game.types.id("addiction", "caffeine")
+local definitions = game.addictions.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "CAFFEINE"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "addiction")
+
+local definition = game.addictions.definition(caffeine)
+assert(definition.id == caffeine)
+assert(type(definition.name) == "string")
+assert(type(definition.type_name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.builtin) == "string")
+assert(definition.craving_morale == nil or
+    definition.craving_morale.kind == "morale")
+assert(definition.effect == nil or
+    definition.effect.kind == "effect_on_condition")
+
+definition.name = "detached"
+assert(game.addictions.definition(caffeine).name ~= "detached")
+assert(pcall(function()
+    game.addictions.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.addictions.definitions({ query = string.rep("x", 129) })
+end) == false)
+assert(pcall(function()
+    game.addictions.definitions({ limit = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_addictions_use_native_state_and_events",
+           "[lua][bindings][addictions][state][integration]" )
+{
+    avatar &player = get_avatar();
+    const addiction_id caffeine( "caffeine" );
+    REQUIRE( caffeine.is_valid() );
+    std::optional<addiction> original;
+    const auto existing = std::find_if(
+                              player.addictions.begin(),
+                              player.addictions.end(),
+    [&caffeine]( const addiction & entry ) {
+        return entry.type == caffeine;
+    } );
+    if( existing != player.addictions.end() ) {
+        original = *existing;
+        player.rem_addiction( caffeine );
+    }
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local caffeine = game.types.id("addiction", "caffeine")
+
+local before = game.addictions.get(avatar, caffeine)
+assert(before.ok == true)
+assert(before.value.id == caffeine)
+assert(before.value.present == false)
+assert(before.value.intensity == 0)
+assert(before.value.active == false)
+assert(before.value.sated == nil)
+assert(before.value.minimum_active_intensity == 3)
+assert(before.value.maximum_intensity == 20)
+
+local assigned = game.addictions.set(avatar, caffeine, {
+    intensity = 5,
+    sated = game.time.duration(2, "hour")
+})
+assert(assigned.ok == true)
+assert(assigned.value.after.present == true)
+assert(assigned.value.after.intensity == 5)
+assert(assigned.value.after.active == true)
+assert(assigned.value.after.sated.turns == 7200)
+
+local states = game.addictions.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(states.ok == true)
+assert(states.value.limit == 256)
+assert(states.value.returned == #states.value.items)
+assert(states.value.total >= 1)
+
+local exposed = game.addictions.expose(avatar, caffeine, 100000)
+assert(exposed.ok == true)
+assert(exposed.value.changed == true)
+assert(exposed.value.after.present == true)
+assert(exposed.value.after.intensity >= 5)
+
+local removed = game.addictions.remove(avatar, caffeine)
+assert(removed.ok == true)
+assert(removed.value.changed == true)
+assert(removed.value.after.present == false)
+
+assert(pcall(function()
+    game.addictions.set(avatar, caffeine, {
+        sated = game.time.duration(1, "hour")
+    })
+end) == false)
+assert(pcall(function()
+    game.addictions.set(avatar, caffeine, { intensity = 21 })
+end) == false)
+assert(pcall(function()
+    game.addictions.get(
+        avatar, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.addiction_level( caffeine ) == 0 );
+    if( original ) {
+        player.addictions.push_back( *original );
+    }
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.addictions.set(
+    game.characters.avatar(),
+    game.types.id("addiction", "caffeine"),
+    { intensity = 5 })
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.addiction_level( caffeine ) ==
+           ( original ? original->intensity : 0 ) );
+}
+
+TEST_CASE( "lua_v5_character_needs_are_generation_safe_and_bounded",
+           "[lua][bindings][needs][state][integration]" )
+{
+    avatar &player = get_avatar();
+    const int original_hunger = player.get_hunger();
+    const int original_thirst = player.get_thirst();
+    const int original_sleepiness = player.get_sleepiness();
+    const int original_sleep_deprivation =
+        player.get_sleep_deprivation();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local before = game.needs.get(avatar)
+assert(before.ok == true)
+assert(math.type(before.value.hunger) == "integer")
+assert(math.type(before.value.starvation) == "integer")
+assert(math.type(before.value.thirst) == "integer")
+assert(math.type(before.value.instant_thirst) == "integer")
+assert(math.type(before.value.sleepiness) == "integer")
+assert(math.type(before.value.sleep_deprivation) == "integer")
+assert(math.type(before.value.stored_kcal) == "integer")
+assert(math.type(before.value.healthy_kcal) == "integer")
+assert(type(before.value.kcal_fraction) == "number")
+assert(math.type(before.value.daily_sleep.turns) == "integer")
+assert(math.type(before.value.continuous_sleep.turns) == "integer")
+
+local assigned = game.needs.set(avatar, {
+    hunger = 10,
+    thirst = 20,
+    sleepiness = 30,
+    sleep_deprivation = 40
+})
+assert(assigned.ok == true)
+assert(assigned.value.after.hunger == 10)
+assert(assigned.value.after.thirst == 20)
+assert(assigned.value.after.sleepiness == 30)
+assert(assigned.value.after.sleep_deprivation == 40)
+
+local modified = game.needs.modify(avatar, {
+    hunger = 1,
+    thirst = 1,
+    sleepiness = 1,
+    sleep_deprivation = 1
+})
+assert(modified.ok == true)
+assert(modified.value.after.hunger == 11)
+assert(modified.value.after.thirst == 21)
+assert(modified.value.after.sleepiness == 31)
+assert(modified.value.after.sleep_deprivation == 41)
+
+assert(pcall(function()
+    game.needs.set(avatar, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.needs.modify(avatar, { hunger = 1000001 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_hunger() == 11 );
+    CHECK( player.get_thirst() == 21 );
+    CHECK( player.get_sleepiness() == 31 );
+    CHECK( player.get_sleep_deprivation() == 41 );
+    player.set_hunger( original_hunger );
+    player.set_thirst( original_thirst );
+    player.set_sleepiness( original_sleepiness );
+    player.set_sleep_deprivation(
+        original_sleep_deprivation );
+}
+
+TEST_CASE( "lua_v5_calorie_sleep_and_health_services_use_native_rules",
+           "[lua][bindings][needs][health][integration]" )
+{
+    avatar &player = get_avatar();
+    const int original_kcal = player.get_stored_kcal();
+    const time_duration original_daily_sleep =
+        player.get_daily_sleep();
+    const time_duration original_continuous_sleep =
+        player.get_continuous_sleep();
+    const int original_lifestyle = player.get_lifestyle();
+    const int original_daily_health =
+        player.get_daily_health();
+    const int original_health_tally =
+        player.get_health_tally();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local initial = game.needs.get(avatar).value
+
+local calories = game.needs.set_calories(avatar, 40000)
+assert(calories.ok == true)
+assert(calories.value.requested == 40000)
+assert(calories.value.after.stored_kcal == 40000)
+local calorie_delta = game.needs.modify_calories(
+    avatar, 100, true)
+assert(calorie_delta.ok == true)
+assert(calorie_delta.value.requested_delta == 100)
+assert(calorie_delta.value.after.stored_kcal == 40100)
+
+local sleep = game.needs.modify_sleep(avatar, {
+    daily = game.time.duration(1, "hour"),
+    continuous = game.time.duration(30, "minute")
+})
+assert(sleep.ok == true)
+assert(sleep.value.after.daily_sleep.turns ==
+    initial.daily_sleep.turns + 3600)
+assert(sleep.value.after.continuous_sleep.turns ==
+    initial.continuous_sleep.turns + 1800)
+local reset = game.needs.reset_sleep(avatar, "all")
+assert(reset.ok == true)
+assert(reset.value.after.daily_sleep.turns == 0)
+assert(reset.value.after.continuous_sleep.turns == 0)
+
+local health = game.needs.set_health(avatar, {
+    lifestyle = 10,
+    daily_health = 20
+})
+assert(health.ok == true)
+assert(health.value.after.daily_health == 20)
+local changed_health = game.needs.modify_health(avatar, {
+    lifestyle = 5,
+    daily_health = 5,
+    daily_health_cap = 25,
+    health_tally = 2
+})
+assert(changed_health.ok == true)
+assert(changed_health.value.after.daily_health == 25)
+assert(changed_health.value.after.health_tally ==
+    changed_health.value.before.health_tally + 2)
+
+assert(pcall(function()
+    game.needs.set_calories(avatar, -1)
+end) == false)
+assert(pcall(function()
+    game.needs.modify_sleep(avatar, {
+        daily = game.time.duration(367, "day")
+    })
+end) == false)
+assert(pcall(function()
+    game.needs.modify_health(avatar, { daily_health = 1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_stored_kcal() == 40100 );
+    CHECK( player.get_daily_sleep() == 0_turns );
+    CHECK( player.get_continuous_sleep() == 0_turns );
+    CHECK( player.get_daily_health() == 25 );
+
+    player.set_stored_kcal( original_kcal );
+    player.reset_daily_sleep();
+    player.mod_daily_sleep( original_daily_sleep );
+    player.reset_continuous_sleep();
+    player.mod_continuous_sleep(
+        original_continuous_sleep );
+    player.set_lifestyle( original_lifestyle );
+    player.set_daily_health( original_daily_health );
+    player.mod_health_tally(
+        original_health_tally -
+        player.get_health_tally() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.needs.set_calories(game.characters.avatar(), 40000)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.get_stored_kcal() == original_kcal );
+}
+
+TEST_CASE( "lua_v5_martial_art_definitions_are_typed_bounded_snapshots",
+           "[lua][bindings][martial_arts][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local karate = game.types.id("martial_art", "style_karate")
+local definitions = game.martial_arts.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "KARATE"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind == "martial_art")
+
+local definition = game.martial_arts.definition(karate)
+assert(definition.id == karate)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(math.type(definition.priority) == "integer")
+assert(type(definition.teachable) == "boolean")
+assert(type(definition.strictly_unarmed) == "boolean")
+assert(type(definition.strictly_melee) == "boolean")
+assert(type(definition.allow_all_weapons) == "boolean")
+assert(type(definition.force_unarmed) == "boolean")
+assert(type(definition.techniques.items) == "table")
+assert(definition.techniques.returned == #definition.techniques.items)
+assert(type(definition.weapons.items) == "table")
+assert(type(definition.weapon_categories.items) == "table")
+
+definition.name = "detached"
+assert(game.martial_arts.definition(karate).name ~= "detached")
+assert(pcall(function()
+    game.martial_arts.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.martial_arts.definitions({ query = string.rep("x", 129) })
+end) == false)
+assert(pcall(function()
+    game.martial_arts.definitions({ limit = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_martial_arts_use_native_style_state",
+           "[lua][bindings][martial_arts][state][integration]" )
+{
+    avatar &player = get_avatar();
+    const matype_id karate( "style_karate" );
+    REQUIRE( karate.is_valid() );
+    const std::vector<matype_id> original_styles =
+        player.known_styles( false );
+    const matype_id original_selected =
+        player.martial_arts_data->selected_style();
+    const bool original_hands_free =
+        player.martial_arts_data->keep_hands_free;
+    if( player.has_martialart( karate ) ) {
+        player.martial_arts_data->clear_style( karate );
+    }
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local karate = game.types.id("martial_art", "style_karate")
+local none = game.types.id("martial_art", "style_none")
+
+local before = game.martial_arts.get(avatar, karate)
+assert(before.ok == true)
+assert(before.value.id == karate)
+assert(before.value.known == false)
+assert(before.value.selected == false)
+assert(type(before.value.keep_hands_free) == "boolean")
+local current = game.martial_arts.current(avatar)
+assert(current.ok == true)
+assert(current.value.selected == true)
+
+local learned = game.martial_arts.learn(avatar, karate)
+assert(learned.ok == true)
+assert(learned.value.changed == true)
+assert(learned.value.after.known == true)
+local selected = game.martial_arts.select(avatar, karate)
+assert(selected.ok == true)
+assert(selected.value.after.selected == true)
+assert(game.martial_arts.current(avatar).value.id == karate)
+
+local hands = game.martial_arts.set_hands_free(avatar, true)
+assert(hands.ok == true)
+assert(hands.value.after == true)
+assert(game.martial_arts.current(avatar).value.keep_hands_free == true)
+
+local styles = game.martial_arts.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(styles.ok == true)
+assert(styles.value.limit == 256)
+assert(styles.value.returned == #styles.value.items)
+assert(styles.value.total >= 3)
+
+local removed = game.martial_arts.remove(avatar, karate)
+assert(removed.ok == true)
+assert(removed.value.changed == true)
+assert(removed.value.after.known == false)
+assert(removed.value.current.id == none)
+
+assert(pcall(function()
+    game.martial_arts.remove(avatar, none)
+end) == false)
+assert(pcall(function()
+    game.martial_arts.select(avatar, karate)
+end) == false)
+assert(pcall(function()
+    game.martial_arts.trigger(avatar, "missing")
+end) == false)
+assert(pcall(function()
+    game.martial_arts.get(
+        avatar, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.has_martialart( karate ) );
+
+    player.martial_arts_data->clear_styles();
+    for( const matype_id &style : original_styles ) {
+        player.martial_arts_data->add_martialart( style );
+    }
+    player.martial_arts_data->set_style(
+        original_selected, true );
+    player.martial_arts_data->keep_hands_free =
+        original_hands_free;
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.martial_arts.learn(
+    game.characters.avatar(),
+    game.types.id("martial_art", "style_karate"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.has_martialart( karate ) ==
+           ( std::find(
+                 original_styles.begin(),
+                 original_styles.end(), karate ) !=
+             original_styles.end() ) );
+}
+
+TEST_CASE( "lua_v5_vehicle_catalogs_and_live_state_are_bounded",
+           "[lua][bindings][vehicles][read][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    vehicle *native_vehicle = here.add_vehicle(
+                                  vproto_id( "bicycle" ),
+                                  tripoint_bub_ms( 60, 60, 0 ),
+                                  0_degrees, 100,
+                                  veh_spawn_status::UNDAMAGED );
+    REQUIRE( native_vehicle != nullptr );
+    native_vehicle->name =
+        "Lua inspection bicycle";
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local bicycle = game.types.id(
+    "vehicle_prototype", "bicycle")
+local definitions = game.vehicles.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "BICYCLE"
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.total >= 1)
+assert(definitions.items[1].id.kind ==
+    "vehicle_prototype")
+
+local definition = game.vehicles.definition(bicycle)
+assert(definition.id == bicycle)
+assert(type(definition.name) == "string")
+assert(definition.parts.returned ==
+    #definition.parts.items)
+assert(definition.parts.total >= 1)
+assert(type(definition.has_blueprint) == "boolean")
+
+local world = game.world.vehicles({
+    offset = 0,
+    limit = 256
+})
+local handle = nil
+for _, candidate in ipairs(world.items) do
+    if candidate.prototype == "bicycle" then
+        handle = candidate.handle
+        break
+    end
+end
+assert(handle ~= nil)
+assert(handle:is_valid())
+
+local current = game.vehicles.get(handle)
+assert(current.ok == true)
+assert(current.value.name == "Lua inspection bicycle")
+assert(current.value.prototype == bicycle)
+assert(current.value.position.origin == "abs")
+assert(current.value.position.scale == "ms")
+assert(math.type(current.value.parts) == "integer")
+assert(current.value.motion.facing.kind == "angle")
+assert(math.type(current.value.motion.velocity) == "integer")
+assert(current.value.lift.mass.kind == "mass")
+assert(type(current.value.lift.weight_newtons) == "number")
+assert(type(current.value.lift.maximum_lift_newtons) == "number")
+assert(type(current.value.lift.lift_margin_newtons) == "number")
+assert(type(current.value.lift.sufficient_balloon_lift) ==
+    "boolean")
+assert(type(current.value.state.engine_on) == "boolean")
+assert(math.type(
+    current.value.power.battery_kilojoules) == "integer")
+
+local parts = game.vehicles.parts(handle, {
+    offset = 0,
+    limit = 1000000
+})
+assert(parts.ok == true)
+assert(parts.value.limit == 256)
+assert(parts.value.returned == #parts.value.items)
+assert(parts.value.total >= 1)
+assert(parts.value.items[1].id.kind == "vehicle_part")
+assert(parts.value.items[1].position.origin == "abs")
+assert(type(parts.value.items[1].capabilities.engine) ==
+    "boolean")
+
+local fuels = game.vehicles.fuels(handle)
+assert(fuels.ok == true)
+assert(fuels.value.returned == #fuels.value.items)
+assert(fuels.value.returned <= fuels.value.total)
+for _, fuel in ipairs(fuels.value.items) do
+    assert(fuel.id.kind == "item")
+    assert(math.type(fuel.remaining) == "integer")
+end
+
+local wrong = game.vehicles.get(game.characters.avatar())
+assert(wrong.ok == false)
+assert(wrong.error.code == "wrong_kind")
+assert(pcall(function()
+    game.vehicles.definition(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.vehicles.definitions({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.vehicles.parts(handle, { offset = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_vehicle_controls_preserve_native_invariants",
+           "[lua][bindings][vehicles][write][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    vehicle *native_vehicle = here.add_vehicle(
+                                  vproto_id( "bicycle" ),
+                                  tripoint_bub_ms( 60, 60, 0 ),
+                                  0_degrees, 100,
+                                  veh_spawn_status::UNDAMAGED );
+    REQUIRE( native_vehicle != nullptr );
+    native_vehicle->name = "Lua control bicycle";
+    native_vehicle->velocity = 500;
+    native_vehicle->cruise_velocity = 500;
+    native_vehicle->engine_on = true;
+    native_vehicle->autopilot_on = true;
+    native_vehicle->is_autodriving = true;
+    native_vehicle->is_following = true;
+    native_vehicle->is_patrolling = true;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local world = game.world.vehicles({
+    offset = 0,
+    limit = 256
+})
+local handle = nil
+for _, candidate in ipairs(world.items) do
+    if candidate.prototype == "bicycle" then
+        handle = candidate.handle
+        break
+    end
+end
+assert(handle ~= nil)
+
+local renamed = game.vehicles.rename(
+    handle, "Lua renamed bicycle")
+assert(renamed.ok == true)
+assert(renamed.value.before == "Lua control bicycle")
+assert(renamed.value.after == "Lua renamed bicycle")
+
+local cruise = game.vehicles.set_cruise_velocity(
+    handle, 1000000)
+assert(cruise.ok == true)
+assert(cruise.value.requested == 1000000)
+assert(cruise.value.after <= cruise.value.maximum)
+assert(cruise.value.after >= cruise.value.minimum)
+assert(cruise.value.clamped == true)
+
+local tracked = game.vehicles.set_tracking(handle, true)
+assert(tracked.ok == true)
+assert(tracked.value.after == true)
+local untracked = game.vehicles.set_tracking(handle, false)
+assert(untracked.ok == true)
+assert(untracked.value.after == false)
+
+local parts = game.vehicles.parts(handle, {
+    offset = 0,
+    limit = 256
+})
+assert(parts.ok == true)
+local toggled_part = nil
+for _, part in ipairs(parts.value.items) do
+    if not part.capabilities.engine and
+            part.available then
+        toggled_part = part
+        break
+    end
+end
+assert(toggled_part ~= nil)
+local toggled = game.vehicles.set_part_enabled(
+    handle, toggled_part.index,
+    not toggled_part.enabled)
+assert(toggled.ok == true)
+assert(toggled.value.changed == true)
+assert(toggled.value.after.enabled ~=
+    toggled_part.enabled)
+local restored = game.vehicles.set_part_enabled(
+    handle, toggled_part.index,
+    toggled_part.enabled)
+assert(restored.ok == true)
+assert(restored.value.after.enabled ==
+    toggled_part.enabled)
+
+local stopped = game.vehicles.stop(handle, {
+    motion = true,
+    engines = true,
+    autopilot = true
+})
+assert(stopped.ok == true)
+assert(stopped.value.after.motion.velocity == 0)
+assert(stopped.value.after.motion.cruise_velocity == 0)
+assert(stopped.value.after.state.engine_on == false)
+assert(stopped.value.after.state.autopilot_on == false)
+assert(stopped.value.after.state.autodriving == false)
+assert(stopped.value.after.state.following == false)
+assert(stopped.value.after.state.patrolling == false)
+
+assert(pcall(function()
+    game.vehicles.rename(handle, string.rep("x", 257))
+end) == false)
+assert(pcall(function()
+    game.vehicles.set_cruise_velocity(handle, 1000001)
+end) == false)
+assert(pcall(function()
+    game.vehicles.set_part_enabled(handle, -1, true)
+end) == false)
+assert(pcall(function()
+    game.vehicles.stop(handle, {
+        motion = false,
+        engines = false,
+        autopilot = false
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_vehicle->name ==
+           "Lua renamed bicycle" );
+    CHECK( native_vehicle->velocity == 0 );
+    CHECK( native_vehicle->cruise_velocity == 0 );
+    CHECK_FALSE( native_vehicle->engine_on );
+    CHECK_FALSE( native_vehicle->autopilot_on );
+    CHECK_FALSE( native_vehicle->is_autodriving );
+    CHECK_FALSE( native_vehicle->is_following );
+    CHECK_FALSE( native_vehicle->is_patrolling );
+    CHECK_FALSE( native_vehicle->tracking_on );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local handle = game.world.vehicles({
+    offset = 0,
+    limit = 1
+}).items[1].handle
+game.vehicles.rename(handle, "unauthorized")
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( native_vehicle->name ==
+           "Lua renamed bicycle" );
+}
+
+TEST_CASE( "lua_v5_npc_catalogs_and_live_state_are_bounded",
+           "[lua][bindings][npcs][read][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    avatar &player = get_avatar();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    npc &native_npc = spawn_npc(
+                          ( player.pos_bub( here ) +
+                            tripoint_rel_ms::east * 3 ).xy(),
+                          "test_talker" );
+    native_npc.name = "Lua inspection NPC";
+    const character_id native_npc_id =
+        native_npc.getID();
+    on_out_of_scope cleanup_npc( [native_npc_id]() {
+        g->remove_npc_follower( native_npc_id );
+        g->remove_npc( native_npc_id );
+        overmap_buffer.remove_npc( native_npc_id );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.npcs.list({
+    offset = 0,
+    limit = 1000000,
+    query = "LUA INSPECTION NPC"
+})
+assert(page.ok == true)
+assert(page.value.limit == 256)
+assert(page.value.returned == #page.value.items)
+assert(page.value.total == 1)
+assert(page.value.returned == 1)
+assert(page.value.has_more == false)
+
+local summary = page.value.items[1]
+assert(summary.name == "Lua inspection NPC")
+assert(summary.handle:is_valid())
+assert(math.type(summary.id) == "integer")
+assert(summary.position.origin == "abs")
+assert(summary.position.scale == "ms")
+assert(summary.class.kind == "npc_class")
+assert(type(summary.attitude) == "string")
+assert(type(summary.attitude_name) == "string")
+assert(type(summary.status) == "string")
+assert(type(summary.activity) == "string")
+assert(type(summary.dead) == "boolean")
+assert(type(summary.following) == "boolean")
+assert(math.type(summary.opinion.trust) == "integer")
+assert(math.type(summary.personality.bravery) == "integer")
+
+local current = game.npcs.get(summary.handle)
+assert(current.ok == true)
+assert(current.value.id == summary.id)
+assert(current.value.handle.kind == summary.handle.kind)
+assert(current.value.handle:locator().stable_id ==
+    summary.handle:locator().stable_id)
+assert(current.value.name == summary.name)
+assert(current.value.class == summary.class)
+
+local class = game.npcs.class(current.value.class)
+assert(class.id == current.value.class)
+assert(type(class.name) == "string")
+assert(type(class.job_description) == "string")
+assert(type(class.common) == "boolean")
+assert(class.starting_spells.returned ==
+    #class.starting_spells.items)
+assert(class.starting_bionics.returned ==
+    #class.starting_bionics.items)
+assert(class.starting_proficiencies.returned ==
+    #class.starting_proficiencies.items)
+
+local classes = game.npcs.classes({
+    offset = 0,
+    limit = 1000000,
+    query = current.value.class.value
+})
+assert(classes.limit == 256)
+assert(classes.returned == #classes.items)
+local found = false
+for _, candidate in ipairs(classes.items) do
+    if candidate.id == current.value.class then
+        found = true
+        break
+    end
+end
+assert(found)
+
+local wrong = game.npcs.get(
+    game.characters.avatar())
+assert(wrong.ok == false)
+assert(wrong.error.code == "wrong_subtype")
+assert(pcall(function()
+    game.npcs.class(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.npcs.classes({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.npcs.list({ offset = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_npc_controls_preserve_permissions_and_bounds",
+           "[lua][bindings][npcs][write][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    avatar &player = get_avatar();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    npc &native_npc = spawn_npc(
+                          ( player.pos_bub( here ) +
+                            tripoint_rel_ms::east * 3 ).xy(),
+                          "test_talker" );
+    native_npc.name = "Lua control NPC";
+    native_npc.set_attitude( NPCATT_TALK );
+    native_npc.op_of_u.trust =
+        std::numeric_limits<int>::max() - 5;
+    native_npc.op_of_u.fear = -10;
+    native_npc.op_of_u.value = 2;
+    native_npc.op_of_u.anger = 3;
+    native_npc.op_of_u.owed = 4;
+    native_npc.op_of_u.sold = 3;
+    const character_id native_npc_id =
+        native_npc.getID();
+    on_out_of_scope cleanup_npc( [native_npc_id]() {
+        g->remove_npc_follower( native_npc_id );
+        g->remove_npc( native_npc_id );
+        overmap_buffer.remove_npc( native_npc_id );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.npcs.list({
+    offset = 0,
+    limit = 1,
+    query = "Lua control NPC"
+})
+assert(page.ok == true)
+assert(page.value.returned == 1)
+local handle = page.value.items[1].handle
+
+local renamed = game.npcs.rename(
+    handle, "Lua renamed NPC")
+assert(renamed.ok == true)
+assert(renamed.value.before == "Lua control NPC")
+assert(renamed.value.after == "Lua renamed NPC")
+
+local attitude = game.npcs.set_attitude(
+    handle, "NPCATT_FOLLOW")
+assert(attitude.ok == true)
+assert(attitude.value.before == "NPCATT_TALK")
+assert(attitude.value.after == "NPCATT_FOLLOW")
+assert(attitude.value.changed == true)
+
+local changed = game.npcs.modify_opinion(handle, {
+    trust = 100,
+    fear = -5,
+    value = 7,
+    anger = -2,
+    owed = 9,
+    sold = -100
+})
+assert(changed.ok == true)
+assert(changed.value.before.trust ==
+    2147483642)
+assert(changed.value.after.trust ==
+    2147483647)
+assert(changed.value.after.fear ==
+    changed.value.before.fear - 5)
+assert(changed.value.after.value ==
+    changed.value.before.value + 7)
+assert(changed.value.after.anger ==
+    changed.value.before.anger - 2)
+assert(changed.value.after.owed ==
+    changed.value.before.owed + 9)
+assert(changed.value.before.sold == 3)
+assert(changed.value.after.sold == 0)
+assert(math.type(changed.value.effective.trust) ==
+    "integer")
+
+assert(pcall(function()
+    game.npcs.rename(handle, "")
+end) == false)
+assert(pcall(function()
+    game.npcs.rename(handle, "bad\nname")
+end) == false)
+assert(pcall(function()
+    game.npcs.set_attitude(handle, "missing")
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {})
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {
+        trust = 1000001
+    })
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {
+        trust = 0.5
+    })
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {
+        unknown = 1
+    })
+end) == false)
+assert(pcall(function()
+    game.npcs.modify_opinion(handle, {
+        [1] = 1
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_npc.name == "Lua renamed NPC" );
+    CHECK( native_npc.get_attitude() == NPCATT_FOLLOW );
+    CHECK( native_npc.op_of_u.trust ==
+           std::numeric_limits<int>::max() );
+    CHECK( native_npc.op_of_u.fear == -15 );
+    CHECK( native_npc.op_of_u.value == 9 );
+    CHECK( native_npc.op_of_u.anger == 1 );
+    CHECK( native_npc.op_of_u.owed == 13 );
+    CHECK( native_npc.op_of_u.sold == 0 );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local handle = game.npcs.list({
+    offset = 0,
+    limit = 1,
+    query = "Lua renamed NPC"
+}).value.items[1].handle
+game.npcs.rename(handle, "unauthorized")
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( native_npc.name == "Lua renamed NPC" );
+}
+
+TEST_CASE( "lua_v5_faction_state_members_and_relations_are_bounded",
+           "[lua][bindings][factions][read][integration]" )
+{
+    g->faction_manager_ptr->create_if_needed();
+    faction *native_faction =
+        g->faction_manager_ptr->get(
+            faction_id( "your_followers" ), false );
+    faction *target_faction =
+        g->faction_manager_ptr->get(
+            faction_id( "free_merchants" ), false );
+    REQUIRE( native_faction != nullptr );
+    REQUIRE( target_faction != nullptr );
+
+    const auto original_members =
+        native_faction->members;
+    const auto original_relations =
+        native_faction->relations;
+    on_out_of_scope restore_faction( [
+                                      native_faction,
+                                      original_members,
+                                      original_relations
+                                    ]() {
+        native_faction->members =
+            original_members;
+        native_faction->relations =
+            original_relations;
+    } );
+    const character_id player_id =
+        get_avatar().getID();
+    native_faction->add_to_membership(
+        player_id, "Lua faction member", true );
+    native_faction->relations[
+        target_faction->id.str()
+    ].set( static_cast<std::size_t>(
+               npc_factions::relationship::
+               share_public_goods ), true );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local yours = game.types.id(
+    "faction", "your_followers")
+local merchants = game.types.id(
+    "faction", "free_merchants")
+
+local page = game.factions.list({
+    offset = 0,
+    limit = 1000000,
+    query = "YOUR_FOLLOWERS"
+})
+assert(page.ok == true)
+assert(page.value.limit == 256)
+assert(page.value.returned == #page.value.items)
+assert(page.value.total == 1)
+assert(page.value.items[1].id == yours)
+
+local current = game.factions.get(yours)
+assert(current.ok == true)
+assert(current.value.id == yours)
+assert(type(current.value.name) == "string")
+assert(type(current.value.description) == "string")
+assert(type(current.value.summary) == "string")
+assert(type(current.value.known_by_player) == "boolean")
+assert(math.type(current.value.reputation.likes) ==
+    "integer")
+assert(type(current.value.reputation.ranking) ==
+    "string")
+assert(math.type(current.value.resources.size) ==
+    "integer")
+assert(math.type(current.value.resources.food_kcal) ==
+    "integer")
+assert(type(current.value.resources.combat_ability) ==
+    "string")
+assert(type(current.value.policy.consumes_food) ==
+    "boolean")
+assert(type(current.value.policy.stealing) == "string")
+if current.value.currency ~= nil then
+    assert(current.value.currency.kind == "item")
+end
+if current.value.monster_faction ~= nil then
+    assert(current.value.monster_faction.kind ==
+        "monster_faction")
+end
+
+local player = game.factions.player()
+assert(player.ok == true)
+assert(player.value.id == yours)
+
+local members = game.factions.members(yours, {
+    offset = 0,
+    limit = 1000000
+})
+assert(members.ok == true)
+assert(members.value.limit == 256)
+assert(members.value.returned ==
+    #members.value.items)
+local member_found = false
+for _, member in ipairs(members.value.items) do
+    if member.name == "Lua faction member" then
+        assert(math.type(member.id) == "integer")
+        assert(member.known_by_player == true)
+        member_found = true
+    end
+end
+assert(member_found)
+
+local relations = game.factions.relationships(yours, {
+    offset = 0,
+    limit = 1000000
+})
+assert(relations.ok == true)
+assert(relations.value.limit == 256)
+assert(relations.value.returned ==
+    #relations.value.items)
+local relation = game.factions.relationship(
+    yours, merchants)
+assert(relation.ok == true)
+assert(relation.value.defined == true)
+assert(relation.value.target == merchants)
+assert(relation.value.share_public_goods == true)
+assert(type(relation.value.kill_on_sight) == "boolean")
+
+local food = game.factions.food(yours, {
+    offset = 0,
+    limit = 1000000
+})
+assert(food.ok == true)
+assert(math.type(food.value.kcal) == "integer")
+assert(food.value.vitamins.limit == 256)
+assert(food.value.vitamins.returned ==
+    #food.value.vitamins.items)
+for _, vitamin in ipairs(food.value.vitamins.items) do
+    assert(vitamin.id.kind == "vitamin")
+    assert(math.type(vitamin.amount) == "integer")
+end
+
+local missing = game.factions.get(
+    game.types.id("faction",
+        "__missing_lua_faction__"))
+assert(missing.ok == false)
+assert(missing.error.code == "not_found")
+assert(pcall(function()
+    game.factions.get(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.factions.list({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.factions.members(yours, { offset = -1 })
+end) == false)
+assert(pcall(function()
+    game.factions.relationship(
+        yours, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_faction_controls_preserve_permissions_and_bounds",
+           "[lua][bindings][factions][write][integration]" )
+{
+    g->faction_manager_ptr->create_if_needed();
+    faction *native_faction =
+        g->faction_manager_ptr->get(
+            faction_id( "your_followers" ), false );
+    faction *target_faction =
+        g->faction_manager_ptr->get(
+            faction_id( "free_merchants" ), false );
+    REQUIRE( native_faction != nullptr );
+    REQUIRE( target_faction != nullptr );
+
+    const std::string original_name =
+        native_faction->get_name();
+    const bool original_known =
+        native_faction->known_by_u;
+    const int original_likes =
+        native_faction->likes_u;
+    const int original_respects =
+        native_faction->respects_u;
+    const int original_trusts =
+        native_faction->trusts_u;
+    const int original_size =
+        native_faction->size;
+    const int original_power =
+        native_faction->power;
+    const int original_wealth =
+        native_faction->wealth;
+    const bool original_consumes_food =
+        native_faction->consumes_food;
+    const std::optional<bool> original_stealing =
+        native_faction->steal_persist;
+    const nutrients original_food =
+        native_faction->food_supply();
+    const auto original_relations =
+        native_faction->relations;
+    on_out_of_scope restore_faction( [
+                                      native_faction,
+                                      original_name,
+                                      original_known,
+                                      original_likes,
+                                      original_respects,
+                                      original_trusts,
+                                      original_size,
+                                      original_power,
+                                      original_wealth,
+                                      original_consumes_food,
+                                      original_stealing,
+                                      original_food,
+                                      original_relations
+                                    ]() {
+        native_faction->set_name(
+            original_name );
+        native_faction->known_by_u =
+            original_known;
+        native_faction->likes_u =
+            original_likes;
+        native_faction->respects_u =
+            original_respects;
+        native_faction->trusts_u =
+            original_trusts;
+        native_faction->size =
+            original_size;
+        native_faction->power =
+            original_power;
+        native_faction->wealth =
+            original_wealth;
+        native_faction->consumes_food =
+            original_consumes_food;
+        native_faction->steal_persist =
+            original_stealing;
+        native_faction->empty_food_supply();
+        native_faction->add_to_food_supply( {
+            { calendar::turn_zero, original_food }
+        } );
+        native_faction->relations =
+            original_relations;
+    } );
+
+    native_faction->set_name(
+        "Lua control faction" );
+    native_faction->known_by_u = true;
+    native_faction->likes_u =
+        std::numeric_limits<int>::max() - 5;
+    native_faction->respects_u = -10;
+    native_faction->trusts_u = 2;
+    native_faction->size = 10;
+    native_faction->power = 20;
+    native_faction->wealth = 30;
+    native_faction->consumes_food = true;
+    native_faction->steal_persist =
+        std::nullopt;
+    native_faction->empty_food_supply();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local yours = game.types.id(
+    "faction", "your_followers")
+local merchants = game.types.id(
+    "faction", "free_merchants")
+
+local renamed = game.factions.rename(
+    yours, "Lua renamed faction")
+assert(renamed.ok == true)
+assert(renamed.value.before == "Lua control faction")
+assert(renamed.value.after == "Lua renamed faction")
+
+local known = game.factions.set_known(yours, false)
+assert(known.ok == true)
+assert(known.value.before == true)
+assert(known.value.after == false)
+assert(known.value.changed == true)
+
+local reputation = game.factions.modify_reputation(
+    yours, {
+        likes = 100,
+        respects = -5,
+        trusts = 7
+    })
+assert(reputation.ok == true)
+assert(reputation.value.before.likes == 2147483642)
+assert(reputation.value.after.likes == 2147483647)
+assert(reputation.value.after.respects == -15)
+assert(reputation.value.after.trusts == 9)
+
+local resources = game.factions.modify_resources(
+    yours, {
+        size = -100,
+        power = 5,
+        wealth = 7
+    })
+assert(resources.ok == true)
+assert(resources.value.before.size == 10)
+assert(resources.value.after.size == 0)
+assert(resources.value.after.power == 25)
+assert(resources.value.after.wealth == 37)
+assert(resources.value.after.wealth_description == "")
+
+local added = game.factions.modify_food(yours, 100)
+assert(added.ok == true)
+assert(added.value.before == 0)
+assert(added.value.after == 100)
+assert(added.value.applied == 100)
+assert(added.value.clamped == false)
+local removed = game.factions.modify_food(yours, -150)
+assert(removed.ok == true)
+assert(removed.value.before == 100)
+assert(removed.value.after == 0)
+assert(removed.value.applied == -100)
+assert(removed.value.clamped == true)
+
+local policy = game.factions.set_policy(yours, {
+    consumes_food = false,
+    stealing = "always"
+})
+assert(policy.ok == true)
+assert(policy.value.before.consumes_food == true)
+assert(policy.value.before.stealing == "ask")
+assert(policy.value.after.consumes_food == false)
+assert(policy.value.after.stealing == "always")
+
+local relationship = game.factions.set_relationship(
+    yours, merchants, {
+        kill_on_sight = true,
+        share_public_goods = false
+    })
+assert(relationship.ok == true)
+assert(relationship.value.after.defined == true)
+assert(relationship.value.after.kill_on_sight == true)
+assert(relationship.value.after.share_public_goods == false)
+
+assert(pcall(function()
+    game.factions.rename(yours, "")
+end) == false)
+assert(pcall(function()
+    game.factions.rename(yours, string.rep("x", 41))
+end) == false)
+assert(pcall(function()
+    game.factions.modify_reputation(yours, {})
+end) == false)
+assert(pcall(function()
+    game.factions.modify_reputation(yours, {
+        likes = 1000001
+    })
+end) == false)
+assert(pcall(function()
+    game.factions.modify_resources(yours, {
+        size = 0.5
+    })
+end) == false)
+assert(pcall(function()
+    game.factions.modify_food(yours, 0)
+end) == false)
+assert(pcall(function()
+    game.factions.modify_food(yours, 1000000001)
+end) == false)
+assert(pcall(function()
+    game.factions.set_policy(yours, {
+        stealing = "sometimes"
+    })
+end) == false)
+assert(pcall(function()
+    game.factions.set_relationship(
+        yours, merchants, {})
+end) == false)
+assert(pcall(function()
+    game.factions.set_relationship(
+        yours, merchants, {
+            kill_on_sight = 1
+        })
+end) == false)
+local missing_target = game.factions.set_relationship(
+    yours,
+    game.types.id("faction",
+        "__missing_lua_faction__"),
+    { kill_on_sight = true })
+assert(missing_target.ok == false)
+assert(missing_target.error.code == "target_not_found")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_faction->get_name() ==
+           "Lua renamed faction" );
+    CHECK_FALSE( native_faction->known_by_u );
+    CHECK( native_faction->likes_u ==
+           std::numeric_limits<int>::max() );
+    CHECK( native_faction->respects_u == -15 );
+    CHECK( native_faction->trusts_u == 9 );
+    CHECK( native_faction->size == 0 );
+    CHECK( native_faction->power == 25 );
+    CHECK( native_faction->wealth == 37 );
+    CHECK( native_faction->food_supply().kcal() == 0 );
+    CHECK_FALSE( native_faction->consumes_food );
+    REQUIRE( native_faction->steal_persist.has_value() );
+    CHECK( *native_faction->steal_persist );
+    CHECK( native_faction->has_relationship(
+               target_faction->id,
+               npc_factions::relationship::
+               kill_on_sight ) );
+    CHECK_FALSE( native_faction->has_relationship(
+                     target_faction->id,
+                     npc_factions::relationship::
+                     share_public_goods ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.factions.set_known(
+    game.types.id("faction", "your_followers"),
+    true)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK_FALSE( native_faction->known_by_u );
+}
+
+TEST_CASE( "lua_v5_camp_discovery_and_state_are_bounded",
+           "[lua][bindings][camps][read][integration]" )
+{
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    const tripoint_abs_omt camp_position =
+        player.pos_abs_omt() +
+        tripoint_rel_omt( 3, 0, 0 );
+    REQUIRE_FALSE( overmap_buffer.find_camp(
+                       camp_position.xy() ).has_value() );
+    here.add_camp(
+        camp_position, "Lua inspection camp", false );
+    std::optional<basecamp *> found =
+        overmap_buffer.find_camp(
+            camp_position.xy() );
+    REQUIRE( found.has_value() );
+    basecamp *native_camp = *found;
+    REQUIRE( native_camp != nullptr );
+    on_out_of_scope cleanup_camp( [
+                                   camp_position
+                                 ]() {
+        overmap_buffer.remove_camp(
+            camp_position.xy() );
+        get_avatar().camps.erase(
+            camp_position );
+    } );
+
+    const tripoint_abs_ms board_position =
+        project_to<coords::ms>(
+            camp_position ) +
+        tripoint_rel_ms( 1, 1, 0 );
+    native_camp->set_bb_pos(
+        board_position );
+    native_camp->set_owner(
+        faction_id( "your_followers" ) );
+    native_camp->directions.push_back(
+        point_rel_omt( 1, 0 ) );
+    native_camp->fortifications.push_back(
+        camp_position );
+    native_camp->set_storage_tiles( {
+        board_position
+    } );
+    native_camp->set_dumping_spot(
+        board_position );
+    native_camp->set_liquid_dumping_spot( {
+        board_position
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.camps.list({
+    offset = 0,
+    limit = 1000000,
+    radius_omt = 10,
+    query = "LUA INSPECTION CAMP"
+})
+assert(page.ok == true)
+assert(page.value.limit == 256)
+assert(page.value.radius_omt == 10)
+assert(page.value.returned == #page.value.items)
+assert(page.value.total == 1)
+local camp = page.value.items[1]
+assert(camp.name == "Lua inspection camp")
+assert(camp.board_name ~= "")
+assert(camp.valid == true)
+assert(camp.position.origin == "abs")
+assert(camp.position.scale == "omt")
+assert(camp.board_position.origin == "abs")
+assert(camp.board_position.scale == "ms")
+assert(camp.owner == game.types.id(
+    "faction", "your_followers"))
+assert(math.type(camp.distance_submaps) == "integer")
+assert(type(camp.distance_omt) == "number")
+assert(camp.directions.returned ==
+    #camp.directions.items)
+assert(camp.directions.total == 1)
+assert(camp.directions.items[1].origin == "rel")
+assert(camp.directions.items[1].scale == "omt")
+assert(camp.fortifications.total == 1)
+assert(camp.storage_tiles.total == 1)
+assert(camp.dumping_spot == camp.board_position)
+assert(camp.liquid_dumping_spots.total == 1)
+
+local current = game.camps.get(camp.position)
+assert(current.ok == true)
+assert(current.value.name == camp.name)
+assert(current.value.position == camp.position)
+
+local near = game.camps.near(camp.position, {
+    offset = 0,
+    limit = 1,
+    radius_omt = 0
+})
+assert(near.ok == true)
+assert(near.value.returned == 1)
+assert(near.value.items[1].position == camp.position)
+
+local missing_position = game.coords.tripoint_abs_omt(
+    camp.position.x + 1000,
+    camp.position.y + 1000,
+    camp.position.z)
+local missing = game.camps.get(missing_position)
+assert(missing.ok == false)
+assert(missing.error.code == "not_found")
+assert(pcall(function()
+    game.camps.list({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.camps.list({ radius_omt = 361 })
+end) == false)
+assert(pcall(function()
+    game.camps.near(
+        game.coords.tripoint_rel_omt(0, 0, 0), {})
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_camp_controls_preserve_permissions_and_location",
+           "[lua][bindings][camps][write][integration]" )
+{
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    const tripoint_abs_omt camp_position =
+        player.pos_abs_omt() +
+        tripoint_rel_omt( 4, 0, 0 );
+    REQUIRE_FALSE( overmap_buffer.find_camp(
+                       camp_position.xy() ).has_value() );
+    here.add_camp(
+        camp_position, "Lua control camp", false );
+    std::optional<basecamp *> found =
+        overmap_buffer.find_camp(
+            camp_position.xy() );
+    REQUIRE( found.has_value() );
+    basecamp *native_camp = *found;
+    REQUIRE( native_camp != nullptr );
+    on_out_of_scope cleanup_camp( [
+                                   camp_position
+                                 ]() {
+        overmap_buffer.remove_camp(
+            camp_position.xy() );
+        get_avatar().camps.erase(
+            camp_position );
+    } );
+
+    const tripoint_abs_ms board_before =
+        project_to<coords::ms>(
+            camp_position ) +
+        tripoint_rel_ms( 1, 1, 0 );
+    const tripoint_abs_ms board_after =
+        project_to<coords::ms>(
+            camp_position ) +
+        tripoint_rel_ms( 2, 2, 0 );
+    native_camp->set_bb_pos(
+        board_before );
+    native_camp->set_owner(
+        faction_id( "your_followers" ) );
+    g->faction_manager_ptr->create_if_needed();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.camps.list({
+    offset = 0,
+    limit = 1,
+    radius_omt = 10,
+    query = "Lua control camp"
+})
+assert(page.ok == true)
+assert(page.value.returned == 1)
+local camp = page.value.items[1]
+
+local renamed = game.camps.rename(
+    camp.position, "Lua renamed camp")
+assert(renamed.ok == true)
+assert(renamed.value.before == "Lua control camp")
+assert(renamed.value.after == "Lua renamed camp")
+
+local merchants = game.types.id(
+    "faction", "free_merchants")
+local owner = game.camps.set_owner(
+    camp.position, merchants)
+assert(owner.ok == true)
+assert(owner.value.before == game.types.id(
+    "faction", "your_followers"))
+assert(owner.value.after == merchants)
+assert(owner.value.changed == true)
+
+local base = camp.position:project_to("ms")
+local board = game.coords.tripoint_abs_ms(
+    base.x + 2, base.y + 2, base.z)
+local moved = game.camps.set_board_position(
+    camp.position, board)
+assert(moved.ok == true)
+assert(moved.value.before == camp.board_position)
+assert(moved.value.after == board)
+assert(moved.value.changed == true)
+
+local current = game.camps.get(camp.position)
+assert(current.ok == true)
+assert(current.value.name == "Lua renamed camp")
+assert(current.value.owner == merchants)
+assert(current.value.board_position == board)
+
+assert(pcall(function()
+    game.camps.rename(camp.position, "")
+end) == false)
+assert(pcall(function()
+    game.camps.rename(
+        camp.position, string.rep("x", 26))
+end) == false)
+assert(pcall(function()
+    game.camps.set_owner(
+        camp.position, game.types.id("item", "rock"))
+end) == false)
+local missing_owner = game.camps.set_owner(
+    camp.position,
+    game.types.id("faction",
+        "__missing_lua_faction__"))
+assert(missing_owner.ok == false)
+assert(missing_owner.error.code == "owner_not_found")
+assert(pcall(function()
+    game.camps.set_board_position(
+        camp.position,
+        game.coords.tripoint_abs_ms(
+            base.x + 1000, base.y, base.z))
+end) == false)
+assert(pcall(function()
+    game.camps.set_board_position(
+        camp.position,
+        game.coords.tripoint_rel_ms(0, 0, 0))
+end) == false)
+
+local wrong_z = game.coords.tripoint_abs_omt(
+    camp.position.x, camp.position.y,
+    camp.position.z + 1)
+local wrong_level = game.camps.rename(
+    wrong_z, "wrong level")
+assert(wrong_level.ok == false)
+assert(wrong_level.error.code == "not_found")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_camp->camp_name() ==
+           "Lua renamed camp" );
+    CHECK( native_camp->get_owner() ==
+           faction_id( "free_merchants" ) );
+    CHECK( native_camp->get_bb_pos_abs() ==
+           board_after );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local camp = game.camps.list({
+    radius_omt = 10,
+    query = "Lua renamed camp"
+}).value.items[1]
+game.camps.rename(camp.position, "unauthorized")
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( native_camp->camp_name() ==
+           "Lua renamed camp" );
+}
+
+TEST_CASE( "lua_v5_zone_catalog_and_state_are_bounded",
+           "[lua][bindings][zones][read][integration]" )
+{
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    zone_manager &manager =
+        zone_manager::get_manager();
+    const faction_id faction(
+        "your_followers" );
+    const zone_type_id type(
+        "LOOT_UNSORTED" );
+    REQUIRE( type.is_valid() );
+    const std::string zone_name =
+        "Lua inspection zone";
+    auto remove_test_zone = [
+        &manager, faction, zone_name
+    ]() {
+        while( true ) {
+            zone_data *found = nullptr;
+            for( zone_data &entry :
+                 manager.get_zones(
+                     faction ) ) {
+                if( entry.get_name() ==
+                    zone_name ) {
+                    found = &entry;
+                    break;
+                }
+            }
+            if( found == nullptr ) {
+                break;
+            }
+            const bool vehicle =
+                found->get_is_vehicle();
+            if( !manager.remove( *found ) ) {
+                break;
+            }
+            if( !vehicle ) {
+                manager.cache_data();
+            }
+        }
+    };
+    remove_test_zone();
+    on_out_of_scope cleanup_zone(
+        remove_test_zone );
+
+    const tripoint_abs_ms start =
+        player.pos_abs() +
+        tripoint_rel_ms( 2, 3, 0 );
+    const tripoint_abs_ms end =
+        start + tripoint_rel_ms( 2, 1, 0 );
+    manager.add(
+        zone_name, type, faction,
+        false, true, start, end,
+        nullptr, true );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local zone_id = game.types.id(
+    "zone", "LOOT_UNSORTED")
+local faction_id = game.types.id(
+    "faction", "your_followers")
+
+local types = game.zones.types({
+    offset = 0,
+    limit = 1000000,
+    query = "loot_unsorted"
+})
+assert(types.limit == 256)
+assert(types.returned == #types.items)
+assert(types.total >= 1)
+local definition = game.zones.type(zone_id)
+assert(definition.id == zone_id)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.can_be_personal) == "boolean")
+assert(type(definition.hidden) == "boolean")
+assert(definition.sources.returned ==
+    #definition.sources.items)
+
+local page = game.zones.list({
+    offset = 0,
+    limit = 1000000,
+    query = "LUA INSPECTION ZONE",
+    faction = faction_id,
+    type = zone_id
+})
+assert(page.ok == true)
+assert(page.value.limit == 256)
+assert(page.value.returned == #page.value.items)
+assert(page.value.total == 1)
+local zone = page.value.items[1]
+assert(zone.name == "Lua inspection zone")
+assert(zone.type == zone_id)
+assert(zone.faction == faction_id)
+assert(zone.type_name ~= "")
+assert(zone.start.origin == "abs")
+assert(zone.start.scale == "ms")
+assert(zone["end"].origin == "abs")
+assert(zone["end"].scale == "ms")
+assert(zone.center.origin == "abs")
+assert(zone.enabled == true)
+assert(zone.temporarily_disabled == false)
+assert(zone.vehicle == false)
+assert(zone.personal == false)
+assert(type(zone.has_options) == "boolean")
+assert(zone.options.returned ==
+    #zone.options.items)
+
+local token = zone.token
+assert(token:is_valid() == true)
+assert(token.name == zone.name)
+assert(token.type == zone.type)
+assert(token.faction == zone.faction)
+assert(token.start == zone.start)
+assert(token["end"] == zone["end"])
+local status = token:status()
+assert(status.ok == true)
+assert(status.value.name == zone.name)
+
+local current = game.zones.get(token)
+assert(current.ok == true)
+assert(current.value.name == zone.name)
+assert(game.zones.contains(
+    token, zone.start).value == true)
+local outside = game.coords.tripoint_abs_ms(
+    zone["end"].x + 1,
+    zone["end"].y,
+    zone["end"].z)
+assert(game.zones.contains(
+    token, outside).value == false)
+
+local at = game.zones.at(zone.start, {
+    faction = faction_id,
+    type = zone_id,
+    limit = 1
+})
+assert(at.ok == true)
+assert(at.value.returned == 1)
+assert(at.value.items[1].token.name ==
+    zone.name)
+
+assert(pcall(function()
+    game.zones.types({ offset = -1 })
+end) == false)
+assert(pcall(function()
+    game.zones.types({
+        query = string.rep("x", 129)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.type(
+        game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.zones.list({
+        limit = -1
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.list({
+        type = game.types.id("item", "rock")
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.at(
+        game.coords.tripoint_rel_ms(
+            0, 0, 0), {})
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_zone_controls_preserve_permissions_and_caches",
+           "[lua][bindings][zones][write][integration]" )
+{
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos(
+        here, tripoint_bub_ms( 30, 30, 0 ) );
+    zone_manager &manager =
+        zone_manager::get_manager();
+    const faction_id faction(
+        "your_followers" );
+    const std::vector<std::string> test_names = {
+        "Lua controlled zone",
+        "Lua renamed zone",
+        "Lua personal zone"
+    };
+    auto remove_test_zones = [
+        &manager, faction, test_names
+    ]() {
+        for( const std::string &name :
+             test_names ) {
+            while( true ) {
+                zone_data *found = nullptr;
+                for( zone_data &entry :
+                     manager.get_zones(
+                         faction ) ) {
+                    if( entry.get_name() ==
+                        name ) {
+                        found = &entry;
+                        break;
+                    }
+                }
+                if( found == nullptr ) {
+                    break;
+                }
+                const bool vehicle =
+                    found->get_is_vehicle();
+                if( !manager.remove(
+                        *found ) ) {
+                    break;
+                }
+                if( !vehicle ) {
+                    manager.cache_data();
+                }
+            }
+        }
+    };
+    remove_test_zones();
+    on_out_of_scope cleanup_zones(
+        remove_test_zones );
+
+    const tripoint_abs_ms base =
+        player.pos_abs() +
+        tripoint_rel_ms( 5, 5, 0 );
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    std::ostringstream source;
+    source << "local bx, by, bz = "
+           << base.x() << ", "
+           << base.y() << ", "
+           << base.z() << "\n";
+    source << R"lua(
+local function abs(dx, dy, dz)
+    return game.coords.tripoint_abs_ms(
+        bx + dx, by + dy, bz + (dz or 0))
+end
+local zone_id = game.types.id(
+    "zone", "LOOT_UNSORTED")
+local faction_id = game.types.id(
+    "faction", "your_followers")
+
+local created = game.zones.create({
+    name = "Lua controlled zone",
+    type = zone_id,
+    faction = faction_id,
+    start = abs(2, 1),
+    ["end"] = abs(0, 0),
+    invert = true,
+    enabled = true
+})
+assert(created.ok == true)
+local zone = created.value
+assert(zone.name == "Lua controlled zone")
+assert(zone.start == abs(0, 0))
+assert(zone["end"] == abs(2, 1))
+assert(zone.invert == true)
+assert(zone.enabled == true)
+local original_token = zone.token
+
+local duplicate = game.zones.create({
+    name = "Lua controlled zone",
+    type = zone_id,
+    start = abs(0, 0),
+    ["end"] = abs(2, 1)
+})
+assert(duplicate.ok == false)
+assert(duplicate.error.code ==
+    "duplicate_zone")
+
+local renamed = game.zones.rename(
+    original_token, "Lua renamed zone")
+assert(renamed.ok == true)
+assert(renamed.value.before ==
+    "Lua controlled zone")
+assert(renamed.value.after ==
+    "Lua renamed zone")
+assert(renamed.value.changed == true)
+assert(game.zones.get(
+    original_token).error.code == "not_found")
+local token = renamed.value.zone.token
+
+local disabled = game.zones.set_enabled(
+    token, false)
+assert(disabled.ok == true)
+assert(disabled.value.before == true)
+assert(disabled.value.after == false)
+assert(disabled.value.zone.enabled == false)
+token = disabled.value.zone.token
+
+local temporary = game.zones.set_temporary_disabled(
+    token, true)
+assert(temporary.ok == true)
+assert(temporary.value.after == true)
+assert(temporary.value.enabled_after == false)
+assert(temporary.value.zone.temporarily_disabled ==
+    true)
+token = temporary.value.zone.token
+
+local restored = game.zones.set_temporary_disabled(
+    token, false)
+assert(restored.ok == true)
+assert(restored.value.after == false)
+assert(restored.value.enabled_after == true)
+assert(restored.value.zone.enabled == true)
+token = restored.value.zone.token
+
+local moved = game.zones.set_position(
+    token, abs(8, 7), abs(6, 5))
+assert(moved.ok == true)
+assert(moved.value.changed == true)
+assert(moved.value.after_start == abs(6, 5))
+assert(moved.value.after_end == abs(8, 7))
+assert(game.zones.get(
+    token).error.code == "not_found")
+token = moved.value.zone.token
+assert(game.zones.contains(
+    token, abs(7, 6)).value == true)
+
+local personal = game.zones.create({
+    name = "Lua personal zone",
+    type = zone_id,
+    start = game.coords.tripoint_rel_ms(
+        1, 1, 0),
+    ["end"] = game.coords.tripoint_rel_ms(
+        -1, -1, 0),
+    personal = true
+})
+assert(personal.ok == true)
+assert(personal.value.personal == true)
+local personal_moved = game.zones.set_position(
+    personal.value.token,
+    game.coords.tripoint_rel_ms(-2, -1, 0),
+    game.coords.tripoint_rel_ms(2, 1, 0))
+assert(personal_moved.ok == true)
+assert(personal_moved.value.after_start ==
+    game.coords.tripoint_rel_ms(-2, -1, 0))
+assert(personal_moved.value.after_end ==
+    game.coords.tripoint_rel_ms(2, 1, 0))
+local personal_token =
+    personal_moved.value.zone.token
+local removed = game.zones.remove(
+    personal_token)
+assert(removed.ok == true)
+assert(removed.value.removed == true)
+assert(removed.value.zone.personal == true)
+assert(personal_token:is_valid() == false)
+assert(game.zones.get(
+    personal_token).error.code == "not_found")
+
+assert(pcall(function()
+    game.zones.create({
+        name = "", type = zone_id,
+        start = abs(0, 0), ["end"] = abs(0, 0)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = game.types.id(
+            "item", "rock"),
+        start = abs(0, 0), ["end"] = abs(0, 0)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = zone_id,
+        start = game.coords.tripoint_rel_ms(
+            0, 0, 0),
+        ["end"] = game.coords.tripoint_rel_ms(
+            1, 1, 0)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = zone_id,
+        start = abs(0, 0, 0),
+        ["end"] = abs(0, 0, 1)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = zone_id,
+        start = abs(0, 0),
+        ["end"] = abs(256, 0)
+    })
+end) == false)
+assert(pcall(function()
+    game.zones.create({
+        name = "bad", type = zone_id,
+        start = abs(0, 0), ["end"] = abs(0, 0),
+        unknown = true
+    })
+end) == false)
+)lua";
+    script.write(
+        source.str() );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+
+    zone_data *native_zone = nullptr;
+    for( zone_data &entry :
+         manager.get_zones(
+             faction ) ) {
+        if( entry.get_name() ==
+            "Lua renamed zone" ) {
+            native_zone = &entry;
+            break;
+        }
+    }
+    REQUIRE( native_zone != nullptr );
+    CHECK( native_zone->get_enabled() );
+    CHECK_FALSE(
+        native_zone->
+        get_temporarily_disabled() );
+    CHECK( native_zone->get_start_point() ==
+           base +
+           tripoint_rel_ms( 6, 5, 0 ) );
+    CHECK( native_zone->get_end_point() ==
+           base +
+           tripoint_rel_ms( 8, 7, 0 ) );
+    CHECK( manager.has(
+               zone_type_id( "LOOT_UNSORTED" ),
+               base +
+               tripoint_rel_ms( 7, 6, 0 ),
+               faction ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.zones.list({
+    query = "Lua renamed zone"
+})
+assert(page.ok == true)
+assert(page.value.returned == 1)
+game.zones.rename(
+    page.value.items[1].token,
+    "unauthorized")
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts(
+                     error ) );
+    CHECK( error.find( "game.write" ) !=
+           std::string::npos );
+    CHECK( native_zone->get_name() ==
+           "Lua renamed zone" );
+}
+
+TEST_CASE( "lua_v5_achievement_catalog_and_progress_are_bounded",
+           "[lua][bindings][achievements][read][integration]" )
+{
+    const achievement_id test_id(
+        "lua_test_manual_achievement" );
+    REQUIRE( test_id.is_valid() );
+    achievements_tracker &tracker =
+        get_achievements();
+    if( tracker.valid_achievements().
+        empty() ) {
+        get_event_bus().send<
+        event_type::game_start>(
+            "lua-achievement-test" );
+    }
+    REQUIRE( tracker.reset_manual_achievement(
+                 test_id.obj() ) );
+    on_out_of_scope cleanup( [
+                              &tracker, test_id
+                            ]() {
+        tracker.reset_manual_achievement(
+            test_id.obj() );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local id = game.types.id(
+    "achievement",
+    "lua_test_manual_achievement")
+local definitions = game.achievements.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "LUA TEST ACHIEVEMENT",
+    conduct = false,
+    manually_given = true
+})
+assert(definitions.limit == 256)
+assert(definitions.returned ==
+    #definitions.items)
+assert(definitions.total == 1)
+local definition =
+    game.achievements.definition(id)
+assert(definition.id == id)
+assert(definition.name ==
+    "Lua test achievement")
+assert(type(definition.description) ==
+    "string")
+assert(definition.conduct == false)
+assert(definition.manually_given == true)
+assert(definition.requirements == 0)
+assert(definition.hidden_by.returned ==
+    #definition.hidden_by.items)
+assert(definition.sources.returned ==
+    #definition.sources.items)
+assert(definition.time_constraint == nil)
+
+local page = game.achievements.list({
+    query = "lua_test_manual",
+    completion = "pending",
+    manually_given = true,
+    valid = true,
+    limit = 1
+})
+assert(page.ok == true)
+assert(page.value.enabled ==
+    true or page.value.enabled == false)
+assert(page.value.total == 1)
+assert(page.value.returned == 1)
+local progress = page.value.items[1]
+assert(progress.id == id)
+assert(progress.valid == true)
+assert(progress.completion == "pending")
+assert(progress.pending == true)
+assert(progress.completed == false)
+assert(progress.failed == false)
+assert(type(progress.hidden) == "boolean")
+assert(type(progress.ui_text) == "string")
+
+local current = game.achievements.get(id)
+assert(current.ok == true)
+assert(current.value.id == id)
+assert(current.value.pending == true)
+
+assert(pcall(function()
+    game.achievements.definitions({
+        completion = "pending"
+    })
+end) == false)
+assert(pcall(function()
+    game.achievements.list({
+        completion = "unknown"
+    })
+end) == false)
+assert(pcall(function()
+    game.achievements.list({
+        offset = -1
+    })
+end) == false)
+assert(pcall(function()
+    game.achievements.list({
+        unknown = true
+    })
+end) == false)
+assert(pcall(function()
+    game.achievements.definition(
+        game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_manual_achievement_controls_are_write_gated",
+           "[lua][bindings][achievements][write][integration]" )
+{
+    const achievement_id test_id(
+        "lua_test_manual_achievement" );
+    REQUIRE( test_id.is_valid() );
+    achievements_tracker &tracker =
+        get_achievements();
+    if( tracker.valid_achievements().
+        empty() ) {
+        get_event_bus().send<
+        event_type::game_start>(
+            "lua-achievement-test" );
+    }
+    const bool enabled_before =
+        tracker.is_enabled();
+    REQUIRE( tracker.reset_manual_achievement(
+                 test_id.obj() ) );
+    on_out_of_scope cleanup( [
+                              &tracker, test_id,
+                              enabled_before
+                            ]() {
+        tracker.reset_manual_achievement(
+            test_id.obj() );
+        tracker.set_enabled(
+            enabled_before );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local id = game.types.id(
+    "achievement",
+    "lua_test_manual_achievement")
+local disabled =
+    game.achievements.set_enabled(false)
+assert(disabled.ok == true)
+assert(disabled.value.after == false)
+local enabled =
+    game.achievements.set_enabled(true)
+assert(enabled.ok == true)
+assert(enabled.value.after == true)
+
+local completed = game.achievements.report(
+    id, "completed")
+assert(completed.ok == true)
+assert(completed.value.completion ==
+    "completed")
+assert(completed.value.completed == true)
+local duplicate = game.achievements.report(
+    id, "failed")
+assert(duplicate.ok == false)
+assert(duplicate.error.code == "not_pending")
+
+local reset = game.achievements.reset(id)
+assert(reset.ok == true)
+assert(reset.value.before == "completed")
+assert(reset.value.after == "pending")
+assert(reset.value.achievement.pending == true)
+
+local failed = game.achievements.report(
+    id, "failed")
+assert(failed.ok == true)
+assert(failed.value.completion == "failed")
+assert(failed.value.failed == true)
+local reset_failed = game.achievements.reset(id)
+assert(reset_failed.ok == true)
+assert(reset_failed.value.before == "failed")
+assert(reset_failed.value.after == "pending")
+
+local automatic = game.achievements.list({
+    manually_given = false,
+    valid = true,
+    limit = 1
+})
+assert(automatic.ok == true)
+assert(automatic.value.returned == 1)
+local rejected = game.achievements.report(
+    automatic.value.items[1].id,
+    "completed")
+assert(rejected.ok == false)
+assert(rejected.error.code == "not_manual")
+assert(pcall(function()
+    game.achievements.report(id, "pending")
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+    CHECK( tracker.is_completed(
+               test_id ) ==
+           achievement_completion::pending );
+    CHECK( tracker.is_enabled() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.achievements.set_enabled(false)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts(
+                     error ) );
+    CHECK( error.find( "game.write" ) !=
+           std::string::npos );
+    CHECK( tracker.is_enabled() );
+}
+
+TEST_CASE( "lua_v5_statistics_and_event_history_are_bounded",
+           "[lua][bindings][statistics][read][integration]" )
+{
+    if( get_stats().valid_scores().
+        empty() &&
+        get_achievements().
+        valid_achievements().empty() ) {
+        get_event_bus().send<
+        event_type::game_start>(
+            "lua-statistics-test" );
+    }
+    get_event_bus().send<
+    event_type::game_begin>(
+        "lua-statistics-event" );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local stat_id = game.types.id(
+    "event_statistic",
+    "num_avatar_enters_oter_test")
+local definitions = game.statistics.definitions({
+    offset = 0,
+    limit = 1000000,
+    query = "NUM_AVATAR_ENTERS_OTER_TEST"
+})
+assert(definitions.limit == 256)
+assert(definitions.total == 1)
+assert(definitions.returned == 1)
+local definition =
+    game.statistics.definition(stat_id)
+assert(definition.id == stat_id)
+assert(type(definition.description) ==
+    "string")
+assert(type(definition.type) == "string")
+assert(type(definition.monotonicity) ==
+    "string")
+assert(definition.sources.returned ==
+    #definition.sources.items)
+
+local current = game.statistics.value(stat_id)
+assert(current.ok == true)
+assert(current.value.id == stat_id)
+assert(current.value.value.type == "int")
+assert(math.type(
+    current.value.value.value) == "integer")
+assert(current.value.value.value >= 0)
+assert(type(current.value.value.raw) == "string")
+assert(current.value.value.valid == true)
+
+local values = game.statistics.values({
+    query = "num_avatar_enters_oter_test",
+    limit = 1
+})
+assert(values.ok == true)
+assert(values.value.returned == 1)
+assert(values.value.items[1].id == stat_id)
+
+local transform_id = game.types.id(
+    "event_transformation",
+    "avatar_enters_oter_test")
+assert(transform_id:is_valid() == true)
+local transformations =
+    game.statistics.transformations({
+        query = "avatar_enters_oter_test",
+        limit = 1
+    })
+assert(transformations.total == 1)
+assert(transformations.items[1].id ==
+    transform_id)
+assert(transformations.items[1].fields.returned ==
+    #transformations.items[1].fields.items)
+local transformed =
+    game.statistics.transformation(
+        transform_id, { limit = 1 })
+assert(transformed.ok == true)
+assert(transformed.value.id == transform_id)
+assert(transformed.value.events.event_count >= 0)
+assert(transformed.value.events.returned ==
+    #transformed.value.events.items)
+
+local event_types = game.statistics.event_types({
+    query = "GAME_BEGIN",
+    limit = 1000000
+})
+assert(event_types.limit == 256)
+assert(event_types.total == 1)
+local event_type = event_types.items[1]
+assert(event_type.name == "game_begin")
+assert(event_type.count >= 1)
+assert(#event_type.fields == 1)
+assert(event_type.fields[1].name ==
+    "cdda_version")
+assert(event_type.fields[1].type ==
+    "string")
+
+local history = game.statistics.event(
+    "game_begin", { limit = 1000000 })
+assert(history.ok == true)
+assert(history.value.name == "game_begin")
+assert(history.value.events.limit == 256)
+assert(history.value.events.event_count >= 1)
+assert(history.value.events.returned ==
+    #history.value.events.items)
+local partition =
+    history.value.events.items[1]
+assert(partition.count >= 1)
+assert(partition.first.turn <=
+    partition.last.turn)
+assert(partition.data.cdda_version.type ==
+    "string")
+assert(partition.data.cdda_version.value ==
+    "lua-statistics-event")
+
+local scores = game.statistics.scores({
+    offset = 0,
+    limit = 1
+})
+assert(scores.ok == true)
+assert(scores.value.returned == 1)
+local score = scores.value.items[1]
+assert(score.id.kind == "score")
+assert(type(score.description) == "string")
+assert(type(score.valid) == "boolean")
+assert(type(score.value.type) == "string")
+local exact_score =
+    game.statistics.score(score.id)
+assert(exact_score.ok == true)
+assert(exact_score.value.id == score.id)
+
+assert(pcall(function()
+    game.statistics.definitions({
+        offset = -1
+    })
+end) == false)
+assert(pcall(function()
+    game.statistics.values({
+        unknown = true
+    })
+end) == false)
+assert(pcall(function()
+    game.statistics.value(
+        game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.statistics.event(
+        "__unknown_event__", {})
+end) == false)
+assert(pcall(function()
+    game.statistics.event(
+        "game_begin", { query = "bad" })
+end) == false)
+assert(pcall(function()
+    game.statistics.transformation(
+        game.types.id("item", "rock"), {})
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_native_calendar_is_snapshot_based_and_checked",
+           "[lua][bindings][time][integration]" )
+{
+    scoped_calendar_turn turn;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local original = game.time.now()
+local snapshot = game.time.snapshot()
+assert(snapshot.point == original)
+assert(snapshot.turn == original.turn)
+assert(type(snapshot.display) == "string")
+assert(type(snapshot.time_of_day) == "string")
+assert(math.type(snapshot.year) == "integer")
+assert(math.type(snapshot.day_of_year) == "integer")
+assert(math.type(snapshot.hour) == "integer")
+assert(math.type(snapshot.minute) == "integer")
+assert(math.type(snapshot.second) == "integer")
+assert(type(snapshot.season.id) == "string")
+assert(math.type(snapshot.season.index) == "integer")
+assert(type(snapshot.season.name) == "string")
+assert(math.type(snapshot.season.day) == "integer")
+assert(type(snapshot.moon_phase) == "string")
+assert(type(snapshot.is_day) == "boolean")
+assert(type(snapshot.is_night) == "boolean")
+assert(type(snapshot.is_dawn) == "boolean")
+assert(type(snapshot.is_dusk) == "boolean")
+assert(type(snapshot.is_twilight) == "boolean")
+assert(snapshot.sunrise.turn <= snapshot.sunset.turn)
+assert(type(snapshot.daylight.turn) == "number")
+assert(type(snapshot.nightfall.turn) == "number")
+assert(type(snapshot.noon.turn) == "number")
+
+local detached_season = snapshot.season.id
+snapshot.season.id = "detached"
+assert(game.time.snapshot().season.id ==
+    detached_season)
+
+local calendar = game.time.calendar()
+assert(calendar.now.point == original)
+assert(calendar.turn_zero.turn == 0)
+assert(type(calendar.start_of_cataclysm.turn) ==
+    "number")
+assert(type(calendar.start_of_game.turn) ==
+    "number")
+assert(calendar.season_length.turns > 0)
+assert(calendar.year_length.turns ==
+    calendar.season_length.turns * 4)
+assert(calendar.turn_zero_offset.turns >= 0)
+assert(type(calendar.initial_season.id) == "string")
+assert(type(calendar.eternal_season) == "boolean")
+assert(type(calendar.eternal_day) == "boolean")
+assert(type(calendar.eternal_night) == "boolean")
+
+local limits = game.time.limits()
+assert(limits.minimum.turn == limits.minimum_turn)
+assert(limits.maximum.turn == limits.maximum_turn)
+assert(limits.minimum_turn == 0)
+assert(limits.maximum_turn > limits.minimum_turn)
+assert(limits.set_now_simulates_turns == false)
+
+local minute = game.time.duration(1, "minute")
+local target = original + minute
+local conflict = game.time.set_now(
+    target, original + game.time.duration(1, "turn"))
+assert(conflict.ok == false)
+assert(conflict.error.code == "conflict")
+assert(game.time.now() == original)
+
+local changed = game.time.set_now(target, original)
+assert(changed.ok == true)
+assert(changed.value.previous.point == original)
+assert(changed.value.current.point == target)
+assert(changed.value.delta.turns == 60)
+assert(changed.value.simulated_turns == false)
+assert(game.time.now() == target)
+
+local advanced = game.time.advance(
+    game.time.duration(-30, "second"), target)
+assert(advanced.ok == true)
+local halfway = original +
+    game.time.duration(30, "second")
+assert(game.time.now() == halfway)
+assert(advanced.value.delta.turns == -30)
+
+local restored = game.time.set_now(
+    original, halfway)
+assert(restored.ok == true)
+assert(game.time.now() == original)
+
+assert(pcall(function()
+    game.time.snapshot(game.time.point(-1))
+end) == false)
+local at_zero = game.time.set_now(
+    game.time.turn_zero(), original)
+assert(at_zero.ok == true)
+assert(pcall(function()
+    game.time.advance(
+        game.time.duration(-1, "turn"),
+        game.time.turn_zero())
+end) == false)
+assert(game.time.set_now(
+    original, game.time.turn_zero()).ok == true)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+    CHECK( calendar::turn ==
+           turn.original() );
+}
+
+TEST_CASE( "lua_v5_native_weather_catalog_and_forecast_are_bounded",
+           "[lua][bindings][weather][read][integration]" )
+{
+    scoped_weather_state weather;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local clear_id = game.types.id(
+    "weather_type", "clear")
+local clear = game.weather.type(clear_id)
+assert(clear.id == clear_id)
+assert(type(clear.name) == "string")
+assert(type(clear.loaded) == "boolean")
+assert(type(clear.symbol) == "string")
+assert(type(clear.sun_symbol) == "string")
+assert(math.type(clear.ranged_penalty) == "integer")
+assert(type(clear.sight_penalty) == "number")
+assert(math.type(clear.light_modifier) == "integer")
+assert(type(clear.light_multiplier) == "number")
+assert(type(clear.sun_multiplier) == "number")
+assert(math.type(clear.sound_attenuation) == "integer")
+assert(type(clear.dangerous) == "boolean")
+assert(type(clear.precipitation) == "string")
+assert(type(clear.precipitation_mm_per_hour) ==
+    "number")
+assert(type(clear.rains) == "boolean")
+assert(type(clear.temperature_modifier_c) == "number")
+assert(math.type(clear.priority) == "integer")
+assert(type(clear.tiles_animation) == "string")
+assert(type(clear.sound_category) == "string")
+assert(type(clear.duration_min.turns) == "number")
+assert(clear.duration_max.turns >=
+    clear.duration_min.turns)
+assert(clear.required_weathers.returned ==
+    #clear.required_weathers.items)
+assert(clear.sources.returned ==
+    #clear.sources.items)
+
+local types = game.weather.types({
+    offset = 0,
+    limit = 1000000,
+    query = "clear",
+    dangerous = false,
+    rains = false
+})
+assert(types.limit == 256)
+assert(types.returned <= 256)
+assert(types.returned <= types.total)
+local found_clear = false
+for _, entry in ipairs(types.items) do
+    if entry.id == clear_id then
+        found_clear = true
+    end
+end
+assert(found_clear)
+
+local current = game.weather.current()
+assert(current.weather.kind == "weather_type")
+assert(current.weather:is_valid() == true)
+assert(current.type.id == current.weather)
+assert(current.temperature.kind == "temperature")
+assert(type(current.temperature_c) == "number")
+assert(math.type(current.wind_speed_mph) == "integer")
+assert(math.type(current.wind_direction_degrees) ==
+    "integer")
+assert(type(current.next_update.turn) == "number")
+assert(type(current.changed) == "boolean")
+assert(type(current.lightning_active) == "boolean")
+assert(current.precise.at == game.time.now())
+assert(current.precise.weather == current.weather)
+assert(current.precise.temperature.kind ==
+    "temperature")
+assert(type(current.precise.humidity) == "number")
+assert(type(current.precise.pressure) == "number")
+assert(type(current.precise.wind_speed_mph) ==
+    "number")
+assert(math.type(
+    current.precise.wind_direction_degrees) ==
+    "integer")
+assert(current.precise.position.origin == "abs")
+assert(current.precise.position.scale == "ms")
+
+local generator = game.weather.generator()
+assert(generator.id.kind == "weather_generator")
+assert(generator.id:is_valid() == true)
+assert(type(generator.loaded) == "boolean")
+assert(type(generator.base_temperature_c) ==
+    "number")
+assert(type(generator.base_humidity) == "number")
+assert(type(generator.base_pressure) == "number")
+assert(type(generator.base_wind_mph) == "number")
+assert(generator.blacklist.returned ==
+    #generator.blacklist.items)
+assert(generator.whitelist.returned ==
+    #generator.whitelist.items)
+assert(generator.sorted_weather.returned ==
+    #generator.sorted_weather.items)
+assert(type(generator.seasonal.spring) == "table")
+assert(type(generator.seasonal.winter) == "table")
+
+local forecast = game.weather.forecast({
+    start = game.time.now(),
+    position = current.precise.position,
+    step = game.time.duration(1, "minute"),
+    limit = 1000000,
+    respect_override = false
+})
+assert(forecast.limit == 168)
+assert(forecast.returned == 168)
+assert(#forecast.items == 168)
+assert(forecast.start == game.time.now())
+assert(forecast.step.turns == 60)
+assert(forecast.position ==
+    current.precise.position)
+assert(forecast.respected_override == false)
+for index, point in ipairs(forecast.items) do
+    assert(point.at.turn ==
+        forecast.start.turn + (index - 1) * 60)
+    assert(point.weather:is_valid() == true)
+    assert(point.temperature.kind == "temperature")
+    assert(type(point.temperature_c) == "number")
+    assert(type(point.humidity) == "number")
+    assert(type(point.pressure) == "number")
+    assert(type(point.precipitation_mm_per_hour) ==
+        "number")
+    assert(type(point.sunlight) == "number")
+    assert(type(point.sun_irradiance) == "number")
+    assert(type(point.moonlight) == "number")
+end
+local repeated = game.weather.forecast({
+    start = forecast.start,
+    position = forecast.position,
+    step = forecast.step,
+    limit = 1,
+    respect_override = false
+})
+assert(repeated.items[1].weather ==
+    forecast.items[1].weather)
+assert(repeated.items[1].temperature ==
+    forecast.items[1].temperature)
+assert(repeated.items[1].humidity ==
+    forecast.items[1].humidity)
+
+local limits = game.weather.limits()
+assert(limits.catalog_limit == 256)
+assert(limits.forecast_limit == 168)
+assert(limits.forecast_minimum_step.turns == 60)
+assert(limits.forecast_maximum_step.turns >
+    limits.forecast_minimum_step.turns)
+assert(limits.forecast_maximum_horizon.turns > 0)
+assert(limits.maximum_wind_speed_mph == 300)
+assert(limits.maximum_temperature_kelvin == 1000)
+
+assert(pcall(function()
+    game.weather.types({ unknown = true })
+end) == false)
+assert(pcall(function()
+    game.weather.type(
+        game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.weather.forecast({
+        step = game.time.duration(1, "second")
+    })
+end) == false)
+assert(pcall(function()
+    game.weather.forecast({
+        step = game.time.duration(24, "hour"),
+        limit = 168
+    })
+end) == false)
+assert(pcall(function()
+    game.weather.forecast({
+        position = game.coords.tripoint(
+            "rel", "ms", 0, 0, 0)
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_native_weather_overrides_are_checked_and_reversible",
+           "[lua][bindings][weather][write][integration]" )
+{
+    scoped_weather_state weather;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local clear_id = game.types.id(
+    "weather_type", "clear")
+local forced = game.weather.set_override(clear_id)
+assert(forced.ok == true)
+assert(forced.value.weather == clear_id)
+assert(forced.value.weather_override == clear_id)
+
+local temperature =
+    game.units.new("temperature", 21, "celsius")
+local heated =
+    game.weather.set_temperature_override(
+        temperature)
+assert(heated.ok == true)
+assert(heated.value.temperature_override.kind ==
+    "temperature")
+assert(heated.value.temperature_override:value(
+    "celsius") > 20.99)
+assert(heated.value.temperature_override:value(
+    "celsius") < 21.01)
+
+local wind = game.weather.set_wind({
+    speed_mph = 37,
+    direction_degrees = 91
+})
+assert(wind.ok == true)
+assert(wind.value.wind_speed_override_mph == 37)
+assert(wind.value.wind_direction_override_degrees ==
+    91)
+assert(wind.value.wind_speed_mph == 37)
+assert(wind.value.wind_direction_degrees == 91)
+
+local cleared_temperature =
+    game.weather.clear_temperature_override()
+assert(cleared_temperature.ok == true)
+assert(cleared_temperature.value.temperature_override ==
+    nil)
+local cleared_weather =
+    game.weather.clear_override()
+assert(cleared_weather.ok == true)
+assert(cleared_weather.value.weather_override == nil)
+local cleared_wind = game.weather.set_wind({
+    clear_speed = true,
+    clear_direction = true
+})
+assert(cleared_wind.ok == true)
+assert(cleared_wind.value.wind_speed_override_mph ==
+    nil)
+assert(cleared_wind.value.
+    wind_direction_override_degrees == nil)
+
+assert(game.weather.set_override(clear_id).ok == true)
+assert(game.weather.set_temperature_override(
+    game.units.new("temperature", 280, "kelvin")
+).ok == true)
+assert(game.weather.set_wind({
+    speed_mph = 12,
+    direction_degrees = 270
+}).ok == true)
+local cleared = game.weather.clear_overrides()
+assert(cleared.ok == true)
+assert(cleared.value.weather_override == nil)
+assert(cleared.value.temperature_override == nil)
+assert(cleared.value.wind_speed_override_mph == nil)
+assert(cleared.value.
+    wind_direction_override_degrees == nil)
+assert(game.weather.refresh().ok == true)
+
+assert(pcall(function()
+    game.weather.set_override(
+        game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.weather.set_temperature_override(
+        game.units.new("mass", 1, "gram"))
+end) == false)
+assert(pcall(function()
+    game.weather.set_temperature_override(
+        game.units.new(
+            "temperature", 1001, "kelvin"))
+end) == false)
+assert(pcall(function()
+    game.weather.set_wind({})
+end) == false)
+assert(pcall(function()
+    game.weather.set_wind({
+        speed_mph = 301
+    })
+end) == false)
+assert(pcall(function()
+    game.weather.set_wind({
+        direction_degrees = 360
+    })
+end) == false)
+assert(pcall(function()
+    game.weather.set_wind({
+        speed_mph = 1,
+        clear_speed = true
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts(
+                 error ) );
+    CHECK( error.empty() );
 }
 
 TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
@@ -3923,10 +8065,17 @@ TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
     using namespace cata::lua_ui;
 
     const std::vector<std::string> &kinds = supported_game_id_kinds();
-    REQUIRE( kinds.size() == 41 );
+    REQUIRE( kinds.size() == 131 );
     CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
     CHECK( std::adjacent_find( kinds.begin(), kinds.end() ) == kinds.end() );
+    CHECK( is_supported_game_id_kind( "achievement" ) );
+    CHECK( is_supported_game_id_kind( "effect_on_condition" ) );
     CHECK( is_supported_game_id_kind( "item" ) );
+    CHECK( is_supported_game_id_kind( "npc_template" ) );
+    CHECK( is_supported_game_id_kind( "proficiency" ) );
+    CHECK( is_supported_game_id_kind( "vehicle_prototype" ) );
+    CHECK( is_supported_game_id_kind( "weather_type" ) );
+    CHECK( is_supported_game_id_kind( "zone" ) );
     CHECK_FALSE( is_supported_game_id_kind( "missing" ) );
 
     const script_game_id rock( "item", "rock" );
@@ -3973,9 +8122,9 @@ assert(id == game.types.id("item", "rock"))
 assert(id ~= game.types.id("monster", "rock"))
 assert(pcall(function() id.value = "stick" end) == false)
 local kinds = game.types.id_kinds()
-assert(#kinds == 41)
+assert(#kinds == 131)
 kinds[1] = "mutated"
-assert(game.types.id_kinds()[1] == "activity")
+assert(game.types.id_kinds()[1] == "achievement")
 )lua" );
     REQUIRE( result.valid() );
 }
@@ -5107,7 +9256,7 @@ assert(string.find(error, "nesting limit", 1, true) ~= nil)
     local ok, error = pcall(
         require, "test_limits.budget_" .. tostring(index))
     if index < )lua" +
-                                            std::to_string( maximum_modules_per_source ) + R"lua( then
+                  std::to_string( maximum_modules_per_source ) + R"lua( then
         assert(ok)
     else
         assert(ok == false)
@@ -5382,6 +9531,326 @@ end)
     const cata::lua_ui::runtime_status status = cata::lua_ui::status();
     CHECK( status.page_count == 1 );
     CHECK( status.callback_count == 0 );
+}
+
+TEST_CASE( "lua_action_menu_entries_are_owned_bounded_and_callback_scoped",
+           "[lua][ui][action_menu][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.read", "state.character", "ui.pages"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+state.character.set("action_menu.invocations", 0)
+local top_level_random = pcall(function()
+    game.random.int(1, 1)
+end)
+assert(top_level_random == false)
+
+local removed = game.action_menu.register({
+    id = "removed", name = "Removed"
+}, function()
+    error("removed action ran")
+end)
+assert(game.action_menu.off(removed) == true)
+assert(game.action_menu.off(removed) == false)
+
+local action = game.action_menu.register({
+    id = "inspect_status",
+    name = "Inspect status",
+    category = "info",
+    hotkey = "i"
+}, function()
+    assert(game.random.int(1, 1) == 1)
+    state.character.set(
+        "action_menu.invocations",
+        state.character.get("action_menu.invocations", 0) + 1)
+end)
+local replacement = game.action_menu.register({
+    id = "inspect_status",
+    name = "Inspect status",
+    category = "info",
+    hotkey = "i"
+}, function()
+    assert(game.random.int(1, 1) == 1)
+    state.character.set(
+        "action_menu.invocations",
+        state.character.get("action_menu.invocations", 0) + 1)
+end)
+assert(action == replacement)
+
+local entries = game.action_menu.list()
+assert(#entries == 1)
+assert(entries[1].registration_id == action)
+assert(entries[1].id == "inspect_status")
+assert(entries[1].name == "Inspect status")
+assert(entries[1].category == "info")
+assert(entries[1].source == "user")
+assert(entries[1].enabled == true)
+local limits = game.action_menu.limits()
+assert(limits.entries == 128)
+assert(limits.entries_per_source == 32)
+assert(limits.callback_instructions > 0)
+assert(pcall(function()
+    game.action_menu.register({
+        id = "../invalid", name = "Invalid"
+    }, function() end)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    const runtime_status before = status();
+    CHECK( before.action_menu_entry_count == 1 );
+
+    const std::vector<action_menu_entry_info> entries =
+        registered_action_menu_entries();
+    REQUIRE( entries.size() == 1 );
+    CHECK( entries.front().id == "inspect_status" );
+    CHECK( entries.front().name == "Inspect status" );
+    CHECK( entries.front().category == "info" );
+    CHECK( entries.front().source == "user" );
+    CHECK( entries.front().hotkey == 'i' );
+    CHECK( entries.front().enabled );
+    REQUIRE( invoke_action_menu_entry(
+                 entries.front().registration_id ) );
+
+    script.write( R"lua(
+assert(state.character.get("action_menu.invocations", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    CHECK( status().action_menu_entry_count == 0 );
+}
+
+TEST_CASE( "lua_sidebar_widgets_are_owned_bounded_and_callback_scoped",
+           "[lua][ui][sidebar][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.read", "state.character", "ui.pages"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+assert(type(sidebar) == "table")
+assert(type(game.sidebar) == "table")
+assert(#sidebar.get_layout_id() > 0)
+state.character.set("sidebar.draws", 0)
+
+sidebar.register_widget({
+    id = "temporary",
+    draw = function() return "temporary" end
+})
+assert(sidebar.clear_widgets() == 1)
+
+local removed = sidebar.register_widget({
+    id = "removed",
+    draw = function() error("removed widget ran") end
+})
+assert(sidebar.off(removed) == true)
+assert(sidebar.off(removed) == false)
+
+local widget = sidebar.register_widget({
+    id = "status",
+    name = "Lua status",
+    height = 4,
+    order = 2,
+    default_toggle = false,
+    redraw_every_frame = true,
+    panel_visible = function()
+        return game.random.int(1, 1) == 1
+    end,
+    draw = function(width, height)
+        assert(width == 40)
+        assert(height == 4)
+        assert(game.random.int(1, 1) == 1)
+        state.character.set(
+            "sidebar.draws",
+            state.character.get("sidebar.draws", 0) + 1)
+        return "first", {
+            { text = "second", color = "light_green" },
+            "third\nfourth"
+        }
+    end
+})
+local replacement = sidebar.register({
+    id = "status",
+    name = "Lua status",
+    height = 4,
+    order = 2,
+    default_toggle = false,
+    redraw_every_frame = true,
+    panel_visible = function()
+        return game.random.int(1, 1) == 1
+    end,
+    draw = function(width, height)
+        assert(width == 40)
+        assert(height == 4)
+        assert(game.random.int(1, 1) == 1)
+        state.character.set(
+            "sidebar.draws",
+            state.character.get("sidebar.draws", 0) + 1)
+        return "first", {
+            { text = "second", color = "light_green" },
+            "third\nfourth"
+        }
+    end
+})
+assert(widget == replacement)
+
+sidebar.register_widget({
+    id = "broken",
+    name = "Broken widget",
+    draw = function()
+        return string.rep("x", 32769)
+    end
+})
+
+local entries = sidebar.list()
+assert(#entries == 2)
+assert(entries[1].id == "status")
+assert(entries[1].key == "lua:user:status")
+assert(entries[1].source == "user")
+assert(entries[1].height == 4)
+assert(entries[1].order == 2)
+assert(entries[1].default_toggle == false)
+assert(entries[1].redraw_every_frame == true)
+assert(entries[1].enabled == true)
+local limits = sidebar.limits()
+assert(limits.widgets == 64)
+assert(limits.widgets_per_source == 16)
+assert(limits.lines == 64)
+assert(limits.output_bytes == 32768)
+assert(limits.callback_instructions > 0)
+assert(pcall(function()
+    sidebar.register_widget({
+        id = "bad_height",
+        height = 0,
+        draw = function() return "" end
+    })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    CHECK( status().sidebar_widget_count == 2 );
+
+    std::vector<sidebar_widget_info> widgets =
+        registered_sidebar_widgets();
+    REQUIRE( widgets.size() == 2 );
+    CHECK( widgets[0].key == "lua:user:status" );
+    CHECK( widgets[0].name == "Lua status" );
+    CHECK( widgets[0].source == "user" );
+    CHECK( widgets[0].height == 4 );
+    REQUIRE( widgets[0].order );
+    CHECK( *widgets[0].order == 2 );
+    CHECK_FALSE( widgets[0].default_toggle );
+    CHECK( widgets[0].redraw_every_frame );
+    CHECK( widgets[0].enabled );
+
+    panel_manager::get_manager().init();
+    panel_layout &layout =
+        panel_manager::get_manager().get_current_layout();
+    auto panel = std::find_if(
+                     layout.panels().begin(), layout.panels().end(),
+    []( const window_panel & candidate ) {
+        return candidate.get_id() == "lua:user:status";
+    } );
+    REQUIRE( panel != layout.panels().end() );
+    CHECK( panel->get_name() == "Lua status" );
+    CHECK( panel->get_height() == 4 );
+    CHECK_FALSE( panel->toggle );
+    CHECK( panel->always_draw );
+
+    REQUIRE( sidebar_widget_visible(
+                 "lua:user:status" ) );
+    const std::vector<sidebar_widget_line> lines =
+        render_sidebar_widget(
+            "lua:user:status", 40, 4 );
+    REQUIRE( lines.size() == 4 );
+    CHECK( lines[0].text == "first" );
+    CHECK( lines[0].color == "light_gray" );
+    CHECK( lines[1].text == "second" );
+    CHECK( lines[1].color == "light_green" );
+    CHECK( lines[2].text == "third" );
+    CHECK( lines[3].text == "fourth" );
+
+    CHECK( render_sidebar_widget(
+               "lua:user:broken", 40, 1 ).empty() );
+    widgets = registered_sidebar_widgets();
+    REQUIRE( widgets.size() == 2 );
+    CHECK( widgets[0].enabled );
+    CHECK_FALSE( widgets[1].enabled );
+
+    panel->toggle = true;
+    script.write( R"lua(
+assert(state.character.get("sidebar.draws", 0) == 1)
+sidebar.register_widget({
+    id = "status",
+    name = "Lua status reloaded",
+    height = 3,
+    draw = function()
+        return "reloaded"
+    end
+})
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    widgets = registered_sidebar_widgets();
+    REQUIRE( widgets.size() == 1 );
+    CHECK( widgets[0].key == "lua:user:status" );
+    panel_layout &hot_layout =
+        panel_manager::get_manager().get_current_layout();
+    panel = std::find_if(
+                hot_layout.panels().begin(),
+                hot_layout.panels().end(),
+    []( const window_panel & candidate ) {
+        return candidate.get_id() == "lua:user:status";
+    } );
+    REQUIRE( panel != hot_layout.panels().end() );
+    CHECK( panel->get_name() == "Lua status reloaded" );
+    CHECK( panel->get_height() == 3 );
+    CHECK( panel->toggle );
+
+    script.write( "this is not valid Lua(" );
+    CHECK_FALSE( reload_scripts( error ) );
+    CHECK( registered_sidebar_widgets().size() == 1 );
+    CHECK( std::any_of(
+               hot_layout.panels().begin(),
+               hot_layout.panels().end(),
+    []( const window_panel & candidate ) {
+        return candidate.get_id() == "lua:user:status";
+    } ) );
+
+    script.write( R"lua(
+assert(state.character.get("sidebar.draws", 0) == 1)
+assert(sidebar.clear_widgets() == 0)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    CHECK( registered_sidebar_widgets().empty() );
+    CHECK( status().sidebar_widget_count == 0 );
+    panel_layout &reloaded_layout =
+        panel_manager::get_manager().get_current_layout();
+    CHECK_FALSE( std::any_of(
+                     reloaded_layout.panels().begin(),
+                     reloaded_layout.panels().end(),
+    []( const window_panel & candidate ) {
+        return candidate.get_id().compare(
+                   0, 4, "lua:" ) == 0;
+    } ) );
 }
 
 TEST_CASE( "lua_game_snapshots_are_bounded_read_only_values", "[lua][ui][game][integration]" )
@@ -5690,6 +10159,417 @@ assert(negative_ok == false)
     CHECK( player.inv_dump().size() == inventory_size_before );
     CHECK( calendar::turn == turn_before );
     CHECK( get_weather_const().weather_id == weather_before );
+}
+
+TEST_CASE( "lua_v5_game_info_services_are_bounded_and_callback_scoped",
+           "[lua][bindings][game_services][info]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "events", "game.actions", "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local constants = game.constants.snapshot()
+assert(type(constants) == "table")
+assert(type(constants.body_temperature) == "table")
+assert(type(constants.body_temperature.cold_c) == "number")
+assert(type(constants.body_temperature.normal_c) == "number")
+assert(type(constants.body_temperature.hot_c) == "number")
+assert(constants.body_temperature.cold_c <
+       constants.body_temperature.normal_c)
+assert(constants.body_temperature.normal_c <
+       constants.body_temperature.hot_c)
+assert(type(constants.lighting.ambient_lit) == "number")
+
+local empty = game.messages.recent(0)
+assert(empty.returned == 0)
+assert(empty.limit == 0)
+assert(#empty.items == 0)
+assert(math.type(empty.total) == "integer")
+assert(pcall(function() game.messages.recent(-1) end) == false)
+assert(pcall(function() game.messages.recent(257) end) == false)
+
+local random_ok, random_error = pcall(function()
+    game.random.int(1, 1)
+end)
+assert(random_ok == false)
+assert(string.find(random_error, "active callback", 1, true) ~= nil)
+local message_ok, message_error = pcall(function()
+    game.messages.add("outside callback")
+end)
+assert(message_ok == false)
+assert(string.find(message_error, "active callback", 1, true) ~= nil)
+
+events.on("game_begin", function()
+    assert(game.random.int(37, 37) == 37)
+    assert(game.random.chance(0, 1) == false)
+    assert(game.random.chance(1, 1) == true)
+    assert(pcall(function() game.random.int(2, 1) end) == false)
+    assert(pcall(function() game.random.chance(-1, 1) end) == false)
+    assert(pcall(function()
+        game.messages.add("bad type", "unknown")
+    end) == false)
+
+    game.messages.add("ccb-lua-v5-message-service", "info")
+    local recent = game.messages.recent(1)
+    assert(recent.returned == 1)
+    assert(#recent.items == 1)
+    assert(string.find(
+        recent.items[1].text,
+        "ccb-lua-v5-message-service",
+        1,
+        true) ~= nil)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    get_event_bus().send<event_type::game_begin>(
+        "lua-game-info-services" );
+
+    const std::vector<std::pair<std::string, std::string>> recent =
+        Messages::recent_messages( 1 );
+    REQUIRE( recent.size() == 1 );
+    CHECK( recent.front().second.find(
+               "ccb-lua-v5-message-service" ) != std::string::npos );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_sound_and_targeting_services_validate_interactions",
+           "[lua][bindings][game_services][interaction]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "events", "game.actions" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local channels = game.sound.channels()
+assert(type(channels) == "table")
+assert(#channels == 31)
+assert(channels[1] == "any")
+
+local sound_ok, sound_error = pcall(function()
+    game.sound.play("menu_move", "default", 0)
+end)
+assert(sound_ok == false)
+assert(string.find(sound_error, "active callback", 1, true) ~= nil)
+local target_ok, target_error = pcall(function()
+    game.targeting.look_around()
+end)
+assert(target_ok == false)
+assert(string.find(target_error, "active callback", 1, true) ~= nil)
+
+events.on("game_begin", function()
+    game.sound.play("menu_move", "default", 0)
+    game.sound.play("menu_move", "default", 0, {
+        angle_degrees = 0,
+        pitch_min = -1,
+        pitch_max = -1
+    })
+    game.sound.play_ambient("environment", "daytime", 0, {
+        channel = "any",
+        fade_in_ms = 0,
+        pitch = -1,
+        loops = 0
+    })
+
+    assert(pcall(function()
+        game.sound.play("", "default", 0)
+    end) == false)
+    assert(pcall(function()
+        game.sound.play("menu_move", "default", 129)
+    end) == false)
+    assert(pcall(function()
+        game.sound.play("menu_move", "default", 0, {
+            pitch_min = 1
+        })
+    end) == false)
+    assert(pcall(function()
+        game.sound.play_ambient("environment", "daytime", 0, {
+            channel = "unknown"
+        })
+    end) == false)
+    assert(pcall(function()
+        game.sound.play_ambient("environment", "daytime", 0, {
+            loops = 101
+        })
+    end) == false)
+
+    assert(pcall(function()
+        game.targeting.choose_adjacent_for_action(
+            "Choose", "Nothing", "__missing_action__")
+    end) == false)
+    assert(pcall(function()
+        game.targeting.choose_adjacent_where(
+            "Choose", "Nothing", { 123 })
+    end) == false)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    get_event_bus().send<event_type::game_begin>(
+        "lua-game-interaction-services" );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_world_services_use_handles_and_guard_dangerous_relocation",
+           "[lua][bindings][game_services][world][integration]" )
+{
+    clear_creatures();
+    map &here = get_map();
+    avatar &player = get_avatar();
+    const tripoint_abs_ms player_before = player.pos_abs();
+
+    std::vector<tripoint_bub_ms> available;
+    for( const tripoint_bub_ms &candidate :
+         here.points_in_radius( player.pos_bub( here ), 8 ) ) {
+        if( candidate == player.pos_bub( here ) ||
+            candidate.z() != player.pos_bub( here ).z() ||
+            !here.passable( candidate ) ||
+            g->is_dangerous_tile( candidate ) ||
+            get_creature_tracker().creature_at<Creature>(
+                candidate, true ) != nullptr ) {
+            continue;
+        }
+        available.push_back( candidate );
+        if( available.size() == 3 ) {
+            break;
+        }
+    }
+    REQUIRE( available.size() == 3 );
+
+    const tripoint_bub_ms monster_position = available[0];
+    const tripoint_bub_ms hallucination_position = available[1];
+    npc &test_npc = spawn_npc(
+                        available[2].xy(), "test_talker" );
+    const character_id test_npc_id = test_npc.getID();
+    const tripoint_abs_ms monster_absolute =
+        here.get_abs( monster_position );
+    const tripoint_abs_ms hallucination_absolute =
+        here.get_abs( hallucination_position );
+    const tripoint_abs_ms npc_absolute = test_npc.pos_abs();
+
+    on_out_of_scope cleanup( [
+                                monster_position,
+                                hallucination_position,
+                                test_npc_id
+                              ]() {
+        if( monster *placed =
+                get_creature_tracker().creature_at<monster>(
+                    monster_position, true ) ) {
+            g->remove_zombie( *placed );
+        }
+        if( monster *hallucination =
+                get_creature_tracker().creature_at<monster>(
+                    hallucination_position, true ) ) {
+            g->remove_zombie( *hallucination );
+        }
+        g->remove_npc_follower( test_npc_id );
+        g->remove_npc( test_npc_id );
+        overmap_buffer.remove_npc( test_npc_id );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events",
+            "game.actions",
+            "game.actions.dangerous",
+            "game.read",
+            "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+
+    std::ostringstream lua;
+    lua << "local monster_position = game.coords.tripoint_abs_ms("
+        << monster_absolute.x() << ","
+        << monster_absolute.y() << ","
+        << monster_absolute.z() << ")\n";
+    lua << "local hallucination_position = game.coords.tripoint_abs_ms("
+        << hallucination_absolute.x() << ","
+        << hallucination_absolute.y() << ","
+        << hallucination_absolute.z() << ")\n";
+    lua << "local npc_position = game.coords.tripoint_abs_ms("
+        << npc_absolute.x() << ","
+        << npc_absolute.y() << ","
+        << npc_absolute.z() << ")\n";
+    lua << R"lua(
+local zombie = game.types.id("monster", "mon_zombie")
+local npc_lookup = game.creatures.at(npc_position)
+assert(npc_lookup.ok == true)
+local npc_handle = npc_lookup.value
+assert(game.creatures.snapshot(npc_handle).value.kind == "npc")
+
+local monster_bubble = game.world.to_bubble(monster_position)
+assert(monster_bubble.origin == "bub")
+assert(monster_bubble.scale == "ms")
+assert(game.world.to_absolute(monster_bubble) == monster_position)
+local monster_absolute_submap =
+    monster_position:project_to("submap")
+local monster_bubble_submap =
+    game.world.to_bubble(monster_absolute_submap)
+assert(monster_bubble_submap.origin == "bub")
+assert(monster_bubble_submap.scale == "sm")
+assert(game.world.to_absolute(monster_bubble_submap) ==
+       monster_absolute_submap)
+assert(pcall(function()
+    game.world.to_absolute(monster_position)
+end) == false)
+assert(pcall(function()
+    game.world.to_bubble(monster_bubble)
+end) == false)
+assert(pcall(function()
+    game.world.to_bubble(
+        monster_position:project_to("overmap_terrain"))
+end) == false)
+
+local spawn_ok, spawn_error = pcall(function()
+    game.spawns.monster(zombie, monster_position)
+end)
+assert(spawn_ok == false)
+assert(string.find(spawn_error, "active callback", 1, true) ~= nil)
+local relocation_ok, relocation_error = pcall(function()
+    game.relocation.local_at(
+        game.creatures.snapshot(game.creatures.avatar()).value.position)
+end)
+assert(relocation_ok == false)
+assert(string.find(relocation_error, "active callback", 1, true) ~= nil)
+
+events.on("game_begin", function()
+    local placed = game.spawns.monster(
+        zombie, monster_position, 0)
+    assert(placed.ok == true)
+    assert(placed.value.handle.kind == "creature")
+    assert(placed.value.handle:is_valid() == true)
+    assert(placed.value.position == monster_position)
+    local placed_snapshot =
+        game.creatures.snapshot(placed.value.handle)
+    assert(placed_snapshot.ok == true)
+    assert(placed_snapshot.value.kind == "monster")
+    assert(placed_snapshot.value.type_id ==
+           placed.value.monster.value)
+    assert(placed_snapshot.value.hallucination == false)
+
+    local hallucination = game.spawns.hallucination(
+        hallucination_position, {
+            monster = zombie,
+            lifespan = game.time.duration(1, "minute")
+        })
+    assert(hallucination.ok == true)
+    assert(hallucination.value.spawned == true)
+    assert(hallucination.value.handle:is_valid() == true)
+    local hallucination_snapshot =
+        game.creatures.snapshot(hallucination.value.handle)
+    assert(hallucination_snapshot.ok == true)
+    assert(hallucination_snapshot.value.hallucination == true)
+
+    assert(pcall(function()
+        game.spawns.monster(
+            game.types.id("item", "rock"),
+            monster_position)
+    end) == false)
+    assert(pcall(function()
+        game.spawns.monster(zombie, monster_position, 61)
+    end) == false)
+    assert(pcall(function()
+        game.spawns.hallucination(
+            hallucination_position, {
+                lifespan = game.time.duration(1, "turn")
+            })
+    end) == false)
+
+    local added = game.followers.add(npc_handle)
+    assert(added.ok == true)
+    assert(added.value.before == false)
+    assert(added.value.after == true)
+    assert(added.value.changed == true)
+    assert(game.followers.add(
+        npc_handle).value.changed == false)
+
+    local followers = game.followers.list()
+    assert(followers.ok == true)
+    local found = false
+    for _, entry in ipairs(followers.value.items) do
+        if entry.id == added.value.id then
+            found = true
+            assert(entry.available == true)
+            assert(entry.handle:is_valid() == true)
+        end
+    end
+    assert(found == true)
+
+    local removed = game.followers.remove(npc_handle)
+    assert(removed.ok == true)
+    assert(removed.value.before == true)
+    assert(removed.value.after == false)
+    assert(removed.value.changed == true)
+    assert(game.followers.remove(
+        npc_handle).value.changed == false)
+    local wrong_follower =
+        game.followers.add(game.creatures.avatar())
+    assert(wrong_follower.ok == false)
+    assert(wrong_follower.error.code == "wrong_subtype")
+
+    local avatar_handle = game.creatures.avatar()
+    local avatar_position =
+        game.creatures.snapshot(avatar_handle).value.position
+    local same_local =
+        game.relocation.local_at(avatar_position)
+    assert(same_local.ok == true)
+    assert(same_local.value.changed == false)
+    assert(same_local.value.position == avatar_position)
+
+    local avatar_omt =
+        avatar_position:project_to("overmap_terrain")
+    local same_overmap =
+        game.relocation.overmap_at(avatar_omt)
+    assert(same_overmap.ok == true)
+    assert(same_overmap.value.changed == false)
+    assert(same_overmap.value.overmap_terrain == avatar_omt)
+    assert(pcall(function()
+        game.relocation.local_at(avatar_omt)
+    end) == false)
+    assert(pcall(function()
+        game.relocation.overmap_at(avatar_position)
+    end) == false)
+end)
+)lua";
+    script.write( lua.str() );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    get_event_bus().send<event_type::game_begin>(
+        "lua-game-world-services" );
+
+    CHECK( player.pos_abs() == player_before );
+    CHECK( g->get_follower_list().count( test_npc_id ) == 0 );
+    monster *placed =
+        get_creature_tracker().creature_at<monster>(
+            monster_position, true );
+    REQUIRE( placed != nullptr );
+    CHECK_FALSE( placed->is_hallucination() );
+    monster *hallucination =
+        get_creature_tracker().creature_at<monster>(
+            hallucination_position, true );
+    REQUIRE( hallucination != nullptr );
+    CHECK( hallucination->is_hallucination() );
+    CHECK( cata::lua_ui::status().last_error.empty() );
 }
 
 TEST_CASE( "lua_game_actions_are_queued_validated_and_isolated",
@@ -6102,6 +10982,2258 @@ assert(game.state_get("test.good_event_count", 0) == 2)
 assert(game.state_get("test.bad_event_count", 0) == 1)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_hooks_are_described_ordered_owned_and_error_isolated",
+           "[lua][bindings][hooks][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.hooks.limits()
+assert(limits.hooks == 52)
+assert(limits.handlers == 1024)
+assert(limits.registered == 0)
+assert(limits.priority_min == -10000)
+assert(limits.priority_max == 10000)
+assert(limits.dispatch_depth == 16)
+assert(limits.instruction_budget > 0)
+
+local catalog = game.hooks.list()
+assert(#catalog == 52)
+local observed = game.hooks.describe("on_game_started")
+assert(observed.name == "on_game_started")
+assert(observed.mode == "observe")
+assert(observed.cancellable == false)
+assert(observed.requires_write == false)
+local intercept = game.hooks.describe("on_try_npc_interaction")
+assert(intercept.mode == "intercept")
+assert(intercept.cancellable == true)
+assert(intercept.requires_write == true)
+assert(#intercept.result_fields == 1)
+assert(intercept.result_fields[1] == "allow")
+local skill_info =
+    game.hooks.describe("on_character_display_skill_info")
+assert(skill_info.mode == "intercept")
+assert(skill_info.cancellable == false)
+assert(skill_info.result_fields[1] == "text")
+assert(pcall(function()
+    game.hooks.on("on_try_npc_interaction", function() end)
+end) == false)
+assert(pcall(function()
+    game.hooks.on("not_a_hook", function() end)
+end) == false)
+
+local removed = game.hooks.on("on_game_started", function()
+    error("removed hook ran")
+end)
+assert(game.hooks.off(removed) == true)
+assert(game.hooks.off(removed) == false)
+
+game.hooks.on("on_game_started", {
+    priority = 100, once = true
+}, function(payload)
+    assert(payload.hook == "on_game_started")
+    assert(payload.mode == "observe")
+    assert(payload.cancellable == false)
+    local order = state.character.get("hooks.order", "")
+    state.character.set("hooks.order", order .. "H")
+end)
+
+game.hooks.on("on_game_started", {
+    priority = 50
+}, function()
+    local count = state.character.get("hooks.bad", 0)
+    state.character.set("hooks.bad", count + 1)
+    error("expected isolated hook failure")
+end)
+
+game.hooks.on("on_game_started", {
+    priority = -100
+}, function()
+    local order = state.character.get("hooks.order", "")
+    state.character.set("hooks.order", order .. "L")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( cata::lua_ui::has_native_hook( "on_game_started" ) );
+    CHECK_FALSE( cata::lua_ui::has_native_hook(
+                     "on_weather_updated" ) );
+    CHECK( cata::lua_ui::dispatch_native_hook(
+               "on_game_started" ) );
+    CHECK( cata::lua_ui::status().last_error.find(
+               "expected isolated hook failure" ) != std::string::npos );
+    CHECK( cata::lua_ui::dispatch_native_hook(
+               "on_game_started" ) );
+
+    script.write( R"lua(
+assert(state.character.get("hooks.order", "") == "HLL")
+assert(state.character.get("hooks.bad", 0) == 1)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_hook_results_are_typed_bounded_and_transactional",
+           "[lua][bindings][hooks][results][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_character_display_skill_info",
+    { priority = 100 }, function(payload)
+        payload.results.text = "shared"
+        return { text = "returned" }
+    end)
+game.hooks.on("on_character_display_skill_info", function(payload)
+    assert(payload.prev.text == "returned")
+    assert(payload.results.text == "shared\nreturned")
+    return { text = "tail" }
+end)
+
+game.hooks.on("on_character_display_skill_action", function(payload)
+    payload.results.handled = true
+end)
+
+game.hooks.on("on_dialogue_start",
+    { priority = 100 }, function()
+        return { result = string.rep("x", 513) }
+    end)
+game.hooks.on("on_dialogue_start", function()
+    return "TALK_LUA_TEST"
+end)
+
+game.hooks.on("on_make_mapgen_factory_list",
+    { priority = 100 }, function(payload)
+        assert(#payload.candidates == 2)
+        assert(payload.candidates[1] == "house")
+        return { results = { "lua_one", "lua_two", "lua_one" } }
+    end)
+game.hooks.on("on_make_mapgen_factory_list", function(payload)
+    assert(#payload.results.results == 2)
+    table.insert(payload.results.results, "lua_three")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    const native_hook_result info = dispatch_native_hook_result(
+                                        "on_character_display_skill_info" );
+    CHECK( info.allowed );
+    CHECK( info.text == "shared\nreturned\ntail" );
+
+    const native_hook_result action = dispatch_native_hook_result(
+                                          "on_character_display_skill_action" );
+    CHECK( action.handled );
+
+    const native_hook_result dialogue = dispatch_native_hook_result(
+                                            "on_dialogue_start" );
+    REQUIRE( dialogue.result );
+    CHECK( *dialogue.result == "TALK_LUA_TEST" );
+    CHECK( status().last_error.find(
+               "invalid length" ) != std::string::npos );
+
+    const native_hook_result mapgen = dispatch_native_hook_result(
+                                        "on_make_mapgen_factory_list", {
+        {
+            "candidates",
+            std::vector<std::string> { "house", "field" }
+        }
+    } );
+    CHECK( mapgen.results ==
+           std::vector<std::string> {
+        "lua_one", "lua_two", "lua_three"
+    } );
+}
+
+TEST_CASE( "lua_v5_effect_hooks_run_from_opt_in_native_lifecycles",
+           "[lua][bindings][hooks][effects][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    avatar &player = get_avatar();
+    const efftype_id lifecycle_effect( "test_lua_lifecycle" );
+    player.remove_effect( lifecycle_effect );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local expected = game.types.id("effect", "test_lua_lifecycle")
+
+local function observe(name, creature_field, remove_on_second_tick)
+    return function(payload)
+        assert(payload.effect == expected)
+        assert(payload.body_part.kind == "body_part")
+        assert(payload.body_part:is_null())
+        assert(payload[creature_field] ~= nil)
+        if payload.intensity ~= nil then
+            assert(payload.intensity == 2)
+        end
+        local key = "native_effects." .. name
+        local count = state.character.get(key, 0) + 1
+        state.character.set(key, count)
+        if remove_on_second_tick and count == 2 then
+            local removed = game.effects.remove(
+                payload[creature_field], payload.effect)
+            assert(removed.ok and removed.value)
+        end
+    end
+end
+
+game.hooks.on("on_character_effect_added",
+    observe("character_added", "character", false))
+game.hooks.on("on_character_effect",
+    observe("character_tick", "character", true))
+game.hooks.on("on_character_effect_removed",
+    observe("character_removed", "character", false))
+game.hooks.on("on_mon_effect_added",
+    observe("monster_added", "monster", false))
+game.hooks.on("on_mon_effect",
+    observe("monster_tick", "monster", true))
+game.hooks.on("on_mon_effect_removed",
+    observe("monster_removed", "monster", false))
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    player.add_effect(
+        lifecycle_effect, 5_minutes,
+        bodypart_str_id::NULL_ID(), false, 2, true );
+    REQUIRE( player.has_effect( lifecycle_effect ) );
+    player.process_effects();
+    CHECK_FALSE( player.has_effect( lifecycle_effect ) );
+
+    monster test_monster( mtype_id( "mon_zombie" ) );
+    test_monster.add_effect(
+        lifecycle_effect, 5_minutes,
+        bodypart_str_id::NULL_ID(), false, 2, true );
+    REQUIRE( test_monster.has_effect( lifecycle_effect ) );
+    test_monster.process_effects();
+    CHECK_FALSE( test_monster.has_effect( lifecycle_effect ) );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native_effects.character_added", 0) == 1)
+assert(state.character.get(
+    "native_effects.character_tick", 0) == 2)
+assert(state.character.get(
+    "native_effects.character_removed", 0) == 1)
+assert(state.character.get(
+    "native_effects.monster_added", 0) == 1)
+assert(state.character.get(
+    "native_effects.monster_tick", 0) == 2)
+assert(state.character.get(
+    "native_effects.monster_removed", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_creature_lifecycle_hooks_run_at_native_boundaries",
+           "[lua][bindings][hooks][lifecycle][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+
+    monster loaded_monster(
+        mtype_id( "mon_zombie" ),
+        player.pos_bub( here ) + tripoint_rel_ms::north * 3 );
+    standard_npc loaded_npc(
+        "Lua lifecycle NPC",
+        player.pos_bub( here ) + tripoint_rel_ms::south * 3 );
+    monster &dying_monster = spawn_test_monster(
+                                 "mon_zombie",
+                                 player.pos_bub( here ) +
+                                 tripoint_rel_ms::east * 3 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_lifecycle." .. name,
+        state.character.get("native_lifecycle." .. name, 0) + 1)
+end
+
+game.hooks.on("on_character_reset_stats", function(payload)
+    assert(payload.character ~= nil)
+    count("character_reset")
+end)
+game.hooks.on("on_creature_loaded", function(payload)
+    assert(payload.creature ~= nil)
+    count("creature_loaded")
+end)
+game.hooks.on("on_monster_loaded", function(payload)
+    assert(payload.monster ~= nil)
+    count("monster_loaded")
+end)
+game.hooks.on("on_npc_loaded", function(payload)
+    assert(payload.npc ~= nil)
+    count("npc_loaded")
+end)
+game.hooks.on("on_character_death", function(payload)
+    assert(payload.character ~= nil)
+    assert(payload.killer ~= nil)
+    count("character_death")
+end)
+game.hooks.on("on_mon_death", function(payload)
+    assert(payload.monster ~= nil)
+    assert(payload.killer ~= nil)
+    count("monster_death")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    player.reset_stats();
+    loaded_monster.on_load();
+    loaded_npc.on_load( &here );
+    loaded_npc.die( &here, &player );
+    dying_monster.die( &here, &player );
+    g->remove_zombie( dying_monster );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native_lifecycle.character_reset", 0) == 1)
+assert(state.character.get(
+    "native_lifecycle.creature_loaded", 0) == 2)
+assert(state.character.get(
+    "native_lifecycle.monster_loaded", 0) == 1)
+assert(state.character.get(
+    "native_lifecycle.npc_loaded", 0) == 1)
+assert(state.character.get(
+    "native_lifecycle.character_death", 0) == 1)
+assert(state.character.get(
+    "native_lifecycle.monster_death", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_movement_hooks_veto_native_creature_moves",
+           "[lua][bindings][hooks][movement][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms player_from( 30, 30, 0 );
+    const tripoint_bub_ms npc_from( 35, 35, 0 );
+    const tripoint_bub_ms monster_from( 40, 40, 0 );
+    player.setpos( here, player_from );
+    standard_npc test_npc( "Lua movement NPC", npc_from );
+    monster test_monster( mtype_id( "mon_zombie" ), monster_from );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_movement." .. name,
+        state.character.get("native_movement." .. name, 0) + 1)
+end
+
+local function check_character_move(payload)
+    assert(payload.from.coordinate_space == "bub_ms")
+    assert(payload.to.coordinate_space == "bub_ms")
+    assert(type(payload.movement_mode) == "string")
+    assert(payload.via_ramp == false)
+    assert(payload.mounted == false)
+    assert(payload.mount == nil)
+end
+
+game.hooks.on("on_player_try_move", function(payload)
+    assert(payload.player ~= nil)
+    check_character_move(payload)
+    assert(payload.from.x == 30 and payload.from.y == 30)
+    assert(payload.to.x == 31 and payload.to.y == 30)
+    count("player")
+    return { allow = false }
+end)
+game.hooks.on("on_character_try_move", function(payload)
+    assert(payload.character ~= nil)
+    check_character_move(payload)
+    count("character")
+    return { allow = false }
+end)
+game.hooks.on("on_npc_try_move", function(payload)
+    assert(payload.npc ~= nil)
+    check_character_move(payload)
+    assert(payload.from.x == 35 and payload.from.y == 35)
+    assert(payload.to.x == 36 and payload.to.y == 35)
+    count("npc")
+    return { allow = false }
+end)
+game.hooks.on("on_monster_try_move", function(payload)
+    assert(payload.monster ~= nil)
+    assert(payload.from.coordinate_space == "bub_ms")
+    assert(payload.to.coordinate_space == "bub_ms")
+    assert(payload.from.x == 40 and payload.from.y == 40)
+    assert(payload.to.x == 41 and payload.to.y == 40)
+    assert(payload.force == false)
+    count("monster")
+    return { allow = false }
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    CHECK_FALSE( g->walk_move(
+                     player_from + tripoint_rel_ms::east,
+                     false, false ) );
+    CHECK( player.pos_bub( here ) == player_from );
+    test_npc.move_to( npc_from + tripoint_rel_ms::east );
+    CHECK( test_npc.pos_bub( here ) == npc_from );
+    CHECK_FALSE( test_monster.move_to(
+                     monster_from + tripoint_rel_ms::east ) );
+    CHECK( test_monster.pos_bub( here ) == monster_from );
+
+    script.write( R"lua(
+assert(state.character.get("native_movement.player", 0) == 1)
+assert(state.character.get("native_movement.character", 0) == 2)
+assert(state.character.get("native_movement.npc", 0) == 1)
+assert(state.character.get("native_movement.monster", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_creature_turn_hooks_run_once_per_native_ai_turn",
+           "[lua][bindings][hooks][turns][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    monster &test_monster = spawn_test_monster(
+                                "mon_zombie",
+                                player.pos_bub( here ) +
+                                tripoint_rel_ms::east * 3 );
+    npc &test_npc = spawn_npc(
+                        ( player.pos_bub( here ) +
+                          tripoint_rel_ms::west * 3 ).xy(),
+                        "test_talker" );
+    test_monster.add_effect(
+        efftype_id( "controlled" ), 1_hours );
+    test_npc.add_effect(
+        efftype_id( "npc_suspend" ), 1_hours );
+    test_npc.set_moves( 0 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_turns." .. name,
+        state.character.get("native_turns." .. name, 0) + 1)
+end
+
+game.hooks.on("on_creature_do_turn", function(payload)
+    assert(payload.creature ~= nil)
+    count("creature")
+end)
+game.hooks.on("on_monster_do_turn", function(payload)
+    assert(payload.monster ~= nil)
+    count("monster")
+end)
+game.hooks.on("on_npc_do_turn", function(payload)
+    assert(payload.npc ~= nil)
+    count("npc")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    g->simulate_turn_suffix();
+
+    script.write( R"lua(
+assert(state.character.get("native_turns.creature", 0) == 2)
+assert(state.character.get("native_turns.monster", 0) == 1)
+assert(state.character.get("native_turns.npc", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_creature_spawn_hooks_run_after_native_placement",
+           "[lua][bindings][hooks][spawn][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_spawn." .. name,
+        state.character.get("native_spawn." .. name, 0) + 1)
+end
+
+game.hooks.on("on_creature_spawn", function(payload)
+    assert(payload.creature ~= nil)
+    assert(payload.source == "placement" or
+        payload.source == "summon")
+    count("creature")
+end)
+game.hooks.on("on_monster_spawn", function(payload)
+    assert(payload.monster ~= nil)
+    assert(payload.source == "placement")
+    count("monster")
+end)
+game.hooks.on("on_npc_spawn", function(payload)
+    assert(payload.npc ~= nil)
+    assert(payload.source == "summon")
+    count("npc")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    REQUIRE( g->place_critter_at(
+                 mtype_id( "mon_zombie" ),
+                 player.pos_bub( here ) +
+                 tripoint_rel_ms::east * 3 ) != nullptr );
+    std::string unique_id;
+    std::vector<trait_id> traits;
+    REQUIRE( g->spawn_npc(
+                 player.pos_bub( here ) +
+                 tripoint_rel_ms::west * 3,
+                 npc_template_id( "test_talker" ),
+                 unique_id, traits, std::nullopt ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_spawn.creature", 0) == 2)
+assert(state.character.get("native_spawn.monster", 0) == 1)
+assert(state.character.get("native_spawn.npc", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_game_lifecycle_hooks_run_once_at_exact_boundaries",
+           "[lua][bindings][hooks][game-lifecycle][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    const std::string handlers = R"lua(
+local function count(name)
+    state.character.set(
+        "native_game_lifecycle." .. name,
+        state.character.get(
+            "native_game_lifecycle." .. name, 0) + 1)
+end
+game.hooks.on("on_game_started", function()
+    count("started")
+end)
+game.hooks.on("on_game_load", function()
+    count("loaded")
+end)
+game.hooks.on("on_game_save", function()
+    count("saved")
+end)
+)lua";
+    script.write( handlers );
+
+    on_world_ready( world_ready_kind::new_game );
+    REQUIRE( status().loaded );
+    on_game_save();
+
+    std::string error;
+    script.write( R"lua(
+assert(state.character.get(
+    "native_game_lifecycle.started", 0) == 1)
+assert(state.character.get(
+    "native_game_lifecycle.loaded", 0) == 0)
+assert(state.character.get(
+    "native_game_lifecycle.saved", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+
+    script.write( handlers );
+    on_world_ready( world_ready_kind::loaded_game );
+    REQUIRE( status().loaded );
+    script.write( R"lua(
+assert(state.character.get(
+    "native_game_lifecycle.started", 0) == 0)
+assert(state.character.get(
+    "native_game_lifecycle.loaded", 0) == 1)
+assert(state.character.get(
+    "native_game_lifecycle.saved", 0) == 0)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_skill_display_hooks_run_from_native_ui_bridge",
+           "[lua][bindings][hooks][skill-display][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    avatar &player = get_avatar();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_character_display_skill_info", function(payload)
+    assert(payload.character ~= nil)
+    assert(payload.skill ==
+        game.types.id("skill", "fabrication"))
+    state.character.set("native_skill.info", true)
+    return { text = "Lua skill details" }
+end)
+game.hooks.on("on_character_display_skill_action", function(payload)
+    assert(payload.character ~= nil)
+    assert(payload.skill ==
+        game.types.id("skill", "fabrication"))
+    assert(payload.action == "CONFIRM")
+    state.character.set("native_skill.action", true)
+    return { handled = true }
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    CHECK( dispatch_character_display_skill_info(
+               player, "fabrication" ) == "Lua skill details" );
+    CHECK( dispatch_character_display_skill_action(
+               player, "fabrication", "CONFIRM" ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_skill.info", false) == true)
+assert(state.character.get("native_skill.action", false) == true)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_dialogue_and_interaction_hooks_run_from_native_bridges",
+           "[lua][bindings][hooks][dialogue][interactions][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    standard_npc test_npc(
+        "Lua dialogue NPC",
+        player.pos_bub( here ) + tripoint_rel_ms::east * 2 );
+    monster test_monster(
+        mtype_id( "mon_zombie" ),
+        player.pos_bub( here ) + tripoint_rel_ms::west * 2 );
+    std::unique_ptr<talker> alpha = get_talker_for( player );
+    std::unique_ptr<talker> beta = get_talker_for( test_npc );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local function count(name)
+    state.character.set(
+        "native_interaction." .. name,
+        state.character.get(
+            "native_interaction." .. name, 0) + 1)
+end
+
+game.hooks.on("on_dialogue_start", function(payload)
+    assert(payload.alpha.kind == "creature")
+    assert(payload.beta.kind == "creature")
+    assert(payload.topic == "TALK_TEST_START")
+    count("dialogue_start")
+    return "TALK_LUA_START"
+end)
+game.hooks.on("on_dialogue_option", function(payload)
+    assert(payload.alpha.kind == "creature")
+    assert(payload.beta.kind == "creature")
+    assert(payload.topic == "TALK_LUA_START")
+    assert(payload.option == "TALK_TEST_OPTION")
+    count("dialogue_option")
+    return { result = "TALK_LUA_OPTION" }
+end)
+game.hooks.on("on_dialogue_end", function(payload)
+    assert(payload.alpha.kind == "creature")
+    assert(payload.beta.kind == "creature")
+    assert(payload.topic == "TALK_LUA_OPTION")
+    count("dialogue_end")
+end)
+game.hooks.on("on_try_npc_interaction", function(payload)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.npc.kind == "creature")
+    count("try_npc")
+    return true
+end)
+game.hooks.on("on_npc_interaction", function(payload)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.npc.kind == "creature")
+    count("npc")
+end)
+game.hooks.on("on_try_monster_interaction", function(payload)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.monster.kind == "creature")
+    count("monster")
+    return false
+end)
+game.hooks.on("on_elevator_try_use", function(payload)
+    assert(payload.character.kind == "creature")
+    assert(payload.position.coordinate_space == "bub_ms")
+    assert(payload.position.x == 30)
+    assert(payload.position.y == 30)
+    assert(payload.destination.coordinate_space == "abs_omt")
+    assert(payload.destination.z == -1)
+    count("elevator")
+    return false
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    const native_hook_result start =
+        dispatch_native_dialogue_hook(
+            "on_dialogue_start", *alpha, *beta,
+            "TALK_TEST_START" );
+    REQUIRE( start.result );
+    CHECK( *start.result == "TALK_LUA_START" );
+
+    const native_hook_result option =
+        dispatch_native_dialogue_hook(
+            "on_dialogue_option", *alpha, *beta,
+            *start.result, "TALK_TEST_OPTION" );
+    REQUIRE( option.result );
+    CHECK( *option.result == "TALK_LUA_OPTION" );
+    dispatch_native_dialogue_hook(
+        "on_dialogue_end", *alpha, *beta, *option.result );
+
+    CHECK( begin_native_npc_interaction( player, test_npc ) );
+    CHECK_FALSE( allow_native_monster_interaction(
+                     player, test_monster ) );
+    CHECK_FALSE( allow_native_elevator_use(
+                     player, { "bub_ms", 30, 30, 0 },
+                     { "abs_omt", 1, 2, -1 } ) );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native_interaction.dialogue_start", 0) == 1)
+assert(state.character.get(
+    "native_interaction.dialogue_option", 0) == 1)
+assert(state.character.get(
+    "native_interaction.dialogue_end", 0) == 1)
+assert(state.character.get(
+    "native_interaction.try_npc", 0) == 1)
+assert(state.character.get(
+    "native_interaction.npc", 0) == 1)
+assert(state.character.get(
+    "native_interaction.monster", 0) == 1)
+assert(state.character.get(
+    "native_interaction.elevator", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_craft_and_explosion_hooks_run_at_native_boundaries",
+           "[lua][bindings][hooks][craft][explosion][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.remove_weapon();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_craft_result", function(payload)
+    assert(payload.character.kind == "creature")
+    assert(payload.recipe ==
+        game.types.id("recipe", "cudgel_test_no_tools"))
+    assert(payload.result.kind == "item")
+    assert(math.type(payload.batch) == "integer")
+    assert(payload.batch == 1)
+    state.character.set(
+        "native_result.craft",
+        state.character.get("native_result.craft", 0) + 1)
+end)
+game.hooks.on("on_explosion_start", function(payload)
+    assert(payload.position.coordinate_space == "abs_ms")
+    assert(math.type(payload.position.x) == "integer")
+    assert(payload.power == 0)
+    assert(payload.source.kind == "creature")
+    state.character.set(
+        "native_result.explosion",
+        state.character.get("native_result.explosion", 0) + 1)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    const recipe &craft_recipe =
+        recipe_id( "cudgel_test_no_tools" ).obj();
+    item_components no_components;
+    item craft( &craft_recipe, 1, no_components, {} );
+    player.complete_craft( craft, std::nullopt );
+
+    explosion_data harmless_explosion;
+    harmless_explosion.power = 0.0f;
+    explosion_handler::explosion(
+        &player,
+        player.pos_bub( here ) + tripoint_rel_ms::north,
+        harmless_explosion );
+    explosion_handler::process_explosions();
+
+    script.write( R"lua(
+assert(state.character.get("native_result.craft", 0) == 1)
+assert(state.character.get("native_result.explosion", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_mission_hooks_emit_generation_bound_instance_tokens",
+           "[lua][bindings][hooks][missions][integration]" )
+{
+    clear_avatar();
+    avatar &player = get_avatar();
+    player.reset_all_missions();
+    mission::clear_all();
+    on_out_of_scope cleanup( [&player]() {
+        player.reset_all_missions();
+        mission::clear_all();
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local expected =
+    game.types.id("mission", "TEST_MISSION_GOAL_CONDITION1")
+
+game.hooks.on("on_mission_start", function(payload)
+    assert(math.type(payload.mission.uid) == "integer")
+    assert(payload.mission:is_valid() == true)
+    local current = game.missions.get(payload.mission)
+    assert(current.ok == true)
+    assert(current.value.id == expected)
+    assert(current.value.status == "active")
+    state.character.set(
+        "native_missions.started",
+        state.character.get("native_missions.started", 0) + 1)
+end)
+
+game.hooks.on("on_mission_end", function(payload)
+    assert(type(payload.success) == "boolean")
+    assert(payload.mission:is_valid() == true)
+    local current = game.missions.get(payload.mission)
+    assert(current.ok == true)
+    assert(current.value.id == expected)
+    assert(current.value.status ==
+        (payload.success and "success" or "failure"))
+    local suffix = payload.success and "success" or "failure"
+    state.character.set(
+        "native_missions." .. suffix,
+        state.character.get("native_missions." .. suffix, 0) + 1)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+
+    const mission_type_id test_mission(
+        "TEST_MISSION_GOAL_CONDITION1" );
+    mission *failed = mission::reserve_new(
+                          test_mission, character_id() );
+    REQUIRE( failed != nullptr );
+    if( failed->get_assigned_player_id() == player.getID() ) {
+        failed->set_assigned_player_id( character_id( -2 ) );
+    }
+    failed->assign( player );
+    failed->fail();
+
+    mission *succeeded = mission::reserve_new(
+                             test_mission, character_id() );
+    REQUIRE( succeeded != nullptr );
+    if( succeeded->get_assigned_player_id() == player.getID() ) {
+        succeeded->set_assigned_player_id( character_id( -2 ) );
+    }
+    succeeded->assign( player );
+    succeeded->wrap_up();
+
+    script.write( R"lua(
+assert(state.character.get("native_missions.started", 0) == 2)
+assert(state.character.get("native_missions.failure", 0) == 1)
+assert(state.character.get("native_missions.success", 0) == 1)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_weather_hooks_run_only_at_initialized_refresh_boundaries",
+           "[lua][bindings][hooks][weather][integration]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    weather_manager &weather = get_weather();
+    const weather_type_id weather_id_before = weather.weather_id;
+    const weather_type_id weather_override_before =
+        weather.weather_override;
+    const time_point nextweather_before = weather.nextweather;
+    const units::temperature temperature_before =
+        weather.temperature;
+    const int winddirection_before = weather.winddirection;
+    const int windspeed_before = weather.windspeed;
+    const std::optional<int> wind_direction_override_before =
+        weather.wind_direction_override;
+    const std::optional<int> windspeed_override_before =
+        weather.windspeed_override;
+    const w_point precise_before = *weather.weather_precise;
+    on_out_of_scope restore_weather( [
+        &weather, weather_id_before, weather_override_before,
+        nextweather_before, temperature_before,
+        winddirection_before, windspeed_before,
+        wind_direction_override_before,
+        windspeed_override_before, precise_before
+    ]() {
+        weather.weather_id = weather_id_before;
+        weather.weather_override = weather_override_before;
+        weather.nextweather = nextweather_before;
+        weather.temperature = temperature_before;
+        weather.winddirection = winddirection_before;
+        weather.windspeed = windspeed_before;
+        weather.wind_direction_override =
+            wind_direction_override_before;
+        weather.windspeed_override = windspeed_override_before;
+        *weather.weather_precise = precise_before;
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_weather_changed", function(payload)
+    assert(payload.before == "clear")
+    assert(payload.after == "drizzle")
+    state.character.set(
+        "native_weather.changed",
+        state.character.get("native_weather.changed", 0) + 1)
+end)
+
+game.hooks.on("on_weather_updated", function(payload)
+    assert(payload.weather == "drizzle")
+    assert(type(payload.temperature) == "number")
+    assert(math.type(payload.windpower) == "integer")
+    state.character.set(
+        "native_weather.updated",
+        state.character.get("native_weather.updated", 0) + 1)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+
+    weather.weather_id = WEATHER_NULL;
+    weather.weather_override = WEATHER_CLEAR;
+    weather.nextweather = calendar::turn;
+    weather.update_weather();
+
+    weather.weather_override = weather_type_id( "drizzle" );
+    weather.nextweather = calendar::turn;
+    weather.update_weather();
+
+    weather.nextweather = calendar::turn + 1_hours;
+    weather.update_weather();
+
+    weather.nextweather = calendar::turn;
+    weather.update_weather();
+
+    script.write( R"lua(
+assert(state.character.get("native_weather.changed", 0) == 1)
+assert(state.character.get("native_weather.updated", 0) == 2)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_mapgen_factory_hook_runs_from_definition_audit",
+           "[lua][bindings][hooks][mapgen][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.hooks.on("on_make_mapgen_factory_list", function(payload)
+    assert(#payload.candidates > 0)
+    assert(type(payload.candidates[1]) == "string")
+    state.character.set(
+        "native_mapgen.factory_audits",
+        state.character.get("native_mapgen.factory_audits", 0) + 1)
+    return { results = { "lua_only_mapgen_usage" } }
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    check_mapgen_definitions();
+
+    script.write( R"lua(
+assert(state.character.get("native_mapgen.factory_audits", 0) == 1)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_callback_actors_dispatch_typed_bounded_payloads",
+           "[lua][bindings][callbacks][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read",
+            "game.write", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.callbacks.limits()
+assert(limits.kinds == 11)
+assert(limits.registrations == 1024)
+assert(limits.registrations_per_target == 64)
+assert(limits.registered == 0)
+assert(limits.priority_min == -10000)
+assert(limits.priority_max == 10000)
+assert(limits.dispatch_depth == 16)
+assert(limits.instruction_budget > 0)
+
+local catalog = game.callbacks.list()
+assert(#catalog == 11)
+local wieldable = game.callbacks.describe("iwieldable")
+assert(wieldable.kind == "iwieldable")
+assert(wieldable.target_id_kind == "item")
+assert(#wieldable.methods == 4)
+assert(pcall(function()
+    game.callbacks.describe("not_an_actor")
+end) == false)
+
+local rock = game.types.id("item", "rock")
+assert(pcall(function()
+    game.callbacks.register("iwieldable",
+        game.types.id("monster", "mon_zombie"), {
+            on_wield = function() end
+        })
+end) == false)
+assert(pcall(function()
+    game.callbacks.register("iwieldable", rock, {
+        unknown = function() end
+    })
+end) == false)
+
+local removed = game.callbacks.register("iwieldable", rock, {
+    on_wield = function()
+        error("removed callback ran")
+    end
+})
+assert(game.callbacks.off(removed) == true)
+assert(game.callbacks.off(removed) == false)
+
+game.callbacks.register("iwieldable", rock, {
+    priority = 100,
+    once = true,
+    on_wield = function(payload)
+        assert(payload.actor_kind == "iwieldable")
+        assert(payload.method == "on_wield")
+        assert(payload.decision == false)
+        assert(payload.consuming == false)
+        assert(payload.target_id == rock)
+        assert(payload.character ~= nil)
+        assert(payload.item ~= nil)
+        assert(payload.position.coordinate_space == "abs_ms")
+        assert(payload.position.x == 11)
+        assert(payload.position.y == 22)
+        assert(payload.position.z == 1)
+        assert(payload.skill ==
+            game.types.id("skill", "fabrication"))
+        assert(math.type(payload.count) == "integer")
+        assert(payload.count == 2)
+        assert(payload.ratio == 0.5)
+        assert(payload.label == "typed")
+        assert(payload.flag == true)
+        local order = state.character.get("callbacks.order", "")
+        state.character.set("callbacks.order", order .. "H")
+    end
+})
+
+game.callbacks.register("iwieldable", rock, {
+    priority = 50,
+    on_wield = function()
+        local order = state.character.get("callbacks.order", "")
+        state.character.set("callbacks.order", order .. "B")
+        error("expected isolated callback actor failure")
+    end
+})
+
+game.callbacks.register("iwieldable", rock, {
+    priority = -100,
+    on_wield = function()
+        local order = state.character.get("callbacks.order", "")
+        state.character.set("callbacks.order", order .. "L")
+    end,
+    can_wield = function(payload)
+        assert(payload.decision == true)
+        return false
+    end
+})
+
+game.hooks.on("on_weather_changed", function(payload)
+    assert(payload.before == "clear")
+    assert(payload.after == "rain")
+    state.character.set("callbacks.native_hook", true)
+end)
+game.hooks.on("on_try_npc_interaction", function()
+    return { allow = false, stop = true }
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    item rock( itype_id( "rock" ) );
+    const native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( &get_avatar() ) },
+        { "item", static_cast<const item *>( &rock ) },
+        { "position", native_callback_point { "abs_ms", 11, 22, 1 } },
+        { "skill", native_callback_id { "skill", "fabrication" } },
+        { "count", std::int64_t { 2 } },
+        { "ratio", 0.5 },
+        { "label", std::string( "typed" ) },
+        { "flag", true }
+    };
+    CHECK( dispatch_native_callback(
+               "iwieldable", "rock", "on_wield", payload ) );
+    CHECK( status().last_error.find(
+               "expected isolated callback actor failure" ) !=
+           std::string::npos );
+    CHECK( dispatch_native_callback(
+               "iwieldable", "rock", "on_wield", payload ) );
+    CHECK_FALSE( dispatch_native_callback(
+                     "iwieldable", "rock", "can_wield", payload ) );
+
+    CHECK( dispatch_native_hook(
+               "on_weather_changed", {
+        { "before", std::string( "clear" ) },
+        { "after", std::string( "rain" ) }
+    } ) );
+    CHECK_FALSE( dispatch_native_hook(
+                     "on_try_npc_interaction" ) );
+
+    script.write( R"lua(
+assert(state.character.get("callbacks.order", "") == "HBLL")
+assert(state.character.get("callbacks.native_hook", false) == true)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_item_callback_actors_run_from_native_item_lifecycle",
+           "[lua][bindings][callbacks][items][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local rock = game.types.id("item", "rock")
+local shirt = game.types.id("item", "tshirt")
+local function observe(name)
+    return function(payload)
+        assert(payload.item ~= nil)
+        local key = "native_items." .. name
+        state.character.set(
+            key, state.character.get(key, 0) + 1)
+    end
+end
+local function decide(name)
+    return function(payload)
+        observe(name)(payload)
+        return true
+    end
+end
+local function preserve(name)
+    return function(payload)
+        observe(name)(payload)
+        assert(payload.consuming == true)
+        return false
+    end
+end
+
+game.callbacks.register("iuse", rock, {
+    can_use = decide("can_use"),
+    on_use = decide("on_use")
+})
+game.callbacks.register("iwieldable", rock, {
+    on_wield = observe("on_wield")
+})
+game.callbacks.register("iwearable", rock, {
+    on_wear = observe("on_wear"),
+    on_takeoff = observe("on_takeoff")
+})
+game.callbacks.register("istate", rock, {
+    on_pickup = observe("on_pickup"),
+    on_tick = observe("on_tick"),
+    on_drop = preserve("on_drop")
+})
+game.callbacks.register("iequippable", shirt, {
+    on_durability_change = observe("on_durability_change"),
+    on_repair = observe("on_repair"),
+    on_break = observe("on_break")
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    CHECK( has_native_callback( "iuse", "rock", "on_use" ) );
+
+    avatar &player = get_avatar();
+    item rock( itype_id( "rock" ) );
+    const tripoint_bub_ms position( 4, 5, 0 );
+
+    rock.on_pickup( player );
+    rock.type->tick( &player, rock, position );
+    CHECK( player.invoke_item(
+               &rock, position, player.get_moves() ) );
+    CHECK_FALSE( rock.on_drop( position ) );
+    rock.on_wield( player, false );
+    rock.on_wear( player );
+    rock.on_takeoff( player );
+
+    item shirt( itype_id( "tshirt" ) );
+    REQUIRE( shirt.max_damage() > 0 );
+    CHECK_FALSE( shirt.mod_damage( itype::damage_scale, &player ) );
+    CHECK_FALSE( shirt.mod_damage( -itype::damage_scale, &player ) );
+    shirt.force_set_damage( shirt.max_damage() );
+    CHECK( shirt.mod_damage( itype::damage_scale, &player ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_items.can_use", 0) == 1)
+assert(state.character.get("native_items.on_use", 0) == 1)
+assert(state.character.get("native_items.on_wield", 0) == 1)
+assert(state.character.get("native_items.on_wear", 0) == 1)
+assert(state.character.get("native_items.on_takeoff", 0) == 1)
+assert(state.character.get("native_items.on_pickup", 0) == 1)
+assert(state.character.get("native_items.on_tick", 0) == 1)
+assert(state.character.get("native_items.on_drop", 0) == 1)
+assert(state.character.get(
+    "native_items.on_durability_change", 0) == 2)
+assert(state.character.get("native_items.on_repair", 0) == 1)
+assert(state.character.get("native_items.on_break", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_item_drop_callbacks_aggregate_consuming_results",
+           "[lua][bindings][callbacks][items][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local rock = game.types.id("item", "rock")
+local function count(name)
+    local key = "native_drop." .. name
+    state.character.set(
+        key, state.character.get(key, 0) + 1)
+end
+
+game.callbacks.register("istate", rock, {
+    priority = 300,
+    on_drop = function(payload)
+        assert(payload.decision == true)
+        assert(payload.consuming == true)
+        count("preserve")
+        return false
+    end
+})
+game.callbacks.register("istate", rock, {
+    priority = 200,
+    on_drop = function()
+        count("consume")
+        return { consume = true }
+    end
+})
+game.callbacks.register("istate", rock, {
+    priority = 100,
+    on_drop = function()
+        count("after_consume")
+        return true
+    end
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    item rock( itype_id( "rock" ) );
+    CHECK( rock.on_drop( tripoint_bub_ms( 4, 5, 0 ) ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_drop.preserve", 0) == 1)
+assert(state.character.get("native_drop.consume", 0) == 1)
+assert(state.character.get("native_drop.after_consume", 0) == 0)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_combat_callbacks_and_hooks_run_from_native_lifecycles",
+           "[lua][bindings][callbacks][combat][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.set_moves( 10000 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read",
+            "game.write", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    const auto write_combat_script = [&]( const bool allow_fire ) {
+        script.write( std::string( R"lua(
+state.character.set("native_combat.allow_fire", )lua" ) +
+    ( allow_fire ? "true" : "false" ) + R"lua()
+local gun = game.types.id("item", "glock_19")
+local rock = game.types.id("item", "rock")
+local function count(name)
+    state.character.set(
+        "native_combat." .. name,
+        state.character.get("native_combat." .. name, 0) + 1)
+end
+
+game.callbacks.register("iranged", gun, {
+    can_fire = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.item ~= nil)
+        assert(payload.target.coordinate_space == "bub_ms")
+        assert(payload.shots == 1)
+        count("can_fire")
+        return true
+    end,
+    on_fire = function(payload)
+        assert(payload.item ~= nil)
+        count("on_fire")
+        return state.character.get("native_combat.allow_fire", false)
+    end
+})
+game.callbacks.register("imelee", rock, {
+    on_melee_attack = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.target ~= nil)
+        assert(payload.item ~= nil)
+        count("on_melee_attack")
+        return false
+    end,
+    on_miss = function(payload)
+        assert(payload.target ~= nil)
+        count("on_miss")
+    end
+})
+game.hooks.on("on_shoot", function(payload)
+    assert(payload.weapon ~= nil)
+    assert(payload.target.coordinate_space == "bub_ms")
+    assert(payload.shots == 1)
+    count("on_shoot")
+end)
+game.hooks.on("on_throw", function(payload)
+    assert(payload.item ~= nil)
+    assert(payload.target.coordinate_space == "bub_ms")
+    assert(payload.origin.coordinate_space == "bub_ms")
+    count("on_throw")
+end)
+game.hooks.on("on_creature_melee_attacked", function(payload)
+    assert(payload.attacker ~= nil)
+    assert(payload.target ~= nil)
+    assert(payload.success == false)
+    count("on_creature_melee_attacked")
+end)
+)lua" );
+    };
+
+    write_combat_script( false );
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    item gun( itype_id( "glock_19" ) );
+    gun.set_flag( flag_NEVER_JAMS );
+    gun.ammo_set( gun.ammo_default(), 2 );
+    REQUIRE( gun.ammo_remaining() == 2 );
+    const tripoint_bub_ms ranged_target =
+        player.pos_bub( here ) + tripoint_rel_ms::east * 5;
+    const int moves_before_veto = player.get_moves();
+    CHECK( player.fire_gun( here, ranged_target, 1, gun ) == 0 );
+    CHECK( gun.ammo_remaining() == 2 );
+    CHECK( player.get_moves() == moves_before_veto );
+
+    write_combat_script( true );
+    REQUIRE( reload_scripts( error ) );
+    CHECK( player.fire_gun( here, ranged_target, 1, gun ) == 1 );
+    CHECK( gun.ammo_remaining() == 1 );
+
+    item thrown_rock( itype_id( "rock" ) );
+    player.throw_item(
+        player.pos_bub( here ) + tripoint_rel_ms::south * 2,
+        thrown_rock );
+
+    item melee_rock( itype_id( "rock" ) );
+    REQUIRE( player.wield( melee_rock ) );
+    monster &target = spawn_test_monster(
+                          "mon_zombie",
+                          player.pos_bub( here ) + tripoint_rel_ms::east );
+    CHECK( player.melee_attack_abstract(
+               target, false, matec_id( "" ) ) );
+    g->remove_zombie( target );
+
+    script.write( R"lua(
+assert(state.character.get("native_combat.can_fire", 0) == 2)
+assert(state.character.get("native_combat.on_fire", 0) == 2)
+assert(state.character.get("native_combat.on_shoot", 0) == 1)
+assert(state.character.get("native_combat.on_throw", 0) == 1)
+assert(state.character.get("native_combat.on_melee_attack", 0) == 1)
+assert(state.character.get("native_combat.on_miss", 0) == 1)
+assert(state.character.get(
+    "native_combat.on_creature_melee_attacked", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_bionic_and_mutation_callbacks_run_from_native_lifecycles",
+           "[lua][bindings][callbacks][character][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local bio = game.types.id("bionic", "bio_flashlight")
+local mutation = game.types.id("mutation", "WEB_WEAVER")
+local function observe(name, id_field, expected)
+    return function(payload)
+        assert(payload.character ~= nil)
+        assert(payload[id_field] == expected)
+        state.character.set(
+            "native_character." .. name,
+            state.character.get("native_character." .. name, 0) + 1)
+    end
+end
+
+game.callbacks.register("bionic", bio, {
+    on_activate = observe("bionic_activate", "bionic", bio),
+    on_deactivate = observe("bionic_deactivate", "bionic", bio),
+    on_installed = observe("bionic_installed", "bionic", bio),
+    on_removed = observe("bionic_removed", "bionic", bio)
+})
+game.callbacks.register("mutation", mutation, {
+    on_activate = observe("mutation_activate", "mutation", mutation),
+    on_deactivate = observe(
+        "mutation_deactivate", "mutation", mutation),
+    on_gain = observe("mutation_gain", "mutation", mutation),
+    on_loss = observe("mutation_loss", "mutation", mutation)
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    player.set_max_power_level( 100_kJ );
+    player.set_power_level( 100_kJ );
+    const bionic_id flashlight( "bio_flashlight" );
+    const bionic_uid flashlight_uid =
+        player.add_bionic( flashlight );
+    REQUIRE( flashlight_uid != 0 );
+    std::optional<bionic *> installed =
+        player.find_bionic_by_uid( flashlight_uid );
+    REQUIRE( installed );
+    CHECK( player.activate_bionic( **installed ) );
+    CHECK( player.deactivate_bionic( **installed ) );
+    player.remove_bionic( **installed );
+    CHECK_FALSE( player.find_bionic_by_uid( flashlight_uid ) );
+
+    const trait_id web_weaver( "WEB_WEAVER" );
+    player.set_mutation( web_weaver );
+    REQUIRE( player.has_trait( web_weaver ) );
+    player.activate_mutation( web_weaver );
+    CHECK( player.has_active_mutation( web_weaver ) );
+    player.deactivate_mutation( web_weaver );
+    CHECK_FALSE( player.has_active_mutation( web_weaver ) );
+    player.unset_mutation( web_weaver );
+    CHECK_FALSE( player.has_trait( web_weaver ) );
+
+    script.write( R"lua(
+assert(state.character.get("native_character.bionic_activate", 0) == 1)
+assert(state.character.get("native_character.bionic_deactivate", 0) == 1)
+assert(state.character.get("native_character.bionic_installed", 0) == 1)
+assert(state.character.get("native_character.bionic_removed", 0) == 1)
+assert(state.character.get("native_character.mutation_activate", 0) == 1)
+assert(state.character.get("native_character.mutation_deactivate", 0) == 1)
+assert(state.character.get("native_character.mutation_gain", 0) == 1)
+assert(state.character.get("native_character.mutation_loss", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_trap_callbacks_run_from_central_trigger_lifecycle",
+           "[lua][bindings][callbacks][traps][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms trap_position( 31, 30, 0 );
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    here.trap_set( trap_position, trap_str_id( "tr_bubblewrap" ) );
+    const trap &bubblewrap = trap_str_id( "tr_bubblewrap" ).obj();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local bubblewrap = game.types.id("trap", "tr_bubblewrap")
+local function count(name)
+    local value = state.character.get("native_trap." .. name, 0) + 1
+    state.character.set("native_trap." .. name, value)
+    return value
+end
+game.callbacks.register("trap", bubblewrap, {
+    can_trigger = function(payload)
+        assert(payload.creature ~= nil)
+        assert(payload.item == nil)
+        assert(payload.trap == bubblewrap)
+        assert(payload.position.coordinate_space == "bub_ms")
+        return count("can_trigger") > 1
+    end,
+    on_trigger = function(payload)
+        assert(payload.trap == bubblewrap)
+        count("on_trigger")
+    end,
+    on_trigger_aftermath = function(payload)
+        assert(payload.trap == bubblewrap)
+        count("on_trigger_aftermath")
+    end
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    bubblewrap.trigger( trap_position, player );
+    CHECK( here.tr_at( trap_position ).id ==
+           trap_str_id( "tr_bubblewrap" ) );
+    bubblewrap.trigger( trap_position, player );
+    CHECK( here.tr_at( trap_position ).is_null() );
+
+    script.write( R"lua(
+assert(state.character.get("native_trap.can_trigger", 0) == 2)
+assert(state.character.get("native_trap.on_trigger", 0) == 1)
+assert(state.character.get("native_trap.on_trigger_aftermath", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_monster_callbacks_collect_menus_and_observe_taming",
+           "[lua][bindings][callbacks][monsters][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    const std::string monster_type = "mon_zombie";
+    monster &target = spawn_test_monster(
+                          monster_type,
+                          player.pos_bub( here ) + tripoint_rel_ms::east );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read",
+            "game.write", "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local zombie = game.types.id("monster", "mon_zombie")
+local function count(name)
+    state.character.set(
+        "native_monster." .. name,
+        state.character.get("native_monster." .. name, 0) + 1)
+end
+game.callbacks.register("monster", zombie, {
+    priority = 100,
+    get_examine_menu_entries = function()
+        count("bad_actor_get_menu")
+        return { entries = "not a table" }
+    end
+})
+game.callbacks.register("monster", zombie, {
+    get_examine_menu_entries = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.monster ~= nil)
+        count("actor_get_menu")
+        return {
+            { menu_id = "actor_entry", menu_label = "Actor entry" },
+            { id = "shared_entry", label = "Actor wins" }
+        }
+    end,
+    on_examine_menu_entry = function(payload)
+        assert(payload.entry == "actor_entry")
+        count("actor_select")
+    end,
+    on_tame = function(payload)
+        assert(payload.monster_type == zombie)
+        count("actor_tame")
+    end
+})
+game.hooks.on("on_monster_get_examine_menu_entries",
+    { priority = 100 }, function()
+        count("bad_hook_get_menu")
+        return { entries = "not a table" }
+    end)
+game.hooks.on("on_monster_get_examine_menu_entries", function(payload)
+    assert(payload.monster ~= nil)
+    count("hook_get_menu")
+    return {
+        entries = {
+            { id = "hook_entry", label = "Hook entry", enabled = false },
+            { id = "shared_entry", label = "Hook duplicate" }
+        }
+    }
+end)
+game.hooks.on("on_monster_examine_menu_entry", function(payload)
+    assert(payload.entry == "actor_entry")
+    count("hook_select")
+end)
+game.hooks.on("on_monster_tame", function(payload)
+    assert(payload.monster_type == zombie)
+    count("hook_tame")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    const std::uint64_t initial_callback_count =
+        status().callback_count;
+
+    const native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( &player ) },
+        { "monster", static_cast<const Creature *>( &target ) },
+        {
+            "monster_type", native_callback_id {
+                "monster", monster_type
+            }
+        }
+    };
+    const std::vector<native_menu_entry> actor_entries =
+        collect_native_callback_menu_entries(
+            "monster", monster_type,
+            "get_examine_menu_entries", payload );
+    REQUIRE( actor_entries.size() == 2 );
+    CHECK( actor_entries[0].id == "actor_entry" );
+    CHECK( actor_entries[0].label == "Actor entry" );
+    CHECK( actor_entries[0].enabled );
+    CHECK( status().callback_count == initial_callback_count + 2 );
+
+    const std::vector<native_menu_entry> hook_entries =
+        collect_native_hook_menu_entries(
+            "on_monster_get_examine_menu_entries", payload );
+    REQUIRE( hook_entries.size() == 2 );
+    CHECK( hook_entries[0].id == "hook_entry" );
+    CHECK( hook_entries[0].label == "Hook entry" );
+    CHECK_FALSE( hook_entries[0].enabled );
+    CHECK( status().callback_count == initial_callback_count + 4 );
+    CHECK( status().last_error.find(
+               "'entries' must be a table" ) != std::string::npos );
+
+    native_callback_arguments selection_payload = payload;
+    selection_payload.push_back( {
+        "entry", std::string( "actor_entry" )
+    } );
+    CHECK( dispatch_native_callback(
+               "monster", monster_type,
+               "on_examine_menu_entry", selection_payload ) );
+    CHECK( dispatch_native_hook(
+               "on_monster_examine_menu_entry", selection_payload ) );
+
+    target.make_pet( player );
+    CHECK( target.is_pet() );
+    CHECK( status().callback_count == initial_callback_count + 8 );
+
+    script.write( R"lua(
+assert(state.character.get("native_monster.bad_actor_get_menu", 0) == 1)
+assert(state.character.get("native_monster.bad_hook_get_menu", 0) == 1)
+assert(state.character.get("native_monster.actor_get_menu", 0) == 1)
+assert(state.character.get("native_monster.hook_get_menu", 0) == 1)
+assert(state.character.get("native_monster.actor_select", 0) == 1)
+assert(state.character.get("native_monster.hook_select", 0) == 1)
+assert(state.character.get("native_monster.actor_tame", 0) == 1)
+assert(state.character.get("native_monster.hook_tame", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    g->remove_zombie( target );
+}
+
+TEST_CASE( "lua_v5_equipment_and_reload_callbacks_gate_native_lifecycles",
+           "[lua][bindings][callbacks][items][equipment][reload][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    player.setpos( get_map(), tripoint_bub_ms( 30, 30, 0 ) );
+    on_out_of_scope cleanup( [&player]() {
+        player.clear_worn();
+        player.inv->clear();
+        player.remove_weapon();
+        player.clear_bionics();
+    } );
+
+    const itype_id shirt_id( "tshirt" );
+    const itype_id pipe_id( "test_pipe" );
+    const itype_id magazine_id( "glockmag" );
+    const itype_id ammunition_id( "9mm" );
+
+    const std::optional<std::list<item>::iterator> initially_worn =
+        player.worn.wear_item(
+            player, item( shirt_id ), false, false );
+    REQUIRE( initially_worn );
+    item pipe( pipe_id );
+    REQUIRE( player.wield( pipe ) );
+    item_location magazine =
+        player.i_add( item( magazine_id ) );
+    item_location ammunition =
+        player.i_add(
+            item( ammunition_id, calendar::turn, 10 ) );
+    REQUIRE( magazine );
+    REQUIRE( ammunition );
+    REQUIRE( magazine->ammo_remaining() == 0 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "game.callbacks", "game.read", "game.write",
+            "state.character"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    const auto write_script = [&script]( const bool allow ) {
+        script.write(
+            std::string( "local allow = " ) +
+            ( allow ? "true\n" : "false\n" ) + R"lua(
+local shirt = game.types.id("item", "tshirt")
+local pipe = game.types.id("item", "test_pipe")
+local magazine = game.types.id("item", "glockmag")
+local blade = game.types.id("item", "bio_blade_weapon")
+local function count(name)
+    local key = "native_remaining." .. name
+    state.character.set(
+        key, state.character.get(key, 0) + 1)
+end
+local function decide(name)
+    return function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.item ~= nil)
+        count(name)
+        return allow
+    end
+end
+local function observe(name)
+    return function(payload)
+        assert(payload.item ~= nil)
+        count(name)
+    end
+end
+
+game.callbacks.register("iwearable", shirt, {
+    can_wear = decide("can_wear"),
+    can_takeoff = decide("can_takeoff"),
+    on_wear = observe("on_wear"),
+    on_takeoff = observe("on_takeoff")
+})
+game.callbacks.register("iwieldable", pipe, {
+    can_unwield = decide("can_unwield"),
+    on_unwield = observe("on_unwield")
+})
+game.callbacks.register("iwieldable", blade, {
+    can_unwield = decide("bionic_can_unwield"),
+    on_unwield = function(payload)
+        local snapshot = game.items.snapshot(payload.item)
+        assert(snapshot.ok == true)
+        assert(snapshot.value.id == blade)
+        count("bionic_on_unwield")
+    end
+})
+game.callbacks.register("iranged", magazine, {
+    can_reload = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.item ~= nil)
+        assert(payload.ammo ~= nil)
+        count("can_reload")
+        return allow
+    end,
+    on_reload = function(payload)
+        assert(payload.item ~= nil)
+        assert(payload.quantity == 1)
+        count("on_reload")
+    end
+})
+)lua" );
+    };
+
+    write_script( false );
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    std::list<item> removed;
+    CHECK_FALSE( player.takeoff(
+                     item_location(
+                         player, &**initially_worn ),
+                     &removed ) );
+    CHECK( removed.empty() );
+    CHECK_FALSE( player.wear_item(
+                     item( shirt_id ), false ).has_value() );
+    CHECK_FALSE( player.unwield() );
+    CHECK_FALSE( magazine->reload(
+                     player, ammunition, 1 ) );
+    CHECK( magazine->ammo_remaining() == 0 );
+
+    write_script( true );
+    REQUIRE( reload_scripts( error ) );
+
+    CHECK( player.takeoff(
+               item_location(
+                   player, &**initially_worn ),
+               &removed ) );
+    REQUIRE( removed.size() == 1 );
+    REQUIRE( player.wear_item(
+                 item( shirt_id ), false ).has_value() );
+    CHECK_FALSE( player.unwield() );
+    CHECK( player.is_armed() );
+    CHECK( magazine->reload(
+               player, ammunition, 1 ) );
+    CHECK( magazine->ammo_remaining() == 1 );
+
+    player.remove_weapon();
+    const bionic_id power_storage( "bio_power_storage" );
+    const bionic_id blade( "bio_blade" );
+    player.add_bionic( power_storage );
+    player.add_bionic( power_storage );
+    player.add_bionic( blade );
+    player.set_power_level( player.get_max_power_level() );
+    bionic &blade_bionic =
+        player.bionic_at_index(
+            player.get_bionics().size() - 1 );
+    REQUIRE( player.activate_bionic( blade_bionic ) );
+    REQUIRE( player.is_armed() );
+    CHECK( player.unwield() );
+    CHECK_FALSE( player.is_armed() );
+
+    script.write( R"lua(
+assert(state.character.get("native_remaining.can_wear", 0) == 2)
+assert(state.character.get("native_remaining.can_takeoff", 0) == 2)
+assert(state.character.get("native_remaining.on_wear", 0) == 1)
+assert(state.character.get("native_remaining.on_takeoff", 0) == 1)
+assert(state.character.get("native_remaining.can_unwield", 0) == 2)
+assert(state.character.get("native_remaining.on_unwield", 0) == 0)
+assert(state.character.get(
+    "native_remaining.bionic_can_unwield", 0) == 1)
+assert(state.character.get(
+    "native_remaining.bionic_on_unwield", 0) == 1)
+assert(state.character.get("native_remaining.can_reload", 0) == 2)
+assert(state.character.get("native_remaining.on_reload", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_remaining_combat_and_control_hooks_run_from_native_lifecycles",
+           "[lua][bindings][callbacks][hooks][combat][npc][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    clear_avatar();
+    clear_map_without_vision();
+    clear_creatures();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.set_moves( 10000 );
+    player.set_stamina( player.get_stamina_max() );
+    player.set_skill_level( skill_id( "melee" ), 20 );
+    player.set_skill_level( skill_id( "unarmed" ), 20 );
+    const character_id original_avatar_id = player.getID();
+
+    on_out_of_scope player_cleanup( [&player]() {
+        player.clear_worn();
+        player.inv->clear();
+        player.remove_weapon();
+    } );
+
+    item pipe( itype_id( "test_pipe" ) );
+    REQUIRE( player.wield( pipe ) );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read",
+            "state.world"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local pipe = game.types.id("item", "test_pipe")
+local punch = game.types.id(
+    "martial_art_technique", "tech_base_punch")
+local names = {
+    "on_block", "on_hit", "on_control_npc",
+    "on_creature_blocked", "on_creature_dodged",
+    "on_creature_performed_technique",
+    "control_debug", "control_normal"
+}
+for _, name in ipairs(names) do
+    state.world.set("native_remaining." .. name, 0)
+end
+local function count(name)
+    local key = "native_remaining." .. name
+    state.world.set(key, state.world.get(key, 0) + 1)
+end
+
+game.callbacks.register("imelee", pipe, {
+    on_block = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.source ~= nil)
+        assert(payload.item ~= nil)
+        assert(type(payload.damage_blocked) == "number")
+        count("on_block")
+    end,
+    on_hit = function(payload)
+        assert(payload.character ~= nil)
+        assert(payload.target ~= nil)
+        assert(payload.item ~= nil)
+        assert(math.type(payload.damage) == "integer")
+        assert(type(payload.critical) == "boolean")
+        count("on_hit")
+    end
+})
+game.hooks.on("on_control_npc", function(payload)
+    assert(payload.avatar ~= nil)
+    assert(payload.npc ~= nil)
+    assert(type(payload.debug) == "boolean")
+    count("on_control_npc")
+    count(payload.debug and "control_debug" or "control_normal")
+end)
+game.hooks.on("on_creature_blocked", function(payload)
+    assert(payload.creature ~= nil)
+    assert(payload.source ~= nil)
+    assert(type(payload.damage_blocked) == "number")
+    count("on_creature_blocked")
+end)
+game.hooks.on("on_creature_dodged", function(payload)
+    assert(payload.creature ~= nil)
+    assert(payload.source ~= nil)
+    assert(type(payload.difficulty) == "number")
+    count("on_creature_dodged")
+end)
+game.hooks.on("on_creature_performed_technique", function(payload)
+    assert(payload.creature ~= nil)
+    assert(payload.target ~= nil)
+    assert(payload.technique == punch)
+    assert(payload.weapon ~= nil)
+    assert(type(payload.damage) == "number")
+    assert(math.type(payload.move_cost) == "integer")
+    count("on_creature_performed_technique")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    monster &target = spawn_test_monster(
+                          "mon_zombie",
+                          player.pos_bub( here ) + tripoint_rel_ms::east );
+    target.set_hp( 1000000 );
+    bool target_is_placed = true;
+    on_out_of_scope monster_cleanup( [&target, &target_is_placed]() {
+        if( target_is_placed ) {
+            g->remove_zombie( target );
+        }
+    } );
+
+    player.on_dodge( &target, 1.0f );
+
+    player.blocks_left = 1;
+    bodypart_id blocked_part( "torso" );
+    damage_instance incoming(
+        damage_type_id( "bash" ), 20.0f );
+    REQUIRE( player.block_hit(
+                 &target, blocked_part, incoming ) );
+
+    bool landed_technique = false;
+    for( int attempt = 0; attempt < 20; ++attempt ) {
+        const int hp_before = target.get_hp();
+        REQUIRE( player.melee_attack_abstract(
+                     target, false,
+                     matec_id( "tech_base_punch" ) ) );
+        if( target.get_hp() < hp_before ) {
+            landed_technique = true;
+            break;
+        }
+    }
+    REQUIRE( landed_technique );
+    g->remove_zombie( target );
+    target_is_placed = false;
+
+    npc &controlled = spawn_npc(
+                          ( player.pos_bub( here ) +
+                            tripoint_rel_ms::west ).xy(),
+                          "test_talker" );
+    const character_id controlled_id = controlled.getID();
+    controlled.set_attitude( NPCATT_FOLLOW );
+    controlled.set_fac( faction_id( "your_followers" ) );
+    g->add_npc_follower( controlled_id );
+    REQUIRE( controlled.is_player_ally() );
+    on_out_of_scope npc_cleanup( [
+                                  &player,
+                                  &controlled,
+                                  original_avatar_id,
+                                  controlled_id
+                                ]() {
+        if( player.getID() != original_avatar_id ) {
+            player.control_npc( controlled, false );
+        }
+        g->remove_npc_follower( controlled_id );
+        g->remove_npc( controlled_id );
+        overmap_buffer.remove_npc( controlled_id );
+    } );
+
+    player.control_npc( controlled, true );
+    player.control_npc( controlled, false );
+    REQUIRE( player.getID() == original_avatar_id );
+
+    script.write( R"lua(
+assert(state.world.get("native_remaining.on_block", 0) == 1)
+assert(state.world.get("native_remaining.on_hit", 0) >= 1)
+assert(state.world.get("native_remaining.on_control_npc", 0) == 2)
+assert(state.world.get("native_remaining.on_creature_blocked", 0) == 1)
+assert(state.world.get("native_remaining.on_creature_dodged", 0) == 1)
+assert(state.world.get(
+    "native_remaining.on_creature_performed_technique", 0) >= 1)
+assert(state.world.get("native_remaining.control_debug", 0) == 1)
+assert(state.world.get("native_remaining.control_normal", 0) == 1)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
 }
 
 TEST_CASE( "lua_v5_recipe_catalog_is_detached_filtered_and_bounded",
@@ -6579,12 +13711,15 @@ TEST_CASE( "lua_v5_mapgen_hooks_are_filtered_ordered_and_read_only",
         "id": "user",
         "version": "5.0.0",
         "api_version": 5,
-        "capabilities": [ "events", "game.hooks", "game.read" ],
+        "capabilities": [
+            "events", "game.hooks", "game.read", "state.character"
+        ],
         "dependencies": [ "builtin" ]
     })json" );
     script.write( R"lua(
 local calls = 0
 local retained = nil
+local retained_compatibility = nil
 local limits = game.mapgen.limits()
 assert(limits.map_width == 24 and limits.map_height == 24)
 assert(limits.operations == 8192)
@@ -6610,6 +13745,23 @@ local removed = game.mapgen.on_postprocess(function()
 end)
 assert(game.mapgen.off(removed) == true)
 assert(game.mapgen.off(removed) == false)
+
+game.hooks.on("on_mapgen_postprocess", function(payload)
+    local count = state.character.get(
+        "native_mapgen.compatibility_calls", 0) + 1
+    if retained_compatibility ~= nil then
+        assert(retained_compatibility:valid() == false)
+    end
+    assert(payload.context:valid())
+    assert(payload.context:id().value == "field")
+    assert(pcall(function()
+        payload.context:set_terrain(
+            0, 0, game.types.id("terrain", "t_grass"))
+    end) == false)
+    retained_compatibility = payload.context
+    state.character.set(
+        "native_mapgen.compatibility_calls", count)
+end)
 
 game.mapgen.on_postprocess({
     priority = 100,
@@ -6668,6 +13820,12 @@ end)
     CHECK( cata::lua_ui::status().last_error.empty() );
     cata::lua_ui::dispatch_mapgen_postprocess( data );
     CHECK( cata::lua_ui::status().last_error.empty() );
+
+    script.write( R"lua(
+assert(state.character.get(
+    "native_mapgen.compatibility_calls", 0) == 2)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
 }
 
 TEST_CASE( "lua_v5_mapgen_hooks_mutate_with_scoped_deterministic_contexts",

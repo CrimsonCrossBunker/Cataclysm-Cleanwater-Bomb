@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <deque>
 #include <filesystem>
@@ -14,6 +16,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -25,38 +28,59 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
+#include "character.h"
 #include "catalua_sol.h"
 #include "catalua_bindings.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
+#include "catalua_ui_addictions.h"
+#include "catalua_ui_achievements.h"
 #include "catalua_ui_bionics.h"
+#include "catalua_ui_callbacks.h"
+#include "catalua_ui_camps.h"
 #include "catalua_ui_crafting.h"
 #include "catalua_ui_creatures.h"
 #include "catalua_ui_effects.h"
+#include "catalua_ui_eocs.h"
 #include "catalua_ui_events.h"
+#include "catalua_ui_factions.h"
 #include "catalua_ui_game.h"
+#include "catalua_ui_game_info.h"
 #include "catalua_ui_hordes.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_imgui.h"
+#include "catalua_ui_interaction.h"
 #include "catalua_ui_items.h"
 #include "catalua_ui_magic.h"
 #include "catalua_ui_manifest.h"
 #include "catalua_ui_mapgen.h"
+#include "catalua_ui_martial_arts.h"
 #include "catalua_ui_missions.h"
 #include "catalua_ui_modules.h"
 #include "catalua_ui_mutations.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
+#include "catalua_ui_needs.h"
+#include "catalua_ui_npcs.h"
 #include "catalua_ui_overmap.h"
+#include "catalua_ui_proficiencies.h"
 #include "catalua_ui_renderer.h"
 #include "catalua_ui_registry.h"
 #include "catalua_ui_scheduler.h"
 #include "catalua_ui_services.h"
+#include "catalua_ui_skills.h"
 #include "catalua_ui_state.h"
+#include "catalua_ui_statistics.h"
+#include "catalua_ui_time.h"
 #include "catalua_ui_values.h"
+#include "catalua_ui_vehicles.h"
+#include "catalua_ui_vitamins.h"
+#include "catalua_ui_weather.h"
 #include "catalua_ui_world.h"
+#include "catalua_ui_world_services.h"
+#include "catalua_ui_zones.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "event.h"
@@ -66,20 +90,26 @@
 #include "game.h"
 #include "game_constants.h"
 #include "imgui/imgui.h"
+#include "input.h"
 #include "input_context.h"
 #include "input_context_actions.h"
+#include "item.h"
+#include "item_location.h"
 #include "json_loader.h"
 #include "messages.h"
 #include "mapgendata.h"
 #include "mod_manager.h"
 #include "output.h"
+#include "panels.h"
 #include "path_info.h"
+#include "talker.h"
 #include "translations.h"
 #include "thread_pool.h"
 #include "type_id.h"
 #include "ui_profile.h"
 #include "ui_manager.h"
 #include "uilist.h"
+#include "vehicle.h"
 #include "worldfactory.h"
 
 namespace cata::lua_ui
@@ -96,9 +126,29 @@ constexpr int callback_instruction_limit = 250000;
 constexpr int instruction_hook_quantum = 1000;
 constexpr std::uint64_t slow_callback_threshold_us = 8000;
 constexpr std::size_t maximum_page_stack_depth = 32;
+constexpr std::size_t maximum_action_menu_entries = 128;
+constexpr std::size_t maximum_action_menu_entries_per_source = 32;
+constexpr std::size_t maximum_action_menu_name_bytes = 256;
+constexpr std::size_t maximum_sidebar_widgets = 64;
+constexpr std::size_t maximum_sidebar_widgets_per_source = 16;
+constexpr std::size_t maximum_sidebar_widget_name_bytes = 256;
+constexpr std::size_t maximum_sidebar_widget_lines = 64;
+constexpr std::size_t maximum_sidebar_widget_line_bytes = 4096;
+constexpr std::size_t maximum_sidebar_widget_output_bytes = 32768;
+constexpr std::size_t maximum_sidebar_widget_color_bytes = 64;
+constexpr int maximum_sidebar_widget_height = 64;
 constexpr std::size_t maximum_diagnostic_records = 64;
 constexpr std::size_t maximum_diagnostic_context_bytes = 512;
 constexpr std::size_t maximum_diagnostic_message_bytes = 8192;
+constexpr std::size_t maximum_menu_entries_per_handler = 64;
+constexpr std::size_t maximum_menu_entries_per_collection = 128;
+constexpr std::size_t maximum_menu_entry_id_bytes = 96;
+constexpr std::size_t maximum_menu_entry_label_bytes = 512;
+constexpr std::size_t maximum_hook_text_bytes = 32768;
+constexpr std::size_t maximum_hook_result_bytes = 512;
+constexpr std::size_t maximum_hook_results_per_handler = 64;
+constexpr std::size_t maximum_hook_results_per_dispatch = 256;
+constexpr std::size_t maximum_hook_result_entry_bytes = 512;
 
 struct memory_tracker {
     std::size_t used = 0;
@@ -260,6 +310,35 @@ struct page_definition {
     std::size_t source_index = 0;
 };
 
+struct action_menu_definition {
+    std::uint64_t registration_id = 0;
+    std::string id;
+    std::string name;
+    std::string category = "misc";
+    int hotkey = -1;
+    sol::protected_function callback;
+    bool enabled = true;
+    std::string error;
+    std::size_t source_index = 0;
+};
+
+struct sidebar_widget_definition {
+    std::uint64_t registration_id = 0;
+    std::string id;
+    std::string name;
+    int height = 1;
+    std::optional<int> order;
+    bool default_toggle = true;
+    bool redraw_every_frame = false;
+    std::optional<bool> panel_visible_value;
+    std::optional<sol::protected_function> panel_visible;
+    std::optional<sol::protected_function> render;
+    sol::protected_function draw;
+    bool enabled = true;
+    std::string error;
+    std::size_t source_index = 0;
+};
+
 struct script_source {
     script_manifest manifest;
     fs::path root;
@@ -304,12 +383,25 @@ class runtime_state : public event_subscriber
         std::unordered_map<std::string, sol::protected_function> service_methods;
         int service_call_depth = 0;
         std::vector<page_definition> pages;
+        std::vector<action_menu_definition> action_menu_entries;
+        std::uint64_t next_action_menu_registration_id = 1;
+        std::vector<sidebar_widget_definition> sidebar_widgets;
+        std::uint64_t next_sidebar_widget_registration_id = 1;
         script_event_registry event_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
+        script_event_registry hook_registry;
+        std::unordered_map<std::uint64_t, sol::protected_function> hook_callbacks;
+        script_callback_registry callback_registry;
+        std::unordered_map <
+        std::uint64_t,
+            std::unordered_map<std::string, sol::protected_function>
+            > callback_methods;
         script_event_registry mapgen_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> mapgen_callbacks;
         std::unordered_map<std::uint64_t, mapgen_handler_filter> mapgen_filters;
         int event_dispatch_depth = 0;
+        int hook_dispatch_depth = 0;
+        int callback_dispatch_depth = 0;
         int mapgen_dispatch_depth = 0;
         std::size_t generation = 0;
         std::size_t world_generation = 0;
@@ -339,10 +431,14 @@ std::size_t world_generation_counter = 0;
 std::deque<runtime_diagnostic_record> diagnostic_history;
 std::uint64_t diagnostic_sequence = 0;
 bool mapgen_bootstrap_attempted = false;
+bool sidebar_panels_dirty = false;
 
 bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
                             const std::string &display_name,
                             const script_value_map &data );
+sol::table event_to_lua(
+    runtime_state &state,
+    const cata::event &event );
 
 class source_scope
 {
@@ -683,9 +779,9 @@ sol::table clone_api_table( sol::state_view lua, const sol::table &source, const
 
 void create_source_environments( runtime_state &state )
 {
-    static const std::array<std::string_view, 12> isolated_tables = {
+    static const std::array<std::string_view, 13> isolated_tables = {
         "ui", "events", "game", "state", "i18n", "modules", "registry", "scheduler",
-        "services", "math", "string", "table"
+        "services", "sidebar", "math", "string", "table"
     };
     static const std::array<std::string_view, 21> safe_globals = {
         "_VERSION", "assert", "error", "getmetatable", "ipairs", "next", "pairs",
@@ -811,6 +907,493 @@ void register_page( runtime_state &state, const std::string &id, const sol::obje
     }
 }
 
+int action_menu_hotkey( const sol::table &descriptor )
+{
+    const sol::object raw_hotkey = descriptor["hotkey"];
+    if( !raw_hotkey.valid() || raw_hotkey.get_type() == sol::type::nil ) {
+        return -1;
+    }
+    if( raw_hotkey.get_type() != sol::type::string ) {
+        throw std::invalid_argument(
+            "game.action_menu.register hotkey must be a string" );
+    }
+    const std::string hotkey = raw_hotkey.as<std::string>();
+    if( hotkey.empty() ) {
+        return -1;
+    }
+    if( hotkey.size() > 64 ) {
+        throw std::invalid_argument(
+            "game.action_menu.register hotkey exceeds 64 bytes" );
+    }
+    if( hotkey.size() == 1 ) {
+        return static_cast<unsigned char>( hotkey.front() );
+    }
+    int keycode = inp_mngr.get_keycode(
+                      input_event_t::keyboard_char, hotkey );
+    if( keycode == 0 ) {
+        keycode = inp_mngr.get_keycode(
+                      input_event_t::keyboard_code, hotkey );
+    }
+    if( keycode == 0 ) {
+        throw std::invalid_argument(
+            "game.action_menu.register received an unknown hotkey name" );
+    }
+    return keycode;
+}
+
+std::uint64_t register_action_menu_entry(
+    runtime_state &state, const sol::table &descriptor,
+    sol::protected_function callback )
+{
+    require_api_version( state, 5, "game.action_menu.register" );
+    require_capability( state, "ui.pages" );
+    if( !callback.valid() ) {
+        throw std::invalid_argument(
+            "game.action_menu.register requires a callback" );
+    }
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.action_menu.register option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "id" && key != "name" &&
+            key != "category" && key != "hotkey" ) {
+            throw std::invalid_argument(
+                "game.action_menu.register received unknown option '" +
+                key + "'" );
+        }
+    }
+
+    action_menu_definition replacement;
+    replacement.id = descriptor.get_or(
+                         "id", std::string() );
+    replacement.name = descriptor.get_or(
+                           "name", replacement.id );
+    replacement.category = descriptor.get_or(
+                               "category", std::string( "misc" ) );
+    replacement.hotkey = action_menu_hotkey( descriptor );
+    replacement.callback = std::move( callback );
+    replacement.source_index = *state.current_source;
+    if( !is_safe_service_identifier( replacement.id ) ) {
+        throw std::invalid_argument(
+            "game.action_menu.register id must be a safe 1..128 byte identifier" );
+    }
+    if( replacement.name.empty() ||
+        replacement.name.size() > maximum_action_menu_name_bytes ) {
+        throw std::invalid_argument(
+            "game.action_menu.register name must contain 1..256 bytes" );
+    }
+    if( !is_safe_service_identifier( replacement.category ) ) {
+        throw std::invalid_argument(
+            "game.action_menu.register category must be a safe 1..128 byte identifier" );
+    }
+
+    const auto existing = std::find_if(
+                              state.action_menu_entries.begin(),
+                              state.action_menu_entries.end(),
+    [&replacement]( const action_menu_definition & entry ) {
+        return entry.source_index == replacement.source_index &&
+               entry.id == replacement.id;
+    } );
+    if( existing != state.action_menu_entries.end() ) {
+        replacement.registration_id = existing->registration_id;
+        *existing = std::move( replacement );
+        return existing->registration_id;
+    }
+
+    const std::size_t source_count = std::count_if(
+                                         state.action_menu_entries.begin(),
+                                         state.action_menu_entries.end(),
+    [&replacement]( const action_menu_definition & entry ) {
+        return entry.source_index == replacement.source_index;
+    } );
+    if( state.action_menu_entries.size() >=
+        maximum_action_menu_entries ) {
+        throw std::runtime_error(
+            "game.action_menu runtime entry limit reached" );
+    }
+    if( source_count >= maximum_action_menu_entries_per_source ) {
+        throw std::runtime_error(
+            "game.action_menu source entry limit reached" );
+    }
+
+    replacement.registration_id =
+        state.next_action_menu_registration_id++;
+    const std::uint64_t result = replacement.registration_id;
+    state.action_menu_entries.emplace_back(
+        std::move( replacement ) );
+    return result;
+}
+
+bool unregister_action_menu_entry(
+    runtime_state &state, const std::uint64_t registration_id )
+{
+    require_api_version( state, 5, "game.action_menu.off" );
+    require_capability( state, "ui.pages" );
+    const auto found = std::find_if(
+                           state.action_menu_entries.begin(),
+                           state.action_menu_entries.end(),
+    [registration_id]( const action_menu_definition & entry ) {
+        return entry.registration_id == registration_id;
+    } );
+    if( found == state.action_menu_entries.end() ||
+        found->source_index != *state.current_source ) {
+        return false;
+    }
+    state.action_menu_entries.erase( found );
+    return true;
+}
+
+sol::table action_menu_entries_to_lua(
+    runtime_state &state, sol::this_state lua )
+{
+    require_api_version( state, 5, "game.action_menu.list" );
+    require_capability( state, "ui.pages" );
+    sol::state_view lua_state( lua );
+    sol::table result = lua_state.create_table(
+                            static_cast<int>(
+                                state.action_menu_entries.size() ), 0 );
+    for( std::size_t index = 0;
+         index < state.action_menu_entries.size(); ++index ) {
+        const action_menu_definition &definition =
+            state.action_menu_entries[index];
+        sol::table entry = lua_state.create_table();
+        entry["registration_id"] = definition.registration_id;
+        entry["id"] = definition.id;
+        entry["name"] = definition.name;
+        entry["category"] = definition.category;
+        entry["source"] =
+            state.sources[definition.source_index].manifest.id;
+        entry["enabled"] = definition.enabled;
+        result[index + 1] = std::move( entry );
+    }
+    return result;
+}
+
+sol::table action_menu_limits_to_lua(
+    runtime_state &state, sol::this_state lua )
+{
+    require_api_version( state, 5, "game.action_menu.limits" );
+    require_capability( state, "ui.pages" );
+    sol::state_view lua_state( lua );
+    return lua_state.create_table_with(
+               "entries", maximum_action_menu_entries,
+               "entries_per_source",
+               maximum_action_menu_entries_per_source,
+               "name_bytes", maximum_action_menu_name_bytes,
+               "callback_instructions", callback_instruction_limit );
+}
+
+std::optional<int> sidebar_integer_option(
+    const sol::table &descriptor, const char *name )
+{
+    const sol::object value = descriptor[name];
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::number ) {
+        throw std::invalid_argument(
+            std::string( "sidebar.register_widget " ) + name +
+            " must be an integer" );
+    }
+    const double number = value.as<double>();
+    if( !std::isfinite( number ) || std::floor( number ) != number ||
+        number < static_cast<double>( std::numeric_limits<int>::min() ) ||
+        number > static_cast<double>( std::numeric_limits<int>::max() ) ) {
+        throw std::invalid_argument(
+            std::string( "sidebar.register_widget " ) + name +
+            " must be an integer" );
+    }
+    return static_cast<int>( number );
+}
+
+bool sidebar_boolean_option(
+    const sol::table &descriptor, const char *name,
+    const bool fallback )
+{
+    const sol::object value = descriptor[name];
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return fallback;
+    }
+    if( value.get_type() != sol::type::boolean ) {
+        throw std::invalid_argument(
+            std::string( "sidebar.register_widget " ) + name +
+            " must be a boolean" );
+    }
+    return value.as<bool>();
+}
+
+std::string sidebar_string_option(
+    const sol::table &descriptor, const char *name,
+    const std::string &fallback )
+{
+    const sol::object value = descriptor[name];
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return fallback;
+    }
+    if( value.get_type() != sol::type::string ) {
+        throw std::invalid_argument(
+            std::string( "sidebar.register_widget " ) + name +
+            " must be a string" );
+    }
+    return value.as<std::string>();
+}
+
+void mark_sidebar_panels_dirty( runtime_state &state )
+{
+    if( active_state.get() == &state &&
+        state.accept_actions ) {
+        sidebar_panels_dirty = true;
+    }
+}
+
+std::uint64_t register_sidebar_widget(
+    runtime_state &state, const sol::table &descriptor )
+{
+    require_api_version( state, 5, "sidebar.register_widget" );
+    require_capability( state, "ui.pages" );
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "sidebar.register_widget option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "id" && key != "name" && key != "height" &&
+            key != "order" && key != "default_toggle" &&
+            key != "redraw_every_frame" && key != "panel_visible" &&
+            key != "draw" && key != "render" ) {
+            throw std::invalid_argument(
+                "sidebar.register_widget received unknown option '" +
+                key + "'" );
+        }
+    }
+
+    sidebar_widget_definition replacement;
+    replacement.id = sidebar_string_option(
+                         descriptor, "id", std::string() );
+    replacement.name = sidebar_string_option(
+                           descriptor, "name", replacement.id );
+    replacement.height =
+        sidebar_integer_option( descriptor, "height" ).value_or( 1 );
+    replacement.order =
+        sidebar_integer_option( descriptor, "order" );
+    replacement.default_toggle = sidebar_boolean_option(
+                                     descriptor, "default_toggle", true );
+    replacement.redraw_every_frame = sidebar_boolean_option(
+                                         descriptor, "redraw_every_frame", false );
+    replacement.source_index = *state.current_source;
+
+    const sol::object draw = descriptor["draw"];
+    if( !draw.valid() || draw.get_type() != sol::type::function ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget requires a draw function" );
+    }
+    replacement.draw = draw.as<sol::protected_function>();
+
+    const sol::object panel_visible = descriptor["panel_visible"];
+    if( panel_visible.valid() &&
+        panel_visible.get_type() != sol::type::nil ) {
+        if( panel_visible.get_type() == sol::type::boolean ) {
+            replacement.panel_visible_value =
+                panel_visible.as<bool>();
+        } else if( panel_visible.get_type() ==
+                   sol::type::function ) {
+            replacement.panel_visible =
+                panel_visible.as<sol::protected_function>();
+        } else {
+            throw std::invalid_argument(
+                "sidebar.register_widget panel_visible must be a boolean or function" );
+        }
+    }
+
+    const sol::object render = descriptor["render"];
+    if( render.valid() && render.get_type() != sol::type::nil ) {
+        if( render.get_type() != sol::type::function ) {
+            throw std::invalid_argument(
+                "sidebar.register_widget render must be a function" );
+        }
+        replacement.render =
+            render.as<sol::protected_function>();
+    }
+
+    if( !is_safe_service_identifier( replacement.id ) ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget id must be a safe 1..128 byte identifier" );
+    }
+    if( replacement.name.empty() ||
+        replacement.name.size() >
+        maximum_sidebar_widget_name_bytes ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget name must contain 1..256 bytes" );
+    }
+    if( replacement.height != -2 &&
+        ( replacement.height < 1 ||
+          replacement.height > maximum_sidebar_widget_height ) ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget height must be -2 or within 1..64" );
+    }
+    if( replacement.order &&
+        ( *replacement.order < 1 || *replacement.order > 512 ) ) {
+        throw std::invalid_argument(
+            "sidebar.register_widget order must be within 1..512" );
+    }
+
+    const auto existing = std::find_if(
+                              state.sidebar_widgets.begin(),
+                              state.sidebar_widgets.end(),
+    [&replacement]( const sidebar_widget_definition & entry ) {
+        return entry.source_index == replacement.source_index &&
+               entry.id == replacement.id;
+    } );
+    if( existing != state.sidebar_widgets.end() ) {
+        replacement.registration_id =
+            existing->registration_id;
+        *existing = std::move( replacement );
+        mark_sidebar_panels_dirty( state );
+        return existing->registration_id;
+    }
+
+    const std::size_t source_count = std::count_if(
+                                         state.sidebar_widgets.begin(),
+                                         state.sidebar_widgets.end(),
+    [&replacement]( const sidebar_widget_definition & entry ) {
+        return entry.source_index == replacement.source_index;
+    } );
+    if( state.sidebar_widgets.size() >=
+        maximum_sidebar_widgets ) {
+        throw std::runtime_error(
+            "sidebar runtime widget limit reached" );
+    }
+    if( source_count >=
+        maximum_sidebar_widgets_per_source ) {
+        throw std::runtime_error(
+            "sidebar source widget limit reached" );
+    }
+
+    replacement.registration_id =
+        state.next_sidebar_widget_registration_id++;
+    const std::uint64_t result =
+        replacement.registration_id;
+    state.sidebar_widgets.emplace_back(
+        std::move( replacement ) );
+    mark_sidebar_panels_dirty( state );
+    return result;
+}
+
+bool unregister_sidebar_widget(
+    runtime_state &state, const std::uint64_t registration_id )
+{
+    require_api_version( state, 5, "sidebar.off" );
+    require_capability( state, "ui.pages" );
+    const auto found = std::find_if(
+                           state.sidebar_widgets.begin(),
+                           state.sidebar_widgets.end(),
+    [registration_id]( const sidebar_widget_definition & entry ) {
+        return entry.registration_id == registration_id;
+    } );
+    if( found == state.sidebar_widgets.end() ||
+        found->source_index != *state.current_source ) {
+        return false;
+    }
+    state.sidebar_widgets.erase( found );
+    mark_sidebar_panels_dirty( state );
+    return true;
+}
+
+std::size_t clear_sidebar_widgets( runtime_state &state )
+{
+    require_api_version( state, 5, "sidebar.clear_widgets" );
+    require_capability( state, "ui.pages" );
+    const std::size_t before = state.sidebar_widgets.size();
+    const std::size_t source_index = *state.current_source;
+    state.sidebar_widgets.erase(
+        std::remove_if(
+            state.sidebar_widgets.begin(),
+            state.sidebar_widgets.end(),
+    [source_index]( const sidebar_widget_definition & entry ) {
+        return entry.source_index == source_index;
+    } ),
+    state.sidebar_widgets.end() );
+    const std::size_t removed =
+        before - state.sidebar_widgets.size();
+    if( removed > 0 ) {
+        mark_sidebar_panels_dirty( state );
+    }
+    return removed;
+}
+
+std::string sidebar_widget_key(
+    const runtime_state &state,
+    const sidebar_widget_definition &definition )
+{
+    if( definition.source_index >= state.sources.size() ) {
+        return {};
+    }
+    return "lua:" +
+           state.sources[definition.source_index].manifest.id +
+           ":" + definition.id;
+}
+
+sol::table sidebar_widgets_to_lua(
+    runtime_state &state, sol::this_state lua )
+{
+    require_api_version( state, 5, "sidebar.list" );
+    require_capability( state, "ui.pages" );
+    sol::state_view lua_state( lua );
+    sol::table result = lua_state.create_table(
+                            static_cast<int>(
+                                state.sidebar_widgets.size() ), 0 );
+    for( std::size_t index = 0;
+         index < state.sidebar_widgets.size(); ++index ) {
+        const sidebar_widget_definition &definition =
+            state.sidebar_widgets[index];
+        if( definition.source_index >=
+            state.sources.size() ) {
+            continue;
+        }
+        sol::table entry = lua_state.create_table();
+        entry["registration_id"] =
+            definition.registration_id;
+        entry["key"] =
+            sidebar_widget_key( state, definition );
+        entry["id"] = definition.id;
+        entry["name"] = definition.name;
+        entry["source"] =
+            state.sources[definition.source_index].manifest.id;
+        entry["height"] = definition.height;
+        if( definition.order ) {
+            entry["order"] = *definition.order;
+        }
+        entry["default_toggle"] =
+            definition.default_toggle;
+        entry["redraw_every_frame"] =
+            definition.redraw_every_frame;
+        entry["enabled"] = definition.enabled;
+        result[index + 1] = std::move( entry );
+    }
+    return result;
+}
+
+sol::table sidebar_limits_to_lua(
+    runtime_state &state, sol::this_state lua )
+{
+    require_api_version( state, 5, "sidebar.limits" );
+    require_capability( state, "ui.pages" );
+    sol::state_view lua_state( lua );
+    return lua_state.create_table_with(
+               "widgets", maximum_sidebar_widgets,
+               "widgets_per_source",
+               maximum_sidebar_widgets_per_source,
+               "height", maximum_sidebar_widget_height,
+               "lines", maximum_sidebar_widget_lines,
+               "line_bytes", maximum_sidebar_widget_line_bytes,
+               "output_bytes",
+               maximum_sidebar_widget_output_bytes,
+               "callback_instructions",
+               callback_instruction_limit );
+}
+
 std::string local_custom_event_name( const runtime_state &state,
                                      const std::string_view name )
 {
@@ -831,6 +1414,342 @@ std::string subscription_event_name( const runtime_state &state,
         return name;
     }
     return local_custom_event_name( state, name );
+}
+
+event_type require_native_event_type( const std::string &name,
+                                      const std::string_view api_name )
+{
+    if( !io::enum_is_valid<event_type>( name ) ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " received an unknown native event type: " + name );
+    }
+    return io::string_to_enum<event_type>( name );
+}
+
+std::string native_event_lua_type(
+    const cata_variant_type type )
+{
+    switch( type ) {
+        case cata_variant_type::bool_:
+            return "boolean";
+        case cata_variant_type::int_:
+        case cata_variant_type::character_id:
+        case cata_variant_type::chrono_seconds:
+            return "integer";
+        case cata_variant_type::string:
+            return "string";
+        case cata_variant_type::void_:
+            return "nil";
+        default:
+            return "string";
+    }
+}
+
+bool valid_coordinate_text(
+    const std::string_view value,
+    const int dimensions )
+{
+    if( value.size() < 5 ||
+        value.front() != '(' ||
+        value.back() != ')' ) {
+        return false;
+    }
+    std::size_t cursor = 1;
+    for( int component = 0;
+         component < dimensions;
+         ++component ) {
+        const char *begin =
+            value.data() + cursor;
+        const char *end =
+            value.data() +
+            value.size() - 1;
+        int parsed = 0;
+        const std::from_chars_result converted =
+            std::from_chars(
+                begin, end, parsed );
+        if( converted.ec !=
+            std::errc() ||
+            converted.ptr == begin ) {
+            return false;
+        }
+        cursor = static_cast<std::size_t>(
+                     converted.ptr -
+                     value.data() );
+        const char expected =
+            component + 1 == dimensions ?
+            ')' : ',';
+        if( cursor >= value.size() ||
+            value[cursor] != expected ) {
+            return false;
+        }
+        ++cursor;
+    }
+    return cursor == value.size();
+}
+
+cata_variant read_native_event_field(
+    const sol::object &value,
+    const cata_variant_type expected,
+    const std::string &event_name,
+    const std::string &field_name )
+{
+    const std::string context =
+        "game.native_events.emit field '" +
+        field_name + "' for '" +
+        event_name + "'";
+    switch( expected ) {
+        case cata_variant_type::bool_:
+            if( !value.is<bool>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be a boolean" );
+            }
+            return cata_variant(
+                       value.as<bool>() );
+        case cata_variant_type::int_: {
+            if( !value.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be an integer" );
+            }
+            const lua_Integer number =
+                value.as<lua_Integer>();
+            if( number <
+                std::numeric_limits<int>::min() ||
+                number >
+                std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument(
+                    context +
+                    " exceeds the native integer range" );
+            }
+            return cata_variant(
+                       static_cast<int>(
+                           number ) );
+        }
+        case cata_variant_type::character_id: {
+            if( !value.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be an integer character id" );
+            }
+            const lua_Integer number =
+                value.as<lua_Integer>();
+            if( number <
+                std::numeric_limits<int>::min() ||
+                number >
+                std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument(
+                    context +
+                    " exceeds the character id range" );
+            }
+            return cata_variant(
+                       character_id(
+                           static_cast<int>(
+                               number ) ) );
+        }
+        case cata_variant_type::chrono_seconds:
+            if( !value.is<lua_Integer>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be an integer number of seconds" );
+            }
+            return cata_variant(
+                       std::chrono::seconds(
+                           value.as<lua_Integer>() ) );
+        case cata_variant_type::string: {
+            if( !value.is<std::string>() ) {
+                throw std::invalid_argument(
+                    context +
+                    " must be a string" );
+            }
+            std::string text =
+                value.as<std::string>();
+            if( text.size() > 8192 ) {
+                throw std::invalid_argument(
+                    context +
+                    " exceeds 8192 bytes" );
+            }
+            return cata_variant(
+                       std::move( text ) );
+        }
+        case cata_variant_type::void_:
+            throw std::invalid_argument(
+                context +
+                " has unsupported void type" );
+        default:
+            break;
+    }
+
+    if( !value.is<std::string>() ) {
+        throw std::invalid_argument(
+            context + " must be a string for native type " +
+            io::enum_to_string( expected ) );
+    }
+    std::string text =
+        value.as<std::string>();
+    if( text.empty() ||
+        text.size() > 512 ) {
+        throw std::invalid_argument(
+            context +
+            " must contain 1..512 bytes" );
+    }
+    if( expected ==
+        cata_variant_type::point &&
+        !valid_coordinate_text(
+            text, 2 ) ) {
+        throw std::invalid_argument(
+            context +
+            " must use '(x,y)' point syntax" );
+    }
+    if( expected ==
+        cata_variant_type::tripoint &&
+        !valid_coordinate_text(
+            text, 3 ) ) {
+        throw std::invalid_argument(
+            context +
+            " must use '(x,y,z)' tripoint syntax" );
+    }
+    cata_variant converted =
+        cata_variant::from_string(
+            expected, std::move( text ) );
+    try {
+        if( !converted.is_valid() ) {
+            throw std::invalid_argument(
+                context +
+                " is not a valid " +
+                io::enum_to_string(
+                    expected ) );
+        }
+    } catch( const std::exception &error ) {
+        throw std::invalid_argument(
+            context +
+            " could not be parsed as " +
+            io::enum_to_string( expected ) +
+            ": " + error.what() );
+    }
+    return converted;
+}
+
+cata::event build_native_event(
+    const std::string &name,
+    const sol::table &requested )
+{
+    const event_type type =
+        require_native_event_type(
+            name,
+            "game.native_events.emit" );
+    const cata::event::fields_type fields =
+        cata::event::get_fields(
+            type );
+    cata::event::data_type data;
+    for( const auto &entry : requested ) {
+        const sol::object key_object =
+            entry.first;
+        if( key_object.get_type() !=
+            sol::type::string ) {
+            throw std::invalid_argument(
+                "game.native_events.emit field "
+                "names must be strings" );
+        }
+        const std::string key =
+            key_object.as<std::string>();
+        const auto expected =
+            fields.find( key );
+        if( expected == fields.end() ) {
+            throw std::invalid_argument(
+                "game.native_events.emit received "
+                "unknown field '" + key +
+                "' for '" + name + "'" );
+        }
+        data.emplace(
+            key,
+            read_native_event_field(
+                entry.second,
+                expected->second,
+                name, key ) );
+    }
+    for( const auto &[field, type] :
+         fields ) {
+        static_cast<void>( type );
+        if( data.count( field ) == 0 ) {
+            throw std::invalid_argument(
+                "game.native_events.emit is "
+                "missing field '" + field +
+                "' for '" + name + "'" );
+        }
+    }
+    return cata::event(
+               type, calendar::turn,
+               std::move( data ) );
+}
+
+sol::table emit_native_event(
+    runtime_state &state,
+    const std::string &name,
+    const sol::table &fields )
+{
+    if( !state.accept_actions ) {
+        throw std::runtime_error(
+            "game.native_events.emit is only "
+            "available from an active runtime callback" );
+    }
+    cata::event emitted =
+        build_native_event(
+            name, fields );
+    get_event_bus().send(
+        emitted );
+    return event_to_lua(
+               state, emitted );
+}
+
+sol::table native_event_types( runtime_state &state, sol::this_state lua )
+{
+    require_capability( state, "events" );
+    sol::state_view lua_state( lua );
+    sol::table result = lua_state.create_table(
+                            static_cast<int>( event_type::num_event_types ), 0 );
+    for( int raw = 0;
+         raw < static_cast<int>( event_type::num_event_types ); ++raw ) {
+        result[raw + 1] = io::enum_to_string(
+                              static_cast<event_type>( raw ) );
+    }
+    return result;
+}
+
+sol::table describe_native_event(
+    runtime_state &state, sol::this_state lua, const std::string &name )
+{
+    require_capability( state, "events" );
+    const event_type type = require_native_event_type(
+                                name, "events.describe_native" );
+    const cata::event::fields_type fields = cata::event::get_fields( type );
+    std::vector<std::pair<std::string, cata_variant_type>> ordered(
+                fields.begin(), fields.end() );
+    std::sort(
+        ordered.begin(), ordered.end(),
+    []( const auto & lhs, const auto & rhs ) {
+        return lhs.first < rhs.first;
+    } );
+
+    sol::state_view lua_state( lua );
+    sol::table field_values = lua_state.create_table(
+                                  static_cast<int>( ordered.size() ), 0 );
+    for( std::size_t index = 0; index < ordered.size(); ++index ) {
+        sol::table field = lua_state.create_table();
+        field["name"] = ordered[index].first;
+        field["type"] = io::enum_to_string( ordered[index].second );
+        field["lua_type"] =
+            native_event_lua_type(
+                ordered[index].second );
+        field_values[index + 1] = std::move( field );
+    }
+    sol::table result = lua_state.create_table();
+    result["type"] = name;
+    result["fields"] = std::move( field_values );
+    result["subscribable"] = true;
+    result["emittable"] = true;
+    return result;
 }
 
 std::string dependency_custom_event_name( const runtime_state &state,
@@ -899,6 +1818,298 @@ bool unregister_event_handler( runtime_state &state, const std::uint64_t id )
     }
     state.event_callbacks.erase( id );
     return true;
+}
+
+void require_hook_capabilities(
+    const runtime_state &state, const script_hook_spec *spec = nullptr )
+{
+    require_api_version( state, 5, "game.hooks" );
+    require_capability( state, "events" );
+    require_capability( state, "game.hooks" );
+    if( spec != nullptr && spec->mode == script_hook_mode::intercept ) {
+        require_capability( state, "game.write" );
+    }
+}
+
+std::uint64_t register_hook_handler(
+    runtime_state &state, const std::string &name,
+    const sol::optional<sol::table> &options,
+    sol::protected_function callback )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    if( spec == nullptr ) {
+        throw std::invalid_argument(
+            "game.hooks.on received an unknown hook name: " + name );
+    }
+    require_hook_capabilities( state, spec );
+    if( !state.current_source || !callback.valid() ) {
+        throw std::runtime_error(
+            "game.hooks.on requires an active source and callback function" );
+    }
+    const auto [priority, once] = event_options( options );
+    const std::uint64_t id = state.hook_registry.subscribe(
+                                 "hook:" + name, priority,
+                                 *state.current_source, once );
+    try {
+        state.hook_callbacks.emplace( id, std::move( callback ) );
+    } catch( ... ) {
+        state.hook_registry.unsubscribe_unchecked( id );
+        throw;
+    }
+    return id;
+}
+
+bool unregister_hook_handler( runtime_state &state, const std::uint64_t id )
+{
+    require_hook_capabilities( state );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.hooks.off is outside a Lua source context" );
+    }
+    if( !state.hook_registry.unsubscribe( id, *state.current_source ) ) {
+        return false;
+    }
+    state.hook_callbacks.erase( id );
+    return true;
+}
+
+sol::table hook_spec_to_lua(
+    sol::state_view lua, const script_hook_spec &spec )
+{
+    sol::table result = lua.create_table();
+    result["name"] = std::string( spec.name );
+    result["mode"] = std::string( script_hook_mode_name( spec.mode ) );
+    result["cancellable"] =
+        script_hook_supports_result( spec, "allow" );
+    result["requires_write"] = spec.mode == script_hook_mode::intercept;
+    sol::table fields = lua.create_table();
+    for( std::size_t index = 0; index < spec.payload_fields.size(); ++index ) {
+        fields[index + 1] = std::string( spec.payload_fields[index] );
+    }
+    result["payload_fields"] = std::move( fields );
+    sol::table result_fields = lua.create_table();
+    for( std::size_t index = 0; index < spec.result_fields.size(); ++index ) {
+        result_fields[index + 1] =
+            std::string( spec.result_fields[index] );
+    }
+    result["result_fields"] = std::move( result_fields );
+    return result;
+}
+
+sol::table describe_hook(
+    runtime_state &state, sol::this_state lua, const std::string &name )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    if( spec == nullptr ) {
+        throw std::invalid_argument(
+            "game.hooks.describe received an unknown hook name: " + name );
+    }
+    require_hook_capabilities( state );
+    return hook_spec_to_lua( sol::state_view( lua ), *spec );
+}
+
+sol::table list_hooks( runtime_state &state, sol::this_state lua )
+{
+    require_hook_capabilities( state );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    const std::vector<script_hook_spec> &specs = script_hook_specs();
+    for( std::size_t index = 0; index < specs.size(); ++index ) {
+        result[index + 1] = hook_spec_to_lua( view, specs[index] );
+    }
+    return result;
+}
+
+sol::table hook_limits( runtime_state &state, sol::this_state lua )
+{
+    require_hook_capabilities( state );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    result["hooks"] = script_hook_specs().size();
+    result["handlers"] = script_event_registry::maximum_subscriptions;
+    result["registered"] = state.hook_registry.size();
+    result["priority_min"] = script_event_registry::minimum_priority;
+    result["priority_max"] = script_event_registry::maximum_priority;
+    result["dispatch_depth"] = 16;
+    result["instruction_budget"] = callback_instruction_limit;
+    return result;
+}
+
+void require_callback_capabilities(
+    const runtime_state &state, const bool require_write )
+{
+    require_api_version( state, 5, "game.callbacks" );
+    require_capability( state, "game.read" );
+    require_capability( state, "game.callbacks" );
+    if( require_write ) {
+        require_capability( state, "game.write" );
+    }
+}
+
+std::uint64_t register_callback_actor(
+    runtime_state &state, const std::string &kind_name,
+    const script_game_id &target, const sol::table &descriptor )
+{
+    const script_callback_kind_spec *kind =
+        find_script_callback_kind_spec( kind_name );
+    if( kind == nullptr ) {
+        throw std::invalid_argument(
+            "game.callbacks.register received an unknown actor kind: " +
+            kind_name );
+    }
+    if( target.kind() != kind->target_id_kind ) {
+        throw std::invalid_argument(
+            "game.callbacks.register kind '" + kind_name +
+            "' requires GameId<" + std::string( kind->target_id_kind ) +
+            ">, received GameId<" + target.kind() + ">" );
+    }
+    if( !target.is_valid() ) {
+        throw std::invalid_argument(
+            "game.callbacks.register received an unknown " +
+            target.to_string() );
+    }
+
+    std::unordered_map<std::string, sol::protected_function> methods;
+    std::vector<std::string> method_names;
+    bool has_decision_method = false;
+    for( const script_callback_method_spec &method : kind->methods ) {
+        const sol::object raw = descriptor[method.name];
+        if( !raw.valid() || raw.get_type() == sol::type::nil ) {
+            continue;
+        }
+        if( raw.get_type() != sol::type::function ) {
+            throw std::invalid_argument(
+                "game.callbacks.register method '" +
+                std::string( method.name ) + "' must be a function" );
+        }
+        methods.emplace(
+            std::string( method.name ),
+            raw.as<sol::protected_function>() );
+        method_names.emplace_back( method.name );
+        has_decision_method = has_decision_method || method.decision;
+    }
+    if( method_names.empty() ) {
+        throw std::invalid_argument(
+            "game.callbacks.register requires at least one callback method" );
+    }
+
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.callbacks.register descriptor keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key == "priority" || key == "once" ||
+            find_script_callback_method_spec( *kind, key ) != nullptr ) {
+            continue;
+        }
+        throw std::invalid_argument(
+            "game.callbacks.register received unknown descriptor field '" +
+            key + "'" );
+    }
+
+    require_callback_capabilities( state, has_decision_method );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.callbacks.register is outside a Lua source context" );
+    }
+    const int priority = descriptor.get_or( "priority", 0 );
+    const bool once = descriptor.get_or( "once", false );
+    const std::uint64_t id = state.callback_registry.subscribe(
+                                 kind_name, target.value(),
+                                 std::move( method_names ), priority,
+                                 *state.current_source, once );
+    try {
+        state.callback_methods.emplace( id, std::move( methods ) );
+    } catch( ... ) {
+        state.callback_registry.unsubscribe_unchecked( id );
+        throw;
+    }
+    return id;
+}
+
+bool unregister_callback_actor(
+    runtime_state &state, const std::uint64_t id )
+{
+    require_callback_capabilities( state, false );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.callbacks.off is outside a Lua source context" );
+    }
+    if( !state.callback_registry.unsubscribe(
+            id, *state.current_source ) ) {
+        return false;
+    }
+    state.callback_methods.erase( id );
+    return true;
+}
+
+sol::table callback_kind_to_lua(
+    sol::state_view lua, const script_callback_kind_spec &kind )
+{
+    sol::table result = lua.create_table();
+    result["kind"] = std::string( kind.kind );
+    result["target_id_kind"] = std::string( kind.target_id_kind );
+    sol::table methods = lua.create_table();
+    for( std::size_t index = 0; index < kind.methods.size(); ++index ) {
+        const script_callback_method_spec &method = kind.methods[index];
+        sol::table entry = lua.create_table();
+        entry["name"] = std::string( method.name );
+        entry["decision"] = method.decision;
+        entry["consuming"] = method.consuming;
+        entry["requires_write"] = method.decision;
+        methods[index + 1] = std::move( entry );
+    }
+    result["methods"] = std::move( methods );
+    return result;
+}
+
+sol::table describe_callback_kind(
+    runtime_state &state, sol::this_state lua, const std::string &kind_name )
+{
+    require_callback_capabilities( state, false );
+    const script_callback_kind_spec *kind =
+        find_script_callback_kind_spec( kind_name );
+    if( kind == nullptr ) {
+        throw std::invalid_argument(
+            "game.callbacks.describe received an unknown actor kind: " +
+            kind_name );
+    }
+    return callback_kind_to_lua( sol::state_view( lua ), *kind );
+}
+
+sol::table list_callback_kinds(
+    runtime_state &state, sol::this_state lua )
+{
+    require_callback_capabilities( state, false );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    const std::vector<script_callback_kind_spec> &kinds =
+        script_callback_kind_specs();
+    for( std::size_t index = 0; index < kinds.size(); ++index ) {
+        result[index + 1] = callback_kind_to_lua( view, kinds[index] );
+    }
+    return result;
+}
+
+sol::table callback_limits( runtime_state &state, sol::this_state lua )
+{
+    require_callback_capabilities( state, false );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    result["kinds"] = script_callback_kind_specs().size();
+    result["registrations"] =
+        script_callback_registry::maximum_registrations;
+    result["registrations_per_target"] =
+        script_callback_registry::maximum_registrations_per_target;
+    result["registered"] = state.callback_registry.size();
+    result["priority_min"] =
+        script_callback_registry::minimum_priority;
+    result["priority_max"] =
+        script_callback_registry::maximum_priority;
+    result["dispatch_depth"] = 16;
+    result["instruction_budget"] = callback_instruction_limit;
+    return result;
 }
 
 void require_mapgen_hook_capabilities( const runtime_state &state )
@@ -1362,6 +2573,10 @@ sol::table lua_runtime_status( sol::this_state lua, const runtime_state &runtime
     result["generation"] = runtime.generation;
     result["world_generation"] = runtime.world_generation;
     result["pages"] = runtime.pages.size();
+    result["action_menu_entries"] =
+        runtime.action_menu_entries.size();
+    result["sidebar_widgets"] =
+        runtime.sidebar_widgets.size();
     result["event_handlers"] = runtime.event_registry.size();
     result["mapgen_handlers"] = runtime.mapgen_registry.size();
     result["sources"] = runtime.sources.size();
@@ -1401,6 +2616,8 @@ sol::table diagnostic_string_array(
 
 struct source_resource_counts {
     std::size_t pages = 0;
+    std::size_t action_menu_entries = 0;
+    std::size_t sidebar_widgets = 0;
     std::size_t event_handlers = 0;
     std::size_t mapgen_handlers = 0;
     std::size_t scheduled_tasks = 0;
@@ -1415,6 +2632,18 @@ std::vector<source_resource_counts> count_source_resources(
     for( const page_definition &page : runtime.pages ) {
         if( page.source_index < result.size() ) {
             ++result[page.source_index].pages;
+        }
+    }
+    for( const action_menu_definition &entry :
+         runtime.action_menu_entries ) {
+        if( entry.source_index < result.size() ) {
+            ++result[entry.source_index].action_menu_entries;
+        }
+    }
+    for( const sidebar_widget_definition &entry :
+         runtime.sidebar_widgets ) {
+        if( entry.source_index < result.size() ) {
+            ++result[entry.source_index].sidebar_widgets;
         }
     }
     for( const script_event_subscription &event :
@@ -1508,6 +2737,10 @@ sol::table lua_runtime_diagnostics(
 
     sol::table resources = state.create_table();
     resources["pages"] = runtime.pages.size();
+    resources["action_menu_entries"] =
+        runtime.action_menu_entries.size();
+    resources["sidebar_widgets"] =
+        runtime.sidebar_widgets.size();
     resources["event_handlers"] = runtime.event_registry.size();
     resources["mapgen_handlers"] = runtime.mapgen_registry.size();
     resources["scheduled_tasks"] = runtime.scheduler.size();
@@ -1539,6 +2772,18 @@ sol::table lua_runtime_diagnostics(
     limits["service_methods"] =
         script_service_registry::maximum_methods_per_service;
     limits["page_stack_depth"] = maximum_page_stack_depth;
+    limits["action_menu_entries"] =
+        maximum_action_menu_entries;
+    limits["action_menu_entries_per_source"] =
+        maximum_action_menu_entries_per_source;
+    limits["sidebar_widgets"] =
+        maximum_sidebar_widgets;
+    limits["sidebar_widgets_per_source"] =
+        maximum_sidebar_widgets_per_source;
+    limits["sidebar_widget_lines"] =
+        maximum_sidebar_widget_lines;
+    limits["sidebar_widget_output_bytes"] =
+        maximum_sidebar_widget_output_bytes;
     limits["diagnostic_records"] = maximum_diagnostic_records;
     limits["module_name_bytes"] = maximum_module_name_bytes;
     limits["module_source_bytes"] = maximum_module_source_bytes;
@@ -1563,6 +2808,10 @@ sol::table lua_runtime_diagnostics(
         source["dependencies"] =
             diagnostic_string_array( state, manifest.dependencies );
         source["pages"] = counts.pages;
+        source["action_menu_entries"] =
+            counts.action_menu_entries;
+        source["sidebar_widgets"] =
+            counts.sidebar_widgets;
         source["event_handlers"] = counts.event_handlers;
         source["mapgen_handlers"] = counts.mapgen_handlers;
         source["scheduled_tasks"] = counts.scheduled_tasks;
@@ -1922,6 +3171,14 @@ void initialize_state( runtime_state &state )
     events.set_function( "off", [&state]( const std::uint64_t id ) {
         return unregister_event_handler( state, id );
     } );
+    events.set_function( "native_types", [&state]( sol::this_state lua ) {
+        return native_event_types( state, lua );
+    } );
+    events.set_function(
+        "describe_native",
+    [&state]( sol::this_state lua, const std::string & name ) {
+        return describe_native_event( state, lua, name );
+    } );
     events.set_function(
         "emit",
         [&state]( const std::string & name,
@@ -1972,10 +3229,213 @@ void initialize_state( runtime_state &state )
 
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
+    const auto require_native_events = [&state]() {
+        require_api_version( state, 5, "game.native_events" );
+        require_capability( state, "events" );
+        require_capability( state, "game.read" );
+    };
+    sol::table native_events = state.lua.create_table();
+    native_events.set_function(
+        "on",
+        sol::overload(
+            [&state, require_native_events](
+                const std::string & name,
+    sol::protected_function callback ) {
+        require_native_events();
+        require_native_event_type( name, "game.native_events.on" );
+        return register_event_handler(
+                   state, "game:" + name, std::nullopt,
+                   std::move( callback ) );
+    },
+    [&state, require_native_events](
+        const std::string & name, const sol::table & options,
+        sol::protected_function callback ) {
+        require_native_events();
+        require_native_event_type( name, "game.native_events.on" );
+        return register_event_handler(
+                   state, "game:" + name, options,
+                   std::move( callback ) );
+    } ) );
+    native_events.set_function(
+    "off", [&state, require_native_events]( const std::uint64_t id ) {
+        require_native_events();
+        return unregister_event_handler( state, id );
+    } );
+    native_events.set_function(
+    "list", [&state, require_native_events]( sol::this_state lua ) {
+        require_native_events();
+        return native_event_types( state, lua );
+    } );
+    native_events.set_function(
+        "describe",
+        [&state, require_native_events](
+    sol::this_state lua, const std::string & name ) {
+        require_native_events();
+        return describe_native_event( state, lua, name );
+    } );
+    native_events.set_function(
+        "emit",
+        [&state, require_native_events](
+            const std::string & name,
+    const sol::table & fields ) {
+        require_native_events();
+        require_capability(
+            state, "game.write" );
+        return emit_native_event(
+                   state, name, fields );
+    } );
+    game["native_events"] = std::move( native_events );
+    sol::table action_menu = state.lua.create_table();
+    action_menu.set_function(
+        "register",
+        [&state]( const sol::table & descriptor,
+    sol::protected_function callback ) {
+        return register_action_menu_entry(
+                   state, descriptor, std::move( callback ) );
+    } );
+    action_menu.set_function(
+    "off", [&state]( const std::uint64_t id ) {
+        return unregister_action_menu_entry( state, id );
+    } );
+    action_menu.set_function(
+        "list",
+    [&state]( sol::this_state lua ) {
+        return action_menu_entries_to_lua( state, lua );
+    } );
+    action_menu.set_function(
+        "limits",
+    [&state]( sol::this_state lua ) {
+        return action_menu_limits_to_lua( state, lua );
+    } );
+    game["action_menu"] = std::move( action_menu );
+    sol::table sidebar =
+        state.lua.create_named_table( "sidebar" );
+    sidebar.set_function(
+        "register_widget",
+    [&state]( const sol::table & descriptor ) {
+        return register_sidebar_widget( state, descriptor );
+    } );
+    sidebar.set_function(
+        "register",
+    [&state]( const sol::table & descriptor ) {
+        return register_sidebar_widget( state, descriptor );
+    } );
+    sidebar.set_function(
+    "off", [&state]( const std::uint64_t id ) {
+        return unregister_sidebar_widget( state, id );
+    } );
+    sidebar.set_function(
+    "clear_widgets", [&state]() {
+        return clear_sidebar_widgets( state );
+    } );
+    sidebar.set_function(
+        "list",
+    [&state]( sol::this_state lua ) {
+        return sidebar_widgets_to_lua( state, lua );
+    } );
+    sidebar.set_function(
+        "limits",
+    [&state]( sol::this_state lua ) {
+        return sidebar_limits_to_lua( state, lua );
+    } );
+    sidebar.set_function(
+    "get_layout_id", [&state]() {
+        require_api_version(
+            state, 5, "sidebar.get_layout_id" );
+        require_capability( state, "ui.pages" );
+        return panel_manager::get_manager().
+               get_current_layout_id();
+    } );
+    game["sidebar"] = sidebar;
     install_value_type_api( state.lua, game, [&state]() {
         require_api_version( state, 5, "game.types" );
         require_capability( state, "game.read" );
     } );
+    install_time_api(
+        game,
+    [&state]() {
+        require_api_version(
+            state, 5, "game.time" );
+        require_capability(
+            state, "game.read" );
+    },
+    [&state]() {
+        require_api_version(
+            state, 5, "game.time" );
+        require_capability(
+            state, "game.write" );
+    } );
+    install_weather_api(
+        game,
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.weather" );
+        require_capability(
+            state, "game.read" );
+    },
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.weather" );
+        require_capability(
+            state, "game.write" );
+    } );
+    sol::table hooks = state.lua.create_table();
+    hooks.set_function(
+        "on",
+        sol::overload(
+            [&state]( const std::string & name,
+    sol::protected_function callback ) {
+        return register_hook_handler(
+                   state, name, std::nullopt, std::move( callback ) );
+    },
+    [&state]( const std::string & name,
+              const sol::table & options,
+              sol::protected_function callback ) {
+        return register_hook_handler(
+                   state, name, options, std::move( callback ) );
+    } ) );
+    hooks.set_function( "off", [&state]( const std::uint64_t id ) {
+        return unregister_hook_handler( state, id );
+    } );
+    hooks.set_function(
+        "describe",
+    [&state]( sol::this_state lua, const std::string & name ) {
+        return describe_hook( state, lua, name );
+    } );
+    hooks.set_function( "list", [&state]( sol::this_state lua ) {
+        return list_hooks( state, lua );
+    } );
+    hooks.set_function( "limits", [&state]( sol::this_state lua ) {
+        return hook_limits( state, lua );
+    } );
+    game["hooks"] = std::move( hooks );
+    sol::table callbacks = state.lua.create_table();
+    callbacks.set_function(
+        "register",
+        [&state]( const std::string & kind,
+                  const script_game_id & target,
+    const sol::table & descriptor ) {
+        return register_callback_actor(
+                   state, kind, target, descriptor );
+    } );
+    callbacks.set_function(
+    "off", [&state]( const std::uint64_t id ) {
+        return unregister_callback_actor( state, id );
+    } );
+    callbacks.set_function(
+        "describe",
+    [&state]( sol::this_state lua, const std::string & kind ) {
+        return describe_callback_kind( state, lua, kind );
+    } );
+    callbacks.set_function( "list", [&state]( sol::this_state lua ) {
+        return list_callback_kinds( state, lua );
+    } );
+    callbacks.set_function( "limits", [&state]( sol::this_state lua ) {
+        return callback_limits( state, lua );
+    } );
+    game["callbacks"] = std::move( callbacks );
     sol::table mapgen = state.lua.create_table();
     mapgen.set_function(
         "on_postprocess",
@@ -2040,6 +3500,26 @@ void initialize_state( runtime_state &state )
         require_api_version( state, 5, "game.effects" );
         require_capability( state, "game.write" );
     } );
+    install_eoc_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.eocs" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.eocs" );
+        require_capability( state, "game.write" );
+    },
+    [&state]() {
+        return state.accept_actions &&
+               state.current_source.has_value();
+    } );
     install_bionic_api(
         game,
     [&state]() {
@@ -2070,6 +3550,195 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.mutations" );
+        require_capability( state, "game.write" );
+    } );
+    install_skill_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.skills" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.skills" );
+        require_capability( state, "game.write" );
+    } );
+    install_proficiency_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.proficiencies" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.proficiencies" );
+        require_capability( state, "game.write" );
+    } );
+    install_vitamin_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.vitamins" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.vitamins" );
+        require_capability( state, "game.write" );
+    } );
+    install_addiction_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.addictions" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.addictions" );
+        require_capability( state, "game.write" );
+    } );
+    install_achievement_api(
+        game,
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.achievements" );
+        require_capability(
+            state, "game.read" );
+    },
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.achievements" );
+        require_capability(
+            state, "game.write" );
+    } );
+    install_statistics_api(
+        game,
+    [&state]() {
+        require_api_version(
+            state, 5,
+            "game.statistics" );
+        require_capability(
+            state, "game.read" );
+    } );
+    install_need_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.needs" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.needs" );
+        require_capability( state, "game.write" );
+    } );
+    install_martial_art_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.martial_arts" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.martial_arts" );
+        require_capability( state, "game.write" );
+    } );
+    install_vehicle_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.vehicles" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.vehicles" );
+        require_capability( state, "game.write" );
+    } );
+    install_npc_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.npcs" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.npcs" );
+        require_capability( state, "game.write" );
+    } );
+    install_faction_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game.factions" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.factions" );
+        require_capability( state, "game.write" );
+    } );
+    install_camp_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game.camps" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.camps" );
+        require_capability( state, "game.write" );
+    } );
+    install_zone_api(
+        state.lua, game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.zones" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.zones" );
         require_capability( state, "game.write" );
     } );
     install_magic_api(
@@ -2192,6 +3861,55 @@ void initialize_state( runtime_state &state )
     } );
     install_game_snapshot_api( game, [&state]() {
         require_capability( state, "game.read" );
+    } );
+    install_game_info_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game information services" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game message services" );
+        require_capability( state, "game.actions" );
+    },
+    [&state]() {
+        return state.accept_actions &&
+               state.current_source.has_value();
+    } );
+    install_game_interaction_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game interaction services" );
+        require_capability( state, "game.actions" );
+    },
+    [&state]() {
+        return state.accept_actions &&
+               state.current_source.has_value();
+    } );
+    install_game_world_service_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game follower services" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game world services" );
+        require_capability( state, "game.write" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game relocation services" );
+        require_capability( state, "game.write" );
+        require_capability( state, "game.actions.dangerous" );
+    },
+    [&state]() {
+        return state.accept_actions &&
+               state.current_source.has_value();
     } );
     install_action_api( game, [&state]() {
         require_capability( state, "game.actions" );
@@ -2529,6 +4247,18 @@ sol::table event_to_lua( runtime_state &state, const cata::event &event )
             case cata_variant_type::int_:
                 data[name] = value.get<cata_variant_type::int_>();
                 break;
+            case cata_variant_type::character_id:
+                data[name] =
+                    value.get <
+                    cata_variant_type::character_id > ().
+                    get_value();
+                break;
+            case cata_variant_type::chrono_seconds:
+                data[name] =
+                    value.get <
+                    cata_variant_type::chrono_seconds > ().
+                    count();
+                break;
             default:
                 data[name] = value.get_string();
                 break;
@@ -2651,6 +4381,910 @@ bool dispatch_lifecycle_event( runtime_state &state, const std::string &name,
                                const script_value_map &data = {} )
 {
     return dispatch_custom_event( state, name, name, data );
+}
+
+class hook_dispatch_scope
+{
+    public:
+        explicit hook_dispatch_scope( runtime_state &state ) : state_( state ) {
+            if( state_.hook_dispatch_depth >= 16 ) {
+                throw std::runtime_error(
+                    "Lua hook callback recursion limit reached" );
+            }
+            ++state_.hook_dispatch_depth;
+        }
+
+        hook_dispatch_scope( const hook_dispatch_scope & ) = delete;
+        hook_dispatch_scope &operator=( const hook_dispatch_scope & ) = delete;
+
+        ~hook_dispatch_scope() {
+            --state_.hook_dispatch_depth;
+        }
+
+    private:
+        runtime_state &state_;
+};
+
+native_hook_result dispatch_script_hook(
+    runtime_state &state, const std::string_view name,
+    const std::function<sol::table( std::size_t )> &make_payload,
+    const std::function<void( std::size_t )> &after_handler = {} );
+
+class callback_dispatch_scope
+{
+    public:
+        explicit callback_dispatch_scope( runtime_state &state ) :
+            state_( state ) {
+            if( state_.callback_dispatch_depth >= 16 ) {
+                throw std::runtime_error(
+                    "Lua callback actor recursion limit reached" );
+            }
+            ++state_.callback_dispatch_depth;
+        }
+
+        callback_dispatch_scope( const callback_dispatch_scope & ) = delete;
+        callback_dispatch_scope &operator=(
+            const callback_dispatch_scope & ) = delete;
+
+        ~callback_dispatch_scope() {
+            --state_.callback_dispatch_depth;
+        }
+
+    private:
+        runtime_state &state_;
+};
+
+game_handle native_creature_handle(
+    runtime_state &state, const Creature &creature )
+{
+    Creature &mutable_creature = const_cast<Creature &>( creature );
+    const tripoint_abs_ms position = creature.pos_abs();
+    game_handle_locator locator;
+    locator.scope = creature.as_character() != nullptr ?
+                    "callback_character" : "callback_monster";
+    locator.x = position.x();
+    locator.y = position.y();
+    locator.z = position.z();
+    if( const Character *character = creature.as_character() ) {
+        locator.stable_id = character->getID().get_value();
+    }
+    return game_handle::from_creature(
+               mutable_creature, std::move( locator ),
+               state.generation, state.world_generation );
+}
+
+sol::object native_talker_to_lua(
+    runtime_state &state, const const_talker &talker )
+{
+    sol::state_view lua( state.lua );
+    if( const Creature *creature = talker.get_const_creature() ) {
+        return sol::make_object(
+                   lua, native_creature_handle( state, *creature ) );
+    }
+    if( const item_location *location = talker.get_const_item() ) {
+        if( const item *value = location->get_item() ) {
+            item &mutable_item = const_cast<item &>( *value );
+            return sol::make_object(
+                       lua, game_handle::from_item(
+            mutable_item, {
+                "callback_talker_item",
+                value->uid().get_value(), 0, 0, 0, {}
+            }, state.generation, state.world_generation ) );
+        }
+    }
+    if( const vehicle *value = talker.get_const_vehicle() ) {
+        vehicle &mutable_vehicle =
+            const_cast<vehicle &>( *value );
+        const tripoint_abs_ms position = value->pos_abs();
+        return sol::make_object(
+                   lua, game_handle::from_vehicle(
+        mutable_vehicle, {
+            "callback_talker_vehicle", 0,
+            position.x(), position.y(), position.z(), {}
+        }, state.generation, state.world_generation ) );
+    }
+
+    sol::table snapshot = state.lua.create_table();
+    std::string kind = "talker";
+    if( talker.get_const_computer() != nullptr ) {
+        kind = "computer";
+    } else if( talker.get_const_zone() != nullptr ) {
+        kind = "zone";
+    } else if( talker.disp_name().empty() ) {
+        kind = "topic";
+    }
+    snapshot["kind"] = std::move( kind );
+    snapshot["name"] = talker.disp_name();
+    const tripoint_abs_ms position = talker.pos_abs();
+    sol::table position_value = state.lua.create_table();
+    position_value["coordinate_space"] = "abs_ms";
+    position_value["x"] = position.x();
+    position_value["y"] = position.y();
+    position_value["z"] = position.z();
+    snapshot["position"] = std::move( position_value );
+    return sol::make_object( lua, std::move( snapshot ) );
+}
+
+sol::object native_callback_value_to_lua(
+    runtime_state &state, const native_callback_value &value )
+{
+    sol::state_view lua( state.lua );
+    return std::visit( [&state, lua]( const auto & entry ) -> sol::object {
+        using value_type = std::decay_t<decltype( entry )>;
+        if constexpr( std::is_same_v<value_type, const Character *> )
+        {
+            if( entry == nullptr ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            return sol::make_object(
+                       lua, native_creature_handle( state, *entry ) );
+        } else if constexpr( std::is_same_v<value_type, const Creature *> )
+        {
+            if( entry == nullptr ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            return sol::make_object(
+                       lua, native_creature_handle( state, *entry ) );
+        } else if constexpr( std::is_same_v<value_type, const item *> )
+        {
+            if( entry == nullptr ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            item &mutable_item = const_cast<item &>( *entry );
+            return sol::make_object(
+                       lua, game_handle::from_item(
+            mutable_item, {
+                "callback_item",
+                entry->uid().get_value(), 0, 0, 0, {}
+            }, state.generation, state.world_generation ) );
+        } else if constexpr( std::is_same_v<value_type, native_callback_point> )
+        {
+            sol::table point = state.lua.create_table();
+            point["coordinate_space"] = entry.coordinate_space;
+            point["x"] = entry.x;
+            point["y"] = entry.y;
+            point["z"] = entry.z;
+            return sol::make_object( lua, std::move( point ) );
+        } else if constexpr( std::is_same_v<value_type, native_callback_id> )
+        {
+            return sol::make_object(
+                       lua, script_game_id( entry.kind, entry.value ) );
+        } else if constexpr( std::is_same_v <
+                             value_type, std::vector<std::string >> )
+        {
+            sol::table strings = state.lua.create_table();
+            for( std::size_t index = 0; index < entry.size(); ++index ) {
+                strings[index + 1] = entry[index];
+            }
+            return sol::make_object( lua, std::move( strings ) );
+        } else if constexpr( std::is_same_v <
+                             value_type, const const_talker * > )
+        {
+            if( entry == nullptr ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            return native_talker_to_lua( state, *entry );
+        } else if constexpr( std::is_same_v <
+                             value_type, native_callback_mission > )
+        {
+            return sol::make_object(
+                       lua, mission_token(
+                           entry.uid, state.generation,
+                           state.world_generation ) );
+        } else
+        {
+            return sol::make_object( lua, entry );
+        }
+    }, value );
+}
+
+sol::table native_callback_payload(
+    runtime_state &state, const native_callback_arguments &arguments )
+{
+    if( arguments.size() > 64 ) {
+        throw std::invalid_argument(
+            "Lua native callback payload exceeds 64 fields" );
+    }
+    sol::table result = state.lua.create_table();
+    std::set<std::string> names;
+    for( const native_callback_argument &argument : arguments ) {
+        if( argument.name.empty() || argument.name.size() > 128 ) {
+            throw std::invalid_argument(
+                "Lua native callback payload field names must contain "
+                "1 to 128 bytes" );
+        }
+        if( !names.insert( argument.name ).second ) {
+            throw std::invalid_argument(
+                "Lua native callback payload repeats field '" +
+                argument.name + "'" );
+        }
+        result[argument.name] =
+            native_callback_value_to_lua( state, argument.value );
+    }
+    return result;
+}
+
+bool dispatch_script_callback(
+    runtime_state &state, const std::string_view kind_name,
+    const std::string_view target, const std::string_view method_name,
+    const std::function<sol::table()> &make_payload,
+    const bool consuming = false )
+{
+    const script_callback_kind_spec *kind =
+        find_script_callback_kind_spec( kind_name );
+    const script_callback_method_spec *method =
+        kind == nullptr ? nullptr :
+        find_script_callback_method_spec( *kind, method_name );
+    if( method == nullptr ) {
+        record_runtime_error(
+            "Lua callback actor dispatch",
+            "native code requested unknown callback '" +
+            std::string( kind_name ) + "." +
+            std::string( method_name ) + "'" );
+        return !consuming;
+    }
+    if( method->consuming != consuming ) {
+        record_runtime_error(
+            "Lua callback actor dispatch",
+            "native code used the wrong result policy for callback '" +
+            std::string( kind_name ) + "." +
+            std::string( method_name ) + "'" );
+        return !consuming;
+    }
+
+    callback_dispatch_scope dispatch_scope( state );
+    const std::vector<script_callback_registration> registrations =
+        state.callback_registry.matching(
+            kind_name, target, method_name );
+    bool outcome = !consuming;
+    for( const script_callback_registration &registration : registrations ) {
+        if( !state.callback_registry.contains( registration.id ) ) {
+            continue;
+        }
+        const auto actor_entry =
+            state.callback_methods.find( registration.id );
+        if( actor_entry == state.callback_methods.end() ||
+            registration.source_index >= state.sources.size() ) {
+            state.callback_registry.unsubscribe_unchecked(
+                registration.id );
+            state.callback_methods.erase( registration.id );
+            continue;
+        }
+        const auto callback_entry =
+            actor_entry->second.find( std::string( method_name ) );
+        if( callback_entry == actor_entry->second.end() ) {
+            continue;
+        }
+
+        bool stop = false;
+        const auto started = std::chrono::steady_clock::now();
+        try {
+            sol::protected_function callback = callback_entry->second;
+            source_scope source( state, registration.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            sol::table payload = make_payload();
+            payload["actor_kind"] = std::string( kind_name );
+            payload["target_id"] = script_game_id(
+                                       std::string( kind->target_id_kind ),
+                                       std::string( target ) );
+            payload["method"] = std::string( method_name );
+            payload["decision"] = method->decision;
+            payload["consuming"] = method->consuming;
+            payload["turn"] = script_current_turn();
+            const sol::protected_function_result result =
+                callback( std::move( payload ) );
+            record_callback_timing(
+                state,
+                "callback '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'", started );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                record_runtime_error(
+                    "Lua callback actor '" + std::string( kind_name ) +
+                    "." + std::string( method_name ) + "'",
+                    error.what() );
+                state.callback_registry.unsubscribe_unchecked(
+                    registration.id );
+                state.callback_methods.erase( registration.id );
+                continue;
+            }
+
+            if( result.return_count() > 0 ) {
+                const sol::type type = result.get_type();
+                if( type == sol::type::boolean ) {
+                    const bool decision = result.get<bool>();
+                    if( method->decision ) {
+                        outcome = consuming ?
+                                  outcome || decision :
+                                  decision;
+                    }
+                    stop = consuming ? decision : !decision;
+                } else if( type == sol::type::table ) {
+                    const sol::table decision = result.get<sol::table>();
+                    const sol::optional<bool> requested_outcome =
+                        decision[consuming ? "consume" : "allow"];
+                    if( requested_outcome && method->decision ) {
+                        outcome = consuming ?
+                                  outcome || *requested_outcome :
+                                  *requested_outcome;
+                    }
+                    stop = decision.get_or( "stop", false ) ||
+                           ( consuming ? outcome : !outcome );
+                } else if( type != sol::type::nil ) {
+                    record_runtime_error(
+                        "Lua callback actor '" +
+                        std::string( kind_name ) + "." +
+                        std::string( method_name ) + "'",
+                        "callback methods must return nil, boolean, or a "
+                        "decision table" );
+                    state.callback_registry.unsubscribe_unchecked(
+                        registration.id );
+                    state.callback_methods.erase( registration.id );
+                    continue;
+                }
+            }
+            if( registration.once ) {
+                state.callback_registry.unsubscribe_unchecked(
+                    registration.id );
+                state.callback_methods.erase( registration.id );
+            }
+        } catch( const std::exception &exception ) {
+            record_callback_timing(
+                state,
+                "callback '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'", started );
+            record_runtime_error(
+                "Lua callback actor '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'",
+                exception.what() );
+            state.callback_registry.unsubscribe_unchecked(
+                registration.id );
+            state.callback_methods.erase( registration.id );
+        }
+        if( stop ) {
+            break;
+        }
+    }
+    return outcome;
+}
+
+void append_native_menu_entries(
+    const sol::table &result_table,
+    std::vector<native_menu_entry> &entries,
+    std::set<std::string> &entry_ids )
+{
+    const sol::object nested_entries =
+        result_table.raw_get<sol::object>( "entries" );
+    sol::table entries_table = result_table;
+    if( nested_entries.valid() &&
+        nested_entries.get_type() != sol::type::nil ) {
+        if( nested_entries.get_type() != sol::type::table ) {
+            throw std::invalid_argument(
+                "Lua menu callback 'entries' must be a table" );
+        }
+        entries_table = nested_entries.as<sol::table>();
+    }
+    const std::size_t count = entries_table.size();
+    if( count > maximum_menu_entries_per_handler ) {
+        throw std::invalid_argument(
+            "Lua menu callback returned more than 64 entries" );
+    }
+    if( entries.size() + count >
+        maximum_menu_entries_per_collection ) {
+        throw std::invalid_argument(
+            "Lua menu callbacks returned more than 128 total entries" );
+    }
+
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object object =
+            entries_table.raw_get<sol::object>( index );
+        if( !object.valid() || object.get_type() != sol::type::table ) {
+            throw std::invalid_argument(
+                "Lua menu entries must be tables" );
+        }
+        const sol::table entry = object.as<sol::table>();
+        sol::optional<std::string> id = entry["id"];
+        if( !id ) {
+            id = entry["menu_id"];
+        }
+        sol::optional<std::string> label = entry["label"];
+        if( !label ) {
+            label = entry["menu_label"];
+        }
+        if( !id || id->empty() ||
+            id->size() > maximum_menu_entry_id_bytes ) {
+            throw std::invalid_argument(
+                "Lua menu entry id must contain 1 to 96 bytes" );
+        }
+        const auto valid_id_character = []( const char ch ) {
+            return ch == '_' || ch == '-' || ch == '.' || ch == ':' ||
+                   ( ch >= '0' && ch <= '9' ) ||
+                   ( ch >= 'A' && ch <= 'Z' ) ||
+                   ( ch >= 'a' && ch <= 'z' );
+        };
+        if( !std::all_of(
+                id->begin(), id->end(), valid_id_character ) ) {
+            throw std::invalid_argument(
+                "Lua menu entry ids may only contain ASCII letters, "
+                "digits, '_', '-', '.', and ':'" );
+        }
+        if( !label || label->empty() ||
+            label->size() > maximum_menu_entry_label_bytes ) {
+            throw std::invalid_argument(
+                "Lua menu entry label must contain 1 to 512 bytes" );
+        }
+        if( !entry_ids.insert( *id ).second ) {
+            continue;
+        }
+        entries.push_back( {
+            std::move( *id ), std::move( *label ),
+            entry.get_or( "enabled", true )
+        } );
+    }
+}
+
+std::vector<native_menu_entry> collect_script_callback_menu_entries(
+    runtime_state &state, const std::string_view kind_name,
+    const std::string_view target, const std::string_view method_name,
+    const std::function<sol::table()> &make_payload )
+{
+    const script_callback_kind_spec *kind =
+        find_script_callback_kind_spec( kind_name );
+    const script_callback_method_spec *method =
+        kind == nullptr ? nullptr :
+        find_script_callback_method_spec( *kind, method_name );
+    if( method == nullptr ) {
+        throw std::invalid_argument(
+            "native code requested unknown callback '" +
+            std::string( kind_name ) + "." +
+            std::string( method_name ) + "'" );
+    }
+
+    callback_dispatch_scope dispatch_scope( state );
+    const std::vector<script_callback_registration> registrations =
+        state.callback_registry.matching(
+            kind_name, target, method_name );
+    std::vector<native_menu_entry> entries;
+    std::set<std::string> entry_ids;
+    for( const script_callback_registration &registration : registrations ) {
+        if( !state.callback_registry.contains( registration.id ) ) {
+            continue;
+        }
+        const auto actor_entry =
+            state.callback_methods.find( registration.id );
+        if( actor_entry == state.callback_methods.end() ||
+            registration.source_index >= state.sources.size() ) {
+            state.callback_registry.unsubscribe_unchecked(
+                registration.id );
+            state.callback_methods.erase( registration.id );
+            continue;
+        }
+        const auto callback_entry =
+            actor_entry->second.find( std::string( method_name ) );
+        if( callback_entry == actor_entry->second.end() ) {
+            continue;
+        }
+
+        bool stop = false;
+        bool timing_recorded = false;
+        const auto started = std::chrono::steady_clock::now();
+        try {
+            sol::protected_function callback = callback_entry->second;
+            source_scope source( state, registration.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            sol::table payload = make_payload();
+            payload["actor_kind"] = std::string( kind_name );
+            payload["target_id"] = script_game_id(
+                                       std::string( kind->target_id_kind ),
+                                       std::string( target ) );
+            payload["method"] = std::string( method_name );
+            payload["decision"] = method->decision;
+            payload["turn"] = script_current_turn();
+            const sol::protected_function_result result =
+                callback( std::move( payload ) );
+            record_callback_timing(
+                state,
+                "callback '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'", started );
+            timing_recorded = true;
+            if( !result.valid() ) {
+                const sol::error error = result;
+                throw std::runtime_error( error.what() );
+            }
+            if( result.return_count() > 0 ) {
+                const sol::type type = result.get_type();
+                if( type == sol::type::boolean ) {
+                    stop = !result.get<bool>();
+                } else if( type == sol::type::table ) {
+                    const sol::table result_table =
+                        result.get<sol::table>();
+                    append_native_menu_entries(
+                        result_table, entries, entry_ids );
+                    const sol::optional<bool> allow =
+                        result_table["allow"];
+                    stop = result_table.get_or( "stop", false ) ||
+                           ( allow && !*allow );
+                } else if( type != sol::type::nil ) {
+                    throw std::invalid_argument(
+                        "menu callbacks must return nil, boolean, or an "
+                        "entry table" );
+                }
+            }
+            if( registration.once ) {
+                state.callback_registry.unsubscribe_unchecked(
+                    registration.id );
+                state.callback_methods.erase( registration.id );
+            }
+        } catch( const std::exception &exception ) {
+            if( !timing_recorded ) {
+                record_callback_timing(
+                    state,
+                    "callback '" + std::string( kind_name ) + "." +
+                    std::string( method_name ) + "'", started );
+            }
+            record_runtime_error(
+                "Lua callback actor '" + std::string( kind_name ) + "." +
+                std::string( method_name ) + "'",
+                exception.what() );
+            state.callback_registry.unsubscribe_unchecked(
+                registration.id );
+            state.callback_methods.erase( registration.id );
+        }
+        if( stop ) {
+            break;
+        }
+    }
+    return entries;
+}
+
+std::optional<bool> hook_result_bool(
+    const sol::table &table, const std::string_view field )
+{
+    const sol::object value =
+        table.raw_get<sol::object>( std::string( field ) );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::boolean ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' must be a boolean" );
+    }
+    return value.as<bool>();
+}
+
+std::optional<std::string> hook_result_string(
+    const sol::table &table, const std::string_view field,
+    const std::size_t maximum_bytes, const bool allow_empty,
+    const bool allow_text_controls )
+{
+    const sol::object value =
+        table.raw_get<sol::object>( std::string( field ) );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::string ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' must be a string" );
+    }
+    std::string result = value.as<std::string>();
+    if( ( !allow_empty && result.empty() ) ||
+        result.size() > maximum_bytes ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' has an invalid length" );
+    }
+    const bool invalid_character = std::any_of(
+                                       result.begin(), result.end(),
+    [allow_text_controls]( const unsigned char ch ) {
+        if( ch == 0 ) {
+            return true;
+        }
+        return !allow_text_controls &&
+               ( ch < 0x20 || ch == 0x7f );
+    } );
+    if( invalid_character ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' contains control characters" );
+    }
+    return result;
+}
+
+std::optional<std::vector<std::string>> hook_result_strings(
+        const sol::table &table, const std::string_view field,
+        const std::size_t maximum_entries )
+{
+    const sol::object value =
+        table.raw_get<sol::object>( std::string( field ) );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::table ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' must be a table" );
+    }
+    const sol::table values = value.as<sol::table>();
+    const std::size_t count = values.size();
+    if( count > maximum_entries ) {
+        throw std::invalid_argument(
+            "Lua hook result '" + std::string( field ) +
+            "' contains too many entries" );
+    }
+    std::vector<std::string> result;
+    result.reserve( count );
+    std::set<std::string> seen;
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object entry =
+            values.raw_get<sol::object>( index );
+        if( !entry.valid() || entry.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "Lua hook result string lists may only contain strings" );
+        }
+        std::string text = entry.as<std::string>();
+        if( text.empty() ||
+            text.size() > maximum_hook_result_entry_bytes ||
+            std::any_of(
+        text.begin(), text.end(), []( const unsigned char ch ) {
+        return ch == 0 || ch < 0x20 || ch == 0x7f;
+    } ) ) {
+            throw std::invalid_argument(
+                "Lua hook result string-list entry is invalid" );
+        }
+        if( seen.insert( text ).second ) {
+            result.push_back( std::move( text ) );
+        }
+    }
+    return result;
+}
+
+sol::table make_hook_results_table(
+    runtime_state &state, const native_hook_result &result )
+{
+    sol::table table = state.lua.create_table();
+    table["allowed"] = result.allowed;
+    table["handled"] = result.handled;
+    if( !result.text.empty() ) {
+        table["text"] = result.text;
+    }
+    if( result.result ) {
+        table["result"] = *result.result;
+    }
+    sol::table strings = state.lua.create_table();
+    for( std::size_t index = 0; index < result.results.size(); ++index ) {
+        strings[index + 1] = result.results[index];
+    }
+    table["results"] = std::move( strings );
+    return table;
+}
+
+bool apply_hook_result_table(
+    const script_hook_spec &spec, const sol::table &table,
+    native_hook_result &result, std::set<std::string> &menu_entry_ids,
+    const bool shared_results )
+{
+    if( script_hook_supports_result( spec, "allow" ) ) {
+        std::optional<bool> allow = hook_result_bool( table, "allow" );
+        if( !allow ) {
+            allow = hook_result_bool( table, "allowed" );
+        }
+        if( allow ) {
+            result.allowed = result.allowed && *allow;
+        }
+    }
+    if( script_hook_supports_result( spec, "handled" ) ) {
+        if( const std::optional<bool> handled =
+                hook_result_bool( table, "handled" ) ) {
+            result.handled = result.handled || *handled;
+        }
+    }
+    if( script_hook_supports_result( spec, "text" ) ) {
+        if( std::optional<std::string> text = hook_result_string(
+                table, "text", maximum_hook_text_bytes, true, true ) ) {
+            if( shared_results ) {
+                result.text = std::move( *text );
+            } else if( !text->empty() ) {
+                const std::size_t separator =
+                    result.text.empty() ? 0 : 1;
+                if( result.text.size() + separator + text->size() >
+                    maximum_hook_text_bytes ) {
+                    throw std::invalid_argument(
+                        "Lua hook text exceeds the 32768-byte limit" );
+                }
+                if( separator != 0 ) {
+                    result.text.push_back( '\n' );
+                }
+                result.text += *text;
+            }
+        }
+    }
+    if( script_hook_supports_result( spec, "result" ) ) {
+        if( std::optional<std::string> replacement =
+                hook_result_string(
+                    table, "result", maximum_hook_result_bytes,
+                    false, false ) ) {
+            result.result = std::move( *replacement );
+        }
+    }
+    if( script_hook_supports_result( spec, "results" ) ) {
+        const std::size_t limit = shared_results ?
+                                  maximum_hook_results_per_dispatch :
+                                  maximum_hook_results_per_handler;
+        if( std::optional<std::vector<std::string>> strings =
+                hook_result_strings( table, "results", limit ) ) {
+            if( shared_results ) {
+                result.results = std::move( *strings );
+            } else {
+                std::set<std::string> seen(
+                    result.results.begin(), result.results.end() );
+                for( std::string &entry : *strings ) {
+                    if( seen.insert( entry ).second ) {
+                        result.results.push_back( std::move( entry ) );
+                    }
+                }
+                if( result.results.size() >
+                    maximum_hook_results_per_dispatch ) {
+                    throw std::invalid_argument(
+                        "Lua hook results exceed the 256-entry limit" );
+                }
+            }
+        }
+    }
+    if( script_hook_supports_result( spec, "entries" ) ) {
+        const sol::object entries =
+            table.raw_get<sol::object>( "entries" );
+        if( entries.valid() && entries.get_type() != sol::type::nil ) {
+            append_native_menu_entries(
+                table, result.menu_entries, menu_entry_ids );
+        }
+    }
+    return hook_result_bool( table, "stop" ).value_or( false );
+}
+
+native_hook_result dispatch_script_hook(
+    runtime_state &state, const std::string_view name,
+    const std::function<sol::table( std::size_t )> &make_payload,
+    const std::function<void( std::size_t )> &after_handler )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    if( spec == nullptr ) {
+        throw std::invalid_argument(
+            "native code requested unknown Lua hook '" +
+            std::string( name ) + "'" );
+    }
+
+    hook_dispatch_scope dispatch_scope( state );
+    const std::vector<script_event_subscription> handlers =
+        state.hook_registry.matching(
+            "hook:" + std::string( name ) );
+    native_hook_result aggregate;
+    sol::state_view lua( state.lua );
+    sol::object previous =
+        sol::make_object( lua, sol::lua_nil );
+    for( const script_event_subscription &handler : handlers ) {
+        if( !state.hook_registry.contains( handler.id ) ) {
+            continue;
+        }
+        const auto callback_entry =
+            state.hook_callbacks.find( handler.id );
+        if( callback_entry == state.hook_callbacks.end() ||
+            handler.source_index >= state.sources.size() ) {
+            state.hook_registry.unsubscribe_unchecked( handler.id );
+            state.hook_callbacks.erase( handler.id );
+            continue;
+        }
+
+        bool stop = false;
+        bool timing_recorded = false;
+        const auto started = std::chrono::steady_clock::now();
+        on_out_of_scope finish_handler( [
+                                            &after_handler, &handler
+        ]() {
+            if( after_handler ) {
+                after_handler( handler.source_index );
+            }
+        } );
+        try {
+            sol::protected_function callback = callback_entry->second;
+            source_scope source( state, handler.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            sol::table payload =
+                make_payload( handler.source_index );
+            payload["hook"] = std::string( name );
+            payload["mode"] =
+                std::string( script_hook_mode_name( spec->mode ) );
+            payload["cancellable"] =
+                script_hook_supports_result( *spec, "allow" );
+            sol::table shared_results =
+                make_hook_results_table( state, aggregate );
+            payload["results"] = shared_results;
+            payload["prev"] = previous;
+            const sol::protected_function_result callback_result =
+                callback( std::move( payload ) );
+            record_callback_timing(
+                state, "hook '" + std::string( name ) + "'", started );
+            timing_recorded = true;
+            if( !callback_result.valid() ) {
+                const sol::error error = callback_result;
+                throw std::runtime_error( error.what() );
+            }
+
+            native_hook_result candidate = aggregate;
+            std::set<std::string> menu_entry_ids;
+            for( const native_menu_entry &entry :
+                 candidate.menu_entries ) {
+                menu_entry_ids.insert( entry.id );
+            }
+            stop = apply_hook_result_table(
+                       *spec, shared_results, candidate,
+                       menu_entry_ids, true );
+
+            sol::object returned =
+                sol::make_object( lua, sol::lua_nil );
+            if( callback_result.return_count() > 0 ) {
+                returned = callback_result.get<sol::object>();
+                const sol::type type = returned.get_type();
+                if( type == sol::type::boolean ) {
+                    const bool decision = returned.as<bool>();
+                    if( script_hook_supports_result(
+                            *spec, "allow" ) ) {
+                        candidate.allowed =
+                            candidate.allowed && decision;
+                    }
+                    stop = stop || !decision;
+                } else if( type == sol::type::string &&
+                           script_hook_supports_result(
+                               *spec, "result" ) ) {
+                    const std::string replacement =
+                        returned.as<std::string>();
+                    sol::table wrapper = state.lua.create_table();
+                    wrapper["result"] = replacement;
+                    stop = apply_hook_result_table(
+                               *spec, wrapper, candidate,
+                               menu_entry_ids, false ) || stop;
+                } else if( type == sol::type::table ) {
+                    stop = apply_hook_result_table(
+                               *spec, returned.as<sol::table>(),
+                               candidate, menu_entry_ids, false ) ||
+                           stop;
+                } else if( type != sol::type::nil ) {
+                    throw std::invalid_argument(
+                        "hook callbacks must return nil, boolean, "
+                        "string, or a result table" );
+                }
+            }
+
+            aggregate = std::move( candidate );
+            previous = std::move( returned );
+            stop = stop ||
+                   ( script_hook_supports_result( *spec, "allow" ) &&
+                     !aggregate.allowed );
+            if( handler.once ) {
+                state.hook_registry.unsubscribe_unchecked( handler.id );
+                state.hook_callbacks.erase( handler.id );
+            }
+        } catch( const std::exception &exception ) {
+            if( !timing_recorded ) {
+                record_callback_timing(
+                    state, "hook '" + std::string( name ) + "'",
+                    started );
+            }
+            record_runtime_error(
+                "Lua hook handler '" + std::string( name ) + "'",
+                exception.what() );
+            state.hook_registry.unsubscribe_unchecked( handler.id );
+            state.hook_callbacks.erase( handler.id );
+        }
+        if( stop ) {
+            break;
+        }
+    }
+    return aggregate;
 }
 
 void runtime_state::notify( const cata::event &event )
@@ -3117,7 +5751,26 @@ bool reload_scripts_with_state(
         // A page, service, scheduler, or lifecycle callback may add its first
         // game-event handler later in the lifetime of this runtime.
         get_event_bus().subscribe( next.get() );
+        std::unique_ptr<runtime_state> previous =
+            std::move( active_state );
         active_state = std::move( next );
+        const bool sync_panels =
+            panel_manager::is_initialized();
+        try {
+            if( sync_panels ) {
+                panel_manager::get_manager().
+                sync_lua_panels();
+            }
+            sidebar_panels_dirty = false;
+        } catch( ... ) {
+            next = std::move( active_state );
+            active_state = std::move( previous );
+            if( sync_panels ) {
+                panel_manager::get_manager().
+                sync_lua_panels();
+            }
+            throw;
+        }
         generation_counter = candidate_generation;
         active_state->accept_actions = true;
         clear_navigation_requests();
@@ -3253,6 +5906,293 @@ void bootstrap_mapgen_runtime_if_needed()
 
 } // namespace
 
+native_hook_result dispatch_native_hook_result(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return {};
+    }
+    try {
+        return dispatch_script_hook(
+        *active_state, name, [&]( const std::size_t ) {
+            return native_callback_payload( *active_state, arguments );
+        } );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native hook '" + std::string( name ) + "'",
+            exception.what() );
+        return {};
+    }
+}
+
+bool dispatch_native_hook(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    return dispatch_native_hook_result( name, arguments ).allowed;
+}
+
+bool has_native_hook( const std::string_view name )
+{
+    return active_state && !is_pool_worker_thread() &&
+           active_state->hook_registry.has_matching(
+               "hook:" + std::string( name ) );
+}
+
+std::vector<std::string> collect_native_mapgen_factory_usages(
+    const std::vector<std::string> &candidates )
+{
+    if( is_pool_worker_thread() ) {
+        return {};
+    }
+    bootstrap_mapgen_runtime_if_needed();
+    if( !active_state ) {
+        return {};
+    }
+    return dispatch_native_hook_result(
+    "on_make_mapgen_factory_list", {
+        { "candidates", candidates }
+    } ).results;
+}
+
+void dispatch_native_monster_spawn(
+    const Creature &monster, const std::string_view source )
+{
+    const bool has_creature_spawn =
+        has_native_hook( "on_creature_spawn" );
+    const bool has_monster_spawn =
+        has_native_hook( "on_monster_spawn" );
+    if( !has_creature_spawn && !has_monster_spawn ) {
+        return;
+    }
+    native_callback_arguments payload = {
+        { "creature", &monster },
+        { "source", std::string( source ) }
+    };
+    if( has_creature_spawn ) {
+        dispatch_native_hook( "on_creature_spawn", payload );
+    }
+    if( has_monster_spawn ) {
+        payload.front().name = "monster";
+        dispatch_native_hook( "on_monster_spawn", payload );
+    }
+}
+
+void dispatch_native_npc_spawn(
+    const Character &npc, const std::string_view source )
+{
+    const bool has_creature_spawn =
+        has_native_hook( "on_creature_spawn" );
+    const bool has_npc_spawn =
+        has_native_hook( "on_npc_spawn" );
+    if( !has_creature_spawn && !has_npc_spawn ) {
+        return;
+    }
+    native_callback_arguments payload = {
+        {
+            "creature",
+            static_cast<const Creature *>( &npc )
+        },
+        { "source", std::string( source ) }
+    };
+    if( has_creature_spawn ) {
+        dispatch_native_hook( "on_creature_spawn", payload );
+    }
+    if( has_npc_spawn ) {
+        payload.front().name = "npc";
+        payload.front().value = &npc;
+        dispatch_native_hook( "on_npc_spawn", payload );
+    }
+}
+
+std::string dispatch_character_display_skill_info(
+    const Character &character, const std::string_view skill )
+{
+    if( !has_native_hook(
+            "on_character_display_skill_info" ) ) {
+        return {};
+    }
+    return dispatch_native_hook_result(
+    "on_character_display_skill_info", {
+        { "character", &character },
+        {
+            "skill",
+            native_callback_id { "skill", std::string( skill ) }
+        }
+    } ).text;
+}
+
+bool dispatch_character_display_skill_action(
+    const Character &character, const std::string_view skill,
+    const std::string_view action )
+{
+    if( !has_native_hook(
+            "on_character_display_skill_action" ) ) {
+        return false;
+    }
+    return dispatch_native_hook_result(
+    "on_character_display_skill_action", {
+        { "character", &character },
+        {
+            "skill",
+            native_callback_id { "skill", std::string( skill ) }
+        },
+        { "action", std::string( action ) }
+    } ).handled;
+}
+
+native_hook_result dispatch_native_dialogue_hook(
+    const std::string_view name, const const_talker &alpha,
+    const const_talker &beta, const std::string_view topic,
+    const std::optional<std::string_view> option )
+{
+    native_callback_arguments payload = {
+        { "alpha", &alpha },
+        { "beta", &beta },
+        { "topic", std::string( topic ) }
+    };
+    if( option ) {
+        payload.push_back( {
+            "option", std::string( *option )
+        } );
+    }
+    return dispatch_native_hook_result( name, payload );
+}
+
+bool begin_native_npc_interaction(
+    const Character &avatar, const Character &npc )
+{
+    const native_callback_arguments payload = {
+        { "avatar", &avatar },
+        { "npc", &npc }
+    };
+    if( !dispatch_native_hook(
+            "on_try_npc_interaction", payload ) ) {
+        return false;
+    }
+    dispatch_native_hook( "on_npc_interaction", payload );
+    return true;
+}
+
+bool allow_native_monster_interaction(
+    const Character &avatar, const Creature &monster )
+{
+    return dispatch_native_hook(
+    "on_try_monster_interaction", {
+        { "avatar", &avatar },
+        { "monster", &monster }
+    } );
+}
+
+bool allow_native_elevator_use(
+    const Character &character,
+    const native_callback_point &position,
+    const native_callback_point &destination )
+{
+    return dispatch_native_hook( "on_elevator_try_use", {
+        { "character", &character },
+        { "position", position },
+        { "destination", destination }
+    } );
+}
+
+bool dispatch_native_callback(
+    const std::string_view kind, const std::string_view target,
+    const std::string_view method,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return true;
+    }
+    try {
+        return dispatch_script_callback(
+        *active_state, kind, target, method, [&]() {
+            return native_callback_payload( *active_state, arguments );
+        } );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native callback '" + std::string( kind ) + "." +
+            std::string( method ) + "'", exception.what() );
+        return true;
+    }
+}
+
+bool dispatch_native_consuming_callback(
+    const std::string_view kind, const std::string_view target,
+    const std::string_view method,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return false;
+    }
+    try {
+        return dispatch_script_callback(
+        *active_state, kind, target, method, [&]() {
+            return native_callback_payload( *active_state, arguments );
+        }, true );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native consuming callback '" +
+            std::string( kind ) + "." + std::string( method ) + "'",
+            exception.what() );
+        return false;
+    }
+}
+
+bool has_native_callback(
+    const std::string_view kind, const std::string_view target,
+    const std::string_view method )
+{
+    return active_state && !is_pool_worker_thread() &&
+           !active_state->callback_registry.matching(
+               kind, target, method ).empty();
+}
+
+std::vector<native_menu_entry> collect_native_callback_menu_entries(
+    const std::string_view kind, const std::string_view target,
+    const std::string_view method,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return {};
+    }
+    try {
+        const auto make_payload = [&]() {
+            return native_callback_payload( *active_state, arguments );
+        };
+        return collect_script_callback_menu_entries(
+                   *active_state, kind, target, method, make_payload );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native callback menu collector '" +
+            std::string( kind ) + "." + std::string( method ) + "'",
+            exception.what() );
+        return {};
+    }
+}
+
+std::vector<native_menu_entry> collect_native_hook_menu_entries(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return {};
+    }
+    try {
+        return dispatch_script_hook(
+        *active_state, name, [&]( const std::size_t ) {
+            return native_callback_payload(
+                       *active_state, arguments );
+        } ).menu_entries;
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua native hook menu collector '" + std::string( name ) + "'",
+            exception.what() );
+        return {};
+    }
+}
+
 bool reload_scripts( std::string &error )
 {
     // The profile loader is an independent, early Lua sandbox.  A bad profile
@@ -3274,6 +6214,17 @@ void on_turn()
 {
     if( active_state ) {
         run_scheduled_callbacks( *active_state, script_current_turn() );
+    }
+    if( sidebar_panels_dirty &&
+        panel_manager::is_initialized() ) {
+        try {
+            panel_manager::get_manager().sync_lua_panels();
+            sidebar_panels_dirty = false;
+        } catch( const std::exception &exception ) {
+            record_runtime_error(
+                "Lua sidebar panel synchronization failed",
+                exception.what() );
+        }
     }
 }
 
@@ -3298,6 +6249,39 @@ void dispatch_mapgen_postprocess( mapgendata &data )
     on_out_of_scope restore_depth( [&state]() {
         --state.mapgen_dispatch_depth;
     } );
+
+    std::shared_ptr<script_mapgen_context>
+    compatibility_context;
+    try {
+        dispatch_script_hook(
+            state, "on_mapgen_postprocess",
+        [&]( const std::size_t source_index ) {
+            const script_manifest &manifest =
+                state.sources[source_index].manifest;
+            const std::shared_ptr<script_mapgen_context> context =
+                std::make_shared<script_mapgen_context>(
+                    data,
+                    manifest.has_capability( "game.write" ),
+                    deterministic_mapgen_seed(
+                        data, manifest.id ) );
+            compatibility_context = context;
+            sol::table payload = state.lua.create_table();
+            payload["context"] = context;
+            return payload;
+        }, [&]( const std::size_t ) {
+            if( compatibility_context ) {
+                compatibility_context->invalidate();
+                compatibility_context.reset();
+            }
+        } );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua on_mapgen_postprocess hook",
+            exception.what() );
+    }
+    if( compatibility_context ) {
+        compatibility_context->invalidate();
+    }
 
     const std::vector<script_event_subscription> handlers =
         state.mapgen_registry.matching( "mapgen.postprocess" );
@@ -3370,7 +6354,7 @@ void dispatch_mapgen_postprocess( mapgendata &data )
     }
 }
 
-void on_world_ready()
+void on_world_ready( const world_ready_kind kind )
 {
     mapgen_bootstrap_attempted = true;
     // A save/new-game transition is a runtime boundary, unlike an in-page hot
@@ -3379,6 +6363,17 @@ void on_world_ready()
         active_state->accept_actions = false;
         dispatch_lifecycle_event( *active_state, "ccb.lifecycle.shutdown" );
         active_state.reset();
+        if( panel_manager::is_initialized() ) {
+            try {
+                panel_manager::get_manager().
+                sync_lua_panels();
+                sidebar_panels_dirty = false;
+            } catch( const std::exception &exception ) {
+                record_runtime_error(
+                    "Lua sidebar panel cleanup failed",
+                    exception.what() );
+            }
+        }
     }
     if( world_generation_counter == std::numeric_limits<std::size_t>::max() ) {
         world_generation_counter = 1;
@@ -3403,6 +6398,9 @@ void on_world_ready()
         ::add_msg( m_bad, _( "Lua initialization failed: %s" ), script_error );
     } else if( active_state ) {
         dispatch_lifecycle_event( *active_state, "ccb.lifecycle.world_ready" );
+        dispatch_native_hook(
+            kind == world_ready_kind::new_game ?
+            "on_game_started" : "on_game_load" );
     }
     if( !character_state_error.empty() ) {
         record_runtime_error( "Lua character state load failed",
@@ -3417,6 +6415,11 @@ void on_world_ready()
                    _( "Lua world state could not be loaded; using defaults: %s" ),
                    world_state_error );
     }
+}
+
+void on_game_save()
+{
+    dispatch_native_hook( "on_game_save" );
 }
 
 bool save_persistent_state( std::string &error )
@@ -3469,6 +6472,10 @@ runtime_status status()
         result.generation = active_state->generation;
         result.world_generation = active_state->world_generation;
         result.page_count = active_state->pages.size();
+        result.action_menu_entry_count =
+            active_state->action_menu_entries.size();
+        result.sidebar_widget_count =
+            active_state->sidebar_widgets.size();
         result.event_handler_count = active_state->event_registry.size();
         result.mapgen_handler_count =
             active_state->mapgen_registry.size();
@@ -3523,6 +6530,17 @@ void shutdown()
         dispatch_lifecycle_event( *active_state, "ccb.lifecycle.shutdown" );
         active_state.reset();
     }
+    if( panel_manager::is_initialized() ) {
+        try {
+            panel_manager::get_manager().
+            sync_lua_panels();
+            sidebar_panels_dirty = false;
+        } catch( const std::exception &exception ) {
+            record_runtime_error(
+                "Lua sidebar panel cleanup failed",
+                exception.what() );
+        }
+    }
     clear_actions();
     clear_navigation_requests();
     last_runtime_error.clear();
@@ -3569,6 +6587,425 @@ bool has_registered_pages( const std::string_view slot )
         return slot.empty() || std::find( page.slots.begin(), page.slots.end(), slot ) !=
                page.slots.end();
     } );
+}
+
+std::vector<action_menu_entry_info>
+registered_action_menu_entries()
+{
+    std::vector<action_menu_entry_info> result;
+    if( !active_state ) {
+        return result;
+    }
+    result.reserve( active_state->action_menu_entries.size() );
+    for( const action_menu_definition &definition :
+         active_state->action_menu_entries ) {
+        if( definition.source_index >=
+            active_state->sources.size() ) {
+            continue;
+        }
+        result.push_back( {
+            definition.registration_id,
+            definition.id,
+            definition.name,
+            definition.category,
+            active_state->sources[
+            definition.source_index].manifest.id,
+            definition.hotkey,
+            definition.enabled
+        } );
+    }
+    return result;
+}
+
+bool invoke_action_menu_entry(
+    const std::uint64_t registration_id )
+{
+    if( !active_state || !active_state->accept_actions ) {
+        return false;
+    }
+    const auto found = std::find_if(
+                           active_state->action_menu_entries.begin(),
+                           active_state->action_menu_entries.end(),
+    [registration_id]( const action_menu_definition & definition ) {
+        return definition.registration_id == registration_id;
+    } );
+    if( found == active_state->action_menu_entries.end() ||
+        !found->enabled ||
+        found->source_index >= active_state->sources.size() ) {
+        return false;
+    }
+
+    const std::string entry_id = found->id;
+    const std::size_t source_index = found->source_index;
+    sol::protected_function callback = found->callback;
+    source_scope source( *active_state, source_index );
+    instruction_guard guard(
+        active_state->lua.lua_state(),
+        callback_instruction_limit );
+    const auto started = std::chrono::steady_clock::now();
+    const sol::protected_function_result result = callback();
+    record_callback_timing(
+        *active_state,
+        "action menu entry '" + entry_id + "'", started );
+    if( !result.valid() ) {
+        const sol::error error = result;
+        const std::string message = error.what();
+        const auto current = std::find_if(
+                                 active_state->action_menu_entries.begin(),
+                                 active_state->action_menu_entries.end(),
+        [registration_id]( const action_menu_definition & definition ) {
+            return definition.registration_id == registration_id;
+        } );
+        if( current != active_state->action_menu_entries.end() ) {
+            current->enabled = false;
+            current->error = message;
+        }
+        record_runtime_error(
+            "Lua action menu entry '" + entry_id + "'",
+            message );
+        return false;
+    }
+    return true;
+}
+
+namespace
+{
+
+sidebar_widget_definition *find_sidebar_widget(
+    runtime_state &state, const std::string_view key )
+{
+    const auto found = std::find_if(
+                           state.sidebar_widgets.begin(),
+                           state.sidebar_widgets.end(),
+    [&state, key]( const sidebar_widget_definition & definition ) {
+        return sidebar_widget_key( state, definition ) == key;
+    } );
+    return found == state.sidebar_widgets.end() ?
+           nullptr : &*found;
+}
+
+void disable_sidebar_widget(
+    runtime_state &state, const std::uint64_t registration_id,
+    const std::size_t source_index, const std::string &key,
+    const std::string &phase, const std::string &message )
+{
+    const auto current = std::find_if(
+                             state.sidebar_widgets.begin(),
+                             state.sidebar_widgets.end(),
+    [registration_id]( const sidebar_widget_definition & definition ) {
+        return definition.registration_id == registration_id;
+    } );
+    if( current != state.sidebar_widgets.end() ) {
+        current->enabled = false;
+        current->error = message;
+    }
+    source_scope source( state, source_index );
+    record_runtime_error(
+        "Lua sidebar widget '" + key + "' " + phase,
+        message );
+}
+
+void append_sidebar_widget_text(
+    std::vector<sidebar_widget_line> &lines,
+    const std::string &text, const std::string &color,
+    std::size_t &output_bytes )
+{
+    if( text.find( '\0' ) != std::string::npos ) {
+        throw std::runtime_error(
+            "sidebar widget output contains a NUL byte" );
+    }
+    if( color.size() > maximum_sidebar_widget_color_bytes ) {
+        throw std::runtime_error(
+            "sidebar widget color exceeds 64 bytes" );
+    }
+    if( text.size() >
+        maximum_sidebar_widget_output_bytes - output_bytes ) {
+        throw std::runtime_error(
+            "sidebar widget output exceeds 32768 bytes" );
+    }
+    output_bytes += text.size();
+
+    std::size_t start = 0;
+    while( true ) {
+        const std::size_t newline = text.find( '\n', start );
+        const std::size_t length =
+            newline == std::string::npos ?
+            text.size() - start : newline - start;
+        if( length > maximum_sidebar_widget_line_bytes ) {
+            throw std::runtime_error(
+                "sidebar widget line exceeds 4096 bytes" );
+        }
+        if( lines.size() >= maximum_sidebar_widget_lines ) {
+            throw std::runtime_error(
+                "sidebar widget output exceeds 64 lines" );
+        }
+        lines.push_back( {
+            text.substr( start, length ), color
+        } );
+        if( newline == std::string::npos ) {
+            break;
+        }
+        start = newline + 1;
+    }
+}
+
+void append_sidebar_widget_value(
+    std::vector<sidebar_widget_line> &lines,
+    const sol::object &value, std::size_t &output_bytes )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return;
+    }
+    if( value.get_type() == sol::type::string ) {
+        append_sidebar_widget_text(
+            lines, value.as<std::string>(),
+            "light_gray", output_bytes );
+        return;
+    }
+    if( value.get_type() != sol::type::table ) {
+        throw std::runtime_error(
+            "sidebar widget draw results must be strings or arrays" );
+    }
+
+    const sol::table entries = value.as<sol::table>();
+    const std::size_t count = entries.size();
+    if( count > maximum_sidebar_widget_lines ) {
+        throw std::runtime_error(
+            "sidebar widget output exceeds 64 entries" );
+    }
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object entry = entries[index];
+        if( entry.get_type() == sol::type::string ) {
+            append_sidebar_widget_text(
+                lines, entry.as<std::string>(),
+                "light_gray", output_bytes );
+            continue;
+        }
+        if( entry.get_type() != sol::type::table ) {
+            throw std::runtime_error(
+                "sidebar widget array entries must be strings or tables" );
+        }
+        const sol::table fields = entry.as<sol::table>();
+        std::size_t field_count = 0;
+        for( const auto &field : fields ) {
+            ++field_count;
+            if( field_count > 2 ||
+                field.first.get_type() != sol::type::string ) {
+                throw std::runtime_error(
+                    "sidebar widget line tables only accept text and color" );
+            }
+            const std::string name =
+                field.first.as<std::string>();
+            if( name != "text" && name != "color" ) {
+                throw std::runtime_error(
+                    "sidebar widget line received unknown field '" +
+                    name + "'" );
+            }
+        }
+        const sol::object text = fields["text"];
+        if( !text.valid() ||
+            text.get_type() != sol::type::string ) {
+            throw std::runtime_error(
+                "sidebar widget line text must be a string" );
+        }
+        std::string color = "light_gray";
+        const sol::object raw_color = fields["color"];
+        if( raw_color.valid() &&
+            raw_color.get_type() != sol::type::nil ) {
+            if( raw_color.get_type() != sol::type::string ) {
+                throw std::runtime_error(
+                    "sidebar widget line color must be a string" );
+            }
+            color = raw_color.as<std::string>();
+        }
+        append_sidebar_widget_text(
+            lines, text.as<std::string>(), color,
+            output_bytes );
+    }
+}
+
+} // namespace
+
+std::vector<sidebar_widget_info> registered_sidebar_widgets()
+{
+    std::vector<sidebar_widget_info> result;
+    if( !active_state ) {
+        return result;
+    }
+    result.reserve( active_state->sidebar_widgets.size() );
+    for( const sidebar_widget_definition &definition :
+         active_state->sidebar_widgets ) {
+        if( definition.source_index >=
+            active_state->sources.size() ) {
+            continue;
+        }
+        result.push_back( {
+            definition.registration_id,
+            sidebar_widget_key( *active_state, definition ),
+            definition.id,
+            definition.name,
+            active_state->sources[
+            definition.source_index].manifest.id,
+            definition.height,
+            definition.order,
+            definition.default_toggle,
+            definition.redraw_every_frame,
+            definition.enabled
+        } );
+    }
+    return result;
+}
+
+bool sidebar_widget_visible( const std::string_view key )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return false;
+    }
+    sidebar_widget_definition *definition =
+        find_sidebar_widget( *active_state, key );
+    if( definition == nullptr || !definition->enabled ||
+        definition->source_index >=
+        active_state->sources.size() ) {
+        return false;
+    }
+
+    const std::uint64_t registration_id =
+        definition->registration_id;
+    const std::size_t source_index =
+        definition->source_index;
+    const std::optional<bool> visible_value =
+        definition->panel_visible_value;
+    const std::optional<sol::protected_function>
+    visible_callback = definition->panel_visible;
+    const std::optional<sol::protected_function>
+    render_callback = definition->render;
+    const std::string stable_key( key );
+
+    if( !visible_callback &&
+        visible_value && !*visible_value ) {
+        return false;
+    }
+    const std::optional<sol::protected_function> callback =
+        visible_callback ? visible_callback : render_callback;
+    if( !callback ) {
+        return true;
+    }
+
+    const auto started =
+        std::chrono::steady_clock::now();
+    bool timing_recorded = false;
+    try {
+        source_scope source( *active_state, source_index );
+        instruction_guard guard(
+            active_state->lua.lua_state(),
+            callback_instruction_limit );
+        const sol::protected_function_result result =
+            ( *callback )();
+        record_callback_timing(
+            *active_state,
+            "sidebar widget '" + stable_key +
+            "' visibility", started );
+        timing_recorded = true;
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.return_count() == 0 ||
+            result.get_type() == sol::type::nil ) {
+            return true;
+        }
+        if( result.return_count() != 1 ||
+            result.get_type() != sol::type::boolean ) {
+            throw std::runtime_error(
+                "visibility callback must return a boolean or nil" );
+        }
+        return result.get<bool>();
+    } catch( const std::exception &exception ) {
+        if( !timing_recorded ) {
+            record_callback_timing(
+                *active_state,
+                "sidebar widget '" + stable_key +
+                "' visibility", started );
+        }
+        disable_sidebar_widget(
+            *active_state, registration_id, source_index,
+            stable_key, "visibility failed",
+            exception.what() );
+        return false;
+    }
+}
+
+std::vector<sidebar_widget_line> render_sidebar_widget(
+    const std::string_view key, const int width,
+    const int height )
+{
+    std::vector<sidebar_widget_line> lines;
+    if( !active_state || is_pool_worker_thread() ) {
+        return lines;
+    }
+    sidebar_widget_definition *definition =
+        find_sidebar_widget( *active_state, key );
+    if( definition == nullptr || !definition->enabled ||
+        definition->source_index >=
+        active_state->sources.size() ) {
+        return lines;
+    }
+
+    const std::uint64_t registration_id =
+        definition->registration_id;
+    const std::size_t source_index =
+        definition->source_index;
+    const sol::protected_function callback =
+        definition->draw;
+    const std::string stable_key( key );
+    const int bounded_width = clamp( width, 1, 512 );
+    const int bounded_height = clamp(
+                                   height, 1,
+                                   maximum_sidebar_widget_height );
+    const auto started =
+        std::chrono::steady_clock::now();
+    bool timing_recorded = false;
+    try {
+        source_scope source( *active_state, source_index );
+        instruction_guard guard(
+            active_state->lua.lua_state(),
+            callback_instruction_limit );
+        const sol::protected_function_result result =
+            callback( bounded_width, bounded_height );
+        record_callback_timing(
+            *active_state,
+            "sidebar widget '" + stable_key +
+            "' draw", started );
+        timing_recorded = true;
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.return_count() >
+            static_cast<int>( maximum_sidebar_widget_lines ) ) {
+            throw std::runtime_error(
+                "sidebar widget draw returned more than 64 values" );
+        }
+        std::size_t output_bytes = 0;
+        for( int index = 0;
+             index < result.return_count(); ++index ) {
+            append_sidebar_widget_value(
+                lines, result.get<sol::object>( index ),
+                output_bytes );
+        }
+        return lines;
+    } catch( const std::exception &exception ) {
+        if( !timing_recorded ) {
+            record_callback_timing(
+                *active_state,
+                "sidebar widget '" + stable_key +
+                "' draw", started );
+        }
+        disable_sidebar_widget(
+            *active_state, registration_id, source_index,
+            stable_key, "draw failed", exception.what() );
+        return {};
+    }
 }
 
 bool show_page( const std::string_view page_id )

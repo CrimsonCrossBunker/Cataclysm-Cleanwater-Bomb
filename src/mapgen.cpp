@@ -598,6 +598,12 @@ class mapgen_factory
                     result.insert( elem.generator_id );
                 }
             }
+            const std::vector<std::string> candidates(
+                result.begin(), result.end() );
+            const std::vector<std::string> script_usages =
+                cata::lua_ui::collect_native_mapgen_factory_usages(
+                    candidates );
+            result.insert( script_usages.begin(), script_usages.end() );
             return result;
         }
 

@@ -15,6 +15,7 @@
 #include "calendar.h"
 #include "character.h"
 #include "character_attire.h"
+#include "catalua_ui.h"
 #include "city.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -1077,6 +1078,27 @@ void weather_manager::update_weather()
         }
         if( weather_changed ) {
             effect_on_conditions::process_reactivate();
+        }
+        if( old_weather != WEATHER_NULL ) {
+            if( weather_changed ) {
+                cata::lua_ui::dispatch_native_hook(
+                "on_weather_changed", {
+                    { "before", old_weather.str() },
+                    { "after", weather_id.str() }
+                } );
+            }
+            cata::lua_ui::dispatch_native_hook(
+            "on_weather_updated", {
+                { "weather", weather_id.str() },
+                {
+                    "temperature",
+                    units::to_celsius( temperature )
+                },
+                {
+                    "windpower",
+                    static_cast<std::int64_t>( windspeed )
+                }
+            } );
         }
     }
     update_snow_depth();

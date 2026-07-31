@@ -476,6 +476,7 @@ class zone_data
 
         // returns true if name is changed
         bool set_name();
+        bool set_name( const std::string &new_name );
         // returns true if type is changed
         bool set_type();
         // We need to be able to suppress the display of zones when the movement is part of a map rotation, as the underlying
@@ -554,6 +555,12 @@ class zone_data
                 return cached_shift + personal_end;
             }
             return end;
+        }
+        tripoint_rel_ms get_personal_start_point() const {
+            return personal_start;
+        }
+        tripoint_rel_ms get_personal_end_point() const {
+            return personal_end;
         }
         void update_cached_shift( const tripoint_abs_ms &player_loc ) {
             cached_shift = player_loc;

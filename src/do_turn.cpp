@@ -325,6 +325,12 @@ void monmove()
 
     int mon_count = 0;
     std::string mon_slow_log;
+    const bool has_creature_do_turn =
+        cata::lua_ui::has_native_hook( "on_creature_do_turn" );
+    const bool has_monster_do_turn =
+        cata::lua_ui::has_native_hook( "on_monster_do_turn" );
+    const bool has_npc_do_turn =
+        cata::lua_ui::has_native_hook( "on_npc_do_turn" );
     for( monster &critter : g->all_monsters() ) {
         if( !m.inbounds( critter.pos_abs() ) ) {
             continue;
@@ -359,7 +365,26 @@ void monmove()
         }
 
         if( !critter.is_dead() ) {
-            critter.process_turn();
+            if( has_creature_do_turn || has_monster_do_turn ) {
+                cata::lua_ui::native_callback_arguments payload = {
+                    {
+                        "creature",
+                        static_cast<const Creature *>( &critter )
+                    }
+                };
+                if( has_creature_do_turn ) {
+                    cata::lua_ui::dispatch_native_hook(
+                        "on_creature_do_turn", payload );
+                }
+                if( has_monster_do_turn ) {
+                    payload.front().name = "monster";
+                    cata::lua_ui::dispatch_native_hook(
+                        "on_monster_do_turn", payload );
+                }
+            }
+            if( !critter.is_dead() ) {
+                critter.process_turn();
+            }
         }
 
         m.creature_in_field( critter );
@@ -431,6 +456,23 @@ void monmove()
         if( cata_mp::is_remote_player( guy.getID() ) ) {
             cata_mp::mp_tick_proxy_activity( guy );
             continue;
+        }
+        if( has_creature_do_turn || has_npc_do_turn ) {
+            cata::lua_ui::native_callback_arguments payload = {
+                {
+                    "creature",
+                    static_cast<const Creature *>( &guy )
+                }
+            };
+            if( has_creature_do_turn ) {
+                cata::lua_ui::dispatch_native_hook(
+                    "on_creature_do_turn", payload );
+            }
+            if( has_npc_do_turn ) {
+                payload.front().name = "npc";
+                cata::lua_ui::dispatch_native_hook(
+                    "on_npc_do_turn", payload );
+            }
         }
         const std::chrono::steady_clock::time_point npc_t0 = std::chrono::steady_clock::now();
         int turns = 0;

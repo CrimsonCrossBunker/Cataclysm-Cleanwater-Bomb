@@ -1,8 +1,10 @@
 #include "monexamine.h"
 
+#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -12,6 +14,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -822,105 +825,195 @@ bool monexamine::pet_menu( monster &z )
             amenu.addentry( insert_bat, false, 'x', _( "You need a %s to power this mech" ), type.nname( 1 ) );
         }
     }
+    const cata::lua_ui::native_callback_arguments menu_payload = {
+        {
+            "character",
+            static_cast<const Character *>( &player_character )
+        },
+        { "monster", static_cast<const Creature *>( &z ) },
+        {
+            "monster_type", cata::lua_ui::native_callback_id {
+                "monster", z.type->id.str()
+            }
+        }
+    };
+    std::vector<cata::lua_ui::native_menu_entry> script_entries =
+        cata::lua_ui::collect_native_callback_menu_entries(
+            "monster", z.type->id.str(),
+            "get_examine_menu_entries", menu_payload );
+    std::vector<cata::lua_ui::native_menu_entry> hook_entries =
+        cata::lua_ui::collect_native_hook_menu_entries(
+            "on_monster_get_examine_menu_entries", menu_payload );
+    script_entries.insert(
+        script_entries.end(),
+        std::make_move_iterator( hook_entries.begin() ),
+        std::make_move_iterator( hook_entries.end() ) );
+
+    std::map<int, std::string> script_entry_ids;
+    std::set<std::string> seen_script_entry_ids;
+    int next_script_choice = stop_bleeding + 1;
+    for( const cata::lua_ui::native_menu_entry &entry : script_entries ) {
+        if( !seen_script_entry_ids.insert( entry.id ).second ) {
+            continue;
+        }
+        script_entry_ids.emplace( next_script_choice, entry.id );
+        amenu.addentry(
+            next_script_choice, entry.enabled, MENU_AUTOASSIGN,
+            entry.label );
+        ++next_script_choice;
+    }
+
     amenu.query();
     int choice = amenu.ret;
+    std::string selected_entry;
+    const auto notify_menu_entry = [&]( const std::string & entry ) {
+        cata::lua_ui::native_callback_arguments payload = menu_payload;
+        payload.push_back( { "entry", entry } );
+        cata::lua_ui::dispatch_native_callback(
+            "monster", z.type->id.str(),
+            "on_examine_menu_entry", payload );
+        cata::lua_ui::dispatch_native_hook(
+            "on_monster_examine_menu_entry", payload );
+    };
 
     switch( choice ) {
         case swap_pos:
+            selected_entry = "swap_pos";
             swap( z );
             break;
         case push_monster:
+            selected_entry = "push_monster";
             push( z );
             break;
         case lead:
+            selected_entry = "lead";
             start_leading( z );
             break;
         case stop_lead:
+            selected_entry = "stop_lead";
             stop_leading( z );
             break;
         case rename:
+            selected_entry = "rename";
             rename_pet( z );
             break;
         case attach_bag:
+            selected_entry = "attach_bag";
             attach_bag_to( z );
             break;
         case remove_bag:
+            selected_entry = "remove_bag";
             remove_bag_from( z );
             break;
         case drop_all:
+            selected_entry = "drop_all";
             dump_items( z );
             break;
-        case give_items:
-            return give_items_to( z );
-        case mon_armor_add:
-            return add_armor( z );
+        case give_items: {
+            const bool result = give_items_to( z );
+            notify_menu_entry( "give_items" );
+            return result;
+        }
+        case mon_armor_add: {
+            const bool result = add_armor( z );
+            notify_menu_entry( "mon_armor_add" );
+            return result;
+        }
         case mon_harness_remove:
+            selected_entry = "mon_harness_remove";
             remove_harness( z );
             break;
         case mon_armor_remove:
+            selected_entry = "mon_armor_remove";
             remove_armor( z );
             break;
         case play_with_pet:
             if( query_yn( _( "Spend a few minutes to play with your %s?" ), pet_name ) ) {
+                selected_entry = "play_with_pet";
                 play_with( z );
             }
             break;
         case cull_pet:
             if( query_yn( _( "Really slaughter your %s?" ), pet_name ) ) {
+                notify_menu_entry( "cull_pet" );
                 cull( z );
             }
             break;
         case leash:
+            selected_entry = "leash";
             add_leash( z );
             break;
         case unleash:
+            selected_entry = "unleash";
             remove_leash( z );
             break;
         case tie:
+            selected_entry = "tie";
             tie_pet( z );
             break;
         case untie:
+            selected_entry = "untie";
             untie_pet( z );
             break;
         case attach_saddle:
+            selected_entry = "attach_saddle";
             attach_saddle_to( z );
             break;
         case remove_saddle:
+            selected_entry = "remove_saddle";
             remove_saddle_from( z );
             break;
         case mount:
+            selected_entry = "mount";
             mount_pet( z );
             break;
         case milk:
+            selected_entry = "milk";
             milk_source( z );
             break;
         case shear:
+            selected_entry = "shear";
             shear_animal( z );
             break;
         case pay:
+            selected_entry = "pay";
             pay_bot( z );
             break;
         case remove_bat:
+            selected_entry = "remove_bat";
             remove_battery( z );
             break;
         case insert_bat:
+            selected_entry = "insert_bat";
             insert_battery( z );
             break;
         case check_bat:
+            selected_entry = "check_bat";
             break;
         case attack:
             if( query_yn( _( "You may be attacked!  Proceed?" ) ) ) {
+                notify_menu_entry( "attack" );
                 get_player_character().melee_attack( z, true );
             }
             break;
         case talk_to:
+            selected_entry = "talk_to";
             get_avatar().talk_to( get_talker_for( z ) );
             break;
         case stop_bleeding:
+            selected_entry = "stop_bleeding";
             bandage_animal( z );
             break;
-        default:
+        default: {
+            const auto script_entry = script_entry_ids.find( choice );
+            if( script_entry != script_entry_ids.end() ) {
+                selected_entry = script_entry->second;
+            }
             break;
+        }
+    }
+    if( !selected_entry.empty() ) {
+        notify_menu_entry( selected_entry );
     }
     return true;
 }
@@ -932,8 +1025,7 @@ bool monexamine::mech_hack( monster &z )
     if( player_character.has_amount( card_type, 1 ) ) {
         if( query_yn( _( "Swipe your ID card into the mech's security port?" ) ) ) {
             player_character.mod_moves( -100 );
-            z.add_effect( effect_pet, 1_turns, true );
-            z.friendly = -1;
+            z.make_pet( player_character );
             add_msg( m_good, _( "The %s whirs into life and opens its restraints to accept a pilot." ),
                      z.get_name() );
             player_character.use_amount( card_type, 1 );

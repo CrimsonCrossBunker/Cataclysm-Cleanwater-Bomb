@@ -32,6 +32,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_algo.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -3674,6 +3675,49 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
     tripoint_bub_ms p = pt;
     map &here = get_map();
     const tripoint_bub_ms pos = pos_bub( here );
+
+    const bool has_npc_try_move =
+        cata::lua_ui::has_native_hook( "on_npc_try_move" );
+    const bool has_character_try_move =
+        cata::lua_ui::has_native_hook( "on_character_try_move" );
+    if( has_npc_try_move || has_character_try_move ) {
+        const monster *const mount =
+            is_mounted() ? mounted_creature.get() : nullptr;
+        cata::lua_ui::native_callback_arguments payload = {
+            { "npc", static_cast<const Character *>( this ) },
+            {
+                "from", cata::lua_ui::native_callback_point {
+                    "bub_ms", pos.x(), pos.y(), pos.z()
+                }
+            },
+            {
+                "to", cata::lua_ui::native_callback_point {
+                    "bub_ms", p.x(), p.y(), p.z()
+                }
+            },
+            { "movement_mode", current_movement_mode().str() },
+            { "via_ramp", false },
+            { "mounted", mount != nullptr },
+            { "mount", static_cast<const Creature *>( mount ) }
+        };
+        bool allowed = true;
+        if( has_npc_try_move ) {
+            const bool npc_allowed =
+                cata::lua_ui::dispatch_native_hook(
+                    "on_npc_try_move", payload );
+            allowed = npc_allowed && allowed;
+        }
+        if( has_character_try_move ) {
+            payload.front().name = "character";
+            const bool character_allowed =
+                cata::lua_ui::dispatch_native_hook(
+                    "on_character_try_move", payload );
+            allowed = character_allowed && allowed;
+        }
+        if( !allowed ) {
+            return;
+        }
+    }
 
     if( sees_dangerous_field( p )
         || ( nomove != nullptr && nomove->find( p ) != nomove->end() ) ) {

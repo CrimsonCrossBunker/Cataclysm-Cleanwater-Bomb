@@ -18,6 +18,7 @@
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
+#include "coordinates.h"
 #include "field.h"
 #include "field_type.h"
 #include "item.h"
@@ -68,6 +69,71 @@ struct vehicle_options {
     std::size_t offset = 0;
     int limit = default_vehicle_limit;
 };
+
+script_tripoint_coord world_to_absolute(
+    const script_tripoint_coord &position )
+{
+    if( position.native_origin() !=
+        coords::origin::reality_bubble ) {
+        throw std::invalid_argument(
+            "game.world.to_absolute requires a reality-bubble Tripoint" );
+    }
+
+    map &here = get_map();
+    if( position.native_scale() == coords::scale::map_square ) {
+        const tripoint_abs_ms absolute = here.get_abs(
+                                             tripoint_bub_ms(
+                                                     position.to_native() ) );
+        return script_tripoint_coord::from_native(
+                   coords::origin::abs, coords::scale::map_square,
+                   absolute.raw() );
+    }
+    if( position.native_scale() == coords::scale::submap ) {
+        const tripoint_bub_ms local_ms =
+            coords::project_to<coords::ms>(
+                tripoint_bub_sm( position.to_native() ) );
+        const tripoint_abs_sm absolute =
+            coords::project_to<coords::sm>(
+                here.get_abs( local_ms ) );
+        return script_tripoint_coord::from_native(
+                   coords::origin::abs, coords::scale::submap,
+                   absolute.raw() );
+    }
+    throw std::invalid_argument(
+        "game.world.to_absolute supports map-square and submap Tripoints" );
+}
+
+script_tripoint_coord world_to_bubble(
+    const script_tripoint_coord &position )
+{
+    if( position.native_origin() != coords::origin::abs ) {
+        throw std::invalid_argument(
+            "game.world.to_bubble requires an absolute Tripoint" );
+    }
+
+    map &here = get_map();
+    if( position.native_scale() == coords::scale::map_square ) {
+        const tripoint_bub_ms local = here.get_bub(
+                                          tripoint_abs_ms(
+                                              position.to_native() ) );
+        return script_tripoint_coord::from_native(
+                   coords::origin::reality_bubble,
+                   coords::scale::map_square, local.raw() );
+    }
+    if( position.native_scale() == coords::scale::submap ) {
+        const tripoint_abs_ms absolute_ms =
+            coords::project_to<coords::ms>(
+                tripoint_abs_sm( position.to_native() ) );
+        const tripoint_bub_sm local =
+            coords::project_to<coords::sm>(
+                here.get_bub( absolute_ms ) );
+        return script_tripoint_coord::from_native(
+                   coords::origin::reality_bubble,
+                   coords::scale::submap, local.raw() );
+    }
+    throw std::invalid_argument(
+        "game.world.to_bubble supports map-square and submap Tripoints" );
+}
 
 tripoint_abs_ms require_absolute_ms(
     const script_tripoint_coord &position,
@@ -1046,6 +1112,18 @@ void install_world_api(
 {
     sol::state_view lua( game.lua_state() );
     sol::table world = lua.create_table();
+    world.set_function(
+        "to_absolute",
+    [require_read]( const script_tripoint_coord & position ) {
+        require_read();
+        return world_to_absolute( position );
+    } );
+    world.set_function(
+        "to_bubble",
+    [require_read]( const script_tripoint_coord & position ) {
+        require_read();
+        return world_to_bubble( position );
+    } );
     world.set_function(
         "bounds",
     [require_read]( sol::this_state lua_state ) {

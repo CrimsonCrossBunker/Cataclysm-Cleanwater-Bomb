@@ -25,6 +25,7 @@
 #include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -778,6 +779,13 @@ void item::on_wield( Character &you, bool combat )
     you.flag_encumbrance();
     you.calc_discomfort();
     you.on_item_acquire( *this );
+    cata::lua_ui::dispatch_native_callback(
+    "iwieldable", typeId().str(), "on_wield", {
+        { "character", static_cast<const Character *>( &you ) },
+        { "item", static_cast<const item *>( this ) },
+        { "move_cost", std::int64_t { wield_cost } },
+        { "combat", combat }
+    } );
 }
 
 std::string item::dirt_symbol() const
@@ -3522,6 +3530,16 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
         debugmsg( "Tried to reload using non-existent ammo" );
         return false;
     }
+    const auto reload_finished = [&]() {
+        cata::lua_ui::dispatch_native_callback(
+        "iranged", typeId().str(), "on_reload", {
+            { "character", static_cast<const Character *>( &u ) },
+            { "item", static_cast<const item *>( this ) },
+            { "quantity", std::int64_t { qty } },
+            { "pocket_index", std::int64_t { pocket_index } }
+        } );
+        return true;
+    };
 
     // Targeted reload: MAGAZINE_WELL swap, or loose ammo into integral MAGAZINE.
     if( pocket_index >= 0 ) {
@@ -3548,6 +3566,16 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
             } );
         }
         if( !target_pocket->can_reload_with( *ammo.get_item(), true ) ) {
+            return false;
+        }
+        if( !cata::lua_ui::dispatch_native_callback(
+        "iranged", typeId().str(), "can_reload", {
+        { "character", static_cast<const Character *>( &u ) },
+            { "item", static_cast<const item *>( this ) },
+            { "ammo", static_cast<const item *>( ammo.get_item() ) },
+            { "quantity", std::int64_t { qty } },
+            { "pocket_index", std::int64_t { pocket_index } }
+        } ) ) {
             return false;
         }
 
@@ -3579,7 +3607,7 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
             if( ammo_from_map ) {
                 u.invalidate_weight_carried_cache();
             }
-            return true;
+            return reload_finished();
         }
 
         item magazine_removed;
@@ -3608,10 +3636,20 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
         if( !magazine_removed.is_null() ) {
             u.i_add( magazine_removed, true, nullptr, nullptr, true, allow_wield );
         }
-        return true;
+        return reload_finished();
     }
 
     if( !can_reload_with( *ammo.get_item(), true ) ) {
+        return false;
+    }
+    if( !cata::lua_ui::dispatch_native_callback(
+    "iranged", typeId().str(), "can_reload", {
+    { "character", static_cast<const Character *>( &u ) },
+        { "item", static_cast<const item *>( this ) },
+        { "ammo", static_cast<const item *>( ammo.get_item() ) },
+        { "quantity", std::int64_t { qty } },
+        { "pocket_index", std::int64_t { pocket_index } }
+    } ) ) {
         return false;
     }
 
@@ -3689,7 +3727,7 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
         if( !magazine_removed.is_null() ) {
             u.i_add( magazine_removed, true, nullptr, nullptr, true, allow_wield );
         }
-        return true;
+        return reload_finished();
     }
 
     if( ammo->charges == 0 ) {
@@ -3698,7 +3736,7 @@ bool item::reload( Character &u, item_location ammo, int qty, int pocket_index )
     if( ammo_from_map ) {
         u.invalidate_weight_carried_cache();
     }
-    return true;
+    return reload_finished();
 }
 
 bool item::detonate( const tripoint_bub_ms &p, std::vector<item> &drops )

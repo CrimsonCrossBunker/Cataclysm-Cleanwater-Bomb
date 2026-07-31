@@ -40,11 +40,119 @@ void on_turn()
 {
 }
 
+native_hook_result dispatch_native_hook_result(
+    std::string_view, const native_callback_arguments & )
+{
+    return {};
+}
+
+bool dispatch_native_hook(
+    std::string_view, const native_callback_arguments & )
+{
+    return true;
+}
+
+bool has_native_hook( std::string_view )
+{
+    return false;
+}
+
+std::vector<std::string> collect_native_mapgen_factory_usages(
+    const std::vector<std::string> & )
+{
+    return {};
+}
+
+void dispatch_native_monster_spawn(
+    const Creature &, std::string_view )
+{
+}
+
+void dispatch_native_npc_spawn(
+    const Character &, std::string_view )
+{
+}
+
+std::string dispatch_character_display_skill_info(
+    const Character &, std::string_view )
+{
+    return {};
+}
+
+bool dispatch_character_display_skill_action(
+    const Character &, std::string_view, std::string_view )
+{
+    return false;
+}
+
+native_hook_result dispatch_native_dialogue_hook(
+    std::string_view, const const_talker &, const const_talker &,
+    std::string_view, std::optional<std::string_view> )
+{
+    return {};
+}
+
+bool begin_native_npc_interaction(
+    const Character &, const Character & )
+{
+    return true;
+}
+
+bool allow_native_monster_interaction(
+    const Character &, const Creature & )
+{
+    return true;
+}
+
+bool allow_native_elevator_use(
+    const Character &, const native_callback_point &,
+    const native_callback_point & )
+{
+    return true;
+}
+
+bool dispatch_native_callback(
+    std::string_view, std::string_view, std::string_view,
+    const native_callback_arguments & )
+{
+    return true;
+}
+
+bool dispatch_native_consuming_callback(
+    std::string_view, std::string_view, std::string_view,
+    const native_callback_arguments & )
+{
+    return false;
+}
+
+bool has_native_callback(
+    std::string_view, std::string_view, std::string_view )
+{
+    return false;
+}
+
+std::vector<native_menu_entry> collect_native_callback_menu_entries(
+    std::string_view, std::string_view, std::string_view,
+    const native_callback_arguments & )
+{
+    return {};
+}
+
+std::vector<native_menu_entry> collect_native_hook_menu_entries(
+    std::string_view, const native_callback_arguments & )
+{
+    return {};
+}
+
 void dispatch_mapgen_postprocess( mapgendata & )
 {
 }
 
-void on_world_ready()
+void on_world_ready( world_ready_kind )
+{
+}
+
+void on_game_save()
 {
 }
 
@@ -79,6 +187,33 @@ std::vector<page_info> registered_pages( std::string_view )
 bool has_registered_pages( std::string_view )
 {
     return false;
+}
+
+std::vector<action_menu_entry_info>
+registered_action_menu_entries()
+{
+    return {};
+}
+
+bool invoke_action_menu_entry( std::uint64_t )
+{
+    return false;
+}
+
+std::vector<sidebar_widget_info> registered_sidebar_widgets()
+{
+    return {};
+}
+
+bool sidebar_widget_visible( std::string_view )
+{
+    return false;
+}
+
+std::vector<sidebar_widget_line> render_sidebar_widget(
+    std::string_view, int, int )
+{
+    return {};
 }
 
 bool show_page( std::string_view )

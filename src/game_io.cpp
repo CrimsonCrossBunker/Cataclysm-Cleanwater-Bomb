@@ -465,7 +465,8 @@ bool game::load( const save_t &name )
                     u.recalculate_enchantment_cache();
                     u.enchantment_cache->activate_passive( u );
                     if constexpr( cata::lua_ui::is_enabled() ) {
-                        cata::lua_ui::on_world_ready();
+                        cata::lua_ui::on_world_ready(
+                            cata::lua_ui::world_ready_kind::loaded_game );
                     }
                     events().send<event_type::game_load>( getVersionString() );
                     time_of_last_load = std::chrono::steady_clock::now();
@@ -751,6 +752,9 @@ bool game::save()
         : std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::steady_clock::now() - time_of_last_load );
     std::chrono::seconds total_time_played = time_played_at_last_load + time_since_load;
+    if constexpr( cata::lua_ui::is_enabled() ) {
+        cata::lua_ui::on_game_save();
+    }
     events().send<event_type::game_save>( time_since_load, total_time_played );
     try {
         if( !save_player_data() ||

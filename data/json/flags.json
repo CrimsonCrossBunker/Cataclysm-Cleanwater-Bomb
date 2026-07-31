@@ -1582,6 +1582,21 @@
     "type": "json_flag"
   },
   {
+    "id": "EFFECT_LUA_ON_ADDED",
+    "type": "json_flag",
+    "//": "Allows an effect type to trigger the bounded Lua hook when it is first added."
+  },
+  {
+    "id": "EFFECT_LUA_ON_TICK",
+    "type": "json_flag",
+    "//": "Allows an effect type to trigger the bounded Lua hook while it is processed."
+  },
+  {
+    "id": "EFFECT_LUA_ON_REMOVED",
+    "type": "json_flag",
+    "//": "Allows an effect type to trigger the bounded Lua hook after it is removed."
+  },
+  {
     "id": "ENCUMBRANCE_UPDATE",
     "type": "json_flag"
   },

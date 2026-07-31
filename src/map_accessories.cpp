@@ -40,6 +40,12 @@ const bash_damage_profile &string_id<bash_damage_profile>::obj() const
 {
     return damage_profile_factory.obj( *this );
 }
+
+template<>
+bool string_id<bash_damage_profile>::is_valid() const
+{
+    return damage_profile_factory.is_valid( *this );
+}
 // end boilerplate
 
 void bash_damage_profile::load( const JsonObject &jo, const std::string_view )

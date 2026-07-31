@@ -39,48 +39,6 @@ constexpr std::size_t maximum_offset = 1000000;
 constexpr std::size_t maximum_relation_values = 128;
 constexpr int maximum_mission_step = 1000000;
 
-class mission_token
-{
-    public:
-        mission_token(
-            const int uid, const std::size_t runtime_generation,
-            const std::size_t world_generation )
-            : uid_( uid ),
-              runtime_generation_( runtime_generation ),
-              world_generation_( world_generation ) {
-        }
-
-        int uid() const noexcept {
-            return uid_;
-        }
-
-        std::size_t runtime_generation() const noexcept {
-            return runtime_generation_;
-        }
-
-        std::size_t world_generation() const noexcept {
-            return world_generation_;
-        }
-
-        std::string to_string() const {
-            return "MissionToken<" + std::to_string( uid_ ) + ">";
-        }
-
-        friend bool operator==(
-            const mission_token &lhs, const mission_token &rhs ) {
-            return lhs.uid_ == rhs.uid_ &&
-                   lhs.runtime_generation_ ==
-                   rhs.runtime_generation_ &&
-                   lhs.world_generation_ ==
-                   rhs.world_generation_;
-        }
-
-    private:
-        int uid_ = 0;
-        std::size_t runtime_generation_ = 0;
-        std::size_t world_generation_ = 0;
-};
-
 void require_mission_id(
     const script_game_id &id, const std::string &api_name )
 {
@@ -1226,6 +1184,35 @@ sol::table abandon_instance(
 }
 
 } // namespace
+
+mission_token::mission_token(
+    const int uid, const std::size_t runtime_generation,
+    const std::size_t world_generation )
+    : uid_( uid ),
+      runtime_generation_( runtime_generation ),
+      world_generation_( world_generation )
+{
+}
+
+int mission_token::uid() const noexcept
+{
+    return uid_;
+}
+
+std::size_t mission_token::runtime_generation() const noexcept
+{
+    return runtime_generation_;
+}
+
+std::size_t mission_token::world_generation() const noexcept
+{
+    return world_generation_;
+}
+
+std::string mission_token::to_string() const
+{
+    return "MissionToken<" + std::to_string( uid_ ) + ">";
+}
 
 void install_mission_api(
     sol::table &game,

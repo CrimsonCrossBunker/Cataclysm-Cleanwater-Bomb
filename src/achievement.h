@@ -3,6 +3,7 @@
 #define CATA_SRC_ACHIEVEMENT_H
 
 #include <array>
+#include <cstddef>
 #include <functional>
 #include <iosfwd>
 #include <memory>
@@ -116,6 +117,7 @@ class achievement
         const std::vector<achievement_requirement> &requirements() const {
             return requirements_;
         }
+        std::size_t requirement_count() const;
 
         bool is_manually_given() const {
             return manually_given_;
@@ -206,6 +208,8 @@ class achievements_tracker : public event_subscriber
         std::vector<const achievement *> valid_achievements() const;
 
         void report_achievement( const achievement *, achievement_completion );
+        bool report_manual_achievement( const achievement &, achievement_completion );
+        bool reset_manual_achievement( const achievement & );
 
         void write_json_achievements(
             std::ostream &achievement_file, const std::string &avatar_name ) const;

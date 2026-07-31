@@ -18,6 +18,7 @@
 #include "cached_options.h"
 #include "cata_imgui.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
@@ -35,6 +36,7 @@
 #include "explosion.h"
 #include "faction.h"
 #include "field_type.h"
+#include "flag.h"
 #include "flat_set.h"
 #include "game.h"
 #include "harvest.h"
@@ -3330,6 +3332,15 @@ void monster::die( map *here, Creature *nkiller )
             }
         }
     }
+
+    cata::lua_ui::dispatch_native_hook(
+    "on_mon_death", {
+        { "monster", static_cast<const Creature *>( this ) },
+        {
+            "killer",
+            static_cast<const Creature *>( get_killer() )
+        }
+    } );
 }
 
 units::energy monster::use_mech_power( units::energy amt )
@@ -3586,17 +3597,92 @@ void monster::process_one_effect( effect &it, bool is_new )
     //Reset max speed
     set_speed_bonus( calculate_by_enchantment( get_speed_base(), enchant_vals::mod::SPEED,
                      true ) - get_speed_base() );
+
+    if( !is_new ) {
+        return;
+    }
+    const std::string body_part =
+        it.get_bp() == bodypart_str_id::NULL_ID() ?
+        std::string() : it.get_bp().id().str();
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "monster", static_cast<const Creature *>( this ) },
+        {
+            "effect", cata::lua_ui::native_callback_id {
+                "effect", it.get_id().str()
+            }
+        },
+        {
+            "body_part", cata::lua_ui::native_callback_id {
+                "body_part", body_part
+            }
+        },
+        { "intensity", std::int64_t { it.get_intensity() } }
+    };
+    const bool dispatch_added =
+        it.has_flag( flag_EFFECT_LUA_ON_ADDED ) &&
+        cata::lua_ui::has_native_hook( "on_mon_effect_added" );
+    const bool dispatch_tick =
+        it.has_flag( flag_EFFECT_LUA_ON_TICK ) &&
+        cata::lua_ui::has_native_hook( "on_mon_effect" );
+    if( dispatch_added ) {
+        cata::lua_ui::dispatch_native_hook(
+            "on_mon_effect_added", payload );
+    }
+    if( dispatch_tick ) {
+        cata::lua_ui::dispatch_native_hook(
+            "on_mon_effect", payload );
+    }
 }
 
 void monster::process_effects()
 {
     map &here = get_map();
 
+    struct lua_effect_tick {
+        std::string effect;
+        std::string body_part;
+        int intensity;
+    };
+    const bool has_lua_effect_hook =
+        cata::lua_ui::has_native_hook( "on_mon_effect" );
+    std::vector<lua_effect_tick> lua_effect_ticks;
     // Monster only effects
     for( auto &elem : *effects ) {
         for( auto &_effect_it : elem.second ) {
             process_one_effect( _effect_it.second, false );
+            if( has_lua_effect_hook &&
+                _effect_it.second.has_flag(
+                    flag_EFFECT_LUA_ON_TICK ) ) {
+                const bodypart_id body_part =
+                    _effect_it.second.get_bp();
+                lua_effect_ticks.push_back( {
+                    _effect_it.second.get_id().str(),
+                    body_part == bodypart_str_id::NULL_ID() ?
+                    std::string() : body_part.id().str(),
+                    _effect_it.second.get_intensity()
+                } );
+            }
         }
+    }
+    for( const lua_effect_tick &tick : lua_effect_ticks ) {
+        cata::lua_ui::dispatch_native_hook(
+        "on_mon_effect", {
+            {
+                "monster",
+                static_cast<const Creature *>( this )
+            },
+            {
+                "effect", cata::lua_ui::native_callback_id {
+                    "effect", tick.effect
+                }
+            },
+            {
+                "body_part", cata::lua_ui::native_callback_id {
+                    "body_part", tick.body_part
+                }
+            },
+            { "intensity", std::int64_t { tick.intensity } }
+        } );
     }
 
     // Like with player/NPCs - keep the speed above 0
@@ -3770,6 +3856,30 @@ void monster::make_ally( const monster &z )
 {
     friendly = z.friendly;
     faction = z.faction;
+}
+
+void monster::make_pet()
+{
+    friendly = -1;
+    add_effect( effect_pet, 1_turns, true );
+}
+
+void monster::make_pet( Character &actor )
+{
+    make_pet();
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( &actor ) },
+        { "monster", static_cast<const Creature *>( this ) },
+        {
+            "monster_type", cata::lua_ui::native_callback_id {
+                "monster", type->id.str()
+            }
+        }
+    };
+    cata::lua_ui::dispatch_native_callback(
+        "monster", type->id.str(), "on_tame", payload );
+    cata::lua_ui::dispatch_native_hook(
+        "on_monster_tame", payload );
 }
 
 void monster::add_item( const item &it )
@@ -4200,6 +4310,23 @@ void monster::on_unload()
 
 void monster::on_load()
 {
+    const auto dispatch_lua_loaded_hooks = [this]() {
+        const cata::lua_ui::native_callback_arguments payload = {
+            { "creature", static_cast<const Creature *>( this ) },
+            { "monster", static_cast<const Creature *>( this ) }
+        };
+        if( cata::lua_ui::has_native_hook(
+                "on_creature_loaded" ) ) {
+            cata::lua_ui::dispatch_native_hook(
+                "on_creature_loaded", payload );
+        }
+        if( cata::lua_ui::has_native_hook(
+                "on_monster_loaded" ) ) {
+            cata::lua_ui::dispatch_native_hook(
+                "on_monster_loaded", payload );
+        }
+    };
+
     try_upgrade( false );
     try_reproduce();
     try_biosignature();
@@ -4211,6 +4338,7 @@ void monster::on_load()
     const time_duration dt = calendar::turn - last_updated;
     last_updated = calendar::turn;
     if( dt <= 0_turns ) {
+        dispatch_lua_loaded_hooks();
         return;
     }
 
@@ -4309,6 +4437,7 @@ void monster::on_load()
 
     add_msg_debug( debugmode::DF_MONSTER, "on_load() by %s, %d turns, healed %d hp, %d speed",
                    name(), to_turns<int>( dt ), healed, healed_speed );
+    dispatch_lua_loaded_hooks();
 }
 
 const pathfinding_settings &monster::get_pathfinding_settings() const

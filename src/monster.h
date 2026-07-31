@@ -491,6 +491,10 @@ class monster : public Creature
         void make_friendly();
         /** Makes this monster an ally of the given monster. */
         void make_ally( const monster &z );
+        /** Makes this monster a permanent pet without a taming actor. */
+        void make_pet();
+        /** Makes this monster a pet and notifies taming callbacks and hooks. */
+        void make_pet( Character &actor );
         // Add an item to inventory
         void add_item( const item &it );
 

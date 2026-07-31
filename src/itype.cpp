@@ -7,6 +7,7 @@
 
 #include "ammo.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "debug.h"
 #include "generic_factory.h"
@@ -259,6 +260,17 @@ const use_function *itype::get_tick( const std::string &iuse_name ) const
 
 int itype::tick( Character *p, item &it, const tripoint_bub_ms &pos ) const
 {
+    cata::lua_ui::dispatch_native_callback(
+    "istate", it.typeId().str(), "on_tick", {
+        { "character", static_cast<const Character *>( p ) },
+        { "item", static_cast<const item *>( &it ) },
+        {
+            "position", cata::lua_ui::native_callback_point {
+                "bub_ms", pos.x(), pos.y(), pos.z()
+            }
+        }
+    } );
+
     int charges_to_use = 0;
     for( const auto &method : tick_action ) {
         charges_to_use += method.second.call( p, it, pos ).value_or( 0 );

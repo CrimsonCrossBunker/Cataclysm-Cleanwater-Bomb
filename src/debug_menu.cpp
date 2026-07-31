@@ -42,6 +42,7 @@
 #endif
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -3705,6 +3706,8 @@ static void import_folower()
         temp->spawn_at_precise( get_avatar().pos_abs() + point( -4, -4 ) );
         overmap_buffer.insert_npc( temp );
         g->load_npcs();
+        cata::lua_ui::dispatch_native_npc_spawn(
+            *temp, "debug_import" );
     } catch( const std::exception &err ) {
         debugmsg( _( "Failed to read NPC: %s" ), err.what() );
     }
@@ -3864,6 +3867,7 @@ static void spawn_npc()
                             faction_id( new_fac_id ), faction_no_faction );
     temp->set_fac( new_solo_fac ? new_solo_fac->id : faction_no_faction );
     g->load_npcs();
+    cata::lua_ui::dispatch_native_npc_spawn( *temp, "debug" );
 }
 
 static void spawn_npc_follower()
@@ -3881,6 +3885,8 @@ static void spawn_npc_follower()
     temp->add_new_mission( mission::reserve_random( ORIGIN_ANY_NPC, temp->pos_abs_omt(),
                            temp->getID() ) );
     g->load_npcs();
+    cata::lua_ui::dispatch_native_npc_spawn(
+        *temp, "debug_follower" );
 }
 
 static void spawn_named_npc()
@@ -3920,6 +3926,8 @@ static void spawn_named_npc()
         temp->form_opinion( player_character );
 
         g->load_npcs();
+        cata::lua_ui::dispatch_native_npc_spawn(
+            *temp, "debug_template" );
     }
 
 }

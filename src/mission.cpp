@@ -13,6 +13,7 @@
 
 #include "avatar.h"
 #include "character.h"
+#include "catalua_ui.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -344,6 +345,13 @@ void mission::assign( avatar &u )
         }
         type->start( this );
         status = mission_status::in_progress;
+        cata::lua_ui::dispatch_native_hook(
+        "on_mission_start", {
+            {
+                "mission",
+                cata::lua_ui::native_callback_mission { uid }
+            }
+        } );
     }
 }
 
@@ -358,6 +366,14 @@ void mission::fail()
     deadline = calendar::turn;
 
     type->fail( this );
+    cata::lua_ui::dispatch_native_hook(
+    "on_mission_end", {
+        {
+            "mission",
+            cata::lua_ui::native_callback_mission { uid }
+        },
+        { "success", false }
+    } );
 }
 
 void mission::set_target_to_mission_giver()
@@ -488,6 +504,14 @@ void mission::wrap_up()
     deadline = calendar::turn;
 
     type->end( this );
+    cata::lua_ui::dispatch_native_hook(
+    "on_mission_end", {
+        {
+            "mission",
+            cata::lua_ui::native_callback_mission { uid }
+        },
+        { "success", true }
+    } );
 }
 
 bool mission::is_complete( const character_id &_npc_id ) const

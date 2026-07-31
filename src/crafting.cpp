@@ -24,6 +24,7 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -2583,6 +2584,32 @@ void Character::complete_craft( item &craft, const std::optional<tripoint_bub_ms
         if( add_faults_to_results ) {
             for( item &craft_result : newits ) {
                 craft_result.set_random_fault_of_type( "crafting_defect" );
+            }
+        }
+        if( cata::lua_ui::has_native_hook(
+                "on_craft_result" ) ) {
+            for( item &craft_result : newits ) {
+                cata::lua_ui::dispatch_native_hook(
+                "on_craft_result", {
+                    {
+                        "character",
+                        static_cast<const Character *>( this )
+                    },
+                    {
+                        "recipe",
+                        cata::lua_ui::native_callback_id {
+                            "recipe", making.ident().str()
+                        }
+                    },
+                    {
+                        "result",
+                        static_cast<const item *>( &craft_result )
+                    },
+                    {
+                        "batch",
+                        static_cast<std::int64_t>( batch_size )
+                    }
+                } );
             }
         }
         // only wield crafted items if there's only one

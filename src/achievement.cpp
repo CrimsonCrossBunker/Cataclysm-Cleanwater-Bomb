@@ -260,6 +260,11 @@ struct achievement_requirement {
     }
 };
 
+std::size_t achievement::requirement_count() const
+{
+    return requirements_.size();
+}
+
 static time_point epoch_to_time_point( achievement::time_bound::epoch e )
 {
     switch( e ) {
@@ -811,6 +816,41 @@ void achievements_tracker::report_achievement( const achievement *a, achievement
     } else if( comp == achievement_completion::failed ) {
         achievement_failed_callback_( a, is_enabled() );
     }
+}
+
+bool achievements_tracker::report_manual_achievement(
+    const achievement &entry,
+    const achievement_completion completion )
+{
+    if( !entry.is_manually_given() ||
+        completion == achievement_completion::pending ||
+        !initial_achievements_.count( entry.id ) ||
+        trackers_.find( entry.id ) == trackers_.end() ||
+        is_completed( entry.id ) !=
+        achievement_completion::pending ) {
+        return false;
+    }
+    report_achievement( &entry, completion );
+    return true;
+}
+
+bool achievements_tracker::reset_manual_achievement(
+    const achievement &entry )
+{
+    if( !active_ ||
+        !entry.is_manually_given() ||
+        !initial_achievements_.count(
+            entry.id ) ) {
+        return false;
+    }
+    trackers_.erase( entry.id );
+    achievements_status_.erase( entry.id );
+    trackers_.emplace(
+        std::piecewise_construct,
+        std::forward_as_tuple( entry.id ),
+        std::forward_as_tuple(
+            entry, *this, *stats_ ) );
+    return true;
 }
 
 achievement_completion achievements_tracker::is_completed( const achievement_id &id ) const

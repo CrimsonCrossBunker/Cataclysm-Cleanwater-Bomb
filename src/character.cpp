@@ -27,6 +27,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "city.h"
@@ -1916,6 +1917,12 @@ void Character::on_dodge( Creature *source, float difficulty, float training_lev
             }
         }
     }
+    cata::lua_ui::dispatch_native_hook(
+    "on_creature_dodged", {
+        { "creature", static_cast<const Character *>( this ) },
+        { "source", static_cast<const Creature *>( source ) },
+        { "difficulty", static_cast<double>( difficulty ) }
+    } );
 }
 
 float Character::get_melee() const
@@ -3118,6 +3125,17 @@ void Character::reset_stats()
     /** @EFFECT_STR_MAX below 6 increases Dodge bonus by 1 */
     else if( get_str_base() <= 5 ) {
         mod_dodge_bonus( 1 );   // Bonus if we're small
+    }
+
+    if( cata::lua_ui::has_native_hook(
+            "on_character_reset_stats" ) ) {
+        cata::lua_ui::dispatch_native_hook(
+        "on_character_reset_stats", {
+            {
+                "character",
+                static_cast<const Character *>( this )
+            }
+        } );
     }
 }
 
@@ -4526,9 +4544,35 @@ bool Character::invoke_item( item *used )
     return invoke_item( used, pos_bub() );
 }
 
-bool Character::invoke_item( item *, const tripoint_bub_ms &, int )
+bool Character::invoke_item( item *used, const tripoint_bub_ms &pt,
+                             int pre_obtain_moves )
 {
-    return false;
+    if( used == nullptr ||
+        !cata::lua_ui::has_native_callback(
+            "iuse", used->typeId().str(), "on_use" ) ) {
+        return false;
+    }
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( this ) },
+        { "item", static_cast<const item *>( used ) },
+        { "action", std::string( "lua" ) },
+        { "tick", false },
+        {
+            "position", cata::lua_ui::native_callback_point {
+                "bub_ms", pt.x(), pt.y(), pt.z()
+            }
+        }
+    };
+    if( !cata::lua_ui::dispatch_native_callback(
+            "iuse", used->typeId().str(), "can_use", payload ) ||
+        !cata::lua_ui::dispatch_native_callback(
+            "iuse", used->typeId().str(), "on_use", payload ) ) {
+        if( pre_obtain_moves >= 0 ) {
+            set_moves( pre_obtain_moves );
+        }
+        return false;
+    }
+    return true;
 }
 
 bool Character::invoke_item( item *used, const std::string &method )
@@ -4583,6 +4627,26 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
     if( actually_used == nullptr ) {
         debugmsg( "Tried to invoke a method %s on item %s, which doesn't have this method",
                   method.c_str(), used->tname() );
+        set_moves( pre_obtain_moves );
+        return false;
+    }
+    const cata::lua_ui::native_callback_arguments callback_payload = {
+        { "character", static_cast<const Character *>( this ) },
+        { "item", static_cast<const item *>( actually_used ) },
+        { "action", method },
+        { "tick", false },
+        {
+            "position", cata::lua_ui::native_callback_point {
+                "bub_ms", pt.x(), pt.y(), pt.z()
+            }
+        }
+    };
+    if( !cata::lua_ui::dispatch_native_callback(
+            "iuse", actually_used->typeId().str(),
+            "can_use", callback_payload ) ||
+        !cata::lua_ui::dispatch_native_callback(
+            "iuse", actually_used->typeId().str(),
+            "on_use", callback_payload ) ) {
         set_moves( pre_obtain_moves );
         return false;
     }
@@ -6955,6 +7019,42 @@ void Character::process_one_effect( effect &it, bool is_new )
     }
 
     // Speed and stats are handled in recalc_speed_bonus and reset_stats respectively
+    if( !is_new ) {
+        return;
+    }
+
+    const std::string body_part =
+        it.get_bp() == bodypart_str_id::NULL_ID() ?
+        std::string() : it.get_bp().id().str();
+    const cata::lua_ui::native_callback_arguments payload = {
+        { "character", static_cast<const Character *>( this ) },
+        {
+            "effect", cata::lua_ui::native_callback_id {
+                "effect", it.get_id().str()
+            }
+        },
+        {
+            "body_part", cata::lua_ui::native_callback_id {
+                "body_part", body_part
+            }
+        },
+        { "intensity", std::int64_t { it.get_intensity() } }
+    };
+    const bool dispatch_added =
+        it.has_flag( flag_EFFECT_LUA_ON_ADDED ) &&
+        cata::lua_ui::has_native_hook(
+            "on_character_effect_added" );
+    const bool dispatch_tick =
+        it.has_flag( flag_EFFECT_LUA_ON_TICK ) &&
+        cata::lua_ui::has_native_hook( "on_character_effect" );
+    if( dispatch_added ) {
+        cata::lua_ui::dispatch_native_hook(
+            "on_character_effect_added", payload );
+    }
+    if( dispatch_tick ) {
+        cata::lua_ui::dispatch_native_hook(
+            "on_character_effect", payload );
+    }
 }
 
 void Character::process_effects()
@@ -7010,11 +7110,51 @@ void Character::process_effects()
     dex_bonus_hardcoded = 0;
     int_bonus_hardcoded = 0;
     per_bonus_hardcoded = 0;
+    struct lua_effect_tick {
+        std::string effect;
+        std::string body_part;
+        int intensity;
+    };
+    const bool has_lua_effect_hook =
+        cata::lua_ui::has_native_hook( "on_character_effect" );
+    std::vector<lua_effect_tick> lua_effect_ticks;
     //Human only effects
     for( std::pair<const efftype_id, std::map<bodypart_id, effect>> &elem : *effects ) {
         for( std::pair<const bodypart_id, effect> &_effect_it : elem.second ) {
             process_one_effect( _effect_it.second, false );
+            if( has_lua_effect_hook &&
+                _effect_it.second.has_flag(
+                    flag_EFFECT_LUA_ON_TICK ) ) {
+                const bodypart_id body_part =
+                    _effect_it.second.get_bp();
+                lua_effect_ticks.push_back( {
+                    _effect_it.second.get_id().str(),
+                    body_part == bodypart_str_id::NULL_ID() ?
+                    std::string() : body_part.id().str(),
+                    _effect_it.second.get_intensity()
+                } );
+            }
         }
+    }
+    for( const lua_effect_tick &tick : lua_effect_ticks ) {
+        cata::lua_ui::dispatch_native_hook(
+        "on_character_effect", {
+            {
+                "character",
+                static_cast<const Character *>( this )
+            },
+            {
+                "effect", cata::lua_ui::native_callback_id {
+                    "effect", tick.effect
+                }
+            },
+            {
+                "body_part", cata::lua_ui::native_callback_id {
+                    "body_part", tick.body_part
+                }
+            },
+            { "intensity", std::int64_t { tick.intensity } }
+        } );
     }
 
     // Apply new effects from effect->effect chains

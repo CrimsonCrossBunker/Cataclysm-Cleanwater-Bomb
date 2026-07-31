@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <istream>
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -872,11 +874,49 @@ action_id handle_action_menu( map &here )
 {
     const input_context ctxt = get_default_mode_input_context();
     std::string catgname;
+    const std::vector<cata::lua_ui::action_menu_entry_info>
+    lua_action_entries =
+        cata::lua_ui::registered_action_menu_entries();
+    const auto category_name = []( const std::string & category_id ) -> std::string {
+        if( category_id == "look" )
+        {
+            return _( "Look" );
+        }
+        if( category_id == "interact" )
+        {
+            return _( "Interact" );
+        }
+        if( category_id == "inventory" )
+        {
+            return _( "Inventory" );
+        }
+        if( category_id == "combat" )
+        {
+            return _( "Combat" );
+        }
+        if( category_id == "craft" )
+        {
+            return _( "Craft" );
+        }
+        if( category_id == "info" )
+        {
+            return _( "Info" );
+        }
+        if( category_id == "misc" )
+        {
+            return _( "Misc" );
+        }
+        if( category_id == "debug" )
+        {
+            return _( "Debug" );
+        }
+        return category_id;
+    };
 
 #define REGISTER_ACTION( name ) entries.emplace_back( name, true, hotkey_for_action( name, /*maximum_modifier_count=*/1 ), \
         ctxt.get_action_name( action_ident( name ) ) );
-#define REGISTER_CATEGORY( name )  categories_by_int[last_category] = name; \
-    catgname = name; \
+#define REGISTER_CATEGORY( id )  categories_by_int[last_category] = id; \
+    catgname = category_name( id ); \
     catgname += "…"; \
     entries.emplace_back( last_category, true, -1, catgname ); \
     last_category++;
@@ -964,7 +1004,9 @@ action_id handle_action_menu( map &here )
         std::vector<uilist_entry> entries;
         uilist_entry *entry;
         std::map<int, std::string> categories_by_int;
+        std::map<int, std::uint64_t> lua_entries_by_int;
         int last_category = NUM_ACTIONS + 1;
+        int next_lua_entry = 4 * NUM_ACTIONS;
 
         if( category == "back" ) {
             std::vector<std::pair<action_id, int> >::iterator it;
@@ -974,13 +1016,21 @@ action_id handle_action_menu( map &here )
                 }
             }
 
-            REGISTER_CATEGORY( _( "Look" ) );
-            REGISTER_CATEGORY( _( "Interact" ) );
-            REGISTER_CATEGORY( _( "Inventory" ) );
-            REGISTER_CATEGORY( _( "Combat" ) );
-            REGISTER_CATEGORY( _( "Craft" ) );
-            REGISTER_CATEGORY( _( "Info" ) );
-            REGISTER_CATEGORY( _( "Misc" ) );
+            std::set<std::string> registered_categories;
+            const auto register_category =
+            [&]( const std::string & category_id ) {
+                if( registered_categories.insert(
+                        category_id ).second ) {
+                    REGISTER_CATEGORY( category_id );
+                }
+            };
+            register_category( "look" );
+            register_category( "interact" );
+            register_category( "inventory" );
+            register_category( "combat" );
+            register_category( "craft" );
+            register_category( "info" );
+            register_category( "misc" );
             if( hotkey_for_action( ACTION_QUICKSAVE, /*maximum_modifier_count=*/1 ).has_value() ) {
                 REGISTER_ACTION( ACTION_QUICKSAVE );
             }
@@ -998,19 +1048,26 @@ action_id handle_action_menu( map &here )
             }
             if( hotkey_for_action( ACTION_DEBUG, /*maximum_modifier_count=*/1 ).has_value() ) {
                 // register with global key
-                REGISTER_CATEGORY( _( "Debug" ) );
+                register_category( "debug" );
                 if( ( entry = &entries.back() ) ) {
                     entry->hotkey = hotkey_for_action( ACTION_DEBUG, /*maximum_modifier_count=*/1 );
                 }
             }
-        } else if( category == _( "Look" ) ) {
+            for( const cata::lua_ui::action_menu_entry_info &lua_entry :
+                 lua_action_entries ) {
+                if( lua_entry.enabled &&
+                    lua_entry.category != "back" ) {
+                    register_category( lua_entry.category );
+                }
+            }
+        } else if( category == "look" ) {
             REGISTER_ACTION( ACTION_LOOK );
             REGISTER_ACTION( ACTION_PEEK );
             REGISTER_ACTION( ACTION_LIST_ITEMS );
             REGISTER_ACTION( ACTION_ZONES );
             REGISTER_ACTION( ACTION_MAP );
             REGISTER_ACTION( ACTION_SKY );
-        } else if( category == _( "Inventory" ) ) {
+        } else if( category == "inventory" ) {
             REGISTER_ACTION( ACTION_INVENTORY );
             REGISTER_ACTION( ACTION_ADVANCEDINV );
             REGISTER_ACTION( ACTION_SORT_ARMOR );
@@ -1032,7 +1089,7 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_READ );
             REGISTER_ACTION( ACTION_WIELD );
             REGISTER_ACTION( ACTION_UNLOAD );
-        } else if( category == _( "Debug" ) ) {
+        } else if( category == "debug" ) {
             REGISTER_ACTION( ACTION_DEBUG );
             if( ( entry = &entries.back() ) ) {
                 // debug _is_a menu.
@@ -1058,7 +1115,7 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_DISPLAY_RADIATION );
             REGISTER_ACTION( ACTION_DISPLAY_NPC_ATTACK_POTENTIAL );
             REGISTER_ACTION( ACTION_TOGGLE_DEBUG_MODE );
-        } else if( category == _( "Interact" ) ) {
+        } else if( category == "interact" ) {
             REGISTER_ACTION( ACTION_EXAMINE );
             REGISTER_ACTION( ACTION_EXAMINE_AND_PICKUP );
             REGISTER_ACTION( ACTION_SMASH );
@@ -1074,7 +1131,7 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_HAUL_TOGGLE );
             REGISTER_ACTION( ACTION_BUTCHER );
             REGISTER_ACTION( ACTION_LOOT );
-        } else if( category == _( "Combat" ) ) {
+        } else if( category == "combat" ) {
             REGISTER_ACTION( ACTION_CYCLE_MOVE );
             REGISTER_ACTION( ACTION_RESET_MOVE );
             REGISTER_ACTION( ACTION_TOGGLE_RUN );
@@ -1101,13 +1158,13 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_PULP_BUTCHER );
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_MINING );
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_FORAGING );
-        } else if( category == _( "Craft" ) ) {
+        } else if( category == "craft" ) {
             REGISTER_ACTION( ACTION_CRAFT );
             REGISTER_ACTION( ACTION_RECRAFT );
             REGISTER_ACTION( ACTION_LONGCRAFT );
             REGISTER_ACTION( ACTION_CONSTRUCT );
             REGISTER_ACTION( ACTION_DISASSEMBLE );
-        } else if( category == _( "Info" ) ) {
+        } else if( category == "info" ) {
             REGISTER_ACTION( ACTION_PL_INFO );
             REGISTER_ACTION( ACTION_MISSIONS );
             REGISTER_ACTION( ACTION_FACTIONS );
@@ -1116,7 +1173,7 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_BODYSTATUS );
             REGISTER_ACTION( ACTION_MESSAGES );
             REGISTER_ACTION( ACTION_DIARY );
-        } else if( category == _( "Misc" ) ) {
+        } else if( category == "misc" ) {
             REGISTER_ACTION( ACTION_WAIT );
             REGISTER_ACTION( ACTION_SLEEP );
             REGISTER_ACTION( ACTION_WORKOUT );
@@ -1134,6 +1191,21 @@ action_id handle_action_menu( map &here )
         }
 
         if( category != "back" ) {
+            for( const cata::lua_ui::action_menu_entry_info &lua_entry :
+                 lua_action_entries ) {
+                if( !lua_entry.enabled ||
+                    lua_entry.category != category ) {
+                    continue;
+                }
+                entries.emplace_back(
+                    next_lua_entry, true, lua_entry.hotkey,
+                    lua_entry.name );
+                lua_entries_by_int[next_lua_entry++] =
+                    lua_entry.registration_id;
+            }
+        }
+
+        if( category != "back" ) {
             std::string msg = _( "Back" );
             msg += "…";
             entries.emplace_back( 2 * NUM_ACTIONS, true,
@@ -1142,14 +1214,21 @@ action_id handle_action_menu( map &here )
 
         std::string title = _( "Actions" );
         if( category != "back" ) {
-            catgname = uppercase_first_letter( category );
+            catgname = uppercase_first_letter(
+                           category_name( category ) );
             title += ": " + catgname;
         }
 
         const int selection = query_action_menu_entries(
                                   title, entries, "gameplay.action_menu", _( "Actions" ) );
 
-        if( selection < 0 || selection == NUM_ACTIONS ) {
+        const auto lua_selection =
+            lua_entries_by_int.find( selection );
+        if( lua_selection != lua_entries_by_int.end() ) {
+            cata::lua_ui::invoke_action_menu_entry(
+                lua_selection->second );
+            return ACTION_NULL;
+        } else if( selection < 0 || selection == NUM_ACTIONS ) {
             return ACTION_NULL;
         } else if( selection == 2 * NUM_ACTIONS ) {
             if( category != "back" ) {

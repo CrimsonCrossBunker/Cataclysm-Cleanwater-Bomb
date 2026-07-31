@@ -5,6 +5,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "coords_fwd.h"
@@ -119,7 +120,7 @@ class panel_manager
 {
     public:
         panel_manager();
-        ~panel_manager() = default;
+        ~panel_manager();
         panel_manager( panel_manager && ) = default;
         panel_manager( const panel_manager & ) = default;
         panel_manager &operator=( panel_manager && ) = default;
@@ -129,6 +130,7 @@ class panel_manager
             static panel_manager single_instance;
             return single_instance;
         }
+        static bool is_initialized();
 
         panel_layout &get_current_layout();
         widget *get_current_sidebar();
@@ -140,6 +142,7 @@ class panel_manager
         void show_adm();
 
         void init();
+        void sync_lua_panels();
 
     private:
         bool save();
@@ -154,6 +157,8 @@ class panel_manager
         int width_left = 0; // NOLINT(cata-serialize)
         std::string current_layout_id;
         std::map<std::string, panel_layout> layouts;
+        using saved_panel_entry = std::pair<std::string, bool>;
+        std::map<std::string, std::vector<saved_panel_entry>> saved_layout_entries;
 
         friend widget;
 };

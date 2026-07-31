@@ -78,6 +78,16 @@ std::vector<script_event_subscription> script_event_registry::matching(
     return result;
 }
 
+bool script_event_registry::has_matching(
+    const std::string_view event_name ) const
+{
+    return std::any_of(
+               subscriptions_.begin(), subscriptions_.end(),
+    [event_name]( const script_event_subscription & entry ) {
+        return entry.event_name == event_name;
+    } );
+}
+
 bool script_event_registry::contains( const std::uint64_t id ) const
 {
     return std::any_of(

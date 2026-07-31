@@ -13,6 +13,7 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -668,6 +669,15 @@ void Character::mutation_effect( const trait_id &mut, const bool worn_destroyed_
         }
     }
     on_mutation_gain( mut );
+    cata::lua_ui::dispatch_native_callback(
+    "mutation", mut.str(), "on_gain", {
+        { "character", static_cast<const Character *>( this ) },
+        {
+            "mutation", cata::lua_ui::native_callback_id {
+                "mutation", mut.str()
+            }
+        }
+    } );
 }
 
 void Character::mutation_loss_effect( const trait_id &mut )
@@ -704,6 +714,15 @@ void Character::mutation_loss_effect( const trait_id &mut )
     }
 
     on_mutation_loss( mut );
+    cata::lua_ui::dispatch_native_callback(
+    "mutation", mut.str(), "on_loss", {
+        { "character", static_cast<const Character *>( this ) },
+        {
+            "mutation", cata::lua_ui::native_callback_id {
+                "mutation", mut.str()
+            }
+        }
+    } );
 }
 
 bool Character::has_active_mutation( const trait_id &b ) const
@@ -847,6 +866,7 @@ void Character::activate_cached_mutation( const trait_id &mut )
 
     const mutation_branch &mdata = mut.obj();
     trait_data &tdata = cached_mutations[mut];
+    const bool was_powered = tdata.powered;
     int cost = mdata.cost;
     // You can take yourself halfway to Near Death levels of hunger/thirst.
     // Sleepiness can go to Exhausted.
@@ -884,6 +904,18 @@ void Character::activate_cached_mutation( const trait_id &mut )
         }
         tdata.powered = true;
         recalc_sight_limits();
+    }
+
+    if( !was_powered && tdata.powered ) {
+        cata::lua_ui::dispatch_native_callback(
+        "mutation", mut.str(), "on_activate", {
+            { "character", static_cast<const Character *>( this ) },
+            {
+                "mutation", cata::lua_ui::native_callback_id {
+                    "mutation", mut.str()
+                }
+            }
+        } );
     }
 
     if( !mut->enchantments.empty() ) {
@@ -1021,6 +1053,7 @@ void Character::activate_cached_mutation( const trait_id &mut )
 
 void Character::deactivate_mutation( const trait_id &mut )
 {
+    const bool was_powered = has_active_mutation( mut );
     cached_mutations[mut].powered = false;
     trait_flag_cache.clear();
 
@@ -1047,6 +1080,17 @@ void Character::deactivate_mutation( const trait_id &mut )
         add_msg_if_player( m_neutral, mdata.transform->msg_transform );
     }
 
+    if( was_powered ) {
+        cata::lua_ui::dispatch_native_callback(
+        "mutation", mut.str(), "on_deactivate", {
+            { "character", static_cast<const Character *>( this ) },
+            {
+                "mutation", cata::lua_ui::native_callback_id {
+                    "mutation", mut.str()
+                }
+            }
+        } );
+    }
 }
 
 trait_id Character::trait_by_invlet( const int ch ) const

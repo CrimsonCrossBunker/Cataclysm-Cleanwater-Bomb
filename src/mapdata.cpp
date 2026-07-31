@@ -351,6 +351,13 @@ std::string enum_to_string<ter_furn_flag>( ter_furn_flag data )
 
 static std::unordered_map<std::string, connect_group> ter_connects_map;
 
+/** @relates string_id */
+template<>
+bool connect_group_id::is_valid() const
+{
+    return ter_connects_map.find( str() ) != ter_connects_map.end();
+}
+
 connect_group get_connect_group( const std::string &name )
 {
     return ter_connects_map[name];

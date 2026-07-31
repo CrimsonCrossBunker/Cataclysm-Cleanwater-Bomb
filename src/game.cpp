@@ -1157,7 +1157,8 @@ bool game::start_game()
     }
 
     if constexpr( cata::lua_ui::is_enabled() ) {
-        cata::lua_ui::on_world_ready();
+        cata::lua_ui::on_world_ready(
+            cata::lua_ui::world_ready_kind::new_game );
     }
     get_event_bus().send<event_type::game_start>( getVersionString() );
     get_event_bus().send<event_type::game_avatar_new>( /*is_new_game=*/true, /*is_debug=*/false,
@@ -1434,6 +1435,7 @@ void game::create_starting_npcs()
     //One random starting NPC mission
     tmp->add_new_mission( mission::reserve_random( ORIGIN_OPENER_NPC, tmp->pos_abs_omt(),
                           tmp->getID() ) );
+    cata::lua_ui::dispatch_native_npc_spawn( *tmp, "starting" );
 }
 
 static int veh_lumi( vehicle &veh )
@@ -4785,7 +4787,13 @@ monster *game::place_critter_around( const mtype_id &id, const tripoint_bub_ms &
     }
     shared_ptr_fast<monster> mon = make_shared_fast<monster>( id );
     mon->ammo = mon->type->starting_ammo;
-    return place_critter_around( mon, center, radius );
+    monster *const placed =
+        place_critter_around( mon, center, radius );
+    if( placed != nullptr ) {
+        cata::lua_ui::dispatch_native_monster_spawn(
+            *placed, "placement" );
+    }
+    return placed;
 }
 
 monster *game::place_critter_around( const shared_ptr_fast<monster> &mon,
@@ -4826,7 +4834,12 @@ monster *game::place_critter_within( const mtype_id &id,
     }
     shared_ptr_fast<monster> mon = make_shared_fast<monster>( id );
     mon->ammo = mon->type->starting_ammo;
-    return place_critter_within( mon, range );
+    monster *const placed = place_critter_within( mon, range );
+    if( placed != nullptr ) {
+        cata::lua_ui::dispatch_native_monster_spawn(
+            *placed, "placement" );
+    }
+    return placed;
 }
 
 monster *game::place_critter_within( const shared_ptr_fast<monster> &mon,
@@ -4861,6 +4874,8 @@ monster *game::place_critter_at_or_within( const shared_ptr_fast<monster> &mon, 
     mon->spawn( here->get_abs( where.value() ) );
     if( critter_tracker->add( mon ) ) {
         mon->gravity_check();
+        cata::lua_ui::dispatch_native_monster_spawn(
+            *mon, "mapgen" );
         return mon.get();
     }
     return nullptr;
@@ -4958,6 +4973,8 @@ bool game::spawn_hallucination( const tripoint_bub_ms &p )
         if( !get_creature_tracker().creature_at( p, true ) ) {
             overmap_buffer.insert_npc( tmp );
             load_npcs();
+            cata::lua_ui::dispatch_native_npc_spawn(
+                *tmp, "hallucination" );
             return true;
         } else {
             return false;
@@ -4999,7 +5016,12 @@ bool game::spawn_hallucination( const tripoint_bub_ms &p, const mtype_id &mt,
     }
     //Don't attempt to place phantasms inside of other creatures
     if( !get_creature_tracker().creature_at( phantasm->pos_bub(), true ) ) {
-        return critter_tracker->add( phantasm );
+        if( critter_tracker->add( phantasm ) ) {
+            cata::lua_ui::dispatch_native_monster_spawn(
+                *phantasm, "hallucination" );
+            return true;
+        }
+        return false;
     } else {
         return false;
     }
@@ -5029,6 +5051,8 @@ bool game::spawn_npc( const tripoint_bub_ms &p, const string_id<npc_template> &n
             tmp->set_summon_time( lifespan.value() );
         }
         load_npcs();
+        cata::lua_ui::dispatch_native_npc_spawn(
+            *tmp, "summon" );
         return true;
     } else {
         return false;
@@ -5317,6 +5341,8 @@ void game::save_cyborg( item *cyborg, const tripoint_bub_ms &couch_pos, Characte
         tmp->hurtall( dmg_lvl * 10, nullptr );
         tmp->add_effect( effect_downed, rng( 1_turns, 4_turns ), false, 0, true );
         load_npcs();
+        cata::lua_ui::dispatch_native_npc_spawn(
+            *tmp, "cyborg" );
 
     } else {
         const int failure_level = static_cast<int>( std::sqrt( std::abs( success ) * 4.0 * difficulty /
@@ -5564,6 +5590,11 @@ void game::control_vehicle( const std::optional<tripoint_bub_ms> &p )
 
 bool game::npc_menu( npc &who )
 {
+    if( !cata::lua_ui::begin_native_npc_interaction(
+            u, who ) ) {
+        return false;
+    }
+
     enum choices : int {
         talk = 0,
         swap_pos,
@@ -5936,24 +5967,32 @@ void game::examine( const tripoint_bub_ms &examp, bool with_pickup )
         monster *mon = dynamic_cast<monster *>( c );
         if( mon != nullptr ) {
             add_msg( _( "There is a %s." ), mon->get_name() );
-            if( mon->has_effect( effect_pet ) && !u.is_mounted() ) {
-                if( monexamine::pet_menu( *mon ) ) {
-                    return;
+            if( cata::lua_ui::allow_native_monster_interaction(
+                    u, *mon ) ) {
+                if( mon->has_effect( effect_pet ) && !u.is_mounted() ) {
+                    if( monexamine::pet_menu( *mon ) ) {
+                        return;
+                    }
+                } else if( mon->has_flag( mon_flag_RIDEABLE_MECH ) &&
+                           !mon->has_effect( effect_pet ) ) {
+                    if( monexamine::mech_hack( *mon ) ) {
+                        return;
+                    }
+                } else if( mon->has_flag( mon_flag_PAY_BOT ) ) {
+                    if( monexamine::pay_bot( *mon ) ) {
+                        return;
+                    }
+                } else if( mon->attitude_to( u ) ==
+                           Creature::Attitude::FRIENDLY &&
+                           !u.is_mounted() ) {
+                    if( monexamine::mfriend_menu( *mon ) ) {
+                        return;
+                    }
+                } else if( mon->has_flag(
+                               mon_flag_CONVERSATION ) &&
+                           !mon->type->chat_topics.empty() ) {
+                    get_avatar().talk_to( get_talker_for( mon ) );
                 }
-            } else if( mon->has_flag( mon_flag_RIDEABLE_MECH ) && !mon->has_effect( effect_pet ) ) {
-                if( monexamine::mech_hack( *mon ) ) {
-                    return;
-                }
-            } else if( mon->has_flag( mon_flag_PAY_BOT ) ) {
-                if( monexamine::pay_bot( *mon ) ) {
-                    return;
-                }
-            } else if( mon->attitude_to( u ) == Creature::Attitude::FRIENDLY && !u.is_mounted() ) {
-                if( monexamine::mfriend_menu( *mon ) ) {
-                    return;
-                }
-            } else if( mon->has_flag( mon_flag_CONVERSATION ) && !mon->type->chat_topics.empty() ) {
-                get_avatar().talk_to( get_talker_for( mon ) );
             }
         } else {
             u.cant_do_mounted();
@@ -8131,6 +8170,49 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
         return false;
     }
     u.set_underwater( false );
+
+    const bool has_player_try_move =
+        cata::lua_ui::has_native_hook( "on_player_try_move" );
+    const bool has_character_try_move =
+        cata::lua_ui::has_native_hook( "on_character_try_move" );
+    if( has_player_try_move || has_character_try_move ) {
+        const monster *const mount =
+            u.is_mounted() ? u.mounted_creature.get() : nullptr;
+        cata::lua_ui::native_callback_arguments payload = {
+            { "player", static_cast<const Character *>( &u ) },
+            {
+                "from", cata::lua_ui::native_callback_point {
+                    "bub_ms", pos.x(), pos.y(), pos.z()
+                }
+            },
+            {
+                "to", cata::lua_ui::native_callback_point {
+                    "bub_ms", dest_loc.x(), dest_loc.y(), dest_loc.z()
+                }
+            },
+            { "movement_mode", u.current_movement_mode().str() },
+            { "via_ramp", via_ramp },
+            { "mounted", mount != nullptr },
+            { "mount", static_cast<const Creature *>( mount ) }
+        };
+        bool allowed = true;
+        if( has_player_try_move ) {
+            const bool player_allowed =
+                cata::lua_ui::dispatch_native_hook(
+                    "on_player_try_move", payload );
+            allowed = player_allowed && allowed;
+        }
+        if( has_character_try_move ) {
+            payload.front().name = "character";
+            const bool character_allowed =
+                cata::lua_ui::dispatch_native_hook(
+                    "on_character_try_move", payload );
+            allowed = character_allowed && allowed;
+        }
+        if( !allowed ) {
+            return false;
+        }
+    }
 
     std::vector<std::string> harmful_stuff = get_dangerous_tile( dest_loc );
     if( !shifting_furniture && !pushing && !harmful_stuff.empty() ) {
@@ -10983,6 +11065,7 @@ void game::perhaps_add_random_npc( bool ignore_spawn_timers_and_rates )
                           tmp->getID() ) );
     // This will make the new NPC active- if its nearby to the player
     load_npcs();
+    cata::lua_ui::dispatch_native_npc_spawn( *tmp, "random" );
 }
 
 // Redraw window and show spinner, so cata window doesn't look frozen while pathfinding on overmap

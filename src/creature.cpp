@@ -20,6 +20,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -37,6 +38,7 @@
 #include "field.h"
 #include "flat_set.h"
 #include "flexbuffer_json.h"
+#include "flag.h"
 #include "game.h"
 #include "game_constants.h"
 #include "item.h"
@@ -1997,6 +1999,32 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
         get_event_bus().send<event_type::character_loses_effect>( ch->getID(), bp.id(), eff_id );
     }
 
+    const bool dispatch_character_hook =
+        type.has_flag( flag_EFFECT_LUA_ON_REMOVED ) &&
+        as_character() != nullptr &&
+        cata::lua_ui::has_native_hook(
+            "on_character_effect_removed" );
+    const bool dispatch_monster_hook =
+        type.has_flag( flag_EFFECT_LUA_ON_REMOVED ) &&
+        as_monster() != nullptr &&
+        cata::lua_ui::has_native_hook( "on_mon_effect_removed" );
+    std::vector<std::string> removed_body_parts;
+    if( dispatch_character_hook || dispatch_monster_hook ) {
+        if( bp == bodypart_str_id::NULL_ID() ) {
+            removed_body_parts.reserve(
+                ( *effects )[eff_id].size() );
+            for( const auto &entry : ( *effects )[eff_id] ) {
+                removed_body_parts.push_back(
+                    entry.first == bodypart_str_id::NULL_ID() ?
+                    std::string() : entry.first.id().str() );
+            }
+        } else {
+            removed_body_parts.push_back(
+                bp == bodypart_str_id::NULL_ID() ?
+                std::string() : bp.id().str() );
+        }
+    }
+
     // bp_null means remove all of a given effect id
     if( bp == bodypart_str_id::NULL_ID() ) {
         for( auto &it : ( *effects )[eff_id] ) {
@@ -2010,6 +2038,37 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
         if( ( *effects )[eff_id].empty() ) {
             effects->erase( eff_id );
         }
+    }
+
+    const char *hook_name = dispatch_character_hook ?
+                            "on_character_effect_removed" :
+                            "on_mon_effect_removed";
+    for( const std::string &body_part : removed_body_parts ) {
+        cata::lua_ui::native_callback_arguments payload = {
+            {
+                "effect", cata::lua_ui::native_callback_id {
+                    "effect", eff_id.str()
+                }
+            },
+            {
+                "body_part", cata::lua_ui::native_callback_id {
+                    "body_part", body_part
+                }
+            }
+        };
+        if( dispatch_character_hook ) {
+            payload.push_back( {
+                "character",
+                static_cast<const Character *>( as_character() )
+            } );
+        } else {
+            payload.push_back( {
+                "monster",
+                static_cast<const Creature *>( this )
+            } );
+        }
+        cata::lua_ui::dispatch_native_hook(
+            hook_name, payload );
     }
 
     return true;

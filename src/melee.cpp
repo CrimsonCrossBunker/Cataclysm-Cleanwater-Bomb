@@ -23,6 +23,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -649,6 +650,16 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
     item cur_weap = cur_weapon ? *cur_weapon : null_item_reference();
 
     int move_cost = attack_speed( cur_weap );
+    const item *callback_weapon =
+        cur_weapon ? cur_weapon.get_item() : &cur_weap;
+    const bool callback_allows_hit =
+        cata::lua_ui::dispatch_native_callback(
+    "imelee", cur_weap.typeId().str(), "on_melee_attack", {
+        { "character", static_cast<const Character *>( this ) },
+        { "target", static_cast<const Creature *>( &t ) },
+        { "item", callback_weapon },
+        { "move_cost", std::int64_t { move_cost } }
+    } );
 
     if( cur_weap.attack_time( *this ) > move_cost * 20 ) {
         add_msg( m_bad, _( "This weapon is too unwieldy to attack with!" ) );
@@ -677,7 +688,7 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
         }
     }
 
-    const bool hits = hit_spread >= 0;
+    const bool hits = callback_allows_hit && hit_spread >= 0;
 
     if( monster *m = t.as_monster() ) {
         cata::event e = cata::event::make<event_type::character_melee_attacks_monster>( getID(),
@@ -700,6 +711,12 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
                                  t.times_combatted_player <= 100;
     Character &player_character = get_player_character();
     if( !hits ) {
+        cata::lua_ui::dispatch_native_callback(
+        "imelee", cur_weap.typeId().str(), "on_miss", {
+            { "character", static_cast<const Character *>( this ) },
+            { "target", static_cast<const Creature *>( &t ) },
+            { "item", callback_weapon }
+        } );
         int stumble_pen = stumble( *this, cur_weapon );
         sfx::generate_melee_sound( cur_weap, pos_bub(), t.pos_bub(), false, false );
 
@@ -857,6 +874,20 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
             weakpoint_attack attack;
             attack.weapon = &cur_weap;
             t.deal_melee_hit( this, hit_spread, critical_hit, d, dealt_dam, attack, &target_bp );
+            callback_weapon =
+                cur_weapon ? cur_weapon.get_item() : &cur_weap;
+            cata::lua_ui::dispatch_native_callback(
+            "imelee", cur_weap.typeId().str(), "on_hit", {
+                { "character", static_cast<const Character *>( this ) },
+                { "target", static_cast<const Creature *>( &t ) },
+                { "item", callback_weapon },
+                {
+                    "damage", std::int64_t {
+                        dealt_dam.total_damage()
+                    }
+                },
+                { "critical", critical_hit }
+            } );
 
             bool has_edged_damage = false;
             for( const damage_type &dt : damage_type::get_all() ) {
@@ -982,6 +1013,13 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
         dealt_projectile_attack dp = dealt_projectile_attack();
         t.as_character()->on_hit( &here, this, bodypart_str_id::NULL_ID().id(), 0.0f, &dp );
     }
+    cata::lua_ui::dispatch_native_hook(
+    "on_creature_melee_attacked", {
+        { "attacker", static_cast<const Character *>( this ) },
+        { "target", static_cast<const Creature *>( &t ) },
+        { "weapon", static_cast<const item *>( &cur_weap ) },
+        { "success", hits }
+    } );
     return true;
 }
 
@@ -1999,6 +2037,22 @@ void Character::perform_technique( const ma_technique &technique, Creature &t,
         moves = temp_moves;
         set_stamina( temp_stamina );
     }
+    cata::lua_ui::dispatch_native_hook(
+    "on_creature_performed_technique", {
+        { "creature", static_cast<const Character *>( this ) },
+        { "target", static_cast<const Creature *>( &t ) },
+        {
+            "technique", cata::lua_ui::native_callback_id {
+                "martial_art_technique", technique.id.str()
+            }
+        },
+        {
+            "weapon", cur_weapon ?
+            static_cast<const item *>( cur_weapon.get_item() ) : nullptr
+        },
+        { "damage", static_cast<double>( di.total_damage() ) },
+        { "move_cost", std::int64_t { move_cost } }
+    } );
 }
 
 int melee::blocking_ability( const item &shield )
@@ -2266,6 +2320,21 @@ bool Character::block_hit( Creature *source, bodypart_id &bp_hit, damage_instanc
 
     // fire martial arts block-triggered effects
     martial_arts_data->ma_onblock_effects( *this );
+    if( shield ) {
+        cata::lua_ui::dispatch_native_callback(
+        "imelee", shield->typeId().str(), "on_block", {
+            { "character", static_cast<const Character *>( this ) },
+            { "source", static_cast<const Creature *>( source ) },
+            { "item", static_cast<const item *>( shield.get_item() ) },
+            { "damage_blocked", static_cast<double>( damage_blocked ) }
+        } );
+    }
+    cata::lua_ui::dispatch_native_hook(
+    "on_creature_blocked", {
+        { "creature", static_cast<const Character *>( this ) },
+        { "source", static_cast<const Creature *>( source ) },
+        { "damage_blocked", static_cast<double>( damage_blocked ) }
+    } );
 
     // Check if we have any block counters
     matec_id tec = std::get<0>( pick_technique( *source, shield, false, false, true ) );

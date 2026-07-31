@@ -86,6 +86,11 @@ void event_transformation::check_consistency()
     event_transformation_factory.check();
 }
 
+const std::vector<event_transformation> &event_transformation::get_all()
+{
+    return event_transformation_factory.get_all();
+}
+
 void event_transformation::reset()
 {
     event_transformation_factory.reset();
@@ -116,6 +121,11 @@ void event_statistic::finalize_all()
 void event_statistic::check_consistency()
 {
     event_statistic_factory.check();
+}
+
+const std::vector<event_statistic> &event_statistic::get_all()
+{
+    return event_statistic_factory.get_all();
 }
 
 void event_statistic::reset()

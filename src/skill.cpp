@@ -247,6 +247,13 @@ const SkillDisplayType &skill_displayType_id::obj() const
     return invalid_skill_type;
 }
 
+/** @relates string_id */
+template<>
+bool skill_displayType_id::is_valid() const
+{
+    return &obj() != &invalid_skill_type;
+}
+
 void SkillDisplayType::load( const JsonObject &jsobj )
 {
     skill_displayType_id ident = skill_displayType_id( jsobj.get_string( "id" ) );

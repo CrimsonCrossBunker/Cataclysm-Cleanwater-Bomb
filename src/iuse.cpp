@@ -1618,8 +1618,7 @@ std::optional<int> iuse::petfood( Character *p, item *it, const tripoint_bub_ms 
             p->add_msg_if_player( m_good, petfood.feed, mon->get_name() );
         }
 
-        mon->friendly = -1;
-        mon->add_effect( effect_pet, 1_turns, true );
+        mon->make_pet( *p );
         if( halluc ) {
             item drop_me = p->reduce_charges( it, 1 );
             p->i_drop_at( drop_me );

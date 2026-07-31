@@ -53,8 +53,8 @@ const std::vector<binding_domain> &binding_catalog()
             binding_implementation_status::covered
         },
         {
-            "game_services", "game", "game.read", 2,
-            binding_implementation_status::partial
+            "game_services", "game", "game.read", 5,
+            binding_implementation_status::covered
         },
         {
             "runtime_and_definitions", "game.definitions + runtime", "game.read", 5,
@@ -62,11 +62,11 @@ const std::vector<binding_domain> &binding_catalog()
         },
         {
             "hooks", "game.hooks", "game.hooks", 5,
-            binding_implementation_status::planned
+            binding_implementation_status::covered
         },
         {
             "callback_actors", "game.callbacks", "game.callbacks", 5,
-            binding_implementation_status::planned
+            binding_implementation_status::covered
         }
     };
     return catalog;

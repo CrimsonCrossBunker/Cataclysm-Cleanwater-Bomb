@@ -16,6 +16,7 @@
 #include "bionics.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "creature_tracker.h"
 #include "damage.h"
@@ -2078,6 +2079,27 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
 {
     map &here = get_map();
     const tripoint_bub_ms pos = pos_bub( here );
+
+    if( cata::lua_ui::has_native_hook( "on_monster_try_move" ) ) {
+        const cata::lua_ui::native_callback_arguments payload = {
+            { "monster", static_cast<const Creature *>( this ) },
+            {
+                "from", cata::lua_ui::native_callback_point {
+                    "bub_ms", pos.x(), pos.y(), pos.z()
+                }
+            },
+            {
+                "to", cata::lua_ui::native_callback_point {
+                    "bub_ms", p.x(), p.y(), p.z()
+                }
+            },
+            { "force", force }
+        };
+        if( !cata::lua_ui::dispatch_native_hook(
+                "on_monster_try_move", payload ) ) {
+            return false;
+        }
+    }
 
     const bool on_ground = !digging() && !flies();
 
