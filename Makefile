@@ -173,7 +173,7 @@ IMGUI_DIR = $(SRC_DIR)/third-party/imgui
 IMTUI_DIR = $(SRC_DIR)/third-party/imtui
 LOCALIZE = 1
 ASTYLE_BINARY = astyle
-CATA_ENABLE_LUA_UI ?= 0
+CATA_ENABLE_LUA_UI ?= 1
 
 ifneq ($(filter $(CATA_ENABLE_LUA_UI),0 1),$(CATA_ENABLE_LUA_UI))
   $(error CATA_ENABLE_LUA_UI must be 0 or 1)
