@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from .check_luals_declarations import check
+from .check_luals_declarations import check, validate_table_mappings
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -32,9 +32,15 @@ class LuaLsDeclarationTest(unittest.TestCase):
 
     def test_committed_declarations_cover_the_native_surface(self) -> None:
         result = check(DECLARATIONS)
-        self.assertEqual(result["methods"], 287)
-        self.assertEqual(result["usertypes"], 14)
+        self.assertEqual(result["tables"], 66)
+        self.assertEqual(result["methods"], 438)
+        self.assertEqual(result["game_tables"], 55)
+        self.assertEqual(result["usertypes"], 15)
         self.assertEqual(result["coordinate_factories"], 36)
+
+    def test_unmapped_registered_table_is_rejected(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "table mappings"):
+            validate_table_mappings({"future_native_api": {"read"}})
 
     def test_missing_registered_method_is_rejected(self) -> None:
         self.check_modified(
@@ -55,6 +61,13 @@ class LuaLsDeclarationTest(unittest.TestCase):
             "---@field point_abs_ms fun",
             "---@field removed_abs_ms fun",
             "omit coordinate factories",
+        )
+
+    def test_missing_game_api_field_is_rejected(self) -> None:
+        self.check_modified(
+            "---@field weather CcbWeatherApi",
+            "",
+            "CcbGameApi fields",
         )
 
     def test_parameter_annotation_drift_is_rejected(self) -> None:

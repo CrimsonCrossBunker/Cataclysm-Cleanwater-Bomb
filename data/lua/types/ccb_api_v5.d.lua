@@ -355,6 +355,64 @@ function CcbUnitsApi.units(kind) end
 ---@class CcbTimeApi
 local CcbTimeApi = {}
 
+---@class CcbCalendarSeason
+---@field id "spring"|"summer"|"autumn"|"winter"|"unknown"
+---@field index integer
+---@field name string
+---@field day? integer
+
+---@class CcbCalendarPoint
+---@field point TimePoint
+---@field turn integer
+---@field display string
+---@field time_of_day string
+---@field year integer
+---@field day_of_year integer
+---@field second integer
+---@field minute integer
+---@field hour integer
+---@field season CcbCalendarSeason
+---@field moon_phase "new"|"waxing_crescent"|"waxing_half"|"waxing_gibbous"|"full"|"waning_gibbous"|"waning_half"|"waning_crescent"|"unknown"
+---@field is_day boolean
+---@field is_night boolean
+---@field is_dawn boolean
+---@field is_dusk boolean
+---@field is_twilight boolean
+---@field sunrise TimePoint
+---@field sunset TimePoint
+---@field daylight TimePoint
+---@field nightfall TimePoint
+---@field noon TimePoint
+---@field turns_since_cataclysm integer
+---@field turns_since_game_start integer
+---@field season_turns integer
+
+---@class CcbCalendarSnapshot
+---@field now CcbCalendarPoint
+---@field turn_zero TimePoint
+---@field start_of_cataclysm TimePoint
+---@field start_of_game TimePoint
+---@field season_length TimeDuration
+---@field year_length TimeDuration
+---@field turn_zero_offset TimeDuration
+---@field initial_season CcbCalendarSeason
+---@field eternal_season boolean
+---@field eternal_day boolean
+---@field eternal_night boolean
+
+---@class CcbTimeLimits
+---@field minimum TimePoint
+---@field maximum TimePoint
+---@field minimum_turn integer
+---@field maximum_turn integer
+---@field set_now_simulates_turns false
+
+---@class CcbTimeChange
+---@field previous CcbCalendarPoint
+---@field current CcbCalendarPoint
+---@field delta TimeDuration
+---@field simulated_turns false
+
 ---@return TimePoint
 function CcbTimeApi.turn_zero() end
 
@@ -372,6 +430,26 @@ function CcbTimeApi.point(turn) end
 
 ---@return TimePoint
 function CcbTimeApi.now() end
+
+---@param point? TimePoint
+---@return CcbCalendarPoint
+function CcbTimeApi.snapshot(point) end
+
+---@return CcbCalendarSnapshot
+function CcbTimeApi.calendar() end
+
+---@return CcbTimeLimits
+function CcbTimeApi.limits() end
+
+---@param point TimePoint
+---@param expected? TimePoint Optimistic-concurrency guard for the current clock.
+---@return CcbResult
+function CcbTimeApi.set_now(point, expected) end
+
+---@param duration TimeDuration
+---@param expected? TimePoint Optimistic-concurrency guard for the current clock.
+---@return CcbResult
+function CcbTimeApi.advance(duration, expected) end
 
 ---@class CcbCoordsApi
 ---@field max_range_points integer
@@ -850,6 +928,19 @@ function CcbUiApi.close() end
 ---@field data CcbScalarMap
 ---@field data_types table<string, string>
 
+---@class CcbNativeEventField
+---@field name string
+---@field type string Native cata_variant type.
+---@field lua_type "boolean"|"integer"|"string"|"nil"
+
+---@class CcbNativeEventDescription
+---@field type string
+---@field fields CcbNativeEventField[]
+---@field subscribable true
+---@field emittable true
+
+---@alias CcbNativeEventData table<string, boolean|integer|string>
+
 ---@alias CcbEventCallback fun(event: CcbEvent): boolean?
 
 ---@class CcbEventsApi
@@ -872,10 +963,42 @@ function CcbEventsApi.on_from(provider_id, name, callback) end
 ---@return boolean removed
 function CcbEventsApi.off(subscription_id) end
 
+---@return string[]
+function CcbEventsApi.native_types() end
+
+---@param name string
+---@return CcbNativeEventDescription
+function CcbEventsApi.describe_native(name) end
+
 ---@param name string
 ---@param data? CcbScalarMap
 ---@return boolean continued
 function CcbEventsApi.emit(name, data) end
+
+---@class CcbNativeEventsApi
+local CcbNativeEventsApi = {}
+
+---@param name string Native event id returned by `list()`.
+---@param callback CcbEventCallback
+---@return integer subscription_id
+---@overload fun(name: string, options: CcbEventOptions, callback: CcbEventCallback): integer
+function CcbNativeEventsApi.on(name, callback) end
+
+---@param subscription_id integer
+---@return boolean removed
+function CcbNativeEventsApi.off(subscription_id) end
+
+---@return string[]
+function CcbNativeEventsApi.list() end
+
+---@param name string
+---@return CcbNativeEventDescription
+function CcbNativeEventsApi.describe(name) end
+
+---@param name string
+---@param fields CcbNativeEventData Exact, complete field set described by `describe()`.
+---@return CcbEvent
+function CcbNativeEventsApi.emit(name, fields) end
 
 ---@class CcbSchedulerApi
 local CcbSchedulerApi = {}
@@ -2876,6 +2999,1405 @@ function CcbHordesApi.signal(position, power) end
 ---@return CcbResult
 function CcbHordesApi.advance() end
 
+---@class CcbDefinitionSearchOptions: CcbPageOptions
+---@field query? string Case-insensitive native id or translated-name fragment.
+
+---@class CcbNativeSkillDefinition
+---@field id GameId
+---@field name string
+---@field description string
+---@field display_type? GameId
+---@field sort_rank integer
+---@field teachable boolean
+---@field obsolete boolean
+---@field combat boolean
+---@field contextual boolean
+---@field consumes_focus boolean
+
+---@class CcbNativeSkillState
+---@field id GameId
+---@field name string
+---@field practical integer
+---@field practical_effective integer
+---@field practical_exercise_percent integer
+---@field practical_exercise_raw integer
+---@field knowledge integer
+---@field knowledge_experience_percent integer
+---@field knowledge_experience_raw integer
+---@field rust_accumulator integer
+---@field rusty boolean
+---@field training boolean
+---@field can_train boolean
+---@field available boolean
+---@field practical_description string
+---@field knowledge_description string
+---@field maximum_level integer
+
+---@class CcbSkillDefinitionPage
+---@field items CcbNativeSkillDefinition[]
+---@field offset integer
+---@field limit integer
+---@field total integer
+---@field returned integer
+---@field has_more boolean
+
+---@class CcbSkillListOptions: CcbPageOptions
+---@field include_obsolete? boolean
+---@field include_contextual? boolean
+
+---@class CcbSkillAdjustments
+---@field practical? integer
+---@field knowledge? integer
+---@field exercise_percent? integer
+
+---@class CcbSkillPracticeOptions
+---@field cap? integer
+---@field allow_multilevel? boolean
+
+---@class CcbSkillsApi
+local CcbSkillsApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return CcbSkillDefinitionPage
+function CcbSkillsApi.definitions(options) end
+
+---@param id GameId
+---@return CcbNativeSkillDefinition
+function CcbSkillsApi.definition(id) end
+
+---@param handle GameHandle
+---@param options? CcbSkillListOptions
+---@return CcbResult
+function CcbSkillsApi.list(handle, options) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbSkillsApi.get(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param adjustments CcbSkillAdjustments
+---@return CcbResult
+function CcbSkillsApi.set(handle, id, adjustments) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param training boolean
+---@return CcbResult
+function CcbSkillsApi.set_training(handle, id, training) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param amount integer
+---@param options? CcbSkillPracticeOptions
+---@return CcbResult
+function CcbSkillsApi.practice(handle, id, amount, options) end
+
+---@class CcbProficiencyCategory
+---@field id GameId
+---@field name string
+---@field description string
+
+---@class CcbProficiencyDefinition
+---@field id GameId
+---@field name string
+---@field description string
+---@field category? GameId
+---@field can_learn boolean
+---@field ignore_focus boolean
+---@field teachable boolean
+---@field time_to_learn TimeDuration
+---@field time_multiplier number
+---@field skill_penalty number
+---@field weakpoint_bonus number
+---@field weakpoint_penalty number
+---@field required table
+
+---@class CcbProficiencyState
+---@field id GameId
+---@field name string
+---@field known boolean
+---@field learning boolean
+---@field practice number
+---@field practiced TimeDuration
+---@field remaining TimeDuration
+---@field prerequisites_met boolean
+---@field can_practice boolean
+---@field ignore_focus boolean
+
+---@class CcbProficiencyListOptions: CcbPageOptions
+---@field include_known? boolean
+---@field include_learning? boolean
+---@field include_unstarted? boolean
+
+---@class CcbProficiencyGrantOptions
+---@field ignore_requirements? boolean
+---@field recursive? boolean
+
+---@class CcbProficienciesApi
+local CcbProficienciesApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbProficienciesApi.definitions(options) end
+
+---@param id GameId
+---@return CcbProficiencyDefinition
+function CcbProficienciesApi.definition(id) end
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbProficienciesApi.categories(options) end
+
+---@param id GameId
+---@return CcbProficiencyCategory
+function CcbProficienciesApi.category(id) end
+
+---@param handle GameHandle
+---@param options? CcbProficiencyListOptions
+---@return CcbResult
+function CcbProficienciesApi.list(handle, options) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbProficienciesApi.get(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param options? CcbProficiencyGrantOptions
+---@return CcbResult
+function CcbProficienciesApi.grant(handle, id, options) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbProficienciesApi.remove(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param amount TimeDuration
+---@return CcbResult
+function CcbProficienciesApi.practice(handle, id, amount) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param progress TimeDuration
+---@return CcbResult
+function CcbProficienciesApi.set_progress(handle, id, progress) end
+
+---@class CcbVitaminDecay
+---@field id GameId
+---@field ratio integer
+
+---@class CcbVitaminDefinition
+---@field id GameId
+---@field name string
+---@field type string
+---@field minimum integer
+---@field maximum integer
+---@field rate TimeDuration
+---@field absorption_per_day? number
+---@field deficiency_effect? GameId
+---@field excess_effect? GameId
+---@field decays_into table
+
+---@class CcbVitaminState
+---@field id GameId
+---@field name string
+---@field amount integer
+---@field minimum integer
+---@field maximum integer
+---@field severity integer
+---@field daily_actual integer
+---@field daily_estimated integer
+---@field rate TimeDuration
+
+---@class CcbVitaminsApi
+local CcbVitaminsApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbVitaminsApi.definitions(options) end
+
+---@param id GameId
+---@return CcbVitaminDefinition
+function CcbVitaminsApi.definition(id) end
+
+---@param handle GameHandle
+---@param options? CcbPageOptions
+---@return CcbResult
+function CcbVitaminsApi.list(handle, options) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbVitaminsApi.get(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param amount integer
+---@return CcbResult
+function CcbVitaminsApi.set(handle, id, amount) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param delta integer
+---@return CcbResult
+function CcbVitaminsApi.modify(handle, id, delta) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbVitaminsApi.reset_daily(handle, id) end
+
+---@class CcbAddictionDefinition
+---@field id GameId
+---@field name string
+---@field type_name string
+---@field description string
+---@field craving_morale? GameId
+---@field effect? GameId
+---@field builtin boolean
+
+---@class CcbAddictionState
+---@field id GameId
+---@field name string
+---@field present boolean
+---@field intensity integer
+---@field active boolean
+---@field minimum_active_intensity integer
+---@field maximum_intensity integer
+---@field sated? TimeDuration
+---@field withdrawing boolean
+
+---@class CcbAddictionAdjustments
+---@field intensity? integer
+---@field sated? TimeDuration
+
+---@class CcbAddictionsApi
+local CcbAddictionsApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbAddictionsApi.definitions(options) end
+
+---@param id GameId
+---@return CcbAddictionDefinition
+function CcbAddictionsApi.definition(id) end
+
+---@param handle GameHandle
+---@param options? CcbPageOptions
+---@return CcbResult
+function CcbAddictionsApi.list(handle, options) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbAddictionsApi.get(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param strength integer
+---@return CcbResult
+function CcbAddictionsApi.expose(handle, id, strength) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbAddictionsApi.remove(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param adjustments CcbAddictionAdjustments
+---@return CcbResult
+function CcbAddictionsApi.set(handle, id, adjustments) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbAddictionsApi.run_effect(handle, id) end
+
+---@class CcbNeedsSnapshot
+---@field hunger integer
+---@field starvation integer
+---@field thirst integer
+---@field instant_thirst integer
+---@field sleepiness integer
+---@field sleep_deprivation integer
+---@field stored_kcal integer
+---@field healthy_kcal integer
+---@field kcal_fraction number
+---@field kcal_speed_penalty number
+---@field daily_sleep TimeDuration
+---@field continuous_sleep TimeDuration
+---@field lifestyle integer
+---@field daily_health integer
+---@field health_tally integer
+
+---@class CcbNeedAdjustments
+---@field hunger? integer
+---@field thirst? integer
+---@field sleepiness? integer
+---@field sleep_deprivation? integer
+
+---@class CcbSleepAdjustments
+---@field daily? TimeDuration
+---@field continuous? TimeDuration
+
+---@class CcbHealthAdjustments
+---@field lifestyle? integer
+---@field daily_health? integer
+
+---@class CcbHealthDeltas: CcbHealthAdjustments
+---@field daily_health_cap? integer Required together with `daily_health`.
+---@field health_tally? integer
+
+---@class CcbNeedsApi
+local CcbNeedsApi = {}
+
+---@param handle GameHandle
+---@return CcbResult
+function CcbNeedsApi.get(handle) end
+
+---@param handle GameHandle
+---@param adjustments CcbNeedAdjustments
+---@return CcbResult
+function CcbNeedsApi.set(handle, adjustments) end
+
+---@param handle GameHandle
+---@param deltas CcbNeedAdjustments
+---@return CcbResult
+function CcbNeedsApi.modify(handle, deltas) end
+
+---@param handle GameHandle
+---@param kcal integer
+---@return CcbResult
+function CcbNeedsApi.set_calories(handle, kcal) end
+
+---@param handle GameHandle
+---@param delta integer
+---@param ignore_weariness? boolean
+---@return CcbResult
+function CcbNeedsApi.modify_calories(handle, delta, ignore_weariness) end
+
+---@param handle GameHandle
+---@param adjustments CcbSleepAdjustments
+---@return CcbResult
+function CcbNeedsApi.modify_sleep(handle, adjustments) end
+
+---@param handle GameHandle
+---@param scope "daily"|"continuous"|"all"
+---@return CcbResult
+function CcbNeedsApi.reset_sleep(handle, scope) end
+
+---@param handle GameHandle
+---@param adjustments CcbHealthAdjustments
+---@return CcbResult
+function CcbNeedsApi.set_health(handle, adjustments) end
+
+---@param handle GameHandle
+---@param deltas CcbHealthDeltas
+---@return CcbResult
+function CcbNeedsApi.modify_health(handle, deltas) end
+
+---@class CcbMartialArtDefinition
+---@field id GameId
+---@field name string
+---@field description string
+---@field priority integer
+---@field teachable boolean
+---@field learn_difficulty integer
+---@field arm_block integer
+---@field leg_block integer
+---@field nonstandard_block integer
+---@field primary_skill? GameId
+---@field strictly_unarmed boolean
+---@field strictly_melee boolean
+---@field allow_all_weapons boolean
+---@field force_unarmed boolean
+---@field prevent_weapon_blocking boolean
+---@field techniques table
+---@field weapons table
+---@field weapon_categories table
+
+---@class CcbMartialArtState
+---@field id GameId
+---@field name string
+---@field known boolean
+---@field selected boolean
+---@field teachable boolean
+---@field strictly_unarmed boolean
+---@field strictly_melee boolean
+---@field allow_all_weapons boolean
+---@field force_unarmed boolean
+---@field keep_hands_free boolean
+
+---@class CcbMartialArtListOptions: CcbPageOptions
+---@field teachable_only? boolean
+
+---@class CcbMartialArtsApi
+local CcbMartialArtsApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbMartialArtsApi.definitions(options) end
+
+---@param id GameId
+---@return CcbMartialArtDefinition
+function CcbMartialArtsApi.definition(id) end
+
+---@param handle GameHandle
+---@param options? CcbMartialArtListOptions
+---@return CcbResult
+function CcbMartialArtsApi.list(handle, options) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbMartialArtsApi.get(handle, id) end
+
+---@param handle GameHandle
+---@return CcbResult
+function CcbMartialArtsApi.current(handle) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbMartialArtsApi.learn(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbMartialArtsApi.remove(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbMartialArtsApi.select(handle, id) end
+
+---@param handle GameHandle
+---@param keep_hands_free boolean
+---@return CcbResult
+function CcbMartialArtsApi.set_hands_free(handle, keep_hands_free) end
+
+---@param handle GameHandle
+---@param trigger string
+---@return CcbResult
+function CcbMartialArtsApi.trigger(handle, trigger) end
+
+---@alias CcbEocInputValue boolean|number|string|TripointCoord
+---@alias CcbEocValue nil|number|string|TripointCoord|CcbEocValue[]
+
+---@class CcbEocSource
+---@field id string
+---@field mod string
+
+---@class CcbEocDefinition
+---@field id GameId
+---@field value string
+---@field type string
+---@field has_condition boolean
+---@field has_false_effect boolean
+---@field has_deactivate_condition boolean
+---@field global boolean
+---@field run_for_npcs boolean
+---@field required_event? string
+---@field sources CcbEocSource[]
+
+---@class CcbEocOptions
+---@field alpha? GameHandle Defaults to the avatar.
+---@field beta? GameHandle
+---@field context? table<string, CcbEocInputValue>
+
+---@class CcbEocLimits
+---@field page integer
+---@field context_entries integer
+---@field context_key_bytes integer
+---@field context_string_bytes integer
+
+---@class CcbEocsApi
+local CcbEocsApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbEocsApi.list(options) end
+
+---@param id GameId
+---@return CcbResult
+function CcbEocsApi.get(id) end
+
+---@param id GameId
+---@param options? CcbEocOptions
+---@return CcbResult
+function CcbEocsApi.test(id, options) end
+
+---@param id GameId
+---@param options? CcbEocOptions
+---@return CcbResult
+function CcbEocsApi.activate(id, options) end
+
+---@param id GameId
+---@param delay TimeDuration
+---@param options? CcbEocOptions
+---@return CcbResult
+function CcbEocsApi.queue(id, delay, options) end
+
+---@return CcbEocLimits
+function CcbEocsApi.limits() end
+
+---@class CcbVariablesApi
+local CcbVariablesApi = {}
+
+---@param handle GameHandle Creature or vehicle handle.
+---@param key string
+---@return CcbResult
+function CcbVariablesApi.get(handle, key) end
+
+---@param handle GameHandle Creature or vehicle handle.
+---@param key string
+---@param value CcbEocInputValue
+---@return CcbResult
+function CcbVariablesApi.set(handle, key, value) end
+
+---@param handle GameHandle Creature or vehicle handle.
+---@param key string
+---@return CcbResult
+function CcbVariablesApi.remove(handle, key) end
+
+---@class CcbAchievementTimeConstraint
+---@field target TimePoint
+---@field completion string
+---@field becomes_false boolean
+---@field text string
+
+---@class CcbAchievementDefinition
+---@field id GameId
+---@field name string
+---@field description string
+---@field conduct boolean
+---@field manually_given boolean
+---@field requirements integer
+---@field loaded boolean
+---@field hidden_by table
+---@field sources table
+---@field time_constraint? CcbAchievementTimeConstraint
+
+---@class CcbAchievementState: CcbAchievementDefinition
+---@field valid boolean
+---@field completion "pending"|"completed"|"failed"
+---@field pending boolean
+---@field completed boolean
+---@field failed boolean
+---@field hidden boolean
+---@field ui_text? string
+
+---@class CcbAchievementListOptions: CcbDefinitionSearchOptions
+---@field completion? "pending"|"completed"|"failed"
+---@field conduct? boolean
+---@field manually_given? boolean
+---@field valid? boolean
+
+---@class CcbAchievementsApi
+local CcbAchievementsApi = {}
+
+---@param options? CcbAchievementListOptions
+---@return table
+function CcbAchievementsApi.definitions(options) end
+
+---@param id GameId
+---@return CcbAchievementDefinition
+function CcbAchievementsApi.definition(id) end
+
+---@param options? CcbAchievementListOptions
+---@return CcbResult
+function CcbAchievementsApi.list(options) end
+
+---@param id GameId
+---@return CcbResult
+function CcbAchievementsApi.get(id) end
+
+---@param enabled boolean
+---@return CcbResult
+function CcbAchievementsApi.set_enabled(enabled) end
+
+---@param id GameId
+---@param completion "completed"|"failed"
+---@return CcbResult
+function CcbAchievementsApi.report(id, completion) end
+
+---@param id GameId
+---@return CcbResult
+function CcbAchievementsApi.reset(id) end
+
+---@class CcbStatisticVariant
+---@field type string
+---@field raw string
+---@field valid boolean
+---@field value? boolean|integer|number|string|table
+
+---@class CcbStatisticDefinition
+---@field id GameId
+---@field description string
+---@field type string
+---@field monotonicity "constant"|"increasing"|"decreasing"|"unknown"
+---@field loaded boolean
+---@field sources table
+
+---@class CcbStatisticTransformation
+---@field id GameId
+---@field monotonicity "constant"|"increasing"|"decreasing"|"unknown"
+---@field loaded boolean
+---@field sources table
+---@field fields table
+
+---@class CcbStatisticEventPartition
+---@field count integer
+---@field first TimePoint
+---@field last TimePoint
+---@field data table<string, CcbStatisticVariant>
+
+---@class CcbStatisticEventType
+---@field name string
+---@field fields table
+---@field count integer
+
+---@class CcbNativeScore
+---@field id GameId
+---@field description string
+---@field value CcbStatisticVariant
+---@field valid boolean
+---@field loaded boolean
+---@field sources table
+
+---@class CcbStatisticsApi
+local CcbStatisticsApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbStatisticsApi.definitions(options) end
+
+---@param id GameId
+---@return CcbStatisticDefinition
+function CcbStatisticsApi.definition(id) end
+
+---@param options? CcbDefinitionSearchOptions
+---@return CcbResult
+function CcbStatisticsApi.values(options) end
+
+---@param id GameId
+---@return CcbResult
+function CcbStatisticsApi.value(id) end
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbStatisticsApi.transformations(options) end
+
+---@param id GameId
+---@param options? CcbPageOptions
+---@return CcbResult
+function CcbStatisticsApi.transformation(id, options) end
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbStatisticsApi.event_types(options) end
+
+---@param name string
+---@param options? CcbPageOptions
+---@return CcbResult
+function CcbStatisticsApi.event(name, options) end
+
+---@param options? CcbDefinitionSearchOptions
+---@return CcbResult
+function CcbStatisticsApi.scores(options) end
+
+---@param id GameId
+---@return CcbResult
+function CcbStatisticsApi.score(id) end
+
+---@class CcbVehiclePrototype
+---@field id GameId
+---@field name string
+---@field parts table
+---@field item_spawn_count integer
+---@field zone_count integer
+---@field has_blueprint boolean
+---@field color_palette? GameId
+
+---@class CcbVehicleMotion
+---@field velocity integer
+---@field average_velocity integer
+---@field cruise_velocity integer
+---@field vertical_velocity integer
+---@field forward_velocity integer
+---@field maximum_velocity integer
+---@field maximum_reverse_velocity integer
+---@field safe_velocity integer
+---@field acceleration integer
+---@field moving boolean
+---@field skidding boolean
+---@field facing UnitValue
+---@field turn_direction integer
+
+---@class CcbVehicleLift
+---@field mass UnitValue
+---@field weight_newtons number
+---@field rotor_lift_newtons number
+---@field safe_rotor_lift_newtons number
+---@field balloon_lift_newtons number
+---@field maximum_lift_newtons number
+---@field lift_margin_newtons number
+---@field sufficient_rotor_lift boolean
+---@field sufficient_balloon_lift boolean
+---@field rotorcraft boolean
+---@field airship boolean
+---@field flying boolean
+---@field flyable boolean
+
+---@class CcbVehicleSnapshot
+---@field name string
+---@field display_name string
+---@field prototype GameId
+---@field position TripointCoord
+---@field parts integer
+---@field real_parts integer
+---@field owner? GameId
+---@field old_owner? GameId
+---@field motion CcbVehicleMotion
+---@field lift CcbVehicleLift
+---@field power table
+---@field state table
+
+---@class CcbVehiclePart
+---@field index integer
+---@field id GameId
+---@field location GameId
+---@field name string
+---@field mount PointCoord
+---@field position TripointCoord
+---@field variant string
+---@field hp integer
+---@field durability integer
+---@field damage_percent integer
+---@field broken boolean
+---@field available boolean
+---@field enabled boolean
+---@field power_disabled boolean
+---@field open boolean
+---@field locked boolean
+---@field inside boolean
+---@field hidden boolean
+---@field removed boolean
+---@field fake boolean
+---@field capabilities table
+---@field ammo? table
+
+---@class CcbVehiclePartOptions: CcbPageOptions
+---@field include_fake? boolean
+---@field include_removed? boolean
+
+---@class CcbVehicleStopOptions
+---@field motion? boolean
+---@field engines? boolean
+---@field autopilot? boolean
+
+---@class CcbVehiclesApi
+local CcbVehiclesApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbVehiclesApi.definitions(options) end
+
+---@param id GameId
+---@return CcbVehiclePrototype
+function CcbVehiclesApi.definition(id) end
+
+---@param handle GameHandle
+---@return CcbResult
+function CcbVehiclesApi.get(handle) end
+
+---@param handle GameHandle
+---@param options? CcbVehiclePartOptions
+---@return CcbResult
+function CcbVehiclesApi.parts(handle, options) end
+
+---@param handle GameHandle
+---@return CcbResult
+function CcbVehiclesApi.fuels(handle) end
+
+---@param handle GameHandle
+---@param name string
+---@return CcbResult
+function CcbVehiclesApi.rename(handle, name) end
+
+---@param handle GameHandle
+---@param velocity integer Native vehicle velocity units.
+---@return CcbResult
+function CcbVehiclesApi.set_cruise_velocity(handle, velocity) end
+
+---@param handle GameHandle
+---@param options? CcbVehicleStopOptions
+---@return CcbResult
+function CcbVehiclesApi.stop(handle, options) end
+
+---@param handle GameHandle
+---@param enabled boolean
+---@return CcbResult
+function CcbVehiclesApi.set_tracking(handle, enabled) end
+
+---@param handle GameHandle
+---@param part_index integer
+---@param enabled boolean
+---@return CcbResult
+function CcbVehiclesApi.set_part_enabled(handle, part_index, enabled) end
+
+---@class CcbNpcClassDefinition
+---@field id GameId
+---@field name string
+---@field job_description string
+---@field common boolean
+---@field sells_belongings boolean
+---@field restock_interval TimeDuration
+---@field work_hours table
+---@field shop_item_group_count integer
+---@field starting_spells table
+---@field starting_bionics table
+---@field starting_proficiencies table
+
+---@class CcbNpcOpinion
+---@field trust integer
+---@field fear integer
+---@field value integer
+---@field anger integer
+---@field owed integer
+---@field sold integer
+
+---@class CcbNpcSnapshot
+---@field handle GameHandle
+---@field id integer
+---@field unique_id string
+---@field name string
+---@field display_name string
+---@field position TripointCoord
+---@field class GameId
+---@field template? GameId
+---@field faction? GameId
+---@field attitude string
+---@field attitude_name string
+---@field mission integer
+---@field status string
+---@field activity string
+---@field male boolean
+---@field dead boolean
+---@field hallucination boolean
+---@field enemy boolean
+---@field following boolean
+---@field player_ally boolean
+---@field leader boolean
+---@field guarding boolean
+---@field patrolling boolean
+---@field shopkeeper boolean
+---@field faction_representative boolean
+---@field opinion CcbNpcOpinion
+---@field personality table
+
+---@class CcbNpcOpinionDeltas
+---@field trust? integer
+---@field fear? integer
+---@field value? integer
+---@field anger? integer
+---@field owed? integer
+---@field sold? integer
+
+---@class CcbNpcsApi
+local CcbNpcsApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbNpcsApi.classes(options) end
+
+---@param id GameId
+---@return CcbNpcClassDefinition
+function CcbNpcsApi.class(id) end
+
+---@param options? CcbDefinitionSearchOptions
+---@return CcbResult
+function CcbNpcsApi.list(options) end
+
+---@param handle GameHandle
+---@return CcbResult
+function CcbNpcsApi.get(handle) end
+
+---@param handle GameHandle
+---@param name string
+---@return CcbResult
+function CcbNpcsApi.rename(handle, name) end
+
+---@param handle GameHandle
+---@param attitude string Native npc_attitude id.
+---@return CcbResult
+function CcbNpcsApi.set_attitude(handle, attitude) end
+
+---@param handle GameHandle
+---@param deltas CcbNpcOpinionDeltas
+---@return CcbResult
+function CcbNpcsApi.modify_opinion(handle, deltas) end
+
+---@class CcbFactionReputation
+---@field likes integer
+---@field respects integer
+---@field trusts integer
+---@field ranking string
+---@field respect string
+
+---@class CcbFactionResources
+---@field size integer
+---@field power integer
+---@field wealth integer
+---@field food_kcal integer
+---@field wealth_description string
+---@field combat_ability string
+
+---@class CcbFactionPolicy
+---@field consumes_food boolean
+---@field lone_wolf boolean
+---@field limited_area_claim boolean
+---@field stealing "ask"|"always"|"never"
+
+---@class CcbFactionSnapshot
+---@field id GameId
+---@field name string
+---@field description string
+---@field summary string
+---@field known_by_player boolean
+---@field reputation CcbFactionReputation
+---@field resources CcbFactionResources
+---@field policy CcbFactionPolicy
+---@field currency? GameId
+---@field monster_faction? GameId
+---@field members integer
+---@field relationship_targets integer
+
+---@class CcbFactionReputationDeltas
+---@field likes? integer
+---@field respects? integer
+---@field trusts? integer
+
+---@class CcbFactionResourceDeltas
+---@field size? integer
+---@field power? integer
+---@field wealth? integer
+
+---@class CcbFactionPolicyUpdate
+---@field consumes_food? boolean
+---@field stealing? "ask"|"always"|"never"
+
+---@class CcbFactionRelationshipUpdate
+---@field kill_on_sight? boolean
+---@field watch_your_back? boolean
+---@field share_my_stuff? boolean
+---@field share_public_goods? boolean
+---@field guard_your_stuff? boolean
+---@field lets_you_in? boolean
+---@field defend_your_space? boolean
+---@field knows_your_voice? boolean
+
+---@class CcbFactionsApi
+local CcbFactionsApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return CcbResult
+function CcbFactionsApi.list(options) end
+
+---@param id GameId
+---@return CcbResult
+function CcbFactionsApi.get(id) end
+
+---@return CcbResult
+function CcbFactionsApi.player() end
+
+---@param id GameId
+---@param options? CcbPageOptions
+---@return CcbResult
+function CcbFactionsApi.members(id, options) end
+
+---@param id GameId
+---@param options? CcbPageOptions
+---@return CcbResult
+function CcbFactionsApi.relationships(id, options) end
+
+---@param id GameId
+---@param target GameId
+---@return CcbResult
+function CcbFactionsApi.relationship(id, target) end
+
+---@param id GameId
+---@param options? CcbPageOptions
+---@return CcbResult
+function CcbFactionsApi.food(id, options) end
+
+---@param id GameId
+---@param name string
+---@return CcbResult
+function CcbFactionsApi.rename(id, name) end
+
+---@param id GameId
+---@param known boolean
+---@return CcbResult
+function CcbFactionsApi.set_known(id, known) end
+
+---@param id GameId
+---@param deltas CcbFactionReputationDeltas
+---@return CcbResult
+function CcbFactionsApi.modify_reputation(id, deltas) end
+
+---@param id GameId
+---@param deltas CcbFactionResourceDeltas
+---@return CcbResult
+function CcbFactionsApi.modify_resources(id, deltas) end
+
+---@param id GameId
+---@param kcal integer
+---@return CcbResult
+function CcbFactionsApi.modify_food(id, kcal) end
+
+---@param id GameId
+---@param options CcbFactionPolicyUpdate
+---@return CcbResult
+function CcbFactionsApi.set_policy(id, options) end
+
+---@param id GameId
+---@param target GameId
+---@param options CcbFactionRelationshipUpdate
+---@return CcbResult
+function CcbFactionsApi.set_relationship(id, target, options) end
+
+---@class CcbCampOptions: CcbDefinitionSearchOptions
+---@field radius_omt? integer
+
+---@class CcbCampSnapshot
+---@field name string
+---@field board_name string
+---@field valid boolean
+---@field position TripointCoord
+---@field board_position TripointCoord
+---@field owner? GameId
+---@field distance_submaps integer
+---@field distance_omt number
+---@field directions table
+---@field fortifications table
+---@field storage_tiles table
+---@field dumping_spot TripointCoord
+---@field liquid_dumping_spots table
+
+---@class CcbCampsApi
+local CcbCampsApi = {}
+
+---@param options? CcbCampOptions
+---@return CcbResult
+function CcbCampsApi.list(options) end
+
+---@param center TripointCoord Absolute overmap-terrain coordinate.
+---@param options? CcbCampOptions
+---@return CcbResult
+function CcbCampsApi.near(center, options) end
+
+---@param position TripointCoord Absolute overmap-terrain coordinate.
+---@return CcbResult
+function CcbCampsApi.get(position) end
+
+---@param position TripointCoord Absolute overmap-terrain coordinate.
+---@param name string
+---@return CcbResult
+function CcbCampsApi.rename(position, name) end
+
+---@param position TripointCoord Absolute overmap-terrain coordinate.
+---@param owner GameId
+---@return CcbResult
+function CcbCampsApi.set_owner(position, owner) end
+
+---@param position TripointCoord Absolute overmap-terrain coordinate.
+---@param board_position TripointCoord Absolute map-square coordinate.
+---@return CcbResult
+function CcbCampsApi.set_board_position(position, board_position) end
+
+---Generation-bound identity of a native zone.
+---@class ZoneToken
+---@field faction GameId
+---@field type GameId
+---@field name string
+---@field start TripointCoord
+---@field end TripointCoord
+---@field personal boolean
+local ZoneToken = {}
+
+---@return boolean
+function ZoneToken:is_valid() end
+
+---@return CcbResult
+function ZoneToken:status() end
+
+---@class CcbZoneType
+---@field id GameId
+---@field name string
+---@field description string
+---@field can_be_personal boolean
+---@field hidden boolean
+---@field loaded boolean
+---@field field? GameId
+---@field sources table
+
+---@class CcbZoneSnapshot
+---@field token ZoneToken
+---@field name string
+---@field type GameId
+---@field type_name string
+---@field faction GameId
+---@field start TripointCoord
+---@field end TripointCoord
+---@field center TripointCoord
+---@field invert boolean
+---@field enabled boolean
+---@field temporarily_disabled boolean
+---@field displayed boolean
+---@field vehicle boolean
+---@field personal boolean
+---@field has_options boolean
+---@field options table
+
+---@class CcbZoneListOptions: CcbDefinitionSearchOptions
+---@field faction? GameId
+---@field type? GameId
+
+---@class CcbZoneCreateOptions
+---@field name string
+---@field type GameId
+---@field faction? GameId
+---@field start TripointCoord
+---@field end TripointCoord
+---@field invert? boolean
+---@field enabled? boolean
+---@field personal? boolean
+
+---@class CcbZonesApi
+local CcbZonesApi = {}
+
+---@param options? CcbDefinitionSearchOptions
+---@return table
+function CcbZonesApi.types(options) end
+
+---@param id GameId
+---@return CcbZoneType
+function CcbZonesApi.type(id) end
+
+---@param options? CcbZoneListOptions
+---@return CcbResult
+function CcbZonesApi.list(options) end
+
+---@param position TripointCoord
+---@param options? CcbZoneListOptions
+---@return CcbResult
+function CcbZonesApi.at(position, options) end
+
+---@param token ZoneToken
+---@return CcbResult
+function CcbZonesApi.get(token) end
+
+---@param token ZoneToken
+---@param position TripointCoord
+---@return CcbResult
+function CcbZonesApi.contains(token, position) end
+
+---@param options CcbZoneCreateOptions
+---@return CcbResult
+function CcbZonesApi.create(options) end
+
+---@param token ZoneToken
+---@param name string
+---@return CcbResult
+function CcbZonesApi.rename(token, name) end
+
+---@param token ZoneToken
+---@param enabled boolean
+---@return CcbResult
+function CcbZonesApi.set_enabled(token, enabled) end
+
+---@param token ZoneToken
+---@param disabled boolean
+---@return CcbResult
+function CcbZonesApi.set_temporary_disabled(token, disabled) end
+
+---@param token ZoneToken
+---@param start TripointCoord
+---@param end TripointCoord
+---@return CcbResult
+function CcbZonesApi.set_position(token, start, end) end
+
+---@param token ZoneToken
+---@return CcbResult
+function CcbZonesApi.remove(token) end
+
+---@class CcbWeatherType
+---@field id GameId
+---@field name string
+---@field loaded boolean
+---@field symbol string
+---@field sun_symbol string
+---@field ranged_penalty integer
+---@field sight_penalty integer
+---@field light_modifier integer
+---@field light_multiplier number
+---@field sun_multiplier number
+---@field sound_attenuation integer
+---@field dangerous boolean
+---@field precipitation string
+---@field precipitation_mm_per_hour number
+---@field rains boolean
+---@field temperature_modifier_c number
+---@field priority integer
+---@field tiles_animation string
+---@field sound_category string
+---@field duration_min TimeDuration
+---@field duration_max TimeDuration
+---@field required_weathers table
+---@field sources table
+
+---@class CcbWeatherPoint
+---@field at TimePoint
+---@field weather GameId
+---@field temperature UnitValue
+---@field temperature_c number
+---@field humidity number
+---@field pressure number
+---@field wind_speed_mph integer
+---@field wind_direction_degrees integer
+---@field wind_description string
+---@field position TripointCoord
+---@field precipitation_mm_per_hour number
+---@field sunlight number
+---@field sun_irradiance number
+---@field moonlight number
+---@field is_day boolean
+---@field is_night boolean
+
+---@class CcbCurrentWeather
+---@field weather GameId
+---@field type? CcbWeatherType
+---@field temperature UnitValue
+---@field temperature_c number
+---@field wind_speed_mph integer
+---@field wind_direction_degrees integer
+---@field next_update TimePoint
+---@field changed boolean
+---@field lightning_active boolean
+---@field weather_override? GameId
+---@field temperature_override? UnitValue
+---@field wind_speed_override_mph? integer
+---@field wind_direction_override_degrees? integer
+---@field precise CcbWeatherPoint
+
+---@class CcbWeatherSeasonModifiers
+---@field temperature_modifier number
+---@field humidity_modifier number
+
+---@class CcbWeatherGenerator
+---@field id GameId
+---@field loaded boolean
+---@field base_temperature_c number
+---@field base_humidity number
+---@field base_pressure number
+---@field base_wind_mph number
+---@field wind_distribution_peaks integer
+---@field wind_season_variation integer
+---@field seasonal table<"spring"|"summer"|"autumn"|"winter", CcbWeatherSeasonModifiers>
+---@field blacklist table
+---@field whitelist table
+---@field sorted_weather table
+
+---@class CcbWeatherListOptions: CcbDefinitionSearchOptions
+---@field dangerous? boolean
+---@field rains? boolean
+
+---@class CcbWeatherForecastOptions
+---@field start? TimePoint
+---@field position? TripointCoord Absolute map-square coordinate.
+---@field step? TimeDuration
+---@field limit? integer
+---@field respect_override? boolean
+
+---@class CcbWeatherForecast
+---@field items CcbWeatherPoint[]
+---@field returned integer
+---@field limit integer
+---@field start TimePoint
+---@field step TimeDuration
+---@field position TripointCoord
+---@field respected_override boolean
+
+---@class CcbWeatherWindOptions
+---@field speed_mph? integer
+---@field direction_degrees? integer
+---@field clear_speed? boolean
+---@field clear_direction? boolean
+
+---@class CcbWeatherLimits
+---@field catalog_limit integer
+---@field forecast_limit integer
+---@field forecast_minimum_step TimeDuration
+---@field forecast_maximum_step TimeDuration
+---@field forecast_maximum_horizon TimeDuration
+---@field maximum_wind_speed_mph integer
+---@field maximum_temperature_kelvin number
+
+---@class CcbWeatherApi
+local CcbWeatherApi = {}
+
+---@param options? CcbWeatherListOptions
+---@return table
+function CcbWeatherApi.types(options) end
+
+---@param id GameId
+---@return CcbWeatherType
+function CcbWeatherApi.type(id) end
+
+---@return CcbCurrentWeather
+function CcbWeatherApi.current() end
+
+---@return CcbWeatherGenerator
+function CcbWeatherApi.generator() end
+
+---@param options? CcbWeatherForecastOptions
+---@return CcbWeatherForecast
+function CcbWeatherApi.forecast(options) end
+
+---@return CcbWeatherLimits
+function CcbWeatherApi.limits() end
+
+---@param id GameId
+---@return CcbResult
+function CcbWeatherApi.set_override(id) end
+
+---@return CcbResult
+function CcbWeatherApi.clear_override() end
+
+---@param temperature UnitValue
+---@return CcbResult
+function CcbWeatherApi.set_temperature_override(temperature) end
+
+---@return CcbResult
+function CcbWeatherApi.clear_temperature_override() end
+
+---@param options CcbWeatherWindOptions
+---@return CcbResult
+function CcbWeatherApi.set_wind(options) end
+
+---@return CcbResult
+function CcbWeatherApi.clear_overrides() end
+
+---@return CcbResult
+function CcbWeatherApi.refresh() end
+
 ---@class CcbRuntimeStatus
 ---@field loaded boolean
 ---@field generation integer
@@ -2897,8 +4419,10 @@ function CcbHordesApi.advance() end
 
 ---@class CcbGameApi
 ---@field api_version 5
+---@field achievements CcbAchievementsApi
 ---@field actions CcbGameActionsApi
 ---@field action_menu CcbActionMenuApi
+---@field addictions CcbAddictionsApi
 ---@field sidebar CcbSidebarApi
 ---@field types CcbTypesApi
 ---@field units CcbUnitsApi
@@ -2911,6 +4435,7 @@ function CcbHordesApi.advance() end
 ---@field diagnostics CcbDiagnosticsApi
 ---@field hooks CcbHooksApi
 ---@field callbacks CcbCallbacksApi
+---@field camps CcbCampsApi
 ---@field mapgen CcbMapgenApi
 ---@field creatures CcbCreaturesApi
 ---@field characters CcbCharactersApi
@@ -2924,9 +4449,12 @@ function CcbHordesApi.advance() end
 ---@field recipes CcbRecipesApi
 ---@field requirements CcbRequirementsApi
 ---@field crafting CcbCraftingApi
+---@field eocs CcbEocsApi
+---@field factions CcbFactionsApi
 ---@field world CcbWorldApi
 ---@field overmap CcbOvermapApi
 ---@field hordes CcbHordesApi
+---@field martial_arts CcbMartialArtsApi
 ---@field messages CcbMessagesApi
 ---@field constants CcbConstantsApi
 ---@field random CcbRandomApi
@@ -2935,6 +4463,17 @@ function CcbHordesApi.advance() end
 ---@field spawns CcbSpawnsApi
 ---@field followers CcbFollowersApi
 ---@field relocation CcbRelocationApi
+---@field native_events CcbNativeEventsApi
+---@field needs CcbNeedsApi
+---@field npcs CcbNpcsApi
+---@field proficiencies CcbProficienciesApi
+---@field skills CcbSkillsApi
+---@field statistics CcbStatisticsApi
+---@field variables CcbVariablesApi
+---@field vehicles CcbVehiclesApi
+---@field vitamins CcbVitaminsApi
+---@field weather CcbWeatherApi
+---@field zones CcbZonesApi
 local CcbGameApi = {}
 
 ---@param message string

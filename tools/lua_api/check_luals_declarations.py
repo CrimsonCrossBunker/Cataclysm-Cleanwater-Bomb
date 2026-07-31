@@ -13,10 +13,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DECLARATIONS = Path("data/lua/types/ccb_api_v5.d.lua")
 
 TABLE_CLASSES = {
+    "achievements": "CcbAchievementsApi",
     "action_menu": "CcbActionMenuApi",
     "actions": "CcbGameActionsApi",
+    "addictions": "CcbAddictionsApi",
     "bionics": "CcbBionicsApi",
     "callbacks": "CcbCallbacksApi",
+    "camps": "CcbCampsApi",
     "character_state": "CcbStateStore",
     "characters": "CcbCharactersApi",
     "constants": "CcbConstantsApi",
@@ -27,7 +30,9 @@ TABLE_CLASSES = {
     "diagnostics": "CcbDiagnosticsApi",
     "effects": "CcbEffectsApi",
     "enum_api": "CcbEnumsApi",
+    "eocs": "CcbEocsApi",
     "events": "CcbEventsApi",
+    "factions": "CcbFactionsApi",
     "followers": "CcbFollowersApi",
     "game": "CcbGameApi",
     "handles": "CcbHandlesApi",
@@ -37,12 +42,17 @@ TABLE_CLASSES = {
     "inventory": "CcbInventoryApi",
     "items": "CcbItemsApi",
     "mapgen": "CcbMapgenApi",
+    "martial_arts": "CcbMartialArtsApi",
     "messages": "CcbMessagesApi",
     "missions": "CcbMissionsApi",
     "modules": "CcbModulesApi",
     "mutations": "CcbMutationsApi",
+    "native_events": "CcbNativeEventsApi",
+    "needs": "CcbNeedsApi",
+    "npcs": "CcbNpcsApi",
     "overmap": "CcbOvermapApi",
     "page_state": "CcbStateStore",
+    "proficiencies": "CcbProficienciesApi",
     "random": "CcbRandomApi",
     "recipes": "CcbRecipesApi",
     "registry": "CcbRegistryApi",
@@ -52,21 +62,36 @@ TABLE_CLASSES = {
     "serde": "CcbSerdeApi",
     "services": "CcbServicesApi",
     "sidebar": "CcbSidebarApi",
+    "skills": "CcbSkillsApi",
     "sound": "CcbSoundApi",
     "spawns": "CcbSpawnsApi",
     "spells": "CcbSpellsApi",
+    "statistics": "CcbStatisticsApi",
     "targeting": "CcbTargetingApi",
     "time": "CcbTimeApi",
     "types": "CcbTypesApi",
     "ui": "CcbUiApi",
     "units": "CcbUnitsApi",
+    "variables": "CcbVariablesApi",
+    "vehicles_api": "CcbVehiclesApi",
+    "vitamins": "CcbVitaminsApi",
+    "weather": "CcbWeatherApi",
     "world": "CcbWorldApi",
     "world_state": "CcbStateStore",
+    "zones": "CcbZonesApi",
 }
+
+# These functions are deliberately installed on the restricted Lua standard
+# library rather than exposed as part of the CCB API.
+INTENTIONALLY_UNDECLARED_TABLES = {"lua"}
 
 SET_FUNCTION = re.compile(
     r"\b([A-Za-z_][A-Za-z0-9_]*)"
     r"\.set_function\s*\(\s*\"([^\"]+)\""
+)
+GAME_TABLE_ASSIGNMENT = re.compile(
+    r"\bgame\s*\[\s*\"([^\"]+)\"\s*\]\s*=\s*"
+    r"(?:std::move\s*\(\s*)?([A-Za-z_][A-Za-z0-9_]*)"
 )
 DECLARED_METHOD = re.compile(
     r"^function\s+([A-Za-z_][A-Za-z0-9_]*)"
@@ -83,6 +108,10 @@ PARAM_ANNOTATION = re.compile(
 )
 FIELD_ANNOTATION = re.compile(
     r"^---@field\s+([A-Za-z_][A-Za-z0-9_]*)\??(?:\s|$)"
+)
+FIELD_TYPE_ANNOTATION = re.compile(
+    r"^---@field\s+([A-Za-z_][A-Za-z0-9_]*)\??\s+"
+    r"(\S+)"
 )
 DECLARED_CLASS = re.compile(
     r"^---@class\s+([A-Za-z_][A-Za-z0-9_]*)",
@@ -106,8 +135,7 @@ def source_methods() -> dict[str, set[str]]:
     for path in catalua_sources():
         contents = path.read_text(encoding="utf-8", errors="replace")
         for table, method in SET_FUNCTION.findall(contents):
-            if table in TABLE_CLASSES:
-                result[table].add(method)
+            result[table].add(method)
     return result
 
 
@@ -116,6 +144,16 @@ def source_usertypes() -> set[str]:
     for path in catalua_sources():
         contents = path.read_text(encoding="utf-8", errors="replace")
         result.update(NEW_USERTYPE.findall(contents))
+    return result
+
+
+def source_game_tables() -> dict[str, str]:
+    result: dict[str, str] = {}
+    for path in catalua_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for public_name, table in GAME_TABLE_ASSIGNMENT.findall(contents):
+            if table in TABLE_CLASSES:
+                result[public_name] = table
     return result
 
 
@@ -140,6 +178,45 @@ def annotation_block(lines: list[str], function_index: int) -> list[str]:
         index -= 1
     result.reverse()
     return result
+
+
+def class_fields(contents: str, class_name: str) -> dict[str, str]:
+    lines = contents.splitlines()
+    marker = f"---@class {class_name}"
+    try:
+        class_index = lines.index(marker)
+    except ValueError:
+        return {}
+
+    result: dict[str, str] = {}
+    cursor = class_index + 1
+    while cursor < len(lines):
+        match = FIELD_TYPE_ANNOTATION.match(lines[cursor])
+        if match is None:
+            break
+        field_name, field_type = match.groups()
+        result[field_name] = field_type
+        cursor += 1
+    return result
+
+
+def validate_table_mappings(
+    registered: dict[str, set[str]],
+) -> dict[str, set[str]]:
+    unknown = sorted(
+        set(registered) - set(TABLE_CLASSES) -
+        INTENTIONALLY_UNDECLARED_TABLES
+    )
+    if unknown:
+        raise RuntimeError(
+            "LuaLS checker omits registered API table mappings: "
+            f"{unknown}"
+        )
+    return {
+        table: methods
+        for table, methods in registered.items()
+        if table in TABLE_CLASSES
+    }
 
 
 def validate_annotation_contracts(contents: str) -> None:
@@ -223,7 +300,7 @@ def check(path: Path) -> dict[str, int]:
         methods[class_name].add(method)
 
     missing: list[str] = []
-    registered = source_methods()
+    registered = validate_table_mappings(source_methods())
     for table, expected_methods in sorted(registered.items()):
         class_name = TABLE_CLASSES[table]
         for method in sorted(expected_methods - methods[class_name]):
@@ -232,6 +309,23 @@ def check(path: Path) -> dict[str, int]:
         details = "\n".join(missing)
         raise RuntimeError(
             f"LuaLS declarations omit registered methods:\n{details}"
+        )
+
+    game_fields = class_fields(contents, "CcbGameApi")
+    missing_game_fields: list[str] = []
+    game_tables = source_game_tables()
+    for public_name, table in sorted(game_tables.items()):
+        class_name = TABLE_CLASSES[table]
+        actual = game_fields.get(public_name)
+        if actual != class_name:
+            missing_game_fields.append(
+                f"{public_name} is {actual or 'undeclared'}, "
+                f"expected {class_name}"
+            )
+    if missing_game_fields:
+        raise RuntimeError(
+            "LuaLS CcbGameApi fields use the wrong API class:\n" +
+            "\n".join(missing_game_fields)
         )
 
     classes = set(DECLARED_CLASS.findall(contents))
@@ -269,6 +363,7 @@ def check(path: Path) -> dict[str, int]:
     return {
         "tables": len(registered),
         "methods": sum(len(value) for value in registered.values()),
+        "game_tables": len(game_tables),
         "usertypes": len(source_usertypes()),
         "coordinate_factories": len(coordinate_factories()),
     }
@@ -284,6 +379,7 @@ def main() -> None:
     print(
         "LuaLS declarations cover "
         f"{result['methods']} methods across {result['tables']} tables, "
+        f"{result['game_tables']} game API domains, "
         f"{result['usertypes']} usertypes, and "
         f"{result['coordinate_factories']} coordinate factories."
     )
