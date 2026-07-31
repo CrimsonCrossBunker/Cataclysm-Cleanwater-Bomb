@@ -15,8 +15,8 @@
     },
     {
       "id": "coordinates",
-      "status": "planned",
-      "target": "typed coordinate construction, conversion, arithmetic and ranges",
+      "status": "covered",
+      "target": "immutable typed coordinate construction, checked conversion, arithmetic and bounded ranges",
       "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_coords*" ] } ]
     },
     {

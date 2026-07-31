@@ -2,6 +2,8 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "catalua_bindings.h"
+#include "catalua_bindings_coords.h"
+#include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
@@ -20,6 +22,7 @@
 #include "json_loader.h"
 #include "path_info.h"
 #include "ui_profile.h"
+#include "units.h"
 #include "weather.h"
 #include "worldfactory.h"
 
@@ -982,7 +985,7 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK( std::adjacent_find( ids.begin(), ids.end() ) == ids.end() );
     CHECK( find_binding_domain( "coordinates" ) != nullptr );
     CHECK( find_binding_domain( "missing" ) == nullptr );
-    CHECK_FALSE( binding_domain_is_covered( "coordinates" ) );
+    CHECK( binding_domain_is_covered( "coordinates" ) );
 
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::table );
@@ -1016,7 +1019,7 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK( second_entry.get<std::string>( "status" ) != "covered" );
 
     sol::protected_function api_supports = game["api_supports"];
-    CHECK_FALSE( api_supports( "coordinates" ).get<bool>() );
+    CHECK( api_supports( "coordinates" ).get<bool>() );
     CHECK_FALSE( api_supports( "missing" ).get<bool>() );
 }
 
@@ -1141,6 +1144,453 @@ end)
     calendar::turn = turn.original() + 1_turns;
     cata::lua_ui::on_turn();
     CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
+           "[lua][bindings][values][ids]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<std::string> &kinds = supported_game_id_kinds();
+    REQUIRE( kinds.size() == 37 );
+    CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
+    CHECK( std::adjacent_find( kinds.begin(), kinds.end() ) == kinds.end() );
+    CHECK( is_supported_game_id_kind( "item" ) );
+    CHECK_FALSE( is_supported_game_id_kind( "missing" ) );
+
+    const script_game_id rock( "item", "rock" );
+    CHECK( rock.kind() == "item" );
+    CHECK( rock.value() == "rock" );
+    CHECK_FALSE( rock.is_null() );
+    CHECK( rock.is_valid() );
+    CHECK( rock == script_game_id( "item", "rock" ) );
+    CHECK_FALSE( rock == script_game_id( "item", "stick" ) );
+    CHECK_FALSE( rock == script_game_id( "monster", "rock" ) );
+    CHECK( rock.to_string() == "GameId<item>(rock)" );
+
+    const script_game_id null_id( "item", "" );
+    CHECK( null_id.is_null() );
+    CHECK_FALSE( null_id.is_valid() );
+    CHECK_THROWS_AS( script_game_id( "missing", "value" ), std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_game_id( "item", std::string( 257, 'x' ) ), std::invalid_argument );
+    CHECK_THROWS_AS( script_game_id( "item", "bad\nid" ), std::invalid_argument );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    bool authorized = false;
+    install_value_type_api( lua, game, [&authorized]() {
+        if( !authorized ) {
+            throw std::runtime_error( "value capability denied" );
+        }
+    } );
+    CHECK_THROWS( lua.safe_script( "return game.types.id('item', 'rock')" ) );
+    CHECK_THROWS( lua.safe_script( "return game.time.turn_zero()" ) );
+    CHECK_THROWS( lua.safe_script(
+                      "return game.time.before_time_starts()" ) );
+
+    authorized = true;
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local id = game.types.id("item", "rock")
+assert(id.kind == "item")
+assert(id.value == "rock")
+assert(id:is_null() == false)
+assert(id:is_valid() == true)
+assert(tostring(id) == "GameId<item>(rock)")
+assert(id == game.types.id("item", "rock"))
+assert(id ~= game.types.id("monster", "rock"))
+assert(pcall(function() id.value = "stick" end) == false)
+local kinds = game.types.id_kinds()
+assert(#kinds == 37)
+kinds[1] = "mutated"
+assert(game.types.id_kinds()[1] == "activity")
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_value_factories_reject_older_source_contracts",
+           "[lua][bindings][values][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "4.0.0",
+        "api_version": 4,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local ok, error = pcall(function()
+    game.types.id("item", "rock")
+end)
+assert(ok == false)
+assert(string.find(error, "requires Lua API 5", 1, true) ~= nil)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_unit_values_are_exact_bounded_and_dimension_safe",
+           "[lua][bindings][values][units]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<std::string> &kinds = supported_script_unit_kinds();
+    REQUIRE( kinds.size() == 11 );
+    CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
+    CHECK( supported_units_for_kind( "mass" ) ==
+           std::vector<std::string>{ "gram", "kilogram", "milligram" } );
+    CHECK_THROWS_AS( supported_units_for_kind( "missing" ), std::invalid_argument );
+
+    const script_unit_value mass =
+        script_unit_value::from( "mass", 1.5, "kilogram" );
+    CHECK( mass.kind() == "mass" );
+    CHECK( mass.canonical_unit() == "milligram" );
+    CHECK( mass.is_integral() );
+    CHECK( mass.canonical_integer() == units::from_kilogram( 1.5 ).value() );
+    CHECK( mass.value_as( "gram" ) == Approx( 1500.0 ) );
+    CHECK( mass.value_as( "kilogram" ) == Approx( 1.5 ) );
+    CHECK( mass.add( mass ).value_as( "kilogram" ) == Approx( 3.0 ) );
+    CHECK( mass.subtract( script_unit_value::from(
+                              "mass", 500.0, "gram" ) ).value_as( "kilogram" ) ==
+           Approx( 1.0 ) );
+    CHECK( mass.scale( 2.0 ).value_as( "kilogram" ) == Approx( 3.0 ) );
+    CHECK( mass.compare( script_unit_value::from(
+                             "mass", 2.0, "kilogram" ) ) < 0 );
+
+    const script_unit_value freezing =
+        script_unit_value::from( "temperature", 32.0, "fahrenheit" );
+    CHECK_FALSE( freezing.is_integral() );
+    CHECK( freezing.value_as( "celsius" ) == Approx( 0.0 ).margin( 1.0e-9 ) );
+    CHECK( freezing.value_as( "kelvin" ) == Approx( 273.15 ).margin( 1.0e-9 ) );
+    CHECK( script_unit_value::from(
+               "angle", 180.0, "degree" ).value_as( "radian" ) ==
+           Approx( 3.14159265358979323846 ) );
+
+    CHECK_THROWS_AS(
+        mass.add( script_unit_value::from( "volume", 1.0, "liter" ) ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_unit_value::from( "mass", 0.0001, "milligram" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_unit_value::from(
+            "mass", 1000000.0000005, "kilogram" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_unit_value::from( "mass", std::numeric_limits<double>::infinity(),
+                                 "gram" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_unit_value::from( "mass", 1.0, "missing" ),
+        std::invalid_argument );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local kg = game.units.new("mass", 1.5, "kilogram")
+local grams = game.units.new("mass", 500, "gram")
+assert(kg.kind == "mass")
+assert(kg.canonical_unit == "milligram")
+assert(kg:is_integral() == true)
+assert(kg:value("gram") == 1500)
+assert((kg + grams):value("kilogram") == 2)
+assert((kg - grams):value("kilogram") == 1)
+assert(grams < kg)
+assert(grams <= kg)
+assert(kg == game.units.new("mass", 1500, "gram"))
+assert(kg ~= game.units.new("volume", 1.5, "liter"))
+assert(kg:scale(2):value("kilogram") == 3)
+assert(kg:compare(grams) == 1)
+assert(pcall(function() return kg + game.units.new("volume", 1, "liter") end) == false)
+assert(pcall(function() kg.kind = "volume" end) == false)
+assert(#game.units.kinds() == 11)
+assert(game.units.units("energy")[1] == "joule")
+local exact = game.units.new("money", 9007199254740993, "cent")
+local preceding = game.units.new("money", 9007199254740992, "cent")
+assert(tostring(exact) == "Unit<money>(9007199254740993 cent)")
+assert(exact ~= preceding)
+assert(exact:compare(preceding) == 1)
+assert(pcall(function()
+    game.units.new("mass", 1000000.0000005, "kilogram")
+end) == false)
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_time_values_are_immutable_checked_and_calendar_aware",
+           "[lua][bindings][values][time]" )
+{
+    using namespace cata::lua_ui;
+    scoped_calendar_turn calendar_guard;
+
+    const script_time_duration ninety_minutes =
+        script_time_duration::from( 90, "minute" );
+    CHECK( ninety_minutes.turns() == 5400 );
+    CHECK( ninety_minutes.to_native() == 90_minutes );
+    CHECK( ninety_minutes.value_as( "hour" ) == Approx( 1.5 ) );
+    CHECK( ninety_minutes.add(
+               script_time_duration::from( 30, "minute" ) ).value_as( "hour" ) ==
+           Approx( 2.0 ) );
+    CHECK( ninety_minutes.subtract(
+               script_time_duration::from( 30, "minute" ) ).value_as( "hour" ) ==
+           Approx( 1.0 ) );
+    CHECK( ninety_minutes.scale( 2 ).value_as( "hour" ) == Approx( 3.0 ) );
+    CHECK( ninety_minutes.divide( 3 ).value_as( "minute" ) == Approx( 30.0 ) );
+    CHECK( ninety_minutes.negate().turns() == -5400 );
+    CHECK_FALSE( ninety_minutes.display().empty() );
+    CHECK( ninety_minutes.to_string() == "TimeDuration(5400 turns)" );
+
+    const script_time_point point = script_time_point::from_turn( 10000 );
+    CHECK( point.to_native() == time_point::from_turn( 10000 ) );
+    CHECK( point.add( ninety_minutes ).turn() == 15400 );
+    CHECK( point.add( ninety_minutes ).difference( point ) == ninety_minutes );
+    CHECK( point.second_of_minute() == 40 );
+    CHECK_FALSE( point.display().empty() );
+    CHECK( point.to_string() == "TimePoint(10000)" );
+    CHECK_FALSE( point.season().empty() );
+    CHECK_FALSE( point.moon_phase().empty() );
+
+    CHECK_THROWS_AS(
+        script_time_duration::from( std::numeric_limits<int>::max(), "week" ),
+        std::overflow_error );
+    CHECK_THROWS_AS(
+        script_time_duration::from( 1, "missing" ), std::invalid_argument );
+    CHECK_THROWS_AS(
+        ninety_minutes.divide( 0 ), std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_time_duration::from( 1, "second" ).divide( 2 ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_time_point::from_turn( std::numeric_limits<int>::max() ).add(
+            script_time_duration::from( 1, "turn" ) ),
+        std::overflow_error );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    calendar::turn = time_point::from_turn( 10000 );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local hour = game.time.duration(1, "hour")
+local half = game.time.duration(30, "minute")
+assert(hour.turns == 3600)
+assert(hour:value("minute") == 60)
+assert((hour + half):value("minute") == 90)
+assert((hour - half):value("minute") == 30)
+assert((hour * 2):value("hour") == 2)
+assert((hour / 2):value("minute") == 30)
+assert((-hour).turns == -3600)
+assert(half < hour and half <= hour)
+assert(game.time.now().turn == 10000)
+assert(type(game.time.turn_zero().turn) == "number")
+assert(type(game.time.before_time_starts().turn) == "number")
+local later = game.time.now() + half
+assert(later.turn == 11800)
+assert((later - game.time.now()).turns == 1800)
+assert((later - half).turn == 10000)
+assert(type(later:is_day()) == "boolean")
+assert(type(later:is_night()) == "boolean")
+assert(type(later:is_dawn()) == "boolean")
+assert(type(later:is_dusk()) == "boolean")
+assert(type(later:moon_phase()) == "string")
+assert(type(later:season()) == "string")
+assert(type(later:sunrise().turn) == "number")
+assert(type(later:sunset().turn) == "number")
+assert(pcall(function() later.turn = 0 end) == false)
+assert(tostring(hour) == "TimeDuration(3600 turns)")
+assert(tostring(later) == "TimePoint(11800)")
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_coordinates_are_immutable_typed_and_checked",
+           "[lua][bindings][values][coordinates]" )
+{
+    using namespace cata::lua_ui;
+
+    const script_point_coord absolute =
+        script_point_coord::from( "absolute", "map_square", 10, 20 );
+    const script_point_coord offset =
+        script_point_coord::from( "relative", "ms", -3, 5 );
+    CHECK( absolute.add( offset ).to_native() == point( 7, 25 ) );
+    CHECK( absolute.add( offset ).origin() == "abs" );
+    CHECK( absolute.subtract(
+               script_point_coord::from( "abs", "ms", 4, 8 ) ).origin() == "rel" );
+    CHECK( offset.scale_by( 3 ).to_native() == point( -9, 15 ) );
+    CHECK( absolute.manhattan_distance(
+               script_point_coord::from( "abs", "ms", 13, 24 ) ) == 7 );
+    CHECK( absolute.square_distance(
+               script_point_coord::from( "abs", "ms", 13, 24 ) ) == 4 );
+    CHECK( absolute.euclidean_distance(
+               script_point_coord::from( "abs", "ms", 13, 24 ) ) == Approx( 5.0 ) );
+    CHECK_THROWS_AS(
+        absolute.add( script_point_coord::from( "abs", "ms", 1, 1 ) ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        absolute.add( script_point_coord::from( "rel", "sm", 1, 1 ) ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_point_coord::from( "sm", "sm", 1, 1 ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_point_coord::from(
+            "abs", "ms", std::numeric_limits<std::int64_t>::max(), 0 ),
+        std::overflow_error );
+
+    const script_tripoint_coord position =
+        script_tripoint_coord::from( "bub", "ms", 10, 20, 3 );
+    const script_tripoint_coord delta =
+        script_tripoint_coord::from( "rel", "ms", -2, 4, 1 );
+    CHECK( position.add( delta ).to_native() == tripoint( 8, 24, 4 ) );
+    CHECK( position.add_xy( offset ).to_native() == tripoint( 7, 25, 3 ) );
+    CHECK( position.xy().to_native() == point( 10, 20 ) );
+    CHECK( position.subtract(
+               script_tripoint_coord::from( "bub", "ms", 7, 15, 1 ) ).origin() ==
+           "rel" );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local pos = game.coords.point_abs_ms(10, 20)
+local off = game.coords.point_rel_ms(-3, 5)
+local moved = pos + off
+assert(moved.x == 7 and moved.y == 25)
+assert(moved.origin == "abs" and moved.scale == "ms")
+assert(moved.type == "Point_abs_ms")
+assert((pos - game.coords.point_abs_ms(4, 8)).origin == "rel")
+assert((off * 3) == game.coords.point_rel_ms(-9, 15))
+assert((-off) == game.coords.point_rel_ms(3, -5))
+assert(pos:manhattan_distance(game.coords.point_abs_ms(13, 24)) == 7)
+assert(pos:square_distance(game.coords.point_abs_ms(13, 24)) == 4)
+assert(pos:euclidean_distance(game.coords.point_abs_ms(13, 24)) == 5)
+local tri = game.coords.tripoint_bub_ms(10, 20, 3)
+local tri_moved = tri + game.coords.tripoint_rel_ms(-2, 4, 1)
+assert(tri_moved == game.coords.tripoint_bub_ms(8, 24, 4))
+assert((tri + off) == game.coords.tripoint_bub_ms(7, 25, 3))
+assert(tri:xy() == game.coords.point_bub_ms(10, 20))
+assert(#game.coords.kinds() == 18)
+assert(pcall(function() pos.x = 0 end) == false)
+assert(pcall(function() return pos + game.coords.point_abs_ms(1, 1) end) == false)
+assert(pcall(function() return pos + game.coords.point_rel_sm(1, 1) end) == false)
+assert(pcall(function() return pos < game.coords.point_bub_ms(10, 20) end) == false)
+assert(tostring(pos) == "Point_abs_ms(10,20)")
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_v5_coordinate_projections_and_ranges_are_checked_and_bounded",
+           "[lua][bindings][values][coordinates][projection]" )
+{
+    using namespace cata::lua_ui;
+
+    const script_point_coord absolute =
+        script_point_coord::from( "abs", "ms", -1, 25 );
+    const script_point_coord submap = absolute.project_to( "sm" );
+    CHECK( submap == script_point_coord::from( "abs", "sm", -1, 2 ) );
+    CHECK( submap.project_to( "ms" ) ==
+           script_point_coord::from( "abs", "ms", -12, 24 ) );
+
+    const auto [coarse, remainder] = absolute.project_remain( "sm" );
+    CHECK( coarse == submap );
+    CHECK( remainder == script_point_coord::from( "sm", "ms", 11, 1 ) );
+    CHECK( coarse.project_combine( remainder ) == absolute );
+
+    const script_point_coord minimum =
+        script_point_coord::from(
+            "abs", "ms", std::numeric_limits<int>::min(), 0 );
+    const auto [minimum_coarse, minimum_remainder] =
+        minimum.project_remain( "sm" );
+    CHECK( minimum_coarse.project_combine( minimum_remainder ) == minimum );
+
+    const script_tripoint_coord tripoint_value =
+        script_tripoint_coord::from( "abs", "ms", -1, 25, 4 );
+    const auto [tripoint_coarse, tripoint_remainder] =
+        tripoint_value.project_remain( "sm" );
+    CHECK( tripoint_coarse ==
+           script_tripoint_coord::from( "abs", "sm", -1, 2, 4 ) );
+    CHECK( tripoint_coarse.project_combine( tripoint_remainder ) ==
+           tripoint_value );
+
+    CHECK_THROWS_AS(
+        script_point_coord::from( "abs", "om", 1, 1 ).project_to( "seg" ),
+        std::invalid_argument );
+    CHECK_THROWS_AS(
+        script_point_coord::from(
+            "abs", "om", std::numeric_limits<int>::max(), 0 ).project_to( "ms" ),
+        std::overflow_error );
+    CHECK_THROWS_AS( submap.project_remain( "ms" ), std::invalid_argument );
+    CHECK_THROWS_AS(
+        coarse.project_combine(
+            script_point_coord::from( "sm", "ms", 12, 0 ) ),
+        std::invalid_argument );
+
+    const std::vector<script_point_coord> line =
+        script_point_coord::from( "bub", "ms", 0, 0 ).line_to(
+            script_point_coord::from( "bub", "ms", 3, 2 ), 4 );
+    REQUIRE( line.size() == 4 );
+    CHECK( line.front() == script_point_coord::from( "bub", "ms", 0, 0 ) );
+    CHECK( line.back() == script_point_coord::from( "bub", "ms", 3, 2 ) );
+    CHECK_THROWS_AS(
+        script_point_coord::from( "bub", "ms", 0, 0 ).line_to(
+            script_point_coord::from( "bub", "ms", 100, 0 ), 10 ),
+        std::length_error );
+    CHECK( script_coordinate_rectangle(
+               script_point_coord::from( "bub", "ms", 0, 0 ),
+               script_point_coord::from( "bub", "ms", 2, 1 ), 6 ).size() == 6 );
+    CHECK_THROWS_AS(
+        script_coordinate_box(
+            script_tripoint_coord::from( "bub", "ms", 0, 0, 0 ),
+            script_tripoint_coord::from( "bub", "ms", 2, 2, 2 ), 20 ),
+        std::length_error );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_value_type_api( lua, game, []() {} );
+    sol::protected_function_result result = lua.safe_script( R"lua(
+local value = game.coords.point_abs_ms(-1, 25)
+local coarse, remainder = value:project_remain("sm")
+assert(coarse == game.coords.point_abs_sm(-1, 2))
+assert(remainder == game.coords.point_sm_ms(11, 1))
+assert(coarse:project_combine(remainder) == value)
+assert(game.coords.project_to(value, "sm") == coarse)
+local api_coarse, api_remainder = game.coords.project_remain(value, "sm")
+assert(game.coords.project_combine(api_coarse, api_remainder) == value)
+local line = game.coords.line(
+    game.coords.point_bub_ms(0, 0),
+    game.coords.point_bub_ms(3, 2), 4)
+assert(#line == 4)
+assert(line[1] == game.coords.point_bub_ms(0, 0))
+assert(line[4] == game.coords.point_bub_ms(3, 2))
+local rectangle = game.coords.rectangle(
+    game.coords.point_bub_ms(0, 0),
+    game.coords.point_bub_ms(2, 1), 6)
+assert(#rectangle == 6)
+local box = game.coords.box(
+    game.coords.tripoint_bub_ms(0, 0, 0),
+    game.coords.tripoint_bub_ms(1, 1, 1), 8)
+assert(#box == 8)
+assert(game.coords.max_range_points == 4096)
+assert(pcall(function()
+    return game.coords.line(
+        game.coords.point_bub_ms(0, 0),
+        game.coords.point_bub_ms(100, 0), 10)
+end) == false)
+assert(pcall(function()
+    return game.coords.rectangle(
+        game.coords.point_bub_ms(0, 0),
+        game.coords.point_bub_ms(100, 100), 4097)
+end) == false)
+)lua" );
+    REQUIRE( result.valid() );
 }
 
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",

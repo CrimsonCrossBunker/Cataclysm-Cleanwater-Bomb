@@ -24,6 +24,7 @@
 #include "cata_variant.h"
 #include "catalua_sol.h"
 #include "catalua_bindings.h"
+#include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
@@ -347,6 +348,18 @@ void require_capability( const runtime_state &state, const std::string &capabili
     if( !manifest.has_capability( capability ) ) {
         throw std::runtime_error( "Lua source '" + manifest.id + "' lacks capability '" +
                                   capability + "'" );
+    }
+}
+
+void require_api_version( const runtime_state &state, const int minimum_version,
+                          const std::string_view api_name )
+{
+    const script_manifest &manifest = current_manifest( state );
+    if( manifest.api_version < minimum_version ) {
+        throw std::runtime_error(
+            std::string( api_name ) + " requires Lua API " +
+            std::to_string( minimum_version ) + " (source '" + manifest.id +
+            "' requests API " + std::to_string( manifest.api_version ) + ")" );
     }
 }
 
@@ -1404,6 +1417,10 @@ void initialize_state( runtime_state &state )
 
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
+    install_value_type_api( state.lua, game, [&state]() {
+        require_api_version( state, 5, "game.types" );
+        require_capability( state, "game.read" );
+    } );
     install_game_handle_api(
         state.lua, game,
     [&state]() {
@@ -1413,9 +1430,11 @@ void initialize_state( runtime_state &state )
         return state.world_generation;
     },
     [&state]() {
+        require_api_version( state, 5, "game.handles" );
         require_capability( state, "game.read" );
     } );
     install_binding_catalog_api( game, [&state]() {
+        require_api_version( state, 5, "game.api_catalog" );
         require_capability( state, "game.read" );
     } );
     game.set_function( "add_msg", [&state]( const std::string & message ) {
