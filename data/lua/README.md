@@ -5,9 +5,11 @@ experimental, versioned Mod runtime. API v5 is the first comprehensive native
 gameplay surface: it combines portable UI, modules, services, events,
 scheduling, persistent state, typed values and ids, generation-safe handles,
 detached definition/snapshot queries, controlled world mutations, native
-hooks, callback actors, mapgen, crafting, action-menu entries, and PC sidebar
-widgets. Native pointers never cross the Lua boundary; reads are bounded
-snapshots and writes are validated, capability-gated operations.
+hooks, callback actors, mapgen, crafting, character progression, EOCs,
+statistics, achievements, weather and calendar control, vehicle/NPC/faction
+services, zones, action-menu entries, and PC sidebar widgets. Native pointers
+never cross the Lua boundary; reads are bounded snapshots and writes are
+validated, capability-gated operations.
 
 The drawing context targets the platform-neutral `script_ui_renderer`
 contract. Complete pages use the shared ImGui page host on Android and desktop
@@ -250,6 +252,33 @@ string keys and only booleans, finite numbers, and strings; the complete copied
 map is limited to 16 KiB. Custom-event and service recursion are independently
 limited to 16 calls.
 
+Native game events have a separately discoverable, strictly typed surface:
+
+```lua
+for _, name in ipairs(game.native_events.list()) do
+    local description = game.native_events.describe(name)
+    print(name, #description.fields, description.emittable)
+end
+
+local save_subscription = game.native_events.on(
+    "game_save",
+    { priority = 10 },
+    function(event)
+        print(event.type, event.turn)
+    end
+)
+game.native_events.off(save_subscription)
+```
+
+`events.native_types()` and `events.describe_native(name)` provide the same
+catalogue for code that also targets the global event facade.
+`game.native_events.emit(name, fields)` is intentionally narrower than custom
+`events.emit`: it is available only inside an active runtime callback, requires
+`events`, `game.read`, and `game.write`, and accepts exactly the native field
+set returned by `describe`. Missing or extra fields, wrong Lua types, invalid
+typed ids, and malformed coordinate strings are rejected before anything
+enters the native event bus.
+
 Lifecycle event names are:
 
 - `ccb.lifecycle.reload`, delivered to the new successful hot-reload runtime;
@@ -369,10 +398,20 @@ silently mixing spaces. `project_remain` and `project_combine` preserve the
 remainder when changing scale. Bounded `line`, `rectangle`, and `box`
 constructors accept an explicit maximum point count.
 
-`game.time.now()`, `game.time.turn_zero`, and
-`game.time.before_time_starts` return exact `TimePoint` values. `TimeDuration`
-stores exact turns. Unit values reject cross-dimension arithmetic and expose a
-checked conversion through `value(unit)`.
+`game.time.now()`, `game.time.turn_zero()`, and
+`game.time.before_time_starts()` return exact `TimePoint` values. `TimeDuration`
+stores exact turns. `game.time.snapshot(point)` expands a point into its
+calendar, season, moon, sunrise/sunset, and day/night values;
+`game.time.calendar()` captures the native world calendar and start points.
+`set_now` and `advance` accept an optional expected clock for optimistic
+conflict detection and deliberately do not simulate skipped turns.
+
+`game.weather.types/type`, `current`, and `generator` expose copied native
+weather data. `forecast` is deterministic, bounded to 14 days, and does not
+mutate generator state. Weather, temperature, and wind overrides are explicit
+checked writes and `clear_overrides()` restores all native defaults. Unit
+values reject cross-dimension arithmetic and expose a checked conversion
+through `value(unit)`.
 
 `game.enums.describe(kind)` records whether an old CBN enum is native,
 represented by a JSON id, or not applicable. `game.definitions` is the typed
@@ -426,6 +465,19 @@ file gives every method's exact parameters and result type.
 | `game.world` | active-map bounds, tiles, regions and vehicles | terrain/furniture/traps/fields/items |
 | `game.overmap` | existing-only tile/search/match queries | terrain, vision, exploration, notes and reveal |
 | `game.hordes` | group definitions, entities, legacy groups and summaries | spawn/update/remove/signal/advance |
+| `game.skills` | skill definitions and character levels/training | bounded level, exercise, training and practice updates |
+| `game.proficiencies` | definitions, categories and learning progress | grant/remove/practice/set progress |
+| `game.vitamins` / `game.addictions` | definitions and character pools/state | bounded pool, exposure and withdrawal updates |
+| `game.needs` | hunger, thirst, calories, sleep and health | checked set/modify/reset operations |
+| `game.martial_arts` | style definitions, known and selected state | learn/remove/select/trigger and hand policy |
+| `game.vehicles` | prototypes, live state, lift, parts and fuels | rename, cruise/stop/tracking and part enablement |
+| `game.npcs` | class catalogue and live NPC snapshots | rename, attitude and opinion updates |
+| `game.factions` / `game.camps` | faction resources/relations and bounded camp discovery | reputation/resources/policy/ownership/board updates |
+| `game.zones` | zone types, tokens, position and membership | create/rename/enable/move/remove |
+| `game.eocs` / `game.variables` | authored EOC metadata and talker variables | callback-scoped test/activate/queue and checked variables |
+| `game.achievements` / `game.statistics` | achievement progress, event history, transformations and scores | manual achievement controls |
+| `game.time` / `game.weather` | native calendar, forecasts, definitions and current state | conflict-checked clock and explicit weather overrides |
+| `game.native_events` | all 113 native event schemas and subscriptions | exact-schema callback-scoped event emission |
 
 Additional bounded services replace the remaining CBN game helpers:
 
@@ -447,7 +499,10 @@ loop from moving the player or repeatedly opening native interaction UIs.
 `game.api_supports(domain)` returns true only for a fully covered domain. The
 repository's stricter CBN comparison lives in
 `reference/cbn_coverage.json`: its schema-2 audit joins all 2,398 pinned
-inventory entries to implementation and test evidence.
+inventory entries to implementation and test evidence. The current native
+inventory records 132 typed-id kinds, 190 JSON definition types, 113 native
+events, and 39 reviewed capability domains; CCB-specific CDDA-derived systems
+are included in addition to the CBN reference mapping.
 
 ## Hooks and callback actors
 

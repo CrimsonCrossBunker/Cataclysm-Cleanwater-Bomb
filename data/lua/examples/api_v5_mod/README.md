@@ -16,6 +16,7 @@ The example demonstrates:
 - one page shared by Android touch, desktop ImGui, and terminal ImTui;
 - named actions from the current input context;
 - typed game values and detached definition lookup;
+- native calendar/weather snapshots and native event schema subscriptions;
 - a source-owned native action-menu entry and PC sidebar widget; and
 - a typed native lifecycle hook.
 

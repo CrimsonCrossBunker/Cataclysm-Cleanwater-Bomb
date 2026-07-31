@@ -42,6 +42,10 @@ scheduler.after(1, function()
     state.character.set("runtime_ready", true)
 end)
 
+game.native_events.on("game_save", function(event)
+    state.character.set("last_native_save_turn", event.turn)
+end)
+
 local page_id = "ccb_lua_v5_example.settings"
 
 ui.page(page_id, {
@@ -62,6 +66,16 @@ ui.page(page_id, {
         environment.profile .. " / " ..
         environment.input .. " / " ..
         environment.breakpoint
+    )
+
+    local calendar = game.time.snapshot()
+    local weather = game.weather.current()
+    local weather_name = weather.type and
+        weather.type.name or weather.weather.value
+    ctx:text(
+        calendar.time_of_day .. " / " ..
+        weather_name .. " / " ..
+        string.format("%.1f C", weather.temperature_c)
     )
 
     local query = state.page.get("draft_query", settings.query)

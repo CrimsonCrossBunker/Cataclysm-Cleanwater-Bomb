@@ -69,12 +69,13 @@ subsystem, which CCB does not contain.  Coordinate conversion, action-menu
 entries, native sidebar widgets, and bounded diagnostics all have CCB
 equivalents and must not be classified as exceptions.
 
-`check_luals_declarations.py` compares the API v5 LuaLS file to the native
-`set_function` registrations, every native usertype, and all 36 generated
-coordinate factories. It also verifies that each stub's parameter annotations
-match its callable signature, rejects duplicate methods and fields, requires
-named option records instead of opaque `table` parameters, and rejects a stale
-v4 declaration:
+`check_luals_declarations.py` compares the API v5 LuaLS file to all 438 native
+methods across 66 registered tables, the 55 tables attached to `game`, all 15
+native usertypes, and all 36 generated coordinate factories. It rejects an
+unmapped newly registered table, verifies every `game.*` field's API class,
+checks that each stub's parameter annotations match its callable signature,
+rejects duplicate methods and fields, requires named option records instead of
+opaque `table` parameters, and rejects a stale v4 declaration:
 
 ```sh
 python3 tools/lua_api/check_luals_declarations.py
