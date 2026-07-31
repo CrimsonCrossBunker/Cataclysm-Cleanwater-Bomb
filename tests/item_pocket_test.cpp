@@ -30,6 +30,7 @@
 #include "item_group.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_uid.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
