@@ -2064,6 +2064,9 @@ TEST_CASE( "lua_v5_effect_updates_notify_the_owning_creature",
     on_out_of_scope cleanup( [&player, &cold, &torso]() {
         player.remove_effect( cold, torso );
         player.clear_morale();
+        player.reset_bonuses();
+        player.process_effects();
+        player.reset();
     } );
 
     scoped_lua_user_script script;
