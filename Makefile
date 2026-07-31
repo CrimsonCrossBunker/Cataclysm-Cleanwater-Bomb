@@ -1151,8 +1151,6 @@ LUA_C_SOURCE_NAMES := \
   lzio.c
 LUA_C_SOURCES := $(addprefix $(SRC_DIR)/lua/,$(LUA_C_SOURCE_NAMES))
 LUA_UI_ENABLED_SOURCES := \
-  $(SRC_DIR)/catalua_bindings.cpp \
-  $(SRC_DIR)/catalua_game_handle.cpp \
   $(SRC_DIR)/catalua_ui.cpp \
   $(SRC_DIR)/catalua_ui_actions.cpp \
   $(SRC_DIR)/catalua_ui_events.cpp \
