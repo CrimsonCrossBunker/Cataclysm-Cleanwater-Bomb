@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <numeric>
 #include <string_view>
 
 #include "avatar.h"
