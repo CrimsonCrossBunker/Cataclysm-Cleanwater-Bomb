@@ -118,8 +118,13 @@
     },
     {
       "id": "mapgen",
-      "status": "planned",
+      "status": "covered",
       "target": "deterministic Lua mapgen and scoped mapgen context",
+      "evidence": [ "src/catalua_ui_mapgen.cpp", "src/catalua_ui.cpp dispatch_mapgen_postprocess", "src/mapgen.cpp", "game.mapgen" ],
+      "tests": [
+        "tests/catalua_ui_test.cpp [lua][bindings][mapgen][context]",
+        "tests/catalua_ui_test.cpp [lua][bindings][mapgen][hooks]"
+      ],
       "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_mapgen.cpp" ] } ]
     },
     {
@@ -132,8 +137,10 @@
     },
     {
       "id": "crafting",
-      "status": "planned",
+      "status": "covered",
       "target": "recipes, requirements, crafting queries and execution",
+      "evidence": [ "src/catalua_ui_crafting.cpp", "game.recipes", "game.crafting" ],
+      "tests": [ "tests/catalua_ui_test.cpp [lua][bindings][recipes]", "tests/catalua_ui_test.cpp [lua][bindings][crafting]" ],
       "rules": [
         {
           "sections": [ "functions", "members" ],

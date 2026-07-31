@@ -35,6 +35,12 @@ void remove_ammo( std::list<item> &dis_items, Character &p );
 
 void drop_or_handle( const item &newit, Character &p );
 
+// Checks the native environmental and character-state gates that must hold
+// before a craft can begin.  This is separate from material/proficiency
+// checks so non-UI safe-point dispatchers can preserve the same restrictions
+// as Character::craft() and Character::long_craft().
+bool crafting_allowed( const Character &p, const recipe &rec );
+
 // Per-choice data for the timer sub-menu when the modal is shown on an
 // in-flight unattended step.  All offsets are step-start anchored
 // (`alarm_at = passive_started_at + offset`), so the resulting

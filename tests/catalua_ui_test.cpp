@@ -13,6 +13,7 @@
 #include "catalua_ui_events.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_mapgen.h"
 #include "catalua_ui_modules.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
@@ -27,9 +28,17 @@
 #include "item.h"
 #include "json_loader.h"
 #include "magic.h"
+#include "map.h"
+#include "map_helpers.h"
+#include "mapgendata.h"
 #include "mission.h"
+#include "overmapbuffer.h"
 #include "path_info.h"
+#include "player_activity.h"
+#include "player_helpers.h"
 #include "pocket_type.h"
+#include "requirements.h"
+#include "trap.h"
 #include "ui_profile.h"
 #include "units.h"
 #include "weather.h"
@@ -43,6 +52,7 @@
 #include <iterator>
 #include <limits>
 #include <list>
+#include <map>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -1001,6 +1011,8 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK( find_binding_domain( "coordinates" ) != nullptr );
     CHECK( find_binding_domain( "missing" ) == nullptr );
     CHECK( binding_domain_is_covered( "coordinates" ) );
+    CHECK( binding_domain_is_covered( "crafting" ) );
+    CHECK( binding_domain_is_covered( "mapgen" ) );
 
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::table );
@@ -6090,4 +6102,729 @@ assert(game.state_get("test.good_event_count", 0) == 2)
 assert(game.state_get("test.bad_event_count", 0) == 1)
 )lua" );
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_recipe_catalog_is_detached_filtered_and_bounded",
+           "[lua][bindings][recipes][crafting][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.recipes.limits()
+assert(limits.default_limit == 64)
+assert(limits.maximum_limit == 256)
+assert(limits.maximum_batch == 1000)
+
+local page = game.recipes.list({
+    offset = 0,
+    limit = 3,
+    include_obsolete = false
+})
+assert(page.limit == 3)
+assert(page.returned == #page.items)
+assert(page.returned <= page.total)
+assert(page.has_more ==
+    (page.offset + page.returned < page.total))
+for _, entry in ipairs(page.items) do
+    assert(entry.id.kind == "recipe")
+    assert(type(entry.result_name) == "string")
+    assert(type(entry.category) == "string")
+    assert(type(entry.subcategory) == "string")
+    assert(math.type(entry.difficulty) == "integer")
+    assert(entry.time.turns >= 0)
+    assert(entry.required_skills.returned ==
+        #entry.required_skills.items)
+    assert(entry.books.returned == #entry.books.items)
+    assert(entry.proficiencies.returned ==
+        #entry.proficiencies.items)
+    assert(type(entry.availability.known) == "boolean")
+    assert(type(entry.availability.craftable) == "boolean")
+end
+
+local cudgel = game.types.id(
+    "recipe", "cudgel_test_no_tools")
+local detail = game.recipes.get(cudgel, 2)
+assert(detail.id == cudgel)
+assert(detail.result.kind == "item")
+assert(detail.result.value == "cudgel")
+assert(detail.batch == 2)
+assert(detail.time.turns >= 0)
+assert(type(detail.description) == "string")
+
+local fabrication = game.types.id("skill", "fabrication")
+local skill_page = game.recipes.by_skill(
+    fabrication, { limit = 8 })
+assert(skill_page.returned == #skill_page.items)
+for _, entry in ipairs(skill_page.items) do
+    assert(entry.primary_skill == fabrication)
+end
+
+local baseball = game.types.id("recipe", "test_baseball")
+assert(game.recipes.has_flag(baseball, "BLIND_EASY") == true)
+local flag_page = game.recipes.by_flag(
+    "BLIND_EASY", { limit = 8 })
+assert(flag_page.returned == #flag_page.items)
+for _, entry in ipairs(flag_page.items) do
+    assert(game.recipes.has_flag(entry.id, "BLIND_EASY"))
+end
+
+assert(pcall(function()
+    game.recipes.list({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.recipes.list({ batch = 1001 })
+end) == false)
+assert(pcall(function()
+    game.recipes.list({ skill = cudgel })
+end) == false)
+assert(pcall(function()
+    game.recipes.list({ unknown = true })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( "game.recipes.list({ limit = 1 })" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.read" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v5_requirements_are_structured_bounded_and_inventory_aware",
+           "[lua][bindings][requirements][crafting][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.requirements.limits()
+assert(limits.default_limit == 64)
+assert(limits.maximum_limit == 256)
+assert(limits.maximum_batch == 1000)
+assert(limits.maximum_groups == 128)
+assert(limits.maximum_alternatives_per_group == 64)
+
+local eggs = game.requirements.get("test_eggs", 2)
+assert(eggs ~= nil)
+assert(eggs.id == "test_eggs")
+assert(eggs.batch == 2)
+assert(type(eggs.null) == "boolean")
+assert(type(eggs.empty) == "boolean")
+assert(type(eggs.blacklisted) == "boolean")
+assert(type(eggs.can_make) == "boolean")
+assert(type(eggs.all_text) == "string")
+assert(type(eggs.missing_text) == "string")
+assert(eggs.tools.returned == #eggs.tools.items)
+assert(eggs.qualities.returned == #eggs.qualities.items)
+assert(eggs.components.returned == #eggs.components.items)
+assert(eggs.components.total == 1)
+local group = eggs.components.items[1]
+assert(group.total == 1)
+assert(group.returned == #group.items)
+assert(type(group.satisfied) == "boolean")
+local component = group.items[1]
+assert(component.id ==
+    game.types.id("item", "test_egg"))
+assert(component.count == 2)
+assert(component.count_for_batch == 4)
+assert(type(component.by_charges) == "boolean")
+assert(type(component.available) == "boolean")
+
+assert(game.requirements.get(
+    "this_requirement_does_not_exist") == nil)
+
+local page = game.requirements.list({
+    offset = 0,
+    limit = 2,
+    batch = 1
+})
+assert(page.limit == 2)
+assert(page.returned == #page.items)
+assert(page.has_more ==
+    (page.offset + page.returned < page.total))
+
+local recipe = game.types.id(
+    "recipe", "cudgel_test_no_tools")
+local needs = game.requirements.for_recipe(recipe, 3)
+assert(needs.recipe == recipe)
+assert(needs.batch == 3)
+assert(math.type(needs.deduped_alternative_count) ==
+    "integer")
+assert(type(needs.deduped_too_complex) == "boolean")
+assert(type(needs.has_required_skills) == "boolean")
+assert(type(needs.has_required_proficiencies) == "boolean")
+assert(needs.components.returned ==
+    #needs.components.items)
+
+assert(pcall(function()
+    game.requirements.get("", 1)
+end) == false)
+assert(pcall(function()
+    game.requirements.get("test_eggs", 0)
+end) == false)
+assert(pcall(function()
+    game.requirements.for_recipe(
+        game.types.id("item", "rock"), 1)
+end) == false)
+assert(pcall(function()
+    game.requirements.list({ unknown = true })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_crafting_starts_only_through_the_safe_action_queue",
+           "[lua][bindings][crafting][actions][integration]" )
+{
+    clear_avatar();
+    on_out_of_scope reset_avatar( []() {
+        clear_avatar();
+    } );
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events",
+            "game.actions",
+            "game.read",
+            "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local recipe = game.types.id(
+    "recipe", "cudgel_test_no_tools")
+
+assert(pcall(function()
+    game.crafting.queue_start(recipe)
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(recipe, { batch = 0 })
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(recipe, { batch = 1001 })
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(recipe, { long = 1 })
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(recipe, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.crafting.queue_start(
+        game.types.id("item", "rock"))
+end) == false)
+
+events.on("game_begin", function()
+    local request = game.crafting.queue_start(
+        recipe, { batch = 1, long = false })
+    assert(math.type(request) == "integer")
+    local status = game.actions.status(0)
+    assert(status.pending_count == 1)
+    assert(#status.pending == 1)
+    assert(status.pending[1].request_id == request)
+    assert(status.pending[1].type == "craft")
+    assert(status.pending[1].recipe ==
+        "cudgel_test_no_tools")
+    assert(status.pending[1].batch == 1)
+    assert(status.pending[1].long == false)
+    assert(status.pending[1].source == "user")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    avatar &player = get_avatar();
+    player.learn_recipe(
+        &recipe_id( "cudgel_test_no_tools" ).obj() );
+    if( player.activity ) {
+        player.cancel_activity();
+    }
+    get_event_bus().send<event_type::game_begin>(
+        "lua-crafting-action-test" );
+    player.activity = player_activity(
+                          activity_id( "ACT_AIM" ), 100 );
+    const std::optional<bool> dispatched =
+        cata::lua_ui::process_next_action();
+    REQUIRE( dispatched );
+    CHECK_FALSE( *dispatched );
+    CHECK_FALSE( cata::lua_ui::process_next_action() );
+
+    if( player.activity ) {
+        player.cancel_activity();
+    }
+    player.controlling_vehicle = true;
+    get_event_bus().send<event_type::game_begin>(
+        "lua-crafting-driving-action-test" );
+    const std::optional<bool> driving_dispatch =
+        cata::lua_ui::process_next_action();
+    player.controlling_vehicle = false;
+    REQUIRE( driving_dispatch );
+    CHECK_FALSE( *driving_dispatch );
+    CHECK_FALSE( cata::lua_ui::process_next_action() );
+
+    script.write( R"lua(
+local status = game.actions.status()
+assert(status.pending_count == 0)
+assert(status.result_count == 2)
+assert(#status.results == 2)
+assert(status.results[1].type == "craft")
+assert(status.results[1].status == "failed")
+assert(status.results[1].action_taken == false)
+assert(string.find(status.results[1].error,
+    "activity", 1, true) ~= nil)
+assert(status.results[2].type == "craft")
+assert(status.results[2].status == "failed")
+assert(status.results[2].action_taken == false)
+assert(string.find(status.results[2].error,
+    "crafting is not currently allowed", 1, true) ~= nil)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+
+    if( player.activity ) {
+        player.cancel_activity();
+    }
+}
+
+TEST_CASE( "lua_v5_bounded_requirement_groups_check_every_alternative",
+           "[lua][bindings][requirements][crafting][integration]" )
+{
+    clear_avatar();
+    clear_map();
+    on_out_of_scope reset_world( []() {
+        clear_avatar();
+        clear_map();
+    } );
+
+    avatar &player = get_avatar();
+    player.i_add( item( itype_id( "rock" ) ) );
+
+    std::vector<item_comp> alternatives;
+    alternatives.reserve( 65 );
+    for( std::size_t index = 0; index < 64; ++index ) {
+        alternatives.emplace_back(
+            itype_id( "2x4" ), 1 );
+    }
+    alternatives.emplace_back( itype_id( "rock" ), 1 );
+
+    requirement_data::alter_item_comp_vector components;
+    components.emplace_back( std::move( alternatives ) );
+    const requirement_id requirement(
+        "lua_v5_bounded_alternatives" );
+    auto &all_requirements = const_cast<
+                             std::map<requirement_id,
+                             requirement_data> &>(
+                                 requirement_data::all() );
+    REQUIRE( all_requirements.count( requirement ) == 0 );
+    on_out_of_scope remove_requirement(
+    [&all_requirements, &requirement]() {
+        all_requirements.erase( requirement );
+    } );
+    requirement_data::save_requirement(
+        requirement_data( {}, {}, components ),
+        requirement );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local requirement =
+    game.requirements.get(
+        "lua_v5_bounded_alternatives")
+local group = requirement.components.items[1]
+assert(group.total == 65)
+assert(group.returned == 64)
+assert(#group.items == 64)
+assert(group.truncated == true)
+assert(group.satisfied == true)
+for index = 1, #group.items do
+    assert(group.items[index].available == false)
+end
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_mapgen_context_is_bounded_deterministic_and_scoped",
+           "[lua][bindings][mapgen][context]" )
+{
+    small_fake_map scratch( ter_str_id( "t_dirt" ).id() );
+    mapgendata data(
+        *scratch.cast_to_map(), mapgendata::dummy_settings );
+
+    cata::lua_ui::script_mapgen_context read_only(
+        data, false, UINT64_C( 0x123456789abcdef0 ) );
+    CHECK( read_only.valid() );
+    CHECK( read_only.id() ==
+           cata::lua_ui::script_game_id(
+               "overmap_terrain", "field" ) );
+    CHECK( read_only.north() == read_only.get_nesw( 0 ) );
+    CHECK( read_only.east() == read_only.get_nesw( 1 ) );
+    CHECK( read_only.south() == read_only.get_nesw( 2 ) );
+    CHECK( read_only.west() == read_only.get_nesw( 3 ) );
+    CHECK( read_only.neast() == read_only.get_nesw( 4 ) );
+    CHECK( read_only.seast() == read_only.get_nesw( 5 ) );
+    CHECK( read_only.swest() == read_only.get_nesw( 6 ) );
+    CHECK( read_only.nwest() == read_only.get_nesw( 7 ) );
+    CHECK( read_only.above().value() == "field" );
+    CHECK( read_only.below().value() == "field" );
+    CHECK( read_only.zlevel() == 0 );
+    CHECK( read_only.get_rotation() == 0 );
+    CHECK( read_only.get_rot_suffix() == "_north" );
+    CHECK( read_only.terrain_at( 0, 0 ).value() == "t_dirt" );
+    CHECK_FALSE( read_only.furniture_at( 0, 0 ) );
+    CHECK_FALSE( read_only.trap_at( 0, 0 ) );
+    CHECK_THROWS( read_only.get_nesw( -1 ) );
+    CHECK_THROWS( read_only.get_nesw( 8 ) );
+    CHECK_THROWS( read_only.terrain_at( -1, 0 ) );
+    CHECK_THROWS( read_only.terrain_at( 24, 0 ) );
+    CHECK_THROWS(
+        read_only.set_terrain(
+            0, 0,
+            cata::lua_ui::script_game_id(
+                "terrain", "t_grass" ) ) );
+
+    cata::lua_ui::script_mapgen_context random_a(
+        data, false, UINT64_C( 0x1111222233334444 ) );
+    cata::lua_ui::script_mapgen_context random_b(
+        data, false, UINT64_C( 0x1111222233334444 ) );
+    for( int index = 0; index < 32; ++index ) {
+        CHECK( random_a.random_int( -1000, 1000 ) ==
+               random_b.random_int( -1000, 1000 ) );
+    }
+    CHECK_FALSE( random_a.random_chance( 0, 1 ) );
+    CHECK( random_a.random_chance( 1, 1 ) );
+    CHECK_THROWS( random_a.random_int( 2, 1 ) );
+    CHECK_THROWS( random_a.random_chance( 2, 1 ) );
+
+    cata::lua_ui::script_mapgen_context budgeted(
+        data, false, UINT64_C( 0x777788889999aaaa ) );
+    for( std::size_t operation = 0;
+         operation <
+         cata::lua_ui::script_mapgen_context::maximum_operations;
+         ++operation ) {
+        static_cast<void>( budgeted.random_int( 0, 1 ) );
+    }
+    CHECK( budgeted.operations_remaining() == 0 );
+    CHECK_THROWS( budgeted.random_int( 0, 1 ) );
+
+    cata::lua_ui::script_mapgen_context writable(
+        data, true, UINT64_C( 0x5555666677778888 ) );
+    const cata::lua_ui::script_game_id grass(
+        "terrain", "t_grass" );
+    const cata::lua_ui::script_game_id armchair(
+        "furniture", "f_armchair" );
+    const cata::lua_ui::script_game_id bubblewrap(
+        "trap", "tr_bubblewrap" );
+    CHECK( writable.set_terrain( 0, 0, grass ) );
+    CHECK( writable.terrain_at( 0, 0 ) == grass );
+    CHECK( writable.set_furniture( 0, 0, armchair ) );
+    REQUIRE( writable.furniture_at( 0, 0 ) );
+    CHECK( *writable.furniture_at( 0, 0 ) == armchair );
+    CHECK( writable.set_trap( 0, 0, bubblewrap ) );
+    REQUIRE( writable.trap_at( 0, 0 ) );
+    CHECK( *writable.trap_at( 0, 0 ) == bubblewrap );
+    writable.set_dir( 3, 42 );
+    CHECK( writable.get_direction( 3 ) == 42 );
+    CHECK_THROWS( writable.set_dir( 8, 0 ) );
+    CHECK_THROWS(
+        writable.nest( "unknown_lua_nested_mapgen", 0, 0 ) );
+    writable.nest( "mapgen_test_nested", 2, 2 );
+    CHECK( writable.operations_used() > 0 );
+    CHECK( writable.operations_remaining() <
+           cata::lua_ui::script_mapgen_context::maximum_operations );
+
+    writable.invalidate();
+    CHECK_FALSE( writable.valid() );
+    CHECK_THROWS( writable.id() );
+    CHECK_THROWS( writable.operations_used() );
+}
+
+TEST_CASE( "lua_v5_mapgen_hooks_are_filtered_ordered_and_read_only",
+           "[lua][bindings][mapgen][hooks][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "events", "game.hooks", "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local calls = 0
+local retained = nil
+local limits = game.mapgen.limits()
+assert(limits.map_width == 24 and limits.map_height == 24)
+assert(limits.operations == 8192)
+assert(limits.nested_generators == 32)
+assert(limits.full_generators == 4)
+assert(limits.handlers == 1024)
+assert(limits.registered == 0)
+assert(limits.terrain_ids == 64)
+
+assert(pcall(function()
+    game.mapgen.on_postprocess({
+        terrain_ids = { "__unknown_lua_oter__" }
+    }, function() end)
+end) == false)
+assert(pcall(function()
+    game.mapgen.on_postprocess({
+        z_min = 1, z_max = 0
+    }, function() end)
+end) == false)
+
+local removed = game.mapgen.on_postprocess(function()
+    error("removed mapgen handler ran")
+end)
+assert(game.mapgen.off(removed) == true)
+assert(game.mapgen.off(removed) == false)
+
+game.mapgen.on_postprocess({
+    priority = 100,
+    once = true,
+    terrain_ids = { "field", "field" },
+    z_min = 0,
+    z_max = 0
+}, function(ctx)
+    calls = calls + 1
+    assert(calls == 1)
+    assert(ctx:valid())
+    assert(ctx:id().kind == "overmap_terrain")
+    assert(ctx:id().value == "field")
+    assert(ctx:zlevel() == 0)
+    assert(ctx:get_rot_suffix() == "_north")
+    assert(ctx:north().kind == "overmap_terrain")
+    assert(ctx:operations_used() > 0)
+    retained = ctx
+    local grass = game.types.id("terrain", "t_grass")
+    assert(pcall(function()
+        ctx:set_terrain(0, 0, grass)
+    end) == false)
+end)
+
+game.mapgen.on_postprocess({ priority = -100 }, function(ctx)
+    calls = calls + 1
+    if calls == 2 then
+        assert(retained ~= nil)
+        assert(retained:valid() == false)
+        assert(pcall(function() retained:id() end) == false)
+    else
+        assert(calls == 3)
+    end
+    assert(ctx:valid())
+end)
+
+game.mapgen.on_postprocess({
+    terrain_ids = { "forest" }
+}, function()
+    error("terrain-filtered mapgen handler ran")
+end)
+game.mapgen.on_postprocess({
+    z_min = 1,
+    z_max = 1
+}, function()
+    error("z-filtered mapgen handler ran")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    small_fake_map scratch( ter_str_id( "t_dirt" ).id() );
+    mapgendata data(
+        *scratch.cast_to_map(), mapgendata::dummy_settings );
+    cata::lua_ui::dispatch_mapgen_postprocess( data );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+    cata::lua_ui::dispatch_mapgen_postprocess( data );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_mapgen_hooks_mutate_with_scoped_deterministic_contexts",
+           "[lua][bindings][mapgen][hooks][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read", "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local calls = 0
+local retained = nil
+local first_sequence = nil
+
+game.mapgen.on_postprocess({
+    priority = 100,
+    once = true,
+    terrain_ids = { "field" },
+    z_min = 0,
+    z_max = 0
+}, function(ctx)
+    calls = calls + 1
+    assert(calls == 1)
+    retained = ctx
+    assert(pcall(function() ctx:terrain_at(-1, 0) end) == false)
+    assert(pcall(function()
+        ctx:set_terrain(
+            0, 0,
+            game.types.id("terrain", "__unknown_lua_terrain__"))
+    end) == false)
+    assert(pcall(function()
+        ctx:nest("__unknown_lua_nested_mapgen__", 0, 0)
+    end) == false)
+
+    assert(ctx:set_terrain(
+        1, 1, game.types.id("terrain", "t_grass")))
+    assert(ctx:set_furniture(
+        2, 2, game.types.id("furniture", "f_armchair")))
+    assert(ctx:set_trap(
+        3, 3, game.types.id("trap", "tr_bubblewrap")))
+    ctx:nest("mapgen_test_nested", 4, 4)
+end)
+
+game.mapgen.on_postprocess({ priority = 0 }, function(ctx)
+    calls = calls + 1
+    assert(retained ~= nil and retained:valid() == false)
+    assert(ctx:terrain_at(1, 1).value == "t_grass")
+    assert(ctx:furniture_at(2, 2).value == "f_armchair")
+    assert(ctx:trap_at(3, 3).value == "tr_bubblewrap")
+
+    local sequence = {
+        ctx:random_int(-1000, 1000),
+        ctx:random_int(-1000, 1000),
+        ctx:random_int(-1000, 1000)
+    }
+    if first_sequence == nil then
+        assert(calls == 2)
+        first_sequence = sequence
+    else
+        assert(calls == 3)
+        for index = 1, #sequence do
+            assert(sequence[index] == first_sequence[index])
+        end
+    end
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    small_fake_map scratch( ter_str_id( "t_dirt" ).id() );
+    mapgendata data(
+        *scratch.cast_to_map(), mapgendata::dummy_settings );
+    cata::lua_ui::dispatch_mapgen_postprocess( data );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+    CHECK( scratch.cast_to_map()->ter(
+               tripoint_bub_ms( 1, 1, 0 ) ) ==
+           ter_str_id( "t_grass" ).id() );
+    CHECK( scratch.cast_to_map()->furn(
+               tripoint_bub_ms( 2, 2, 0 ) ) ==
+           furn_str_id( "f_armchair" ).id() );
+    CHECK( scratch.cast_to_map()->tr_at(
+               tripoint_bub_ms( 3, 3, 0 ) ).id ==
+           trap_str_id( "tr_bubblewrap" ) );
+
+    cata::lua_ui::dispatch_mapgen_postprocess( data );
+    CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_mapgen_hooks_respect_the_native_postprocess_gate",
+           "[lua][bindings][mapgen][hooks][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [
+            "events", "game.hooks", "game.read",
+            "game.write"
+        ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.mapgen.on_postprocess({
+    once = true,
+    terrain_ids = { "field" },
+    z_min = 0,
+    z_max = 0
+}, function(ctx)
+    ctx:set_furniture(
+        0, 0,
+        game.types.id("furniture", "f_armchair"))
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+
+    const tripoint_abs_omt position( 77, 77, 0 );
+    std::vector<std::pair<tripoint_abs_omt, oter_id>>
+            original_terrain;
+    for( int dx = -1; dx <= 1; ++dx ) {
+        for( int dy = -1; dy <= 1; ++dy ) {
+            const tripoint_abs_omt nearby =
+                position + tripoint( dx, dy, 0 );
+            original_terrain.emplace_back(
+                nearby, overmap_buffer.ter( nearby ) );
+            overmap_buffer.ter_set(
+                nearby, oter_str_id( "field" ).id() );
+        }
+    }
+    on_out_of_scope restore_terrain( [&original_terrain]() {
+        for( const auto &[where, terrain] : original_terrain ) {
+            overmap_buffer.ter_set( where, terrain );
+        }
+    } );
+
+    const auto generated_furniture =
+    [&position]( const bool run_post_process ) {
+        smallmap generated;
+        generated.generate(
+            position, calendar::turn, false,
+            run_post_process );
+        const furn_id result = generated.cast_to_map()->furn(
+                                   tripoint_bub_ms( 0, 0, 0 ) );
+        generated.delete_unmerged_submaps();
+        return result;
+    };
+
+    const furn_id marker = furn_str_id( "f_armchair" ).id();
+    CHECK( generated_furniture( false ) != marker );
+    CHECK( generated_furniture( true ) == marker );
+    CHECK( cata::lua_ui::status().last_error.empty() );
 }

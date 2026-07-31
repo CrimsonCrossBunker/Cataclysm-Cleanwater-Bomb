@@ -40,6 +40,10 @@ void on_turn()
 {
 }
 
+void dispatch_mapgen_postprocess( mapgendata & )
+{
+}
+
 void on_world_ready()
 {
 }

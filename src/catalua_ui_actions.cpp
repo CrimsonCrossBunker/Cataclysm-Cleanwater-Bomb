@@ -15,6 +15,7 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "calendar.h"
+#include "crafting.h"
 #include "item.h"
 #include "item_location.h"
 #include "input_context_actions.h"
@@ -25,6 +26,7 @@
 #include "mutation.h"
 #include "output.h"
 #include "point.h"
+#include "recipe.h"
 #include "translations.h"
 
 namespace cata::lua_ui
@@ -48,6 +50,7 @@ struct action_request {
     std::string source_id;
     std::string label;
     bool dangerous = false;
+    bool bool_argument = false;
 };
 
 struct action_result {
@@ -229,6 +232,11 @@ sol::table request_snapshot( sol::state_view &state, const action_request &reque
         snapshot["action"] = request.text_argument;
         snapshot["context_revision"] = request.context_revision;
         snapshot["dangerous"] = request.dangerous;
+        snapshot["source"] = request.source_id;
+    } else if( request.type == "craft" ) {
+        snapshot["recipe"] = request.text_argument;
+        snapshot["batch"] = request.integer_argument;
+        snapshot["long"] = request.bool_argument;
         snapshot["source"] = request.source_id;
     }
     return snapshot;
@@ -460,6 +468,47 @@ bool dispatch_action( const action_request &request )
         }
         return true;
     }
+    if( request.type == "craft" ) {
+        if( player.activity ) {
+            throw std::runtime_error(
+                "cannot start a craft while an activity is active" );
+        }
+        const recipe_id id( request.text_argument );
+        if( !id.is_valid() ) {
+            throw std::runtime_error(
+                "queued recipe is no longer available" );
+        }
+        const recipe &value = id.obj();
+        const int batch =
+            static_cast<int>( request.integer_argument );
+        if( !player.has_recipe( &value ) ) {
+            throw std::runtime_error(
+                "the recipe is not currently available to the avatar" );
+        }
+        if( !value.character_has_required_proficiencies( player ) ) {
+            throw std::runtime_error(
+                "the avatar lacks a required proficiency" );
+        }
+        if( !crafting_allowed( player, value ) ) {
+            throw std::runtime_error(
+                "crafting is not currently allowed" );
+        }
+        if( !player.can_start_craft(
+                &value, recipe_filter_flags::none, batch ) ) {
+            throw std::runtime_error(
+                "the recipe cannot currently be started" );
+        }
+        if( request.bool_argument ) {
+            player.make_all_craft( id, batch, std::nullopt );
+        } else {
+            player.make_craft( id, batch );
+        }
+        if( !player.activity ) {
+            throw std::runtime_error(
+                "craft setup was canceled or rejected" );
+        }
+        return true;
+    }
     throw std::runtime_error( "unsupported queued action" );
 }
 
@@ -524,6 +573,35 @@ std::uint64_t enqueue_context_action( const std::string &action,
     request.source_id = source_id;
     request.label = descriptor.label;
     request.dangerous = descriptor.dangerous;
+    pending_actions.push_back( std::move( request ) );
+    return pending_actions.back().id;
+}
+
+std::uint64_t enqueue_craft_action( const std::string &recipe,
+                                    const int batch,
+                                    const bool long_craft,
+                                    const std::string &source_id )
+{
+    if( pending_actions.size() >= maximum_pending_actions ) {
+        throw std::runtime_error( "game.actions queue is full" );
+    }
+    if( recipe.empty() || recipe.size() > 256 ||
+        recipe.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "queued recipe id must contain 1 to 256 non-NUL bytes" );
+    }
+    if( batch < 1 || batch > 1000 ) {
+        throw std::invalid_argument(
+            "queued craft batch must be within 1..1000" );
+    }
+    action_request request;
+    request.id = next_action_id++;
+    request.type = "craft";
+    request.text_argument = recipe;
+    request.integer_argument = batch;
+    request.queued_turn = current_turn();
+    request.source_id = source_id;
+    request.bool_argument = long_craft;
     pending_actions.push_back( std::move( request ) );
     return pending_actions.back().id;
 }

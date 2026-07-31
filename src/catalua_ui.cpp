@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "avatar.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_imgui.h"
 #include "cata_scope_helpers.h"
@@ -31,6 +32,7 @@
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_bionics.h"
+#include "catalua_ui_crafting.h"
 #include "catalua_ui_creatures.h"
 #include "catalua_ui_effects.h"
 #include "catalua_ui_events.h"
@@ -41,6 +43,7 @@
 #include "catalua_ui_items.h"
 #include "catalua_ui_magic.h"
 #include "catalua_ui_manifest.h"
+#include "catalua_ui_mapgen.h"
 #include "catalua_ui_missions.h"
 #include "catalua_ui_modules.h"
 #include "catalua_ui_mutations.h"
@@ -60,15 +63,20 @@
 #include "event_bus.h"
 #include "event_subscriber.h"
 #include "filesystem.h"
+#include "game.h"
+#include "game_constants.h"
 #include "imgui/imgui.h"
 #include "input_context.h"
 #include "input_context_actions.h"
 #include "json_loader.h"
 #include "messages.h"
+#include "mapgendata.h"
 #include "mod_manager.h"
 #include "output.h"
 #include "path_info.h"
 #include "translations.h"
+#include "thread_pool.h"
+#include "type_id.h"
 #include "ui_profile.h"
 #include "ui_manager.h"
 #include "uilist.h"
@@ -258,6 +266,18 @@ struct script_source {
     fs::path entry;
 };
 
+struct mapgen_handler_filter {
+    std::vector<std::string> terrain_ids;
+    int z_min = -OVERMAP_DEPTH;
+    int z_max = OVERMAP_HEIGHT;
+};
+
+struct mapgen_handler_options {
+    mapgen_handler_filter filter;
+    int priority = 0;
+    bool once = false;
+};
+
 class runtime_state : public event_subscriber
 {
     public:
@@ -286,7 +306,11 @@ class runtime_state : public event_subscriber
         std::vector<page_definition> pages;
         script_event_registry event_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
+        script_event_registry mapgen_registry;
+        std::unordered_map<std::uint64_t, sol::protected_function> mapgen_callbacks;
+        std::unordered_map<std::uint64_t, mapgen_handler_filter> mapgen_filters;
         int event_dispatch_depth = 0;
+        int mapgen_dispatch_depth = 0;
         std::size_t generation = 0;
         std::size_t world_generation = 0;
         bool accept_actions = false;
@@ -314,6 +338,7 @@ std::size_t generation_counter = 0;
 std::size_t world_generation_counter = 0;
 std::deque<runtime_diagnostic_record> diagnostic_history;
 std::uint64_t diagnostic_sequence = 0;
+bool mapgen_bootstrap_attempted = false;
 
 bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
                             const std::string &display_name,
@@ -876,6 +901,144 @@ bool unregister_event_handler( runtime_state &state, const std::uint64_t id )
     return true;
 }
 
+void require_mapgen_hook_capabilities( const runtime_state &state )
+{
+    require_api_version( state, 5, "game.mapgen" );
+    require_capability( state, "events" );
+    require_capability( state, "game.hooks" );
+    require_capability( state, "game.read" );
+}
+
+mapgen_handler_options read_mapgen_handler_options(
+    const sol::optional<sol::table> &options )
+{
+    mapgen_handler_options result;
+    if( !options ) {
+        return result;
+    }
+
+    result.priority = options->get_or( "priority", 0 );
+    result.once = options->get_or( "once", false );
+    result.filter.z_min = options->get_or( "z_min", -OVERMAP_DEPTH );
+    result.filter.z_max = options->get_or( "z_max", OVERMAP_HEIGHT );
+    if( result.filter.z_min < -OVERMAP_DEPTH ||
+        result.filter.z_max > OVERMAP_HEIGHT ||
+        result.filter.z_min > result.filter.z_max ) {
+        throw std::invalid_argument(
+            "game.mapgen.on_postprocess requires ordered z_min/z_max "
+            "within the overmap bounds" );
+    }
+
+    const sol::object raw_terrain_ids = ( *options )["terrain_ids"];
+    if( !raw_terrain_ids.valid() ||
+        raw_terrain_ids.get_type() == sol::type::nil ) {
+        return result;
+    }
+    if( raw_terrain_ids.get_type() != sol::type::table ) {
+        throw std::invalid_argument(
+            "game.mapgen.on_postprocess terrain_ids must be an array" );
+    }
+
+    const sol::table terrain_ids = raw_terrain_ids.as<sol::table>();
+    if( terrain_ids.size() > 64 ) {
+        throw std::invalid_argument(
+            "game.mapgen.on_postprocess accepts at most 64 terrain_ids" );
+    }
+    result.filter.terrain_ids.reserve( terrain_ids.size() );
+    for( std::size_t index = 1; index <= terrain_ids.size(); ++index ) {
+        const sol::object raw_id = terrain_ids[index];
+        if( !raw_id.valid() || raw_id.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.mapgen.on_postprocess terrain_ids must be an array "
+                "of strings" );
+        }
+        const std::string id = raw_id.as<std::string>();
+        if( id.empty() || id.size() > 256 ||
+            !oter_str_id( id ).is_valid() ) {
+            throw std::invalid_argument(
+                "game.mapgen.on_postprocess received an unknown "
+                "overmap terrain id" );
+        }
+        result.filter.terrain_ids.push_back( id );
+    }
+    std::sort( result.filter.terrain_ids.begin(),
+               result.filter.terrain_ids.end() );
+    result.filter.terrain_ids.erase(
+        std::unique( result.filter.terrain_ids.begin(),
+                     result.filter.terrain_ids.end() ),
+        result.filter.terrain_ids.end() );
+    return result;
+}
+
+std::uint64_t register_mapgen_handler(
+    runtime_state &state, const sol::optional<sol::table> &options,
+    sol::protected_function callback )
+{
+    require_mapgen_hook_capabilities( state );
+    if( !state.current_source || !callback.valid() ) {
+        throw std::runtime_error(
+            "game.mapgen.on_postprocess requires an active source and "
+            "callback function" );
+    }
+    const mapgen_handler_options parsed =
+        read_mapgen_handler_options( options );
+    const std::uint64_t id = state.mapgen_registry.subscribe(
+                                 "mapgen.postprocess", parsed.priority,
+                                 *state.current_source, parsed.once );
+    try {
+        state.mapgen_callbacks.emplace( id, std::move( callback ) );
+        state.mapgen_filters.emplace( id, parsed.filter );
+    } catch( ... ) {
+        state.mapgen_registry.unsubscribe_unchecked( id );
+        state.mapgen_callbacks.erase( id );
+        state.mapgen_filters.erase( id );
+        throw;
+    }
+    return id;
+}
+
+bool unregister_mapgen_handler(
+    runtime_state &state, const std::uint64_t id )
+{
+    require_mapgen_hook_capabilities( state );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.mapgen.off is outside a Lua source context" );
+    }
+    if( !state.mapgen_registry.unsubscribe(
+            id, *state.current_source ) ) {
+        return false;
+    }
+    state.mapgen_callbacks.erase( id );
+    state.mapgen_filters.erase( id );
+    return true;
+}
+
+sol::table mapgen_limits( runtime_state &state, sol::this_state lua )
+{
+    require_mapgen_hook_capabilities( state );
+    sol::state_view view( lua );
+    sol::table result = view.create_table();
+    result["map_width"] = script_mapgen_context::map_width;
+    result["map_height"] = script_mapgen_context::map_height;
+    result["operations"] = script_mapgen_context::maximum_operations;
+    result["nested_generators"] =
+        script_mapgen_context::maximum_nested_generators;
+    result["full_generators"] =
+        script_mapgen_context::maximum_full_generators;
+    result["handlers"] =
+        script_event_registry::maximum_subscriptions;
+    result["registered"] = state.mapgen_registry.size();
+    result["priority_min"] =
+        script_event_registry::minimum_priority;
+    result["priority_max"] =
+        script_event_registry::maximum_priority;
+    result["z_min"] = -OVERMAP_DEPTH;
+    result["z_max"] = OVERMAP_HEIGHT;
+    result["terrain_ids"] = 64;
+    return result;
+}
+
 std::size_t loaded_source_index( const runtime_state &state,
                                  const std::string_view source_id )
 {
@@ -1200,6 +1363,7 @@ sol::table lua_runtime_status( sol::this_state lua, const runtime_state &runtime
     result["world_generation"] = runtime.world_generation;
     result["pages"] = runtime.pages.size();
     result["event_handlers"] = runtime.event_registry.size();
+    result["mapgen_handlers"] = runtime.mapgen_registry.size();
     result["sources"] = runtime.sources.size();
     result["memory_used"] = runtime.memory.used;
     result["memory_limit"] = runtime.memory.limit;
@@ -1238,6 +1402,7 @@ sol::table diagnostic_string_array(
 struct source_resource_counts {
     std::size_t pages = 0;
     std::size_t event_handlers = 0;
+    std::size_t mapgen_handlers = 0;
     std::size_t scheduled_tasks = 0;
     std::size_t services = 0;
     std::size_t modules = 0;
@@ -1256,6 +1421,12 @@ std::vector<source_resource_counts> count_source_resources(
          runtime.event_registry.all() ) {
         if( event.source_index < result.size() ) {
             ++result[event.source_index].event_handlers;
+        }
+    }
+    for( const script_event_subscription &handler :
+         runtime.mapgen_registry.all() ) {
+        if( handler.source_index < result.size() ) {
+            ++result[handler.source_index].mapgen_handlers;
         }
     }
     for( const scheduled_script_task &task : runtime.scheduler.all() ) {
@@ -1331,12 +1502,14 @@ sol::table lua_runtime_diagnostics(
     callbacks["slow_threshold_us"] = slow_callback_threshold_us;
     callbacks["last_slow"] = runtime.last_slow_callback;
     callbacks["event_dispatch_depth"] = runtime.event_dispatch_depth;
+    callbacks["mapgen_dispatch_depth"] = runtime.mapgen_dispatch_depth;
     callbacks["service_call_depth"] = runtime.service_call_depth;
     snapshot["callbacks"] = std::move( callbacks );
 
     sol::table resources = state.create_table();
     resources["pages"] = runtime.pages.size();
     resources["event_handlers"] = runtime.event_registry.size();
+    resources["mapgen_handlers"] = runtime.mapgen_registry.size();
     resources["scheduled_tasks"] = runtime.scheduler.size();
     resources["scheduled_callbacks"] = runtime.scheduled_callbacks.size();
     resources["services"] = runtime.service_registry.size();
@@ -1359,6 +1532,8 @@ sol::table lua_runtime_diagnostics(
     limits["scheduler_callbacks_per_turn"] =
         deterministic_turn_scheduler::maximum_callbacks_per_turn;
     limits["event_handlers"] =
+        script_event_registry::maximum_subscriptions;
+    limits["mapgen_handlers"] =
         script_event_registry::maximum_subscriptions;
     limits["services"] = script_service_registry::maximum_services;
     limits["service_methods"] =
@@ -1389,6 +1564,7 @@ sol::table lua_runtime_diagnostics(
             diagnostic_string_array( state, manifest.dependencies );
         source["pages"] = counts.pages;
         source["event_handlers"] = counts.event_handlers;
+        source["mapgen_handlers"] = counts.mapgen_handlers;
         source["scheduled_tasks"] = counts.scheduled_tasks;
         source["services"] = counts.services;
         source["modules"] = counts.modules;
@@ -1759,12 +1935,67 @@ void initialize_state( runtime_state &state )
                    source_id + ":" + name, copied );
     } );
 
+    state.lua.new_usertype<script_mapgen_context>(
+        "ScriptMapgenContext", sol::no_constructor,
+        "valid", &script_mapgen_context::valid,
+        "operations_used", &script_mapgen_context::operations_used,
+        "operations_remaining",
+        &script_mapgen_context::operations_remaining,
+        "id", &script_mapgen_context::id,
+        "north", &script_mapgen_context::north,
+        "east", &script_mapgen_context::east,
+        "south", &script_mapgen_context::south,
+        "west", &script_mapgen_context::west,
+        "neast", &script_mapgen_context::neast,
+        "seast", &script_mapgen_context::seast,
+        "swest", &script_mapgen_context::swest,
+        "nwest", &script_mapgen_context::nwest,
+        "above", &script_mapgen_context::above,
+        "below", &script_mapgen_context::below,
+        "get_nesw", &script_mapgen_context::get_nesw,
+        "zlevel", &script_mapgen_context::zlevel,
+        "get_direction", &script_mapgen_context::get_direction,
+        "set_dir", &script_mapgen_context::set_dir,
+        "get_rotation", &script_mapgen_context::get_rotation,
+        "get_rot_suffix", &script_mapgen_context::get_rot_suffix,
+        "random_int", &script_mapgen_context::random_int,
+        "random_chance", &script_mapgen_context::random_chance,
+        "terrain_at", &script_mapgen_context::terrain_at,
+        "furniture_at", &script_mapgen_context::furniture_at,
+        "trap_at", &script_mapgen_context::trap_at,
+        "set_terrain", &script_mapgen_context::set_terrain,
+        "set_furniture", &script_mapgen_context::set_furniture,
+        "set_trap", &script_mapgen_context::set_trap,
+        "fill_groundcover", &script_mapgen_context::fill_groundcover,
+        "nest", &script_mapgen_context::nest,
+        "generate", &script_mapgen_context::generate );
+
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
     install_value_type_api( state.lua, game, [&state]() {
         require_api_version( state, 5, "game.types" );
         require_capability( state, "game.read" );
     } );
+    sol::table mapgen = state.lua.create_table();
+    mapgen.set_function(
+        "on_postprocess",
+        sol::overload(
+    [&state]( sol::protected_function callback ) {
+        return register_mapgen_handler(
+                   state, std::nullopt, std::move( callback ) );
+    },
+    [&state]( const sol::table & options,
+              sol::protected_function callback ) {
+        return register_mapgen_handler(
+                   state, options, std::move( callback ) );
+    } ) );
+    mapgen.set_function( "off", [&state]( const std::uint64_t id ) {
+        return unregister_mapgen_handler( state, id );
+    } );
+    mapgen.set_function( "limits", [&state]( sol::this_state lua ) {
+        return mapgen_limits( state, lua );
+    } );
+    game["mapgen"] = std::move( mapgen );
     install_game_handle_api(
         state.lua, game,
     [&state]() {
@@ -1872,6 +2103,22 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.missions" );
         require_capability( state, "game.write" );
+    } );
+    install_crafting_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game.recipes" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.crafting" );
+        require_capability( state, "game.write" );
+    },
+    [&state]() {
+        return state.accept_actions;
+    },
+    [&state]() {
+        return current_manifest( state ).id;
     } );
     install_world_api(
         game,
@@ -2922,6 +3169,88 @@ void run_scheduled_callbacks( runtime_state &state, const std::int64_t now )
     }
 }
 
+bool mapgen_filter_matches( const mapgen_handler_filter &filter,
+                            const mapgendata &data )
+{
+    if( data.zlevel() < filter.z_min || data.zlevel() > filter.z_max ) {
+        return false;
+    }
+    if( filter.terrain_ids.empty() ) {
+        return true;
+    }
+    const std::string terrain_id = data.terrain_type().id().str();
+    return std::binary_search(
+               filter.terrain_ids.begin(), filter.terrain_ids.end(),
+               terrain_id );
+}
+
+void hash_mapgen_byte( std::uint64_t &hash, const std::uint8_t value )
+{
+    hash ^= value;
+    hash *= UINT64_C( 1099511628211 );
+}
+
+void hash_mapgen_integer( std::uint64_t &hash, const std::uint64_t value )
+{
+    for( unsigned int shift = 0; shift < 64; shift += 8 ) {
+        hash_mapgen_byte(
+            hash, static_cast<std::uint8_t>( value >> shift ) );
+    }
+}
+
+void hash_mapgen_string(
+    std::uint64_t &hash, const std::string_view value )
+{
+    hash_mapgen_integer( hash, value.size() );
+    for( const unsigned char ch : value ) {
+        hash_mapgen_byte( hash, ch );
+    }
+}
+
+std::uint64_t deterministic_mapgen_seed(
+    const mapgendata &data, const std::string_view source_id )
+{
+    std::uint64_t hash = UINT64_C( 1469598103934665603 );
+    hash_mapgen_integer( hash, g ? g->get_seed() : 0 );
+    hash_mapgen_integer(
+        hash, static_cast<std::uint64_t>(
+            static_cast<std::int64_t>( data.pos().x() ) ) );
+    hash_mapgen_integer(
+        hash, static_cast<std::uint64_t>(
+            static_cast<std::int64_t>( data.pos().y() ) ) );
+    hash_mapgen_integer(
+        hash, static_cast<std::uint64_t>(
+            static_cast<std::int64_t>( data.pos().z() ) ) );
+    hash_mapgen_string( hash, data.terrain_type().id().str() );
+    hash_mapgen_string( hash, source_id );
+    hash ^= hash >> 30;
+    hash *= UINT64_C( 0xbf58476d1ce4e5b9 );
+    hash ^= hash >> 27;
+    hash *= UINT64_C( 0x94d049bb133111eb );
+    return hash ^ ( hash >> 31 );
+}
+
+void remove_mapgen_handler(
+    runtime_state &state, const std::uint64_t id )
+{
+    state.mapgen_registry.unsubscribe_unchecked( id );
+    state.mapgen_callbacks.erase( id );
+    state.mapgen_filters.erase( id );
+}
+
+void bootstrap_mapgen_runtime_if_needed()
+{
+    if( active_state || test_mode || mapgen_bootstrap_attempted ) {
+        return;
+    }
+    mapgen_bootstrap_attempted = true;
+    std::string error;
+    if( !reload_scripts_with_state( nullptr, nullptr, error ) ) {
+        DebugLog( D_WARNING, D_MAP_GEN )
+                << "Early Lua mapgen initialization failed: " << error;
+    }
+}
+
 } // namespace
 
 bool reload_scripts( std::string &error )
@@ -2948,8 +3277,102 @@ void on_turn()
     }
 }
 
+void dispatch_mapgen_postprocess( mapgendata &data )
+{
+    if( is_pool_worker_thread() ) {
+        return;
+    }
+    bootstrap_mapgen_runtime_if_needed();
+    if( !active_state ) {
+        return;
+    }
+
+    runtime_state &state = *active_state;
+    if( state.mapgen_dispatch_depth >= 4 ) {
+        record_runtime_error(
+            "Lua mapgen postprocess",
+            "Lua mapgen callback recursion limit reached" );
+        return;
+    }
+    ++state.mapgen_dispatch_depth;
+    on_out_of_scope restore_depth( [&state]() {
+        --state.mapgen_dispatch_depth;
+    } );
+
+    const std::vector<script_event_subscription> handlers =
+        state.mapgen_registry.matching( "mapgen.postprocess" );
+    for( const script_event_subscription &handler : handlers ) {
+        if( !state.mapgen_registry.contains( handler.id ) ) {
+            continue;
+        }
+        const auto callback_entry =
+            state.mapgen_callbacks.find( handler.id );
+        const auto filter_entry =
+            state.mapgen_filters.find( handler.id );
+        if( callback_entry == state.mapgen_callbacks.end() ||
+            filter_entry == state.mapgen_filters.end() ) {
+            remove_mapgen_handler( state, handler.id );
+            continue;
+        }
+        if( !mapgen_filter_matches( filter_entry->second, data ) ) {
+            continue;
+        }
+        if( handler.source_index >= state.sources.size() ) {
+            record_runtime_error(
+                "Lua mapgen postprocess",
+                "Lua mapgen handler has an invalid source index" );
+            remove_mapgen_handler( state, handler.id );
+            continue;
+        }
+
+        const script_manifest &manifest =
+            state.sources[handler.source_index].manifest;
+        const std::shared_ptr<script_mapgen_context> context =
+            std::make_shared<script_mapgen_context>(
+                data, manifest.has_capability( "game.write" ),
+                deterministic_mapgen_seed( data, manifest.id ) );
+        on_out_of_scope invalidate_context( [context]() {
+            context->invalidate();
+        } );
+        const auto started = std::chrono::steady_clock::now();
+        try {
+            sol::protected_function callback = callback_entry->second;
+            source_scope source( state, handler.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            const sol::protected_function_result result =
+                callback( context );
+            context->invalidate();
+            record_callback_timing(
+                state,
+                "mapgen postprocess " + std::to_string( handler.id ),
+                started );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                record_runtime_error(
+                    "Lua mapgen postprocess handler " +
+                    std::to_string( handler.id ), error.what() );
+                remove_mapgen_handler( state, handler.id );
+            } else if( handler.once ) {
+                remove_mapgen_handler( state, handler.id );
+            }
+        } catch( const std::exception &exception ) {
+            context->invalidate();
+            record_callback_timing(
+                state,
+                "mapgen postprocess " + std::to_string( handler.id ),
+                started );
+            record_runtime_error(
+                "Lua mapgen postprocess handler " +
+                std::to_string( handler.id ), exception.what() );
+            remove_mapgen_handler( state, handler.id );
+        }
+    }
+}
+
 void on_world_ready()
 {
+    mapgen_bootstrap_attempted = true;
     // A save/new-game transition is a runtime boundary, unlike an in-page hot
     // reload.  Never retain callbacks or state belonging to the previous world.
     if( active_state ) {
@@ -3047,6 +3470,8 @@ runtime_status status()
         result.world_generation = active_state->world_generation;
         result.page_count = active_state->pages.size();
         result.event_handler_count = active_state->event_registry.size();
+        result.mapgen_handler_count =
+            active_state->mapgen_registry.size();
         result.source_count = active_state->sources.size();
         result.memory_used = active_state->memory.used;
         result.memory_limit = active_state->memory.limit;
@@ -3102,6 +3527,7 @@ void shutdown()
     clear_navigation_requests();
     last_runtime_error.clear();
     diagnostic_history.clear();
+    mapgen_bootstrap_attempted = false;
 }
 
 std::vector<page_info> registered_pages( const std::string_view slot )

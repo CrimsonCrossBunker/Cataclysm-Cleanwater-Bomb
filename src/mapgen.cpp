@@ -24,6 +24,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_ui.h"
 #include "character_id.h"
 #include "city.h"
 #include "clzones.h"
@@ -375,6 +376,9 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
                         pp_generator_aftershock_ruin.obj().execute( *this, omt_point, nullptr );
                     }
                 }
+            }
+            if( any_missing || !save_results ) {
+                cata::lua_ui::dispatch_mapgen_postprocess( dat );
             }
         }
     }
