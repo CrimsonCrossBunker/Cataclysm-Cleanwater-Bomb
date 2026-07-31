@@ -1,0 +1,1 @@
+require("itemuse_triggers.fcl_cureall")
