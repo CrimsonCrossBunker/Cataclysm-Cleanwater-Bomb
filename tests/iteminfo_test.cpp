@@ -1830,14 +1830,14 @@ TEST_CASE( "gun_or_other_ranged_weapon_attributes", "[iteminfo][weapon][gun]" )
         CHECK( item_info_str( glock, aim_stats ) ==
                "--\n"
                "<color_c_cyan>Regular</color>\n"
-               "Even chance of good hit at range: <color_c_yellow>3</color>\n"
-               "Time to reach aim level: <color_c_yellow>115</color> moves\n"
+               "Even chance of good hit at range: <color_c_yellow>4</color>\n"
+               "Time to reach aim level: <color_c_yellow>126</color> moves\n"
                "<color_c_cyan>Careful</color>\n"
-               "Even chance of good hit at range: <color_c_yellow>6</color>\n"
-               "Time to reach aim level: <color_c_yellow>194</color> moves\n"
+               "Even chance of good hit at range: <color_c_yellow>9</color>\n"
+               "Time to reach aim level: <color_c_yellow>212</color> moves\n"
                "<color_c_cyan>Precise</color>\n"
-               "Even chance of good hit at range: <color_c_yellow>8</color>\n"
-               "Time to reach aim level: <color_c_yellow>316</color> moves\n" );
+               "Even chance of good hit at range: <color_c_yellow>15</color>\n"
+               "Time to reach aim level: <color_c_yellow>345</color> moves\n" );
     }
 
     SECTION( "compatible magazines" ) {
