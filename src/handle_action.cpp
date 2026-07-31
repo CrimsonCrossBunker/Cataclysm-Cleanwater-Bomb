@@ -15,7 +15,7 @@
 #include "action.h"
 #include "activity_actor_definitions.h"
 #include "advanced_inv.h"
-#include "android_ui_mode.h"
+#include "android_ui_mode.h" // IWYU pragma: keep
 #include "auto_note.h"
 #include "auto_pickup.h"
 #include "avatar.h"
