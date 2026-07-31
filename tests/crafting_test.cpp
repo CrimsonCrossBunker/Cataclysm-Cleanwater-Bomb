@@ -2792,38 +2792,39 @@ TEST_CASE( "recipes_inherit_rot_of_components_properly", "[crafting][rot]" )
     tools.emplace_back( itype_pot_canning );
     tools.emplace_back( itype_knife_huge );
 
-    GIVEN( "1 hour until rotten macaroni and fresh cheese" ) {
+    GIVEN( "4 hours until rotten macaroni and fresh cheese" ) {
 
-        item macaroni( itype_macaroni_raw );
-        item cheese( itype_cheese );
-        item water_clean( itype_water_clean );
+        item macaroni( itype_macaroni_raw, calendar::turn, 1 );
+        item cheese( itype_cheese, calendar::turn, 1 );
 
-        macaroni.set_rot( macaroni.get_shelf_life() - 1_hours );
-        REQUIRE( cheese.get_shelf_life() - cheese.get_rot() > 1_hours );
+        // Stay just outside the interactive three-hour spoilage warning while
+        // still exercising inheritance from a nearly rotten component.
+        macaroni.set_rot( macaroni.get_shelf_life() - 4_hours );
+        REQUIRE( cheese.get_shelf_life() - cheese.get_rot() > 4_hours );
 
         tools.insert( tools.end(), 1, macaroni );
         tools.insert( tools.end(), 1, cheese );
         item &bottle = tools.emplace_back( itype_bottle_plastic ); // water container
-        bottle.get_contents().insert_item( item( itype_water_clean ), pocket_type::CONTAINER );
+        bottle.get_contents().insert_item( item( itype_water_clean, calendar::turn, 1 ),
+                                           pocket_type::CONTAINER );
 
         WHEN( "crafting the mac and cheese" ) {
             prep_craft( recipe_macaroni_cooked, tools, true );
             actually_test_craft( recipe_macaroni_cooked, INT_MAX, 10 );
 
-            THEN( "it should have exactly 1 hour until it spoils" ) {
+            THEN( "it should have exactly 4 hours until it spoils" ) {
                 item_location mac_and_cheese = player_character.get_wielded_item();
 
                 REQUIRE( mac_and_cheese->type->get_id() == recipe_macaroni_cooked->result() );
 
-                CHECK( mac_and_cheese->get_shelf_life() - mac_and_cheese->get_rot() == 1_hours );
+                CHECK( mac_and_cheese->get_shelf_life() - mac_and_cheese->get_rot() == 4_hours );
             }
         }
     }
 
     GIVEN( "fresh macaroni and fresh cheese" ) {
-        item macaroni( itype_macaroni_raw );
-        item cheese( itype_cheese );
-        item water_clean( itype_water_clean );
+        item macaroni( itype_macaroni_raw, calendar::turn, 1 );
+        item cheese( itype_cheese, calendar::turn, 1 );
 
         REQUIRE( macaroni.get_rot() == 0_turns );
         REQUIRE( cheese.get_rot() == 0_turns );
@@ -2831,7 +2832,8 @@ TEST_CASE( "recipes_inherit_rot_of_components_properly", "[crafting][rot]" )
         tools.insert( tools.end(), 1, macaroni );
         tools.insert( tools.end(), 1, cheese );
         item &bottle = tools.emplace_back( itype_bottle_plastic ); // water container
-        bottle.get_contents().insert_item( item( itype_water_clean ), pocket_type::CONTAINER );
+        bottle.get_contents().insert_item( item( itype_water_clean, calendar::turn, 1 ),
+                                           pocket_type::CONTAINER );
 
         WHEN( "crafting the mac and cheese" ) {
             prep_craft( recipe_macaroni_cooked, tools, true );
@@ -2848,7 +2850,7 @@ TEST_CASE( "recipes_inherit_rot_of_components_properly", "[crafting][rot]" )
     }
 
     GIVEN( "meat with 1 percent of its shelf life left" ) {
-        item meat( itype_meat );
+        item meat( itype_meat, calendar::turn, 1 );
 
         meat.set_relative_rot( 0.01 );
 
