@@ -411,6 +411,11 @@ class mission
          */
         static mission *find( int id, bool ok_missing = false );
         /**
+         * Remove a reserved mission that has not been assigned.
+         * Returns false when the mission is missing or already assigned.
+         */
+        static bool remove_unassigned( int id );
+        /**
          * Remove all active missions, used to cleanup on exit and before reloading a new game.
          */
         static void clear_all();

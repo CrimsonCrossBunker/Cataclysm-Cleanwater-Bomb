@@ -26,6 +26,8 @@
 #include "input_context_actions.h"
 #include "item.h"
 #include "json_loader.h"
+#include "magic.h"
+#include "mission.h"
 #include "path_info.h"
 #include "pocket_type.h"
 #include "ui_profile.h"
@@ -1699,6 +1701,608 @@ game.bionics.install(
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK( player.num_bionics() == original_count );
     CHECK( player.get_power_level() == original_power );
+}
+
+TEST_CASE( "lua_v5_mutation_definitions_are_detached_paginated_snapshots",
+           "[lua][bindings][mutations][definitions][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local definitions = game.mutations.definitions({
+    offset = 0,
+    limit = 1000000
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.has_more ==
+    (definitions.offset + definitions.returned < definitions.total))
+
+local speed = game.types.id("mutation", "DEBUG_SPEED")
+local definition = game.mutations.definition(speed)
+assert(definition.id == speed)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.availability.valid) == "boolean")
+assert(type(definition.availability.debug) == "boolean")
+assert(definition.activation.activated == true)
+assert(definition.activation.cooldown.turns >= 0)
+assert(math.type(definition.statistics.points) == "integer")
+assert(type(definition.statistics.body_temperature_minimum_celsius_delta) ==
+    "number")
+assert(type(definition.equipment.destroys_gear) == "boolean")
+assert(definition.relations.prerequisites.returned ==
+    #definition.relations.prerequisites.items)
+assert(definition.relations.conflicts_with.returned ==
+    #definition.relations.conflicts_with.items)
+assert(definition.relations.categories.returned ==
+    #definition.relations.categories.items)
+assert(definition.variants.returned == #definition.variants.items)
+assert(definition.learned_spells.returned ==
+    #definition.learned_spells.items)
+
+assert(pcall(function()
+    game.mutations.definitions({ offset = -1 })
+end) == false)
+assert(pcall(function()
+    game.mutations.definitions({ unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.mutations.definition(game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_mutations_are_generation_safe_and_write_gated",
+           "[lua][bindings][mutations][state][write][integration]" )
+{
+    avatar &player = get_avatar();
+    const trait_id debug_speed( "DEBUG_SPEED" );
+    const bool originally_present =
+        player.has_permanent_trait( debug_speed );
+    if( originally_present ) {
+        player.unset_mutation( debug_speed );
+    }
+    on_out_of_scope cleanup( [&player, debug_speed,
+    originally_present]() {
+        if( player.has_permanent_trait( debug_speed ) ) {
+            player.unset_mutation( debug_speed );
+        }
+        if( originally_present ) {
+            player.set_mutation( debug_speed );
+        }
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local speed = game.types.id("mutation", "DEBUG_SPEED")
+
+local initial = game.mutations.list(avatar, {
+    offset = 0,
+    limit = 1000000,
+    include_hidden = true,
+    include_enchantment = true
+})
+assert(initial.ok == true)
+assert(initial.value.limit == 256)
+assert(initial.value.returned == #initial.value.items)
+assert(initial.value.has_more ==
+    (initial.value.offset + initial.value.returned < initial.value.total))
+assert(game.mutations.has(avatar, speed).value == false)
+assert(game.mutations.get(avatar, speed).ok == false)
+
+local granted = game.mutations.grant(avatar, speed)
+assert(granted.ok == true)
+assert(granted.value.id == speed)
+assert(granted.value.permanent == true)
+assert(granted.value.activatable == true)
+assert(granted.value.active == false)
+assert(game.mutations.has(avatar, speed).value == true)
+assert(game.mutations.get(avatar, speed).value.id == speed)
+assert(game.mutations.grant(avatar, speed).error.code ==
+    "already_present")
+
+local activated = game.mutations.set_active(avatar, speed, true)
+assert(activated.ok == true)
+assert(activated.value.accepted == true)
+assert(activated.value.after.active == true)
+local deactivated = game.mutations.set_active(avatar, speed, false)
+assert(deactivated.ok == true)
+assert(deactivated.value.accepted == true)
+assert(deactivated.value.after.active == false)
+
+assert(pcall(function()
+    game.mutations.list(avatar, { limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.mutations.list(avatar, { include_hidden = 1 })
+end) == false)
+assert(pcall(function()
+    game.mutations.list(avatar, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.mutations.set_variant(avatar, speed, "unknown")
+end) == false)
+assert(pcall(function()
+    game.mutations.has(avatar, game.types.id("item", "rock"))
+end) == false)
+
+local removed = game.mutations.remove(avatar, speed)
+assert(removed.ok == true)
+assert(removed.value.removed.id == speed)
+assert(removed.value.present == false)
+assert(game.mutations.has(avatar, speed).value == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.has_permanent_trait( debug_speed ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.mutations.grant(
+    game.characters.avatar(),
+    game.types.id("mutation", "DEBUG_SPEED"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK_FALSE( player.has_permanent_trait( debug_speed ) );
+}
+
+TEST_CASE( "lua_v5_spell_definitions_and_known_spells_are_detached_and_bounded",
+           "[lua][bindings][spells][definitions][integration]" )
+{
+    avatar &player = get_avatar();
+    const spell_id test_spell( "test_spell_pew" );
+    const bool originally_known =
+        player.magic->knows_spell( test_spell );
+    if( !originally_known ) {
+        player.magic->learn_spell(
+            test_spell, player, true );
+    }
+    on_out_of_scope cleanup( [&player, test_spell,
+    originally_known]() {
+        if( !originally_known &&
+            player.magic->knows_spell( test_spell ) ) {
+            player.magic->forget_spell( test_spell );
+        }
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local pew = game.types.id("spell", "test_spell_pew")
+
+local definitions = game.spells.definitions({
+    offset = 0,
+    limit = 1000000
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.has_more ==
+    (definitions.offset + definitions.returned < definitions.total))
+
+local definition = game.spells.definition(pew)
+assert(definition.id == pew)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(type(definition.effect) == "string")
+assert(type(definition.shape) == "string")
+assert(type(definition.energy_source) == "string")
+assert(type(definition.formulas.minimum_damage.dynamic) == "boolean")
+assert(definition.formulas.minimum_damage.minimum ~= nil)
+assert(definition.valid_targets.returned ==
+    #definition.valid_targets.items)
+assert(definition.flags.returned == #definition.flags.items)
+assert(definition.additional_spells.returned ==
+    #definition.additional_spells.items)
+
+local known = game.spells.list(avatar, {
+    offset = 0,
+    limit = 1000000
+})
+assert(known.ok == true)
+assert(known.value.limit == 256)
+assert(known.value.returned == #known.value.items)
+assert(known.value.has_more ==
+    (known.value.offset + known.value.returned < known.value.total))
+assert(game.spells.knows(avatar, pew).value == true)
+local fetched = game.spells.get(avatar, pew)
+assert(fetched.ok == true)
+assert(fetched.value.id == pew)
+assert(math.type(fetched.value.experience) == "integer")
+assert(math.type(fetched.value.level) == "integer")
+assert(math.type(fetched.value.maximum_level) == "integer")
+assert(type(fetched.value.can_cast) == "boolean")
+assert(type(fetched.value.has_enough_energy) == "boolean")
+assert(type(fetched.value.failure_probability) == "number")
+assert(math.type(fetched.value.casting_time_moves) == "integer")
+assert(fetched.value.duration.turns >= 0)
+local learn = game.spells.can_learn(avatar, pew)
+assert(learn.ok == true)
+assert(learn.value.known == true)
+assert(type(learn.value.can_learn) == "boolean")
+assert(learn.value.time.turns >= 0)
+
+assert(pcall(function()
+    game.spells.definitions({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.spells.list(avatar, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.spells.get(avatar, game.types.id("item", "rock"))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_spellbook_mana_and_casting_operations_are_controlled",
+           "[lua][bindings][spells][write][integration]" )
+{
+    avatar &player = get_avatar();
+    const spell_id kiss( "test_spell_kiss" );
+    const spell_id primer( "ink_gland_spray_primer" );
+    const bool kiss_known = player.magic->knows_spell( kiss );
+    const bool primer_known =
+        player.magic->knows_spell( primer );
+    const int kiss_experience = kiss_known ?
+                                player.magic->get_spell( kiss ).xp() : 0;
+    const int primer_experience = primer_known ?
+                                  player.magic->get_spell( primer ).xp() : 0;
+    const int original_mana = player.magic->available_mana();
+    const bool original_ignore = player.magic->casting_ignore;
+    const spell_id original_last = player.magic->last_spell;
+    const bool kiss_favorite =
+        player.magic->is_favorite( kiss );
+    const bool primer_favorite =
+        player.magic->is_favorite( primer );
+    REQUIRE( player.activity.is_null() );
+    if( kiss_known ) {
+        player.magic->set_spell_level( kiss, -1, &player );
+    }
+    if( primer_known ) {
+        player.magic->set_spell_level(
+            primer, -1, &player );
+    }
+    on_out_of_scope cleanup( [&player, kiss, primer, kiss_known,
+    primer_known, kiss_experience, primer_experience,
+    original_mana, original_ignore, original_last,
+    kiss_favorite, primer_favorite]() {
+        if( !player.activity.is_null() ) {
+            player.cancel_activity();
+        }
+        const auto restore_spell =
+        [&player]( const spell_id & id, const bool known,
+                   const int experience, const bool favorite ) {
+            if( player.magic->knows_spell( id ) ) {
+                player.magic->set_spell_level(
+                    id, -1, &player );
+            }
+            if( known ) {
+                player.magic->learn_spell(
+                    id, player, true );
+                player.magic->set_spell_exp(
+                    id, experience, &player );
+            }
+            if( player.magic->is_favorite( id ) !=
+                favorite ) {
+                player.magic->toggle_favorite( id );
+            }
+        };
+        restore_spell(
+            kiss, kiss_known, kiss_experience,
+            kiss_favorite );
+        restore_spell(
+            primer, primer_known, primer_experience,
+            primer_favorite );
+        player.magic->set_mana( original_mana );
+        player.magic->casting_ignore = original_ignore;
+        player.magic->last_spell = original_last;
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local kiss = game.types.id("spell", "test_spell_kiss")
+local primer = game.types.id("spell", "ink_gland_spray_primer")
+
+local learned = game.spells.learn(avatar, kiss, {
+    force = true,
+    experience = 100
+})
+assert(learned.ok == true)
+assert(learned.value.id == kiss)
+assert(learned.value.experience == 100)
+assert(game.spells.learn(avatar, kiss, { force = true }).error.code ==
+    "already_known")
+
+local gained = game.spells.gain_experience(avatar, kiss, 50)
+assert(gained.ok == true)
+assert(gained.value.after.experience >=
+    gained.value.before.experience)
+local leveled = game.spells.set_level(avatar, kiss, 2)
+assert(leveled.ok == true)
+assert(leveled.value.after.level == 2)
+local more_levels = game.spells.gain_levels(avatar, kiss, 1)
+assert(more_levels.ok == true)
+assert(more_levels.value.after.level >=
+    more_levels.value.before.level)
+local reset_exp = game.spells.set_experience(avatar, kiss, 200)
+assert(reset_exp.ok == true)
+assert(reset_exp.value.after.experience == 200)
+
+local mana = game.spells.mana(avatar)
+assert(mana.ok == true)
+assert(math.type(mana.value.current) == "integer")
+assert(math.type(mana.value.maximum) == "integer")
+assert(type(mana.value.regeneration_per_turn) == "number")
+local full = game.spells.set_mana(avatar, mana.value.maximum)
+assert(full.ok == true)
+assert(full.value.after.current == mana.value.maximum)
+local spent = game.spells.modify_mana(avatar, -1)
+assert(spent.ok == true)
+assert(spent.value.after.current ==
+    math.max(0, spent.value.before.current - 1))
+local ignore = game.spells.set_casting_ignore(
+    avatar, not mana.value.casting_ignore)
+assert(ignore.ok == true)
+assert(ignore.value.after == not mana.value.casting_ignore)
+local favorite = game.spells.set_favorite(avatar, kiss, true)
+assert(favorite.ok == true and favorite.value.after == true)
+
+local learned_primer = game.spells.learn(avatar, primer, {
+    force = true
+})
+assert(learned_primer.ok == true)
+local current = game.spells.mana(avatar).value
+game.spells.set_mana(avatar, current.maximum)
+local position = game.creatures.snapshot(avatar).value.position
+local queued = game.spells.queue_cast(avatar, primer, position)
+assert(queued.ok == true)
+assert(queued.value.accepted == true)
+assert(queued.value.spell.id == primer)
+assert(queued.value.target == position)
+assert(queued.value.activity.kind == "activity")
+
+assert(pcall(function()
+    game.spells.learn(avatar, kiss, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.spells.set_experience(avatar, kiss, -1)
+end) == false)
+assert(pcall(function()
+    game.spells.gain_levels(avatar, kiss, 0)
+end) == false)
+assert(pcall(function()
+    game.spells.set_mana(avatar, -1)
+end) == false)
+assert(pcall(function()
+    game.spells.queue_cast(
+        avatar, primer, game.coords.tripoint_rel_ms(0, 0, 0))
+end) == false)
+
+local forgotten = game.spells.forget(avatar, kiss)
+assert(forgotten.ok == true)
+assert(forgotten.value.forgotten.id == kiss)
+assert(forgotten.value.known == false)
+assert(game.spells.knows(avatar, kiss).value == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.activity.is_null() );
+    player.cancel_activity();
+    if( player.magic->knows_spell( kiss ) ) {
+        player.magic->set_spell_level( kiss, -1, &player );
+    }
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.spells.learn(
+    game.characters.avatar(),
+    game.types.id("spell", "test_spell_kiss"),
+    { force = true })
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK_FALSE( player.magic->knows_spell( kiss ) );
+}
+
+TEST_CASE( "lua_v5_missions_use_detached_definitions_and_generation_tokens",
+           "[lua][bindings][missions][lifecycle][integration]" )
+{
+    avatar &player = get_avatar();
+    const std::size_t world_count_before =
+        mission::get_all_active().size();
+    const std::size_t active_count_before =
+        player.get_active_missions().size();
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local test_id = game.types.id(
+    "mission", "TEST_MISSION_GOAL_CONDITION1")
+local definitions = game.missions.definitions({
+    offset = 0,
+    limit = 1000000
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.has_more ==
+    (definitions.offset + definitions.returned < definitions.total))
+
+local definition = game.missions.definition(test_id)
+assert(definition.id == test_id)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(definition.goal.kind == "MissionGoal")
+assert(math.type(definition.difficulty) == "integer")
+assert(type(definition.deadline.dynamic) == "boolean")
+assert(definition.origins.returned == #definition.origins.items)
+assert(definition.likely_rewards.returned ==
+    #definition.likely_rewards.items)
+assert(definition.dialogue.returned == #definition.dialogue.items)
+
+local reserved = game.missions.reserve(test_id)
+assert(reserved.ok == true)
+assert(reserved.value.id == test_id)
+assert(reserved.value.status == "reserved")
+assert(reserved.value.assigned == false)
+local token = reserved.value.token
+assert(math.type(token.uid) == "integer")
+assert(token:is_valid() == true)
+assert(type(tostring(token)) == "string")
+assert(game.missions.get(token).value.uid == token.uid)
+
+local listed = game.missions.list({
+    offset = 0,
+    limit = 1000000,
+    scope = "all",
+    status = "reserved"
+})
+assert(listed.limit == 256)
+assert(listed.returned == #listed.items)
+local found = false
+for _, entry in ipairs(listed.items) do
+    if entry.uid == token.uid then
+        found = true
+    end
+end
+assert(found)
+
+local assigned = game.missions.assign(token)
+assert(assigned.ok == true)
+assert(assigned.value.status == "active")
+assert(assigned.value.assigned == true)
+assert(assigned.value.selected == true)
+local selected = game.missions.select(token)
+assert(selected.ok == true and selected.value.selected == true)
+assert(game.missions.current().value.uid == token.uid)
+assert(type(game.missions.is_complete(token).value) == "boolean")
+local stepped = game.missions.step_complete(token, 1)
+assert(stepped.ok == true and stepped.value.step == 1)
+
+local abandoned = game.missions.abandon(token)
+assert(abandoned.ok == true)
+assert(abandoned.value.removed == true)
+assert(token:is_valid() == false)
+assert(game.missions.get(token).error.code == "missing_mission")
+
+local second = game.missions.reserve(test_id)
+assert(second.ok == true)
+local second_token = second.value.token
+local cancelled = game.missions.cancel(second_token)
+assert(cancelled.ok == true)
+assert(cancelled.value.removed == true)
+assert(second_token:is_valid() == false)
+
+local origin = game.enums.value(
+    "MissionOrigin", "ORIGIN_GAME_START")
+local omt = game.coords.tripoint_abs_omt(0, 0, 0)
+local random = game.missions.random_definition(origin, omt)
+assert(random.ok == true)
+assert(random.value.kind == "mission")
+
+assert(pcall(function()
+    game.missions.definitions({ limit = -1 })
+end) == false)
+assert(pcall(function()
+    game.missions.list({ scope = "unknown" })
+end) == false)
+assert(pcall(function()
+    game.missions.reserve(game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.missions.random_definition(
+        origin, game.coords.tripoint_rel_ms(0, 0, 0))
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( mission::get_all_active().size() ==
+           world_count_before );
+    CHECK( player.get_active_missions().size() ==
+           active_count_before );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.missions.reserve(
+    game.types.id(
+        "mission", "TEST_MISSION_GOAL_CONDITION1"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( mission::get_all_active().size() ==
+           world_count_before );
+    CHECK( player.get_active_missions().size() ==
+           active_count_before );
 }
 
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
