@@ -1155,20 +1155,17 @@ LUA_UI_ENABLED_SOURCES := \
   $(SRC_DIR)/catalua_ui_actions.cpp \
   $(SRC_DIR)/catalua_ui_events.cpp \
   $(SRC_DIR)/catalua_ui_game.cpp \
-  $(SRC_DIR)/catalua_ui_hordes.cpp \
   $(SRC_DIR)/catalua_ui_i18n.cpp \
   $(SRC_DIR)/catalua_ui_imgui.cpp \
   $(SRC_DIR)/catalua_ui_manifest.cpp \
   $(SRC_DIR)/catalua_ui_modules.cpp \
   $(SRC_DIR)/catalua_ui_navigation.cpp \
-  $(SRC_DIR)/catalua_ui_overmap.cpp \
   $(SRC_DIR)/catalua_ui_renderer.cpp \
   $(SRC_DIR)/catalua_ui_registry.cpp \
   $(SRC_DIR)/catalua_ui_scheduler.cpp \
   $(SRC_DIR)/catalua_ui_services.cpp \
   $(SRC_DIR)/catalua_ui_state.cpp \
-  $(SRC_DIR)/catalua_ui_values.cpp \
-  $(SRC_DIR)/catalua_ui_world.cpp
+  $(SRC_DIR)/catalua_ui_values.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
 HEADERS := $(wildcard $(SRC_DIR)/*.h)
