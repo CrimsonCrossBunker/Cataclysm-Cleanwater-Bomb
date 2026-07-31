@@ -50,6 +50,7 @@ bool is_radial_right_open();
 bool is_alt_held();
 bool is_in_menu();
 bool is_active();
+void set_raw_input_mode( bool enabled );
 
 // Convert direction enum to movement offset
 tripoint direction_to_offset( direction dir );
