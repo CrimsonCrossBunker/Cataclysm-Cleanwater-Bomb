@@ -35,6 +35,7 @@
 #include "catalua_ui_effects.h"
 #include "catalua_ui_events.h"
 #include "catalua_ui_game.h"
+#include "catalua_ui_hordes.h"
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_imgui.h"
 #include "catalua_ui_items.h"
@@ -45,12 +46,14 @@
 #include "catalua_ui_mutations.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
+#include "catalua_ui_overmap.h"
 #include "catalua_ui_renderer.h"
 #include "catalua_ui_registry.h"
 #include "catalua_ui_scheduler.h"
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
 #include "catalua_ui_values.h"
+#include "catalua_ui_world.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "event.h"
@@ -1868,6 +1871,48 @@ void initialize_state( runtime_state &state )
     },
     [&state]() {
         require_api_version( state, 5, "game.missions" );
+        require_capability( state, "game.write" );
+    } );
+    install_world_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.world" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.world" );
+        require_capability( state, "game.write" );
+    } );
+    install_overmap_api(
+        game,
+    [&state]() {
+        require_api_version( state, 5, "game.overmap" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.overmap" );
+        require_capability( state, "game.write" );
+    } );
+    install_horde_api(
+        game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.hordes" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.hordes" );
         require_capability( state, "game.write" );
     } );
     install_item_api(

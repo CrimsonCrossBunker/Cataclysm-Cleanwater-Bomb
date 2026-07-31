@@ -571,6 +571,14 @@ class overmapbuffer
          * Groups with no population are not included.
          */
         std::vector<mongroup *> groups_at( const tripoint_abs_sm &p );
+        /**
+         * Add or remove one legacy monster group without generating an
+         * overmap.  The returned pointer is for short-lived native callers
+         * only; external scripting APIs must wrap it in a checked token.
+         */
+        mongroup *add_mongroup_existing( const mongroup &group );
+        bool remove_mongroup_existing( const tripoint_abs_sm &p,
+                                       const mongroup *expected );
 
         /**
          * Spawn monsters from the overmap onto the main map (game::m).

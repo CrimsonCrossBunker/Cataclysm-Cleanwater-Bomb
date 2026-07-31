@@ -1023,15 +1023,16 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     REQUIRE( first.size() == catalog.size() );
     sol::table first_entry = first[1];
     const std::string original_id = first_entry["id"];
+    const std::string original_status = first_entry["status"];
     first_entry["id"] = "mutated";
-    first_entry["status"] = "covered";
+    first_entry["status"] = "mutated";
 
     sol::protected_function_result second_result = api_catalog();
     REQUIRE( second_result.valid() );
     sol::table second = second_result;
     sol::table second_entry = second[1];
     CHECK( second_entry.get<std::string>( "id" ) == original_id );
-    CHECK( second_entry.get<std::string>( "status" ) != "covered" );
+    CHECK( second_entry.get<std::string>( "status" ) == original_status );
 
     sol::protected_function api_supports = game["api_supports"];
     CHECK( api_supports( "coordinates" ).get<bool>() );
@@ -2305,6 +2306,825 @@ game.missions.reserve(
            active_count_before );
 }
 
+TEST_CASE( "lua_v5_world_reads_bounded_active_map_snapshots",
+           "[lua][bindings][world][map][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.snapshot(
+    game.creatures.avatar()).value
+local position = avatar.position
+local bounds = game.world.bounds()
+assert(bounds.minimum.origin == "abs")
+assert(bounds.minimum.scale == "ms")
+assert(bounds.maximum.origin == "abs")
+assert(bounds.map_squares > 0)
+assert(bounds.submaps > 0)
+
+local tile = game.world.tile(position, {
+    item_limit = 1000000,
+    field_limit = 1000000
+})
+assert(tile.position == position)
+assert(tile.terrain.kind == "terrain")
+assert(tile.terrain:is_valid())
+assert(type(tile.terrain_name) == "string")
+assert(type(tile.outside) == "boolean")
+assert(type(tile.passable) == "boolean")
+assert(math.type(tile.move_cost) == "integer")
+assert(type(tile.ambient_light) == "number")
+assert(tile.items.limit == 128)
+assert(tile.items.returned == #tile.items.items)
+assert(tile.items.returned <= tile.items.total)
+assert(tile.fields.limit == 128)
+assert(tile.fields.returned == #tile.fields.items)
+assert(tile.vehicle.present == false or
+    tile.vehicle.handle:is_valid())
+
+for _, entry in ipairs(tile.items.items) do
+    assert(entry.handle:is_valid())
+    assert(entry.id.kind == "item")
+    assert(math.type(entry.uid) == "integer")
+end
+for _, entry in ipairs(tile.fields.items) do
+    assert(entry.id.kind == "field")
+    assert(entry.age.turns ~= nil)
+end
+
+local region = game.world.region(position, {
+    radius = 1000000,
+    radius_z = 1000000,
+    offset = 0,
+    limit = 1,
+    item_limit = 0,
+    field_limit = 0
+})
+assert(region.radius == 30)
+assert(region.radius_z == 5)
+assert(region.limit == 1)
+assert(region.returned == #region.items)
+assert(region.returned <= region.total)
+assert(region.has_more ==
+    (region.offset + region.returned < region.total))
+
+local vehicles = game.world.vehicles({
+    offset = 0,
+    limit = 1000000
+})
+assert(vehicles.limit == 256)
+assert(vehicles.returned == #vehicles.items)
+assert(vehicles.returned <= vehicles.total)
+
+assert(pcall(function()
+    game.world.tile(game.coords.tripoint_rel_ms(0, 0, 0))
+end) == false)
+assert(pcall(function()
+    game.world.tile(position, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.world.region(position, { radius = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( "game.world.bounds()" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.read" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v5_world_applies_controlled_active_map_mutations",
+           "[lua][bindings][world][map][write][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local position = game.creatures.snapshot(
+    game.creatures.avatar()).value.position
+local before = game.world.tile(position)
+local web = game.types.id("field", "fd_web")
+local original_web = nil
+for _, entry in ipairs(before.fields.items) do
+    if entry.id == web then
+        original_web = entry
+    end
+end
+local spawned_handle = nil
+
+local ok, failure = pcall(function()
+    local terrain = game.world.set_terrain(
+        position, before.terrain)
+    assert(terrain.ok == true)
+    assert(terrain.value.accepted == true)
+    assert(terrain.value.after.kind == before.terrain.kind)
+    assert(terrain.value.after.value == before.terrain.value)
+
+    local furniture = game.world.set_furniture(
+        position, before.furniture)
+    assert(furniture.ok == true)
+    assert(furniture.value.accepted == true)
+    assert(furniture.value.changed == false)
+
+    local trap = game.world.set_trap(
+        position, before.trap)
+    assert(trap.ok == true)
+    assert(trap.value.accepted == true)
+    assert(trap.value.changed == false)
+
+    if original_web ~= nil then
+        local cleared = game.world.remove_field(position, web)
+        assert(cleared.ok == true)
+        assert(cleared.value.removed == true)
+    end
+    local placed = game.world.put_field(
+        position, web, 1, game.time.duration(0, "turn"))
+    assert(placed.ok == true)
+    assert(placed.value.id == web)
+    assert(placed.value.after_intensity == 1)
+    assert(placed.value.after_age.turns == 0)
+
+    local removed_field = game.world.remove_field(position, web)
+    assert(removed_field.ok == true)
+    assert(removed_field.value.removed == true)
+    assert(game.world.remove_field(position, web).value.removed == false)
+
+    local backpack = game.types.id("item", "backpack")
+    local spawned = game.world.spawn_item(position, backpack, 1)
+    assert(spawned.ok == true)
+    if spawned.value.items[1] ~= nil then
+        spawned_handle = spawned.value.items[1].handle
+    end
+    assert(spawned.value.added == 1)
+    assert(spawned.value.count_by_charges == false)
+    assert(spawned.value.instances == 1)
+    assert(#spawned.value.items == 1)
+    assert(spawned_handle:is_valid())
+
+    local wrong_kind = game.world.remove_item(
+        position, game.creatures.avatar())
+    assert(wrong_kind.ok == false)
+    assert(wrong_kind.error.code == "wrong_kind")
+    local removed_item = game.world.remove_item(
+        position, spawned_handle)
+    assert(removed_item.ok == true)
+    assert(removed_item.value.removed == true)
+    assert(spawned_handle:is_valid() == false)
+    spawned_handle = nil
+
+    assert(pcall(function()
+        game.world.set_terrain(
+            position, backpack)
+    end) == false)
+    assert(pcall(function()
+        game.world.put_field(
+            position, web, 1000000,
+            game.time.duration(0, "turn"))
+    end) == false)
+    assert(pcall(function()
+        game.world.put_field(
+            position, web, 1,
+            game.time.duration(366, "day"))
+    end) == false)
+    assert(pcall(function()
+        game.world.spawn_item(position, backpack, 101)
+    end) == false)
+end)
+
+if spawned_handle ~= nil and spawned_handle:is_valid() then
+    game.world.remove_item(position, spawned_handle)
+end
+game.world.remove_field(position, web)
+if original_web ~= nil then
+    game.world.put_field(
+        position, web, original_web.intensity,
+        original_web.age)
+end
+assert(ok, failure)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local position = game.creatures.snapshot(
+    game.creatures.avatar()).value.position
+local terrain = game.world.tile(position).terrain
+game.world.set_terrain(position, terrain)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v5_overmap_reads_existing_tiles_with_bounded_search",
+           "[lua][bindings][world][overmap][read][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.snapshot(
+    game.creatures.avatar()).value
+local origin = avatar.position:project_to("overmap_terrain")
+local limits = game.overmap.limits()
+assert(limits.maximum_radius == 60)
+assert(limits.maximum_radius_z == 5)
+assert(limits.maximum_limit == 256)
+assert(limits.maximum_selectors == 16)
+assert(limits.maximum_note_bytes == 4096)
+assert(limits.maximum_reveal_radius == 30)
+assert(limits.existing_only == true)
+
+local tile = game.overmap.tile(origin)
+assert(tile.exists == true)
+assert(tile.position == origin)
+assert(tile.terrain.kind == "overmap_terrain")
+assert(tile.terrain:is_valid())
+assert(type(tile.name) == "string")
+assert(type(tile.visible_name) == "string")
+assert(tile.vision.kind == "OmVisionLevel")
+assert(type(tile.seen) == "boolean")
+assert(type(tile.explored) == "boolean")
+assert(type(tile.generated) == "boolean")
+
+local exact = game.enums.value("OtMatchType", "exact")
+local selector = { terrain = tile.terrain, match = exact }
+assert(game.overmap.matches(origin, tile.terrain) == true)
+assert(game.overmap.matches(origin, tile.terrain, exact) == true)
+assert(game.overmap.matches(origin, {
+    terrain = tile.terrain,
+    match = game.enums.value("OtMatchType", "contains"),
+}) == true)
+
+local options = {
+    types = { selector },
+    radius = 0,
+    radius_z = 0,
+    seen = tile.seen,
+    explored = tile.explored,
+    limit = 1,
+}
+local found = game.overmap.search(origin, options)
+assert(found.total == 1)
+assert(found.returned == 1)
+assert(found.scanned == 1)
+assert(found.existing == 1)
+assert(found.items[1].position == origin)
+assert(found.items[1].terrain == tile.terrain)
+assert(found.existing_only == true)
+
+local closest = game.overmap.closest(origin, options)
+assert(closest.ok == true)
+assert(closest.value.position == origin)
+local sampled = game.overmap.random(origin, options)
+assert(sampled.ok == true)
+assert(sampled.value.position == origin)
+
+local excluded = game.overmap.search(origin, {
+    exclude_types = { tile.terrain },
+    radius = 0,
+})
+assert(excluded.total == 0)
+local missing = game.overmap.closest(origin, {
+    exclude_types = { tile.terrain },
+    radius = 0,
+})
+assert(missing.ok == false)
+assert(missing.error.code == "not_found")
+
+assert(pcall(function()
+    game.overmap.tile(avatar.position)
+end) == false)
+assert(pcall(function()
+    game.overmap.search(origin, { radius = 61 })
+end) == false)
+assert(pcall(function()
+    game.overmap.search(origin, { radius_z = 6 })
+end) == false)
+assert(pcall(function()
+    game.overmap.search(origin, { limit = 257 })
+end) == false)
+assert(pcall(function()
+    game.overmap.search(origin, {
+        types = { [2] = tile.terrain },
+        radius = 0,
+    })
+end) == false)
+assert(pcall(function()
+    game.overmap.matches(
+        origin, tile.terrain,
+        game.enums.values("Direction", 0, 1)[1])
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( "game.overmap.limits()" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.read" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v5_overmap_applies_existing_only_controlled_mutations",
+           "[lua][bindings][world][overmap][write][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.snapshot(
+    game.creatures.avatar()).value
+local position = avatar.position:project_to("overmap_terrain")
+local before = game.overmap.tile(position)
+assert(before.exists == true)
+
+local ok, failure = pcall(function()
+    local terrain = game.overmap.set_terrain(
+        position, before.terrain)
+    assert(terrain.ok == true)
+    assert(terrain.value.accepted == true)
+    assert(terrain.value.changed == false)
+    assert(terrain.value.after == before.terrain)
+
+    local alternate_name = "full"
+    if before.vision.name == "full" then
+        alternate_name = "details"
+    end
+    local alternate = game.enums.value(
+        "OmVisionLevel", alternate_name)
+    local seen = game.overmap.set_seen(position, alternate)
+    assert(seen.ok == true)
+    assert(seen.value.accepted == true)
+    assert(seen.value.changed == true)
+    assert(seen.value.after == alternate)
+
+    local explored = game.overmap.set_explored(
+        position, not before.explored)
+    assert(explored.ok == true)
+    assert(explored.value.accepted == true)
+    assert(explored.value.changed == true)
+    assert(explored.value.after == not before.explored)
+
+    local note_text = "Lua v5 overmap integration 测试"
+    local note = game.overmap.set_note(position, note_text)
+    assert(note.ok == true)
+    assert(note.value.accepted == true)
+    assert(note.value.after_present == true)
+    assert(game.overmap.tile(position).note == note_text)
+
+    local danger = game.overmap.set_note_danger(
+        position, 3, true)
+    assert(danger.ok == true)
+    assert(danger.value.accepted == true)
+    assert(danger.value.after_dangerous == true)
+    assert(danger.value.after_radius == 3)
+    local safe = game.overmap.set_note_danger(
+        position, 0, false)
+    assert(safe.ok == true)
+    assert(safe.value.accepted == true)
+    assert(safe.value.after_dangerous == false)
+    assert(safe.value.after_radius == -1)
+
+    local cleared = game.overmap.set_note(position, nil)
+    assert(cleared.ok == true)
+    assert(cleared.value.accepted == true)
+    assert(cleared.value.after_present == false)
+    local missing_note = game.overmap.set_note_danger(
+        position, 1, true)
+    assert(missing_note.ok == false)
+    assert(missing_note.error.code == "not_found")
+
+    local unseen = game.enums.value(
+        "OmVisionLevel", "unseen")
+    assert(game.overmap.set_seen(position, unseen).ok == true)
+    local revealed = game.overmap.reveal(position, 0)
+    assert(revealed.ok == true)
+    assert(revealed.value.scanned == 1)
+    assert(revealed.value.existing == 1)
+    assert(revealed.value.changed == 1)
+    assert(revealed.value.vision.name == "full")
+    assert(game.overmap.reveal(position, 0).value.changed == 0)
+
+    assert(pcall(function()
+        game.overmap.set_terrain(
+            position, game.types.id("item", "rock"))
+    end) == false)
+    assert(pcall(function()
+        game.overmap.set_seen(
+            position,
+            game.enums.values("Direction", 0, 1)[1])
+    end) == false)
+    assert(pcall(function()
+        game.overmap.set_note(
+            position, string.rep("x", 4097))
+    end) == false)
+    assert(pcall(function()
+        game.overmap.set_note(position, "a\0b")
+    end) == false)
+    assert(pcall(function()
+        game.overmap.set_note_danger(position, 101, true)
+    end) == false)
+    assert(pcall(function()
+        game.overmap.reveal(position, 31)
+    end) == false)
+end)
+
+game.overmap.set_seen(position, before.vision)
+game.overmap.set_explored(position, before.explored)
+game.overmap.set_note(position, before.note)
+if before.note ~= nil then
+    local restore_radius = 0
+    if before.note_dangerous then
+        restore_radius = before.note_danger_radius
+    end
+    game.overmap.set_note_danger(
+        position, restore_radius,
+        before.note_dangerous)
+end
+assert(ok, failure)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local position = game.creatures.snapshot(
+    game.creatures.avatar()).value.position
+    :project_to("overmap_terrain")
+local vision = game.overmap.tile(position).vision
+game.overmap.set_seen(position, vision)
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v5_hordes_expose_bounded_definitions_and_existing_snapshots",
+           "[lua][bindings][world][hordes][read][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local limits = game.hordes.limits()
+assert(limits.maximum_radius == 30)
+assert(limits.maximum_radius_z == 5)
+assert(limits.maximum_limit == 256)
+assert(limits.maximum_signal_power == 60)
+assert(limits.existing_only == true)
+assert(#limits.flavors == 4)
+
+local definitions = game.hordes.definitions({
+    offset = 0,
+    limit = 1000000,
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.total > 0)
+local first = definitions.items[1]
+assert(first.id.kind == "monster_group")
+assert(first.id:is_valid())
+assert(math.type(first.entries) == "integer")
+assert(type(first.is_animal) == "boolean")
+assert(type(first.safe) == "boolean")
+
+local definition = game.hordes.definition(first.id, {
+    offset = 0,
+    limit = 1000000,
+})
+assert(definition.id == first.id)
+assert(definition.entries.limit == 256)
+assert(definition.entries.returned == #definition.entries.items)
+assert(definition.entries.returned <= definition.entries.total)
+assert(type(definition.is_animal) == "boolean")
+assert(type(definition.safe) == "boolean")
+assert(math.type(definition.frequency_total) == "integer")
+for _, entry in ipairs(definition.entries.items) do
+    assert(entry.kind == "group" or entry.kind == "monster")
+    assert(entry.id.kind == "monster_group" or
+        entry.id.kind == "monster")
+    assert(math.type(entry.frequency) == "integer")
+    assert(math.type(entry.cost_multiplier) == "integer")
+    assert(entry.starts.turns ~= nil)
+    assert(entry.ends.turns ~= nil)
+    assert(type(entry.lasts_forever) == "boolean")
+    assert(type(entry.event) == "string")
+    assert(entry.conditions.returned ==
+        #entry.conditions.items)
+end
+
+local members = game.hordes.monsters(
+    first.id, false, { limit = 1000000 })
+assert(members.group == first.id)
+assert(members.limit == 256)
+assert(members.returned == #members.items)
+for _, monster in ipairs(members.items) do
+    assert(monster.kind == "monster")
+    assert(monster:is_valid())
+    assert(game.hordes.contains(first.id, monster) == true)
+end
+
+local avatar = game.creatures.snapshot(
+    game.creatures.avatar()).value
+local omt = avatar.position:project_to("overmap_terrain")
+local entities = game.hordes.entities(omt, {
+    radius = 0,
+    radius_z = 0,
+    limit = 1000000,
+    flavors = { "active", "idle", "dormant", "immobile" },
+})
+assert(entities.limit == 256)
+assert(entities.returned == #entities.items)
+assert(entities.returned <= entities.total)
+assert(entities.existing_only == true)
+for _, entry in ipairs(entities.items) do
+    assert(entry.token:is_valid())
+    assert(entry.position.origin == "abs")
+    assert(entry.position.scale == "ms")
+    assert(entry.overmap_position == omt)
+    assert(entry.monster.kind == "monster")
+    assert(type(entry.name) == "string")
+    assert(type(entry.flavor) == "string")
+    assert(type(entry.active) == "boolean")
+    assert(type(entry.heavy) == "boolean")
+    assert(math.type(entry.tracking_intensity) == "integer")
+    assert(game.hordes.entity(entry.token).ok == true)
+end
+
+local legacy = game.hordes.legacy_groups(omt, {
+    radius = 0,
+    radius_z = 0,
+    horde_only = false,
+    limit = 1000000,
+})
+assert(legacy.limit == 256)
+assert(legacy.returned == #legacy.items)
+assert(legacy.returned <= legacy.total)
+assert(legacy.existing_only == true)
+for _, entry in ipairs(legacy.items) do
+    assert(entry.token:is_valid())
+    assert(entry.group.kind == "monster_group")
+    assert(entry.position.origin == "abs")
+    assert(entry.position.scale == "sm")
+    assert(type(entry.behavior) == "string")
+    assert(type(entry.horde) == "boolean")
+    assert(entry.monsters.returned == #entry.monsters.items)
+    assert(game.hordes.legacy_group(entry.token).ok == true)
+end
+
+local summary = game.hordes.summary(omt)
+assert(summary.position == omt)
+assert(math.type(summary.entities) == "integer")
+assert(math.type(summary.legacy_hordes) == "integer")
+assert(math.type(summary.estimated_size) == "integer")
+assert(type(summary.has_horde) == "boolean")
+assert(summary.existing_only == true)
+
+assert(pcall(function()
+    game.hordes.entities(avatar.position)
+end) == false)
+assert(pcall(function()
+    game.hordes.entities(omt, { radius = 31 })
+end) == false)
+assert(pcall(function()
+    game.hordes.entities(omt, { radius_z = 6 })
+end) == false)
+assert(pcall(function()
+    game.hordes.entities(omt, { flavors = { [2] = "idle" } })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( "game.hordes.limits()" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.read" ) != std::string::npos );
+}
+
+TEST_CASE( "lua_v5_hordes_use_generation_tokens_and_controlled_mutations",
+           "[lua][bindings][world][hordes][write][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.snapshot(
+    game.creatures.avatar()).value
+local position = avatar.position
+local omt = position:project_to("overmap_terrain")
+local sm = position:project_to("submap")
+local zombie = game.types.id("monster", "mon_zombie")
+local definitions = game.hordes.definitions({ limit = 1 })
+assert(definitions.returned == 1)
+local group_id = definitions.items[1].id
+
+local entity_token = nil
+local legacy_token = nil
+local ok, failure = pcall(function()
+    local created = game.hordes.spawn_entity(position, zombie)
+    assert(created.ok == true)
+    entity_token = created.value.token
+    assert(entity_token:is_valid() == true)
+    assert(created.value.monster == zombie)
+    assert(created.value.position == position)
+    assert(game.hordes.entity(entity_token).value.monster == zombie)
+
+    local alerted = game.hordes.alert_entity(
+        entity_token, position, 25)
+    assert(alerted.ok == true)
+    assert(alerted.value.before.tracking_intensity == 0)
+    assert(alerted.value.after.tracking_intensity == 25)
+    assert(alerted.value.after.active == true)
+    assert(alerted.value.after.token == entity_token)
+
+    local filtered = game.hordes.entities(omt, {
+        radius = 0,
+        monster = zombie,
+        flavors = { "active" },
+        limit = 256,
+    })
+    local found = false
+    for _, entry in ipairs(filtered.items) do
+        if entry.token == entity_token then
+            found = true
+        end
+    end
+    assert(found == true)
+
+    local signaled = game.hordes.signal(sm, 1)
+    assert(signaled.ok == true)
+    assert(signaled.value.accepted == true)
+    assert(signaled.value.existing_only == true)
+
+    local legacy = game.hordes.spawn_legacy_group({
+        group = group_id,
+        position = sm,
+        population = 17,
+        interest = 30,
+        horde = true,
+        behavior = "roam",
+        target = sm,
+        nemesis_target = sm,
+    })
+    assert(legacy.ok == true)
+    legacy_token = legacy.value.token
+    assert(legacy_token:is_valid() == true)
+    assert(legacy.value.group == group_id)
+    assert(legacy.value.population == 17)
+    assert(legacy.value.interest == 30)
+    assert(legacy.value.behavior == "roam")
+
+    local updated = game.hordes.update_legacy_group(
+        legacy_token, {
+            population = 19,
+            interest = 45,
+            dying = true,
+            horde = true,
+            behavior = "city",
+            target = sm,
+        })
+    assert(updated.ok == true)
+    assert(updated.value.before.population == 17)
+    assert(updated.value.after.population == 19)
+    assert(updated.value.after.interest == 45)
+    assert(updated.value.after.dying == true)
+    assert(updated.value.after.behavior == "city")
+    assert(updated.value.after.token == legacy_token)
+    assert(game.hordes.legacy_group(
+        legacy_token).value.population == 19)
+
+    assert(pcall(function()
+        game.hordes.spawn_entity(
+            position, game.types.id("item", "rock"))
+    end) == false)
+    assert(pcall(function()
+        game.hordes.alert_entity(
+            entity_token, position, 1000001)
+    end) == false)
+    assert(pcall(function()
+        game.hordes.signal(sm, 61)
+    end) == false)
+    assert(pcall(function()
+        game.hordes.update_legacy_group(
+            legacy_token, { interest = 14 })
+    end) == false)
+end)
+
+if legacy_token ~= nil and legacy_token:is_valid() then
+    local removed = game.hordes.remove_legacy_group(legacy_token)
+    assert(removed.ok == true)
+    assert(removed.value.removed == true)
+    assert(legacy_token:is_valid() == false)
+    assert(game.hordes.legacy_group(
+        legacy_token).error.code == "missing_legacy_horde")
+end
+if entity_token ~= nil and entity_token:is_valid() then
+    local removed = game.hordes.remove_entity(entity_token)
+    assert(removed.ok == true)
+    assert(removed.value.removed == true)
+    assert(entity_token:is_valid() == false)
+    assert(game.hordes.entity(
+        entity_token).error.code == "missing_horde_entity")
+end
+assert(ok, failure)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local position = game.creatures.snapshot(
+    game.creatures.avatar()).value.position
+game.hordes.spawn_entity(
+    position,
+    game.types.id("monster", "mon_zombie"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+}
+
 TEST_CASE( "lua_v5_inventory_traversal_returns_bounded_item_handles",
            "[lua][bindings][items][inventory][integration]" )
 {
@@ -3538,8 +4358,9 @@ TEST_CASE( "lua_v5_enums_are_typed_discoverable_and_bounded",
     using namespace cata::lua_ui;
 
     const std::vector<std::string> kinds = supported_script_enum_kinds();
-    CHECK( kinds.size() == 25 );
+    CHECK( kinds.size() == 26 );
     CHECK( std::find( kinds.begin(), kinds.end(), "DamageType" ) != kinds.end() );
+    CHECK( std::find( kinds.begin(), kinds.end(), "OmVisionLevel" ) != kinds.end() );
     CHECK( script_enum_kind_is_available( "DamageType" ) );
     CHECK( script_enum_kind_is_available( "ArtifactEffectActive" ) );
     CHECK_FALSE( script_enum_kind_is_available( "ArtifactEffectPassive" ) );
@@ -3563,7 +4384,7 @@ TEST_CASE( "lua_v5_enums_are_typed_discoverable_and_bounded",
     sol::table game = lua.create_named_table( "game" );
     install_value_type_api( lua, game, []() {} );
     sol::protected_function_result result = lua.safe_script( R"lua(
-assert(#game.enums.kinds() == 25)
+assert(#game.enums.kinds() == 26)
 local hostile = game.enums.value("Attitude", "hostile")
 assert(hostile.kind == "Attitude")
 assert(hostile.name == "hostile")

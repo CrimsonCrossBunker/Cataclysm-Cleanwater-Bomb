@@ -217,6 +217,11 @@ std::vector<std::string> overmap_match_values()
     return fixed_values( { "exact", "type", "subtype", "prefix", "contains" } );
 }
 
+std::vector<std::string> overmap_vision_values()
+{
+    return fixed_values( { "unseen", "vague", "outlines", "details", "full" } );
+}
+
 std::vector<std::string> phase_values()
 {
     return converted_enum_values<phase_id>(
@@ -364,6 +369,9 @@ const std::vector<enum_family_definition> &enum_families()
         },
         {
             "OtMatchType", enum_family_status::native, "", "", &overmap_match_values
+        },
+        {
+            "OmVisionLevel", enum_family_status::native, "", "", &overmap_vision_values
         },
         {
             "Phase", enum_family_status::native, "", "", &phase_values

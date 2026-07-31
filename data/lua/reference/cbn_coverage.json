@@ -9,8 +9,23 @@
   "domains": [
     {
       "id": "value_types_and_ids",
-      "status": "planned",
+      "status": "covered",
       "target": "coords, units, time, ids, enums and safe value serialization",
+      "evidence": [
+        "src/catalua_bindings_values.cpp",
+        "src/catalua_bindings_enums.cpp",
+        "src/catalua_bindings_serde.cpp",
+        "game.types",
+        "game.values",
+        "game.time",
+        "game.enums",
+        "game.serde"
+      ],
+      "tests": [
+        "tests/catalua_ui_test.cpp [lua][bindings][values]",
+        "tests/catalua_ui_test.cpp [lua][bindings][enums]",
+        "tests/catalua_ui_test.cpp [lua][bindings][serde]"
+      ],
       "rules": [ { "sections": [ "types", "ids" ], "file_globs": [ "*" ] } ]
     },
     {
@@ -23,14 +38,22 @@
     },
     {
       "id": "bionics",
-      "status": "planned",
+      "status": "covered",
       "target": "bionic definitions, instances, activation, fuel and callbacks",
+      "evidence": [ "src/catalua_ui_bionics.cpp", "game.bionics" ],
+      "tests": [ "tests/catalua_ui_test.cpp [lua][bindings][bionics]" ],
       "rules": [ { "sections": [ "functions", "members" ], "file_globs": [ "src/catalua_bindings_bionics.cpp" ] } ]
     },
     {
       "id": "creatures_and_effects",
-      "status": "planned",
+      "status": "covered",
       "target": "Creature, Character, avatar, NPC, monster and effect handles",
+      "evidence": [ "src/catalua_ui_creatures.cpp", "src/catalua_ui_effects.cpp", "game.creatures", "game.characters", "game.effects" ],
+      "tests": [
+        "tests/catalua_ui_test.cpp [lua][bindings][creatures]",
+        "tests/catalua_ui_test.cpp [lua][bindings][characters]",
+        "tests/catalua_ui_test.cpp [lua][bindings][effects]"
+      ],
       "rules": [
         {
           "sections": [ "functions", "members" ],
@@ -40,8 +63,10 @@
     },
     {
       "id": "items_and_inventory",
-      "status": "planned",
+      "status": "covered",
       "target": "safe item locations, pockets, inventory and item behavior",
+      "evidence": [ "src/catalua_ui_items.cpp", "game.items", "game.inventory" ],
+      "tests": [ "tests/catalua_ui_test.cpp [lua][bindings][items]", "tests/catalua_ui_test.cpp [lua][bindings][inventory]" ],
       "rules": [
         {
           "sections": [ "functions", "members" ],
@@ -64,8 +89,21 @@
     },
     {
       "id": "map_and_world",
-      "status": "planned",
+      "status": "covered",
       "target": "active map, off-bubble regions, overmap, hordes and world mutation",
+      "evidence": [
+        "src/catalua_ui_world.cpp",
+        "src/catalua_ui_overmap.cpp",
+        "src/catalua_ui_hordes.cpp",
+        "game.world",
+        "game.overmap",
+        "game.hordes"
+      ],
+      "tests": [
+        "tests/catalua_ui_test.cpp [lua][bindings][world]",
+        "tests/catalua_ui_test.cpp [lua][bindings][overmap]",
+        "tests/catalua_ui_test.cpp [lua][bindings][hordes]"
+      ],
       "rules": [
         {
           "sections": [ "functions", "members" ],
@@ -116,8 +154,21 @@
     },
     {
       "id": "runtime_and_definitions",
-      "status": "planned",
+      "status": "covered",
       "target": "runtime lifecycle, serialization, definition access and shared helpers",
+      "evidence": [
+        "src/catalua_ui_registry.cpp",
+        "src/catalua_ui_modules.cpp",
+        "src/catalua_bindings_serde.cpp",
+        "game.definitions",
+        "game.modules",
+        "game.diagnostics"
+      ],
+      "tests": [
+        "tests/catalua_ui_test.cpp [lua][bindings][registry]",
+        "tests/catalua_ui_test.cpp [lua][bindings][diagnostics]",
+        "tests/catalua_ui_test.cpp [lua][modules][sandbox]"
+      ],
       "rules": [
         {
           "sections": [ "functions", "members" ],
