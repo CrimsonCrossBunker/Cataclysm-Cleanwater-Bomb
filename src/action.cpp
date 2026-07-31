@@ -665,9 +665,8 @@ bool can_butcher_at( map &here, const tripoint_bub_ms &p )
             if( factor != INT_MIN  || factorD != INT_MIN ) {
                 has_corpse = true;
             }
-        } else if( player_character.can_disassemble( items_it, crafting_inv ).success() ) {
-            has_item = true;
-        } else if( salvage_iuse && salvage_iuse->valid_to_cut_up( nullptr, items_it ) ) {
+        } else if( player_character.can_disassemble( items_it, crafting_inv ).success() ||
+                   ( salvage_iuse && salvage_iuse->valid_to_cut_up( nullptr, items_it ) ) ) {
             has_item = true;
         }
     }
