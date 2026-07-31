@@ -30,7 +30,7 @@
     "material": [ "glass", "lc_steel" ],
     "volume": "6500 ml",
     "price": "10 kUSD 200 USD",
-    "price_postapoc": "82 USD",
+    "price_postapoc": "105 USD",
     "copy-from": "solar_panel"
   },
   {
