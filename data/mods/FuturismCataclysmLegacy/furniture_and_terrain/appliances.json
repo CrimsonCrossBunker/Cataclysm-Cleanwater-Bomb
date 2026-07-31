@@ -54,7 +54,7 @@
     "description": "A reinforced quantum solar panel array, mounted on a frame and ready to power other appliances.",
     "copy-from": "ap_ground_solar_panel_v3",
     "item": "reinforced_ground_solar_panel_v3",
-    "proportional": { "epower": 0.9 },
+    "proportional": { "epower": 0.95 },
     "durability": 450,
     "requirements": {
       "install": {  },
