@@ -1,7 +1,7 @@
 [
   {
     "type": "overmap_terrain",
-    "id": "microlab_generic",
+    "id": [ "microlab_generic", "microlab_generic_special_room" ],
     "vision_levels": "underground_stone",
     "name": "science lab",
     "sym": "L",
