@@ -49,7 +49,7 @@ file(GLOB CATA_SOURCES CONFIGURE_DEPENDS ${CATA_REPO_ROOT}/src/*.cpp
 
 option(CCB_ANDROID_NEW_UI
        "Enable the opt-in Android touch UI and customizable HUD" OFF)
-option(CATA_ENABLE_LUA_UI "Enable the experimental Lua Mod API" OFF)
+option(CATA_ENABLE_LUA_UI "Enable the experimental Lua Mod API" ON)
 
 set(
   CATALUA_UI_ENABLED_SOURCES

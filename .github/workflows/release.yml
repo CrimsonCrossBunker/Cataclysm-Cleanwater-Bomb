@@ -290,6 +290,7 @@ jobs:
     permissions: write-all
     env:
         ZSTD_CLEVEL: 17
+        CATA_ENABLE_LUA_UI: 1
     steps:
       - name: Maximize build space (mac)
         if: ${{ runner.os == 'macos' && matrix.android == '' }}

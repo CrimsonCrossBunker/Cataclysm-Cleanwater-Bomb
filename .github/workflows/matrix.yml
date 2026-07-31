@@ -189,7 +189,6 @@ jobs:
             tiles: 0
             sound: 0
             localize: 1
-            lua_ui: 1
             dont_skip_data_only_changes: 1
             native: linux64
             pch: 1
@@ -226,7 +225,7 @@ jobs:
         SOUND: ${{ matrix.sound }}
         SDL3: ${{ matrix.sdl3 }}
         LOCALIZE: ${{ matrix.localize }}
-        CATA_ENABLE_LUA_UI: ${{ matrix.lua_ui || 0 }}
+        CATA_ENABLE_LUA_UI: 1
         MODS: ${{ matrix.mods }}
         SANITIZE: ${{ matrix.sanitize }}
         TEST_STAGE: ${{ matrix.test-stage }}
