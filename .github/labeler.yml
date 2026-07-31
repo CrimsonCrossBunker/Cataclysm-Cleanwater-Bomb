@@ -47,6 +47,12 @@ labels:
         - "**/*.cpp"
         - "**/*.h"
 
+  - label: "[Lua]"
+    matcher:
+      files:
+        - "**/*.lua"
+        - "**/lua/**"
+
   - label: "[JSON]"
     matcher:
       files:
