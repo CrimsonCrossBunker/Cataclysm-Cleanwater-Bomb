@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_eocs.h"
 
 #include <algorithm>
@@ -780,3 +782,5 @@ void install_eoc_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

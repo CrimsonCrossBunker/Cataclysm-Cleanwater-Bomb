@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_statistics.h"
 
 #include <algorithm>
@@ -1293,3 +1295,5 @@ void install_statistics_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

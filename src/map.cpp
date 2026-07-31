@@ -1554,6 +1554,11 @@ float map::vehicle_vehicle_collision( vehicle &veh, vehicle &veh2,
     vehicle_part &vp1 = veh.part( c.part );
     vehicle_part &vp2 = veh2.part( c.target_part );
 
+    // Cancel automated driving before collision damage does so without braking.
+    // Manual drivers must retain their requested cruise velocity after a crash.
+    veh.stop_autodriving();
+    veh2.stop_autodriving();
+
     // Check whether avatar sees the collision, and log a message if so
     const avatar &you = get_avatar();
     const tripoint_bub_ms part1_pos = veh.bub_part_pos( *this, vp1 );

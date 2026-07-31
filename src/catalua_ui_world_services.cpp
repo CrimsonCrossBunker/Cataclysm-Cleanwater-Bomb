@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_world_services.h"
 
 #include <algorithm>
@@ -647,3 +649,5 @@ void install_game_world_service_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

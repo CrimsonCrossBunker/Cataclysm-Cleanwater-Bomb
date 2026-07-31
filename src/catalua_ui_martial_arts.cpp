@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_martial_arts.h"
 
 #include <algorithm>
@@ -737,3 +739,5 @@ void install_martial_art_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

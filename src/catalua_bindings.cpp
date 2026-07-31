@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_bindings.h"
 
 #include <algorithm>
@@ -127,3 +129,5 @@ void install_binding_catalog_api( sol::table &game, std::function<void()> requir
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

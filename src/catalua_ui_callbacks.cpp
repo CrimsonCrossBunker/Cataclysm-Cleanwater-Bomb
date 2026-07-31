@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_callbacks.h"
 
 #include <algorithm>
@@ -484,3 +486,5 @@ void script_callback_registry::clear()
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI
