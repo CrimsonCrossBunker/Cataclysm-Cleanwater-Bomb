@@ -84,6 +84,13 @@
         "south": { "id": "dmicrolab_to_dmicrolab", "type": "available", "alternatives": [ "dmicrolab_to_dhallway" ] },
         "west": { "id": "dmicrolab_to_dmicrolab", "type": "available", "alternatives": [ "dmicrolab_to_dhallway" ] }
       },
+      "dmicrolab_special_room": {
+        "overmap": "microlab_distorted_special_room",
+        "north": { "id": "dmicrolab_to_dmicrolab", "alternatives": [ "dmicrolab_to_dhallway" ] },
+        "east": { "id": "dmicrolab_to_dmicrolab", "alternatives": [ "dmicrolab_to_dhallway" ] },
+        "south": { "id": "dmicrolab_to_dmicrolab", "alternatives": [ "dmicrolab_to_dhallway" ] },
+        "west": { "id": "dmicrolab_to_dmicrolab", "alternatives": [ "dmicrolab_to_dhallway" ] }
+      },
       "microlab_portal_dressroom": { "overmap": "microlab_portal_dressroom_south", "north": "hallway_to_hallway", "south": "hallway_to_hallway" },
       "microlab_sub_entry": {
         "overmap": "microlab_generic_sub_entry_north",
@@ -281,7 +288,10 @@
       [ { "overmap": "hallway_blind_end", "weight": 1 } ],
       [ { "overmap": "microlab", "max": 20 } ],
       [ { "overmap": "microlab_edge", "weight": 1 } ],
-      [ { "overmap": "dmicrolab", "max": 6 } ],
+      [
+        { "name": "distorted-special-room", "chunk": [ { "overmap": "dmicrolab_special_room", "pos": [ 0, 0, 0 ] } ], "max": 1 }
+      ],
+      [ { "overmap": "dmicrolab", "max": 5 } ],
       [ { "overmap": "nether_deep", "max": 480 } ],
       [ { "overmap": "nether_impassable", "weight": 1 } ],
       [ { "overmap": "dmicrolab_edge", "weight": 100000 }, { "overmap": "rock_divisor", "weight": 1 } ]
