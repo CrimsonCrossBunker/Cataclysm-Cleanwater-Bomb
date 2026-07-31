@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_proficiencies.h"
 
 #include <algorithm>
@@ -830,3 +832,5 @@ void install_proficiency_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

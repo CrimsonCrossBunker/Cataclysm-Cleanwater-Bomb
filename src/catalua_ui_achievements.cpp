@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_achievements.h"
 
 #include <algorithm>
@@ -799,3 +801,5 @@ void install_achievement_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

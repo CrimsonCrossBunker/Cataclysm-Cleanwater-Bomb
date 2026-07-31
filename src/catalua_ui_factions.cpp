@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_factions.h"
 
 #include <algorithm>
@@ -1358,3 +1360,5 @@ void install_faction_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

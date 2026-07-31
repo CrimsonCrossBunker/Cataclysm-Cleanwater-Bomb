@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_vitamins.h"
 
 #include <algorithm>
@@ -572,3 +574,5 @@ void install_vitamin_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI
