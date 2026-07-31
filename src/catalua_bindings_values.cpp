@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_bindings_values.h"
 
 #include <algorithm>
@@ -1115,3 +1117,5 @@ void install_value_type_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI
