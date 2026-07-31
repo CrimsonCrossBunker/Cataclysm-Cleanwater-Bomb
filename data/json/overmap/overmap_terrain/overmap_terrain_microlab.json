@@ -107,7 +107,7 @@
   },
   {
     "type": "overmap_terrain",
-    "id": [ "microlab_distorted", "microlab_distorted_edge" ],
+    "id": [ "microlab_distorted", "microlab_distorted_edge", "microlab_distorted_special_room" ],
     "name": "distorted science lab",
     "color": "pink",
     "copy-from": "microlab_generic"
