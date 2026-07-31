@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_bindings_serde.h"
 
 #include <algorithm>
@@ -512,3 +514,5 @@ void install_serde_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

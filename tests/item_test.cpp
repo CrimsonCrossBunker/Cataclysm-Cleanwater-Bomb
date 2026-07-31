@@ -23,6 +23,7 @@
 #include "enums.h"
 #include "flag.h"
 #include "game.h"
+#include "game_constants.h"
 #include "item.h"
 #include "item_category.h"
 #include "item_factory.h"

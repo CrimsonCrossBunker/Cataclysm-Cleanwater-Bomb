@@ -1151,27 +1151,14 @@ LUA_C_SOURCE_NAMES := \
   lzio.c
 LUA_C_SOURCES := $(addprefix $(SRC_DIR)/lua/,$(LUA_C_SOURCE_NAMES))
 LUA_UI_ENABLED_SOURCES := \
-  $(SRC_DIR)/catalua_bindings.cpp \
-  $(SRC_DIR)/catalua_bindings_coords.cpp \
-  $(SRC_DIR)/catalua_bindings_enums.cpp \
-  $(SRC_DIR)/catalua_bindings_serde.cpp \
-  $(SRC_DIR)/catalua_bindings_values.cpp \
-  $(SRC_DIR)/catalua_game_handle.cpp \
   $(SRC_DIR)/catalua_ui.cpp \
   $(SRC_DIR)/catalua_ui_actions.cpp \
-  $(SRC_DIR)/catalua_ui_bionics.cpp \
-  $(SRC_DIR)/catalua_ui_creatures.cpp \
-  $(SRC_DIR)/catalua_ui_effects.cpp \
   $(SRC_DIR)/catalua_ui_events.cpp \
   $(SRC_DIR)/catalua_ui_game.cpp \
   $(SRC_DIR)/catalua_ui_i18n.cpp \
   $(SRC_DIR)/catalua_ui_imgui.cpp \
-  $(SRC_DIR)/catalua_ui_items.cpp \
-  $(SRC_DIR)/catalua_ui_magic.cpp \
   $(SRC_DIR)/catalua_ui_manifest.cpp \
-  $(SRC_DIR)/catalua_ui_missions.cpp \
   $(SRC_DIR)/catalua_ui_modules.cpp \
-  $(SRC_DIR)/catalua_ui_mutations.cpp \
   $(SRC_DIR)/catalua_ui_navigation.cpp \
   $(SRC_DIR)/catalua_ui_renderer.cpp \
   $(SRC_DIR)/catalua_ui_registry.cpp \
