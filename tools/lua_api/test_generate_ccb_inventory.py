@@ -81,7 +81,7 @@ class CcbInventoryGeneratorTest(unittest.TestCase):
 
     def test_repository_inventory_has_expected_native_baselines(self) -> None:
         inventory = build_inventory()
-        self.assertEqual(len(inventory["id_kinds"]), 131)
+        self.assertEqual(len(inventory["id_kinds"]), 132)
         self.assertEqual(len(inventory["json_types"]), 190)
         self.assertEqual(len(inventory["event_types"]), 113)
         self.assertEqual(
