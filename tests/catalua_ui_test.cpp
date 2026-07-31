@@ -1,6 +1,8 @@
 #include "cata_catch.h"
 #include "avatar.h"
+#include "bodypart.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "catalua_bindings.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_enums.h"
@@ -18,6 +20,7 @@
 #include "catalua_ui_scheduler.h"
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
+#include "effect.h"
 #include "event_bus.h"
 #include "input_context_actions.h"
 #include "json_loader.h"
@@ -1150,6 +1153,548 @@ end)
     calendar::turn = turn.original() + 1_turns;
     cata::lua_ui::on_turn();
     CHECK( cata::lua_ui::status().last_error.empty() );
+}
+
+TEST_CASE( "lua_v5_creature_queries_return_bounded_handles_and_snapshots",
+           "[lua][bindings][creatures][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.avatar()
+assert(avatar.kind == "creature")
+assert(avatar:is_valid())
+
+local result = game.creatures.snapshot(avatar)
+assert(result.ok == true)
+local snapshot = result.value
+assert(snapshot.kind == "avatar")
+assert(type(snapshot.name) == "string")
+assert(type(snapshot.display_name) == "string")
+assert(snapshot.position.origin == "abs")
+assert(snapshot.position.scale == "ms")
+assert(math.type(snapshot.position.x) == "integer")
+assert(type(snapshot.visible) == "boolean")
+assert(math.type(snapshot.distance) == "integer")
+assert(type(snapshot.attitude) == "string")
+assert(type(snapshot.dead) == "boolean")
+assert(type(snapshot.hallucination) == "boolean")
+assert(math.type(snapshot.hp) == "integer")
+assert(math.type(snapshot.hp_max) == "integer")
+assert(math.type(snapshot.hp_percent) == "integer")
+assert(math.type(snapshot.moves) == "integer")
+assert(math.type(snapshot.effect_count) == "integer")
+assert(type(snapshot.size) == "string")
+
+local nearby = game.creatures.nearby({
+    radius = 0,
+    limit = 4,
+    visible_only = false,
+    include_avatar = true
+})
+assert(nearby.radius == 0)
+assert(nearby.limit == 4)
+assert(nearby.returned == #nearby.items)
+assert(nearby.total >= 1)
+assert(nearby.truncated == (nearby.returned < nearby.total))
+assert(nearby.items[1].handle:is_valid())
+assert(type(nearby.items[1].snapshot.kind) == "string")
+
+local capped = game.creatures.nearby({
+    radius = 1000000,
+    limit = 1000000,
+    visible_only = false
+})
+assert(capped.radius == 60)
+assert(capped.limit == 256)
+
+local at_position = game.creatures.at(snapshot.position)
+assert(at_position.ok == true)
+assert(at_position.value:is_valid())
+assert(game.creatures.snapshot(at_position.value).value.kind == "avatar")
+
+local relative = game.coords.tripoint_rel_ms(0, 0, 0)
+assert(pcall(function()
+    game.creatures.at(relative)
+end) == false)
+assert(pcall(function()
+    game.creatures.nearby({ radius = -1 })
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_queries_return_detailed_bounded_snapshots",
+           "[lua][bindings][characters][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local result = game.characters.snapshot(avatar)
+assert(result.ok == true)
+local character = result.value
+assert(math.type(character.id) == "integer")
+assert(type(character.name) == "string")
+assert(character.avatar == true)
+assert(character.npc == false)
+assert(type(character.male) == "boolean")
+assert(type(character.faction_id) == "string")
+
+assert(math.type(character.stats.strength) == "integer")
+assert(math.type(character.stats.dexterity_base) == "integer")
+assert(math.type(character.stats.perception_bonus) == "integer")
+assert(math.type(character.needs.stamina) == "integer")
+assert(math.type(character.needs.stamina_max) == "integer")
+assert(type(character.needs.kcal_percent) == "number")
+assert(math.type(character.needs.focus) == "integer")
+assert(type(character.senses.blind) == "boolean")
+assert(type(character.senses.deaf) == "boolean")
+assert(type(character.senses.stealthy) == "boolean")
+assert(type(character.combat.dodge) == "number")
+assert(math.type(character.combat.working_arms) == "integer")
+assert(type(character.carrying.weight_grams) == "number")
+assert(type(character.carrying.volume_ml) == "number")
+assert(type(character.movement.id) == "string")
+assert(type(character.movement.name) == "string")
+assert(character.npc_state.present == false)
+
+local body = character.body_parts
+assert(body.returned == #body.items)
+assert(body.returned <= body.total)
+assert(body.limit == 32)
+assert(body.truncated == (body.returned < body.total))
+for _, part in ipairs(body.items) do
+    assert(type(part.id) == "string")
+    assert(type(part.name) == "string")
+    assert(math.type(part.hp) == "integer")
+    assert(math.type(part.hp_max) == "integer")
+    assert(type(part.hp_percent) == "number")
+    assert(math.type(part.encumbrance) == "integer")
+    assert(type(part.temperature_c) == "number")
+    assert(type(part.broken) == "boolean")
+end
+
+local zero = game.characters.snapshot(avatar, 0).value.body_parts
+assert(zero.limit == 0 and zero.returned == 0)
+local capped = game.characters.snapshot(avatar, 1000000).value.body_parts
+assert(capped.limit == 64 and capped.returned <= 64)
+
+local by_id = game.characters.by_id(character.id)
+assert(by_id.ok == true)
+assert(by_id.value:is_valid())
+assert(game.characters.snapshot(by_id.value).value.id == character.id)
+assert(game.characters.by_id(-9223372036854775807).ok == false)
+
+local nearby = game.characters.nearby({
+    radius = 0,
+    limit = 4,
+    visible_only = false,
+    include_avatar = true
+})
+assert(nearby.total >= 1)
+assert(nearby.returned == #nearby.items)
+assert(nearby.items[1].handle:is_valid())
+assert(math.type(nearby.items[1].id) == "integer")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_v5_character_mutations_are_bounded_and_write_gated",
+           "[lua][bindings][characters][write][integration]" )
+{
+    avatar &player = get_avatar();
+    const int original_moves = player.get_moves();
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local adjusted = game.characters.adjust(avatar, { moves = 7 })
+assert(adjusted.ok == true)
+assert(adjusted.value.after.moves == adjusted.value.before.moves + 7)
+local restored = game.characters.adjust(avatar, { moves = -7 })
+assert(restored.ok == true)
+assert(restored.value.after.moves == adjusted.value.before.moves)
+
+local torso = game.types.id("body_part", "torso")
+local healed = game.characters.heal(avatar, torso, 1)
+assert(healed.ok == true)
+assert(healed.value.body_part == torso)
+assert(healed.value.requested == 1)
+assert(healed.value.after >= healed.value.before)
+assert(healed.value.after <= healed.value.maximum)
+
+local snapshot = game.characters.snapshot(avatar, 0).value
+local current_mode = game.types.id("move_mode", snapshot.movement.id)
+local movement = game.characters.set_movement_mode(avatar, current_mode)
+assert(movement.ok == true)
+assert(movement.value.before == current_mode)
+assert(movement.value.after == current_mode)
+
+assert(pcall(function()
+    game.characters.adjust(avatar, { unknown = 1 })
+end) == false)
+assert(pcall(function()
+    game.characters.adjust(avatar, { moves = 1.5 })
+end) == false)
+assert(pcall(function()
+    game.characters.adjust(avatar, { moves = 1000001 })
+end) == false)
+assert(pcall(function()
+    game.characters.heal(avatar, torso, 0)
+end) == false)
+assert(pcall(function()
+    game.characters.heal(
+        avatar, game.types.id("effect", "downed"), 1)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_moves() == original_moves );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.characters.adjust(game.characters.avatar(), { moves = 1 })
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.get_moves() == original_moves );
+}
+
+TEST_CASE( "lua_v5_effects_are_detached_bounded_and_write_gated",
+           "[lua][bindings][effects][integration]" )
+{
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.creatures.avatar()
+local downed = game.types.id("effect", "downed")
+local one_turn = game.time.duration(1, "turn")
+local two_turns = game.time.duration(2, "turn")
+
+game.effects.remove(avatar, downed)
+local absent = game.effects.has(avatar, downed)
+assert(absent.ok == true and absent.value == false)
+assert(game.effects.get(avatar, downed).ok == false)
+
+local added = game.effects.add(avatar, downed, one_turn, {
+    intensity = 1,
+    permanent = false,
+    force = true
+})
+assert(added.ok == true)
+assert(added.value.id == downed)
+assert(added.value.duration == one_turn)
+assert(added.value.body_part == nil)
+assert(math.type(added.value.intensity) == "integer")
+assert(type(added.value.name) == "string")
+assert(type(added.value.description) == "string")
+assert(type(added.value.permanent) == "boolean")
+assert(added.value.resisted_by.effects.returned ==
+    #added.value.resisted_by.effects.items)
+assert(added.value.blocks_effects.returned ==
+    #added.value.blocks_effects.items)
+
+local present = game.effects.has(avatar, downed)
+assert(present.ok == true and present.value == true)
+local fetched = game.effects.get(avatar, downed)
+assert(fetched.ok == true and fetched.value.id == downed)
+
+local listed = game.effects.list(avatar, 1000000)
+assert(listed.ok == true)
+assert(listed.value.limit == 256)
+assert(listed.value.returned == #listed.value.items)
+assert(listed.value.returned <= listed.value.total)
+assert(listed.value.truncated ==
+    (listed.value.returned < listed.value.total))
+
+local updated = game.effects.update(avatar, downed, {
+    duration = two_turns,
+    intensity = 1,
+    permanent = true
+})
+assert(updated.ok == true)
+assert(updated.value.before.id == downed)
+assert(updated.value.after.duration == two_turns)
+assert(updated.value.after.permanent == true)
+
+assert(pcall(function()
+    game.effects.add(avatar, downed,
+        game.time.duration(0, "turn"))
+end) == false)
+assert(pcall(function()
+    game.effects.add(avatar, downed, one_turn,
+        { intensity = 1001 })
+end) == false)
+assert(pcall(function()
+    game.effects.add(avatar, downed, one_turn,
+        { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.effects.has(avatar,
+        game.types.id("item", "rock"))
+end) == false)
+
+local removed = game.effects.remove(avatar, downed)
+assert(removed.ok == true and removed.value == true)
+assert(game.effects.has(avatar, downed).value == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.effects.add(
+    game.creatures.avatar(),
+    game.types.id("effect", "downed"),
+    game.time.duration(1, "turn"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
+}
+
+TEST_CASE( "lua_v5_effect_updates_notify_the_owning_creature",
+           "[lua][bindings][effects][integration][regression]" )
+{
+    avatar &player = get_avatar();
+    const efftype_id cold( "cold" );
+    const bodypart_id torso = bodypart_str_id( "torso" ).id();
+    player.remove_effect( cold, torso );
+    player.clear_morale();
+    on_out_of_scope cleanup( [&player, &cold, &torso]() {
+        player.remove_effect( cold, torso );
+        player.clear_morale();
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local cold = game.types.id("effect", "cold")
+local torso = game.types.id("body_part", "torso")
+local duration = game.time.duration(10, "minute")
+assert(game.effects.add(avatar, cold, duration, {
+    body_part = torso,
+    intensity = 1,
+    force = true
+}).ok)
+local updated = game.effects.update(avatar, cold, {
+    body_part = torso,
+    intensity = 2
+})
+assert(updated.ok)
+assert(updated.value.before.intensity == 1)
+assert(updated.value.after.intensity == 2)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    REQUIRE( player.has_effect( cold, torso ) );
+    CHECK( player.get_effect( cold, torso ).get_intensity() == 2 );
+    player.update_morale();
+    const int lua_updated_morale = player.get_morale_level();
+
+    player.remove_effect( cold, torso );
+    player.clear_morale();
+    player.add_effect(
+        cold, 10_minutes, torso, false, 2, true );
+    player.update_morale();
+    CHECK( lua_updated_morale == player.get_morale_level() );
+}
+
+TEST_CASE( "lua_v5_bionics_use_detached_definitions_and_uid_operations",
+           "[lua][bindings][bionics][integration]" )
+{
+    avatar &player = get_avatar();
+    const int original_count = player.num_bionics();
+    const units::energy original_power = player.get_power_level();
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local earplugs = game.types.id("bionic", "bio_earplugs")
+local ears = game.types.id("bionic", "bio_ears")
+
+local definitions = game.bionics.definitions({
+    offset = 0,
+    limit = 1000000
+})
+assert(definitions.limit == 256)
+assert(definitions.returned == #definitions.items)
+assert(definitions.returned <= definitions.total)
+assert(definitions.has_more ==
+    (definitions.offset + definitions.returned < definitions.total))
+
+local definition = game.bionics.definition(earplugs)
+assert(definition.id == earplugs)
+assert(type(definition.name) == "string")
+assert(type(definition.description) == "string")
+assert(definition.power.activation.kind == "energy")
+assert(definition.power.charge_time.turns >= 0)
+assert(type(definition.activated) == "boolean")
+assert(definition.flags.returned == #definition.flags.items)
+assert(definition.occupied_body_parts.returned ==
+    #definition.occupied_body_parts.items)
+assert(definition.damage_protection.returned ==
+    #definition.damage_protection.items)
+
+local bundle = game.bionics.install(avatar, ears)
+assert(bundle.ok == true)
+local bundled_instances = game.bionics.list(avatar, 256)
+assert(bundled_instances.ok == true)
+local included_uid = nil
+for _, instance in ipairs(bundled_instances.value.items) do
+    if instance.id == earplugs and instance.included then
+        included_uid = instance.uid
+    end
+end
+assert(included_uid ~= nil)
+local included_removal = game.bionics.remove(avatar, included_uid)
+assert(included_removal.ok == false)
+assert(included_removal.error.code == "included_bionic")
+assert(game.bionics.get(avatar, included_uid).ok == true)
+local bundle_removal = game.bionics.remove(avatar, bundle.value.uid)
+assert(bundle_removal.ok == true)
+assert(game.bionics.has(avatar, ears).value == false)
+assert(game.bionics.has(avatar, earplugs).value == false)
+
+local before = game.bionics.list(avatar, 1000000)
+assert(before.ok == true and before.value.limit == 256)
+local installed = game.bionics.install(avatar, earplugs)
+assert(installed.ok == true)
+assert(installed.value.id == earplugs)
+assert(math.type(installed.value.uid) == "integer")
+local uid = installed.value.uid
+assert(game.bionics.has(avatar, earplugs).value == true)
+assert(game.bionics.get(avatar, uid).value.id == earplugs)
+
+local configured = game.bionics.configure(avatar, uid, {
+    auto_shutdown = false,
+    show_sprite = false,
+    safe_fuel_threshold = -1
+})
+assert(configured.ok == true)
+assert(configured.value.after.auto_shutdown == false)
+assert(configured.value.after.show_sprite == false)
+assert(configured.value.after.safe_fuel_threshold == -1)
+
+local activated = game.bionics.activate(avatar, uid)
+assert(activated.ok == true)
+assert(activated.value.accepted == true)
+assert(activated.value.after.powered == true)
+local deactivated = game.bionics.deactivate(avatar, uid)
+assert(deactivated.ok == true)
+assert(deactivated.value.accepted == true)
+assert(deactivated.value.after.powered == false)
+
+local zero = game.units.new("energy", 0, "kilojoule")
+local power = game.bionics.set_power(avatar, zero)
+assert(power.ok == true)
+assert(power.value.after == zero)
+assert(type(power.value.clamped) == "boolean")
+
+assert(pcall(function()
+    game.bionics.configure(avatar, uid,
+        { safe_fuel_threshold = 1.1 })
+end) == false)
+assert(pcall(function()
+    game.bionics.configure(avatar, uid, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.bionics.has(avatar, game.types.id("item", "rock"))
+end) == false)
+assert(game.bionics.get(avatar, 0).ok == false)
+
+local removed = game.bionics.remove(avatar, uid)
+assert(removed.ok == true)
+assert(removed.value.removed.id == earplugs)
+assert(game.bionics.has(avatar, earplugs).value == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.num_bionics() == original_count );
+    CHECK( player.get_power_level() == units::from_kilojoule( 0 ) );
+    player.set_power_level( original_power );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.bionics.install(
+    game.characters.avatar(),
+    game.types.id("bionic", "bio_earplugs"))
+)lua" );
+    CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.find( "game.write" ) != std::string::npos );
+    CHECK( player.num_bionics() == original_count );
+    CHECK( player.get_power_level() == original_power );
 }
 
 TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",

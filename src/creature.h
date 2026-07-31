@@ -697,6 +697,10 @@ class Creature : public viewer
         /** Returns the intensity of the matching effect. Returns 0 if effect doesn't exist. */
         int get_effect_int( const efftype_id &eff_id,
                             const bodypart_id &bp = bodypart_str_id::NULL_ID() ) const;
+        /** Refresh derived creature state after a caller directly changes an
+         * existing effect's intensity. */
+        void notify_effect_int_change( const efftype_id &eff_id, int intensity,
+                                       const bodypart_id &bp );
         /** Returns true if the creature resists an effect */
         bool resists_effect( const effect &e ) const;
 

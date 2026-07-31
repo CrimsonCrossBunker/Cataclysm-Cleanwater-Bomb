@@ -2019,6 +2019,12 @@ bool Creature::remove_effect( const efftype_id &eff_id )
     return remove_effect( eff_id, bodypart_str_id::NULL_ID() );
 }
 
+void Creature::notify_effect_int_change( const efftype_id &eff_id,
+        const int intensity, const bodypart_id &bp )
+{
+    on_effect_int_change( eff_id, intensity, bp );
+}
+
 void Creature::schedule_effect_removal( const efftype_id &eff_id, const bodypart_id &bp )
 {
     terminating_effects.push( terminating_effect{eff_id, bp} );
