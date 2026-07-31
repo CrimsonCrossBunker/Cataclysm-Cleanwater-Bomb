@@ -3,23 +3,28 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 
 try:
     from .generate_ccb_inventory import (
+        DEFAULT_OUTPUT,
         NATIVE_DOMAINS,
         build_inventory,
         parse_event_types,
         parse_id_kinds,
         parse_json_types,
+        serialize_inventory,
     )
 except ImportError:
     from generate_ccb_inventory import (
+        DEFAULT_OUTPUT,
         NATIVE_DOMAINS,
         build_inventory,
         parse_event_types,
         parse_id_kinds,
         parse_json_types,
+        serialize_inventory,
     )
 
 
@@ -92,6 +97,14 @@ class CcbInventoryGeneratorTest(unittest.TestCase):
             sorted(domain for domain, _ in NATIVE_DOMAINS),
             [domain for domain, _ in NATIVE_DOMAINS],
         )
+
+    def test_repository_inventory_uses_generator_format(self) -> None:
+        serialized = serialize_inventory(build_inventory())
+        self.assertEqual(
+            serialized,
+            DEFAULT_OUTPUT.read_text(encoding="utf-8"),
+        )
+        self.assertEqual(json.loads(serialized), build_inventory())
 
 
 if __name__ == "__main__":

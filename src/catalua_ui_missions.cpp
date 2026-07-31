@@ -1087,7 +1087,7 @@ sol::table complete_instance(
         } );
     }
     const bool goal_complete =
-        entry->is_complete( character_id() );
+        entry->is_complete( entry->get_npc_id() );
     if( !goal_complete && !force.value_or( false ) ) {
         return make_game_error_result(
         state, game_handle_error{

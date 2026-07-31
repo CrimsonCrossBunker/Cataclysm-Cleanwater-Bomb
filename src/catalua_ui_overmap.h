@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CATALUA_UI_OVERMAP_H
 #define CATA_SRC_CATALUA_UI_OVERMAP_H
 
+#include <cstddef>
 #include <functional>
 
 #include "catalua_sol.h"
@@ -14,7 +15,8 @@ namespace cata::lua_ui
 void install_overmap_api(
     sol::table &game,
     std::function<void()> require_read,
-    std::function<void()> require_write );
+    std::function<void()> require_write,
+    std::function<std::size_t( std::size_t )> random_index );
 
 } // namespace cata::lua_ui
 

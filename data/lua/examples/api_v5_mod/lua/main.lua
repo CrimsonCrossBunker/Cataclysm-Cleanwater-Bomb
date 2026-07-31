@@ -42,8 +42,14 @@ scheduler.after(1, function()
     state.character.set("runtime_ready", true)
 end)
 
-ui.page("ccb_lua_v4_example.settings", {
-    title = i18n.gettext("Lua API v4 example"),
+game.native_events.on("game_save", function(event)
+    state.character.set("last_native_save_turn", event.turn)
+end)
+
+local page_id = "ccb_lua_v5_example.settings"
+
+ui.page(page_id, {
+    title = i18n.gettext("Lua API v5 example"),
     category = "examples",
     order = 100,
     slots = {
@@ -60,6 +66,16 @@ ui.page("ccb_lua_v4_example.settings", {
         environment.profile .. " / " ..
         environment.input .. " / " ..
         environment.breakpoint
+    )
+
+    local calendar = game.time.snapshot()
+    local weather = game.weather.current()
+    local weather_name = weather.type and
+        weather.type.name or weather.weather.value
+    ctx:text(
+        calendar.time_of_day .. " / " ..
+        weather_name .. " / " ..
+        string.format("%.1f C", weather.temperature_c)
     )
 
     local query = state.page.get("draft_query", settings.query)
@@ -111,4 +127,32 @@ ui.page("ccb_lua_v4_example.settings", {
     else
         ctx:disabled_text(i18n.gettext("No safe action is available here."))
     end
+end)
+
+game.action_menu.register({
+    id = "open_example",
+    name = i18n.gettext("Lua API v5 example"),
+    category = "info",
+}, function()
+    ui.open(page_id)
+end)
+
+sidebar.register_widget({
+    id = "example_status",
+    name = i18n.gettext("Lua example"),
+    height = 2,
+    order = 500,
+    draw = function()
+        return {
+            {
+                text = i18n.gettext("Lua API v5 active"),
+                color = "light_green",
+            },
+            game.time.now():display(),
+        }
+    end,
+})
+
+game.hooks.on("on_game_save", function()
+    state.character.set("last_save_turn", scheduler.now())
 end)

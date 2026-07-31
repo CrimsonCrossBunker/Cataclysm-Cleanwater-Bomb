@@ -32,6 +32,7 @@
 #include "damage.h"
 #include "effect.h"
 #include "event_bus.h"
+#include "event_subscriber.h"
 #include "explosion.h"
 #include "faction.h"
 #include "flag.h"
@@ -58,6 +59,7 @@
 #include "pocket_type.h"
 #include "projectile.h"
 #include "requirements.h"
+#include "rng.h"
 #include "skill.h"
 #include "stats_tracker.h"
 #include "talker.h"
@@ -92,6 +94,27 @@ namespace
 {
 
 namespace fs = std::filesystem;
+
+class mutation_event_subscriber final : public event_subscriber
+{
+    public:
+        explicit mutation_event_subscriber( const trait_id &watched )
+            : watched_( watched ) {}
+
+        using event_subscriber::notify;
+        void notify( const cata::event &event ) override {
+            if( ( event.type() == event_type::gains_mutation ||
+                  event.type() == event_type::loses_mutation ) &&
+                event.get<trait_id>( "trait" ) == watched_ ) {
+                events.push_back( event.type() );
+            }
+        }
+
+        std::vector<event_type> events;
+
+    private:
+        trait_id watched_;
+};
 
 class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
 {
@@ -302,6 +325,12 @@ class scoped_lua_user_script
                 }
                 previous_manifest_ = std::string( std::istreambuf_iterator<char>( input ),
                                                   std::istreambuf_iterator<char>() );
+                input.close();
+                fs::remove( manifest_path_, error );
+                if( error ) {
+                    throw std::runtime_error(
+                        "Unable to isolate existing user Lua manifest: " + error.message() );
+                }
             }
             cata::lua_ui::shutdown();
         }
@@ -2035,6 +2064,9 @@ TEST_CASE( "lua_v5_effect_updates_notify_the_owning_creature",
     on_out_of_scope cleanup( [&player, &cold, &torso]() {
         player.remove_effect( cold, torso );
         player.clear_morale();
+        player.reset_bonuses();
+        player.process_effects();
+        player.reset();
     } );
 
     scoped_lua_user_script script;
@@ -5368,8 +5400,18 @@ assert(history.value.events.limit == 256)
 assert(history.value.events.event_count >= 1)
 assert(history.value.events.returned ==
     #history.value.events.items)
-local partition =
-    history.value.events.items[1]
+local partition = nil
+for _, candidate in ipairs(
+    history.value.events.items) do
+    local version = candidate.data.cdda_version
+    if version ~= nil and
+        version.value ==
+            "lua-statistics-event" then
+        partition = candidate
+        break
+    end
+end
+assert(partition ~= nil)
 assert(partition.count >= 1)
 assert(partition.first.turn <=
     partition.last.turn)
@@ -6030,6 +6072,102 @@ game.mutations.grant(
     CHECK_FALSE( player.has_permanent_trait( debug_speed ) );
 }
 
+TEST_CASE( "lua_v5_mutation_writes_preserve_native_lifecycle_side_effects",
+           "[lua][bindings][mutations][state][write][integration]" )
+{
+    avatar &player = get_avatar();
+    const trait_id lifecycle_mutation(
+        "TEST_LUA_MUTATION_LIFECYCLE" );
+    const itype_id integrated_armor(
+        "integrated_horns_small" );
+    const spell_id learned_spell( "test_spell_kiss" );
+
+    if( player.has_permanent_trait(
+            lifecycle_mutation ) ) {
+        player.unset_mutation(
+            lifecycle_mutation );
+    }
+    if( player.magic->knows_spell(
+            learned_spell ) ) {
+        player.magic->forget_spell(
+            learned_spell );
+    }
+    REQUIRE_FALSE(
+        player.has_permanent_trait( lifecycle_mutation ) );
+    REQUIRE_FALSE(
+        player.is_wearing( integrated_armor ) );
+    REQUIRE_FALSE(
+        player.magic->knows_spell( learned_spell ) );
+
+    mutation_event_subscriber subscriber(
+        lifecycle_mutation );
+    event_bus &bus = get_event_bus();
+    bus.subscribe( &subscriber );
+    on_out_of_scope cleanup( [&]() {
+        bus.unsubscribe( &subscriber );
+        if( player.has_permanent_trait(
+                lifecycle_mutation ) ) {
+            player.unset_mutation(
+                lifecycle_mutation );
+        }
+        if( player.magic->knows_spell(
+                learned_spell ) ) {
+            player.magic->forget_spell(
+                learned_spell );
+        }
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local lifecycle = game.types.id(
+    "mutation", "TEST_LUA_MUTATION_LIFECYCLE")
+local granted = game.mutations.grant(avatar, lifecycle)
+assert(granted.ok == true)
+assert(granted.value.active == true)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.has_active_mutation(
+               lifecycle_mutation ) );
+    CHECK( player.is_wearing(
+               integrated_armor ) );
+    CHECK( player.magic->knows_spell(
+               learned_spell ) );
+    REQUIRE( subscriber.events.size() == 1 );
+    CHECK( subscriber.events[0] ==
+           event_type::gains_mutation );
+
+    script.write( R"lua(
+local removed = game.mutations.remove(
+    game.characters.avatar(),
+    game.types.id(
+        "mutation", "TEST_LUA_MUTATION_LIFECYCLE"))
+assert(removed.ok == true)
+assert(removed.value.present == false)
+)lua" );
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( player.has_permanent_trait(
+                     lifecycle_mutation ) );
+    CHECK_FALSE( player.is_wearing(
+                     integrated_armor ) );
+    CHECK_FALSE( player.magic->knows_spell(
+                     learned_spell ) );
+    REQUIRE( subscriber.events.size() == 2 );
+    CHECK( subscriber.events[1] ==
+           event_type::loses_mutation );
+}
+
 TEST_CASE( "lua_v5_spell_definitions_and_known_spells_are_detached_and_bounded",
            "[lua][bindings][spells][definitions][integration]" )
 {
@@ -6460,6 +6598,60 @@ game.missions.reserve(
            active_count_before );
 }
 
+TEST_CASE( "lua_v5_mission_completion_uses_the_reserved_giver",
+           "[lua][bindings][missions][lifecycle][integration]" )
+{
+    clear_avatar();
+    avatar &player = get_avatar();
+    mission::clear_all();
+    on_out_of_scope cleanup( [&player]() {
+        player.reset_all_missions();
+        mission::clear_all();
+    } );
+    player.i_add( item( itype_id( "test_rock" ) ) );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local giver_id = 424242
+local mission_id = game.types.id(
+    "mission", "TEST_MISSION_FIND_ITEM_GIVER")
+local reserved = game.missions.reserve(
+    mission_id, giver_id)
+assert(reserved.ok == true)
+assert(reserved.value.npc_id == giver_id)
+local token = reserved.value.token
+
+local assigned = game.missions.assign(token)
+assert(assigned.ok == true)
+assert(game.missions.is_complete(
+    token, giver_id).value == true)
+
+local completed = game.missions.complete(token)
+assert(completed.ok == true)
+assert(completed.value.forced == false)
+assert(completed.value.after.status == "success")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.get_active_missions().empty() );
+    REQUIRE( player.get_completed_missions().size() == 1 );
+    CHECK( player.get_completed_missions().front()->
+           mission_id() ==
+           mission_type_id(
+               "TEST_MISSION_FIND_ITEM_GIVER" ) );
+    CHECK( player.amount_of(
+               itype_id( "test_rock" ) ) == 0 );
+}
+
 TEST_CASE( "lua_v5_world_reads_bounded_active_map_snapshots",
            "[lua][bindings][world][map][integration]" )
 {
@@ -6805,9 +6997,18 @@ assert(pcall(function()
 end) == false)
 )lua" );
 
+    // A read-only Lua query must not perturb combat, spawning, or any other
+    // simulation randomness.
+    // NOLINTNEXTLINE(cata-determinism)
+    const cata_default_random_engine saved_engine = rng_get_engine();
+    on_out_of_scope restore_rng( [saved_engine]() {
+        rng_get_engine() = saved_engine;
+    } );
+
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
+    CHECK( rng_get_engine() == saved_engine );
 
     script.write_manifest( R"json({
         "id": "user",
@@ -7220,6 +7421,40 @@ local ok, failure = pcall(function()
     assert(updated.value.after.token == legacy_token)
     assert(game.hordes.legacy_group(
         legacy_token).value.population == 19)
+
+    local removed_legacy =
+        game.hordes.remove_legacy_group(legacy_token)
+    assert(removed_legacy.ok == true)
+    assert(removed_legacy.value.removed == true)
+    local replacement_legacy =
+        game.hordes.spawn_legacy_group({
+            group = group_id,
+            position = sm,
+            population = 19,
+            interest = 45,
+            horde = true,
+            behavior = "city",
+            target = sm,
+        })
+    assert(replacement_legacy.ok == true)
+    assert(replacement_legacy.value.token ~= legacy_token)
+    assert(legacy_token:is_valid() == false)
+    assert(game.hordes.legacy_group(
+        legacy_token).error.code == "missing_legacy_horde")
+    legacy_token = replacement_legacy.value.token
+
+    local removed_entity =
+        game.hordes.remove_entity(entity_token)
+    assert(removed_entity.ok == true)
+    assert(removed_entity.value.removed == true)
+    local replacement_entity =
+        game.hordes.spawn_entity(position, zombie)
+    assert(replacement_entity.ok == true)
+    assert(replacement_entity.value.token ~= entity_token)
+    assert(entity_token:is_valid() == false)
+    assert(game.hordes.entity(
+        entity_token).error.code == "missing_horde_entity")
+    entity_token = replacement_entity.value.token
 
     assert(pcall(function()
         game.hordes.spawn_entity(
@@ -8065,7 +8300,7 @@ TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
     using namespace cata::lua_ui;
 
     const std::vector<std::string> &kinds = supported_game_id_kinds();
-    REQUIRE( kinds.size() == 131 );
+    REQUIRE( kinds.size() == 132 );
     CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
     CHECK( std::adjacent_find( kinds.begin(), kinds.end() ) == kinds.end() );
     CHECK( is_supported_game_id_kind( "achievement" ) );
@@ -8122,7 +8357,7 @@ assert(id == game.types.id("item", "rock"))
 assert(id ~= game.types.id("monster", "rock"))
 assert(pcall(function() id.value = "stick" end) == false)
 local kinds = game.types.id_kinds()
-assert(#kinds == 131)
+assert(#kinds == 132)
 kinds[1] = "mutated"
 assert(game.types.id_kinds()[1] == "achievement")
 )lua" );
@@ -9006,7 +9241,7 @@ TEST_CASE( "lua_v5_definition_registry_uses_typed_ids_without_native_references"
     })json" );
     script.write( R"lua(
 local kinds = game.definitions.kinds()
-assert(#kinds == 41)
+assert(#kinds == 132)
 assert(type(game.definitions.revision()) == "number")
 
 local item = game.definitions.describe("item")
@@ -11367,8 +11602,9 @@ TEST_CASE( "lua_v5_movement_hooks_veto_native_creature_moves",
     const tripoint_bub_ms npc_from( 35, 35, 0 );
     const tripoint_bub_ms monster_from( 40, 40, 0 );
     player.setpos( here, player_from );
-    standard_npc test_npc( "Lua movement NPC", npc_from );
-    monster test_monster( mtype_id( "mon_zombie" ), monster_from );
+    npc &test_npc = spawn_npc( npc_from.xy(), "test_talker" );
+    monster &test_monster =
+        spawn_test_monster( "mon_zombie", monster_from );
 
     scoped_lua_user_script script;
     script.write_manifest( R"json({
@@ -11462,7 +11698,17 @@ TEST_CASE( "lua_v5_creature_turn_hooks_run_once_per_native_ai_turn",
     clear_map_without_vision();
     avatar &player = get_avatar();
     map &here = get_map();
-    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.setpos( here, tripoint_bub_ms( MAPSIZE_X / 2, MAPSIZE_Y / 2, 0 ) );
+
+    // clear_map_without_vision dirties support caches across z-levels.  Drain
+    // those changes before installing the turn hooks so this case observes
+    // only the two creatures it creates, rather than testing the entire map
+    // falling simulation as an accidental prerequisite.
+    here.build_floor_caches();
+    here.process_falling();
+    clear_creatures();
+    clear_npcs();
+
     monster &test_monster = spawn_test_monster(
                                 "mon_zombie",
                                 player.pos_bub( here ) +
@@ -11471,6 +11717,22 @@ TEST_CASE( "lua_v5_creature_turn_hooks_run_once_per_native_ai_turn",
                         ( player.pos_bub( here ) +
                           tripoint_rel_ms::west * 3 ).xy(),
                         "test_talker" );
+
+    // spawn_npc reloads every nearby overmap NPC.  Mapgen may have placed
+    // unrelated static NPCs in the current test world, so remove those before
+    // asserting exact native-turn hook counts.
+    for( npc &candidate : g->all_npcs() ) {
+        if( &candidate != &test_npc ) {
+            candidate.die( &here, nullptr );
+        }
+    }
+    g->cleanup_dead();
+
+    on_out_of_scope cleanup_creatures( []() {
+        clear_creatures();
+        clear_npcs();
+    } );
+
     test_monster.add_effect(
         efftype_id( "controlled" ), 1_hours );
     test_npc.add_effect(

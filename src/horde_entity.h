@@ -9,6 +9,10 @@
 #include "type_id.h"
 #include "monster.h"
 
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+    #include "catalua_ui_identity.h"
+#endif
+
 struct mtype;
 
 // This represents a single entity that moves around at overmap scale.
@@ -23,6 +27,11 @@ struct horde_entity {
     // Retrieve the mtype whether it's a light or heavy entity.
     const mtype *get_type() const;
     bool is_active() const;
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+    std::uint64_t lua_identity() const noexcept {
+        return lua_identity_.value();
+    }
+#endif
 
     // Data here related to processing while acting as a horde entity.
     // a glaring omission is location, the parent horde container knows that.
@@ -42,6 +51,9 @@ struct horde_entity {
     // meaning they don't have this member populated.
     // This could be a 16-bit index instead of a 32-to-64-bit+ unique_pointer
     std::unique_ptr<monster> monster_data;
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+    cata::lua_ui::native_object_identity lua_identity_;
+#endif
 };
 
 #endif // CATA_SRC_HORDE_ENTITY_H

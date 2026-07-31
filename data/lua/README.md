@@ -1,19 +1,25 @@
 # Lua Mod API v5
 
 This directory contains the built-in Lua entry point and modules for the
-experimental, versioned Mod runtime. Its first complete extension surface is
-portable UI. API v4 added isolated modules, services, events,
-deterministic scheduling, persistent state, definition registries, and queued
-game actions. API v5 adds capability-scoped, generation-checked game handles
-and a machine-readable native API coverage catalogue. The Lua drawing context targets the
-platform-neutral `script_ui_renderer` contract. Complete pages use the shared
-ImGui page host on Android and desktop Tiles; terminal builds use the ImTui
-fallback. Desktop keeps its established keyboard UI and Widget sidebar;
-Android applies a separate touch profile and owns the native schema-6 HUD.
-Scripts do not import or depend on a renderer backend.
+experimental, versioned Mod runtime. API v5 is the first comprehensive native
+gameplay surface: it combines portable UI, modules, services, events,
+scheduling, persistent state, typed values and ids, generation-safe handles,
+detached definition/snapshot queries, controlled world mutations, native
+hooks, callback actors, mapgen, crafting, character progression, EOCs,
+statistics, achievements, weather and calendar control, vehicle/NPC/faction
+services, zones, action-menu entries, and PC sidebar widgets. Native pointers
+never cross the Lua boundary; reads are bounded snapshots and writes are
+validated, capability-gated operations.
+
+The drawing context targets the platform-neutral `script_ui_renderer`
+contract. Complete pages use the shared ImGui page host on Android and desktop
+Tiles; terminal builds use the ImTui fallback. Desktop keeps its established
+keyboard UI and Widget sidebar; Android applies a separate touch profile and
+owns the native schema-6 HUD. Scripts do not import or depend on a renderer
+backend.
 
 The current platform policy is Android on SDL3, with Linux, macOS, and Windows
-using SDL2 while their SDL3 migration is paused. API v4 and v5 code should use
+using SDL2 while their SDL3 migration is paused. API v5 code should use
 `ctx:environment()` for layout and interaction decisions. `ctx:platform()` is
 retained for API v2 diagnostics and must not be used to distinguish touch from
 desktop interaction.
@@ -54,23 +60,23 @@ sidecars, or expose the Lua UI debug-menu entry.
 - `manifest.schema.json` is the authoritative JSON Schema for
   `lua/manifest.json`. Add a relative `$schema` property to receive editor
   validation.
-- `types/ccb_api_v5.d.lua` is a LuaLS/EmmyLua declaration file for the current
-  public v5 surface, including safe game handles and the coverage catalogue.
-  Add this directory to the editor workspace library; never
+- `types/ccb_api_v5.d.lua` is a LuaLS/EmmyLua declaration file for the complete
+  public v5 surface. Add this directory to the editor workspace library; never
   `require` the declaration at runtime.
-- `examples/api_v4_mod/` is a complete source example covering modules,
-  services, events, scheduling, registry queries, state, pages, and named
-  actions.
+- `examples/api_v5_mod/` is a complete source example covering modules,
+  services, hooks, scheduling, typed values, registry queries, state, pages,
+  named actions, action-menu integration, and a sidebar widget.
+- `reference/cbn_api_inventory.json` pins the 2,398-entry CBN reference surface
+  at commit `584939ce64c9d7352d37024132d968c3163edbe2`;
+  `reference/cbn_coverage.json` records a verified CCB mapping for every entry.
 
 CCB takes the useful structural lessons from Cataclysm: Bright Nights—one
 environment per Mod, local modules, explicit lifecycle stages, hot reload, and
 developer documentation—but deliberately does not copy BN's unrestricted
-native-object binding model. API v4 returns detached snapshots and submits
-mutations through validated queues. API v5 extends that model with opaque
-`GameHandle` userdata backed by checked engine references. A handle is scoped
-to the active runtime and world generations, exposes only a detached locator,
-and fails safely after reload, world replacement, or native-object deletion.
-Native pointers and mutable C++ references never cross the Lua boundary.
+native-object binding model. API v5 maps every applicable recorded CBN
+capability to typed values, detached snapshots, generation-bound tokens, or
+controlled operations. The sole not-applicable reference is CBN's
+distribution-grid tracker, whose engine subsystem does not exist in CCB.
 
 ## Loading and hot reload
 
@@ -81,7 +87,7 @@ Scripts are loaded as one transaction in this order:
 3. `config/lua/main.lua`
 
 The user entry point therefore has the final opportunity to replace a page by
-registering the same id. In API v4, `require("foo.bar")` searches only the
+registering the same id. In API v4 and v5, `require("foo.bar")` searches only the
 calling source's root and accepts both `foo/bar.lua` and
 `foo/bar/init.lua`. Cross-source source-code reuse must use
 `modules.import(provider_id, "foo.bar")`, and the provider must be `builtin`,
@@ -116,6 +122,7 @@ Each source may contain `lua/manifest.json`:
   "api_version": 5,
   "capabilities": [
     "events",
+    "game.callbacks",
     "game.hooks",
     "game.read",
     "game.write",
@@ -127,7 +134,7 @@ Each source may contain `lua/manifest.json`:
 }
 ```
 
-API versions 2, 3, 4, and 5 are accepted. New code should target v5. Supported
+API versions 2 through 5 are accepted. New code should target v5. Supported
 capabilities are:
 
 - `events`
@@ -149,15 +156,15 @@ capabilities are:
 
 The dangerous-action, module-import, registry, scheduler, and service
 capabilities require API v4. `game.callbacks`, `game.hooks`, and `game.write`
-require API v5. `game.actions.dangerous` also requires `game.actions`;
-`game.write` and `game.callbacks` require `game.read`; `game.hooks` requires
-`events`. Unknown capabilities, an incompatible API, duplicate ids, missing
-dependencies, or dependencies that load later reject the whole candidate
-transaction. The bundled manifest is mandatory. A local user script without a
-manifest keeps compatibility capabilities but never receives dangerous-action
-or v5 mutation authorization. An active game Mod without a manifest receives
-all compatibility capabilities except game actions and v5 mutation
-capabilities; declare mutations explicitly.
+require API v5. `game.actions.dangerous` requires `game.actions`;
+`game.write` requires `game.read`; `game.hooks` requires `events`; and
+`game.callbacks` requires `game.read`. Unknown capabilities, an incompatible
+API, duplicate ids, missing dependencies, or dependencies that load later
+reject the whole candidate transaction. The bundled manifest is mandatory. A
+local user script without a manifest keeps compatibility capabilities but
+never receives dangerous-action or v5 mutation authorization. An active game
+Mod without a manifest receives all compatibility capabilities except game
+actions and v5 mutation capabilities; declare mutations explicitly.
 
 Callbacks retain the manifest identity that registered them. Replacing a page
 id, loading a helper through `require`, or firing an event later never borrows
@@ -190,10 +197,10 @@ and `data_types`. Boolean and integer fields keep their Lua types; other
 game-specific ids and coordinates are exposed as strings.
 
 Lua has no `ui.hud` surface. Android uses the native schema-6 layout for
-in-game information and controls, while PC retains the original Widget sidebar.
-Cross-platform mods should expose common information through the original
-Widget system; PC renders the Widget in its sidebar and Android exposes the same
-Widget in the HUD information catalogue.
+in-game information and controls. API v5 can register source-owned
+`sidebar` widgets in PC's original native Widget sidebar; these intentionally
+do not cross into the Android Java HUD. Use a portable `ui.page` for information
+that must be available on every platform.
 
 The string-title form of `ui.page` remains compatible and registers in
 `main.extensions` and `ingame.extensions`. The descriptor form accepts:
@@ -244,6 +251,33 @@ To observe a dependency's custom event, declare the dependency and call
 string keys and only booleans, finite numbers, and strings; the complete copied
 map is limited to 16 KiB. Custom-event and service recursion are independently
 limited to 16 calls.
+
+Native game events have a separately discoverable, strictly typed surface:
+
+```lua
+for _, name in ipairs(game.native_events.list()) do
+    local description = game.native_events.describe(name)
+    print(name, #description.fields, description.emittable)
+end
+
+local save_subscription = game.native_events.on(
+    "game_save",
+    { priority = 10 },
+    function(event)
+        print(event.type, event.turn)
+    end
+)
+game.native_events.off(save_subscription)
+```
+
+`events.native_types()` and `events.describe_native(name)` provide the same
+catalogue for code that also targets the global event facade.
+`game.native_events.emit(name, fields)` is intentionally narrower than custom
+`events.emit`: it is available only inside an active runtime callback, requires
+`events`, `game.read`, and `game.write`, and accepts exactly the native field
+set returned by `describe`. Missing or extra fields, wrong Lua types, invalid
+typed ids, and malformed coordinate strings are rejected before anything
+enters the native event bus.
 
 Lifecycle event names are:
 
@@ -335,6 +369,263 @@ The default page size is 64 and the maximum is 256. Search matches stable ids
 and translated names. `registry.revision()` changes when the language-backed
 index is rebuilt; use it to invalidate cached labels. Returned tables are
 fresh snapshots and may be changed locally without altering game data.
+
+## API v5 values, ids, and handles
+
+API v5 does not expose borrowed C++ objects. It uses three kinds of values:
+
+- immutable `GameId`, `GameEnum`, unit, time, and coordinate userdata;
+- detached Lua tables for definitions and state snapshots; and
+- generation-bound tokens or `GameHandle` values for live instances.
+
+```lua
+local avatar = game.handles.avatar()
+assert(avatar:is_valid())
+
+local water = game.types.id("item", "water")
+local position = game.coords.tripoint_abs_ms(100, 200, 0)
+local delay = game.time.duration(30, "minutes")
+local mass = game.units.new("mass", 2.5, "kilogram")
+
+print(water.kind, water.value, water:is_valid())
+print(position:to("omt"), delay:display(), mass:value("gram"))
+```
+
+`game.types.id_kinds()`, `game.units.kinds()`, `game.coords.kinds()`, and
+`game.enums.kinds()` are the runtime catalogues. Coordinate values carry both
+origin and scale; mismatched arithmetic and lossy conversions throw instead of
+silently mixing spaces. `project_remain` and `project_combine` preserve the
+remainder when changing scale. Bounded `line`, `rectangle`, and `box`
+constructors accept an explicit maximum point count.
+
+`game.time.now()`, `game.time.turn_zero()`, and
+`game.time.before_time_starts()` return exact `TimePoint` values. `TimeDuration`
+stores exact turns. `game.time.snapshot(point)` expands a point into its
+calendar, season, moon, sunrise/sunset, and day/night values;
+`game.time.calendar()` captures the native world calendar and start points.
+`set_now` and `advance` accept an optional expected clock for optimistic
+conflict detection and deliberately do not simulate skipped turns.
+
+`game.weather.types/type`, `current`, and `generator` expose copied native
+weather data. `forecast` is deterministic, bounded to 14 days, and does not
+mutate generator state. Weather, temperature, and wind overrides are explicit
+checked writes and `clear_overrides()` restores all native defaults. Unit
+values reject cross-dimension arithmetic and expose a checked conversion
+through `value(unit)`.
+
+`game.enums.describe(kind)` records whether an old CBN enum is native,
+represented by a JSON id, or not applicable. `game.definitions` is the typed
+counterpart of the compatibility `registry`: `describe`, `exists`, `get`, and
+`list` accept `GameId` values and return detached data.
+
+`game.serde` serializes only the documented immutable values, booleans,
+numbers, strings, and bounded acyclic tables. The format has explicit size,
+depth, node, and table-entry limits and never invokes a constructor named by
+serialized input.
+
+A live `GameHandle` contains an opaque locator plus the runtime and world
+generation in which it was created. Use `handle:is_valid()` or
+`handle:status()` before retaining it. Native service calls return a result
+envelope:
+
+```lua
+local result = game.characters.snapshot(avatar)
+if result.ok then
+    print(result.value.name)
+else
+    print(result.error.code, result.error.message)
+end
+```
+
+Handles become invalid when their object disappears, the world changes, or a
+successful Lua reload replaces the runtime. Lua can never construct or edit a
+handle's locator.
+
+## API v5 gameplay services
+
+All namespaces below require API v5 and `game.read`; mutating functions also
+require `game.write`. Every operation validates ids, coordinate spaces,
+generations, ranges, and result limits before touching native state; crafting
+and spell casting enter their existing safe action queues. The declaration
+file gives every method's exact parameters and result type.
+
+| Namespace | Read surface | Controlled write surface |
+| --- | --- | --- |
+| `game.creatures` | avatar, position and nearby queries, snapshots | — |
+| `game.characters` | avatar/by-id/nearby and detailed snapshots | stats, healing, movement mode |
+| `game.effects` | list, presence and snapshot | add, update, remove |
+| `game.bionics` | definitions and installed instances | install, remove, power, activation, configuration |
+| `game.items` | snapshots, pockets, contents, variables, flags, techniques | bounded item field/variable/flag/technique updates |
+| `game.inventory` | traversal, lookup and resource checks | give, remove, wield, wear, stash |
+| `game.mutations` | definitions and character state | grant, remove, activate, choose variant |
+| `game.spells` | definitions, spellbook and mana | learn/forget, experience/level/mana, favorite, queued cast |
+| `game.missions` | definitions, tokens, status and random selection | reserve, assign, select, advance, complete/fail/cancel/abandon |
+| `game.recipes` / `game.requirements` | filtered recipes and structured requirements | — |
+| `game.crafting` | — | queue a validated craft start |
+| `game.world` | active-map bounds, tiles, regions and vehicles | terrain/furniture/traps/fields/items |
+| `game.overmap` | existing-only tile/search/match queries | terrain, vision, exploration, notes and reveal |
+| `game.hordes` | group definitions, entities, legacy groups and summaries | spawn/update/remove/signal/advance |
+| `game.skills` | skill definitions and character levels/training | bounded level, exercise, training and practice updates |
+| `game.proficiencies` | definitions, categories and learning progress | grant/remove/practice/set progress |
+| `game.vitamins` / `game.addictions` | definitions and character pools/state | bounded pool, exposure and withdrawal updates |
+| `game.needs` | hunger, thirst, calories, sleep and health | checked set/modify/reset operations |
+| `game.martial_arts` | style definitions, known and selected state | learn/remove/select/trigger and hand policy |
+| `game.vehicles` | prototypes, live state, lift, parts and fuels | rename, cruise/stop/tracking and part enablement |
+| `game.npcs` | class catalogue and live NPC snapshots | rename, attitude and opinion updates |
+| `game.factions` / `game.camps` | faction resources/relations and bounded camp discovery | reputation/resources/policy/ownership/board updates |
+| `game.zones` | zone types, tokens, position and membership | create/rename/enable/move/remove |
+| `game.eocs` / `game.variables` | authored EOC metadata and talker variables | callback-scoped test/activate/queue and checked variables |
+| `game.achievements` / `game.statistics` | achievement progress, event history, transformations and scores | manual achievement controls |
+| `game.time` / `game.weather` | native calendar, forecasts, definitions and current state | conflict-checked clock and explicit weather overrides |
+| `game.native_events` | all 113 native event schemas and subscriptions | exact-schema callback-scoped event emission |
+
+Additional bounded services replace the remaining CBN game helpers:
+
+- `game.messages.recent/add`, `game.constants.snapshot`, and
+  `game.random.int/chance`;
+- `game.sound.play/play_ambient` and the platform-neutral
+  `game.targeting` selectors;
+- `game.spawns.monster/hallucination`, `game.followers.list/add/remove`, and
+  guarded `game.relocation.local_at/overmap_at`;
+- `game.world.to_absolute/to_bubble` for explicit coordinate conversion; and
+- `game.diagnostics.snapshot/recent` for path-free runtime health and errors.
+
+Sound, targeting, spawn, follower mutation, relocation, random, message-write,
+and other interaction services require an active callback. Relocation also
+requires `game.actions.dangerous`. This prevents a top-level script or a draw
+loop from moving the player or repeatedly opening native interaction UIs.
+
+`game.api_catalog()` returns the native capability-domain catalogue and
+`game.api_supports(domain)` returns true only for a fully covered domain. The
+repository's stricter CBN comparison lives in
+`reference/cbn_coverage.json`: its schema-2 audit joins all 2,398 pinned
+inventory entries to implementation and test evidence. The current native
+inventory records 132 typed-id kinds, 190 JSON definition types, 113 native
+events, and 39 reviewed capability domains; CCB-specific CDDA-derived systems
+are included in addition to the CBN reference mapping.
+
+## Hooks and callback actors
+
+`game.hooks` exposes 52 typed native lifecycle boundaries. Call
+`game.hooks.list()` or `describe(name)` to discover each hook's payload,
+result fields, mode, and capability requirements. Observe hooks ignore return
+values. Intercept hooks accept only their declared result fields and require
+`game.write`.
+
+```lua
+local id = game.hooks.on("on_character_try_move", {
+    priority = 100,
+}, function(payload)
+    if state.character.get("freeze_movement", false) then
+        return { allow = false }
+    end
+end)
+
+-- A source can remove only its own registration.
+game.hooks.off(id)
+```
+
+Priority is -10000..10000; higher values run first and equal values retain
+registration order. `once = true` removes a handler after its first delivery.
+Payloads use typed ids, coordinates, handles, mission tokens, or detached
+tables. Invalid return keys/types reject only that invocation. A throwing or
+over-budget handler is disabled without affecting other Mods.
+
+`game.callbacks` attaches Lua methods to one validated JSON definition. The 11
+kinds are `iuse`, `iwieldable`, `iwearable`, `iequippable`, `istate`, `imelee`,
+`iranged`, `bionic`, `mutation`, `trap`, and `monster`.
+
+```lua
+local bandage = game.types.id("item", "bandages")
+game.callbacks.register("iuse", bandage, {
+    priority = 20,
+    can_use = function(payload)
+        return { allow = payload.character ~= nil }
+    end,
+    on_use = function(payload)
+        game.messages.add("Lua item callback ran", "good")
+        return true
+    end,
+})
+```
+
+Use `game.callbacks.list()` or `describe(kind)` for the exact method catalogue
+and whether a method is a decision gate. A descriptor must contain at least
+one valid method; unknown fields are rejected. Registrations are source-owned,
+hot-reload transactional, bounded globally and per target, and restore the
+registering source's permissions whenever native C++ calls them.
+
+## Mapgen callbacks
+
+`game.mapgen.on_postprocess(options, callback)` registers a filtered,
+deterministic callback for one 24×24 OMT mapgen operation:
+
+```lua
+game.mapgen.on_postprocess({
+    terrain_ids = { "field" },
+    z_min = 0,
+    z_max = 0,
+}, function(ctx)
+    if ctx:random_chance(1, 20) then
+        ctx:set_terrain(12, 12, game.types.id("terrain", "t_grass"))
+    end
+end)
+```
+
+The callback-scoped `ScriptMapgenContext` exposes neighbor ids, rotation,
+deterministic random values, terrain/furniture/trap reads and writes,
+groundcover, bounded nested generators, and a tightly limited full generator.
+It becomes invalid immediately after the callback. Each context has an
+operation budget; filters accept at most 64 existing overmap terrain ids.
+
+## Native action menu and PC sidebar
+
+API v5 can place a source-owned entry in the native action menu:
+
+```lua
+local menu_id = game.action_menu.register({
+    id = "open_my_mod",
+    name = "My Mod",
+    category = "info",
+    hotkey = "m",
+}, function()
+    ui.open("my_mod_settings")
+end)
+```
+
+`off`, `list`, and `limits` are source-scoped. Built-in category ids sort with
+their native categories; safe custom category ids are also accepted. Callbacks
+run under their registering source's permissions and instruction budget.
+
+The global `sidebar` table, also available as `game.sidebar`, implements the
+CBN-compatible `register_widget`, `clear_widgets`, and `get_layout_id` calls,
+plus `register`, `off`, `list`, and `limits`:
+
+```lua
+sidebar.register_widget({
+    id = "my_status",
+    name = "My status",
+    height = 2,
+    order = 500,
+    default_toggle = true,
+    draw = function()
+        return {
+            { text = "Lua ready", color = "light_green" },
+            game.time.now():display(),
+        }
+    end,
+})
+```
+
+The stable native panel key is `lua:<source-id>:<widget-id>`. Player toggle and
+ordering choices survive hot reload. `draw` may return a multiline string,
+string array, or `{ text, color }` line array. `panel_visible` may be a boolean
+or callback; `render` is an optional compatibility callback. A bad widget
+disables only itself. Per-source/runtime counts, line count, per-line bytes,
+total output, height, and callback instructions are all bounded.
+
+Lua sidebar widgets are mounted only in PC's native sidebar. Android's Java
+schema-6 HUD remains an independent surface and never calls into Lua.
 
 ## Page navigation
 
@@ -647,18 +938,8 @@ ordinary ImGui page host and are unrelated to this HUD snapshot.
 
 ## Game API and reload state
 
-- `game.api_version` is `5`. Manifests targeting API v2, v3, and v4 remain
-  accepted; v5-only functions still enforce the calling source's manifest
-  version and capabilities.
-- `game.api_catalog()` returns detached entries for every tracked native API
-  domain. Each entry reports its id, namespace, required capability, minimum
-  API version, and implementation status. `game.api_supports(domain)` returns
-  true only when that complete domain is covered.
-- `game.handles.avatar()` returns a generation-checked `GameHandle`. Its
-  read-only `kind`, detached `locator()`, `is_valid()`, and structured
-  `status()` methods never expose a native pointer. A handle becomes invalid
-  when its object is destroyed or when the Lua runtime/world generation
-  changes.
+- `game.api_version` is `5`. Manifests targeting API v2 through v4 remain
+  accepted for their original surfaces.
 - `game.add_msg(text)` writes to the game message log.
 - `game.player_name()` returns the current avatar name.
 - `game.player_snapshot()` returns copied character status: name, moves, stamina,
@@ -714,11 +995,12 @@ ordinary ImGui page host and are unrelated to this HUD snapshot.
 - `game.nearby_creatures_snapshot(radius, limit)` returns only creatures the
   avatar can currently see, with kind, attitude, distance, and hit points.
   Radius defaults to 20 and caps at 60; count defaults to 64 and caps at 256.
-- `game.runtime_status()` returns load state, generation, page/event/source
-  counts, memory use and limit, latest runtime error, `callback_count`,
-  `callback_time_total_us`, `callback_time_max_us`, `slow_callback_count`, and
-  `last_slow_callback`. A callback taking at least 8 ms is recorded as slow;
-  use these cumulative fields to find page or event callbacks doing too much.
+- `game.runtime_status()` returns load state, runtime/world generations,
+  page/action-menu/sidebar/event/mapgen/source counts, memory use and limit,
+  latest runtime error, `callback_count`, `callback_time_total_us`,
+  `callback_time_max_us`, `slow_callback_count`, and `last_slow_callback`. A
+  callback taking at least 8 ms is recorded as slow; use these cumulative
+  fields to find callbacks doing too much.
 - `game.state_get(key, default)` and `game.state_set(key, value)` are the API v2
   compatibility state. They remain per-character and use their original,
   unnamespaced keys.
@@ -827,7 +1109,7 @@ the rendered revision into a 16-entry platform-neutral queue. Consumption
 checks the revision again and confirms that the receiving context still
 registered the id. Context changes clear pending actions.
 
-API v4 and later also expose
+API v4 also exposes
 `game.actions.enqueue_context(action_id, context_revision)`. Ordinary named
 actions require `game.actions`. Debug, deletion, reset, quickload, and suicide
 actions additionally require the explicit `game.actions.dangerous` manifest

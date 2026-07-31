@@ -25,7 +25,6 @@
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "point.h"
-#include "rng.h"
 #include "type_id.h"
 
 namespace cata::lua_ui
@@ -790,7 +789,8 @@ sol::table overmap_closest(
 sol::table overmap_random(
     sol::this_state lua,
     const script_tripoint_coord &origin,
-    const sol::optional<sol::table> &requested )
+    const sol::optional<sol::table> &requested,
+    const std::function<std::size_t( std::size_t )> &random_index )
 {
     constexpr std::string_view api_name =
         "game.overmap.random";
@@ -811,9 +811,15 @@ sol::table overmap_random(
             "No existing overmap tile matched the bounded search"
         } );
     }
+    const std::size_t selected =
+        random_index( scan.matches.size() );
+    if( selected >= scan.matches.size() ) {
+        throw std::runtime_error(
+            "game.overmap.random selector returned an invalid index" );
+    }
     sol::table value =
         snapshot_overmap_tile(
-            state, random_entry( scan.matches ) );
+            state, scan.matches[selected] );
     return make_game_value_result(
                state,
                sol::make_object(
@@ -1230,7 +1236,8 @@ sol::table reveal_existing_overmap(
 void install_overmap_api(
     sol::table &game,
     std::function<void()> require_read,
-    std::function<void()> require_write )
+    std::function<void()> require_write,
+    std::function<std::size_t( std::size_t )> random_index )
 {
     sol::state_view lua( game.lua_state() );
     sol::table overmap = lua.create_table();
@@ -1271,13 +1278,14 @@ void install_overmap_api(
     } );
     overmap.set_function(
         "random",
-        [require_read](
+        [require_read, random_index](
             sol::this_state lua_state,
             const script_tripoint_coord & origin,
     const sol::optional<sol::table> &options ) {
         require_read();
         return overmap_random(
-                   lua_state, origin, options );
+                   lua_state, origin, options,
+                   random_index );
     } );
     overmap.set_function(
         "matches",

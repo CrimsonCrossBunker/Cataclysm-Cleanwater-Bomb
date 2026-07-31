@@ -153,6 +153,59 @@ def build_inventory() -> dict[str, object]:
     }
 
 
+def inline_object(entry: dict[str, object]) -> str:
+    fields = (
+        f"{json.dumps(key, ensure_ascii=False)}: "
+        f"{json.dumps(value, ensure_ascii=False)}"
+        for key, value in entry.items()
+    )
+    return "{ " + ", ".join(fields) + " }"
+
+
+def serialize_inventory(inventory: dict[str, object]) -> str:
+    """Serialize the inventory in the repository's canonical JSON style."""
+    source = inventory["source"]
+    if not isinstance(source, dict):
+        raise RuntimeError("inventory source must be an object")
+
+    lines = [
+        "{",
+        f'  "schema_version": {inventory["schema_version"]},',
+        '  "source": {',
+    ]
+    source_items = list(source.items())
+    for index, (key, value) in enumerate(source_items):
+        comma = "," if index + 1 < len(source_items) else ""
+        lines.append(
+            f"    {json.dumps(key, ensure_ascii=False)}: "
+            f"{json.dumps(value, ensure_ascii=False)}{comma}"
+        )
+    lines.append("  },")
+
+    array_names = (
+        "id_kinds",
+        "json_types",
+        "event_types",
+        "native_domains",
+    )
+    for array_index, name in enumerate(array_names):
+        entries = inventory[name]
+        if not isinstance(entries, list):
+            raise RuntimeError(f"inventory {name} must be an array")
+        lines.append(f'  "{name}": [')
+        for entry_index, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                raise RuntimeError(
+                    f"inventory {name} entries must be objects"
+                )
+            comma = "," if entry_index + 1 < len(entries) else ""
+            lines.append(f"    {inline_object(entry)}{comma}")
+        comma = "," if array_index + 1 < len(array_names) else ""
+        lines.append(f"  ]{comma}")
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -164,7 +217,7 @@ def main() -> int:
     arguments = parser.parse_args()
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(
-        json.dumps(build_inventory(), ensure_ascii=False, indent=2) + "\n",
+        serialize_inventory(build_inventory()),
         encoding="utf-8",
     )
     return 0

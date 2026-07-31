@@ -29,6 +29,18 @@
     "origins": [  ]
   },
   {
+    "id": "TEST_MISSION_FIND_ITEM_GIVER",
+    "type": "mission_definition",
+    "name": { "str": "Test mission item giver" },
+    "description": "Checks Lua completion against the mission's reserved giver.",
+    "goal": "MGOAL_FIND_ITEM",
+    "difficulty": 1,
+    "value": 0,
+    "item": "test_rock",
+    "count": 1,
+    "origins": [ "ORIGIN_GAME_START" ]
+  },
+  {
     "//COMMENT": "Dummy EOCs to prevent the startup chain from triggering missions in the test environment.",
     "type": "effect_on_condition",
     "id": "EOC_FACTION_SUCCESSION_CHANGE_REINIT",

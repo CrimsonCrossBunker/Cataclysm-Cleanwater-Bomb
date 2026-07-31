@@ -17,6 +17,8 @@
 #include "catalua_game_handle.h"
 #include "character.h"
 #include "creature.h"
+#include "event.h"
+#include "event_bus.h"
 #include "mutation.h"
 #include "type_id.h"
 #include "units.h"
@@ -761,6 +763,8 @@ sol::table grant_state(
             "The engine rejected mutation '" + id.str() + "'"
         } );
     }
+    get_event_bus().send<event_type::gains_mutation>(
+        character->getID(), id );
     const std::string variant_id =
         variant == nullptr ? std::string() : variant->id;
     sol::table value = snapshot_state(
@@ -802,6 +806,8 @@ sol::table remove_state(
     if( character->has_base_trait( id ) ) {
         character->toggle_trait( id, variant );
     } else {
+        get_event_bus().send<event_type::loses_mutation>(
+            character->getID(), id );
         character->unset_mutation( id );
     }
     sol::table value = state.create_table();

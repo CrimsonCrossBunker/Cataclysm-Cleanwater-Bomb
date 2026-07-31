@@ -1,11 +1,12 @@
 {
   "$schema": "../../../manifest.schema.json",
-  "id": "ccb_lua_v4_example",
+  "id": "ccb_lua_v5_example",
   "version": "1.0.0",
-  "api_version": 4,
+  "api_version": 5,
   "capabilities": [
     "events",
     "game.actions",
+    "game.hooks",
     "game.read",
     "modules.import",
     "registry.read",

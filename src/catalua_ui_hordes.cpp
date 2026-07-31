@@ -101,7 +101,7 @@ class horde_entity_token
               monster_( entry.get_type()->id.str() ),
               runtime_generation_( runtime_generation ),
               world_generation_( world_generation ),
-              identity_( reinterpret_cast<std::uintptr_t>( &entry ) ) {
+              identity_( entry.lua_identity() ) {
         }
 
         script_tripoint_coord position() const {
@@ -138,7 +138,7 @@ class horde_entity_token
             return monster_;
         }
 
-        std::uintptr_t native_identity() const noexcept {
+        std::uint64_t native_identity() const noexcept {
             return identity_;
         }
 
@@ -157,7 +157,7 @@ class horde_entity_token
         std::string monster_;
         std::size_t runtime_generation_ = 0;
         std::size_t world_generation_ = 0;
-        std::uintptr_t identity_ = 0;
+        std::uint64_t identity_ = 0;
 };
 
 class legacy_horde_token
@@ -171,7 +171,7 @@ class legacy_horde_token
               group_( group.type.str() ),
               runtime_generation_( runtime_generation ),
               world_generation_( world_generation ),
-              identity_( reinterpret_cast<std::uintptr_t>( &group ) ) {
+              identity_( group.lua_identity() ) {
         }
 
         script_tripoint_coord position() const {
@@ -208,7 +208,7 @@ class legacy_horde_token
             return group_;
         }
 
-        std::uintptr_t native_identity() const noexcept {
+        std::uint64_t native_identity() const noexcept {
             return identity_;
         }
 
@@ -227,7 +227,7 @@ class legacy_horde_token
         std::string group_;
         std::size_t runtime_generation_ = 0;
         std::size_t world_generation_ = 0;
-        std::uintptr_t identity_ = 0;
+        std::uint64_t identity_ = 0;
 };
 
 struct page_options {
@@ -1240,8 +1240,7 @@ std::optional<entity_match> resolve_entity_token(
                     token.native_monster() ) {
                     continue;
                 }
-                if( reinterpret_cast<std::uintptr_t>(
-                        &entry->second ) !=
+                if( entry->second.lua_identity() !=
                     token.native_identity() ) {
                     continue;
                 }
@@ -1286,7 +1285,7 @@ mongroup *resolve_legacy_token(
             token.native_group() ) {
             continue;
         }
-        if( reinterpret_cast<std::uintptr_t>( group ) !=
+        if( group->lua_identity() !=
             token.native_identity() ) {
             continue;
         }
