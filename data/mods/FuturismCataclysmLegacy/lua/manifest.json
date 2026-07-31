@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../lua/manifest.schema.json",
+  "id": "catalegacy_future",
+  "version": "1.0.0",
+  "api_version": 5,
+  "capabilities": [
+    "events",
+    "game.read",
+    "game.write"
+  ],
+  "dependencies": [
+    "builtin"
+  ]
+}
