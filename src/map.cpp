@@ -5630,6 +5630,11 @@ void map::bash_field( const tripoint_bub_ms &p, bash_params &params )
     }
     for( field_type_id fd : to_remove ) {
         remove_field( p, fd );
+        // A zero-intensity entry remains in the field container until field
+        // processing runs.  That stale entry would intercept an immediate
+        // follow-up bash (for example, cutting a no-stump tree through webs),
+        // so erase a successfully bashed field synchronously.
+        delete_field( p, fd );
     }
 }
 
