@@ -196,10 +196,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\tests\*.cpp" />
-    <!-- This solution links catalua_ui_disabled.cpp, so only the disabled
-         facade tests apply.  Full Lua runtime tests belong to Lua-enabled
-         Make/CMake configurations. -->
-    <ClCompile Remove="..\tests\catalua_ui_test.cpp" />
+    <!-- Lua runtime tests are part of the default checked-in MSVC build. -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\msvc-full-features\Cataclysm-libMZ-vcpkg-static.vcxproj">
