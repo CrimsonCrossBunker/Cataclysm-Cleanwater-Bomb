@@ -2,10 +2,10 @@
   {
     "type": "jmath_function",
     "id": "alpha_stat_bonus",
-    "//": "the smaller your stat, the bigger the bonus, up to 20, plus 4 of the stat above",
+    "//": "the smaller your stat, the bigger the bonus, up to 18, plus 4 of the stat above",
     "//_0": "your current base stat, like `u_val('intelligence_base')`",
     "num_args": 1,
-    "return": "_0 < 20 ? 14 - (_0 / 2) : 4"
+    "return": "_0 < 18 ? 13 - (_0 / 2) : 4"
   },
   {
     "type": "jmath_function",
