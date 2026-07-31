@@ -282,6 +282,8 @@ TEST_CASE( "vehicle_to_vehicle_collision", "[vehicle] [vehicle_fake]" )
                                          veh_spawn_status::UNDAMAGED );
         REQUIRE( trg != nullptr );
         trg->name = "crash bus";
+        trg->cruise_velocity = target_velocity;
+        trg->is_autodriving = true;
         WHEN( "A vehicle is placed in the vehicle's path such that it will hit a true part" ) {
             // we're travelling south east, so place another vehicle in the way.
 
@@ -297,6 +299,9 @@ TEST_CASE( "vehicle_to_vehicle_collision", "[vehicle] [vehicle_fake]" )
 
                 // hitting the bus should have slowed the vehicle down
                 REQUIRE( veh->velocity < target_velocity );
+                CHECK( veh->cruise_velocity == target_velocity );
+                CHECK_FALSE( trg->is_autodriving );
+                CHECK( trg->cruise_velocity == 0 );
 
                 for( const vpart_reference &vp : veh->get_all_parts() ) {
                     if( vp.info().durability > vp.part().hp() ) {

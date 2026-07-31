@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_crafting.h"
 
 #include <algorithm>
@@ -1101,3 +1103,5 @@ void install_crafting_api(
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

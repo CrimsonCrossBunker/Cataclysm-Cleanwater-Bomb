@@ -1,3 +1,5 @@
+#if CATA_ENABLE_LUA_UI
+
 #include "catalua_ui_mapgen.h"
 
 #include <algorithm>
@@ -515,3 +517,5 @@ void script_mapgen_context::generate( const std::string &id )
 }
 
 } // namespace cata::lua_ui
+
+#endif // CATA_ENABLE_LUA_UI

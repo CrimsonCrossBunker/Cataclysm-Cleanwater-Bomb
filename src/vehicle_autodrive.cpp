@@ -1564,14 +1564,11 @@ autodrive_result vehicle::do_autodrive( map &here, Character &driver )
 
 void vehicle::stop_autodriving( bool apply_brakes )
 {
-    // Braking is an explicit safety request and must still take effect if a
-    // preceding event (such as collision damage) already cleared the
-    // autodriving state.
-    if( apply_brakes ) {
-        cruise_velocity = 0;
-    }
     if( !is_autodriving && !is_patrolling && !is_following ) {
         return;
+    }
+    if( apply_brakes ) {
+        cruise_velocity = 0;
     }
     is_autodriving = false;
     is_patrolling = false;
