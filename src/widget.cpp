@@ -2345,6 +2345,7 @@ std::string widget::layout_internal( const avatar &ava,
             std::vector<std::vector<std::string>> cols;
             std::vector<int> widths;
             std::vector<bool> fit_widths;
+            std::vector<bool> pad_missing_widths;
             unsigned int total_width = 0;
             std::string debug_widths;
             for( size_t i = 0; i < wgts.size(); i++ ) {
@@ -2398,6 +2399,7 @@ std::string widget::layout_internal( const avatar &ava,
                 cols.emplace_back( string_split( txt, '\n' ) );
                 widths.emplace_back( cur_width );
                 fit_widths.emplace_back( contextual && !skip_pad_this );
+                pad_missing_widths.emplace_back( !skip_pad_this );
             }
 
             int h_max = 0;
@@ -2408,7 +2410,7 @@ std::string widget::layout_internal( const avatar &ava,
                 std::string line;
                 for( size_t c = 0; c < cols.size(); c++ ) {
                     if( r >= cols[c].size() ) {
-                        if( fit_widths[c] ) {
+                        if( pad_missing_widths[c] ) {
                             // No row r for this column, pad with empty space
                             line += std::string( widths[c], ' ' );
                         }

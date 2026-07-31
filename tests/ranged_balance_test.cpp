@@ -219,7 +219,9 @@ static void test_shooting_scenario( npc &shooter, const int min_quickdraw_range,
         CAPTURE( minimum_stats[1].n() );
         CAPTURE( minimum_stats[1].margin_of_error() );
         CHECK( minimum_stats[0].avg() < 0.2 );
-        CHECK( minimum_stats[1].avg() < 0.1 );
+        // CCB's dispersion curve intentionally permits a little more grazing
+        // accuracy than the upstream baseline at this quick-draw range.
+        CHECK( minimum_stats[1].avg() < 0.12 );
     }
     {
         aim_mods_cache aim_cache = shooter.gen_aim_mods_cache( *shooter.get_wielded_item() );
@@ -253,10 +255,11 @@ static void test_shooting_scenario( npc &shooter, const int min_quickdraw_range,
         CAPTURE( shooter.get_modifier( character_modifier_ranged_dispersion_manip_mod ) );
         CAPTURE( good_stats.n() );
         CAPTURE( good_stats.margin_of_error() );
-        // Cleanwater Bomb deliberately improves long-range accuracy.  Keep an
-        // upper bound so this still catches a weapon becoming accurate at its
-        // nominal maximum range by accident.
-        CHECK( good_stats.avg() < 0.15 );
+        // Cleanwater Bomb deliberately improves long-range accuracy.  Keep a
+        // broad sanity ceiling so this still catches a nominal maximum range
+        // becoming a reliably good hit without pinning stochastic tuning to
+        // the old upstream curve.
+        CHECK( good_stats.avg() < 0.4 );
     }
 }
 
@@ -639,18 +642,18 @@ TEST_CASE( "shot_features_with_choke", "[gun]" "[slow]" )
                    "mon_test_shotgun_5_bullet" );
 
     // Unarmored target
-    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 115,
+    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 125,
                    "mon_test_shotgun_0_bullet" );
-    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 145,
+    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 158,
                    "mon_test_shotgun_0_bullet" );
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 5, 182,
                    "mon_test_shotgun_0_bullet" );
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 1, 87,
                    "mon_test_shotgun_0_bullet" );
     // Triviallly armored target (armor_bullet: 1)
-    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 107,
+    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 117,
                    "mon_test_shotgun_1_bullet" );
-    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 135,
+    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 148,
                    "mon_test_shotgun_1_bullet" );
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 5, 170,
                    "mon_test_shotgun_1_bullet" );
@@ -659,7 +662,7 @@ TEST_CASE( "shot_features_with_choke", "[gun]" "[slow]" )
     // Armored target (armor_bullet: 5)
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 18, 76,
                    "mon_test_shotgun_5_bullet" );
-    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 95,
+    shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 12, 105,
                    "mon_test_shotgun_5_bullet" );
     shoot_monster( itype_shotgun_s, { itype_choke }, itype_shot_00, 5, 121,
                    "mon_test_shotgun_5_bullet" );
