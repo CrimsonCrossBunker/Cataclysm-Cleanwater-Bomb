@@ -264,7 +264,15 @@
   {
     "id": "any_sheet_metal_small",
     "type": "requirement",
-    "components": [ [ [ "sheet_metal_small", 1 ], [ "hc_sheet_metal_small", 1 ], [ "mc_sheet_metal_small", 1 ], [ "qt_sheet_metal_small", 1 ], [ "ch_sheet_metal_small", 1 ] ] ]
+    "components": [
+      [
+        [ "sheet_metal_small", 1 ],
+        [ "hc_sheet_metal_small", 1 ],
+        [ "mc_sheet_metal_small", 1 ],
+        [ "qt_sheet_metal_small", 1 ],
+        [ "ch_sheet_metal_small", 1 ]
+      ]
+    ]
   },
   {
     "id": "superalloy_forge",

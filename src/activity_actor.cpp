@@ -418,9 +418,9 @@ static const skill_id skill_computer( "computer" );
 static const skill_id skill_electronics( "electronics" );
 static const skill_id skill_fabrication( "fabrication" );
 static const skill_id skill_firstaid( "firstaid" );
-static const skill_id skill_speech( "speech" );
 static const skill_id skill_gun( "gun" );
 static const skill_id skill_mechanics( "mechanics" );
+static const skill_id skill_speech( "speech" );
 static const skill_id skill_survival( "survival" );
 static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_traps( "traps" );
@@ -6247,7 +6247,7 @@ void unload_activity_actor::unload( Character &who, item_location &target )
     item &it = *target.get_item();
     bool actually_unloaded = false;
     const bool can_hold_legacy_plutonium = ( it.is_tool() || it.is_gun() || it.is_magazine() ) &&
-            it.ammo_capacity( ammo_plutonium ) > 0;
+                                           it.ammo_capacity( ammo_plutonium ) > 0;
 
     if( it.is_container() ) {
         contents_change_handler handler;
@@ -10479,7 +10479,7 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
         terrain_growth_state growth_state;
         growth_state.fertilized_at = calendar::turn - real_reduction;
         here.set_terrain_growth( plant_position, growth_state );
-    //~ %1$s: plant name, %2$s: fertilizer name
+        //~ %1$s: plant name, %2$s: fertilizer name
         add_msg( m_info, _( "You fertilize the %1s with the %2s." ), terrain.name(),
                  planted.front().tname() );
         act.set_to_null();
@@ -13050,7 +13050,7 @@ void training_activity_actor::train_skill( Character &who, skill_id trained_skil
     // Student intelligence and social skill is secondary.
     int student_quality = ( who.get_int() + ( who.get_skill_level( skill_speech ) * 2 ) ) * 4;
     int teaching_effectiveness = std::min( 200, std::max( 10,
-                                     ( teacher_quality * 2 + student_quality ) / 2 ) );
+                                           ( teacher_quality * 2 + student_quality ) / 2 ) );
     who.practice( trained_skill, teaching_effectiveness, old_skill_level + 2 );
     int new_skill_level = who.get_knowledge_level( trained_skill );
     if( old_skill_level != new_skill_level ) {

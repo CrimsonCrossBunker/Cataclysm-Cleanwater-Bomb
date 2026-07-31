@@ -12,7 +12,7 @@ namespace cata::lua_ui
 {
 
 constexpr int minimum_api_version = 2;
-constexpr int api_version = 4;
+constexpr int api_version = 5;
 
 constexpr bool is_enabled() noexcept
 {
@@ -26,6 +26,7 @@ constexpr bool is_enabled() noexcept
 struct runtime_status {
     bool loaded = false;
     std::size_t generation = 0;
+    std::size_t world_generation = 0;
     std::size_t page_count = 0;
     std::size_t event_handler_count = 0;
     std::size_t source_count = 0;

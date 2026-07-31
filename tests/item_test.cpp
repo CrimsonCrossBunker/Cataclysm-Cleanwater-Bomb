@@ -23,6 +23,7 @@
 #include "enums.h"
 #include "flag.h"
 #include "game.h"
+#include "game_constants.h"
 #include "item.h"
 #include "item_category.h"
 #include "item_factory.h"
@@ -1287,7 +1288,7 @@ TEST_CASE( "item_relative_rot_after_is_non_mutating", "[item][rot]" )
     const double initial_rot = butter.get_relative_rot();
 
     const double simulated_rot = butter.get_relative_rot_after( temperatures::normal, 1.0f,
-                                  1_hours );
+                                 1_hours );
 
     CHECK( butter.get_relative_rot() == initial_rot );
     CHECK( simulated_rot > initial_rot );

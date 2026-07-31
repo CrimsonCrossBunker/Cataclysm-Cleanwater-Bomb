@@ -1,6 +1,8 @@
 #include "cata_catch.h"
 #include "avatar.h"
 #include "calendar.h"
+#include "catalua_bindings.h"
+#include "catalua_game_handle.h"
 #include "catalua_ui.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_events.h"
@@ -28,6 +30,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -697,7 +700,15 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "capabilities": [ "modules.import", "scheduler", "services.consume" ],
         "dependencies": []
     })json" ) );
-    CHECK( v4.api_version == api_version );
+    CHECK( v4.api_version == 4 );
+    const script_manifest v5 = read_script_manifest( json_loader::from_string( R"json({
+        "id": "v5", "version": "5", "api_version": 5,
+        "capabilities": [
+            "events", "game.callbacks", "game.hooks", "game.read", "game.write"
+        ],
+        "dependencies": []
+    })json" ) );
+    CHECK( v5.api_version == api_version );
 
     extension.dependencies = { "missing" };
     CHECK_THROWS( validate_script_manifests( { base, extension } ) );
@@ -721,7 +732,24 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "id": "dangerous-without-actions", "version": "1", "api_version": 4,
         "capabilities": [ "game.actions.dangerous" ], "dependencies": []
     })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "write-without-read", "version": "1", "api_version": 5,
+        "capabilities": [ "game.write" ], "dependencies": []
+    })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "hooks-without-events", "version": "1", "api_version": 5,
+        "capabilities": [ "game.hooks" ], "dependencies": []
+    })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "callbacks-without-read", "version": "1", "api_version": 5,
+        "capabilities": [ "game.callbacks" ], "dependencies": []
+    })json" ) ) );
+    CHECK_THROWS( read_script_manifest( json_loader::from_string( R"json({
+        "id": "old-writer", "version": "1", "api_version": 4,
+        "capabilities": [ "game.read", "game.write" ], "dependencies": []
+    })json" ) ) );
     CHECK( capability_minimum_api_version( "scheduler" ) == 4 );
+    CHECK( capability_minimum_api_version( "game.write" ) == 5 );
     CHECK( capability_minimum_api_version( "game.read" ) == minimum_api_version );
 }
 
@@ -930,6 +958,189 @@ TEST_CASE( "lua_i18n_api_returns_owned_translations_and_validates_plural_counts"
     const sol::protected_function_result revision = language_revision();
     REQUIRE( revision.valid() );
     CHECK( revision.get<int>() >= 0 );
+}
+
+TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
+           "[lua][ui][bindings]" )
+{
+    using namespace cata::lua_ui;
+
+    const std::vector<binding_domain> &catalog = binding_catalog();
+    REQUIRE( catalog.size() == 14 );
+    std::vector<std::string_view> ids;
+    ids.reserve( catalog.size() );
+    for( const binding_domain &domain : catalog ) {
+        CHECK_FALSE( domain.id.empty() );
+        CHECK_FALSE( domain.lua_namespace.empty() );
+        CHECK( supported_script_capabilities().count( std::string( domain.capability ) ) == 1 );
+        CHECK( domain.minimum_api_version >=
+               capability_minimum_api_version( domain.capability ) );
+        CHECK_FALSE( binding_status_name( domain.status ).empty() );
+        ids.push_back( domain.id );
+    }
+    std::sort( ids.begin(), ids.end() );
+    CHECK( std::adjacent_find( ids.begin(), ids.end() ) == ids.end() );
+    CHECK( find_binding_domain( "coordinates" ) != nullptr );
+    CHECK( find_binding_domain( "missing" ) == nullptr );
+    CHECK_FALSE( binding_domain_is_covered( "coordinates" ) );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    bool authorized = false;
+    install_binding_catalog_api( game, [&authorized]() {
+        if( !authorized ) {
+            throw std::runtime_error( "catalog capability denied" );
+        }
+    } );
+
+    sol::protected_function api_catalog = game["api_catalog"];
+    sol::protected_function_result denied = api_catalog();
+    CHECK_FALSE( denied.valid() );
+
+    authorized = true;
+    sol::protected_function_result first_result = api_catalog();
+    REQUIRE( first_result.valid() );
+    sol::table first = first_result;
+    REQUIRE( first.size() == catalog.size() );
+    sol::table first_entry = first[1];
+    const std::string original_id = first_entry["id"];
+    first_entry["id"] = "mutated";
+    first_entry["status"] = "covered";
+
+    sol::protected_function_result second_result = api_catalog();
+    REQUIRE( second_result.valid() );
+    sol::table second = second_result;
+    sol::table second_entry = second[1];
+    CHECK( second_entry.get<std::string>( "id" ) == original_id );
+    CHECK( second_entry.get<std::string>( "status" ) != "covered" );
+
+    sol::protected_function api_supports = game["api_supports"];
+    CHECK_FALSE( api_supports( "coordinates" ).get<bool>() );
+    CHECK_FALSE( api_supports( "missing" ).get<bool>() );
+}
+
+TEST_CASE( "lua_game_handles_reject_stale_destroyed_and_wrong_kind_references",
+           "[lua][bindings][handles]" )
+{
+    using namespace cata::lua_ui;
+
+    constexpr std::size_t runtime_generation = 17;
+    constexpr std::size_t world_generation = 23;
+    game_handle_locator locator{ "test", 42, 1, 2, 3, { 4, 5 } };
+    auto value = std::make_unique<item>();
+    game_handle handle = game_handle::from_item(
+                             *value, locator, runtime_generation, world_generation );
+
+    native_handle_result<item> resolved =
+        handle.resolve_item( runtime_generation, world_generation );
+    REQUIRE( resolved );
+    CHECK( resolved.value == value.get() );
+    CHECK_FALSE( resolved.error );
+
+    const native_handle_result<Creature> wrong =
+        handle.resolve_creature( runtime_generation, world_generation );
+    REQUIRE_FALSE( wrong );
+    REQUIRE( wrong.error );
+    CHECK( wrong.error->code == "wrong_kind" );
+
+    resolved = handle.resolve_item( runtime_generation + 1, world_generation );
+    REQUIRE_FALSE( resolved );
+    REQUIRE( resolved.error );
+    CHECK( resolved.error->code == "stale_runtime" );
+
+    resolved = handle.resolve_item( runtime_generation, world_generation + 1 );
+    REQUIRE_FALSE( resolved );
+    REQUIRE( resolved.error );
+    CHECK( resolved.error->code == "stale_world" );
+
+    value.reset();
+    resolved = handle.resolve_item( runtime_generation, world_generation );
+    REQUIRE_FALSE( resolved );
+    REQUIRE( resolved.error );
+    CHECK( resolved.error->code == "destroyed" );
+
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    std::size_t current_runtime = runtime_generation;
+    std::size_t current_world = world_generation;
+    install_game_handle_api(
+        lua, game,
+    [&current_runtime]() {
+        return current_runtime;
+    },
+    [&current_world]() {
+        return current_world;
+    },
+    []() {} );
+
+    auto live_value = std::make_unique<item>();
+    lua["test_handle"] = game_handle::from_item(
+                             *live_value, locator, runtime_generation, world_generation );
+    sol::protected_function_result script = lua.safe_script( R"lua(
+assert(test_handle.kind == "item")
+local locator = test_handle:locator()
+assert(locator.scope == "test")
+assert(locator.stable_id == 42)
+assert(locator.position.x == 1)
+assert(locator.position.y == 2)
+assert(locator.position.z == 3)
+assert(locator.path[1] == 4 and locator.path[2] == 5)
+locator.scope = "mutated"
+assert(test_handle:locator().scope == "test")
+local status = test_handle:status()
+assert(status.ok == true)
+assert(status.value.kind == "item")
+)lua" );
+    REQUIRE( script.valid() );
+
+    ++current_runtime;
+    script = lua.safe_script( R"lua(
+assert(test_handle:is_valid() == false)
+local status = test_handle:status()
+assert(status.ok == false)
+assert(status.value == nil)
+assert(status.error.code == "stale_runtime")
+assert(type(status.error.message) == "string")
+)lua" );
+    REQUIRE( script.valid() );
+}
+
+TEST_CASE( "lua_top_level_handles_use_the_committed_runtime_generation",
+           "[lua][bindings][handles][integration]" )
+{
+    scoped_calendar_turn turn;
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "scheduler" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local runtime = game.runtime_status()
+assert(runtime.generation > 0)
+assert(math.type(runtime.world_generation) == "integer")
+local player = game.handles.avatar()
+assert(player.kind == "creature")
+assert(player:is_valid() == true)
+scheduler.after(1, function()
+    assert(player:is_valid() == true)
+    local status = player:status()
+    assert(status.ok == true)
+    assert(status.value.kind == "creature")
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    const cata::lua_ui::runtime_status loaded = cata::lua_ui::status();
+    CHECK( loaded.generation > 0 );
+    calendar::turn = turn.original() + 1_turns;
+    cata::lua_ui::on_turn();
+    CHECK( cata::lua_ui::status().last_error.empty() );
 }
 
 TEST_CASE( "lua_ui_navigation_is_callback_only_typed_and_bounded",

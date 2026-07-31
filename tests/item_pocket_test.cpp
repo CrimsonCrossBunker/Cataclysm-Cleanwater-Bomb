@@ -30,6 +30,7 @@
 #include "item_group.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_uid.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
@@ -76,10 +77,9 @@ static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bag_plastic( "bag_plastic" ); //Purposefully nonsense
 static const itype_id itype_barrel_small( "barrel_small" );
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
-static const itype_id itype_debug_modular_m4_carbine( "debug_modular_m4_carbine" );
 static const itype_id itype_debug_gun_no_mag_well( "debug_gun_no_mag_well" );
+static const itype_id itype_debug_modular_m4_carbine( "debug_modular_m4_carbine" );
 static const itype_id itype_debug_retool_mag_well( "debug_retool_mag_well" );
-static const itype_id itype_stanag30( "stanag30" );
 static const itype_id itype_ketchup( "ketchup" );
 static const itype_id itype_mustard( "mustard" );
 static const itype_id itype_paper( "paper" );
@@ -87,6 +87,7 @@ static const itype_id itype_pencil( "pencil" );
 static const itype_id itype_shotgun_d( "shotgun_d" );
 static const itype_id itype_shoulder_strap( "shoulder_strap" );
 static const itype_id itype_software_math( "software_math" );
+static const itype_id itype_stanag30( "stanag30" );
 static const itype_id itype_steel_pan( "steel_pan" );
 static const itype_id itype_stock_none( "stock_none" );
 static const itype_id itype_test_45_ammo( "test_45_ammo" );
@@ -3098,7 +3099,11 @@ TEST_CASE( "unload_from_spillable_container", "[item][pocket]" )
                 CHECK( backpack_items_vec[1]->typeId().str() == "bottle_plastic_small" );
                 CHECK( backpack_items_vec[1]->empty() );
                 CHECK( backpack_items_vec[2]->typeId().str() == "bottle_plastic_small" );
-                CHECK( backpack_items_vec[2]->all_items_top().size() == 5 );
+                const std::list<item *> merged_pills =
+                    backpack_items_vec[2]->all_items_top();
+                REQUIRE( merged_pills.size() == 1 );
+                CHECK( merged_pills.front()->typeId() == itype_tums );
+                CHECK( merged_pills.front()->count() == 5 );
                 CHECK_FALSE( static_cast<bool>( bottle1_loc ) );
             }
         }

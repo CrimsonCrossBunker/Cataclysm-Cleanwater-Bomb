@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "activity_actor_definitions.h"
+#include "calendar.h"
 #include "character.h"
 #include "crafting.h"
 #include "crafting_enums.h"
@@ -40,6 +41,7 @@
 #include "translations.h"
 #include "type_id.h"
 #include "uistate.h"
+#include "units.h"
 #include "vehicle.h"
 #include "visitable.h"
 #include "vpart_position.h"
@@ -654,7 +656,7 @@ item craft_command::create_in_progress_craft()
     // inheritance path as the craft that will be created below.
     item preview( rec, batch_size, *preview_used, std::vector<item_comp> {}, false );
     const time_duration expected_duration = time_duration::from_moves(
-                crafter->expected_time_to_craft( *rec, batch_size ) );
+            crafter->expected_time_to_craft( *rec, batch_size ) );
     const double predicted_rot = preview.get_relative_rot_after(
                                      get_weather().get_temperature( crafter->pos_bub() ), 1.0f,
                                      expected_duration );

@@ -4,23 +4,19 @@
     "id": "fcl_cureall",
     "max_duration": "10 s",
     "removes_effects": [
-        "bite",
-        "bleed",
-        "redcells_anemia",
-        "hypovolemia",
-        "shakes",
-        "stunned",
-        "winded",
-        "winded_leg",
-        "winded_arm",
-        "hypocalcemia",
-        "anemia",
-        "scurvy"
+      "bite",
+      "bleed",
+      "redcells_anemia",
+      "hypovolemia",
+      "shakes",
+      "stunned",
+      "winded",
+      "winded_leg",
+      "winded_arm",
+      "hypocalcemia",
+      "anemia",
+      "scurvy"
     ],
-    "base_mods": {
-      "hurt_amount": [ -10 ],
-      "h_mod_min": [ 25 ],
-      "health_min": [ 100 ]
-    }
+    "base_mods": { "hurt_amount": [ -10 ], "h_mod_min": [ 25 ], "health_min": [ 100 ] }
   }
 ]

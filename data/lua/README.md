@@ -1,10 +1,11 @@
-# Lua Mod API v4
+# Lua Mod API v5
 
 This directory contains the built-in Lua entry point and modules for the
 experimental, versioned Mod runtime. Its first complete extension surface is
-portable UI, but API v4 also provides isolated modules, services, events,
+portable UI. API v4 added isolated modules, services, events,
 deterministic scheduling, persistent state, definition registries, and queued
-game actions. The Lua drawing context targets the
+game actions. API v5 adds capability-scoped, generation-checked game handles
+and a machine-readable native API coverage catalogue. The Lua drawing context targets the
 platform-neutral `script_ui_renderer` contract. Complete pages use the shared
 ImGui page host on Android and desktop Tiles; terminal builds use the ImTui
 fallback. Desktop keeps its established keyboard UI and Widget sidebar;
@@ -12,7 +13,7 @@ Android applies a separate touch profile and owns the native schema-6 HUD.
 Scripts do not import or depend on a renderer backend.
 
 The current platform policy is Android on SDL3, with Linux, macOS, and Windows
-using SDL2 while their SDL3 migration is paused. API v4 code should use
+using SDL2 while their SDL3 migration is paused. API v4 and v5 code should use
 `ctx:environment()` for layout and interaction decisions. `ctx:platform()` is
 retained for API v2 diagnostics and must not be used to distinguish touch from
 desktop interaction.
@@ -53,8 +54,9 @@ sidecars, or expose the Lua UI debug-menu entry.
 - `manifest.schema.json` is the authoritative JSON Schema for
   `lua/manifest.json`. Add a relative `$schema` property to receive editor
   validation.
-- `types/ccb_api_v4.d.lua` is a LuaLS/EmmyLua declaration file for the complete
-  public v4 surface. Add this directory to the editor workspace library; never
+- `types/ccb_api_v5.d.lua` is a LuaLS/EmmyLua declaration file for the current
+  public v5 surface, including safe game handles and the coverage catalogue.
+  Add this directory to the editor workspace library; never
   `require` the declaration at runtime.
 - `examples/api_v4_mod/` is a complete source example covering modules,
   services, events, scheduling, registry queries, state, pages, and named
@@ -64,10 +66,11 @@ CCB takes the useful structural lessons from Cataclysm: Bright Nights—one
 environment per Mod, local modules, explicit lifecycle stages, hot reload, and
 developer documentation—but deliberately does not copy BN's unrestricted
 native-object binding model. API v4 returns detached snapshots and submits
-mutations through validated queues. It is currently a strong base for Mod
-pages, story/state orchestration, settings, and tools; native item-use,
-mapgen, creature, and arbitrary world-mutation bindings remain future
-capability modules rather than implicit access to C++ pointers.
+mutations through validated queues. API v5 extends that model with opaque
+`GameHandle` userdata backed by checked engine references. A handle is scoped
+to the active runtime and world generations, exposes only a detached locator,
+and fails safely after reload, world replacement, or native-object deletion.
+Native pointers and mutable C++ references never cross the Lua boundary.
 
 ## Loading and hot reload
 
@@ -110,10 +113,12 @@ Each source may contain `lua/manifest.json`:
   "$schema": "./manifest.schema.json",
   "id": "my_mod_id",
   "version": "1.0.0",
-  "api_version": 4,
+  "api_version": 5,
   "capabilities": [
     "events",
+    "game.hooks",
     "game.read",
+    "game.write",
     "registry.read",
     "scheduler",
     "ui.pages"
@@ -122,13 +127,16 @@ Each source may contain `lua/manifest.json`:
 }
 ```
 
-API versions 2, 3, and 4 are accepted. New code should target v4. Supported
+API versions 2, 3, 4, and 5 are accepted. New code should target v5. Supported
 capabilities are:
 
 - `events`
 - `game.actions`
 - `game.actions.dangerous`
+- `game.callbacks`
+- `game.hooks`
 - `game.read`
+- `game.write`
 - `modules.import`
 - `registry.read`
 - `scheduler`
@@ -140,14 +148,16 @@ capabilities are:
 - `ui.pages`
 
 The dangerous-action, module-import, registry, scheduler, and service
-capabilities require API v4. `game.actions.dangerous` also requires
-`game.actions`. Unknown capabilities, an incompatible API, duplicate ids,
-missing dependencies, or dependencies that load later reject the whole
-candidate transaction. The bundled manifest is mandatory. A local user script
-without a manifest keeps compatibility capabilities but never receives
-dangerous-action authorization. An active game Mod without a manifest receives
-all compatibility capabilities except game actions; declare mutation
-capabilities explicitly.
+capabilities require API v4. `game.callbacks`, `game.hooks`, and `game.write`
+require API v5. `game.actions.dangerous` also requires `game.actions`;
+`game.write` and `game.callbacks` require `game.read`; `game.hooks` requires
+`events`. Unknown capabilities, an incompatible API, duplicate ids, missing
+dependencies, or dependencies that load later reject the whole candidate
+transaction. The bundled manifest is mandatory. A local user script without a
+manifest keeps compatibility capabilities but never receives dangerous-action
+or v5 mutation authorization. An active game Mod without a manifest receives
+all compatibility capabilities except game actions and v5 mutation
+capabilities; declare mutations explicitly.
 
 Callbacks retain the manifest identity that registered them. Replacing a page
 id, loading a helper through `require`, or firing an event later never borrows
@@ -637,7 +647,18 @@ ordinary ImGui page host and are unrelated to this HUD snapshot.
 
 ## Game API and reload state
 
-- `game.api_version` is `4`. Manifests targeting API v2 and v3 remain accepted.
+- `game.api_version` is `5`. Manifests targeting API v2, v3, and v4 remain
+  accepted; v5-only functions still enforce the calling source's manifest
+  version and capabilities.
+- `game.api_catalog()` returns detached entries for every tracked native API
+  domain. Each entry reports its id, namespace, required capability, minimum
+  API version, and implementation status. `game.api_supports(domain)` returns
+  true only when that complete domain is covered.
+- `game.handles.avatar()` returns a generation-checked `GameHandle`. Its
+  read-only `kind`, detached `locator()`, `is_valid()`, and structured
+  `status()` methods never expose a native pointer. A handle becomes invalid
+  when its object is destroyed or when the Lua runtime/world generation
+  changes.
 - `game.add_msg(text)` writes to the game message log.
 - `game.player_name()` returns the current avatar name.
 - `game.player_snapshot()` returns copied character status: name, moves, stamina,
@@ -806,7 +827,7 @@ the rendered revision into a 16-entry platform-neutral queue. Consumption
 checks the revision again and confirms that the receiving context still
 registered the id. Context changes clear pending actions.
 
-API v4 also exposes
+API v4 and later also expose
 `game.actions.enqueue_context(action_id, context_revision)`. Ordinary named
 actions require `game.actions`. Debug, deletion, reset, quickload, and suicide
 actions additionally require the explicit `game.actions.dangerous` manifest

@@ -26,7 +26,7 @@
       "minLength": 1,
       "maxLength": 64
     },
-    "api_version": { "description": "Lua API contract requested by this source.", "type": "integer", "enum": [ 2, 3, 4 ] },
+    "api_version": { "description": "Lua API contract requested by this source.", "type": "integer", "enum": [ 2, 3, 4, 5 ] },
     "capabilities": {
       "description": "Explicit privileges granted to this source.",
       "type": "array",
@@ -38,7 +38,10 @@
           "events",
           "game.actions",
           "game.actions.dangerous",
+          "game.callbacks",
+          "game.hooks",
           "game.read",
+          "game.write",
           "modules.import",
           "registry.read",
           "scheduler",
@@ -71,7 +74,14 @@
         },
         "required": [ "capabilities" ]
       },
-      "then": { "properties": { "api_version": { "const": 4 } } }
+      "then": { "properties": { "api_version": { "minimum": 4 } } }
+    },
+    {
+      "if": {
+        "properties": { "capabilities": { "contains": { "enum": [ "game.callbacks", "game.hooks", "game.write" ] } } },
+        "required": [ "capabilities" ]
+      },
+      "then": { "properties": { "api_version": { "minimum": 5 } } }
     },
     {
       "if": {
@@ -79,6 +89,18 @@
         "required": [ "capabilities" ]
       },
       "then": { "properties": { "capabilities": { "contains": { "const": "game.actions" } } } }
+    },
+    {
+      "if": { "properties": { "capabilities": { "contains": { "const": "game.write" } } }, "required": [ "capabilities" ] },
+      "then": { "properties": { "capabilities": { "contains": { "const": "game.read" } } } }
+    },
+    {
+      "if": { "properties": { "capabilities": { "contains": { "const": "game.hooks" } } }, "required": [ "capabilities" ] },
+      "then": { "properties": { "capabilities": { "contains": { "const": "events" } } } }
+    },
+    {
+      "if": { "properties": { "capabilities": { "contains": { "const": "game.callbacks" } } }, "required": [ "capabilities" ] },
+      "then": { "properties": { "capabilities": { "contains": { "const": "game.read" } } } }
     }
   ],
   "additionalProperties": true

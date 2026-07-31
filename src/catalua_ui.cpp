@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <set>
@@ -22,6 +23,8 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catalua_sol.h"
+#include "catalua_bindings.h"
+#include "catalua_game_handle.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_events.h"
@@ -267,6 +270,7 @@ class runtime_state : public event_subscriber
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
         int event_dispatch_depth = 0;
         std::size_t generation = 0;
+        std::size_t world_generation = 0;
         bool accept_actions = false;
         std::optional<std::size_t> current_source;
         std::optional<std::string> current_page;
@@ -280,6 +284,7 @@ class runtime_state : public event_subscriber
 std::unique_ptr<runtime_state> active_state;
 std::string last_runtime_error;
 std::size_t generation_counter = 0;
+std::size_t world_generation_counter = 0;
 
 bool dispatch_custom_event( runtime_state &state, const std::string &internal_name,
                             const std::string &display_name,
@@ -1046,24 +1051,24 @@ void scoped_state_set( runtime_state &runtime, script_persistent_state &store,
                      "state." + scope + ".set" );
 }
 
-sol::table lua_runtime_status( sol::this_state lua )
+sol::table lua_runtime_status( sol::this_state lua, const runtime_state &runtime )
 {
-    const runtime_status snapshot = status();
     sol::state_view state( lua );
     sol::table result = state.create_table();
-    result["loaded"] = snapshot.loaded;
-    result["generation"] = snapshot.generation;
-    result["pages"] = snapshot.page_count;
-    result["event_handlers"] = snapshot.event_handler_count;
-    result["sources"] = snapshot.source_count;
-    result["memory_used"] = snapshot.memory_used;
-    result["memory_limit"] = snapshot.memory_limit;
-    result["callback_count"] = snapshot.callback_count;
-    result["callback_time_total_us"] = snapshot.callback_time_total_us;
-    result["callback_time_max_us"] = snapshot.callback_time_max_us;
-    result["slow_callback_count"] = snapshot.slow_callback_count;
-    result["last_slow_callback"] = snapshot.last_slow_callback;
-    result["last_error"] = snapshot.last_error;
+    result["loaded"] = true;
+    result["generation"] = runtime.generation;
+    result["world_generation"] = runtime.world_generation;
+    result["pages"] = runtime.pages.size();
+    result["event_handlers"] = runtime.event_registry.size();
+    result["sources"] = runtime.sources.size();
+    result["memory_used"] = runtime.memory.used;
+    result["memory_limit"] = runtime.memory.limit;
+    result["callback_count"] = runtime.callback_count;
+    result["callback_time_total_us"] = runtime.callback_time_total_us;
+    result["callback_time_max_us"] = runtime.callback_time_max_us;
+    result["slow_callback_count"] = runtime.slow_callback_count;
+    result["last_slow_callback"] = runtime.last_slow_callback;
+    result["last_error"] = last_runtime_error;
     return result;
 }
 
@@ -1399,6 +1404,20 @@ void initialize_state( runtime_state &state )
 
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
+    install_game_handle_api(
+        state.lua, game,
+    [&state]() {
+        return state.generation;
+    },
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_capability( state, "game.read" );
+    } );
+    install_binding_catalog_api( game, [&state]() {
+        require_capability( state, "game.read" );
+    } );
     game.set_function( "add_msg", [&state]( const std::string & message ) {
         require_capability( state, "game.actions" );
         ::add_msg( message );
@@ -1429,7 +1448,9 @@ void initialize_state( runtime_state &state )
     game.set_function( "state_set", [&state]( const std::string & key, const sol::object & value ) {
         persistent_set( state, key, value );
     } );
-    game.set_function( "runtime_status", lua_runtime_status );
+    game.set_function( "runtime_status", [&state]( sol::this_state lua ) {
+        return lua_runtime_status( lua, state );
+    } );
     install_i18n_api( state.lua );
     install_registry_api( state.lua, [&state]() {
         require_capability( state, "registry.read" );
@@ -2279,7 +2300,15 @@ bool reload_scripts_with_state(
     std::string &error )
 {
     try {
+        if( generation_counter == std::numeric_limits<std::size_t>::max() ) {
+            throw std::runtime_error( "Lua runtime generation counter exhausted" );
+        }
+        const std::size_t candidate_generation = generation_counter + 1;
         auto next = std::make_unique<runtime_state>();
+        // Handles created by top-level scripts must carry the generation that
+        // this candidate will have after the transactional reload commits.
+        next->generation = candidate_generation;
+        next->world_generation = world_generation_counter;
         if( active_state ) {
             next->persistent_state = active_state->persistent_state;
             next->world_state = active_state->world_state;
@@ -2299,12 +2328,12 @@ bool reload_scripts_with_state(
             run_script( *next, next->sources[index].entry, index );
         }
 
-        next->generation = ++generation_counter;
         // Subscribe even when no entry script registered a game event yet.
         // A page, service, scheduler, or lifecycle callback may add its first
         // game-event handler later in the lifetime of this runtime.
         get_event_bus().subscribe( next.get() );
         active_state = std::move( next );
+        generation_counter = candidate_generation;
         active_state->accept_actions = true;
         clear_navigation_requests();
         last_runtime_error.clear();
@@ -2390,6 +2419,11 @@ void on_world_ready()
         dispatch_lifecycle_event( *active_state, "ccb.lifecycle.shutdown" );
         active_state.reset();
     }
+    if( world_generation_counter == std::numeric_limits<std::size_t>::max() ) {
+        world_generation_counter = 1;
+    } else {
+        ++world_generation_counter;
+    }
     clear_navigation_requests();
     script_persistent_state saved_character_state;
     std::string character_state_error;
@@ -2472,6 +2506,7 @@ runtime_status status()
     result.last_error = last_runtime_error;
     if( active_state ) {
         result.generation = active_state->generation;
+        result.world_generation = active_state->world_generation;
         result.page_count = active_state->pages.size();
         result.event_handler_count = active_state->event_registry.size();
         result.source_count = active_state->sources.size();

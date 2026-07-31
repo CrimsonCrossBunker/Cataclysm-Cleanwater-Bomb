@@ -99,8 +99,6 @@ static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
 static const activity_id ACT_DISASSEMBLE( "ACT_DISASSEMBLE" );
 
-static const itype_id itype_water_faucet( "water_faucet" );
-
 static const efftype_id effect_contacts( "contacts" );
 static const efftype_id effect_transition_contacts( "transition_contacts" );
 
@@ -111,6 +109,7 @@ static const itype_id itype_disassembly( "disassembly" );
 static const itype_id itype_pickaxe( "pickaxe" );
 static const itype_id itype_plut_cell( "plut_cell" );
 static const itype_id itype_shovel( "shovel" );
+static const itype_id itype_water_faucet( "water_faucet" );
 
 static const json_character_flag json_flag_CRAFT_IN_DARKNESS( "CRAFT_IN_DARKNESS" );
 static const json_character_flag json_flag_HYPEROPIC( "HYPEROPIC" );
@@ -3240,10 +3239,10 @@ std::vector<item_location> preview_source_locations( Character &crafter,
 {
     const itype_id type = selection.comp.type;
     const std::function<bool( const item & )> source_filter =
-        [&filter, &type, preferred]( const item &candidate ) {
-            return candidate.typeId() == type && filter( candidate ) &&
-                   ( !preferred || is_preferred_component( candidate ) );
-        };
+    [&filter, &type, preferred]( const item & candidate ) {
+        return candidate.typeId() == type && filter( candidate ) &&
+               ( !preferred || is_preferred_component( candidate ) );
+    };
     std::vector<item_location> locations;
     map &here = get_map();
     if( selection.use_from & usage_from::map ) {
@@ -3334,7 +3333,7 @@ std::optional<item_components> Character::preview_crafting_components(
                         std::abs( selection.comp.count );
         if( by_charges && ( selection.use_from & usage_from::map ) ) {
             std::optional<item> infinite_source = preview_infinite_map_charge_source( *this,
-                    selection.comp.type );
+                                                  selection.comp.type );
             if( infinite_source ) {
                 infinite_source->charges = remaining;
                 sources.push_back( { item_location::nowhere, *infinite_source, remaining, true,
@@ -3344,7 +3343,7 @@ std::optional<item_components> Character::preview_crafting_components(
         }
         std::vector<item_location> planned_locations;
         const auto add_candidate = [&sources, &planned_locations, &remaining, by_charges](
-        item_location &location ) {
+        item_location & location ) {
             if( remaining <= 0 || std::find( planned_locations.begin(), planned_locations.end(),
                                              location ) != planned_locations.end() ) {
                 return;

@@ -1,6 +1,6 @@
 ---@meta
 
--- LuaLS declarations for the CCB Lua Mod API v4.
+-- LuaLS declarations for the CCB Lua Mod API v5.
 -- This file is editor metadata. Do not require or copy it into runtime code.
 
 ---@alias CcbScalar boolean|integer|number|string
@@ -755,10 +755,70 @@ function CcbGameActionsApi.context_snapshot() end
 ---@field last_slow_callback string
 ---@field last_error string
 
+---@alias CcbGameHandleKind '"creature"'|'"item"'|'"vehicle"'
+
+---@class CcbGameHandlePosition
+---@field x integer
+---@field y integer
+---@field z integer
+
+---@class CcbGameHandleLocator
+---@field scope string
+---@field stable_id integer
+---@field position CcbGameHandlePosition
+---@field path integer[]
+
+---@class CcbGameHandleError
+---@field code string
+---@field message string
+
+---@class CcbGameHandleStatus
+---@field ok boolean
+---@field value? { kind: CcbGameHandleKind, locator: CcbGameHandleLocator }
+---@field error? CcbGameHandleError
+
+---Opaque generation-checked reference to a live game object. Handles never
+---expose native pointers and become invalid after runtime/world replacement.
+---@class GameHandle
+---@field kind CcbGameHandleKind
+local GameHandle = {}
+
+---@return CcbGameHandleLocator
+function GameHandle:locator() end
+
+---@return boolean
+function GameHandle:is_valid() end
+
+---@return CcbGameHandleStatus
+function GameHandle:status() end
+
+---@class CcbGameHandlesApi
+local CcbGameHandlesApi = {}
+
+---@return GameHandle
+function CcbGameHandlesApi.avatar() end
+
+---@alias CcbLuaBindingStatus '"planned"'|'"partial"'|'"covered"'|'"not_applicable"'
+
+---@class CcbLuaBindingDomain
+---@field id string
+---@field namespace string
+---@field capability string
+---@field minimum_api_version integer
+---@field status CcbLuaBindingStatus
+
 ---@class CcbGameApi
----@field api_version 4
+---@field api_version 5
 ---@field actions CcbGameActionsApi
+---@field handles CcbGameHandlesApi
 local CcbGameApi = {}
+
+---@return CcbLuaBindingDomain[]
+function CcbGameApi.api_catalog() end
+
+---@param domain string
+---@return boolean
+function CcbGameApi.api_supports(domain) end
 
 ---@param message string
 function CcbGameApi.add_msg(message) end
