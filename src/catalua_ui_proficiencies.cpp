@@ -137,7 +137,7 @@ std::vector<const proficiency_category *> matching_categories(
     }
     std::sort(
         result.begin(), result.end(),
-    []( const proficiency_category * lhs,
+        []( const proficiency_category * lhs,
     const proficiency_category * rhs ) {
         return lhs->id.str() < rhs->id.str();
     } );

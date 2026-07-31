@@ -18,6 +18,6 @@
     "name": "Lua test achievement",
     "description": "A manually controlled achievement reserved for Lua integration tests.",
     "manually_given": true,
-    "requirements": []
+    "requirements": [  ]
   }
 ]

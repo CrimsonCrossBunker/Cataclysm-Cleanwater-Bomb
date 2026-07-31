@@ -671,7 +671,7 @@ void install_martial_art_api(
     martial_arts.set_function(
         "current",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle & handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return get_current_state(
                    lua_state, handle,

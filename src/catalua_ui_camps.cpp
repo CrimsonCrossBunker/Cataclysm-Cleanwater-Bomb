@@ -262,7 +262,7 @@ std::vector<located_camp> matching_camps(
         if( !query.empty() &&
             lowercase_ascii(
                 reference.camp->camp_name() ).find(
-                    query ) == std::string::npos ) {
+                query ) == std::string::npos ) {
             continue;
         }
         result.push_back( {
@@ -271,7 +271,7 @@ std::vector<located_camp> matching_camps(
     }
     std::sort(
         result.begin(), result.end(),
-    []( const located_camp & lhs,
+        []( const located_camp & lhs,
     const located_camp & rhs ) {
         if( lhs.distance_submaps !=
             rhs.distance_submaps ) {
@@ -411,7 +411,7 @@ void validate_camp_name(
     if( std::any_of(
     name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+} ) ) {
         throw std::invalid_argument(
             "game.camps.rename name cannot contain control characters" );
     }
@@ -580,7 +580,7 @@ void install_camp_api(
     camps.set_function(
         "near",
         [require_read]( sol::this_state lua_state,
-    const script_tripoint_coord & center,
+                        const script_tripoint_coord & center,
     const sol::optional<sol::table> &options ) {
         require_read();
         return camps_near(
@@ -597,8 +597,8 @@ void install_camp_api(
     camps.set_function(
         "rename",
         [require_write]( sol::this_state lua_state,
-    const script_tripoint_coord & position,
-    const std::string &name ) {
+                         const script_tripoint_coord & position,
+    const std::string & name ) {
         require_write();
         return rename_camp(
                    lua_state, position, name );
@@ -606,7 +606,7 @@ void install_camp_api(
     camps.set_function(
         "set_owner",
         [require_write]( sol::this_state lua_state,
-    const script_tripoint_coord & position,
+                         const script_tripoint_coord & position,
     const script_game_id & owner ) {
         require_write();
         return set_camp_owner(
@@ -615,7 +615,7 @@ void install_camp_api(
     camps.set_function(
         "set_board_position",
         [require_write]( sol::this_state lua_state,
-    const script_tripoint_coord & position,
+                         const script_tripoint_coord & position,
     const script_tripoint_coord & board_position ) {
         require_write();
         return set_camp_board_position(

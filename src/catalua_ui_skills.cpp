@@ -338,7 +338,7 @@ sol::table get_state(
     return make_game_value_result(
                state, sol::make_object(
                    state, snapshot_state(
-                   state, *character,
+                       state, *character,
                        skill_id( requested_id.value() ).obj() ) ) );
 }
 

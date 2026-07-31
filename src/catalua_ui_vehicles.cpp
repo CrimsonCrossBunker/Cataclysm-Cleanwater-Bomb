@@ -185,8 +185,8 @@ std::vector<const vehicle_prototype *> matching_definitions(
     }
     std::sort(
         result.begin(), result.end(),
-    []( const vehicle_prototype * lhs,
-        const vehicle_prototype * rhs ) {
+        []( const vehicle_prototype * lhs,
+    const vehicle_prototype * rhs ) {
         return lhs->id.str() < rhs->id.str();
     } );
     return result;
@@ -673,7 +673,7 @@ void validate_vehicle_name( const std::string &name )
     if( std::any_of(
     name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+} ) ) {
         throw std::invalid_argument(
             "game.vehicles.rename name cannot contain "
             "control characters" );
@@ -890,14 +890,14 @@ sol::table set_vehicle_part_enabled(
         entry->part( part_index );
     if( part.removed || part.is_fake ) {
         return make_game_error_result(
-                   state, game_handle_error{
+        state, game_handle_error{
             "invalid_part",
             "The requested vehicle part is removed or synthetic"
         } );
     }
     if( enabled && !part.is_available() ) {
         return make_game_error_result(
-                   state, game_handle_error{
+        state, game_handle_error{
             "unavailable",
             "The requested vehicle part cannot be enabled"
         } );
@@ -977,7 +977,7 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "get",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle & handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return get_live_vehicle(
                    lua_state, handle,
@@ -998,7 +998,7 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "fuels",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle & handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return list_vehicle_fuels(
                    lua_state, handle,
@@ -1009,7 +1009,7 @@ void install_vehicle_api(
         "rename",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string &name ) {
+    const std::string & name ) {
         require_write();
         return rename_vehicle(
                    lua_state, handle, name,

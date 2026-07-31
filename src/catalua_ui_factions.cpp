@@ -600,7 +600,7 @@ void validate_faction_name(
     if( std::any_of(
     name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+} ) ) {
         throw std::invalid_argument(
             "game.factions.rename name cannot contain control characters" );
     }
@@ -1098,7 +1098,7 @@ parse_relationship_flag( const std::string &key )
 
 using relationship_updates =
     std::vector<std::pair<
-        npc_factions::relationship, bool>>;
+    npc_factions::relationship, bool>>;
 
 relationship_updates read_relationship_updates(
     const sol::table &requested )
@@ -1112,8 +1112,8 @@ relationship_updates read_relationship_updates(
         }
         const std::string key =
             pair.first.as<std::string>();
-        const std::optional<
-        npc_factions::relationship> flag =
+        const std::optional <
+        npc_factions::relationship > flag =
             parse_relationship_flag( key );
         if( !flag ) {
             throw std::invalid_argument(
@@ -1252,14 +1252,14 @@ void install_faction_api(
     } );
     factions.set_function(
         "player",
-        [require_read]( sol::this_state lua_state ) {
+    [require_read]( sol::this_state lua_state ) {
         require_read();
         return player_faction( lua_state );
     } );
     factions.set_function(
         "members",
         [require_read]( sol::this_state lua_state,
-    const script_game_id & id,
+                        const script_game_id & id,
     const sol::optional<sol::table> &options ) {
         require_read();
         return faction_members(
@@ -1268,7 +1268,7 @@ void install_faction_api(
     factions.set_function(
         "relationships",
         [require_read]( sol::this_state lua_state,
-    const script_game_id & id,
+                        const script_game_id & id,
     const sol::optional<sol::table> &options ) {
         require_read();
         return faction_relationships(
@@ -1277,7 +1277,7 @@ void install_faction_api(
     factions.set_function(
         "relationship",
         [require_read]( sol::this_state lua_state,
-    const script_game_id & id,
+                        const script_game_id & id,
     const script_game_id & target ) {
         require_read();
         return faction_relationship(
@@ -1286,7 +1286,7 @@ void install_faction_api(
     factions.set_function(
         "food",
         [require_read]( sol::this_state lua_state,
-    const script_game_id & id,
+                        const script_game_id & id,
     const sol::optional<sol::table> &options ) {
         require_read();
         return faction_food(
@@ -1295,8 +1295,8 @@ void install_faction_api(
     factions.set_function(
         "rename",
         [require_write]( sol::this_state lua_state,
-    const script_game_id & id,
-    const std::string &name ) {
+                         const script_game_id & id,
+    const std::string & name ) {
         require_write();
         return rename_faction(
                    lua_state, id, name );
@@ -1312,8 +1312,8 @@ void install_faction_api(
     factions.set_function(
         "modify_reputation",
         [require_write]( sol::this_state lua_state,
-    const script_game_id & id,
-    const sol::table &deltas ) {
+                         const script_game_id & id,
+    const sol::table & deltas ) {
         require_write();
         return modify_faction_reputation(
                    lua_state, id, deltas );
@@ -1321,8 +1321,8 @@ void install_faction_api(
     factions.set_function(
         "modify_resources",
         [require_write]( sol::this_state lua_state,
-    const script_game_id & id,
-    const sol::table &deltas ) {
+                         const script_game_id & id,
+    const sol::table & deltas ) {
         require_write();
         return modify_faction_resources(
                    lua_state, id, deltas );
@@ -1338,8 +1338,8 @@ void install_faction_api(
     factions.set_function(
         "set_policy",
         [require_write]( sol::this_state lua_state,
-    const script_game_id & id,
-    const sol::table &options ) {
+                         const script_game_id & id,
+    const sol::table & options ) {
         require_write();
         return set_faction_policy(
                    lua_state, id, options );
@@ -1347,9 +1347,9 @@ void install_faction_api(
     factions.set_function(
         "set_relationship",
         [require_write]( sol::this_state lua_state,
-    const script_game_id & id,
-    const script_game_id & target,
-    const sol::table &options ) {
+                         const script_game_id & id,
+                         const script_game_id & target,
+    const sol::table & options ) {
         require_write();
         return set_faction_relationship(
                    lua_state, id, target, options );

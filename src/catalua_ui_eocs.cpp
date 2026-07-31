@@ -127,7 +127,7 @@ std::vector<const effect_on_condition *> sorted_eocs()
     }
     std::sort(
         result.begin(), result.end(),
-    []( const effect_on_condition * lhs,
+        []( const effect_on_condition * lhs,
     const effect_on_condition * rhs ) {
         return lhs->id.str() < rhs->id.str();
     } );
@@ -179,7 +179,7 @@ sol::table get_eoc(
     return make_game_value_result(
                state, sol::make_object(
                    state, snapshot_eoc(
-                   state, effect_on_condition_id( id.value() ).obj() ) ) );
+                       state, effect_on_condition_id( id.value() ).obj() ) ) );
 }
 
 void require_active_callback(
@@ -196,7 +196,7 @@ void require_active_callback(
 void validate_context_key( const std::string &key )
 {
     if( key.empty() || key.size() > maximum_context_key_bytes ||
-        std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
+    std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
     return ch == '\0' || ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
@@ -507,7 +507,7 @@ sol::table queue_eoc(
         alpha == nullptr ? nullptr : alpha->get_character();
     if( character == nullptr ) {
         return make_game_error_result(
-                   state, {
+        state, {
             "wrong_subtype",
             "game.eocs.queue alpha must reference a character"
         } );
@@ -684,7 +684,7 @@ void install_eoc_api(
     eocs.set_function(
         "test",
         [current_runtime_generation, current_world_generation,
-         require_read, has_active_callback](
+                                     require_read, has_active_callback](
             sol::this_state lua_state, const script_game_id & id,
     const sol::optional<sol::table> &options ) {
         require_read();
@@ -698,7 +698,7 @@ void install_eoc_api(
     eocs.set_function(
         "activate",
         [current_runtime_generation, current_world_generation,
-         require_write, has_active_callback](
+                                     require_write, has_active_callback](
             sol::this_state lua_state, const script_game_id & id,
     const sol::optional<sol::table> &options ) {
         require_write();
@@ -712,7 +712,7 @@ void install_eoc_api(
     eocs.set_function(
         "queue",
         [current_runtime_generation, current_world_generation,
-         require_write, has_active_callback](
+                                     require_write, has_active_callback](
             sol::this_state lua_state, const script_game_id & id,
             const script_time_duration & delay,
     const sol::optional<sol::table> &options ) {
@@ -739,7 +739,7 @@ void install_eoc_api(
     variables.set_function(
         "get",
         [current_runtime_generation, current_world_generation,
-         require_read](
+                                     require_read](
             sol::this_state lua_state, const game_handle & handle,
     const std::string & key ) {
         require_read();
@@ -751,9 +751,9 @@ void install_eoc_api(
     variables.set_function(
         "set",
         [current_runtime_generation, current_world_generation,
-         require_write, has_active_callback](
+                                     require_write, has_active_callback](
             sol::this_state lua_state, const game_handle & handle,
-            const std::string & key, const sol::object & value ) {
+    const std::string & key, const sol::object & value ) {
         require_write();
         require_active_callback(
             has_active_callback, "game.variables.set" );
@@ -765,7 +765,7 @@ void install_eoc_api(
     variables.set_function(
         "remove",
         [current_runtime_generation, current_world_generation,
-         require_write, has_active_callback](
+                                     require_write, has_active_callback](
             sol::this_state lua_state, const game_handle & handle,
     const std::string & key ) {
         require_write();

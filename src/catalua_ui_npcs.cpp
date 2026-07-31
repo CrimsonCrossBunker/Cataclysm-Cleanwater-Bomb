@@ -542,7 +542,7 @@ void validate_npc_name( const std::string &name )
     if( std::any_of(
     name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+} ) ) {
         throw std::invalid_argument(
             "game.npcs.rename name cannot contain control characters" );
     }
@@ -827,7 +827,7 @@ void install_npc_api(
     npcs.set_function(
         "get",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle & handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return get_npc(
                    lua_state, handle,
@@ -838,7 +838,7 @@ void install_npc_api(
         "rename",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string &name ) {
+    const std::string & name ) {
         require_write();
         return rename_npc(
                    lua_state, handle, name,
@@ -849,7 +849,7 @@ void install_npc_api(
         "set_attitude",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string &attitude ) {
+    const std::string & attitude ) {
         require_write();
         return set_npc_attitude(
                    lua_state, handle, attitude,
@@ -860,7 +860,7 @@ void install_npc_api(
         "modify_opinion",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const sol::table &deltas ) {
+    const sol::table & deltas ) {
         require_write();
         return modify_npc_opinion(
                    lua_state, handle, deltas,

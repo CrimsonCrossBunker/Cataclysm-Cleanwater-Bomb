@@ -617,7 +617,7 @@ void install_need_api(
     needs.set_function(
         "get",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle & handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return get_needs(
                    lua_state, handle,
