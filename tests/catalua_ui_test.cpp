@@ -5397,8 +5397,18 @@ assert(history.value.events.limit == 256)
 assert(history.value.events.event_count >= 1)
 assert(history.value.events.returned ==
     #history.value.events.items)
-local partition =
-    history.value.events.items[1]
+local partition = nil
+for _, candidate in ipairs(
+    history.value.events.items) do
+    local version = candidate.data.cdda_version
+    if version ~= nil and
+        version.value ==
+            "lua-statistics-event" then
+        partition = candidate
+        break
+    end
+end
+assert(partition ~= nil)
 assert(partition.count >= 1)
 assert(partition.first.turn <=
     partition.last.turn)
@@ -8287,7 +8297,7 @@ TEST_CASE( "lua_v5_game_ids_are_immutable_typed_and_registry_validated",
     using namespace cata::lua_ui;
 
     const std::vector<std::string> &kinds = supported_game_id_kinds();
-    REQUIRE( kinds.size() == 131 );
+    REQUIRE( kinds.size() == 132 );
     CHECK( std::is_sorted( kinds.begin(), kinds.end() ) );
     CHECK( std::adjacent_find( kinds.begin(), kinds.end() ) == kinds.end() );
     CHECK( is_supported_game_id_kind( "achievement" ) );
@@ -8344,7 +8354,7 @@ assert(id == game.types.id("item", "rock"))
 assert(id ~= game.types.id("monster", "rock"))
 assert(pcall(function() id.value = "stick" end) == false)
 local kinds = game.types.id_kinds()
-assert(#kinds == 131)
+assert(#kinds == 132)
 kinds[1] = "mutated"
 assert(game.types.id_kinds()[1] == "achievement")
 )lua" );
@@ -9228,7 +9238,7 @@ TEST_CASE( "lua_v5_definition_registry_uses_typed_ids_without_native_references"
     })json" );
     script.write( R"lua(
 local kinds = game.definitions.kinds()
-assert(#kinds == 41)
+assert(#kinds == 132)
 assert(type(game.definitions.revision()) == "number")
 
 local item = game.definitions.describe("item")
