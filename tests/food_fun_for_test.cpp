@@ -380,8 +380,9 @@ TEST_CASE( "fun_for_food_eaten_too_often", "[fun_for][food][monotony]" )
     std::pair<int, int> actual_fun;
 
     // A big box of tasty toast-ems
-    item toastem( itype_toastem_test, calendar::turn );
+    item toastem( itype_toastem_test, calendar::turn, 2 );
     REQUIRE( toastem.is_comestible() );
+    REQUIRE( toastem.count() == 2 );
 
     // Base fun value and monotony penalty for toast-em
     int toastem_fun = toastem.get_comestible_fun();
@@ -466,4 +467,3 @@ TEST_CASE( "fun_for_bionic_bio_taste_blocker", "[fun_for][food][bionic]" )
         }
     }
 }
-
