@@ -7,1794 +7,485 @@
     "event_registry": "src/event.h"
   },
   "id_kinds": [
-    {
-      "kind": "achievement",
-      "native_type": "achievement"
-    },
-    {
-      "kind": "activity",
-      "native_type": "activity_type"
-    },
-    {
-      "kind": "addiction",
-      "native_type": "add_type"
-    },
-    {
-      "kind": "ammo_effect",
-      "native_type": "ammo_effect"
-    },
-    {
-      "kind": "ammunition",
-      "native_type": "ammunition_type"
-    },
-    {
-      "kind": "anatomy",
-      "native_type": "anatomy"
-    },
-    {
-      "kind": "ascii_art",
-      "native_type": "ascii_art"
-    },
-    {
-      "kind": "attack_vector",
-      "native_type": "attack_vector"
-    },
-    {
-      "kind": "bash_damage_profile",
-      "native_type": "bash_damage_profile"
-    },
-    {
-      "kind": "bionic",
-      "native_type": "bionic_data"
-    },
-    {
-      "kind": "body_part",
-      "native_type": "body_part_type"
-    },
-    {
-      "kind": "bodygraph",
-      "native_type": "bodygraph"
-    },
-    {
-      "kind": "character_modifier",
-      "native_type": "character_modifier"
-    },
-    {
-      "kind": "climbing_aid",
-      "native_type": "climbing_aid"
-    },
-    {
-      "kind": "clothing_mod",
-      "native_type": "clothing_mod"
-    },
-    {
-      "kind": "connect_group",
-      "native_type": "connect_group"
-    },
-    {
-      "kind": "construction",
-      "native_type": "construction"
-    },
-    {
-      "kind": "construction_category",
-      "native_type": "construction_category"
-    },
-    {
-      "kind": "construction_group",
-      "native_type": "construction_group"
-    },
-    {
-      "kind": "crafting_category",
-      "native_type": "crafting_category"
-    },
-    {
-      "kind": "damage_info_order",
-      "native_type": "damage_info_order"
-    },
-    {
-      "kind": "damage_type",
-      "native_type": "damage_type"
-    },
-    {
-      "kind": "dimension",
-      "native_type": "dimension_world"
-    },
-    {
-      "kind": "dimension_region_layout",
-      "native_type": "dimension_region_layout"
-    },
-    {
-      "kind": "disease",
-      "native_type": "disease_type"
-    },
-    {
-      "kind": "effect",
-      "native_type": "effect_type"
-    },
-    {
-      "kind": "effect_on_condition",
-      "native_type": "effect_on_condition"
-    },
-    {
-      "kind": "emit",
-      "native_type": "emit"
-    },
-    {
-      "kind": "enchantment",
-      "native_type": "enchantment"
-    },
-    {
-      "kind": "end_screen",
-      "native_type": "end_screen"
-    },
-    {
-      "kind": "event_statistic",
-      "native_type": "event_statistic"
-    },
-    {
-      "kind": "event_transformation",
-      "native_type": "event_transformation"
-    },
-    {
-      "kind": "faction",
-      "native_type": "faction"
-    },
-    {
-      "kind": "faction_mission",
-      "native_type": "faction_mission"
-    },
-    {
-      "kind": "fault",
-      "native_type": "fault"
-    },
-    {
-      "kind": "fault_fix",
-      "native_type": "fault_fix"
-    },
-    {
-      "kind": "fault_group",
-      "native_type": "fault_group"
-    },
-    {
-      "kind": "field",
-      "native_type": "field_type"
-    },
-    {
-      "kind": "forest_biome_component",
-      "native_type": "forest_biome_component"
-    },
-    {
-      "kind": "forest_biome_mapgen",
-      "native_type": "forest_biome_mapgen"
-    },
-    {
-      "kind": "furniture",
-      "native_type": "furn_t"
-    },
-    {
-      "kind": "harvest",
-      "native_type": "harvest_list"
-    },
-    {
-      "kind": "harvest_drop_type",
-      "native_type": "harvest_drop_type"
-    },
-    {
-      "kind": "item",
-      "native_type": "itype"
-    },
-    {
-      "kind": "item_category",
-      "native_type": "item_category"
-    },
-    {
-      "kind": "item_group",
-      "native_type": "Item_spawn_data"
-    },
-    {
-      "kind": "json_flag",
-      "native_type": "json_flag"
-    },
-    {
-      "kind": "limb_score",
-      "native_type": "limb_score"
-    },
-    {
-      "kind": "magic_type",
-      "native_type": "magic_type"
-    },
-    {
-      "kind": "map_extra",
-      "native_type": "map_extra"
-    },
-    {
-      "kind": "map_extra_collection",
-      "native_type": "map_extra_collection"
-    },
-    {
-      "kind": "mapgen_palette",
-      "native_type": "mapgen_palette"
-    },
-    {
-      "kind": "martial_art",
-      "native_type": "martialart"
-    },
-    {
-      "kind": "martial_art_buff",
-      "native_type": "ma_buff"
-    },
-    {
-      "kind": "martial_art_technique",
-      "native_type": "ma_technique"
-    },
-    {
-      "kind": "material",
-      "native_type": "material_type"
-    },
-    {
-      "kind": "mission",
-      "native_type": "mission_type"
-    },
-    {
-      "kind": "mod",
-      "native_type": "MOD_INFORMATION"
-    },
-    {
-      "kind": "monster",
-      "native_type": "mtype"
-    },
-    {
-      "kind": "monster_faction",
-      "native_type": "monfaction"
-    },
-    {
-      "kind": "monster_flag",
-      "native_type": "mon_flag"
-    },
-    {
-      "kind": "monster_group",
-      "native_type": "MonsterGroup"
-    },
-    {
-      "kind": "mood_face",
-      "native_type": "mood_face"
-    },
-    {
-      "kind": "morale",
-      "native_type": "morale_type_data"
-    },
-    {
-      "kind": "move_mode",
-      "native_type": "move_mode"
-    },
-    {
-      "kind": "mutation",
-      "native_type": "mutation_branch"
-    },
-    {
-      "kind": "mutation_category",
-      "native_type": "mutation_category_trait"
-    },
-    {
-      "kind": "nested_mapgen",
-      "native_type": "nested_mapgen"
-    },
-    {
-      "kind": "npc_class",
-      "native_type": "npc_class"
-    },
-    {
-      "kind": "npc_template",
-      "native_type": "npc_template"
-    },
-    {
-      "kind": "option_slider",
-      "native_type": "option_slider"
-    },
-    {
-      "kind": "overmap_connection",
-      "native_type": "overmap_connection"
-    },
-    {
-      "kind": "overmap_location",
-      "native_type": "overmap_location"
-    },
-    {
-      "kind": "overmap_special",
-      "native_type": "overmap_special"
-    },
-    {
-      "kind": "overmap_terrain",
-      "native_type": "oter_t"
-    },
-    {
-      "kind": "overmap_terrain_type",
-      "native_type": "oter_type_t"
-    },
-    {
-      "kind": "overmap_vision",
-      "native_type": "oter_vision"
-    },
-    {
-      "kind": "postprocess_generator",
-      "native_type": "pp_generator"
-    },
-    {
-      "kind": "profession",
-      "native_type": "profession"
-    },
-    {
-      "kind": "profession_group",
-      "native_type": "profession_group"
-    },
-    {
-      "kind": "proficiency",
-      "native_type": "proficiency"
-    },
-    {
-      "kind": "proficiency_category",
-      "native_type": "proficiency_category"
-    },
-    {
-      "kind": "quality",
-      "native_type": "quality"
-    },
-    {
-      "kind": "recipe",
-      "native_type": "recipe"
-    },
-    {
-      "kind": "region_settings",
-      "native_type": "region_settings"
-    },
-    {
-      "kind": "region_settings_city",
-      "native_type": "region_settings_city"
-    },
-    {
-      "kind": "region_settings_forest",
-      "native_type": "region_settings_forest"
-    },
-    {
-      "kind": "region_settings_forest_mapgen",
-      "native_type": "region_settings_forest_mapgen"
-    },
-    {
-      "kind": "region_settings_forest_trail",
-      "native_type": "region_settings_forest_trail"
-    },
-    {
-      "kind": "region_settings_highway",
-      "native_type": "region_settings_highway"
-    },
-    {
-      "kind": "region_settings_lake",
-      "native_type": "region_settings_lake"
-    },
-    {
-      "kind": "region_settings_map_extras",
-      "native_type": "region_settings_map_extras"
-    },
-    {
-      "kind": "region_settings_ocean",
-      "native_type": "region_settings_ocean"
-    },
-    {
-      "kind": "region_settings_ravine",
-      "native_type": "region_settings_ravine"
-    },
-    {
-      "kind": "region_settings_river",
-      "native_type": "region_settings_river"
-    },
-    {
-      "kind": "region_settings_terrain_furniture",
-      "native_type": "region_settings_terrain_furniture"
-    },
-    {
-      "kind": "region_terrain_furniture",
-      "native_type": "region_terrain_furniture"
-    },
-    {
-      "kind": "relic_procgen",
-      "native_type": "relic_procgen_data"
-    },
-    {
-      "kind": "requirement",
-      "native_type": "requirement_data"
-    },
-    {
-      "kind": "scent",
-      "native_type": "scent_type"
-    },
-    {
-      "kind": "score",
-      "native_type": "score"
-    },
-    {
-      "kind": "shopkeeper_blacklist",
-      "native_type": "shopkeeper_blacklist"
-    },
-    {
-      "kind": "shopkeeper_consumption_rates",
-      "native_type": "shopkeeper_cons_rates"
-    },
-    {
-      "kind": "shopkeeper_whitelist",
-      "native_type": "shopkeeper_whitelist"
-    },
-    {
-      "kind": "skill",
-      "native_type": "Skill"
-    },
-    {
-      "kind": "skill_display_type",
-      "native_type": "SkillDisplayType"
-    },
-    {
-      "kind": "snippet",
-      "native_type": "translation"
-    },
-    {
-      "kind": "species",
-      "native_type": "species_type"
-    },
-    {
-      "kind": "speed_description",
-      "native_type": "speed_description"
-    },
-    {
-      "kind": "spell",
-      "native_type": "spell_type"
-    },
-    {
-      "kind": "start_location",
-      "native_type": "start_location"
-    },
-    {
-      "kind": "sub_body_part",
-      "native_type": "sub_body_part_type"
-    },
-    {
-      "kind": "terrain",
-      "native_type": "ter_t"
-    },
-    {
-      "kind": "terrain_furniture_transform",
-      "native_type": "ter_furn_transform"
-    },
-    {
-      "kind": "trait_flag",
-      "native_type": "json_flag"
-    },
-    {
-      "kind": "trait_group",
-      "native_type": "Trait_group"
-    },
-    {
-      "kind": "trap",
-      "native_type": "trap"
-    },
-    {
-      "kind": "update_mapgen",
-      "native_type": "update_mapgen"
-    },
-    {
-      "kind": "vehicle_group",
-      "native_type": "VehicleGroup"
-    },
-    {
-      "kind": "vehicle_palette",
-      "native_type": "VehiclePalette"
-    },
-    {
-      "kind": "vehicle_part",
-      "native_type": "vpart_info"
-    },
-    {
-      "kind": "vehicle_part_location",
-      "native_type": "vpart_location"
-    },
-    {
-      "kind": "vehicle_prototype",
-      "native_type": "vehicle_prototype"
-    },
-    {
-      "kind": "vitamin",
-      "native_type": "vitamin"
-    },
-    {
-      "kind": "weakpoint_set",
-      "native_type": "weakpoints"
-    },
-    {
-      "kind": "weapon_category",
-      "native_type": "weapon_category"
-    },
-    {
-      "kind": "weather_generator",
-      "native_type": "weather_generator"
-    },
-    {
-      "kind": "weather_type",
-      "native_type": "weather_type"
-    },
-    {
-      "kind": "widget",
-      "native_type": "widget"
-    },
-    {
-      "kind": "wound",
-      "native_type": "wound_type"
-    },
-    {
-      "kind": "wound_fix",
-      "native_type": "wound_fix"
-    },
-    {
-      "kind": "zone",
-      "native_type": "zone_type"
-    }
+    { "kind": "achievement", "native_type": "achievement" },
+    { "kind": "activity", "native_type": "activity_type" },
+    { "kind": "addiction", "native_type": "add_type" },
+    { "kind": "ammo_effect", "native_type": "ammo_effect" },
+    { "kind": "ammunition", "native_type": "ammunition_type" },
+    { "kind": "anatomy", "native_type": "anatomy" },
+    { "kind": "ascii_art", "native_type": "ascii_art" },
+    { "kind": "attack_vector", "native_type": "attack_vector" },
+    { "kind": "bash_damage_profile", "native_type": "bash_damage_profile" },
+    { "kind": "bionic", "native_type": "bionic_data" },
+    { "kind": "body_part", "native_type": "body_part_type" },
+    { "kind": "bodygraph", "native_type": "bodygraph" },
+    { "kind": "character_modifier", "native_type": "character_modifier" },
+    { "kind": "climbing_aid", "native_type": "climbing_aid" },
+    { "kind": "clothing_mod", "native_type": "clothing_mod" },
+    { "kind": "connect_group", "native_type": "connect_group" },
+    { "kind": "construction", "native_type": "construction" },
+    { "kind": "construction_category", "native_type": "construction_category" },
+    { "kind": "construction_group", "native_type": "construction_group" },
+    { "kind": "crafting_category", "native_type": "crafting_category" },
+    { "kind": "damage_info_order", "native_type": "damage_info_order" },
+    { "kind": "damage_type", "native_type": "damage_type" },
+    { "kind": "dimension", "native_type": "dimension_world" },
+    { "kind": "dimension_region_layout", "native_type": "dimension_region_layout" },
+    { "kind": "disease", "native_type": "disease_type" },
+    { "kind": "effect", "native_type": "effect_type" },
+    { "kind": "effect_on_condition", "native_type": "effect_on_condition" },
+    { "kind": "emit", "native_type": "emit" },
+    { "kind": "enchantment", "native_type": "enchantment" },
+    { "kind": "end_screen", "native_type": "end_screen" },
+    { "kind": "event_statistic", "native_type": "event_statistic" },
+    { "kind": "event_transformation", "native_type": "event_transformation" },
+    { "kind": "faction", "native_type": "faction" },
+    { "kind": "faction_mission", "native_type": "faction_mission" },
+    { "kind": "fault", "native_type": "fault" },
+    { "kind": "fault_fix", "native_type": "fault_fix" },
+    { "kind": "fault_group", "native_type": "fault_group" },
+    { "kind": "field", "native_type": "field_type" },
+    { "kind": "forest_biome_component", "native_type": "forest_biome_component" },
+    { "kind": "forest_biome_mapgen", "native_type": "forest_biome_mapgen" },
+    { "kind": "furniture", "native_type": "furn_t" },
+    { "kind": "harvest", "native_type": "harvest_list" },
+    { "kind": "harvest_drop_type", "native_type": "harvest_drop_type" },
+    { "kind": "item", "native_type": "itype" },
+    { "kind": "item_category", "native_type": "item_category" },
+    { "kind": "item_group", "native_type": "Item_spawn_data" },
+    { "kind": "json_flag", "native_type": "json_flag" },
+    { "kind": "limb_score", "native_type": "limb_score" },
+    { "kind": "magic_type", "native_type": "magic_type" },
+    { "kind": "map_extra", "native_type": "map_extra" },
+    { "kind": "map_extra_collection", "native_type": "map_extra_collection" },
+    { "kind": "mapgen_palette", "native_type": "mapgen_palette" },
+    { "kind": "martial_art", "native_type": "martialart" },
+    { "kind": "martial_art_buff", "native_type": "ma_buff" },
+    { "kind": "martial_art_technique", "native_type": "ma_technique" },
+    { "kind": "material", "native_type": "material_type" },
+    { "kind": "mission", "native_type": "mission_type" },
+    { "kind": "mod", "native_type": "MOD_INFORMATION" },
+    { "kind": "monster", "native_type": "mtype" },
+    { "kind": "monster_faction", "native_type": "monfaction" },
+    { "kind": "monster_flag", "native_type": "mon_flag" },
+    { "kind": "monster_group", "native_type": "MonsterGroup" },
+    { "kind": "mood_face", "native_type": "mood_face" },
+    { "kind": "morale", "native_type": "morale_type_data" },
+    { "kind": "move_mode", "native_type": "move_mode" },
+    { "kind": "mutation", "native_type": "mutation_branch" },
+    { "kind": "mutation_category", "native_type": "mutation_category_trait" },
+    { "kind": "nested_mapgen", "native_type": "nested_mapgen" },
+    { "kind": "npc_class", "native_type": "npc_class" },
+    { "kind": "npc_template", "native_type": "npc_template" },
+    { "kind": "option_slider", "native_type": "option_slider" },
+    { "kind": "overmap_connection", "native_type": "overmap_connection" },
+    { "kind": "overmap_location", "native_type": "overmap_location" },
+    { "kind": "overmap_special", "native_type": "overmap_special" },
+    { "kind": "overmap_terrain", "native_type": "oter_t" },
+    { "kind": "overmap_terrain_type", "native_type": "oter_type_t" },
+    { "kind": "overmap_vision", "native_type": "oter_vision" },
+    { "kind": "postprocess_generator", "native_type": "pp_generator" },
+    { "kind": "profession", "native_type": "profession" },
+    { "kind": "profession_group", "native_type": "profession_group" },
+    { "kind": "proficiency", "native_type": "proficiency" },
+    { "kind": "proficiency_category", "native_type": "proficiency_category" },
+    { "kind": "quality", "native_type": "quality" },
+    { "kind": "recipe", "native_type": "recipe" },
+    { "kind": "region_settings", "native_type": "region_settings" },
+    { "kind": "region_settings_city", "native_type": "region_settings_city" },
+    { "kind": "region_settings_forest", "native_type": "region_settings_forest" },
+    { "kind": "region_settings_forest_mapgen", "native_type": "region_settings_forest_mapgen" },
+    { "kind": "region_settings_forest_trail", "native_type": "region_settings_forest_trail" },
+    { "kind": "region_settings_highway", "native_type": "region_settings_highway" },
+    { "kind": "region_settings_lake", "native_type": "region_settings_lake" },
+    { "kind": "region_settings_map_extras", "native_type": "region_settings_map_extras" },
+    { "kind": "region_settings_ocean", "native_type": "region_settings_ocean" },
+    { "kind": "region_settings_ravine", "native_type": "region_settings_ravine" },
+    { "kind": "region_settings_river", "native_type": "region_settings_river" },
+    { "kind": "region_settings_terrain_furniture", "native_type": "region_settings_terrain_furniture" },
+    { "kind": "region_terrain_furniture", "native_type": "region_terrain_furniture" },
+    { "kind": "relic_procgen", "native_type": "relic_procgen_data" },
+    { "kind": "requirement", "native_type": "requirement_data" },
+    { "kind": "scent", "native_type": "scent_type" },
+    { "kind": "score", "native_type": "score" },
+    { "kind": "shopkeeper_blacklist", "native_type": "shopkeeper_blacklist" },
+    { "kind": "shopkeeper_consumption_rates", "native_type": "shopkeeper_cons_rates" },
+    { "kind": "shopkeeper_whitelist", "native_type": "shopkeeper_whitelist" },
+    { "kind": "skill", "native_type": "Skill" },
+    { "kind": "skill_display_type", "native_type": "SkillDisplayType" },
+    { "kind": "snippet", "native_type": "translation" },
+    { "kind": "species", "native_type": "species_type" },
+    { "kind": "speed_description", "native_type": "speed_description" },
+    { "kind": "spell", "native_type": "spell_type" },
+    { "kind": "start_location", "native_type": "start_location" },
+    { "kind": "sub_body_part", "native_type": "sub_body_part_type" },
+    { "kind": "terrain", "native_type": "ter_t" },
+    { "kind": "terrain_furniture_transform", "native_type": "ter_furn_transform" },
+    { "kind": "trait_flag", "native_type": "json_flag" },
+    { "kind": "trait_group", "native_type": "Trait_group" },
+    { "kind": "trap", "native_type": "trap" },
+    { "kind": "update_mapgen", "native_type": "update_mapgen" },
+    { "kind": "vehicle_group", "native_type": "VehicleGroup" },
+    { "kind": "vehicle_palette", "native_type": "VehiclePalette" },
+    { "kind": "vehicle_part", "native_type": "vpart_info" },
+    { "kind": "vehicle_part_location", "native_type": "vpart_location" },
+    { "kind": "vehicle_prototype", "native_type": "vehicle_prototype" },
+    { "kind": "vitamin", "native_type": "vitamin" },
+    { "kind": "weakpoint_set", "native_type": "weakpoints" },
+    { "kind": "weapon_category", "native_type": "weapon_category" },
+    { "kind": "weather_generator", "native_type": "weather_generator" },
+    { "kind": "weather_type", "native_type": "weather_type" },
+    { "kind": "widget", "native_type": "widget" },
+    { "kind": "wound", "native_type": "wound_type" },
+    { "kind": "wound_fix", "native_type": "wound_fix" },
+    { "kind": "zone", "native_type": "zone_type" }
   ],
   "json_types": [
-    {
-      "type": "EXTERNAL_OPTION",
-      "registration_count": 1
-    },
-    {
-      "type": "ITEM",
-      "registration_count": 1
-    },
-    {
-      "type": "ITEM_BLACKLIST",
-      "registration_count": 1
-    },
-    {
-      "type": "ITEM_CATEGORY",
-      "registration_count": 1
-    },
-    {
-      "type": "LOOT_ZONE",
-      "registration_count": 1
-    },
-    {
-      "type": "MIGRATION",
-      "registration_count": 1
-    },
-    {
-      "type": "MOD_INFO",
-      "registration_count": 1
-    },
-    {
-      "type": "MONSTER",
-      "registration_count": 1
-    },
-    {
-      "type": "MONSTER_BLACKLIST",
-      "registration_count": 1
-    },
-    {
-      "type": "MONSTER_FACTION",
-      "registration_count": 1
-    },
-    {
-      "type": "MONSTER_WHITELIST",
-      "registration_count": 1
-    },
-    {
-      "type": "SCENARIO_BLACKLIST",
-      "registration_count": 1
-    },
-    {
-      "type": "SPECIES",
-      "registration_count": 1
-    },
-    {
-      "type": "SPELL",
-      "registration_count": 1
-    },
-    {
-      "type": "TRAIT_BLACKLIST",
-      "registration_count": 1
-    },
-    {
-      "type": "TRAIT_MIGRATION",
-      "registration_count": 1
-    },
-    {
-      "type": "WORLD_OPTION",
-      "registration_count": 1
-    },
-    {
-      "type": "achievement",
-      "registration_count": 1
-    },
-    {
-      "type": "activity_type",
-      "registration_count": 1
-    },
-    {
-      "type": "addiction_type",
-      "registration_count": 1
-    },
-    {
-      "type": "ammo_effect",
-      "registration_count": 1
-    },
-    {
-      "type": "ammunition_type",
-      "registration_count": 1
-    },
-    {
-      "type": "anatomy",
-      "registration_count": 1
-    },
-    {
-      "type": "ascii_art",
-      "registration_count": 1
-    },
-    {
-      "type": "attack_vector",
-      "registration_count": 1
-    },
-    {
-      "type": "bash_damage_profile",
-      "registration_count": 1
-    },
-    {
-      "type": "behavior",
-      "registration_count": 1
-    },
-    {
-      "type": "bionic",
-      "registration_count": 1
-    },
-    {
-      "type": "bionic_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "body_graph",
-      "registration_count": 1
-    },
-    {
-      "type": "body_part",
-      "registration_count": 1
-    },
-    {
-      "type": "butchery_requirement",
-      "registration_count": 1
-    },
-    {
-      "type": "camp_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "character_mod",
-      "registration_count": 1
-    },
-    {
-      "type": "charge_removal_blacklist",
-      "registration_count": 1
-    },
-    {
-      "type": "city",
-      "registration_count": 1
-    },
-    {
-      "type": "city_building",
-      "registration_count": 1
-    },
-    {
-      "type": "climbing_aid",
-      "registration_count": 1
-    },
-    {
-      "type": "clothing_mod",
-      "registration_count": 1
-    },
-    {
-      "type": "colordef",
-      "registration_count": 1
-    },
-    {
-      "type": "conduct",
-      "registration_count": 1
-    },
-    {
-      "type": "connect_group",
-      "registration_count": 1
-    },
-    {
-      "type": "construction",
-      "registration_count": 1
-    },
-    {
-      "type": "construction_category",
-      "registration_count": 1
-    },
-    {
-      "type": "construction_group",
-      "registration_count": 1
-    },
-    {
-      "type": "damage_info_order",
-      "registration_count": 1
-    },
-    {
-      "type": "damage_type",
-      "registration_count": 1
-    },
-    {
-      "type": "dimension",
-      "registration_count": 1
-    },
-    {
-      "type": "dimension_region_layout",
-      "registration_count": 1
-    },
-    {
-      "type": "disease_type",
-      "registration_count": 1
-    },
-    {
-      "type": "dream",
-      "registration_count": 1
-    },
-    {
-      "type": "effect_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "effect_on_condition",
-      "registration_count": 1
-    },
-    {
-      "type": "effect_type",
-      "registration_count": 1
-    },
-    {
-      "type": "emit",
-      "registration_count": 1
-    },
-    {
-      "type": "enchantment",
-      "registration_count": 1
-    },
-    {
-      "type": "end_screen",
-      "registration_count": 1
-    },
-    {
-      "type": "event_statistic",
-      "registration_count": 1
-    },
-    {
-      "type": "event_transformation",
-      "registration_count": 1
-    },
-    {
-      "type": "explosion_light",
-      "registration_count": 1
-    },
-    {
-      "type": "faction",
-      "registration_count": 1
-    },
-    {
-      "type": "faction_mission",
-      "registration_count": 1
-    },
-    {
-      "type": "fault",
-      "registration_count": 1
-    },
-    {
-      "type": "fault_fix",
-      "registration_count": 1
-    },
-    {
-      "type": "fault_group",
-      "registration_count": 1
-    },
-    {
-      "type": "field_type",
-      "registration_count": 1
-    },
-    {
-      "type": "field_type_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "forest_biome_component",
-      "registration_count": 1
-    },
-    {
-      "type": "forest_biome_mapgen",
-      "registration_count": 1
-    },
-    {
-      "type": "furniture",
-      "registration_count": 1
-    },
-    {
-      "type": "gate",
-      "registration_count": 1
-    },
-    {
-      "type": "harvest",
-      "registration_count": 1
-    },
-    {
-      "type": "harvest_drop_type",
-      "registration_count": 1
-    },
-    {
-      "type": "help",
-      "registration_count": 1
-    },
-    {
-      "type": "hit_range",
-      "registration_count": 1
-    },
-    {
-      "type": "item_action",
-      "registration_count": 1
-    },
-    {
-      "type": "item_group",
-      "registration_count": 1
-    },
-    {
-      "type": "jmath_function",
-      "registration_count": 1
-    },
-    {
-      "type": "json_flag",
-      "registration_count": 1
-    },
-    {
-      "type": "limb_score",
-      "registration_count": 1
-    },
-    {
-      "type": "magic_type",
-      "registration_count": 1
-    },
-    {
-      "type": "map_extra",
-      "registration_count": 1
-    },
-    {
-      "type": "map_extra_collection",
-      "registration_count": 1
-    },
-    {
-      "type": "mapgen",
-      "registration_count": 1
-    },
-    {
-      "type": "martial_art",
-      "registration_count": 1
-    },
-    {
-      "type": "material",
-      "registration_count": 1
-    },
-    {
-      "type": "mission_definition",
-      "registration_count": 1
-    },
-    {
-      "type": "mod_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "mod_tileset",
-      "registration_count": 2
-    },
-    {
-      "type": "monster_adjustment",
-      "registration_count": 1
-    },
-    {
-      "type": "monster_attack",
-      "registration_count": 1
-    },
-    {
-      "type": "monster_flag",
-      "registration_count": 1
-    },
-    {
-      "type": "monstergroup",
-      "registration_count": 1
-    },
-    {
-      "type": "mood_face",
-      "registration_count": 1
-    },
-    {
-      "type": "morale_type",
-      "registration_count": 1
-    },
-    {
-      "type": "movement_mode",
-      "registration_count": 1
-    },
-    {
-      "type": "mutation",
-      "registration_count": 1
-    },
-    {
-      "type": "mutation_category",
-      "registration_count": 1
-    },
-    {
-      "type": "mutation_type",
-      "registration_count": 1
-    },
-    {
-      "type": "named_color",
-      "registration_count": 1
-    },
-    {
-      "type": "nested_category",
-      "registration_count": 1
-    },
-    {
-      "type": "npc",
-      "registration_count": 1
-    },
-    {
-      "type": "npc_class",
-      "registration_count": 1
-    },
-    {
-      "type": "omt_placeholder",
-      "registration_count": 1
-    },
-    {
-      "type": "option_slider",
-      "registration_count": 1
-    },
-    {
-      "type": "oter_id_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "oter_vision",
-      "registration_count": 1
-    },
-    {
-      "type": "overlay_order",
-      "registration_count": 1
-    },
-    {
-      "type": "overmap_connection",
-      "registration_count": 1
-    },
-    {
-      "type": "overmap_land_use_code",
-      "registration_count": 1
-    },
-    {
-      "type": "overmap_location",
-      "registration_count": 1
-    },
-    {
-      "type": "overmap_special",
-      "registration_count": 1
-    },
-    {
-      "type": "overmap_special_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "overmap_terrain",
-      "registration_count": 1
-    },
-    {
-      "type": "palette",
-      "registration_count": 1
-    },
-    {
-      "type": "playlist",
-      "registration_count": 1
-    },
-    {
-      "type": "pp_generator",
-      "registration_count": 1
-    },
-    {
-      "type": "practice",
-      "registration_count": 1
-    },
-    {
-      "type": "profession",
-      "registration_count": 1
-    },
-    {
-      "type": "profession_blacklist",
-      "registration_count": 1
-    },
-    {
-      "type": "profession_group",
-      "registration_count": 1
-    },
-    {
-      "type": "profession_item_substitutions",
-      "registration_count": 1
-    },
-    {
-      "type": "proficiency",
-      "registration_count": 1
-    },
-    {
-      "type": "proficiency_category",
-      "registration_count": 1
-    },
-    {
-      "type": "proficiency_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "recipe",
-      "registration_count": 1
-    },
-    {
-      "type": "recipe_category",
-      "registration_count": 1
-    },
-    {
-      "type": "recipe_group",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_city",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_forest",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_forest_mapgen",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_forest_trail",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_highway",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_lake",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_map_extras",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_ocean",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_ravine",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_river",
-      "registration_count": 1
-    },
-    {
-      "type": "region_settings_terrain_furniture",
-      "registration_count": 1
-    },
-    {
-      "type": "region_terrain_furniture",
-      "registration_count": 1
-    },
-    {
-      "type": "relic_procgen_data",
-      "registration_count": 1
-    },
-    {
-      "type": "requirement",
-      "registration_count": 1
-    },
-    {
-      "type": "rotatable_symbol",
-      "registration_count": 1
-    },
-    {
-      "type": "scenario",
-      "registration_count": 1
-    },
-    {
-      "type": "scent_type",
-      "registration_count": 1
-    },
-    {
-      "type": "score",
-      "registration_count": 1
-    },
-    {
-      "type": "shopkeeper_blacklist",
-      "registration_count": 1
-    },
-    {
-      "type": "shopkeeper_consumption_rates",
-      "registration_count": 1
-    },
-    {
-      "type": "shopkeeper_whitelist",
-      "registration_count": 1
-    },
-    {
-      "type": "skill",
-      "registration_count": 1
-    },
-    {
-      "type": "skill_display_type",
-      "registration_count": 1
-    },
-    {
-      "type": "snippet",
-      "registration_count": 1
-    },
-    {
-      "type": "sound_effect",
-      "registration_count": 1
-    },
-    {
-      "type": "sound_effect_preload",
-      "registration_count": 1
-    },
-    {
-      "type": "speech",
-      "registration_count": 1
-    },
-    {
-      "type": "speed_description",
-      "registration_count": 1
-    },
-    {
-      "type": "spell_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "start_location",
-      "registration_count": 1
-    },
-    {
-      "type": "sub_body_part",
-      "registration_count": 1
-    },
-    {
-      "type": "talk_topic",
-      "registration_count": 1
-    },
-    {
-      "type": "technique",
-      "registration_count": 1
-    },
-    {
-      "type": "temperature_removal_blacklist",
-      "registration_count": 1
-    },
-    {
-      "type": "ter_furn_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "ter_furn_transform",
-      "registration_count": 1
-    },
-    {
-      "type": "terrain",
-      "registration_count": 1
-    },
-    {
-      "type": "test_data",
-      "registration_count": 1
-    },
-    {
-      "type": "tool_quality",
-      "registration_count": 1
-    },
-    {
-      "type": "trait_group",
-      "registration_count": 1
-    },
-    {
-      "type": "trap",
-      "registration_count": 1
-    },
-    {
-      "type": "trap_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "uncraft",
-      "registration_count": 1
-    },
-    {
-      "type": "var_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle_color_palette",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle_group",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle_part",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle_part_category",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle_part_location",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle_part_migration",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle_placement",
-      "registration_count": 1
-    },
-    {
-      "type": "vehicle_spawn",
-      "registration_count": 1
-    },
-    {
-      "type": "vitamin",
-      "registration_count": 1
-    },
-    {
-      "type": "weakpoint_set",
-      "registration_count": 1
-    },
-    {
-      "type": "weapon_category",
-      "registration_count": 1
-    },
-    {
-      "type": "weather_generator",
-      "registration_count": 1
-    },
-    {
-      "type": "weather_type",
-      "registration_count": 1
-    },
-    {
-      "type": "widget",
-      "registration_count": 1
-    },
-    {
-      "type": "wound",
-      "registration_count": 1
-    },
-    {
-      "type": "wound_fix",
-      "registration_count": 1
-    }
+    { "type": "EXTERNAL_OPTION", "registration_count": 1 },
+    { "type": "ITEM", "registration_count": 1 },
+    { "type": "ITEM_BLACKLIST", "registration_count": 1 },
+    { "type": "ITEM_CATEGORY", "registration_count": 1 },
+    { "type": "LOOT_ZONE", "registration_count": 1 },
+    { "type": "MIGRATION", "registration_count": 1 },
+    { "type": "MOD_INFO", "registration_count": 1 },
+    { "type": "MONSTER", "registration_count": 1 },
+    { "type": "MONSTER_BLACKLIST", "registration_count": 1 },
+    { "type": "MONSTER_FACTION", "registration_count": 1 },
+    { "type": "MONSTER_WHITELIST", "registration_count": 1 },
+    { "type": "SCENARIO_BLACKLIST", "registration_count": 1 },
+    { "type": "SPECIES", "registration_count": 1 },
+    { "type": "SPELL", "registration_count": 1 },
+    { "type": "TRAIT_BLACKLIST", "registration_count": 1 },
+    { "type": "TRAIT_MIGRATION", "registration_count": 1 },
+    { "type": "WORLD_OPTION", "registration_count": 1 },
+    { "type": "achievement", "registration_count": 1 },
+    { "type": "activity_type", "registration_count": 1 },
+    { "type": "addiction_type", "registration_count": 1 },
+    { "type": "ammo_effect", "registration_count": 1 },
+    { "type": "ammunition_type", "registration_count": 1 },
+    { "type": "anatomy", "registration_count": 1 },
+    { "type": "ascii_art", "registration_count": 1 },
+    { "type": "attack_vector", "registration_count": 1 },
+    { "type": "bash_damage_profile", "registration_count": 1 },
+    { "type": "behavior", "registration_count": 1 },
+    { "type": "bionic", "registration_count": 1 },
+    { "type": "bionic_migration", "registration_count": 1 },
+    { "type": "body_graph", "registration_count": 1 },
+    { "type": "body_part", "registration_count": 1 },
+    { "type": "butchery_requirement", "registration_count": 1 },
+    { "type": "camp_migration", "registration_count": 1 },
+    { "type": "character_mod", "registration_count": 1 },
+    { "type": "charge_removal_blacklist", "registration_count": 1 },
+    { "type": "city", "registration_count": 1 },
+    { "type": "city_building", "registration_count": 1 },
+    { "type": "climbing_aid", "registration_count": 1 },
+    { "type": "clothing_mod", "registration_count": 1 },
+    { "type": "colordef", "registration_count": 1 },
+    { "type": "conduct", "registration_count": 1 },
+    { "type": "connect_group", "registration_count": 1 },
+    { "type": "construction", "registration_count": 1 },
+    { "type": "construction_category", "registration_count": 1 },
+    { "type": "construction_group", "registration_count": 1 },
+    { "type": "damage_info_order", "registration_count": 1 },
+    { "type": "damage_type", "registration_count": 1 },
+    { "type": "dimension", "registration_count": 1 },
+    { "type": "dimension_region_layout", "registration_count": 1 },
+    { "type": "disease_type", "registration_count": 1 },
+    { "type": "dream", "registration_count": 1 },
+    { "type": "effect_migration", "registration_count": 1 },
+    { "type": "effect_on_condition", "registration_count": 1 },
+    { "type": "effect_type", "registration_count": 1 },
+    { "type": "emit", "registration_count": 1 },
+    { "type": "enchantment", "registration_count": 1 },
+    { "type": "end_screen", "registration_count": 1 },
+    { "type": "event_statistic", "registration_count": 1 },
+    { "type": "event_transformation", "registration_count": 1 },
+    { "type": "explosion_light", "registration_count": 1 },
+    { "type": "faction", "registration_count": 1 },
+    { "type": "faction_mission", "registration_count": 1 },
+    { "type": "fault", "registration_count": 1 },
+    { "type": "fault_fix", "registration_count": 1 },
+    { "type": "fault_group", "registration_count": 1 },
+    { "type": "field_type", "registration_count": 1 },
+    { "type": "field_type_migration", "registration_count": 1 },
+    { "type": "forest_biome_component", "registration_count": 1 },
+    { "type": "forest_biome_mapgen", "registration_count": 1 },
+    { "type": "furniture", "registration_count": 1 },
+    { "type": "gate", "registration_count": 1 },
+    { "type": "harvest", "registration_count": 1 },
+    { "type": "harvest_drop_type", "registration_count": 1 },
+    { "type": "help", "registration_count": 1 },
+    { "type": "hit_range", "registration_count": 1 },
+    { "type": "item_action", "registration_count": 1 },
+    { "type": "item_group", "registration_count": 1 },
+    { "type": "jmath_function", "registration_count": 1 },
+    { "type": "json_flag", "registration_count": 1 },
+    { "type": "limb_score", "registration_count": 1 },
+    { "type": "magic_type", "registration_count": 1 },
+    { "type": "map_extra", "registration_count": 1 },
+    { "type": "map_extra_collection", "registration_count": 1 },
+    { "type": "mapgen", "registration_count": 1 },
+    { "type": "martial_art", "registration_count": 1 },
+    { "type": "material", "registration_count": 1 },
+    { "type": "mission_definition", "registration_count": 1 },
+    { "type": "mod_migration", "registration_count": 1 },
+    { "type": "mod_tileset", "registration_count": 2 },
+    { "type": "monster_adjustment", "registration_count": 1 },
+    { "type": "monster_attack", "registration_count": 1 },
+    { "type": "monster_flag", "registration_count": 1 },
+    { "type": "monstergroup", "registration_count": 1 },
+    { "type": "mood_face", "registration_count": 1 },
+    { "type": "morale_type", "registration_count": 1 },
+    { "type": "movement_mode", "registration_count": 1 },
+    { "type": "mutation", "registration_count": 1 },
+    { "type": "mutation_category", "registration_count": 1 },
+    { "type": "mutation_type", "registration_count": 1 },
+    { "type": "named_color", "registration_count": 1 },
+    { "type": "nested_category", "registration_count": 1 },
+    { "type": "npc", "registration_count": 1 },
+    { "type": "npc_class", "registration_count": 1 },
+    { "type": "omt_placeholder", "registration_count": 1 },
+    { "type": "option_slider", "registration_count": 1 },
+    { "type": "oter_id_migration", "registration_count": 1 },
+    { "type": "oter_vision", "registration_count": 1 },
+    { "type": "overlay_order", "registration_count": 1 },
+    { "type": "overmap_connection", "registration_count": 1 },
+    { "type": "overmap_land_use_code", "registration_count": 1 },
+    { "type": "overmap_location", "registration_count": 1 },
+    { "type": "overmap_special", "registration_count": 1 },
+    { "type": "overmap_special_migration", "registration_count": 1 },
+    { "type": "overmap_terrain", "registration_count": 1 },
+    { "type": "palette", "registration_count": 1 },
+    { "type": "playlist", "registration_count": 1 },
+    { "type": "pp_generator", "registration_count": 1 },
+    { "type": "practice", "registration_count": 1 },
+    { "type": "profession", "registration_count": 1 },
+    { "type": "profession_blacklist", "registration_count": 1 },
+    { "type": "profession_group", "registration_count": 1 },
+    { "type": "profession_item_substitutions", "registration_count": 1 },
+    { "type": "proficiency", "registration_count": 1 },
+    { "type": "proficiency_category", "registration_count": 1 },
+    { "type": "proficiency_migration", "registration_count": 1 },
+    { "type": "recipe", "registration_count": 1 },
+    { "type": "recipe_category", "registration_count": 1 },
+    { "type": "recipe_group", "registration_count": 1 },
+    { "type": "region_settings", "registration_count": 1 },
+    { "type": "region_settings_city", "registration_count": 1 },
+    { "type": "region_settings_forest", "registration_count": 1 },
+    { "type": "region_settings_forest_mapgen", "registration_count": 1 },
+    { "type": "region_settings_forest_trail", "registration_count": 1 },
+    { "type": "region_settings_highway", "registration_count": 1 },
+    { "type": "region_settings_lake", "registration_count": 1 },
+    { "type": "region_settings_map_extras", "registration_count": 1 },
+    { "type": "region_settings_ocean", "registration_count": 1 },
+    { "type": "region_settings_ravine", "registration_count": 1 },
+    { "type": "region_settings_river", "registration_count": 1 },
+    { "type": "region_settings_terrain_furniture", "registration_count": 1 },
+    { "type": "region_terrain_furniture", "registration_count": 1 },
+    { "type": "relic_procgen_data", "registration_count": 1 },
+    { "type": "requirement", "registration_count": 1 },
+    { "type": "rotatable_symbol", "registration_count": 1 },
+    { "type": "scenario", "registration_count": 1 },
+    { "type": "scent_type", "registration_count": 1 },
+    { "type": "score", "registration_count": 1 },
+    { "type": "shopkeeper_blacklist", "registration_count": 1 },
+    { "type": "shopkeeper_consumption_rates", "registration_count": 1 },
+    { "type": "shopkeeper_whitelist", "registration_count": 1 },
+    { "type": "skill", "registration_count": 1 },
+    { "type": "skill_display_type", "registration_count": 1 },
+    { "type": "snippet", "registration_count": 1 },
+    { "type": "sound_effect", "registration_count": 1 },
+    { "type": "sound_effect_preload", "registration_count": 1 },
+    { "type": "speech", "registration_count": 1 },
+    { "type": "speed_description", "registration_count": 1 },
+    { "type": "spell_migration", "registration_count": 1 },
+    { "type": "start_location", "registration_count": 1 },
+    { "type": "sub_body_part", "registration_count": 1 },
+    { "type": "talk_topic", "registration_count": 1 },
+    { "type": "technique", "registration_count": 1 },
+    { "type": "temperature_removal_blacklist", "registration_count": 1 },
+    { "type": "ter_furn_migration", "registration_count": 1 },
+    { "type": "ter_furn_transform", "registration_count": 1 },
+    { "type": "terrain", "registration_count": 1 },
+    { "type": "test_data", "registration_count": 1 },
+    { "type": "tool_quality", "registration_count": 1 },
+    { "type": "trait_group", "registration_count": 1 },
+    { "type": "trap", "registration_count": 1 },
+    { "type": "trap_migration", "registration_count": 1 },
+    { "type": "uncraft", "registration_count": 1 },
+    { "type": "var_migration", "registration_count": 1 },
+    { "type": "vehicle", "registration_count": 1 },
+    { "type": "vehicle_color_palette", "registration_count": 1 },
+    { "type": "vehicle_group", "registration_count": 1 },
+    { "type": "vehicle_part", "registration_count": 1 },
+    { "type": "vehicle_part_category", "registration_count": 1 },
+    { "type": "vehicle_part_location", "registration_count": 1 },
+    { "type": "vehicle_part_migration", "registration_count": 1 },
+    { "type": "vehicle_placement", "registration_count": 1 },
+    { "type": "vehicle_spawn", "registration_count": 1 },
+    { "type": "vitamin", "registration_count": 1 },
+    { "type": "weakpoint_set", "registration_count": 1 },
+    { "type": "weapon_category", "registration_count": 1 },
+    { "type": "weather_generator", "registration_count": 1 },
+    { "type": "weather_type", "registration_count": 1 },
+    { "type": "widget", "registration_count": 1 },
+    { "type": "wound", "registration_count": 1 },
+    { "type": "wound_fix", "registration_count": 1 }
   ],
   "event_types": [
-    {
-      "type": "activates_artifact"
-    },
-    {
-      "type": "activates_mininuke"
-    },
-    {
-      "type": "administers_mutagen"
-    },
-    {
-      "type": "angers_amigara_horrors"
-    },
-    {
-      "type": "avatar_enters_omt"
-    },
-    {
-      "type": "avatar_moves"
-    },
-    {
-      "type": "avatar_dies"
-    },
-    {
-      "type": "awakes_dark_wyrms"
-    },
-    {
-      "type": "becomes_wanted"
-    },
-    {
-      "type": "broken_bone"
-    },
-    {
-      "type": "broken_bone_mends"
-    },
-    {
-      "type": "buries_corpse"
-    },
-    {
-      "type": "camp_taken_over"
-    },
-    {
-      "type": "causes_resonance_cascade"
-    },
-    {
-      "type": "character_casts_spell"
-    },
-    {
-      "type": "character_consumes_item"
-    },
-    {
-      "type": "character_dies"
-    },
-    {
-      "type": "character_eats_item"
-    },
-    {
-      "type": "character_finished_activity"
-    },
-    {
-      "type": "character_forgets_spell"
-    },
-    {
-      "type": "character_gains_effect"
-    },
-    {
-      "type": "character_gets_headshot"
-    },
-    {
-      "type": "character_heals_damage"
-    },
-    {
-      "type": "character_kills_character"
-    },
-    {
-      "type": "character_kills_monster"
-    },
-    {
-      "type": "character_learns_spell"
-    },
-    {
-      "type": "character_loses_effect"
-    },
-    {
-      "type": "character_melee_attacks_character"
-    },
-    {
-      "type": "character_melee_attacks_monster"
-    },
-    {
-      "type": "character_radioactively_mutates"
-    },
-    {
-      "type": "character_ranged_attacks_character"
-    },
-    {
-      "type": "character_ranged_attacks_monster"
-    },
-    {
-      "type": "character_smashes_tile"
-    },
-    {
-      "type": "character_starts_activity"
-    },
-    {
-      "type": "character_takes_damage"
-    },
-    {
-      "type": "monster_takes_damage"
-    },
-    {
-      "type": "character_triggers_trap"
-    },
-    {
-      "type": "character_attempt_to_fall_asleep"
-    },
-    {
-      "type": "character_falls_asleep"
-    },
-    {
-      "type": "character_wakes_up"
-    },
-    {
-      "type": "character_wields_item"
-    },
-    {
-      "type": "character_wears_item"
-    },
-    {
-      "type": "character_takeoff_item"
-    },
-    {
-      "type": "character_armor_destroyed"
-    },
-    {
-      "type": "character_fertilizes_plant"
-    },
-    {
-      "type": "character_harvests_plant"
-    },
-    {
-      "type": "character_plants_seed"
-    },
-    {
-      "type": "character_waters_plant"
-    },
-    {
-      "type": "consumes_marloss_item"
-    },
-    {
-      "type": "crosses_marloss_threshold"
-    },
-    {
-      "type": "crosses_mutation_threshold"
-    },
-    {
-      "type": "crosses_mycus_threshold"
-    },
-    {
-      "type": "cuts_tree"
-    },
-    {
-      "type": "dermatik_eggs_hatch"
-    },
-    {
-      "type": "dermatik_eggs_injected"
-    },
-    {
-      "type": "destroys_triffid_grove"
-    },
-    {
-      "type": "dies_from_asthma_attack"
-    },
-    {
-      "type": "dies_from_drug_overdose"
-    },
-    {
-      "type": "dies_from_bleeding"
-    },
-    {
-      "type": "dies_from_hypovolemia"
-    },
-    {
-      "type": "dies_from_redcells_loss"
-    },
-    {
-      "type": "dies_of_infection"
-    },
-    {
-      "type": "dies_of_starvation"
-    },
-    {
-      "type": "dies_of_thirst"
-    },
-    {
-      "type": "digs_into_lava"
-    },
-    {
-      "type": "dimension_travel"
-    },
-    {
-      "type": "disarms_nuke"
-    },
-    {
-      "type": "eats_sewage"
-    },
-    {
-      "type": "evolves_mutation"
-    },
-    {
-      "type": "exhumes_grave"
-    },
-    {
-      "type": "fails_to_install_cbm"
-    },
-    {
-      "type": "fails_to_remove_cbm"
-    },
-    {
-      "type": "falls_asleep_from_exhaustion"
-    },
-    {
-      "type": "fuel_tank_explodes"
-    },
-    {
-      "type": "gains_addiction"
-    },
-    {
-      "type": "gains_mutation"
-    },
-    {
-      "type": "gains_proficiency"
-    },
-    {
-      "type": "gains_skill_level"
-    },
-    {
-      "type": "game_avatar_death"
-    },
-    {
-      "type": "game_avatar_new"
-    },
-    {
-      "type": "game_load"
-    },
-    {
-      "type": "game_begin"
-    },
-    {
-      "type": "game_over"
-    },
-    {
-      "type": "game_save"
-    },
-    {
-      "type": "game_start"
-    },
-    {
-      "type": "installs_cbm"
-    },
-    {
-      "type": "installs_faulty_cbm"
-    },
-    {
-      "type": "learns_martial_art"
-    },
-    {
-      "type": "loses_addiction"
-    },
-    {
-      "type": "loses_mutation"
-    },
-    {
-      "type": "npc_becomes_hostile"
-    },
-    {
-      "type": "opens_portal"
-    },
-    {
-      "type": "opens_spellbook"
-    },
-    {
-      "type": "opens_temple"
-    },
-    {
-      "type": "phase_move"
-    },
-    {
-      "type": "player_fails_conduct"
-    },
-    {
-      "type": "player_gets_achievement"
-    },
-    {
-      "type": "player_levels_spell"
-    },
-    {
-      "type": "reads_book"
-    },
-    {
-      "type": "releases_subspace_specimens"
-    },
-    {
-      "type": "removes_cbm"
-    },
-    {
-      "type": "seals_hazardous_material_sarcophagus"
-    },
-    {
-      "type": "spellcasting_finish"
-    },
-    {
-      "type": "telefrags_creature"
-    },
-    {
-      "type": "teleglow_teleports"
-    },
-    {
-      "type": "teleports_into_wall"
-    },
-    {
-      "type": "terminates_subspace_specimens"
-    },
-    {
-      "type": "throws_up"
-    },
-    {
-      "type": "triggers_alarm"
-    },
-    {
-      "type": "uses_debug_menu"
-    },
-    {
-      "type": "u_var_changed"
-    },
-    {
-      "type": "vehicle_moves"
-    },
-    {
-      "type": "character_butchered_corpse"
-    }
+    { "type": "activates_artifact" },
+    { "type": "activates_mininuke" },
+    { "type": "administers_mutagen" },
+    { "type": "angers_amigara_horrors" },
+    { "type": "avatar_enters_omt" },
+    { "type": "avatar_moves" },
+    { "type": "avatar_dies" },
+    { "type": "awakes_dark_wyrms" },
+    { "type": "becomes_wanted" },
+    { "type": "broken_bone" },
+    { "type": "broken_bone_mends" },
+    { "type": "buries_corpse" },
+    { "type": "camp_taken_over" },
+    { "type": "causes_resonance_cascade" },
+    { "type": "character_casts_spell" },
+    { "type": "character_consumes_item" },
+    { "type": "character_dies" },
+    { "type": "character_eats_item" },
+    { "type": "character_finished_activity" },
+    { "type": "character_forgets_spell" },
+    { "type": "character_gains_effect" },
+    { "type": "character_gets_headshot" },
+    { "type": "character_heals_damage" },
+    { "type": "character_kills_character" },
+    { "type": "character_kills_monster" },
+    { "type": "character_learns_spell" },
+    { "type": "character_loses_effect" },
+    { "type": "character_melee_attacks_character" },
+    { "type": "character_melee_attacks_monster" },
+    { "type": "character_radioactively_mutates" },
+    { "type": "character_ranged_attacks_character" },
+    { "type": "character_ranged_attacks_monster" },
+    { "type": "character_smashes_tile" },
+    { "type": "character_starts_activity" },
+    { "type": "character_takes_damage" },
+    { "type": "monster_takes_damage" },
+    { "type": "character_triggers_trap" },
+    { "type": "character_attempt_to_fall_asleep" },
+    { "type": "character_falls_asleep" },
+    { "type": "character_wakes_up" },
+    { "type": "character_wields_item" },
+    { "type": "character_wears_item" },
+    { "type": "character_takeoff_item" },
+    { "type": "character_armor_destroyed" },
+    { "type": "character_fertilizes_plant" },
+    { "type": "character_harvests_plant" },
+    { "type": "character_plants_seed" },
+    { "type": "character_waters_plant" },
+    { "type": "consumes_marloss_item" },
+    { "type": "crosses_marloss_threshold" },
+    { "type": "crosses_mutation_threshold" },
+    { "type": "crosses_mycus_threshold" },
+    { "type": "cuts_tree" },
+    { "type": "dermatik_eggs_hatch" },
+    { "type": "dermatik_eggs_injected" },
+    { "type": "destroys_triffid_grove" },
+    { "type": "dies_from_asthma_attack" },
+    { "type": "dies_from_drug_overdose" },
+    { "type": "dies_from_bleeding" },
+    { "type": "dies_from_hypovolemia" },
+    { "type": "dies_from_redcells_loss" },
+    { "type": "dies_of_infection" },
+    { "type": "dies_of_starvation" },
+    { "type": "dies_of_thirst" },
+    { "type": "digs_into_lava" },
+    { "type": "dimension_travel" },
+    { "type": "disarms_nuke" },
+    { "type": "eats_sewage" },
+    { "type": "evolves_mutation" },
+    { "type": "exhumes_grave" },
+    { "type": "fails_to_install_cbm" },
+    { "type": "fails_to_remove_cbm" },
+    { "type": "falls_asleep_from_exhaustion" },
+    { "type": "fuel_tank_explodes" },
+    { "type": "gains_addiction" },
+    { "type": "gains_mutation" },
+    { "type": "gains_proficiency" },
+    { "type": "gains_skill_level" },
+    { "type": "game_avatar_death" },
+    { "type": "game_avatar_new" },
+    { "type": "game_load" },
+    { "type": "game_begin" },
+    { "type": "game_over" },
+    { "type": "game_save" },
+    { "type": "game_start" },
+    { "type": "installs_cbm" },
+    { "type": "installs_faulty_cbm" },
+    { "type": "learns_martial_art" },
+    { "type": "loses_addiction" },
+    { "type": "loses_mutation" },
+    { "type": "npc_becomes_hostile" },
+    { "type": "opens_portal" },
+    { "type": "opens_spellbook" },
+    { "type": "opens_temple" },
+    { "type": "phase_move" },
+    { "type": "player_fails_conduct" },
+    { "type": "player_gets_achievement" },
+    { "type": "player_levels_spell" },
+    { "type": "reads_book" },
+    { "type": "releases_subspace_specimens" },
+    { "type": "removes_cbm" },
+    { "type": "seals_hazardous_material_sarcophagus" },
+    { "type": "spellcasting_finish" },
+    { "type": "telefrags_creature" },
+    { "type": "teleglow_teleports" },
+    { "type": "teleports_into_wall" },
+    { "type": "terminates_subspace_specimens" },
+    { "type": "throws_up" },
+    { "type": "triggers_alarm" },
+    { "type": "uses_debug_menu" },
+    { "type": "u_var_changed" },
+    { "type": "vehicle_moves" },
+    { "type": "character_butchered_corpse" }
   ],
   "native_domains": [
-    {
-      "id": "achievements",
-      "requirement": "Inspect achievement definitions and world progress."
-    },
-    {
-      "id": "actions",
-      "requirement": "Queue safe player and input-context actions."
-    },
-    {
-      "id": "addictions",
-      "requirement": "Inspect and mutate character addictions."
-    },
-    {
-      "id": "bionics",
-      "requirement": "Inspect definitions and mutate installed bionics."
-    },
-    {
-      "id": "callbacks",
-      "requirement": "Attach Lua methods to native JSON callback actors."
-    },
-    {
-      "id": "camps",
-      "requirement": "Inspect faction camps and their world locations."
-    },
-    {
-      "id": "characters",
-      "requirement": "Query, snapshot, and mutate active characters."
-    },
-    {
-      "id": "crafting",
-      "requirement": "Inspect requirements and start bounded crafting work."
-    },
-    {
-      "id": "definitions",
-      "requirement": "Validate and inspect stable native definition ids."
-    },
-    {
-      "id": "diagnostics",
-      "requirement": "Inspect bounded runtime health and errors."
-    },
-    {
-      "id": "effects",
-      "requirement": "Inspect and mutate native creature effects."
-    },
-    {
-      "id": "eocs",
-      "requirement": "Test and activate authored effect-on-condition programs."
-    },
-    {
-      "id": "factions",
-      "requirement": "Inspect faction state and player relationships."
-    },
-    {
-      "id": "handles",
-      "requirement": "Reference live creatures, items, and vehicles safely."
-    },
-    {
-      "id": "hooks",
-      "requirement": "Observe and intercept documented native lifecycles."
-    },
-    {
-      "id": "hordes",
-      "requirement": "Inspect and mutate persistent overmap hordes."
-    },
-    {
-      "id": "inventory",
-      "requirement": "Traverse and mutate item inventories and pockets."
-    },
-    {
-      "id": "mapgen",
-      "requirement": "Inspect and post-process native map generation."
-    },
-    {
-      "id": "martial_arts",
-      "requirement": "Inspect and mutate known martial arts."
-    },
-    {
-      "id": "missions",
-      "requirement": "Inspect definitions and control mission instances."
-    },
-    {
-      "id": "modules",
-      "requirement": "Compose source-scoped Lua modules and services."
-    },
-    {
-      "id": "mutations",
-      "requirement": "Inspect definitions and mutate character mutations."
-    },
-    {
-      "id": "native_events",
-      "requirement": "Subscribe to every typed native event bus event."
-    },
-    {
-      "id": "needs",
-      "requirement": "Inspect and adjust character physiological needs."
-    },
-    {
-      "id": "npcs",
-      "requirement": "Query and mutate NPC identity and relationships."
-    },
-    {
-      "id": "overmap",
-      "requirement": "Query and mutate existing overmap state."
-    },
-    {
-      "id": "proficiencies",
-      "requirement": "Inspect definitions and mutate character learning."
-    },
-    {
-      "id": "recipes",
-      "requirement": "Search recipes and evaluate native requirements."
-    },
-    {
-      "id": "scheduler",
-      "requirement": "Run bounded source-owned deferred callbacks."
-    },
-    {
-      "id": "skills",
-      "requirement": "Inspect definitions and mutate character skills."
-    },
-    {
-      "id": "spells",
-      "requirement": "Inspect definitions and mutate character spellbooks."
-    },
-    {
-      "id": "statistics",
-      "requirement": "Inspect native event statistics and score values."
-    },
-    {
-      "id": "time",
-      "requirement": "Inspect calendar values and control world time."
-    },
-    {
-      "id": "ui",
-      "requirement": "Build portable pages, menus, sidebars, and navigation."
-    },
-    {
-      "id": "vehicles",
-      "requirement": "Query, snapshot, and control active vehicles."
-    },
-    {
-      "id": "vitamins",
-      "requirement": "Inspect definitions and mutate character vitamins."
-    },
-    {
-      "id": "weather",
-      "requirement": "Inspect forecasts and control weather overrides."
-    },
-    {
-      "id": "world",
-      "requirement": "Query and mutate the active map and world services."
-    },
-    {
-      "id": "zones",
-      "requirement": "Inspect and mutate loot and personal zones."
-    }
+    { "id": "achievements", "requirement": "Inspect achievement definitions and world progress." },
+    { "id": "actions", "requirement": "Queue safe player and input-context actions." },
+    { "id": "addictions", "requirement": "Inspect and mutate character addictions." },
+    { "id": "bionics", "requirement": "Inspect definitions and mutate installed bionics." },
+    { "id": "callbacks", "requirement": "Attach Lua methods to native JSON callback actors." },
+    { "id": "camps", "requirement": "Inspect faction camps and their world locations." },
+    { "id": "characters", "requirement": "Query, snapshot, and mutate active characters." },
+    { "id": "crafting", "requirement": "Inspect requirements and start bounded crafting work." },
+    { "id": "definitions", "requirement": "Validate and inspect stable native definition ids." },
+    { "id": "diagnostics", "requirement": "Inspect bounded runtime health and errors." },
+    { "id": "effects", "requirement": "Inspect and mutate native creature effects." },
+    { "id": "eocs", "requirement": "Test and activate authored effect-on-condition programs." },
+    { "id": "factions", "requirement": "Inspect faction state and player relationships." },
+    { "id": "handles", "requirement": "Reference live creatures, items, and vehicles safely." },
+    { "id": "hooks", "requirement": "Observe and intercept documented native lifecycles." },
+    { "id": "hordes", "requirement": "Inspect and mutate persistent overmap hordes." },
+    { "id": "inventory", "requirement": "Traverse and mutate item inventories and pockets." },
+    { "id": "mapgen", "requirement": "Inspect and post-process native map generation." },
+    { "id": "martial_arts", "requirement": "Inspect and mutate known martial arts." },
+    { "id": "missions", "requirement": "Inspect definitions and control mission instances." },
+    { "id": "modules", "requirement": "Compose source-scoped Lua modules and services." },
+    { "id": "mutations", "requirement": "Inspect definitions and mutate character mutations." },
+    { "id": "native_events", "requirement": "Subscribe to every typed native event bus event." },
+    { "id": "needs", "requirement": "Inspect and adjust character physiological needs." },
+    { "id": "npcs", "requirement": "Query and mutate NPC identity and relationships." },
+    { "id": "overmap", "requirement": "Query and mutate existing overmap state." },
+    { "id": "proficiencies", "requirement": "Inspect definitions and mutate character learning." },
+    { "id": "recipes", "requirement": "Search recipes and evaluate native requirements." },
+    { "id": "scheduler", "requirement": "Run bounded source-owned deferred callbacks." },
+    { "id": "skills", "requirement": "Inspect definitions and mutate character skills." },
+    { "id": "spells", "requirement": "Inspect definitions and mutate character spellbooks." },
+    { "id": "statistics", "requirement": "Inspect native event statistics and score values." },
+    { "id": "time", "requirement": "Inspect calendar values and control world time." },
+    { "id": "ui", "requirement": "Build portable pages, menus, sidebars, and navigation." },
+    { "id": "vehicles", "requirement": "Query, snapshot, and control active vehicles." },
+    { "id": "vitamins", "requirement": "Inspect definitions and mutate character vitamins." },
+    { "id": "weather", "requirement": "Inspect forecasts and control weather overrides." },
+    { "id": "world", "requirement": "Query and mutate the active map and world services." },
+    { "id": "zones", "requirement": "Inspect and mutate loot and personal zones." }
   ]
 }
