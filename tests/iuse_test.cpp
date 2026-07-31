@@ -641,7 +641,8 @@ TEST_CASE( "prozac", "[iuse][prozac]" )
 
         dummy.consume( prozac );
         CHECK( dummy.get_stim() == -5 ); // The iuse action gives +0 and item itself -5
-        dummy.consume( prozac );
+        item second_prozac( itype_prozac, calendar::turn_zero, item::default_charges_tag{} );
+        dummy.consume( second_prozac );
         CHECK( dummy.get_stim() == -7 ); // Second iuse gives +3
     }
 }
