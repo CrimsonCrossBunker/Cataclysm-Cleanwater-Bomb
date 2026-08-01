@@ -13044,12 +13044,14 @@ static int auto_process_target_joules( const item &it, const auto_process_rule &
     return units::to_joule<int>( rule.energy_cost * station.energy_mult ) * count;
 }
 
-void map::finish_auto_process_furniture_item( item &it, const auto_process_rule &rule,
-        const auto_process_station &station, const tripoint_bub_ms &p )
+std::vector<item> map::finish_auto_process_furniture_item( item &it,
+        const auto_process_rule &rule, const auto_process_station &station,
+        const tripoint_bub_ms &p )
 {
+    std::vector<item> extras;
     if( rule.results.empty() ) {
         it = item();
-        return;
+        return extras;
     }
     const bool input_count_by_charges = it.count_by_charges();
     const int input_charges = it.charges;
@@ -13086,7 +13088,7 @@ void map::finish_auto_process_furniture_item( item &it, const auto_process_rule 
         if( input_count_by_charges && extra.count_by_charges() ) {
             extra.charges *= input_charges;
         }
-        add_item_or_charges( p, extra );
+        extras.emplace_back( std::move( extra ) );
     }
     // EOC hooks on completion
     if( rule.completion_eoc.is_valid() ) {
@@ -13100,6 +13102,7 @@ void map::finish_auto_process_furniture_item( item &it, const auto_process_rule 
         dialogue d( nullptr, nullptr );
         station.completion_eoc->activate( d );
     }
+    return extras;
 }
 
 void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
@@ -13163,6 +13166,9 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
     const double raw_j = units::to_millijoule( station.power * elapsed ) / 1000.0;
     int energy_remaining = roll_remainder( std::min( raw_j, static_cast<double>( total_needed ) ) );
 
+    // Completed extras are collected and placed only after the loop: placing them inside the
+    // loop could reallocate the tile stack and invalidate the remaining pending item pointers.
+    std::vector<item> extras_to_place;
     for( pending_item &pi : pending ) {
         const int needed = pi.target_j - pi.energy_done;
         const int applied = std::min( needed, energy_remaining );
@@ -13171,11 +13177,16 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
 
         pi.it->set_var( "auto_process_" + pi.rule->action, std::to_string( pi.energy_done ) );
         if( pi.energy_done >= pi.target_j ) {
-            finish_auto_process_furniture_item( *pi.it, *pi.rule, station, p );
+            std::vector<item> extras = finish_auto_process_furniture_item( *pi.it, *pi.rule,
+                    station, p );
+            extras_to_place.insert( extras_to_place.end(), extras.begin(), extras.end() );
         }
         if( energy_remaining <= 0 ) {
             break;
         }
+    }
+    for( item &extra : extras_to_place ) {
+        add_item_or_charges( p, extra );
     }
 }
 
@@ -13250,7 +13261,11 @@ void map::process_auto_process_furniture()
                 station.advance_eoc->activate( d );
             }
             if( energy_done >= target_j ) {
-                finish_auto_process_furniture_item( *current, *rule, station, p );
+                std::vector<item> extras = finish_auto_process_furniture_item( *current, *rule,
+                        station, p );
+                for( item &extra : extras ) {
+                    add_item_or_charges( p, extra );
+                }
             }
         }
         ++tile_it;

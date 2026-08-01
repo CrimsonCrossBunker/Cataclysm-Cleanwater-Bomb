@@ -2220,9 +2220,11 @@ class map
                                               const time_duration &elapsed );
     private:
         /** Shared completion logic for auto-process furniture: replaces the item with the
-         *  rule's results, spills extra results onto the tile and fires EOC hooks. */
-        void finish_auto_process_furniture_item( item &it, const auto_process_rule &rule,
-                const auto_process_station &station, const tripoint_bub_ms &p );
+         *  rule's results and fires EOC hooks.  Extra result items are returned and placed
+         *  by the caller after all item pointers into the tile stack are no longer used. */
+        std::vector<item> finish_auto_process_furniture_item( item &it,
+                const auto_process_rule &rule, const auto_process_station &station,
+                const tripoint_bub_ms &p );
     public:
         // All active items connected to the power_grid with their connection points.
         std::vector<item_reference> item_network_connections( vehicle *power_grid );

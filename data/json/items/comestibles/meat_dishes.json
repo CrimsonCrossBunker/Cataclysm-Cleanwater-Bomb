@@ -1678,8 +1678,7 @@
     "price_postapoc": "2 USD",
     "material": [ { "type": "flesh" } ],
     "flags": [ "RAW" ],
-    "cook_result": "cooked_cured_meat",
-    "cook_cost_energy": "300 kJ",
+    "auto_process": [ { "action": "COOK", "results": [ "cooked_cured_meat" ], "energy": "300 kJ" } ],
     "smoking_result": "null",
     "vitamins": [ [ "meat_allergen", 1 ] ]
   },
