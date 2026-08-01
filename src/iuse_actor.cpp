@@ -226,6 +226,12 @@ static std::optional<item_location> try_form_loc( Character &you, map *here,
 
 static item_location form_loc( Character &you, map *here, const tripoint_bub_ms &p, item &it )
 {
+    // Pseudo tools (e.g. one invoked from a vehicle tool station) are virtual
+    // instances that aren't stored in any inventory or on the map, so there is
+    // no real location to form.  Return a dummy location without complaining.
+    if( it.has_flag( flag_PSEUDO ) ) {
+        return item_location( you, &it );
+    }
     if( std::optional<item_location> loc = try_form_loc( you, here, p, it ) ) {
         return *loc;
     }
