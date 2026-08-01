@@ -16,6 +16,7 @@
 #include "filesystem.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "get_version.h"
 #include "input_context.h"
 #include "json.h"
 #include "localized_comparator.h"
@@ -57,6 +58,36 @@ bool is_unexpected_builtin_mod( const MOD_INFORMATION &mod )
     }
     return path_is_within( mod.path.get_unrelative_path(),
                            PATH_INFO::moddir().get_unrelative_path() );
+}
+
+std::string get_mod_error_source( std::string_view src )
+{
+    if( src == "core" || src == "custom" ) {
+        return {};
+    }
+
+    const mod_id base_mod = get_mod_base_id_from_src( mod_id( std::string( src ) ) );
+    if( !base_mod.is_valid() ) {
+        return {};
+    }
+
+    const MOD_INFORMATION &mod = base_mod.obj();
+    std::string result = string_format( _( "Mod source: %s [%s]" ), mod.name(), mod.ident.str() );
+    if( !builtin_mod_manifest_available ) {
+        return result;
+    }
+
+    const bool is_builtin = std::find( builtin_mod_ids.begin(), builtin_mod_ids.end(), mod.ident.str() ) !=
+                            builtin_mod_ids.end();
+    if( is_builtin ) {
+        return result + "\n" + string_format( _( "Game version: %s" ), getVersionString() );
+    }
+
+    result += "\n" + _( "This error may originate from a third-party mod." );
+    if( !mod.version.empty() ) {
+        result += "\n" + string_format( _( "Mod version: %s" ), mod.version );
+    }
+    return result;
 }
 
 mod_id get_mod_base_id_from_src( mod_id src )
