@@ -13,6 +13,7 @@ Typical validation:
 
 ```sh
 make -j2 json-check
+make -j2 tools/format/json_formatter.cgi
 tools/format/json_formatter.cgi <changed-json-file>
 ```
 

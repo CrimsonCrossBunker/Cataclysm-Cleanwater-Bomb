@@ -1,6 +1,10 @@
 import unittest
 
-from check_docs_impact import impacts, validate_pr_body
+from check_docs_impact import (
+    documentation_field_warnings,
+    impacts,
+    validate_pr_body,
+)
 
 
 class DocsImpactTest(unittest.TestCase):
@@ -40,6 +44,19 @@ None
         self.assertEqual([], validate_pr_body(body))
         self.assertTrue(
             validate_pr_body(body.replace("@maintainer", "@username"))
+        )
+
+    def test_documentation_fields_are_advisory_in_phase_zero(self):
+        body = """#### Responsible human
+@maintainer
+"""
+        self.assertEqual(validate_pr_body(body), [])
+        self.assertEqual(len(documentation_field_warnings(body)), 4)
+
+    def test_responsible_human_cannot_be_none_or_a_bot(self):
+        self.assertTrue(validate_pr_body("#### Responsible human\nNone\n"))
+        self.assertTrue(
+            validate_pr_body("#### Responsible human\n@automation[bot]\n")
         )
 
 

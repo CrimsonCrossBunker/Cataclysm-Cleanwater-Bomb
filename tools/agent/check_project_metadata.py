@@ -32,14 +32,7 @@ def load_yaml(path: Path) -> dict:
 
 def tracked_paths() -> list[str]:
     output = subprocess.run(
-        [
-            "git",
-            "ls-files",
-            "-z",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-        ],
+        ["git", "ls-files", "-z", "--cached"],
         cwd=ROOT,
         check=True,
         stdout=subprocess.PIPE,
