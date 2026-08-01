@@ -1,0 +1,182 @@
+[
+ {
+  "type": "vehicle_part",
+  "id": "veh_portable_generator",
+  "name": {"str": "车载 便携式汽油发电机"},
+  "categories": ["energy"],
+  "color": "light_green",
+  "broken_color": "blue",
+  "damage_modifier": 80,
+  "durability": 400,
+  "description": "一种小型便携式发电机，通常用于露营。这个发电机被安装在载具上。",
+  "power": "7 W",
+  "epower": "3000 W",
+  "fuel_type": "gasoline",
+  "item": "portable_generator",
+  "location": "fuel_source",
+  "looks_like":"portable_generator",
+  "requirements": {
+    "install": {
+      "skills": [["mechanics", 3]],
+      "time": "30 m",
+      "using": [["vehicle_bolt_install", 1]]
+    },
+    "removal": {
+      "skills": [["mechanics", 3]],
+      "time": "30 m",
+      "using": [["vehicle_weld_removal", 1]]
+    },
+    "repair": {
+      "skills": [["mechanics", 4]],
+      "time": "60 m",
+      "using": [
+        ["repair_welding_standard", 5],
+        ["soldering_standard", 5]
+      ]
+    }
+  },
+  "flags": ["REACTOR"],
+  "breaks_into": [
+    {"item": "mc_steel_lump", "count": [6, 11]},
+    {"item": "mc_steel_chunk", "count": [6, 11]},
+    {"item": "scrap", "count": [6, 11]}
+  ],
+  "damage_reduction": {"all": 60},
+  "variants": [{"symbols": "O", "symbols_broken": "#"}]
+ },
+ {
+  "type": "vehicle_part",
+  "id": "veh_diesel_generator",
+  "name": {"str": "车载 柴油发电机"},
+  "categories": ["energy"],
+  "color": "green_white",
+  "broken_color": "blue",
+  "damage_modifier": 80,
+  "durability": 400,
+  "description": "一种功率强大的大型发电机，主要用于街道施工。这个发电机被安装在载具上。",
+  "power": "8 W",
+  "epower": "7000 W",
+  "fuel_type": "gasoline",
+  "item": "diesel_generator",
+  "location": "fuel_source",
+  "looks_like":"diesel_generator",
+  "requirements": {
+    "install": {
+      "skills": [["mechanics", 3]],
+      "time": "30 m",
+      "using": [["vehicle_bolt_install", 1]]
+    },
+    "removal": {
+      "skills": [["mechanics", 3]],
+      "time": "30 m",
+      "using": [["vehicle_weld_removal", 1]]
+    },
+    "repair": {
+      "skills": [["mechanics", 4]],
+      "time": "60 m",
+      "using": [
+        ["repair_welding_standard", 5],
+        ["soldering_standard", 5]
+      ]
+    }
+  },
+  "flags": ["REACTOR"],
+  "breaks_into": [
+    {"item": "mc_steel_lump", "count": [6, 11]},
+    {"item": "mc_steel_chunk", "count": [6, 11]},
+    {"item": "scrap", "count": [6, 11]}
+  ],
+  "damage_reduction": {"all": 60},
+  "variants": [{"symbols": "O", "symbols_broken": "#"}]
+ },
+ {
+  "type": "vehicle_part",
+  "id": "veh_military_generator",
+  "name": {"str": "车载 军用柴油发电机"},
+  "categories": ["energy"],
+  "color": "green_white",
+  "broken_color": "blue",
+  "damage_modifier": 80,
+  "durability": 400,
+  "description": "一种功率强大的大型发电机，外壳涂有迷彩。这个发电机被安装在载具上。",
+  "power": "8 W",
+  "epower": "10000 W",
+  "fuel_type": "gasoline",
+  "item": "military_generator",
+  "location": "fuel_source",
+  "looks_like":"military_generator",
+  "requirements": {
+    "install": {
+      "skills": [["mechanics", 3]],
+      "time": "30 m",
+      "using": [["vehicle_bolt_install", 1]]
+    },
+    "removal": {
+      "skills": [["mechanics", 3]],
+      "time": "30 m",
+      "using": [["vehicle_weld_removal", 1]]
+    },
+    "repair": {
+      "skills": [["mechanics", 4]],
+      "time": "60 m",
+      "using": [
+        ["repair_welding_standard", 5],
+        ["soldering_standard", 5]
+      ]
+    }
+  },
+  "flags": ["REACTOR"],
+  "breaks_into": [
+    {"item": "mc_steel_lump", "count": [6, 11]},
+    {"item": "mc_steel_chunk", "count": [6, 11]},
+    {"item": "scrap", "count": [6, 11]}
+  ],
+  "damage_reduction": {"all": 60},
+  "variants": [{"symbols": "O", "symbols_broken": "#"}]
+ },
+ {
+  "type": "vehicle_part",
+  "id": "veh_12000_gasoline_generator",
+  "name": {"str": "车载 大功率汽油发电机"},
+  "categories": ["energy"],
+  "color": "green_white",
+  "broken_color": "blue",
+  "damage_modifier": 80,
+  "durability": 400,
+  "description": "一台12000瓦的汽油发电机，依然保持了相对的便携性，能够为整栋房屋提供电力。这个发电机被安装在载具上。",
+  "power": "8 W",
+  "epower": "12000 W",
+  "fuel_type": "gasoline",
+  "item": "12000_gasoline_generator",
+  "location": "fuel_source",
+  "looks_like":"12000_gasoline_generator",
+  "requirements": {
+    "install": {
+      "skills": [["mechanics", 3]],
+      "time": "30 m",
+      "using": [["vehicle_bolt_install", 1]]
+    },
+    "removal": {
+      "skills": [["mechanics", 3]],
+      "time": "30 m",
+      "using": [["vehicle_weld_removal", 1]]
+    },
+    "repair": {
+      "skills": [["mechanics", 4]],
+      "time": "60 m",
+      "using": [
+        ["repair_welding_standard", 5],
+        ["soldering_standard", 5]
+      ]
+    }
+  },
+  "flags": ["REACTOR"],
+  "breaks_into": [
+    {"item": "mc_steel_lump", "count": [6, 11]},
+    {"item": "mc_steel_chunk", "count": [6, 11]},
+    {"item": "scrap", "count": [6, 11]}
+  ],
+  "damage_reduction": {"all": 60},
+  "variants": [{"symbols": "O", "symbols_broken": "#"}]
+ }
+]
