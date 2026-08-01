@@ -588,7 +588,7 @@ bool mod_manager::check_mods_list( WORLD *world ) const
         save_mods_list( world );
 #else
         for( const mod_id &mod : incorrectly_installed_mods ) {
-            DebugLog( D_WARNING, DC_MAIN ) << "Third-party mod '" << mod.str()
+            DebugLog( D_WARNING, D_MAIN ) << "Third-party mod '" << mod.str()
                                            << "' is installed in the built-in mod directory: "
                                            << mod->path.generic_u8string();
         }
