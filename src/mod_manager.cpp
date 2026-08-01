@@ -49,7 +49,8 @@ static bool path_is_within( const std::filesystem::path &path,
 
 bool is_unexpected_builtin_mod( const MOD_INFORMATION &mod )
 {
-    if( test_mode || !builtin_mod_manifest_available ) {
+    if( test_mode || !builtin_mod_manifest_available ||
+        mod.ident.str().find( '#' ) != std::string::npos ) {
         return false;
     }
     if( std::find( builtin_mod_ids.begin(), builtin_mod_ids.end(), mod.ident.str() ) !=
