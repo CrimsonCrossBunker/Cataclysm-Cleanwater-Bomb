@@ -7,6 +7,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -80,6 +81,12 @@ struct MOD_INFORMATION {
  * its ID was not present in the manifest generated from the distributed mods.
  */
 bool is_unexpected_builtin_mod( const MOD_INFORMATION &mod );
+
+/**
+ * Returns concise error context for a loaded mod source, or an empty string
+ * when that source is not a mod.
+ */
+std::string get_mod_error_source( std::string_view src );
 
 // Enumerates and formats the mod origin
 template<typename src_id>
