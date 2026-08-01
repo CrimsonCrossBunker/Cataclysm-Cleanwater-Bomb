@@ -25,7 +25,9 @@ class BuiltinModManifestTest(unittest.TestCase):
           { "type": "MOD_INFO", "id": "alpha" }
         ]"""
         value = json.loads(strip_trailing_commas(strip_jsonc_comments(text)))
-        self.assertEqual(find_mod_ids(value, Path("modinfo.json")), {"alpha", "beta"})
+        self.assertEqual(
+            find_mod_ids(value, Path("modinfo.json")), {"alpha", "beta"}
+        )
 
     def test_nested_mod_info_is_not_loaded(self) -> None:
         value = {
@@ -45,8 +47,14 @@ class BuiltinModManifestTest(unittest.TestCase):
                 encoding="utf-8",
             )
             output = root / "builtin_mods_generated.h"
-            with patch.object(sys, "argv", ["generate_builtin_mods.py", "--source", str(source),
-                                             "--output", str(output)]):
+            arguments = [
+                "generate_builtin_mods.py",
+                "--source",
+                str(source),
+                "--output",
+                str(output),
+            ]
+            with patch.object(sys, "argv", arguments):
                 self.assertEqual(main(), 0)
             header = output.read_text(encoding="utf-8")
             self.assertIn("builtin_mod_manifest_available = true", header)
@@ -56,8 +64,14 @@ class BuiltinModManifestTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             output = root / "builtin_mods_generated.h"
-            with patch.object(sys, "argv", ["generate_builtin_mods.py", "--source",
-                                             str(root / "missing"), "--output", str(output)]):
+            arguments = [
+                "generate_builtin_mods.py",
+                "--source",
+                str(root / "missing"),
+                "--output",
+                str(output),
+            ]
+            with patch.object(sys, "argv", arguments):
                 self.assertEqual(main(), 0)
             header = output.read_text(encoding="utf-8")
             self.assertIn("builtin_mod_manifest_available = false", header)
