@@ -75,6 +75,12 @@ struct MOD_INFORMATION {
         std::pair<int, translation> category = { -1, translation() };
 };
 
+/**
+ * Returns true when a mod is installed below the built-in mod directory but
+ * its ID was not present in the manifest generated from the distributed mods.
+ */
+bool is_unexpected_builtin_mod( const MOD_INFORMATION &mod );
+
 // Enumerates and formats the mod origin
 template<typename src_id>
 std::string get_origin( const std::vector<std::pair<src_id, mod_id>> &src )
