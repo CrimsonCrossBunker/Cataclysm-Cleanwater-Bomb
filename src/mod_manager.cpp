@@ -83,7 +83,8 @@ std::string get_mod_error_source( std::string_view src )
         return result + "\n" + string_format( _( "Game version: %s" ), getVersionString() );
     }
 
-    result += "\n" + _( "This error may originate from a third-party mod." );
+    result += "\n";
+    result += _( "This error may originate from a third-party mod." );
     if( !mod.version.empty() ) {
         result += "\n" + string_format( _( "Mod version: %s" ), mod.version );
     }
