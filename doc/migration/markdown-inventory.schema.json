@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/markdown-inventory-v1.json",
+  "title": "CCB Markdown migration inventory",
+  "type": "object",
+  "required": [ "schema_version", "kind", "source_commit", "document_count", "documents" ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "markdown_inventory" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "document_count": { "type": "integer", "minimum": 1 },
+    "scope": { "type": "string", "minLength": 1 },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "original_path",
+          "target_path",
+          "source_commit",
+          "contributors",
+          "license",
+          "action",
+          "archive_reason",
+          "replacement",
+          "migration_status",
+          "history_strategy"
+        ],
+        "properties": {
+          "original_path": { "type": "string", "minLength": 1 },
+          "target_path": { "type": [ "string", "null" ] },
+          "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "contributors": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "license": { "type": "string", "minLength": 1 },
+          "action": {
+            "enum": [ "keep_in_repo", "review", "retain_third_party" ]
+          },
+          "archive_reason": { "type": [ "string", "null" ] },
+          "replacement": { "type": [ "string", "null" ] },
+          "migration_status": { "const": "inventoried" },
+          "history_strategy": {
+            "enum": [ "keep_in_repo", "evaluate_filtered_history", "retain_in_place" ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

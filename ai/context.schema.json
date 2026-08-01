@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/agent-context-v1.json",
+  "title": "CCB agent context document",
+  "type": "object",
+  "required": [ "schema_version", "kind", "entries" ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": {
+      "enum": [
+        "project_map",
+        "test_matrix",
+        "generated_files",
+        "docs_impact",
+        "repository_settings_target"
+      ]
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "enforcement": { "enum": [ "advisory", "deferred", "required" ] },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [ "id" ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

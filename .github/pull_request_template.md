@@ -26,6 +26,14 @@ https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/doc/
 合并后，你的概述会被加入项目更新日志：
 https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/data/changelog.txt -->
 
+#### Responsible human
+<!-- #### 责任人 -->
+
+@username
+
+<!-- 每个 PR 必须指定一名真实的人类责任人。AI 工具或模型无需披露，但责任人
+必须理解修改、审查最终 diff、确认测试与许可证/外部来源，并回答审阅问题。 -->
+
 #### Purpose of change
 <!-- #### 变更目的 -->
 
@@ -57,6 +65,26 @@ https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/data
 <!-- #### 测试 -->
 
 <!-- 描述你采取了哪些步骤来测试这个 PR 是否修复了 bug 或添加了特性，以及你做了哪些测试以确保没有引入回归问题。也请为审阅者和维护者提供测试建议。参见 TESTING_YOUR_CHANGES.md -->
+
+#### Documentation impact
+<!-- None，或说明需要新增/更新/标记 stale 的开发文档。Phase 0/1 期间此项只提示。 -->
+
+None
+
+#### Related CCB-Docs PR
+<!-- None，或填写 CrimsonCrossBunker/CCB-Docs 的 PR 链接。 -->
+
+None
+
+#### Affected documentation IDs
+<!-- None，或填写 docs-catalog.yml 中稳定的文档 ID，多个 ID 用逗号分隔。 -->
+
+None
+
+#### Generated reference impact
+<!-- None，或说明 Schema、LuaLS、注册信息或生成清单是否需要刷新。 -->
+
+None
 
 #### Additional context
 <!-- #### 补充说明 -->

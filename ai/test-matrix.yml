@@ -1,0 +1,44 @@
+schema_version: 1
+kind: test_matrix
+description: Narrowest-first validation routing. Expensive commands may require platform dependencies.
+entries:
+  - id: agent-context
+    paths: [AGENTS.md, CLAUDE.md, GEMINI.md, GOVERNANCE.md, ai/, tools/agent/, .github/copilot-instructions.md]
+    command: python3 -m unittest discover -s tools/agent -p 'test_*.py'
+    workdir: .
+    cost: fast
+  - id: python-tools
+    paths: [tools/]
+    command: make python-check
+    workdir: .
+    cost: fast
+  - id: cpp-format
+    paths: [src/, tests/, tools/]
+    command: make astyle-check
+    workdir: .
+    cost: fast
+  - id: cpp-tests
+    paths: [src/, tests/]
+    command: make -j2 tests && ./tests/cata_test
+    workdir: .
+    cost: expensive
+  - id: json-load
+    paths: [data/]
+    command: make -j2 json-check
+    workdir: .
+    cost: medium
+  - id: lua-contract
+    paths: ['src/catalua_ui_*.cpp', 'src/catalua_ui_*.h', data/lua/, tools/lua_api/]
+    command: python3 tools/lua_api/check_luals_declarations.py && python3 tools/lua_api/check_coverage.py
+    workdir: .
+    cost: fast
+  - id: cmake-configure
+    paths: [CMakeLists.txt, CMakeModules/, CMakePresets.json]
+    command: cmake --preset linux-x64
+    workdir: .
+    cost: medium
+  - id: android-unit
+    paths: [android/]
+    command: ./gradlew test
+    workdir: android
+    cost: expensive

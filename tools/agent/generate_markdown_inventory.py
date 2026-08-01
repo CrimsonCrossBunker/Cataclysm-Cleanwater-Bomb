@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""Generate tracked Markdown inventory without walking the work tree."""
+
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+import yaml
+
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUTPUT = ROOT / "doc/migration/markdown-inventory.yml"
+
+
+def git(*args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return result.stdout
+
+
+def resolve_commit(value: str) -> str:
+    return git("rev-parse", "--verify", f"{value}^{{commit}}").strip()
+
+
+def tracked_markdown(commit: str) -> list[str]:
+    """Return the migration scope from Git, never from a filesystem walk."""
+    output = subprocess.run(
+        ["git", "ls-tree", "-r", "-z", "--name-only", commit],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+    ).stdout.decode("utf-8")
+    paths = []
+    for path in output.split("\0"):
+        if not path or not path.lower().endswith(".md"):
+            continue
+        if path.split("/", 1)[0].startswith("."):
+            continue
+        if path == "obj-lua" or path.startswith("obj-lua/"):
+            raise RuntimeError(
+                "obj-lua must never enter the documentation inventory"
+            )
+        paths.append(path)
+    return sorted(paths)
+
+
+def contributors(commit: str, path: str) -> list[str]:
+    names = git(
+        "log", commit, "--follow", "--format=%aN", "--", path
+    ).splitlines()
+    unique: list[str] = []
+    for name in names:
+        clean = name.strip()
+        if clean and clean not in unique:
+            unique.append(clean)
+    return unique or ["Unknown (see source history)"]
+
+
+def classification(path: str) -> tuple[str, str, str]:
+    if path.startswith("src/third-party/"):
+        return (
+            "retain_third_party",
+            "file-specific third-party license",
+            "retain_in_place",
+        )
+    if path == "src/lua/LICENSE.md":
+        return "retain_third_party", "MIT", "retain_in_place"
+    if path in {
+        "README.md",
+        "CONTRIBUTING.md",
+        "CODE_OF_CONDUCT.md",
+        "ISSUES.md",
+        "SYNC_EXCLUDED_PRS.md",
+        "TRANSLATION_CREDITS.md",
+    }:
+        return "keep_in_repo", "CC-BY-SA-3.0", "keep_in_repo"
+    return "review", "CC-BY-SA-3.0", "evaluate_filtered_history"
+
+
+def build_inventory(commit: str) -> dict:
+    documents = []
+    for path in tracked_markdown(commit):
+        action, license_name, history_strategy = classification(path)
+        documents.append(
+            {
+                "original_path": path,
+                "target_path": (
+                    path
+                    if action in {"keep_in_repo", "retain_third_party"}
+                    else None
+                ),
+                "source_commit": commit,
+                "contributors": contributors(commit, path),
+                "license": license_name,
+                "action": action,
+                "archive_reason": None,
+                "replacement": None,
+                "migration_status": "inventoried",
+                "history_strategy": history_strategy,
+            }
+        )
+    return {
+        "schema_version": 1,
+        "kind": "markdown_inventory",
+        "source_commit": commit,
+        "document_count": len(documents),
+        "scope": (
+            "Tracked Markdown at source_commit, excluding dot-prefixed "
+            "tool/config paths; "
+            "filesystem caches are never traversed."
+        ),
+        "documents": documents,
+    }
+
+
+def render(data: dict) -> str:
+    return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=100)
+
+
+def source_for_check(output: Path) -> str:
+    if not output.exists():
+        raise FileNotFoundError(f"inventory does not exist: {output}")
+    data = yaml.safe_load(output.read_text(encoding="utf-8"))
+    return resolve_commit(str(data["source_commit"]))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--source-commit", default="HEAD")
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+
+    output = args.output if args.output.is_absolute() else ROOT / args.output
+    commit = (
+        source_for_check(output)
+        if args.check
+        else resolve_commit(args.source_commit)
+    )
+    rendered = render(build_inventory(commit))
+
+    if args.check:
+        if output.read_text(encoding="utf-8") != rendered:
+            print(
+                f"stale Markdown inventory: {output.relative_to(ROOT)}",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"Markdown inventory is current at {commit}")
+        return 0
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(rendered, encoding="utf-8")
+    print(f"wrote {output.relative_to(ROOT)} at {commit}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

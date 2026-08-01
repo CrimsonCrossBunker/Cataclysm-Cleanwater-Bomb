@@ -1,0 +1,23 @@
+schema_version: 1
+kind: repository_settings_target
+description: Desired settings only; Phase 0/1 does not apply them automatically.
+enforcement: deferred
+entries:
+  - id: master-protection
+    branch: master
+    enabled: false
+    prerequisites:
+      minimum_confirmed_human_reviewers: 2
+      required_checks_must_succeed_on_default_branch: true
+    target:
+      require_pull_request: true
+      required_non_author_approvals: 1
+      dismiss_stale_reviews: true
+      prohibit_force_push: true
+      prohibit_branch_deletion: true
+      administrator_emergency_bypass: true
+    manual_record:
+      confirmed_reviewers: []
+      required_checks: []
+      enabled_at: null
+      enabled_by: null

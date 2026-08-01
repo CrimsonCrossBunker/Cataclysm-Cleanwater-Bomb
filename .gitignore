@@ -17,8 +17,6 @@
 !/.vscode/settings.json
 !/.vscode/extensions.json
 !/.vscode/msbuild.ps1
-/AGENTS.md
-
 !src/chkjson
 *.7z
 *.a
