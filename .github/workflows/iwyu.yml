@@ -38,7 +38,10 @@ jobs:
             /CMakeLists\.txt$/,
             /^\.github\/workflows\/iwyu\.yml$/,
           ];
-          const dominated = response.some(f => dominated_by.some(r => r.test(f.filename)));
+          const is_agent_instruction = f => /(^|\/)AGENTS\.md$/.test(f.filename);
+          const dominated = response.some(f =>
+            !is_agent_instruction(f) && dominated_by.some(r => r.test(f.filename))
+          );
           return dominated;
 
   iwyu:

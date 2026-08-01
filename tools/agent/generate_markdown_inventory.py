@@ -86,7 +86,11 @@ def classification(path: str) -> tuple[str, str, str]:
     return "review", "CC-BY-SA-3.0", "evaluate_filtered_history"
 
 
-def build_inventory(commit: str) -> dict:
+def build_inventory(
+    commit: str,
+    contributor_snapshot: dict[str, list[str]] | None = None,
+) -> dict:
+    recorded_contributors = contributor_snapshot or {}
     documents = []
     for path in tracked_markdown(commit):
         action, license_name, history_strategy = classification(path)
@@ -99,7 +103,9 @@ def build_inventory(commit: str) -> dict:
                     else None
                 ),
                 "source_commit": commit,
-                "contributors": contributors(commit, path),
+                "contributors": list(recorded_contributors[path])
+                if path in recorded_contributors
+                else contributors(commit, path),
                 "license": license_name,
                 "action": action,
                 "archive_reason": None,
@@ -126,11 +132,27 @@ def render(data: dict) -> str:
     return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=100)
 
 
-def source_for_check(output: Path) -> str:
+def inventory_for_check(output: Path) -> tuple[str, dict[str, list[str]]]:
+    """Load the frozen commit and history snapshot used by check mode.
+
+    Contributor history depends on clone depth and mailmap availability.  A
+    fresh generation records that provenance, while check mode preserves it
+    and validates all deterministic inventory fields around it.
+    """
     if not output.exists():
         raise FileNotFoundError(f"inventory does not exist: {output}")
     data = yaml.safe_load(output.read_text(encoding="utf-8"))
-    return resolve_commit(str(data["source_commit"]))
+    contributor_snapshot = {
+        item["original_path"]: item["contributors"]
+        for item in data.get("documents", [])
+        if isinstance(item.get("original_path"), str) and isinstance(
+            item.get("contributors"), list
+        )
+    }
+    return (
+        resolve_commit(str(data["source_commit"])),
+        contributor_snapshot,
+    )
 
 
 def main() -> int:
@@ -141,12 +163,12 @@ def main() -> int:
     args = parser.parse_args()
 
     output = args.output if args.output.is_absolute() else ROOT / args.output
-    commit = (
-        source_for_check(output)
-        if args.check
-        else resolve_commit(args.source_commit)
-    )
-    rendered = render(build_inventory(commit))
+    if args.check:
+        commit, contributor_snapshot = inventory_for_check(output)
+    else:
+        commit = resolve_commit(args.source_commit)
+        contributor_snapshot = None
+    rendered = render(build_inventory(commit, contributor_snapshot))
 
     if args.check:
         if output.read_text(encoding="utf-8") != rendered:
