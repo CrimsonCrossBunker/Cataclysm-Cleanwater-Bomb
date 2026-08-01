@@ -1966,7 +1966,7 @@ std::string game_info::mods_loaded()
     mod_names.reserve( mod_ids.size() );
     std::transform( mod_ids.begin(), mod_ids.end(),
     std::back_inserter( mod_names ), []( const mod_id & mod ) -> std::string {
-        // e.g. "Dark Days Ahead [dda] (95c4e03)".
+        // e.g. "Catharsis Covenant Basemodule [dda] (95c4e03)".
         return string_format( "%s [%s] (%s)", mod->name(), mod->ident.str(), mod->version );
     } );
 
