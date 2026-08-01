@@ -721,7 +721,14 @@ void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_lin
     const int maximum_visible_items = std::max( 1, bottom_left.y - 1 );
     const int height = std::min<int>( sub_opts.size(), maximum_visible_items );
     const int window_height = height + 2;
-    point top_left( bottom_left + point( 0, -( window_height - 1 ) ) );
+    const int window_width = xlen + 4;
+    // bottom_left is the horizontal center of the selected menu button.
+    // Center the submenu window on it and keep the window fully inside the
+    // terminal, so it lines up with the button at any display scale.
+    const int win_x = std::clamp( bottom_left.x - window_width / 2, 0,
+                                  std::max( 0, TERMX - window_width ) );
+    const int win_y = std::max( 0, bottom_left.y - ( window_height - 1 ) );
+    point top_left( win_x, win_y );
 
     if( static_cast<size_t>( height ) != sub_opts.size() ) {
         if( sel2 < sub_opt_off ) {
@@ -735,7 +742,7 @@ void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_lin
         sub_opt_off = 0;
     }
 
-    catacurses::window w_sub = catacurses::newwin( window_height, xlen + 4, top_left );
+    catacurses::window w_sub = catacurses::newwin( window_height, window_width, top_left );
     werase( w_sub );
     draw_border( w_sub, c_white );
 
@@ -855,10 +862,21 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
 
         const point p_offset( catacurses::getbegx( w_open ), catacurses::getbegy( w_open ) );
 
+        // Center the submenu window on the selected button so that it stays
+        // aligned with the menu regardless of display scale.  Without this the
+        // submenu is anchored to the button's left edge and can run off the
+        // right side of the screen when the buttons are spread out (1x scale).
+        const int menu_count = static_cast<int>( vMenuItems.size() );
+        const int btn_left = offsets[iSel];
+        const int btn_right = iSel + 1 < menu_count
+                              ? offsets[iSel + 1] - spacing
+                              : final_offset + menu_length + spacing * ( menu_count - 1 );
+        const int btn_center = btn_left + ( btn_right - btn_left ) / 2;
+
         // Stage the parent before the submenu so the smaller window remains the
         // topmost layer in curses' virtual screen.
         wnoutrefresh( w_open );
-        display_sub_menu( iSel, p_offset + point( offsets[iSel], offset.y - 2 ), sel_line );
+        display_sub_menu( iSel, p_offset + point( btn_center, offset.y - 2 ), sel_line );
     } else {
         wnoutrefresh( w_open );
     }
@@ -984,7 +1002,7 @@ void main_menu::init_strings()
         vNewGameHints.emplace_back(
             _( "Puts you right in the game, randomly choosing scenario and character's traits, profession, skills and other parameters." ) );
     }
-    vNewGameSubItems.emplace_back( pgettext( "Main Menu", "T<u|U>torial" ) );
+    vNewGameSubItems.emplace_back( pgettext( "Main Menu", "<T|t>utorial" ) );
     vNewGameHints.emplace_back(
         _( "Learn the basic controls and survival systems in a guided game." ) );
     vNewGameHotkeys.clear();
