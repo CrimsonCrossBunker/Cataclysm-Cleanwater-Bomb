@@ -1323,6 +1323,13 @@ static void bionic_install_common( npc &p, Character &patron, Character &patient
     //Makes the doctor awesome at installing but not perfect
     if( patient.can_install_bionics( it, p, false, 20 ) ) {
         std::optional<item> source_item = *bionic.get_item();
+        // The patient paid the purchase price for this CBM (see bionic_install_price):
+        // transfer ownership to the payer, otherwise the salvaged module dropped on
+        // uninstall would still belong to the doctor's faction and picking it up would
+        // be treated as theft.
+        if( !source_item->is_owned_by( patient ) ) {
+            source_item->set_owner( patron );
+        }
         bionic.remove_item();
         patient.install_bionics( it, p, false, 20, source_item );
     }
