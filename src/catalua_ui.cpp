@@ -4870,11 +4870,11 @@ void append_native_menu_entries(
         const sol::table entry = object.as<sol::table>();
         sol::optional<std::string> id = entry["id"];
         if( !id ) {
-            id = entry["menu_id"];
+            id = entry.get<sol::optional<std::string>>( "menu_id" );
         }
         sol::optional<std::string> label = entry["label"];
         if( !label ) {
-            label = entry["menu_label"];
+            label = entry.get<sol::optional<std::string>>( "menu_label" );
         }
         if( !id || id->empty() ||
             id->size() > maximum_menu_entry_id_bytes ) {
