@@ -1425,7 +1425,7 @@ src/version.h: version
 
 src/version.cpp: src/version.h
 
-BUILTIN_MODS_HEADER := $(ODIR)/builtin_mods.h
+BUILTIN_MODS_HEADER := $(ODIR)/builtin_mods_generated.h
 BUILTIN_MODINFO := $(shell find data/mods -type f -name modinfo.json)
 
 $(BUILTIN_MODS_HEADER): tools/generate_builtin_mods.py $(BUILTIN_MODINFO)
