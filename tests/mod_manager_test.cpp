@@ -7,8 +7,8 @@
 
 static const mod_id MOD_INFORMATION_dda( "dda" );
 static const mod_id MOD_INFORMATION_test_third_party_mod( "test_third_party_mod" );
-static const mod_id MOD_INFORMATION_test_user_mod( "test_user_mod" );
 static const mod_id MOD_INFORMATION_test_third_party_mod_dda( "test_third_party_mod#dda" );
+static const mod_id MOD_INFORMATION_test_user_mod( "test_user_mod" );
 
 TEST_CASE( "unexpected_builtin_mod_detection", "[mod_manager]" )
 {
