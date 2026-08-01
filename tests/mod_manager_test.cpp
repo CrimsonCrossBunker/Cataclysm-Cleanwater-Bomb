@@ -24,10 +24,15 @@ TEST_CASE( "unexpected_builtin_mod_detection", "[mod_manager]" )
     user_mod.ident = mod_id( "test_user_mod" );
     user_mod.path = PATH_INFO::user_moddir_path() / "test_user_mod";
 
+    MOD_INFORMATION virtual_mod;
+    virtual_mod.ident = mod_id( "test_third_party_mod#dda" );
+    virtual_mod.path = PATH_INFO::moddir() / "test_third_party_mod";
+
     test_mode = false;
     CHECK_FALSE( is_unexpected_builtin_mod( builtin_mod ) );
     CHECK( is_unexpected_builtin_mod( third_party_mod ) );
     CHECK_FALSE( is_unexpected_builtin_mod( user_mod ) );
+    CHECK_FALSE( is_unexpected_builtin_mod( virtual_mod ) );
 
     test_mode = true;
     CHECK_FALSE( is_unexpected_builtin_mod( third_party_mod ) );
