@@ -98,7 +98,7 @@ execute_process(
                 --output ${BUILTIN_MODS_HEADER}
         RESULT_VARIABLE BUILTIN_MODS_RESULT
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-if (NOT BUILTIN_MODS_RESULT EQUAL 0)
+if (NOT BUILTIN_MODS_RESULT STREQUAL "0")
     message(FATAL_ERROR "Failed to generate the built-in mod manifest")
 endif()
 add_custom_command(
