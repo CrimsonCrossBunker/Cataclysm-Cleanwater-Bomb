@@ -576,7 +576,7 @@ ifeq ($(PCH), 1)
   endif
 endif
 
-CPPFLAGS += -Isrc -isystem ${SRC_DIR}/third-party -isystem ${SRC_DIR}/third-party/asio/asio/include $(DEFINES)
+CPPFLAGS += -Isrc -I$(ODIR) -isystem ${SRC_DIR}/third-party -isystem ${SRC_DIR}/third-party/asio/asio/include $(DEFINES)
 CXXFLAGS += $(WARNINGS) $(DEBUG) $(DEBUGSYMS) $(PROFILE) $(OTHERS)
 TOOL_CXXFLAGS = -DCATA_IN_TOOL
 DEFINES += -DZSTD_STATIC_LINKING_ONLY -DZSTD_DISABLE_ASM -DFMT_USE_LOCALE=0
@@ -1424,6 +1424,15 @@ $(ODIR)/resource.o: data/cataicon.ico data/application_manifest.xml
 src/version.h: version
 
 src/version.cpp: src/version.h
+
+BUILTIN_MODS_HEADER := $(ODIR)/builtin_mods.h
+BUILTIN_MODINFO := $(shell find data/mods -type f -name modinfo.json)
+
+$(BUILTIN_MODS_HEADER): tools/generate_builtin_mods.py $(BUILTIN_MODINFO)
+	mkdir -p $(dir $@)
+	python3 tools/generate_builtin_mods.py --source data/mods --output $@
+
+$(ODIR)/mod_manager.o: $(BUILTIN_MODS_HEADER)
 
 TEST_MO := data/mods/TEST_DATA/lang/mo/ru/LC_MESSAGES/TEST_DATA.mo
 
