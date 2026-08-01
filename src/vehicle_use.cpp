@@ -2852,8 +2852,13 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .on_submit( [this, dw_idx, here] { use_mws( *here, dw_idx ); } );
     }
     const std::optional<vpart_reference> vp_auto_cooker = [&]() -> std::optional<vpart_reference> {
-        for( const vpart_reference &vpr : vp.vehicle().get_all_parts() ) {
-            if( vpr.info().auto_process.has_value() ) {
+        // Match the avail_part_with_feature() semantics used by the other
+        // appliance toggles below: only an available part at the interaction
+        // mount point can be switched.  Broken parts must not be activatable.
+        const vehicle &veh = vp.vehicle();
+        for( const vpart_reference &vpr : veh.get_all_parts() ) {
+            if( vpr.info().auto_process.has_value() && vpr.part().is_available() &&
+                vpr.mount_pos() == vp.mount_pos() ) {
                 return vpr;
             }
         }

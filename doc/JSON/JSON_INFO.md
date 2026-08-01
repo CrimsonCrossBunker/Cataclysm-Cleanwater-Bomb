@@ -2807,10 +2807,18 @@ Vehicle components when installed on a vehicle.
                               // its cargo (see "auto_process" in ITEM.md).
                               // Each turn processes at most ONE item (put items in different parts
                               // to process multiple simultaneously).
+                              // While the vehicle is off-map, processing and power draw are
+                              // settled in one catch-up pass when it is processed again; on-map
+                              // vehicles are advanced every turn.  Catch-up discharges each
+                              // station only for the energy actually injected into its cargo
+                              // (a station whose cargo finished early switches off), while
+                              // other enabled drains (e.g. fridges) draw for the full span.
+                              // Grid-connected off-map vehicles (linked by jumper cables) are
+                              // drained every turn but gain NO processing progress.
   "actions": [ "COOK" ],      // Action types this station can perform (matched against item rules)
-  "energy_mult": 1.0,         // (Optional, default 1.0) Multiplier applied to item energy costs
+  "energy_mult": 1.0,         // (Optional, default 1.0) Multiplier applied to item energy costs; must be > 0
   "completion_eoc": "eoc_id", // (Optional) EOC activated on the vehicle when a transformation completes
-  "advance_eoc": "eoc_id"     // (Optional) EOC activated on the vehicle each turn while processing
+  "advance_eoc": "eoc_id"     // (Optional) EOC activated on the vehicle each turn while processing (on-map turns only, never during off-map catch-up)
 },
 "item": "wheel",              // The item used to install this part, and the item obtained when
                               // removing this part.

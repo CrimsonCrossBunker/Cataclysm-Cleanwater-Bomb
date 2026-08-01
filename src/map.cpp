@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <climits>
+#include <charconv>
 #include <cmath>
 #include <cstdlib>
 #include <optional>
@@ -6963,8 +6964,8 @@ static void process_vehicle_items( vehicle &cur_veh, int part )
     vehicle_part &vp = cur_veh.part( part );
     const vpart_info &vpi = vp.info();
 
-    const bool auto_cooker_here = vpi.auto_process.has_value() && vp.enabled;
-    if( auto_cooker_here ) {
+    const bool auto_process_here = vpi.auto_process.has_value() && vp.enabled;
+    if( auto_process_here ) {
         process_auto_process_veh_part( cur_veh, part, here );
     }
 
@@ -13036,12 +13037,27 @@ const furn_str_id &drawsq_params::furniture_override() const
     return furn_override;
 }
 
-static int auto_process_target_joules( const item &it, const auto_process_rule &rule,
-                                       const auto_process_station &station )
+static int64_t auto_process_target_joules( const item &it, const auto_process_rule &rule,
+        const auto_process_station &station )
 {
     // count_by_charges items (e.g. a stack of meat) need energy per charge.
-    const int count = it.count_by_charges() ? it.charges : 1;
-    return units::to_joule<int>( rule.energy_cost * station.energy_mult ) * count;
+    // int64_t: large charge stacks times a big energy cost overflow 32 bits.
+    const int64_t count = it.count_by_charges() ? it.charges : 1;
+    return units::to_joule<int64_t>( rule.energy_cost * station.energy_mult ) * count;
+}
+
+static int64_t auto_process_get_progress( const item &it, const std::string &var_name )
+{
+    // Progress vars travel through saves and can be written by EOC math, so
+    // treat unparsable values as no progress instead of throwing.
+    const std::string raw = it.get_var( var_name, "0" );
+    int64_t value = 0;
+    const std::from_chars_result res = std::from_chars( raw.data(), raw.data() + raw.size(),
+                                        value );
+    if( res.ec != std::errc() ) {
+        return 0;
+    }
+    return value;
 }
 
 std::vector<item> map::finish_auto_process_furniture_item( item &it,
@@ -13082,6 +13098,13 @@ std::vector<item> map::finish_auto_process_furniture_item( item &it,
             first.set_var( "auto_process_" + other.action, other_var );
         }
     }
+    // Anything stored inside the processed item would be silently destroyed by
+    // the replacement below; spill it out so the caller can place it instead.
+    for( item &content : it.remove_items_with( []( const item & ) {
+    return true;
+} ) ) {
+        extras.emplace_back( std::move( content ) );
+    }
     it = first;
     for( size_t ri = 1; ri < rule.results.size(); ri++ ) {
         item extra( rule.results[ri], calendar::turn );
@@ -13090,11 +13113,47 @@ std::vector<item> map::finish_auto_process_furniture_item( item &it,
         }
         extras.emplace_back( std::move( extra ) );
     }
-    // EOC hooks on completion
+    // The replacement above changed a nested item's parent container derived
+    // state; refresh it.
+    map_stack items = i_at( p );
+    for( item &top : items ) {
+        if( &top == &it ) {
+            break;
+        }
+        item *parent = top.find_parent( it );
+        if( parent != nullptr ) {
+            parent->on_contents_changed();
+            break;
+        }
+    }
+    return extras;
+}
+
+void map::fire_auto_process_completion_eocs( item &it, const auto_process_rule &rule,
+        const auto_process_station &station, const tripoint_bub_ms &p )
+{
+    // EOC hooks on completion.  Kept separate from
+    // finish_auto_process_furniture_item() so catch-up can defer them until
+    // no tile-stack pointers are in use: an EOC may mutate items or furniture.
     if( rule.completion_eoc.is_valid() ) {
-        item_location loc( map_cursor( get_abs( p ) ), &it );
-        dialogue d( get_talker_for( loc ), nullptr );
-        rule.completion_eoc->activate( d );
+        bool top_level = false;
+        map_stack items = i_at( p );
+        for( item &top : items ) {
+            if( &top == &it ) {
+                top_level = true;
+                break;
+            }
+        }
+        if( top_level ) {
+            item_location loc( map_cursor( get_abs( p ) ), &it );
+            dialogue d( get_talker_for( loc ), nullptr );
+            rule.completion_eoc->activate( d );
+        } else {
+            // item_location on a map cursor only supports top-level items;
+            // nested items get no item talker (documented in auto_process.h).
+            dialogue d( nullptr, nullptr );
+            rule.completion_eoc->activate( d );
+        }
     }
     if( station.completion_eoc.is_valid() ) {
         // No talker available for furniture — nullptr is intentional.
@@ -13102,7 +13161,6 @@ std::vector<item> map::finish_auto_process_furniture_item( item &it,
         dialogue d( nullptr, nullptr );
         station.completion_eoc->activate( d );
     }
-    return extras;
 }
 
 void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
@@ -13123,8 +13181,8 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
     struct pending_item {
         item *it;
         const auto_process_rule *rule;
-        int target_j;
-        int energy_done;
+        int64_t target_j;
+        int64_t energy_done;
     };
     std::vector<pending_item> pending;
     pending.reserve( 64 );
@@ -13134,11 +13192,13 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
             if( st.actions.count( rule.action ) == 0 ) {
                 continue;
             }
-            const int target_j = auto_process_target_joules( it, rule, st );
-            const int done = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
+            const int64_t target_j = auto_process_target_joules( it, rule, st );
+            const int64_t done = auto_process_get_progress( it, "auto_process_" + rule.action );
             if( done < target_j ) {
                 pending.push_back( { &it, &rule, target_j, done } );
-                break;
+                // Contents of a matched item are spilled as extras when it
+                // finishes; never track them separately (they would dangle).
+                return;
             }
         }
         for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
@@ -13157,21 +13217,24 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
         return;
     }
 
-    // Cap the pool at the total remaining demand: avoids int overflow in
-    // roll_remainder for long off-map spans and skips computing unused energy.
+    // Cap the pool at the total remaining demand: avoids int overflow for
+    // long off-map spans and skips computing unused energy.
     int64_t total_needed = 0;
     for( const pending_item &pi : pending ) {
         total_needed += pi.target_j - pi.energy_done;
     }
     const double raw_j = units::to_millijoule( station.power * elapsed ) / 1000.0;
-    int energy_remaining = roll_remainder( std::min( raw_j, static_cast<double>( total_needed ) ) );
+    int64_t energy_remaining = std::min( static_cast<int64_t>( raw_j ), total_needed );
 
-    // Completed extras are collected and placed only after the loop: placing them inside the
-    // loop could reallocate the tile stack and invalidate the remaining pending item pointers.
+    // Completed extras are placed and completion EOCs fired only after the
+    // loop: placing inside the loop could reallocate the tile stack, and an
+    // EOC may mutate items or furniture — both would invalidate the remaining
+    // pending item pointers.
     std::vector<item> extras_to_place;
+    std::vector<std::pair<item *, const auto_process_rule *>> completions;
     for( pending_item &pi : pending ) {
-        const int needed = pi.target_j - pi.energy_done;
-        const int applied = std::min( needed, energy_remaining );
+        const int64_t needed = pi.target_j - pi.energy_done;
+        const int64_t applied = std::min( needed, energy_remaining );
         pi.energy_done += applied;
         energy_remaining -= applied;
 
@@ -13180,6 +13243,7 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
             std::vector<item> extras = finish_auto_process_furniture_item( *pi.it, *pi.rule,
                     station, p );
             extras_to_place.insert( extras_to_place.end(), extras.begin(), extras.end() );
+            completions.emplace_back( pi.it, pi.rule );
         }
         if( energy_remaining <= 0 ) {
             break;
@@ -13188,13 +13252,19 @@ void map::catch_up_auto_process_furniture( const tripoint_bub_ms &p,
     for( item &extra : extras_to_place ) {
         add_item_or_charges( p, extra );
     }
+    for( const std::pair<item *, const auto_process_rule *> &completion : completions ) {
+        fire_auto_process_completion_eocs( *completion.first, *completion.second, station, p );
+    }
 }
 
 void map::process_auto_process_furniture()
 {
     for( auto tile_it = auto_process_tiles.begin(); tile_it != auto_process_tiles.end(); ) {
-        const tripoint_bub_ms &p = *tile_it;
-        const furn_id &furn = this->furn( p );
+        // Copy p out: completion EOCs may call furn_set(), which erases the
+        // tile from auto_process_tiles and invalidates tile_it.  We re-locate
+        // with upper_bound() below instead of ++tile_it.
+        const tripoint_bub_ms p = *tile_it;
+        const furn_id furn = this->furn( p );
         if( furn == furn_str_id::NULL_ID() ) {
             tile_it = auto_process_tiles.erase( tile_it );
             continue;
@@ -13222,8 +13292,9 @@ void map::process_auto_process_furniture()
                 if( station.actions.count( candidate.action ) == 0 ) {
                     continue;
                 }
-                const int target_j = auto_process_target_joules( it, candidate, station );
-                const int done = std::stoi( it.get_var( "auto_process_" + candidate.action, "0" ) );
+                const int64_t target_j = auto_process_target_joules( it, candidate, station );
+                const int64_t done = auto_process_get_progress( it,
+                                     "auto_process_" + candidate.action );
                 if( done < target_j ) {
                     current = &it;
                     rule = &candidate;
@@ -13249,10 +13320,11 @@ void map::process_auto_process_furniture()
         }
 
         if( current != nullptr ) {
-            const int target_j = auto_process_target_joules( *current, *rule, station );
+            const int64_t target_j = auto_process_target_joules( *current, *rule, station );
             const std::string var_name = "auto_process_" + rule->action;
-            int energy_done = std::stoi( current->get_var( var_name, "0" ) );
-            energy_done += std::min( energy_per_turn_j, target_j - energy_done );
+            int64_t energy_done = auto_process_get_progress( *current, var_name );
+            energy_done += std::min( static_cast<int64_t>( energy_per_turn_j ),
+                                     target_j - energy_done );
             current->set_var( var_name, std::to_string( energy_done ) );
             // Station-level advance EOC: fired each turn while processing is in progress.
             // No talker available for furniture — nullptr is intentional.
@@ -13266,8 +13338,11 @@ void map::process_auto_process_furniture()
                 for( item &extra : extras ) {
                     add_item_or_charges( p, extra );
                 }
+                fire_auto_process_completion_eocs( *current, *rule, station, p );
             }
         }
-        ++tile_it;
+        // Re-locate the iterator instead of ++tile_it: an EOC may have removed
+        // this tile from auto_process_tiles via furn_set(), invalidating it.
+        tile_it = auto_process_tiles.upper_bound( p );
     }
 }

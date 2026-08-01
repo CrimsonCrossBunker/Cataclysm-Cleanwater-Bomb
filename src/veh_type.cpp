@@ -917,6 +917,9 @@ void vpart_info::check() const
         debugmsg( "vehicle part %s has auto_process but lacks ENABLED_DRAINS_EPOWER: "
                   "it will not drain power at runtime", id.str() );
     }
+    if( auto_process.has_value() && auto_process->energy_mult <= 0.0 ) {
+        debugmsg( "vehicle part %s auto_process energy_mult must be > 0", id.str() );
+    }
     if( dmg_mod < 0 ) {
         debugmsg( "vehicle part %s has negative damage modifier", id.str() );
     }

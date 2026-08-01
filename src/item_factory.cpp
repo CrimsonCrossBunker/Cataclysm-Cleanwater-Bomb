@@ -2356,9 +2356,16 @@ void Item_factory::check_definitions() const
             msg +=  "item has unknown ascii_picture.";
         }
 
+        std::unordered_set<std::string> auto_process_actions;
         for( const auto_process_rule &rule : type->auto_process ) {
             if( rule.results.empty() ) {
                 msg += "auto_process rule has empty results\n";
+            }
+            if( rule.energy_cost <= 0_J ) {
+                msg += "auto_process rule has non-positive energy cost\n";
+            }
+            if( !auto_process_actions.insert( rule.action ).second ) {
+                msg += string_format( "duplicate auto_process action %s\n", rule.action );
             }
             for( const itype_id &result : rule.results ) {
                 if( !has_template( result ) ) {
@@ -4627,6 +4634,11 @@ void itype::load( const JsonObject &jo, std::string_view src )
             optional( jobj, was_loaded, "energy", rule.energy_cost,
                       units_bound_reader<units::energy> {0_kJ}, 0_J );
             mandatory( jobj, was_loaded, "results", rule.results );
+            if( rule.results.empty() ) {
+                // Empty results would replace the item with a "null" ghost at
+                // runtime; there is no legitimate use for it.
+                jobj.throw_error( "auto_process rule results must not be empty" );
+            }
             optional( jobj, was_loaded, "completion_eoc", rule.completion_eoc );
             auto_process.push_back( rule );
         }

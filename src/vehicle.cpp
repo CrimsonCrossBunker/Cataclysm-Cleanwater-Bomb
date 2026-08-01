@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
+#include <climits>
 #include <cmath>
 #include <complex>
 #include <cstdint>
@@ -387,6 +389,7 @@ void vehicle::init_state( map &placed_on, int init_veh_fuel, veh_spawn_status in
 
     // More realistically it should be -5 days old
     last_update = calendar::turn_zero;
+    last_auto_process_update = calendar::turn_zero;
 
     if( get_option<bool>( "OVERRIDE_VEHICLE_INIT_STATE" ) ) {
         if( !force_status ) {
@@ -6336,9 +6339,18 @@ void vehicle::idle( map &here, bool on_map )
     smart_controller_handle_turn( here );
 
     if( !on_map ) {
+        // power_parts() above settles accessory drain every turn for
+        // grid-connected off-map vehicles; mark the turn as covered so
+        // update_time() does not discharge the same span again when the
+        // vehicle is loaded back.  Off-map vehicles gain no processing
+        // progress (same as upstream fridges).
+        last_auto_process_update = calendar::turn;
         return;
     } else {
         update_time( here, calendar::turn );
+        // power_parts() settles accessory drain every on-map turn; mark it as
+        // covered so update_time() only discharges genuine off-map spans.
+        last_auto_process_update = calendar::turn;
     }
 
     // Parts emitting fields
@@ -8484,6 +8496,7 @@ bool vehicle::restore_folded_parts( const item &it )
     precalc_mounts( 0, pivot_rotation[0], pivot_anchor[0] );
     precalc_mounts( 1, pivot_rotation[1], pivot_anchor[1] );
     last_update = calendar::turn;
+    last_auto_process_update = calendar::turn;
     return true;
 }
 
@@ -8666,12 +8679,27 @@ static bool is_sm_tile_outside( const tripoint_abs_ms &real_global_pos )
               sm->get_furn( p ).obj().has_flag( ter_furn_flag::TFLAG_INDOORS ) );
 }
 
-static int auto_process_target_joules( const item &it, const auto_process_rule &rule,
-                                       const auto_process_station &station )
+static int64_t auto_process_target_joules( const item &it, const auto_process_rule &rule,
+        const auto_process_station &station )
 {
     // count_by_charges items (e.g. a stack of meat) need energy per charge.
-    const int count = it.count_by_charges() ? it.charges : 1;
-    return units::to_joule<int>( rule.energy_cost * station.energy_mult ) * count;
+    // int64_t: large charge stacks times a big energy cost overflow 32 bits.
+    const int64_t count = it.count_by_charges() ? it.charges : 1;
+    return units::to_joule<int64_t>( rule.energy_cost * station.energy_mult ) * count;
+}
+
+static int64_t auto_process_get_progress( const item &it, const std::string &var_name )
+{
+    // Progress vars travel through saves and can be written by EOC math, so
+    // treat unparsable values as no progress instead of throwing.
+    const std::string raw = it.get_var( var_name, "0" );
+    int64_t value = 0;
+    const std::from_chars_result res = std::from_chars( raw.data(), raw.data() + raw.size(),
+                                        value );
+    if( res.ec != std::errc() ) {
+        return 0;
+    }
+    return value;
 }
 
 std::pair<item *, const auto_process_rule *> vehicle::find_auto_process_item( item &it,
@@ -8684,8 +8712,8 @@ std::pair<item *, const auto_process_rule *> vehicle::find_auto_process_item( it
         if( station.actions.count( rule.action ) == 0 ) {
             continue;
         }
-        const int target_j = auto_process_target_joules( it, rule, station );
-        const int done_j = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
+        const int64_t target_j = auto_process_target_joules( it, rule, station );
+        const int64_t done_j = auto_process_get_progress( it, "auto_process_" + rule.action );
         if( done_j < target_j ) {
             return { &it, &rule };
         }
@@ -8743,6 +8771,14 @@ std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_proces
         }
     }
 
+    // Anything stored inside the processed item would be silently destroyed by
+    // the replacement below; spill it out so the caller can place it instead.
+    for( item &content : it.remove_items_with( []( const item & ) {
+    return true;
+} ) ) {
+        extras.emplace_back( std::move( content ) );
+    }
+
     it = first_result;
 
     // Extra results are returned to the caller to place in the same cargo
@@ -8754,7 +8790,29 @@ std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_proces
         }
     }
 
-    // EOC hooks on completion
+    // The replacement above changed the cargo weight and, for nested items,
+    // the parent container's derived state; refresh both.
+    invalidate_mass();
+    vehicle_stack items = get_items( parts[part] );
+    for( item &top : items ) {
+        if( &top == &it ) {
+            break;
+        }
+        item *parent = top.find_parent( it );
+        if( parent != nullptr ) {
+            parent->on_contents_changed();
+            break;
+        }
+    }
+    return extras;
+}
+
+void vehicle::fire_auto_process_completion_eocs( item &it, const auto_process_rule &rule,
+        const auto_process_station &station, int part )
+{
+    // EOC hooks on completion.  Kept separate from finish_auto_process_item()
+    // so off-map catch-up can defer them until no cargo pointers are in use:
+    // an EOC may mutate cargo, parts or the map.
     if( rule.completion_eoc.is_valid() ) {
         item_location loc( vehicle_cursor( *this, part ), &it );
         dialogue d( get_talker_for( loc ), nullptr );
@@ -8764,19 +8822,18 @@ std::vector<item> vehicle::finish_auto_process_item( item &it, const auto_proces
         dialogue d( get_talker_for( *this ), nullptr );
         station.completion_eoc->activate( d );
     }
-    return extras;
 }
 
 std::vector<item> vehicle::advance_auto_process_item( item &it, const auto_process_rule &rule,
         int energy_per_turn_j, const auto_process_station &station, int part )
 {
-    const int target_j = auto_process_target_joules( it, rule, station );
+    const int64_t target_j = auto_process_target_joules( it, rule, station );
     const std::string var_name = "auto_process_" + rule.action;
 
-    int energy_done = std::stoi( it.get_var( var_name, "0" ) );
-    const int energy_remaining = target_j - energy_done;
+    int64_t energy_done = auto_process_get_progress( it, var_name );
+    const int64_t energy_remaining = target_j - energy_done;
     if( energy_remaining > 0 ) {
-        energy_done += std::min( energy_per_turn_j, energy_remaining );
+        energy_done += std::min( static_cast<int64_t>( energy_per_turn_j ), energy_remaining );
     }
 
     it.set_var( var_name, std::to_string( energy_done ) );
@@ -8788,7 +8845,9 @@ std::vector<item> vehicle::advance_auto_process_item( item &it, const auto_proce
     }
 
     if( energy_done >= target_j ) {
-        return finish_auto_process_item( it, rule, station, part );
+        std::vector<item> extras = finish_auto_process_item( it, rule, station, part );
+        fire_auto_process_completion_eocs( it, rule, station, part );
+        return extras;
     }
     return {};
 }
@@ -8799,6 +8858,9 @@ void vehicle::process_auto_process_part( map &here, int p )
     if( !vp.info().auto_process ) {
         return;
     }
+    // This per-turn processing covers the current turn, so update_time()'s
+    // catch-up won't re-settle it.
+    last_auto_process_update = calendar::turn;
     const auto_process_station &station = *vp.info().auto_process;
     vehicle_stack items = get_items( vp );
     item *current = nullptr;
@@ -8854,8 +8916,8 @@ void vehicle::catch_up_auto_process( map &here, int p, const time_duration &elap
     struct pending_item {
         item *it;
         const auto_process_rule *rule;
-        int target_j;
-        int energy_done;
+        int64_t target_j;
+        int64_t energy_done;
     };
     std::vector<pending_item> pending;
     pending.reserve( 64 );
@@ -8865,11 +8927,13 @@ void vehicle::catch_up_auto_process( map &here, int p, const time_duration &elap
             if( st.actions.count( rule.action ) == 0 ) {
                 continue;
             }
-            const int target_j = auto_process_target_joules( it, rule, st );
-            const int done = std::stoi( it.get_var( "auto_process_" + rule.action, "0" ) );
+            const int64_t target_j = auto_process_target_joules( it, rule, st );
+            const int64_t done = auto_process_get_progress( it, "auto_process_" + rule.action );
             if( done < target_j ) {
                 pending.push_back( { &it, &rule, target_j, done } );
-                break; // one pending entry per item
+                // Contents of a matched item are spilled as extras when it
+                // finishes; never track them separately (they would dangle).
+                return;
             }
         }
         for( item *content : it.all_items_top( pocket_type::CONTAINER ) ) {
@@ -8889,33 +8953,69 @@ void vehicle::catch_up_auto_process( map &here, int p, const time_duration &elap
         return;
     }
 
-    // Cap the pool at the total remaining demand: avoids int overflow in
-    // roll_remainder for long off-map spans and skips computing unused energy.
+    // The station draws only the energy it can actually inject into its cargo:
+    // on-map it switches off as soon as everything is finished, so discharging
+    // it for the whole off-map span would evaporate the surplus.
     int64_t total_needed = 0;
     for( const pending_item &pi : pending ) {
         total_needed += pi.target_j - pi.energy_done;
     }
     const double raw_j = units::to_millijoule( cook_power * elapsed ) / 1000.0;
-    int energy_remaining = roll_remainder( std::min( raw_j, static_cast<double>( total_needed ) ) );
+    const int64_t want_j = std::min( static_cast<int64_t>( raw_j ), total_needed );
+    const int want_bat = static_cast<int>( std::min( std::ceil( want_j / 1000.0 ),
+                         static_cast<double>( INT_MAX ) ) );
+    const int deficit = discharge_battery( here, want_bat );
+    int64_t energy_remaining = want_j;
+    if( deficit > 0 ) {
+        // Battery ran dry partway through the span: settle only the covered
+        // fraction, matching on-map semantics where processing continues
+        // until the power dies, then disables the station.
+        energy_remaining = std::max( static_cast<int64_t>( 0 ), want_j - deficit * 1000LL );
+        vp.enabled = false;
+        vp.power_disabled = true;
+    }
 
-    for( pending_item &pi : pending ) {
-        const int needed = pi.target_j - pi.energy_done;
-        const int applied = std::min( needed, energy_remaining );
+    // Two phases: transform items and collect extras/completions inside the
+    // loop (in-place replacement never touches the cargo stack, so pending
+    // pointers stay valid), then place extras and fire completion EOCs
+    // afterwards, when no pending pointers are in use anymore.
+    std::vector<item> extras_to_place;
+    std::vector<std::pair<item *, const auto_process_rule *>> completions;
+    bool all_done = true;
+    for( size_t i = 0; i < pending.size(); i++ ) {
+        pending_item &pi = pending[i];
+        const int64_t needed = pi.target_j - pi.energy_done;
+        const int64_t applied = std::min( needed, energy_remaining );
         pi.energy_done += applied;
         energy_remaining -= applied;
 
         pi.it->set_var( "auto_process_" + pi.rule->action, std::to_string( pi.energy_done ) );
         if( pi.energy_done >= pi.target_j ) {
             std::vector<item> extras = finish_auto_process_item( *pi.it, *pi.rule, station, p );
-            for( item &extra : extras ) {
-                if( !add_item( here, vp, extra ) ) {
-                    here.add_item_or_charges( bub_part_pos( here, p ), extra );
-                }
-            }
+            extras_to_place.insert( extras_to_place.end(), extras.begin(), extras.end() );
+            completions.emplace_back( pi.it, pi.rule );
+        } else {
+            all_done = false;
         }
-        if( energy_remaining <= 0 ) {
+        if( energy_remaining <= 0 && i + 1 < pending.size() ) {
+            all_done = false;
             break;
         }
+    }
+    if( all_done ) {
+        // Everything in the cargo is finished; switch off like the on-map path.
+        vp.enabled = false;
+    }
+
+    for( item &extra : extras_to_place ) {
+        if( !add_item( here, vp, extra ) ) {
+            here.add_item_or_charges( bub_part_pos( here, p ), extra );
+        }
+    }
+    // Fire completion EOCs last: they may mutate cargo, parts or the map, so
+    // nothing above may hold references across them.
+    for( const std::pair<item *, const auto_process_rule *> &completion : completions ) {
+        fire_auto_process_completion_eocs( *completion.first, *completion.second, station, p );
     }
 }
 
@@ -8926,6 +9026,54 @@ void vehicle::update_time( map &here, const time_point &update_to )
         // Special case going backwards in time - that happens
         last_update = update_to;
         return;
+    }
+
+    // Catch up auto-process stations that were running while the vehicle was
+    // off-map.  Only settle time not already covered by per-turn processing
+    // (see last_auto_process_update): on-map vehicles are advanced every turn
+    // by process_auto_process_part() and drained by power_parts(), and idle()
+    // marks every processed turn as covered, so ap_elapsed spans genuine
+    // off-grid off-map time only.  This is independent of weather, so it also
+    // runs for underground vehicles (matching furniture stations).
+    const time_duration ap_elapsed = update_to - last_auto_process_update;
+    last_auto_process_update = update_to;
+    if( ap_elapsed >= 1_minutes ) {
+        // Non-station accessory drains (fridges etc.) are discharged for the
+        // full span, matching on-map power_parts() semantics; each station
+        // discharges only the energy it actually injects into its cargo
+        // (see catch_up_auto_process).
+        std::vector<int> station_parts;
+        units::power station_power = 0_W;
+        for( const vpart_reference &vp : get_all_parts() ) {
+            if( vp.info().auto_process.has_value() && vp.part().enabled ) {
+                station_power += part_epower( vp.part() );
+                station_parts.push_back( vp.part_index() );
+            }
+        }
+        const units::power standby_power = total_accessory_epower() - station_power;
+        if( standby_power < 0_W ) {
+            const int standby_energy = std::abs( power_to_energy_bat( standby_power,
+                                                 ap_elapsed ) );
+            const int standby_deficit = discharge_battery( here, standby_energy );
+            if( standby_deficit > 0 ) {
+                for( const vpart_reference &drain_vp : get_enabled_parts(
+                         VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
+                    vehicle_part &pt = drain_vp.part();
+                    if( pt.info().epower < 0_W ) {
+                        pt.enabled = false;
+                        pt.power_disabled = true;
+                    }
+                }
+            }
+        }
+        // Re-validate indices inside the loop: completion EOCs fired during
+        // catch-up may add or remove parts and invalidate earlier references.
+        for( const int sp : station_parts ) {
+            if( sp < static_cast<int>( parts.size() ) && parts[sp].enabled &&
+                parts[sp].info().auto_process ) {
+                catch_up_auto_process( here, sp, ap_elapsed );
+            }
+        }
     }
 
     if( sm_pos.z() < 0 ) {
@@ -9023,37 +9171,6 @@ void vehicle::update_time( map &here, const time_point &update_to )
             if( energy_bat > 0 ) {
                 add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from water wheels", name, energy_bat );
                 charge_battery( here, energy_bat );
-            }
-        }
-    }
-
-    // Catch up auto-process stations that were running while the vehicle was off-map.
-    // Discharge battery for auto-process parts only (not all accessories like fridges).
-    bool can_auto_process = true;
-    units::power standby_power = 0_W;
-    for( const vpart_reference &vp : get_all_parts() ) {
-        if( vp.info().auto_process.has_value() && vp.part().enabled ) {
-            standby_power += part_epower( vp.part() );
-        }
-    }
-    if( standby_power < 0_W ) {
-        const int standby_energy = std::abs( power_to_energy_bat( standby_power, elapsed ) );
-        const int standby_deficit = discharge_battery( here, standby_energy );
-        if( standby_deficit > 0 ) {
-            for( const vpart_reference &drain_vp : get_enabled_parts( VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
-                vehicle_part &pt = drain_vp.part();
-                if( pt.info().epower < 0_W ) {
-                    pt.enabled = false;
-                    pt.power_disabled = true;
-                }
-            }
-            can_auto_process = false;
-        }
-    }
-    if( can_auto_process ) {
-        for( const vpart_reference &vp : get_all_parts() ) {
-            if( vp.info().auto_process.has_value() && vp.part().enabled ) {
-                catch_up_auto_process( here, vp.part_index(), elapsed );
             }
         }
     }

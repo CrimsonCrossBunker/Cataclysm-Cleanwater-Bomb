@@ -1807,8 +1807,10 @@ void furn_t::check() const
         if( auto_process->energy_mult <= 0.0 ) {
             debugmsg( "furniture %s auto_process energy_mult must be > 0", id.c_str() );
         }
-        if( auto_process->power < 0_W ) {
-            debugmsg( "furniture %s auto_process power must be >= 0", id.c_str() );
+        if( auto_process->power <= 0_W ) {
+            // power is the only energy source of a furniture station;
+            // zero means a silently dead station.
+            debugmsg( "furniture %s auto_process power must be > 0", id.c_str() );
         }
     }
 }
