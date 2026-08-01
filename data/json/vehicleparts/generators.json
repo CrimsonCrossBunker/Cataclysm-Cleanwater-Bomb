@@ -3,7 +3,7 @@
     "type": "vehicle_part",
     "id": "veh_portable_generator",
     "copy-from": "ap_portable_generator",
-    "name": { "str": "vehicle-mounted portable gasoline generator" },
+    "name": { "str": "portable gasoline generator" },
     "description": "A small portable generator, normally used for camping.  This generator is installed in a vehicle.",
     "delete": {
       "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
@@ -31,7 +31,7 @@
     "type": "vehicle_part",
     "id": "veh_diesel_generator",
     "copy-from": "ap_diesel_generator",
-    "name": { "str": "vehicle-mounted diesel generator" },
+    "name": { "str": "diesel generator" },
     "description": "A powerful, large generator primarily used for street construction.  This generator is installed in a vehicle.",
     "delete": {
       "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
@@ -54,7 +54,7 @@
     "type": "vehicle_part",
     "id": "veh_military_generator",
     "copy-from": "ap_military_generator",
-    "name": { "str": "vehicle-mounted military diesel generator" },
+    "name": { "str": "military diesel generator" },
     "description": "A powerful, large generator with a camouflage-painted casing.  This generator is installed in a vehicle.",
     "delete": {
       "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
@@ -77,7 +77,7 @@
     "type": "vehicle_part",
     "id": "veh_12000_gasoline_generator",
     "copy-from": "ap_12000_gasoline_generator",
-    "name": { "str": "vehicle-mounted high-output gasoline generator" },
+    "name": { "str": "high-output gasoline generator" },
     "description": "A 12,000-watt gasoline generator that remains relatively portable while providing enough power for an entire house.  This generator is installed in a vehicle.",
     "delete": {
       "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
