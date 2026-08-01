@@ -8858,9 +8858,12 @@ void vehicle::process_auto_process_part( map &here, int p )
     if( !vp.info().auto_process ) {
         return;
     }
-    // This per-turn processing covers the current turn, so update_time()'s
-    // catch-up won't re-settle it.
-    last_auto_process_update = calendar::turn;
+    // Deliberately no last_auto_process_update stamp here: this function also
+    // runs from map::actualize() when the vehicle is loaded back into the
+    // reality bubble, and stamping the current turn there would make
+    // update_time() compute a zero ap_elapsed and drop the catch-up for the
+    // whole off-map span.  Covered turns are marked by idle() and update_time()
+    // instead.
     const auto_process_station &station = *vp.info().auto_process;
     vehicle_stack items = get_items( vp );
     item *current = nullptr;
