@@ -15127,86 +15127,96 @@ void zone_sort_activity_actor::deliver_picked_items( Character &you,
     while( dest_iter != dropoff_coords.end() ) {
         const tripoint_abs_ms drop_dest = *dest_iter;
         const tripoint_bub_ms drop_bub = here.get_bub( drop_dest );
-        if( here.inbounds( drop_bub ) && !here.is_open_air( drop_bub ) &&
-            ( square_dist( abspos, drop_dest ) <= 1 ||
-              zone_sorting::route_length( you, drop_bub ) != INT_MAX ) ) {
-            auto iter = picked_up_stuff.begin();
-            // Item locations can be invalidated by inventory restacking / charge-merging
-            // between pickup and delivery. Purge stale entries and continue with what remains.
-            auto stale = std::remove_if( picked_up_stuff.begin(), picked_up_stuff.end(),
-            []( const item_location & loc ) {
-                return !loc.get_item();
-            } );
-            if( stale != picked_up_stuff.end() ) {
-                add_msg_debug( debugmode::DF_ACTIVITY,
-                               "zone_sort deliver_picked_items: purged %zu stale item_locations",
-                               static_cast<size_t>( std::distance( stale, picked_up_stuff.end() ) ) );
-                picked_up_stuff.erase( stale, picked_up_stuff.end() );
-            }
-            if( picked_up_stuff.empty() ) {
-                return;
-            }
-            while( iter != picked_up_stuff.end() ) {
-                if( you.get_moves() <= 0 ) { // Ran out of moves dropping stuff
-                    return;
-                }
-
-                // Place item at destination directly. Zone binding
-                // determines the fallback chain: vehicle-only zones skip
-                // ground, everything else tries cargo then ground.
-                const zone_type_id drop_zt = mgr.get_near_zone_type_for_item( **iter,
-                                             drop_dest, 0, fac_id );
-                const bool vehicle_only = drop_zt != zone_type_id::NULL_ID() &&
-                                          mgr.has_vehicle( drop_zt, drop_dest, fac_id ) &&
-                                          !mgr.has_terrain( drop_zt, drop_dest, fac_id );
-                bool placed = false;
-                item copy( **iter );
-                for( const vpart_reference &ovp : zone_sorting::cargo_parts_at( drop_bub ) ) {
-                    if( ovp.vehicle().add_item( here, ovp.part(), copy ) ) {
-                        placed = true;
-                        break;
-                    }
-                }
-                if( !placed && !vehicle_only ) {
-                    item copy( **iter );
-                    item_location ground = here.add_item_or_charges_ret_loc(
-                                               drop_bub, copy, false );
-                    placed = ground.get_item() != nullptr;
-                }
-
-                if( placed ) {
-                    if( square_dist( abspos, drop_dest ) > 1 &&
-                        distance_fee_charged.insert( drop_dest ).second ) {
-                        you.mod_moves( -std::min( 100 * rl_dist( src_bub, drop_bub ), 500 ) );
-                    }
-                    you.mod_moves( -batch_handling_cost( you, **iter ) );
-                    if( const vehicle_cursor *veh_curs = iter->veh_cursor() ) {
-                        vehicle &cart_with_items = veh_curs->veh;
-                        cart_with_items.remove_item( cart_with_items.part( veh_curs->part ), iter->get_item() );
-                    } else if( iter->carrier() ) {
-                        iter->carrier()->i_rem( iter->get_item() );
-                    }
-                    iter = picked_up_stuff.erase( iter );
-                    // dumb. Go through and clear our any now-invalidated item_locations. Then reset iter to the start, to *make sure* we iterate everything.
-                    // Definitely wasteful, but I am not paid enough to figure out a better way.
-                    auto cleanup_iter = picked_up_stuff.begin();
-                    while( cleanup_iter != picked_up_stuff.end() ) {
-                        if( !cleanup_iter->get_item() ) {
-                            cleanup_iter = picked_up_stuff.erase( cleanup_iter );
-                        } else {
-                            cleanup_iter++;
-                        }
-                    }
-                    // Again: Always reset to the start if we dropped stuff.
-                    iter = picked_up_stuff.begin();
-                } else {
-                    iter++; // Failed to drop for some reason?!
-                }
-            }
-            dest_iter = dropoff_coords.erase( dest_iter ); // Done dropping stuff here.
-        } else {
+        if( !here.inbounds( drop_bub ) || here.is_open_air( drop_bub ) ||
+            ( square_dist( abspos, drop_dest ) > 1 &&
+              zone_sorting::route_length( you, drop_bub ) == INT_MAX ) ) {
             dest_iter = dropoff_coords.erase( dest_iter ); // No longer reachable or valid.
+            continue;
         }
+
+        // Item locations can be invalidated by inventory restacking / charge-merging
+        // between pickup and delivery. Purge stale entries once, then deliver.
+        auto stale = std::remove_if( picked_up_stuff.begin(), picked_up_stuff.end(),
+        []( const item_location & loc ) {
+            return !loc.get_item();
+        } );
+        if( stale != picked_up_stuff.end() ) {
+            add_msg_debug( debugmode::DF_ACTIVITY,
+                           "zone_sort deliver_picked_items: purged %zu stale item_locations",
+                           static_cast<size_t>( std::distance( stale, picked_up_stuff.end() ) ) );
+            picked_up_stuff.erase( stale, picked_up_stuff.end() );
+        }
+        if( picked_up_stuff.empty() ) {
+            return;
+        }
+
+        // Deliver the batch. Each item is placed individually because it needs
+        // its own cargo part / capacity check, but handling time is charged
+        // once per destination as a bulk unload instead of per item.
+        units::mass placed_mass = 0_gram;
+        auto iter = picked_up_stuff.begin();
+        while( iter != picked_up_stuff.end() ) {
+            // Skip locations invalidated by an earlier removal in this loop;
+            // their items were merged into other stacks on the carrier.
+            if( !iter->get_item() ) {
+                iter = picked_up_stuff.erase( iter );
+                continue;
+            }
+
+            // Place item at destination directly. Zone binding
+            // determines the fallback chain: vehicle-only zones skip
+            // ground, everything else tries cargo then ground.
+            const zone_type_id drop_zt = mgr.get_near_zone_type_for_item( **iter,
+                                         drop_dest, 0, fac_id );
+            const bool vehicle_only = drop_zt != zone_type_id::NULL_ID() &&
+                                      mgr.has_vehicle( drop_zt, drop_dest, fac_id ) &&
+                                      !mgr.has_terrain( drop_zt, drop_dest, fac_id );
+            bool placed = false;
+            item copy( **iter );
+            for( const vpart_reference &ovp : zone_sorting::cargo_parts_at( drop_bub ) ) {
+                if( ovp.vehicle().add_item( here, ovp.part(), copy ) ) {
+                    placed = true;
+                    break;
+                }
+            }
+            if( !placed && !vehicle_only ) {
+                item copy( **iter );
+                item_location ground = here.add_item_or_charges_ret_loc(
+                                           drop_bub, copy, false );
+                placed = ground.get_item() != nullptr;
+            }
+
+            if( !placed ) {
+                ++iter; // Didn't fit - remaining destinations get a chance at it.
+                continue;
+            }
+            if( square_dist( abspos, drop_dest ) > 1 &&
+                distance_fee_charged.insert( drop_dest ).second ) {
+                you.mod_moves( -std::min( 100 * rl_dist( src_bub, drop_bub ), 500 ) );
+            }
+            placed_mass += ( **iter ).weight();
+            if( const vehicle_cursor *veh_curs = iter->veh_cursor() ) {
+                vehicle &cart_with_items = veh_curs->veh;
+                cart_with_items.remove_item( cart_with_items.part( veh_curs->part ), iter->get_item() );
+            } else if( iter->carrier() ) {
+                iter->carrier()->i_rem( iter->get_item() );
+            }
+            iter = picked_up_stuff.erase( iter );
+        }
+
+        // Single bulk unload cost based on the total weight delivered here,
+        // mirroring the batched drop cost in zone_sorting::unload_item().
+        if( placed_mass > 0_gram ) {
+            int unload_cost = 50;
+            if( you.is_armed() ) {
+                unload_cost += 20;
+            }
+            const int delta = units::to_gram( placed_mass ) - units::to_gram( you.weight_capacity() );
+            unload_cost += std::max( 0, delta / 100 );
+            unload_cost = std::min( 400, unload_cost );
+            you.mod_moves( -std::min( 2 * unload_cost, 500 ) );
+        }
+        dest_iter = dropoff_coords.erase( dest_iter ); // Done dropping stuff here.
     }
 }
 
