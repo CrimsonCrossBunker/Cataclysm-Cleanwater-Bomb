@@ -8,6 +8,8 @@
 #include <ostream>
 #include <queue>
 
+#include "builtin_mods.h"
+#include "cached_options.h"
 #include "cata_utility.h"
 #include "debug.h"
 #include "dependency_tree.h"
@@ -26,6 +28,36 @@ static const mod_id MOD_INFORMATION_dev_default( "dev:default" );
 static const mod_id MOD_INFORMATION_user_default( "user:default" );
 
 static const std::string MOD_SEARCH_FILE( "modinfo.json" );
+
+static bool path_is_within( const std::filesystem::path &path,
+                            const std::filesystem::path &directory )
+{
+    const std::filesystem::path normalized_path = path.lexically_normal();
+    const std::filesystem::path normalized_directory = directory.lexically_normal();
+    auto path_it = normalized_path.begin();
+    auto directory_it = normalized_directory.begin();
+    while( directory_it != normalized_directory.end() ) {
+        if( path_it == normalized_path.end() || *path_it != *directory_it ) {
+            return false;
+        }
+        ++path_it;
+        ++directory_it;
+    }
+    return true;
+}
+
+bool is_unexpected_builtin_mod( const MOD_INFORMATION &mod )
+{
+    if( test_mode || !builtin_mod_manifest_available ) {
+        return false;
+    }
+    if( std::find( builtin_mod_ids.begin(), builtin_mod_ids.end(), mod.ident.str() ) !=
+        builtin_mod_ids.end() ) {
+        return false;
+    }
+    return path_is_within( mod.path.get_unrelative_path(),
+                           PATH_INFO::moddir().get_unrelative_path() );
+}
 
 mod_id get_mod_base_id_from_src( mod_id src )
 {
