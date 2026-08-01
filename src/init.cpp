@@ -545,8 +545,7 @@ void DynamicDataLoader::load_data_from_path( const cata_path &path, const std::s
 
     // iterate over each file
     for( const cata_path &file : files ) {
-        if( file.get_relative_path().filename().string() == "manifest.json" &&
-            file.get_relative_path().parent_path().filename().string() == "lua" ) {
+        if( file == path / "lua" / "manifest.json" ) {
             continue;
         }
         try {
@@ -582,8 +581,7 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
 
     // iterate over each file
     for( const cata_path &file : files ) {
-        if( file.get_relative_path().filename().string() == "manifest.json" &&
-            file.get_relative_path().parent_path().filename().string() == "lua" ) {
+        if( file == path / "lua" / "manifest.json" ) {
             continue;
         }
         try {
