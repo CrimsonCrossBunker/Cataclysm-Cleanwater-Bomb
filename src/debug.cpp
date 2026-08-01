@@ -115,8 +115,8 @@ static std::string captured;
 // Get the image base of a module from its PE header
 static uintptr_t get_image_base( const char *const path )
 {
-    HANDLE file = CreateFile( path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-                              FILE_ATTRIBUTE_NORMAL, nullptr );
+    HANDLE file = CreateFileA( path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL, nullptr );
     if( file == INVALID_HANDLE_VALUE ) {
         return 0;
     }
