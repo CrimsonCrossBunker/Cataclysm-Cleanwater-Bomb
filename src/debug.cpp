@@ -534,21 +534,47 @@ struct repetition_folder {
 static repetition_folder rep_folder;
 static void output_repetitions( std::ostream &out );
 
+static thread_local std::vector<std::string> debug_error_sources;
+
+scoped_debug_error_source::scoped_debug_error_source( std::string source )
+{
+    if( !source.empty() ) {
+        debug_error_sources.push_back( std::move( source ) );
+        active_ = true;
+    }
+}
+
+scoped_debug_error_source::~scoped_debug_error_source()
+{
+    if( active_ ) {
+        debug_error_sources.pop_back();
+    }
+}
+
+std::string add_debug_error_source( const std::string &text )
+{
+    if( debug_error_sources.empty() ) {
+        return text;
+    }
+    return text + "\n\n" + debug_error_sources.back();
+}
+
 void realDebugmsg( const char *filename, const char *line, const char *funcname,
                    const std::string &text )
 {
     cata_assert( filename != nullptr );
     cata_assert( line != nullptr );
     cata_assert( funcname != nullptr );
+    const std::string contextual_text = add_debug_error_source( text );
 
     if( capturing ) {
-        captured += text;
+        captured += contextual_text;
     } else {
 
-        if( !rep_folder.test( filename, line, funcname, text ) ) {
-            DebugLog( D_ERROR, D_MAIN ) << filename << ":" << line << " [" << funcname << "] " << text <<
+        if( !rep_folder.test( filename, line, funcname, contextual_text ) ) {
+            DebugLog( D_ERROR, D_MAIN ) << filename << ":" << line << " [" << funcname << "] " << contextual_text <<
                                         std::flush;
-            rep_folder.set( filename, line, funcname, text );
+            rep_folder.set( filename, line, funcname, contextual_text );
         } else {
             rep_folder.increment_count();
         }
@@ -578,24 +604,24 @@ void realDebugmsg( const char *filename, const char *line, const char *funcname,
     bool excess_repetition = rep_folder.repeat_count == repetition_folder::repetition_threshold;
 
     if( !catacurses::stdscr ) {
-        buffered_prompts().push_back( {filename, line, funcname, text, false } );
+        buffered_prompts().push_back( {filename, line, funcname, contextual_text, false } );
         if( excess_repetition ) {
             // prepend excessive error repetition to original text then prompt
             std::string rep_err =
                 "Excessive error repetition detected.  Please file a bug report at https://github.com/CleverRaven/Cataclysm-DDA/issues\n            "
-                + text;
+                + contextual_text;
             buffered_prompts().push_back( {filename, line, funcname, rep_err, true } );
         }
         return;
     }
 
-    debug_error_prompt( filename, line, funcname, text.c_str(), false );
+    debug_error_prompt( filename, line, funcname, contextual_text.c_str(), false );
 
     if( excess_repetition ) {
         // prepend excessive error repetition to original text then prompt
         std::string rep_err =
             "Excessive error repetition detected.  Please file a bug report at https://github.com/CleverRaven/Cataclysm-DDA/issues\n            "
-            + text;
+            + contextual_text;
         debug_error_prompt( filename, line, funcname, rep_err.c_str(), true );
         // Do not count this prompt when considering repetition folding
         // Might look weird in the log if the repetitions end exactly after this prompt is displayed.
