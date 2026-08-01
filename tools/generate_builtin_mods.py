@@ -86,16 +86,20 @@ def strip_trailing_commas(text: str) -> str:
 def find_mod_ids(value: object, path: Path) -> set[str]:
     result: set[str] = set()
     if isinstance(value, dict):
-        if value.get("type") == "MOD_INFO":
-            mod_id = value.get("id")
+        entries = [value]
+    elif isinstance(value, list):
+        entries = value
+    else:
+        raise ValueError(f"{path}: expected array or object")
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError(f"{path}: modinfo array entry is not an object")
+        if entry.get("type") == "MOD_INFO":
+            mod_id = entry.get("id")
             if not isinstance(mod_id, str) or not mod_id:
                 raise ValueError(f"{path}: MOD_INFO has no string id")
             result.add(mod_id)
-        for child in value.values():
-            result.update(find_mod_ids(child, path))
-    elif isinstance(value, list):
-        for child in value:
-            result.update(find_mod_ids(child, path))
     return result
 
 
