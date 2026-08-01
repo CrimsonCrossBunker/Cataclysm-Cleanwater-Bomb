@@ -887,5 +887,10 @@
     "type": "MIGRATION",
     "id": "mc_rapier",
     "replace": "rapier"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "staff_sling_grenade_cradle",
+    "replace": "sling"
   }
 ]
