@@ -1,0 +1,4500 @@
+schema_version: 1
+kind: markdown_inventory
+source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+document_count: 175
+scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
+  are never traversed.
+documents:
+- original_path: CODE_OF_CONDUCT.md
+  target_path: CODE_OF_CONDUCT.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LunaGlaze
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: keep_in_repo
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: keep_in_repo
+- original_path: CONTRIBUTING.md
+  target_path: CONTRIBUTING.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - David Seguin
+  - Olivia Lee
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  license: CC-BY-SA-3.0
+  action: keep_in_repo
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: keep_in_repo
+- original_path: ISSUES.md
+  target_path: ISSUES.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: keep_in_repo
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: keep_in_repo
+- original_path: README.md
+  target_path: README.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  - LunaGlaze
+  - Asthmatic123
+  - EArias
+  - lapp2333xhj
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: keep_in_repo
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: keep_in_repo
+- original_path: SYNC_EXCLUDED_PRS.md
+  target_path: SYNC_EXCLUDED_PRS.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  - EliadOArias
+  license: CC-BY-SA-3.0
+  action: keep_in_repo
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: keep_in_repo
+- original_path: TRANSLATION_CREDITS.md
+  target_path: TRANSLATION_CREDITS.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  license: CC-BY-SA-3.0
+  action: keep_in_repo
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: keep_in_repo
+- original_path: data/json/LOADING_ORDER.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/json/npcs/godco/NECC_INFO.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/lua/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/lua/examples/api_v5_mod/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Backrooms/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/BombasticPerks/docs/contributing.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/BombasticPerks/docs/expanding_with_mods.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/DinoMod/DESIGN.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/DinoMod/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/MA/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Magiclysm/lore.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Magiclysm/magic_balance.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Megafauna/readme.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/MindOverMatter/GainingPowerSpoilers.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/MindOverMatter/NetherAttunementSpoilers.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/MindOverMatter/NewPowerGuide.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/MindOverMatter/PowerDescriptionSpoilers.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Standing-Storm
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/MindOverMatter/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Standing-Storm
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/MindOverMatter/lore_spoilers.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/MindOverMatterNoKnacks/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/No_Hope/CONTRIBUTING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/No_Hope/DIFFICULTY_OPTIONS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - Son Phan Trung
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Sky_Island/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Sorcerer/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/TEST_DATA/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/XedraWood/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Standing-Storm
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Xedra_Evolved/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Xedra_Evolved/design_doc_spoilers.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - SariusSkelrets
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/Xedra_Evolved/vampire_guide.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/Hacking.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/crafting_system.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Mihály Verhás
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/lore/cyberpunk_future.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/lore/factions.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Mihály Verhás
+  - Standing-Storm
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/lore/organizations.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Mihály Verhás
+  - Standing-Storm
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Mihály Verhás
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/lore/salus_4.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/lore/timeline.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Mihály Verhás
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/doc/suit_operating_time.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/alt_map_key/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/classic_zombies/design-doc.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/classic_zombies/place_names.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/hunvre/documentation/lore.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - BalthazarArgall
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/hunvre/progress_tracker.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - BalthazarArgall
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/immortal_path/GLOSSARY.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Asthmatic123
+  - EliadOArias
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/immortal_path/LANGUAGE_CONVENTION.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - EliadOArias
+  - LYHGLYTX
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/immortal_path/doc/game-design.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - EliadOArias
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/immortal_path/doc/lore.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - EliadOArias
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/immortal_path/doc/spell-design.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - EliadOArias
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/innawood/readme.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: data/mods/translate-dialogue/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/ASCII_ART.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/CHANGELOG_GUIDELINES.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/DEVELOPER_FAQ.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/FREQUENTLY_MADE_SUGGESTIONS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LunaGlaze
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/GUN_NAMING_AND_INCLUSION.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/HOWTO_MASSAGE_MA_GUN_DATA.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/HOW_YOU_CAN_HELP.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/IN_REPO_MODS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/ISSUE_TRIAGE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/ARTIFACTS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/BASECAMP.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/CLIMBING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Killa-bite
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/DIMENSIONS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  - Anton Simakov
+  - Maleclypse
+  - Blueflowers
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/EFFECTS_JSON.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/EFFECT_ON_CONDITION.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - zihanZheng
+  - LunaGlaze
+  - Killa-bite
+  - Anton Simakov
+  - Maleclypse
+  - GuardianDll
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Uwuewsky
+  - Geeves
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/EXAMINE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LunaGlaze
+  - Maleclypse
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/FACTIONS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/FACTION_MISSIONS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/GUIDE_COMESTIBLES.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/HELP_MENU.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/ITEM.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LunaGlaze
+  - Standing-Storm
+  - zihanZheng
+  - Anton Simakov
+  - dobbry-vechur
+  - RenechCDDA
+  - dumb-kevin
+  - thaelina
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - madez
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Anton Simakov
+  - dobbry-vechur
+  - RenechCDDA
+  - dumb-kevin
+  - thaelina
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/ITEM_SPAWN.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - dumb-kevin
+  - thaelina
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_FLAGS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LunaGlaze
+  - LYHGLYTX
+  - Standing-Storm
+  - Mihály Verhás
+  - zihanZheng
+  - Tektolnes
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - RenechCDDA
+  - dumb-kevin
+  - evilbananas
+  - Anton Simakov
+  - thaelina
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - Kevin Granade
+  - GuardianDll
+  - BalthazarArgall
+  - madez
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_INFO.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LunaGlaze
+  - MrDraMaster
+  - OromisElf
+  - zihanZheng
+  - Fris0uman
+  - Maleclypse
+  - GuardianDll
+  - Mihály Verhás
+  - Tektolnes
+  - ehughsbaird
+  - Anton Simakov
+  - RenechCDDA
+  - thaelina
+  - dumb-kevin
+  - Uwuewsky
+  - Geeves
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_INHERITANCE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - zihanZheng
+  - ehughsbaird
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_LOADING_ORDER.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_beginning_mapgen.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_intermediate_mapgen.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_Mapping_Guides/JSON_ROOF_MAPGEN.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_STYLE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/JSON_TOOLS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MAGIC.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  - Standing-Storm
+  - LunaGlaze
+  - thaelina
+  - dumb-kevin
+  - b3brodie
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MAPGEN.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - dumb-kevin
+  - ehughsbaird
+  - thaelina
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MAP_SMASHING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MARTIALART_JSON.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - Standing-Storm
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MISSIONS_JSON.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Maleclypse
+  - GuardianDll
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Uwuewsky
+  - Geeves
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MONSTERS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Maleclypse
+  - GuardianDll
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Uwuewsky
+  - Geeves
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MONSTER_SPECIAL_ATTACKS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Maleclypse
+  - GuardianDll
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Uwuewsky
+  - Geeves
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MOVE_MODE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/MUTATIONS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/NPCs.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Killa-bite
+  - Standing-Storm
+  - Maleclypse
+  - LunaGlaze
+  - GuardianDll
+  - 李诗琪
+  - Anton Simakov
+  - Tektolnes
+  - RenechCDDA
+  - thaelina
+  - dumb-kevin
+  - Uwuewsky
+  - Geeves
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - madez
+  - anoobindisguise
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/OBSOLETION_AND_MIGRATION.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/OPTIONS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/OVERMAP.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - dumb-kevin
+  - thaelina
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/PRACTICE_RECIPES.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/PROFICIENCY.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/PROFICIENCY_LIST.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/REGION_LAYOUT.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  - Anton Simakov
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/REGION_SETTINGS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/TER_FURN_TRANSFORM.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/VEHICLES_JSON.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LunaGlaze
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/VITAMIN.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - zihanZheng
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/WEATHER_TYPE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Anton Simakov
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/JSON/WOUNDS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Anton Simakov
+  - GuardianDll
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/MANUAL_OF_STYLE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/MODDING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - SpinosaurusBoat
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/MOD_COMPATIBILITY.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/PLAYER_ACTIVITY.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Antonín Drdácký
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/RELEASE_DIFF.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/RELEASE_PROCESS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/SOUNDPACKS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - AnotherSeawhite
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/TESTING_YOUR_CHANGES.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/TILESET.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/TRANSLATING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LunaGlaze
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/TRANSLATING_MOD.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/USER_INTERFACE_AND_ACCESSIBILITY.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/WIDGETS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/CODE_STYLE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILER_SUPPORT.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILING-CMAKE-VCPKG.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILING-CMAKE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILING-CYGWIN.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILING-DEVCONTAINER.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILING-FLATPAK.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILING-MSYS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILING-VS-VCPKG.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - Maleclypse
+  - dobbry-vechur
+  - dumb-kevin
+  - thaelina
+  - RenechCDDA
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/COMPILING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  - Anton Simakov
+  - akrieger
+  - dobbry-vechur
+  - Maleclypse
+  - dumb-kevin
+  - evilbananas
+  - thaelina
+  - RenechCDDA
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/DEVELOPER_TOOLING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - dumb-kevin
+  - thaelina
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/JSON_INTERFACE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - ehughsbaird
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/PERFORMANCE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - g1ytx
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/POINTS_COORDINATES.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/c++/TESTING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - g1ytx
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/ARMOR_BALANCE_AND_DESIGN.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/CONSTRUCTION_BALANCE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/GAME_BALANCE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/LORE_FAQ.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/PORTAL_STORM_BALANCE_AND_DESIGN.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/POSTAPOC_PRICE_GUIDE.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/STEEL_CRAFTING.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - FarFarLakeSea
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/VARIANTS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/batteries_and_electricity.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/design-balance.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/design-doc.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/design-gameplay.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/design-user-experience.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/lore-background.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/lore-factions.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/lore.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/melee_weapons/MELEE_BALANCE_SPREADSHEET.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/design-balance-lore/technology.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/development_process.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/reviewing_PR_guide.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/user-guides/COLOR.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: doc/user-guides/FONT_OPTIONS.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: lang/notes/README_all_translators.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: lang/notes/ru-notes.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: src/lua/LICENSE.md
+  target_path: src/lua/LICENSE.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  license: MIT
+  action: retain_third_party
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: retain_in_place
+- original_path: src/lua/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: src/third-party/snmalloc/README.md
+  target_path: src/third-party/snmalloc/README.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  license: file-specific third-party license
+  action: retain_third_party
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: retain_in_place
+- original_path: src/third-party/snmalloc/stl/README.md
+  target_path: src/third-party/snmalloc/stl/README.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  license: file-specific third-party license
+  action: retain_third_party
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: retain_in_place
+- original_path: src/third-party/snmalloc/stl/cxx/README.md
+  target_path: src/third-party/snmalloc/stl/cxx/README.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  license: file-specific third-party license
+  action: retain_third_party
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: retain_in_place
+- original_path: src/third-party/snmalloc/stl/gnu/README.md
+  target_path: src/third-party/snmalloc/stl/gnu/README.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  license: file-specific third-party license
+  action: retain_third_party
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: retain_in_place
+- original_path: src/third-party/zstd/README.md
+  target_path: src/third-party/zstd/README.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: file-specific third-party license
+  action: retain_third_party
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: retain_in_place
+- original_path: tools/llama/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  - dumb-kevin
+  - RenechCDDA
+  - Maleclypse
+  - Uwuewsky
+  - Geeves
+  - GuardianDll
+  - BalthazarArgall
+  - Standing-StormStanding-Storm git config --global user.name Standing-Storm git config --global user.name
+    Standing-Storm
+  - Tektolnes
+  - Anton Simakov
+  - madez
+  - anoobindisguise
+  - Standing-Storm
+  - AnotherSeawhite
+  - PatrikLundell
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history
+- original_path: tools/lua_api/README.md
+  target_path: null
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - LYHGLYTX
+  license: CC-BY-SA-3.0
+  action: review
+  archive_reason: null
+  replacement: null
+  migration_status: inventoried
+  history_strategy: evaluate_filtered_history

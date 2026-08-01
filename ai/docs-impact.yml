@@ -1,0 +1,35 @@
+schema_version: 1
+kind: docs_impact
+description: Advisory Phase 0/1 mapping from source changes to stable CCB-Docs IDs.
+enforcement: advisory
+entries:
+  - id: governance-policy
+    patterns: [AGENTS.md, '*/AGENTS.md', CONTRIBUTING.md, GOVERNANCE.md, .github/pull_request_template.md]
+    documentation_ids: [contributing.responsible-human, getting-started.first-contribution]
+    generated_reference_impact: false
+    risk_group: governance
+    risk_level: high
+  - id: project-routing
+    patterns: [ai/project-map.yml, ai/test-matrix.yml, ai/generated-files.yml]
+    documentation_ids: [architecture.project-map, validation.quickstart]
+    generated_reference_impact: false
+    risk_group: project-context
+    risk_level: normal
+  - id: build-contracts
+    patterns: [CMakeLists.txt, CMakeModules/*, CMakePresets.json, Makefile, build-scripts/*, .github/workflows/*]
+    documentation_ids: [validation.quickstart]
+    generated_reference_impact: false
+    risk_group: build
+    risk_level: high
+  - id: lua-public-contract
+    patterns: [src/catalua_ui_*, data/lua/manifest.schema.json, data/lua/types/ccb_api_v5.d.lua, data/lua/reference/*, tools/lua_api/*]
+    documentation_ids: []
+    generated_reference_impact: true
+    risk_group: lua-api
+    risk_level: high
+  - id: json-contracts
+    patterns: [data/json/*, data/core/*, src/*factory*, src/*json*]
+    documentation_ids: []
+    generated_reference_impact: true
+    risk_group: json-api
+    risk_level: high

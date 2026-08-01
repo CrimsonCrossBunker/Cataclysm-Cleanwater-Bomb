@@ -1,0 +1,68 @@
+schema_version: 1
+kind: project_map
+description: Offline subsystem routing for human contributors and agents.
+entries:
+  - id: engine
+    paths: [src/]
+    purpose: Native C++ engine, gameplay, UI, and Lua bindings.
+    instructions: src/AGENTS.md
+    validation_ids: [cpp-format, cpp-tests]
+    boundaries:
+      - Runtime behaviour is defined by source and tests.
+      - Public JSON and Lua changes require contract-impact review.
+  - id: core-data
+    paths: [data/core/, data/json/]
+    purpose: Core JSON definitions loaded by the game.
+    instructions: data/AGENTS.md
+    validation_ids: [json-load]
+    boundaries:
+      - Preserve stable IDs or provide explicit migration data.
+  - id: lua-api
+    paths: [data/lua/, tools/lua_api/, 'src/catalua_ui_*.cpp', 'src/catalua_ui_*.h']
+    purpose: Versioned Lua runtime, declarations, registrations, and coverage inventories.
+    instructions: data/lua/AGENTS.md
+    validation_ids: [lua-contract]
+    boundaries:
+      - Schema, LuaLS declarations, native registrations, and generated inventories are authoritative.
+  - id: bundled-mods
+    paths: [data/mods/]
+    purpose: Mods shipped and validated with CCB.
+    instructions: data/mods/AGENTS.md
+    validation_ids: [json-load]
+    boundaries:
+      - Each mod is an independent compatibility surface.
+  - id: tests
+    paths: [tests/]
+    purpose: Catch2 regression and integration tests.
+    instructions: tests/AGENTS.md
+    validation_ids: [cpp-tests]
+    boundaries:
+      - Tests must be deterministic and behaviour-focused.
+  - id: developer-tools
+    paths: [tools/]
+    purpose: Formatters, validators, generators, and maintenance automation.
+    instructions: tools/AGENTS.md
+    validation_ids: [agent-context, python-tools]
+    boundaries:
+      - Generators provide a non-mutating check mode.
+  - id: android
+    paths: [android/]
+    purpose: Android Gradle application, Java UI, and native packaging.
+    instructions: android/AGENTS.md
+    validation_ids: [android-unit]
+    boundaries:
+      - Never commit SDK paths, signing material, APKs, or local Gradle state.
+  - id: build
+    paths: [CMakeLists.txt, CMakeModules/, Makefile, build-scripts/, .github/workflows/]
+    purpose: Build, validation, packaging, and continuous integration contracts.
+    instructions: build-scripts/AGENTS.md
+    validation_ids: [cmake-configure]
+    boundaries:
+      - Actual build definitions override explanatory documentation.
+  - id: governance
+    paths: [AGENTS.md, CONTRIBUTING.md, GOVERNANCE.md, .github/pull_request_template.md]
+    purpose: Contribution, responsibility, and repository governance policy.
+    instructions: AGENTS.md
+    validation_ids: [agent-context]
+    boundaries:
+      - Every PR names a Responsible human.

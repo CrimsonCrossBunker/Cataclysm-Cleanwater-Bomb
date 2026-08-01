@@ -1,0 +1,37 @@
+name: Agent context and documentation impact
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-agent-context:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned metadata dependencies
+        run: python3 -m pip install --disable-pip-version-check -r tools/agent/requirements.txt
+
+      - name: Validate metadata and migration inventory
+        run: |
+          python3 tools/agent/generate_markdown_inventory.py --check
+          python3 tools/agent/check_project_metadata.py
+          python3 -m unittest discover -s tools/agent -p 'test_*.py'
+
+      - name: Report documentation impact and validate PR responsibility
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          python3 tools/agent/check_docs_impact.py
+          --base "$BASE_SHA"
+          --head "$HEAD_SHA"
+          --check-pr-body

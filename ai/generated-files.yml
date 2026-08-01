@@ -1,0 +1,44 @@
+schema_version: 1
+kind: generated_files
+description: Files and artifacts that must be regenerated rather than hand-edited.
+entries:
+  - id: version-header
+    paths: [src/version.h]
+    tracked: false
+    generated_by: build system version target
+    validation_id: cpp-tests
+  - id: prefix-header
+    paths: [src/prefix.h]
+    tracked: false
+    generated_by: build system prefix target
+    validation_id: cpp-tests
+  - id: compile-commands
+    paths: [compile_commands.json]
+    tracked: false
+    generated_by: CMake or make compile_commands.json
+    validation_id: cmake-configure
+  - id: json-formatter-binary
+    paths: [tools/format/json_formatter.cgi]
+    tracked: false
+    generated_by: make style-json or formatter target
+    validation_id: json-load
+  - id: cbn-api-inventory
+    paths: [data/lua/reference/cbn_api_inventory.json]
+    tracked: true
+    generated_by: python3 tools/lua_api/generate_cbn_inventory.py
+    validation_id: lua-contract
+  - id: cbn-api-coverage
+    paths: [data/lua/reference/cbn_coverage.json]
+    tracked: true
+    generated_by: python3 tools/lua_api/generate_cbn_coverage.py
+    validation_id: lua-contract
+  - id: ccb-native-inventory
+    paths: [data/lua/reference/ccb_native_inventory.json]
+    tracked: true
+    generated_by: python3 tools/lua_api/generate_ccb_inventory.py
+    validation_id: lua-contract
+  - id: shader-artifacts
+    paths: [data/shaders/*.spv, data/shaders/*.dxil, data/shaders/*.msl, data/shaders/build-*.stamp]
+    tracked: false
+    generated_by: shader build workflow
+    validation_id: cmake-configure
