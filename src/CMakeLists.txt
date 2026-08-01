@@ -91,7 +91,7 @@ file(GLOB CATACLYSM_DDA_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 file(GLOB_RECURSE BUILTIN_MODINFO CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/data/mods/**/modinfo.json)
-set(BUILTIN_MODS_HEADER ${CMAKE_CURRENT_BINARY_DIR}/builtin_mods.h)
+set(BUILTIN_MODS_HEADER ${CMAKE_CURRENT_BINARY_DIR}/builtin_mods_generated.h)
 add_custom_command(
         OUTPUT ${BUILTIN_MODS_HEADER}
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py
