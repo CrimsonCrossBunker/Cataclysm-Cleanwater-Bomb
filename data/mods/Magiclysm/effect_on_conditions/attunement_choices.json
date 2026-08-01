@@ -4,7 +4,7 @@
     "id": "EOC_CHECK_ATTUNEMENTS",
     "//": "These need to be u_variables because they don't carry down into the EoC-selector's options otherwise",
     "effect": [
-      { "math": [ "u_required_attunement_spell_count = 12" ] },
+      { "math": [ "u_required_attunement_spell_count = 9" ] },
       { "math": [ "u_required_attunement_spell_levels = 200" ] },
       {
         "if": {
