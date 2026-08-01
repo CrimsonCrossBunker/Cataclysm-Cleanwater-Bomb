@@ -192,6 +192,7 @@ void DynamicDataLoader::load_deferred( deferred_json &data )
         const size_t n = data.size();
         auto it = data.begin();
         for( size_t idx = 0; idx != n; ++idx ) {
+            scoped_debug_error_source error_source( get_mod_error_source( it->second ) );
             try {
                 const JsonObject &jo = it->first;
                 load_object( jo, it->second );
@@ -204,6 +205,7 @@ void DynamicDataLoader::load_deferred( deferred_json &data )
         data.erase( data.begin(), it );
         if( data.size() == n ) {
             for( const auto &elem : data ) {
+                scoped_debug_error_source error_source( get_mod_error_source( elem.second ) );
                 try {
                     elem.first.throw_error( "JSON contains circular dependency, this object is discarded" );
                 } catch( const JsonError &err ) {
@@ -548,12 +550,15 @@ void DynamicDataLoader::load_data_from_path( const cata_path &path, const std::s
         if( file == path / "lua" / "manifest.json" ) {
             continue;
         }
+        scoped_debug_error_source error_source( get_mod_error_source( src ) );
         try {
             // parse it
             JsonValue jsin = json_loader::from_path( file );
             load_all_from_json( jsin, src, path, file );
         } catch( const JsonError &err ) {
-            throw std::runtime_error( err.what() );
+            throw std::runtime_error( add_debug_error_source( err.what() ) );
+        } catch( const std::exception &err ) {
+            throw std::runtime_error( add_debug_error_source( err.what() ) );
         }
     }
 }
@@ -584,12 +589,15 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
         if( file == path / "lua" / "manifest.json" ) {
             continue;
         }
+        scoped_debug_error_source error_source( get_mod_error_source( src ) );
         try {
             // parse it
             JsonValue jsin = json_loader::from_path( file );
             load_all_from_json( jsin, src, path, file );
         } catch( const JsonError &err ) {
-            throw std::runtime_error( err.what() );
+            throw std::runtime_error( add_debug_error_source( err.what() ) );
+        } catch( const std::exception &err ) {
+            throw std::runtime_error( add_debug_error_source( err.what() ) );
         }
     }
 }
@@ -623,12 +631,16 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
     }
     // iterate over each file
     for( const std::pair<const mod_id, cata_path> &file : files ) {
+        const std::string interaction_src = string_format( "%s#%s", src, file.first.str() );
+        scoped_debug_error_source error_source( get_mod_error_source( interaction_src ) );
         try {
             // parse it
             JsonValue jsin = json_loader::from_path( file.second );
-            load_all_from_json( jsin, string_format( "%s#%s", src, file.first.str() ), path, file.second );
+            load_all_from_json( jsin, interaction_src, path, file.second );
         } catch( const JsonError &err ) {
-            throw std::runtime_error( err.what() );
+            throw std::runtime_error( add_debug_error_source( err.what() ) );
+        } catch( const std::exception &err ) {
+            throw std::runtime_error( add_debug_error_source( err.what() ) );
         }
     }
 }

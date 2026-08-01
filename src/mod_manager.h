@@ -7,6 +7,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -74,6 +75,26 @@ struct MOD_INFORMATION {
 
         std::pair<int, translation> category = { -1, translation() };
 };
+
+/** @relates string_id */
+template<>
+const MOD_INFORMATION &string_id<MOD_INFORMATION>::obj() const;
+
+/** @relates string_id */
+template<>
+bool string_id<MOD_INFORMATION>::is_valid() const;
+
+/**
+ * Returns true when a mod is installed below the built-in mod directory but
+ * its ID was not present in the manifest generated from the distributed mods.
+ */
+bool is_unexpected_builtin_mod( const MOD_INFORMATION &mod );
+
+/**
+ * Returns concise error context for a loaded mod source, or an empty string
+ * when that source is not a mod.
+ */
+std::string get_mod_error_source( std::string_view src );
 
 // Enumerates and formats the mod origin
 template<typename src_id>

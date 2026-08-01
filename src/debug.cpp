@@ -115,8 +115,8 @@ static std::string captured;
 // Get the image base of a module from its PE header
 static uintptr_t get_image_base( const char *const path )
 {
-    HANDLE file = CreateFile( path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-                              FILE_ATTRIBUTE_NORMAL, nullptr );
+    HANDLE file = CreateFileA( path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL, nullptr );
     if( file == INVALID_HANDLE_VALUE ) {
         return 0;
     }
@@ -534,21 +534,47 @@ struct repetition_folder {
 static repetition_folder rep_folder;
 static void output_repetitions( std::ostream &out );
 
+static thread_local std::vector<std::string> debug_error_sources;
+
+scoped_debug_error_source::scoped_debug_error_source( std::string source )
+{
+    if( !source.empty() ) {
+        debug_error_sources.push_back( std::move( source ) );
+        active_ = true;
+    }
+}
+
+scoped_debug_error_source::~scoped_debug_error_source()
+{
+    if( active_ ) {
+        debug_error_sources.pop_back();
+    }
+}
+
+std::string add_debug_error_source( const std::string &text )
+{
+    if( debug_error_sources.empty() ) {
+        return text;
+    }
+    return text + "\n\n" + debug_error_sources.back();
+}
+
 void realDebugmsg( const char *filename, const char *line, const char *funcname,
                    const std::string &text )
 {
     cata_assert( filename != nullptr );
     cata_assert( line != nullptr );
     cata_assert( funcname != nullptr );
+    const std::string contextual_text = add_debug_error_source( text );
 
     if( capturing ) {
-        captured += text;
+        captured += contextual_text;
     } else {
 
-        if( !rep_folder.test( filename, line, funcname, text ) ) {
-            DebugLog( D_ERROR, D_MAIN ) << filename << ":" << line << " [" << funcname << "] " << text <<
+        if( !rep_folder.test( filename, line, funcname, contextual_text ) ) {
+            DebugLog( D_ERROR, D_MAIN ) << filename << ":" << line << " [" << funcname << "] " << contextual_text <<
                                         std::flush;
-            rep_folder.set( filename, line, funcname, text );
+            rep_folder.set( filename, line, funcname, contextual_text );
         } else {
             rep_folder.increment_count();
         }
@@ -578,24 +604,24 @@ void realDebugmsg( const char *filename, const char *line, const char *funcname,
     bool excess_repetition = rep_folder.repeat_count == repetition_folder::repetition_threshold;
 
     if( !catacurses::stdscr ) {
-        buffered_prompts().push_back( {filename, line, funcname, text, false } );
+        buffered_prompts().push_back( {filename, line, funcname, contextual_text, false } );
         if( excess_repetition ) {
             // prepend excessive error repetition to original text then prompt
             std::string rep_err =
                 "Excessive error repetition detected.  Please file a bug report at https://github.com/CleverRaven/Cataclysm-DDA/issues\n            "
-                + text;
+                + contextual_text;
             buffered_prompts().push_back( {filename, line, funcname, rep_err, true } );
         }
         return;
     }
 
-    debug_error_prompt( filename, line, funcname, text.c_str(), false );
+    debug_error_prompt( filename, line, funcname, contextual_text.c_str(), false );
 
     if( excess_repetition ) {
         // prepend excessive error repetition to original text then prompt
         std::string rep_err =
             "Excessive error repetition detected.  Please file a bug report at https://github.com/CleverRaven/Cataclysm-DDA/issues\n            "
-            + text;
+            + contextual_text;
         debug_error_prompt( filename, line, funcname, rep_err.c_str(), true );
         // Do not count this prompt when considering repetition folding
         // Might look weird in the log if the repetitions end exactly after this prompt is displayed.
@@ -1250,7 +1276,7 @@ void debug_write_backtrace( std::ostream &out )
         const DWORD64 mod_base = SymGetModuleBase64( proc, reinterpret_cast<DWORD64>( bt[i] ) );
         if( mod_base ) {
             out << "[";
-            const DWORD mod_len = GetModuleFileName( reinterpret_cast<HMODULE>( mod_base ), mod_path,
+            const DWORD mod_len = GetModuleFileNameA( reinterpret_cast<HMODULE>( mod_base ), mod_path,
                                   module_path_len );
             // mod_len == module_path_len means insufficient buffer
             if( mod_len > 0 && mod_len < module_path_len ) {
@@ -1272,7 +1298,7 @@ void debug_write_backtrace( std::ostream &out )
             if( it != bt_module_info_map.end() ) {
                 bt_module_info = it->second;
             } else {
-                const DWORD mod_len = GetModuleFileName( reinterpret_cast<HMODULE>( mod_base ), mod_path,
+                const DWORD mod_len = GetModuleFileNameA( reinterpret_cast<HMODULE>( mod_base ), mod_path,
                                       module_path_len );
                 if( mod_len > 0 && mod_len < module_path_len ) {
                     bt_module_info.state = bt_create_state( mod_path, 0,
@@ -1966,7 +1992,7 @@ std::string game_info::mods_loaded()
     mod_names.reserve( mod_ids.size() );
     std::transform( mod_ids.begin(), mod_ids.end(),
     std::back_inserter( mod_names ), []( const mod_id & mod ) -> std::string {
-        // e.g. "Dark Days Ahead [dda] (95c4e03)".
+        // e.g. "Catharsis Covenant Basemodule [dda] (95c4e03)".
         return string_format( "%s [%s] (%s)", mod->name(), mod->ident.str(), mod->version );
     } );
 

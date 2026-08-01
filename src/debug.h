@@ -75,6 +75,27 @@
 // Don't use this, use debugmsg instead.
 void realDebugmsg( const char *filename, const char *line, const char *funcname,
                    const std::string &text );
+
+/**
+ * Temporarily associates debug messages with a concise error source.  This is
+ * primarily used while loading data that belongs to a particular mod.
+ */
+class scoped_debug_error_source
+{
+    public:
+        explicit scoped_debug_error_source( std::string source );
+        ~scoped_debug_error_source();
+
+        scoped_debug_error_source( const scoped_debug_error_source & ) = delete;
+        scoped_debug_error_source &operator=( const scoped_debug_error_source & ) = delete;
+
+    private:
+        bool active_ = false;
+};
+
+/** Append the active debug error source to text, if there is one. */
+std::string add_debug_error_source( const std::string &text );
+
 template<typename ...Args>
 inline void realDebugmsg( const char *const filename, const char *const line,
                           const char *const funcname, const char *const mes, Args &&... args )
@@ -125,7 +146,7 @@ std::string game_version();
 /** Return the underlying graphics version used by the game; either Tiles or Curses.
 */
 std::string graphics_version();
-/** Return a list of the loaded mods, including the mod full name and its id name in brackets, e.g. "Dark Days Ahead [dda]".
+/** Return a list of the loaded mods, including the mod full name and its id name in brackets, e.g. "Catharsis Covenant Basemodule [dda]".
 */
 std::string mods_loaded();
 /** Generate a game report, including the information returned by all of the other functions.

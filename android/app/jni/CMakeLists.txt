@@ -47,6 +47,29 @@ add_subdirectory(${CATA_REPO_ROOT}/src/third-party third-party)
 file(GLOB CATA_SOURCES CONFIGURE_DEPENDS ${CATA_REPO_ROOT}/src/*.cpp
      ${CATA_REPO_ROOT}/src/cata_allocator_c.c)
 
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+file(GLOB_RECURSE BUILTIN_MODINFO CONFIGURE_DEPENDS
+     ${CATA_REPO_ROOT}/data/mods/**/modinfo.json)
+set(BUILTIN_MODS_HEADER ${CMAKE_CURRENT_BINARY_DIR}/builtin_mods_generated.h)
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py
+          --source ${CATA_REPO_ROOT}/data/mods
+          --output ${BUILTIN_MODS_HEADER}
+  RESULT_VARIABLE BUILTIN_MODS_RESULT
+  WORKING_DIRECTORY ${CATA_REPO_ROOT})
+if(NOT BUILTIN_MODS_RESULT STREQUAL "0")
+  message(FATAL_ERROR "Failed to generate the built-in mod manifest")
+endif()
+add_custom_command(
+  OUTPUT ${BUILTIN_MODS_HEADER}
+  COMMAND ${Python3_EXECUTABLE} ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py
+          --source ${CATA_REPO_ROOT}/data/mods
+          --output ${BUILTIN_MODS_HEADER}
+  DEPENDS ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py ${BUILTIN_MODINFO}
+  WORKING_DIRECTORY ${CATA_REPO_ROOT}
+  VERBATIM)
+add_custom_target(builtin_mod_manifest DEPENDS ${BUILTIN_MODS_HEADER})
+
 option(CCB_ANDROID_NEW_UI
        "Enable the opt-in Android touch UI and customizable HUD" OFF)
 option(CATA_ENABLE_LUA_UI "Enable the experimental Lua Mod API" ON)
@@ -78,6 +101,7 @@ else()
 endif()
 
 add_library(main SHARED ${CATA_SOURCES})
+add_dependencies(main builtin_mod_manifest)
 
 # Android always uses SDL3's Vulkan GPU backend when available, so every APK
 # needs SPIR-V shader artifacts. Release CI downloads and validates prebuilt
@@ -116,7 +140,8 @@ else()
 endif()
 
 target_include_directories(
-  main PRIVATE ${CATA_REPO_ROOT}/src ${CATA_REPO_ROOT}/src/third-party
+  main PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CATA_REPO_ROOT}/src
+               ${CATA_REPO_ROOT}/src/third-party
                ${_sdl3_subdir_inc})
 
 target_compile_definitions(
