@@ -12,9 +12,6 @@
 #include "catalua_sol.h"
 #include "coords_fwd.h"
 
-class point;
-class tripoint;
-
 namespace cata::lua_ui
 {
 
