@@ -28,34 +28,64 @@
   {
     "type": "vehicle_part",
     "id": "veh_diesel_generator",
-    "copy-from": "veh_portable_generator",
-    "name": { "str": "diesel generator" },
-    "description": "Big and powerful generator, used for street works.  It just needs to be fueled up, and then turned on.",
-    "power": "8 W",
-    "epower": "7000 W",
-    "item": "diesel_generator",
-    "breaks_into": [ { "item": "diesel_generator", "damage": 4 } ]
+    "copy-from": "ap_diesel_generator",
+    "delete": {
+      "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
+    },
+    "location": "fuel_source",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ] ]
+      }
+    }
   },
   {
     "type": "vehicle_part",
     "id": "veh_military_generator",
-    "copy-from": "veh_portable_generator",
-    "name": { "str": "military diesel generator" },
-    "description": "Big and powerful generator, painted in camo.  It just needs to be fueled up, and then turned on.",
-    "power": "8 W",
-    "epower": "10000 W",
-    "item": "military_generator",
-    "breaks_into": [ { "item": "military_generator", "damage": 4 } ]
+    "copy-from": "ap_military_generator",
+    "delete": {
+      "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
+    },
+    "location": "fuel_source",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ] ]
+      }
+    }
   },
   {
     "type": "vehicle_part",
     "id": "veh_12000_gasoline_generator",
-    "copy-from": "veh_portable_generator",
-    "name": { "str": "powerful gasoline generator" },
-    "description": "Still reasonably portable, this 12000 W gasoline generator can power up an entire house.  It just needs to be fueled up, and then turned on.",
-    "power": "8 W",
-    "epower": "12000 W",
-    "item": "12000_gasoline_generator",
-    "breaks_into": [ { "item": "12000_gasoline_generator", "damage": 4 } ]
+    "copy-from": "ap_12000_gasoline_generator",
+    "delete": {
+      "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
+    },
+    "location": "fuel_source",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ] ]
+      }
+    }
   }
 ]
