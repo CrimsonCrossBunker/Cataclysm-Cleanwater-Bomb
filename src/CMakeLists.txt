@@ -92,6 +92,15 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 file(GLOB_RECURSE BUILTIN_MODINFO CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/data/mods/**/modinfo.json)
 set(BUILTIN_MODS_HEADER ${CMAKE_CURRENT_BINARY_DIR}/builtin_mods_generated.h)
+execute_process(
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py
+                --source ${CMAKE_SOURCE_DIR}/data/mods
+                --output ${BUILTIN_MODS_HEADER}
+        RESULT_VARIABLE BUILTIN_MODS_RESULT
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+if (NOT BUILTIN_MODS_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to generate the built-in mod manifest")
+endif()
 add_custom_command(
         OUTPUT ${BUILTIN_MODS_HEADER}
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py
