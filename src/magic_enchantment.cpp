@@ -692,7 +692,7 @@ void enchant_cache::load( const JsonObject &jo, std::string_view,
     if( jo.has_array( "limb_score_modifier" ) ) {
         for( const JsonObject value_obj : jo.get_array( "limb_score_modifier" ) ) {
             const limb_score_id score( value_obj.get_string( "score" ) );
-            const bodypart_str_id part( value_obj.get_string( "part", "" ) );
+            const bodypart_str_id part( value_obj.get_string( "part", bodypart_str_id::NULL_ID().str() ) );
             const double add = value_obj.get_float( "add", 0.0 );
             const double mult = value_obj.get_float( "multiply", 0.0 );
             if( part.is_null() ) {
