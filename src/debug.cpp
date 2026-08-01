@@ -1276,7 +1276,7 @@ void debug_write_backtrace( std::ostream &out )
         const DWORD64 mod_base = SymGetModuleBase64( proc, reinterpret_cast<DWORD64>( bt[i] ) );
         if( mod_base ) {
             out << "[";
-            const DWORD mod_len = GetModuleFileName( reinterpret_cast<HMODULE>( mod_base ), mod_path,
+            const DWORD mod_len = GetModuleFileNameA( reinterpret_cast<HMODULE>( mod_base ), mod_path,
                                   module_path_len );
             // mod_len == module_path_len means insufficient buffer
             if( mod_len > 0 && mod_len < module_path_len ) {
@@ -1298,7 +1298,7 @@ void debug_write_backtrace( std::ostream &out )
             if( it != bt_module_info_map.end() ) {
                 bt_module_info = it->second;
             } else {
-                const DWORD mod_len = GetModuleFileName( reinterpret_cast<HMODULE>( mod_base ), mod_path,
+                const DWORD mod_len = GetModuleFileNameA( reinterpret_cast<HMODULE>( mod_base ), mod_path,
                                       module_path_len );
                 if( mod_len > 0 && mod_len < module_path_len ) {
                     bt_module_info.state = bt_create_state( mod_path, 0,
