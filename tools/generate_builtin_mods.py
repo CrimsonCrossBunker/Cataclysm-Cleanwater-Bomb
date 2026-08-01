@@ -136,7 +136,7 @@ def main() -> int:
     try:
         mod_ids: set[str] = set()
         for modinfo in args.source.rglob("modinfo.json"):
-            text = modinfo.read_text(encoding="utf-8")
+            text = modinfo.read_text(encoding="utf-8-sig")
             value = json.loads(strip_trailing_commas(strip_jsonc_comments(text)))
             mod_ids.update(find_mod_ids(value, modinfo))
         write_header(args.output, True, sorted(mod_ids))
