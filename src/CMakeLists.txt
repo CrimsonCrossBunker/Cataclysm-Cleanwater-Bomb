@@ -100,6 +100,7 @@ add_custom_command(
         DEPENDS ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py ${BUILTIN_MODINFO}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         VERBATIM)
+add_custom_target(builtin_mod_manifest DEPENDS ${BUILTIN_MODS_HEADER})
 list(APPEND CATACLYSM_DDA_HEADERS ${BUILTIN_MODS_HEADER})
 
 # Get GIT version strings
@@ -119,6 +120,7 @@ if (TILES)
             cataclysm-tiles-common OBJECT
             ${CATACLYSM_DDA_SOURCES}
             ${CATACLYSM_DDA_HEADERS})
+    add_dependencies(cataclysm-tiles-common builtin_mod_manifest)
     target_include_directories(cataclysm-tiles-common PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_include_directories(cataclysm-tiles-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -342,6 +344,7 @@ if (CURSES)
     add_library(cataclysm-common OBJECT
             ${CATACLYSM_DDA_SOURCES}
             ${CATACLYSM_DDA_HEADERS})
+    add_dependencies(cataclysm-common builtin_mod_manifest)
     target_include_directories(cataclysm-common PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(cataclysm-common PUBLIC third-party)
@@ -433,6 +436,7 @@ if (HEADLESS)
     add_library(cataclysm-common OBJECT
             ${CATACLYSM_DDA_SOURCES}
             ${CATACLYSM_DDA_HEADERS})
+    add_dependencies(cataclysm-common builtin_mod_manifest)
     target_include_directories(cataclysm-common PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(cataclysm-common PUBLIC third-party)
