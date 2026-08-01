@@ -13,6 +13,23 @@
 #include "debug.h"
 #include "debug_capture.h"
 
+TEST_CASE( "scoped_debug_error_source", "[debug]" )
+{
+    const std::string captured = capture_debugmsg_during( []() {
+        scoped_debug_error_source outer( "Outer source" );
+        debugmsg( "outer error" );
+        {
+            scoped_debug_error_source inner( "Inner source" );
+            debugmsg( "inner error" );
+        }
+        debugmsg( "outer error again" );
+    } );
+
+    CHECK( captured.find( "outer error\n\nOuter source" ) != std::string::npos );
+    CHECK( captured.find( "inner error\n\nInner source" ) != std::string::npos );
+    CHECK( captured.find( "outer error again\n\nOuter source" ) != std::string::npos );
+}
+
 TEST_CASE( "capture_json_escape_round_trip", "[debug_capture]" )
 {
     SECTION( "plain ASCII passes through" ) {
