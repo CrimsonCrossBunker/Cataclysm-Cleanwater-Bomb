@@ -16,12 +16,15 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 MAP_PATH = ROOT / "ai/docs-impact.yml"
-REQUIRED_PR_FIELDS = (
-    "Responsible human",
+DOCUMENTATION_PR_FIELDS = (
     "Documentation impact",
     "Related CCB-Docs PR",
     "Affected documentation IDs",
     "Generated reference impact",
+)
+RESPONSIBLE_HUMAN_FIELD = "Responsible human"
+GITHUB_USER_MENTION = re.compile(
+    r"(?<![\w/-])@[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?(?![\w/-])"
 )
 
 
@@ -76,19 +79,27 @@ def field_value(body: str, heading: str) -> str | None:
 
 
 def validate_pr_body(body: str) -> list[str]:
-    errors = []
-    values = {
-        heading: field_value(body, heading) for heading in REQUIRED_PR_FIELDS
-    }
-    for heading, value in values.items():
-        if value is None:
-            errors.append(f"missing PR field: {heading}")
-    responsible = values.get("Responsible human")
-    if responsible is not None and (
-        not responsible or responsible.lower() == "@username"
+    """Return blocking responsibility errors only."""
+    responsible = field_value(body, RESPONSIBLE_HUMAN_FIELD)
+    if responsible is None:
+        return [f"missing PR field: {RESPONSIBLE_HUMAN_FIELD}"]
+    mentions = GITHUB_USER_MENTION.findall(responsible)
+    if not mentions or all(
+        mention.lower() == "@username" for mention in mentions
     ):
-        errors.append("Responsible human must name a real GitHub account")
-    return errors
+        return ["Responsible human must name a real GitHub account"]
+    if "[bot]" in responsible.lower():
+        return ["Responsible human must not be a bot account"]
+    return []
+
+
+def documentation_field_warnings(body: str) -> list[str]:
+    """Return non-blocking Phase 0/1 documentation-field warnings."""
+    warnings = []
+    for heading in DOCUMENTATION_PR_FIELDS:
+        if field_value(body, heading) is None:
+            warnings.append(f"missing advisory PR field: {heading}")
+    return warnings
 
 
 def report(result: list[dict]) -> str:
@@ -131,6 +142,9 @@ def main() -> int:
 
     if args.check_pr_body:
         errors = validate_pr_body(os.environ.get("PR_BODY", ""))
+        warnings = documentation_field_warnings(os.environ.get("PR_BODY", ""))
+        for warning in warnings:
+            print(f"::warning::{warning}", file=sys.stderr)
         for error in errors:
             print(f"::error::{error}", file=sys.stderr)
         if errors:
