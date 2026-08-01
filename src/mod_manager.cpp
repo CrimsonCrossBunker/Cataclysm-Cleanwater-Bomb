@@ -498,6 +498,71 @@ bool mod_manager::check_mods_list( WORLD *world ) const
     std::vector<mod_id> &amo = world->active_mod_order;
     bool changed = false;
 
+    const auto is_virtual_mod = []( const mod_id & mod ) {
+        return mod.str().find( '#' ) != std::string::npos;
+    };
+    std::set<std::string> mods_to_remove;
+    std::vector<mod_id> incorrectly_installed_mods;
+    for( const mod_id &mod : amo ) {
+        if( !is_virtual_mod( mod ) && mod.is_valid() && is_unexpected_builtin_mod( mod.obj() ) ) {
+            mods_to_remove.emplace( mod.str() );
+            incorrectly_installed_mods.emplace_back( mod );
+        }
+    }
+
+    if( !mods_to_remove.empty() ) {
+        bool added_dependent;
+        do {
+            added_dependent = false;
+            for( const mod_id &mod : amo ) {
+                if( is_virtual_mod( mod ) || !mod.is_valid() || mods_to_remove.count( mod.str() ) > 0 ) {
+                    continue;
+                }
+                for( const mod_id &dependency : mod->dependencies ) {
+                    if( mods_to_remove.count( get_mod_base_id_from_src( dependency ).str() ) > 0 ) {
+                        mods_to_remove.emplace( mod.str() );
+                        added_dependent = true;
+                        break;
+                    }
+                }
+            }
+        } while( added_dependent );
+
+#if defined(RELEASE)
+        std::vector<std::string> descriptions;
+        descriptions.reserve( incorrectly_installed_mods.size() );
+        for( const mod_id &mod : incorrectly_installed_mods ) {
+            std::string description = string_format( "%s [%s]", mod->name(), mod.str() );
+            if( !mod->version.empty() ) {
+                description += string_format( " (%s)", mod->version );
+            }
+            description += string_format( "\n%s", mod->path.generic_u8string() );
+            descriptions.emplace_back( std::move( description ) );
+        }
+        const std::string warning = string_format(
+                                        _( "<color_red>Third-party mods were installed in the built-in mod directory.</color>\n\n"
+                                           "The following mods are not distributed with this game:\n%s\n\n"
+                                           "Move them to %s and restart the game.\n\n"
+                                           "Choose Yes only to ignore this warning, permanently remove the listed mods "
+                                           "and their dependents from this world's mod list, and continue loading." ),
+                                        string_join( descriptions, "\n\n" ), PATH_INFO::user_moddir() );
+        if( !query_yn( warning ) ) {
+            return false;
+        }
+        amo.erase( std::remove_if( amo.begin(), amo.end(),
+        [&mods_to_remove, &is_virtual_mod]( const mod_id & mod ) {
+            return !is_virtual_mod( mod ) && mods_to_remove.count( mod.str() ) > 0;
+        } ), amo.end() );
+        save_mods_list( world );
+#else
+        for( const mod_id &mod : incorrectly_installed_mods ) {
+            DebugLog( D_WARNING, DC_MAIN ) << "Third-party mod '" << mod.str()
+                                           << "' is installed in the built-in mod directory: "
+                                           << mod->path.generic_u8string();
+        }
+#endif
+    }
+
     for( auto check_it = amo.begin(); check_it != amo.end(); check_it++ ) {
         if( !check_it->is_valid() ) {
             if( const auto replace_it = migrated_mods.find( *check_it ); replace_it != migrated_mods.end() &&
