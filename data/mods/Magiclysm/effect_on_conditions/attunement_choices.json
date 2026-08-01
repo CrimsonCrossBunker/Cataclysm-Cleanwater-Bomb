@@ -4,8 +4,8 @@
     "id": "EOC_CHECK_ATTUNEMENTS",
     "//": "These need to be u_variables because they don't carry down into the EoC-selector's options otherwise",
     "effect": [
-      { "math": [ "u_required_attunement_spell_count = 12" ] },
-      { "math": [ "u_required_attunement_spell_levels = 200" ] },
+      { "math": [ "u_required_attunement_spell_count = 9" ] },
+      { "math": [ "u_required_attunement_spell_levels = 120" ] },
       {
         "if": {
           "or": [
@@ -391,6 +391,150 @@
         ]
       },
       {
+        "math": [ "u_required_attunement_qualified_school_count = 0" ]
+      },
+      {
+        "math": [ "u_required_attunement_high_level_school_count = 0" ]
+      },
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "ANIMIST" },
+            { "math": [ "u_spell_count('school': 'ANIMIST') >= u_required_attunement_spell_count" ] },
+            { "math": [ "u_spell_level_sum('school': 'ANIMIST') >= u_required_attunement_spell_levels" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_required_attunement_qualified_school_count += 1" ] },
+          {
+            "if": { "math": [ "u_spell_level_sum('school': 'ANIMIST', 'level': '15') > 0" ] },
+            "then": { "math": [ "u_required_attunement_high_level_school_count += 1" ] }
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "BIOMANCER" },
+            { "math": [ "u_spell_count('school': 'BIOMANCER') >= u_required_attunement_spell_count" ] },
+            { "math": [ "u_spell_level_sum('school': 'BIOMANCER') >= u_required_attunement_spell_levels" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_required_attunement_qualified_school_count += 1" ] },
+          {
+            "if": { "math": [ "u_spell_level_sum('school': 'BIOMANCER', 'level': '15') > 0" ] },
+            "then": { "math": [ "u_required_attunement_high_level_school_count += 1" ] }
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "DRUID" },
+            { "math": [ "u_spell_count('school': 'DRUID') >= u_required_attunement_spell_count" ] },
+            { "math": [ "u_spell_level_sum('school': 'DRUID') >= u_required_attunement_spell_levels" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_required_attunement_qualified_school_count += 1" ] },
+          {
+            "if": { "math": [ "u_spell_level_sum('school': 'DRUID', 'level': '15') > 0" ] },
+            "then": { "math": [ "u_required_attunement_high_level_school_count += 1" ] }
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "EARTHSHAPER" },
+            { "math": [ "u_spell_count('school': 'EARTHSHAPER') >= u_required_attunement_spell_count" ] },
+            { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER') >= u_required_attunement_spell_levels" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_required_attunement_qualified_school_count += 1" ] },
+          {
+            "if": { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER', 'level': '15') > 0" ] },
+            "then": { "math": [ "u_required_attunement_high_level_school_count += 1" ] }
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "KELVINIST" },
+            { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
+            { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_required_attunement_qualified_school_count += 1" ] },
+          {
+            "if": { "math": [ "u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
+            "then": { "math": [ "u_required_attunement_high_level_school_count += 1" ] }
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "MAGUS" },
+            { "math": [ "u_spell_count('school': 'MAGUS') >= u_required_attunement_spell_count" ] },
+            { "math": [ "u_spell_level_sum('school': 'MAGUS') >= u_required_attunement_spell_levels" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_required_attunement_qualified_school_count += 1" ] },
+          {
+            "if": { "math": [ "u_spell_level_sum('school': 'MAGUS', 'level': '15') > 0" ] },
+            "then": { "math": [ "u_required_attunement_high_level_school_count += 1" ] }
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "STORMSHAPER" },
+            { "math": [ "u_spell_count('school': 'STORMSHAPER') >= u_required_attunement_spell_count" ] },
+            { "math": [ "u_spell_level_sum('school': 'STORMSHAPER') >= u_required_attunement_spell_levels" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_required_attunement_qualified_school_count += 1" ] },
+          {
+            "if": { "math": [ "u_spell_level_sum('school': 'STORMSHAPER', 'level': '15') > 0" ] },
+            "then": { "math": [ "u_required_attunement_high_level_school_count += 1" ] }
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "u_has_trait": "TECHNOMANCER" },
+            { "math": [ "u_spell_count('school': 'TECHNOMANCER') >= u_required_attunement_spell_count" ] },
+            { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER') >= u_required_attunement_spell_levels" ] }
+          ]
+        },
+        "then": [
+          { "math": [ "u_required_attunement_qualified_school_count += 1" ] },
+          {
+            "if": { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER', 'level': '15') > 0" ] },
+            "then": { "math": [ "u_required_attunement_high_level_school_count += 1" ] }
+          }
+        ]
+      },
+      {
+        "if": {
+          "and": [
+            { "math": [ "u_required_attunement_qualified_school_count >= 2" ] },
+            { "math": [ "u_required_attunement_high_level_school_count >= 1" ] }
+          ]
+        },
+        "then": { "math": [ "u_required_attunement_level_fifteen_is_met = 1" ] },
+        "else": { "math": [ "u_required_attunement_level_fifteen_is_met = -2" ] }
+      },
+      {
         "run_eoc_selector": [
           "EOC_GIVE_ATTUNEMENT_ARTIFICER",
           "EOC_GIVE_ATTUNEMENT_ALCHEMIST",
@@ -426,6 +570,7 @@
           "EOC_CANT_GIVE_ATTUNEMENT_NOT_ENOUGH_SPELLS",
           "EOC_CANT_GIVE_ATTUNEMENT_NOT_ENOUGH_SPELL_LEVELS",
           "EOC_CANT_GIVE_ATTUNEMENT_NOT_ENOUGH_PROFICIENCIES",
+          "EOC_CANT_GIVE_ATTUNEMENT_NO_LEVEL_FIFTEEN_SPELL",
           "EOC_NONE"
         ],
         "title": "You reach out to touch the attunement altar.",
@@ -464,6 +609,7 @@
           "Touch the altar",
           "Touch the altar",
           "Touch the altar",
+          "Touch the altar",
           "Back away"
         ],
         "descriptions": [
@@ -497,6 +643,7 @@
           "<trait_description:VOID_MAGE>",
           "<trait_description:VULCANIST>",
           "<trait_description:WITHER_MAGE>",
+          "Touch the altar",
           "Touch the altar",
           "Touch the altar",
           "Touch the altar",
@@ -552,6 +699,7 @@
         { "math": [ "u_spell_count('school': 'TECHNOMANCER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'STORMSHAPER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'STORMSHAPER', 'level': '15') + u_spell_level_sum('school': 'TECHNOMANCER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -599,6 +747,7 @@
         { "math": [ "u_spell_count('school': 'TECHNOMANCER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'ANIMIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'ANIMIST', 'level': '15') + u_spell_level_sum('school': 'TECHNOMANCER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -648,6 +797,7 @@
         { "math": [ "u_spell_count('school': 'TECHNOMANCER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'BIOMANCER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'BIOMANCER', 'level': '15') + u_spell_level_sum('school': 'TECHNOMANCER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -695,6 +845,7 @@
         { "math": [ "u_spell_count('school': 'ANIMIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'BIOMANCER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'ANIMIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'BIOMANCER', 'level': '15') + u_spell_level_sum('school': 'ANIMIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -744,6 +895,7 @@
         { "math": [ "u_spell_count('school': 'TECHNOMANCER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'KELVINIST', 'level': '15') + u_spell_level_sum('school': 'TECHNOMANCER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -797,6 +949,7 @@
         { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'DRUID') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'DRUID', 'level': '15') + u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -844,6 +997,7 @@
         { "math": [ "u_spell_count('school': 'TECHNOMANCER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'DRUID') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'DRUID', 'level': '15') + u_spell_level_sum('school': 'TECHNOMANCER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -891,6 +1045,7 @@
         { "math": [ "u_spell_count('school': 'EARTHSHAPER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'BIOMANCER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'BIOMANCER', 'level': '15') + u_spell_level_sum('school': 'EARTHSHAPER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -940,6 +1095,7 @@
         { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'BIOMANCER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'BIOMANCER', 'level': '15') + u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -989,6 +1145,7 @@
         { "math": [ "u_spell_count('school': 'STORMSHAPER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'MAGUS') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'STORMSHAPER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'MAGUS', 'level': '15') + u_spell_level_sum('school': 'STORMSHAPER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1036,6 +1193,7 @@
         { "math": [ "u_spell_count('school': 'EARTHSHAPER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'DRUID') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'DRUID', 'level': '15') + u_spell_level_sum('school': 'EARTHSHAPER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1085,6 +1243,7 @@
         { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER', 'level': '15') + u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1136,6 +1295,7 @@
         { "math": [ "u_spell_count('school': 'EARTHSHAPER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'ANIMIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'ANIMIST', 'level': '15') + u_spell_level_sum('school': 'EARTHSHAPER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1183,6 +1343,7 @@
         { "math": [ "u_spell_count('school': 'MAGUS') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'MAGUS') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER', 'level': '15') + u_spell_level_sum('school': 'MAGUS', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1232,6 +1393,7 @@
         { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'BIOMANCER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'BIOMANCER', 'level': '15') + u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1279,6 +1441,7 @@
         { "math": [ "u_spell_count('school': 'TECHNOMANCER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'MAGUS') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'MAGUS', 'level': '15') + u_spell_level_sum('school': 'TECHNOMANCER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1328,6 +1491,7 @@
         { "math": [ "u_spell_count('school': 'STORMSHAPER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'STORMSHAPER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER', 'level': '15') + u_spell_level_sum('school': 'STORMSHAPER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1377,6 +1541,7 @@
         { "math": [ "u_spell_count('school': 'TECHNOMANCER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'TECHNOMANCER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'KELVINIST', 'level': '15') + u_spell_level_sum('school': 'TECHNOMANCER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1426,6 +1591,7 @@
         { "math": [ "u_spell_count('school': 'MAGUS') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'MAGUS') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'KELVINIST', 'level': '15') + u_spell_level_sum('school': 'MAGUS', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1475,6 +1641,7 @@
         { "math": [ "u_spell_count('school': 'STORMSHAPER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'ANIMIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'STORMSHAPER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'ANIMIST', 'level': '15') + u_spell_level_sum('school': 'STORMSHAPER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1528,6 +1695,7 @@
         { "math": [ "u_spell_count('school': 'DRUID') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'ANIMIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'DRUID') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'ANIMIST', 'level': '15') + u_spell_level_sum('school': 'DRUID', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1575,6 +1743,7 @@
         { "math": [ "u_spell_count('school': 'MAGUS') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'BIOMANCER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'MAGUS') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'BIOMANCER', 'level': '15') + u_spell_level_sum('school': 'MAGUS', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1624,6 +1793,7 @@
         { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'ANIMIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'ANIMIST', 'level': '15') + u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1677,6 +1847,7 @@
         { "math": [ "u_spell_count('school': 'STORMSHAPER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'BIOMANCER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'STORMSHAPER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'BIOMANCER', 'level': '15') + u_spell_level_sum('school': 'STORMSHAPER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1726,6 +1897,7 @@
         { "math": [ "u_spell_count('school': 'STORMSHAPER') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'DRUID') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'STORMSHAPER') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'DRUID', 'level': '15') + u_spell_level_sum('school': 'STORMSHAPER', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1775,6 +1947,7 @@
         { "math": [ "u_spell_count('school': 'MAGUS') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'MAGUS') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'KELVINIST', 'level': '15') + u_spell_level_sum('school': 'MAGUS', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1824,6 +1997,7 @@
         { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'DRUID') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'DRUID', 'level': '15') + u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1877,6 +2051,7 @@
         { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'ANIMIST') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'ANIMIST', 'level': '15') + u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1926,6 +2101,7 @@
         { "math": [ "u_spell_count('school': 'KELVINIST') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'KELVINIST') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'EARTHSHAPER', 'level': '15') + u_spell_level_sum('school': 'KELVINIST', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -1973,6 +2149,7 @@
         { "math": [ "u_spell_count('school': 'MAGUS') >= u_required_attunement_spell_count" ] },
         { "math": [ "u_spell_level_sum('school': 'DRUID') >= u_required_attunement_spell_levels" ] },
         { "math": [ "u_spell_level_sum('school': 'MAGUS') >= u_required_attunement_spell_levels" ] },
+        { "math": [ "u_spell_level_sum('school': 'DRUID', 'level': '15') + u_spell_level_sum('school': 'MAGUS', 'level': '15') > 0" ] },
         { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" }
       ]
     },
@@ -2032,6 +2209,24 @@
     "effect": [
       {
         "u_message": "The altar does not respond to your touch.  While your knowledge of spells is considerable, your understanding of the fundamentals of spellcasting needs work.",
+        "type": "bad"
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_CANT_GIVE_ATTUNEMENT_NO_LEVEL_FIFTEEN_SPELL",
+    "condition": {
+      "and": [
+        { "math": [ "u_required_attunement_spell_count_is_met == 1" ] },
+        { "math": [ "u_required_spell_levels_is_met == 1" ] },
+        { "test_eoc": "EOC_CONDITION_ATTUNEMENT_CHECK_PROFICIENCY_MASTERY" },
+        { "math": [ "u_required_attunement_level_fifteen_is_met == -2" ] }
+      ]
+    },
+    "effect": [
+      {
+        "u_message": "The altar does not respond to your touch.  Your spell knowledge is broad and deep, but you must master at least one spell to level 15 before attempting attunement.",
         "type": "bad"
       }
     ]
