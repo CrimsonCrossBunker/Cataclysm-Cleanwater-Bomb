@@ -576,6 +576,8 @@ bool mod_manager::check_mods_list( WORLD *world ) const
                                         _( "<color_red>Third-party mods were installed in the built-in mod directory.</color>\n\n"
                                            "The following mods are not distributed with this game:\n%s\n\n"
                                            "Move them to %s and restart the game.\n\n"
+                                           "Some resources loaded from the built-in mod directory do not support "
+                                           "third-party mods.  This may cause parts of them to stop working.\n\n"
                                            "Choose Yes only to ignore this warning, permanently remove the listed mods "
                                            "and their dependents from this world's mod list, and continue loading." ),
                                         string_join( descriptions, "\n\n" ), PATH_INFO::user_moddir() );
