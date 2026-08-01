@@ -1,0 +1,99 @@
+[
+  {
+    "type": "vehicle_part",
+    "id": "veh_portable_generator",
+    "copy-from": "ap_portable_generator",
+    "name": { "str": "portable gasoline generator" },
+    "description": "A small portable generator, normally used for camping.  This generator is installed in a vehicle.",
+    "delete": {
+      "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
+    },
+    "location": "fuel_source",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ] ]
+      },
+      "repair": {
+        "skills": [ [ "mechanics", 4 ] ],
+        "time": "60 m",
+        "using": [ [ "repair_welding_standard", 5 ], [ "soldering_standard", 5 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "veh_diesel_generator",
+    "copy-from": "ap_diesel_generator",
+    "name": { "str": "diesel generator" },
+    "description": "A powerful, large generator primarily used for street construction.  This generator is installed in a vehicle.",
+    "delete": {
+      "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
+    },
+    "location": "fuel_source",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "veh_military_generator",
+    "copy-from": "ap_military_generator",
+    "name": { "str": "military diesel generator" },
+    "description": "A powerful, large generator with a camouflage-painted casing.  This generator is installed in a vehicle.",
+    "delete": {
+      "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
+    },
+    "location": "fuel_source",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ] ]
+      }
+    }
+  },
+  {
+    "type": "vehicle_part",
+    "id": "veh_12000_gasoline_generator",
+    "copy-from": "ap_12000_gasoline_generator",
+    "name": { "str": "high-output gasoline generator" },
+    "description": "A 12,000-watt gasoline generator that remains relatively portable while providing enough power for an entire house.  This generator is installed in a vehicle.",
+    "delete": {
+      "flags": [ "ENGINE", "E_DIESEL_FUEL", "OBSTACLE", "COVERED", "APPLIANCE", "FLUIDTANK" ]
+    },
+    "location": "fuel_source",
+    "requirements": {
+      "install": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_bolt_install", 1 ] ]
+      },
+      "removal": {
+        "skills": [ [ "mechanics", 3 ] ],
+        "time": "30 m",
+        "using": [ [ "vehicle_weld_removal", 1 ] ]
+      }
+    }
+  }
+]
