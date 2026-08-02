@@ -4,8 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import re
 import subprocess
 import sys
+import unicodedata
+from collections import Counter
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
@@ -13,8 +18,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "doc/migration/markdown-inventory.yml"
-
-
 def git(*args: str) -> str:
     result = subprocess.run(
         ["git", *args],
@@ -25,12 +28,8 @@ def git(*args: str) -> str:
         text=True,
     )
     return result.stdout
-
-
 def resolve_commit(value: str) -> str:
     return git("rev-parse", "--verify", f"{value}^{{commit}}").strip()
-
-
 def tracked_markdown(commit: str) -> list[str]:
     """Return the migration scope from Git, never from a filesystem walk."""
     output = subprocess.run(
@@ -51,8 +50,6 @@ def tracked_markdown(commit: str) -> list[str]:
             )
         paths.append(path)
     return sorted(paths)
-
-
 def contributors(commit: str, path: str) -> list[str]:
     names = git(
         "log", commit, "--follow", "--format=%aN", "--", path
@@ -63,8 +60,6 @@ def contributors(commit: str, path: str) -> list[str]:
         if clean and clean not in unique:
             unique.append(clean)
     return unique or ["Unknown (see source history)"]
-
-
 def classification(path: str) -> tuple[str, str, str]:
     if path.startswith("src/third-party/"):
         return (
@@ -84,8 +79,6 @@ def classification(path: str) -> tuple[str, str, str]:
     }:
         return "keep_in_repo", "CC-BY-SA-3.0", "keep_in_repo"
     return "review", "CC-BY-SA-3.0", "evaluate_filtered_history"
-
-
 def build_inventory(
     commit: str,
     contributor_snapshot: dict[str, list[str]] | None = None,
@@ -126,12 +119,8 @@ def build_inventory(
         ),
         "documents": documents,
     }
-
-
 def render(data: dict) -> str:
     return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=100)
-
-
 def inventory_for_check(output: Path) -> tuple[str, dict[str, list[str]]]:
     """Load the frozen commit and history snapshot used by check mode.
 
@@ -153,8 +142,6 @@ def inventory_for_check(output: Path) -> tuple[str, dict[str, list[str]]]:
         resolve_commit(str(data["source_commit"])),
         contributor_snapshot,
     )
-
-
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -184,7 +171,18 @@ def main() -> int:
     output.write_text(rendered, encoding="utf-8")
     print(f"wrote {output.relative_to(ROOT)} at {commit}")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+DEFAULT_ANOMALY_REPORT = ROOT / "doc/migration/contributor-anomalies.yml"
+UNSAFE_CONTRIBUTOR_PATTERNS = (
+    re.compile(r"\bgit\s+config\b", re.IGNORECASE),
+    re.compile(r"(?:\$\(|`|&&|\|\||[;<>])"),
+    re.compile(r"(?:^|\s)-(?:c|e|x)(?:\s|$)"),
+)
+MAX_CONTRIBUTOR_LENGTH = 160
+KEEP_IN_REPO = {
+    "README.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "ISSUES.md",
+    "SYNC_EXCLUDED_PRS.md",
+    "TRANSLATION_CREDITS.md",
+}
