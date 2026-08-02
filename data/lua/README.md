@@ -57,17 +57,37 @@ sidecars, or expose the Lua UI debug-menu entry.
 ## Developer files
 
 - `manifest.schema.json` is the authoritative JSON Schema for
-  `lua/manifest.json`. Add a relative `$schema` property to receive editor
-  validation.
+  `lua/manifest.json`. Use the Schema's stable repository URL in a Mod so the
+  reference remains valid after copying the Mod to another directory.
 - `types/ccb_api_v5.d.lua` is a LuaLS/EmmyLua declaration file for the complete
   public v5 surface. Add this directory to the editor workspace library; never
   `require` the declaration at runtime.
+- `reference/ccb_public_api_v5.json` is the generated public denominator for
+  CCB-Docs. It records every callable access path, class and field, native
+  usertype member and operator, enum family, event and field, hook, callback,
+  capability, permission rule, and Manifest field with source locations.
+  `reference/ccb_public_api_v5_coverage.json` proves inventory coverage and
+  deliberately reports published CCB-Docs coverage separately.
 - `examples/api_v5_mod/` is a complete source example covering modules,
   services, hooks, scheduling, typed values, registry queries, state, pages,
   named actions, action-menu integration, and a sidebar widget.
 - `reference/cbn_api_inventory.json` pins the 2,398-entry CBN reference surface
   at commit `584939ce64c9d7352d37024132d968c3163edbe2`;
   `reference/cbn_coverage.json` records a verified CCB mapping for every entry.
+
+Regenerate and validate the public contract with:
+
+```sh
+python3 tools/lua_api/generate_public_contract.py
+python3 tools/lua_api/generate_public_contract.py --check
+python3 tools/lua_api/check_public_contract.py
+python3 tools/lua_api/check_examples.py --require-luac
+python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
+```
+
+The CBN mapping percentage is an upstream capability audit, not CCB public API
+documentation coverage. Only the v5 public-contract coverage file has the
+complete current CCB denominator.
 
 CCB takes the useful structural lessons from Cataclysm: Bright Nights—one
 environment per Mod, local modules, explicit lifecycle stages, hot reload, and
